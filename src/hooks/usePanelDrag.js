@@ -82,10 +82,23 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
         onPointerDown: handlePointerDown
     }
 
+    const panelPointerProps = {
+        onMouseDown: (e) => {
+            // Bring to front on any mouse interaction
+            if (e.button === 0) { // Left click only
+                bringToFront()
+            }
+        },
+        onTouchStart: () => {
+            // Bring to front on touch
+            bringToFront()
+        }
+    }
+
     return {
         panelRef,
         dragProps,
-        panelPointerProps: { onPointerDownCapture: bringToFront },
+        panelPointerProps,
         dragStyle: { position: 'fixed', top: 0, left: 0, transform: `translate(${offset.x}px, ${offset.y}px)`, zIndex },
         isDragging
     }
