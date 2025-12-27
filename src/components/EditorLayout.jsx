@@ -176,8 +176,11 @@ export function EditorLayout({
                             canCreateGroup={canCreateGroupSelection}
                         />
                     )}
+                    {layoutMode === 'split' && <InspectorPanel />}
                 </div>
             )}
+
+            {isUiVisible && layoutMode !== 'split' && <InspectorPanel />}
 
             {isLoading && (
                 <div className="loading-overlay">
