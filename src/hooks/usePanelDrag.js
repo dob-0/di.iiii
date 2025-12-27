@@ -83,11 +83,15 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
     }
 
     const panelPointerProps = {
-        onMouseDown: (e) => {
-            // Bring to front on any mouse interaction
+        onMouseDownCapture: (e) => {
+            // Bring to front on any mouse interaction (capture phase)
             if (e.button === 0) { // Left click only
                 bringToFront()
             }
+        },
+        onClickCapture: () => {
+            // Backup handler for elements that prevent mousedown
+            bringToFront()
         },
         onTouchStart: () => {
             // Bring to front on touch
