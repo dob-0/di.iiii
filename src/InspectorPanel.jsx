@@ -177,7 +177,7 @@ export default function InspectorPanel() {
         requestManualMediaOptimization
     } = useContext(AppContext)
 
-    const { panelRef, dragProps, dragStyle, isDragging, panelPointerProps } = usePanelDrag({ x: 16, y: 120 }, { baseZ: 80 })
+    const { panelRef, dragProps, dragStyle, isDragging, panelPointerProps } = usePanelDrag({ x: 16, y: 120 }, { baseZ: 100 })
     const { width, height, resizerProps, isResizing } = usePanelResize(320, {
         min: 280,
         max: 640,

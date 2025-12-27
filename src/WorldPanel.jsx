@@ -48,7 +48,7 @@ export default function WorldPanel() {
             title="World Settings"
             onClose={() => setIsWorldPanelVisible(false)}
             initialPosition={{ x: 704, y: 120 }}
-            dragOptions={{ baseZ: 200 }}
+            dragOptions={{ baseZ: 100 }}
             sizeOptions={{
                 initialWidth: 320,
                 min: 280,

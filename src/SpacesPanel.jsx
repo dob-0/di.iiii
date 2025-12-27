@@ -39,7 +39,7 @@ export default function SpacesPanel({
     canCreateGroup
 }) {
     const [copiedId, setCopiedId] = useState(null)
-    const { panelRef, dragProps, dragStyle, isDragging, panelPointerProps } = usePanelDrag({ x: 704, y: 460 }, { baseZ: 150 })
+    const { panelRef, dragProps, dragStyle, isDragging, panelPointerProps } = usePanelDrag({ x: 704, y: 460 }, { baseZ: 100 })
     const { width, height, resizerProps, isResizing } = usePanelResize(320, {
         min: 280,
         max: 640,

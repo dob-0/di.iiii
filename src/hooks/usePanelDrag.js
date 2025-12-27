@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
-let globalZIndex = 300
+let globalZIndex = 1000
 
 export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
-    const { baseZ = 200 } = options
+    const { baseZ = 100 } = options
     const panelRef = useRef(null)
     const dragStateRef = useRef(null)
     const [offset, setOffset] = useState(initialPosition)

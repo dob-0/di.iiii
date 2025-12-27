@@ -7,7 +7,7 @@ export default function MediaPanel({ preference, onChange, onClose }) {
             title="Media Settings"
             onClose={onClose}
             initialPosition={{ x: 1048, y: 120 }}
-            dragOptions={{ baseZ: 200 }}
+            dragOptions={{ baseZ: 100 }}
             sizeOptions={{
                 initialWidth: 320,
                 min: 280,

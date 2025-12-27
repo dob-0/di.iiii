@@ -19,7 +19,7 @@ export default function AssetPanel({ onClose }) {
         selectObject,
         clearSelection
     } = useContext(AppContext)
-    const { panelRef, dragProps, dragStyle, isDragging, panelPointerProps } = usePanelDrag({ x: 16, y: 460 }, { baseZ: 150 })
+    const { panelRef, dragProps, dragStyle, isDragging, panelPointerProps } = usePanelDrag({ x: 16, y: 460 }, { baseZ: 100 })
     const { width, height, resizerProps, isResizing } = usePanelResize(320, {
         min: 280,
         max: 640,
