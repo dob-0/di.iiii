@@ -575,7 +575,6 @@ body,
 }
 .draggable-panel {
     position: fixed;
-    z-index: auto;
     min-width: 240px;
     max-width: calc(100vw - 32px);
 }
