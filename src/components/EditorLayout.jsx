@@ -58,6 +58,8 @@ export function EditorLayout({
     setIsMediaPanelVisible,
     setIsAssetPanelVisible,
     setIsOutlinerPanelVisible,
+    isInspectorPanelVisible,
+    setIsInspectorPanelVisible,
     setIsSpacesPanelVisible,
     isGizmoVisible,
     isPointerDragging,
@@ -126,7 +128,9 @@ export function EditorLayout({
             {isUiVisible && layoutMode === 'split' && (
                 <div className="panel-container split-mode">
                     <div className="split-tabs">
-                        <button className="split-tab active" onClick={() => {}}>Inspector</button>
+                        {isInspectorPanelVisible && (
+                            <button className="split-tab active" onClick={() => setIsInspectorPanelVisible(false)}>Inspector ×</button>
+                        )}
                         {isWorldPanelVisible && (
                             <button className="split-tab active" onClick={() => setIsWorldPanelVisible(false)}>World ×</button>
                         )}
@@ -147,7 +151,7 @@ export function EditorLayout({
                         )}
                     </div>
                     <div className="split-panel-content">
-                        <InspectorPanel />
+                        {isInspectorPanelVisible && <InspectorPanel />}
                         {isWorldPanelVisible && <WorldPanel />}
                         {isViewPanelVisible && <ViewPanel />}
                         {isMediaPanelVisible && (

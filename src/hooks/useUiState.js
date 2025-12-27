@@ -53,6 +53,7 @@ export function useUiState({
     const [isMediaPanelVisible, setIsMediaPanelVisible] = useState(false)
     const [isAssetPanelVisible, setIsAssetPanelVisible] = useState(false)
     const [isOutlinerPanelVisible, setIsOutlinerPanelVisible] = useState(false)
+    const [isInspectorPanelVisible, setIsInspectorPanelVisible] = useState(true)
     const [isSpacesPanelVisible, setIsSpacesPanelVisible] = useState(false)
     const [isGizmoVisible, setIsGizmoVisible] = useState(defaultGizmoVisible)
     const [isGridVisible, setIsGridVisible] = useState(defaultGridVisible)
@@ -219,6 +220,8 @@ export function useUiState({
         setIsAssetPanelVisible,
         isOutlinerPanelVisible,
         setIsOutlinerPanelVisible,
+        isInspectorPanelVisible,
+        setIsInspectorPanelVisible,
         isSpacesPanelVisible,
         setIsSpacesPanelVisible,
         isGizmoVisible,

@@ -178,6 +178,8 @@ export default function App() {
         setIsAssetPanelVisible,
         isOutlinerPanelVisible,
         setIsOutlinerPanelVisible,
+        isInspectorPanelVisible,
+        setIsInspectorPanelVisible,
         isSpacesPanelVisible,
         setIsSpacesPanelVisible,
         isGizmoVisible,
@@ -3260,6 +3262,8 @@ export default function App() {
                 setIsMediaPanelVisible={setIsMediaPanelVisible}
                 setIsAssetPanelVisible={setIsAssetPanelVisible}
                 setIsOutlinerPanelVisible={setIsOutlinerPanelVisible}
+                isInspectorPanelVisible={isInspectorPanelVisible}
+                setIsInspectorPanelVisible={setIsInspectorPanelVisible}
                 setIsSpacesPanelVisible={setIsSpacesPanelVisible}
                 isGizmoVisible={isGizmoVisible}
                 isPointerDragging={isPointerDragging}
