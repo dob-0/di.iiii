@@ -126,6 +126,7 @@ export function EditorLayout({
             {isUiVisible && layoutMode === 'split' && (
                 <div className="panel-container split-mode">
                     <div className="split-tabs">
+                        <button className="split-tab active" onClick={() => {}}>Inspector</button>
                         {isWorldPanelVisible && (
                             <button className="split-tab active" onClick={() => setIsWorldPanelVisible(false)}>World ×</button>
                         )}
@@ -146,6 +147,7 @@ export function EditorLayout({
                         )}
                     </div>
                     <div className="split-panel-content">
+                        <InspectorPanel />
                         {isWorldPanelVisible && <WorldPanel />}
                         {isViewPanelVisible && <ViewPanel />}
                         {isMediaPanelVisible && (
