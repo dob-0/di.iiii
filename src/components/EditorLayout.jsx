@@ -256,60 +256,6 @@ export function EditorLayout({
                             canCreateGroup={canCreateGroupSelection}
                         />
                     )}
-            {isUiVisible && layoutMode !== 'split' && (
-                <div className="panel-container panel-dock-right">
-                    {isWorldPanelVisible && <WorldPanel />}
-                    {isViewPanelVisible && <ViewPanel />}
-                    {isMediaPanelVisible && (
-                        <MediaPanel
-                            preference={mediaOptimizationPreference}
-                            onChange={setMediaOptimizationPreference}
-                            onClose={() => setIsMediaPanelVisible(false)}
-                        />
-                    )}
-                    {isAssetPanelVisible && (
-                        <AssetPanel
-                            onClose={() => setIsAssetPanelVisible(false)}
-                        />
-                    )}
-                    {isOutlinerPanelVisible && (
-                        <OutlinerPanel
-                            objects={objects}
-                            selectionGroups={selectionGroups}
-                            selectedObjectIds={selectedObjectIds}
-                            onSelectObject={handleSelectObjectFromOutliner}
-                            onToggleVisibility={handleToggleObjectVisibility}
-                            onSelectGroup={handleSelectSelectionGroup}
-                            onCreateGroup={() => handleCreateSelectionGroup()}
-                            onDeleteGroup={handleDeleteSelectionGroup}
-                            canCreateGroup={canCreateGroupSelection}
-                            onClose={() => setIsOutlinerPanelVisible(false)}
-                        />
-                    )}
-                    {isAdminMode && isSpacesPanelVisible && (
-                        <SpacesPanel
-                            spaces={spaces}
-                            currentSpaceId={spaceId}
-                            onClose={() => setIsSpacesPanelVisible(false)}
-                            onCreateSpace={() => handleCreateNamedSpace(false)}
-                            onCreatePermanentSpace={() => handleCreateNamedSpace(true)}
-                            onOpenSpace={handleOpenSpace}
-                            onCopyLink={handleCopySpaceLink}
-                            onDeleteSpace={handleDeleteSpace}
-                            onTogglePermanent={handleToggleSpacePermanent}
-                            newSpaceName={newSpaceName}
-                            onSpaceNameChange={setNewSpaceName}
-                            spaceNameFeedback={spaceNameFeedback}
-                            canCreateSpace={canCreateSpace}
-                            ttlHours={tempSpaceTtlHours}
-                            isCreatingSpace={isCreatingSpace}
-                            selectionGroups={selectionGroups}
-                            onCreateGroup={handleCreateSelectionGroup}
-                            onSelectGroup={handleSelectSelectionGroup}
-                            onDeleteGroup={handleDeleteSelectionGroup}
-                            canCreateGroup={canCreateGroupSelection}
-                        />
-                    )}
                 </div>
             )}
 
@@ -332,7 +278,7 @@ export function EditorLayout({
                 </div>
             )}
 
-            {isUiVisible && <InspectorPanel />}
+            {isUiVisible && layoutMode !== 'split' && <InspectorPanel />}
 
             {!isLoading && (
                 <SceneCanvas
