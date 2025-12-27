@@ -236,6 +236,8 @@ export function useUiState({
         isAdminMode,
         setIsAdminMode,
         layoutMode,
-        toggleLayoutMode
+        toggleLayoutMode,
+        layoutSide,
+        cycleLayoutSide
     }
 }
