@@ -1,0 +1,16 @@
+RewriteEngine On
+RewriteBase /
+
+# Allow direct requests for real files/directories
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Do not SPA-redirect missing extracted default-scene assets; return 404 instead
+RewriteCond %{REQUEST_URI} ^/default-scene/
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ - [R=404,L]
+
+# Fallback all other routes to SPA entry point
+RewriteRule ^ index.html [L]

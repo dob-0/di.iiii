@@ -1,0 +1,22 @@
+/* --- New styles for the ViewPanel preset grid --- */
+
+/* Add a bit of space for the stacked label */
+.view-panel .prop-label-stacked {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.75);
+    margin: 6px 0 4px;
+}
+
+/* This creates the 3x2 grid */
+.view-panel .view-preset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr; /* 3 equal columns */
+    gap: 5px;
+}
+
+/* Make sure buttons in the grid fill the space */
+.view-panel .view-preset-grid .toggle-button-small {
+    width: 100%;
+    box-sizing: border-box; /* Ensures padding doesn't break layout */
+}

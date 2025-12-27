@@ -1,0 +1,19 @@
+RewriteEngine On
+RewriteBase /serverXR/
+
+# Serve assets via PHP fallback before proxying to Node
+RewriteCond %{REQUEST_METHOD} ^(GET|HEAD)$
+RewriteRule ^api/spaces/([^/]+)/assets/([^/]+)$ serve-asset.php?space=$1&id=$2 [L]
+
+RewriteCond %{REQUEST_FILENAME} \.(js|css|png|jpg|jpeg|gif|svg|ico|html|php)$ [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_METHOD} ^(GET|POST|PUT|PATCH|DELETE|OPTIONS)$
+RewriteRule ^ http://127.0.0.1:4000%{REQUEST_URI} [P,L]
+
+RewriteCond %{REQUEST_METHOD} !^(GET|POST|PUT|PATCH|DELETE|OPTIONS)$
+RewriteRule ^ - [R=501,L]

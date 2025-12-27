@@ -1,0 +1,28 @@
+# Node / build output
+node_modules/
+dist/
+.vite/
+.cache/
+coverage/
+tmp/
+
+# Env and local config
+.env
+.env.*.local
+.env.local
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS noise
+.DS_Store
+
+# Server data
+serverXR/data/
+serverXR/uploads/
+serverXR/.env
+serverXR/.env.local
