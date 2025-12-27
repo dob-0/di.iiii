@@ -193,7 +193,9 @@ export default function App() {
         isSelectionLocked,
         setIsSelectionLocked,
         isAdminMode,
-        setIsAdminMode
+        setIsAdminMode,
+        layoutMode,
+        toggleLayoutMode
     } = useUiState({
         spaceId,
         defaults: {
@@ -3082,6 +3084,8 @@ export default function App() {
         setIsSelectionLocked,
         uiDefaultVisible,
         toggleUiDefaultVisible,
+        layoutMode,
+        toggleLayoutMode,
         isArModeActive,
         arAnchorTransform,
         resetArAnchor,
@@ -3211,6 +3215,8 @@ export default function App() {
                 handleFileLoad={handleFileLoad}
                 controlSections={controlSections}
                 isUiVisible={isUiVisible}
+                layoutMode={layoutMode}
+                toggleLayoutMode={toggleLayoutMode}
                 isWorldPanelVisible={isWorldPanelVisible}
                 isViewPanelVisible={isViewPanelVisible}
                 isMediaPanelVisible={isMediaPanelVisible}

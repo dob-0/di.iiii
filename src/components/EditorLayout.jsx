@@ -17,6 +17,8 @@ export function EditorLayout({
     handleFileLoad,
     controlSections,
     isUiVisible,
+    layoutMode,
+    toggleLayoutMode,
     isWorldPanelVisible,
     isViewPanelVisible,
     isMediaPanelVisible,
@@ -92,7 +94,7 @@ export function EditorLayout({
     }
 
     return (
-        <>
+        <div className={layoutMode === 'split' ? 'layout-split' : 'layout-floating'}>
             {menu.visible && (
                 <Menu
                     x={menu.x}
@@ -238,7 +240,7 @@ export function EditorLayout({
             )}
 
             <Loader />
-        </>
+        </div>
     )
 }
 

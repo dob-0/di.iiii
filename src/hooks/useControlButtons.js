@@ -51,6 +51,8 @@ export function useControlButtons({
     setIsSelectionLocked,
     uiDefaultVisible,
     toggleUiDefaultVisible,
+    layoutMode,
+    toggleLayoutMode,
     // xr
     isArModeActive,
     arAnchorTransform,
@@ -152,6 +154,13 @@ export function useControlButtons({
             onClick: toggleUiDefaultVisible,
             title: 'Set whether the UI shows on load'
         })
+        displayButtons.push({
+            key: 'layout-mode',
+            label: layoutMode === 'split' ? 'Split View' : 'Floating Panels',
+            onClick: toggleLayoutMode,
+            isActive: layoutMode === 'split',
+            title: 'Toggle between floating panels and split-screen layout'
+        })
 
         const xrButtons = []
         if (isArModeActive) {
@@ -235,6 +244,8 @@ export function useControlButtons({
         setIsSelectionLocked,
         uiDefaultVisible,
         toggleUiDefaultVisible,
+        layoutMode,
+        toggleLayoutMode,
         isArModeActive,
         arAnchorTransform?.anchored,
         resetArAnchor,

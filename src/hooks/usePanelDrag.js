@@ -48,6 +48,7 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
 
     const bringToFront = useCallback(() => {
         const next = ++globalZIndex
+        console.log('Panel z-index changed to:', next)
         setZIndex(next)
     }, [])
 
@@ -103,7 +104,13 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
         panelRef,
         dragProps,
         panelPointerProps,
-        dragStyle: { position: 'fixed', top: 0, left: 0, transform: `translate(${offset.x}px, ${offset.y}px)`, zIndex },
+        dragStyle: { 
+            position: 'fixed', 
+            top: 0, 
+            left: 0, 
+            transform: `translate(${offset.x}px, ${offset.y}px)`, 
+            zIndex 
+        },
         isDragging
     }
 }

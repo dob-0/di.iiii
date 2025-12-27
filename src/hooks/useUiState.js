@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 const UI_DEFAULT_STORAGE_KEY = 'ui-default-visible'
 const UI_VISIBLE_STORAGE_PREFIX = 'ui-visible'
 const SELECTION_LOCK_STORAGE_PREFIX = 'selection-lock'
+const LAYOUT_MODE_STORAGE_KEY = 'layout-mode'
 
 const readUiDefaultVisible = () => {
     if (typeof window === 'undefined') return false
@@ -56,6 +57,27 @@ export function useUiState({
     const [isGridVisible, setIsGridVisible] = useState(defaultGridVisible)
     const [isPointerDragging, setIsPointerDragging] = useState(false)
     const [isAdminMode, setIsAdminMode] = useState(false)
+    const [layoutMode, setLayoutMode] = useState(() => {
+        if (typeof window === 'undefined') return 'floating'
+        try {
+            const stored = window.localStorage.getItem(LAYOUT_MODE_STORAGE_KEY)
+            return stored === 'split' ? 'split' : 'floating'
+        } catch {
+            return 'floating'
+        }
+    })
+
+    const toggleLayoutMode = useCallback(() => {
+        setLayoutMode(prev => {
+            const next = prev === 'floating' ? 'split' : 'floating'
+            try {
+                window.localStorage.setItem(LAYOUT_MODE_STORAGE_KEY, next)
+            } catch (error) {
+                console.warn('Could not persist layout mode', error)
+            }
+            return next
+        })
+    }, [])
 
     const uiVisibilityQuery = typeof window !== 'undefined'
         ? new URLSearchParams(window.location.search).get('ui')
@@ -187,6 +209,8 @@ export function useUiState({
         isSelectionLocked,
         setIsSelectionLocked,
         isAdminMode,
-        setIsAdminMode
+        setIsAdminMode,
+        layoutMode,
+        toggleLayoutMode
     }
 }
