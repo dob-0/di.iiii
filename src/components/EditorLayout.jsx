@@ -95,7 +95,7 @@ export function EditorLayout({
     }
 
     return (
-        <div className={`${layoutMode === 'split' ? 'layout-split' : 'layout-floating'} ${layoutMode === 'split' ? `split-${layoutSide}` : ''}`}>
+        <div className={`${layoutMode === 'split' ? 'layout-split' : 'layout-floating'} ${layoutMode === 'split' ? `split-${layoutSide || 'right'}` : ''}`}>
             {menu.visible && (
                 <Menu
                     x={menu.x}
