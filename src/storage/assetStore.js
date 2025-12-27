@@ -1,3 +1,4 @@
+/* global Buffer */
 import { clear, createStore, del, get, set } from 'idb-keyval'
 
 const assetStore = createStore('dii-scene-assets', 'files')
