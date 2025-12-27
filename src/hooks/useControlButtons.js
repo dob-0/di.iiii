@@ -167,7 +167,10 @@ export function useControlButtons({
             displayButtons.push({
                 key: 'layout-side',
                 label: `Side: ${(layoutSide || 'right').charAt(0).toUpperCase() + (layoutSide || 'right').slice(1)}`,
-                onClick: cycleLayoutSide,
+                onClick: () => {
+                    console.log('cycleLayoutSide clicked, current side:', layoutSide)
+                    cycleLayoutSide()
+                },
                 title: 'Cycle dock position (right → left → bottom → top)'
             })
         }
