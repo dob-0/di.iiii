@@ -166,7 +166,7 @@ function Vector3Control({
     )
 }
 
-export default function InspectorPanel() {
+export default function InspectorPanel({ onClose }) {
     const {
         selectedObjectId,
         objects,
@@ -306,7 +306,7 @@ export default function InspectorPanel() {
         >
             <div className={`panel-header draggable-header ${isDragging ? 'dragging' : ''}`} {...dragProps}>
                 <h3>Inspector</h3>
-                <button className="close-button" onClick={clearSelection}>×</button>
+                <button className="close-button" onClick={onClose}>×</button>
             </div>
 
             <div className="panel-content gizmo-controls">

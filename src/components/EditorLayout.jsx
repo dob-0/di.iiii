@@ -267,19 +267,7 @@ export function EditorLayout({
             )}
 
             {isUiVisible && layoutMode !== 'split' && isInspectorPanelVisible && (
-                <div className="floating-panel inspector-panel">
-                    <div className="panel-header">
-                        <h2>Inspector</h2>
-                        <button
-                            className="close-button"
-                            onClick={() => setIsInspectorPanelVisible(false)}
-                            title="Close Inspector"
-                        >
-                            ×
-                        </button>
-                    </div>
-                    <InspectorPanel />
-                </div>
+                <InspectorPanel onClose={() => setIsInspectorPanelVisible(false)} />
             )}
 
             {isLoading && (
