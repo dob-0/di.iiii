@@ -166,7 +166,7 @@ export function useControlButtons({
         if (layoutMode === 'split') {
             displayButtons.push({
                 key: 'layout-side',
-                label: `Side: ${layoutSide.charAt(0).toUpperCase() + layoutSide.slice(1)}`,
+                label: `Side: ${(layoutSide || 'right').charAt(0).toUpperCase() + (layoutSide || 'right').slice(1)}`,
                 onClick: cycleLayoutSide,
                 title: 'Cycle dock position (right → left → bottom → top)'
             })
