@@ -2,11 +2,12 @@ name: Auto PR dev→main
 
 on:
   push:
-    branches: [ dev ]
+    branches:
+      - dev
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pull-requests: write
 
 jobs:
@@ -21,14 +22,33 @@ jobs:
             const { owner, repo } = context.repo;
             const head = 'dev';
             const base = 'main';
-            const title = 'feat: visible default scene + dev auto-open path';
-            const body = `\nSummary: New/cleared scenes are visible; skip server reload after clear; stronger grid and aligned camera; dev server auto-opens chosen path.\n\nIncludes: default scene + camera updates, clear logic fixes, grid color/appearance, vite auto-open env, CI + release workflows.`;
+            const title = 'Auto PR: dev → main';
+            const body = [
+              'Summary: New/cleared scenes are visible; skip server reload after clear;',
+              'stronger grid and aligned camera; dev server auto-opens chosen path.',
+              '',
+              'Includes: default scene + camera updates, clear logic fixes, grid color/appearance,',
+              'vite auto-open env, CI + release workflows.'
+            ].join('\n');
 
-            // Check if a PR already exists
-            const prs = await github.rest.pulls.list({ owner, repo, state: 'open', head: `${owner}:${head}`, base });
-            if (prs.data && prs.data.length > 0) {
-              core.info(`PR already exists: ${prs.data[0].html_url}`);
-            } else {
-              const res = await github.rest.pulls.create({ owner, repo, title, head, base, body });
-              core.info(`Created PR: ${res.data.html_url}`);
+            async function run() {
+              try {
+                const prs = await github.rest.pulls.list({
+                  owner,
+                  repo,
+                  state: 'open',
+                  head: `${owner}:${head}`,
+                  base,
+                });
+                if (prs.data && prs.data.length > 0) {
+                  core.info(`PR already exists: ${prs.data[0].html_url}`);
+                  return;
+                }
+                const res = await github.rest.pulls.create({ owner, repo, title, head, base, body, maintainer_can_modify: true });
+                core.info(`Created PR: ${res.data.html_url}`);
+              } catch (err) {
+                core.setFailed(`Failed to create PR: ${err.message}`);
+              }
             }
+
+            await run();
