@@ -1692,6 +1692,10 @@ body,
     display: none;
 }
 
+.layout-split .top-right-controls {
+    right: 400px;
+}
+
 /* Mobile responsive layout */
 @media (max-width: 768px) {
     .layout-split .panel-container.split-mode {
@@ -1701,6 +1705,10 @@ body,
         bottom: 0;
         border-left: none;
         border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .layout-split .top-right-controls {
+        right: 18px;
     }
     
     .split-panel-content {
