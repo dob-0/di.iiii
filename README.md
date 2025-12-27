@@ -72,7 +72,44 @@ pm2 save                        # optional: keep on reboot if startup scripts ar
 - **PM2 restarts repeatedly**: check `serverXR/stderr.log` and `pm2 logs dii-control-server` for the actual error (port in use, missing env, bad path).
 - **Gizmo arrows misaligned**: ensure the UI build is up to date (local-space gizmo is the current behavior).
 
-## Shortcuts (UI)
-- Toggle HUD: `H`
-- Gizmo modes: `G` / `R` / `S`; axis locks `X`/`Y`/`Z`
-- Selection: click, Shift-click to add/remove; Delete/Backspace to remove objects
+## Features
+- **3D Scene Editor**: Create and manipulate 3D objects (boxes, spheres, cones, cylinders, text, images, videos, audio, 3D models)
+- **Transform Controls**: Gizmo-based translate, rotate, and scale with axis locking
+- **Multi-Selection**: Select multiple objects, group/ungroup, copy/paste
+- **Asset Management**: Upload and manage media assets with IndexedDB storage
+- **Scene Persistence**: Auto-save to localStorage; optional ServerXR sync
+- **XR Support**: VR/AR modes via WebXR
+- **Undo/Redo**: Full history tracking
+- **Responsive Panels**: Draggable, resizable UI panels
+
+## Keyboard Shortcuts
+### Navigation & View
+- `H` — Toggle UI visibility
+- `P` — Toggle performance monitor
+- `L` — Toggle selection lock
+
+### Transform & Gizmo
+- `G` — Translate mode
+- `R` — Rotate mode
+- `S` — Scale mode
+- `X` / `Y` / `Z` — Lock to axis (press again to unlock)
+- `Escape` — Clear axis lock / exit mode
+
+### Selection & Editing
+- Click — Select object
+- `Shift + Click` — Add/remove from selection
+- `Ctrl/Cmd + A` — Select all
+- `Delete` / `Backspace` — Delete selected
+- `Ctrl/Cmd + C` — Copy
+- `Ctrl/Cmd + X` — Cut
+- `Ctrl/Cmd + V` — Paste
+- `Ctrl/Cmd + D` — Duplicate
+- `Ctrl/Cmd + G` — Group selection
+- `Alt + G` — Ungroup selection
+
+### History
+- `Ctrl/Cmd + Z` — Undo
+- `Ctrl/Cmd + Shift + Z` / `Ctrl/Cmd + Y` — Redo
+
+### Admin Mode
+- `Shift + D` → `I` — Toggle admin mode (hold Shift+D, then press I)

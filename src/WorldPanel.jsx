@@ -27,6 +27,22 @@ export default function WorldPanel() {
         }))
     }
 
+    const resetToDefaults = () => {
+        setBackgroundColor('#f7f6ef')
+        setGridSize(20)
+        setAmbientLight({ color: '#ffffff', intensity: 0.8 })
+        setDirectionalLight({ color: '#ffffff', intensity: 1, position: [10, 10, 5] })
+        setGridAppearance({
+            cellSize: 0.75,
+            cellThickness: 0.2,
+            sectionSize: 6,
+            sectionThickness: 0.45,
+            fadeDistance: 24,
+            fadeStrength: 0.7,
+            offset: 0.01
+        })
+    }
+
     return (
         <PanelShell
             title="World Settings"
@@ -43,6 +59,16 @@ export default function WorldPanel() {
             }}
             className="world-panel"
         >
+            <div className="prop-row">
+                <label>Reset</label>
+                <button 
+                    className="toggle-button-small"
+                    onClick={resetToDefaults}
+                    title="Reset all world settings to defaults"
+                >
+                    Reset to Defaults
+                </button>
+            </div>
             <div className="prop-row">
                 <label>Background</label>
                 <input 

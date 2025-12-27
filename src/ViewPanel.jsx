@@ -31,6 +31,26 @@ export default function ViewPanel() {
         controlsRef.current.update();
     };
 
+    const resetRenderToDefaults = () => {
+        setCameraSettings({
+            orthographic: false,
+            position: [0, 1.6, 4],
+            fov: 60,
+            near: 0.1,
+            far: 200
+        })
+        setRenderSettings({
+            dpr: [1, 2],
+            shadows: true,
+            antialias: true,
+            toneMapping: 'ACESFilmic',
+            toneMappingExposure: 1,
+            powerPreference: 'high-performance'
+        })
+        setIsGridVisible(true)
+        setIsGizmoVisible(true)
+    };
+
     const setTopView = () => {
         setCameraView([0, 10, 0], [0, 0, 0]);
     };
@@ -79,6 +99,17 @@ export default function ViewPanel() {
             
             <div className="panel-content">
                 
+                <div className="prop-row">
+                    <label>Reset</label>
+                    <button 
+                        className="toggle-button-small" 
+                        onClick={resetRenderToDefaults}
+                        title="Reset view and render settings to defaults"
+                    >
+                        Reset to Defaults
+                    </button>
+                </div>
+
                 <div className="prop-row">
                     <label>View</label>
                     <button className="toggle-button-small" onClick={handleFrameAll}>
