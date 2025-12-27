@@ -124,7 +124,7 @@ export function EditorLayout({
             </div>
 
             {isUiVisible && layoutMode === 'split' && (
-                <div className="panel-container panel-dock-right split-mode">
+                <div className="panel-container split-mode">
                     <div className="split-tabs">
                         {isWorldPanelVisible && (
                             <button className="split-tab active" onClick={() => setIsWorldPanelVisible(false)}>World ×</button>
