@@ -4,6 +4,7 @@ const UI_DEFAULT_STORAGE_KEY = 'ui-default-visible'
 const UI_VISIBLE_STORAGE_PREFIX = 'ui-visible'
 const SELECTION_LOCK_STORAGE_PREFIX = 'selection-lock'
 const LAYOUT_MODE_STORAGE_KEY = 'layout-mode'
+const LAYOUT_SIDE_STORAGE_KEY = 'layout-side'
 
 const readUiDefaultVisible = () => {
     if (typeof window === 'undefined') return false
@@ -67,6 +68,16 @@ export function useUiState({
         }
     })
 
+    const [layoutSide, setLayoutSide] = useState(() => {
+        if (typeof window === 'undefined') return 'right'
+        try {
+            const stored = window.localStorage.getItem(LAYOUT_SIDE_STORAGE_KEY)
+            return ['left', 'right', 'top', 'bottom'].includes(stored) ? stored : 'right'
+        } catch {
+            return 'right'
+        }
+    })
+
     const toggleLayoutMode = useCallback(() => {
         setLayoutMode(prev => {
             const next = prev === 'floating' ? 'split' : 'floating'
@@ -74,6 +85,20 @@ export function useUiState({
                 window.localStorage.setItem(LAYOUT_MODE_STORAGE_KEY, next)
             } catch (error) {
                 console.warn('Could not persist layout mode', error)
+            }
+            return next
+        })
+    }, [])
+
+    const cycleLayoutSide = useCallback(() => {
+        setLayoutSide(prev => {
+            const sides = ['right', 'left', 'bottom', 'top']
+            const currentIndex = sides.indexOf(prev)
+            const next = sides[(currentIndex + 1) % sides.length]
+            try {
+                window.localStorage.setItem(LAYOUT_SIDE_STORAGE_KEY, next)
+            } catch (error) {
+                console.warn('Could not persist layout side', error)
             }
             return next
         })
@@ -187,7 +212,9 @@ export function useUiState({
         isWorldPanelVisible,
         setIsWorldPanelVisible,
         isViewPanelVisible,
-        setIsViewPanelVisible,
+        setIsViewPanelVi,
+        layoutSide,
+        cycleLayoutSidesible,
         isMediaPanelVisible,
         setIsMediaPanelVisible,
         isAssetPanelVisible,

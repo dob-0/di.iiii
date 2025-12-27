@@ -19,6 +19,7 @@ export function EditorLayout({
     isUiVisible,
     layoutMode,
     toggleLayoutMode,
+    layoutSide,
     isWorldPanelVisible,
     isViewPanelVisible,
     isMediaPanelVisible,
@@ -94,7 +95,7 @@ export function EditorLayout({
     }
 
     return (
-        <div className={layoutMode === 'split' ? 'layout-split' : 'layout-floating'}>
+        <div className={`${layoutMode === 'split' ? 'layout-split' : 'layout-floating'} ${layoutMode === 'split' ? `split-${layoutSide}` : ''}`}>
             {menu.visible && (
                 <Menu
                     x={menu.x}

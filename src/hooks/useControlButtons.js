@@ -53,6 +53,8 @@ export function useControlButtons({
     toggleUiDefaultVisible,
     layoutMode,
     toggleLayoutMode,
+    layoutSide,
+    cycleLayoutSide,
     // xr
     isArModeActive,
     arAnchorTransform,
@@ -161,6 +163,14 @@ export function useControlButtons({
             isActive: layoutMode === 'split',
             title: 'Toggle between floating panels and split-screen layout'
         })
+        if (layoutMode === 'split') {
+            displayButtons.push({
+                key: 'layout-side',
+                label: `Side: ${layoutSide.charAt(0).toUpperCase() + layoutSide.slice(1)}`,
+                onClick: cycleLayoutSide,
+                title: 'Cycle dock position (right → left → bottom → top)'
+            })
+        }
 
         const xrButtons = []
         if (isArModeActive) {
@@ -246,6 +256,8 @@ export function useControlButtons({
         toggleUiDefaultVisible,
         layoutMode,
         toggleLayoutMode,
+        layoutSide,
+        cycleLayoutSide,
         isArModeActive,
         arAnchorTransform?.anchored,
         resetArAnchor,

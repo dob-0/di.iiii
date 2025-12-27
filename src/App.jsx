@@ -195,7 +195,9 @@ export default function App() {
         isAdminMode,
         setIsAdminMode,
         layoutMode,
-        toggleLayoutMode
+        toggleLayoutMode,
+        layoutSide,
+        cycleLayoutSide
     } = useUiState({
         spaceId,
         defaults: {
@@ -3086,6 +3088,8 @@ export default function App() {
         toggleUiDefaultVisible,
         layoutMode,
         toggleLayoutMode,
+        layoutSide,
+        cycleLayoutSide,
         isArModeActive,
         arAnchorTransform,
         resetArAnchor,
@@ -3217,6 +3221,7 @@ export default function App() {
                 isUiVisible={isUiVisible}
                 layoutMode={layoutMode}
                 toggleLayoutMode={toggleLayoutMode}
+                layoutSide={layoutSide}
                 isWorldPanelVisible={isWorldPanelVisible}
                 isViewPanelVisible={isViewPanelVisible}
                 isMediaPanelVisible={isMediaPanelVisible}
