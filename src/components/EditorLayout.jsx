@@ -204,7 +204,6 @@ export function EditorLayout({
                                 canCreateGroup={canCreateGroupSelection}
                             />
                         )}
-                        <InspectorPanel />
                     </div>
                 </div>
             )}
