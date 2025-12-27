@@ -1553,15 +1553,73 @@ body,
     height: 100%;
 }
 
+.split-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 8px 8px 0 8px;
+    background: rgba(7, 11, 18, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.split-tab {
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px 8px 0 0;
+    color: rgba(244, 246, 255, 0.8);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.split-tab:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f4f6ff;
+}
+
+.split-tab.active {
+    background: rgba(70, 201, 255, 0.15);
+    border-color: rgba(70, 201, 255, 0.3);
+    color: #46c9ff;
+}
+
+.split-panel-content {
+    height: calc(100% - 48px);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px;
+}
+
+.layout-split .panel-container.split-mode {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 380px;
+    background: rgba(7, 11, 18, 0.95);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    z-index: 50;
+    backdrop-filter: blur(12px);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+}
+
 .layout-split .floating-panel.draggable-panel {
     position: relative !important;
     width: 100% !important;
     max-width: 100% !important;
     transform: none !important;
-    margin-bottom: 8px;
+    margin: 0;
+    border-radius: 12px;
+    box-shadow: none;
 }
 
-.layout-split .panel-container {
+.layout-split .panel-container:not(.split-mode) {
     position: fixed;
     right: 0;
     top: 0;
@@ -1576,6 +1634,22 @@ body,
     backdrop-filter: blur(10px);
 }
 
+.layout-split .panel-container:not(.split-mode) {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 340px;
+    background: rgba(7, 11, 18, 0.92);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 60px 8px 8px 8px;
+    z-index: 50;
+    backdrop-filter: blur(10px);
+}
+
+.layout-split .split-panel-content::-webkit-scrollbar,
 .layout-split .panel-container::-webkit-scrollbar {
     width: 8px;
 }
@@ -1589,6 +1663,23 @@ body,
     border-radius: 4px;
 }
 
+.layout-split .split-panel-content::-webkit-scrollbar,
+.layout-split .panel-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.layout-split .split-panel-content::-webkit-scrollbar-track,
+.layout-split .panel-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.layout-split .split-panel-content::-webkit-scrollbar-thumb,
+.layout-split .panel-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+}
+
+.layout-split .split-panel-content::-webkit-scrollbar-thumb:hover,
 .layout-split .panel-container::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.25);
 }
@@ -1603,14 +1694,17 @@ body,
 
 /* Mobile responsive layout */
 @media (max-width: 768px) {
-    .layout-split .panel-container {
+    .layout-split .panel-container.split-mode {
         width: 100%;
-        height: 50vh;
+        height: 55vh;
         top: auto;
         bottom: 0;
         border-left: none;
         border-top: 1px solid rgba(255, 255, 255, 0.08);
-        padding-top: 8px;
+    }
+    
+    .split-panel-content {
+        height: calc(100% - 44px);
     }
     
     .layout-split .top-right-controls {
@@ -1618,19 +1712,16 @@ body,
         align-items: flex-end;
         gap: 8px;
     }
-    
-    .layout-split .control-cluster {
-        width: auto;
-    }
 }
 
 @media (max-width: 560px) {
-    .layout-split .panel-container {
-        height: 60vh;
+    .layout-split .panel-container.split-mode {
+        height: 65vh;
     }
     
-    .layout-split .floating-panel .panel-content {
-        font-size: 13px;
+    .split-tab {
+        font-size: 12px;
+        padding: 6px 12px;
     }
     
     .layout-split .top-right-controls {

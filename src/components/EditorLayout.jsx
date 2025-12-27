@@ -122,7 +122,87 @@ export function EditorLayout({
                 ))}
             </div>
 
-            {isUiVisible && (
+            {isUiVisible && layoutMode === 'split' && (
+                <div className="panel-container panel-dock-right split-mode">
+                    <div className="split-tabs">
+                        {isWorldPanelVisible && (
+                            <button className="split-tab active" onClick={() => setIsWorldPanelVisible(false)}>World ×</button>
+                        )}
+                        {isViewPanelVisible && (
+                            <button className="split-tab active" onClick={() => setIsViewPanelVisible(false)}>View ×</button>
+                        )}
+                        {isMediaPanelVisible && (
+                            <button className="split-tab active" onClick={() => setIsMediaPanelVisible(false)}>Media ×</button>
+                        )}
+                        {isAssetPanelVisible && (
+                            <button className="split-tab active" onClick={() => setIsAssetPanelVisible(false)}>Assets ×</button>
+                        )}
+                        {isOutlinerPanelVisible && (
+                            <button className="split-tab active" onClick={() => setIsOutlinerPanelVisible(false)}>Outliner ×</button>
+                        )}
+                        {isAdminMode && isSpacesPanelVisible && (
+                            <button className="split-tab active" onClick={() => setIsSpacesPanelVisible(false)}>Spaces ×</button>
+                        )}
+                    </div>
+                    <div className="split-panel-content">
+                        {isWorldPanelVisible && <WorldPanel />}
+                        {isViewPanelVisible && <ViewPanel />}
+                        {isMediaPanelVisible && (
+                            <MediaPanel
+                                preference={mediaOptimizationPreference}
+                                onChange={setMediaOptimizationPreference}
+                                onClose={() => setIsMediaPanelVisible(false)}
+                            />
+                        )}
+                        {isAssetPanelVisible && (
+                            <AssetPanel
+                                onClose={() => setIsAssetPanelVisible(false)}
+                            />
+                        )}
+                        {isOutlinerPanelVisible && (
+                            <OutlinerPanel
+                                objects={objects}
+                                selectionGroups={selectionGroups}
+                                selectedObjectIds={selectedObjectIds}
+                                onSelectObject={handleSelectObjectFromOutliner}
+                                onToggleVisibility={handleToggleObjectVisibility}
+                                onSelectGroup={handleSelectSelectionGroup}
+                                onCreateGroup={() => handleCreateSelectionGroup()}
+                                onDeleteGroup={handleDeleteSelectionGroup}
+                                canCreateGroup={canCreateGroupSelection}
+                                onClose={() => setIsOutlinerPanelVisible(false)}
+                            />
+                        )}
+                        {isAdminMode && isSpacesPanelVisible && (
+                            <SpacesPanel
+                                spaces={spaces}
+                                currentSpaceId={spaceId}
+                                onClose={() => setIsSpacesPanelVisible(false)}
+                                onCreateSpace={() => handleCreateNamedSpace(false)}
+                                onCreatePermanentSpace={() => handleCreateNamedSpace(true)}
+                                onOpenSpace={handleOpenSpace}
+                                onCopyLink={handleCopySpaceLink}
+                                onDeleteSpace={handleDeleteSpace}
+                                onTogglePermanent={handleToggleSpacePermanent}
+                                newSpaceName={newSpaceName}
+                                onSpaceNameChange={setNewSpaceName}
+                                spaceNameFeedback={spaceNameFeedback}
+                                canCreateSpace={canCreateSpace}
+                                ttlHours={tempSpaceTtlHours}
+                                isCreatingSpace={isCreatingSpace}
+                                selectionGroups={selectionGroups}
+                                onCreateGroup={handleCreateSelectionGroup}
+                                onSelectGroup={handleSelectSelectionGroup}
+                                onDeleteGroup={handleDeleteSelectionGroup}
+                                canCreateGroup={canCreateGroupSelection}
+                            />
+                        )}
+                        <InspectorPanel />
+                    </div>
+                </div>
+            )}
+
+            {isUiVisible && layoutMode !== 'split' && (
                 <div className="panel-container panel-dock-right">
                     {isWorldPanelVisible && <WorldPanel />}
                     {isViewPanelVisible && <ViewPanel />}
@@ -176,7 +256,60 @@ export function EditorLayout({
                             canCreateGroup={canCreateGroupSelection}
                         />
                     )}
-                    {layoutMode === 'split' && <InspectorPanel />}
+            {isUiVisible && layoutMode !== 'split' && (
+                <div className="panel-container panel-dock-right">
+                    {isWorldPanelVisible && <WorldPanel />}
+                    {isViewPanelVisible && <ViewPanel />}
+                    {isMediaPanelVisible && (
+                        <MediaPanel
+                            preference={mediaOptimizationPreference}
+                            onChange={setMediaOptimizationPreference}
+                            onClose={() => setIsMediaPanelVisible(false)}
+                        />
+                    )}
+                    {isAssetPanelVisible && (
+                        <AssetPanel
+                            onClose={() => setIsAssetPanelVisible(false)}
+                        />
+                    )}
+                    {isOutlinerPanelVisible && (
+                        <OutlinerPanel
+                            objects={objects}
+                            selectionGroups={selectionGroups}
+                            selectedObjectIds={selectedObjectIds}
+                            onSelectObject={handleSelectObjectFromOutliner}
+                            onToggleVisibility={handleToggleObjectVisibility}
+                            onSelectGroup={handleSelectSelectionGroup}
+                            onCreateGroup={() => handleCreateSelectionGroup()}
+                            onDeleteGroup={handleDeleteSelectionGroup}
+                            canCreateGroup={canCreateGroupSelection}
+                            onClose={() => setIsOutlinerPanelVisible(false)}
+                        />
+                    )}
+                    {isAdminMode && isSpacesPanelVisible && (
+                        <SpacesPanel
+                            spaces={spaces}
+                            currentSpaceId={spaceId}
+                            onClose={() => setIsSpacesPanelVisible(false)}
+                            onCreateSpace={() => handleCreateNamedSpace(false)}
+                            onCreatePermanentSpace={() => handleCreateNamedSpace(true)}
+                            onOpenSpace={handleOpenSpace}
+                            onCopyLink={handleCopySpaceLink}
+                            onDeleteSpace={handleDeleteSpace}
+                            onTogglePermanent={handleToggleSpacePermanent}
+                            newSpaceName={newSpaceName}
+                            onSpaceNameChange={setNewSpaceName}
+                            spaceNameFeedback={spaceNameFeedback}
+                            canCreateSpace={canCreateSpace}
+                            ttlHours={tempSpaceTtlHours}
+                            isCreatingSpace={isCreatingSpace}
+                            selectionGroups={selectionGroups}
+                            onCreateGroup={handleCreateSelectionGroup}
+                            onSelectGroup={handleSelectSelectionGroup}
+                            onDeleteGroup={handleDeleteSelectionGroup}
+                            canCreateGroup={canCreateGroupSelection}
+                        />
+                    )}
                 </div>
             )}
 
