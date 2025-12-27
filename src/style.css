@@ -1592,6 +1592,7 @@ body,
     overflow-y: auto;
     overflow-x: hidden;
     padding: 8px;
+    flex: 1;
 }
 
 .layout-split .panel-container.split-mode {
@@ -1601,6 +1602,16 @@ body,
     backdrop-filter: blur(12px);
     padding: 0;
     display: flex;
+    flex-direction: column;
+}
+
+.split-right .panel-container.split-mode,
+.split-left .panel-container.split-mode {
+    flex-direction: column;
+}
+
+.split-top .panel-container.split-mode,
+.split-bottom .panel-container.split-mode {
     flex-direction: column;
 }
 
@@ -1627,8 +1638,17 @@ body,
     left: 0;
     right: 0;
     top: 0;
-    height: 45vh;
+    height: 50vh;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.split-top .split-tabs {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 0;
+}
+
+.split-top .split-tab {
+    border-radius: 0;
 }
 
 /* Bottom side */
@@ -1636,8 +1656,23 @@ body,
     left: 0;
     right: 0;
     bottom: 0;
-    height: 45vh;
+    height: 50vh;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.split-bottom .split-tabs {
+    border-bottom: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    order: 2;
+    padding: 0 8px 8px 8px;
+}
+
+.split-bottom .split-panel-content {
+    order: 1;
+}
+
+.split-bottom .split-tab {
+    border-radius: 0 0 8px 8px;
 }
 
 .layout-split .floating-panel.draggable-panel {
