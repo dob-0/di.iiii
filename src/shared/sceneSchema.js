@@ -76,13 +76,3 @@ export const normalizeObject = (obj) => {
 
 export const normalizeObjects = (list = []) => list.map(normalizeObject)
 
-// Optional: allow CommonJS consumers if the file is required directly in Node.
-if (typeof module !== 'undefined') {
-    module.exports = {
-        SCENE_DATA_VERSION,
-        defaultScene,
-        normalizeObject,
-        normalizeObjects,
-        generateObjectId
-    }
-}
