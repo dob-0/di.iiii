@@ -9,13 +9,29 @@ Minimal Express server meant to run on the cPanel Node.js environment (Node 22.1
 - `GET /api/events` – last 25 lifecycle events (requests + server start + errors).
 - `GET /api/spaces` – list saved spaces (`id`, `label`, timestamps, permanence).
 - `POST /api/spaces` – create a new space (`{ label, slug, permanent }`).
-- `PATCH /api/spaces/:id` – rename or toggle permanence.
+- `PATCH /api/spaces/:id` – rename a space or toggle permanence/edit access.
 - `DELETE /api/spaces/:id` – remove a space and its persisted data.
 - `POST /api/spaces/:id/touch` – update `lastTouchedAt` to keep temporary spaces alive.
 - `GET /api/spaces/:id/scene` – retrieve the saved scene payload.
 - `PUT /api/spaces/:id/scene` – persist the latest scene JSON.
+- `GET /api/spaces/:id/ops` – fetch scene-op history after a version for catch-up.
+- `POST /api/spaces/:id/ops` – append durable scene ops with optimistic version checks.
 - `POST /api/spaces/:id/assets` – upload an asset blob (multipart field `asset`), returns `{ assetId, mimeType, size, url }`.
 - `GET /api/spaces/:id/assets/:assetId` – stream a stored asset file.
+- `GET /api/spaces/:spaceId/projects` – list V2 projects inside a space.
+- `POST /api/spaces/:spaceId/projects` – create a V2 project in a space.
+- `GET /api/projects/:projectId` – load V2 project metadata.
+- `PATCH /api/projects/:projectId` – rename/update V2 project metadata.
+- `DELETE /api/projects/:projectId` – delete a V2 project.
+- `GET /api/projects/:projectId/document` – read the normalized V2 project document.
+- `PUT /api/projects/:projectId/document` – replace the V2 project document.
+- `GET /api/projects/:projectId/ops` – fetch V2 project op history after a version.
+- `POST /api/projects/:projectId/ops` – append durable V2 project ops with optimistic version checks.
+- `POST /api/projects/:projectId/assets` – upload a V2 project asset blob.
+- `GET /api/projects/:projectId/assets/:assetId` – stream a stored V2 project asset file.
+- `GET /api/projects/:projectId/events` – SSE stream for durable V2 project op updates.
+- `WS <APP_BASE_PATH>/socket.io` – collaborator presence.
+- `GET <APP_BASE_PATH>/api/spaces/:id/events` – SSE stream for durable scene-op updates and catch-up.
 
 ## Scripts
 
@@ -39,6 +55,20 @@ Environment variables live in a `.env` file inside `serverXR/` (see `.env.exampl
 | `SPACES_DIR` | Optional override for the spaces directory. | `<DATA_ROOT>/spaces` |
 | `UPLOADS_DIR` | Optional override for uploaded assets. | `<DATA_ROOT>/uploads` |
 | `SPACE_TTL_MS` | Milliseconds of inactivity before temporary spaces are pruned. | `2592000000` (30 days) |
+| `API_TOKEN` | Token required for write requests (POST/PUT/PATCH/DELETE). | _none_ |
+| `REQUIRE_AUTH` | Enforce `API_TOKEN` for write requests. When unset, it defaults to `true` in production and `false` otherwise. | `NODE_ENV`-aware |
+| `CORS_ORIGINS` | Comma-separated allowlist of origins. Use `*` only for local dev. | _none_ |
+| `MAX_UPLOAD_MB` | Max asset upload size in MB. | `100` |
+
+> **Security note:** In production the server now defaults to rejecting unauthenticated writes unless you explicitly disable `REQUIRE_AUTH`. If a space has `allowEdits=false`, scene, asset, and realtime mutation requests are rejected with `403`.
+
+## Current Collaboration Contract
+
+- The stable baseline for this repo is `LIVE_SYNC_FEATURE_ENABLED=true`.
+- Socket.IO provides collaborator presence under `<APP_BASE_PATH>/socket.io`.
+- Durable collaborative scene edits flow through REST scene ops plus the SSE event stream.
+- Hidden Beta V2 follows the same rule set with `projects`: project ops + SSE are authoritative, while sockets handle project roster/cursors only.
+- Manual publish/reload remains available for full-scene overwrite flows and recovery.
 
 ## Running via PM2 (recommended)
 
@@ -69,5 +99,6 @@ pm2 save                      # optional: auto-start on boot (depends on host)
 ### Storage notes
 
 - Scene + asset data lives under `serverXR/data/spaces/<spaceId>/`.
+- Beta V2 project data lives under `serverXR/data/spaces/<spaceId>/projects/<projectId>/`.
 - Temporary spaces auto-prune after ~30 days of inactivity (`SPACE_TTL_MS` overrides this).
 - Uploaded assets are streamed back from `/api/spaces/:id/assets/:assetId` and include the recorded MIME type.

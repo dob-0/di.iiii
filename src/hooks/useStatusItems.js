@@ -9,13 +9,42 @@ export function useStatusItems({
     mediaOptimizationStatus,
     supportsServerSpaces,
     isOfflineMode,
+    liveSyncFeatureEnabled,
+    isLiveSyncEnabled,
     sceneVersion,
     spaceId,
     canPublishToServer,
-    serverSyncInfo
+    isReadOnly,
+    serverSyncInfo,
+    isSocketConnected,
+    collaborators,
+    participantRoster,
+    isSceneStreamConnected,
+    sceneStreamState,
+    sceneStreamError
 }) {
     return useMemo(() => {
         const list = []
+        const otherParticipants = Array.isArray(participantRoster)
+            ? participantRoster.filter((participant) => !participant.isSelf)
+            : []
+        const collaboratorCount = collaborators?.length || otherParticipants.length || 0
+        const collaboratorSummary = collaboratorCount > 0
+            ? otherParticipants
+                .slice(0, 3)
+                .map((participant) => participant.userName || participant.displayName || participant.userId)
+                .filter(Boolean)
+                .join(', ')
+            : 'No other collaborators online'
+
+        if (isReadOnly) {
+            list.push({
+                key: 'read-only',
+                label: 'Read-only mode',
+                detail: 'Editing locked by admin',
+                showBar: false
+            })
+        }
 
         if (uploadProgress?.active) {
             const percent = uploadProgress.total ? Math.round((uploadProgress.completed / uploadProgress.total) * 100) : 0
@@ -82,13 +111,24 @@ export function useStatusItems({
 
         const serverLabel = (() => {
             if (!supportsServerSpaces || isOfflineMode) return 'Server sync unavailable'
-            if (!sceneVersion || !spaceId) return 'Server sync disabled'
+            if (isReadOnly) return 'Read-only (editing locked)'
+            if (!spaceId) return 'Server sync disabled'
             if (!canPublishToServer) return 'Server sync disabled'
+            if (liveSyncFeatureEnabled && isLiveSyncEnabled && sceneStreamState === 'degraded') return 'Live collaboration degraded'
+            if (liveSyncFeatureEnabled && isLiveSyncEnabled) return 'Live collaboration active'
             return 'Server sync ready'
         })()
         const serverDetail = (() => {
+            if (isReadOnly) return ''
             if (!canPublishToServer || isOfflineMode) return ''
-            if (!serverSyncInfo?.ts) return 'Not synced yet'
+            if (liveSyncFeatureEnabled && isLiveSyncEnabled) {
+                if (sceneStreamState === 'degraded') {
+                    return sceneStreamError || 'Presence is connected, but the scene event stream is reconnecting.'
+                }
+                if (!serverSyncInfo?.ts) return 'Scene edits sync live. Publish is still available for full-scene overwrite.'
+                return `${serverSyncInfo.label} @ ${new Date(serverSyncInfo.ts).toLocaleTimeString()}`
+            }
+            if (!serverSyncInfo?.ts) return 'Live sync is off. Use Publish to sync changes between browsers.'
             return `${serverSyncInfo.label} @ ${new Date(serverSyncInfo.ts).toLocaleTimeString()}`
         })()
         list.push({
@@ -98,6 +138,47 @@ export function useStatusItems({
             detail: serverDetail,
             showBar: false
         })
+
+        if (supportsServerSpaces && !isOfflineMode) {
+            list.push({
+                key: 'presence-status',
+                label: isSocketConnected
+                    ? `Presence connected: ${collaboratorCount} ${collaboratorCount === 1 ? 'collaborator' : 'collaborators'} online`
+                    : 'Presence disconnected',
+                detail: isSocketConnected
+                    ? `${collaboratorSummary}. ${liveSyncFeatureEnabled && isLiveSyncEnabled ? 'Cursor presence uses sockets.' : 'Publish to sync scene changes.'}`
+                    : 'Waiting to reconnect presence and cursor updates.',
+                showBar: false
+            })
+        }
+
+        if (supportsServerSpaces && !isOfflineMode && liveSyncFeatureEnabled && isLiveSyncEnabled) {
+            const streamLabel = (() => {
+                if (sceneStreamState === 'connected') return 'Scene stream connected'
+                if (sceneStreamState === 'connecting') return 'Scene stream connecting'
+                if (sceneStreamState === 'degraded') return 'Scene stream degraded'
+                return 'Scene stream idle'
+            })()
+            const streamDetail = (() => {
+                if (sceneStreamState === 'connected') {
+                    return 'Scene edits sync live through the event stream.'
+                }
+                if (sceneStreamState === 'connecting') {
+                    return 'Presence may be online while the scene event stream catches up.'
+                }
+                if (sceneStreamState === 'degraded') {
+                    return sceneStreamError || 'Presence is online, but scene edits are waiting for the event stream to recover.'
+                }
+                return 'Scene stream is idle.'
+            })()
+            list.push({
+                key: 'scene-stream',
+                label: streamLabel,
+                detail: streamDetail,
+                showBar: false,
+                percent: isSceneStreamConnected ? 100 : 0
+            })
+        }
 
         return list
     }, [
@@ -120,11 +201,19 @@ export function useStatusItems({
         mediaOptimizationStatus?.label,
         supportsServerSpaces,
         isOfflineMode,
-        sceneVersion,
+        liveSyncFeatureEnabled,
+        isLiveSyncEnabled,
         spaceId,
         canPublishToServer,
+        isReadOnly,
         serverSyncInfo?.label,
-        serverSyncInfo?.ts
+        serverSyncInfo?.ts,
+        isSocketConnected,
+        collaborators,
+        participantRoster,
+        isSceneStreamConnected,
+        sceneStreamState,
+        sceneStreamError
     ])
 }
 

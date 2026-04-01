@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { usePanelDrag } from '../hooks/usePanelDrag.js'
 import { usePanelResize } from '../hooks/usePanelResize.js'
 
@@ -39,7 +39,7 @@ export function PanelShell({
                 <h3>{title}</h3>
                 <div className="panel-header-actions">
                     {headerActions}
-                    <button className="close-button" onClick={onClose}>×</button>
+                    <button className="close-button" onClick={onClose}>x</button>
                 </div>
             </div>
 
@@ -53,3 +53,4 @@ export function PanelShell({
 }
 
 export default PanelShell
+

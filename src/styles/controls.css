@@ -1,0 +1,227 @@
+/* --- Top-Right Controls --- */
+.top-right-controls {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 100;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    max-width: 320px;
+    justify-content: flex-end;
+}
+
+.control-cluster {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 100%;
+}
+
+.cluster-label {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.75);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7), 0 -1px 2px rgba(0,0,0,0.25);
+}
+
+.control-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: 100%;
+    justify-content: flex-end;
+}
+
+.control-buttons .toggle-button {
+    min-width: 82px;
+    padding: 5px 9px;
+}
+
+.toggle-button .button-hint {
+    display: inline-flex;
+    margin-left: 6px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.65);
+}
+
+.toggle-button.active {
+    background: linear-gradient(135deg, var(--ui-accent-strong), var(--ui-accent));
+    border-color: rgba(255,255,255,0.35);
+    color: #fff;
+    box-shadow: 0 8px 18px rgba(70,201,255,0.35);
+}
+
+.slider-cluster .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 200px;
+}
+
+.slider-cluster input[type="range"] {
+    flex: 1;
+    accent-color: var(--ui-accent);
+}
+
+.slider-cluster span {
+    font-size: 12px;
+    color: var(--ui-text-primary);
+}
+
+@media (max-width: 560px) {
+    .top-right-controls {
+        max-width: calc(100vw - 20px);
+    }
+    .control-cluster {
+        min-width: 100%;
+    }
+    .control-buttons .toggle-button {
+        min-width: 70px;
+    }
+}
+
+.toggle-button {
+    position: relative;
+    top: auto;
+    right: auto;
+    padding: 6px 12px;
+    min-width: 92px;
+    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--ui-text-primary);
+    background: var(--ui-surface-muted);
+    border: 1px solid var(--ui-border);
+    border-radius: 8px;
+    cursor: pointer;
+    outline: none;
+    box-shadow: var(--ui-shadow);
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, color 0.15s ease;
+}
+.toggle-button:hover {
+    background: var(--ui-surface-highlight);
+    border-color: var(--ui-border-strong);
+    transform: translateY(-1px);
+}
+.toggle-button.success-button {
+    background: linear-gradient(135deg, #0f3f2f, #1a7b58);
+    border-color: rgba(30,203,146,0.45);
+    color: #b6ffe7;
+}
+.toggle-button.success-button:hover {
+    background: linear-gradient(135deg, #14523e, #1fb683);
+    border-color: rgba(82,246,194,0.9);
+}
+.toggle-button.warning-button {
+    background: linear-gradient(135deg, #4a2604, #7a4607);
+    border-color: rgba(255,187,59,0.5);
+    color: #ffdca1;
+}
+.toggle-button.warning-button:hover {
+    background: linear-gradient(135deg, #5f3206, #a4600c);
+    border-color: rgba(255,210,99,0.9);
+}
+.toggle-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: var(--ui-border);
+}
+.admin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.hidden-ui-quick-menu {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    z-index: 105;
+    max-width: min(320px, calc(100vw - 24px));
+    padding: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    background: rgba(8, 13, 22, 0.88);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.28);
+}
+
+.scene-canvas-shell {
+    width: 100%;
+    height: 100%;
+}
+
+.scene-canvas-shell canvas {
+    display: block;
+}
+
+.hidden-ui-quick-header {
+    margin-bottom: 10px;
+    color: rgba(255,255,255,0.72);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+}
+
+.hidden-ui-quick-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.collaboration-cursor-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 95;
+    pointer-events: none;
+}
+
+.collaboration-cursor {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.collaboration-cursor-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    border: 2px solid rgba(255,255,255,0.92);
+    background: linear-gradient(135deg, var(--ui-accent), var(--ui-success));
+    box-shadow: 0 0 0 4px rgba(70, 201, 255, 0.16);
+}
+
+.collaboration-cursor-label {
+    padding: 4px 8px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 999px;
+    background: rgba(10, 16, 28, 0.92);
+    color: var(--ui-text-primary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+}
+
+
+
+/* --- Style for the Clear All button --- */
+.top-right-controls .clear-button {
+    background-color: #e74c3c;
+    color: white;
+    border-color: #e74c3c;
+}
+.top-right-controls .clear-button:hover {
+    background-color: #c0392b;
+    border-color: #c0392b;
+}

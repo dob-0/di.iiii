@@ -1,20 +1,93 @@
-const BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
+const RAW_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
+const API_TOKEN = (import.meta.env.VITE_API_TOKEN || '').trim()
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1'])
+const SERVER_UNAVAILABLE_COOLDOWN_MS = 15000
+let serverUnavailableUntil = 0
 
-export const hasServerApi = Boolean(BASE)
+const normalizeLoopbackBase = (baseUrl = '') => {
+    if (!baseUrl || typeof window === 'undefined') {
+        return baseUrl
+    }
+    try {
+        const url = new URL(baseUrl, window.location.origin)
+        const currentHost = window.location.hostname
+        if (
+            LOOPBACK_HOSTS.has(url.hostname)
+            && LOOPBACK_HOSTS.has(currentHost)
+            && url.hostname !== currentHost
+        ) {
+            url.hostname = currentHost
+        }
+        return url.toString().replace(/\/+$/, '')
+    } catch {
+        return baseUrl
+    }
+}
+
+export const apiBaseUrl = normalizeLoopbackBase(RAW_BASE)
+export const hasServerApi = Boolean(apiBaseUrl)
+
+export const getServerUnavailableRetryDelay = () => Math.max(0, serverUnavailableUntil - Date.now())
+
+export const isServerTemporarilyUnavailable = () => getServerUnavailableRetryDelay() > 0
+
+export const clearServerUnavailable = () => {
+    serverUnavailableUntil = 0
+}
+
+export const markServerUnavailable = (cooldownMs = SERVER_UNAVAILABLE_COOLDOWN_MS) => {
+    serverUnavailableUntil = Date.now() + Math.max(0, Number(cooldownMs) || 0)
+    return getServerUnavailableRetryDelay()
+}
+
+export const isServerNetworkError = (error) => {
+    if (!error) return false
+    const message = String(error?.message || error)
+    return (
+        error instanceof TypeError
+        || /Failed to fetch/i.test(message)
+        || /NetworkError/i.test(message)
+        || /Load failed/i.test(message)
+    )
+}
+
+const createServerUnavailableError = (message, cause = null) => {
+    const error = new Error(message)
+    error.isServerUnavailable = true
+    error.retryAfterMs = getServerUnavailableRetryDelay()
+    if (cause) {
+        error.cause = cause
+    }
+    return error
+}
 
 export async function apiFetch(path, { method = 'GET', headers, body, json = true } = {}) {
     if (!hasServerApi) {
         throw new Error('API base URL is not configured')
     }
-    const url = path.startsWith('http') ? path : `${BASE}${path}`
-    const init = { method, headers: headers ? { ...headers } : {} }
+    if (isServerTemporarilyUnavailable()) {
+        throw createServerUnavailableError('ServerXR is temporarily unavailable.')
+    }
+    const url = path.startsWith('http') ? path : `${apiBaseUrl}${path}`
+    const authHeaders = API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : {}
+    const init = { method, headers: { ...authHeaders, ...(headers ? { ...headers } : {}) } }
     if (body instanceof FormData) {
         init.body = body
     } else if (body !== undefined) {
         init.body = JSON.stringify(body)
         init.headers['Content-Type'] = 'application/json'
     }
-    const response = await fetch(url, init)
+    let response
+    try {
+        response = await fetch(url, init)
+        clearServerUnavailable()
+    } catch (error) {
+        if (isServerNetworkError(error)) {
+            markServerUnavailable()
+            throw createServerUnavailableError('ServerXR is unreachable. Check that the server is running and CORS allows this origin.', error)
+        }
+        throw error
+    }
     if (!response.ok) {
         const text = await response.text()
         let message = text || `Request failed with status ${response.status}`
@@ -41,5 +114,3 @@ export async function apiFetch(path, { method = 'GET', headers, body, json = tru
     }
     return response.json()
 }
-
-export const apiBaseUrl = BASE

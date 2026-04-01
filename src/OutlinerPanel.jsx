@@ -38,6 +38,12 @@ export default function OutlinerPanel({
         })
     }, [objects, query])
 
+    const handleObjectRowKeyDown = (event, objectId) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        event.preventDefault()
+        onSelectObject?.(objectId)
+    }
+
     return (
         <div
             ref={panelRef}
@@ -69,7 +75,10 @@ export default function OutlinerPanel({
                                     'object-row',
                                     isSelected ? 'object-selected' : ''
                                 ].join(' ')}
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => onSelectObject?.(obj.id)}
+                                onKeyDown={(event) => handleObjectRowKeyDown(event, obj.id)}
                             >
                                 <div className="object-row-main">
                                     <span className="object-name">{formatObjectLabel(obj)}</span>

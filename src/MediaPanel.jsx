@@ -1,7 +1,9 @@
-import React from 'react'
+import React, { useId } from 'react'
 import PanelShell from './components/PanelShell.jsx'
 
 export default function MediaPanel({ preference, onChange, onClose }) {
+    const optimizationFieldId = useId()
+
     return (
         <PanelShell
             title="Media Settings"
@@ -19,8 +21,9 @@ export default function MediaPanel({ preference, onChange, onClose }) {
             className="view-panel"
         >
             <div className="prop-row-stacked">
-                <label>Default Optimization</label>
+                <label htmlFor={optimizationFieldId}>Default Optimization</label>
                 <select
+                    id={optimizationFieldId}
                     className="text-input"
                     value={preference}
                     onChange={(e) => onChange(e.target.value)}

@@ -1,0 +1,69 @@
+.asset-panel {
+    width: 240px;
+}
+
+.asset-panel .panel-content {
+    gap: 10px;
+}
+.asset-panel-content {
+    padding-bottom: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.asset-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.asset-row {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px;
+    border: 1px solid var(--ui-border);
+    border-radius: 8px;
+    background: var(--ui-surface);
+}
+.asset-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+.asset-name {
+    font-weight: 600;
+    color: #f4f8ff;
+}
+.asset-tag {
+    font-size: 11px;
+    padding: 1px 5px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: rgba(255,255,255,0.65);
+}
+.asset-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: rgba(255,255,255,0.75);
+}
+.asset-focus-button {
+    align-self: flex-start;
+    padding: 4px 9px;
+    border-radius: 4px;
+    border: 1px solid rgba(0,198,255,0.35);
+    background: rgba(0,198,255,0.2);
+    color: var(--ui-text-primary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+.asset-focus-button:hover:not(:disabled) {
+    background: rgba(0,198,255,0.25);
+}
+.asset-focus-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

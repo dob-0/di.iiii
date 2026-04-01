@@ -1,5 +1,17 @@
 const SCENE_DATA_VERSION = 4
 const VECTOR_SIZE = 3
+const SCENE_SETTINGS_KEYS = [
+  'backgroundColor',
+  'gridSize',
+  'gridAppearance',
+  'renderSettings',
+  'ambientLight',
+  'directionalLight',
+  'transformSnaps',
+  'isGridVisible',
+  'isGizmoVisible',
+  'isPerfVisible'
+]
 
 const ensureVector = (vector, defaults) => {
   const source = Array.isArray(vector) ? vector : []
@@ -79,12 +91,105 @@ const normalizeObject = (obj) => {
 
 const normalizeObjects = (list = []) => list.map(normalizeObject)
 
+const cloneSceneValue = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(cloneSceneValue)
+  }
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, nested]) => [key, cloneSceneValue(nested)])
+    )
+  }
+  return value
+}
+
+const buildBaseScene = (scene) => ({
+  ...defaultScene,
+  ...(scene && typeof scene === 'object' ? cloneSceneValue(scene) : {}),
+  objects: normalizeObjects(scene?.objects || [])
+})
+
+const applySceneOps = (scene, ops = []) => {
+  let nextScene = buildBaseScene(scene)
+  const objectsById = new Map(nextScene.objects.map(obj => [obj.id, obj]))
+
+  const applyPatch = (obj, patch = {}) => ({
+    ...obj,
+    ...cloneSceneValue(patch)
+  })
+
+  ops.forEach((op) => {
+    const payload = op?.payload || {}
+    switch (op?.type) {
+      case 'addObject': {
+        if (!payload.object) break
+        const object = normalizeObject(payload.object)
+        objectsById.set(object.id, object)
+        break
+      }
+      case 'updateObject': {
+        const targetId = payload.objectId
+        if (!targetId || !objectsById.has(targetId)) break
+        const existing = objectsById.get(targetId)
+        objectsById.set(targetId, normalizeObject(applyPatch(existing, payload.patch || {})))
+        break
+      }
+      case 'deleteObject': {
+        const targetId = payload.objectId
+        if (targetId) {
+          objectsById.delete(targetId)
+        }
+        break
+      }
+      case 'setSceneSettings': {
+        SCENE_SETTINGS_KEYS.forEach((key) => {
+          if (key in payload) {
+            nextScene[key] = cloneSceneValue(payload[key])
+          }
+        })
+        break
+      }
+      case 'setView': {
+        if (payload.savedView && typeof payload.savedView === 'object') {
+          nextScene.savedView = {
+            ...(nextScene.savedView || defaultScene.savedView),
+            ...cloneSceneValue(payload.savedView)
+          }
+        }
+        if (payload.default3DView && typeof payload.default3DView === 'object') {
+          nextScene.default3DView = {
+            ...(nextScene.default3DView || defaultScene.default3DView),
+            ...cloneSceneValue(payload.default3DView)
+          }
+        }
+        break
+      }
+      case 'replaceScene': {
+        if (payload.scene && typeof payload.scene === 'object') {
+          nextScene = buildBaseScene(payload.scene)
+          objectsById.clear()
+          nextScene.objects.forEach(obj => objectsById.set(obj.id, obj))
+        }
+        break
+      }
+      default:
+        break
+    }
+  })
+
+  nextScene.objects = Array.from(objectsById.values())
+  return nextScene
+}
+
 module.exports = {
   SCENE_DATA_VERSION,
+  SCENE_SETTINGS_KEYS,
   defaultScene,
   ensureVector,
   ensureExpressions,
+  cloneSceneValue,
   normalizeObject,
   normalizeObjects,
-  generateObjectId
+  generateObjectId,
+  applySceneOps
 }

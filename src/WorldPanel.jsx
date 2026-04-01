@@ -1,12 +1,13 @@
-import React, { useContext } from 'react'
-import { AppContext } from './AppContext.js' // Import context
+import React, { useContext, useId } from 'react'
+import { SceneSettingsContext, UiContext } from './contexts/AppContexts.js'
 import PanelShell from './components/PanelShell.jsx'
 
 export default function WorldPanel() {
+    const fieldPrefix = useId()
     
     // --- Get what we need from context ---
-    const { 
-        backgroundColor, 
+    const {
+        backgroundColor,
         setBackgroundColor,
         gridSize,
         setGridSize,
@@ -15,9 +16,9 @@ export default function WorldPanel() {
         directionalLight,
         setDirectionalLight,
         gridAppearance,
-        setGridAppearance,
-        setIsWorldPanelVisible 
-    } = useContext(AppContext)
+        setGridAppearance
+    } = useContext(SceneSettingsContext)
+    const { setIsWorldPanelVisible } = useContext(UiContext)
 
     const handleGridInput = (key, value, fallback) => {
         const numeric = Number(value)
@@ -60,8 +61,9 @@ export default function WorldPanel() {
             className="world-panel"
         >
             <div className="prop-row">
-                <label>Reset</label>
+                <label htmlFor={`${fieldPrefix}-reset`}>Reset</label>
                 <button 
+                    id={`${fieldPrefix}-reset`}
                     className="toggle-button-small"
                     onClick={resetToDefaults}
                     title="Reset all world settings to defaults"
@@ -70,16 +72,18 @@ export default function WorldPanel() {
                 </button>
             </div>
             <div className="prop-row">
-                <label>Background</label>
+                <label htmlFor={`${fieldPrefix}-background`}>Background</label>
                 <input 
+                    id={`${fieldPrefix}-background`}
                     type="color" 
                     value={backgroundColor}
                     onChange={(e) => setBackgroundColor(e.target.value)}
                 />
             </div>
             <div className="prop-row">
-                <label>Grid Size</label>
+                <label htmlFor={`${fieldPrefix}-grid-size`}>Grid Size</label>
                 <input 
+                    id={`${fieldPrefix}-grid-size`}
                     type="number"
                     min="10"
                     step="10"
@@ -89,8 +93,9 @@ export default function WorldPanel() {
             </div>
 
             <div className="prop-row two-column">
-                <label>Grid Cell Size</label>
+                <label htmlFor={`${fieldPrefix}-grid-cell-size`}>Grid Cell Size</label>
                 <input
+                    id={`${fieldPrefix}-grid-cell-size`}
                     type="number"
                     min="0.1"
                     step="0.05"
@@ -99,8 +104,9 @@ export default function WorldPanel() {
                 />
             </div>
             <div className="prop-row two-column">
-                <label>Grid Thickness</label>
+                <label htmlFor={`${fieldPrefix}-grid-thickness`}>Grid Thickness</label>
                 <input
+                    id={`${fieldPrefix}-grid-thickness`}
                     type="number"
                     min="0.05"
                     step="0.05"
@@ -109,8 +115,9 @@ export default function WorldPanel() {
                 />
             </div>
             <div className="prop-row two-column">
-                <label>Grid Section Size</label>
+                <label htmlFor={`${fieldPrefix}-grid-section-size`}>Grid Section Size</label>
                 <input
+                    id={`${fieldPrefix}-grid-section-size`}
                     type="number"
                     min="1"
                     step="1"
@@ -119,8 +126,9 @@ export default function WorldPanel() {
                 />
             </div>
             <div className="prop-row two-column">
-                <label>Section Thickness</label>
+                <label htmlFor={`${fieldPrefix}-section-thickness`}>Section Thickness</label>
                 <input
+                    id={`${fieldPrefix}-section-thickness`}
                     type="number"
                     min="0.1"
                     step="0.05"
@@ -129,8 +137,9 @@ export default function WorldPanel() {
                 />
             </div>
             <div className="prop-row two-column">
-                <label>Grid Fade Distance</label>
+                <label htmlFor={`${fieldPrefix}-grid-fade-distance`}>Grid Fade Distance</label>
                 <input
+                    id={`${fieldPrefix}-grid-fade-distance`}
                     type="number"
                     min="0"
                     step="1"
@@ -139,8 +148,9 @@ export default function WorldPanel() {
                 />
             </div>
             <div className="prop-row two-column">
-                <label>Grid Fade Strength</label>
+                <label htmlFor={`${fieldPrefix}-grid-fade-strength`}>Grid Fade Strength</label>
                 <input
+                    id={`${fieldPrefix}-grid-fade-strength`}
                     type="number"
                     min="0"
                     max="1"
@@ -150,8 +160,9 @@ export default function WorldPanel() {
                 />
             </div>
             <div className="prop-row two-column">
-                <label>Grid Offset</label>
+                <label htmlFor={`${fieldPrefix}-grid-offset`}>Grid Offset</label>
                 <input
+                    id={`${fieldPrefix}-grid-offset`}
                     type="number"
                     min="0"
                     step="0.005"
@@ -161,16 +172,18 @@ export default function WorldPanel() {
             </div>
 
             <div className="prop-row">
-                <label>Ambient Color</label>
+                <label htmlFor={`${fieldPrefix}-ambient-color`}>Ambient Color</label>
                 <input
+                    id={`${fieldPrefix}-ambient-color`}
                     type="color"
                     value={ambientLight.color}
                     onChange={(e) => setAmbientLight(prev => ({ ...prev, color: e.target.value }))}
                 />
             </div>
             <div className="prop-row">
-                <label>Ambient Intensity</label>
+                <label htmlFor={`${fieldPrefix}-ambient-intensity`}>Ambient Intensity</label>
                 <input
+                    id={`${fieldPrefix}-ambient-intensity`}
                     type="range"
                     min="0"
                     max="2"
@@ -181,16 +194,18 @@ export default function WorldPanel() {
             </div>
 
             <div className="prop-row">
-                <label>Sun Color</label>
+                <label htmlFor={`${fieldPrefix}-sun-color`}>Sun Color</label>
                 <input
+                    id={`${fieldPrefix}-sun-color`}
                     type="color"
                     value={directionalLight.color}
                     onChange={(e) => setDirectionalLight(prev => ({ ...prev, color: e.target.value }))}
                 />
             </div>
             <div className="prop-row">
-                <label>Sun Intensity</label>
+                <label htmlFor={`${fieldPrefix}-sun-intensity`}>Sun Intensity</label>
                 <input
+                    id={`${fieldPrefix}-sun-intensity`}
                     type="range"
                     min="0"
                     max="3"
@@ -200,8 +215,9 @@ export default function WorldPanel() {
                 />
             </div>
             <div className="prop-row">
-                <label>Sun Height</label>
+                <label htmlFor={`${fieldPrefix}-sun-height`}>Sun Height</label>
                 <input
+                    id={`${fieldPrefix}-sun-height`}
                     type="range"
                     min="-20"
                     max="20"
@@ -214,8 +230,9 @@ export default function WorldPanel() {
                 />
             </div>
             <div className="prop-row">
-                <label>Sun Offset</label>
+                <label htmlFor={`${fieldPrefix}-sun-offset`}>Sun Offset</label>
                 <input
+                    id={`${fieldPrefix}-sun-offset`}
                     type="range"
                     min="-20"
                     max="20"

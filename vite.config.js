@@ -1,6 +1,28 @@
 import react from '@vitejs/plugin-react'
 import { transformWithEsbuild } from 'vite'
 import restart from 'vite-plugin-restart'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url))
+const XR_EMULATE_STUB = path.resolve(ROOT_DIR, 'src/xr/emulateStub.js')
+
+const stubXrEmulatorPlugin = () => ({
+    name: 'stub-xr-emulator',
+    enforce: 'pre',
+    resolveId(id, importer) {
+        if (id && id.endsWith('/@pmndrs/xr/dist/emulate.js')) {
+            return XR_EMULATE_STUB
+        }
+        if (id === './emulate.js' && importer) {
+            const normalizedImporter = importer.split('\\').join('/')
+            if (normalizedImporter.includes('/node_modules/@pmndrs/xr/dist/store.js')) {
+                return XR_EMULATE_STUB
+            }
+        }
+        return null
+    }
+})
 
 // Resolve a path to auto-open in the browser.
 // Set VITE_OPEN_SPACE (e.g. "main" or your space slug) or VITE_OPEN_PATH (e.g. "/my-space").
@@ -16,8 +38,15 @@ export default {
     root: 'src/',
     publicDir: '../public/',
     envDir: '../',
+    resolve: {
+        alias: {
+            // Disable XR emulator/dev UI (removes SES + styled-components overhead in production bundles).
+            '@pmndrs/xr/dist/emulate.js': XR_EMULATE_STUB
+        }
+    },
     plugins:
     [
+        stubXrEmulatorPlugin(),
         // Restart server on static/public file change
         restart({ restart: [ '../public/**', ] }),
 
@@ -51,10 +80,60 @@ export default {
     {
         outDir: '../dist', // Output in the dist/ folder
         emptyOutDir: true, // Empty the folder first
-        sourcemap: true // Add sourcemap
+        sourcemap: true, // Add sourcemap
+        // 3D dependencies are large; raise warning threshold while we keep chunks split.
+        chunkSizeWarningLimit: 1500,
+        rollupOptions:
+        {
+            output:
+            {
+                manualChunks(id)
+                {
+                    const normalizedId = id.split('\\').join('/')
+                    if (!normalizedId.includes('node_modules/'))
+                        return
+
+                    const parts = normalizedId.split('node_modules/')[1].split('/')
+                    const pkg = parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0]
+
+                    if (pkg === 'three')
+                        return 'three-core'
+
+                    if (
+                        pkg === '@react-three/xr'
+                        || pkg === '@pmndrs/xr'
+                        || pkg.startsWith('iwer')
+                        || pkg.startsWith('@iwer/')
+                    )
+                        return 'xr-vendor'
+
+                    if (
+                        pkg.startsWith('@react-three')
+                        || pkg.startsWith('three-')
+                        || pkg.startsWith('troika-')
+                        || pkg === 'meshoptimizer'
+                        || pkg === 'meshline'
+                        || pkg === 'r3f-perf'
+                    )
+                        return 'react-three'
+
+                    if (pkg === 'react' || pkg === 'react-dom')
+                        return 'react-vendor'
+
+                    if (pkg === 'jszip' || pkg === 'idb-keyval')
+                        return 'utils-vendor'
+
+                    return 'vendor'
+                }
+            }
+        }
     },
     test:
     {
+        include: [
+            '**/*.{test,spec}.{js,jsx}',
+            '../serverXR/src/**/*.{test,spec}.js'
+        ],
         environment: 'jsdom',
         setupFiles: './setupTests.js',
         globals: true

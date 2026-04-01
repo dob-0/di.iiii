@@ -1,5 +1,17 @@
 export const SCENE_DATA_VERSION = 4
 const VECTOR_SIZE = 3
+export const SCENE_SETTINGS_KEYS = [
+    'backgroundColor',
+    'gridSize',
+    'gridAppearance',
+    'renderSettings',
+    'ambientLight',
+    'directionalLight',
+    'transformSnaps',
+    'isGridVisible',
+    'isGizmoVisible',
+    'isPerfVisible'
+]
 
 const ensureVector = (vector, defaults) => {
     const source = Array.isArray(vector) ? vector : []
@@ -22,14 +34,14 @@ const ensureExpressions = (exprs) => {
 export const defaultScene = {
     version: SCENE_DATA_VERSION,
     objects: [],
-    backgroundColor: '#FFFFF0',
-    gridSize: 1000,
+    backgroundColor: '#f7f6ef',
+    gridSize: 20,
     isGridVisible: true,
     isGizmoVisible: true,
     isPerfVisible: false,
     ambientLight: {
         color: '#ffffff',
-        intensity: 0.6
+        intensity: 0.8
     },
     directionalLight: {
         color: '#ffffff',
@@ -37,18 +49,18 @@ export const defaultScene = {
         position: [10, 10, 5]
     },
     transformSnaps: {
-        translation: 1,
+        translation: 0.1,
         rotation: 15,
         scale: 0.1
     },
     default3DView: {
-        position: [8, 8, 8],
-        target: [0, 0, 0]
+        position: [0, 1.6, 4],
+        target: [0, 1, 0]
     },
     savedView: {
         viewMode: '3D',
-        position: [8, 8, 8],
-        target: [0, 0, 0]
+        position: [0, 1.6, 4],
+        target: [0, 1, 0]
     }
 }
 
@@ -75,4 +87,94 @@ export const normalizeObject = (obj) => {
 }
 
 export const normalizeObjects = (list = []) => list.map(normalizeObject)
+
+export const cloneSceneValue = (value) => {
+    if (Array.isArray(value)) {
+        return value.map(cloneSceneValue)
+    }
+    if (value && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value).map(([key, nested]) => [key, cloneSceneValue(nested)])
+        )
+    }
+    return value
+}
+
+const buildBaseScene = (scene) => ({
+    ...defaultScene,
+    ...(scene && typeof scene === 'object' ? cloneSceneValue(scene) : {}),
+    objects: normalizeObjects(scene?.objects || [])
+})
+
+export const applySceneOps = (scene, ops = []) => {
+    let nextScene = buildBaseScene(scene)
+    const objectsById = new Map(nextScene.objects.map(obj => [obj.id, obj]))
+
+    const applyPatch = (obj, patch = {}) => ({
+        ...obj,
+        ...cloneSceneValue(patch)
+    })
+
+    ops.forEach((op) => {
+        const payload = op?.payload || {}
+        switch (op?.type) {
+            case 'addObject': {
+                if (!payload.object) break
+                const object = normalizeObject(payload.object)
+                objectsById.set(object.id, object)
+                break
+            }
+            case 'updateObject': {
+                const targetId = payload.objectId
+                if (!targetId || !objectsById.has(targetId)) break
+                const existing = objectsById.get(targetId)
+                objectsById.set(targetId, normalizeObject(applyPatch(existing, payload.patch || {})))
+                break
+            }
+            case 'deleteObject': {
+                const targetId = payload.objectId
+                if (targetId) {
+                    objectsById.delete(targetId)
+                }
+                break
+            }
+            case 'setSceneSettings': {
+                SCENE_SETTINGS_KEYS.forEach((key) => {
+                    if (key in payload) {
+                        nextScene[key] = cloneSceneValue(payload[key])
+                    }
+                })
+                break
+            }
+            case 'setView': {
+                if (payload.savedView && typeof payload.savedView === 'object') {
+                    nextScene.savedView = {
+                        ...(nextScene.savedView || defaultScene.savedView),
+                        ...cloneSceneValue(payload.savedView)
+                    }
+                }
+                if (payload.default3DView && typeof payload.default3DView === 'object') {
+                    nextScene.default3DView = {
+                        ...(nextScene.default3DView || defaultScene.default3DView),
+                        ...cloneSceneValue(payload.default3DView)
+                    }
+                }
+                break
+            }
+            case 'replaceScene': {
+                if (payload.scene && typeof payload.scene === 'object') {
+                    nextScene = buildBaseScene(payload.scene)
+                    objectsById.clear()
+                    nextScene.objects.forEach(obj => objectsById.set(obj.id, obj))
+                }
+                break
+            }
+            default:
+                break
+        }
+    })
+
+    nextScene.objects = Array.from(objectsById.values())
+    return nextScene
+}
 

@@ -2,22 +2,28 @@ import { useEffect, useState } from 'react'
 import { getAssetBlob } from '../storage/assetStore.js'
 import { getAssetSourceUrl, streamRemoteAsset } from '../services/assetSources.js'
 
-export function useAssetUrl(assetRef) {
+export function useAssetUrl(assetRef, options = {}) {
     const assetId = assetRef?.id
     const [objectUrl, setObjectUrl] = useState(null)
+    const preferRemoteSource = options?.preferRemoteSource === true
 
     const remoteUrl = assetId ? getAssetSourceUrl(assetId) : null
     const expectedTopLevelType = assetRef?.mimeType ? assetRef.mimeType.split('/')[0] : null
-    const allowedTopLevels = expectedTopLevelType
-        ? [expectedTopLevelType]
-        : ['image', 'video', 'audio']
 
     useEffect(() => {
         let revokedUrl = null
         let isCancelled = false
+        const allowedTopLevels = expectedTopLevelType
+            ? [expectedTopLevelType]
+            : ['image', 'video', 'audio']
 
         if (!assetId) {
             setObjectUrl(null)
+            return () => {}
+        }
+
+        if (preferRemoteSource && remoteUrl) {
+            setObjectUrl(remoteUrl)
             return () => {}
         }
 
@@ -71,7 +77,7 @@ export function useAssetUrl(assetRef) {
                 URL.revokeObjectURL(revokedUrl)
             }
         }
-    }, [assetId, assetRef?.mimeType, assetRef?.name, expectedTopLevelType, remoteUrl])
+    }, [assetId, assetRef?.mimeType, assetRef?.name, expectedTopLevelType, preferRemoteSource, remoteUrl])
 
     return objectUrl
 }

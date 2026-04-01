@@ -1,7 +1,7 @@
 import React, { useContext, useMemo } from 'react'
-import { AppContext } from './AppContext.js'
+import { SceneContext, ActionsContext } from './contexts/AppContexts.js'
 import { getAssetBlob } from './storage/assetStore.js'
-import { getAssetSourceUrl, streamRemoteAsset } from './services/assetSources.js'
+import { streamRemoteAsset } from './services/assetSources.js'
 import { usePanelDrag } from './hooks/usePanelDrag.js'
 import { usePanelResize } from './hooks/usePanelResize.js'
 
@@ -14,11 +14,8 @@ const formatBytes = (bytes) => {
 }
 
 export default function AssetPanel({ onClose }) {
-    const {
-        objects,
-        selectObject,
-        clearSelection
-    } = useContext(AppContext)
+    const { objects, clearSelection } = useContext(SceneContext)
+    const { selectObject } = useContext(ActionsContext)
     const { panelRef, dragProps, dragStyle, isDragging, panelPointerProps } = usePanelDrag({ x: 16, y: 460 }, { baseZ: 100 })
     const { width, height, resizerProps, isResizing } = usePanelResize(320, {
         min: 280,

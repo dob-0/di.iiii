@@ -18,7 +18,7 @@ if (!$space || !$assetId) {
     exit;
 }
 
-$spacesDir = rtrim(getenv('SPACES_DIR') ?: __DIR__ . '/data/spaces', '/');
+$spacesDir = rtrim(getenv('SPACES_DIR') ?: __DIR__ . '/../../serverXR/data/spaces', '/');
 $defaultSceneDir = rtrim(getenv('DEFAULT_SCENE_ASSETS_DIR') ?: dirname(__DIR__) . '/default-scene/assets', '/');
 
 function try_send_file($path, $metaPath = null) {
