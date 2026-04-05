@@ -1,6 +1,6 @@
 # dii Scene Editor
 
-Web-based spatial editor built with React, Vite, Three.js, and an optional Node backend in [serverXR](./serverXR).
+Web-based spatial editor built with React, Vite, Three.js, and an optional Node backend in [serverXR](./serverXR). for realtime colloboration through the network.
 
 This repo currently includes two editors:
 
