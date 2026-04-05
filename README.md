@@ -1,7 +1,19 @@
 # dii Scene Editor
 
-Web-based spatial editor built with React, Vite, Three.js, and an optional Node backend in [serverXR](./serverXR). for realtime colloboration through the network.
 
+Web-based spatial editor built with React, Vite, Three.js, and an optional Node backend in [ServerXR] (./ServerXR) for real-time collaboration through the network.
+
+You can leave your real time feedback in www.thedi.studio space.. or create and play in your ground! 
+Don't trash it, plz! 
+Be ecofriendly. 
+We are going to performance there; write if you interested:
+
+Excited with: https://threejs.org/
+@bruno_simon: https://threejs-journey.com/#
+
+
+write me: d0b@duck.com
+ 
 This repo currently includes two editors:
 
 - `V1` legacy space editor on routes like `/main`
