@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 
 export default function EditorOverlays({
     isUiVisible,
@@ -12,6 +12,14 @@ export default function EditorOverlays({
     statusSummary,
     statusItems
 }) {
+    const [isStatusExpanded, setIsStatusExpanded] = useState(false)
+
+    useEffect(() => {
+        if (!shouldShowStatusPanel) {
+            setIsStatusExpanded(false)
+        }
+    }, [shouldShowStatusPanel])
+
     const renderButton = (button) => {
         const classNames = ['toggle-button']
         if (button.variant === 'success') classNames.push('success-button')
@@ -80,29 +88,43 @@ export default function EditorOverlays({
             )}
 
             {shouldShowStatusPanel && (
-                <div className={statusPanelClassName}>
+                <div className={[statusPanelClassName, isStatusExpanded ? 'is-expanded' : 'is-collapsed'].join(' ')}>
                     <div className="status-header">
                         <div className="status-title">
                             <span className={statusDotClass} aria-hidden="true" />
                             <span>Activity</span>
                         </div>
-                        <div className="status-summary">{statusSummary}</div>
+                        <div className="status-header-actions">
+                            <div className="status-summary">{statusSummary}</div>
+                            <button
+                                type="button"
+                                className="status-toggle-button"
+                                onClick={() => setIsStatusExpanded((prev) => !prev)}
+                                aria-expanded={isStatusExpanded}
+                            >
+                                {isStatusExpanded ? 'Hide' : 'Show'}
+                            </button>
+                        </div>
                     </div>
-                    {statusItems.map(item => (
-                        <div key={item.key} className="status-row">
-                            <div className="status-row-top">
-                                <div className="status-label">{item.label}</div>
-                                {item.detail && <div className="status-detail">{item.detail}</div>}
-                            </div>
-                            {item.showBar !== false && (item.indeterminate || 'percent' in item) && (
-                                <div className={['status-bar', item.indeterminate ? 'indeterminate' : ''].filter(Boolean).join(' ')}>
-                                    {!item.indeterminate && 'percent' in item && (
-                                        <div className="status-progress" style={{ width: `${Math.max(0, Math.min(100, item.percent || 0))}%` }} />
+                    {isStatusExpanded && (
+                        <div className="status-rows">
+                            {statusItems.map(item => (
+                                <div key={item.key} className="status-row">
+                                    <div className="status-row-top">
+                                        <div className="status-label">{item.label}</div>
+                                        {item.detail && <div className="status-detail">{item.detail}</div>}
+                                    </div>
+                                    {item.showBar !== false && (item.indeterminate || 'percent' in item) && (
+                                        <div className={['status-bar', item.indeterminate ? 'indeterminate' : ''].filter(Boolean).join(' ')}>
+                                            {!item.indeterminate && 'percent' in item && (
+                                                <div className="status-progress" style={{ width: `${Math.max(0, Math.min(100, item.percent || 0))}%` }} />
+                                            )}
+                                        </div>
                                     )}
                                 </div>
-                            )}
+                            ))}
                         </div>
-                    ))}
+                    )}
                 </div>
             )}
         </>

@@ -1,4 +1,5 @@
 @import './ViewPanel.css';
+@import './PresentationCanvas.css';
 @import './styles/base.css';
 @import './styles/controls.css';
 @import './styles/inspector-controls.css';

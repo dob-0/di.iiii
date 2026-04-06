@@ -19,6 +19,7 @@ export function useSceneApply({
     setIsGridVisible,
     setIsGizmoVisible,
     setIsPerfVisible,
+    setPresentation,
     setAmbientLight,
     setDirectionalLight,
     setCameraPosition,
@@ -85,6 +86,10 @@ export function useSceneApply({
                         if (!response.ok) {
                             continue
                         }
+                        const contentType = response.headers.get('content-type') || ''
+                        if (contentType.includes('text/html')) {
+                            continue
+                        }
                         return await response.blob()
                     } catch {
                         // try next candidate
@@ -131,6 +136,7 @@ export function useSceneApply({
                 ? sceneData.isPerfVisible
                 : defaultScene.isPerfVisible
         )
+        setPresentation?.(sceneData.presentation || defaultScene.presentation)
         setAmbientLight(sceneData.ambientLight || defaultScene.ambientLight)
         setDirectionalLight(sceneData.directionalLight || defaultScene.directionalLight)
 
@@ -182,6 +188,7 @@ export function useSceneApply({
         setIsGridVisible,
         setIsGizmoVisible,
         setIsPerfVisible,
+        setPresentation,
         setAmbientLight,
         setDirectionalLight,
         setCameraPosition,
@@ -223,6 +230,9 @@ export function useSceneApply({
         if ('isPerfVisible' in patch) {
             setIsPerfVisible(Boolean(patch.isPerfVisible))
         }
+        if ('presentation' in patch) {
+            setPresentation?.(patch.presentation || defaultScene.presentation)
+        }
         if (patch.savedView?.position && patch.savedView?.target) {
             // Do not override local camera position for live patches
             setCameraTarget(patch.savedView.target)
@@ -237,6 +247,7 @@ export function useSceneApply({
         setIsGridVisible,
         setIsGizmoVisible,
         setIsPerfVisible,
+        setPresentation,
         setCameraTarget
     ])
 

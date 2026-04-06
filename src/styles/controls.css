@@ -225,3 +225,190 @@
     background-color: #c0392b;
     border-color: #c0392b;
 }
+
+/* --- Editor Toolbar --- */
+.editor-toolbar {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    right: 18px;
+    z-index: 100;
+    display: flex;
+    justify-content: flex-end;
+    pointer-events: none;
+}
+
+.editor-toolbar-primary {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    max-width: min(1120px, 100%);
+    pointer-events: auto;
+}
+
+.toolbar-button-group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 14px;
+    background: rgba(8, 13, 22, 0.84);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.22);
+}
+
+.toolbar-button-group-segmented .toolbar-button {
+    min-width: 88px;
+}
+
+.toolbar-button,
+.toolbar-space-pill {
+    min-width: auto;
+    padding: 7px 12px;
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+.toolbar-space-pill {
+    max-width: min(320px, 52vw);
+    background: rgba(8, 13, 22, 0.9);
+    border-color: rgba(255,255,255,0.16);
+}
+
+.toolbar-button-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.toolbar-menu-shell {
+    position: relative;
+    pointer-events: auto;
+}
+
+.toolbar-popover {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    min-width: 240px;
+    max-width: min(380px, calc(100vw - 32px));
+    max-height: min(70vh, 560px);
+    overflow-y: auto;
+    padding: 12px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 16px;
+    background: rgba(8, 13, 22, 0.94);
+    backdrop-filter: blur(18px);
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.34);
+}
+
+.toolbar-popover-wide {
+    width: min(360px, calc(100vw - 32px));
+}
+
+.toolbar-popover-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.toolbar-popover-section + .toolbar-popover-section {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.toolbar-popover-heading {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.56);
+}
+
+.toolbar-popover-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.toolbar-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    color: var(--ui-text-primary);
+    font: inherit;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.toolbar-menu-item:hover:not(:disabled) {
+    background: rgba(255,255,255,0.08);
+    border-color: rgba(255,255,255,0.14);
+    transform: translateY(-1px);
+}
+
+.toolbar-menu-item.is-active {
+    border-color: rgba(70, 201, 255, 0.34);
+    background: rgba(70, 201, 255, 0.12);
+}
+
+.toolbar-menu-item:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.toolbar-menu-check {
+    width: 14px;
+    color: #7cf4c4;
+    font-weight: 700;
+}
+
+.toolbar-menu-hint {
+    font-size: 11px;
+    color: rgba(255,255,255,0.58);
+}
+
+@media (max-width: 560px) {
+    .editor-toolbar {
+        left: 12px;
+        right: 12px;
+        top: 12px;
+    }
+
+    .editor-toolbar-primary {
+        justify-content: stretch;
+        width: 100%;
+    }
+
+    .toolbar-space-pill,
+    .toolbar-menu-shell {
+        width: 100%;
+    }
+
+    .toolbar-space-pill {
+        max-width: none;
+    }
+
+    .toolbar-button-group {
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .toolbar-popover,
+    .toolbar-popover-wide {
+        left: 0;
+        right: 0;
+        width: auto;
+        max-width: none;
+    }
+}

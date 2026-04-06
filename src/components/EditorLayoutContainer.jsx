@@ -1,4 +1,4 @@
-import { useContext } from 'react'
+import { useContext, useMemo } from 'react'
 import {
     SceneContext,
     UiContext,
@@ -14,14 +14,14 @@ import EditorLayout from './EditorLayout.jsx'
 
 export default function EditorLayoutContainer({
     handleFileLoad,
-    controlSections,
-    hiddenUiButtons,
+    controlButtons,
     isLoading,
     isFileDragActive,
     mediaOptimizationPreference,
     setMediaOptimizationPreference,
     canCreateGroupSelection,
     xrStore,
+    currentCameraSettings,
     cameraPosition,
     rendererRef,
     remoteCursorMarkers,
@@ -54,7 +54,7 @@ export default function EditorLayoutContainer({
         isGizmoVisible,
         isPointerDragging
     } = useContext(UiContext)
-    const { renderSettings, cameraSettings, selectionGroups } = useContext(SceneSettingsContext)
+    const { renderSettings, selectionGroups, presentation } = useContext(SceneSettingsContext)
     const {
         uploadProgress,
         assetRestoreProgress,
@@ -136,13 +136,139 @@ export default function EditorLayoutContainer({
         isUiVisible
     })
 
+    const {
+        sceneButtons = [],
+        adminButtons = [],
+        displayButtons = [],
+        xrButtons = [],
+        hiddenUiButtons = []
+    } = controlButtons || {}
+
+    const panelEntries = useMemo(() => ([
+        {
+            key: 'view',
+            label: 'View',
+            isVisible: isViewPanelVisible,
+            onToggle: () => setIsViewPanelVisible((prev) => !prev),
+            onClose: () => setIsViewPanelVisible(false),
+            floatingPlacement: 'dock'
+        },
+        {
+            key: 'world',
+            label: 'World',
+            isVisible: isWorldPanelVisible,
+            onToggle: () => setIsWorldPanelVisible((prev) => !prev),
+            onClose: () => setIsWorldPanelVisible(false),
+            floatingPlacement: 'dock'
+        },
+        {
+            key: 'media',
+            label: 'Media',
+            isVisible: isMediaPanelVisible,
+            onToggle: () => setIsMediaPanelVisible((prev) => !prev),
+            onClose: () => setIsMediaPanelVisible(false),
+            floatingPlacement: 'dock'
+        },
+        {
+            key: 'assets',
+            label: 'Assets',
+            isVisible: isAssetPanelVisible,
+            onToggle: () => setIsAssetPanelVisible((prev) => !prev),
+            onClose: () => setIsAssetPanelVisible(false),
+            floatingPlacement: 'dock'
+        },
+        {
+            key: 'outliner',
+            label: 'Outliner',
+            isVisible: isOutlinerPanelVisible,
+            onToggle: () => setIsOutlinerPanelVisible((prev) => !prev),
+            onClose: () => setIsOutlinerPanelVisible(false),
+            floatingPlacement: 'dock'
+        },
+        {
+            key: 'spaces',
+            label: 'Spaces',
+            isVisible: isSpacesPanelVisible,
+            onToggle: () => setIsSpacesPanelVisible((prev) => !prev),
+            onClose: () => setIsSpacesPanelVisible(false),
+            floatingPlacement: 'dock',
+            isAvailable: isAdminMode
+        },
+        {
+            key: 'inspector',
+            label: 'Inspector',
+            isVisible: isInspectorPanelVisible,
+            onToggle: () => setIsInspectorPanelVisible((prev) => !prev),
+            onClose: () => setIsInspectorPanelVisible(false),
+            floatingPlacement: 'overlay'
+        }
+    ].filter((entry) => entry.isAvailable !== false)), [
+        isAdminMode,
+        isAssetPanelVisible,
+        isInspectorPanelVisible,
+        isMediaPanelVisible,
+        isOutlinerPanelVisible,
+        isSpacesPanelVisible,
+        isViewPanelVisible,
+        isWorldPanelVisible,
+        setIsAssetPanelVisible,
+        setIsInspectorPanelVisible,
+        setIsMediaPanelVisible,
+        setIsOutlinerPanelVisible,
+        setIsSpacesPanelVisible,
+        setIsViewPanelVisible,
+        setIsWorldPanelVisible
+    ])
+
+    const toolbarModel = useMemo(() => {
+        const buttonMap = new Map()
+        ;[sceneButtons, displayButtons, adminButtons, xrButtons].flat().forEach((button) => {
+            if (button?.key) {
+                buttonMap.set(button.key, button)
+            }
+        })
+
+        const pick = (...keys) => keys.map((key) => buttonMap.get(key)).filter(Boolean)
+
+        return {
+            spaceButton: buttonMap.get('space-label') || null,
+            fileButtons: pick('save', 'load'),
+            historyButtons: pick('undo', 'redo'),
+            interactionModeButton: buttonMap.get('interaction-mode') || null,
+            presentationButtons: pick('presentation-scene', 'presentation-fixed-camera', 'presentation-code'),
+            overflowSections: [
+                {
+                    key: 'scene',
+                    label: 'Scene',
+                    items: pick('new-space', 'group-selection', 'ungroup-selection', 'preferences', 'offline-mode', 'clear')
+                },
+                {
+                    key: 'display',
+                    label: 'Display',
+                    items: pick('fullscreen', 'status-panel', 'selection-lock', 'ui-default-toggle', 'layout-mode', 'layout-side', 'hide-ui', 'xr-focus')
+                },
+                {
+                    key: 'admin',
+                    label: 'Admin',
+                    items: adminButtons
+                },
+                {
+                    key: 'xr',
+                    label: 'XR',
+                    items: xrButtons
+                }
+            ].filter((section) => Array.isArray(section.items) && section.items.length > 0)
+        }
+    }, [adminButtons, displayButtons, sceneButtons, xrButtons])
+
     return (
         <EditorLayout
             menu={menu}
             setMenu={setMenu}
             fileInputRef={fileInputRef}
             handleFileLoad={handleFileLoad}
-            controlSections={controlSections}
+            toolbarModel={toolbarModel}
+            panelEntries={panelEntries}
             hiddenUiButtons={hiddenUiButtons}
             isUiVisible={isUiVisible}
             layoutMode={layoutMode}
@@ -193,10 +319,11 @@ export default function EditorLayoutContainer({
             isPointerDragging={isPointerDragging}
             clearSelection={clearSelection}
             xrStore={xrStore}
-            currentCameraSettings={cameraSettings}
+            currentCameraSettings={currentCameraSettings}
             cameraPosition={cameraPosition}
             renderSettings={renderSettings}
             rendererRef={rendererRef}
+            presentation={presentation}
             remoteCursorMarkers={remoteCursorMarkers}
             handleCanvasPointerMove={handleCanvasPointerMove}
             handleCanvasPointerLeave={handleCanvasPointerLeave}

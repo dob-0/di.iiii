@@ -127,4 +127,42 @@ describe('useSceneInitializer', () => {
 
         expect(props.setRemoteAssetsManifest).toHaveBeenCalledWith(assets, '/serverXR/api/spaces/main/assets')
     })
+
+    it('prefers the local server asset base over a remote scene asset base on localhost', async () => {
+        const assets = [{ id: 'asset-2', mimeType: 'image/png', name: 'poster.png' }]
+        window.localStorage.setItem('scene:test', JSON.stringify({
+            version: SCENE_DATA_VERSION,
+            sceneVersion: 8,
+            objects: [],
+            assets,
+            assetsBaseUrl: 'https://di-studio.xyz/serverXR/api/spaces/main/assets',
+            backgroundColor: defaultScene.backgroundColor,
+            gridSize: defaultScene.gridSize,
+            gridAppearance: DEFAULT_GRID_APPEARANCE,
+            transformSnaps: defaultScene.transformSnaps,
+            isGridVisible: defaultScene.isGridVisible,
+            isGizmoVisible: defaultScene.isGizmoVisible,
+            isPerfVisible: defaultScene.isPerfVisible,
+            ambientLight: defaultScene.ambientLight,
+            directionalLight: defaultScene.directionalLight,
+            default3DView: defaultScene.default3DView,
+            savedView: defaultScene.savedView,
+            renderSettings: DEFAULT_RENDER_SETTINGS
+        }))
+        const props = {
+            ...createProps(),
+            serverAssetBaseUrl: 'http://localhost:4000/serverXR/api/spaces/main/assets'
+        }
+
+        const { result } = renderHook(() => useSceneInitializer(props))
+
+        await waitFor(() => {
+            expect(result.current.isLoading).toBe(false)
+        })
+
+        expect(props.setRemoteAssetsManifest).toHaveBeenCalledWith(
+            assets,
+            'http://localhost:4000/serverXR/api/spaces/main/assets'
+        )
+    })
 })

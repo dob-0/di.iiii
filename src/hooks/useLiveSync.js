@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createSceneSyncService } from '../services/sceneSyncService.js'
+import { preferLocalAssetsBaseUrl } from '../utils/assetsBaseUrl.js'
 import {
     applySceneOps,
     buildCollaborativeSceneSnapshot,
@@ -46,10 +47,10 @@ export function useLiveSync({
     const [sceneStreamError, setSceneStreamError] = useState(null)
 
     const resolveAssetsBaseUrl = useCallback((sceneData = null) => {
-        if (sceneData?.assetsBaseUrl) {
-            return sceneData.assetsBaseUrl
-        }
-        return serverAssetBaseUrl || undefined
+        return preferLocalAssetsBaseUrl({
+            sceneBaseUrl: sceneData?.assetsBaseUrl || '',
+            serverAssetBaseUrl
+        }) || undefined
     }, [serverAssetBaseUrl])
 
     const setSceneVersionValue = useCallback((version) => {

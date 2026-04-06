@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { defaultScene, SCENE_DATA_VERSION, normalizeObjects } from '../state/sceneStore.js'
+import { preferLocalAssetsBaseUrl } from '../utils/assetsBaseUrl.js'
 
 export function useSceneInitializer({
     sceneStorageKey,
@@ -26,6 +27,7 @@ export function useSceneInitializer({
     setIsGridVisible,
     setIsGizmoVisible,
     setIsPerfVisible,
+    setPresentation,
     setAmbientLight,
     setDirectionalLight,
     setDefault3DView,
@@ -40,10 +42,11 @@ export function useSceneInitializer({
     const [isLoading, setIsLoading] = useState(true)
 
     const getPreferredAssetsBase = useCallback((sceneBaseUrl) => {
-        if (forceServerAssetsBase && serverAssetBaseUrl) {
-            return serverAssetBaseUrl
-        }
-        return sceneBaseUrl || serverAssetBaseUrl || ''
+        return preferLocalAssetsBaseUrl({
+            sceneBaseUrl,
+            serverAssetBaseUrl,
+            forceServerAssetsBase
+        })
     }, [forceServerAssetsBase, serverAssetBaseUrl])
 
     const initializeBlankScene = useCallback(() => {
@@ -71,6 +74,7 @@ export function useSceneInitializer({
         setIsGridVisible(blankScene.isGridVisible)
         setIsGizmoVisible(blankScene.isGizmoVisible)
         setIsPerfVisible(blankScene.isPerfVisible)
+        setPresentation?.(blankScene.presentation)
         setAmbientLight(blankScene.ambientLight)
         setDirectionalLight(blankScene.directionalLight)
         setDefault3DView(blankScene.default3DView)
@@ -95,6 +99,7 @@ export function useSceneInitializer({
         setIsGizmoVisible,
         setIsGridVisible,
         setIsPerfVisible,
+        setPresentation,
         setObjects,
         setRenderSettings,
         setRemoteSceneVersion,
@@ -199,6 +204,7 @@ export function useSceneInitializer({
                         ? sceneData.isPerfVisible
                         : defaultScene.isPerfVisible
                 )
+                setPresentation?.(sceneData.presentation || defaultScene.presentation)
                 setRemoteSceneVersion(null)
 
                 const savedView = sceneData.savedView || defaultScene.savedView
@@ -250,6 +256,7 @@ export function useSceneInitializer({
         setIsGizmoVisible,
         setIsGridVisible,
         setIsPerfVisible,
+        setPresentation,
         setObjects,
         setRenderSettings,
         setRemoteAssetsManifest,

@@ -61,6 +61,9 @@ export function useControlButtons({
     toggleLayoutMode,
     layoutSide,
     cycleLayoutSide,
+    presentationMode,
+    setPresentationMode,
+    handleEnterXrFocus,
     // xr
     isXrPresenting,
     handleEnterXrSession,
@@ -70,6 +73,11 @@ export function useControlButtons({
     showXrDiagnostics
 }) {
     return useMemo(() => {
+        const isSceneView = presentationMode === 'scene'
+        const isFixedCameraView = presentationMode === 'fixed-camera'
+        const isCodeView = presentationMode === 'code'
+        const xrModeBlocked = !isSceneView
+
         const interactionModeButton = {
             key: 'interaction-mode',
             label: interactionMode === 'edit' ? 'Mode: Edit' : 'Mode: Navigate',
@@ -111,8 +119,8 @@ export function useControlButtons({
         if (isUiVisible) {
             sceneButtons.push(
                 { key: 'preferences', label: 'Preferences', onClick: navigateToPreferences },
-                { key: 'save', label: 'Export Scene', onClick: handleSave, hint: 'Cmd/Ctrl+S' },
-                { key: 'load', label: 'Load Scene', onClick: handleLoadClick },
+                { key: 'save', label: 'Export Project', onClick: handleSave, hint: 'Cmd/Ctrl+S' },
+                { key: 'load', label: 'Import Project', onClick: handleLoadClick },
                 { key: 'offline-mode', label: isOfflineMode ? 'Exit Offline' : 'Work Offline', onClick: handleToggleOfflineMode },
                 { key: 'undo', label: 'Undo', onClick: handleUndo, disabled: !canUndo, hint: 'Cmd/Ctrl+Z' },
                 { key: 'redo', label: 'Redo', onClick: handleRedo, disabled: !canRedo, hint: 'Shift+Cmd/Ctrl+Z' },
@@ -160,6 +168,33 @@ export function useControlButtons({
             displayButtons.push({ key: 'fullscreen', label: 'Enter Fullscreen', onClick: handleEnterFullscreen })
         }
         if (isUiVisible) {
+            displayButtons.push({
+                key: 'presentation-scene',
+                label: '3D View',
+                onClick: () => setPresentationMode('scene'),
+                isActive: isSceneView,
+                title: 'Use the normal interactive 3D scene camera.'
+            })
+            displayButtons.push({
+                key: 'presentation-fixed-camera',
+                label: '2D Camera',
+                onClick: () => setPresentationMode('fixed-camera'),
+                isActive: isFixedCameraView,
+                title: 'Lock the scene to a saved presentation camera.'
+            })
+            displayButtons.push({
+                key: 'presentation-code',
+                label: 'Code View',
+                onClick: () => setPresentationMode('code'),
+                isActive: isCodeView,
+                title: 'Show this space as a flat 2D/code-driven presentation.'
+            })
+            displayButtons.push({
+                key: 'xr-focus',
+                label: 'XR Focus',
+                onClick: handleEnterXrFocus,
+                title: 'Hide the editor UI and switch to the 3D scene so only XR controls remain.'
+            })
             displayButtons.push({ key: 'hide-ui', label: 'Hide UI', onClick: () => setIsUiVisible(false), variant: 'warning' })
             displayButtons.push({
                 key: 'status-panel',
@@ -204,15 +239,19 @@ export function useControlButtons({
                         key: 'enter-vr',
                         label: 'Enter VR',
                         onClick: () => handleEnterXrSession('vr'),
-                        disabled: !supportedXrModes.vr,
-                        title: !supportedXrModes.vr ? 'VR is not supported on this device or browser.' : undefined
+                        disabled: !supportedXrModes.vr || xrModeBlocked,
+                        title: xrModeBlocked
+                            ? 'Switch back to 3D View or use XR Focus before entering immersive mode.'
+                            : (!supportedXrModes.vr ? 'VR is not supported on this device or browser.' : undefined)
                     },
                     {
                         key: 'enter-ar',
                         label: 'Enter AR',
                         onClick: () => handleEnterXrSession('ar'),
-                        disabled: !supportedXrModes.ar,
-                        title: !supportedXrModes.ar ? 'AR is not supported on this device or browser.' : undefined
+                        disabled: !supportedXrModes.ar || xrModeBlocked,
+                        title: xrModeBlocked
+                            ? 'Switch back to 3D View or use XR Focus before entering immersive mode.'
+                            : (!supportedXrModes.ar ? 'AR is not supported on this device or browser.' : undefined)
                     }
                 ]
             }
@@ -224,17 +263,27 @@ export function useControlButtons({
             }]
         }
 
-        const xrButtons = isUiVisible ? buildXrSessionButtons() : []
+        const xrButtons = isUiVisible ? [
+            ...buildXrSessionButtons(),
+            ...(showXrDiagnostics ? [{
+                key: 'xr-debug',
+                label: 'XR Debug',
+                onClick: showXrDiagnostics,
+                title: 'Copy XR diagnostics for support and session checks'
+            }] : [])
+        ] : []
         const hiddenUiButtons = !isUiVisible
             ? [
                 { key: 'show-ui', label: 'Show UI', onClick: () => setIsUiVisible(true), variant: 'success' },
-                ...buildXrSessionButtons(),
-                ...(showXrDiagnostics ? [{
-                    key: 'xr-debug',
-                    label: 'XR Debug',
-                    onClick: showXrDiagnostics,
-                    title: 'Copy XR diagnostics for support and session checks'
-                }] : [])
+                ...(!isSceneView
+                    ? [{
+                        key: 'switch-3d-view',
+                        label: '3D View',
+                        onClick: () => setPresentationMode('scene'),
+                        title: 'Return to the 3D scene while the UI stays hidden.'
+                    }]
+                    : []),
+                ...(isXrPresenting ? buildXrSessionButtons() : [])
             ]
             : []
 
@@ -296,6 +345,9 @@ export function useControlButtons({
         toggleLayoutMode,
         layoutSide,
         cycleLayoutSide,
+        presentationMode,
+        setPresentationMode,
+        handleEnterXrFocus,
         isXrPresenting,
         handleEnterXrSession,
         supportedXrModes?.vr,

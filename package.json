@@ -9,6 +9,7 @@
     "dev:server": "npm --prefix serverXR run dev",
     "build": "vite build",
     "deploy:cpanel": "node scripts/stage-cpanel-release.mjs",
+    "sync:space-assets": "node scripts/sync-space-assets.mjs",
     "preview": "vite preview",
     "lint": "eslint src --ext .js,.jsx",
     "test": "vitest run",

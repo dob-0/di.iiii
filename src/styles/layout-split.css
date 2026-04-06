@@ -50,6 +50,10 @@
     flex: 1;
 }
 
+.split-panel-section + .split-panel-section {
+    margin-top: 12px;
+}
+
 .layout-split .panel-container.split-mode {
     position: fixed;
     background: rgba(7, 11, 18, 0.95);
@@ -213,17 +217,17 @@
     display: none;
 }
 
-.layout-split .top-right-controls {
+.layout-split .editor-toolbar {
     right: 450px;
 }
 
-.split-left .top-right-controls {
+.split-left .editor-toolbar {
     left: 450px;
     right: auto;
 }
 
-.split-top .top-right-controls,
-.split-bottom .top-right-controls {
+.split-top .editor-toolbar,
+.split-bottom .editor-toolbar {
     right: 18px;
 }
 
@@ -244,8 +248,8 @@
         border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
     
-    .layout-split .top-right-controls,
-    .split-left .top-right-controls {
+    .layout-split .editor-toolbar,
+    .split-left .editor-toolbar {
         right: 18px;
         left: auto;
     }
@@ -254,10 +258,9 @@
         height: calc(100% - 44px);
     }
     
-    .layout-split .top-right-controls {
-        flex-direction: column;
-        align-items: flex-end;
-        gap: 8px;
+    .layout-split .editor-toolbar-primary {
+        width: 100%;
+        justify-content: flex-end;
     }
 }
 
@@ -280,4 +283,3 @@
         right: 8px;
     }
 }
-

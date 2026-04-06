@@ -23,7 +23,7 @@ describe('assetSources', () => {
         })
 
         expect(candidates[0]).toBe('https://di-studio.xyz/serverXR/api/spaces/main/assets/asset-1')
-        expect(candidates.some((url) => /\/api\/spaces\/main\/assets\/asset-1$/.test(url) && !url.includes('/serverXR/api/'))).toBe(true)
+        expect(candidates).not.toContain('/api/spaces/main/assets/asset-1')
     })
 
     it('prefers the mounted API base for legacy relative asset bases', () => {
@@ -33,7 +33,7 @@ describe('assetSources', () => {
         )
 
         expect(candidates[0]).toBe('https://di-studio.xyz/serverXR/api/spaces/main/assets/asset-2')
-        expect(candidates).toContain('/api/spaces/main/assets/asset-2')
+        expect(candidates).not.toContain('/api/spaces/main/assets/asset-2')
     })
 
     it('registers the corrected mounted path as the primary source', () => {

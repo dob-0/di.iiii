@@ -16,7 +16,6 @@ import { useRenderSettings, DEFAULT_RENDER_SETTINGS } from './hooks/useRenderSet
 import { getSceneStorageKey, persistSceneToLocalStorage } from './storage/scenePersistence.js'
 import EditorLayoutContainer from './components/EditorLayoutContainer.jsx'
 import PreferencesPage from './components/PreferencesPage.jsx'
-import { useControlSections } from './hooks/useControlSections.js'
 import { useControlButtons } from './hooks/useControlButtons.js'
 import { useSpaceLabel } from './hooks/useSpaceLabel.js'
 import { useSpacesController } from './hooks/useSpacesController.js'
@@ -36,6 +35,7 @@ import { useAssetRestore } from './hooks/useAssetRestore.js'
 import { useSceneActions } from './hooks/useSceneActions.js'
 import { useSyncPreferences } from './hooks/useSyncPreferences.js'
 import { useServerEndpoints } from './hooks/useServerEndpoints.js'
+import { usePresentationState } from './hooks/usePresentationState.js'
 import { APP_PAGE_PREFERENCES, buildAppSpacePath } from './utils/spaceRouting.js'
 import { useFullscreen } from './hooks/useFullscreen.js'
 import { usePointerTransform } from './hooks/usePointerTransform.js'
@@ -88,6 +88,40 @@ function AppInner() {
         defaultGridAppearance: DEFAULT_GRID_APPEARANCE,
         perspectiveCameraSettings
     })
+    const {
+        presentation,
+        setPresentation,
+        presentationMode,
+        setPresentationMode,
+        presentationSourceType,
+        setPresentationSourceType,
+        presentationUrl,
+        setPresentationUrl,
+        presentationHtml,
+        setPresentationHtml,
+        presentationFixedCamera,
+        setPresentationFixedCamera
+    } = usePresentationState(defaultScene.presentation)
+    const isFixedCameraMode = presentationMode === 'fixed-camera'
+    const activeFixedCamera = presentationFixedCamera || defaultScene.presentation.fixedCamera
+    const effectiveCameraSettings = useMemo(() => (
+        isFixedCameraMode
+            ? {
+                orthographic: activeFixedCamera.projection === 'orthographic',
+                position: activeFixedCamera.position,
+                fov: activeFixedCamera.fov,
+                zoom: activeFixedCamera.zoom,
+                near: activeFixedCamera.near,
+                far: activeFixedCamera.far
+            }
+            : sceneSettings.cameraSettings
+    ), [activeFixedCamera, isFixedCameraMode, sceneSettings.cameraSettings])
+    const effectiveCameraPosition = isFixedCameraMode
+        ? activeFixedCamera.position
+        : sceneSettings.cameraPosition
+    const effectiveCameraTarget = isFixedCameraMode
+        ? activeFixedCamera.target
+        : sceneSettings.cameraTarget
 
     const sceneStore = useSceneStore({ initialObjects: defaultScene.objects, initialVersion: 0 })
     const {
@@ -235,6 +269,8 @@ function AppInner() {
     const remoteAssetsRef = useRef(null)
     const remoteAssetsBaseRef = useRef('')
     const {
+        remoteAssetsManifest,
+        remoteAssetsBaseUrl,
         resetRemoteAssets,
         setRemoteAssetsManifest,
         resetAssetStoreQuotaState,
@@ -299,6 +335,7 @@ function AppInner() {
         setIsGridVisible,
         setIsGizmoVisible,
         setIsPerfVisible,
+        setPresentation,
         setAmbientLight: sceneSettings.setAmbientLight,
         setDirectionalLight: sceneSettings.setDirectionalLight,
         setCameraPosition: sceneSettings.setCameraPosition,
@@ -337,6 +374,7 @@ function AppInner() {
         setIsGridVisible,
         setIsGizmoVisible,
         setIsPerfVisible,
+        setPresentation,
         setAmbientLight: sceneSettings.setAmbientLight,
         setDirectionalLight: sceneSettings.setDirectionalLight,
         setDefault3DView: sceneSettings.setDefault3DView,
@@ -387,6 +425,7 @@ function AppInner() {
         ambientLight: sceneSettings.ambientLight,
         directionalLight: sceneSettings.directionalLight,
         transformSnaps: sceneSettings.transformSnaps,
+        presentation,
         default3DView: sceneSettings.default3DView,
         applyRemoteScene,
         applyScenePatch,
@@ -398,6 +437,7 @@ function AppInner() {
         setGridAppearance: sceneSettings.setGridAppearance,
         setRenderSettings,
         setTransformSnaps: sceneSettings.setTransformSnaps,
+        setPresentation,
         setAmbientLight: sceneSettings.setAmbientLight,
         setDirectionalLight: sceneSettings.setDirectionalLight,
         setDefault3DView: sceneSettings.setDefault3DView,
@@ -428,6 +468,12 @@ function AppInner() {
         ambientLight: sceneSettings.ambientLight,
         directionalLight: sceneSettings.directionalLight,
         default3DView: sceneSettings.default3DView,
+        presentation: {
+            mode: presentation.mode,
+            sourceType: presentation.sourceType,
+            url: presentation.url,
+            fixedCamera: presentation.fixedCamera
+        },
         cameraPosition: sceneSettings.cameraPosition,
         cameraTarget: sceneSettings.cameraTarget
     }), [
@@ -444,6 +490,7 @@ function AppInner() {
         sceneSettings.ambientLight,
         sceneSettings.directionalLight,
         sceneSettings.default3DView,
+        presentation,
         sceneSettings.cameraPosition,
         sceneSettings.cameraTarget
     ])
@@ -459,6 +506,13 @@ function AppInner() {
         setIsGridVisible(typeof snapshot.isGridVisible === 'boolean' ? snapshot.isGridVisible : defaultScene.isGridVisible)
         setIsGizmoVisible(typeof snapshot.isGizmoVisible === 'boolean' ? snapshot.isGizmoVisible : defaultScene.isGizmoVisible)
         setIsPerfVisible(typeof snapshot.isPerfVisible === 'boolean' ? snapshot.isPerfVisible : defaultScene.isPerfVisible)
+        if (snapshot.presentation) {
+            setPresentation((prev) => ({
+                ...prev,
+                ...snapshot.presentation,
+                fixedCamera: snapshot.presentation.fixedCamera || prev.fixedCamera
+            }))
+        }
         sceneSettings.setAmbientLight(snapshot.ambientLight || defaultScene.ambientLight)
         sceneSettings.setDirectionalLight(snapshot.directionalLight || defaultScene.directionalLight)
         sceneSettings.setDefault3DView(snapshot.default3DView || defaultScene.default3DView)
@@ -473,7 +527,8 @@ function AppInner() {
         setRenderSettings,
         setIsGizmoVisible,
         setIsGridVisible,
-        setIsPerfVisible
+        setIsPerfVisible,
+        setPresentation
     ])
     const { canUndo, canRedo, handleUndo, handleRedo } = useSceneHistory({
         snapshot: sceneHistorySnapshot,
@@ -551,10 +606,12 @@ function AppInner() {
     useCameraControls({
         controlsRef,
         isLoading,
-        cameraPosition: sceneSettings.cameraPosition,
-        cameraTarget: sceneSettings.cameraTarget,
+        cameraSettings: effectiveCameraSettings,
+        cameraPosition: effectiveCameraPosition,
+        cameraTarget: effectiveCameraTarget,
         setCameraPosition: sceneSettings.setCameraPosition,
-        setCameraTarget: sceneSettings.setCameraTarget
+        setCameraTarget: sceneSettings.setCameraTarget,
+        captureCameraChanges: presentationMode === 'scene'
     })
 
     // This hook is for keydown events
@@ -577,6 +634,7 @@ function AppInner() {
         mediaOptimizationPreference,
         setMediaOptimizationPreference,
         mediaOptimizationStatus,
+        handleBatchMediaOptimization,
         handleAssetFilesUpload,
         handleManualMediaOptimization,
         uploadAssetToServer
@@ -611,12 +669,14 @@ function AppInner() {
         cameraTarget: sceneSettings.cameraTarget,
         setCameraPosition: sceneSettings.setCameraPosition,
         setCameraTarget: sceneSettings.setCameraTarget,
+        captureSavedViewFromControls: presentationMode === 'scene',
         objects,
         backgroundColor: sceneSettings.backgroundColor,
         gridSize: sceneSettings.gridSize,
         gridAppearance: sceneSettings.gridAppearance,
         renderSettings,
         transformSnaps: sceneSettings.transformSnaps,
+        presentation,
         isGridVisible,
         isGizmoVisible,
         isPerfVisible,
@@ -627,6 +687,8 @@ function AppInner() {
         sceneVersion,
         remoteAssetsRef,
         remoteAssetsBaseRef,
+        remoteAssetsManifest,
+        remoteAssetsBaseUrl,
         persistSceneDataWithStatus,
         updateSceneSignature,
         shouldSyncServerScene: !LIVE_SYNC_FEATURE_ENABLED && shouldSyncServerScene,
@@ -652,6 +714,7 @@ function AppInner() {
         setIsGridVisible,
         setIsGizmoVisible,
         setIsPerfVisible,
+        setPresentation,
         setAmbientLight: sceneSettings.setAmbientLight,
         setDirectionalLight: sceneSettings.setDirectionalLight,
         setDefault3DView: sceneSettings.setDefault3DView,
@@ -696,6 +759,7 @@ function AppInner() {
         setDefault3DView: sceneSettings.setDefault3DView,
         setGridAppearance: sceneSettings.setGridAppearance,
         setTransformSnaps: sceneSettings.setTransformSnaps,
+        setPresentation,
         setRemoteSceneVersion,
         resetRemoteAssets,
         setIsGridVisible,
@@ -763,6 +827,12 @@ function AppInner() {
         markServerSync
     })
 
+    const handleEnterXrFocus = useCallback(() => {
+        setPresentationMode('scene')
+        setIsStatusPanelVisible(false)
+        setIsUiVisible(false)
+    }, [setIsStatusPanelVisible, setIsUiVisible, setPresentationMode])
+
     const xrControlButtonsProps = useMemo(() => ({
         isXrPresenting: xrContextValue.isXrPresenting ?? false,
         handleEnterXrSession: xrContextValue.handleEnterXrSession,
@@ -781,7 +851,6 @@ function AppInner() {
 
     const {
         sceneButtons,
-        panelButtons,
         adminButtons,
         displayButtons,
         xrButtons,
@@ -843,16 +912,10 @@ function AppInner() {
         toggleLayoutMode,
         layoutSide,
         cycleLayoutSide,
+        presentationMode,
+        setPresentationMode,
+        handleEnterXrFocus,
         ...xrControlButtonsProps
-    })
-
-    const controlSections = useControlSections({
-        isUiVisible,
-        sceneButtons,
-        panelButtons,
-        adminButtons,
-        displayButtons,
-        xrButtons
     })
 
     const sceneSettingsContext = useMemo(() => ({
@@ -873,10 +936,43 @@ function AppInner() {
         setGridAppearance: sceneSettings.setGridAppearance,
         renderSettings,
         setRenderSettings,
+        presentation,
+        setPresentation,
+        presentationMode,
+        setPresentationMode,
+        presentationSourceType,
+        setPresentationSourceType,
+        presentationUrl,
+        setPresentationUrl,
+        presentationHtml,
+        setPresentationHtml,
+        presentationFixedCamera,
+        setPresentationFixedCamera,
+        cameraPosition: sceneSettings.cameraPosition,
+        cameraTarget: sceneSettings.cameraTarget,
         selectionGroups,
         canUndo,
         canRedo
-    }), [sceneSettings, renderSettings, selectionGroups, canUndo, canRedo, setRenderSettings])
+    }), [
+        sceneSettings,
+        renderSettings,
+        setRenderSettings,
+        presentation,
+        setPresentation,
+        presentationMode,
+        setPresentationMode,
+        presentationSourceType,
+        setPresentationSourceType,
+        presentationUrl,
+        setPresentationUrl,
+        presentationHtml,
+        setPresentationHtml,
+        presentationFixedCamera,
+        setPresentationFixedCamera,
+        selectionGroups,
+        canUndo,
+        canRedo
+    ])
 
     const syncState = useMemo(() => ({
         liveSyncFeatureEnabled: LIVE_SYNC_FEATURE_ENABLED,
@@ -897,6 +993,9 @@ function AppInner() {
         serverAssetSyncProgress,
         serverAssetSyncPending,
         mediaOptimizationStatus,
+        remoteAssetsManifest,
+        remoteAssetsBaseUrl,
+        setRemoteAssetsManifest,
         isStatusPanelVisible,
         setIsStatusPanelVisible,
         displayName,
@@ -928,6 +1027,9 @@ function AppInner() {
         serverAssetSyncProgress,
         serverAssetSyncPending,
         mediaOptimizationStatus,
+        remoteAssetsManifest,
+        remoteAssetsBaseUrl,
+        setRemoteAssetsManifest,
         isStatusPanelVisible,
         setIsStatusPanelVisible,
         displayName,
@@ -981,6 +1083,7 @@ function AppInner() {
         resetAxisLock,
         toggleAdminMode,
         requestManualMediaOptimization: guardEditAction(handleManualMediaOptimization),
+        requestBatchMediaOptimization: guardEditAction(handleBatchMediaOptimization),
         copySelectedObject,
         pasteClipboardObject: guardEditAction(pasteClipboardObject),
         cutSelectedObject: guardEditAction(cutSelectedObject),
@@ -1018,6 +1121,7 @@ function AppInner() {
         resetAxisLock,
         toggleAdminMode,
         handleManualMediaOptimization,
+        handleBatchMediaOptimization,
         copySelectedObject,
         pasteClipboardObject,
         cutSelectedObject,
@@ -1045,22 +1149,32 @@ function AppInner() {
 
     const editorLayoutProps = useMemo(() => ({
         handleFileLoad,
-        controlSections,
-        hiddenUiButtons,
+        controlButtons: {
+            sceneButtons,
+            adminButtons,
+            displayButtons,
+            xrButtons,
+            hiddenUiButtons
+        },
         isLoading,
         isFileDragActive,
         mediaOptimizationPreference,
         setMediaOptimizationPreference,
         canCreateGroupSelection,
         xrStore,
-        cameraPosition: sceneSettings.cameraPosition,
+        currentCameraSettings: effectiveCameraSettings,
+        cameraPosition: effectiveCameraPosition,
         rendererRef,
+        presentation,
         remoteCursorMarkers,
         handleCanvasPointerMove,
         handleCanvasPointerLeave
     }), [
         handleFileLoad,
-        controlSections,
+        sceneButtons,
+        adminButtons,
+        displayButtons,
+        xrButtons,
         hiddenUiButtons,
         isLoading,
         isFileDragActive,
@@ -1068,8 +1182,10 @@ function AppInner() {
         setMediaOptimizationPreference,
         canCreateGroupSelection,
         xrStore,
-        sceneSettings.cameraPosition,
+        effectiveCameraSettings,
+        effectiveCameraPosition,
         rendererRef,
+        presentation,
         remoteCursorMarkers,
         handleCanvasPointerMove,
         handleCanvasPointerLeave

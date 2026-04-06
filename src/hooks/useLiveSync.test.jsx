@@ -229,6 +229,46 @@ describe('useLiveSync', () => {
         })
     })
 
+    it('prefers the local server asset base when a remote replacement scene carries production asset urls', async () => {
+        const baseProps = createBaseProps()
+        let eventHandlers = null
+        connectMock.mockImplementation((handlers) => {
+            eventHandlers = handlers
+        })
+
+        renderHook(() => useLiveSync(baseProps))
+
+        const replacementScene = {
+            ...createScene(),
+            assetsBaseUrl: 'https://di-studio.xyz/serverXR/api/spaces/main/assets',
+            assets: [{ id: 'asset-remote', mimeType: 'image/png', name: 'poster.png' }]
+        }
+
+        act(() => {
+            eventHandlers.onPatch({
+                version: 5,
+                ops: [{
+                    opId: 'replace-remote-assets',
+                    clientId: 'client-b',
+                    type: 'replaceScene',
+                    payload: {
+                        scene: replacementScene
+                    }
+                }]
+            })
+        })
+
+        await waitFor(() => {
+            expect(baseProps.applyRemoteScene).toHaveBeenCalledTimes(1)
+        })
+
+        expect(baseProps.applyRemoteScene).toHaveBeenCalledWith(replacementScene, {
+            silent: true,
+            assetsBaseUrl: '/serverXR/api/spaces/main/assets',
+            serverVersion: 5
+        })
+    })
+
     it('uses the server asset base when live sync reloads the full scene', async () => {
         const replacementScene = {
             ...createScene(),

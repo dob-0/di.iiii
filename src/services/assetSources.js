@@ -3,12 +3,16 @@ import { normalizeSpaceId } from '../utils/spaceNames.js'
 
 const assetSourceMap = new Map()
 const MAX_CONCURRENT_STREAMS = 3
+const STREAM_FAILURE_COOLDOWN_MS = 5000
 const streamQueue = []
+const streamRequestMap = new Map()
+const streamFailureMap = new Map()
 let activeStreams = 0
 
 const trimTrailingSlash = (value = '') => value.replace(/\/+$/, '')
 const ensureLeadingSlash = (value = '') => (value.startsWith('/') ? value : `/${value}`)
 const isAbsolute = (value = '') => /^https?:\/\//i.test(value)
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '::1'])
 
 const SERVER_ASSET_BASE_REGEX = /\/api\/spaces\/[^/]+\/assets$/i
 const SPACE_API_SEGMENT_REGEX = /(\/api\/spaces\/)([^/]+)(?=\/|$)/i
@@ -40,6 +44,48 @@ const extractApiPath = (pathname = '') => {
     const normalizedPathname = String(pathname || '')
     const apiIndex = normalizedPathname.indexOf('/api/')
     return apiIndex >= 0 ? normalizedPathname.slice(apiIndex) : ''
+}
+
+const resolveUrl = (value = '') => {
+    if (!value || typeof window === 'undefined' || !window.location?.origin) {
+        return null
+    }
+    try {
+        return new URL(value, window.location.origin)
+    } catch {
+        return null
+    }
+}
+
+const isLoopbackUrl = (url) => LOOPBACK_HOSTS.has(String(url?.hostname || '').toLowerCase())
+
+const shouldPreferMountedCandidate = (rawValue = '', mountedValue = '') => {
+    if (!rawValue || !mountedValue) {
+        return false
+    }
+    if (!extractApiPath(extractPathname(rawValue))) {
+        return false
+    }
+    const mountedUrl = resolveUrl(mountedValue)
+    if (!mountedUrl) {
+        return false
+    }
+    if (!isAbsolute(rawValue)) {
+        return true
+    }
+    const rawUrl = resolveUrl(rawValue)
+    const currentUrl = resolveUrl(window.location?.href || '')
+    if (!rawUrl || !currentUrl) {
+        return false
+    }
+    if (rawUrl.toString() === mountedUrl.toString()) {
+        return false
+    }
+    return (
+        isLoopbackUrl(currentUrl)
+        && isLoopbackUrl(mountedUrl)
+        && rawUrl.origin !== mountedUrl.origin
+    )
 }
 
 const normalizeSpacePathname = (pathname = '') => {
@@ -101,6 +147,8 @@ const enqueueStream = (runner) => {
 
 export function registerAssetSources(assets = [], baseUrl = '', fallbackBases = []) {
     assetSourceMap.clear()
+    streamRequestMap.clear()
+    streamFailureMap.clear()
     const bases = [baseUrl, ...(Array.isArray(fallbackBases) ? fallbackBases : [])]
     assets.forEach((asset) => {
         if (!asset?.id) return
@@ -144,6 +192,8 @@ export function getAssetSourceUrl(id) {
 
 export function clearAssetSources() {
     assetSourceMap.clear()
+    streamRequestMap.clear()
+    streamFailureMap.clear()
 }
 
 const addCandidate = (list, value) => {
@@ -165,16 +215,27 @@ export function getAssetUrlCandidates(asset, baseUrl = '') {
     const deferredUrls = []
     const baseCandidates = []
 
-    ;[
-        buildApiMountedUrl(normalizedBase),
-        normalizedBase,
-        buildApiMountedUrl(rawBase),
-        rawBase
-    ].forEach((base) => {
-        if (base && !baseCandidates.includes(base)) {
-            baseCandidates.push(base)
+    const addBaseValue = (value) => {
+        if (!value) return
+        const mountedValue = buildApiMountedUrl(value)
+        if (mountedValue && !baseCandidates.includes(mountedValue)) {
+            baseCandidates.push(mountedValue)
         }
-    })
+        if (isAbsolute(value)) {
+            if (!shouldPreferMountedCandidate(value, mountedValue) && !baseCandidates.includes(value)) {
+                baseCandidates.push(value)
+            }
+            return
+        }
+        if (!shouldPreferMountedCandidate(value, mountedValue) && !baseCandidates.includes(value)) {
+            baseCandidates.push(value)
+        }
+    }
+
+    addBaseValue(normalizedBase)
+    if (rawBase !== normalizedBase) {
+        addBaseValue(rawBase)
+    }
 
     if (asset.url) {
         const addUrlValue = (value) => {
@@ -184,10 +245,14 @@ export function getAssetUrlCandidates(asset, baseUrl = '') {
                 addCandidate(candidates, mountedUrl)
             }
             if (isAbsolute(value)) {
-                addCandidate(candidates, value)
+                if (!shouldPreferMountedCandidate(value, mountedUrl)) {
+                    addCandidate(candidates, value)
+                }
             } else {
-                // Defer relative URLs so server base candidates are tried first.
-                addCandidate(deferredUrls, buildAbsolutePath(value))
+                if (!shouldPreferMountedCandidate(value, mountedUrl)) {
+                    // Defer relative URLs so server base candidates are tried first.
+                    addCandidate(deferredUrls, buildAbsolutePath(value))
+                }
             }
         }
 
@@ -228,48 +293,60 @@ export function streamRemoteAsset(id) {
     if (!id) {
         return Promise.reject(new Error('Asset id required'))
     }
+    const inFlight = streamRequestMap.get(id)
+    if (inFlight) {
+        return inFlight
+    }
+    const recentFailure = streamFailureMap.get(id)
+    if (recentFailure && (Date.now() - recentFailure.ts) < STREAM_FAILURE_COOLDOWN_MS) {
+        return Promise.reject(recentFailure.error)
+    }
     const registered = assetSourceMap.get(id)
     const candidates = Array.isArray(registered) && registered.length
         ? [...registered]
         : []
-    // Always try fallback default-scene paths after any registered sources
-    ;[
-        ensureLeadingSlash(`default-scene/assets/${id}`),
-        ensureLeadingSlash(`default-scene/${id}`),
-        ensureLeadingSlash(id)
-    ].forEach((fallback) => addCandidate(candidates, fallback))
-    
-    console.log(`Attempting to stream asset ${id} from candidates:`, candidates)
-    
-    return enqueueStream(async () => {
+    if (!candidates.length) {
+        return Promise.reject(new Error(`No remote source registered for asset ${id}`))
+    }
+
+    const request = enqueueStream(async () => {
         let lastError = null
         for (const url of candidates) {
             if (!url) continue
             try {
-                console.log(`Trying asset URL: ${url}`)
                 const response = await fetch(url, { cache: 'no-store' })
                 if (!response.ok) {
                     lastError = new Error(`Failed to fetch ${url} (${response.status})`)
-                    console.warn(`Asset fetch failed: ${url} (${response.status})`)
                     continue
                 }
-                
                 // Check Content-Type to avoid accepting HTML error pages
                 const contentType = response.headers.get('content-type') || ''
                 if (contentType.includes('text/html')) {
                     lastError = new Error(`URL returned HTML instead of asset: ${url}`)
-                    console.warn(`Asset URL returned HTML: ${url}`)
                     continue
                 }
-                
-                console.log(`Successfully fetched asset from: ${url}`)
                 return response.blob()
             } catch (error) {
                 lastError = error
-                console.warn(`Error fetching asset from ${url}:`, error)
             }
         }
-        console.error(`All asset fetch attempts failed for ${id}`, lastError)
         throw lastError || new Error(`No remote source available for asset ${id}`)
     })
+
+    const trackedRequest = request
+        .then((blob) => {
+            streamFailureMap.delete(id)
+            return blob
+        })
+        .catch((error) => {
+            streamFailureMap.set(id, { ts: Date.now(), error })
+            throw error
+        })
+        .finally(() => {
+            streamRequestMap.delete(id)
+        })
+
+    streamRequestMap.set(id, trackedRequest)
+
+    return trackedRequest
 }
