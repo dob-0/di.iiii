@@ -2,17 +2,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useSceneInitializer } from './useSceneInitializer.js'
 import { DEFAULT_RENDER_SETTINGS } from './useRenderSettings.js'
-import { defaultScene, SCENE_DATA_VERSION } from '../state/sceneStore.js'
-
-const DEFAULT_GRID_APPEARANCE = {
-    cellSize: 0.75,
-    cellThickness: 0.75,
-    sectionSize: 6,
-    sectionThickness: 1.2,
-    fadeDistance: 100,
-    fadeStrength: 0.1,
-    offset: 0.015
-}
+import { defaultGridAppearance, defaultScene, SCENE_DATA_VERSION } from '../state/sceneStore.js'
 
 const createProps = () => ({
     sceneStorageKey: 'scene:test',
@@ -46,7 +36,7 @@ const createProps = () => ({
     setCameraTarget: vi.fn(),
     setSceneVersion: vi.fn(),
     getServerScene: vi.fn(),
-    defaultGridAppearance: DEFAULT_GRID_APPEARANCE,
+    defaultGridAppearance,
     defaultRenderSettings: DEFAULT_RENDER_SETTINGS,
     defaultSceneRemoteBase: ''
 })
@@ -71,7 +61,7 @@ describe('useSceneInitializer', () => {
             objects: [],
             backgroundColor: defaultScene.backgroundColor,
             gridSize: defaultScene.gridSize,
-            gridAppearance: DEFAULT_GRID_APPEARANCE,
+            gridAppearance: defaultGridAppearance,
             transformSnaps: defaultScene.transformSnaps,
             isGridVisible: defaultScene.isGridVisible,
             isGizmoVisible: defaultScene.isGizmoVisible,
@@ -102,7 +92,7 @@ describe('useSceneInitializer', () => {
             assetsBaseUrl: '/default-scene',
             backgroundColor: defaultScene.backgroundColor,
             gridSize: defaultScene.gridSize,
-            gridAppearance: DEFAULT_GRID_APPEARANCE,
+            gridAppearance: defaultGridAppearance,
             transformSnaps: defaultScene.transformSnaps,
             isGridVisible: defaultScene.isGridVisible,
             isGizmoVisible: defaultScene.isGizmoVisible,
@@ -138,7 +128,7 @@ describe('useSceneInitializer', () => {
             assetsBaseUrl: 'https://di-studio.xyz/serverXR/api/spaces/main/assets',
             backgroundColor: defaultScene.backgroundColor,
             gridSize: defaultScene.gridSize,
-            gridAppearance: DEFAULT_GRID_APPEARANCE,
+            gridAppearance: defaultGridAppearance,
             transformSnaps: defaultScene.transformSnaps,
             isGridVisible: defaultScene.isGridVisible,
             isGizmoVisible: defaultScene.isGizmoVisible,
@@ -163,6 +153,26 @@ describe('useSceneInitializer', () => {
         expect(props.setRemoteAssetsManifest).toHaveBeenCalledWith(
             assets,
             'http://localhost:4000/serverXR/api/spaces/main/assets'
+        )
+    })
+
+    it('initializes a blank scene with the dark workspace defaults', async () => {
+        const props = createProps()
+
+        const { result } = renderHook(() => useSceneInitializer(props))
+
+        await waitFor(() => {
+            expect(result.current.isLoading).toBe(false)
+        })
+
+        expect(props.setBackgroundColor).toHaveBeenCalledWith(defaultScene.backgroundColor)
+        expect(props.setGridAppearance).toHaveBeenCalledWith(defaultGridAppearance)
+        expect(props.persistSceneDataWithStatus).toHaveBeenCalledWith(
+            expect.objectContaining({
+                backgroundColor: defaultScene.backgroundColor,
+                gridAppearance: defaultGridAppearance
+            }),
+            'Initialized blank scene'
         )
     })
 })

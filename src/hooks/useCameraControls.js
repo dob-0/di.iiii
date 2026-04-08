@@ -3,15 +3,17 @@ import { useEffect, useState } from 'react'
 export function useCameraControls({
     controlsRef,
     isLoading,
+    cameraSettings,
     cameraPosition,
     cameraTarget,
     setCameraPosition,
-    setCameraTarget
+    setCameraTarget,
+    captureCameraChanges = true
 } = {}) {
     const [controlsReady, setControlsReady] = useState(false)
 
     useEffect(() => {
-        if (!controlsRef?.current) return
+        if (!controlsRef?.current || !captureCameraChanges) return
         const controls = controlsRef.current
         const handleChange = () => {
             const position = controls.object.position.toArray()
@@ -21,7 +23,7 @@ export function useCameraControls({
         }
         controls.addEventListener('change', handleChange)
         return () => controls.removeEventListener('change', handleChange)
-    }, [controlsRef, setCameraPosition, setCameraTarget])
+    }, [captureCameraChanges, controlsRef, setCameraPosition, setCameraTarget])
 
     useEffect(() => {
         let rafId = null
@@ -40,10 +42,23 @@ export function useCameraControls({
 
     useEffect(() => {
         if (!controlsReady || isLoading || !controlsRef?.current) return
-        controlsRef.current.object.position.set(...cameraPosition)
-        controlsRef.current.object.updateProjectionMatrix?.()
+        const camera = controlsRef.current.object
+        camera.position.set(...cameraPosition)
+        if (Number.isFinite(cameraSettings?.fov) && 'fov' in camera) {
+            camera.fov = cameraSettings.fov
+        }
+        if (Number.isFinite(cameraSettings?.zoom) && 'zoom' in camera) {
+            camera.zoom = cameraSettings.zoom
+        }
+        if (Number.isFinite(cameraSettings?.near)) {
+            camera.near = cameraSettings.near
+        }
+        if (Number.isFinite(cameraSettings?.far)) {
+            camera.far = cameraSettings.far
+        }
+        camera.updateProjectionMatrix?.()
         controlsRef.current.update()
-    }, [controlsReady, isLoading, cameraPosition, controlsRef])
+    }, [cameraPosition, cameraSettings, controlsReady, controlsRef, isLoading])
 
     useEffect(() => {
         if (!controlsReady || isLoading || !controlsRef?.current) return
@@ -52,7 +67,7 @@ export function useCameraControls({
     }, [controlsReady, isLoading, cameraTarget, controlsRef])
 
     useEffect(() => {
-        if (!controlsReady || !controlsRef?.current) return
+        if (!controlsReady || !controlsRef?.current || !captureCameraChanges) return
         const controls = controlsRef.current
         const handleControlEnd = () => {
             const position = controls.object.position.toArray()
@@ -64,7 +79,7 @@ export function useCameraControls({
         return () => {
             controls.removeEventListener('end', handleControlEnd)
         }
-    }, [controlsReady, controlsRef, setCameraPosition, setCameraTarget])
+    }, [captureCameraChanges, controlsReady, controlsRef, setCameraPosition, setCameraTarget])
 
     return { controlsReady }
 }

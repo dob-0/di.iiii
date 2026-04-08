@@ -383,6 +383,61 @@ const pruneSpaces = async () => {
 
 const isValidAssetId = (value = '') => ASSET_ID_REGEX.test(String(value).trim())
 
+const collectSceneAssetRefs = (objects = []) => {
+  const refs = new Map()
+  const addRef = (asset) => {
+    if (!asset?.id) return
+    if (!refs.has(asset.id)) {
+      refs.set(asset.id, asset)
+    }
+  }
+
+  objects.forEach((obj) => {
+    addRef(obj?.asset)
+    addRef(obj?.assetRef)
+    addRef(obj?.materialsAssetRef)
+    if (Array.isArray(obj?.assets)) {
+      obj.assets.forEach(addRef)
+    }
+    if (obj?.mediaVariants && typeof obj.mediaVariants === 'object') {
+      Object.values(obj.mediaVariants).forEach(addRef)
+    }
+  })
+
+  return Array.from(refs.values())
+}
+
+const hydrateSceneAssetManifest = (scene, assetBaseUrl = '') => {
+  if (!scene || typeof scene !== 'object') return scene
+
+  const baseUrl = String(assetBaseUrl || '').replace(/\/+$/g, '')
+  const merged = new Map()
+  const addAsset = (asset) => {
+    if (!asset?.id) return
+    const current = merged.get(asset.id) || {}
+    merged.set(asset.id, {
+      ...current,
+      ...asset,
+      ...(baseUrl ? { url: `${baseUrl}/${asset.id}` } : {})
+    })
+  }
+
+  if (Array.isArray(scene.assets)) {
+    scene.assets.forEach(addAsset)
+  }
+  collectSceneAssetRefs(Array.isArray(scene.objects) ? scene.objects : []).forEach(addAsset)
+
+  if (!merged.size) {
+    return scene
+  }
+
+  return {
+    ...scene,
+    assets: Array.from(merged.values()),
+    ...(baseUrl ? { assetsBaseUrl: scene.assetsBaseUrl || baseUrl } : {})
+  }
+}
+
 const serveAsset = async (spaceId, assetId, res) => {
   const { assetsDir } = getSpacePaths(spaceId)
   const filePath = path.join(assetsDir, assetId)
@@ -961,9 +1016,10 @@ router.get('/api/spaces/:spaceId/scene', async (req, res, next) => {
     const { scenePath } = getSpacePaths(spaceId)
     await ensureSpaceScene(spaceId)
     const scene = await readJson(scenePath, BLANK_SCENE)
+    const assetBaseUrl = `${req.baseUrl || ''}/api/spaces/${spaceId}/assets`
     const meta = await loadSpaceMeta(spaceId)
     res.json({
-      scene,
+      scene: hydrateSceneAssetManifest(scene, assetBaseUrl),
       version: meta?.sceneVersion || 0
     })
   } catch (error) {

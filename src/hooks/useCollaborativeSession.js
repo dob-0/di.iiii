@@ -34,6 +34,7 @@ export function useCollaborativeSession({
     ambientLight,
     directionalLight,
     transformSnaps,
+    presentation,
     default3DView,
     applyRemoteScene,
     applyScenePatch,
@@ -45,6 +46,7 @@ export function useCollaborativeSession({
     setGridAppearance,
     setRenderSettings,
     setTransformSnaps,
+    setPresentation,
     setAmbientLight,
     setDirectionalLight,
     setDefault3DView,
@@ -62,6 +64,7 @@ export function useCollaborativeSession({
         ambientLight,
         directionalLight,
         transformSnaps,
+        presentation,
         default3DView
     }), [
         objects,
@@ -72,6 +75,7 @@ export function useCollaborativeSession({
         ambientLight,
         directionalLight,
         transformSnaps,
+        presentation,
         default3DView
     ])
 
@@ -84,6 +88,7 @@ export function useCollaborativeSession({
         setGridAppearance(sceneData.gridAppearance || defaultGridAppearance)
         setRenderSettings(sceneData.renderSettings || DEFAULT_RENDER_SETTINGS)
         setTransformSnaps(sceneData.transformSnaps || defaultScene.transformSnaps)
+        setPresentation?.(sceneData.presentation || defaultScene.presentation)
         setAmbientLight(sceneData.ambientLight || defaultScene.ambientLight)
         setDirectionalLight(sceneData.directionalLight || defaultScene.directionalLight)
         setDefault3DView(sceneData.default3DView || defaultScene.default3DView)
@@ -101,7 +106,8 @@ export function useCollaborativeSession({
         setObjects,
         setRenderSettings,
         setSceneVersion,
-        setTransformSnaps
+        setTransformSnaps,
+        setPresentation
     ])
 
     const realtimeCollaboration = useRealtimeCollaboration({

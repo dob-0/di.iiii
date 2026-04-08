@@ -9,10 +9,11 @@ import SceneBase from './components/SceneBase.jsx'
 export default function Experience() {
     const { objects, selectedObjectId, selectedObjectIds, clearSelection } = useContext(SceneContext)
     const { setMenu, isPerfVisible, isGridVisible, isGizmoVisible, isPointerDragging, interactionMode } = useContext(UiContext)
-    const { backgroundColor, gridSize, gridAppearance, ambientLight, directionalLight } = useContext(SceneSettingsContext)
+    const { backgroundColor, gridSize, gridAppearance, ambientLight, directionalLight, presentationMode } = useContext(SceneSettingsContext)
     const { controlsRef } = useContext(RefsContext)
     const { selectObject } = useContext(ActionsContext)
     const { gl, camera } = useThree()
+    const controlsEnabled = !isPointerDragging && presentationMode !== 'fixed-camera'
 
     const orbitMouseButtons = interactionMode === 'edit'
         ? {
@@ -43,7 +44,7 @@ export default function Experience() {
             {camera && gl?.domElement && (
                 <OrbitControls
                     ref={controlsRef}
-                    enabled={!isPointerDragging}
+                    enabled={controlsEnabled}
                     enableDamping
                     dampingFactor={0.08}
                     enableRotate

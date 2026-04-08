@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+    defaultGridAppearance,
     defaultScene,
     generateObjectId,
     normalizeObject,
@@ -53,10 +54,23 @@ describe('defaultScene', () => {
         expect(defaultScene).toMatchObject({
             version: expect.any(Number),
             objects: expect.any(Array),
-            backgroundColor: expect.any(String),
+            backgroundColor: '#171a20',
             ambientLight: expect.any(Object),
             directionalLight: expect.any(Object),
             transformSnaps: expect.any(Object)
+        })
+    })
+})
+
+describe('defaultGridAppearance', () => {
+    it('includes the darker blank-scene grid palette', () => {
+        expect(defaultGridAppearance).toMatchObject({
+            cellThickness: 0.3,
+            sectionThickness: 0.65,
+            fadeDistance: 42,
+            fadeStrength: 0.35,
+            color: '#2b313d',
+            sectionColor: '#465063'
         })
     })
 })

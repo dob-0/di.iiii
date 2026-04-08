@@ -32,8 +32,8 @@ export default function SceneBase({
                     sectionThickness={gridAppearance?.sectionThickness ?? 0.6}
                     fadeDistance={(gridAppearance?.fadeStrength ?? 0) > 0 ? (gridAppearance?.fadeDistance ?? 20) : 0}
                     fadeStrength={gridAppearance?.fadeStrength ?? 0}
-                    sectionColor="#6a6a6a"
-                    color="#909090"
+                    sectionColor={gridAppearance?.sectionColor ?? '#6a6a6a'}
+                    color={gridAppearance?.color ?? '#909090'}
                 />
             )}
 

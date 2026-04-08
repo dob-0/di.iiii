@@ -9,6 +9,9 @@
     "dev:server": "npm --prefix serverXR run dev",
     "build": "vite build",
     "deploy:cpanel": "node scripts/stage-cpanel-release.mjs",
+    "env:serverxr": "node scripts/write-server-env.mjs",
+    "smoke:cpanel": "node scripts/smoke-check-cpanel.mjs",
+    "checkpoint": "node scripts/create-checkpoint.mjs",
     "sync:space-assets": "node scripts/sync-space-assets.mjs",
     "preview": "vite preview",
     "lint": "eslint src --ext .js,.jsx",
@@ -36,6 +39,10 @@
     "vitest": "^4.0.14"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.9",
+    "@mui/material": "^7.3.9",
     "@react-three/drei": "^9.108.1",
     "@react-three/fiber": "^8.16.8",
     "@react-three/xr": "^6.6.27",

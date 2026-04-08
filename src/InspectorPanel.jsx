@@ -9,13 +9,16 @@ import InspectorBasics from './components/inspector/InspectorBasics.jsx'
 import InspectorMediaSection from './components/inspector/InspectorMediaSection.jsx'
 import InspectorTransformSection from './components/inspector/InspectorTransformSection.jsx'
 
-export default function InspectorPanel({ onClose }) {
+export default function InspectorPanel({ onClose, surfaceMode = 'floating' }) {
     const { selectedObjectId, objects, setObjects, clearSelection } = useContext(SceneContext)
     const { gizmoMode, setGizmoMode } = useContext(UiContext)
     const { requestManualMediaOptimization } = useContext(ActionsContext)
+    const isSheetMode = surfaceMode === 'sheet'
+    const isDockMode = surfaceMode === 'dock'
+    const isEmbeddedMode = isSheetMode || isDockMode
 
-    const { panelRef, dragProps, dragStyle, isDragging, panelPointerProps } = usePanelDrag({ x: 16, y: 120 }, { baseZ: 100 })
-    const { width, height, resizerProps, isResizing } = usePanelResize(320, {
+    const dragState = usePanelDrag({ x: 16, y: 120 }, { baseZ: 100 })
+    const resizeState = usePanelResize(320, {
         min: 280,
         max: 640,
         minHeight: 220,
@@ -135,12 +138,12 @@ export default function InspectorPanel({ onClose }) {
 
     return (
         <div
-            ref={panelRef}
-            style={{ ...dragStyle, width, height }}
-            className="floating-panel inspector-panel draggable-panel"
-            {...panelPointerProps}
+            ref={isEmbeddedMode ? undefined : dragState.panelRef}
+            style={isEmbeddedMode ? undefined : { ...dragState.dragStyle, width: resizeState.width, height: resizeState.height }}
+            className={['floating-panel', 'inspector-panel', isSheetMode ? 'sheet-panel' : (isDockMode ? 'dock-panel' : 'draggable-panel')].join(' ')}
+            {...(isEmbeddedMode ? {} : dragState.panelPointerProps)}
         >
-            <div className={`panel-header draggable-header ${isDragging ? 'dragging' : ''}`} {...dragProps}>
+            <div className={`panel-header ${isSheetMode ? 'sheet-panel-header' : (isDockMode ? 'dock-panel-header' : `draggable-header ${dragState.isDragging ? 'dragging' : ''}`)}`.trim()} {...(isEmbeddedMode ? {} : dragState.dragProps)}>
                 <h3>Inspector</h3>
                 <button className="close-button" onClick={onClose}>×</button>
             </div>
@@ -188,7 +191,7 @@ export default function InspectorPanel({ onClose }) {
                 </div>
             </div>
 
-            <div className={`panel-resizer ${isResizing ? 'resizing' : ''}`} {...resizerProps} />
+            {!isEmbeddedMode && <div className={`panel-resizer ${resizeState.isResizing ? 'resizing' : ''}`} {...resizeState.resizerProps} />}
         </div>
     )
 }

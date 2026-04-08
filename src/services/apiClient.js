@@ -1,22 +1,73 @@
-const RAW_BASE = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '')
-const API_TOKEN = (import.meta.env.VITE_API_TOKEN || '').trim()
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1'])
+const API_TOKEN = (import.meta.env.VITE_API_TOKEN || '').trim()
+
+const getHostnameFromOrigin = (origin = '') => {
+    if (!origin) return ''
+    try {
+        return new URL(origin).hostname
+    } catch {
+        return ''
+    }
+}
+
+const shouldUseRelativeDevBase = (configuredBase = '', { isDev = false, locationHostname = '' } = {}) => {
+    if (!isDev || !configuredBase) {
+        return false
+    }
+
+    try {
+        const url = new URL(configuredBase)
+        return LOOPBACK_HOSTS.has(url.hostname) || (locationHostname && url.hostname === locationHostname)
+    } catch {
+        return false
+    }
+}
+
+const toBasePath = (value = '') => {
+    if (!value) return ''
+    try {
+        const url = new URL(value, 'http://localhost')
+        return url.pathname.replace(/\/+$/, '') || '/'
+    } catch {
+        return value
+    }
+}
+
+const resolveRawBase = ({
+    configuredBase = '',
+    isDev = false,
+    locationHostname = ''
+} = {}) => {
+    if (configuredBase) {
+        if (shouldUseRelativeDevBase(configuredBase, { isDev, locationHostname })) {
+            return toBasePath(configuredBase)
+        }
+        return configuredBase
+    }
+    return '/serverXR'
+}
+
 const SERVER_UNAVAILABLE_COOLDOWN_MS = 15000
 let serverUnavailableUntil = 0
 
-const normalizeLoopbackBase = (baseUrl = '') => {
-    if (!baseUrl || typeof window === 'undefined') {
+const normalizeLoopbackBase = (baseUrl = '', { locationOrigin = '', locationHostname = '' } = {}) => {
+    if (!baseUrl) {
         return baseUrl
     }
     try {
-        const url = new URL(baseUrl, window.location.origin)
-        const currentHost = window.location.hostname
+        if (!locationOrigin && !/^[a-z]+:\/\//i.test(baseUrl)) {
+            return baseUrl
+        }
+        const url = new URL(baseUrl, locationOrigin || 'http://localhost')
         if (
             LOOPBACK_HOSTS.has(url.hostname)
-            && LOOPBACK_HOSTS.has(currentHost)
-            && url.hostname !== currentHost
+            && LOOPBACK_HOSTS.has(locationHostname)
+            && url.hostname !== locationHostname
         ) {
-            url.hostname = currentHost
+            url.hostname = locationHostname
+        }
+        if (!locationOrigin && !/^[a-z]+:\/\//i.test(baseUrl)) {
+            return `${url.pathname}${url.search}${url.hash}`
         }
         return url.toString().replace(/\/+$/, '')
     } catch {
@@ -24,7 +75,31 @@ const normalizeLoopbackBase = (baseUrl = '') => {
     }
 }
 
-export const apiBaseUrl = normalizeLoopbackBase(RAW_BASE)
+export const getApiBaseUrlForRuntime = ({
+    configuredBase = '',
+    isDev = false,
+    locationOrigin = '',
+    locationHostname = ''
+} = {}) => {
+    const resolvedHostname = locationHostname || getHostnameFromOrigin(locationOrigin)
+    const rawBase = resolveRawBase({
+        configuredBase: String(configuredBase || '').trim(),
+        isDev,
+        locationHostname: resolvedHostname
+    }).replace(/\/+$/, '')
+
+    return normalizeLoopbackBase(rawBase, {
+        locationOrigin,
+        locationHostname: resolvedHostname
+    })
+}
+
+export const apiBaseUrl = getApiBaseUrlForRuntime({
+    configuredBase: import.meta.env.VITE_API_BASE_URL || '',
+    isDev: Boolean(import.meta.env.DEV),
+    locationOrigin: typeof window !== 'undefined' ? window.location.origin : '',
+    locationHostname: typeof window !== 'undefined' ? window.location.hostname : ''
+})
 export const hasServerApi = Boolean(apiBaseUrl)
 
 export const getServerUnavailableRetryDelay = () => Math.max(0, serverUnavailableUntil - Date.now())

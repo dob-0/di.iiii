@@ -7,12 +7,14 @@ export function useScenePersistenceCoordinator({
     cameraTarget,
     setCameraPosition,
     setCameraTarget,
+    captureSavedViewFromControls = true,
     objects,
     backgroundColor,
     gridSize,
     gridAppearance,
     renderSettings,
     transformSnaps,
+    presentation,
     isGridVisible,
     isGizmoVisible,
     isPerfVisible,
@@ -36,7 +38,7 @@ export function useScenePersistenceCoordinator({
     const latestServerPayloadRef = useRef(null)
 
     const captureCurrentCameraView = useCallback(() => {
-        if (controlsRef?.current) {
+        if (controlsRef?.current && captureSavedViewFromControls) {
             const position = controlsRef.current.object.position.toArray()
             const target = controlsRef.current.target.toArray()
             setCameraPosition?.(position)
@@ -44,7 +46,7 @@ export function useScenePersistenceCoordinator({
             return { position, target }
         }
         return { position: cameraPosition, target: cameraTarget }
-    }, [cameraPosition, cameraTarget, controlsRef, setCameraPosition, setCameraTarget])
+    }, [cameraPosition, cameraTarget, captureSavedViewFromControls, controlsRef, setCameraPosition, setCameraTarget])
 
     const getBaseSceneData = useCallback(() => {
         const base = {
@@ -55,6 +57,7 @@ export function useScenePersistenceCoordinator({
             gridAppearance,
             renderSettings,
             transformSnaps,
+            presentation,
             isGridVisible,
             isGizmoVisible,
             isPerfVisible,
@@ -82,6 +85,7 @@ export function useScenePersistenceCoordinator({
         isGridVisible,
         isPerfVisible,
         objects,
+        presentation,
         remoteAssetsBaseRef,
         remoteAssetsRef,
         remoteSceneVersion,

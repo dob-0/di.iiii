@@ -2,6 +2,7 @@
 @import './PresentationCanvas.css';
 @import './styles/base.css';
 @import './styles/controls.css';
+@import './styles/mobile-shell.css';
 @import './styles/inspector-controls.css';
 @import './styles/menu.css';
 @import './styles/layout-stack.css';
@@ -20,3 +21,4 @@
 @import './styles/inspector/misc.css';
 @import './styles/layout-split.css';
 @import './styles/preferences.css';
+@import './styles/workspace.css';

@@ -35,4 +35,16 @@ describe('getSocketConfigForRuntime', () => {
             auth: undefined
         })
     })
+
+    it('uses the current Vite origin in dev for loopback API bases', () => {
+        expect(getSocketConfigForRuntime({
+            configuredBase: 'http://localhost:4000/serverXR',
+            isDev: true,
+            locationOrigin: 'http://localhost:5173'
+        })).toEqual({
+            serverUrl: 'http://localhost:5173',
+            path: '/serverXR/socket.io',
+            auth: undefined
+        })
+    })
 })

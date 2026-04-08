@@ -29,6 +29,20 @@ const resolveLoopbackHostname = (hostname = '') => {
   return hostname
 }
 
+const shouldUseSameOriginDevSocket = ({
+  configuredBase = '',
+  isDev = false,
+  locationHostname = ''
+} = {}) => {
+  if (!isDev || !configuredBase) return false
+  try {
+    const url = new URL(configuredBase, locationHostname ? `http://${locationHostname}` : 'http://localhost')
+    return LOOPBACK_HOSTS.has(url.hostname) || (locationHostname && url.hostname === locationHostname)
+  } catch {
+    return false
+  }
+}
+
 export const getSocketConfigForRuntime = ({
   configuredBase = '',
   token = '',
@@ -37,13 +51,28 @@ export const getSocketConfigForRuntime = ({
 } = {}) => {
   const normalizedBase = String(configuredBase || '').trim()
   const authToken = normalizeAuthToken(token)
+  const locationHostname = (() => {
+    if (!locationOrigin) return ''
+    try {
+      return new URL(locationOrigin).hostname
+    } catch {
+      return ''
+    }
+  })()
 
   if (normalizedBase && locationOrigin) {
     const url = new URL(normalizedBase, locationOrigin)
-    url.hostname = resolveLoopbackHostname(url.hostname)
+    const useSameOrigin = shouldUseSameOriginDevSocket({
+      configuredBase: normalizedBase,
+      isDev,
+      locationHostname
+    })
+    url.hostname = useSameOrigin ? locationHostname : resolveLoopbackHostname(url.hostname)
+    url.port = useSameOrigin ? new URL(locationOrigin).port : url.port
+    url.protocol = useSameOrigin ? new URL(locationOrigin).protocol : url.protocol
     const basePath = url.pathname.replace(/\/+$/, '')
     return {
-      serverUrl: url.origin,
+      serverUrl: useSameOrigin ? locationOrigin : url.origin,
       path: `${basePath || ''}/socket.io`,
       auth: authToken ? { token: authToken } : undefined
     }

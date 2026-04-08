@@ -10,6 +10,7 @@ import {
 } from '../contexts/AppContexts.js'
 import { useStatusItems } from '../hooks/useStatusItems.js'
 import { useStatusPanel } from '../hooks/useStatusPanel.js'
+import { useViewportMode } from '../hooks/useViewportMode.js'
 import EditorLayout from './EditorLayout.jsx'
 
 export default function EditorLayoutContainer({
@@ -28,6 +29,7 @@ export default function EditorLayoutContainer({
     handleCanvasPointerMove,
     handleCanvasPointerLeave
 }) {
+    const { viewportMode, isPhoneCompact } = useViewportMode()
     const { objects, selectedObjectIds, clearSelection, sceneVersion } = useContext(SceneContext)
     const {
         menu,
@@ -151,7 +153,11 @@ export default function EditorLayoutContainer({
             isVisible: isViewPanelVisible,
             onToggle: () => setIsViewPanelVisible((prev) => !prev),
             onClose: () => setIsViewPanelVisible(false),
-            floatingPlacement: 'dock'
+            floatingPlacement: 'dock',
+            workspaceGroup: 'scene',
+            workspaceOrder: 10,
+            mobileGroup: 'scene',
+            mobileOrder: 10
         },
         {
             key: 'world',
@@ -159,7 +165,11 @@ export default function EditorLayoutContainer({
             isVisible: isWorldPanelVisible,
             onToggle: () => setIsWorldPanelVisible((prev) => !prev),
             onClose: () => setIsWorldPanelVisible(false),
-            floatingPlacement: 'dock'
+            floatingPlacement: 'dock',
+            workspaceGroup: 'scene',
+            workspaceOrder: 20,
+            mobileGroup: 'scene',
+            mobileOrder: 20
         },
         {
             key: 'media',
@@ -167,7 +177,11 @@ export default function EditorLayoutContainer({
             isVisible: isMediaPanelVisible,
             onToggle: () => setIsMediaPanelVisible((prev) => !prev),
             onClose: () => setIsMediaPanelVisible(false),
-            floatingPlacement: 'dock'
+            floatingPlacement: 'dock',
+            workspaceGroup: 'files',
+            workspaceOrder: 10,
+            mobileGroup: 'files',
+            mobileOrder: 10
         },
         {
             key: 'assets',
@@ -175,7 +189,11 @@ export default function EditorLayoutContainer({
             isVisible: isAssetPanelVisible,
             onToggle: () => setIsAssetPanelVisible((prev) => !prev),
             onClose: () => setIsAssetPanelVisible(false),
-            floatingPlacement: 'dock'
+            floatingPlacement: 'dock',
+            workspaceGroup: 'files',
+            workspaceOrder: 20,
+            mobileGroup: 'files',
+            mobileOrder: 20
         },
         {
             key: 'outliner',
@@ -183,7 +201,11 @@ export default function EditorLayoutContainer({
             isVisible: isOutlinerPanelVisible,
             onToggle: () => setIsOutlinerPanelVisible((prev) => !prev),
             onClose: () => setIsOutlinerPanelVisible(false),
-            floatingPlacement: 'dock'
+            floatingPlacement: 'dock',
+            workspaceGroup: 'scene',
+            workspaceOrder: 30,
+            mobileGroup: 'scene',
+            mobileOrder: 30
         },
         {
             key: 'spaces',
@@ -192,7 +214,11 @@ export default function EditorLayoutContainer({
             onToggle: () => setIsSpacesPanelVisible((prev) => !prev),
             onClose: () => setIsSpacesPanelVisible(false),
             floatingPlacement: 'dock',
-            isAvailable: isAdminMode
+            isAvailable: isAdminMode,
+            workspaceGroup: 'scene',
+            workspaceOrder: 40,
+            mobileGroup: 'scene',
+            mobileOrder: 40
         },
         {
             key: 'inspector',
@@ -200,7 +226,11 @@ export default function EditorLayoutContainer({
             isVisible: isInspectorPanelVisible,
             onToggle: () => setIsInspectorPanelVisible((prev) => !prev),
             onClose: () => setIsInspectorPanelVisible(false),
-            floatingPlacement: 'overlay'
+            floatingPlacement: 'dock',
+            workspaceGroup: 'selected',
+            workspaceOrder: 10,
+            mobileGroup: 'selected',
+            mobileOrder: 10
         }
     ].filter((entry) => entry.isAvailable !== false)), [
         isAdminMode,
@@ -231,12 +261,16 @@ export default function EditorLayoutContainer({
         const pick = (...keys) => keys.map((key) => buttonMap.get(key)).filter(Boolean)
 
         return {
-            spaceButton: buttonMap.get('space-label') || null,
-            fileButtons: pick('save', 'load'),
-            historyButtons: pick('undo', 'redo'),
-            interactionModeButton: buttonMap.get('interaction-mode') || null,
-            presentationButtons: pick('presentation-scene', 'presentation-fixed-camera', 'presentation-code'),
-            overflowSections: [
+            identity: {
+                spaceButton: buttonMap.get('space-label') || null
+            },
+            modeButtons: {
+                interaction: buttonMap.get('interaction-mode') || null,
+                presentation: pick('presentation-scene', 'presentation-fixed-camera', 'presentation-code')
+            },
+            primaryActions: pick('save', 'load'),
+            historyActions: pick('undo', 'redo'),
+            drawerSections: [
                 {
                     key: 'scene',
                     label: 'Scene',
@@ -245,7 +279,7 @@ export default function EditorLayoutContainer({
                 {
                     key: 'display',
                     label: 'Display',
-                    items: pick('fullscreen', 'status-panel', 'selection-lock', 'ui-default-toggle', 'layout-mode', 'layout-side', 'hide-ui', 'xr-focus')
+                    items: pick('fullscreen', 'status-panel', 'selection-lock', 'ui-default-toggle', 'hide-ui', 'xr-focus')
                 },
                 {
                     key: 'admin',
@@ -261,6 +295,34 @@ export default function EditorLayoutContainer({
         }
     }, [adminButtons, displayButtons, sceneButtons, xrButtons])
 
+    const mobileModel = useMemo(() => ({
+        spaceButton: toolbarModel.identity?.spaceButton,
+        interactionModeButton: toolbarModel.modeButtons?.interaction
+            ? {
+                ...toolbarModel.modeButtons.interaction,
+                label: toolbarModel.modeButtons.interaction.label.replace('Mode: ', '')
+            }
+            : null,
+        presentationButtons: (toolbarModel.modeButtons?.presentation || []).map((button) => ({
+            ...button,
+            label: button.label === '2D Camera' ? '2D' : button.label.replace(' View', '')
+        })),
+        panelEntries,
+        moreSections: [
+            {
+                key: 'project',
+                label: 'Project',
+                items: toolbarModel.primaryActions || []
+            },
+            {
+                key: 'history',
+                label: 'History',
+                items: toolbarModel.historyActions || []
+            },
+            ...(toolbarModel.drawerSections || [])
+        ].filter((section) => Array.isArray(section.items) && section.items.length > 0)
+    }), [panelEntries, toolbarModel])
+
     return (
         <EditorLayout
             menu={menu}
@@ -268,9 +330,12 @@ export default function EditorLayoutContainer({
             fileInputRef={fileInputRef}
             handleFileLoad={handleFileLoad}
             toolbarModel={toolbarModel}
+            mobileModel={mobileModel}
             panelEntries={panelEntries}
             hiddenUiButtons={hiddenUiButtons}
             isUiVisible={isUiVisible}
+            viewportMode={viewportMode}
+            isPhoneCompact={isPhoneCompact}
             layoutMode={layoutMode}
             toggleLayoutMode={toggleLayoutMode}
             layoutSide={layoutSide}

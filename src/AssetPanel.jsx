@@ -40,7 +40,10 @@ const downloadBlob = (blob, fileName) => {
     URL.revokeObjectURL(url)
 }
 
-export default function AssetPanel({ onClose }) {
+export default function AssetPanel({ onClose, surfaceMode = 'floating' }) {
+    const isSheetMode = surfaceMode === 'sheet'
+    const isDockMode = surfaceMode === 'dock'
+    const isEmbeddedMode = isSheetMode || isDockMode
     const { objects, setObjects, clearSelection } = useContext(SceneContext)
     const {
         selectObject,
@@ -60,8 +63,8 @@ export default function AssetPanel({ onClose }) {
     const [isRunningBatchOptimize, setIsRunningBatchOptimize] = useState(false)
     const [isRemovingUnused, setIsRemovingUnused] = useState(false)
     const [expandedAssetKey, setExpandedAssetKey] = useState(null)
-    const { panelRef, dragProps, dragStyle, isDragging, panelPointerProps } = usePanelDrag({ x: 16, y: 460 }, { baseZ: 100 })
-    const { width, height, resizerProps, isResizing } = usePanelResize(380, {
+    const dragState = usePanelDrag({ x: 16, y: 460 }, { baseZ: 100 })
+    const resizeState = usePanelResize(380, {
         min: 320,
         max: 760,
         minHeight: 300,
@@ -356,12 +359,12 @@ export default function AssetPanel({ onClose }) {
 
     return (
         <div
-            ref={panelRef}
-            style={{ ...dragStyle, width, height }}
-            className="floating-panel asset-panel draggable-panel"
-            {...panelPointerProps}
+            ref={isEmbeddedMode ? undefined : dragState.panelRef}
+            style={isEmbeddedMode ? undefined : { ...dragState.dragStyle, width: resizeState.width, height: resizeState.height }}
+            className={['floating-panel', 'asset-panel', isSheetMode ? 'sheet-panel' : (isDockMode ? 'dock-panel' : 'draggable-panel')].join(' ')}
+            {...(isEmbeddedMode ? {} : dragState.panelPointerProps)}
         >
-            <div className={`panel-header draggable-header ${isDragging ? 'dragging' : ''}`} {...dragProps}>
+            <div className={`panel-header ${isSheetMode ? 'sheet-panel-header' : (isDockMode ? 'dock-panel-header' : `draggable-header ${dragState.isDragging ? 'dragging' : ''}`)}`.trim()} {...(isEmbeddedMode ? {} : dragState.dragProps)}>
                 <h3>Project Assets</h3>
                 <button className="close-button" onClick={onClose}>×</button>
             </div>
@@ -520,7 +523,7 @@ export default function AssetPanel({ onClose }) {
                     </div>
                 )}
             </div>
-            <div className={`panel-resizer ${isResizing ? 'resizing' : ''}`} {...resizerProps} />
+            {!isEmbeddedMode && <div className={`panel-resizer ${resizeState.isResizing ? 'resizing' : ''}`} {...resizeState.resizerProps} />}
         </div>
     )
 }

@@ -45,6 +45,34 @@ const parseEnvFile = async (filePath) => {
     }
 }
 
+const captureCommand = (command, args, options = {}) => new Promise((resolve) => {
+    const child = spawn(command, args, {
+        cwd: options.cwd || repoRoot,
+        env: options.env || process.env,
+        stdio: ['ignore', 'pipe', 'pipe']
+    })
+
+    let stdout = ''
+    let stderr = ''
+
+    child.stdout?.on('data', (chunk) => {
+        stdout += chunk.toString()
+    })
+    child.stderr?.on('data', (chunk) => {
+        stderr += chunk.toString()
+    })
+    child.on('error', () => {
+        resolve({ code: 1, stdout: '', stderr: '' })
+    })
+    child.on('exit', (code) => {
+        resolve({
+            code: code ?? 1,
+            stdout: stdout.trim(),
+            stderr: stderr.trim()
+        })
+    })
+})
+
 const runCommand = (command, args, options = {}) => new Promise((resolve, reject) => {
     const child = spawn(command, args, {
         cwd: options.cwd || repoRoot,
@@ -89,21 +117,6 @@ const formatTimestamp = (date = new Date()) => {
     ].join('')
 }
 
-const buildReleaseManifest = ({ timestamp }) => ({
-    generatedAt: new Date().toISOString(),
-    releaseId: `cpanel-${timestamp}`,
-    paths: {
-        publicHtml: 'public_html',
-        serverXR: 'serverXR',
-        shared: 'shared'
-    },
-    notes: [
-        'Upload public_html contents to your web root.',
-        'Upload serverXR and shared as sibling folders in your home directory.',
-        'Copy serverXR/.env.production.example to serverXR/.env before first start.'
-    ]
-})
-
 const buildReleaseEnv = async () => {
     const rootEnv = await parseEnvFile(path.join(repoRoot, '.env'))
     const env = { ...process.env }
@@ -119,6 +132,40 @@ const buildReleaseEnv = async () => {
     return env
 }
 
+const readGitMetadata = async () => {
+    const [commitResult, branchResult] = await Promise.all([
+        captureCommand('git', ['rev-parse', 'HEAD']),
+        captureCommand('git', ['rev-parse', '--abbrev-ref', 'HEAD'])
+    ])
+
+    return {
+        commit: commitResult.code === 0 ? commitResult.stdout : '',
+        branch: branchResult.code === 0 ? branchResult.stdout : ''
+    }
+}
+
+const buildReleaseManifest = ({ timestamp, git, releaseEnv }) => ({
+    generatedAt: new Date().toISOString(),
+    releaseId: `cpanel-${timestamp}`,
+    deploymentMode: 'cpanel-nodejs-app',
+    frontendApiBaseUrl: (releaseEnv.VITE_API_BASE_URL || '/serverXR').trim() || '/serverXR',
+    git,
+    paths: {
+        publicHtml: 'public_html',
+        serverXR: 'serverXR',
+        shared: 'shared'
+    },
+    omittedLegacyPaths: [
+        'public_html/serverXR'
+    ],
+    notes: [
+        'Sync public_html contents to your web root.',
+        'Sync serverXR and shared as sibling folders in your home directory.',
+        'Do not deploy a public_html/serverXR proxy folder; the cPanel Node.js App owns /serverXR.',
+        'Generate serverXR/.env from environment-specific secrets before restarting the Node.js App.'
+    ]
+})
+
 const ensureRequiredPaths = async () => {
     await access(path.join(serverRoot, 'src'))
     await access(sharedRoot)
@@ -126,6 +173,7 @@ const ensureRequiredPaths = async () => {
 
 await ensureRequiredPaths()
 const releaseEnv = await buildReleaseEnv()
+const gitMetadata = await readGitMetadata()
 await runCommand(npmCommand, ['run', 'build'], { cwd: repoRoot, env: releaseEnv })
 
 try {
@@ -138,6 +186,7 @@ await rm(releaseRoot, { recursive: true, force: true })
 await ensureDir(releaseRoot)
 
 await copyDirectory(distRoot, publicHtmlRoot)
+await rm(path.join(publicHtmlRoot, 'serverXR'), { recursive: true, force: true })
 
 await ensureDir(releaseServerRoot)
 await copyDirectory(path.join(serverRoot, 'src'), path.join(releaseServerRoot, 'src'), (sourcePath) => !sourcePath.endsWith('.test.js'))
@@ -146,6 +195,7 @@ await copyIfPresent(path.join(serverRoot, 'package.json'), path.join(releaseServ
 await copyIfPresent(path.join(serverRoot, 'package-lock.json'), path.join(releaseServerRoot, 'package-lock.json'))
 await copyIfPresent(path.join(serverRoot, 'ecosystem.config.js'), path.join(releaseServerRoot, 'ecosystem.config.js'))
 await copyIfPresent(path.join(serverRoot, 'README.md'), path.join(releaseServerRoot, 'README.md'))
+await copyIfPresent(path.join(serverRoot, '.env.example'), path.join(releaseServerRoot, '.env.example'))
 await copyIfPresent(path.join(templateRoot, 'serverXR.env.production.example'), path.join(releaseServerRoot, '.env.production.example'))
 
 await ensureDir(releaseSharedRoot)
@@ -154,7 +204,11 @@ await copyDirectory(sharedRoot, releaseSharedRoot, (sourcePath) => sourcePath.en
 await copyIfPresent(path.join(templateRoot, 'frontend.env.production.example'), path.join(releaseRoot, 'frontend.env.production.example'))
 await copyIfPresent(path.join(templateRoot, 'DEPLOY.md'), path.join(releaseRoot, 'DEPLOY.md'))
 
-const releaseManifest = buildReleaseManifest({ timestamp: formatTimestamp() })
+const releaseManifest = buildReleaseManifest({
+    timestamp: formatTimestamp(),
+    git: gitMetadata,
+    releaseEnv
+})
 await writeFile(path.join(releaseRoot, 'release.json'), `${JSON.stringify(releaseManifest, null, 2)}\n`, 'utf8')
 
 const frontendEnvExample = await readFile(path.join(templateRoot, 'frontend.env.production.example'), 'utf8')
@@ -165,6 +219,9 @@ console.log('[deploy:cpanel] Release staged successfully.')
 console.log(`[deploy:cpanel] Output: ${releaseRoot}`)
 console.log(`[deploy:cpanel] Frontend env template: ${path.join(releaseRoot, 'frontend.env.production.example')}`)
 console.log(`[deploy:cpanel] Server env template: ${path.join(releaseServerRoot, '.env.production.example')}`)
+if (releaseManifest.git.commit) {
+    console.log(`[deploy:cpanel] Git commit: ${releaseManifest.git.commit}`)
+}
 console.log('')
 console.log('[deploy:cpanel] frontend.env.production.example')
 console.log(frontendEnvExample.trim())

@@ -14,6 +14,7 @@ export function useSceneActions({
     setDefault3DView,
     setGridAppearance,
     setTransformSnaps,
+    setPresentation,
     setRemoteSceneVersion,
     resetRemoteAssets,
     setIsGridVisible,
@@ -51,6 +52,7 @@ export function useSceneActions({
             setGridAppearance?.(defaultGridAppearance)
         }
         setTransformSnaps?.(defaultScene.transformSnaps)
+        setPresentation?.(defaultScene.presentation)
         setRemoteSceneVersion?.(null)
         resetRemoteAssets?.()
         // restore UI visibility flags to defaults so a cleared scene is visible
@@ -115,6 +117,7 @@ export function useSceneActions({
         setRemoteSceneVersion,
         setSceneVersion,
         setTransformSnaps,
+        setPresentation,
         skipServerLoadRef,
         updateSceneSignature,
         resetSceneVersionOnClear

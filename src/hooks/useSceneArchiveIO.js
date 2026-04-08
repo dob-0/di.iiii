@@ -6,6 +6,7 @@ import { mergeAssetsManifest } from '../utils/assetManifest.js'
 
 export function useSceneArchiveIO({
     fileInputRef,
+    spaceId,
     setRemoteSceneVersion,
     resetRemoteAssets,
     getBaseSceneData,
@@ -26,6 +27,7 @@ export function useSceneArchiveIO({
     setIsGridVisible,
     setIsGizmoVisible,
     setIsPerfVisible,
+    setPresentation,
     setAmbientLight,
     setDirectionalLight,
     setDefault3DView,
@@ -35,6 +37,15 @@ export function useSceneArchiveIO({
     defaultGridAppearance,
     defaultRenderSettings
 } = {}) {
+    const buildProjectPackageName = useCallback(() => {
+        const slug = String(spaceId || 'scene')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '')
+        return `${slug || 'scene'}.dii-project.zip`
+    }, [spaceId])
+
     const downloadBlob = useCallback((blob, fileName) => {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
@@ -54,7 +65,7 @@ export function useSceneArchiveIO({
             savedView: getSavedViewData() // Save the current view
         }
         sceneData.defaultSceneVersion = null
-        if (!persistSceneDataWithStatus(sceneData, 'Saved locally (export)')) return
+        if (!persistSceneDataWithStatus(sceneData, 'Saved locally (project export)')) return
         updateSceneSignature(sceneData)
         const exportSceneData = {
             ...sceneData
@@ -67,12 +78,13 @@ export function useSceneArchiveIO({
                 getAssetBlob,
                 getAssetSourceUrl
             })
-            downloadBlob(archiveBlob, 'my-scene.zip')
+            downloadBlob(archiveBlob, buildProjectPackageName())
         } catch (error) {
             console.error('Failed to create download file:', error)
-            alert('Error: Could not create download file.')
+            alert('Error: Could not create project package.')
         }
     }, [
+        buildProjectPackageName,
         downloadBlob,
         getAssetBlob,
         getAssetSourceUrl,
@@ -132,6 +144,7 @@ export function useSceneArchiveIO({
                 ? sceneData.isPerfVisible
                 : defaultScene.isPerfVisible
         )
+        setPresentation?.(sceneData.presentation || defaultScene.presentation)
         setAmbientLight(sceneData.ambientLight || defaultScene.ambientLight)
         setDirectionalLight(sceneData.directionalLight || defaultScene.directionalLight)
         setDefault3DView(sceneData.default3DView || defaultScene.default3DView)
@@ -160,6 +173,7 @@ export function useSceneArchiveIO({
                 typeof sceneData.isPerfVisible === 'boolean'
                     ? sceneData.isPerfVisible
                     : defaultScene.isPerfVisible,
+            presentation: sceneData.presentation || defaultScene.presentation,
             ambientLight: sceneData.ambientLight || defaultScene.ambientLight,
             directionalLight: sceneData.directionalLight || defaultScene.directionalLight,
             default3DView: sceneData.default3DView || defaultScene.default3DView,
@@ -169,9 +183,9 @@ export function useSceneArchiveIO({
             assets: mergedManifest,
             assetsBaseUrl: sceneData.assetsBaseUrl || '',
             renderSettings: sceneData.renderSettings || defaultRenderSettings
-        }, 'Loaded scene locally')
+        }, 'Loaded project locally')
         if (!silent) {
-            alert('Scene loaded successfully!')
+            alert('Project package loaded successfully!')
         }
     }, [
         clearSelection,
@@ -192,6 +206,7 @@ export function useSceneArchiveIO({
         setIsGizmoVisible,
         setIsGridVisible,
         setIsPerfVisible,
+        setPresentation,
         setObjects,
         setRemoteAssetsManifest,
         setRenderSettings,
@@ -209,7 +224,7 @@ export function useSceneArchiveIO({
             || file.type === 'application/zip'
             || file.type === 'application/x-zip-compressed'
         if (!isArchive) {
-            alert('Please select a .zip scene exported from this editor.')
+            alert('Please select a .zip or .dii-project.zip package exported from this editor.')
             event.target.value = null
             return
         }
@@ -218,8 +233,8 @@ export function useSceneArchiveIO({
             try {
                 await handleArchiveSceneLoad(e.target.result)
             } catch (error) {
-                console.error('Failed to load scene archive:', error)
-                alert(`Error: Could not load scene. ${error.message || 'The file might be corrupt or not valid.'}`)
+                console.error('Failed to load project package:', error)
+                alert(`Error: Could not load project package. ${error.message || 'The file might be corrupt or not valid.'}`)
                 return
             }
         }

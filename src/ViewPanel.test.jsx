@@ -112,4 +112,13 @@ describe('ViewPanel', () => {
         expect(screen.getByRole('button', { name: 'Frame All' })).toBeTruthy()
         expect(screen.getByRole('button', { name: 'Save Current View' })).toBeTruthy()
     })
+
+    it('loads the artist open call starter into the code editor', () => {
+        render(<ViewPanelHarness initialMode="code" />)
+
+        fireEvent.click(screen.getByRole('button', { name: /Artist Open Call/i }))
+
+        expect(screen.getByLabelText('Custom HTML').value).toContain('Women Creating Change')
+        expect(screen.getByLabelText('Custom HTML').value).toContain('Apply to the open call')
+    })
 })

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const XR_EMULATE_STUB = path.resolve(ROOT_DIR, 'src/xr/emulateStub.js')
+const DEV_PROXY_API_TARGET = (process.env.VITE_PROXY_API_TARGET || 'http://localhost:4000').trim()
 
 const stubXrEmulatorPlugin = () => ({
     name: 'stub-xr-emulator',
@@ -74,7 +75,13 @@ export default {
         // Open the browser to a specific path if provided
         open: !('SANDBOX_URL' in process.env || 'CODESANDBOX_HOST' in process.env) ? resolveOpenPath() : false,
         port: 5173,
-        strictPort: false
+        strictPort: false,
+        proxy: {
+            '/serverXR': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true
+            }
+        }
     },
     build:
     {

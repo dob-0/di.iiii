@@ -1,11 +1,12 @@
 const APP_BASE_PATH = ((import.meta.env.BASE_URL) || '/').replace(/\/+$/, '') || '/'
 export const APP_PAGE_EDITOR = 'editor'
 export const APP_PAGE_PREFERENCES = 'preferences'
+export const APP_PAGE_PREFERENCES_ROUTE = 'admin'
 export const APP_PAGE_PREFERENCES_ALIASES = [
+    APP_PAGE_PREFERENCES_ROUTE,
     APP_PAGE_PREFERENCES,
     'prefrenaces',
-    'preferances',
-    'admin'
+    'preferances'
 ]
 export const RESERVED_APP_SEGMENTS = [...APP_PAGE_PREFERENCES_ALIASES]
 
@@ -30,7 +31,7 @@ export const buildAppSpacePath = (spaceId) => {
 
 export const buildPreferencesPath = (spaceId) => {
     const prefix = getAppBasePrefix()
-    const basePath = `${prefix}/${APP_PAGE_PREFERENCES}`.replace(/\/{2,}/g, '/')
+    const basePath = `${prefix}/${APP_PAGE_PREFERENCES_ROUTE}`.replace(/\/{2,}/g, '/')
     if (!spaceId) return basePath
     const params = new URLSearchParams({ space: spaceId })
     return `${basePath}?${params.toString()}`

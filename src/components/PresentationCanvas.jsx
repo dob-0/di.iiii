@@ -46,10 +46,10 @@ export default function PresentationCanvas({
     const renderEmptyState = () => (
         <div className="presentation-empty-state">
             <div className="presentation-empty-eyebrow">Code View</div>
-            <h2>Design a flat 2D space</h2>
+            <h2>Design a deployable 2D space</h2>
             <p>
-                Use the View panel to switch this space into a custom page mode,
-                then paste HTML or point to a public link.
+                Use the View panel to load a studio starter, import a single HTML file,
+                paste a custom microsite, or point the space at a public link.
             </p>
         </div>
     )

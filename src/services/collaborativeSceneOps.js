@@ -3,7 +3,8 @@ import {
     applySceneOps,
     cloneSceneValue,
     generateObjectId,
-    normalizeObjects
+    normalizeObjects,
+    normalizePresentation
 } from '../shared/sceneSchema.js'
 
 export const COLLABORATIVE_SCENE_SETTING_KEYS = [
@@ -13,7 +14,8 @@ export const COLLABORATIVE_SCENE_SETTING_KEYS = [
     'renderSettings',
     'ambientLight',
     'directionalLight',
-    'transformSnaps'
+    'transformSnaps',
+    'presentation'
 ]
 
 export const buildCollaborativeSceneSnapshot = ({
@@ -25,6 +27,7 @@ export const buildCollaborativeSceneSnapshot = ({
     ambientLight,
     directionalLight,
     transformSnaps,
+    presentation,
     default3DView
 } = {}) => ({
     version: SCENE_DATA_VERSION,
@@ -36,6 +39,7 @@ export const buildCollaborativeSceneSnapshot = ({
     ambientLight: cloneSceneValue(ambientLight),
     directionalLight: cloneSceneValue(directionalLight),
     transformSnaps: cloneSceneValue(transformSnaps),
+    presentation: normalizePresentation(cloneSceneValue(presentation)),
     default3DView: cloneSceneValue(default3DView)
 })
 

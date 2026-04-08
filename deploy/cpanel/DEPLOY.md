@@ -1,6 +1,6 @@
 # cPanel Release Bundle
 
-This folder is the template source for the staged cPanel release built by:
+Build the staged release with:
 
 ```bash
 npm run deploy:cpanel
@@ -14,30 +14,43 @@ That command creates:
 ├── serverXR/
 ├── shared/
 ├── frontend.env.production.example
-└── DEPLOY.md
+├── DEPLOY.md
+└── release.json
 ```
 
 ## Upload Targets
 
-- Upload `.deploy/cpanel/public_html/*` to your domain web root such as `public_html/`
-- Upload `.deploy/cpanel/serverXR/` to your home directory such as `~/serverXR/`
-- Upload `.deploy/cpanel/shared/` to your home directory such as `~/shared/`
+- Sync `.deploy/cpanel/public_html/` into your domain web root such as `public_html/`
+- Sync `.deploy/cpanel/serverXR/` into your Node.js app root such as `~/serverXR/`
+- Sync `.deploy/cpanel/shared/` into a sibling folder such as `~/shared/`
 
 The `shared/` folder is required because `serverXR/src` imports the shared schemas from `../../shared`.
 
+## Important Change
+
+- Do not upload a `public_html/serverXR/` proxy folder.
+- In the current deployment model, cPanel `Setup Node.js App` owns `/serverXR`.
+- The release bundle intentionally removes the legacy Apache proxy files from `public_html/`.
+
 ## First-Time Server Setup
+
+1. Create a Node.js app in cPanel:
+   - app root: `serverXR`
+   - app URL: `/serverXR`
+   - startup file: `src/index.js`
+2. Copy `serverXR/.env.production.example` to `serverXR/.env` and replace placeholders.
+3. Install production dependencies in the app root:
 
 ```bash
 cd ~/serverXR
-cp .env.production.example .env
 npm install --production
-pm2 start ecosystem.config.js
-pm2 save
+cloudlinux-selector restart --json --interpreter nodejs --user "$USER" --app-root serverXR
 ```
 
 ## Verify
 
 - Frontend: `https://your-domain/`
+- Admin: `https://your-domain/admin?space=main`
 - Server status: `https://your-domain/serverXR/`
 - Health: `https://your-domain/serverXR/api/health`
-
+- Events: `https://your-domain/serverXR/api/events`

@@ -1,4 +1,4 @@
-export const PROJECT_DOCUMENT_VERSION = 1
+export const PROJECT_DOCUMENT_VERSION = 2
 export const ENTITY_TYPES = [
     'box',
     'sphere',
@@ -82,12 +82,38 @@ export const defaultXrState = {
     arSupported: false
 }
 
+export const defaultPresentationFixedCamera = {
+    projection: 'perspective',
+    position: [0, 2.4, 6.5],
+    target: [0, 0.75, 0],
+    fov: 50,
+    zoom: 1,
+    near: 0.1,
+    far: 200,
+    locked: false
+}
+
+export const defaultPresentationState = {
+    mode: 'scene',
+    fixedCamera: defaultPresentationFixedCamera,
+    codeHtml: '',
+    entryView: 'scene'
+}
+
+export const defaultPublishState = {
+    shareEnabled: false,
+    xrDefaultMode: 'none',
+    lastExportAt: 0
+}
+
 export const defaultProjectDocument = {
     version: PROJECT_DOCUMENT_VERSION,
     projectMeta: { id: '', spaceId: 'main', title: 'Untitled Beta Project', createdAt: 0, updatedAt: 0, source: 'beta-v2' },
     entities: [],
     worldState: defaultWorldState,
     xrState: defaultXrState,
+    presentationState: defaultPresentationState,
+    publishState: defaultPublishState,
     windowLayout: defaultWindowLayout,
     assets: []
 }
@@ -270,6 +296,50 @@ const normalizeXrState = (xr = {}) => {
     }
 }
 
+const normalizePresentationFixedCamera = (camera = {}, worldState = defaultWorldState) => {
+    const source = camera && typeof camera === 'object' ? camera : {}
+    const worldView = worldState?.savedView || defaultWorldState.savedView
+    const projection = ensureString(source.projection, defaultPresentationFixedCamera.projection)
+    return {
+        ...cloneValue(defaultPresentationFixedCamera),
+        ...cloneValue(source),
+        projection: ['perspective', 'orthographic'].includes(projection) ? projection : defaultPresentationFixedCamera.projection,
+        position: ensureVector(source.position, worldView.position || defaultPresentationFixedCamera.position),
+        target: ensureVector(source.target, worldView.target || defaultPresentationFixedCamera.target),
+        fov: Math.max(1, ensureNumber(source.fov, defaultPresentationFixedCamera.fov)),
+        zoom: Math.max(0.01, ensureNumber(source.zoom, defaultPresentationFixedCamera.zoom)),
+        near: Math.max(0.001, ensureNumber(source.near, defaultPresentationFixedCamera.near)),
+        far: Math.max(0.01, ensureNumber(source.far, defaultPresentationFixedCamera.far)),
+        locked: ensureBoolean(source.locked, defaultPresentationFixedCamera.locked)
+    }
+}
+
+export const normalizePresentationState = (presentation = {}, worldState = defaultWorldState) => {
+    const source = presentation && typeof presentation === 'object' ? presentation : {}
+    const mode = ensureString(source.mode, defaultPresentationState.mode)
+    const entryView = ensureString(source.entryView, mode || defaultPresentationState.entryView)
+    return {
+        ...cloneValue(defaultPresentationState),
+        ...cloneValue(source),
+        mode: ['scene', 'fixed-camera', 'code'].includes(mode) ? mode : defaultPresentationState.mode,
+        fixedCamera: normalizePresentationFixedCamera(source.fixedCamera, worldState),
+        codeHtml: typeof source.codeHtml === 'string' ? source.codeHtml : defaultPresentationState.codeHtml,
+        entryView: ['scene', 'fixed-camera', 'code'].includes(entryView) ? entryView : defaultPresentationState.entryView
+    }
+}
+
+export const normalizePublishState = (publish = {}) => {
+    const source = publish && typeof publish === 'object' ? publish : {}
+    const xrDefaultMode = ensureString(source.xrDefaultMode, defaultPublishState.xrDefaultMode)
+    return {
+        ...cloneValue(defaultPublishState),
+        ...cloneValue(source),
+        shareEnabled: ensureBoolean(source.shareEnabled, defaultPublishState.shareEnabled),
+        xrDefaultMode: ['none', 'vr', 'ar'].includes(xrDefaultMode) ? xrDefaultMode : defaultPublishState.xrDefaultMode,
+        lastExportAt: Math.max(0, ensureNumber(source.lastExportAt, defaultPublishState.lastExportAt))
+    }
+}
+
 export const normalizeProjectMeta = (meta = {}) => {
     const source = meta && typeof meta === 'object' ? meta : {}
     const now = Date.now()
@@ -285,12 +355,15 @@ export const normalizeProjectMeta = (meta = {}) => {
 
 export const normalizeProjectDocument = (document = {}) => {
     const source = document && typeof document === 'object' ? document : {}
+    const worldState = normalizeWorldState(source.worldState)
     return {
         version: PROJECT_DOCUMENT_VERSION,
         projectMeta: normalizeProjectMeta(source.projectMeta),
         entities: Array.isArray(source.entities) ? source.entities.map(normalizeEntity) : [],
-        worldState: normalizeWorldState(source.worldState),
+        worldState,
         xrState: normalizeXrState(source.xrState),
+        presentationState: normalizePresentationState(source.presentationState, worldState),
+        publishState: normalizePublishState(source.publishState),
         windowLayout: normalizeWindowLayout(source.windowLayout),
         assets: Array.isArray(source.assets) ? source.assets.map(normalizeAsset) : []
     }
@@ -355,6 +428,17 @@ export const applyProjectOps = (document, ops = []) => {
             }
             case 'setXrState': {
                 nextDocument.xrState = normalizeXrState(mergePatch(nextDocument.xrState, payload.patch || {}))
+                break
+            }
+            case 'setPresentationState': {
+                nextDocument.presentationState = normalizePresentationState(
+                    mergePatch(nextDocument.presentationState, payload.patch || {}),
+                    nextDocument.worldState
+                )
+                break
+            }
+            case 'setPublishState': {
+                nextDocument.publishState = normalizePublishState(mergePatch(nextDocument.publishState, payload.patch || {}))
                 break
             }
             case 'setWindowState': {

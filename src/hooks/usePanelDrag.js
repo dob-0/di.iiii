@@ -48,7 +48,6 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
 
     const bringToFront = useCallback(() => {
         const next = ++globalZIndex
-        console.log('Panel z-index changed to:', next)
         setZIndex(next)
     }, [])
 

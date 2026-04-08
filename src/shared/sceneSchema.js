@@ -1,5 +1,7 @@
 export const SCENE_DATA_VERSION = 4
 const VECTOR_SIZE = 3
+const DEFAULT_FIXED_CAMERA_POSITION = [0, 1.6, 4]
+const DEFAULT_FIXED_CAMERA_TARGET = [0, 1, 0]
 export const SCENE_SETTINGS_KEYS = [
     'backgroundColor',
     'gridSize',
@@ -8,6 +10,7 @@ export const SCENE_SETTINGS_KEYS = [
     'ambientLight',
     'directionalLight',
     'transformSnaps',
+    'presentation',
     'isGridVisible',
     'isGizmoVisible',
     'isPerfVisible'
@@ -31,10 +34,69 @@ const ensureExpressions = (exprs) => {
     })
 }
 
+export const defaultPresentation = {
+    mode: 'scene',
+    sourceType: 'html',
+    url: '',
+    html: '',
+    fixedCamera: {
+        projection: 'perspective',
+        position: [...DEFAULT_FIXED_CAMERA_POSITION],
+        target: [...DEFAULT_FIXED_CAMERA_TARGET],
+        fov: 60,
+        zoom: 1,
+        near: 0.1,
+        far: 200,
+        locked: true
+    }
+}
+
+export const normalizeFixedCamera = (fixedCamera = {}) => {
+    const nextNear = Number(fixedCamera?.near)
+    const near = Number.isFinite(nextNear) && nextNear > 0 ? nextNear : defaultPresentation.fixedCamera.near
+    const nextFar = Number(fixedCamera?.far)
+    const fallbackFar = Math.max(defaultPresentation.fixedCamera.far, near + 1)
+    const far = Number.isFinite(nextFar) && nextFar > near ? nextFar : fallbackFar
+    const nextFov = Number(fixedCamera?.fov)
+    const nextZoom = Number(fixedCamera?.zoom)
+    return {
+        projection: fixedCamera?.projection === 'orthographic' ? 'orthographic' : 'perspective',
+        position: ensureVector(fixedCamera?.position, defaultPresentation.fixedCamera.position),
+        target: ensureVector(fixedCamera?.target, defaultPresentation.fixedCamera.target),
+        fov: Number.isFinite(nextFov) && nextFov > 0 ? nextFov : defaultPresentation.fixedCamera.fov,
+        zoom: Number.isFinite(nextZoom) && nextZoom > 0 ? nextZoom : defaultPresentation.fixedCamera.zoom,
+        near,
+        far,
+        locked: true
+    }
+}
+
+export const normalizePresentation = (presentation = {}) => ({
+    mode: presentation?.mode === 'code'
+        ? 'code'
+        : (presentation?.mode === 'fixed-camera' ? 'fixed-camera' : 'scene'),
+    sourceType: presentation?.sourceType === 'url' ? 'url' : 'html',
+    url: typeof presentation?.url === 'string' ? presentation.url.trim() : '',
+    html: typeof presentation?.html === 'string' ? presentation.html : '',
+    fixedCamera: normalizeFixedCamera(presentation?.fixedCamera)
+})
+
+export const defaultGridAppearance = {
+    cellSize: 0.75,
+    cellThickness: 0.3,
+    sectionSize: 6,
+    sectionThickness: 0.65,
+    fadeDistance: 42,
+    fadeStrength: 0.35,
+    offset: 0.015,
+    color: '#2b313d',
+    sectionColor: '#465063'
+}
+
 export const defaultScene = {
     version: SCENE_DATA_VERSION,
     objects: [],
-    backgroundColor: '#f7f6ef',
+    backgroundColor: '#171a20',
     gridSize: 20,
     isGridVisible: true,
     isGizmoVisible: true,
@@ -52,6 +114,9 @@ export const defaultScene = {
         translation: 0.1,
         rotation: 15,
         scale: 0.1
+    },
+    presentation: {
+        ...defaultPresentation
     },
     default3DView: {
         position: [0, 1.6, 4],
@@ -103,7 +168,8 @@ export const cloneSceneValue = (value) => {
 const buildBaseScene = (scene) => ({
     ...defaultScene,
     ...(scene && typeof scene === 'object' ? cloneSceneValue(scene) : {}),
-    objects: normalizeObjects(scene?.objects || [])
+    objects: normalizeObjects(scene?.objects || []),
+    presentation: normalizePresentation(scene?.presentation)
 })
 
 export const applySceneOps = (scene, ops = []) => {
@@ -141,7 +207,9 @@ export const applySceneOps = (scene, ops = []) => {
             case 'setSceneSettings': {
                 SCENE_SETTINGS_KEYS.forEach((key) => {
                     if (key in payload) {
-                        nextScene[key] = cloneSceneValue(payload[key])
+                        nextScene[key] = key === 'presentation'
+                            ? normalizePresentation(payload[key])
+                            : cloneSceneValue(payload[key])
                     }
                 })
                 break

@@ -136,8 +136,8 @@ const withAuth = (token) => ({
 })
 
 const createReadOnlySpace = async (dataRoot, spaceId = 'locked-space') => {
-    const spaceDir = path.join(dataRoot, 'spaces', spaceId)
-    await mkdir(path.join(spaceDir, 'assets'), { recursive: true })
+  const spaceDir = path.join(dataRoot, 'spaces', spaceId)
+  await mkdir(path.join(spaceDir, 'assets'), { recursive: true })
     await writeFile(path.join(spaceDir, 'meta.json'), JSON.stringify({
         id: spaceId,
         label: 'Locked Space',
@@ -148,7 +148,29 @@ const createReadOnlySpace = async (dataRoot, spaceId = 'locked-space') => {
         lastTouchedAt: Date.now(),
         sceneVersion: 0
     }, null, 2))
-    return spaceId
+  return spaceId
+}
+
+const createSpaceWithScene = async (dataRoot, {
+  spaceId = 'asset-space',
+  scene,
+  sceneVersion = 7
+} = {}) => {
+  const spaceDir = path.join(dataRoot, 'spaces', spaceId)
+  await mkdir(path.join(spaceDir, 'assets'), { recursive: true })
+  await writeFile(path.join(spaceDir, 'meta.json'), JSON.stringify({
+    id: spaceId,
+    label: 'Asset Space',
+    permanent: true,
+    allowEdits: true,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    lastTouchedAt: Date.now(),
+    sceneVersion
+  }, null, 2))
+  await writeFile(path.join(spaceDir, 'scene.json'), JSON.stringify(scene, null, 2))
+  await writeFile(path.join(spaceDir, 'ops.json'), JSON.stringify([], null, 2))
+  return spaceId
 }
 
 afterEach(async () => {
@@ -199,6 +221,42 @@ describe('server write contracts', () => {
         const server = await startServer({ appBasePath: '/nested/app' })
         const response = await fetch(`${server.baseUrl}/api/health`)
         expect(response.status).toBe(200)
+    })
+
+    it('hydrates a scene asset manifest from object asset refs for legacy scenes', async () => {
+        const server = await startServer({ nodeEnv: 'production', requireAuth: true })
+        const assetId = '4c122913-7872-42b3-8b04-9f73942022fd'
+        const spaceId = await createSpaceWithScene(server.dataRoot, {
+            scene: {
+                version: 4,
+                objects: [{
+                    id: 'image-1',
+                    type: 'image',
+                    assetRef: {
+                        id: assetId,
+                        name: '1.webp',
+                        mimeType: 'image/webp',
+                        size: 6872,
+                        createdAt: 1773766320415
+                    }
+                }]
+            }
+        })
+
+        const response = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/scene`)
+        expect(response.status).toBe(200)
+
+        const payload = await response.json()
+        expect(payload.version).toBe(7)
+        expect(payload.scene.assetsBaseUrl).toBe(`/serverXR/api/spaces/${spaceId}/assets`)
+        expect(payload.scene.assets).toEqual([
+            expect.objectContaining({
+                id: assetId,
+                name: '1.webp',
+                mimeType: 'image/webp',
+                url: `/serverXR/api/spaces/${spaceId}/assets/${assetId}`
+            })
+        ])
     })
 
     it('rejects read-only scene, asset, and live mutations with 403', async () => {

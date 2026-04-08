@@ -3,6 +3,7 @@
     display: flex;
     flex-direction: column;
     gap: var(--panel-gap);
+    min-width: 0;
 }
 .gizmo-controls button {
     padding: 5px 10px;
@@ -30,6 +31,7 @@
     display: flex;
     flex-direction: column;
     gap: calc(var(--panel-gap) - 1px);
+    min-width: 0;
 }
 .gizmo-controls .gizmo-mode-buttons {
     display: flex;
@@ -86,11 +88,12 @@
 }
 .gizmo-controls .prop-row {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-columns: minmax(0, 88px) minmax(0, 1fr);
     align-items: center;
     gap: var(--panel-gap);
     font-size: 11px;
     color: var(--ui-text-primary);
+    min-width: 0;
 }
 .gizmo-controls .prop-row > label,
 .gizmo-controls .prop-row > .prop-label {
@@ -99,9 +102,12 @@
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--ui-text-muted);
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 .gizmo-controls .prop-row > :not(label):not(.prop-label) {
     justify-self: end;
+    min-width: 0;
 }
 .gizmo-controls .prop-row input:not([type="color"]),
 .gizmo-controls .prop-row select,
@@ -143,12 +149,13 @@
 }
 .gizmo-controls .link-row {
     display: grid;
-    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-columns: 52px minmax(0, 1fr);
     gap: 6px;
     align-items: center;
     padding: 4px;
     border-radius: 8px;
     background: rgba(255,255,255,0.02);
+    min-width: 0;
 }
 .gizmo-controls .link-row .toggle-button-small {
     width: 100%;
@@ -189,6 +196,7 @@
     margin-top: 6px;
     padding-top: 6px;
     border-top: 1px solid rgba(255,255,255,0.05);
+    min-width: 0;
 }
 .gizmo-controls .object-actions button {
     width: 100%;

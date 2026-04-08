@@ -112,6 +112,12 @@ describe('useLiveSync', () => {
             type: 'addObject'
         })
         expect(baseProps.setSceneVersion).toHaveBeenCalledWith(1)
+
+        await act(async () => {
+            await new Promise(resolve => setTimeout(resolve, 0))
+        })
+
+        expect(baseProps.submitSceneOps).toHaveBeenCalledTimes(1)
     })
 
     it('keeps the event stream subscribed while local scene state changes', async () => {
@@ -146,6 +152,11 @@ describe('useLiveSync', () => {
             expect(baseProps.submitSceneOps).toHaveBeenCalledTimes(1)
         })
 
+        await act(async () => {
+            await new Promise(resolve => setTimeout(resolve, 0))
+        })
+
+        expect(baseProps.submitSceneOps).toHaveBeenCalledTimes(1)
         expect(connectMock).toHaveBeenCalledTimes(1)
         expect(disconnectMock).not.toHaveBeenCalled()
     })

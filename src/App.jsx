@@ -10,7 +10,7 @@ import {
     getServerSceneOps,
     submitSceneOps
 } from './services/serverSpaces.js'
-import { defaultScene, useSceneStore } from './state/sceneStore.js'
+import { defaultGridAppearance, defaultScene, useSceneStore } from './state/sceneStore.js'
 import { useUiState } from './hooks/useUiState.js'
 import { useRenderSettings, DEFAULT_RENDER_SETTINGS } from './hooks/useRenderSettings.js'
 import { getSceneStorageKey, persistSceneToLocalStorage } from './storage/scenePersistence.js'
@@ -66,15 +66,6 @@ const perspectiveCameraSettings = {
 const DEFAULT_SCENE_REMOTE_BASE = ''
 const LEGACY_DEFAULT_SCENE_BASE = ''
 const LIVE_SYNC_FEATURE_ENABLED = true
-const DEFAULT_GRID_APPEARANCE = {
-    cellSize: 0.75,
-    cellThickness: 0.75,
-    sectionSize: 6,
-    sectionThickness: 1.2,
-    fadeDistance: 100,
-    fadeStrength: 0.1,
-    offset: 0.015
-}
 
 const DEFAULT_SPACE_ID = 'main'
 
@@ -85,7 +76,7 @@ function AppInner() {
     const isPreferencesPage = route.page === APP_PAGE_PREFERENCES
     const sceneSettings = useSceneSettings({
         defaultScene,
-        defaultGridAppearance: DEFAULT_GRID_APPEARANCE,
+        defaultGridAppearance,
         perspectiveCameraSettings
     })
     const {
@@ -342,7 +333,7 @@ function AppInner() {
         setCameraTarget: sceneSettings.setCameraTarget,
         clearSelection,
         setRemoteSceneVersion,
-        defaultGridAppearance: DEFAULT_GRID_APPEARANCE,
+        defaultGridAppearance,
         defaultRenderSettings: DEFAULT_RENDER_SETTINGS,
         defaultSceneRemoteBase: DEFAULT_SCENE_REMOTE_BASE,
         legacySceneRemoteBase: LEGACY_DEFAULT_SCENE_BASE,
@@ -382,7 +373,7 @@ function AppInner() {
         setCameraTarget: sceneSettings.setCameraTarget,
         setSceneVersion,
         getServerScene,
-        defaultGridAppearance: DEFAULT_GRID_APPEARANCE,
+        defaultGridAppearance,
         defaultRenderSettings: DEFAULT_RENDER_SETTINGS,
         defaultSceneRemoteBase: DEFAULT_SCENE_REMOTE_BASE
     })
@@ -441,7 +432,7 @@ function AppInner() {
         setAmbientLight: sceneSettings.setAmbientLight,
         setDirectionalLight: sceneSettings.setDirectionalLight,
         setDefault3DView: sceneSettings.setDefault3DView,
-        defaultGridAppearance: DEFAULT_GRID_APPEARANCE
+        defaultGridAppearance
     })
 
     useEffect(() => {
@@ -499,7 +490,7 @@ function AppInner() {
         setObjects(cloneObjects(snapshot.objects || []))
         sceneSettings.setBackgroundColor(snapshot.backgroundColor || defaultScene.backgroundColor)
         sceneSettings.setGridSize(snapshot.gridSize || defaultScene.gridSize)
-        sceneSettings.setGridAppearance(snapshot.gridAppearance || DEFAULT_GRID_APPEARANCE)
+        sceneSettings.setGridAppearance(snapshot.gridAppearance || defaultGridAppearance)
         setRenderSettings(snapshot.renderSettings || DEFAULT_RENDER_SETTINGS)
         sceneSettings.setCameraSettings(snapshot.cameraSettings || perspectiveCameraSettings)
         sceneSettings.setTransformSnaps(snapshot.transformSnaps || defaultScene.transformSnaps)
@@ -719,7 +710,7 @@ function AppInner() {
         setDirectionalLight: sceneSettings.setDirectionalLight,
         setDefault3DView: sceneSettings.setDefault3DView,
         clearSelection,
-        defaultGridAppearance: DEFAULT_GRID_APPEARANCE,
+        defaultGridAppearance,
         defaultRenderSettings: DEFAULT_RENDER_SETTINGS,
         isLoading,
         canPublishToServer,
@@ -778,7 +769,7 @@ function AppInner() {
         clearAllAssets,
         resetAssetStoreQuotaState,
         scheduleLocalSceneSave,
-        defaultGridAppearance: DEFAULT_GRID_APPEARANCE,
+        defaultGridAppearance,
         toggleAdminMode,
         resetSceneVersionOnClear: !LIVE_SYNC_FEATURE_ENABLED
     })
@@ -980,7 +971,6 @@ function AppInner() {
         setIsLiveSyncEnabled,
         canSyncServerScene,
         spaceId,
-        supportsServerSpaces,
         isOfflineMode,
         setOfflineMode,
         shouldSyncServerScene,
@@ -1014,7 +1004,6 @@ function AppInner() {
         setIsLiveSyncEnabled,
         canSyncServerScene,
         spaceId,
-        supportsServerSpaces,
         isOfflineMode,
         setOfflineMode,
         shouldSyncServerScene,
@@ -1100,6 +1089,8 @@ function AppInner() {
         handleDeleteSpace,
         handleToggleSpacePermanent,
         handleToggleSpaceEditLock,
+        handleReloadFromServer,
+        handlePublishToServer,
         socketEmit
     }), [
         handleAddObject,
@@ -1138,6 +1129,8 @@ function AppInner() {
         handleDeleteSpace,
         handleToggleSpacePermanent,
         handleToggleSpaceEditLock,
+        handleReloadFromServer,
+        handlePublishToServer,
         guardEditAction,
         socketEmit
     ])

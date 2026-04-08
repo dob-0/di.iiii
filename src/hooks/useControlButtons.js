@@ -118,7 +118,7 @@ export function useControlButtons({
         }
         if (isUiVisible) {
             sceneButtons.push(
-                { key: 'preferences', label: 'Preferences', onClick: navigateToPreferences },
+                { key: 'preferences', label: 'Admin', onClick: navigateToPreferences },
                 { key: 'save', label: 'Export Project', onClick: handleSave, hint: 'Cmd/Ctrl+S' },
                 { key: 'load', label: 'Import Project', onClick: handleLoadClick },
                 { key: 'offline-mode', label: isOfflineMode ? 'Exit Offline' : 'Work Offline', onClick: handleToggleOfflineMode },
@@ -216,22 +216,6 @@ export function useControlButtons({
             onClick: toggleUiDefaultVisible,
             title: 'Set whether the UI shows on load'
         })
-        displayButtons.push({
-            key: 'layout-mode',
-            label: layoutMode === 'split' ? 'Split View' : 'Floating Panels',
-            onClick: toggleLayoutMode,
-            isActive: layoutMode === 'split',
-            title: 'Toggle between floating panels and split-screen layout'
-        })
-        if (layoutMode === 'split') {
-            displayButtons.push({
-                key: 'layout-side',
-                label: `Side: ${(layoutSide || 'right').charAt(0).toUpperCase() + (layoutSide || 'right').slice(1)}`,
-                onClick: cycleLayoutSide,
-                title: 'Cycle dock position (right → left → bottom → top)'
-            })
-        }
-
         const buildXrSessionButtons = () => {
             if (!isXrPresenting) {
                 return [
@@ -341,10 +325,6 @@ export function useControlButtons({
         setIsSelectionLocked,
         uiDefaultVisible,
         toggleUiDefaultVisible,
-        layoutMode,
-        toggleLayoutMode,
-        layoutSide,
-        cycleLayoutSide,
         presentationMode,
         setPresentationMode,
         handleEnterXrFocus,

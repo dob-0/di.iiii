@@ -1,87 +1,21 @@
-import React, { useContext, useId } from 'react'
+import React, { useContext, useId, useRef } from 'react'
 import { UiContext, SceneSettingsContext, ActionsContext, RefsContext } from './contexts/AppContexts.js'
 import { usePanelDrag } from './hooks/usePanelDrag.js'
 import { usePanelResize } from './hooks/usePanelResize.js'
 import { defaultPresentation } from './shared/sceneSchema.js'
+import {
+    defaultPresentationTemplate,
+    getPresentationTemplateById,
+    presentationStarterTemplates
+} from './utils/presentationTemplates.js'
 import './ViewPanel.css'
 
-const DEFAULT_PRESENTATION_HTML = `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My Space</title>
-    <style>
-      :root {
-        color-scheme: light;
-        --page-bg: #f3eee2;
-        --card-bg: rgba(255, 255, 255, 0.84);
-        --text-primary: #20160c;
-        --text-secondary: #6a5133;
-        --accent: #b46d1f;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        min-height: 100vh;
-        font-family: Georgia, "Times New Roman", serif;
-        background:
-          radial-gradient(circle at top left, rgba(255,255,255,0.75), transparent 28%),
-          linear-gradient(180deg, #f8f2e6 0%, var(--page-bg) 100%);
-        color: var(--text-primary);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 32px;
-      }
-
-      .card {
-        width: min(720px, 100%);
-        padding: 32px;
-        border-radius: 28px;
-        background: var(--card-bg);
-        box-shadow: 0 30px 80px rgba(67, 41, 7, 0.14);
-        backdrop-filter: blur(10px);
-      }
-
-      .eyebrow {
-        margin: 0 0 10px;
-        font-size: 12px;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        color: var(--accent);
-      }
-
-      h1 {
-        margin: 0 0 14px;
-        font-size: clamp(2.2rem, 5vw, 4.5rem);
-        line-height: 0.95;
-      }
-
-      p {
-        margin: 0 0 14px;
-        font-size: 1rem;
-        line-height: 1.7;
-        color: var(--text-secondary);
-      }
-    </style>
-  </head>
-  <body>
-    <article class="card">
-      <p class="eyebrow">Code View</p>
-      <h1>Design this space like a web page.</h1>
-      <p>Replace this HTML with your own layout, sections, typography, and links.</p>
-      <p>Our editor UI can still sit on top of it when you want to debug or publish.</p>
-    </article>
-  </body>
-</html>`
-
-export default function ViewPanel() {
+export default function ViewPanel({ onClose, surfaceMode = 'floating' }) {
     const fieldPrefix = useId()
+    const htmlFileInputRef = useRef(null)
+    const isSheetMode = surfaceMode === 'sheet'
+    const isDockMode = surfaceMode === 'dock'
+    const isEmbeddedMode = isSheetMode || isDockMode
 
     const { setIsViewPanelVisible, isGridVisible, setIsGridVisible, isGizmoVisible, setIsGizmoVisible } = useContext(UiContext)
     const {
@@ -200,10 +134,47 @@ export default function ViewPanel() {
         window.open(nextUrl, '_blank', 'noopener,noreferrer')
     }
 
-    const handleUseStarterHtml = () => {
+    const applyPresentationTemplate = (templateId) => {
+        const nextTemplate = getPresentationTemplateById(templateId)
         setPresentationSourceType('html')
         setPresentationMode('code')
-        setPresentationHtml(presentationHtml.trim() ? presentationHtml : DEFAULT_PRESENTATION_HTML)
+        setPresentationHtml(nextTemplate.html)
+    }
+
+    const handleUseStarterHtml = () => {
+        applyPresentationTemplate(defaultPresentationTemplate.id)
+    }
+
+    const handleImportPresentationHtml = async (event) => {
+        const nextFile = event.target.files?.[0]
+        event.target.value = ''
+        if (!nextFile) return
+
+        try {
+            const nextHtml = await nextFile.text()
+            setPresentationSourceType('html')
+            setPresentationMode('code')
+            setPresentationHtml(nextHtml)
+        } catch (error) {
+            console.error('Unable to import HTML presentation file', error)
+        }
+    }
+
+    const handleOpenPresentationHtml = () => {
+        const nextHtml = presentationHtml.trim() || defaultPresentationTemplate.html
+        const objectUrl = URL.createObjectURL(new Blob([nextHtml], { type: 'text/html' }))
+        window.open(objectUrl, '_blank', 'noopener,noreferrer')
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000)
+    }
+
+    const handleDownloadPresentationHtml = () => {
+        const nextHtml = presentationHtml.trim() || defaultPresentationTemplate.html
+        const objectUrl = URL.createObjectURL(new Blob([nextHtml], { type: 'text/html' }))
+        const link = document.createElement('a')
+        link.href = objectUrl
+        link.download = 'space-code-view.html'
+        link.click()
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1_000)
     }
 
     const handleUseCurrentCamera = () => {
@@ -211,8 +182,9 @@ export default function ViewPanel() {
         setPresentationFixedCamera(readCurrentCameraSnapshot())
     }
 
-    const { panelRef, dragProps, dragStyle, isDragging, panelPointerProps } = usePanelDrag({ x: 360, y: 120 }, { baseZ: 100 })
-    const { width, height, resizerProps, isResizing } = usePanelResize(320, {
+    const closePanel = onClose || (() => setIsViewPanelVisible(false))
+    const dragState = usePanelDrag({ x: 360, y: 120 }, { baseZ: 100 })
+    const resizeState = usePanelResize(320, {
         min: 280,
         max: 640,
         minHeight: 260,
@@ -227,14 +199,14 @@ export default function ViewPanel() {
 
     return (
         <div
-            ref={panelRef}
-            style={{ ...dragStyle, width, height }}
-            className="view-panel floating-panel draggable-panel"
-            {...panelPointerProps}
+            ref={isEmbeddedMode ? undefined : dragState.panelRef}
+            style={isEmbeddedMode ? undefined : { ...dragState.dragStyle, width: resizeState.width, height: resizeState.height }}
+            className={['view-panel', 'floating-panel', isSheetMode ? 'sheet-panel' : (isDockMode ? 'dock-panel' : 'draggable-panel')].join(' ')}
+            {...(isEmbeddedMode ? {} : dragState.panelPointerProps)}
         >
-            <div className={`panel-header draggable-header ${isDragging ? 'dragging' : ''}`} {...dragProps}>
+            <div className={`panel-header ${isSheetMode ? 'sheet-panel-header' : (isDockMode ? 'dock-panel-header' : `draggable-header ${dragState.isDragging ? 'dragging' : ''}`)}`.trim()} {...(isEmbeddedMode ? {} : dragState.dragProps)}>
                 <h3>View Settings</h3>
-                <button className="close-button" onClick={() => setIsViewPanelVisible(false)}>×</button>
+                <button className="close-button" onClick={closePanel}>×</button>
             </div>
 
             <div className="panel-content view-panel-content">
@@ -304,10 +276,67 @@ export default function ViewPanel() {
                                     </div>
                                     <p className="panel-subtext">
                                         Use this when a space should present an external page, prototype, or published microsite.
+                                        Switch back to Custom HTML when the artist needs a deployable page directly inside the project.
                                     </p>
                                 </div>
                             ) : (
                                 <div className="prop-row-stacked">
+                                    <div className="view-panel-code-heading-row">
+                                        <div className="prop-label">Custom HTML</div>
+                                        <span className="view-panel-code-hint">Studio-ready code handoff</span>
+                                    </div>
+                                    <div className="view-panel-template-grid">
+                                        {presentationStarterTemplates.map((template) => (
+                                            <button
+                                                key={template.id}
+                                                type="button"
+                                                className={`view-panel-template-card ${presentationHtml.trim() === template.html.trim() ? 'is-active' : ''}`.trim()}
+                                                onClick={() => applyPresentationTemplate(template.id)}
+                                            >
+                                                <span className="view-panel-template-eyebrow">{template.eyebrow}</span>
+                                                <strong>{template.name}</strong>
+                                                <span>{template.description}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="view-panel-inline-actions view-panel-code-actions">
+                                        <button
+                                            type="button"
+                                            className="toggle-button-small"
+                                            onClick={handleUseStarterHtml}
+                                        >
+                                            XR Starter
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="toggle-button-small"
+                                            onClick={() => htmlFileInputRef.current?.click()}
+                                        >
+                                            Import HTML
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="toggle-button-small"
+                                            onClick={handleOpenPresentationHtml}
+                                        >
+                                            Open Preview
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="toggle-button-small"
+                                            onClick={handleDownloadPresentationHtml}
+                                        >
+                                            Download HTML
+                                        </button>
+                                    </div>
+                                    <input
+                                        ref={htmlFileInputRef}
+                                        type="file"
+                                        accept=".html,.htm,.txt,text/html,text/plain"
+                                        aria-label="Import HTML file"
+                                        style={{ display: 'none' }}
+                                        onChange={handleImportPresentationHtml}
+                                    />
                                     <label htmlFor={`${fieldPrefix}-presentation-html`}>Custom HTML</label>
                                     <textarea
                                         id={`${fieldPrefix}-presentation-html`}
@@ -315,19 +344,18 @@ export default function ViewPanel() {
                                         spellCheck="false"
                                         value={presentationHtml}
                                         onChange={(event) => setPresentationHtml(event.target.value)}
-                                        placeholder="Paste a standalone HTML document or a custom page fragment."
+                                        placeholder="Paste a standalone HTML document, an artist microsite, or a custom page fragment."
                                     />
-                                    <div className="view-panel-inline-actions">
-                                        <button
-                                            type="button"
-                                            className="toggle-button-small"
-                                            onClick={handleUseStarterHtml}
-                                        >
-                                            Use Starter
-                                        </button>
+                                    <div className="view-panel-code-note">
+                                        <strong>Deploy-ready tip</strong>
+                                        <span>
+                                            Single-file HTML is the safest path for artist handoff inside this editor.
+                                            You can still paste React, CDN, or Three.js experiments, but those are usually better once the project already has a public host.
+                                        </span>
                                     </div>
                                     <p className="panel-subtext">
                                         Paste a full HTML layout here to let this space behave more like a web page while our tools stay available on top.
+                                        The starter cards above are tuned for deployable artist pages, open calls, and client launches.
                                     </p>
                                 </div>
                             )}
@@ -692,7 +720,7 @@ export default function ViewPanel() {
                     </details>
                 </section>
             </div>
-            <div className={`panel-resizer ${isResizing ? 'resizing' : ''}`} {...resizerProps} />
+            {!isEmbeddedMode && <div className={`panel-resizer ${resizeState.isResizing ? 'resizing' : ''}`} {...resizeState.resizerProps} />}
         </div>
     )
 }

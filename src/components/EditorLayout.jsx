@@ -3,10 +3,9 @@ import { Loader } from '@react-three/drei'
 import SceneCanvas from './SceneCanvas.jsx'
 import PresentationCanvas from './PresentationCanvas.jsx'
 import EditorOverlays from './EditorOverlays.jsx'
-import DockPanels from './DockPanels.jsx'
-import SplitPanels from './SplitPanels.jsx'
 import EditorChrome from './EditorChrome.jsx'
-import EditorToolbar from './EditorToolbar.jsx'
+import DesktopWorkspaceShell from './DesktopWorkspaceShell.jsx'
+import MobileEditorShell from './MobileEditorShell.jsx'
 import WorldPanel from '../WorldPanel.jsx'
 import ViewPanel from '../ViewPanel.jsx'
 import MediaPanel from '../MediaPanel.jsx'
@@ -21,9 +20,12 @@ export function EditorLayout({
     fileInputRef,
     handleFileLoad,
     toolbarModel,
+    mobileModel,
     panelEntries,
     hiddenUiButtons,
     isUiVisible,
+    viewportMode = 'desktop',
+    isPhoneCompact = false,
     layoutMode,
     toggleLayoutMode,
     layoutSide,
@@ -86,27 +88,31 @@ export function EditorLayout({
     statusSummary,
     statusItems
 }) {
+    const isMobileViewport = viewportMode === 'mobile'
     const isCodeView = presentation?.mode === 'code'
-    const renderPanelContent = (entry) => {
+    const renderPanelContent = (entry, options = {}) => {
         if (!entry) return null
+        const surfaceMode = options.surfaceMode || 'floating'
+        const panelClose = options.onClose || entry.onClose
 
         switch (entry.key) {
         case 'inspector':
-            return <InspectorPanel onClose={entry.onClose} />
+            return <InspectorPanel onClose={panelClose} surfaceMode={surfaceMode} />
         case 'world':
-            return <WorldPanel />
+            return <WorldPanel onClose={panelClose} surfaceMode={surfaceMode} />
         case 'view':
-            return <ViewPanel />
+            return <ViewPanel onClose={panelClose} surfaceMode={surfaceMode} />
         case 'media':
             return (
                 <MediaPanel
                     preference={mediaOptimizationPreference}
                     onChange={setMediaOptimizationPreference}
-                    onClose={entry.onClose}
+                    onClose={panelClose}
+                    surfaceMode={surfaceMode}
                 />
             )
         case 'assets':
-            return <AssetPanel onClose={entry.onClose} />
+            return <AssetPanel onClose={panelClose} surfaceMode={surfaceMode} />
         case 'outliner':
             return (
                 <OutlinerPanel
@@ -119,7 +125,8 @@ export function EditorLayout({
                     onCreateGroup={() => handleCreateSelectionGroup()}
                     onDeleteGroup={handleDeleteSelectionGroup}
                     canCreateGroup={canCreateGroupSelection}
-                    onClose={entry.onClose}
+                    onClose={panelClose}
+                    surfaceMode={surfaceMode}
                 />
             )
         case 'spaces':
@@ -127,7 +134,6 @@ export function EditorLayout({
                 <SpacesPanel
                     spaces={spaces}
                     currentSpaceId={spaceId}
-                    onClose={entry.onClose}
                     onCreateSpace={() => handleCreateNamedSpace(false)}
                     onCreatePermanentSpace={() => handleCreateNamedSpace(true)}
                     onOpenSpace={handleOpenSpace}
@@ -145,6 +151,8 @@ export function EditorLayout({
                     onSelectGroup={handleSelectSelectionGroup}
                     onDeleteGroup={handleDeleteSelectionGroup}
                     canCreateGroup={canCreateGroupSelection}
+                    surfaceMode={surfaceMode}
+                    onClose={panelClose}
                 />
             ) : null
         default:
@@ -153,7 +161,7 @@ export function EditorLayout({
     }
 
     return (
-        <div className={`${layoutMode === 'split' ? 'layout-split' : 'layout-floating'} ${layoutMode === 'split' ? `split-${layoutSide || 'right'}` : ''}`}>
+        <div className={`editor-workspace viewport-${viewportMode}`}>
             <EditorChrome
                 menu={menu}
                 setMenu={setMenu}
@@ -162,24 +170,25 @@ export function EditorLayout({
             />
 
             {isUiVisible && (
-                <EditorToolbar
-                    toolbarModel={toolbarModel}
-                    panelEntries={panelEntries}
-                />
-            )}
-
-            {isUiVisible && layoutMode === 'split' && (
-                <SplitPanels
-                    panelEntries={panelEntries}
-                    renderPanelContent={renderPanelContent}
-                />
-            )}
-
-            {isUiVisible && layoutMode !== 'split' && (
-                <DockPanels
-                    panelEntries={panelEntries}
-                    renderPanelContent={renderPanelContent}
-                />
+                isMobileViewport ? (
+                    <MobileEditorShell
+                        mobileModel={mobileModel}
+                        renderPanelContent={renderPanelContent}
+                        selectedCount={selectedObjectIds?.length || 0}
+                        statusSummary={statusSummary}
+                        statusItems={statusItems}
+                        isPhoneCompact={isPhoneCompact}
+                    />
+                ) : (
+                    <DesktopWorkspaceShell
+                        toolbarModel={toolbarModel}
+                        panelEntries={panelEntries}
+                        renderPanelContent={renderPanelContent}
+                        selectedCount={selectedObjectIds?.length || 0}
+                        statusSummary={statusSummary}
+                        statusItems={statusItems}
+                    />
+                )
             )}
 
             <EditorOverlays
@@ -188,7 +197,7 @@ export function EditorLayout({
                 isFileDragActive={isFileDragActive}
                 hiddenUiButtons={hiddenUiButtons}
                 remoteCursorMarkers={remoteCursorMarkers}
-                shouldShowStatusPanel={shouldShowStatusPanel}
+                shouldShowStatusPanel={false}
                 statusPanelClassName={statusPanelClassName}
                 statusDotClass={statusDotClass}
                 statusSummary={statusSummary}

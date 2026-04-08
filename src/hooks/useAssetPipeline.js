@@ -314,6 +314,30 @@ export function useAssetPipeline({
         }
     }, [getAssetBlob, getAssetSourceUrl, objects, startMediaOptimization])
 
+    const handleBatchMediaOptimization = useCallback(async () => {
+        const candidates = []
+        const seenOriginalIds = new Set()
+        ;(Array.isArray(objects) ? objects : []).forEach((obj) => {
+            if (!obj || !['video', 'audio'].includes(obj.type)) return
+            if (obj.mediaVariants?.optimized) return
+            const originalMeta = obj.mediaVariants?.original || obj.assetRef
+            if (!originalMeta?.id || seenOriginalIds.has(originalMeta.id)) return
+            seenOriginalIds.add(originalMeta.id)
+            candidates.push(obj.id)
+        })
+        let completed = 0
+        for (const objectId of candidates) {
+            const ok = await handleManualMediaOptimization(objectId)
+            if (ok) {
+                completed += 1
+            }
+        }
+        return {
+            queued: candidates.length,
+            completed
+        }
+    }, [handleManualMediaOptimization, objects])
+
     const uploadAssetToServer = useCallback(async ({ file, assetId, name, mimeType, trackPending = true } = {}) => {
         if (!canUploadServerAssets || !spaceId || !file) return null
         if (trackPending) {
@@ -575,6 +599,7 @@ export function useAssetPipeline({
         mediaOptimizationPreference,
         setMediaOptimizationPreference,
         mediaOptimizationStatus,
+        handleBatchMediaOptimization,
         handleManualMediaOptimization,
         handleAssetFilesUpload,
         uploadAssetToServer

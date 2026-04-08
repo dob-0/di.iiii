@@ -1,8 +1,9 @@
 import React, { useContext, useId } from 'react'
 import { SceneSettingsContext, UiContext } from './contexts/AppContexts.js'
 import PanelShell from './components/PanelShell.jsx'
+import { defaultGridAppearance, defaultScene } from './state/sceneStore.js'
 
-export default function WorldPanel() {
+export default function WorldPanel({ onClose, surfaceMode = 'floating' }) {
     const fieldPrefix = useId()
     
     // --- Get what we need from context ---
@@ -19,6 +20,7 @@ export default function WorldPanel() {
         setGridAppearance
     } = useContext(SceneSettingsContext)
     const { setIsWorldPanelVisible } = useContext(UiContext)
+    const closePanel = onClose || (() => setIsWorldPanelVisible(false))
 
     const handleGridInput = (key, value, fallback) => {
         const numeric = Number(value)
@@ -29,25 +31,18 @@ export default function WorldPanel() {
     }
 
     const resetToDefaults = () => {
-        setBackgroundColor('#f7f6ef')
-        setGridSize(20)
-        setAmbientLight({ color: '#ffffff', intensity: 0.8 })
-        setDirectionalLight({ color: '#ffffff', intensity: 1, position: [10, 10, 5] })
-        setGridAppearance({
-            cellSize: 0.75,
-            cellThickness: 0.2,
-            sectionSize: 6,
-            sectionThickness: 0.45,
-            fadeDistance: 24,
-            fadeStrength: 0.7,
-            offset: 0.01
-        })
+        setBackgroundColor(defaultScene.backgroundColor)
+        setGridSize(defaultScene.gridSize)
+        setAmbientLight(defaultScene.ambientLight)
+        setDirectionalLight(defaultScene.directionalLight)
+        setGridAppearance(defaultGridAppearance)
     }
 
     return (
         <PanelShell
             title="World Settings"
-            onClose={() => setIsWorldPanelVisible(false)}
+            onClose={closePanel}
+            surfaceMode={surfaceMode}
             initialPosition={{ x: 704, y: 120 }}
             dragOptions={{ baseZ: 100 }}
             sizeOptions={{
@@ -100,7 +95,7 @@ export default function WorldPanel() {
                     min="0.1"
                     step="0.05"
                     value={gridAppearance.cellSize}
-                    onChange={(e) => handleGridInput('cellSize', e.target.value, 0.75)}
+                    onChange={(e) => handleGridInput('cellSize', e.target.value, defaultGridAppearance.cellSize)}
                 />
             </div>
             <div className="prop-row two-column">
@@ -111,7 +106,7 @@ export default function WorldPanel() {
                     min="0.05"
                     step="0.05"
                     value={gridAppearance.cellThickness}
-                    onChange={(e) => handleGridInput('cellThickness', e.target.value, 0.2)}
+                    onChange={(e) => handleGridInput('cellThickness', e.target.value, defaultGridAppearance.cellThickness)}
                 />
             </div>
             <div className="prop-row two-column">
@@ -122,7 +117,7 @@ export default function WorldPanel() {
                     min="1"
                     step="1"
                     value={gridAppearance.sectionSize}
-                    onChange={(e) => handleGridInput('sectionSize', e.target.value, 6)}
+                    onChange={(e) => handleGridInput('sectionSize', e.target.value, defaultGridAppearance.sectionSize)}
                 />
             </div>
             <div className="prop-row two-column">
@@ -133,7 +128,7 @@ export default function WorldPanel() {
                     min="0.1"
                     step="0.05"
                     value={gridAppearance.sectionThickness}
-                    onChange={(e) => handleGridInput('sectionThickness', e.target.value, 0.45)}
+                    onChange={(e) => handleGridInput('sectionThickness', e.target.value, defaultGridAppearance.sectionThickness)}
                 />
             </div>
             <div className="prop-row two-column">
@@ -144,7 +139,7 @@ export default function WorldPanel() {
                     min="0"
                     step="1"
                     value={gridAppearance.fadeDistance}
-                    onChange={(e) => handleGridInput('fadeDistance', e.target.value, 24)}
+                    onChange={(e) => handleGridInput('fadeDistance', e.target.value, defaultGridAppearance.fadeDistance)}
                 />
             </div>
             <div className="prop-row two-column">
@@ -156,7 +151,7 @@ export default function WorldPanel() {
                     max="1"
                     step="0.05"
                     value={gridAppearance.fadeStrength}
-                    onChange={(e) => handleGridInput('fadeStrength', e.target.value, 0.7)}
+                    onChange={(e) => handleGridInput('fadeStrength', e.target.value, defaultGridAppearance.fadeStrength)}
                 />
             </div>
             <div className="prop-row two-column">
@@ -167,7 +162,7 @@ export default function WorldPanel() {
                     min="0"
                     step="0.005"
                     value={gridAppearance.offset}
-                    onChange={(e) => handleGridInput('offset', e.target.value, 0.01)}
+                    onChange={(e) => handleGridInput('offset', e.target.value, defaultGridAppearance.offset)}
                 />
             </div>
 

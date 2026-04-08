@@ -73,6 +73,8 @@ export default function SelectableObject({ obj, isSelected, isPrimarySelected = 
     useEffect(() => {
         latestObjectRef.current = obj
         if (!groupRef.current) return
+        // Keep transforms in sync from scene state without letting React overwrite
+        // TransformControls during unrelated rerenders like selection changes.
         groupRef.current.position.set(...obj.position)
         groupRef.current.rotation.set(...obj.rotation)
         groupRef.current.scale.set(...obj.scale)
@@ -138,9 +140,6 @@ export default function SelectableObject({ obj, isSelected, isPrimarySelected = 
     const objectMesh = (
         <group
             ref={groupRef}
-            position={obj.position}
-            rotation={obj.rotation}
-            scale={obj.scale}
             onClick={(e) => {
                 e.stopPropagation()
                 if ((e.delta ?? 0) > CLICK_SELECTION_DELTA) {

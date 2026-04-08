@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { saveAssetBlob, dataUrlToBlob, blobToDataUrl, hasAssetStoreQuotaExceeded, resetAssetStoreQuotaExceeded } from '../storage/assetStore.js'
 import { registerAssetSources, clearAssetSources, setAssetSource } from '../services/assetSources.js'
 
@@ -11,10 +11,14 @@ export function useAssetRestore({
 } = {}) {
     const assetStoreQuotaExceededRef = useRef(false)
     const assetStoreQuotaAlertedRef = useRef(false)
+    const [remoteAssetsManifest, setRemoteAssetsManifestState] = useState([])
+    const [remoteAssetsBaseUrl, setRemoteAssetsBaseUrlState] = useState('')
 
     const resetRemoteAssets = useCallback(() => {
         if (remoteAssetsRef) remoteAssetsRef.current = null
         if (remoteAssetsBaseRef) remoteAssetsBaseRef.current = ''
+        setRemoteAssetsManifestState([])
+        setRemoteAssetsBaseUrlState('')
         clearAssetSources()
     }, [remoteAssetsBaseRef, remoteAssetsRef])
 
@@ -23,6 +27,8 @@ export function useAssetRestore({
         if (remoteAssetsRef) remoteAssetsRef.current = Array.isArray(manifest) ? manifest : []
         const assets = Array.isArray(manifest) ? manifest : []
         const base = remoteAssetsBaseRef?.current || ''
+        setRemoteAssetsManifestState(assets)
+        setRemoteAssetsBaseUrlState(base)
         registerAssetSources(assets, base, [defaultSceneRemoteBase, legacySceneRemoteBase])
     }, [defaultSceneRemoteBase, legacySceneRemoteBase, remoteAssetsBaseRef, remoteAssetsRef])
 
@@ -166,12 +172,18 @@ export function useAssetRestore({
         if (typeof baseUrl === 'string' && remoteAssetsBaseRef) {
             remoteAssetsBaseRef.current = baseUrl
         }
+        setRemoteAssetsManifestState(manifest)
+        if (typeof baseUrl === 'string') {
+            setRemoteAssetsBaseUrlState(baseUrl)
+        }
         setAssetSource(entry, baseUrl ?? remoteAssetsBaseRef?.current)
     }, [remoteAssetsBaseRef, remoteAssetsRef])
 
     return {
         remoteAssetsRef,
         remoteAssetsBaseRef,
+        remoteAssetsManifest,
+        remoteAssetsBaseUrl,
         resetRemoteAssets,
         setRemoteAssetsManifest,
         resetAssetStoreQuotaState,
