@@ -11,15 +11,16 @@ const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { config, buildCorsOriginHandler } = require('./config')
 const { initializeSocket } = require('./socketHandlers')
+const { loadSharedModule } = require('./sharedRuntime')
 const {
   defaultScene: BLANK_SCENE,
   applySceneOps
-} = require('../../shared/sceneSchema.cjs')
+} = loadSharedModule('sceneSchema.cjs')
 const {
   defaultProjectDocument: BLANK_PROJECT_DOCUMENT,
   normalizeProjectDocument,
   applyProjectOps
-} = require('../../shared/projectSchema.cjs')
+} = loadSharedModule('projectSchema.cjs')
 const {
   buildProjectAssetMeta,
   deleteProject,

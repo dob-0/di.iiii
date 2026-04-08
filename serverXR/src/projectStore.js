@@ -1,10 +1,11 @@
 const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
+const { loadSharedModule } = require('./sharedRuntime')
 const {
   defaultProjectDocument,
   normalizeProjectDocument
-} = require('../../shared/projectSchema.cjs')
+} = loadSharedModule('projectSchema.cjs')
 
 const PROJECTS_DIRNAME = 'projects'
 const PROJECT_META_FILE = 'project.json'
