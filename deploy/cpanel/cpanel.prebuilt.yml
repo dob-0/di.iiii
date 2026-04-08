@@ -1,0 +1,4 @@
+---
+deployment:
+  tasks:
+    - /usr/bin/env bash scripts/cpanel-apply-prebuilt-release.sh
