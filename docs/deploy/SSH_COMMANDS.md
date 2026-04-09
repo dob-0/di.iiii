@@ -1,65 +1,41 @@
-# SSH Commands for di-studio.xyz PM2 Deployment
+# SSH Commands for cPanel Node.js App Deployment
 
-## First Time Setup
+## Restart Production
 
 ```bash
-# SSH into your server
-ssh your-username@di-studio.xyz
-
-# Navigate to serverXR directory
+ssh distudio@di-studio.xyz
 cd ~/serverXR
-
-# Install Node dependencies
 npm install --production
-
-# Start with PM2
-pm2 start ecosystem.config.js
-
-# Save PM2 process list
-pm2 save
-
-# Optional: Auto-start on server reboot
-pm2 startup
-# Run the command it outputs, then:
-pm2 save
+cloudlinux-selector restart --json --interpreter nodejs --user distudio --app-root serverXR
 ```
 
-## Regular Updates (After Uploading Files)
+## Restart Staging
 
 ```bash
-# SSH into your server
-ssh your-username@di-studio.xyz
-
-# Restart the application
-cd ~/serverXR
-pm2 restart dii-control-server
+ssh distudio@di-studio.xyz
+cd ~/serverXR-staging
+npm install --production
+cloudlinux-selector restart --json --interpreter nodejs --user distudio --app-root serverXR-staging
 ```
 
-## Quick Check
+## Manual Backup Before Recovery
 
 ```bash
-# Check if running
-pm2 list
-
-# View recent logs
-pm2 logs dii-control-server --lines 50
-
-# View errors only
-pm2 logs dii-control-server --err --lines 20
+ssh distudio@di-studio.xyz
+TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+mkdir -p ~/deploy-backups/"$TIMESTAMP"-manual
+tar -czf ~/deploy-backups/"$TIMESTAMP"-manual/public_html.tar.gz -C ~/public_html .
+tar -czf ~/deploy-backups/"$TIMESTAMP"-manual/serverXR.tar.gz -C ~/serverXR .
 ```
 
-## One-Liner for Quick Restart
+## Quick Checks
 
 ```bash
-ssh your-username@di-studio.xyz "cd ~/serverXR && pm2 restart dii-control-server"
-```
-
-## Testing via curl
-
-```bash
-# Test health endpoint
 curl https://di-studio.xyz/serverXR/api/health
-
-# Expected response:
-# {"status":"ok"}
+curl https://di-studio.xyz/serverXR/api/events
+curl https://staging.di-studio.xyz/serverXR/api/health
 ```
+
+## If `cloudlinux-selector` Is Missing
+
+Your host is not exposing the normal CloudLinux Node.js CLI. In that case restart from the cPanel `Setup Node.js App` screen instead of falling back to PM2.

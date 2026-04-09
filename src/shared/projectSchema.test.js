@@ -29,6 +29,13 @@ describe('projectSchema', () => {
         expect(document.windowLayout.windows.viewport.visible).toBe(true)
     })
 
+    it('uses neutral project defaults unless a surface sets its own source metadata', () => {
+        const document = normalizeProjectDocument({})
+
+        expect(document.projectMeta.title).toBe('Untitled Project')
+        expect(document.projectMeta.source).toBe('project')
+    })
+
     it('applies entity and world ops to a project document', () => {
         const nextDocument = applyProjectOps(normalizeProjectDocument({}), [
             {

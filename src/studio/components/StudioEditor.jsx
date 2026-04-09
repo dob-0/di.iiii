@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useMediaQuery, useTheme } from '@mui/material'
-import { createEntityOfType, getInspectorSections } from '../../beta/entityRegistry.js'
-import { useProjectDocumentSync } from '../../beta/hooks/useProjectDocumentSync.js'
-import { useProjectPresence } from '../../beta/hooks/useProjectPresence.js'
-import { useProjectStore } from '../../beta/state/projectStore.js'
-import { uploadBetaProjectAsset } from '../../beta/services/projectsApi.js'
+import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
+import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
+import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
+import { useProjectStore } from '../../project/state/projectStore.js'
+import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { defaultWorldState, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import useXrAr from '../../hooks/useXrAr.js'
+import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
+import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { useStudioLayoutPrefs } from '../hooks/useStudioLayoutPrefs.js'
 import StudioShell from './StudioShell.jsx'
@@ -53,7 +55,7 @@ const readCurrentCameraSnapshot = (controlsRef, fallback) => {
     }
 }
 
-export default function StudioEditor({ projectId }) {
+export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [displayName, setDisplayName] = useState(() => {
         try {
             return window.localStorage.getItem(DISPLAY_NAME_KEY)
@@ -65,9 +67,24 @@ export default function StudioEditor({ projectId }) {
     })
     const store = useProjectStore()
     const { state, dispatch } = store
-    const { applyLocalOps, replaceDocument } = useProjectDocumentSync({ projectId, store })
-    const presence = useProjectPresence({ projectId, displayName })
+    const { applyLocalOps, replaceDocument } = useProjectDocumentSync({
+        projectId,
+        store,
+        clientIdPrefix: 'studio-client',
+        opIdPrefix: 'studio-op'
+    })
+    const presence = useProjectPresence({
+        projectId,
+        displayName,
+        displayNameStorageKey: DISPLAY_NAME_KEY,
+        userIdStorageKey: 'dii.studio.userId',
+        legacyDisplayNameStorageKeys: ['dii.beta.displayName'],
+        legacyUserIdStorageKeys: ['dii.beta.userId'],
+        anonymousLabel: 'Studio',
+        userIdPrefix: 'studio-user'
+    })
     const document = state.document
+    const resolvedSpaceId = document.projectMeta?.spaceId || spaceId || DEFAULT_PROJECT_SPACE_ID
     const entities = document.entities || []
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
     const theme = useTheme()
@@ -80,6 +97,8 @@ export default function StudioEditor({ projectId }) {
         legacyWindowLayout: document.windowLayout
     })
     const controlsRef = useRef(null)
+    const [spaceMeta, setSpaceMeta] = useState(null)
+    const [isUpdatingLiveProject, setIsUpdatingLiveProject] = useState(false)
     const [cameraView, setCameraView] = useState(() => ({
         position: document.worldState?.savedView?.position || defaultWorldState.savedView.position,
         target: document.worldState?.savedView?.target || defaultWorldState.savedView.target
@@ -100,6 +119,24 @@ export default function StudioEditor({ projectId }) {
             // ignore local storage errors
         }
     }, [displayName])
+
+    useEffect(() => {
+        let cancelled = false
+
+        getServerSpace(resolvedSpaceId)
+            .then((space) => {
+                if (cancelled) return
+                setSpaceMeta(space)
+            })
+            .catch(() => {
+                if (cancelled) return
+                setSpaceMeta(null)
+            })
+
+        return () => {
+            cancelled = true
+        }
+    }, [resolvedSpaceId])
 
     const xr = useXrAr({
         default3DView: document.worldState?.savedView || defaultWorldState.savedView,
@@ -136,7 +173,7 @@ export default function StudioEditor({ projectId }) {
         const files = Array.from(event.target.files || [])
         if (!files.length) return
         for (const file of files) {
-            const asset = await uploadBetaProjectAsset(projectId, file)
+            const asset = await uploadProjectAsset(projectId, file)
             applyLocalOps({
                 type: 'upsertAsset',
                 payload: { asset }
@@ -245,7 +282,11 @@ export default function StudioEditor({ projectId }) {
     }
 
     const handleCopyShareLink = async () => {
-        const url = `${window.location.origin}${buildStudioProjectPath(projectId)}`
+        const isLiveProject = spaceMeta?.publishedProjectId === projectId
+        const sharePath = isLiveProject
+            ? buildAppSpacePath(resolvedSpaceId)
+            : buildStudioProjectPath(projectId, resolvedSpaceId)
+        const url = `${window.location.origin}${sharePath}`
         try {
             if (navigator.clipboard?.writeText) {
                 await navigator.clipboard.writeText(url)
@@ -255,7 +296,7 @@ export default function StudioEditor({ projectId }) {
             dispatch({
                 type: 'append-activity',
                 level: 'info',
-                message: 'Copied the project share link.'
+                message: isLiveProject ? 'Copied the live space link.' : 'Copied the project share link.'
             })
         } catch (error) {
             dispatch({
@@ -263,6 +304,52 @@ export default function StudioEditor({ projectId }) {
                 level: 'error',
                 message: `Could not copy share link: ${error.message || 'unknown error'}`
             })
+        }
+    }
+
+    const handleSetLiveProject = async () => {
+        setIsUpdatingLiveProject(true)
+        try {
+            const nextSpace = await updateServerSpace(resolvedSpaceId, {
+                publishedProjectId: projectId
+            })
+            setSpaceMeta(nextSpace)
+            dispatch({
+                type: 'append-activity',
+                level: 'info',
+                message: `Published this project to /${resolvedSpaceId}.`
+            })
+        } catch (error) {
+            dispatch({
+                type: 'append-activity',
+                level: 'error',
+                message: `Could not set the live project: ${error.message || 'unknown error'}`
+            })
+        } finally {
+            setIsUpdatingLiveProject(false)
+        }
+    }
+
+    const handleClearLiveProject = async () => {
+        setIsUpdatingLiveProject(true)
+        try {
+            const nextSpace = await updateServerSpace(resolvedSpaceId, {
+                publishedProjectId: null
+            })
+            setSpaceMeta(nextSpace)
+            dispatch({
+                type: 'append-activity',
+                level: 'info',
+                message: `Cleared the live project for /${resolvedSpaceId}.`
+            })
+        } catch (error) {
+            dispatch({
+                type: 'append-activity',
+                level: 'error',
+                message: `Could not clear the live project: ${error.message || 'unknown error'}`
+            })
+        } finally {
+            setIsUpdatingLiveProject(false)
         }
     }
 
@@ -378,8 +465,17 @@ export default function StudioEditor({ projectId }) {
             onImportProjectFile={handleImportProjectFile}
             onEnterXr={xr.handleEnterXrSession}
             onExitXr={xr.handleExitXrSession}
-            onBackToHub={() => navigateToStudioPath(buildStudioHubPath())}
+            onBackToHub={() => navigateToStudioPath(buildStudioHubPath(resolvedSpaceId))}
             onCameraViewChange={handleCameraViewChange}
+            liveProjectState={{
+                spaceId: resolvedSpaceId,
+                spaceLabel: spaceMeta?.label || resolvedSpaceId,
+                currentLiveProjectId: spaceMeta?.publishedProjectId || null,
+                isLiveProject: spaceMeta?.publishedProjectId === projectId,
+                isUpdating: isUpdatingLiveProject
+            }}
+            onSetLiveProject={handleSetLiveProject}
+            onClearLiveProject={handleClearLiveProject}
         />
     )
 }

@@ -48,8 +48,8 @@ const waitForHealth = async ({ url, child, getLogs }) => {
 }
 
 const startServer = async () => {
-    const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-beta-server-cwd-'))
-    const sandboxDataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-beta-server-data-'))
+    const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-project-server-cwd-'))
+    const sandboxDataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-project-server-data-'))
     const port = await getFreePort()
     const child = spawn(process.execPath, [SERVER_ENTRY], {
         cwd: sandboxCwd,
@@ -102,20 +102,21 @@ afterEach(async () => {
     await Promise.all(activeServers.splice(0).map(server => server.stop()))
 })
 
-describe('beta project contracts', () => {
+describe('project contracts', () => {
     it('creates a project inside a space and updates its document via ops', async () => {
         const server = await startServer()
 
         const createResponse = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ title: 'Beta Contracts Project', slug: 'beta-contracts-project' })
+            body: JSON.stringify({ title: 'Studio Contracts Project', slug: 'studio-contracts-project', source: 'studio-v3' })
         })
         expect(createResponse.status).toBe(201)
         const created = await createResponse.json()
-        expect(created.project.id).toBe('beta-contracts-project')
+        expect(created.project.id).toBe('studio-contracts-project')
+        expect(created.project.source).toBe('studio-v3')
 
-        const submitResponse = await fetch(`${server.baseUrl}/api/projects/beta-contracts-project/ops`, {
+        const submitResponse = await fetch(`${server.baseUrl}/api/projects/studio-contracts-project/ops`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -136,14 +137,15 @@ describe('beta project contracts', () => {
         const submitted = await submitResponse.json()
         expect(submitted.newVersion).toBe(1)
 
-        const documentResponse = await fetch(`${server.baseUrl}/api/projects/beta-contracts-project/document`)
+        const documentResponse = await fetch(`${server.baseUrl}/api/projects/studio-contracts-project/document`)
         expect(documentResponse.status).toBe(200)
         const documentPayload = await documentResponse.json()
         expect(documentPayload.document.entities).toEqual([
             expect.objectContaining({ id: 'entity-1', name: 'Shared Box' })
         ])
+        expect(documentPayload.document.projectMeta.source).toBe('studio-v3')
 
-        const opsResponse = await fetch(`${server.baseUrl}/api/projects/beta-contracts-project/ops?since=0`)
+        const opsResponse = await fetch(`${server.baseUrl}/api/projects/studio-contracts-project/ops?since=0`)
         expect(opsResponse.status).toBe(200)
         const opsPayload = await opsResponse.json()
         expect(opsPayload.ops).toHaveLength(1)
@@ -174,7 +176,7 @@ describe('beta project contracts', () => {
         expect(await assetResponse.text()).toBe('beta-asset')
     })
 
-    it('recovers a corrupted beta project document by trimming trailing garbage', async () => {
+    it('recovers a corrupted project document by trimming trailing garbage', async () => {
         const server = await startServer()
 
         await fetch(`${server.baseUrl}/api/spaces/main/projects`, {

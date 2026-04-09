@@ -1,36 +1,58 @@
 # cPanel Prebuilt Deploy
 
-Use this flow when the cPanel host cannot build the frontend because of memory limits.
+This is the canonical deploy path for this repo.
 
-## Branch mapping
+## What Is Canonical
 
-- `dev` builds and publishes `cpanel-staging`
-- `main` builds and publishes `cpanel-production`
+- publish workflow: [.github/workflows/publish-cpanel-prebuilt-v2.yml](/home/nnn/Desktop/dii_ii/.github/workflows/publish-cpanel-prebuilt-v2.yml)
+- staged bundle source: `.deploy/cpanel/`
+- server apply script: [scripts/cpanel-apply-prebuilt-release.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-apply-prebuilt-release.sh)
+- runtime baseline: Node `22.x`
 
-## What the GitHub workflow does
+Branch and environment mapping:
 
-The workflow `publish-cpanel-prebuilt.yml`:
+- `dev` -> `cpanel-staging`
+- `main` -> `cpanel-production`
 
-- checks out `dev` or `main`
-- installs dependencies on GitHub Actions
-- runs tests
-- builds the frontend off-server
-- stages `.deploy/cpanel`
-- force-updates a prebuilt branch with:
-  - repo files
-  - prebuilt `.deploy/cpanel`
-  - a `.cpanel.yml` that applies the release without rebuilding
+## What The Workflow Does
 
-## What cPanel should track
+The canonical workflow:
+
+1. checks out `dev` or `main`
+2. installs dependencies on GitHub Actions
+3. runs tests
+4. stages `.deploy/cpanel`
+5. force-updates the prebuilt branch for the target environment
+
+The prebuilt branch contains:
+
+- repo files
+- prebuilt `.deploy/cpanel`
+- `.cpanel.yml`
+- the source ref and deploy environment markers
+
+## What cPanel Should Track
 
 - staging cPanel repo should track `cpanel-staging`
 - production cPanel repo should track `cpanel-production`
 
-## Server deploy command
+## Server Apply Step
 
-When cPanel runs `Deploy HEAD Commit`, it will execute `scripts/cpanel-apply-prebuilt-release.sh`, which:
+When cPanel runs `Deploy HEAD Commit`, it should execute:
 
-- generates backend `.env` from the server-only config
+```bash
+bash scripts/cpanel-apply-prebuilt-release.sh staging
+```
+
+or:
+
+```bash
+bash scripts/cpanel-apply-prebuilt-release.sh production
+```
+
+That apply step:
+
+- generates backend `.env`
 - syncs prebuilt frontend files into the web root
 - syncs backend files into the Node.js app root
 - installs production backend dependencies
@@ -38,11 +60,27 @@ When cPanel runs `Deploy HEAD Commit`, it will execute `scripts/cpanel-apply-pre
 - runs smoke checks
 - writes a checkpoint
 
-## Server-only config files
+## Server-Only Config
 
 Keep using:
 
 - `~/.config/dii/staging.deploy.env`
 - `~/.config/dii/production.deploy.env`
 
-These should contain the real API token and path settings.
+Those files should contain the real tokens and path settings, including:
+
+- `APP_BASE_PATH`
+- `DATA_ROOT`
+- `SHARED_ROOT`
+- `CPANEL_WEB_ROOT`
+- `CPANEL_SERVERXR_ROOT`
+- `CPANEL_SHARED_ROOT`
+
+## Legacy Paths
+
+These still exist, but they are not the primary path:
+
+- `publish-cpanel-prebuilt.yml`
+- `deploy-cpanel.yml`
+- `deploy-cpanel-safe.yml`
+- Git-pull/self-host deploy docs

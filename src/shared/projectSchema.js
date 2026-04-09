@@ -108,7 +108,7 @@ export const defaultPublishState = {
 
 export const defaultProjectDocument = {
     version: PROJECT_DOCUMENT_VERSION,
-    projectMeta: { id: '', spaceId: 'main', title: 'Untitled Beta Project', createdAt: 0, updatedAt: 0, source: 'beta-v2' },
+    projectMeta: { id: '', spaceId: 'main', title: 'Untitled Project', createdAt: 0, updatedAt: 0, source: 'project' },
     entities: [],
     worldState: defaultWorldState,
     xrState: defaultXrState,
@@ -346,10 +346,10 @@ export const normalizeProjectMeta = (meta = {}) => {
     return {
         id: ensureString(source.id, ''),
         spaceId: ensureString(source.spaceId, 'main'),
-        title: ensureString(source.title, 'Untitled Beta Project'),
+        title: ensureString(source.title, 'Untitled Project'),
         createdAt: ensureNumber(source.createdAt, now),
         updatedAt: ensureNumber(source.updatedAt, now),
-        source: ensureString(source.source, 'beta-v2')
+        source: ensureString(source.source, 'project')
     }
 }
 

@@ -1,4 +1,4 @@
-name: Deploy cPanel
+name: Legacy Deploy cPanel (SSH Push)
 
 on:
   push:

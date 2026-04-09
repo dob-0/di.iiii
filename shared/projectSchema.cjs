@@ -189,10 +189,10 @@ const defaultProjectDocument = {
   projectMeta: {
     id: '',
     spaceId: 'main',
-    title: 'Untitled Beta Project',
+    title: 'Untitled Project',
     createdAt: 0,
     updatedAt: 0,
-    source: 'beta-v2'
+    source: 'project'
   },
   entities: [],
   worldState: defaultWorldState,
@@ -461,10 +461,10 @@ const normalizeProjectMeta = (meta = {}) => {
   return {
     id: ensureString(source.id, ''),
     spaceId: ensureString(source.spaceId, 'main'),
-    title: ensureString(source.title, 'Untitled Beta Project'),
+    title: ensureString(source.title, 'Untitled Project'),
     createdAt: ensureNumber(source.createdAt, now),
     updatedAt: ensureNumber(source.updatedAt, now),
-    source: ensureString(source.source, 'beta-v2')
+    source: ensureString(source.source, 'project')
   }
 }
 

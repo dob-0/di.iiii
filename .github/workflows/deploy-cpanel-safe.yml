@@ -1,4 +1,4 @@
-name: Deploy cPanel Safe
+name: Legacy Deploy cPanel Safe (SSH Push)
 
 on:
   workflow_dispatch:

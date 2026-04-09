@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
-import { importLegacySceneFile } from '../import/importLegacyScene.js'
+import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
 import {
-    DEFAULT_BETA_SPACE_ID,
-    createBetaProject,
-    listBetaProjects,
-    updateBetaProjectDocument,
-    uploadBetaProjectAsset
-} from '../services/projectsApi.js'
-import { buildBetaProjectPath } from '../utils/betaRouting.js'
+    DEFAULT_PROJECT_SPACE_ID,
+    createProject,
+    listProjects,
+    updateProjectDocument,
+    uploadProjectAsset
+} from '../../project/services/projectsApi.js'
+import { buildBetaProjectPath, navigateToBetaPath } from '../utils/betaRouting.js'
 
 const detectEntityTypeFromMime = (mimeType = '') => {
     if (mimeType.startsWith('image/')) return 'image'
@@ -19,40 +19,40 @@ const detectEntityTypeFromMime = (mimeType = '') => {
     return null
 }
 
-export default function BetaHub() {
+export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [projects, setProjects] = useState([])
-    const [title, setTitle] = useState('Untitled Beta Project')
+    const [title, setTitle] = useState('Untitled Project')
     const [status, setStatus] = useState('Loading beta projects...')
     const [isBusy, setIsBusy] = useState(false)
     const [importWarnings, setImportWarnings] = useState([])
 
-    const loadProjects = async () => {
+    const loadProjects = useCallback(async () => {
         setStatus('Loading beta projects...')
         try {
-            const nextProjects = await listBetaProjects(DEFAULT_BETA_SPACE_ID)
+            const nextProjects = await listProjects(spaceId)
             setProjects(nextProjects)
-            setStatus(nextProjects.length ? '' : 'No beta projects yet.')
+            setStatus(nextProjects.length ? '' : 'No beta projects in this space yet.')
         } catch (error) {
             setStatus(error.message || 'Unable to load beta projects.')
         }
-    }
+    }, [spaceId])
 
     useEffect(() => {
         loadProjects()
-    }, [])
+    }, [loadProjects])
 
     const openProject = (projectId) => {
-        window.history.pushState({}, '', buildBetaProjectPath(projectId))
-        window.dispatchEvent(new PopStateEvent('popstate'))
+        navigateToBetaPath(buildBetaProjectPath(projectId, spaceId))
     }
 
     const handleCreate = async () => {
         setIsBusy(true)
         setStatus('Creating beta project...')
         try {
-            const response = await createBetaProject(DEFAULT_BETA_SPACE_ID, {
+            const response = await createProject(spaceId, {
                 title,
-                slug: title
+                slug: title,
+                source: 'beta-v2'
             })
             openProject(response.project.id)
         } catch (error) {
@@ -70,13 +70,14 @@ export default function BetaHub() {
         setImportWarnings([])
         try {
             const { document, assetFiles, warnings } = await importLegacySceneFile(file)
-            const response = await createBetaProject(DEFAULT_BETA_SPACE_ID, {
+            const response = await createProject(spaceId, {
                 title: document.projectMeta.title,
-                slug: document.projectMeta.title
+                slug: document.projectMeta.title,
+                source: 'beta-v2'
             })
             const assetMap = new Map()
             for (const [assetId, assetFile] of assetFiles.entries()) {
-                const uploaded = await uploadBetaProjectAsset(response.project.id, assetFile, { assetId })
+                const uploaded = await uploadProjectAsset(response.project.id, assetFile, { assetId })
                 assetMap.set(assetId, uploaded)
             }
             const nextDocument = {
@@ -84,7 +85,8 @@ export default function BetaHub() {
                 projectMeta: {
                     ...document.projectMeta,
                     id: response.project.id,
-                    spaceId: DEFAULT_BETA_SPACE_ID
+                    spaceId,
+                    source: 'beta-v2'
                 },
                 assets: document.assets.map((asset) => {
                     const uploaded = assetMap.get(asset.id)
@@ -101,7 +103,7 @@ export default function BetaHub() {
                     }
                 })
             }
-            await updateBetaProjectDocument(response.project.id, nextDocument)
+            await updateProjectDocument(response.project.id, nextDocument)
             setImportWarnings(warnings)
             openProject(response.project.id)
         } catch (error) {
@@ -115,10 +117,13 @@ export default function BetaHub() {
     return (
         <main className="beta-hub">
             <section className="beta-hub-hero">
-                <span className="beta-chip">Hidden Beta</span>
+                <div className="beta-hub-actions" style={{ gap: '0.5rem', justifyContent: 'flex-start' }}>
+                    <span className="beta-chip">V2 Beta</span>
+                    <span className="beta-chip" style={{ background: 'rgba(255,255,255,0.08)' }}>Space {spaceId}</span>
+                </div>
                 <h1>Desktop Editor V2</h1>
                 <p>
-                    Asset-first, windowed, and document-driven. This beta lives beside the legacy editor so we can rebuild the core cleanly.
+                    Asset-first, windowed, and document-driven. This is the experimental workspace for this space, while Studio remains the official main workspace.
                 </p>
                 <div className="beta-hub-actions">
                     <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Project title" />
@@ -127,7 +132,7 @@ export default function BetaHub() {
                         <input type="file" accept=".zip,.json,application/zip,application/json" onChange={handleImport} />
                         Import V1 Local Scene
                     </label>
-                    <button type="button" onClick={() => window.location.assign(buildAppSpacePath(DEFAULT_BETA_SPACE_ID))}>
+                    <button type="button" onClick={() => window.location.assign(buildAppSpacePath(spaceId))}>
                         Open Legacy Editor
                     </button>
                 </div>
@@ -150,6 +155,14 @@ export default function BetaHub() {
                     ) : (
                         <p>{status}</p>
                     )}
+                </div>
+                <div className="beta-card">
+                    <h2>Role In The Platform</h2>
+                    <ul className="beta-inline-list">
+                        <li>Beta lane for alternative and experimental project workflow</li>
+                        <li>Useful for testing ideas without replacing the main Studio surface</li>
+                        <li>Kept alongside Studio instead of replacing it</li>
+                    </ul>
                 </div>
                 <div className="beta-card">
                     <h2>What V2 Reuses</h2>

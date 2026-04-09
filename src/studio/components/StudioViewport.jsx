@@ -113,10 +113,10 @@ function EntityVisual({ entity, assetMap, selected, onSelect }) {
     )
 }
 
-function StudioOrbit({ controlsRef, cameraView, onCameraChange }) {
+function StudioOrbit({ controlsRef, cameraView, onCameraChange, enabled = true }) {
     const isXrPresenting = useXR((state) => state.session != null)
 
-    if (isXrPresenting) {
+    if (isXrPresenting || !enabled) {
         return null
     }
 
@@ -194,7 +194,8 @@ export default function StudioViewport({
     cameraView,
     onCameraChange,
     controlsRef,
-    xrStore
+    xrStore,
+    enableNavigation = true
 }) {
     const viewportRef = useRef(null)
     const camera = cameraView || document.worldState?.savedView || {}
@@ -221,9 +222,11 @@ export default function StudioViewport({
                 shadows
                 camera={{
                     position: camera.position || [0, 2.4, 6.5],
-                    fov: 50,
-                    near: 0.1,
-                    far: 200
+                    fov: camera.fov || 50,
+                    zoom: camera.zoom || 1,
+                    near: camera.near || 0.1,
+                    far: camera.far || 200,
+                    orthographic: camera.projection === 'orthographic'
                 }}
                 onPointerMissed={() => onSelectEntity?.(null)}
             >
@@ -232,6 +235,7 @@ export default function StudioViewport({
                         controlsRef={controlsRef}
                         cameraView={camera}
                         onCameraChange={onCameraChange}
+                        enabled={enableNavigation}
                     />
                     <StudioSceneContent
                         document={document}

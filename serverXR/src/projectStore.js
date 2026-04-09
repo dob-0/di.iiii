@@ -88,12 +88,12 @@ const buildProjectMeta = (spaceId, projectId, overrides = {}) => {
   return {
     id: projectId,
     spaceId,
-    title: (typeof overrides.title === 'string' && overrides.title.trim()) || 'Untitled Beta Project',
+    title: (typeof overrides.title === 'string' && overrides.title.trim()) || 'Untitled Project',
     createdAt: overrides.createdAt || now,
     updatedAt: now,
     lastTouchedAt: now,
     documentVersion: Number.isFinite(Number(overrides.documentVersion)) ? Number(overrides.documentVersion) : 0,
-    source: overrides.source || 'beta-v2'
+    source: overrides.source || 'project'
   }
 }
 

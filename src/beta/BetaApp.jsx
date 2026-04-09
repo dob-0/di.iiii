@@ -16,12 +16,12 @@ export default function BetaApp({ initialRoute }) {
     }, [])
 
     if (route.page === BETA_PAGE_PROJECT && route.projectId) {
-        return <BetaEditor projectId={route.projectId} />
+        return <BetaEditor projectId={route.projectId} spaceId={route.spaceId} />
     }
 
     if (route.page === BETA_PAGE_HUB) {
-        return <BetaHub />
+        return <BetaHub spaceId={route.spaceId} />
     }
 
-    return <BetaHub />
+    return <BetaHub spaceId={route.spaceId} />
 }

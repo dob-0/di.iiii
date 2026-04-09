@@ -10,6 +10,11 @@ export const listServerSpaces = async () => {
     return data.spaces || []
 }
 
+export const getServerSpace = async (spaceId) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}`)
+    return data.space || null
+}
+
 export const createServerSpace = async ({ label, slug, isPermanent = false } = {}) => {
     const data = await apiFetch('/api/spaces', {
         method: 'POST',
@@ -24,7 +29,8 @@ export const updateServerSpace = async (spaceId, updates = {}) => {
         body: {
             label: updates.label,
             permanent: updates.isPermanent,
-            allowEdits: updates.allowEdits
+            allowEdits: updates.allowEdits,
+            publishedProjectId: updates.publishedProjectId
         }
     })
     return data.space

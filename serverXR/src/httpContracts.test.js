@@ -135,6 +135,24 @@ const withAuth = (token) => ({
     Authorization: `Bearer ${token}`
 })
 
+const createServerProject = async (server, spaceId, {
+    title = 'Live Project',
+    slug = 'live-project',
+    source = 'studio-v3'
+} = {}) => {
+    const response = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...withAuth(server.apiToken)
+        },
+        body: JSON.stringify({ title, slug, source })
+    })
+    expect(response.status).toBe(201)
+    const payload = await response.json()
+    return payload.project
+}
+
 const createReadOnlySpace = async (dataRoot, spaceId = 'locked-space') => {
   const spaceDir = path.join(dataRoot, 'spaces', spaceId)
   await mkdir(path.join(spaceDir, 'assets'), { recursive: true })
@@ -257,6 +275,96 @@ describe('server write contracts', () => {
                 url: `/serverXR/api/spaces/${spaceId}/assets/${assetId}`
             })
         ])
+    })
+
+    it('gets and updates the live published project for a space', async () => {
+        const server = await startServer({ nodeEnv: 'production', requireAuth: true })
+
+        const createSpaceResponse = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(server.apiToken)
+            },
+            body: JSON.stringify({ label: 'Showcase Space', slug: 'showcase-space' })
+        })
+        expect(createSpaceResponse.status).toBe(201)
+
+        const project = await createServerProject(server, 'showcase-space', {
+            title: 'Showcase Live Project',
+            slug: 'showcase-live-project'
+        })
+
+        const readResponse = await fetch(`${server.baseUrl}/api/spaces/showcase-space`)
+        expect(readResponse.status).toBe(200)
+        const readPayload = await readResponse.json()
+        expect(readPayload.space.publishedProjectId).toBeNull()
+
+        const publishResponse = await fetch(`${server.baseUrl}/api/spaces/showcase-space`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(server.apiToken)
+            },
+            body: JSON.stringify({ publishedProjectId: project.id })
+        })
+        expect(publishResponse.status).toBe(200)
+        const publishPayload = await publishResponse.json()
+        expect(publishPayload.space.publishedProjectId).toBe(project.id)
+
+        const clearResponse = await fetch(`${server.baseUrl}/api/spaces/showcase-space`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(server.apiToken)
+            },
+            body: JSON.stringify({ publishedProjectId: null })
+        })
+        expect(clearResponse.status).toBe(200)
+        const clearPayload = await clearResponse.json()
+        expect(clearPayload.space.publishedProjectId).toBeNull()
+    })
+
+    it('rejects publishing a project that belongs to another space', async () => {
+        const server = await startServer({ nodeEnv: 'production', requireAuth: true })
+
+        const createOriginSpace = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(server.apiToken)
+            },
+            body: JSON.stringify({ label: 'Origin Space', slug: 'origin-space' })
+        })
+        expect(createOriginSpace.status).toBe(201)
+
+        const createTargetSpace = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(server.apiToken)
+            },
+            body: JSON.stringify({ label: 'Target Space', slug: 'target-space' })
+        })
+        expect(createTargetSpace.status).toBe(201)
+
+        const project = await createServerProject(server, 'origin-space', {
+            title: 'Origin Live Project',
+            slug: 'origin-live-project'
+        })
+
+        const publishResponse = await fetch(`${server.baseUrl}/api/spaces/target-space`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(server.apiToken)
+            },
+            body: JSON.stringify({ publishedProjectId: project.id })
+        })
+        expect(publishResponse.status).toBe(404)
+        await expect(publishResponse.json()).resolves.toMatchObject({
+            error: 'Published project not found in this space.'
+        })
     })
 
     it('rejects read-only scene, asset, and live mutations with 403', async () => {

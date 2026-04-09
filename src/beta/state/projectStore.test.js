@@ -36,5 +36,13 @@ describe('projectStoreReducer', () => {
 
         expect(state.version).toBe(3)
         expect(state.document.entities[0].name).toBe('Title Card')
+
+        state = projectStoreReducer(state, {
+            type: 'set-version',
+            version: 4
+        })
+
+        expect(state.version).toBe(4)
+        expect(state.document.entities[0].name).toBe('Title Card')
     })
 })

@@ -1,222 +1,129 @@
-# cPanel Deployment Guide for di-studio.xyz
+# cPanel Deployment Guide
 
-## 🚀 Quick Deployment Steps
+This file describes the current safe deployment model for the dii platform.
 
-### 1. Build the Frontend
-```bash
-# Make sure you're in the project root
-npm run build
+## Canonical Model
+
+- source branches:
+  - `dev` for staging
+  - `main` for production
+- canonical publish workflow:
+  - [.github/workflows/publish-cpanel-prebuilt-v2.yml](/home/nnn/Desktop/dii_ii/.github/workflows/publish-cpanel-prebuilt-v2.yml)
+- canonical server apply step:
+  - [scripts/cpanel-apply-prebuilt-release.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-apply-prebuilt-release.sh)
+- runtime baseline:
+  - Node `22.x`
+
+Important:
+
+- both environments use cPanel `Setup Node.js App`
+- `/serverXR` must be owned by the Node.js App, not by a static proxy directory
+- the old SSH-push workflows are legacy fallbacks, not the primary path
+
+## One-Time Setup
+
+### 1. Create the staging subdomain
+
+In cPanel:
+
+1. Open `Domains`
+2. Create `staging.di-studio.xyz`
+3. note the document root cPanel creates for it
+
+### 2. Create the Node.js apps
+
+In `Setup Node.js App`, create:
+
+- production
+  - app root: `serverXR`
+  - application URL: `/serverXR`
+  - startup file: `src/index.js`
+- staging
+  - app root: `serverXR-staging`
+  - application URL: `/serverXR`
+  - startup file: `src/index.js`
+
+### 3. Create sibling shared folders
+
+Create once:
+
+```text
+/home/distudio/shared
+/home/distudio/shared-staging
 ```
 
-This creates the `dist/` folder with your compiled React app, configured to use `https://di-studio.xyz/serverXR` as the API endpoint.
+## GitHub / cPanel Mapping
 
-### 2. Upload Files to cPanel
+GitHub publish branches:
 
-#### A. Upload Frontend (dist/ folder)
-1. Go to cPanel → **File Manager**
-2. Navigate to `public_html/` (or your domain's root folder)
-3. Upload **ALL contents** of the `dist/` folder (not the dist folder itself)
-   - index.html
-   - assets/
-   - default-scene/
-   - serverXR/ (with serve-asset.php and .htaccess)
-   - .htaccess
-   - etc.
+- `cpanel-staging`
+- `cpanel-production`
 
-#### B. Upload Backend (serverXR/ folder)
-1. In cPanel File Manager, navigate to your **home directory** (not public_html)
-2. Create a folder named `serverXR` (if it doesn't exist)
-3. Upload the contents of your local `serverXR/` folder to this directory:
-   - src/
-   - .env (the one we created)
-   - ecosystem.config.js
-   - package.json
-   - package-lock.json
+cPanel-managed clones:
 
-### 3. Setup PM2 via SSH
+- staging should track `cpanel-staging`
+- production should track `cpanel-production`
 
-1. **Connect via SSH** to your cPanel account
+## Required Server Config
 
-2. **Install dependencies and start with PM2:**
-   ```bash
-   cd ~/serverXR
-   npm install --production
-   
-   # Start the app with PM2
-   pm2 start ecosystem.config.js
-   
-   # Save PM2 process list (keeps running after logout)
-   pm2 save
-   
-   # Setup PM2 to start on server reboot (optional)
-   pm2 startup
-   ```
+Keep the real deploy config on the server, not in the repo.
 
-3. **Verify it's running:**
-   ```bash
-   pm2 list
-   pm2 logs dii-control-server
-   ```
-   
-   You should see "ServerXR listening on port 4000" in the logs.
+Expected settings include:
 
-### 4. Verify Deployment
+- `VITE_API_BASE_URL=/serverXR`
+- `NODE_ENV=production`
+- `APP_BASE_PATH=/serverXR`
+- `DATA_ROOT=<environment specific>`
+- `SHARED_ROOT=<environment specific>`
+- `CPANEL_WEB_ROOT=<environment specific>`
+- `CPANEL_SERVERXR_ROOT=<environment specific>`
+- `CPANEL_SHARED_ROOT=<environment specific>`
 
-Open these URLs in your browser:
+Recommended roots:
 
-1. **Frontend:** https://di-studio.xyz/
-   - Should show the 3D editor
+- production
+  - `CPANEL_SERVERXR_ROOT=/home/distudio/serverXR`
+  - `CPANEL_SHARED_ROOT=/home/distudio/shared`
+- staging
+  - `CPANEL_SERVERXR_ROOT=/home/distudio/serverXR-staging`
+  - `CPANEL_SHARED_ROOT=/home/distudio/shared-staging`
 
-2. **Server Status:** https://di-studio.xyz/serverXR/
-   - Should show "ServerXR is running" with status info
+## Release Flow
 
-3. **API Health:** https://di-studio.xyz/serverXR/api/health
-   - Should return JSON: `{"status":"ok"}`
+### Staging
 
-## 🧪 Test Asset Loading
+1. merge approved work into `dev`
+2. publish `cpanel-staging`
+3. run the staging apply step on the server
+4. verify staging smoke checks and real editor flows
 
-1. Open https://di-studio.xyz/ in **Firefox**
-2. Create a new scene
-3. Press **Shift+D** then **Shift+I** to enable admin mode
-4. Drag an image onto the canvas
-5. Click **Save to Server** (make the space permanent if needed)
-6. Copy the URL and open it in **Chrome**
-7. The image should load correctly! ✅
+### Production
 
-Check the browser console for logs like:
-```
-Attempting to stream asset [id] from candidates: [...]
-Trying asset URL: https://di-studio.xyz/serverXR/api/spaces/[space]/assets/[id]
-Successfully fetched asset from: [url]
-```
+1. promote the approved commit into `main`
+2. publish `cpanel-production`
+3. run the production apply step on the server
+4. verify production smoke checks
 
-## 📁 File Structure on cPanel
+## Expected Checks
 
-```
-/home/YOUR_USERNAME/
-├── public_html/                    # Web root (served at https://di-studio.xyz/)
-│   ├── index.html                  # React app entry
-│   ├── assets/                     # React app JS/CSS bundles
-│   ├── default-scene/              # Default assets
-│   ├── serverXR/                   # Proxy fallback
-│   │   ├── .htaccess              # Proxies to Node.js + PHP fallback
-│   │   └── serve-asset.php        # PHP fallback for assets
-│   └── .htaccess                   # SPA routing
-│
-└── serverXR/                       # Node.js app (served at /serverXR via cPanel)
-    ├── src/
-    │   ├── index.js               # Express server
-    │   └── config.js
-    ├── data/                       # Created automatically
-    │   └── spaces/                # User spaces & assets
-    ├── .env                        # Configuration
-    ├── package.json
-    └── ecosystem.config.js
-```
+- `https://staging.di-studio.xyz/`
+- `https://staging.di-studio.xyz/admin?space=main`
+- `https://staging.di-studio.xyz/studio`
+- `https://staging.di-studio.xyz/serverXR/api/health`
+- asset upload/readback
+- collaboration routes
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
-### Assets return HTML instead of image data
+### `/serverXR/` shows directory listing or HTML fallback
 
-**Symptom:** Console shows "Asset [id] unsupported MIME: text/html"
+That means the web root is still serving a static folder instead of the Node.js app. Fix the cPanel Node.js App mapping and remove legacy proxy leftovers.
 
-**Causes & Fixes:**
-1. **Node.js app not running:**
-   - Go to cPanel → Setup Node.js App → Restart
-   - Check Application Log for errors
+### `/serverXR/api/health` fails
 
-2. **Wrong data directory path:**
-   - The `.env` file should have `DATA_ROOT=./data`
-   - If using absolute path: `DATA_ROOT=/home/YOUR_USERNAME/serverXR/data`
+Check:
 
-3. **Assets not on server:**
-   - Make sure you clicked "Save to Server" after uploading
-   - Space must be permanent or have publishing enabled
-
-### Node.js app won't start
-
-**Check PM2 logs:**
-```bash
-# SSH into cPanel
-cd ~/serverXR
-pm2 logs dii-control-server --lines 50
-```
-
-**Common issues:**
-- **Port already in use:** Change PORT in `.env` (default 4000)
-- **Missing modules:** Run `npm install --production`
-- **Permission issues:** Ensure `data/` folder is writable: `chmod 755 data`
-
-**PM2 Management Commands:**
-```bash
-# Restart the app
-pm2 restart dii-control-server
-
-# Stop the app
-pm2 stop dii-control-server
-
-# View status
-pm2 list
-
-# View logs in real-time
-pm2 logs dii-control-server
-
-# Delete from PM2
-pm2 delete dii-control-server
-```
-
-### CORS errors from API
-
-**Update serverXR/.env:**
-```env
-CORS_ORIGINS=https://di-studio.xyz,https://www.di-studio.xyz
-```
-
-Then restart the Node.js app in cPanel.
-
-### Changes not appearing
-
-1. **Frontend changes:** Rebuild with `npm run build` and re-upload `dist/` contents
-2. **Backend changes:** 
-   ```bash
-   # SSH to cPanel
-   cd ~/serverXR
-   # Upload your changed files, then:
-   pm2 restart dii-control-server
-   ```
-3. **Clear browser cache:** Ctrl+Shift+R (Chrome/Firefox)
-
-## 🛡️ Optional: Secure with API Token
-
-1. Edit `serverXR/.env`:
-   ```env
-   API_TOKEN=your-very-secure-random-token-here
-   REQUIRE_AUTH=true
-   ```
-
-2. Rebuild frontend with token:
-   ```bashPM2:
-   ```bash
-   pm2 restart dii-control-server
-   ```
-   # On local machine
-   $env:VITE_API_TOKEN="your-very-secure-random-token-here"
-   npm run build
-   ```
-
-3. Re-upload `dist/` and restart Node.js app
-
-## 🎉 Success!
-
-When everything works:
-- ✅ https://di-studio.xyz/ loads the editor
-- ✅ https://di-studio.xyz/serverXR/api/health returns OK
-- ✅ Assets uploaded in one browser appear in another browser
-- ✅ Console shows: "Successfully fetched asset from: https://di-studio.xyz/serverXR/api/spaces/..."
-
-## 📞 Need Help?
-
-- Check Node.js app logs in cPanel
-- Check browser console for asset loading details
-- Verify .htaccess files are uploaded correctly
-- Ensure Node.js app is running in cPanel
+- the Node.js app is started
+- backend `.env` exists
+- `API_TOKEN`, `DATA_ROOT`, `SHARED_ROOT`, and `CORS_ORIGINS` are valid
+- dependencies are installed in the app root

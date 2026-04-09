@@ -48,7 +48,10 @@ export function useSpacesController({
                 createdAt: space.createdAt || existing.createdAt || Date.now(),
                 lastActive,
                 isPermanent: typeof space.permanent === 'boolean' ? space.permanent : Boolean(existing.isPermanent),
-                allowEdits: typeof space.allowEdits === 'boolean' ? space.allowEdits : (existing.allowEdits !== false)
+                allowEdits: typeof space.allowEdits === 'boolean' ? space.allowEdits : (existing.allowEdits !== false),
+                publishedProjectId: typeof space.publishedProjectId === 'string' && space.publishedProjectId.trim()
+                    ? space.publishedProjectId.trim()
+                    : (existing.publishedProjectId || null)
             })
         })
         return Array.from(map.values()).sort((a, b) => (b.lastActive || 0) - (a.lastActive || 0))

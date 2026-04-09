@@ -42,7 +42,10 @@ const normalizeSpace = (space) => {
         createdAt: Number(space.createdAt) || Date.now(),
         lastActive: Number(space.lastActive) || Date.now(),
         isPermanent: Boolean(space.isPermanent),
-        allowEdits: space.allowEdits !== false
+        allowEdits: space.allowEdits !== false,
+        publishedProjectId: typeof space.publishedProjectId === 'string' && space.publishedProjectId.trim()
+            ? space.publishedProjectId.trim()
+            : null
     }
 }
 
@@ -105,7 +108,8 @@ export const createSpace = ({ label, slug, isPermanent = false } = {}) => {
         id: normalizedId,
         label,
         isPermanent,
-        allowEdits: true
+        allowEdits: true,
+        publishedProjectId: null
     })
     const spaces = readSpaces()
     spaces.unshift(record)

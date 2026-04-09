@@ -1,104 +1,133 @@
 # dii Control Server
 
-Minimal Express server meant to run on the cPanel Node.js environment (Node 22.14.0). It ships with a visual status UI plus a lightweight API for syncing multi-user “spaces” with the front-end editor.
+Minimal Express backend for the dii platform. It runs on the cPanel Node.js App model, serves a small monitor UI, and provides the API contract for legacy spaces plus project-based editors.
 
-## Features
+Runtime baseline:
 
-- `GET /` – lightweight dashboard that pings the API and lists the last 25 requests/errors.
-- `GET /api/health` – JSON payload with uptime, memory, Node version, and current port.
-- `GET /api/events` – last 25 lifecycle events (requests + server start + errors).
-- `GET /api/spaces` – list saved spaces (`id`, `label`, timestamps, permanence).
-- `POST /api/spaces` – create a new space (`{ label, slug, permanent }`).
-- `PATCH /api/spaces/:id` – rename a space or toggle permanence/edit access.
-- `DELETE /api/spaces/:id` – remove a space and its persisted data.
-- `POST /api/spaces/:id/touch` – update `lastTouchedAt` to keep temporary spaces alive.
-- `GET /api/spaces/:id/scene` – retrieve the saved scene payload.
-- `PUT /api/spaces/:id/scene` – persist the latest scene JSON.
-- `GET /api/spaces/:id/ops` – fetch scene-op history after a version for catch-up.
-- `POST /api/spaces/:id/ops` – append durable scene ops with optimistic version checks.
-- `POST /api/spaces/:id/assets` – upload an asset blob (multipart field `asset`), returns `{ assetId, mimeType, size, url }`.
-- `GET /api/spaces/:id/assets/:assetId` – stream a stored asset file.
-- `GET /api/spaces/:spaceId/projects` – list V2 projects inside a space.
-- `POST /api/spaces/:spaceId/projects` – create a V2 project in a space.
-- `GET /api/projects/:projectId` – load V2 project metadata.
-- `PATCH /api/projects/:projectId` – rename/update V2 project metadata.
-- `DELETE /api/projects/:projectId` – delete a V2 project.
-- `GET /api/projects/:projectId/document` – read the normalized V2 project document.
-- `PUT /api/projects/:projectId/document` – replace the V2 project document.
-- `GET /api/projects/:projectId/ops` – fetch V2 project op history after a version.
-- `POST /api/projects/:projectId/ops` – append durable V2 project ops with optimistic version checks.
-- `POST /api/projects/:projectId/assets` – upload a V2 project asset blob.
-- `GET /api/projects/:projectId/assets/:assetId` – stream a stored V2 project asset file.
-- `GET /api/projects/:projectId/events` – SSE stream for durable V2 project op updates.
-- `WS <APP_BASE_PATH>/socket.io` – collaborator presence.
-- `GET <APP_BASE_PATH>/api/spaces/:id/events` – SSE stream for durable scene-op updates and catch-up.
+- package version: `0.2.0`
+- Node baseline: `22.x`
+
+## What It Serves
+
+- `GET /` - lightweight monitor/dashboard
+- `GET /api/health` - uptime, memory, Node version, and port
+- `GET /api/events` - recent lifecycle events
+- `GET /api/spaces` - list spaces
+- `POST /api/spaces` - create a space
+- `PATCH /api/spaces/:id` - rename or update permanence/edit access
+- `DELETE /api/spaces/:id` - delete a space
+- `POST /api/spaces/:id/touch` - refresh temporary space activity
+- `GET /api/spaces/:id/scene` - read a legacy scene
+- `PUT /api/spaces/:id/scene` - replace a legacy scene
+- `GET /api/spaces/:id/ops` - read V1 scene-op history
+- `POST /api/spaces/:id/ops` - append V1 scene ops
+- `POST /api/spaces/:id/assets` - upload a space asset
+- `GET /api/spaces/:id/assets/:assetId` - stream a space asset
+- `GET /api/spaces/:spaceId/projects` - list project documents inside a space
+- `POST /api/spaces/:spaceId/projects` - create a project
+- `GET /api/projects/:projectId` - read project metadata
+- `PATCH /api/projects/:projectId` - update project metadata
+- `DELETE /api/projects/:projectId` - delete a project
+- `GET /api/projects/:projectId/document` - read a normalized project document
+- `PUT /api/projects/:projectId/document` - replace a project document
+- `GET /api/projects/:projectId/ops` - fetch project op history after a version
+- `POST /api/projects/:projectId/ops` - append durable project ops
+- `POST /api/projects/:projectId/assets` - upload a project asset
+- `GET /api/projects/:projectId/assets/:assetId` - stream a project asset
+- `GET /api/projects/:projectId/events` - SSE stream for project document updates
+- `WS <APP_BASE_PATH>/socket.io` - collaborator presence and cursors
+- `GET <APP_BASE_PATH>/api/spaces/:id/events` - SSE stream for V1 scene updates
+
+## Product Relationship
+
+This server supports two editor families:
+
+- `V1 Legacy`
+  - spaces are the authoritative shared unit
+- `Project Editors`
+  - Beta and Studio both use project documents, project ops, SSE, and presence
+
+The server does not decide which editor is the long-term product target. The current repo direction is:
+
+- V1 remains the stable compatibility lane
+- Studio is the future main editor
+- Beta is transitional
 
 ## Scripts
 
 ```bash
 cd serverXR
-npm install      # install once
-# copy .env.example to .env and tweak the values for your server
-npm run dev      # local watch mode
-npm run start    # production start
+npm install
+npm run dev
+npm run start
 ```
 
 ## Configuration
 
-Environment variables live in a `.env` file inside `serverXR/` (see `.env.example`). Key values:
+Environment variables:
 
 | Variable | Description | Default |
 | --- | --- | --- |
 | `PORT` | HTTP port the Express app listens on. | `4000` |
-| `APP_BASE_PATH` | Public path when reverse-proxied (e.g. `/serverXR`). Leave blank for root. | `/serverXR` |
-| `DATA_ROOT` | Folder where scene data + uploads are persisted. | `./data` |
+| `APP_BASE_PATH` | Public mount path when reverse-proxied. | `/serverXR` |
+| `DATA_ROOT` | Folder where scene/project data and uploads are persisted. | `./data` |
 | `SPACES_DIR` | Optional override for the spaces directory. | `<DATA_ROOT>/spaces` |
 | `UPLOADS_DIR` | Optional override for uploaded assets. | `<DATA_ROOT>/uploads` |
-| `SPACE_TTL_MS` | Milliseconds of inactivity before temporary spaces are pruned. | `2592000000` (30 days) |
-| `API_TOKEN` | Token required for write requests (POST/PUT/PATCH/DELETE). | _none_ |
-| `REQUIRE_AUTH` | Enforce `API_TOKEN` for write requests. When unset, it defaults to `true` in production and `false` otherwise. | `NODE_ENV`-aware |
-| `CORS_ORIGINS` | Comma-separated allowlist of origins. Use `*` only for local dev. | _none_ |
+| `SPACE_TTL_MS` | Inactivity window before temporary spaces are pruned. | `2592000000` |
+| `API_TOKEN` | Token required for write requests. | _none_ |
+| `REQUIRE_AUTH` | Enforce `API_TOKEN` for writes. | `NODE_ENV`-aware |
+| `CORS_ORIGINS` | Comma-separated allowlist of origins. | _none_ |
 | `MAX_UPLOAD_MB` | Max asset upload size in MB. | `100` |
+| `SHARED_ROOT` | Optional override for shared schema loading. Used when staging and production keep separate shared folders outside the repo. | repo-local `shared/` fallback |
 
-> **Security note:** In production the server now defaults to rejecting unauthenticated writes unless you explicitly disable `REQUIRE_AUTH`. If a space has `allowEdits=false`, scene, asset, and realtime mutation requests are rejected with `403`.
+Security note:
 
-## Current Collaboration Contract
+- in production, unauthenticated writes are rejected unless `REQUIRE_AUTH=false`
+- if a space has `allowEdits=false`, scene, asset, and realtime mutations are rejected with `403`
 
-- The stable baseline for this repo is `LIVE_SYNC_FEATURE_ENABLED=true`.
-- Socket.IO provides collaborator presence under `<APP_BASE_PATH>/socket.io`.
-- Durable collaborative scene edits flow through REST scene ops plus the SSE event stream.
-- Hidden Beta V2 follows the same rule set with `projects`: project ops + SSE are authoritative, while sockets handle project roster/cursors only.
-- Manual publish/reload remains available for full-scene overwrite flows and recovery.
+## Collaboration Contract
 
-## Running via PM2 (recommended)
+- Socket.IO provides presence and cursors
+- durable changes flow through REST ops plus SSE catch-up
+- V1 uses scene ops
+- Beta and Studio use project ops
+- project metadata now preserves the requested source so Studio, Beta, and imports can be identified correctly
 
-Keeping the Node process alive via PM2 prevents accidental shutdowns when a shell disconnects. From the `serverXR/` directory:
+## Running On cPanel Node.js App
+
+Recommended app settings:
+
+- Node version: `22`
+- application root: `serverXR` or `serverXR-staging`
+- application URL: `/serverXR`
+- startup file: `src/index.js`
+
+Typical restart flow:
 
 ```bash
-npm install --production      # or npm install if you haven’t already
-pm2 start ecosystem.config.js # boots the API
-pm2 logs dii-control-server   # tail stdout/stderr
-pm2 restart dii-control-server
-pm2 save                      # optional: auto-start on boot (depends on host)
+cd ~/serverXR
+npm install --omit=dev
+cloudlinux-selector restart --json --interpreter nodejs --user "$USER" --app-root serverXR
 ```
 
-## Deploying on cPanel
+For staging, use `~/serverXR-staging` and `--app-root serverXR-staging`.
 
-1. Upload the `serverXR/` folder to `/home/distudio/serverXR` (or whatever root you configure).
-2. Duplicate `.env.example` into `.env` and update the values for your environment (port, base path, storage locations).
-3. In **Setup Node.js App** choose Node **22.14.0**, set the application root to that directory, and leave the app URL at `/serverXR`.
-4. If Passenger does not inject a port automatically, set `PORT=<free port>` in the cPanel UI (same value as your `.env` file).
-5. Optional: set `APP_BASE_PATH=/serverXR` if the app is reverse-proxied (default still falls back to `/serverXR`).
-6. Click **Run NPM Install** once, then either:
-   - **Start App** in Passenger (simple deployment), or
-   - SSH in and run the PM2 commands above for a long-lived process (recommended for stability).
-7. Visit `https://di-studio.xyz/serverXR/` to see the status page, or hit `https://di-studio.xyz/serverXR/api/health` directly.
+## Deploy Model
 
-> **Tip:** avoid using the “Run JS Script” button for `npm start`; let Passenger manage the daemon so you can stop/restart it from the UI.
+Canonical deploy path:
 
-### Storage notes
+- publish from GitHub Actions with [publish-cpanel-prebuilt-v2.yml](/home/nnn/Desktop/dii_ii/.github/workflows/publish-cpanel-prebuilt-v2.yml)
+- apply on the server with [scripts/cpanel-apply-prebuilt-release.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-apply-prebuilt-release.sh)
+- keep `/serverXR` owned by the cPanel Node.js App
 
-- Scene + asset data lives under `serverXR/data/spaces/<spaceId>/`.
-- Beta V2 project data lives under `serverXR/data/spaces/<spaceId>/projects/<projectId>/`.
-- Temporary spaces auto-prune after ~30 days of inactivity (`SPACE_TTL_MS` overrides this).
-- Uploaded assets are streamed back from `/api/spaces/:id/assets/:assetId` and include the recorded MIME type.
+Fallbacks:
+
+- PM2 only if the host does not expose `Setup Node.js App`
+- Git-pull/self-host deploy only when GitHub Actions cannot push artifacts to the host
+
+## Storage Notes
+
+- scene + asset data lives under `serverXR/data/spaces/<spaceId>/`
+- project data lives under `serverXR/data/spaces/<spaceId>/projects/<projectId>/`
+- temporary spaces auto-prune after ~30 days of inactivity unless `SPACE_TTL_MS` overrides it
+- uploaded assets stream directly from the API and preserve MIME type metadata

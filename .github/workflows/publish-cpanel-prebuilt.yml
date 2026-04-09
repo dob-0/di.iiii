@@ -1,4 +1,4 @@
-name: Publish cPanel Prebuilt
+name: Legacy Publish cPanel Prebuilt
 
 on:
   push:

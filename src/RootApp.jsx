@@ -1,21 +1,24 @@
 import { useEffect, useMemo, useState } from 'react'
-import App from './App.jsx'
 import BetaApp from './beta/BetaApp.jsx'
 import { getBetaLocationState, isBetaLocation } from './beta/utils/betaRouting.js'
+import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 import StudioApp from './studio/StudioApp.jsx'
 import { getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
+import { getAppLocationState } from './utils/spaceRouting.js'
 
 export default function RootApp() {
     const [locationState, setLocationState] = useState(() => ({
         betaState: getBetaLocationState(),
-        studioState: getStudioLocationState()
+        studioState: getStudioLocationState(),
+        appState: getAppLocationState()
     }))
 
     useEffect(() => {
         const handlePopState = () => {
             setLocationState({
                 betaState: getBetaLocationState(),
-                studioState: getStudioLocationState()
+                studioState: getStudioLocationState(),
+                appState: getAppLocationState()
             })
         }
         window.addEventListener('popstate', handlePopState)
@@ -29,5 +32,5 @@ export default function RootApp() {
         return <StudioApp initialRoute={locationState.studioState} />
     }
 
-    return isBeta ? <BetaApp initialRoute={locationState.betaState} /> : <App />
+    return isBeta ? <BetaApp initialRoute={locationState.betaState} /> : <SpaceSurfaceApp routeState={locationState.appState} />
 }

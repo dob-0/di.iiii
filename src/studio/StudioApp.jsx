@@ -66,13 +66,13 @@ export default function StudioApp({ initialRoute }) {
 
     const content = useMemo(() => {
         if (route.page === STUDIO_PAGE_PROJECT && route.projectId) {
-            return <StudioEditor projectId={route.projectId} />
+            return <StudioEditor projectId={route.projectId} spaceId={route.spaceId} />
         }
         if (route.page === STUDIO_PAGE_HUB) {
-            return <StudioHub />
+            return <StudioHub spaceId={route.spaceId} />
         }
-        return <StudioHub />
-    }, [route.page, route.projectId])
+        return <StudioHub spaceId={route.spaceId} />
+    }, [route.page, route.projectId, route.spaceId])
 
     return (
         <ThemeProvider theme={studioTheme}>

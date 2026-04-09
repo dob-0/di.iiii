@@ -1,46 +1,113 @@
-# dii Scene Editor
+# dii Platform
 
+Web-based spatial editor platform built with React, Vite, Three.js, and a Node backend in `serverXR` for persistence, collaboration, assets, SSE, and presence.
 
-Web-based spatial editor built with React, Vite, Three.js, and an optional Node backend in [ServerXR] (./ServerXR) for real-time collaboration through the network.
+Current development cycle:
 
-You can leave your real time feedback in www.thedi.studio space.. or create and play in your ground! 
-Don't trash it, plz! 
-Be ecofriendly. 
-We are going to performance there; write if you interested:
+- package version: `0.2.0`
+- current release tag on `main`: `v0.1.0`
+- runtime baseline: Node `22.x`
 
-Excited with: https://threejs.org/
-@bruno_simon: https://threejs-journey.com/#
+Latest project references:
 
+- [Checkpoint 2026-04-09](/home/nnn/Desktop/dii_ii/docs/checkpoints/2026-04-09.md)
+- [Checkpoint 2026-04-07](/home/nnn/Desktop/dii_ii/docs/checkpoints/2026-04-07.md)
+- [Project Surfaces](/home/nnn/Desktop/dii_ii/docs/architecture/PROJECT_SURFACES.md)
+- [V1 To Studio Parity](/home/nnn/Desktop/dii_ii/docs/roadmaps/V1_STUDIO_PARITY.md)
 
-write me: d0b@duck.com
- 
-This repo currently includes two editors:
+## Platform Status
 
-- `V1` legacy space editor on routes like `/main`
-- `V2` hidden beta desktop editor on `/beta`
+This repo is one platform with four active surfaces:
 
-## What This Repo Contains
+- `V1 Legacy`: legacy editor fallback behind `/<space>` when no live project is published
+- `Admin/Ops`: `/admin?space=<id>`
+- `V2 Beta`: `/<space>/beta` with `/beta` as a `main`-space compatibility alias
+- `Studio`: `/<space>/studio` with `/studio` as a `main`-space compatibility alias
+- `serverXR`: backend under `/serverXR`
 
-- `src/` - frontend app
-- `src/beta/` - V2 hidden beta editor
-- `serverXR/` - Node/Express backend for spaces, projects, assets, ops, SSE, and Socket.IO presence
-- `shared/` - schemas shared by frontend and backend
-- `public/` - static files and Apache helpers
-- `docs/` - deployment and testing notes
+Current product direction:
+
+- `Studio` is the main authoring surface for each space.
+- `Beta` is the beta editor lane.
+- `/<space>` is the public space route.
+- Studio chooses which project is live for `/<space>`.
+- `V1` stays as the legacy editor fallback and compatibility lane when a space has no live project yet.
+- deploy and release truth should stay simpler than feature truth.
+
+## Product Surfaces
+
+### `V1 Legacy`
+
+- routes like `/main` or `/my-space`
+- legacy editor fallback
+- still loads for a space when no live project is published yet
+- supports objects, gizmos, local persistence, XR entry points, and server-backed collaboration
+
+### `Public Space View`
+
+- route: `/<space>`
+- pure public viewer when that space has a live published project
+- hides editor chrome and only shows presentation/XR entry controls
+- reuses the published Studio project document for the live experience
+
+### `Admin/Ops`
+
+- route: `/admin?space=<id>`
+- operator dashboard for links, scene signals, logs, preview, status, and debugging
+
+### `V2 Beta`
+
+- routes: `/<space>/beta` and `/beta` as a compatibility alias for `main`
+- older project-based desktop editor
+- beta editor lane
+- kept available alongside Studio for experiments and alternate workflow validation
+
+### `Studio`
+
+- routes: `/<space>/studio` and `/studio` as a compatibility alias for `main`
+- project-based main authoring workspace attached to a space
+- cleaner long-term workspace direction
+- uses the shared neutral project layer in `src/project/`
+- can set or clear the live published project for its space
+
+## Repo Map
+
+- `src/App.jsx` - V1 legacy editor shell
+- `src/RootApp.jsx` - top-level route switch
+- `src/SpaceSurfaceApp.jsx` - decides whether `/<space>` should open the public viewer or legacy V1 fallback
+- `src/components/` - shared desktop/mobile/admin UI
+- `src/hooks/` - V1/editor orchestration and collaboration logic
+- `src/project/` - canonical shared project model, sync, presence, import, and entity logic used by Beta and Studio
+- `src/project/components/PublicProjectViewer.jsx` - minimal public-facing renderer for the live published project
+- `src/beta/` - transitional Beta route/UI layer and compatibility wrappers
+- `src/studio/` - Studio V3 route/UI layer
+- `serverXR/` - backend app
+- `shared/` - backend/runtime shared schemas
+- `src/shared/` - frontend shared schemas
+- `scripts/` - dev stack, deploy, smoke, checkpoint, and release tooling
+- `docs/` - deployment, testing, architecture, checkpoints, and roadmap notes
 
 ## Requirements
 
-- Node 18+
-- npm
+- Node `22.x`
+- npm `10.x`
 
-## Local Development
-
-Install dependencies:
+Recommended local setup:
 
 ```bash
 npm install
 cd serverXR && npm install
 ```
+
+Or use:
+
+```bash
+nvm use
+```
+
+This repo now includes [.nvmrc](/home/nnn/Desktop/dii_ii/.nvmrc) with the Node 22 baseline.
+
+## Local Development
 
 Run the full local stack from the repo root:
 
@@ -48,55 +115,28 @@ Run the full local stack from the repo root:
 npm run dev
 ```
 
-That command:
-
-- starts `serverXR` automatically when needed
-- points the frontend at `http://localhost:4000/serverXR`
-- launches Vite
-
 Useful local URLs:
 
-- `http://localhost:5173/main` - legacy editor
-- `http://localhost:5173/beta` - hidden beta hub
+- `http://localhost:5173/main` - public `main` space route, or legacy fallback when no live project is published
+- `http://localhost:5173/admin?space=main` - admin/operator route
+- `http://localhost:5173/main/beta` - main-space Beta hub
+- `http://localhost:5173/beta` - compatibility alias for `main/beta`
+- `http://localhost:5173/main/studio` - main-space Studio hub
+- `http://localhost:5173/studio` - compatibility alias for `main/studio`
 - `http://localhost:4000/serverXR/api/health` - backend health
 
-Other scripts:
+Other useful scripts:
 
 ```bash
 npm run dev:client
 npm run dev:server
 npm run build
-npm run test
 npm run lint
+npm run test
+npm run test:server-contracts
+npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
+npm run checkpoint -- --environment staging --note "checkpoint note"
 ```
-
-## Editors
-
-### Legacy Editor (V1)
-
-The legacy editor is space-based.
-
-Examples:
-
-- `/main`
-- `/my-space`
-
-V1 supports primitives, text, media objects, transform gizmos, multi-selection, XR entry points, local persistence, and server-backed collaboration.
-
-### Hidden Beta (V2)
-
-Open `/beta`.
-
-V2 is a separate editor model with:
-
-- hub-first entry
-- project-based workflow
-- desktop-window layout
-- generic property-sheet inspector
-- asset-first workflow
-- one-way import from local V1 scene files
-
-V2 is still beta and lives beside V1, not in place of it.
 
 ## Collaboration Model
 
@@ -104,15 +144,26 @@ V2 is still beta and lives beside V1, not in place of it.
 
 - `spaces` are the shared unit
 - durable scene ops are authoritative
-- SSE is used for sync/catch-up
-- Socket.IO is used for presence only
+- SSE handles sync/catch-up
+- Socket.IO handles presence only
 
-### V2
+### Project Editors
 
 - `projects` are the editable unit inside a space
 - durable project ops are authoritative
-- SSE carries document updates
-- Socket.IO is used for roster and cursors only
+- SSE carries project document updates
+- Socket.IO handles roster and cursors
+
+Today that project model is used by:
+
+- `Beta`
+- `Studio`
+
+Live publishing model:
+
+- a space can point `publishedProjectId` at one Studio/Beta project
+- `/<space>` opens the public viewer when that live project is set
+- if no live project is set, `/<space>` falls back to the legacy V1 editor
 
 ## ServerXR
 
@@ -120,116 +171,102 @@ V2 is still beta and lives beside V1, not in place of it.
 
 - spaces
 - scenes
-- V2 projects
+- project documents
 - assets
 - ops history
 - SSE streams
 - Socket.IO presence/cursors
 - auth and edit locks
 
-Run it manually if needed:
-
-```bash
-cd serverXR
-cp .env.example .env
-npm install
-npm run dev
-```
-
 Important environment variables:
 
 - `PORT`
 - `APP_BASE_PATH`
 - `DATA_ROOT`
+- `SHARED_ROOT`
 - `API_TOKEN`
 - `REQUIRE_AUTH`
 - `CORS_ORIGINS`
 - `MAX_UPLOAD_MB`
 
-Typical local dev CORS:
-
-```env
-CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
-```
-
 More backend detail lives in [serverXR/README.md](/home/nnn/Desktop/dii_ii/serverXR/README.md).
 
-## Production Build
+## Deploy Truth
 
-Build the frontend:
+Canonical release model:
 
-```bash
-npm run build
-```
+- `dev` = active work + staging source
+- `main` = production source
+- canonical publish workflow: [.github/workflows/publish-cpanel-prebuilt-v2.yml](/home/nnn/Desktop/dii_ii/.github/workflows/publish-cpanel-prebuilt-v2.yml)
+- canonical server apply step: [scripts/cpanel-apply-prebuilt-release.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-apply-prebuilt-release.sh)
+- canonical staged bundle: `.deploy/cpanel/`
 
-If you need a cPanel-ready bundle:
+Environment mapping:
 
-```bash
-npm run deploy:cpanel
-```
+- `dev` publishes `cpanel-staging`
+- `main` publishes `cpanel-production`
+- staging URL: `https://staging.di-studio.xyz`
+- production URL: `https://di-studio.xyz`
 
-That creates a staged release bundle in `.deploy/cpanel/` with:
+Deploy notes:
 
-- `public_html/`
-- `serverXR/`
-- `shared/`
+- `/serverXR` must stay owned by the cPanel Node.js App
+- `public_html/` is frontend-only
+- `shared/` and `SHARED_ROOT` are part of the runtime contract
+- old SSH push and Git-pull deploy docs still exist as fallbacks, but they are not the primary path
 
-The PowerShell helper [build-for-cpanel.ps1](/home/nnn/Desktop/dii_ii/build-for-cpanel.ps1) runs the same staging flow on Windows.
+Start here for deploy details:
+
+- [docs/deploy/LIVE_DEPLOY.md](/home/nnn/Desktop/dii_ii/docs/deploy/LIVE_DEPLOY.md)
+- [docs/deploy/CPANEL_PREBUILT_DEPLOY.md](/home/nnn/Desktop/dii_ii/docs/deploy/CPANEL_PREBUILT_DEPLOY.md)
+- [docs/deploy/CPANEL_DEPLOYMENT.md](/home/nnn/Desktop/dii_ii/docs/deploy/CPANEL_DEPLOYMENT.md)
 
 ## Testing
 
-Run the main checks:
+Main checks:
 
 ```bash
-npm test
-npm run build
 npm run lint
+npm run build
+npm run test
 ```
 
-The repo includes coverage for:
+Backend contract checks:
 
-- editor state
-- collaboration contracts
-- backend auth and read-only enforcement
-- V2 project APIs
-- V2 routing and layout behavior
+```bash
+npm run test:server-contracts
+```
 
-## Troubleshooting
+Note:
 
-### Frontend loads but server calls fail
+- the backend contract tests bind to loopback ports, so they need an environment that allows local socket listen/bind
+- if those tests fail with `listen EPERM 127.0.0.1`, treat that as an environment restriction first, not automatically as an app regression
 
-Check:
+## Current Roadmap
 
-- `http://localhost:4000/serverXR/api/health` locally
-- `https://your-domain/serverXR/api/health` in production
-- `VITE_API_BASE_URL`
-- `CORS_ORIGINS`
+Now:
 
-### Beta page opens but shows project load errors
+- keep docs, deploy truth, and runtime expectations aligned
+- stabilize the shared project layer under `src/project/`
+- keep Beta transitional
+- keep V1 stable as the fallback/editor compatibility lane
+- harden the new public viewer plus live-project publish flow
 
-That usually means the frontend is newer than the live backend. Update `serverXR/`, `shared/`, and restart the public backend.
+Next:
 
-### Firefox shows SES warnings
+- reduce remaining Studio dependence on Beta-era naming and assumptions
+- drive a real V1-to-Studio parity checklist
+- keep releases and route ownership simpler than the feature set
 
-Those messages usually come from a browser extension, not this app.
+Later:
 
-### Video does not autoplay
+- decide how much Beta should stay alive next to Studio
+- keep V1 only as compatibility/import mode if still needed
 
-Firefox private browsing and some browser policies may require a click or key press before playback starts.
+## Known Focus Areas
 
-## Legacy Editor Shortcuts
+- improve 2D / fixed-camera workflow
+- unify settings management into a smarter operator/editor UI
+- keep route naming, surface ownership, and deploy docs boring and clear
 
-- `H` - toggle UI
-- `G` - move
-- `R` - rotate
-- `S` - scale
-- `X / Y / Z` - axis lock
-- `Delete / Backspace` - delete selected
-- `Ctrl/Cmd + Z` - undo
-- `Ctrl/Cmd + Shift + Z` or `Ctrl/Cmd + Y` - redo
-
-## Notes
-
-- `V1` remains the main stable editor path
-- `V2` is the active hidden beta
-- generated build/deploy artifacts are intentionally not kept as source
+write me: `d0b@duck.com`

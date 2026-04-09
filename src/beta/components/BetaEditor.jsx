@@ -2,12 +2,12 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PropertyInspector from './PropertyInspector.jsx'
 import DesktopWindow from './DesktopWindow.jsx'
 import BetaViewport from './BetaViewport.jsx'
-import { useProjectStore } from '../state/projectStore.js'
-import { useProjectDocumentSync } from '../hooks/useProjectDocumentSync.js'
-import { useProjectPresence } from '../hooks/useProjectPresence.js'
-import { createEntityOfType, getInspectorSections } from '../entityRegistry.js'
+import { useProjectStore } from '../../project/state/projectStore.js'
+import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
+import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
+import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { buildBetaHubPath } from '../utils/betaRouting.js'
-import { uploadBetaProjectAsset } from '../services/projectsApi.js'
+import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { getWorkspaceAdjustmentOps, getWorkspaceTopInset } from '../utils/windowLayout.js'
 
 const DISPLAY_NAME_KEY = 'dii.beta.displayName'
@@ -133,7 +133,7 @@ function BetaProjectWindow({ document, displayName, onDisplayNameChange, onProje
     )
 }
 
-export default function BetaEditor({ projectId }) {
+export default function BetaEditor({ projectId, spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [displayName, setDisplayName] = useState(() => {
         try {
             return window.localStorage.getItem(DISPLAY_NAME_KEY) || ''
@@ -143,13 +143,26 @@ export default function BetaEditor({ projectId }) {
     })
     const store = useProjectStore()
     const { state, dispatch } = store
-    const projectSync = useProjectDocumentSync({ projectId, store })
+    const projectSync = useProjectDocumentSync({
+        projectId,
+        store,
+        clientIdPrefix: 'beta-client',
+        opIdPrefix: 'beta-op'
+    })
     const { applyLocalOps } = projectSync
-    const presence = useProjectPresence({ projectId, displayName })
+    const presence = useProjectPresence({
+        projectId,
+        displayName,
+        displayNameStorageKey: 'dii.beta.displayName',
+        userIdStorageKey: 'dii.beta.userId',
+        anonymousLabel: 'Beta',
+        userIdPrefix: 'beta-user'
+    })
     const topbarRef = useRef(null)
     const [workspaceTop, setWorkspaceTop] = useState(168)
 
     const document = state.document
+    const resolvedSpaceId = document.projectMeta?.spaceId || spaceId || DEFAULT_PROJECT_SPACE_ID
     const entities = document.entities || []
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
     const visibleWindows = useMemo(() => Object.values(document.windowLayout?.windows || {}).filter((entry) => entry.visible), [document.windowLayout])
@@ -215,7 +228,7 @@ export default function BetaEditor({ projectId }) {
 
     const handleUploadAssets = async (files = []) => {
         for (const file of files) {
-            const asset = await uploadBetaProjectAsset(projectId, file)
+            const asset = await uploadProjectAsset(projectId, file)
             applyLocalOps({
                 type: 'upsertAsset',
                 payload: { asset }
@@ -289,7 +302,7 @@ export default function BetaEditor({ projectId }) {
                     <span className="beta-status-pill">Users: {presence.users.length}</span>
                 </div>
                 <div className="beta-topbar-actions">
-                    <button type="button" onClick={() => window.history.pushState({}, '', buildBetaHubPath()) || window.dispatchEvent(new PopStateEvent('popstate'))}>
+                    <button type="button" onClick={() => window.history.pushState({}, '', buildBetaHubPath(resolvedSpaceId)) || window.dispatchEvent(new PopStateEvent('popstate'))}>
                         Hub
                     </button>
                     <button type="button" onClick={handleDeleteSelected} disabled={!selectedEntity}>Delete Selected</button>

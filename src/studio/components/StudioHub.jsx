@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
     Alert,
     Box,
@@ -18,14 +18,14 @@ import UploadFileIcon from '@mui/icons-material/UploadFile'
 import HistoryIcon from '@mui/icons-material/History'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
-import { importLegacySceneFile } from '../../beta/import/importLegacyScene.js'
+import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
 import {
-    DEFAULT_BETA_SPACE_ID,
-    createBetaProject,
-    listBetaProjects,
-    updateBetaProjectDocument,
-    uploadBetaProjectAsset
-} from '../../beta/services/projectsApi.js'
+    DEFAULT_PROJECT_SPACE_ID,
+    createProject,
+    listProjects,
+    updateProjectDocument,
+    uploadProjectAsset
+} from '../../project/services/projectsApi.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
 
 const detectEntityTypeFromMime = (mimeType = '') => {
@@ -37,39 +37,57 @@ const detectEntityTypeFromMime = (mimeType = '') => {
     return null
 }
 
-export default function StudioHub() {
+const formatProjectSourceLabel = (source = '') => {
+    switch (source) {
+        case 'studio-v3':
+            return 'Studio V3'
+        case 'legacy-import-studio':
+            return 'Studio import'
+        case 'beta-v2':
+            return 'Beta V2'
+        case 'legacy-import':
+            return 'Legacy import'
+        case 'project':
+        case '':
+            return 'Project'
+        default:
+            return source
+    }
+}
+
+export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [projects, setProjects] = useState([])
-    const [title, setTitle] = useState('Untitled Studio Project')
+    const [title, setTitle] = useState('Untitled Project')
     const [status, setStatus] = useState('Loading projects...')
     const [isBusy, setIsBusy] = useState(false)
     const [importWarnings, setImportWarnings] = useState([])
 
     const mostRecentProject = useMemo(() => projects[0] || null, [projects])
 
-    const loadProjects = async () => {
+    const loadProjects = useCallback(async () => {
         setStatus('Loading projects...')
         try {
-            const nextProjects = await listBetaProjects(DEFAULT_BETA_SPACE_ID)
+            const nextProjects = await listProjects(spaceId)
             setProjects(nextProjects)
             setStatus(nextProjects.length ? '' : 'No projects yet.')
         } catch (error) {
             setStatus(error.message || 'Unable to load projects.')
         }
-    }
+    }, [spaceId])
 
     useEffect(() => {
         loadProjects()
-    }, [])
+    }, [loadProjects])
 
     const openProject = (projectId) => {
-        navigateToStudioPath(buildStudioProjectPath(projectId))
+        navigateToStudioPath(buildStudioProjectPath(projectId, spaceId))
     }
 
     const handleCreate = async () => {
         setIsBusy(true)
         setStatus('Creating project...')
         try {
-            const response = await createBetaProject(DEFAULT_BETA_SPACE_ID, {
+            const response = await createProject(spaceId, {
                 title,
                 slug: title,
                 source: 'studio-v3'
@@ -90,14 +108,14 @@ export default function StudioHub() {
         setStatus(`Importing ${file.name}...`)
         try {
             const { document, assetFiles, warnings } = await importLegacySceneFile(file)
-            const response = await createBetaProject(DEFAULT_BETA_SPACE_ID, {
+            const response = await createProject(spaceId, {
                 title: document.projectMeta.title,
                 slug: document.projectMeta.title,
                 source: 'studio-v3'
             })
             const assetMap = new Map()
             for (const [assetId, assetFile] of assetFiles.entries()) {
-                const uploaded = await uploadBetaProjectAsset(response.project.id, assetFile, { assetId })
+                const uploaded = await uploadProjectAsset(response.project.id, assetFile, { assetId })
                 assetMap.set(assetId, uploaded)
             }
             const nextDocument = {
@@ -105,7 +123,7 @@ export default function StudioHub() {
                 projectMeta: {
                     ...document.projectMeta,
                     id: response.project.id,
-                    spaceId: DEFAULT_BETA_SPACE_ID,
+                    spaceId,
                     source: 'legacy-import-studio'
                 },
                 assets: document.assets.map((asset) => assetMap.get(asset.id) || asset),
@@ -119,7 +137,7 @@ export default function StudioHub() {
                     }
                 })
             }
-            await updateBetaProjectDocument(response.project.id, nextDocument)
+            await updateProjectDocument(response.project.id, nextDocument)
             setImportWarnings(warnings)
             openProject(response.project.id)
         } catch (error) {
@@ -141,10 +159,13 @@ export default function StudioHub() {
                         alignItems={{ xs: 'stretch', lg: 'flex-start' }}
                     >
                         <Stack spacing={1.25} sx={{ maxWidth: 720 }}>
-                            <Chip label="Studio V3" color="primary" sx={{ alignSelf: 'flex-start' }} />
-                            <Typography variant="h3" fontWeight={800}>Projects</Typography>
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                <Chip label="Main Studio" color="primary" sx={{ alignSelf: 'flex-start' }} />
+                                <Chip label={`Space ${spaceId}`} variant="outlined" sx={{ alignSelf: 'flex-start' }} />
+                            </Stack>
+                            <Typography variant="h3" fontWeight={800}>Studio Projects</Typography>
                             <Typography variant="body1" color="text.secondary">
-                                Create, reopen, import, and keep moving.
+                                Studio is the main authoring workspace for this space. Use it for project-based work, imports, and the primary long-term workflow.
                             </Typography>
                         </Stack>
                         <Stack
@@ -192,7 +213,7 @@ export default function StudioHub() {
                                 <Button
                                     variant="text"
                                     color="inherit"
-                                    onClick={() => navigateToStudioPath(buildStudioProjectPath(mostRecentProject.id))}
+                                    onClick={() => navigateToStudioPath(buildStudioProjectPath(mostRecentProject.id, spaceId))}
                                     disabled={!mostRecentProject}
                                     startIcon={<HistoryIcon />}
                                 >
@@ -201,7 +222,7 @@ export default function StudioHub() {
                                 <Button
                                     variant="text"
                                     color="inherit"
-                                    onClick={() => window.location.assign(buildAppSpacePath(DEFAULT_BETA_SPACE_ID))}
+                                    onClick={() => window.location.assign(buildAppSpacePath(spaceId))}
                                 >
                                     Legacy editor
                                 </Button>
@@ -232,7 +253,7 @@ export default function StudioHub() {
                                             <Box sx={{ flex: 1 }} />
                                             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
                                                 <Chip size="small" label={`Updated ${new Date(project.updatedAt || Date.now()).toLocaleDateString()}`} />
-                                                <Chip size="small" variant="outlined" label={project.source || 'beta-v2'} />
+                                                <Chip size="small" variant="outlined" label={formatProjectSourceLabel(project.source)} />
                                             </Stack>
                                         </CardContent>
                                     </CardActionArea>

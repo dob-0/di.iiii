@@ -1,8 +1,12 @@
 {
   "name": "iiiiiiiiiiiii",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
+  "engines": {
+    "node": "22.x",
+    "npm": "10.x"
+  },
   "scripts": {
     "dev": "node scripts/dev-stack.mjs",
     "dev:client": "vite",
@@ -16,6 +20,7 @@
     "preview": "vite preview",
     "lint": "eslint src --ext .js,.jsx",
     "test": "vitest run",
+    "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js",
     "test:ui": "vitest",
     "format": "prettier --write ."
   },

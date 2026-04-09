@@ -271,6 +271,7 @@ const buildMeta = (spaceId, overrides = {}) => {
     label: (overrides.label && String(overrides.label).trim()) || spaceId,
     permanent: Boolean(overrides.permanent),
     allowEdits: overrides.allowEdits !== false,
+    publishedProjectId: overrides.publishedProjectId || null,
     createdAt: overrides.createdAt || now,
     updatedAt: now,
     lastTouchedAt: now,
@@ -309,6 +310,7 @@ const upsertSpaceMeta = async (spaceId, updates = {}) => {
       ...('label' in updates ? { label: updates.label } : {}),
       ...('permanent' in updates ? { permanent: Boolean(updates.permanent) } : {}),
       ...('allowEdits' in updates ? { allowEdits: Boolean(updates.allowEdits) } : {}),
+      ...('publishedProjectId' in updates ? { publishedProjectId: updates.publishedProjectId || null } : {}),
       ...('sceneVersion' in updates ? { sceneVersion: Number.isFinite(Number(updates.sceneVersion)) ? Number(updates.sceneVersion) : (meta.sceneVersion || 0) } : {})
     }
     meta.updatedAt = Date.now()
@@ -623,6 +625,20 @@ router.post('/api/spaces', async (req, res, next) => {
   }
 })
 
+router.get('/api/spaces/:spaceId', async (req, res, next) => {
+  try {
+    const spaceId = normalizeSpaceId(req.params.spaceId)
+    if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+    const meta = await loadSpaceMeta(spaceId)
+    if (!meta) {
+      return res.status(404).json({ error: 'Space not found.' })
+    }
+    res.json({ space: meta })
+  } catch (error) {
+    next(error)
+  }
+})
+
 router.patch('/api/spaces/:spaceId', async (req, res, next) => {
   try {
     const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -630,11 +646,27 @@ router.patch('/api/spaces/:spaceId', async (req, res, next) => {
     if (!(await spaceExists(spaceId))) {
       return res.status(404).json({ error: 'Space not found.' })
     }
-    const { label, permanent, allowEdits } = req.body || {}
+    const { label, permanent, allowEdits, publishedProjectId } = req.body || {}
+    let nextPublishedProjectId
+    if (publishedProjectId !== undefined) {
+      if (publishedProjectId === null || publishedProjectId === '') {
+        nextPublishedProjectId = null
+      } else {
+        nextPublishedProjectId = normalizeProjectId(publishedProjectId)
+        if (!nextPublishedProjectId) {
+          return res.status(400).json({ error: 'Invalid published project id.' })
+        }
+        const project = await findProjectById(SPACES_DIR, nextPublishedProjectId)
+        if (!project || project.spaceId !== spaceId) {
+          return res.status(404).json({ error: 'Published project not found in this space.' })
+        }
+      }
+    }
     const meta = await upsertSpaceMeta(spaceId, {
       ...(label !== undefined ? { label } : {}),
       ...(permanent !== undefined ? { permanent } : {}),
-      ...(allowEdits !== undefined ? { allowEdits } : {})
+      ...(allowEdits !== undefined ? { allowEdits } : {}),
+      ...(publishedProjectId !== undefined ? { publishedProjectId: nextPublishedProjectId } : {})
     })
     res.json({ space: meta })
   } catch (error) {
@@ -693,6 +725,7 @@ router.post('/api/spaces/:spaceId/projects', async (req, res, next) => {
     }
     await ensureSpaceWritable(spaceId)
     const title = typeof req.body?.title === 'string' ? req.body.title.trim() : ''
+    const source = typeof req.body?.source === 'string' ? req.body.source.trim() : ''
     const slugSource = req.body?.slug || title || `project-${Date.now()}`
     const projectId = normalizeProjectId(slugSource)
     if (!projectId) {
@@ -703,7 +736,8 @@ router.post('/api/spaces/:spaceId/projects', async (req, res, next) => {
       return res.status(409).json({ error: 'Project already exists.' })
     }
     const meta = await ensureProject(SPACES_DIR, spaceId, projectId, {
-      title: title || 'Untitled Beta Project'
+      title: title || 'Untitled Project',
+      ...(source ? { source } : {})
     })
     res.status(201).json({
       project: meta,

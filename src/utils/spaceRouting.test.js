@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
     APP_PAGE_PREFERENCES,
     buildPreferencesPath,
-    getAppLocationState
+    getAppLocationState,
+    isReservedAppSegment
 } from './spaceRouting.js'
 
 describe('spaceRouting', () => {
@@ -21,5 +22,12 @@ describe('spaceRouting', () => {
             page: APP_PAGE_PREFERENCES,
             spaceId: 'debug-space'
         })
+    })
+
+    it('reserves product-owned route segments as space names', () => {
+        expect(isReservedAppSegment('admin')).toBe(true)
+        expect(isReservedAppSegment('beta')).toBe(true)
+        expect(isReservedAppSegment('studio')).toBe(true)
+        expect(isReservedAppSegment('gallery')).toBe(false)
     })
 })

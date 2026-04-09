@@ -8,7 +8,11 @@ export const APP_PAGE_PREFERENCES_ALIASES = [
     'prefrenaces',
     'preferances'
 ]
-export const RESERVED_APP_SEGMENTS = [...APP_PAGE_PREFERENCES_ALIASES]
+export const RESERVED_APP_SEGMENTS = [
+    ...APP_PAGE_PREFERENCES_ALIASES,
+    'beta',
+    'studio'
+]
 
 const getAppBasePrefix = () => (APP_BASE_PATH === '/' ? '' : APP_BASE_PATH)
 

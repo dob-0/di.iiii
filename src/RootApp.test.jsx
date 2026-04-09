@@ -2,21 +2,21 @@ import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import RootApp from './RootApp.jsx'
 
-vi.mock('./App.jsx', () => ({
-    default: function MockApp() {
-        return <div>legacy-app</div>
+vi.mock('./beta/BetaApp.jsx', () => ({
+    default: function MockBetaApp({ initialRoute }) {
+        return <div>beta-app:{initialRoute?.page}:{initialRoute?.spaceId}</div>
     }
 }))
 
-vi.mock('./beta/BetaApp.jsx', () => ({
-    default: function MockBetaApp({ initialRoute }) {
-        return <div>beta-app:{initialRoute?.page}</div>
+vi.mock('./SpaceSurfaceApp.jsx', () => ({
+    default: function MockSpaceSurfaceApp({ routeState }) {
+        return <div>space-surface-app:{routeState?.page}:{routeState?.spaceId || 'main'}</div>
     }
 }))
 
 vi.mock('./studio/StudioApp.jsx', () => ({
     default: function MockStudioApp({ initialRoute }) {
-        return <div>studio-app:{initialRoute?.page}</div>
+        return <div>studio-app:{initialRoute?.page}:{initialRoute?.spaceId}</div>
     }
 }))
 
@@ -25,28 +25,33 @@ describe('RootApp', () => {
         window.history.pushState({}, '', '/')
     })
 
-    it('renders the studio hub on /studio', () => {
+    it('renders the studio hub on /studio as the main-space compatibility route', () => {
         window.history.pushState({}, '', '/studio')
         render(<RootApp />)
 
-        expect(screen.getByText('studio-app:hub')).toBeInTheDocument()
+        expect(screen.getByText('studio-app:hub:main')).toBeInTheDocument()
     })
 
-    it('renders the studio editor route on /studio/projects/:id', () => {
-        window.history.pushState({}, '', '/studio/projects/test-project')
+    it('renders the space-scoped studio editor route on /gallery/studio/projects/:id', () => {
+        window.history.pushState({}, '', '/gallery/studio/projects/test-project')
         render(<RootApp />)
 
-        expect(screen.getByText('studio-app:project')).toBeInTheDocument()
+        expect(screen.getByText('studio-app:project:gallery')).toBeInTheDocument()
     })
 
     it('keeps beta and legacy routes intact', () => {
         window.history.pushState({}, '', '/beta')
         const { unmount } = render(<RootApp />)
-        expect(screen.getByText('beta-app:hub')).toBeInTheDocument()
+        expect(screen.getByText('beta-app:hub:main')).toBeInTheDocument()
         unmount()
+
+        window.history.pushState({}, '', '/gallery/beta/projects/test-project')
+        const { unmount: unmountBetaProject } = render(<RootApp />)
+        expect(screen.getByText('beta-app:project:gallery')).toBeInTheDocument()
+        unmountBetaProject()
 
         window.history.pushState({}, '', '/main')
         render(<RootApp />)
-        expect(screen.getByText('legacy-app')).toBeInTheDocument()
+        expect(screen.getByText('space-surface-app:editor:main')).toBeInTheDocument()
     })
 })

@@ -51,8 +51,8 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import SmartphoneIcon from '@mui/icons-material/Smartphone'
 import ViewInArIcon from '@mui/icons-material/ViewInAr'
-import StudioViewport from './StudioViewport.jsx'
 import StudioInspector from './StudioInspector.jsx'
+import StudioPresentationSurface from './StudioPresentationSurface.jsx'
 
 const APP_BAR_HEIGHT = 72
 const DESKTOP_BOTTOM_HEIGHT = 300
@@ -266,9 +266,9 @@ function PresentPanel({
     return (
         <Stack spacing={2} sx={{ p: 2 }}>
             <FormControl fullWidth size="small">
-                <InputLabel>Presentation mode</InputLabel>
+                <InputLabel>Studio preview</InputLabel>
                 <Select
-                    label="Presentation mode"
+                    label="Studio preview"
                     value={presentationState.mode || 'scene'}
                     onChange={(event) => onPresentationPatch({ mode: event.target.value })}
                 >
@@ -278,9 +278,9 @@ function PresentPanel({
                 </Select>
             </FormControl>
             <FormControl fullWidth size="small">
-                <InputLabel>Entry view</InputLabel>
+                <InputLabel>Public entry view</InputLabel>
                 <Select
-                    label="Entry view"
+                    label="Public entry view"
                     value={presentationState.entryView || 'scene'}
                     onChange={(event) => onPresentationPatch({ entryView: event.target.value })}
                 >
@@ -296,7 +296,7 @@ function PresentPanel({
             <TextField
                 multiline
                 minRows={8}
-                label="Code view HTML"
+                label="Code preview HTML"
                 value={presentationState.codeHtml || ''}
                 onChange={(event) => onPresentationPatch({ codeHtml: event.target.value })}
             />
@@ -307,7 +307,10 @@ function PresentPanel({
 function PublishPanel({
     document,
     publishState,
+    liveProjectState,
     onPublishPatch,
+    onSetLiveProject,
+    onClearLiveProject,
     onCopyShareLink,
     onExportProject,
     onImportProjectFile,
@@ -326,6 +329,43 @@ function PublishPanel({
                 )}
                 label="Share enabled"
             />
+            <Card variant="outlined" sx={{ p: 1.5 }}>
+                <Stack spacing={1}>
+                    <Typography variant="subtitle2">Live space route</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Public route: `/{liveProjectState?.spaceId || 'main'}`
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        {liveProjectState?.isLiveProject
+                            ? 'This project is currently live for the space viewer.'
+                            : liveProjectState?.currentLiveProjectId
+                                ? `Another project is currently live in this space: ${liveProjectState.currentLiveProjectId}`
+                                : 'No live project is set for this space yet.'}
+                    </Typography>
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+                        <Button
+                            variant={liveProjectState?.isLiveProject ? 'contained' : 'outlined'}
+                            onClick={onSetLiveProject}
+                            disabled={!publishState.shareEnabled || liveProjectState?.isUpdating || liveProjectState?.isLiveProject}
+                        >
+                            {liveProjectState?.isLiveProject ? 'Currently live' : 'Set as live project'}
+                        </Button>
+                        <Button
+                            variant="text"
+                            color="inherit"
+                            onClick={onClearLiveProject}
+                            disabled={!liveProjectState?.isLiveProject || liveProjectState?.isUpdating}
+                        >
+                            Clear live project
+                        </Button>
+                    </Stack>
+                    {!publishState.shareEnabled ? (
+                        <Typography variant="caption" color="warning.main">
+                            Enable sharing before setting this project live for the public space route.
+                        </Typography>
+                    ) : null}
+                </Stack>
+            </Card>
             <FormControl fullWidth size="small">
                 <InputLabel>XR default</InputLabel>
                 <Select
@@ -441,6 +481,9 @@ export default function StudioShell({
     onProjectMetaPatch,
     onPresentationPatch,
     onPublishPatch,
+    liveProjectState,
+    onSetLiveProject,
+    onClearLiveProject,
     onSaveCurrentCamera,
     onUseCurrentCameraAsFixed,
     onCopyShareLink,
@@ -527,7 +570,10 @@ export default function StudioShell({
                 <PublishPanel
                     document={document}
                     publishState={document.publishState}
+                    liveProjectState={liveProjectState}
                     onPublishPatch={onPublishPatch}
+                    onSetLiveProject={onSetLiveProject}
+                    onClearLiveProject={onClearLiveProject}
                     onCopyShareLink={onCopyShareLink}
                     onExportProject={onExportProject}
                     onImportProjectFile={onImportProjectFile}
@@ -693,7 +739,7 @@ export default function StudioShell({
                     ...viewportMargins
                 }}
             >
-                <StudioViewport
+                <StudioPresentationSurface
                     document={document}
                     selectedEntityId={selectedEntityId}
                     onSelectEntity={onSelectEntity}
@@ -822,7 +868,10 @@ export default function StudioShell({
                 <PublishPanel
                     document={document}
                     publishState={document.publishState}
+                    liveProjectState={liveProjectState}
                     onPublishPatch={onPublishPatch}
+                    onSetLiveProject={onSetLiveProject}
+                    onClearLiveProject={onClearLiveProject}
                     onCopyShareLink={onCopyShareLink}
                     onExportProject={onExportProject}
                     onImportProjectFile={onImportProjectFile}

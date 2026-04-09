@@ -1,5 +1,9 @@
 # Quick PM2 Deployment for di-studio.xyz
 
+Legacy fallback only.
+
+If your cPanel account includes `Setup Node.js App`, use the cPanel Node.js App flow documented in [docs/deploy/CPANEL_DEPLOYMENT.md](/home/nnn/Desktop/dii_ii/docs/deploy/CPANEL_DEPLOYMENT.md) instead of this PM2 guide.
+
 ## 🚀 Deploy/Update in 3 Steps
 
 ### 1. Build locally
