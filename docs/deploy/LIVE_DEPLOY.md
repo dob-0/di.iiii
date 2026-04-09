@@ -2,6 +2,11 @@
 
 This is the shortest practical runbook for normal future work.
 
+If you only remember one thing, remember this:
+
+- `dev + staging` = work lane
+- `main + production` = public lane
+
 ## Golden Path
 
 - local work happens on `dev`
@@ -28,10 +33,13 @@ Canonical pieces:
 3. in cPanel `Git Version Control`, update the staging clone if needed
 4. run `Deploy HEAD Commit` for the staging clone if the host did not auto-apply
 5. verify:
-   - `/`
+   - `/main`
+   - `/<space>` for the space you are working on
    - `/admin?space=main`
-   - `/studio`
+   - `/main/studio`
+   - `/main/beta`
    - `/serverXR/api/health`
+   - `/serverXR/api/spaces`
    - assets
    - live sync
 
@@ -63,6 +71,7 @@ Canonical pieces:
 - frontend lives in the web root
 - backend lives in `serverXR` or `serverXR-staging`
 - shared schema files live outside the backend repo copy and must be pointed to with `SHARED_ROOT`
+- staging and production do not automatically share media/content
 
 Per environment keep these aligned:
 
@@ -75,9 +84,11 @@ Per environment keep these aligned:
 ## Public Surfaces
 
 - public app: `https://your-domain/`
-- V1 editor: `https://your-domain/main`
+- public/main route: `https://your-domain/main`
+- public/space route: `https://your-domain/<space>`
 - admin: `https://your-domain/admin?space=main`
-- Studio: `https://your-domain/studio`
+- Studio: `https://your-domain/main/studio`
+- Beta: `https://your-domain/main/beta`
 - backend monitor: `https://your-domain/serverXR/`
 - backend health: `https://your-domain/serverXR/api/health`
 

@@ -21,6 +21,11 @@ Branch and environment mapping:
 - `dev` -> `cpanel-staging`
 - `main` -> `cpanel-production`
 
+That means:
+
+- `dev + staging` is the work lane
+- `main + production` is the public lane
+
 ## What The Workflow Does
 
 The canonical workflow:
@@ -44,6 +49,7 @@ The prebuilt branch contains:
 
 - staging cPanel repo should track `cpanel-staging`
 - production cPanel repo should track `cpanel-production`
+- both environments should keep `/serverXR` mounted through the cPanel Node.js App
 
 ## What Is Automatic vs Manual
 
@@ -57,6 +63,8 @@ Sometimes still manual:
 - enable `Automatic Deployment` in cPanel `Git Version Control` if the host exposes it
 - cPanel host apply
 - if the live/staging site still serves the older build after GitHub finished, open cPanel `Git Version Control` and run `Deploy HEAD Commit`
+
+If GitHub already published the correct `cpanel-*` branch but the site is stale, the missing step is usually cPanel-side, not GitHub-side.
 
 ## Server Apply Step
 
