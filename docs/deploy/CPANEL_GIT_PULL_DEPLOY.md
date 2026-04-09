@@ -1,6 +1,6 @@
 # cPanel Git Pull Deploy
 
-This is a fallback deploy model.
+This is the fallback build-on-host cPanel path.
 
 Use it only when:
 
@@ -11,12 +11,13 @@ The canonical path is still the prebuilt publish/apply model documented in:
 
 - [docs/deploy/CPANEL_PREBUILT_DEPLOY.md](/home/nnn/Desktop/dii_ii/docs/deploy/CPANEL_PREBUILT_DEPLOY.md)
 
-## What This Fallback Does
+## What This Mode Means
 
-- the server pulls from GitHub locally through cPanel `Git Version Control`
-- deployment runs on the host through `.cpanel.yml`
+- cPanel `Git Version Control` updates a local clone on the host
+- `.cpanel.yml` runs the host-side script [scripts/cpanel-git-deploy.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-git-deploy.sh)
+- the host itself installs deps, stages the release bundle, and applies it
 - the existing cPanel Node.js App still serves `/serverXR`
-- staging and production stay separated through two cPanel-managed clones
+- staging and production still stay separated through two cPanel-managed clones
 
 ## One-Time Setup
 
@@ -68,13 +69,13 @@ For production:
 
 ## What The Deploy Script Does
 
-- installs dependencies
-- optionally runs tests
-- builds the frontend
-- stages a cPanel release bundle
-- copies frontend files into the web root
-- copies backend files into the Node.js App root
+- installs root and backend dependencies on the host
+- optionally runs tests on the host
+- stages the cPanel release bundle on the host
 - writes backend `.env`
+- syncs frontend files into the web root
+- syncs backend files into the Node.js App root
+- syncs shared schema files
 - installs production backend deps
 - restarts the cPanel Node.js App
 - runs smoke checks

@@ -98,7 +98,11 @@ echo "[cpanel-deploy] Web root: ${CPANEL_WEB_ROOT}"
 echo "[cpanel-deploy] Backend root: ${CPANEL_SERVERXR_ROOT}"
 
 npm ci
-npm --prefix serverXR ci
+if [[ -f "serverXR/package-lock.json" ]]; then
+  npm --prefix serverXR ci
+else
+  npm --prefix serverXR install
+fi
 
 if [[ "${CPANEL_RUN_TESTS:-1}" == "1" ]]; then
   npm test
@@ -130,6 +134,7 @@ if command -v rsync >/dev/null 2>&1; then
     --exclude='cgi-bin' \
     --exclude='.well-known' \
     --exclude='.htaccess' \
+    --exclude='serverXR' \
     .deploy/cpanel/public_html/ "${CPANEL_WEB_ROOT}/"
 
   rsync -az --delete \
@@ -146,7 +151,10 @@ else
   exit 1
 fi
 
-rm -rf "${CPANEL_WEB_ROOT}/serverXR"
+mkdir -p "${CPANEL_WEB_ROOT}/serverXR"
+if [[ ! -f "${CPANEL_WEB_ROOT}/serverXR/.htaccess" ]]; then
+  : > "${CPANEL_WEB_ROOT}/serverXR/.htaccess"
+fi
 cp .deploy/cpanel/serverXR/.env.generated "${CPANEL_SERVERXR_ROOT}/.env"
 
 (

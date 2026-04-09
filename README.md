@@ -221,6 +221,29 @@ Deploy notes:
 - `shared/` and `SHARED_ROOT` are part of the runtime contract
 - old SSH push docs still exist as legacy references, but they are not the primary path
 
+## Golden Path
+
+Use this as the default future workflow:
+
+1. work locally on `dev`
+2. push `dev`
+3. GitHub Actions auto-publishes `cpanel-staging`
+4. in cPanel `Git Version Control`, update and run `Deploy HEAD Commit` for staging if the host did not auto-apply
+5. verify staging
+6. merge or promote the approved work into `main`
+7. push `main`
+8. GitHub Actions auto-publishes `cpanel-production`
+9. in cPanel `Git Version Control`, update and run `Deploy HEAD Commit` for production if the host did not auto-apply
+10. verify production
+
+Important:
+
+- GitHub-side publish is automatic on pushes to `dev` and `main`
+- if cPanel `Git Version Control` exposes `Automatic Deployment`, enable it for the tracked `cpanel-*` clone
+- cPanel-side apply may still require pressing `Deploy HEAD Commit`, depending on host behavior
+- `/serverXR` must remain the cPanel Node.js App mount in both environments
+- staging and production do not automatically share scene data or assets
+
 Start here for deploy details:
 
 - [docs/deploy/LIVE_DEPLOY.md](/home/nnn/Desktop/dii_ii/docs/deploy/LIVE_DEPLOY.md)

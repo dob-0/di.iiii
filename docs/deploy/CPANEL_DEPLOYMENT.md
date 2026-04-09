@@ -93,11 +93,10 @@ Recommended roots:
 
 ### Staging
 
-1. merge approved work into `dev`
-2. push `dev`
-3. let GitHub publish `cpanel-staging`
-4. in cPanel `Git Version Control`, update and deploy `HEAD` if needed
-5. verify staging smoke checks and real editor flows
+1. commit and push `dev`
+2. let GitHub publish `cpanel-staging`
+3. in cPanel `Git Version Control`, update and deploy `HEAD` if needed
+4. verify staging smoke checks and real editor flows
 
 ### Production
 
@@ -106,6 +105,12 @@ Recommended roots:
 3. let GitHub publish `cpanel-production`
 4. in cPanel `Git Version Control`, update and deploy `HEAD` if needed
 5. verify production smoke checks
+
+## Automatic Behavior
+
+- GitHub-side publish is automatic on pushes to `dev` and `main`
+- if cPanel `Git Version Control` exposes `Automatic Deployment`, enable it on the tracked `cpanel-staging` and `cpanel-production` clones
+- cPanel-side apply may still require `Deploy HEAD Commit`, depending on host behavior
 
 ## Expected Checks
 
@@ -130,3 +135,4 @@ Check:
 - backend `.env` exists
 - `API_TOKEN`, `DATA_ROOT`, `SHARED_ROOT`, and `CORS_ORIGINS` are valid
 - dependencies are installed in the app root
+- the Passenger `.htaccess` inside the web-root `serverXR/` mount still points at the correct app root

@@ -23,6 +23,7 @@ jobs:
       SERVER_CORS_ORIGINS: https://di-studio.xyz,https://www.di-studio.xyz
       SERVER_APP_BASE_PATH: /serverXR
       SERVER_DATA_ROOT: ${{ format('{0}/data', secrets.CPANEL_SERVERXR_ROOT) }}
+      SERVER_SHARED_ROOT: ${{ secrets.CPANEL_SHARED_ROOT }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -47,7 +48,12 @@ jobs:
         run: npm ci
 
       - name: Install server dependencies
-        run: npm --prefix serverXR ci
+        run: |
+          if [ -f serverXR/package-lock.json ]; then
+            npm --prefix serverXR ci
+          else
+            npm --prefix serverXR install
+          fi
 
       - name: Run automated tests
         run: npm test
@@ -71,6 +77,7 @@ jobs:
           PORT: ${{ env.SERVER_PORT }}
           APP_BASE_PATH: ${{ env.SERVER_APP_BASE_PATH }}
           DATA_ROOT: ${{ env.SERVER_DATA_ROOT }}
+          SHARED_ROOT: ${{ env.SERVER_SHARED_ROOT }}
           API_TOKEN: ${{ secrets.SERVERXR_API_TOKEN }}
           REQUIRE_AUTH: true
           CORS_ORIGINS: ${{ env.SERVER_CORS_ORIGINS }}
@@ -139,6 +146,10 @@ jobs:
         run: |
           set -euo pipefail
           rsync -az --delete \
+            --exclude='cgi-bin' \
+            --exclude='.well-known' \
+            --exclude='.htaccess' \
+            --exclude='serverXR' \
             -e "ssh -i ~/.ssh/cpanel_key -p ${CPANEL_PORT:-22}" \
             .deploy/cpanel/public_html/ \
             "${CPANEL_USERNAME}@${CPANEL_HOST}:${CPANEL_WEB_ROOT}/"
@@ -191,15 +202,21 @@ jobs:
           CPANEL_HOST: ${{ secrets.CPANEL_HOST }}
           CPANEL_PORT: ${{ secrets.CPANEL_PORT }}
           CPANEL_USERNAME: ${{ secrets.CPANEL_USERNAME }}
+          CPANEL_WEB_ROOT: ${{ secrets.CPANEL_WEB_ROOT }}
           CPANEL_SERVERXR_ROOT: ${{ secrets.CPANEL_SERVERXR_ROOT }}
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/cpanel_key -p "${CPANEL_PORT:-22}" "${CPANEL_USERNAME}@${CPANEL_HOST}" <<EOF
           set -euo pipefail
+          CPANEL_WEB_ROOT="${CPANEL_WEB_ROOT}"
           CPANEL_SERVERXR_ROOT="${CPANEL_SERVERXR_ROOT}"
           CPANEL_USERNAME="${CPANEL_USERNAME}"
+          mkdir -p "\${CPANEL_WEB_ROOT}/serverXR"
+          if [ ! -f "\${CPANEL_WEB_ROOT}/serverXR/.htaccess" ]; then
+            : > "\${CPANEL_WEB_ROOT}/serverXR/.htaccess"
+          fi
           cd "\${CPANEL_SERVERXR_ROOT}"
-          npm install --production
+          npm install --omit=dev
           if ! command -v cloudlinux-selector >/dev/null 2>&1; then
             echo "cloudlinux-selector is not installed on the target server." >&2
             exit 1

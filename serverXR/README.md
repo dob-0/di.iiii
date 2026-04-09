@@ -125,6 +125,16 @@ Fallbacks:
 - PM2 only if the host does not expose `Setup Node.js App`
 - Git-pull/self-host deploy only when GitHub Actions cannot push artifacts to the host
 
+## Golden Runtime Rules
+
+- production should use `DATA_ROOT=/home/distudio/serverXR/data`
+- production should use `SHARED_ROOT=/home/distudio/shared`
+- staging should use `DATA_ROOT=/home/distudio/serverXR-staging/data`
+- staging should use `SHARED_ROOT=/home/distudio/shared-staging`
+- `API_TOKEN` and `VITE_API_TOKEN` should match inside each environment
+- the Node app mount stays `/serverXR` in both environments
+- if `/serverXR/api/health` fails, check the Passenger `.htaccess`, backend `.env`, `DATA_ROOT`, and `SHARED_ROOT` before changing code
+
 ## Storage Notes
 
 - scene + asset data lives under `serverXR/data/spaces/<spaceId>/`

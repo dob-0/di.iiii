@@ -2,12 +2,12 @@
 
 This is the canonical deploy path for this repo.
 
-It is a Git-based cPanel deploy path:
+It is a GitHub-to-cPanel Git flow:
 
 - GitHub Actions publishes prebuilt `cpanel-*` branches
 - cPanel `Git Version Control` tracks those branches
-- cPanel runs `.cpanel.yml`, which executes the apply script on the host
-- SSH is not part of the canonical deploy flow
+- `.cpanel.yml` runs the apply script on the host
+- SSH push deploys are not the canonical path
 
 ## What Is Canonical
 
@@ -44,6 +44,19 @@ The prebuilt branch contains:
 
 - staging cPanel repo should track `cpanel-staging`
 - production cPanel repo should track `cpanel-production`
+
+## What Is Automatic vs Manual
+
+Automatic:
+
+- push to `dev` -> GitHub publishes `cpanel-staging`
+- push to `main` -> GitHub publishes `cpanel-production`
+
+Sometimes still manual:
+
+- enable `Automatic Deployment` in cPanel `Git Version Control` if the host exposes it
+- cPanel host apply
+- if the live/staging site still serves the older build after GitHub finished, open cPanel `Git Version Control` and run `Deploy HEAD Commit`
 
 ## Server Apply Step
 

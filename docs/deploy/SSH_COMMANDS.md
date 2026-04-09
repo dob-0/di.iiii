@@ -1,4 +1,10 @@
-# SSH Commands for cPanel Node.js App Deployment
+# SSH / Terminal Commands for cPanel Node.js App Deployment
+
+These commands are still useful for recovery and inspection, but the canonical deploy path is:
+
+- push `dev` or `main`
+- let GitHub publish the matching `cpanel-*` branch
+- use cPanel `Git Version Control` to apply the latest `HEAD`
 
 ## Restart Production
 
