@@ -102,8 +102,9 @@ Per environment keep these aligned:
 
 ## Legacy Fallbacks
 
-These still exist, but they are not the default future path:
+These docs still exist for emergency use, but they are not the default future path:
 
 - [docs/deploy/CPANEL_GIT_PULL_DEPLOY.md](/home/nnn/Desktop/dii_ii/docs/deploy/CPANEL_GIT_PULL_DEPLOY.md)
 - [docs/deploy/PM2_QUICK_GUIDE.md](/home/nnn/Desktop/dii_ii/docs/deploy/PM2_QUICK_GUIDE.md)
-- legacy SSH-push workflows in `.github/workflows/`
+
+The old legacy SSH-push GitHub workflows were removed on purpose so the Actions page reflects the real path in use.

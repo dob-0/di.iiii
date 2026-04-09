@@ -116,9 +116,9 @@ Those files should contain the real tokens and path settings, including:
 
 ## Legacy Paths
 
-These still exist, but they are not the primary path:
+Old GitHub Action deploy workflows were removed to keep the Actions page focused on the canonical path.
 
-- `publish-cpanel-prebuilt.yml`
-- `deploy-cpanel.yml`
-- `deploy-cpanel-safe.yml`
+Legacy/manual references still live only in docs and scripts for emergency recovery:
+
 - Git-pull/self-host deploy docs
+- PM2 fallback docs
