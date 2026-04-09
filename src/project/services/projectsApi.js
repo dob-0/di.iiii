@@ -1,17 +1,63 @@
 import { apiBaseUrl, apiFetch } from '../../services/apiClient.js'
+import { createServerSpace } from '../../services/serverSpaces.js'
 
 export const DEFAULT_PROJECT_SPACE_ID = 'main'
 
+const autoProvisionSpaceRequests = new Map()
+
+const isMissingSpaceError = (error) => (
+    Number(error?.status) === 404
+    && /space not found/i.test(String(error?.data?.error || error?.message || ''))
+)
+
+const ensureProjectSpaceExists = async (spaceId = DEFAULT_PROJECT_SPACE_ID) => {
+    const normalizedSpaceId = String(spaceId || DEFAULT_PROJECT_SPACE_ID).trim()
+    if (!normalizedSpaceId) return null
+    if (autoProvisionSpaceRequests.has(normalizedSpaceId)) {
+        return autoProvisionSpaceRequests.get(normalizedSpaceId)
+    }
+    const request = (async () => {
+        try {
+            return await createServerSpace({
+                label: normalizedSpaceId,
+                slug: normalizedSpaceId,
+                isPermanent: false
+            })
+        } catch (error) {
+            if (Number(error?.status) === 409) {
+                return null
+            }
+            throw error
+        } finally {
+            autoProvisionSpaceRequests.delete(normalizedSpaceId)
+        }
+    })()
+    autoProvisionSpaceRequests.set(normalizedSpaceId, request)
+    return request
+}
+
+const withAutoProvisionedSpace = async (spaceId, runRequest) => {
+    try {
+        return await runRequest()
+    } catch (error) {
+        if (!isMissingSpaceError(error)) {
+            throw error
+        }
+        await ensureProjectSpaceExists(spaceId)
+        return runRequest()
+    }
+}
+
 export const listProjects = async (spaceId = DEFAULT_PROJECT_SPACE_ID) => {
-    const data = await apiFetch(`/api/spaces/${spaceId}/projects`)
+    const data = await withAutoProvisionedSpace(spaceId, () => apiFetch(`/api/spaces/${spaceId}/projects`))
     return data.projects || []
 }
 
 export const createProject = async (spaceId = DEFAULT_PROJECT_SPACE_ID, payload = {}) => {
-    return apiFetch(`/api/spaces/${spaceId}/projects`, {
+    return withAutoProvisionedSpace(spaceId, () => apiFetch(`/api/spaces/${spaceId}/projects`, {
         method: 'POST',
         body: payload
-    })
+    }))
 }
 
 export const getProject = async (projectId) => {
