@@ -25,6 +25,7 @@ export default function SpacesPanel({
     onOpenSpace,
     onCopyLink,
     onDeleteSpace,
+    onRenameSpace,
     onTogglePermanent,
     newSpaceName,
     onSpaceNameChange,
@@ -172,6 +173,9 @@ export default function SpacesPanel({
                                 </button>
                                 <button type="button" onClick={() => handleCopy(space.id)}>
                                     {copiedId === space.id ? 'Copied!' : 'Copy Link'}
+                                </button>
+                                <button type="button" onClick={() => onRenameSpace?.(space.id)}>
+                                    Rename
                                 </button>
                                 <button
                                     type="button"

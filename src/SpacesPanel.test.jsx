@@ -60,4 +60,40 @@ describe('SpacesPanel', () => {
 
         expect(handleOpenAfterCreateTargetChange).toHaveBeenCalledWith('beta')
     })
+
+    it('exposes a rename action for existing spaces', () => {
+        const handleRenameSpace = vi.fn()
+
+        render(
+            <SpacesPanel
+                spaces={[{
+                    id: 'gallery',
+                    label: 'Gallery',
+                    isPermanent: true,
+                    lastActive: Date.now()
+                }]}
+                currentSpaceId="main"
+                newSpaceName=""
+                onSpaceNameChange={vi.fn()}
+                openAfterCreateTarget="public"
+                onOpenAfterCreateTargetChange={vi.fn()}
+                canCreateSpace
+                ttlHours={24}
+                isCreatingSpace={false}
+                onCreateSpace={vi.fn()}
+                onCreatePermanentSpace={vi.fn()}
+                onOpenSpace={vi.fn()}
+                onCopyLink={vi.fn()}
+                onDeleteSpace={vi.fn()}
+                onRenameSpace={handleRenameSpace}
+                onTogglePermanent={vi.fn()}
+                onClose={vi.fn()}
+                surfaceMode="sheet"
+            />
+        )
+
+        fireEvent.click(screen.getByRole('button', { name: 'Rename' }))
+
+        expect(handleRenameSpace).toHaveBeenCalledWith('gallery')
+    })
 })

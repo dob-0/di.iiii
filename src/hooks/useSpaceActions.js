@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { deleteSpace, toggleSpacePermanent, setSpaceAllowEdits } from '../storage/spaceStore.js'
+import { deleteSpace, toggleSpacePermanent, setSpaceAllowEdits, setSpaceLabel } from '../storage/spaceStore.js'
 import { slugifySpaceName, isValidSpaceSlug } from '../utils/spaceNames.js'
 import { isReservedAppSegment } from '../utils/spaceRouting.js'
 
@@ -87,6 +87,36 @@ export function useSpaceActions({
         await refreshSpaces()
     }, [isOfflineMode, refreshSpaces, supportsServerSpaces, updateServerSpace])
 
+    const handleRenameSpace = useCallback(async (spaceIdentifier) => {
+        if (!spaceIdentifier) return
+        const currentSpace = spaces.find((space) => space.id === spaceIdentifier)
+        if (!currentSpace) return
+        const nextLabel = window.prompt('Rename this space label:', currentSpace.label || spaceIdentifier)?.trim()
+        if (!nextLabel || nextLabel === currentSpace.label) return
+
+        if (supportsServerSpaces && !isOfflineMode && typeof updateServerSpace === 'function') {
+            try {
+                await updateServerSpace(spaceIdentifier, { label: nextLabel })
+            } catch (error) {
+                const status = typeof error?.status === 'number' ? error.status : null
+                if (status && status !== 404) {
+                    console.warn('Failed to rename server space', error)
+                    alert('Could not rename the server space. Please try again.')
+                    return
+                }
+                if (!status) {
+                    console.warn('Server unavailable; keeping local rename only.', error)
+                    alert('Server is unavailable. Local rename only.')
+                }
+            }
+        } else if (supportsServerSpaces && isOfflineMode) {
+            alert('Offline mode enabled. Local rename only.')
+        }
+
+        setSpaceLabel(spaceIdentifier, nextLabel)
+        await refreshSpaces()
+    }, [isOfflineMode, refreshSpaces, spaces, supportsServerSpaces, updateServerSpace])
+
     const handleQuickSpaceCreate = useCallback(async () => {
         const label = window.prompt('Name this space:', '')?.trim()
         if (!label) return
@@ -114,6 +144,7 @@ export function useSpaceActions({
 
     return {
         handleDeleteSpace,
+        handleRenameSpace,
         handleToggleSpacePermanent,
         handleToggleSpaceEditLock,
         handleQuickSpaceCreate

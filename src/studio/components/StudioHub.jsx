@@ -4,7 +4,6 @@ import {
     Box,
     Button,
     Card,
-    CardActionArea,
     CardContent,
     Chip,
     Container,
@@ -24,10 +23,12 @@ import { importLegacySceneFile } from '../../project/import/importLegacyScene.js
 import {
     DEFAULT_PROJECT_SPACE_ID,
     createProject,
+    deleteProject,
     listProjects,
     updateProjectDocument,
     uploadProjectAsset
 } from '../../project/services/projectsApi.js'
+import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
 
 const detectEntityTypeFromMime = (mimeType = '') => {
@@ -150,6 +151,27 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         }
     }
 
+    const handleDeleteProject = async (project) => {
+        if (!project?.id) return
+        const confirmed = window.confirm(`Delete project "${project.title || project.id}"? This cannot be undone.`)
+        if (!confirmed) return
+        setIsBusy(true)
+        setStatus(`Deleting ${project.title || project.id}...`)
+        try {
+            const spaceMeta = await getServerSpace(spaceId).catch(() => null)
+            if (spaceMeta?.publishedProjectId === project.id) {
+                await updateServerSpace(spaceId, { publishedProjectId: null })
+            }
+            await deleteProject(project.id)
+            await loadProjects()
+            setStatus('Project deleted.')
+        } catch (error) {
+            setStatus(error.message || 'Unable to delete project.')
+        } finally {
+            setIsBusy(false)
+        }
+    }
+
     return (
         <Box className="studio-shell-root studio-hub-root">
             <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 } }}>
@@ -257,22 +279,36 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         {projects.map((project) => (
                             <Grid key={project.id} size={{ xs: 12, md: 6, xl: 4 }}>
                                 <Card sx={{ height: '100%' }}>
-                                    <CardActionArea onClick={() => openProject(project.id)} sx={{ height: '100%' }}>
-                                        <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, minHeight: 190 }}>
-                                            <Stack direction="row" justifyContent="space-between" spacing={1}>
-                                                <Typography variant="h6" fontWeight={700}>{project.title}</Typography>
-                                                <ArrowForwardIcon color="primary" />
-                                            </Stack>
-                                            <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
-                                                {project.id}
-                                            </Typography>
-                                            <Box sx={{ flex: 1 }} />
-                                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                                <Chip size="small" label={`Updated ${new Date(project.updatedAt || Date.now()).toLocaleDateString()}`} />
-                                                <Chip size="small" variant="outlined" label={formatProjectSourceLabel(project.source)} />
-                                            </Stack>
-                                        </CardContent>
-                                    </CardActionArea>
+                                    <CardContent sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, minHeight: 190 }}>
+                                        <Stack direction="row" justifyContent="space-between" spacing={1}>
+                                            <Typography variant="h6" fontWeight={700}>{project.title}</Typography>
+                                            <ArrowForwardIcon color="primary" />
+                                        </Stack>
+                                        <Typography variant="body2" color="text.secondary" sx={{ wordBreak: 'break-word' }}>
+                                            {project.id}
+                                        </Typography>
+                                        <Box sx={{ flex: 1 }} />
+                                        <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                            <Chip size="small" label={`Updated ${new Date(project.updatedAt || Date.now()).toLocaleDateString()}`} />
+                                            <Chip size="small" variant="outlined" label={formatProjectSourceLabel(project.source)} />
+                                        </Stack>
+                                        <Stack direction="row" spacing={1}>
+                                            <Button
+                                                size="small"
+                                                variant="contained"
+                                                onClick={() => openProject(project.id)}
+                                            >
+                                                Open
+                                            </Button>
+                                            <Button
+                                                size="small"
+                                                color="error"
+                                                onClick={() => handleDeleteProject(project)}
+                                            >
+                                                Delete
+                                            </Button>
+                                        </Stack>
+                                    </CardContent>
                                 </Card>
                             </Grid>
                         ))}

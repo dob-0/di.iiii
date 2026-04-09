@@ -51,6 +51,7 @@ export function EditorLayout({
     handleOpenSpace,
     handleCopySpaceLink,
     handleDeleteSpace,
+    handleRenameSpace,
     handleToggleSpacePermanent,
     newSpaceName,
     setNewSpaceName,
@@ -141,6 +142,7 @@ export function EditorLayout({
                     onOpenSpace={handleOpenSpace}
                     onCopyLink={handleCopySpaceLink}
                     onDeleteSpace={handleDeleteSpace}
+                    onRenameSpace={handleRenameSpace}
                     onTogglePermanent={handleToggleSpacePermanent}
                     newSpaceName={newSpaceName}
                     onSpaceNameChange={setNewSpaceName}

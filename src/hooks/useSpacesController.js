@@ -244,6 +244,7 @@ export function useSpacesController({
 
     const {
         handleDeleteSpace,
+        handleRenameSpace,
         handleToggleSpacePermanent,
         handleToggleSpaceEditLock,
         handleQuickSpaceCreate
@@ -276,6 +277,7 @@ export function useSpacesController({
         handleOpenSpace,
         handleCopySpaceLink,
         handleDeleteSpace,
+        handleRenameSpace,
         handleToggleSpacePermanent,
         handleToggleSpaceEditLock,
         handleQuickSpaceCreate

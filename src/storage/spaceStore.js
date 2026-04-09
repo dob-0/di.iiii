@@ -147,6 +147,20 @@ export const setSpaceAllowEdits = (spaceId, allowEdits) => {
     writeSpaces(spaces)
 }
 
+export const setSpaceLabel = (spaceId, label) => {
+    if (!spaceId) return
+    const nextLabel = String(label || '').trim()
+    if (!nextLabel) return
+    const spaces = readSpaces()
+    const index = spaces.findIndex(space => space.id === spaceId)
+    if (index === -1) return
+    spaces[index] = {
+        ...spaces[index],
+        label: nextLabel
+    }
+    writeSpaces(spaces)
+}
+
 export const markSpaceActive = (spaceId) => {
     if (!spaceId) return
     const spaces = readSpaces()

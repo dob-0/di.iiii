@@ -5,10 +5,12 @@ import { importLegacySceneFile } from '../../project/import/importLegacyScene.js
 import {
     DEFAULT_PROJECT_SPACE_ID,
     createProject,
+    deleteProject,
     listProjects,
     updateProjectDocument,
     uploadProjectAsset
 } from '../../project/services/projectsApi.js'
+import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioHubPath } from '../../studio/utils/studioRouting.js'
 import { buildBetaProjectPath, navigateToBetaPath } from '../utils/betaRouting.js'
 
@@ -116,6 +118,27 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         }
     }
 
+    const handleDeleteProject = async (project) => {
+        if (!project?.id) return
+        const confirmed = window.confirm(`Delete project "${project.title || project.id}"? This cannot be undone.`)
+        if (!confirmed) return
+        setIsBusy(true)
+        setStatus(`Deleting ${project.title || project.id}...`)
+        try {
+            const spaceMeta = await getServerSpace(spaceId).catch(() => null)
+            if (spaceMeta?.publishedProjectId === project.id) {
+                await updateServerSpace(spaceId, { publishedProjectId: null })
+            }
+            await deleteProject(project.id)
+            await loadProjects()
+            setStatus('Project deleted.')
+        } catch (error) {
+            setStatus(error.message || 'Unable to delete project.')
+        } finally {
+            setIsBusy(false)
+        }
+    }
+
     return (
         <main className="beta-hub">
             <section className="beta-hub-hero">
@@ -156,6 +179,13 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                     <button type="button" onClick={() => openProject(project.id)}>
                                         <strong>{project.title}</strong>
                                         <span>{project.id}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="danger"
+                                        onClick={() => handleDeleteProject(project)}
+                                    >
+                                        Delete
                                     </button>
                                 </li>
                             ))}

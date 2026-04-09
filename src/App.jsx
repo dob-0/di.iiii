@@ -289,6 +289,7 @@ function AppInner() {
         handleOpenSpace,
         handleCopySpaceLink,
         handleDeleteSpace,
+        handleRenameSpace,
         handleToggleSpacePermanent,
         handleToggleSpaceEditLock,
         handleQuickSpaceCreate
@@ -1093,6 +1094,7 @@ function AppInner() {
         handleOpenSpace,
         handleCopySpaceLink,
         handleDeleteSpace,
+        handleRenameSpace,
         handleToggleSpacePermanent,
         handleToggleSpaceEditLock,
         handleReloadFromServer,
@@ -1133,6 +1135,7 @@ function AppInner() {
         handleOpenSpace,
         handleCopySpaceLink,
         handleDeleteSpace,
+        handleRenameSpace,
         handleToggleSpacePermanent,
         handleToggleSpaceEditLock,
         handleReloadFromServer,
