@@ -12,7 +12,7 @@
     "dev:client": "vite",
     "dev:server": "npm --prefix serverXR run dev",
     "build": "vite build",
-    "deploy:cpanel": "node scripts/stage-cpanel-release.mjs",
+    "deploy:cpanel": "node scripts/stage-cpanel-nodeapp-release.mjs",
     "env:serverxr": "node scripts/write-server-env.mjs",
     "smoke:cpanel": "node scripts/smoke-check-cpanel.mjs",
     "checkpoint": "node scripts/create-checkpoint.mjs",
