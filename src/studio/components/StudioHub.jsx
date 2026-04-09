@@ -18,6 +18,8 @@ import UploadFileIcon from '@mui/icons-material/UploadFile'
 import HistoryIcon from '@mui/icons-material/History'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
+import { buildPreferencesPath } from '../../utils/spaceRouting.js'
+import { buildBetaHubPath } from '../../beta/utils/betaRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
 import {
     DEFAULT_PROJECT_SPACE_ID,
@@ -224,7 +226,21 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                     color="inherit"
                                     onClick={() => window.location.assign(buildAppSpacePath(spaceId))}
                                 >
-                                    Legacy editor
+                                    Open public route
+                                </Button>
+                                <Button
+                                    variant="text"
+                                    color="inherit"
+                                    onClick={() => window.location.assign(buildBetaHubPath(spaceId))}
+                                >
+                                    Open beta workspace
+                                </Button>
+                                <Button
+                                    variant="text"
+                                    color="inherit"
+                                    onClick={() => window.location.assign(buildPreferencesPath(spaceId))}
+                                >
+                                    Open admin
                                 </Button>
                             </Stack>
                         </Stack>

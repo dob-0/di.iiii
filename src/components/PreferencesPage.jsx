@@ -10,6 +10,8 @@ import {
 } from '../contexts/AppContexts.js'
 import { useRuntimeConsole } from '../hooks/useRuntimeConsole.js'
 import { useStatusItems } from '../hooks/useStatusItems.js'
+import { buildBetaHubPath } from '../beta/utils/betaRouting.js'
+import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
 import { buildAppSpacePath, buildPreferencesPath } from '../utils/spaceRouting.js'
 
 const formatTimestamp = (value) => {
@@ -217,7 +219,14 @@ function OperatorLinkCard({ label, href }) {
     )
 }
 
-function SpacePreviewRow({ space, isActive, onOpen, onCopy }) {
+const buildSpaceRouteBundle = (spaceId) => ({
+    publicPath: buildAppSpacePath(spaceId),
+    studioPath: buildStudioHubPath(spaceId),
+    betaPath: buildBetaHubPath(spaceId),
+    adminPath: buildPreferencesPath(spaceId)
+})
+
+function SpacePreviewRow({ space, isActive, routes, onOpenRoute, onCopy }) {
     return (
         <div className={`preferences-space-row ${isActive ? 'is-active' : ''}`}>
             <div className="preferences-space-top">
@@ -231,11 +240,20 @@ function SpacePreviewRow({ space, isActive, onOpen, onCopy }) {
                 </div>
             </div>
             <div className="preferences-space-actions">
-                <button type="button" className="preferences-inline-action" onClick={() => onOpen?.(space?.id)}>
-                    Open
+                <button type="button" className="preferences-inline-action" onClick={() => onOpenRoute?.(routes?.publicPath)}>
+                    Public
+                </button>
+                <button type="button" className="preferences-inline-action" onClick={() => onOpenRoute?.(routes?.studioPath)}>
+                    Studio
+                </button>
+                <button type="button" className="preferences-inline-action" onClick={() => onOpenRoute?.(routes?.betaPath)}>
+                    Beta
+                </button>
+                <button type="button" className="preferences-inline-action" onClick={() => onOpenRoute?.(routes?.adminPath)}>
+                    Admin
                 </button>
                 <button type="button" className="preferences-inline-action" onClick={() => onCopy?.(space?.id)}>
-                    Copy Link
+                    Copy Public
                 </button>
             </div>
         </div>
@@ -435,11 +453,14 @@ export default function PreferencesPage({ onNavigateToEditor }) {
             online: navigator?.onLine ? 'Online' : 'Offline',
             userAgent: navigator?.userAgent || 'n/a'
         }
+    const currentSpaceRoutes = buildSpaceRouteBundle(sync?.spaceId)
 
     const operatorLinks = typeof window === 'undefined'
         ? []
         : [
-            { key: 'editor', label: 'Editor', href: `${window.location.origin}${buildAppSpacePath(sync?.spaceId)}` },
+            { key: 'public', label: 'Public', href: `${window.location.origin}${currentSpaceRoutes.publicPath}` },
+            { key: 'studio', label: 'Studio', href: `${window.location.origin}${currentSpaceRoutes.studioPath}` },
+            { key: 'beta', label: 'Beta', href: `${window.location.origin}${currentSpaceRoutes.betaPath}` },
             { key: 'admin', label: 'Admin', href: `${window.location.origin}${buildPreferencesPath(sync?.spaceId)}` },
             { key: 'monitor', label: 'Backend Monitor', href: `${window.location.origin}/serverXR/` },
             { key: 'health', label: 'Backend Health', href: `${window.location.origin}/serverXR/api/health` },
@@ -573,7 +594,10 @@ export default function PreferencesPage({ onNavigateToEditor }) {
     const projectSnapshot = {
         generatedAt: new Date().toISOString(),
         route: {
-            editorPath: buildAppSpacePath(sync?.spaceId),
+            publicPath: currentSpaceRoutes.publicPath,
+            editorPath: currentSpaceRoutes.publicPath,
+            studioPath: currentSpaceRoutes.studioPath,
+            betaPath: currentSpaceRoutes.betaPath,
             adminPath: buildPreferencesPath(sync?.spaceId)
         },
         space: {
@@ -664,6 +688,11 @@ export default function PreferencesPage({ onNavigateToEditor }) {
     const copyRuntimeLog = async () => {
         await copyText('Runtime log', runtimeLogText || 'No runtime log entries yet.')
     }
+
+    const openRoute = useCallback((path) => {
+        if (typeof window === 'undefined' || !path) return
+        window.location.assign(path)
+    }, [])
 
     const copyOperatorLinks = async () => {
         const linkText = operatorLinks.map((link) => `${link.label}: ${link.href}`).join('\n')
@@ -1051,7 +1080,8 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                     key={space.id}
                                     space={space}
                                     isActive={space.id === sync?.spaceId}
-                                    onOpen={(spaceId) => onNavigateToEditor?.(spaceId)}
+                                    routes={buildSpaceRouteBundle(space.id)}
+                                    onOpenRoute={openRoute}
                                     onCopy={actions?.handleCopySpaceLink}
                                 />
                             )) : (
@@ -1375,7 +1405,9 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         title="Project Snapshot"
                         subtitle={currentSpace?.label || sync?.spaceId || 'main'}
                     >
-                        <InfoPair label="Editor Path" value={buildAppSpacePath(sync?.spaceId)} mono />
+                        <InfoPair label="Public Path" value={currentSpaceRoutes.publicPath} mono />
+                        <InfoPair label="Studio Path" value={currentSpaceRoutes.studioPath} mono />
+                        <InfoPair label="Beta Path" value={currentSpaceRoutes.betaPath} mono />
                         <InfoPair label="Admin Path" value={buildPreferencesPath(sync?.spaceId)} mono />
                         <InfoPair label="Scene Version" value={String(sceneVersion)} />
                         <InfoPair label="Display Name" value={sync?.effectiveDisplayName || 'n/a'} />

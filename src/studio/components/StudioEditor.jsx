@@ -84,7 +84,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         userIdPrefix: 'studio-user'
     })
     const document = state.document
-    const resolvedSpaceId = document.projectMeta?.spaceId || spaceId || DEFAULT_PROJECT_SPACE_ID
+    const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     const entities = document.entities || []
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
     const theme = useTheme()
@@ -385,7 +385,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 projectMeta: {
                     ...imported.projectMeta,
                     id: document.projectMeta?.id || projectId,
-                    spaceId: document.projectMeta?.spaceId || imported.projectMeta.spaceId
+                    spaceId: spaceId || document.projectMeta?.spaceId || imported.projectMeta.spaceId
                 }
             }, {
                 activityMessage: `Imported ${file.name}.`

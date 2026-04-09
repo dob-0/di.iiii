@@ -204,4 +204,46 @@ describe('project contracts', () => {
         const repaired = await readFile(documentPath, 'utf8')
         expect(() => JSON.parse(repaired)).not.toThrow()
     })
+
+    it('repairs non-main project documents whose embedded space drifts back to main', async () => {
+        const server = await startServer()
+
+        const createSpaceResponse = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'Gallery', slug: 'gallery' })
+        })
+        expect(createSpaceResponse.status).toBe(201)
+
+        const createProjectResponse = await fetch(`${server.baseUrl}/api/spaces/gallery/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Gallery Project', slug: 'gallery-project' })
+        })
+        expect(createProjectResponse.status).toBe(201)
+
+        const documentPath = path.join(
+            server.dataRoot,
+            'spaces',
+            'gallery',
+            'projects',
+            'gallery-project',
+            'document.json'
+        )
+        const original = JSON.parse(await readFile(documentPath, 'utf8'))
+        original.projectMeta = {
+            ...original.projectMeta,
+            spaceId: 'main'
+        }
+        await writeFile(documentPath, JSON.stringify(original, null, 2))
+
+        const documentResponse = await fetch(`${server.baseUrl}/api/projects/gallery-project/document`)
+        expect(documentResponse.status).toBe(200)
+        const payload = await documentResponse.json()
+        expect(payload.document.projectMeta.id).toBe('gallery-project')
+        expect(payload.document.projectMeta.spaceId).toBe('gallery')
+
+        const repaired = JSON.parse(await readFile(documentPath, 'utf8'))
+        expect(repaired.projectMeta.spaceId).toBe('gallery')
+    })
 })

@@ -54,6 +54,8 @@ export function EditorLayout({
     handleToggleSpacePermanent,
     newSpaceName,
     setNewSpaceName,
+    openAfterCreateTarget,
+    setOpenAfterCreateTarget,
     spaceNameFeedback,
     canCreateSpace,
     tempSpaceTtlHours,
@@ -142,6 +144,8 @@ export function EditorLayout({
                     onTogglePermanent={handleToggleSpacePermanent}
                     newSpaceName={newSpaceName}
                     onSpaceNameChange={setNewSpaceName}
+                    openAfterCreateTarget={openAfterCreateTarget}
+                    onOpenAfterCreateTargetChange={setOpenAfterCreateTarget}
                     spaceNameFeedback={spaceNameFeedback}
                     canCreateSpace={canCreateSpace}
                     ttlHours={tempSpaceTtlHours}

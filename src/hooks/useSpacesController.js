@@ -14,7 +14,10 @@ import {
     deleteServerSpace,
     updateServerSpace
 } from '../services/serverSpaces.js'
+import { buildBetaHubPath } from '../beta/utils/betaRouting.js'
+import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
 import { slugifySpaceName } from '../utils/spaceNames.js'
+import { buildPreferencesPath } from '../utils/spaceRouting.js'
 import { defaultScene, SCENE_DATA_VERSION } from '../state/sceneStore.js'
 import { getSceneStorageKey, persistSceneToLocalStorage } from '../storage/scenePersistence.js'
 import { useSpaceNaming } from './useSpaceNaming.js'
@@ -26,11 +29,13 @@ export function useSpacesController({
     supportsServerSpaces = false,
     isOfflineMode = false,
     buildSpacePath,
-    resetRemoteAssets
+    resetRemoteAssets,
+    navigateToSpace
 } = {}) {
     const [spaces, setSpaces] = useState(() => listSpaces())
     const [isCreatingSpace, setIsCreatingSpace] = useState(false)
     const [newSpaceName, setNewSpaceName] = useState('')
+    const [openAfterCreateTarget, setOpenAfterCreateTarget] = useState('public')
     const serverUnavailableNoticeRef = useRef(false)
 
     const mergeSpaces = useCallback((localList = [], remoteList = []) => {
@@ -108,6 +113,28 @@ export function useSpacesController({
 
     const tempSpaceTtlHours = useMemo(() => Math.round(TEMP_SPACE_TTL_MS / (1000 * 60 * 60)), [])
 
+    const resolveSpaceOpenPath = useCallback((targetId, target = openAfterCreateTarget) => {
+        switch (target) {
+            case 'studio':
+                return buildStudioHubPath(targetId)
+            case 'beta':
+                return buildBetaHubPath(targetId)
+            case 'admin':
+                return buildPreferencesPath(targetId)
+            case 'public':
+            default:
+                return buildSpacePath ? buildSpacePath(targetId) : getSpaceShareUrl(targetId)
+        }
+    }, [buildSpacePath, openAfterCreateTarget])
+
+    const navigateToResolvedSpace = useCallback((url) => {
+        if (typeof navigateToSpace === 'function') {
+            navigateToSpace(url)
+            return
+        }
+        window.location.assign(url)
+    }, [navigateToSpace])
+
     const {
         trimmedSpaceName,
         newSpaceSlug,
@@ -121,7 +148,7 @@ export function useSpacesController({
         buildSpacePath
     })
 
-    const handleCreateSpaceEntry = useCallback(async ({ isPermanent = false, label, slug } = {}) => {
+    const handleCreateSpaceEntry = useCallback(async ({ isPermanent = false, label, slug, openTarget } = {}) => {
         if (isCreatingSpace) return
         resetRemoteAssets?.()
         setIsCreatingSpace(true)
@@ -172,11 +199,11 @@ export function useSpacesController({
             }
             persistSceneToLocalStorage(blankScene, getSceneStorageKey(targetId))
             await refreshSpaces()
-            const url = getSpaceShareUrl(targetId)
+            const url = resolveSpaceOpenPath(targetId, openTarget)
             if (fellBackToLocal) {
                 alert(fallbackMessage || 'Server unavailable. Created a local space instead.')
             }
-            window.location.href = url
+            navigateToResolvedSpace(url)
         } catch (error) {
             console.warn('Failed to create space', error)
             const message = error?.message || 'Could not create space. Please try again.'
@@ -184,7 +211,7 @@ export function useSpacesController({
         } finally {
             setIsCreatingSpace(false)
         }
-    }, [isCreatingSpace, isOfflineMode, refreshSpaces, resetRemoteAssets, supportsServerSpaces])
+    }, [isCreatingSpace, isOfflineMode, navigateToResolvedSpace, refreshSpaces, resetRemoteAssets, resolveSpaceOpenPath, supportsServerSpaces])
 
     const handleOpenSpace = useCallback((spaceIdentifier) => {
         const url = getSpaceShareUrl(spaceIdentifier)
@@ -206,9 +233,14 @@ export function useSpacesController({
     const handleCreateNamedSpace = useCallback(async (isPermanent = false) => {
         if (!canCreateNamedSpace || isCreatingSpace) return
         const label = trimmedSpaceName || newSpaceSlug
-        await handleCreateSpaceEntry({ isPermanent, label, slug: newSpaceSlug })
+        await handleCreateSpaceEntry({
+            isPermanent,
+            label,
+            slug: newSpaceSlug,
+            openTarget: openAfterCreateTarget
+        })
         setNewSpaceName('')
-    }, [canCreateNamedSpace, handleCreateSpaceEntry, isCreatingSpace, newSpaceSlug, trimmedSpaceName])
+    }, [canCreateNamedSpace, handleCreateSpaceEntry, isCreatingSpace, newSpaceSlug, openAfterCreateTarget, trimmedSpaceName])
 
     const {
         handleDeleteSpace,
@@ -219,6 +251,7 @@ export function useSpacesController({
         spaceId,
         handleCreateSpaceEntry,
         isCreatingSpace,
+        openAfterCreateTarget,
         spaces,
         refreshSpaces,
         supportsServerSpaces,
@@ -233,6 +266,8 @@ export function useSpacesController({
         isCreatingSpace,
         newSpaceName,
         setNewSpaceName,
+        openAfterCreateTarget,
+        setOpenAfterCreateTarget,
         tempSpaceTtlHours,
         spaceNameFeedback,
         canCreateSpace,

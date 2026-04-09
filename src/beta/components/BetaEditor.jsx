@@ -162,7 +162,7 @@ export default function BetaEditor({ projectId, spaceId = DEFAULT_PROJECT_SPACE_
     const [workspaceTop, setWorkspaceTop] = useState(168)
 
     const document = state.document
-    const resolvedSpaceId = document.projectMeta?.spaceId || spaceId || DEFAULT_PROJECT_SPACE_ID
+    const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     const entities = document.entities || []
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
     const visibleWindows = useMemo(() => Object.values(document.windowLayout?.windows || {}).filter((entry) => entry.visible), [document.windowLayout])

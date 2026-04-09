@@ -7,6 +7,7 @@ export function useSpaceActions({
     spaceId,
     handleCreateSpaceEntry,
     isCreatingSpace,
+    openAfterCreateTarget = 'public',
     spaces,
     refreshSpaces,
     supportsServerSpaces = false,
@@ -103,8 +104,13 @@ export function useSpaceActions({
             return
         }
         if (isCreatingSpace) return
-        await handleCreateSpaceEntry({ isPermanent: false, label, slug })
-    }, [handleCreateSpaceEntry, isCreatingSpace, spaces])
+        await handleCreateSpaceEntry({
+            isPermanent: false,
+            label,
+            slug,
+            openTarget: openAfterCreateTarget
+        })
+    }, [handleCreateSpaceEntry, isCreatingSpace, openAfterCreateTarget, spaces])
 
     return {
         handleDeleteSpace,

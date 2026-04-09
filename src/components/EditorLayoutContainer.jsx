@@ -84,6 +84,8 @@ export default function EditorLayoutContainer({
         spaces,
         newSpaceName,
         setNewSpaceName,
+        openAfterCreateTarget,
+        setOpenAfterCreateTarget,
         spaceNameFeedback,
         canCreateSpace,
         tempSpaceTtlHours,
@@ -364,6 +366,8 @@ export default function EditorLayoutContainer({
             handleToggleSpacePermanent={handleToggleSpacePermanent}
             newSpaceName={newSpaceName}
             setNewSpaceName={setNewSpaceName}
+            openAfterCreateTarget={openAfterCreateTarget}
+            setOpenAfterCreateTarget={setOpenAfterCreateTarget}
             spaceNameFeedback={spaceNameFeedback}
             canCreateSpace={canCreateSpace}
             tempSpaceTtlHours={tempSpaceTtlHours}

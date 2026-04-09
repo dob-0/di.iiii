@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createProjectSyncService } from '../services/projectSyncService.js'
-import { buildProjectEventsUrl, getProjectDocument, listProjectOps } from '../services/projectsApi.js'
+import {
+    DEFAULT_PROJECT_SPACE_ID,
+    buildProjectEventsUrl,
+    getProjectDocument,
+    listProjectOps
+} from '../services/projectsApi.js'
 import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import useXrAr from '../../hooks/useXrAr.js'
 import StudioViewport from '../../studio/components/StudioViewport.jsx'
@@ -58,8 +63,17 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         documentRef.current = state.document
     }, [state.document])
 
+    const resolvedRouteSpaceId = spaceId || DEFAULT_PROJECT_SPACE_ID
+
     const applyIncomingDocument = useCallback((nextDocument) => {
-        const normalized = normalizeProjectDocument(nextDocument || {})
+        const normalized = normalizeProjectDocument({
+            ...(nextDocument || {}),
+            projectMeta: {
+                ...(nextDocument?.projectMeta || {}),
+                id: projectId || nextDocument?.projectMeta?.id || '',
+                spaceId: resolvedRouteSpaceId || nextDocument?.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
+            }
+        })
         const nextEntryView = normalized.presentationState?.entryView || 'scene'
         setState((current) => ({
             ...current,
@@ -73,7 +87,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             }
             return currentCamera
         })
-    }, [])
+    }, [projectId, resolvedRouteSpaceId])
 
     const applyIncomingOps = useCallback((ops = [], version = null) => {
         setState((current) => {
@@ -166,9 +180,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     }, [applyIncomingOps, projectId, reloadDocument])
 
     const viewerTitle = useMemo(() => {
-        if (!document?.projectMeta?.title) return spaceLabel || spaceId
+        if (!document?.projectMeta?.title) return spaceLabel || resolvedRouteSpaceId
         return document.projectMeta.title
-    }, [document?.projectMeta?.title, spaceId, spaceLabel])
+    }, [document?.projectMeta?.title, resolvedRouteSpaceId, spaceLabel])
 
     return (
         <main

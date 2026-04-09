@@ -112,6 +112,14 @@ const getProjectPaths = (spacesDir, spaceId, projectId) => {
   }
 }
 
+const normalizeProjectTimestamp = (value, fallback) => {
+  const next = Number(value)
+  if (Number.isFinite(next) && next > 0) {
+    return next
+  }
+  return fallback
+}
+
 const loadProjectMeta = async (spacesDir, spaceId, projectId) => {
   const { metaPath } = getProjectPaths(spacesDir, spaceId, projectId)
   return readJson(metaPath, null)
@@ -164,10 +172,9 @@ const ensureProject = async (spacesDir, spaceId, projectId, overrides = {}) => {
   return meta
 }
 
-const readProjectDocument = async (spacesDir, spaceId, projectId) => {
-  const { documentPath } = getProjectPaths(spacesDir, spaceId, projectId)
-  const existing = await readJson(documentPath, null)
-  return normalizeProjectDocument(existing || {
+const coerceProjectDocument = (spaceId, projectId, document = null, projectMeta = null) => {
+  const now = Date.now()
+  const normalized = normalizeProjectDocument(document || {
     ...defaultProjectDocument,
     projectMeta: {
       ...defaultProjectDocument.projectMeta,
@@ -175,11 +182,39 @@ const readProjectDocument = async (spacesDir, spaceId, projectId) => {
       spaceId
     }
   })
+  const fallbackCreatedAt = normalizeProjectTimestamp(projectMeta?.createdAt, now)
+  return {
+    ...normalized,
+    projectMeta: {
+      ...normalized.projectMeta,
+      id: projectId,
+      spaceId,
+      title: normalized.projectMeta?.title || projectMeta?.title || 'Untitled Project',
+      createdAt: normalizeProjectTimestamp(normalized.projectMeta?.createdAt, fallbackCreatedAt),
+      updatedAt: normalizeProjectTimestamp(
+        normalized.projectMeta?.updatedAt,
+        normalizeProjectTimestamp(projectMeta?.updatedAt, fallbackCreatedAt)
+      ),
+      source: normalized.projectMeta?.source || projectMeta?.source || 'project'
+    }
+  }
+}
+
+const readProjectDocument = async (spacesDir, spaceId, projectId) => {
+  const { documentPath } = getProjectPaths(spacesDir, spaceId, projectId)
+  const existing = await readJson(documentPath, null)
+  const projectMeta = await loadProjectMeta(spacesDir, spaceId, projectId)
+  const nextDocument = coerceProjectDocument(spaceId, projectId, existing, projectMeta)
+  if (existing && JSON.stringify(existing) !== JSON.stringify(nextDocument)) {
+    await writeJson(documentPath, nextDocument)
+  }
+  return nextDocument
 }
 
 const writeProjectDocument = async (spacesDir, spaceId, projectId, document) => {
   const { documentPath } = getProjectPaths(spacesDir, spaceId, projectId)
-  await writeJson(documentPath, normalizeProjectDocument(document))
+  const projectMeta = await loadProjectMeta(spacesDir, spaceId, projectId)
+  await writeJson(documentPath, coerceProjectDocument(spaceId, projectId, document, projectMeta))
 }
 
 const readProjectOps = async (spacesDir, spaceId, projectId) => {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
+import { buildPreferencesPath } from '../../utils/spaceRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
 import {
     DEFAULT_PROJECT_SPACE_ID,
@@ -8,6 +9,7 @@ import {
     updateProjectDocument,
     uploadProjectAsset
 } from '../../project/services/projectsApi.js'
+import { buildStudioHubPath } from '../../studio/utils/studioRouting.js'
 import { buildBetaProjectPath, navigateToBetaPath } from '../utils/betaRouting.js'
 
 const detectEntityTypeFromMime = (mimeType = '') => {
@@ -133,7 +135,13 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         Import V1 Local Scene
                     </label>
                     <button type="button" onClick={() => window.location.assign(buildAppSpacePath(spaceId))}>
-                        Open Legacy Editor
+                        Open public route
+                    </button>
+                    <button type="button" onClick={() => window.location.assign(buildStudioHubPath(spaceId))}>
+                        Open Studio workspace
+                    </button>
+                    <button type="button" onClick={() => window.location.assign(buildPreferencesPath(spaceId))}>
+                        Open admin
                     </button>
                 </div>
             </section>

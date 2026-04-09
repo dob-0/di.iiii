@@ -28,6 +28,8 @@ export default function SpacesPanel({
     onTogglePermanent,
     newSpaceName,
     onSpaceNameChange,
+    openAfterCreateTarget = 'public',
+    onOpenAfterCreateTargetChange,
     spaceNameFeedback,
     canCreateSpace,
     ttlHours,
@@ -92,6 +94,20 @@ export default function SpacesPanel({
                             {spaceNameFeedback.message}
                         </p>
                     )}
+                </div>
+                <div className="space-name-field">
+                    <label htmlFor="space-open-target-input">Open After Create</label>
+                    <select
+                        id="space-open-target-input"
+                        value={openAfterCreateTarget}
+                        onChange={(event) => onOpenAfterCreateTargetChange?.(event.target.value)}
+                        className="text-input"
+                    >
+                        <option value="public">Public route</option>
+                        <option value="studio">Studio workspace</option>
+                        <option value="beta">Beta workspace</option>
+                        <option value="admin">Admin page</option>
+                    </select>
                 </div>
                 <div className="spaces-panel-actions">
                     <button
