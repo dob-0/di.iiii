@@ -2,6 +2,13 @@
 
 This is the canonical deploy path for this repo.
 
+It is a Git-based cPanel deploy path:
+
+- GitHub Actions publishes prebuilt `cpanel-*` branches
+- cPanel `Git Version Control` tracks those branches
+- cPanel runs `.cpanel.yml`, which executes the apply script on the host
+- SSH is not part of the canonical deploy flow
+
 ## What Is Canonical
 
 - publish workflow: [.github/workflows/publish-cpanel-prebuilt-v2.yml](/home/nnn/Desktop/dii_ii/.github/workflows/publish-cpanel-prebuilt-v2.yml)
@@ -18,11 +25,13 @@ Branch and environment mapping:
 
 The canonical workflow:
 
-1. checks out `dev` or `main`
-2. installs dependencies on GitHub Actions
-3. runs tests
-4. stages `.deploy/cpanel`
-5. force-updates the prebuilt branch for the target environment
+1. runs automatically on pushes to `dev` and `main`
+2. can also be run manually with `workflow_dispatch`
+3. checks out the source ref
+4. installs dependencies on GitHub Actions
+5. runs tests
+6. stages `.deploy/cpanel`
+7. force-updates the prebuilt branch for the target environment
 
 The prebuilt branch contains:
 
@@ -38,7 +47,7 @@ The prebuilt branch contains:
 
 ## Server Apply Step
 
-When cPanel runs `Deploy HEAD Commit`, it should execute:
+When cPanel runs `Deploy HEAD Commit`, `.cpanel.yml` should execute:
 
 ```bash
 bash scripts/cpanel-apply-prebuilt-release.sh staging
@@ -59,6 +68,14 @@ That apply step:
 - restarts the Node.js app
 - runs smoke checks
 - writes a checkpoint
+
+In other words, the canonical human flow is:
+
+1. push to `dev` or `main`
+2. let GitHub publish `cpanel-staging` or `cpanel-production`
+3. in cPanel `Git Version Control`, update and deploy `HEAD` if it did not apply automatically
+
+If GitHub already has the right `cpanel-*` branch but the live site still serves an older build, the missing step is in cPanel, not in GitHub.
 
 ## Server-Only Config
 

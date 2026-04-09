@@ -117,7 +117,7 @@ For staging, use `~/serverXR-staging` and `--app-root serverXR-staging`.
 Canonical deploy path:
 
 - publish from GitHub Actions with [publish-cpanel-prebuilt-v2.yml](/home/nnn/Desktop/dii_ii/.github/workflows/publish-cpanel-prebuilt-v2.yml)
-- apply on the server with [scripts/cpanel-apply-prebuilt-release.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-apply-prebuilt-release.sh)
+- cPanel `Git Version Control` deploys the tracked `cpanel-*` branch and runs [scripts/cpanel-apply-prebuilt-release.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-apply-prebuilt-release.sh) through `.cpanel.yml`
 - keep `/serverXR` owned by the cPanel Node.js App
 
 Fallbacks:

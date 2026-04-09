@@ -1,9 +1,6 @@
-name: Legacy Deploy cPanel (SSH Push)
+name: Legacy Deploy cPanel (SSH Push, Manual Only)
 
 on:
-  push:
-    branches:
-      - dev
   workflow_dispatch:
     inputs:
       ref:
@@ -16,15 +13,14 @@ permissions:
 
 jobs:
   deploy:
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'push' && 'staging' || 'production' }}
+    environment: production
     env:
-      DEPLOY_ENV: ${{ github.event_name == 'push' && 'staging' || 'production' }}
-      TARGET_REF: ${{ github.event_name == 'push' && github.sha || inputs.ref }}
-      SMOKE_BASE_URL: ${{ github.event_name == 'push' && 'https://staging.di-studio.xyz' || 'https://di-studio.xyz' }}
-      SERVER_PORT: ${{ github.event_name == 'push' && '4001' || '4000' }}
-      SERVER_CORS_ORIGINS: ${{ github.event_name == 'push' && 'https://staging.di-studio.xyz' || 'https://di-studio.xyz,https://www.di-studio.xyz' }}
+      DEPLOY_ENV: production
+      TARGET_REF: ${{ inputs.ref }}
+      SMOKE_BASE_URL: https://di-studio.xyz
+      SERVER_PORT: 4000
+      SERVER_CORS_ORIGINS: https://di-studio.xyz,https://www.di-studio.xyz
       SERVER_APP_BASE_PATH: /serverXR
       SERVER_DATA_ROOT: ${{ format('{0}/data', secrets.CPANEL_SERVERXR_ROOT) }}
     steps:

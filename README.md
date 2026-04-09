@@ -200,20 +200,26 @@ Canonical release model:
 - canonical publish workflow: [.github/workflows/publish-cpanel-prebuilt-v2.yml](/home/nnn/Desktop/dii_ii/.github/workflows/publish-cpanel-prebuilt-v2.yml)
 - canonical server apply step: [scripts/cpanel-apply-prebuilt-release.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-apply-prebuilt-release.sh)
 - canonical staged bundle: `.deploy/cpanel/`
+- canonical deploy transport: GitHub + cPanel `Git Version Control`
 
 Environment mapping:
 
-- `dev` publishes `cpanel-staging`
-- `main` publishes `cpanel-production`
+- pushing `dev` publishes `cpanel-staging`
+- pushing `main` publishes `cpanel-production`
 - staging URL: `https://staging.di-studio.xyz`
 - production URL: `https://di-studio.xyz`
 
 Deploy notes:
 
+- the canonical flow does not use SSH deploys
+- GitHub Actions publishes the prebuilt `cpanel-*` branches
+- cPanel `Git Version Control` should track those branches and run `.cpanel.yml`
+- `.cpanel.yml` executes [scripts/cpanel-apply-prebuilt-release.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-apply-prebuilt-release.sh) on the host
+- if a site looks stale after a push, check cPanel `Git Version Control` and run `Deploy HEAD Commit`
 - `/serverXR` must stay owned by the cPanel Node.js App
 - `public_html/` is frontend-only
 - `shared/` and `SHARED_ROOT` are part of the runtime contract
-- old SSH push and Git-pull deploy docs still exist as fallbacks, but they are not the primary path
+- old SSH push docs still exist as legacy references, but they are not the primary path
 
 Start here for deploy details:
 

@@ -18,6 +18,7 @@ Important:
 
 - both environments use cPanel `Setup Node.js App`
 - `/serverXR` must be owned by the Node.js App, not by a static proxy directory
+- the canonical path is GitHub + cPanel `Git Version Control`
 - the old SSH-push workflows are legacy fallbacks, not the primary path
 
 ## One-Time Setup
@@ -93,16 +94,18 @@ Recommended roots:
 ### Staging
 
 1. merge approved work into `dev`
-2. publish `cpanel-staging`
-3. run the staging apply step on the server
-4. verify staging smoke checks and real editor flows
+2. push `dev`
+3. let GitHub publish `cpanel-staging`
+4. in cPanel `Git Version Control`, update and deploy `HEAD` if needed
+5. verify staging smoke checks and real editor flows
 
 ### Production
 
 1. promote the approved commit into `main`
-2. publish `cpanel-production`
-3. run the production apply step on the server
-4. verify production smoke checks
+2. push `main`
+3. let GitHub publish `cpanel-production`
+4. in cPanel `Git Version Control`, update and deploy `HEAD` if needed
+5. verify production smoke checks
 
 ## Expected Checks
 

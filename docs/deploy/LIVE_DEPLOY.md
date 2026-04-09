@@ -12,6 +12,9 @@ This repo uses a staged cPanel deployment model with one canonical publish path 
   - `.deploy/cpanel/`
 - canonical apply step:
   - [scripts/cpanel-apply-prebuilt-release.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-apply-prebuilt-release.sh)
+- canonical deploy transport:
+  - GitHub Actions + cPanel `Git Version Control`
+- canonical flow does not require SSH deploys
 
 ## Public Surfaces
 
@@ -56,14 +59,15 @@ Create:
 
 Required environment secrets:
 
-- `CPANEL_HOST`
-- `CPANEL_PORT`
-- `CPANEL_USERNAME`
-- `CPANEL_SSH_KEY`
 - `CPANEL_WEB_ROOT`
 - `CPANEL_SERVERXR_ROOT`
 - `CPANEL_SHARED_ROOT`
 - `SERVERXR_API_TOKEN`
+
+Notes:
+
+- the canonical Git publish workflow only requires the GitHub environment values it uses while staging the release
+- SSH secrets belong to the legacy SSH workflows, not to the canonical cPanel Git flow
 
 ## Server Shared Contract
 
