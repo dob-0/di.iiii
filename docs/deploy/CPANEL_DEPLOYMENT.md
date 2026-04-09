@@ -8,9 +8,9 @@ This file describes the current safe deployment model for the dii platform.
   - `dev` for staging
   - `main` for production
 - canonical publish workflow:
-  - [.github/workflows/publish-cpanel-prebuilt-v2.yml](/home/nnn/Desktop/dii_ii/.github/workflows/publish-cpanel-prebuilt-v2.yml)
+  - [.github/workflows/publish-cpanel-prebuilt-v2.yml](../../.github/workflows/publish-cpanel-prebuilt-v2.yml)
 - canonical server apply step:
-  - [scripts/cpanel-apply-prebuilt-release.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-apply-prebuilt-release.sh)
+  - [scripts/cpanel-apply-prebuilt-release.sh](../../scripts/cpanel-apply-prebuilt-release.sh)
 - runtime baseline:
   - Node `22.x`
 
@@ -19,7 +19,7 @@ Important:
 - both environments use cPanel `Setup Node.js App`
 - `/serverXR` must be owned by the Node.js App, not by a static proxy directory
 - the canonical path is GitHub + cPanel `Git Version Control`
-- the old SSH-push workflows are legacy fallbacks, not the primary path
+- legacy/manual fallback material is archived under [docs/deploy/legacy/README.md](legacy/README.md)
 
 ## One-Time Setup
 

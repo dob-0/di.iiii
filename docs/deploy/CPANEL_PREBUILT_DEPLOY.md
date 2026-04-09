@@ -11,9 +11,9 @@ It is a GitHub-to-cPanel Git flow:
 
 ## What Is Canonical
 
-- publish workflow: [.github/workflows/publish-cpanel-prebuilt-v2.yml](/home/nnn/Desktop/dii_ii/.github/workflows/publish-cpanel-prebuilt-v2.yml)
+- publish workflow: [.github/workflows/publish-cpanel-prebuilt-v2.yml](../../.github/workflows/publish-cpanel-prebuilt-v2.yml)
 - staged bundle source: `.deploy/cpanel/`
-- server apply script: [scripts/cpanel-apply-prebuilt-release.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-apply-prebuilt-release.sh)
+- server apply script: [scripts/cpanel-apply-prebuilt-release.sh](../../scripts/cpanel-apply-prebuilt-release.sh)
 - runtime baseline: Node `22.x`
 
 Branch and environment mapping:
@@ -118,7 +118,6 @@ Those files should contain the real tokens and path settings, including:
 
 Old GitHub Action deploy workflows were removed to keep the Actions page focused on the canonical path.
 
-Legacy/manual references still live only in docs and scripts for emergency recovery:
+Legacy/manual references now live in the archive area for emergency recovery:
 
-- Git-pull/self-host deploy docs
-- PM2 fallback docs
+- [docs/deploy/legacy/README.md](legacy/README.md)

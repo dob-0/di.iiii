@@ -250,6 +250,8 @@ Important runtime rules:
 - `SHARED_ROOT` is part of the runtime contract
 - staging and production content stay separate unless you intentionally sync them
 
+Emergency-only fallback material is archived under `docs/deploy/legacy/` and `legacy/`.
+
 ## Testing
 
 Main checks:

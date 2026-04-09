@@ -9,12 +9,13 @@ Use it only when:
 
 The canonical path is still the prebuilt publish/apply model documented in:
 
-- [docs/deploy/CPANEL_PREBUILT_DEPLOY.md](/home/nnn/Desktop/dii_ii/docs/deploy/CPANEL_PREBUILT_DEPLOY.md)
+- [docs/deploy/CPANEL_PREBUILT_DEPLOY.md](../CPANEL_PREBUILT_DEPLOY.md)
 
 ## What This Mode Means
 
 - cPanel `Git Version Control` updates a local clone on the host
-- `.cpanel.yml` runs the host-side script [scripts/cpanel-git-deploy.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-git-deploy.sh)
+- if you intentionally use this fallback, copy [`legacy/cpanel-git-pull/cpanel.git-pull.yml`](../../../legacy/cpanel-git-pull/cpanel.git-pull.yml) to the repo root as `.cpanel.yml`
+- that `.cpanel.yml` then runs the host-side script [`legacy/cpanel-git-pull/cpanel-git-deploy.sh`](../../../legacy/cpanel-git-pull/cpanel-git-deploy.sh)
 - the host itself installs deps, stages the release bundle, and applies it
 - the existing cPanel Node.js App still serves `/serverXR`
 - staging and production still stay separated through two cPanel-managed clones

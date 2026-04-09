@@ -4,13 +4,13 @@ Legacy emergency-only reference.
 
 Do not use this as the normal future path for this repo.
 
-If your cPanel account includes `Setup Node.js App`, use the cPanel Node.js App flow documented in [docs/deploy/CPANEL_DEPLOYMENT.md](/home/nnn/Desktop/dii_ii/docs/deploy/CPANEL_DEPLOYMENT.md) instead.
+If your cPanel account includes `Setup Node.js App`, use the cPanel Node.js App flow documented in [docs/deploy/CPANEL_DEPLOYMENT.md](../CPANEL_DEPLOYMENT.md) instead.
 
 ## 🚀 Deploy/Update in 3 Steps
 
 ### 1. Build locally
 ```powershell
-.\build-for-cpanel.ps1
+powershell -File .\legacy\pm2\build-for-cpanel.ps1
 ```
 
 ### 2. Upload via FTP/cPanel File Manager
@@ -106,7 +106,7 @@ If URLs are wrong, rebuild frontend with correct `.env`:
 Get-Content .env
 # Should show: VITE_API_BASE_URL=https://di-studio.xyz/serverXR
 
-.\build-for-cpanel.ps1
+powershell -File .\legacy\pm2\build-for-cpanel.ps1
 # Then re-upload dist/
 ```
 
@@ -116,7 +116,7 @@ Get-Content .env
 
 1. **Frontend changes** (React, CSS, etc):
    ```powershell
-   .\build-for-cpanel.ps1
+   powershell -File .\legacy\pm2\build-for-cpanel.ps1
    # Upload dist/ → public_html/
    # Clear browser cache
    ```
@@ -131,7 +131,7 @@ Get-Content .env
 
 3. **Both**:
    ```powershell
-   .\build-for-cpanel.ps1
+   powershell -File .\legacy\pm2\build-for-cpanel.ps1
    ```
    Upload both folders, then:
    ```bash

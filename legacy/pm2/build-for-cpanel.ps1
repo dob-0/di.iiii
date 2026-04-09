@@ -1,5 +1,7 @@
 $ErrorActionPreference = "Stop"
 
+Set-Location (Resolve-Path (Join-Path $PSScriptRoot "..\.."))
+
 Write-Host "Staging cPanel release bundle..." -ForegroundColor Green
 Write-Host ""
 

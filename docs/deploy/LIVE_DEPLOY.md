@@ -18,11 +18,11 @@ If you only remember one thing, remember this:
 Canonical pieces:
 
 - workflow:
-  - [.github/workflows/publish-cpanel-prebuilt-v2.yml](/home/nnn/Desktop/dii_ii/.github/workflows/publish-cpanel-prebuilt-v2.yml)
+  - [.github/workflows/publish-cpanel-prebuilt-v2.yml](../../.github/workflows/publish-cpanel-prebuilt-v2.yml)
 - release bundle:
   - `.deploy/cpanel/`
 - apply script:
-  - [scripts/cpanel-apply-prebuilt-release.sh](/home/nnn/Desktop/dii_ii/scripts/cpanel-apply-prebuilt-release.sh)
+  - [scripts/cpanel-apply-prebuilt-release.sh](../../scripts/cpanel-apply-prebuilt-release.sh)
 
 ## Daily Workflow
 
@@ -104,7 +104,8 @@ Per environment keep these aligned:
 
 These docs still exist for emergency use, but they are not the default future path:
 
-- [docs/deploy/CPANEL_GIT_PULL_DEPLOY.md](/home/nnn/Desktop/dii_ii/docs/deploy/CPANEL_GIT_PULL_DEPLOY.md)
-- [docs/deploy/PM2_QUICK_GUIDE.md](/home/nnn/Desktop/dii_ii/docs/deploy/PM2_QUICK_GUIDE.md)
+- [docs/deploy/legacy/README.md](legacy/README.md)
+- [docs/deploy/legacy/CPANEL_GIT_PULL_DEPLOY.md](legacy/CPANEL_GIT_PULL_DEPLOY.md)
+- [docs/deploy/legacy/PM2_QUICK_GUIDE.md](legacy/PM2_QUICK_GUIDE.md)
 
 The old legacy SSH-push GitHub workflows were removed on purpose so the Actions page reflects the real path in use.
