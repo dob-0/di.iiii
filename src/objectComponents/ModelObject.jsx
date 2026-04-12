@@ -5,8 +5,9 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { MODEL_FORMATS, detectModelFormatFromMeta, detectModelFormatFromName } from '../utils/modelFormats.js'
-import { getAssetBlob } from '../storage/assetStore.js'
+import { deleteAsset, getAssetBlob } from '../storage/assetStore.js'
 import { getAssetSourceUrl, streamRemoteAsset } from '../services/assetSources.js'
+import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
 
 export default function ModelObject({
     assetRef,
@@ -37,7 +38,15 @@ export default function ModelObject({
                 try {
                     const blob = await getAssetBlob(ref.id)
                     if (blob) {
-                        return { blob, type: 'blob' }
+                        if (isHtmlLikeMimeType(blob.type)) {
+                            try {
+                                await deleteAsset(ref.id)
+                            } catch {
+                                // ignore cache cleanup errors and continue to remote recovery
+                            }
+                        } else {
+                            return { blob, type: 'blob' }
+                        }
                     }
                 } catch (error) {
                     console.error(`Failed to read asset blob ${ref.id}`, error)
@@ -67,8 +76,12 @@ export default function ModelObject({
                 return source.blob.arrayBuffer()
             }
             if (source.url) {
-                const response = await fetch(source.url)
+                const response = await fetch(source.url, { cache: 'no-store' })
                 if (!response.ok) throw new Error(`Failed to fetch ${source.url}`)
+                const contentType = response.headers.get('content-type') || ''
+                if (isHtmlLikeMimeType(contentType)) {
+                    throw new Error(`URL returned HTML instead of model asset: ${source.url}`)
+                }
                 return response.arrayBuffer()
             }
             return null
@@ -80,8 +93,12 @@ export default function ModelObject({
                 return source.blob.text()
             }
             if (source.url) {
-                const response = await fetch(source.url)
+                const response = await fetch(source.url, { cache: 'no-store' })
                 if (!response.ok) throw new Error(`Failed to fetch ${source.url}`)
+                const contentType = response.headers.get('content-type') || ''
+                if (isHtmlLikeMimeType(contentType)) {
+                    throw new Error(`URL returned HTML instead of model asset: ${source.url}`)
+                }
                 return response.text()
             }
             return null

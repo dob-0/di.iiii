@@ -63,14 +63,15 @@ function EntityVisual({ entity, assetMap, selected, onSelect }) {
                 )
             break
         case 'image':
-            content = <ImageObject data={asset?.url || null} opacity={appearance.opacity} />
+            content = <ImageObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
             break
         case 'video':
-            content = <VideoObject data={asset?.url || null} opacity={appearance.opacity} />
+            content = <VideoObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
             break
         case 'audio':
             content = (
                 <AudioObject
+                    assetRef={asset || null}
                     data={asset?.url || null}
                     color={appearance.color}
                     audioVolume={media.volume}
@@ -82,7 +83,7 @@ function EntityVisual({ entity, assetMap, selected, onSelect }) {
             )
             break
         case 'model':
-            content = <ModelObject data={asset?.url || null} modelColor={appearance.color} applyModelColor={false} opacity={appearance.opacity} />
+            content = <ModelObject assetRef={asset || null} data={asset?.url || null} modelColor={appearance.color} applyModelColor={false} opacity={appearance.opacity} />
             break
         default:
             content = <BoxObject color={appearance.color} boxSize={[1, 1, 1]} />

@@ -1,5 +1,6 @@
 import { apiBaseUrl } from './apiClient.js'
 import { normalizeSpaceId } from '../utils/spaceNames.js'
+import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
 
 const assetSourceMap = new Map()
 const MAX_CONCURRENT_STREAMS = 3
@@ -321,7 +322,7 @@ export function streamRemoteAsset(id) {
                 }
                 // Check Content-Type to avoid accepting HTML error pages
                 const contentType = response.headers.get('content-type') || ''
-                if (contentType.includes('text/html')) {
+                if (isHtmlLikeMimeType(contentType)) {
                     lastError = new Error(`URL returned HTML instead of asset: ${url}`)
                     continue
                 }
