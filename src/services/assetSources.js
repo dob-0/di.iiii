@@ -1,3 +1,4 @@
+import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
 const assetSourceMap = new Map()
 const MAX_CONCURRENT_STREAMS = 3
 const streamQueue = []
@@ -167,6 +168,12 @@ export function streamRemoteAsset(id) {
                 const response = await fetch(url, { cache: 'no-store' })
                 if (!response.ok) {
                     lastError = new Error(`Failed to fetch ${url} (${response.status})`)
+                    continue
+                }
+                // Check Content-Type to avoid accepting HTML error pages
+                const contentType = response.headers.get('content-type') || ''
+                if (isHtmlLikeMimeType(contentType)) {
+                    lastError = new Error(`URL returned HTML instead of asset: ${url}`)
                     continue
                 }
                 return response.blob()
