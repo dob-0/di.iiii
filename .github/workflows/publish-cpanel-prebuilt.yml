@@ -48,7 +48,12 @@ jobs:
         run: npm ci
 
       - name: Install server dependencies
-        run: npm --prefix serverXR ci
+        run: |
+          if [ -f serverXR/package-lock.json ]; then
+            npm --prefix serverXR ci
+          else
+            npm --prefix serverXR install
+          fi
 
       - name: Run automated tests
         run: npm test
