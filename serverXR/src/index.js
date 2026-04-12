@@ -9,6 +9,7 @@ const fs = require('node:fs')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { config } = require('./config')
+const { isValidAssetId, filterAvailableSceneAssets } = require('./sceneAssets')
 const {
   defaultScene: BLANK_SCENE,
   generateObjectId
@@ -20,7 +21,6 @@ const SPACES_DIR = config.directories.spacesDir
 const UPLOADS_DIR = config.directories.uploadsDir
 const RECENT_LIMIT = 25
 const SLUG_REGEX = /^[a-z0-9-]{3,48}$/
-const ASSET_ID_REGEX = /^[a-f0-9-]{8,64}$/i
 const DEFAULT_TTL_MS = config.defaultTtlMs
 const MAX_OP_HISTORY = 500
 const OPS_FILE_NAME = 'ops.json'
@@ -347,8 +347,6 @@ const pruneSpaces = async () => {
   await Promise.all(stale.map(space => deleteSpace(space.id)))
 }
 
-const isValidAssetId = (value = '') => ASSET_ID_REGEX.test(String(value).trim())
-
 const serveAsset = async (spaceId, assetId, res) => {
   const { assetsDir } = getSpacePaths(spaceId)
   const filePath = path.join(assetsDir, assetId)
@@ -520,8 +518,9 @@ router.get('/api/spaces/:spaceId/scene', async (req, res, next) => {
     await ensureSpaceScene(spaceId)
     const scene = await readJson(scenePath, BLANK_SCENE)
     const meta = await loadSpaceMeta(spaceId)
+    const filteredScene = await filterAvailableSceneAssets(scene, getSpacePaths(spaceId).assetsDir)
     res.json({
-      scene,
+      scene: filteredScene,
       version: meta?.sceneVersion || 0
     })
   } catch (error) {

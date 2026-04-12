@@ -38,7 +38,8 @@ import { useUiState } from './hooks/useUiState.js'
 import { useXrAr } from './hooks/useXrAr.js'
 import { useRenderSettings, DEFAULT_RENDER_SETTINGS } from './hooks/useRenderSettings.js'
 import { buildSceneSignature, getSceneStorageKey, persistSceneToLocalStorage } from './storage/scenePersistence.js'
-import { createSceneArchive, loadSceneArchive, resolveAssetEntries } from './services/sceneArchive.js'
+import { createSceneArchive, loadSceneArchive, resolveAssetEntries, collectSceneAssetRefs } from './services/sceneArchive.js'
+import { formatMissingAssetList, getMissingAssetRefs, selectAssetsForServerPublish } from './services/serverAssetSync.js'
 import { useSceneAutosave } from './hooks/useSceneAutosave.js'
 import EditorLayout from './components/EditorLayout.jsx'
 import { useControlSections } from './hooks/useControlSections.js'
@@ -2230,11 +2231,13 @@ export default function App() {
 
     const syncAssetsForPublish = useCallback(async () => {
         if (!canPublishToServer) return true
+        const assetRefs = collectSceneAssetRefs(objects || [])
         const entries = await resolveAssetEntries(objects, { getAssetBlob, getAssetSourceUrl })
-        const targets = entries.filter(({ meta }) => {
-            if (!meta?.id) return false
-            return !getAssetSourceUrl(meta.id)
-        })
+        const missingAssets = getMissingAssetRefs(assetRefs, entries)
+        if (missingAssets.length) {
+            throw new Error(`Some assets are missing and cannot be published: ${formatMissingAssetList(missingAssets)}.`)
+        }
+        const targets = await selectAssetsForServerPublish(entries, serverAssetBaseUrl)
         if (!targets.length) {
             setServerAssetSyncProgress({
                 active: false,
@@ -2259,13 +2262,16 @@ export default function App() {
                 const meta = entry.meta
                 const blob = entry.blob
                 if (!blob || !meta?.id) continue
-                await uploadAssetToServer({
+                const uploaded = await uploadAssetToServer({
                     file: blob,
                     assetId: meta.id,
                     name: meta.name,
                     mimeType: meta.mimeType,
                     trackPending: false
                 })
+                if (!uploaded?.id) {
+                    throw new Error(`Failed to upload asset ${meta.name || meta.id} to the server.`)
+                }
                 completed += 1
                 setServerAssetSyncProgress(prev => ({
                     ...prev,
@@ -2281,7 +2287,7 @@ export default function App() {
             })
         }
         return true
-    }, [canPublishToServer, canUploadServerAssets, getAssetBlob, getAssetSourceUrl, objects, uploadAssetToServer])
+    }, [canPublishToServer, canUploadServerAssets, getAssetBlob, getAssetSourceUrl, objects, serverAssetBaseUrl, uploadAssetToServer])
 
     const handlePublishToServer = useCallback(async () => {
         if (!canPublishToServer || !spaceId) {

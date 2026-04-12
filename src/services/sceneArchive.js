@@ -1,6 +1,7 @@
 import JSZip from 'jszip'
+import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
 
-const collectAssetRefs = (objects = []) => {
+export const collectSceneAssetRefs = (objects = []) => {
     const refs = new Map()
     const addRef = (asset) => {
         if (!asset?.id) return
@@ -24,23 +25,28 @@ const collectAssetRefs = (objects = []) => {
 
 export const resolveAssetEntries = async (objects, { getAssetBlob, getAssetSourceUrl } = {}) => {
     const entries = []
-    const assetRefs = collectAssetRefs(objects || [])
+    const assetRefs = collectSceneAssetRefs(objects || [])
     for (const [assetId, meta] of assetRefs.entries()) {
         try {
+            const sourceUrl = getAssetSourceUrl?.(assetId) || null
             const blob = await getAssetBlob?.(assetId)
             if (blob) {
-                entries.push({ meta, blob })
+                entries.push({ meta, blob, source: 'local', sourceUrl })
                 continue
             }
-            const remoteUrl = getAssetSourceUrl?.(assetId)
-            if (remoteUrl) {
-                const response = await fetch(remoteUrl)
+            if (sourceUrl) {
+                const response = await fetch(sourceUrl)
                 if (!response.ok) {
-                    console.warn(`Failed to fetch remote asset for export: ${remoteUrl}`)
+                    console.warn(`Failed to fetch remote asset for export: ${sourceUrl}`)
+                    continue
+                }
+                const contentType = response.headers?.get?.('content-type') || ''
+                if (isHtmlLikeMimeType(contentType)) {
+                    console.warn(`Remote asset source returned HTML instead of media: ${sourceUrl}`)
                     continue
                 }
                 const remoteBlob = await response.blob()
-                entries.push({ meta, blob: remoteBlob })
+                entries.push({ meta, blob: remoteBlob, source: 'remote', sourceUrl })
             }
         } catch (error) {
             console.error(`Failed to read asset ${assetId} for export`, error)
