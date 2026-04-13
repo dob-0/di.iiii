@@ -13,6 +13,8 @@ export const slugifySpaceName = (input = '') => {
     return sanitized.slice(0, SLUG_MAX_LENGTH)
 }
 
+export const normalizeSpaceId = (input = '') => slugifySpaceName(input)
+
 export const isValidSpaceSlug = (slug) => {
     if (typeof slug !== 'string') return false
     const trimmed = slug.trim()

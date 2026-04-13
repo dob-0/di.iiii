@@ -3,6 +3,7 @@ import * as sceneSchema from '../shared/sceneSchema.js'
 
 const {
     SCENE_DATA_VERSION,
+    defaultGridAppearance,
     defaultScene,
     normalizeObject,
     normalizeObjects,
@@ -11,6 +12,7 @@ const {
 
 export {
     SCENE_DATA_VERSION,
+    defaultGridAppearance,
     defaultScene,
     normalizeObject,
     normalizeObjects,

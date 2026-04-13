@@ -1,14 +1,26 @@
 {
   "name": "iiiiiiiiiiiii",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
+  "engines": {
+    "node": "22.x",
+    "npm": "10.x"
+  },
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev-stack.mjs",
+    "dev:client": "vite",
+    "dev:server": "npm --prefix serverXR run dev",
     "build": "vite build",
+    "deploy:cpanel": "node scripts/stage-cpanel-nodeapp-release.mjs",
+    "env:serverxr": "node scripts/write-server-env.mjs",
+    "smoke:cpanel": "node scripts/smoke-check-cpanel.mjs",
+    "checkpoint": "node scripts/create-checkpoint.mjs",
+    "sync:space-assets": "node scripts/sync-space-assets.mjs",
     "preview": "vite preview",
     "lint": "eslint src --ext .js,.jsx",
     "test": "vitest run",
+    "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js",
     "test:ui": "vitest",
     "format": "prettier --write ."
   },
@@ -17,6 +29,7 @@
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "baseline-browser-mapping": "^2.9.19",
     "eslint": "^9.39.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-import": "^2.32.0",
@@ -31,6 +44,10 @@
     "vitest": "^4.0.14"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.9",
+    "@mui/material": "^7.3.9",
     "@react-three/drei": "^9.108.1",
     "@react-three/fiber": "^8.16.8",
     "@react-three/xr": "^6.6.27",
@@ -40,6 +57,7 @@
     "r3f-perf": "^7.2.1",
     "react": "18.3",
     "react-dom": "18.3",
+    "socket.io-client": "^4.7.0",
     "three": "^0.166.1"
   }
 }

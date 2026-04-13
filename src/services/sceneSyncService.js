@@ -18,7 +18,9 @@ export function createSceneSyncService() {
         eventsUrl,
         onPatch,
         onCursor,
-        onReady
+        onReady,
+        onOpen,
+        onError
     } = {}) => {
         if (!eventsUrl) {
             disconnect()
@@ -59,7 +61,11 @@ export function createSceneSyncService() {
         source.addEventListener('scene-op', handlePatch)
         source.addEventListener('cursor-update', handleCursor)
         source.addEventListener('ready', handleReady)
+        source.onopen = () => {
+            onOpen?.()
+        }
         source.onerror = () => {
+            onError?.()
             // allow browser to retry automatically
         }
 

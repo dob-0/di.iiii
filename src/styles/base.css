@@ -1,0 +1,41 @@
+:root {
+    --ui-surface: #0b111b;
+    --ui-surface-raised: #121a24;
+    --ui-surface-muted: #182338;
+    --ui-surface-highlight: #1f2d48;
+    --ui-border: rgba(255,255,255,0.1);
+    --ui-border-strong: rgba(255,255,255,0.2);
+    --ui-divider: rgba(255,255,255,0.14);
+    --ui-shadow: 0 14px 38px rgba(0, 0, 0, 0.55);
+    --ui-text-primary: #f4f6ff;
+    --ui-text-muted: rgba(244,246,255,0.78);
+    --ui-accent: #46c9ff;
+    --ui-accent-strong: #00a8ff;
+    --ui-success: #1ecb92;
+    --ui-warning: #ffb347;
+    --ui-danger: #f25f5c;
+    --panel-width: 205px;
+    --panel-padding: 4px;
+    --panel-gap: 4px;
+    --panel-radius: 12px;
+    --panel-control-height: 24px;
+    --axis-x: #ff6b6b;
+    --axis-y: #4ae3a5;
+    --axis-z: #4db2ff;
+}
+
+html,
+body,
+#root
+{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at top, #070b12, #05070d 60%, #030407);
+    cursor: default;
+    color: #f4f6ff;
+}
+
+

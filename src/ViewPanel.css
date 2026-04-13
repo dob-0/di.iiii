@@ -1,6 +1,25 @@
-/* --- New styles for the ViewPanel preset grid --- */
+.view-panel .view-panel-content {
+    gap: 14px;
+}
 
-/* Add a bit of space for the stacked label */
+.view-panel .view-panel-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+.view-panel .view-section-heading {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.62);
+}
+
 .view-panel .prop-label-stacked {
     font-size: 13px;
     font-weight: 600;
@@ -8,15 +27,183 @@
     margin: 6px 0 4px;
 }
 
-/* This creates the 3x2 grid */
+.view-panel .view-panel-toggle-group {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.view-panel .view-panel-toggle-group-dual {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.view-panel .view-panel-toggle-group .toggle-button-small,
+.view-panel .view-panel-inline-actions .toggle-button-small,
+.view-panel .view-preset-grid .toggle-button-small {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.view-panel .toggle-button-small.is-active {
+    background: linear-gradient(135deg, rgba(140, 210, 255, 0.22), rgba(54, 108, 255, 0.3));
+    border-color: rgba(140, 210, 255, 0.42);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 8px 24px rgba(17, 63, 128, 0.18);
+}
+
+.view-panel .view-panel-inline-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.view-panel .view-panel-code-actions {
+    flex-wrap: wrap;
+}
+
+.view-panel .view-panel-code-heading-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.view-panel .view-panel-code-heading-row label {
+    margin: 0;
+}
+
+.view-panel .view-panel-code-hint {
+    font-size: 11px;
+    color: rgba(255,255,255,0.48);
+}
+
+.view-panel .view-panel-template-grid {
+    display: grid;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.view-panel .view-panel-template-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(7,11,20,0.52);
+    color: rgba(255,255,255,0.86);
+    text-align: left;
+    transition: border-color 0.16s ease, background 0.16s ease, transform 0.16s ease;
+}
+
+.view-panel .view-panel-template-card:hover {
+    border-color: rgba(140, 210, 255, 0.3);
+    background: rgba(10,16,28,0.78);
+    transform: translateY(-1px);
+}
+
+.view-panel .view-panel-template-card strong {
+    font-size: 13px;
+}
+
+.view-panel .view-panel-template-card span {
+    font-size: 12px;
+    line-height: 1.5;
+    color: rgba(255,255,255,0.6);
+}
+
+.view-panel .view-panel-template-card.is-active {
+    border-color: rgba(140, 210, 255, 0.42);
+    background: linear-gradient(135deg, rgba(140, 210, 255, 0.12), rgba(54, 108, 255, 0.18));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
+}
+
+.view-panel .view-panel-template-card .view-panel-template-eyebrow {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(140, 210, 255, 0.88);
+}
+
+.view-panel .presentation-code-input {
+    min-height: 220px;
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(7,11,20,0.75);
+    color: var(--ui-text-primary);
+    font-size: 12px;
+    line-height: 1.5;
+    font-family: 'JetBrains Mono', 'SFMono-Regular', 'Consolas', monospace;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.view-panel .presentation-code-input::placeholder {
+    color: rgba(255,255,255,0.38);
+}
+
+.view-panel .view-panel-code-note {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(140, 210, 255, 0.12);
+    background: rgba(34, 56, 84, 0.2);
+}
+
+.view-panel .view-panel-code-note strong {
+    font-size: 12px;
+    color: rgba(220,233,255,0.9);
+}
+
+.view-panel .view-panel-code-note span {
+    font-size: 12px;
+    line-height: 1.55;
+    color: rgba(220,233,255,0.7);
+}
+
 .view-panel .view-preset-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr; /* 3 equal columns */
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 5px;
 }
 
-/* Make sure buttons in the grid fill the space */
-.view-panel .view-preset-grid .toggle-button-small {
-    width: 100%;
-    box-sizing: border-box; /* Ensures padding doesn't break layout */
+.view-panel .fixed-camera-preset-grid {
+    margin-bottom: 6px;
+}
+
+.view-panel .view-panel-display-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.view-panel .view-panel-advanced {
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 12px;
+    background: rgba(7,11,20,0.35);
+}
+
+.view-panel .view-panel-advanced summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 10px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.82);
+}
+
+.view-panel .view-panel-advanced summary::-webkit-details-marker {
+    display: none;
+}
+
+.view-panel .view-panel-advanced-content {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 0 12px 12px;
 }

@@ -1,5 +1,6 @@
 require('dotenv').config()
 const express = require('express')
+const http = require('http')
 const cors = require('cors')
 const morgan = require('morgan')
 const multer = require('multer')
@@ -8,12 +9,34 @@ const os = require('node:os')
 const fs = require('node:fs')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
-const { config } = require('./config')
+const { config, buildCorsOriginHandler } = require('./config')
 const { isValidAssetId, filterAvailableSceneAssets } = require('./sceneAssets')
+const { initializeSocket } = require('./socketHandlers')
+const { loadSharedModule } = require('./sharedRuntime')
 const {
   defaultScene: BLANK_SCENE,
-  generateObjectId
-} = require('../../shared/sceneSchema.cjs')
+  applySceneOps
+} = loadSharedModule('sceneSchema.cjs')
+const {
+  defaultProjectDocument: BLANK_PROJECT_DOCUMENT,
+  normalizeProjectDocument,
+  applyProjectOps
+} = loadSharedModule('projectSchema.cjs')
+const {
+  buildProjectAssetMeta,
+  deleteProject,
+  ensureProject,
+  findProjectById,
+  getProjectPaths,
+  isValidAssetId: isValidProjectAssetId,
+  listProjectsInSpace,
+  normalizeProjectId,
+  readProjectDocument,
+  readProjectOps,
+  upsertProjectMeta,
+  appendProjectOps,
+  writeProjectDocument
+} = require('./projectStore')
 
 const PUBLIC_DIR = config.directories.publicDir
 const DATA_DIR = config.directories.dataDir
@@ -24,105 +47,72 @@ const SLUG_REGEX = /^[a-z0-9-]{3,48}$/
 const DEFAULT_TTL_MS = config.defaultTtlMs
 const MAX_OP_HISTORY = 500
 const OPS_FILE_NAME = 'ops.json'
+const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'model/']
+const ALLOWED_MIME_TYPES = new Set([
+  'application/json',
+  'application/octet-stream',
+  'application/pdf',
+  'application/zip',
+  'application/x-zip-compressed',
+  'application/gzip',
+  'text/plain'
+])
+const ALLOWED_EXTENSIONS = new Set([
+  '.glb',
+  '.gltf',
+  '.obj',
+  '.mtl',
+  '.stl',
+  '.fbx',
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.svg',
+  '.mp4',
+  '.mov',
+  '.webm',
+  '.mp3',
+  '.wav',
+  '.ogg',
+  '.m4a',
+  '.zip',
+  '.bin',
+  '.hdr',
+  '.exr'
+])
 
-const applySceneOps = (scene, ops = []) => {
-  if (!scene || typeof scene !== 'object') {
-    scene = { ...BLANK_SCENE, objects: [] }
-  }
-  let nextScene = {
-    ...scene,
-    objects: Array.isArray(scene.objects) ? [...scene.objects] : []
-  }
-
-  const objectsById = new Map(nextScene.objects.map(obj => [obj.id, obj]))
-
-  const applyPatch = (obj, patch = {}) => ({
-    ...obj,
-    ...patch
-  })
-
-  ops.forEach((op) => {
-    const payload = op?.payload || {}
-    switch (op?.type) {
-      case 'addObject': {
-        if (!payload.object) break
-        const object = {
-          ...payload.object,
-          id: payload.object.id || generateObjectId()
-        }
-        objectsById.set(object.id, object)
-        break
-      }
-      case 'updateObject': {
-        const targetId = payload.objectId
-        if (!targetId || !objectsById.has(targetId)) break
-        const existing = objectsById.get(targetId)
-        objectsById.set(targetId, applyPatch(existing, payload.patch || {}))
-        break
-      }
-      case 'deleteObject': {
-        const targetId = payload.objectId
-        if (targetId) {
-          objectsById.delete(targetId)
-        }
-        break
-      }
-      case 'setSceneSettings': {
-        const allowed = ['backgroundColor', 'gridSize', 'isGridVisible', 'isGizmoVisible', 'isPerfVisible', 'ambientLight', 'directionalLight', 'transformSnaps']
-        allowed.forEach((key) => {
-          if (key in payload) {
-            nextScene[key] = payload[key]
-          }
-        })
-        break
-      }
-      case 'setView': {
-        if (payload.savedView) {
-          nextScene.savedView = {
-            ...nextScene.savedView,
-            ...payload.savedView
-          }
-        }
-        if (payload.default3DView) {
-          nextScene.default3DView = {
-            ...nextScene.default3DView,
-            ...payload.default3DView
-          }
-        }
-        break
-      }
-      case 'replaceScene': {
-        if (payload.scene && typeof payload.scene === 'object') {
-          const replacement = payload.scene
-          nextScene = {
-            ...nextScene,
-            ...replacement
-          }
-          const newObjects = Array.isArray(replacement.objects)
-            ? replacement.objects.map(obj => ({
-                ...obj,
-                id: obj?.id || generateObjectId()
-              }))
-            : []
-          objectsById.clear()
-          newObjects.forEach(obj => objectsById.set(obj.id, obj))
-        }
-        break
-      }
-      default:
-        break
+const isAllowedUpload = (file) => {
+  const mime = (file?.mimetype || '').toLowerCase()
+  const name = (file?.originalname || '').toLowerCase()
+  const ext = path.extname(name)
+  if (ALLOWED_MIME_PREFIXES.some(prefix => mime.startsWith(prefix))) return true
+  if (ALLOWED_MIME_TYPES.has(mime)) {
+    if (mime === 'application/octet-stream' && ext) {
+      return ALLOWED_EXTENSIONS.has(ext)
     }
-  })
-
-  nextScene.objects = Array.from(objectsById.values())
-  return nextScene
+    return true
+  }
+  if (ext && ALLOWED_EXTENSIONS.has(ext)) return true
+  return false
 }
 
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, UPLOADS_DIR),
     filename: (req, file, cb) => cb(null, `${Date.now()}-${file.originalname.replace(/[^a-z0-9._-]+/gi, '_')}`)
-  })
+  }),
+  limits: {
+    fileSize: config.maxUploadBytes
+  },
+  fileFilter: (req, file, cb) => {
+    if (isAllowedUpload(file)) {
+      cb(null, true)
+      return
+    }
+    cb(new Error('Unsupported asset type.'))
+  }
 })
 
 async function ensureDir(dir) {
@@ -139,6 +129,7 @@ const app = express()
 const startedAt = Date.now()
 const recentEvents = []
 const liveClients = new Map()
+const projectLiveClients = new Map()
 
 function pushEvent(type, details = {}) {
   recentEvents.unshift({ type, details, timestamp: new Date().toISOString() })
@@ -219,17 +210,49 @@ const normalizeIncomingOps = (ops = []) => {
     .filter(Boolean)
 }
 
+const tryRecoverJson = (raw = '') => {
+  const trimmed = String(raw || '').trim()
+  if (!trimmed) return null
+  let cursor = Math.max(trimmed.lastIndexOf('}'), trimmed.lastIndexOf(']'))
+  while (cursor >= 0) {
+    const candidate = trimmed.slice(0, cursor + 1)
+    try {
+      return JSON.parse(candidate)
+    } catch {
+      const previousObject = trimmed.lastIndexOf('}', cursor - 1)
+      const previousArray = trimmed.lastIndexOf(']', cursor - 1)
+      cursor = Math.max(previousObject, previousArray)
+    }
+  }
+  return null
+}
+
+const writeJson = async (filePath, data) => {
+  await ensureDir(path.dirname(filePath))
+  const serialized = JSON.stringify(data, null, 2)
+  const tempPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`
+  await fsp.writeFile(tempPath, serialized)
+  await fsp.rename(tempPath, filePath)
+}
+
 const readJson = async (filePath, fallback = null) => {
   try {
     const raw = await fsp.readFile(filePath, 'utf8')
-    return JSON.parse(raw)
+    try {
+      return JSON.parse(raw)
+    } catch (error) {
+      const recovered = tryRecoverJson(raw)
+      if (recovered !== null) {
+        await writeJson(filePath, recovered)
+        return recovered
+      }
+      throw error
+    }
   } catch (error) {
     if (error.code === 'ENOENT') return fallback
     throw error
   }
 }
-
-const writeJson = (filePath, data) => fsp.writeFile(filePath, JSON.stringify(data, null, 2))
 
 const spaceExists = async (spaceId) => {
   try {
@@ -247,6 +270,8 @@ const buildMeta = (spaceId, overrides = {}) => {
     id: spaceId,
     label: (overrides.label && String(overrides.label).trim()) || spaceId,
     permanent: Boolean(overrides.permanent),
+    allowEdits: overrides.allowEdits !== false,
+    publishedProjectId: overrides.publishedProjectId || null,
     createdAt: overrides.createdAt || now,
     updatedAt: now,
     lastTouchedAt: now,
@@ -257,6 +282,16 @@ const buildMeta = (spaceId, overrides = {}) => {
 const loadSpaceMeta = async (spaceId) => {
   const { metaPath } = getSpacePaths(spaceId)
   return readJson(metaPath)
+}
+
+const ensureSpaceWritable = async (spaceId) => {
+  const meta = await loadSpaceMeta(spaceId)
+  if (meta?.allowEdits === false) {
+    const error = new Error('Space is read-only.')
+    error.status = 403
+    throw error
+  }
+  return meta
 }
 
 const saveSpaceMeta = async (spaceId, meta) => {
@@ -274,6 +309,8 @@ const upsertSpaceMeta = async (spaceId, updates = {}) => {
       ...meta,
       ...('label' in updates ? { label: updates.label } : {}),
       ...('permanent' in updates ? { permanent: Boolean(updates.permanent) } : {}),
+      ...('allowEdits' in updates ? { allowEdits: Boolean(updates.allowEdits) } : {}),
+      ...('publishedProjectId' in updates ? { publishedProjectId: updates.publishedProjectId || null } : {}),
       ...('sceneVersion' in updates ? { sceneVersion: Number.isFinite(Number(updates.sceneVersion)) ? Number(updates.sceneVersion) : (meta.sceneVersion || 0) } : {})
     }
     meta.updatedAt = Date.now()
@@ -347,6 +384,61 @@ const pruneSpaces = async () => {
   await Promise.all(stale.map(space => deleteSpace(space.id)))
 }
 
+const collectSceneAssetRefs = (objects = []) => {
+  const refs = new Map()
+  const addRef = (asset) => {
+    if (!asset?.id) return
+    if (!refs.has(asset.id)) {
+      refs.set(asset.id, asset)
+    }
+  }
+
+  objects.forEach((obj) => {
+    addRef(obj?.asset)
+    addRef(obj?.assetRef)
+    addRef(obj?.materialsAssetRef)
+    if (Array.isArray(obj?.assets)) {
+      obj.assets.forEach(addRef)
+    }
+    if (obj?.mediaVariants && typeof obj.mediaVariants === 'object') {
+      Object.values(obj.mediaVariants).forEach(addRef)
+    }
+  })
+
+  return Array.from(refs.values())
+}
+
+const hydrateSceneAssetManifest = (scene, assetBaseUrl = '') => {
+  if (!scene || typeof scene !== 'object') return scene
+
+  const baseUrl = String(assetBaseUrl || '').replace(/\/+$/g, '')
+  const merged = new Map()
+  const addAsset = (asset) => {
+    if (!asset?.id) return
+    const current = merged.get(asset.id) || {}
+    merged.set(asset.id, {
+      ...current,
+      ...asset,
+      ...(baseUrl ? { url: `${baseUrl}/${asset.id}` } : {})
+    })
+  }
+
+  if (Array.isArray(scene.assets)) {
+    scene.assets.forEach(addAsset)
+  }
+  collectSceneAssetRefs(Array.isArray(scene.objects) ? scene.objects : []).forEach(addAsset)
+
+  if (!merged.size) {
+    return scene
+  }
+
+  return {
+    ...scene,
+    assets: Array.from(merged.values()),
+    ...(baseUrl ? { assetsBaseUrl: scene.assetsBaseUrl || baseUrl } : {})
+  }
+}
+
 const serveAsset = async (spaceId, assetId, res) => {
   const { assetsDir } = getSpacePaths(spaceId)
   const filePath = path.join(assetsDir, assetId)
@@ -390,10 +482,43 @@ const broadcastLiveEvent = (spaceId, eventName, payload, excludeId) => {
   })
 }
 
+const getProjectLiveBucket = async (projectId) => {
+  const normalized = normalizeProjectId(projectId)
+  if (!normalized) return null
+  const resolved = await findProjectById(SPACES_DIR, normalized)
+  if (!resolved) return null
+  let bucket = projectLiveClients.get(normalized)
+  if (!bucket) {
+    bucket = new Map()
+    projectLiveClients.set(normalized, bucket)
+  }
+  return {
+    normalized,
+    bucket,
+    project: resolved
+  }
+}
+
+const broadcastProjectLiveEvent = async (projectId, eventName, payload, excludeId) => {
+  const entry = await getProjectLiveBucket(projectId)
+  if (!entry) return
+  const data = `event: ${eventName}\ndata: ${JSON.stringify(payload)}\n\n`
+  entry.bucket.forEach((client, clientId) => {
+    if (excludeId && clientId === excludeId) return
+    try {
+      client.res.write(data)
+    } catch (error) {
+      console.warn('Failed to write project SSE event', error)
+      client.res.end()
+      entry.bucket.delete(clientId)
+    }
+  })
+}
+
 app.use(cors({
-  origin: true,
+  origin: buildCorsOriginHandler(config.corsOrigins),
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Origin', 'Accept'],
+  allowedHeaders: ['Content-Type', 'Origin', 'Accept', 'Authorization', 'X-Api-Key'],
   credentials: true,
   preflightContinue: false,
   optionsSuccessStatus: 204
@@ -407,6 +532,40 @@ app.use((req, res, next) => {
 
 const router = express.Router()
 router.use(express.static(PUBLIC_DIR))
+
+const readAuthToken = (req) => {
+  const header = req.get('authorization')
+  if (header) {
+    const [scheme, value] = header.split(' ')
+    if (scheme && value && scheme.toLowerCase() === 'bearer') {
+      return value.trim()
+    }
+    return header.trim()
+  }
+  const apiKey = req.get('x-api-key')
+  if (apiKey) return String(apiKey).trim()
+  return null
+}
+
+const requireWriteAuth = (req, res, next) => {
+  if (!config.requireAuth) return next()
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next()
+  const token = readAuthToken(req)
+  if (token && token === config.apiToken) {
+    return next()
+  }
+  res.status(401).json({ error: 'Unauthorized' })
+}
+
+router.use('/api', requireWriteAuth)
+
+const resolveProjectContext = async (projectId) => {
+  const normalized = normalizeProjectId(projectId)
+  if (!normalized) {
+    return null
+  }
+  return findProjectById(SPACES_DIR, normalized)
+}
 
 router.get('/api/health', (req, res) => {
   const memory = process.memoryUsage()
@@ -446,7 +605,7 @@ router.get('/api/spaces', async (req, res, next) => {
 
 router.post('/api/spaces', async (req, res, next) => {
   try {
-    const { label = '', slug, permanent = false } = req.body || {}
+    const { label = '', slug, permanent = false, allowEdits } = req.body || {}
     const desired = slug || label || ''
     const spaceId = normalizeSpaceId(desired)
     if (!spaceId) {
@@ -455,10 +614,24 @@ router.post('/api/spaces', async (req, res, next) => {
     if (await spaceExists(spaceId)) {
       return res.status(409).json({ error: 'Space already exists.' })
     }
-    const meta = buildMeta(spaceId, { label, permanent })
+    const meta = buildMeta(spaceId, { label, permanent, allowEdits })
     await saveSpaceMeta(spaceId, meta)
     await ensureSpaceScene(spaceId)
     res.status(201).json({ space: meta })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.get('/api/spaces/:spaceId', async (req, res, next) => {
+  try {
+    const spaceId = normalizeSpaceId(req.params.spaceId)
+    if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+    const meta = await loadSpaceMeta(spaceId)
+    if (!meta) {
+      return res.status(404).json({ error: 'Space not found.' })
+    }
+    res.json({ space: meta })
   } catch (error) {
     next(error)
   }
@@ -471,10 +644,27 @@ router.patch('/api/spaces/:spaceId', async (req, res, next) => {
     if (!(await spaceExists(spaceId))) {
       return res.status(404).json({ error: 'Space not found.' })
     }
-    const { label, permanent } = req.body || {}
+    const { label, permanent, allowEdits, publishedProjectId } = req.body || {}
+    let nextPublishedProjectId
+    if (publishedProjectId !== undefined) {
+      if (publishedProjectId === null || publishedProjectId === '') {
+        nextPublishedProjectId = null
+      } else {
+        nextPublishedProjectId = normalizeProjectId(publishedProjectId)
+        if (!nextPublishedProjectId) {
+          return res.status(400).json({ error: 'Invalid published project id.' })
+        }
+        const project = await findProjectById(SPACES_DIR, nextPublishedProjectId)
+        if (!project || project.spaceId !== spaceId) {
+          return res.status(404).json({ error: 'Published project not found in this space.' })
+        }
+      }
+    }
     const meta = await upsertSpaceMeta(spaceId, {
       ...(label !== undefined ? { label } : {}),
-      ...(permanent !== undefined ? { permanent } : {})
+      ...(permanent !== undefined ? { permanent } : {}),
+      ...(allowEdits !== undefined ? { allowEdits } : {}),
+      ...(publishedProjectId !== undefined ? { publishedProjectId: nextPublishedProjectId } : {})
     })
     res.json({ space: meta })
   } catch (error) {
@@ -490,7 +680,7 @@ router.delete('/api/spaces/:spaceId', async (req, res, next) => {
       return res.status(404).json({ error: 'Space not found.' })
     }
     await deleteSpace(spaceId)
-    res.json({ ok: true, newVersion: nextVersion })
+    res.json({ ok: true })
   } catch (error) {
     next(error)
   }
@@ -510,6 +700,348 @@ router.post('/api/spaces/:spaceId/touch', async (req, res, next) => {
   }
 })
 
+router.get('/api/spaces/:spaceId/projects', async (req, res, next) => {
+  try {
+    const spaceId = normalizeSpaceId(req.params.spaceId)
+    if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+    if (!(await spaceExists(spaceId))) {
+      return res.status(404).json({ error: 'Space not found.' })
+    }
+    const projects = await listProjectsInSpace(SPACES_DIR, spaceId)
+    res.json({ projects })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.post('/api/spaces/:spaceId/projects', async (req, res, next) => {
+  try {
+    const spaceId = normalizeSpaceId(req.params.spaceId)
+    if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+    if (!(await spaceExists(spaceId))) {
+      return res.status(404).json({ error: 'Space not found.' })
+    }
+    await ensureSpaceWritable(spaceId)
+    const title = typeof req.body?.title === 'string' ? req.body.title.trim() : ''
+    const source = typeof req.body?.source === 'string' ? req.body.source.trim() : ''
+    const slugSource = req.body?.slug || title || `project-${Date.now()}`
+    const projectId = normalizeProjectId(slugSource)
+    if (!projectId) {
+      return res.status(400).json({ error: 'Invalid project id.' })
+    }
+    const existing = await resolveProjectContext(projectId)
+    if (existing) {
+      return res.status(409).json({ error: 'Project already exists.' })
+    }
+    const meta = await ensureProject(SPACES_DIR, spaceId, projectId, {
+      title: title || 'Untitled Project',
+      ...(source ? { source } : {})
+    })
+    res.status(201).json({
+      project: meta,
+      document: await readProjectDocument(SPACES_DIR, spaceId, projectId)
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.get('/api/projects/:projectId', async (req, res, next) => {
+  try {
+    const project = await resolveProjectContext(req.params.projectId)
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' })
+    }
+    res.json({ project: project.meta })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.patch('/api/projects/:projectId', async (req, res, next) => {
+  try {
+    const project = await resolveProjectContext(req.params.projectId)
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' })
+    }
+    await ensureSpaceWritable(project.spaceId)
+    const nextMeta = await upsertProjectMeta(SPACES_DIR, project.spaceId, project.projectId, {
+      ...(req.body?.title !== undefined ? { title: req.body.title } : {})
+    })
+    const document = await readProjectDocument(SPACES_DIR, project.spaceId, project.projectId)
+    document.projectMeta = {
+      ...document.projectMeta,
+      id: nextMeta.id,
+      spaceId: nextMeta.spaceId,
+      title: nextMeta.title,
+      createdAt: nextMeta.createdAt,
+      updatedAt: nextMeta.updatedAt,
+      source: nextMeta.source
+    }
+    await writeProjectDocument(SPACES_DIR, project.spaceId, project.projectId, document)
+    res.json({ project: nextMeta })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.delete('/api/projects/:projectId', async (req, res, next) => {
+  try {
+    const project = await resolveProjectContext(req.params.projectId)
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' })
+    }
+    await ensureSpaceWritable(project.spaceId)
+    await deleteProject(SPACES_DIR, project.spaceId, project.projectId)
+    res.json({ ok: true })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.get('/api/projects/:projectId/document', async (req, res, next) => {
+  try {
+    const project = await resolveProjectContext(req.params.projectId)
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' })
+    }
+    const document = await readProjectDocument(SPACES_DIR, project.spaceId, project.projectId)
+    res.json({
+      document,
+      version: Number(project.meta?.documentVersion) || 0,
+      project: project.meta
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.put('/api/projects/:projectId/document', async (req, res, next) => {
+  try {
+    const project = await resolveProjectContext(req.params.projectId)
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' })
+    }
+    await ensureSpaceWritable(project.spaceId)
+    const document = normalizeProjectDocument(req.body || BLANK_PROJECT_DOCUMENT)
+    const currentVersion = Number(project.meta?.documentVersion) || 0
+    const nextVersion = currentVersion + 1
+    document.projectMeta = {
+      ...document.projectMeta,
+      id: project.projectId,
+      spaceId: project.spaceId,
+      createdAt: project.meta?.createdAt || Date.now(),
+      updatedAt: Date.now()
+    }
+    await writeProjectDocument(SPACES_DIR, project.spaceId, project.projectId, document)
+    const resetOp = {
+      opId: crypto.randomUUID?.() || `project-op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      clientId: 'server',
+      type: 'replaceDocument',
+      payload: { document },
+      version: nextVersion,
+      timestamp: Date.now()
+    }
+    await appendProjectOps(SPACES_DIR, project.spaceId, project.projectId, [resetOp], MAX_OP_HISTORY)
+    const nextMeta = await upsertProjectMeta(SPACES_DIR, project.spaceId, project.projectId, {
+      title: document.projectMeta.title,
+      documentVersion: nextVersion
+    })
+    await broadcastProjectLiveEvent(project.projectId, 'project-op', {
+      version: nextVersion,
+      ops: [resetOp]
+    })
+    res.json({
+      ok: true,
+      version: nextVersion,
+      project: nextMeta,
+      document
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.get('/api/projects/:projectId/ops', async (req, res, next) => {
+  try {
+    const project = await resolveProjectContext(req.params.projectId)
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' })
+    }
+    const since = Number(req.query.since)
+    const history = await readProjectOps(SPACES_DIR, project.spaceId, project.projectId)
+    const latestVersion = Number(project.meta?.documentVersion) || 0
+    const filtered = Number.isFinite(since)
+      ? history.filter(entry => (entry.version || 0) > since)
+      : history
+    res.json({
+      ops: filtered,
+      latestVersion
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.post('/api/projects/:projectId/ops', async (req, res, next) => {
+  try {
+    const project = await resolveProjectContext(req.params.projectId)
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' })
+    }
+    await ensureSpaceWritable(project.spaceId)
+    const baseVersion = Number(req.body?.baseVersion)
+    if (!Number.isInteger(baseVersion) || baseVersion < 0) {
+      return res.status(400).json({ error: 'baseVersion must be an integer' })
+    }
+    const normalizedOps = normalizeIncomingOps(req.body?.ops)
+    if (!normalizedOps.length) {
+      return res.status(400).json({ error: 'No operations provided.' })
+    }
+    const currentVersion = Number(project.meta?.documentVersion) || 0
+    if (baseVersion !== currentVersion) {
+      const pendingOps = await readProjectOps(SPACES_DIR, project.spaceId, project.projectId)
+      return res.status(409).json({
+        latestVersion: currentVersion,
+        pendingOps: pendingOps.filter(entry => (entry.version || 0) > baseVersion)
+      })
+    }
+
+    const document = await readProjectDocument(SPACES_DIR, project.spaceId, project.projectId)
+    let nextVersion = currentVersion
+    const timestamp = Date.now()
+    const versionedOps = normalizedOps.map((op) => ({
+      ...op,
+      version: ++nextVersion,
+      timestamp
+    }))
+    const nextDocument = applyProjectOps(document, versionedOps)
+    nextDocument.projectMeta = {
+      ...nextDocument.projectMeta,
+      id: project.projectId,
+      spaceId: project.spaceId,
+      createdAt: project.meta?.createdAt || nextDocument.projectMeta.createdAt,
+      updatedAt: Date.now()
+    }
+    await writeProjectDocument(SPACES_DIR, project.spaceId, project.projectId, nextDocument)
+    await appendProjectOps(SPACES_DIR, project.spaceId, project.projectId, versionedOps, MAX_OP_HISTORY)
+    const nextMeta = await upsertProjectMeta(SPACES_DIR, project.spaceId, project.projectId, {
+      title: nextDocument.projectMeta.title,
+      documentVersion: nextVersion
+    })
+    await broadcastProjectLiveEvent(project.projectId, 'project-op', {
+      version: nextVersion,
+      ops: versionedOps
+    })
+    res.json({
+      newVersion: nextVersion,
+      ops: versionedOps,
+      project: nextMeta
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.post('/api/projects/:projectId/assets', upload.single('asset'), async (req, res, next) => {
+  try {
+    const project = await resolveProjectContext(req.params.projectId)
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' })
+    }
+    await ensureSpaceWritable(project.spaceId)
+    if (!req.file) {
+      return res.status(400).json({ error: 'Missing asset file.' })
+    }
+    let assetId = ''
+    if (req.body?.assetId) {
+      const requested = String(req.body.assetId).trim()
+      if (!isValidProjectAssetId(requested)) {
+        await fsp.rm(req.file.path, { force: true }).catch(() => {})
+        return res.status(400).json({ error: 'Invalid asset id.' })
+      }
+      assetId = requested
+    } else {
+      assetId = crypto.randomUUID()
+    }
+    const { assetsDir } = getProjectPaths(SPACES_DIR, project.spaceId, project.projectId)
+    await ensureDir(assetsDir)
+    const finalPath = path.join(assetsDir, assetId)
+    const metaPath = path.join(assetsDir, `${assetId}.json`)
+    await fsp.rm(finalPath, { force: true }).catch(() => {})
+    await fsp.rm(metaPath, { force: true }).catch(() => {})
+    await fsp.rename(req.file.path, finalPath)
+    const assetMeta = buildProjectAssetMeta({ assetId, file: req.file })
+    await writeJson(metaPath, assetMeta)
+    res.json({
+      asset: {
+        ...assetMeta,
+        url: `${req.baseUrl || ''}/api/projects/${project.projectId}/assets/${assetId}`
+      }
+    })
+  } catch (error) {
+    if (req.file?.path) {
+      await fsp.rm(req.file.path, { force: true }).catch(() => {})
+    }
+    next(error)
+  }
+})
+
+router.get('/api/projects/:projectId/assets/:assetId', async (req, res, next) => {
+  try {
+    const project = await resolveProjectContext(req.params.projectId)
+    if (!project) {
+      return res.status(404).json({ error: 'Project not found.' })
+    }
+    const assetId = String(req.params.assetId || '').trim()
+    if (!isValidProjectAssetId(assetId)) {
+      return res.status(400).json({ error: 'Invalid asset id.' })
+    }
+    const { assetsDir } = getProjectPaths(SPACES_DIR, project.spaceId, project.projectId)
+    const filePath = path.join(assetsDir, assetId)
+    const metaPath = path.join(assetsDir, `${assetId}.json`)
+    const meta = await readJson(metaPath, null)
+    await fsp.access(filePath)
+    res.setHeader('Content-Type', meta?.mimeType || 'application/octet-stream')
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+    fs.createReadStream(filePath).pipe(res)
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return res.status(404).json({ error: 'Asset not found.' })
+    }
+    next(error)
+  }
+})
+
+router.get('/api/projects/:projectId/events', async (req, res, next) => {
+  try {
+    const entry = await getProjectLiveBucket(req.params.projectId)
+    if (!entry) {
+      return res.status(404).json({ error: 'Project not found.' })
+    }
+    res.setHeader('Content-Type', 'text/event-stream')
+    res.setHeader('Cache-Control', 'no-cache')
+    res.setHeader('Connection', 'keep-alive')
+    res.flushHeaders?.()
+    const clientId = crypto.randomUUID()
+    entry.bucket.set(clientId, { res })
+    res.write(`event: ready\ndata: ${JSON.stringify({ clientId, projectId: entry.normalized })}\n\n`)
+    const keepAlive = setInterval(() => {
+      try {
+        res.write(':keep-alive\n\n')
+      } catch {
+        clearInterval(keepAlive)
+      }
+    }, 25000)
+    req.on('close', () => {
+      clearInterval(keepAlive)
+      entry.bucket.delete(clientId)
+    })
+  } catch (error) {
+    next(error)
+  }
+})
+
 router.get('/api/spaces/:spaceId/scene', async (req, res, next) => {
   try {
     const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -517,8 +1049,10 @@ router.get('/api/spaces/:spaceId/scene', async (req, res, next) => {
     const { scenePath } = getSpacePaths(spaceId)
     await ensureSpaceScene(spaceId)
     const scene = await readJson(scenePath, BLANK_SCENE)
+    const assetBaseUrl = `${req.baseUrl || ''}/api/spaces/${spaceId}/assets`
     const meta = await loadSpaceMeta(spaceId)
-    const filteredScene = await filterAvailableSceneAssets(scene, getSpacePaths(spaceId).assetsDir)
+    const hydratedScene = hydrateSceneAssetManifest(scene, assetBaseUrl)
+    const filteredScene = await filterAvailableSceneAssets(hydratedScene, getSpacePaths(spaceId).assetsDir)
     res.json({
       scene: filteredScene,
       version: meta?.sceneVersion || 0
@@ -563,7 +1097,7 @@ router.post('/api/spaces/:spaceId/ops', async (req, res, next) => {
     }
 
     await ensureSpaceScene(spaceId)
-    const meta = await loadSpaceMeta(spaceId)
+    const meta = await ensureSpaceWritable(spaceId)
     const currentVersion = meta?.sceneVersion || 0
     if (parsedBaseVersion !== currentVersion) {
       const history = await readOpsHistory(spaceId)
@@ -608,6 +1142,7 @@ router.put('/api/spaces/:spaceId/scene', async (req, res, next) => {
     if (!sceneData || typeof sceneData !== 'object') {
       return res.status(400).json({ error: 'Scene payload required.' })
     }
+    await ensureSpaceWritable(spaceId)
     const { spaceDir, scenePath, assetsDir } = getSpacePaths(spaceId)
     await ensureDir(spaceDir)
     await ensureDir(assetsDir)
@@ -642,6 +1177,7 @@ router.post('/api/spaces/:spaceId/assets', upload.single('asset'), async (req, r
     if (!req.file) {
       return res.status(400).json({ error: 'Missing asset file.' })
     }
+    await ensureSpaceWritable(spaceId)
     const { assetsDir } = getSpacePaths(spaceId)
     await ensureDir(assetsDir)
     let assetId = ''
@@ -677,6 +1213,9 @@ router.post('/api/spaces/:spaceId/assets', upload.single('asset'), async (req, r
       url
     })
   } catch (error) {
+    if (req.file?.path) {
+      await fsp.rm(req.file.path, { force: true }).catch(() => {})
+    }
     next(error)
   }
 })
@@ -723,22 +1262,27 @@ router.get('/api/spaces/:spaceId/events', (req, res) => {
   })
 })
 
-router.post('/api/spaces/:spaceId/live', (req, res) => {
-  const entry = getLiveBucket(req.params.spaceId)
-  if (!entry) {
-    return res.status(400).json({ error: 'Invalid space id.' })
+router.post('/api/spaces/:spaceId/live', async (req, res, next) => {
+  try {
+    const entry = getLiveBucket(req.params.spaceId)
+    if (!entry) {
+      return res.status(400).json({ error: 'Invalid space id.' })
+    }
+    await ensureSpaceWritable(entry.normalized)
+    const body = req.body || {}
+    if (!body.payload && !body.cursor) {
+      return res.status(400).json({ error: 'payload or cursor required' })
+    }
+    if (body.payload) {
+      broadcastLiveEvent(entry.normalized, 'scene-patch', { payload: body.payload }, body.clientId)
+    }
+    if (body.cursor) {
+      broadcastLiveEvent(entry.normalized, 'cursor-update', { cursor: body.cursor, clientId: body.clientId }, body.clientId)
+    }
+    res.json({ ok: true })
+  } catch (error) {
+    next(error)
   }
-  const body = req.body || {}
-  if (!body.payload && !body.cursor) {
-    return res.status(400).json({ error: 'payload or cursor required' })
-  }
-  if (body.payload) {
-    broadcastLiveEvent(entry.normalized, 'scene-patch', { payload: body.payload }, body.clientId)
-  }
-  if (body.cursor) {
-    broadcastLiveEvent(entry.normalized, 'cursor-update', { cursor: body.cursor, clientId: body.clientId }, body.clientId)
-  }
-  res.json({ ok: true })
 })
 
 const mountTargets = new Set([mountPath])
@@ -753,7 +1297,15 @@ mountTargets.forEach((targetPath) => {
 app.use((err, req, res, next) => {
   pushEvent('error', { message: err.message })
   console.error(err)
-  res.status(500).json({ error: err.message || 'Server error' })
+  if (err?.code === 'LIMIT_FILE_SIZE') {
+    res.status(413).json({ error: 'Uploaded file is too large.' })
+    return
+  }
+  if (err?.message === 'Unsupported asset type.') {
+    res.status(400).json({ error: err.message })
+    return
+  }
+  res.status(err?.status || 500).json({ error: err.message || 'Server error' })
 })
 
 const PORT = config.port
@@ -765,7 +1317,27 @@ initStorage()
     setInterval(() => {
       pruneSpaces().catch((error) => console.warn('Failed to prune spaces', error))
     }, 1000 * 60 * 30) // every 30 minutes
-    app.listen(PORT, () => {
+    
+    // Create HTTP server
+    const httpServer = http.createServer(app)
+    
+    // Initialize Socket.IO for real-time collaboration
+    const io = initializeSocket(httpServer, {
+      ...config,
+      canEditSpace: async (spaceId) => {
+        const normalized = normalizeSpaceId(spaceId)
+        if (!normalized) return false
+        const meta = await loadSpaceMeta(normalized)
+        return meta?.allowEdits !== false
+      },
+      projectExists: async (projectId) => {
+        const resolved = await findProjectById(SPACES_DIR, projectId)
+        return Boolean(resolved)
+      }
+    })
+    console.log('[Socket.IO] Initialized for real-time collaboration')
+    
+    httpServer.listen(PORT, () => {
       pushEvent('server-started', { port: PORT, node: process.version })
       console.log(`Server running. Listening on: ${PORT}`)
     })

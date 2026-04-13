@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { slugifySpaceName, isValidSpaceSlug, getSpaceSlugLimits } from '../utils/spaceNames.js'
+import { isReservedAppSegment } from '../utils/spaceRouting.js'
 
 export function useSpaceNaming({
     newSpaceName,
@@ -11,7 +12,8 @@ export function useSpaceNaming({
     const trimmedSpaceName = useMemo(() => (newSpaceName || '').trim(), [newSpaceName])
     const newSpaceSlug = useMemo(() => slugifySpaceName(trimmedSpaceName), [trimmedSpaceName])
     const isSpaceNameValid = isValidSpaceSlug(newSpaceSlug)
-    const isSpaceNameAvailable = isSpaceNameValid && !spaces.some(space => space.id === newSpaceSlug)
+    const isSpaceNameReserved = isReservedAppSegment(newSpaceSlug)
+    const isSpaceNameAvailable = isSpaceNameValid && !isSpaceNameReserved && !spaces.some(space => space.id === newSpaceSlug)
     const canCreateNamedSpace = Boolean(trimmedSpaceName) && isSpaceNameAvailable
     const canCreateSpace = canCreateNamedSpace && !isCreatingSpace
 
@@ -31,7 +33,9 @@ export function useSpaceNaming({
         if (!isSpaceNameAvailable) {
             return {
                 tone: 'error',
-                message: 'That name is taken. Try another.'
+                message: isSpaceNameReserved
+                    ? 'That name is reserved by the app. Try another.'
+                    : 'That name is taken. Try another.'
             }
         }
         const sharePath = typeof buildSpacePath === 'function' ? buildSpacePath(newSpaceSlug) : newSpaceSlug
@@ -39,7 +43,7 @@ export function useSpaceNaming({
             tone: 'success',
             message: `Share link will be "${sharePath}".`
         }
-    }, [trimmedSpaceName, isSpaceNameValid, isSpaceNameAvailable, newSpaceSlug, slugLimits, buildSpacePath])
+    }, [trimmedSpaceName, isSpaceNameValid, isSpaceNameAvailable, isSpaceNameReserved, newSpaceSlug, slugLimits, buildSpacePath])
 
     return {
         trimmedSpaceName,
