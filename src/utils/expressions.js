@@ -59,6 +59,7 @@ export const evaluateExpressionString = (expression, context = {}, options = {})
     const fnArgs = Object.keys(context);
     const fnValues = Object.values(context);
     try {
+        // eslint-disable-next-line no-new-func
         const evaluator = new Function(...fnArgs, `return (${trimmed});`);
         const result = evaluator(...fnValues);
         if (!Number.isFinite(result)) return null;

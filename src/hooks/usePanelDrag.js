@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 
-let globalZIndex = 1000
+let globalZIndex = 300
 
 export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
-    const { baseZ = 100 } = options
+    const { baseZ = 200 } = options
     const panelRef = useRef(null)
     const dragStateRef = useRef(null)
     const [offset, setOffset] = useState(initialPosition)
@@ -82,34 +82,11 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
         onPointerDown: handlePointerDown
     }
 
-    const panelPointerProps = {
-        onMouseDownCapture: (e) => {
-            // Bring to front on any mouse interaction (capture phase)
-            if (e.button === 0) { // Left click only
-                bringToFront()
-            }
-        },
-        onClickCapture: () => {
-            // Backup handler for elements that prevent mousedown
-            bringToFront()
-        },
-        onTouchStart: () => {
-            // Bring to front on touch
-            bringToFront()
-        }
-    }
-
     return {
         panelRef,
         dragProps,
-        panelPointerProps,
-        dragStyle: { 
-            position: 'fixed', 
-            top: 0, 
-            left: 0, 
-            transform: `translate(${offset.x}px, ${offset.y}px)`, 
-            zIndex 
-        },
+        panelPointerProps: { onPointerDownCapture: bringToFront },
+        dragStyle: { position: 'fixed', top: 0, left: 0, transform: `translate(${offset.x}px, ${offset.y}px)`, zIndex },
         isDragging
     }
 }

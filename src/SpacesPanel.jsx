@@ -25,12 +25,9 @@ export default function SpacesPanel({
     onOpenSpace,
     onCopyLink,
     onDeleteSpace,
-    onRenameSpace,
     onTogglePermanent,
     newSpaceName,
     onSpaceNameChange,
-    openAfterCreateTarget = 'public',
-    onOpenAfterCreateTargetChange,
     spaceNameFeedback,
     canCreateSpace,
     ttlHours,
@@ -39,15 +36,11 @@ export default function SpacesPanel({
     onCreateGroup,
     onSelectGroup,
     onDeleteGroup,
-    canCreateGroup,
-    surfaceMode = 'floating'
+    canCreateGroup
 }) {
     const [copiedId, setCopiedId] = useState(null)
-    const isSheetMode = surfaceMode === 'sheet'
-    const isDockMode = surfaceMode === 'dock'
-    const isEmbeddedMode = isSheetMode || isDockMode
-    const dragState = usePanelDrag({ x: 704, y: 460 }, { baseZ: 100 })
-    const resizeState = usePanelResize(320, {
+    const { panelRef, dragProps, dragStyle, isDragging, panelPointerProps } = usePanelDrag({ x: 704, y: 460 }, { baseZ: 150 })
+    const { width, height, resizerProps, isResizing } = usePanelResize(320, {
         min: 280,
         max: 640,
         minHeight: 260,
@@ -66,12 +59,12 @@ export default function SpacesPanel({
 
     return (
         <div
-            ref={isEmbeddedMode ? undefined : dragState.panelRef}
-            style={isEmbeddedMode ? undefined : { ...dragState.dragStyle, width: resizeState.width, height: resizeState.height }}
-            className={['floating-panel', 'spaces-panel', isSheetMode ? 'sheet-panel' : (isDockMode ? 'dock-panel' : 'draggable-panel')].join(' ')}
-            {...(isEmbeddedMode ? {} : dragState.panelPointerProps)}
+            ref={panelRef}
+            style={{ ...dragStyle, width, height }}
+            className="floating-panel spaces-panel draggable-panel"
+            {...panelPointerProps}
         >
-            <div className={`panel-header ${isSheetMode ? 'sheet-panel-header' : (isDockMode ? 'dock-panel-header' : `draggable-header ${dragState.isDragging ? 'dragging' : ''}`)}`.trim()} {...(isEmbeddedMode ? {} : dragState.dragProps)}>
+            <div className={`panel-header draggable-header ${isDragging ? 'dragging' : ''}`} {...dragProps}>
                 <h3>Spaces</h3>
                 <button className="close-button" onClick={onClose}>×</button>
             </div>
@@ -95,20 +88,6 @@ export default function SpacesPanel({
                             {spaceNameFeedback.message}
                         </p>
                     )}
-                </div>
-                <div className="space-name-field">
-                    <label htmlFor="space-open-target-input">Open After Create</label>
-                    <select
-                        id="space-open-target-input"
-                        value={openAfterCreateTarget}
-                        onChange={(event) => onOpenAfterCreateTargetChange?.(event.target.value)}
-                        className="text-input"
-                    >
-                        <option value="public">Public route</option>
-                        <option value="studio">Studio workspace</option>
-                        <option value="beta">Beta workspace</option>
-                        <option value="admin">Admin page</option>
-                    </select>
                 </div>
                 <div className="spaces-panel-actions">
                     <button
@@ -174,9 +153,6 @@ export default function SpacesPanel({
                                 <button type="button" onClick={() => handleCopy(space.id)}>
                                     {copiedId === space.id ? 'Copied!' : 'Copy Link'}
                                 </button>
-                                <button type="button" onClick={() => onRenameSpace?.(space.id)}>
-                                    Rename
-                                </button>
                                 <button
                                     type="button"
                                     onClick={() => onTogglePermanent?.(space.id, !space.isPermanent)}
@@ -232,7 +208,7 @@ export default function SpacesPanel({
                     </>
                 )}
             </div>
-            {!isEmbeddedMode && <div className={`panel-resizer ${resizeState.isResizing ? 'resizing' : ''}`} {...resizeState.resizerProps} />}
+            <div className={`panel-resizer ${isResizing ? 'resizing' : ''}`} {...resizerProps} />
         </div>
     )
 }

@@ -5,8 +5,6 @@ dist/
 .cache/
 coverage/
 tmp/
-.archive/
-.deploy/
 
 # Env and local config
 .env
@@ -22,12 +20,6 @@ pnpm-debug.log*
 
 # OS noise
 .DS_Store
-
-# Local workspace-only files
-.codex
-open_call/
-docs/checkpoints/
-.cpanel.yml
 
 # Server data
 serverXR/data/

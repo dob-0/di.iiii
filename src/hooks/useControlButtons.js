@@ -19,7 +19,6 @@ export function useControlButtons({
     canUndo,
     canRedo,
     handleClear,
-    navigateToPreferences,
     // panels
     isViewPanelVisible,
     setIsViewPanelVisible,
@@ -42,56 +41,29 @@ export function useControlButtons({
     handleReloadFromServer,
     handlePublishToServer,
     canPublishToServer,
-    isReadOnly,
-    canAccessServerSpaces,
-    handleToggleSpaceEditLock,
     // display
     isFullscreen,
     handleEnterFullscreen,
     setIsUiVisible,
     isStatusPanelVisible,
     setIsStatusPanelVisible,
-    interactionMode,
-    toggleInteractionMode,
     isSelectionLocked,
     setIsSelectionLocked,
     uiDefaultVisible,
     toggleUiDefaultVisible,
-    layoutMode,
-    toggleLayoutMode,
-    layoutSide,
-    cycleLayoutSide,
-    presentationMode,
-    setPresentationMode,
-    handleEnterXrFocus,
     // xr
+    isArModeActive,
+    arAnchorTransform,
+    resetArAnchor,
     isXrPresenting,
     handleEnterXrSession,
     supportedXrModes,
     activeXrMode,
-    handleExitXrSession,
-    showXrDiagnostics
+    handleExitXrSession
 }) {
     return useMemo(() => {
-        const isSceneView = presentationMode === 'scene'
-        const isFixedCameraView = presentationMode === 'fixed-camera'
-        const isCodeView = presentationMode === 'code'
-        const xrModeBlocked = !isSceneView
-
-        const interactionModeButton = {
-            key: 'interaction-mode',
-            label: interactionMode === 'edit' ? 'Mode: Edit' : 'Mode: Navigate',
-            onClick: toggleInteractionMode,
-            hint: 'E',
-            variant: interactionMode === 'edit' ? 'success' : undefined,
-            title: interactionMode === 'edit'
-                ? 'Edit mode: selection and gizmo editing are active. Press E to switch.'
-                : 'Navigate mode: camera-first navigation. Press E to switch.'
-        }
-
         const sceneButtons = [
             spaceLabelButton,
-            interactionModeButton,
             {
                 key: 'new-space',
                 label: isCreatingSpace ? 'Creating...' : 'New Space',
@@ -118,9 +90,8 @@ export function useControlButtons({
         }
         if (isUiVisible) {
             sceneButtons.push(
-                { key: 'preferences', label: 'Admin', onClick: navigateToPreferences },
-                { key: 'save', label: 'Export Project', onClick: handleSave, hint: 'Cmd/Ctrl+S' },
-                { key: 'load', label: 'Import Project', onClick: handleLoadClick },
+                { key: 'save', label: 'Export Scene', onClick: handleSave, hint: 'Cmd/Ctrl+S' },
+                { key: 'load', label: 'Load Scene', onClick: handleLoadClick },
                 { key: 'offline-mode', label: isOfflineMode ? 'Exit Offline' : 'Work Offline', onClick: handleToggleOfflineMode },
                 { key: 'undo', label: 'Undo', onClick: handleUndo, disabled: !canUndo, hint: 'Cmd/Ctrl+Z' },
                 { key: 'redo', label: 'Redo', onClick: handleRedo, disabled: !canRedo, hint: 'Shift+Cmd/Ctrl+Z' },
@@ -141,14 +112,6 @@ export function useControlButtons({
         const adminButtons = (isAdminMode && isUiVisible)
             ? [
                 { key: 'spaces', label: 'Spaces', onClick: () => setIsSpacesPanelVisible(prev => !prev), isActive: isSpacesPanelVisible },
-                ...(canAccessServerSpaces
-                    ? [{
-                        key: 'edit-lock',
-                        label: isReadOnly ? 'Editing: Locked' : 'Editing: Open',
-                        onClick: () => handleToggleSpaceEditLock?.(isReadOnly),
-                        title: 'Toggle whether collaborators can edit'
-                    }]
-                    : []),
                 ...(liveSyncFeatureEnabled
                     ? [{
                         key: 'live-toggle',
@@ -168,33 +131,6 @@ export function useControlButtons({
             displayButtons.push({ key: 'fullscreen', label: 'Enter Fullscreen', onClick: handleEnterFullscreen })
         }
         if (isUiVisible) {
-            displayButtons.push({
-                key: 'presentation-scene',
-                label: '3D View',
-                onClick: () => setPresentationMode('scene'),
-                isActive: isSceneView,
-                title: 'Use the normal interactive 3D scene camera.'
-            })
-            displayButtons.push({
-                key: 'presentation-fixed-camera',
-                label: '2D Camera',
-                onClick: () => setPresentationMode('fixed-camera'),
-                isActive: isFixedCameraView,
-                title: 'Lock the scene to a saved presentation camera.'
-            })
-            displayButtons.push({
-                key: 'presentation-code',
-                label: 'Code View',
-                onClick: () => setPresentationMode('code'),
-                isActive: isCodeView,
-                title: 'Show this space as a flat 2D/code-driven presentation.'
-            })
-            displayButtons.push({
-                key: 'xr-focus',
-                label: 'XR Focus',
-                onClick: handleEnterXrFocus,
-                title: 'Hide the editor UI and switch to the 3D scene so only XR controls remain.'
-            })
             displayButtons.push({ key: 'hide-ui', label: 'Hide UI', onClick: () => setIsUiVisible(false), variant: 'warning' })
             displayButtons.push({
                 key: 'status-panel',
@@ -216,62 +152,42 @@ export function useControlButtons({
             onClick: toggleUiDefaultVisible,
             title: 'Set whether the UI shows on load'
         })
-        const buildXrSessionButtons = () => {
-            if (!isXrPresenting) {
-                return [
-                    {
-                        key: 'enter-vr',
-                        label: 'Enter VR',
-                        onClick: () => handleEnterXrSession('vr'),
-                        disabled: !supportedXrModes.vr || xrModeBlocked,
-                        title: xrModeBlocked
-                            ? 'Switch back to 3D View or use XR Focus before entering immersive mode.'
-                            : (!supportedXrModes.vr ? 'VR is not supported on this device or browser.' : undefined)
-                    },
-                    {
-                        key: 'enter-ar',
-                        label: 'Enter AR',
-                        onClick: () => handleEnterXrSession('ar'),
-                        disabled: !supportedXrModes.ar || xrModeBlocked,
-                        title: xrModeBlocked
-                            ? 'Switch back to 3D View or use XR Focus before entering immersive mode.'
-                            : (!supportedXrModes.ar ? 'AR is not supported on this device or browser.' : undefined)
-                    }
-                ]
-            }
 
-            return [{
+        const xrButtons = []
+        if (isArModeActive) {
+            xrButtons.push({
+                key: 'ar-anchor',
+                label: arAnchorTransform.anchored ? 'Recenter AR' : 'Place Scene',
+                onClick: resetArAnchor,
+                variant: arAnchorTransform.anchored ? undefined : 'warning'
+            })
+        }
+        if (!isXrPresenting) {
+            xrButtons.push(
+                {
+                    key: 'enter-vr',
+                    label: 'Enter VR',
+                    onClick: () => handleEnterXrSession('vr'),
+                    disabled: !supportedXrModes.vr,
+                    title: !supportedXrModes.vr ? 'VR is not supported on this device or browser.' : undefined
+                },
+                {
+                    key: 'enter-ar',
+                    label: 'Enter AR',
+                    onClick: () => handleEnterXrSession('ar'),
+                    disabled: !supportedXrModes.ar,
+                    title: !supportedXrModes.ar ? 'AR is not supported on this device or browser.' : undefined
+                }
+            )
+        } else {
+            xrButtons.push({
                 key: 'exit-xr',
                 label: activeXrMode === 'immersive-ar' ? 'Exit AR' : 'Exit XR',
                 onClick: handleExitXrSession
-            }]
+            })
         }
 
-        const xrButtons = isUiVisible ? [
-            ...buildXrSessionButtons(),
-            ...(showXrDiagnostics ? [{
-                key: 'xr-debug',
-                label: 'XR Debug',
-                onClick: showXrDiagnostics,
-                title: 'Copy XR diagnostics for support and session checks'
-            }] : [])
-        ] : []
-        const hiddenUiButtons = !isUiVisible
-            ? [
-                { key: 'show-ui', label: 'Show UI', onClick: () => setIsUiVisible(true), variant: 'success' },
-                ...(!isSceneView
-                    ? [{
-                        key: 'switch-3d-view',
-                        label: '3D View',
-                        onClick: () => setPresentationMode('scene'),
-                        title: 'Return to the 3D scene while the UI stays hidden.'
-                    }]
-                    : []),
-                ...(isXrPresenting ? buildXrSessionButtons() : [])
-            ]
-            : []
-
-        return { sceneButtons, panelButtons, adminButtons, displayButtons, xrButtons, hiddenUiButtons }
+        return { sceneButtons, panelButtons, adminButtons, displayButtons, xrButtons }
     }, [
         spaceLabelButton,
         isCreatingSpace,
@@ -290,7 +206,6 @@ export function useControlButtons({
         canUndo,
         canRedo,
         handleClear,
-        navigateToPreferences,
         isViewPanelVisible,
         setIsViewPanelVisible,
         isWorldPanelVisible,
@@ -302,9 +217,6 @@ export function useControlButtons({
         isOutlinerPanelVisible,
         setIsOutlinerPanelVisible,
         isAdminMode,
-        isReadOnly,
-        canAccessServerSpaces,
-        handleToggleSpaceEditLock,
         isSpacesPanelVisible,
         setIsSpacesPanelVisible,
         liveSyncFeatureEnabled,
@@ -319,22 +231,19 @@ export function useControlButtons({
         setIsUiVisible,
         isStatusPanelVisible,
         setIsStatusPanelVisible,
-        interactionMode,
-        toggleInteractionMode,
         isSelectionLocked,
         setIsSelectionLocked,
         uiDefaultVisible,
         toggleUiDefaultVisible,
-        presentationMode,
-        setPresentationMode,
-        handleEnterXrFocus,
+        isArModeActive,
+        arAnchorTransform?.anchored,
+        resetArAnchor,
         isXrPresenting,
         handleEnterXrSession,
         supportedXrModes?.vr,
         supportedXrModes?.ar,
         activeXrMode,
-        handleExitXrSession,
-        showXrDiagnostics
+        handleExitXrSession
     ])
 }
 

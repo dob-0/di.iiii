@@ -1,21 +1,24 @@
-import React, { useContext, useMemo, useRef, useEffect, useCallback } from 'react'
+import React, { useContext, useMemo, useRef, useEffect } from 'react'
 import * as THREE from 'three'
 import { useThree } from '@react-three/fiber'
 import { TransformControls } from '@react-three/drei'
-import { SceneContext, UiContext, SceneSettingsContext, RefsContext, ActionsContext } from './contexts/AppContexts.js'
+import { AppContext } from './AppContext.js'
 
 export default function MultiSelectionControls() {
-    const { objects, selectedObjectIds, setObjects } = useContext(SceneContext)
     const {
+        objects,
+        selectedObjectIds,
+        setObjects,
         gizmoMode,
         isGizmoVisible,
+        transformSnaps,
+        controlsRef,
+        axisConstraint,
+        setAxisConstraint,
         resetAxisLock,
         setIsPointerDragging,
         isSelectionLocked
-    } = useContext(UiContext)
-    const { transformSnaps } = useContext(SceneSettingsContext)
-    const { controlsRef } = useContext(RefsContext)
-    const { socketEmit } = useContext(ActionsContext)
+    } = useContext(AppContext)
 
     const selectedObjects = useMemo(() => {
         if (!selectedObjectIds || selectedObjectIds.length === 0) return []
@@ -27,10 +30,9 @@ export default function MultiSelectionControls() {
     const isActive = isGizmoVisible && selectedObjects.length > 1 && !isLocked
     const { scene } = useThree()
     const pivot = useMemo(() => new THREE.Group(), [])
+    const pivotRef = useRef(pivot)
     const transformStateRef = useRef(null)
     const isTransformingRef = useRef(false)
-    const transformControlsRef = useRef(null)
-    const dragStateRef = useRef(false)
 
     const centroid = useMemo(() => {
         if (selectedObjects.length === 0) return [0, 0, 0]
@@ -59,7 +61,7 @@ export default function MultiSelectionControls() {
         }
     }, [pivot, scene])
 
-    const captureInitialState = useCallback(() => {
+    const captureInitialState = () => {
         const pivotMatrix = new THREE.Matrix4().compose(
             pivot.position.clone(),
             pivot.quaternion.clone(),
@@ -75,9 +77,9 @@ export default function MultiSelectionControls() {
             return { id: obj.id, matrix }
         })
         transformStateRef.current = { pivotMatrix, pivotInverse, entries }
-    }, [pivot, selectedObjects])
+    }
 
-    const applyDelta = useCallback(() => {
+    const applyDelta = () => {
         const state = transformStateRef.current
         if (!state) return
         const currentPivotMatrix = new THREE.Matrix4().compose(
@@ -101,71 +103,29 @@ export default function MultiSelectionControls() {
             })
         })
         if (updates.size === 0) return
-        const updatedObjects = []
-        setObjects(prev => prev.map(obj => {
-            if (!updates.has(obj.id)) return obj
-            const next = { ...obj, ...updates.get(obj.id) }
-            updatedObjects.push(next)
-            return next
-        }))
-        if (socketEmit?.objectChanged) {
-            updatedObjects.forEach((updatedObject) => {
-                socketEmit.objectChanged(updatedObject.id, 'transform', updatedObject)
-            })
-        }
-    }, [pivot, setObjects, socketEmit])
+        setObjects(prev => prev.map(obj => updates.get(obj.id) ? { ...obj, ...updates.get(obj.id) } : obj))
+    }
 
-    const handlePointerDown = useCallback((event) => {
-        event?.stopPropagation?.()
-        event?.preventDefault?.()
+    const handlePointerDown = () => {
         if (isLocked) return
         if (controlsRef.current) controlsRef.current.enabled = false
         setIsPointerDragging?.(true)
         isTransformingRef.current = true
         captureInitialState()
-    }, [captureInitialState, controlsRef, isLocked, setIsPointerDragging])
+    }
 
-    const handlePointerUp = useCallback((event) => {
-        event?.stopPropagation?.()
-        event?.preventDefault?.()
+    const handlePointerUp = () => {
         if (controlsRef.current) controlsRef.current.enabled = true
         setIsPointerDragging?.(false)
         isTransformingRef.current = false
         transformStateRef.current = null
         resetAxisLock()
-    }, [controlsRef, resetAxisLock, setIsPointerDragging])
+    }
 
-    const handleObjectChange = useCallback(() => {
+    const handleObjectChange = () => {
         if (!isTransformingRef.current || isLocked) return
         applyDelta()
-    }, [applyDelta, isLocked])
-
-    useEffect(() => {
-        const controls = transformControlsRef.current
-        if (!controls) return
-        const checkDragging = (event) => {
-            const dragging = typeof event?.value === 'boolean'
-                ? event.value
-                : Boolean(controls.dragging)
-            if (dragging === dragStateRef.current) return
-            dragStateRef.current = dragging
-            setIsPointerDragging?.(dragging)
-            if (controlsRef.current) {
-                controlsRef.current.enabled = !dragging
-            }
-            if (dragging && !isTransformingRef.current) {
-                isTransformingRef.current = true
-                captureInitialState()
-            }
-            if (!dragging) {
-                isTransformingRef.current = false
-                transformStateRef.current = null
-                resetAxisLock()
-            }
-        }
-        controls.addEventListener('dragging-changed', checkDragging)
-        return () => controls.removeEventListener('dragging-changed', checkDragging)
-    }, [captureInitialState, controlsRef, resetAxisLock, setIsPointerDragging])
+    }
 
     if (!isActive) {
         pivot.visible = false
@@ -176,7 +136,6 @@ export default function MultiSelectionControls() {
 
     return (
         <TransformControls
-            ref={transformControlsRef}
             object={pivot}
             mode={gizmoMode}
             translationSnap={gizmoMode === 'translate' ? (transformSnaps?.translation || 1) : null}
@@ -190,14 +149,7 @@ export default function MultiSelectionControls() {
             onPointerDown={handlePointerDown}
             onMouseUp={handlePointerUp}
             onPointerUp={handlePointerUp}
-            onPointerCancel={(event) => {
-                event?.stopPropagation?.()
-                event?.preventDefault?.()
-                setIsPointerDragging?.(false)
-                if (controlsRef.current) controlsRef.current.enabled = true
-                isTransformingRef.current = false
-                transformStateRef.current = null
-            }}
+            onPointerCancel={() => setIsPointerDragging?.(false)}
             onObjectChange={handleObjectChange}
         />
     )

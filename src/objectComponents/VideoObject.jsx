@@ -2,53 +2,59 @@ import React, { useState, useEffect } from 'react'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
-import { attachVideoPlaybackRetry, configureVideoElement } from '../utils/videoPlayback.js'
 
 function useVideoTextureSource(sourceUrl) {
     const [texture, setTexture] = useState(null)
-    const [playbackBlocked, setPlaybackBlocked] = useState(false)
 
     useEffect(() => {
         const resolvedSrc = typeof sourceUrl === 'string' ? sourceUrl.trim() : ''
         if (!resolvedSrc || resolvedSrc === 'blob:null') {
             setTexture(null)
-            setPlaybackBlocked(false)
             return
         }
 
         const video = document.createElement('video')
-        configureVideoElement(video, resolvedSrc, { preload: 'auto' })
+        video.src = resolvedSrc
+        video.loop = true
+        video.muted = true
+        video.autoplay = true
+        video.playsInline = true
+        video.crossOrigin = 'anonymous'
+        video.preload = 'metadata'
 
         const tex = new THREE.VideoTexture(video)
         tex.colorSpace = THREE.SRGBColorSpace
         tex.minFilter = THREE.LinearFilter
         tex.magFilter = THREE.LinearFilter
-        tex.needsUpdate = true
 
-        const detachPlaybackRetry = attachVideoPlaybackRetry(video, {
-            onBlockedChange: setPlaybackBlocked
-        })
+        const startPlayback = async () => {
+            try {
+                await video.play()
+            } catch (error) {
+                // Autoplay can fail without user gesture; keep texture but stay silent.
+            }
+        }
+        startPlayback()
 
         setTexture(tex)
 
         return () => {
-            detachPlaybackRetry()
             video.pause()
             video.src = ''
             tex.dispose()
         }
     }, [sourceUrl])
 
-    return { texture, playbackBlocked }
+    return texture
 }
 
 export default function VideoObject({ assetRef, data, opacity = 1, linkActive }) {
-    const assetUrl = useAssetUrl(assetRef, { preferRemoteSource: true })
+    const assetUrl = useAssetUrl(assetRef)
     const isVideoType = !assetRef?.mimeType || assetRef.mimeType.startsWith('video/')
     const rawSource = (isVideoType ? assetUrl : null) || data || null
     const sourceUrl = typeof rawSource === 'string' ? rawSource.trim() : null
     const [size, setSize] = useState([1, 1])
-    const { texture, playbackBlocked } = useVideoTextureSource(sourceUrl)
+    const texture = useVideoTextureSource(sourceUrl)
 
     useEffect(() => {
         const resolvedSrc = typeof sourceUrl === 'string' ? sourceUrl.trim() : ''
@@ -58,7 +64,7 @@ export default function VideoObject({ assetRef, data, opacity = 1, linkActive })
         }
 
         const video = document.createElement('video')
-        configureVideoElement(video, resolvedSrc, { preload: 'metadata' })
+        video.src = resolvedSrc
         const handleMetadata = () => {
             const aspect = video.videoWidth / (video.videoHeight || 1)
             setSize([Math.max(aspect * 3, 1), 3])
@@ -79,11 +85,6 @@ export default function VideoObject({ assetRef, data, opacity = 1, linkActive })
         <mesh position-y={0.01} rotation-x={-Math.PI / 2}>
             <planeGeometry args={size} />
             <meshBasicMaterial map={texture} toneMapped={false} transparent opacity={opacity} />
-            {playbackBlocked && (
-                <Html position={[0, 0.08, 0]} center>
-                    <span className="link-label">Click or press a key to start video</span>
-                </Html>
-            )}
             {linkActive && (
                 <Html position={[0, 0.05, 0]} center>
                     <span className="link-label">🔗</span>

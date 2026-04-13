@@ -16,6 +16,7 @@ export default function AudioObject({
     const sourceUrl = assetUrl || data || null
     const [canUsePositional, setCanUsePositional] = React.useState(true)
     const audioRef = React.useRef(null)
+    const htmlAudioRef = React.useRef(null)
     const htmlAudioElRef = React.useRef(null)
     const mimeType = (assetRef?.mimeType || '').toLowerCase()
     const forceHtmlAudio = mimeType.includes('flac')
@@ -53,7 +54,7 @@ export default function AudioObject({
         }
         testPlayback()
         return () => { cancelled = true }
-    }, [forceHtmlAudio, sourceUrl])
+    }, [sourceUrl])
 
     React.useEffect(() => {
         const audio = audioRef.current

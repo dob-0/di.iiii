@@ -1,10 +1,6 @@
 RewriteEngine On
 RewriteBase /
 
-# Let the cPanel Node.js App mounted at /serverXR handle backend traffic.
-RewriteCond %{REQUEST_URI} ^/serverXR(/|$)
-RewriteRule ^ - [L]
-
 # Allow direct requests for real files/directories
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d

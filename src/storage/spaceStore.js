@@ -41,11 +41,7 @@ const normalizeSpace = (space) => {
         label: (space.label && String(space.label).trim()) || fallbackLabel,
         createdAt: Number(space.createdAt) || Date.now(),
         lastActive: Number(space.lastActive) || Date.now(),
-        isPermanent: Boolean(space.isPermanent),
-        allowEdits: space.allowEdits !== false,
-        publishedProjectId: typeof space.publishedProjectId === 'string' && space.publishedProjectId.trim()
-            ? space.publishedProjectId.trim()
-            : null
+        isPermanent: Boolean(space.isPermanent)
     }
 }
 
@@ -107,9 +103,7 @@ export const createSpace = ({ label, slug, isPermanent = false } = {}) => {
     const record = normalizeSpace({
         id: normalizedId,
         label,
-        isPermanent,
-        allowEdits: true,
-        publishedProjectId: null
+        isPermanent
     })
     const spaces = readSpaces()
     spaces.unshift(record)
@@ -131,32 +125,6 @@ export const toggleSpacePermanent = (spaceId, isPermanent) => {
     spaces[index] = {
         ...spaces[index],
         isPermanent: Boolean(isPermanent)
-    }
-    writeSpaces(spaces)
-}
-
-export const setSpaceAllowEdits = (spaceId, allowEdits) => {
-    if (!spaceId) return
-    const spaces = readSpaces()
-    const index = spaces.findIndex(space => space.id === spaceId)
-    if (index === -1) return
-    spaces[index] = {
-        ...spaces[index],
-        allowEdits: allowEdits !== false
-    }
-    writeSpaces(spaces)
-}
-
-export const setSpaceLabel = (spaceId, label) => {
-    if (!spaceId) return
-    const nextLabel = String(label || '').trim()
-    if (!nextLabel) return
-    const spaces = readSpaces()
-    const index = spaces.findIndex(space => space.id === spaceId)
-    if (index === -1) return
-    spaces[index] = {
-        ...spaces[index],
-        label: nextLabel
     }
     writeSpaces(spaces)
 }

@@ -1,4 +1,4 @@
-name: Release Bundles
+name: Release
 
 on:
   push:
@@ -15,30 +15,21 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Stage cPanel release
-        run: npm run deploy:cpanel
+      - name: Build
+        run: npm run build
 
       - name: Zip dist
-        run: |
-          cd .deploy/cpanel/public_html
-          zip -r ../../../dist.zip .
-
-      - name: Zip cPanel release
-        run: |
-          cd .deploy/cpanel
-          zip -r ../../cpanel-release.zip .
+        run: zip -r dist.zip dist
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            dist.zip
-            cpanel-release.zip
+          files: dist.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

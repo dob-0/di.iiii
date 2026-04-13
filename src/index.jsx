@@ -1,13 +1,10 @@
 import './style.css'
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import RootApp from './RootApp.jsx'
-import { ensureRuntimeConsole } from './services/runtimeConsole.js'
-
-ensureRuntimeConsole()
+import App from './App.jsx'
 
 ReactDOM.createRoot(document.querySelector('#root')).render(
     <React.StrictMode>
-        <RootApp />
+        <App />
     </React.StrictMode>
 )

@@ -1,288 +1,78 @@
-# dii Platform
+# dii Scene Editor
 
-Web-based spatial editor platform built with React, Vite, Three.js, and a Node backend in `serverXR` for persistence, assets, SSE, presence, and deploy-time runtime wiring.
-
-Current baseline:
-
-- package version: `0.2.0`
-- runtime baseline: Node `22.x`
-- active work branch: `dev`
-- stable/public branch: `main`
-
-Start here:
-
-- [Checkpoint 2026-04-09](docs/checkpoints/2026-04-09.md)
-- [Live Deploy Runbook](docs/deploy/LIVE_DEPLOY.md)
-- [cPanel Prebuilt Deploy](docs/deploy/CPANEL_PREBUILT_DEPLOY.md)
-- [Project Surfaces](docs/architecture/PROJECT_SURFACES.md)
-
-## Current Truth
-
-This repo is easiest to understand as two lanes:
-
-- `dev + staging` = work lane
-- `main + production` = public lane
-
-That model matters more than any old deploy note or spare workflow file.
-
-Also keep these boundaries in mind:
-
-- code is promoted between environments
-- scene data and uploaded assets are not automatically shared between environments
-- `/serverXR` stays owned by the cPanel Node.js App in both staging and production
-
-## Platform Surfaces
-
-This platform currently has five active surfaces:
-
-- `Public Space View`
-  - route: `/<space>`
-  - shows the live published project for a space
-  - falls back to V1 when no live project is published
-- `Studio`
-  - route: `/<space>/studio`
-  - compatibility alias: `/studio` for `main`
-  - main authoring surface
-- `Beta`
-  - route: `/<space>/beta`
-  - compatibility alias: `/beta` for `main`
-  - secondary editor lane kept alongside Studio
-- `Admin/Ops`
-  - route: `/admin?space=<space>`
-  - operator/debugging surface
-- `V1 Legacy`
-  - route: `/<space>` when no live project is published
-  - legacy collaborative editor and compatibility lane
-
-Current direction:
-
-- Studio is the main authoring surface
-- Beta remains available, but it is not the long-term primary lane
-- V1 remains the compatibility and fallback lane
-- public routes should stay simple even if the editor model grows
-
-## Space Model
-
-Spaces are first-class now.
-
-Each space can have:
-
-- a public route: `/<space>`
-- a Studio route: `/<space>/studio`
-- a Beta route: `/<space>/beta`
-- an Admin route: `/admin?space=<space>`
-
-Management capabilities now available in the work lane:
-
-- create spaces
-- open newly created spaces directly in `Public`, `Studio`, `Beta`, or `Admin`
-- rename space labels without changing the space ID/URL
-- delete spaces
-- create and delete projects inside a space
-- publish or clear a live project for a space
-
-Important nuance:
-
-- the space ID controls the URL
-- the label is safe to rename
-- Studio/Beta now treat the route space as authoritative
-- if a project request hits a missing space, the client can auto-provision that space and retry
-
-## Repo Map
-
-- `src/RootApp.jsx`
-  - top-level route switch
-- `src/SpaceSurfaceApp.jsx`
-  - chooses public viewer vs V1 fallback for `/<space>`
-- `src/components/`
-  - shared desktop/mobile/admin UI
-- `src/hooks/`
-  - app orchestration, spaces UI, V1 logic
-- `src/project/`
-  - shared project model used by Studio and Beta
-- `src/project/components/PublicProjectViewer.jsx`
-  - live public viewer
-- `src/studio/`
-  - Studio route/UI layer
-- `src/beta/`
-  - Beta route/UI layer
-- `serverXR/`
-  - backend app
-- `shared/`
-  - backend/shared schemas used by runtime
-- `src/shared/`
-  - frontend/shared schemas
-- `scripts/`
-  - dev stack, deploy, smoke, checkpoint, and release tooling
-- `docs/`
-  - checkpoints, deploy notes, testing, and architecture docs
+Spatial editor for the web (React + Vite) with an optional Node API (`serverXR/`) for sharing scenes and assets.
 
 ## Requirements
+- Node 18+ (frontend) / Node 18+ or host-provided version for `serverXR` (ecosystem config targets 22.x).
+- npm
 
-- Node `22.x`
-- npm `10.x`
+## Repo Layout
+- `/` – React app (UI/editor).
+- `/serverXR` – Express API for spaces/scenes/assets (optional but recommended in production).
+- `/dist` – Built front-end (after `npm run build`).
 
-Recommended setup:
-
+## Front-end: Local Dev
 ```bash
-nvm use
 npm install
-cd serverXR && npm install
+npm run dev   # http://localhost:5173
 ```
 
-This repo includes `.nvmrc` with the Node 22 baseline.
-
-## Local Development
-
-Run the full stack from the repo root:
-
+## Front-end: Build for Prod
 ```bash
-npm run dev
+npm run build         # emits dist/
 ```
-
-Useful local URLs:
-
-- `http://localhost:5173/main`
-- `http://localhost:5173/main/studio`
-- `http://localhost:5173/main/beta`
-- `http://localhost:5173/admin?space=main`
-- `http://localhost:4000/serverXR/api/health`
-
-Useful scripts:
-
+Deploy `dist/` to any static host. If you serve the API under `/serverXR`, set the build-time env so the UI calls the right origin:
 ```bash
-npm run dev:client
-npm run dev:server
-npm run build
-npm run lint
-npm run test
-npm run test:server-contracts
-npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
-npm run checkpoint -- --environment staging --note "checkpoint note"
+VITE_API_BASE_URL=https://your-domain/serverXR npm run build
 ```
 
-## Collaboration Model
-
-There are two collaboration models in the repo.
-
-### V1
-
-- `spaces` are the authoritative shared unit
-- durable scene ops are authoritative
-- SSE handles sync and catch-up
-- Socket.IO handles presence only
-
-### Studio/Beta Project Model
-
-- `projects` are the editable unit inside a space
-- durable project ops are authoritative
-- SSE carries project document updates
-- Socket.IO handles roster and cursors
-- a space can point `publishedProjectId` at one live project
-- `/<space>` opens the public viewer when a live project exists
-- otherwise `/<space>` falls back to V1
-
-## ServerXR
-
-`serverXR` handles:
-
-- spaces
-- scenes
-- project documents
-- assets
-- ops history
-- SSE streams
-- Socket.IO presence/cursors
-- auth and edit locks
-
-Important environment variables:
-
-- `PORT`
-- `APP_BASE_PATH`
-- `DATA_ROOT`
-- `SHARED_ROOT`
-- `API_TOKEN`
-- `REQUIRE_AUTH`
-- `CORS_ORIGINS`
-- `MAX_UPLOAD_MB`
-
-More detail lives in [serverXR/README.md](serverXR/README.md).
-
-## Deploy Workflow
-
-Canonical deploy model:
-
-- `dev` publishes `cpanel-staging`
-- `main` publishes `cpanel-production`
-- GitHub Actions builds and publishes the prebuilt branch
-- cPanel `Git Version Control` applies that branch on the host
-- `.cpanel.yml` runs `scripts/cpanel-apply-prebuilt-release.sh`
-
-Canonical pieces:
-
-- workflow: `.github/workflows/publish-cpanel-prebuilt-v2.yml`
-- staged bundle: `.deploy/cpanel/`
-- host apply script: `scripts/cpanel-apply-prebuilt-release.sh`
-
-What is automatic:
-
-- pushing `dev` publishes `cpanel-staging`
-- pushing `main` publishes `cpanel-production`
-
-What may still be manual:
-
-- cPanel host apply
-- if the host does not auto-apply, open cPanel `Git Version Control` and run `Deploy HEAD Commit`
-
-Golden future path:
-
-1. work locally on `dev`
-2. push `dev`
-3. verify staging
-4. promote approved work to `main`
-5. push `main`
-6. verify production
-
-Important runtime rules:
-
-- do not delete the web-root `serverXR/` mount directory
-- do not replace Passenger with PM2 unless there is a host emergency
-- `SHARED_ROOT` is part of the runtime contract
-- staging and production content stay separate unless you intentionally sync them
-
-Emergency-only fallback material is archived under `docs/deploy/legacy/` and `legacy/`.
-
-## Testing
-
-Main checks:
-
+## ServerXR API (local/manual)
 ```bash
-npm run lint
-npm run build
-npm run test
-npm run test:server-contracts
+cd serverXR
+cp .env.example .env   # adjust PORT/APP_BASE_PATH/DATA_ROOT as needed
+npm install
+npm run dev            # or: node src/index.js (uses PORT from .env, default 4000)
+```
+Key envs (see `serverXR/.env.example`):
+- `PORT` (default 4000)
+- `APP_BASE_PATH` (e.g. `/serverXR` when behind a proxy)
+- `DATA_ROOT` (where spaces/uploads are stored; default `./data`)
+
+## ServerXR with PM2 (recommended)
+From `/serverXR`:
+```bash
+npm install --production
+pm2 start ecosystem.config.js   # starts app name dii-control-server
+pm2 logs dii-control-server
+pm2 restart dii-control-server
+pm2 save                        # optional: keep on reboot if startup scripts are enabled
 ```
 
-Note:
+## Deploying
+1) **Front-end**
+   - Build: `npm run build`
+   - Upload `dist/` to your web root.
+   - Ensure `VITE_API_BASE_URL` at build time points to your API base (or leave empty for local-only).
 
-- backend contract tests bind to loopback ports
-- if they fail with `listen EPERM 127.0.0.1`, treat that as an environment restriction first
+2) **ServerXR**
+   - Upload `/serverXR` to the server (e.g. `/home/<user>/serverXR`).
+   - `cp .env.example .env` and set `PORT`, `APP_BASE_PATH=/serverXR` (if reverse-proxied), `DATA_ROOT` as needed.
+   - `npm install --production`
+   - `pm2 start ecosystem.config.js`
+   - If using nginx/Apache, proxy `/serverXR` to `http://127.0.0.1:<PORT>` and allow CORS from your front-end origin.
 
-## Current Development Focus
+## Common URLs (when APP_BASE_PATH=/serverXR)
+- Status page: `/serverXR/`
+- Health: `/serverXR/api/health`
+- Spaces API: `/serverXR/api/spaces`
+- Assets: `/serverXR/api/spaces/:id/assets/:assetId`
 
-Now:
+## Troubleshooting
+- **503 / CORS from /api/spaces**: serverXR not running or blocked by proxy/CORS. Start the service (`pm2 start ecosystem.config.js`) and allow CORS for your front-end origin.
+- **PM2 restarts repeatedly**: check `serverXR/stderr.log` and `pm2 logs dii-control-server` for the actual error (port in use, missing env, bad path).
+- **Gizmo arrows misaligned**: ensure the UI build is up to date (local-space gizmo is the current behavior).
 
-- keep deploy truth boring and stable
-- keep per-space routes and management flows predictable
-- keep Studio/Beta/public routes aligned
-- keep runtime path assumptions explicit with `DATA_ROOT` and `SHARED_ROOT`
-
-Next:
-
-- improve management UX around spaces and projects
-- reduce remaining Beta-era assumptions in Studio
-- keep V1 compatibility without letting it define the whole product
-
-## Contact
-
-write me: `d0b@duck.com`
+## Shortcuts (UI)
+- Toggle HUD: `H`
+- Gizmo modes: `G` / `R` / `S`; axis locks `X`/`Y`/`Z`
+- Selection: click, Shift-click to add/remove; Delete/Backspace to remove objects

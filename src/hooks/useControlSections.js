@@ -14,7 +14,7 @@ export function useControlSections({
         if (isUiVisible && panelButtons.length) sections.push({ key: 'panels', label: 'Panels', buttons: panelButtons })
         if (isUiVisible && adminButtons.length) sections.push({ key: 'admin', label: 'Admin', buttons: adminButtons })
         if (isUiVisible && displayButtons.length) sections.push({ key: 'display', label: 'Display', buttons: displayButtons })
-        if (isUiVisible && xrButtons.length) sections.push({ key: 'xr', label: 'XR', buttons: xrButtons })
+        if (xrButtons.length) sections.push({ key: 'xr', label: 'XR', buttons: xrButtons })
         return sections
     }, [isUiVisible, sceneButtons, panelButtons, adminButtons, displayButtons, xrButtons])
 }

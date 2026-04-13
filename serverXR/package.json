@@ -1,9 +1,9 @@
 {
   "name": "dii-control-server",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "22.x"
+    "node": "22.14.0"
   },
   "scripts": {
     "dev": "node --watch src/index.js",
@@ -14,7 +14,6 @@
     "cors": "^2.8.5",
     "express": "^4.19.2",
     "morgan": "^1.10.0",
-    "multer": "^1.4.5-lts.1",
-    "socket.io": "^4.7.0"
+    "multer": "^1.4.5-lts.1"
   }
 }
