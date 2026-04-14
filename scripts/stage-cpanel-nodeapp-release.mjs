@@ -117,6 +117,30 @@ const formatTimestamp = (date = new Date()) => {
     ].join('')
 }
 
+const normalizeValue = (value) => {
+    const normalized = typeof value === 'string' ? value.trim() : ''
+    return normalized
+}
+
+const inferDeployEnv = ({ explicit = '', sourceRef = '' } = {}) => {
+    const normalizedExplicit = normalizeValue(explicit).toLowerCase()
+    if (normalizedExplicit) {
+        return normalizedExplicit
+    }
+
+    switch (normalizeValue(sourceRef)) {
+        case 'dev':
+        case 'cpanel-staging':
+            return 'staging'
+        case 'main':
+        case 'master':
+        case 'cpanel-production':
+            return 'production'
+        default:
+            return 'preview'
+    }
+}
+
 const buildReleaseEnv = async () => {
     const rootEnv = await parseEnvFile(path.join(repoRoot, '.env'))
     const env = { ...process.env }
@@ -133,38 +157,60 @@ const buildReleaseEnv = async () => {
 }
 
 const readGitMetadata = async () => {
-    const [commitResult, branchResult] = await Promise.all([
+    const [commitResult, branchResult, branchFallbackResult] = await Promise.all([
         captureCommand('git', ['rev-parse', 'HEAD']),
+        captureCommand('git', ['branch', '--show-current']),
         captureCommand('git', ['rev-parse', '--abbrev-ref', 'HEAD'])
     ])
 
     return {
         commit: commitResult.code === 0 ? commitResult.stdout : '',
-        branch: branchResult.code === 0 ? branchResult.stdout : ''
+        branch: branchResult.code === 0 && branchResult.stdout
+            ? branchResult.stdout
+            : (branchFallbackResult.code === 0 ? branchFallbackResult.stdout : '')
     }
 }
 
-const buildReleaseManifest = ({ timestamp, git, releaseEnv }) => ({
-    generatedAt: new Date().toISOString(),
-    releaseId: `cpanel-${timestamp}`,
-    deploymentMode: 'cpanel-nodejs-app',
-    frontendApiBaseUrl: (releaseEnv.VITE_API_BASE_URL || '/serverXR').trim() || '/serverXR',
-    git,
-    paths: {
-        publicHtml: 'public_html',
-        serverXR: 'serverXR',
-        shared: 'shared'
-    },
-    omittedLegacyPaths: [
-        'public_html/serverXR'
-    ],
-    notes: [
-        'Sync public_html contents to your web root.',
-        'Sync serverXR and shared as sibling folders in your home directory.',
-        'Do not deploy a public_html/serverXR proxy folder; the cPanel Node.js App owns /serverXR.',
-        'Generate serverXR/.env from environment-specific secrets before restarting the Node.js App.'
-    ]
-})
+const buildReleaseManifest = ({ timestamp, git, releaseEnv }) => {
+    const sourceRef = normalizeValue(releaseEnv.GITHUB_HEAD_REF)
+        || normalizeValue(releaseEnv.GITHUB_REF_NAME)
+        || normalizeValue(releaseEnv.BRANCH_NAME)
+        || normalizeValue(git.branch)
+    const gitCommit = normalizeValue(releaseEnv.GITHUB_SHA) || normalizeValue(git.commit)
+    const deployEnv = inferDeployEnv({
+        explicit: releaseEnv.CPANEL_DEPLOY_ENV || releaseEnv.DEPLOY_ENV,
+        sourceRef
+    })
+
+    return {
+        generatedAt: new Date().toISOString(),
+        releaseId: `cpanel-${timestamp}`,
+        deployEnv,
+        sourceRef: sourceRef || null,
+        gitCommit: gitCommit || null,
+        deploymentMode: 'cpanel-nodejs-app',
+        frontendApiBaseUrl: (releaseEnv.VITE_API_BASE_URL || '/serverXR').trim() || '/serverXR',
+        git: {
+            branch: sourceRef || '',
+            commit: gitCommit || ''
+        },
+        paths: {
+            publicHtml: 'public_html',
+            serverXR: 'serverXR',
+            shared: 'shared'
+        },
+        omittedLegacyPaths: [
+            'public_html/serverXR'
+        ],
+        notes: [
+            'Sync public_html contents to your web root.',
+            'Sync serverXR and shared as sibling folders in your home directory.',
+            'Do not deploy a public_html/serverXR proxy folder; the cPanel Node.js App owns /serverXR.',
+            'Generate serverXR/.env from environment-specific secrets before restarting the Node.js App.',
+            'serverXR/release.json is copied with the backend bundle so /api/health can report the active release.'
+        ]
+    }
+}
 
 const ensureRequiredPaths = async () => {
     await access(path.join(serverRoot, 'src'))
@@ -209,7 +255,9 @@ const releaseManifest = buildReleaseManifest({
     git: gitMetadata,
     releaseEnv
 })
-await writeFile(path.join(releaseRoot, 'release.json'), `${JSON.stringify(releaseManifest, null, 2)}\n`, 'utf8')
+const serializedReleaseManifest = `${JSON.stringify(releaseManifest, null, 2)}\n`
+await writeFile(path.join(releaseRoot, 'release.json'), serializedReleaseManifest, 'utf8')
+await writeFile(path.join(releaseServerRoot, 'release.json'), serializedReleaseManifest, 'utf8')
 
 const frontendEnvExample = await readFile(path.join(templateRoot, 'frontend.env.production.example'), 'utf8')
 const serverEnvExample = await readFile(path.join(templateRoot, 'serverXR.env.production.example'), 'utf8')
@@ -219,6 +267,10 @@ console.log('[deploy:cpanel] Release staged successfully.')
 console.log(`[deploy:cpanel] Output: ${releaseRoot}`)
 console.log(`[deploy:cpanel] Frontend env template: ${path.join(releaseRoot, 'frontend.env.production.example')}`)
 console.log(`[deploy:cpanel] Server env template: ${path.join(releaseServerRoot, '.env.production.example')}`)
+console.log(`[deploy:cpanel] Deploy env: ${releaseManifest.deployEnv}`)
+if (releaseManifest.sourceRef) {
+    console.log(`[deploy:cpanel] Source ref: ${releaseManifest.sourceRef}`)
+}
 if (releaseManifest.git.commit) {
     console.log(`[deploy:cpanel] Git commit: ${releaseManifest.git.commit}`)
 }

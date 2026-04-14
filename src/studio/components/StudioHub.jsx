@@ -43,11 +43,11 @@ const detectEntityTypeFromMime = (mimeType = '') => {
 const formatProjectSourceLabel = (source = '') => {
     switch (source) {
         case 'studio-v3':
-            return 'Studio V3'
+            return 'Studio Main'
         case 'legacy-import-studio':
             return 'Studio import'
         case 'beta-v2':
-            return 'Beta V2'
+            return 'V2 Beta'
         case 'legacy-import':
             return 'Legacy import'
         case 'project':
@@ -114,7 +114,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
             const response = await createProject(spaceId, {
                 title: document.projectMeta.title,
                 slug: document.projectMeta.title,
-                source: 'studio-v3'
+                source: 'legacy-import-studio'
             })
             const assetMap = new Map()
             for (const [assetId, assetFile] of assetFiles.entries()) {
@@ -184,12 +184,12 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     >
                         <Stack spacing={1.25} sx={{ maxWidth: 720 }}>
                             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                                <Chip label="Main Studio" color="primary" sx={{ alignSelf: 'flex-start' }} />
+                                <Chip label="Stable Studio" color="primary" sx={{ alignSelf: 'flex-start' }} />
                                 <Chip label={`Space ${spaceId}`} variant="outlined" sx={{ alignSelf: 'flex-start' }} />
                             </Stack>
                             <Typography variant="h3" fontWeight={800}>Studio Projects</Typography>
                             <Typography variant="body1" color="text.secondary">
-                                Studio is the main authoring workspace for this space. Use it for project-based work, imports, and the primary long-term workflow.
+                                Studio is the stable main authoring workspace for this space. Use it for project-based work, imports, publishing, and the primary long-term workflow.
                             </Typography>
                         </Stack>
                         <Stack
@@ -255,7 +255,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                     color="inherit"
                                     onClick={() => window.location.assign(buildBetaHubPath(spaceId))}
                                 >
-                                    Open beta workspace
+                                    Open beta experimental
                                 </Button>
                                 <Button
                                     variant="text"

@@ -11,6 +11,7 @@ const uploadProjectAsset = vi.fn()
 const getServerSpace = vi.fn()
 const updateServerSpace = vi.fn()
 const navigateToStudioPath = vi.fn()
+const importLegacySceneFile = vi.fn()
 
 vi.mock('../../project/services/projectsApi.js', () => ({
     DEFAULT_PROJECT_SPACE_ID: 'main',
@@ -27,7 +28,7 @@ vi.mock('../../services/serverSpaces.js', () => ({
 }))
 
 vi.mock('../../project/import/importLegacyScene.js', () => ({
-    importLegacySceneFile: vi.fn()
+    importLegacySceneFile: (...args) => importLegacySceneFile(...args)
 }))
 
 vi.mock('../utils/studioRouting.js', () => ({
@@ -45,6 +46,7 @@ describe('StudioHub', () => {
         getServerSpace.mockReset()
         updateServerSpace.mockReset()
         navigateToStudioPath.mockReset()
+        importLegacySceneFile.mockReset()
         vi.spyOn(window, 'confirm').mockImplementation(() => true)
     })
 
@@ -72,5 +74,55 @@ describe('StudioHub', () => {
             expect(updateServerSpace).toHaveBeenCalledWith('gallery', { publishedProjectId: null })
             expect(deleteProject).toHaveBeenCalledWith('live-project')
         })
+    })
+
+    it('creates imported Studio projects with the Studio import source', async () => {
+        listProjects.mockResolvedValue([])
+        createProject.mockResolvedValue({
+            project: {
+                id: 'imported-project'
+            }
+        })
+        uploadProjectAsset.mockResolvedValue({
+            id: 'asset-1',
+            mimeType: 'image/webp'
+        })
+        updateProjectDocument.mockResolvedValue({ ok: true })
+        importLegacySceneFile.mockResolvedValue({
+            document: {
+                projectMeta: {
+                    title: 'Imported Studio Scene'
+                },
+                assets: [],
+                entities: []
+            },
+            assetFiles: new Map(),
+            warnings: []
+        })
+
+        render(<StudioHub spaceId="gallery" />)
+
+        const input = document.querySelector('input[type="file"]')
+        const file = new File(['{}'], 'legacy-scene.json', { type: 'application/json' })
+        fireEvent.change(input, {
+            target: {
+                files: [file]
+            }
+        })
+
+        await waitFor(() => {
+            expect(createProject).toHaveBeenCalledWith('gallery', {
+                title: 'Imported Studio Scene',
+                slug: 'Imported Studio Scene',
+                source: 'legacy-import-studio'
+            })
+        })
+        expect(updateProjectDocument).toHaveBeenCalledWith('imported-project', expect.objectContaining({
+            projectMeta: expect.objectContaining({
+                id: 'imported-project',
+                spaceId: 'gallery',
+                source: 'legacy-import-studio'
+            })
+        }))
     })
 })

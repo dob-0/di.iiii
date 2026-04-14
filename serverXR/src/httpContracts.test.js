@@ -2,6 +2,7 @@
 
 import { spawn } from 'node:child_process'
 import { mkdtemp, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
+import fs from 'node:fs'
 import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
@@ -57,20 +58,28 @@ const startServer = async ({
     appBasePath = '/serverXR',
     apiToken = 'test-token',
     requireAuth,
+    releaseManifest = null,
     extraEnv = {}
 } = {}) => {
     const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-server-cwd-'))
     const sandboxDataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-server-data-'))
     const port = await getFreePort()
+    const releaseFilePath = path.join(sandboxDataRoot, 'release.json')
+
+    if (releaseManifest) {
+        await writeFile(releaseFilePath, `${JSON.stringify(releaseManifest, null, 2)}\n`)
+    }
+
     const childEnv = {
         ...process.env,
-        ...extraEnv,
         PORT: String(port),
         NODE_ENV: nodeEnv,
         APP_BASE_PATH: appBasePath,
         DATA_ROOT: sandboxDataRoot,
         API_TOKEN: apiToken,
-        CORS_ORIGINS: '*'
+        CORS_ORIGINS: '*',
+        ...(releaseManifest ? { SERVERXR_RELEASE_FILE: releaseFilePath } : {}),
+        ...extraEnv
     }
 
     delete childEnv.SPACES_DIR
@@ -241,6 +250,24 @@ describe('server write contracts', () => {
         expect(response.status).toBe(200)
     })
 
+    it('reports release metadata from the runtime manifest', async () => {
+        const releaseManifest = {
+            deployEnv: 'staging',
+            sourceRef: 'dev',
+            gitCommit: 'abcdef1234567890',
+            releaseId: 'cpanel-20260412-120000',
+            generatedAt: '2026-04-12T12:00:00.000Z'
+        }
+        const server = await startServer({ releaseManifest })
+        const response = await fetch(`${server.baseUrl}/api/health`)
+
+        expect(response.status).toBe(200)
+        await expect(response.json()).resolves.toMatchObject({
+            ok: true,
+            release: releaseManifest
+        })
+    })
+
     it('hydrates a scene asset manifest from object asset refs for legacy scenes', async () => {
         const server = await startServer({ nodeEnv: 'production', requireAuth: true })
         const assetId = '4c122913-7872-42b3-8b04-9f73942022fd'
@@ -260,6 +287,15 @@ describe('server write contracts', () => {
                 }]
             }
         })
+        const assetsDir = path.join(server.dataRoot, 'spaces', spaceId, 'assets')
+        await writeFile(path.join(assetsDir, assetId), Buffer.from('image'))
+        await writeFile(path.join(assetsDir, `${assetId}.json`), JSON.stringify({
+            id: assetId,
+            name: '1.webp',
+            mimeType: 'image/webp',
+            size: 5,
+            createdAt: 1773766320415
+        }, null, 2))
 
         const response = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/scene`)
         expect(response.status).toBe(200)
@@ -272,6 +308,64 @@ describe('server write contracts', () => {
                 id: assetId,
                 name: '1.webp',
                 mimeType: 'image/webp',
+                url: `/serverXR/api/spaces/${spaceId}/assets/${assetId}`
+            })
+        ])
+    })
+
+    it('omits scene asset manifest entries when the backing asset file is missing', async () => {
+        const server = await startServer({ nodeEnv: 'production', requireAuth: true })
+        const assetId = '4c122913-7872-42b3-8b04-9f73942022fd'
+        const missingAssetId = '5d233024-8983-4ba6-a7df-61818c45ec60'
+        const spaceId = await createSpaceWithScene(server.dataRoot, {
+            scene: {
+                version: 4,
+                objects: [{
+                    id: 'image-1',
+                    type: 'image',
+                    assetRef: {
+                        id: assetId,
+                        name: '1.webp',
+                        mimeType: 'image/webp',
+                        size: 6872,
+                        createdAt: 1773766320415
+                    }
+                }],
+                assets: [
+                    {
+                        id: assetId,
+                        name: '1.webp',
+                        mimeType: 'image/webp',
+                        archivePath: `assets/${assetId}`
+                    },
+                    {
+                        id: missingAssetId,
+                        name: 'missing.webp',
+                        mimeType: 'image/webp',
+                        archivePath: `assets/${missingAssetId}`
+                    }
+                ]
+            }
+        })
+
+        const assetsDir = path.join(server.dataRoot, 'spaces', spaceId, 'assets')
+        await writeFile(path.join(assetsDir, assetId), Buffer.from('image'))
+        await writeFile(path.join(assetsDir, `${assetId}.json`), JSON.stringify({
+            id: assetId,
+            name: '1.webp',
+            mimeType: 'image/webp',
+            size: 5,
+            createdAt: 1773766320415
+        }, null, 2))
+        expect(fs.existsSync(path.join(assetsDir, missingAssetId))).toBe(false)
+
+        const response = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/scene`)
+        expect(response.status).toBe(200)
+
+        const payload = await response.json()
+        expect(payload.scene.assets).toEqual([
+            expect.objectContaining({
+                id: assetId,
                 url: `/serverXR/api/spaces/${spaceId}/assets/${assetId}`
             })
         ])

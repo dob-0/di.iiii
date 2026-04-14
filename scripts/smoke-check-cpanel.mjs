@@ -39,8 +39,29 @@ const checks = [
         bodyIncludes: ['<div id="root"></div>']
     },
     {
+        name: 'main public route',
+        path: '/main',
+        expectedStatuses: [200],
+        contentTypeIncludes: 'text/html',
+        bodyIncludes: ['<div id="root"></div>']
+    },
+    {
         name: 'admin route',
         path: '/admin?space=main',
+        expectedStatuses: [200],
+        contentTypeIncludes: 'text/html',
+        bodyIncludes: ['<div id="root"></div>']
+    },
+    {
+        name: 'studio route',
+        path: '/main/studio',
+        expectedStatuses: [200],
+        contentTypeIncludes: 'text/html',
+        bodyIncludes: ['<div id="root"></div>']
+    },
+    {
+        name: 'beta route',
+        path: '/main/beta',
         expectedStatuses: [200],
         contentTypeIncludes: 'text/html',
         bodyIncludes: ['<div id="root"></div>']
@@ -49,7 +70,8 @@ const checks = [
         name: 'server health',
         path: '/serverXR/api/health',
         expectedStatuses: [200],
-        contentTypeIncludes: 'application/json'
+        contentTypeIncludes: 'application/json',
+        bodyIncludes: ['"release"']
     },
     {
         name: 'server events',

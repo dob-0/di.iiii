@@ -1,6 +1,7 @@
 const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
+const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { loadSharedModule } = require('./sharedRuntime')
 const {
   defaultProjectDocument,
@@ -11,6 +12,7 @@ const PROJECTS_DIRNAME = 'projects'
 const PROJECT_META_FILE = 'project.json'
 const PROJECT_DOCUMENT_FILE = 'document.json'
 const PROJECT_OPS_FILE = 'ops.json'
+const PROJECT_INDEX_FILE = 'project-index.json'
 
 const PROJECT_ID_REGEX = /^[a-z0-9-]{3,64}$/
 const ASSET_ID_REGEX = /^[a-f0-9-]{8,64}$/i
@@ -35,54 +37,6 @@ const normalizeProjectId = (value) => {
 const isValidProjectId = (value = '') => PROJECT_ID_REGEX.test(String(value).trim())
 const isValidAssetId = (value = '') => ASSET_ID_REGEX.test(String(value).trim())
 
-const ensureDir = async (dirPath) => {
-  await fsp.mkdir(dirPath, { recursive: true })
-}
-
-const tryRecoverJson = (raw = '') => {
-  const trimmed = String(raw || '').trim()
-  if (!trimmed) return null
-  let cursor = Math.max(trimmed.lastIndexOf('}'), trimmed.lastIndexOf(']'))
-  while (cursor >= 0) {
-    const candidate = trimmed.slice(0, cursor + 1)
-    try {
-      return JSON.parse(candidate)
-    } catch {
-      const previousObject = trimmed.lastIndexOf('}', cursor - 1)
-      const previousArray = trimmed.lastIndexOf(']', cursor - 1)
-      cursor = Math.max(previousObject, previousArray)
-    }
-  }
-  return null
-}
-
-const writeJson = async (filePath, data) => {
-  await ensureDir(path.dirname(filePath))
-  const serialized = JSON.stringify(data, null, 2)
-  const tempPath = `${filePath}.${process.pid}.${crypto.randomUUID()}.tmp`
-  await fsp.writeFile(tempPath, serialized)
-  await fsp.rename(tempPath, filePath)
-}
-
-const readJson = async (filePath, fallback = null) => {
-  try {
-    const raw = await fsp.readFile(filePath, 'utf8')
-    try {
-      return JSON.parse(raw)
-    } catch (error) {
-      const recovered = tryRecoverJson(raw)
-      if (recovered !== null) {
-        await writeJson(filePath, recovered)
-        return recovered
-      }
-      throw error
-    }
-  } catch (error) {
-    if (error.code === 'ENOENT') return fallback
-    throw error
-  }
-}
-
 const buildProjectMeta = (spaceId, projectId, overrides = {}) => {
   const now = Date.now()
   return {
@@ -98,6 +52,7 @@ const buildProjectMeta = (spaceId, projectId, overrides = {}) => {
 }
 
 const getSpaceProjectsDir = (spacesDir, spaceId) => path.join(spacesDir, spaceId, PROJECTS_DIRNAME)
+const getProjectIndexPath = (spacesDir) => path.join(spacesDir, PROJECT_INDEX_FILE)
 
 const getProjectPaths = (spacesDir, spaceId, projectId) => {
   const projectsDir = getSpaceProjectsDir(spacesDir, spaceId)
@@ -110,6 +65,47 @@ const getProjectPaths = (spacesDir, spaceId, projectId) => {
     opsPath: path.join(projectDir, PROJECT_OPS_FILE),
     assetsDir: path.join(projectDir, 'assets')
   }
+}
+
+const readProjectIndex = async (spacesDir) => {
+  const index = await readJson(getProjectIndexPath(spacesDir), {})
+  return index && typeof index === 'object' && !Array.isArray(index) ? index : {}
+}
+
+const writeProjectIndex = async (spacesDir, index = {}) => {
+  await writeJson(getProjectIndexPath(spacesDir), index)
+}
+
+const setProjectIndexEntry = async (spacesDir, projectId, spaceId) => {
+  const index = await readProjectIndex(spacesDir)
+  index[projectId] = spaceId
+  await writeProjectIndex(spacesDir, index)
+  return index
+}
+
+const removeProjectIndexEntry = async (spacesDir, projectId) => {
+  const index = await readProjectIndex(spacesDir)
+  if (!(projectId in index)) {
+    return index
+  }
+  delete index[projectId]
+  await writeProjectIndex(spacesDir, index)
+  return index
+}
+
+const removeProjectIndexEntriesForSpace = async (spacesDir, spaceId) => {
+  const index = await readProjectIndex(spacesDir)
+  let changed = false
+  Object.entries(index).forEach(([projectId, indexedSpaceId]) => {
+    if (indexedSpaceId === spaceId) {
+      delete index[projectId]
+      changed = true
+    }
+  })
+  if (changed) {
+    await writeProjectIndex(spacesDir, index)
+  }
+  return index
 }
 
 const normalizeProjectTimestamp = (value, fallback) => {
@@ -169,6 +165,7 @@ const ensureProject = async (spacesDir, spaceId, projectId, overrides = {}) => {
   if (!existingOps) {
     await writeJson(opsPath, [])
   }
+  await setProjectIndexEntry(spacesDir, projectId, spaceId)
   return meta
 }
 
@@ -253,12 +250,28 @@ const listProjectsInSpace = async (spacesDir, spaceId) => {
 const findProjectById = async (spacesDir, projectId) => {
   const normalizedId = normalizeProjectId(projectId)
   if (!normalizedId) return null
+  const projectIndex = await readProjectIndex(spacesDir)
+  const indexedSpaceId = typeof projectIndex[normalizedId] === 'string' ? projectIndex[normalizedId] : ''
+  if (indexedSpaceId) {
+    const indexedPaths = getProjectPaths(spacesDir, indexedSpaceId, normalizedId)
+    const indexedMeta = await readJson(indexedPaths.metaPath, null)
+    if (indexedMeta) {
+      return {
+        ...indexedPaths,
+        spaceId: indexedSpaceId,
+        projectId: normalizedId,
+        meta: indexedMeta
+      }
+    }
+    await removeProjectIndexEntry(spacesDir, normalizedId)
+  }
   const spaceEntries = await fsp.readdir(spacesDir, { withFileTypes: true }).catch(() => [])
   for (const entry of spaceEntries) {
     if (!entry.isDirectory()) continue
     const paths = getProjectPaths(spacesDir, entry.name, normalizedId)
     const meta = await readJson(paths.metaPath, null)
     if (meta) {
+      await setProjectIndexEntry(spacesDir, normalizedId, entry.name)
       return {
         ...paths,
         spaceId: entry.name,
@@ -273,6 +286,7 @@ const findProjectById = async (spacesDir, projectId) => {
 const deleteProject = async (spacesDir, spaceId, projectId) => {
   const { projectDir } = getProjectPaths(spacesDir, spaceId, projectId)
   await fsp.rm(projectDir, { recursive: true, force: true })
+  await removeProjectIndexEntry(spacesDir, projectId)
 }
 
 const buildProjectAssetMeta = ({ assetId, file, source = 'server' }) => ({
@@ -288,6 +302,7 @@ module.exports = {
   PROJECT_META_FILE,
   PROJECT_DOCUMENT_FILE,
   PROJECT_OPS_FILE,
+  PROJECT_INDEX_FILE,
   PROJECTS_DIRNAME,
   buildProjectAssetMeta,
   buildProjectMeta,
@@ -295,18 +310,23 @@ module.exports = {
   ensureProject,
   findProjectById,
   getProjectPaths,
+  getProjectIndexPath,
   isValidAssetId,
   isValidProjectId,
   listProjectsInSpace,
   loadProjectMeta,
   normalizeProjectId,
   readJson,
+  readProjectIndex,
   readProjectDocument,
   readProjectOps,
+  removeProjectIndexEntriesForSpace,
   saveProjectMeta,
+  setProjectIndexEntry,
   upsertProjectMeta,
   appendProjectOps,
   writeJson,
+  writeProjectIndex,
   writeProjectDocument,
   writeProjectOps
 }
