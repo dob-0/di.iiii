@@ -27,6 +27,8 @@ That means:
 - `dev` is the integration lane
 - `staging` is the stable preview lane
 - `main` is the public lane
+- normal work starts on `dev`
+- `staging` and `main` are promotion branches during the normal path
 
 ## What The Workflow Does
 
@@ -39,6 +41,8 @@ The canonical workflow:
 5. runs lint and tests
 6. stages `.deploy/cpanel`
 7. force-updates the prebuilt branch for the target environment
+
+`workflow_dispatch` is useful for repair or recovery work, but it should not be used to bypass the normal `dev -> staging -> main` promotion path.
 
 The prebuilt branch contains:
 

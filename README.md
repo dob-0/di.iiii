@@ -21,9 +21,9 @@ Start here:
 
 This repo is easiest to understand as three branches:
 
-- `dev` = active development and integration
-- `staging` = stable preview and showcase lane
-- `main` = production and public lane
+- `dev` = active development and integration, and the normal place to start work
+- `staging` = stable preview and promotion lane
+- `main` = production and public lane, and promotion-only except for urgent hotfixes
 
 Normal promotion path:
 
@@ -34,6 +34,13 @@ Emergency hotfix path:
 - `main -> staging + dev`
 
 That model matters more than any old deploy note or spare workflow file.
+
+Simple rule:
+
+- start normal work on `dev`
+- promote into `staging` only after local checks pass
+- promote into `main` only after staging is verified
+- start on `main` only when production needs an emergency hotfix
 
 Also keep these boundaries in mind:
 
@@ -150,6 +157,14 @@ Run the full stack from the repo root:
 npm run dev
 ```
 
+Typical start-of-session commands:
+
+```bash
+git switch dev
+git pull --ff-only origin dev
+npm run dev
+```
+
 Useful local URLs:
 
 - `http://localhost:5173/main`
@@ -247,12 +262,13 @@ What may still be manual:
 
 Golden future path:
 
-1. work locally on `dev`
-2. push `dev` while integrating normally
-3. promote approved work from `dev` to `staging`
-4. push `staging` and verify staging
-5. promote the verified staging commit to `main`
-6. push `main` and verify production
+1. switch to `dev` and sync it
+2. work locally on `dev`
+3. run local checks and push `dev` while integrating normally
+4. promote approved work from `dev` to `staging`
+5. push `staging` and verify staging
+6. promote the verified staging commit to `main`
+7. push `main` and verify production
 
 Preferred promotion commands:
 

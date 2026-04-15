@@ -21,6 +21,8 @@ Important:
 - `/serverXR` must be owned by the Node.js App, not by a static proxy directory
 - the canonical path is GitHub + cPanel `Git Version Control`
 - legacy/manual fallback material is archived under [docs/deploy/legacy/README.md](legacy/README.md)
+- normal work starts on `dev`
+- `staging` and `main` are promotion branches except during emergency hotfixes
 
 ## One-Time Setup
 

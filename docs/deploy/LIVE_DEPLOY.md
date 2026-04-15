@@ -12,11 +12,16 @@ If you only remember one thing, remember this:
 ## Golden Path
 
 - local work happens on `dev`
+- normal work starts on `dev`
+- `staging` and `main` are promotion branches during normal flow
 - reviewed work is promoted to `staging`
 - staging is published from `staging`
 - production is published from `main`
 - GitHub publishes prebuilt `cpanel-*` branches
 - cPanel `Git Version Control` applies those branches on the host
+
+Do not start routine feature work on `main`.
+Use `main` as a starting point only for an emergency production hotfix.
 
 Canonical pieces:
 
@@ -28,6 +33,14 @@ Canonical pieces:
   - [scripts/cpanel-apply-prebuilt-release.sh](../../scripts/cpanel-apply-prebuilt-release.sh)
 
 ## Daily Workflow
+
+Typical start-of-session commands:
+
+```bash
+git switch dev
+git pull --ff-only origin dev
+npm run dev
+```
 
 ### To update staging
 
@@ -79,6 +92,7 @@ If a fast-forward is not possible, stop and cherry-pick or rebase the exact appr
 - the prebuilt branches are:
   - `cpanel-staging`
   - `cpanel-production`
+- `workflow_dispatch` exists for repair or recovery work, but it should not replace the normal `dev -> staging -> main` promotion flow
 
 ## Emergency Hotfix Path
 
