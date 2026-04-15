@@ -130,6 +130,7 @@ const inferDeployEnv = ({ explicit = '', sourceRef = '' } = {}) => {
 
     switch (normalizeValue(sourceRef)) {
         case 'dev':
+        case 'staging':
         case 'cpanel-staging':
             return 'staging'
         case 'main':

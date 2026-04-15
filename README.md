@@ -6,8 +6,9 @@ Current baseline:
 
 - package version: `0.2.0`
 - runtime baseline: Node `22.x`
-- active work branch: `dev`
-- stable/public branch: `main`
+- integration branch: `dev`
+- stable preview branch: `staging`
+- production branch: `main`
 
 Start here:
 
@@ -18,10 +19,19 @@ Start here:
 
 ## Current Truth
 
-This repo is easiest to understand as two lanes:
+This repo is easiest to understand as three branches:
 
-- `dev + staging` = work lane
-- `main + production` = public lane
+- `dev` = active development and integration
+- `staging` = stable preview and showcase lane
+- `main` = production and public lane
+
+Normal promotion path:
+
+- `dev -> staging -> main`
+
+Emergency hotfix path:
+
+- `main -> staging + dev`
 
 That model matters more than any old deploy note or spare workflow file.
 
@@ -42,22 +52,22 @@ This platform currently has five active surfaces:
 - `Studio`
   - route: `/<space>/studio`
   - compatibility alias: `/studio` for `main`
-  - main authoring surface
+  - stable main authoring surface
 - `Beta`
   - route: `/<space>/beta`
   - compatibility alias: `/beta` for `main`
-  - secondary editor lane kept alongside Studio
+  - active experimental/v2 lane kept alongside Studio
 - `Admin/Ops`
   - route: `/admin?space=<space>`
   - operator/debugging surface
 - `V1 Legacy`
   - route: `/<space>` when no live project is published
-  - legacy collaborative editor and compatibility lane
+  - fallback/history editor and compatibility lane
 
 Current direction:
 
-- Studio is the main authoring surface
-- Beta remains available, but it is not the long-term primary lane
+- Studio is the stable main product lane
+- Beta is the active experimental/v2 lane
 - V1 remains the compatibility and fallback lane
 - public routes should stay simple even if the editor model grows
 
@@ -212,8 +222,9 @@ More detail lives in [serverXR/README.md](serverXR/README.md).
 
 Canonical deploy model:
 
-- `dev` publishes `cpanel-staging`
+- `staging` publishes `cpanel-staging`
 - `main` publishes `cpanel-production`
+- `dev` is the integration branch and does not auto-deploy
 - GitHub Actions builds and publishes the prebuilt branch
 - cPanel `Git Version Control` applies that branch on the host
 - `.cpanel.yml` runs `scripts/cpanel-apply-prebuilt-release.sh`
@@ -226,7 +237,7 @@ Canonical pieces:
 
 What is automatic:
 
-- pushing `dev` publishes `cpanel-staging`
+- pushing `staging` publishes `cpanel-staging`
 - pushing `main` publishes `cpanel-production`
 
 What may still be manual:
@@ -237,11 +248,25 @@ What may still be manual:
 Golden future path:
 
 1. work locally on `dev`
-2. push `dev`
-3. verify staging
-4. promote approved work to `main`
-5. push `main`
-6. verify production
+2. push `dev` while integrating normally
+3. promote approved work from `dev` to `staging`
+4. push `staging` and verify staging
+5. promote the verified staging commit to `main`
+6. push `main` and verify production
+
+Preferred promotion commands:
+
+```bash
+git switch staging
+git merge --ff-only dev
+git push origin staging
+
+git switch main
+git merge --ff-only staging
+git push origin main
+```
+
+If `--ff-only` fails because the branches diverged, stop and either rebase or cherry-pick the exact approved commit instead of forcing a merge you do not trust.
 
 Important runtime rules:
 

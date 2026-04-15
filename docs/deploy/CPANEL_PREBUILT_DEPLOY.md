@@ -18,23 +18,25 @@ It is a GitHub-to-cPanel Git flow:
 
 Branch and environment mapping:
 
-- `dev` -> `cpanel-staging`
+- `staging` -> `cpanel-staging`
 - `main` -> `cpanel-production`
+- `dev` -> no direct deploy branch
 
 That means:
 
-- `dev + staging` is the work lane
-- `main + production` is the public lane
+- `dev` is the integration lane
+- `staging` is the stable preview lane
+- `main` is the public lane
 
 ## What The Workflow Does
 
 The canonical workflow:
 
-1. runs automatically on pushes to `dev` and `main`
+1. runs automatically on pushes to `staging` and `main`
 2. can also be run manually with `workflow_dispatch`
 3. checks out the source ref
 4. installs dependencies on GitHub Actions
-5. runs tests
+5. runs lint and tests
 6. stages `.deploy/cpanel`
 7. force-updates the prebuilt branch for the target environment
 
@@ -55,7 +57,7 @@ The prebuilt branch contains:
 
 Automatic:
 
-- push to `dev` -> GitHub publishes `cpanel-staging`
+- push to `staging` -> GitHub publishes `cpanel-staging`
 - push to `main` -> GitHub publishes `cpanel-production`
 
 Sometimes still manual:
@@ -92,9 +94,13 @@ That apply step:
 
 In other words, the canonical human flow is:
 
-1. push to `dev` or `main`
-2. let GitHub publish `cpanel-staging` or `cpanel-production`
-3. in cPanel `Git Version Control`, update and deploy `HEAD` if it did not apply automatically
+1. work and integrate on `dev`
+2. promote approved work to `staging` and push `staging`
+3. let GitHub publish `cpanel-staging`
+4. verify staging
+5. promote the verified commit to `main` and push `main`
+6. let GitHub publish `cpanel-production`
+7. in cPanel `Git Version Control`, update and deploy `HEAD` if it did not apply automatically
 
 If GitHub already has the right `cpanel-*` branch but the live site still serves an older build, the missing step is in cPanel, not in GitHub.
 

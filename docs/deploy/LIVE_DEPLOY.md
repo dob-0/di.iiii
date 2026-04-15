@@ -4,13 +4,16 @@ This is the shortest practical runbook for normal future work.
 
 If you only remember one thing, remember this:
 
-- `dev + staging` = work lane
-- `main + production` = public lane
+- `dev` = active development
+- `staging` = stable preview
+- `main` = production
+- normal promotion path: `dev -> staging -> main`
 
 ## Golden Path
 
 - local work happens on `dev`
-- staging is published from `dev`
+- reviewed work is promoted to `staging`
+- staging is published from `staging`
 - production is published from `main`
 - GitHub publishes prebuilt `cpanel-*` branches
 - cPanel `Git Version Control` applies those branches on the host
@@ -28,11 +31,13 @@ Canonical pieces:
 
 ### To update staging
 
-1. commit and push `dev`
-2. GitHub automatically publishes `cpanel-staging`
-3. in cPanel `Git Version Control`, update the staging clone if needed
-4. run `Deploy HEAD Commit` for the staging clone if the host did not auto-apply
-5. verify:
+1. commit and push `dev` normally while you work
+2. promote the approved commit from `dev` to `staging`
+3. push `staging`
+4. GitHub automatically publishes `cpanel-staging`
+5. in cPanel `Git Version Control`, update the staging clone if needed
+6. run `Deploy HEAD Commit` for the staging clone if the host did not auto-apply
+7. verify:
    - `/main`
    - `/<space>` for the space you are working on
    - `/admin?space=main`
@@ -45,19 +50,39 @@ Canonical pieces:
 
 ### To update production
 
-1. merge or promote approved work into `main`
+1. promote the already verified `staging` commit into `main`
 2. push `main`
 3. GitHub automatically publishes `cpanel-production`
 4. in cPanel `Git Version Control`, update the production clone if needed
 5. run `Deploy HEAD Commit` for the production clone if the host did not auto-apply
 6. verify production
 
+### Promotion Commands
+
+Use fast-forward promotions when the branches are still linear:
+
+```bash
+git switch staging
+git merge --ff-only dev
+git push origin staging
+
+git switch main
+git merge --ff-only staging
+git push origin main
+```
+
+If a fast-forward is not possible, stop and cherry-pick or rebase the exact approved commit instead of creating a merge you did not mean to ship.
+
 ## What Is Automatic Today
 
-- GitHub-side prebuilt publish is automatic on pushes to `dev` and `main`
+- GitHub-side prebuilt publish is automatic on pushes to `staging` and `main`
 - the prebuilt branches are:
   - `cpanel-staging`
   - `cpanel-production`
+
+## Emergency Hotfix Path
+
+When production needs an urgent fix, start from `main`, then bring the same commit back into `staging` and `dev` so the branches do not drift apart.
 
 ## What May Still Be Manual
 

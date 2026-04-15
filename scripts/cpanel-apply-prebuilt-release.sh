@@ -11,7 +11,7 @@ DEPLOY_ENV="${1:-${CPANEL_DEPLOY_ENV:-}}"
 
 if [[ -z "${DEPLOY_ENV}" ]]; then
   case "${CURRENT_BRANCH}" in
-    cpanel-staging|dev)
+    cpanel-staging|staging|dev)
       DEPLOY_ENV="staging"
       ;;
     cpanel-production|main|master)

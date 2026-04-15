@@ -5,7 +5,8 @@ This file describes the current safe deployment model for the dii platform.
 ## Canonical Model
 
 - source branches:
-  - `dev` for staging
+  - `dev` for active development
+  - `staging` for stable preview
   - `main` for production
 - canonical publish workflow:
   - [.github/workflows/publish-cpanel-prebuilt-v2.yml](../../.github/workflows/publish-cpanel-prebuilt-v2.yml)
@@ -94,13 +95,15 @@ Recommended roots:
 ### Staging
 
 1. commit and push `dev`
-2. let GitHub publish `cpanel-staging`
-3. in cPanel `Git Version Control`, update and deploy `HEAD` if needed
-4. verify staging smoke checks and real editor flows
+2. promote the approved commit to `staging`
+3. push `staging`
+4. let GitHub publish `cpanel-staging`
+5. in cPanel `Git Version Control`, update and deploy `HEAD` if needed
+6. verify staging smoke checks and real editor flows
 
 ### Production
 
-1. promote the approved commit into `main`
+1. promote the staging-verified commit into `main`
 2. push `main`
 3. let GitHub publish `cpanel-production`
 4. in cPanel `Git Version Control`, update and deploy `HEAD` if needed
@@ -108,7 +111,7 @@ Recommended roots:
 
 ## Automatic Behavior
 
-- GitHub-side publish is automatic on pushes to `dev` and `main`
+- GitHub-side publish is automatic on pushes to `staging` and `main`
 - if cPanel `Git Version Control` exposes `Automatic Deployment`, enable it on the tracked `cpanel-staging` and `cpanel-production` clones
 - cPanel-side apply may still require `Deploy HEAD Commit`, depending on host behavior
 
