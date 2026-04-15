@@ -1,0 +1,98 @@
+name: Auto PR staging→main
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  create-pull-request:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create PR from staging to main
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const head = 'staging';
+            const base = 'main';
+            const title = 'Auto PR: staging → main';
+            const compareUrl = `${process.env.GITHUB_SERVER_URL}/${owner}/${repo}/compare/${base}...${head}?expand=1`;
+            const body = [
+              'Summary: Promote the latest staging-verified work into production.',
+              '',
+              'Expected path:',
+              '1. verify staging is healthy',
+              '2. review the staged changes',
+              '3. merge into main only when ready for production',
+              '',
+              `Manual compare/create URL: ${compareUrl}`
+            ].join('\n');
+
+            async function run() {
+              try {
+                const prs = await github.rest.pulls.list({
+                  owner,
+                  repo,
+                  state: 'open',
+                  head: `${owner}:${head}`,
+                  base,
+                });
+
+                if (prs.data && prs.data.length > 0) {
+                  const existingUrl = prs.data[0].html_url;
+                  core.info(`PR already exists: ${existingUrl}`);
+                  await core.summary
+                    .addHeading('Auto PR status')
+                    .addRaw(`Open PR already exists: ${existingUrl}`)
+                    .write();
+                  return;
+                }
+
+                const res = await github.rest.pulls.create({
+                  owner,
+                  repo,
+                  title,
+                  head,
+                  base,
+                  body,
+                  maintainer_can_modify: true,
+                });
+
+                core.info(`Created PR: ${res.data.html_url}`);
+                await core.summary
+                  .addHeading('Auto PR status')
+                  .addRaw(`Created PR: ${res.data.html_url}`)
+                  .write();
+              } catch (err) {
+                const message = err && err.message ? err.message : String(err);
+                const normalized = message.toLowerCase();
+
+                if (
+                  err?.status === 403
+                  || normalized.includes('not permitted to create or approve pull requests')
+                  || normalized.includes('resource not accessible by integration')
+                ) {
+                  core.warning(
+                    `Auto PR skipped because this repository does not currently allow this workflow token to create pull requests. Create it manually: ${compareUrl}`
+                  );
+                  await core.summary
+                    .addHeading('Auto PR skipped')
+                    .addRaw(
+                      `GitHub Actions is not currently allowed to create PRs here. Create the promotion PR manually: ${compareUrl}`
+                    )
+                    .write();
+                  return;
+                }
+
+                core.setFailed(`Failed to create PR: ${message}`);
+              }
+            }
+
+            await run();

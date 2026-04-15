@@ -1,0 +1,96 @@
+.presentation-canvas-shell {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at top left, rgba(255,255,255,0.12), transparent 28%),
+        linear-gradient(180deg, #f4efe3 0%, #e9dfca 100%);
+    display: flex;
+    flex-direction: column;
+}
+
+.presentation-frame {
+    flex: 1;
+    width: 100%;
+    border: none;
+    background: #ffffff;
+}
+
+.presentation-frame-note-stack {
+    position: absolute;
+    left: 20px;
+    bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.presentation-frame-note,
+.presentation-frame-status {
+    max-width: 320px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(16, 23, 38, 0.86);
+    color: rgba(255,255,255,0.82);
+    font-size: 12px;
+    line-height: 1.45;
+    box-shadow: 0 14px 30px rgba(0,0,0,0.18);
+}
+
+.presentation-frame-status {
+    background: rgba(118, 77, 14, 0.9);
+    border: 1px solid rgba(255, 205, 112, 0.35);
+    color: rgba(255, 240, 208, 0.95);
+}
+
+.presentation-empty-state {
+    max-width: 540px;
+    margin: auto;
+    padding: 28px 30px;
+    border-radius: 24px;
+    background: rgba(255,255,255,0.84);
+    box-shadow: 0 28px 70px rgba(52, 39, 16, 0.16);
+    backdrop-filter: blur(10px);
+    color: #23180a;
+}
+
+.presentation-empty-eyebrow {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #8a6a2b;
+    margin-bottom: 10px;
+}
+
+.presentation-empty-state h2 {
+    margin: 0 0 12px;
+    font-size: clamp(26px, 4vw, 42px);
+    line-height: 1.05;
+}
+
+.presentation-empty-state p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.65;
+    color: #5f4930;
+}
+
+@media (max-width: 720px) {
+    .presentation-empty-state {
+        margin: auto 16px 22px;
+        padding: 22px 20px;
+        border-radius: 20px;
+    }
+
+    .presentation-frame-note {
+        max-width: none;
+    }
+
+    .presentation-frame-note-stack {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+    }
+}
