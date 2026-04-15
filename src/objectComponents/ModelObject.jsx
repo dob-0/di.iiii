@@ -28,7 +28,7 @@ export default function ModelObject({
             return detectModelFormatFromName(data) || MODEL_FORMATS.GLTF
         }
         return MODEL_FORMATS.GLTF
-    }, [modelFormat, assetRef?.name, assetRef?.mimeType, data])
+    }, [modelFormat, assetRef, data])
 
     useEffect(() => {
         let disposed = false
@@ -179,7 +179,7 @@ export default function ModelObject({
         return () => {
             disposed = true
         }
-    }, [assetRef?.id, materialsAssetRef?.id, data, effectiveFormat])
+    }, [assetRef, materialsAssetRef, data, effectiveFormat])
 
     const renderedScene = useMemo(() => {
         if (!loadedScene) return null

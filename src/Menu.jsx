@@ -1,5 +1,5 @@
 import React, { useRef, useContext, useState, useLayoutEffect, useEffect } from 'react'
-import { AppContext } from './AppContext.js'
+import { ActionsContext, SceneSettingsContext } from './contexts/AppContexts.js'
 
 export default function Menu({ x, y, onClose }) {
     const fileInputRef = useRef()
@@ -8,7 +8,8 @@ export default function Menu({ x, y, onClose }) {
     const [menuPosition, setMenuPosition] = useState({ x, y })
 
     // --- Get the handler from context ---
-    const { handleAddObject, handleAssetFilesUpload, transformSnaps, handleUpdateTransformSnaps } = useContext(AppContext)
+    const { handleAddObject, handleAssetFilesUpload, handleUpdateTransformSnaps } = useContext(ActionsContext)
+    const { transformSnaps } = useContext(SceneSettingsContext)
 
     useEffect(() => {
         setMenuPosition({ x, y })
@@ -40,7 +41,7 @@ export default function Menu({ x, y, onClose }) {
         }
     }, [menuPosition])
 
-    const handleClick = (e) => {
+    const handlePointerDown = (e) => {
         e.stopPropagation()
     }
 
@@ -71,7 +72,7 @@ export default function Menu({ x, y, onClose }) {
             className="upload-menu upload-menu-dark upload-menu-compact" 
             ref={menuRef}
             style={{ top: `${menuPosition.y}px`, left: `${menuPosition.x}px` }}
-            onClick={handleClick}
+            onPointerDown={handlePointerDown}
         >
             <div className="menu-header">
                 <h4>Add object</h4>

@@ -1,0 +1,7 @@
+---
+# Legacy fallback template.
+# Copy this file to the repo root as `.cpanel.yml` only when intentionally using
+# the build-on-host cPanel Git pull fallback path.
+deployment:
+  tasks:
+    - /usr/bin/env bash legacy/cpanel-git-pull/cpanel-git-deploy.sh

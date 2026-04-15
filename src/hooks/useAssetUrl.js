@@ -3,12 +3,31 @@ import { deleteAsset, getAssetBlob } from '../storage/assetStore.js'
 import { getAssetSourceUrl, streamRemoteAsset } from '../services/assetSources.js'
 import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
 
+const FRONTEND_ASSET_PATH_REGEX = /^\/assets\/[^/]+$/i
+
+const isFrontendAssetFallbackUrl = (value = '') => {
+    if (!value) return false
+    try {
+        const base = typeof window !== 'undefined' && window.location?.origin
+            ? window.location.origin
+            : 'http://localhost'
+        const url = new URL(value, base)
+        const currentOrigin = typeof window !== 'undefined' && window.location?.origin
+            ? window.location.origin
+            : url.origin
+        return url.origin === currentOrigin && FRONTEND_ASSET_PATH_REGEX.test(url.pathname)
+    } catch {
+        return FRONTEND_ASSET_PATH_REGEX.test(String(value))
+    }
+}
+
 export function useAssetUrl(assetRef, options = {}) {
     const assetId = assetRef?.id
     const [objectUrl, setObjectUrl] = useState(null)
     const preferRemoteSource = options?.preferRemoteSource === true
 
     const remoteUrl = assetId ? getAssetSourceUrl(assetId) : null
+    const canPreferRemoteSource = preferRemoteSource && remoteUrl && !isFrontendAssetFallbackUrl(remoteUrl)
     const expectedTopLevelType = assetRef?.mimeType ? assetRef.mimeType.split('/')[0] : null
 
     useEffect(() => {
@@ -23,7 +42,7 @@ export function useAssetUrl(assetRef, options = {}) {
             return () => {}
         }
 
-        if (preferRemoteSource && remoteUrl) {
+        if (canPreferRemoteSource) {
             setObjectUrl(remoteUrl)
             return () => {}
         }
@@ -87,7 +106,7 @@ export function useAssetUrl(assetRef, options = {}) {
                 URL.revokeObjectURL(revokedUrl)
             }
         }
-    }, [assetId, assetRef?.mimeType, assetRef?.name, expectedTopLevelType, preferRemoteSource, remoteUrl])
+    }, [assetId, assetRef?.mimeType, assetRef?.name, canPreferRemoteSource, expectedTopLevelType, remoteUrl])
 
     return objectUrl
 }

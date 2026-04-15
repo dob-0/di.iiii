@@ -1,0 +1,61 @@
+.gizmo-controls .media-variant-section {
+    gap: 8px;
+}
+.media-variant-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.media-variant-button {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 8px 10px;
+    border: 1px solid var(--ui-border);
+    border-radius: 8px;
+    background: var(--ui-surface);
+    cursor: pointer;
+    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--ui-text-primary);
+}
+.media-variant-button.selected {
+    border-color: var(--ui-accent);
+    background: rgba(0,182,255,0.12);
+}
+.media-variant-button.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.media-variant-button .media-variant-title {
+    font-weight: 700;
+    font-size: 13px;
+    color: #f4f6ff;
+}
+.media-variant-button .media-variant-meta {
+    font-size: 12px;
+    color: var(--ui-text-muted);
+}
+.media-variant-hint {
+    font-size: 12px;
+    color: var(--ui-text-muted);
+    margin: 0;
+}
+.media-variant-optimize {
+    margin-top: 6px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,182,255,0.4);
+    background: rgba(0,182,255,0.18);
+    color: var(--ui-text-primary);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s ease, background 0.15s ease;
+}
+.media-variant-optimize:hover {
+    background: rgba(0,182,255,0.2);
+}
+.media-variant-optimize:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

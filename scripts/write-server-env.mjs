@@ -40,6 +40,7 @@ if (missingEntries.length) {
 }
 
 const optionalValues = {
+    SHARED_ROOT: process.env.SHARED_ROOT || '',
     SPACE_TTL_MS: process.env.SPACE_TTL_MS || '',
     SPACES_DIR: process.env.SPACES_DIR || '',
     UPLOADS_DIR: process.env.UPLOADS_DIR || ''

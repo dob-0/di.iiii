@@ -1,9 +1,9 @@
-name: Auto PR dev→main
+name: Auto PR staging→main
 
 on:
   push:
     branches:
-      - dev
+      - staging
   workflow_dispatch:
 
 permissions:
@@ -14,21 +14,22 @@ jobs:
   create-pull-request:
     runs-on: ubuntu-latest
     steps:
-      - name: Create PR from dev to main
+      - name: Create PR from staging to main
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const { owner, repo } = context.repo;
-            const head = 'dev';
+            const head = 'staging';
             const base = 'main';
-            const title = 'Auto PR: dev → main';
+            const title = 'Auto PR: staging → main';
             const body = [
-              'Summary: New/cleared scenes are visible; skip server reload after clear;',
-              'stronger grid and aligned camera; dev server auto-opens chosen path.',
+              'Summary: Promote the latest staging-verified work into production.',
               '',
-              'Includes: default scene + camera updates, clear logic fixes, grid color/appearance,',
-              'vite auto-open env, CI + release workflows.'
+              'Expected path:',
+              '1. verify staging is healthy',
+              '2. review the staged changes',
+              '3. merge into main only when ready for production'
             ].join('\n');
 
             async function run() {

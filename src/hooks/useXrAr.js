@@ -1,8 +1,68 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createXRStore } from '@react-three/xr'
-import { createDefaultArAnchor } from '../utils/ar.js'
 
-const clamp = (value, min, max) => Math.min(max, Math.max(min, value))
+const DEFAULT_SUPPORTED_XR_MODES = { vr: false, ar: false }
+
+const serializeXrError = (error) => {
+    if (!error) return null
+
+    return {
+        name: error.name || 'Error',
+        message: error.message || String(error),
+        stack: error.stack || null
+    }
+}
+
+const readXrEnvironment = () => {
+    if (
+        typeof window === 'undefined'
+        || typeof document === 'undefined'
+        || typeof navigator === 'undefined'
+    ) {
+        return {
+            href: null,
+            secureContext: false,
+            visibilityState: 'unknown',
+            userAgent: null,
+            hasNavigatorXr: false,
+            hasIsSessionSupported: false
+        }
+    }
+
+    return {
+        href: window.location?.href ?? null,
+        secureContext: window.isSecureContext,
+        visibilityState: document.visibilityState,
+        userAgent: navigator.userAgent,
+        hasNavigatorXr: Boolean(navigator.xr),
+        hasIsSessionSupported: Boolean(navigator.xr?.isSessionSupported)
+    }
+}
+
+const formatXrUnsupportedMessage = (mode, diagnostics) => {
+    const modeLabel = mode === 'ar' ? 'AR' : 'VR'
+    const environment = diagnostics?.environment ?? readXrEnvironment()
+    const supportError = diagnostics?.error
+    const supportErrorMessage = supportError?.message
+        ? ` ${supportError.name ? `${supportError.name}: ` : ''}${supportError.message}`
+        : ''
+
+    return `WebXR ${modeLabel} is not supported on this device or browser. Secure context: ${environment.secureContext ? 'yes' : 'no'}. Visibility: ${environment.visibilityState}. navigator.xr: ${environment.hasNavigatorXr ? 'yes' : 'no'}.${supportErrorMessage}`
+}
+
+const formatXrStartError = (mode, error) => {
+    const modeLabel = mode === 'ar' ? 'AR' : 'VR'
+    const errorName = error?.name ? `${error.name}: ` : ''
+    const errorMessage = error?.message || 'Unknown error.'
+    const visibilityHint = (
+        typeof document !== 'undefined'
+        && document.visibilityState !== 'visible'
+    )
+        ? ' Keep the page visible in Chrome while starting the session.'
+        : ''
+
+    return `Could not start the ${modeLabel} session. ${errorName}${errorMessage}${visibilityHint}`
+}
 
 export function useXrAr({
     default3DView,
@@ -10,44 +70,36 @@ export function useXrAr({
     setCameraPosition,
     setCameraTarget
 } = {}) {
-    const domOverlayRoot = useMemo(() => {
-        if (typeof document === 'undefined') return undefined
-        const existing = document.getElementById('xr-dom-overlay-root')
-        if (existing) return existing
-        const el = document.createElement('div')
-        el.id = 'xr-dom-overlay-root'
-        el.style.position = 'fixed'
-        el.style.inset = '0'
-        el.style.pointerEvents = 'none'
-        // Do not append here; letting the XR store attach it avoids hierarchy issues.
-        return el
-    }, [])
+    const xrSessionInit = useMemo(() => ({
+        requiredFeatures: ['local-floor'],
+        optionalFeatures: []
+    }), [])
 
     const xrStore = useMemo(() => createXRStore({
         offerSession: false,
         emulate: false,
         controller: { teleportPointer: true },
         hand: { teleportPointer: true },
-        // Keep AR session init minimal to avoid feature errors on devices that don't support
-        // layers/mesh/plane detection.
-        anchors: false,
-        handTracking: false,
-        layers: false,
-        meshDetection: false,
-        planeDetection: false,
-        hitTest: false,
-        depthSensing: false,
-        domOverlay: domOverlayRoot ?? false
-    }), [domOverlayRoot])
+        customSessionInit: xrSessionInit
+    }), [xrSessionInit])
 
+    const isMountedRef = useRef(true)
     const [isXrPresenting, setIsXrPresenting] = useState(false)
     const [activeXrMode, setActiveXrMode] = useState(null)
-    const [supportedXrModes, setSupportedXrModes] = useState({ vr: false, ar: false })
-    const [xrOriginPosition, setXrOriginPosition] = useState([0, 0, 0])
-    const [arAnchorTransform, setArAnchorTransform] = useState(() => createDefaultArAnchor())
-    const [arPreviewScale, setArPreviewScale] = useState(1)
-    const [arPreviewOffset, setArPreviewOffset] = useState([0, 0, 0])
-    const previousXrModeRef = useRef(null)
+    const [supportedXrModes, setSupportedXrModes] = useState(DEFAULT_SUPPORTED_XR_MODES)
+    const [xrEnvironment, setXrEnvironment] = useState(() => readXrEnvironment())
+    const [lastSupportCheckAt, setLastSupportCheckAt] = useState(null)
+    const [supportCheckError, setSupportCheckError] = useState(null)
+    const [lastXrStartAttempt, setLastXrStartAttempt] = useState(null)
+    const [lastXrStartError, setLastXrStartError] = useState(null)
+
+    useEffect(() => {
+        isMountedRef.current = true
+
+        return () => {
+            isMountedRef.current = false
+        }
+    }, [])
 
     useEffect(() => {
         const unsubscribe = xrStore.subscribe((state) => {
@@ -57,141 +109,183 @@ export function useXrAr({
         return unsubscribe
     }, [xrStore])
 
-    useEffect(() => {
-        if (typeof navigator === 'undefined' || !navigator.xr || !navigator.xr.isSessionSupported) {
-            setSupportedXrModes({ vr: false, ar: false })
-            return
+    const refreshXrSupport = useCallback(async () => {
+        const environment = readXrEnvironment()
+        const checkedAt = new Date().toISOString()
+
+        const applySupportState = (supportedModes, error = null) => {
+            if (!isMountedRef.current) return
+            setXrEnvironment(environment)
+            setSupportedXrModes(supportedModes)
+            setLastSupportCheckAt(checkedAt)
+            setSupportCheckError(error)
         }
-        let isCancelled = false
-        const checkSupport = async () => {
-            try {
-                const [vrSupported, arSupported] = await Promise.all([
-                    navigator.xr.isSessionSupported('immersive-vr'),
-                    navigator.xr.isSessionSupported('immersive-ar')
-                ])
-                if (!isCancelled) {
-                    setSupportedXrModes({
-                        vr: vrSupported,
-                        ar: arSupported
-                    })
-                }
-            } catch (error) {
-                console.error('Failed to detect WebXR support', error)
-                if (!isCancelled) {
-                    setSupportedXrModes({ vr: false, ar: false })
-                }
+
+        if (typeof navigator === 'undefined' || !navigator.xr || !navigator.xr.isSessionSupported) {
+            const error = !environment.hasNavigatorXr
+                ? { name: 'Unavailable', message: 'navigator.xr is not available.' }
+                : { name: 'Unavailable', message: 'navigator.xr.isSessionSupported is not available.' }
+            applySupportState(DEFAULT_SUPPORTED_XR_MODES, error)
+            return {
+                environment,
+                checkedAt,
+                supportedModes: DEFAULT_SUPPORTED_XR_MODES,
+                error
             }
         }
-        checkSupport()
-        return () => {
-            isCancelled = true
-        }
-    }, [])
 
-    const resetArAnchor = useCallback(() => {
-        setArAnchorTransform(createDefaultArAnchor())
-        setArPreviewScale(1)
-        setArPreviewOffset([0, 0, 0])
+        try {
+            const [vrSupported, arSupported] = await Promise.all([
+                navigator.xr.isSessionSupported('immersive-vr'),
+                navigator.xr.isSessionSupported('immersive-ar')
+            ])
+            const supportedModes = {
+                vr: Boolean(vrSupported),
+                ar: Boolean(arSupported)
+            }
+            applySupportState(supportedModes, null)
+            return { environment, checkedAt, supportedModes, error: null }
+        } catch (error) {
+            console.error('Failed to detect WebXR support', error)
+            const serializedError = serializeXrError(error)
+            applySupportState(DEFAULT_SUPPORTED_XR_MODES, serializedError)
+            return {
+                environment,
+                checkedAt,
+                supportedModes: DEFAULT_SUPPORTED_XR_MODES,
+                error: serializedError
+            }
+        }
     }, [])
 
     useEffect(() => {
-        if (activeXrMode === 'immersive-ar' && previousXrModeRef.current !== 'immersive-ar') {
-            resetArAnchor()
+        void refreshXrSupport()
+
+        if (typeof document === 'undefined' || typeof window === 'undefined') {
+            return undefined
         }
-        if (activeXrMode !== 'immersive-ar' && previousXrModeRef.current === 'immersive-ar') {
-            resetArAnchor()
+
+        const handlePageStateChange = () => {
+            const environment = readXrEnvironment()
+            if (isMountedRef.current) {
+                setXrEnvironment(environment)
+            }
+            if (document.visibilityState === 'visible') {
+                void refreshXrSupport()
+            }
         }
-        previousXrModeRef.current = activeXrMode
-    }, [activeXrMode, resetArAnchor])
+
+        document.addEventListener('visibilitychange', handlePageStateChange)
+        window.addEventListener('focus', handlePageStateChange)
+        window.addEventListener('pageshow', handlePageStateChange)
+
+        return () => {
+            document.removeEventListener('visibilitychange', handlePageStateChange)
+            window.removeEventListener('focus', handlePageStateChange)
+            window.removeEventListener('pageshow', handlePageStateChange)
+        }
+    }, [refreshXrSupport])
 
     const isArModeActive = activeXrMode === 'immersive-ar'
-    const shouldCapturePreviewGestures = isArModeActive && !arAnchorTransform.anchored
+
+    const getXrDiagnosticsSnapshot = useCallback((overrides = {}) => ({
+        generatedAt: new Date().toISOString(),
+        environment: overrides.environment ?? xrEnvironment,
+        support: {
+            vr: overrides.supportedModes?.vr ?? supportedXrModes.vr,
+            ar: overrides.supportedModes?.ar ?? supportedXrModes.ar,
+            lastCheckedAt: overrides.checkedAt ?? lastSupportCheckAt,
+            error: overrides.supportError ?? supportCheckError
+        },
+        session: {
+            isXrPresenting,
+            activeXrMode,
+            isArModeActive
+        },
+        sessionInit: xrSessionInit,
+        lastStartAttempt: overrides.lastStartAttempt ?? lastXrStartAttempt,
+        lastStartError: overrides.lastStartError ?? lastXrStartError
+    }), [
+        xrEnvironment,
+        supportedXrModes.vr,
+        supportedXrModes.ar,
+        lastSupportCheckAt,
+        supportCheckError,
+        isXrPresenting,
+        activeXrMode,
+        isArModeActive,
+        xrSessionInit,
+        lastXrStartAttempt,
+        lastXrStartError
+    ])
 
     useEffect(() => {
-        if (!shouldCapturePreviewGestures) return
-        const gestureState = {
-            pointers: new Map(),
-            initialPinch: null,
-            baseScale: arPreviewScale,
-            lastSingle: null
+        if (typeof window === 'undefined') return undefined
+
+        window.__DII_XR_DEBUG__ = {
+            snapshot: getXrDiagnosticsSnapshot(),
+            getSnapshot: () => getXrDiagnosticsSnapshot(),
+            refreshSupport: () => refreshXrSupport(),
+            enterAR: () => xrStore.enterAR(),
+            enterVR: () => xrStore.enterVR()
         }
 
-        const handlePointerDown = (event) => {
-            if (event.pointerType === 'mouse' && event.button !== 0) return
-            gestureState.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
-            if (gestureState.pointers.size === 2) {
-                const points = Array.from(gestureState.pointers.values())
-                const dx = points[0].x - points[1].x
-                const dy = points[0].y - points[1].y
-                gestureState.initialPinch = Math.hypot(dx, dy)
-                gestureState.baseScale = arPreviewScale
-            } else if (gestureState.pointers.size === 1) {
-                gestureState.lastSingle = { x: event.clientX, y: event.clientY }
-            }
-        }
-
-        const handlePointerMove = (event) => {
-            if (!gestureState.pointers.has(event.pointerId)) return
-            gestureState.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
-            if (gestureState.pointers.size === 2 && gestureState.initialPinch) {
-                const points = Array.from(gestureState.pointers.values())
-                const dx = points[0].x - points[1].x
-                const dy = points[0].y - points[1].y
-                const current = Math.hypot(dx, dy)
-                if (current > 0) {
-                    const nextScale = clamp(
-                        gestureState.baseScale * (current / gestureState.initialPinch),
-                        0.2,
-                        2
-                    )
-                    setArPreviewScale(nextScale)
-                }
-                event.preventDefault()
-            } else if (gestureState.pointers.size === 1 && gestureState.lastSingle) {
-                const current = gestureState.pointers.get(event.pointerId)
-                const dx = (current.x - gestureState.lastSingle.x) * 0.002
-                const dy = (current.y - gestureState.lastSingle.y) * 0.002
-                gestureState.lastSingle = { ...current }
-                setArPreviewOffset(prev => {
-                    const next = [
-                        clamp(prev[0] + dx, -2, 2),
-                        prev[1],
-                        clamp(prev[2] + dy, -2, 2)
-                    ]
-                    return next
-                })
-                event.preventDefault()
-            }
-        }
-
-        const handlePointerUp = (event) => {
-            gestureState.pointers.delete(event.pointerId)
-            if (gestureState.pointers.size < 2) {
-                gestureState.initialPinch = null
-            }
-            if (gestureState.pointers.size === 0) {
-                gestureState.lastSingle = null
-            }
-        }
-
-        window.addEventListener('pointerdown', handlePointerDown, { passive: false })
-        window.addEventListener('pointermove', handlePointerMove, { passive: false })
-        window.addEventListener('pointerup', handlePointerUp)
-        window.addEventListener('pointercancel', handlePointerUp)
-        window.addEventListener('pointerleave', handlePointerUp)
         return () => {
-            window.removeEventListener('pointerdown', handlePointerDown)
-            window.removeEventListener('pointermove', handlePointerMove)
-            window.removeEventListener('pointerup', handlePointerUp)
-            window.removeEventListener('pointercancel', handlePointerUp)
-            window.removeEventListener('pointerleave', handlePointerUp)
+            delete window.__DII_XR_DEBUG__
         }
-    }, [shouldCapturePreviewGestures, arPreviewScale])
+    }, [getXrDiagnosticsSnapshot, refreshXrSupport, xrStore])
+
+    const showXrDiagnostics = useCallback(async () => {
+        const supportResult = await refreshXrSupport()
+        const snapshot = getXrDiagnosticsSnapshot({
+            environment: supportResult.environment,
+            supportedModes: supportResult.supportedModes,
+            checkedAt: supportResult.checkedAt,
+            supportError: supportResult.error
+        })
+        const diagnosticText = JSON.stringify(snapshot, null, 2)
+
+        console.info('XR diagnostics', snapshot)
+
+        try {
+            if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(diagnosticText)
+                alert(
+                    `XR diagnostics copied to clipboard.\nAR supported: ${snapshot.support.ar ? 'yes' : 'no'}\nSecure context: ${snapshot.environment.secureContext ? 'yes' : 'no'}\nVisibility: ${snapshot.environment.visibilityState}\nURL: ${snapshot.environment.href}`
+                )
+                return
+            }
+        } catch (error) {
+            console.warn('Failed to copy XR diagnostics', error)
+        }
+
+        if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
+            window.prompt('XR diagnostics', diagnosticText)
+            return
+        }
+
+        alert(diagnosticText)
+    }, [refreshXrSupport, getXrDiagnosticsSnapshot])
 
     const handleEnterXrSession = useCallback(async (mode = 'vr') => {
-        const isModeSupported = mode === 'ar' ? supportedXrModes.ar : supportedXrModes.vr
+        const supportResult = await refreshXrSupport()
+        const startAttempt = {
+            mode,
+            attemptedAt: new Date().toISOString(),
+            environment: supportResult.environment,
+            sessionInit: xrSessionInit
+        }
+
+        if (isMountedRef.current) {
+            setLastXrStartAttempt(startAttempt)
+            setLastXrStartError(null)
+        }
+
+        const isModeSupported = mode === 'ar'
+            ? supportResult.supportedModes.ar
+            : supportResult.supportedModes.vr
         if (!isModeSupported) {
-            alert(`WebXR ${mode.toUpperCase()} is not supported on this device or browser.`)
+            alert(formatXrUnsupportedMessage(mode, supportResult))
             return
         }
 
@@ -216,10 +310,14 @@ export function useXrAr({
                 await xrStore.enterVR()
             }
         } catch (error) {
+            const serializedError = serializeXrError(error)
+            if (isMountedRef.current) {
+                setLastXrStartError(serializedError)
+            }
             console.error(`Failed to start ${mode.toUpperCase()} session:`, error)
-            alert(`Could not start the ${mode === 'ar' ? 'AR' : 'VR'} session. Please ensure you are using a compatible browser over HTTPS.`)
+            alert(formatXrStartError(mode, error))
         }
-    }, [supportedXrModes, isXrPresenting, xrStore, controlsRef, default3DView, setCameraPosition, setCameraTarget])
+    }, [refreshXrSupport, xrSessionInit, isXrPresenting, xrStore, controlsRef, default3DView, setCameraPosition, setCameraTarget])
 
     const handleExitXrSession = useCallback(async () => {
         try {
@@ -233,20 +331,17 @@ export function useXrAr({
 
     return {
         xrStore,
+        xrSessionInit,
         isXrPresenting,
         activeXrMode,
         isArModeActive,
         supportedXrModes,
-        xrOriginPosition,
-        setXrOriginPosition,
-        arAnchorTransform,
-        setArAnchorTransform,
-        arPreviewScale,
-        setArPreviewScale,
-        arPreviewOffset,
-        setArPreviewOffset,
-        resetArAnchor,
+        refreshXrSupport,
+        getXrDiagnosticsSnapshot,
+        showXrDiagnostics,
         handleEnterXrSession,
         handleExitXrSession
     }
 }
+
+export default useXrAr

@@ -11,7 +11,7 @@ DEPLOY_ENV="${1:-${CPANEL_DEPLOY_ENV:-}}"
 
 if [[ -z "${DEPLOY_ENV}" ]]; then
   case "${CURRENT_BRANCH}" in
-    cpanel-staging|dev)
+    cpanel-staging|staging|dev)
       DEPLOY_ENV="staging"
       ;;
     cpanel-production|main|master)
@@ -127,28 +127,58 @@ if [[ "${CPANEL_SKIP_BACKUP:-0}" != "1" ]]; then
   fi
 fi
 
-if ! command -v rsync >/dev/null 2>&1; then
-  echo "[cpanel-prebuilt] rsync is required on the server." >&2
-  exit 1
+sync_tree_tar() {
+  local source_dir="$1"
+  local target_dir="$2"
+  shift 2
+
+  tar -cf - "$@" -C "${source_dir}" . | tar -xf - -C "${target_dir}"
+}
+
+if command -v rsync >/dev/null 2>&1; then
+  rsync -az --delete \
+    --exclude='cgi-bin' \
+    --exclude='.well-known' \
+    --exclude='.htaccess' \
+    --exclude='serverXR' \
+    .deploy/cpanel/public_html/ "${CPANEL_WEB_ROOT}/"
+
+  rsync -az --delete \
+    --exclude='.env' \
+    --exclude='.env.generated' \
+    --exclude='data' \
+    --exclude='node_modules' \
+    .deploy/cpanel/serverXR/ "${CPANEL_SERVERXR_ROOT}/"
+
+  rsync -az --delete \
+    .deploy/cpanel/shared/ "${CPANEL_SHARED_ROOT}/"
+else
+  echo "[cpanel-prebuilt] rsync not found, using tar fallback."
+
+  find "${CPANEL_WEB_ROOT}" -mindepth 1 -maxdepth 1 \
+    ! -name 'cgi-bin' \
+    ! -name '.well-known' \
+    ! -name '.htaccess' \
+    ! -name 'serverXR' \
+    -exec rm -rf {} +
+  sync_tree_tar ".deploy/cpanel/public_html" "${CPANEL_WEB_ROOT}"
+
+  find "${CPANEL_SERVERXR_ROOT}" -mindepth 1 -maxdepth 1 \
+    ! -name 'data' \
+    ! -name 'node_modules' \
+    -exec rm -rf {} +
+  sync_tree_tar ".deploy/cpanel/serverXR" "${CPANEL_SERVERXR_ROOT}"
+
+  find "${CPANEL_SHARED_ROOT}" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+  sync_tree_tar ".deploy/cpanel/shared" "${CPANEL_SHARED_ROOT}"
 fi
 
-rsync -az --delete \
-  --exclude='cgi-bin' \
-  --exclude='.well-known' \
-  --exclude='.htaccess' \
-  .deploy/cpanel/public_html/ "${CPANEL_WEB_ROOT}/"
-
-rsync -az --delete \
-  --exclude='.env' \
-  --exclude='.env.generated' \
-  --exclude='data' \
-  --exclude='node_modules' \
-  .deploy/cpanel/serverXR/ "${CPANEL_SERVERXR_ROOT}/"
-
-rsync -az --delete \
-  .deploy/cpanel/shared/ "${CPANEL_SHARED_ROOT}/"
-
-rm -rf "${CPANEL_WEB_ROOT}/serverXR"
+# CloudLinux Node.js App expects the app URL mount path to exist in the web root
+# so it can manage its generated .htaccess there.
+mkdir -p "${CPANEL_WEB_ROOT}/serverXR"
+if [[ ! -f "${CPANEL_WEB_ROOT}/serverXR/.htaccess" ]]; then
+  : > "${CPANEL_WEB_ROOT}/serverXR/.htaccess"
+fi
 cp .deploy/cpanel/serverXR/.env.generated "${CPANEL_SERVERXR_ROOT}/.env"
 
 (

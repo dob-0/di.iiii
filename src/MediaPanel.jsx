@@ -1,13 +1,16 @@
-import React from 'react'
+import React, { useId } from 'react'
 import PanelShell from './components/PanelShell.jsx'
 
-export default function MediaPanel({ preference, onChange, onClose }) {
+export default function MediaPanel({ preference, onChange, onClose, surfaceMode = 'floating' }) {
+    const optimizationFieldId = useId()
+
     return (
         <PanelShell
             title="Media Settings"
             onClose={onClose}
+            surfaceMode={surfaceMode}
             initialPosition={{ x: 1048, y: 120 }}
-            dragOptions={{ baseZ: 200 }}
+            dragOptions={{ baseZ: 100 }}
             sizeOptions={{
                 initialWidth: 320,
                 min: 280,
@@ -19,8 +22,9 @@ export default function MediaPanel({ preference, onChange, onClose }) {
             className="view-panel"
         >
             <div className="prop-row-stacked">
-                <label>Default Optimization</label>
+                <label htmlFor={optimizationFieldId}>Default Optimization</label>
                 <select
+                    id={optimizationFieldId}
                     className="text-input"
                     value={preference}
                     onChange={(e) => onChange(e.target.value)}

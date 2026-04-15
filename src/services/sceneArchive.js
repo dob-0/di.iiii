@@ -1,5 +1,4 @@
 import JSZip from 'jszip'
-import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
 
 export const collectSceneAssetRefs = (objects = []) => {
     const refs = new Map()
@@ -38,11 +37,6 @@ export const resolveAssetEntries = async (objects, { getAssetBlob, getAssetSourc
                 const response = await fetch(sourceUrl)
                 if (!response.ok) {
                     console.warn(`Failed to fetch remote asset for export: ${sourceUrl}`)
-                    continue
-                }
-                const contentType = response.headers?.get?.('content-type') || ''
-                if (isHtmlLikeMimeType(contentType)) {
-                    console.warn(`Remote asset source returned HTML instead of media: ${sourceUrl}`)
                     continue
                 }
                 const remoteBlob = await response.blob()

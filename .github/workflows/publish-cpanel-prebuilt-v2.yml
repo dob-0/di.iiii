@@ -1,12 +1,16 @@
-name: Publish cPanel Prebuilt v2
+name: Publish cPanel Release (Canonical)
 
 on:
+  push:
+    branches:
+      - staging
+      - main
   workflow_dispatch:
     inputs:
       source_ref:
         description: Source branch or ref to build from
         required: true
-        default: dev
+        default: staging
       deploy_env:
         description: Target prebuilt environment branch
         required: true
@@ -22,11 +26,11 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.deploy_env }}
+    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_env || (github.ref_name == 'staging' && 'staging' || 'production') }}
     env:
-      SOURCE_REF: ${{ inputs.source_ref }}
-      DEPLOY_ENV: ${{ inputs.deploy_env }}
-      TARGET_BRANCH: ${{ inputs.deploy_env == 'staging' && 'cpanel-staging' || 'cpanel-production' }}
+      SOURCE_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || github.ref_name }}
+      DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_env || (github.ref_name == 'staging' && 'staging' || 'production') }}
+      TARGET_BRANCH: ${{ github.event_name == 'workflow_dispatch' && (inputs.deploy_env == 'staging' && 'cpanel-staging' || 'cpanel-production') || (github.ref_name == 'staging' && 'cpanel-staging' || 'cpanel-production') }}
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -50,6 +54,9 @@ jobs:
           else
             npm --prefix serverXR install
           fi
+
+      - name: Run lint
+        run: npm run lint
 
       - name: Run automated tests
         run: npm test

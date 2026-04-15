@@ -23,10 +23,14 @@
   <header>
     <div>
       <h1>dii Server Monitor</h1>
-      <p>Quick glance at health + recent events.</p>
+      <p>Quick glance at health, release, and recent events.</p>
     </div>
     <button id="refresh">Refresh</button>
   </header>
+  <section>
+    <h2>Release</h2>
+    <pre id="release">Loading...</pre>
+  </section>
   <section>
     <h2>Health</h2>
     <pre id="health">Loading…</pre>
@@ -36,6 +40,7 @@
     <ul id="events"><li>Loading…</li></ul>
   </section>
   <script>
+    const releaseEl = document.getElementById('release')
     const healthEl = document.getElementById('health')
     const eventsEl = document.getElementById('events')
     const refreshBtn = document.getElementById('refresh')
@@ -56,6 +61,7 @@
           fetchJson(buildApiUrl('/api/health')),
           fetchJson(buildApiUrl('/api/events'))
         ])
+        releaseEl.textContent = JSON.stringify(health.release || {}, null, 2)
         healthEl.textContent = JSON.stringify(health, null, 2)
         if (!events.events.length) {
           eventsEl.innerHTML = '<li>No events yet.</li>'
@@ -68,6 +74,7 @@
           `).join('')
         }
       } catch (error) {
+        releaseEl.textContent = `Failed to load: ${error.message}`
         healthEl.textContent = `Failed to load: ${error.message}`
         eventsEl.innerHTML = '<li>Error loading events.</li>'
       } finally {

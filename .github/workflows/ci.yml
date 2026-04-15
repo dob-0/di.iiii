@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ dev, staging, main ]
   pull_request:
-    branches: [ main ]
+    branches: [ dev, staging, main ]
 
 jobs:
   build-and-test:
@@ -16,11 +16,19 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install server dependencies
+        run: |
+          if [ -f serverXR/package-lock.json ]; then
+            npm --prefix serverXR ci
+          else
+            npm --prefix serverXR install
+          fi
 
       - name: Lint
         run: npm run lint

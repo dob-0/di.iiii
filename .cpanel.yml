@@ -1,4 +1,0 @@
----
-deployment:
-  tasks:
-    - /usr/bin/env bash scripts/cpanel-git-deploy.sh
