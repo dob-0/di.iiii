@@ -78,8 +78,17 @@ export default function StudioApp({ initialRoute }) {
         <ThemeProvider theme={studioTheme}>
             <CssBaseline />
             <GlobalStyles styles={{
+                html: {
+                    backgroundColor: '#0a1118',
+                    height: '100%'
+                },
                 body: {
-                    backgroundColor: '#0a1118'
+                    backgroundColor: '#0a1118',
+                    height: '100%'
+                },
+                '#root': {
+                    backgroundColor: '#0a1118',
+                    height: '100%'
                 }
             }}
             />

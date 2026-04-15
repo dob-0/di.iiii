@@ -599,7 +599,7 @@ export default function StudioShell({
     )
 
     return (
-        <Box className="studio-shell-root">
+        <Box className="studio-shell-root studio-editor-root">
             <AppBar position="fixed" color="transparent" elevation={0} className="studio-appbar">
                 <Toolbar sx={{ minHeight: `${APP_BAR_HEIGHT}px !important`, gap: 1.5 }}>
                     <IconButton color="inherit" onClick={() => updateLayout({ leftOpen: !layout.leftOpen })}>
@@ -734,7 +734,7 @@ export default function StudioShell({
                 component="main"
                 sx={{
                     position: 'relative',
-                    height: '100vh',
+                    height: '100%',
                     pt: `${APP_BAR_HEIGHT}px`,
                     ...viewportMargins
                 }}
