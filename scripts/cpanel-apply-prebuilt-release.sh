@@ -82,6 +82,10 @@ TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_ROOT="${BACKUP_DIR}/${TIMESTAMP}-${DEPLOY_ENV}"
 CPANEL_NODE_VERSION="${CPANEL_NODE_VERSION:-22}"
 NODEENV_ACTIVATE="${HOME}/nodevenv/$(basename "${CPANEL_SERVERXR_ROOT}")/${CPANEL_NODE_VERSION}/bin/activate"
+APP_ROOT_REL="${CPANEL_SERVERXR_ROOT#${HOME}/}"
+if [[ "${APP_ROOT_REL}" == "${CPANEL_SERVERXR_ROOT}" ]]; then
+  APP_ROOT_REL="${CPANEL_SERVERXR_ROOT#/home/$(whoami)/}"
+fi
 
 required_vars=(
   API_TOKEN
@@ -189,18 +193,22 @@ if [[ ! -f "${CPANEL_WEB_ROOT}/serverXR/.htaccess" ]]; then
 fi
 cp .deploy/cpanel/serverXR/.env.generated "${CPANEL_SERVERXR_ROOT}/.env"
 
-(
-  cd "${CPANEL_SERVERXR_ROOT}"
-  npm install --omit=dev
-)
+if command -v cloudlinux-selector >/dev/null 2>&1; then
+  if [[ -e "${CPANEL_SERVERXR_ROOT}/node_modules" && ! -L "${CPANEL_SERVERXR_ROOT}/node_modules" ]]; then
+    echo "[cpanel-prebuilt] Removing app-root node_modules directory so CloudLinux can recreate its managed symlink."
+    rm -rf "${CPANEL_SERVERXR_ROOT}/node_modules"
+  fi
+  cloudlinux-selector install-modules --json --interpreter nodejs --user "$(whoami)" --app-root "${APP_ROOT_REL}"
+else
+  (
+    cd "${CPANEL_SERVERXR_ROOT}"
+    npm install --omit=dev
+  )
+fi
 
 if [[ "${CPANEL_SKIP_RESTART:-0}" == "1" ]]; then
   echo "[cpanel-prebuilt] Skipping Node.js App restart because CPANEL_SKIP_RESTART=1."
 elif command -v cloudlinux-selector >/dev/null 2>&1; then
-  APP_ROOT_REL="${CPANEL_SERVERXR_ROOT#${HOME}/}"
-  if [[ "${APP_ROOT_REL}" == "${CPANEL_SERVERXR_ROOT}" ]]; then
-    APP_ROOT_REL="${CPANEL_SERVERXR_ROOT#/home/$(whoami)/}"
-  fi
   cloudlinux-selector restart --json --interpreter nodejs --user "$(whoami)" --app-root "${APP_ROOT_REL}"
 else
   echo "[cpanel-prebuilt] cloudlinux-selector not found. Restart the Node.js App manually in cPanel." >&2
