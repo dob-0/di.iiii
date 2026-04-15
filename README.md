@@ -53,23 +53,23 @@ Also keep these boundaries in mind:
 This platform currently has five active surfaces:
 
 - `Public Space View`
-  - route: `/<space>`
-  - shows the live published project for a space
-  - falls back to V1 when no live project is published
+    - route: `/<space>`
+    - shows the live published project for a space
+    - falls back to V1 when no live project is published
 - `Studio`
-  - route: `/<space>/studio`
-  - compatibility alias: `/studio` for `main`
-  - stable main authoring surface
+    - route: `/<space>/studio`
+    - compatibility alias: `/studio` for `main`
+    - stable main authoring surface
 - `Beta`
-  - route: `/<space>/beta`
-  - compatibility alias: `/beta` for `main`
-  - active experimental/v2 lane kept alongside Studio
+    - route: `/<space>/beta`
+    - compatibility alias: `/beta` for `main`
+    - active experimental/v2 lane kept alongside Studio
 - `Admin/Ops`
-  - route: `/admin?space=<space>`
-  - operator/debugging surface
+    - route: `/admin?space=<space>`
+    - operator/debugging surface
 - `V1 Legacy`
-  - route: `/<space>` when no live project is published
-  - fallback/history editor and compatibility lane
+    - route: `/<space>` when no live project is published
+    - fallback/history editor and compatibility lane
 
 Current direction:
 
@@ -108,31 +108,31 @@ Important nuance:
 ## Repo Map
 
 - `src/RootApp.jsx`
-  - top-level route switch
+    - top-level route switch
 - `src/SpaceSurfaceApp.jsx`
-  - chooses public viewer vs V1 fallback for `/<space>`
+    - chooses public viewer vs V1 fallback for `/<space>`
 - `src/components/`
-  - shared desktop/mobile/admin UI
+    - shared desktop/mobile/admin UI
 - `src/hooks/`
-  - app orchestration, spaces UI, V1 logic
+    - app orchestration, spaces UI, V1 logic
 - `src/project/`
-  - shared project model used by Studio and Beta
+    - shared project model used by Studio and Beta
 - `src/project/components/PublicProjectViewer.jsx`
-  - live public viewer
+    - live public viewer
 - `src/studio/`
-  - Studio route/UI layer
+    - Studio route/UI layer
 - `src/beta/`
-  - Beta route/UI layer
+    - Beta route/UI layer
 - `serverXR/`
-  - backend app
+    - backend app
 - `shared/`
-  - backend/shared schemas used by runtime
+    - backend/shared schemas used by runtime
 - `src/shared/`
-  - frontend/shared schemas
+    - frontend/shared schemas
 - `scripts/`
-  - dev stack, deploy, smoke, checkpoint, and release tooling
+    - dev stack, deploy, smoke, checkpoint, and release tooling
 - `docs/`
-  - checkpoints, deploy notes, testing, and architecture docs
+    - checkpoints, deploy notes, testing, and architecture docs
 
 ## Requirements
 
@@ -249,6 +249,51 @@ Branch mapping:
 - `main` source branch publishes `cpanel-production`
 - `dev` does not deploy directly
 
+### Fast path
+
+Use this when you are on `dev`, the change is committed, and you want to test the same
+commit on the real staging phone URL.
+
+1. Push current `dev` commit to GitHub staging:
+
+```bash
+git push origin HEAD:dev HEAD:staging
+```
+
+GitHub Actions automatically builds and publishes `cpanel-staging`.
+
+2. Apply the new staging artifact on the server:
+
+```bash
+cd /home/distudio/repositories/di.iiii-staging
+git pull --ff-only origin cpanel-staging
+bash scripts/cpanel-apply-prebuilt-release.sh staging
+```
+
+3. Check real staging on desktop and mobile:
+
+```bash
+curl -s https://staging.di-studio.xyz/serverXR/api/health
+npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
+```
+
+4. After staging passes, promote that exact staging commit to production:
+
+```bash
+git fetch origin staging
+git push origin FETCH_HEAD:main
+```
+
+GitHub Actions automatically builds and publishes `cpanel-production`. Apply it in the
+production cPanel clone, then verify `https://di-studio.xyz`.
+
+Current automation note:
+
+- pushing `staging` already auto-builds the deploy artifact
+- the live cPanel apply step is still manual unless cPanel auto-deploy/webhook or a GitHub
+  Actions SSH deploy secret is configured
+- the safest current workflow is automatic build plus the short server apply command above
+
 ### Full workflow circle
 
 Use this when you make a fix, test it, put it on staging, verify it, then ship it to production.
@@ -325,11 +370,11 @@ The staging health response must show:
 
 ```json
 {
-  "release": {
-    "deployEnv": "staging",
-    "sourceRef": "staging",
-    "gitCommit": "<the staging source commit>"
-  }
+    "release": {
+        "deployEnv": "staging",
+        "sourceRef": "staging",
+        "gitCommit": "<the staging source commit>"
+    }
 }
 ```
 
@@ -419,11 +464,11 @@ The health JSON should include:
 
 ```json
 {
-  "release": {
-    "deployEnv": "staging",
-    "sourceRef": "staging",
-    "gitCommit": "<current staging source commit>"
-  }
+    "release": {
+        "deployEnv": "staging",
+        "sourceRef": "staging",
+        "gitCommit": "<current staging source commit>"
+    }
 }
 ```
 
