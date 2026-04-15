@@ -88,6 +88,9 @@ describe('PublicProjectViewer', () => {
         )
 
         expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+        await waitFor(() => {
+            expect(syncState.connectArgs?.onProjectOp).toEqual(expect.any(Function))
+        })
 
         await act(async () => {
             syncState.connectArgs?.onProjectOp?.({

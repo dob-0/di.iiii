@@ -27,6 +27,8 @@ That means:
 - `dev` is the integration lane
 - `staging` is the stable preview lane
 - `main` is the public lane
+- normal work starts on `dev`
+- `staging` and `main` are promotion branches during the normal path
 
 ## What The Workflow Does
 
@@ -38,7 +40,9 @@ The canonical workflow:
 4. installs dependencies on GitHub Actions
 5. runs lint and tests
 6. stages `.deploy/cpanel`
-7. force-updates the prebuilt branch for the target environment
+7. publishes a prebuilt commit to the target environment branch
+
+`workflow_dispatch` is useful for repair or recovery work, but it should not be used to bypass the normal `dev -> staging -> main` promotion path.
 
 The prebuilt branch contains:
 
@@ -67,6 +71,114 @@ Sometimes still manual:
 - if the live/staging site still serves the older build after GitHub finished, open cPanel `Git Version Control` and run `Deploy HEAD Commit`
 
 If GitHub already published the correct `cpanel-*` branch but the site is stale, the missing step is usually cPanel-side, not GitHub-side.
+
+## Easy Staging Deploy
+
+Use this for `https://staging.di-studio.xyz`.
+
+1. Promote the approved source commit to `staging`:
+
+```bash
+git switch staging
+git pull --ff-only origin staging
+git merge --ff-only dev
+git push origin staging
+```
+
+2. Wait for GitHub Actions to publish `cpanel-staging`.
+
+3. Open cPanel `Git Version Control`.
+
+4. Open the staging clone:
+
+```text
+/home/distudio/repositories/di.iiii-staging
+```
+
+5. Click `Update from Remote`.
+
+6. Confirm the checked-out branch is `cpanel-staging`.
+
+7. Click `Deploy HEAD Commit`.
+
+8. Verify the source commit reported by the live backend:
+
+```bash
+curl -s https://staging.di-studio.xyz/serverXR/api/health
+npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
+```
+
+The health response should include:
+
+```json
+{
+  "release": {
+    "deployEnv": "staging",
+    "sourceRef": "staging",
+    "gitCommit": "<current staging source commit>"
+  }
+}
+```
+
+## Easy Production Deploy
+
+Use this only after staging is verified.
+
+1. Promote the verified source commit to `main`:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git merge --ff-only staging
+git push origin main
+```
+
+2. Wait for GitHub Actions to publish `cpanel-production`.
+
+3. Open the production cPanel clone in `Git Version Control`.
+
+4. Click `Update from Remote`.
+
+5. Confirm the checked-out branch is `cpanel-production`.
+
+6. Click `Deploy HEAD Commit`.
+
+7. Verify production:
+
+```bash
+curl -s https://di-studio.xyz/serverXR/api/health
+npm run smoke:cpanel -- --base-url https://di-studio.xyz
+```
+
+## If cPanel Cannot Fast-Forward
+
+If `Update from Remote` shows a message like `Diverging branches can't be fast-forwarded` or `Not possible to fast-forward, aborting`, cPanel is stuck on an older generated artifact commit.
+
+Do not deploy the old HEAD. Reset the cPanel clone to the remote artifact branch, then deploy.
+
+For staging:
+
+```bash
+cd /home/distudio/repositories/di.iiii-staging
+git status --short
+git branch backup-cpanel-staging-before-reset-$(date +%Y%m%d-%H%M%S)
+git fetch origin cpanel-staging
+git reset --hard origin/cpanel-staging
+git status --short
+git log -1 --oneline
+```
+
+Expected result:
+
+```text
+8cdc182 Publish staging cPanel prebuilt from staging
+```
+
+The exact commit will change over time. The important part is that `HEAD` and `origin/cpanel-staging` point at the same commit.
+
+Then refresh cPanel `Git Version Control` and click `Deploy HEAD Commit`.
+
+For production, use the production clone and replace `cpanel-staging` with `cpanel-production`.
 
 ## Server Apply Step
 

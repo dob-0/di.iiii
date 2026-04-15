@@ -1,6 +1,6 @@
 import React from 'react'
 import { fireEvent, render, screen, within } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import PreferencesPage from './PreferencesPage.jsx'
 import {
     ActionsContext,
@@ -42,6 +42,10 @@ vi.mock('../hooks/useStatusItems.js', () => ({
         }
     ])
 }))
+
+afterEach(() => {
+    vi.restoreAllMocks()
+})
 
 function renderPreferencesPage() {
     const objects = [
@@ -169,12 +173,31 @@ function renderPreferencesPage() {
 }
 
 describe('PreferencesPage', () => {
-    it('renders the architecture map and updates the node inspector when a node is selected', () => {
+    it('renders runtime build metadata and updates the node inspector when a node is selected', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+            ok: true,
+            json: async () => ({
+                mode: 'development',
+                nodeVersion: 'v22.22.0',
+                release: {
+                    deployEnv: 'staging',
+                    sourceRef: 'staging',
+                    gitCommit: 'abcdef1234567890',
+                    releaseId: 'cpanel-20260415-150000',
+                    generatedAt: '2026-04-15T15:00:00.000Z'
+                }
+            })
+        })
+
         renderPreferencesPage()
 
         expect(screen.getByText('System Architecture')).toBeInTheDocument()
         expect(screen.getByText('Node Inspector')).toBeInTheDocument()
         expect(screen.getByText('Scene Radar')).toBeInTheDocument()
+        expect(await screen.findByText('Build / Release')).toBeInTheDocument()
+        expect(screen.getByText('0.2.0')).toBeInTheDocument()
+        expect(screen.getByText('cpanel-20260415-150000')).toBeInTheDocument()
+        expect(screen.getByText('abcdef1234567890')).toBeInTheDocument()
 
         const runtimeNode = screen.getAllByRole('button').find((button) => (
             button.textContent?.includes('Runtime') && button.textContent?.includes('socket jitter detected')

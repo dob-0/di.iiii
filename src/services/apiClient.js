@@ -1,5 +1,22 @@
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1'])
-const API_TOKEN = (import.meta.env.VITE_API_TOKEN || '').trim()
+const SAFE_CLIENT_API_TOKEN_PATTERN = /^[A-Za-z0-9._~+/\-=]{16,}$/
+
+export const normalizeClientApiToken = (value = '') => {
+    const normalized = String(value || '').trim().replace(/^bearer\s+/i, '')
+    if (!normalized) {
+        return ''
+    }
+
+    // Ignore malformed values so a bad deploy token does not crash fetch()
+    // with an invalid Authorization header before the request is sent.
+    if (!SAFE_CLIENT_API_TOKEN_PATTERN.test(normalized)) {
+        return ''
+    }
+
+    return normalized
+}
+
+const API_TOKEN = normalizeClientApiToken(import.meta.env.VITE_API_TOKEN || '')
 
 const getHostnameFromOrigin = (origin = '') => {
     if (!origin) return ''
