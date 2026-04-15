@@ -4,14 +4,13 @@ import {
   clearServerUnavailable,
   getServerUnavailableRetryDelay,
   isServerTemporarilyUnavailable,
-  markServerUnavailable
+  markServerUnavailable,
+  normalizeClientApiToken
 } from '../services/apiClient.js'
 import { normalizeSpaceId } from '../utils/spaceNames.js'
 
 const normalizeAuthToken = (value = '') => {
-  const token = String(value || '').trim()
-  if (!token) return ''
-  return token.replace(/^bearer\s+/i, '')
+  return normalizeClientApiToken(value)
 }
 
 const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1'])
