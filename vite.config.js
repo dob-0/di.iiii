@@ -1,12 +1,30 @@
 import react from '@vitejs/plugin-react'
 import { transformWithEsbuild } from 'vite'
 import restart from 'vite-plugin-restart'
+import fs from 'node:fs'
+import { execSync } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const XR_EMULATE_STUB = path.resolve(ROOT_DIR, 'src/xr/emulateStub.js')
 const DEV_PROXY_API_TARGET = (process.env.VITE_PROXY_API_TARGET || 'http://localhost:4000').trim()
+const APP_PACKAGE = JSON.parse(fs.readFileSync(path.resolve(ROOT_DIR, 'package.json'), 'utf8'))
+
+const readGitValue = (args) => {
+    try {
+        return execSync(`git ${args}`, {
+            cwd: ROOT_DIR,
+            stdio: ['ignore', 'pipe', 'ignore']
+        }).toString().trim()
+    } catch {
+        return ''
+    }
+}
+
+const APP_VERSION = String(APP_PACKAGE?.version || '').trim() || '0.0.0'
+const APP_GIT_BRANCH = readGitValue('branch --show-current') || readGitValue('rev-parse --abbrev-ref HEAD')
+const APP_GIT_COMMIT = readGitValue('rev-parse --short HEAD')
 
 const stubXrEmulatorPlugin = () => ({
     name: 'stub-xr-emulator',
@@ -39,6 +57,11 @@ export default {
     root: 'src/',
     publicDir: '../public/',
     envDir: '../',
+    define: {
+        __APP_VERSION__: JSON.stringify(APP_VERSION),
+        __APP_GIT_BRANCH__: JSON.stringify(APP_GIT_BRANCH),
+        __APP_GIT_COMMIT__: JSON.stringify(APP_GIT_COMMIT)
+    },
     resolve: {
         alias: {
             // Disable XR emulator/dev UI (removes SES + styled-components overhead in production bundles).

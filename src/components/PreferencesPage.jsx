@@ -1,4 +1,5 @@
-import React, { useCallback, useContext, useState } from 'react'
+/* global __APP_VERSION__, __APP_GIT_BRANCH__, __APP_GIT_COMMIT__ */
+import React, { useCallback, useContext, useEffect, useState } from 'react'
 import {
     ActionsContext,
     SceneContext,
@@ -30,6 +31,12 @@ const formatJson = (value) => {
     } catch {
         return String(value)
     }
+}
+
+const normalizeBuildValue = (value, fallback = 'n/a') => {
+    if (typeof value !== 'string') return fallback
+    const normalized = value.trim()
+    return normalized || fallback
 }
 
 const readLocalStorageKeys = () => {
@@ -403,6 +410,11 @@ export default function PreferencesPage({ onNavigateToEditor }) {
     const xr = useContext(XrContext)
     const { entries, clearEntries } = useRuntimeConsole()
     const [selectedNodeId, setSelectedNodeId] = useState('scene')
+    const [runtimeHealth, setRuntimeHealth] = useState({
+        status: 'idle',
+        data: null,
+        error: ''
+    })
 
     const statusItems = useStatusItems({
         uploadProgress: sync?.uploadProgress,
@@ -454,6 +466,70 @@ export default function PreferencesPage({ onNavigateToEditor }) {
             userAgent: navigator?.userAgent || 'n/a'
         }
     const currentSpaceRoutes = buildSpaceRouteBundle(sync?.spaceId)
+    const frontendBuild = {
+        version: normalizeBuildValue(__APP_VERSION__, '0.0.0'),
+        branch: normalizeBuildValue(__APP_GIT_BRANCH__),
+        commit: normalizeBuildValue(__APP_GIT_COMMIT__)
+    }
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || typeof fetch !== 'function') return undefined
+
+        let cancelled = false
+        const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
+
+        const loadRuntimeHealth = async () => {
+            setRuntimeHealth((current) => (
+                current.status === 'ready'
+                    ? current
+                    : { status: 'loading', data: null, error: '' }
+            ))
+
+            try {
+                const response = await fetch(`${window.location.origin}/serverXR/api/health`, {
+                    signal: controller?.signal
+                })
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`)
+                }
+                const data = await response.json()
+                if (cancelled) return
+                setRuntimeHealth({
+                    status: 'ready',
+                    data,
+                    error: ''
+                })
+            } catch (error) {
+                if (cancelled || error?.name === 'AbortError') return
+                setRuntimeHealth({
+                    status: 'error',
+                    data: null,
+                    error: error?.message || 'Unavailable'
+                })
+            }
+        }
+
+        void loadRuntimeHealth()
+
+        return () => {
+            cancelled = true
+            controller?.abort()
+        }
+    }, [])
+
+    const runtimeRelease = runtimeHealth.data?.release || {}
+    const releaseDeployEnv = runtimeRelease.deployEnv || (runtimeHealth.status === 'ready' ? 'local/unreleased' : 'n/a')
+    const releaseId = runtimeRelease.releaseId || (runtimeHealth.status === 'ready' ? 'local/unreleased' : 'n/a')
+    const releaseSourceRef = runtimeRelease.sourceRef || 'n/a'
+    const releaseGitCommit = runtimeRelease.gitCommit || 'n/a'
+    const releaseGeneratedAt = runtimeRelease.generatedAt ? formatTimestamp(runtimeRelease.generatedAt) : 'n/a'
+    const backendMode = runtimeHealth.data?.mode || (runtimeHealth.status === 'error' ? 'unreachable' : 'n/a')
+    const backendNodeVersion = runtimeHealth.data?.nodeVersion || 'n/a'
+    const backendHealthStatus = runtimeHealth.status === 'ready'
+        ? 'Connected'
+        : runtimeHealth.status === 'error'
+            ? `Unavailable (${runtimeHealth.error})`
+            : 'Loading...'
 
     const operatorLinks = typeof window === 'undefined'
         ? []
@@ -1399,6 +1475,23 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         <InfoPair label="Network" value={environmentSnapshot?.online || 'n/a'} />
                         <InfoPair label="AR Supported" value={xrSnapshot?.support?.ar ? 'Yes' : 'No'} />
                         <InfoPair label="VR Supported" value={xrSnapshot?.support?.vr ? 'Yes' : 'No'} />
+                    </ModuleSection>
+
+                    <ModuleSection
+                        title="Build / Release"
+                        subtitle="Frontend build + backend health metadata"
+                    >
+                        <InfoPair label="Frontend Version" value={frontendBuild.version} mono />
+                        <InfoPair label="Frontend Branch" value={frontendBuild.branch} mono />
+                        <InfoPair label="Frontend Commit" value={frontendBuild.commit} mono />
+                        <InfoPair label="Backend Health" value={backendHealthStatus} />
+                        <InfoPair label="Backend Mode" value={backendMode} />
+                        <InfoPair label="Backend Node" value={backendNodeVersion} mono />
+                        <InfoPair label="Deploy Env" value={releaseDeployEnv} mono />
+                        <InfoPair label="Release ID" value={releaseId} mono />
+                        <InfoPair label="Source Ref" value={releaseSourceRef} mono />
+                        <InfoPair label="Backend Commit" value={releaseGitCommit} mono />
+                        <InfoPair label="Release Generated" value={releaseGeneratedAt} mono />
                     </ModuleSection>
 
                     <ModuleSection
