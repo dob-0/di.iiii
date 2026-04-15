@@ -1,6 +1,10 @@
 :root {
     --workspace-bg: rgba(11, 15, 22, 0.84);
-    --workspace-chrome-surface: linear-gradient(180deg, rgba(15, 19, 28, 0.96) 0%, rgba(11, 15, 22, 0.9) 100%);
+    --workspace-chrome-surface: linear-gradient(
+        180deg,
+        rgba(15, 19, 28, 0.96) 0%,
+        rgba(11, 15, 22, 0.9) 100%
+    );
     --workspace-surface: rgba(13, 18, 26, 0.9);
     --workspace-surface-elevated: rgba(17, 22, 32, 0.96);
     --workspace-surface-soft: rgba(255, 255, 255, 0.025);
@@ -143,7 +147,11 @@
     letter-spacing: 0.01em;
     font-size: 12px;
     font-weight: 600;
-    transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
+    transition:
+        background 0.16s ease,
+        border-color 0.16s ease,
+        color 0.16s ease,
+        transform 0.16s ease;
 }
 
 .workspace-command-button:hover:not(:disabled) {
@@ -613,10 +621,10 @@
 
 .dock-panel .presentation-code-input,
 .sheet-panel .presentation-code-input,
-.dock-panel input[type="number"],
+.dock-panel input[type='number'],
 .dock-panel select,
 .dock-panel .text-input,
-.sheet-panel input[type="number"],
+.sheet-panel input[type='number'],
 .sheet-panel select,
 .sheet-panel .text-input {
     min-height: 36px;
@@ -774,6 +782,28 @@
 
 .mobile-workbench-body > * {
     min-width: 0;
+}
+
+.mobile-xr-launcher {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+    gap: 6px;
+    padding: 8px 8px 0;
+}
+
+.mobile-xr-button {
+    min-height: 42px;
+    justify-content: center;
+    border-color: rgba(125, 211, 252, 0.22);
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(15, 23, 42, 0.82));
+}
+
+.mobile-xr-button:not(:disabled) {
+    color: #e0f2fe;
+}
+
+.mobile-xr-button:not(:disabled):hover {
+    border-color: rgba(186, 230, 253, 0.55);
 }
 
 .mobile-workbench-nav {
@@ -951,6 +981,15 @@
     .mobile-editor-shell.is-compact .mobile-workbench-nav {
         gap: 4px;
         padding: 6px;
+    }
+
+    .mobile-editor-shell.is-compact .mobile-xr-launcher {
+        gap: 4px;
+        padding: 6px 6px 0;
+    }
+
+    .mobile-editor-shell.is-compact .mobile-xr-button {
+        min-height: 38px;
     }
 
     .mobile-editor-shell.is-compact .mobile-nav-button {

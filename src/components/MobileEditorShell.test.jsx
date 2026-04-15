@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import MobileEditorShell from './MobileEditorShell.jsx'
 
@@ -20,7 +20,12 @@ describe('MobileEditorShell', () => {
                         { key: 'view', label: 'View', mobileGroup: 'scene', mobileOrder: 10 },
                         { key: 'world', label: 'World', mobileGroup: 'scene', mobileOrder: 20 },
                         { key: 'assets', label: 'Assets', mobileGroup: 'files', mobileOrder: 10 },
-                        { key: 'inspector', label: 'Inspector', mobileGroup: 'selected', mobileOrder: 10 }
+                        {
+                            key: 'inspector',
+                            label: 'Inspector',
+                            mobileGroup: 'selected',
+                            mobileOrder: 10
+                        }
                     ],
                     moreSections: []
                 }}
@@ -95,5 +100,41 @@ describe('MobileEditorShell', () => {
         expect(container.querySelector('.mobile-sheet-scrim')).toBeNull()
         fireEvent.click(screen.getByRole('button', { name: 'Export Project' }))
         expect(exportProject).toHaveBeenCalledTimes(1)
+    })
+
+    it('keeps quick AR and VR launch buttons visible above the mobile navigation', () => {
+        const enterAr = vi.fn()
+        const enterVr = vi.fn()
+        const showDebug = vi.fn()
+
+        render(
+            <MobileEditorShell
+                mobileModel={{
+                    spaceButton: { key: 'space', label: 'Play Room', onClick: vi.fn() },
+                    interactionModeButton: null,
+                    presentationButtons: [],
+                    xrButtons: [
+                        { key: 'enter-vr', label: 'Enter VR', onClick: enterVr },
+                        { key: 'enter-ar', label: 'Enter AR', onClick: enterAr },
+                        { key: 'xr-debug', label: 'XR Debug', onClick: showDebug }
+                    ],
+                    panelEntries: [],
+                    moreSections: []
+                }}
+                renderPanelContent={vi.fn()}
+            />
+        )
+
+        const launcher = screen.getByLabelText('XR launch controls')
+        const arButton = within(launcher).getByRole('button', { name: 'AR' })
+        const vrButton = within(launcher).getByRole('button', { name: 'VR' })
+
+        expect(within(launcher).queryByRole('button', { name: 'XR Debug' })).toBeNull()
+        fireEvent.click(arButton)
+        fireEvent.click(vrButton)
+
+        expect(enterAr).toHaveBeenCalledTimes(1)
+        expect(enterVr).toHaveBeenCalledTimes(1)
+        expect(showDebug).not.toHaveBeenCalled()
     })
 })
