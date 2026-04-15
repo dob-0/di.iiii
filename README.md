@@ -235,54 +235,245 @@ More detail lives in [serverXR/README.md](serverXR/README.md).
 
 ## Deploy Workflow
 
-Canonical deploy model:
+Simple model:
 
-- `staging` publishes `cpanel-staging`
-- `main` publishes `cpanel-production`
-- `dev` is the integration branch and does not auto-deploy
-- GitHub Actions builds and publishes the prebuilt branch
-- cPanel `Git Version Control` applies that branch on the host
-- `.cpanel.yml` runs `scripts/cpanel-apply-prebuilt-release.sh`
+- write code on `dev`
+- promote preview-ready code to `staging`
+- promote staging-verified code to `main`
+- GitHub builds deploy artifacts
+- cPanel applies those artifacts to the host
 
-Canonical pieces:
+Branch mapping:
+
+- `staging` source branch publishes `cpanel-staging`
+- `main` source branch publishes `cpanel-production`
+- `dev` does not deploy directly
+
+### Full workflow circle
+
+Use this when you make a fix, test it, put it on staging, verify it, then ship it to production.
+
+Start clean and sync `dev`:
+
+```bash
+git status --short --branch
+git fetch origin
+git switch dev
+git pull --ff-only origin dev
+```
+
+Make your code change, then test locally:
+
+```bash
+npm run lint
+npm run build
+npm run test
+npm run test:server-contracts
+```
+
+Commit and push the fix to `dev`:
+
+```bash
+git status --short
+git add <changed-files>
+git commit -m "fix: short clear description"
+git push origin dev
+```
+
+Promote the exact tested `dev` commit to staging:
+
+```bash
+git switch staging
+git pull --ff-only origin staging
+git merge --ff-only dev
+git push origin staging
+```
+
+Wait for GitHub Actions to publish `cpanel-staging`, then confirm the cPanel artifact exists:
+
+```bash
+git fetch origin cpanel-staging
+git log -1 --oneline origin/cpanel-staging
+git show origin/cpanel-staging:.deploy/cpanel/release.json
+```
+
+Apply staging in cPanel:
+
+```text
+cPanel -> Git Version Control -> /home/distudio/repositories/di.iiii-staging
+Click Update from Remote
+Confirm branch is cpanel-staging
+Click Deploy HEAD Commit
+```
+
+If the cPanel button does not apply the release, use SSH:
+
+```bash
+cd /home/distudio/repositories/di.iiii-staging
+git pull --ff-only origin cpanel-staging
+bash scripts/cpanel-apply-prebuilt-release.sh staging
+```
+
+Verify staging:
+
+```bash
+curl -s https://staging.di-studio.xyz/serverXR/api/health
+npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
+```
+
+The staging health response must show:
+
+```json
+{
+  "release": {
+    "deployEnv": "staging",
+    "sourceRef": "staging",
+    "gitCommit": "<the staging source commit>"
+  }
+}
+```
+
+Only after staging is verified, promote the same commit to production:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git merge --ff-only staging
+git push origin main
+```
+
+Wait for GitHub Actions to publish `cpanel-production`, then confirm the production artifact exists:
+
+```bash
+git fetch origin cpanel-production
+git log -1 --oneline origin/cpanel-production
+git show origin/cpanel-production:.deploy/cpanel/release.json
+```
+
+Apply production in cPanel:
+
+```text
+cPanel -> Git Version Control -> production cPanel repo tracking cpanel-production
+Click Update from Remote
+Confirm branch is cpanel-production
+Click Deploy HEAD Commit
+```
+
+If the production cPanel button does not apply the release, use SSH and adjust the repo path if cPanel shows a different production clone path:
+
+```bash
+cd /home/distudio/repositories/di.iiii-production
+git pull --ff-only origin cpanel-production
+bash scripts/cpanel-apply-prebuilt-release.sh production
+```
+
+Verify production:
+
+```bash
+curl -s https://di-studio.xyz/serverXR/api/health
+npm run smoke:cpanel -- --base-url https://di-studio.xyz
+```
+
+Stop rules:
+
+- if `git status --short` shows unexpected changes, stop and inspect before switching branches
+- if any `git pull --ff-only` or `git merge --ff-only` fails, stop and decide whether to rebase or cherry-pick
+- if staging verification fails, do not promote to `main`
+- if cPanel says branches diverged, use the recovery steps below before deploying
+
+### Easy staging deploy
+
+Use this when you want to update `https://staging.di-studio.xyz`.
+
+1. Promote the approved source code:
+
+```bash
+git switch staging
+git pull --ff-only origin staging
+git merge --ff-only dev
+git push origin staging
+```
+
+2. Wait for GitHub Actions to publish `cpanel-staging`.
+
+3. In cPanel `Git Version Control`, open the staging repo:
+
+```text
+/home/distudio/repositories/di.iiii-staging
+```
+
+4. Click `Update from Remote`.
+
+5. Confirm the checked-out branch is `cpanel-staging` and the HEAD commit changed to the latest published cPanel commit.
+
+6. Click `Deploy HEAD Commit`.
+
+7. Verify the deployed backend reports the same source commit as `origin/staging`:
+
+```bash
+curl -s https://staging.di-studio.xyz/serverXR/api/health
+npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
+```
+
+The health JSON should include:
+
+```json
+{
+  "release": {
+    "deployEnv": "staging",
+    "sourceRef": "staging",
+    "gitCommit": "<current staging source commit>"
+  }
+}
+```
+
+### Easy production deploy
+
+Use this only after staging is verified.
+
+```bash
+git switch main
+git pull --ff-only origin main
+git merge --ff-only staging
+git push origin main
+```
+
+Then in cPanel `Git Version Control`, open the production repo tracking `cpanel-production`, click `Update from Remote`, then `Deploy HEAD Commit`.
+
+Verify:
+
+```bash
+curl -s https://di-studio.xyz/serverXR/api/health
+npm run smoke:cpanel -- --base-url https://di-studio.xyz
+```
+
+### If cPanel says branches diverged
+
+This is a recovery path for a cPanel clone that is stuck on an older artifact commit. Do not click `Deploy HEAD Commit` while cPanel is still on the old commit.
+
+For staging, run this in cPanel Terminal or SSH:
+
+```bash
+cd /home/distudio/repositories/di.iiii-staging
+git status --short
+git branch backup-cpanel-staging-before-reset-$(date +%Y%m%d-%H%M%S)
+git fetch origin cpanel-staging
+git reset --hard origin/cpanel-staging
+git status --short
+git log -1 --oneline
+```
+
+Then refresh cPanel `Git Version Control` and click `Deploy HEAD Commit`.
+
+For production, use the production cPanel clone and replace `cpanel-staging` with `cpanel-production`.
+
+### Deploy pieces
 
 - workflow: `.github/workflows/publish-cpanel-prebuilt-v2.yml`
 - staged bundle: `.deploy/cpanel/`
 - host apply script: `scripts/cpanel-apply-prebuilt-release.sh`
 
-What is automatic:
-
-- pushing `staging` publishes `cpanel-staging`
-- pushing `main` publishes `cpanel-production`
-
-What may still be manual:
-
-- cPanel host apply
-- if the host does not auto-apply, open cPanel `Git Version Control` and run `Deploy HEAD Commit`
-
-Golden future path:
-
-1. switch to `dev` and sync it
-2. work locally on `dev`
-3. run local checks and push `dev` while integrating normally
-4. promote approved work from `dev` to `staging`
-5. push `staging` and verify staging
-6. promote the verified staging commit to `main`
-7. push `main` and verify production
-
-Preferred promotion commands:
-
-```bash
-git switch staging
-git merge --ff-only dev
-git push origin staging
-
-git switch main
-git merge --ff-only staging
-git push origin main
-```
-
-If `--ff-only` fails because the branches diverged, stop and either rebase or cherry-pick the exact approved commit instead of forcing a merge you do not trust.
+If `--ff-only` fails during source promotion, stop and either rebase or cherry-pick the exact approved commit instead of forcing a merge you do not trust.
 
 Important runtime rules:
 

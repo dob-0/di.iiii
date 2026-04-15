@@ -96,8 +96,16 @@ for key in "${required_vars[@]}"; do
 done
 
 if [[ -f "${NODEENV_ACTIVATE}" ]]; then
+  had_nounset=0
+  case "$-" in
+    *u*) had_nounset=1 ;;
+  esac
+  set +u
   # shellcheck disable=SC1090
   source "${NODEENV_ACTIVATE}"
+  if [[ "${had_nounset}" == "1" ]]; then
+    set -u
+  fi
 fi
 
 mkdir -p "${CPANEL_WEB_ROOT}" "${CPANEL_SERVERXR_ROOT}" "${CPANEL_SHARED_ROOT}" "${DATA_ROOT}" "${CHECKPOINT_DIR}" "${BACKUP_ROOT}"
