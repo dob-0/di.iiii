@@ -845,6 +845,7 @@ function AppInner() {
 
     const {
         sceneButtons,
+        panelButtons,
         adminButtons,
         displayButtons,
         xrButtons,
@@ -1153,6 +1154,7 @@ function AppInner() {
         handleFileLoad,
         controlButtons: {
             sceneButtons,
+            panelButtons,
             adminButtons,
             displayButtons,
             xrButtons,
@@ -1174,6 +1176,7 @@ function AppInner() {
     }), [
         handleFileLoad,
         sceneButtons,
+        panelButtons,
         adminButtons,
         displayButtons,
         xrButtons,

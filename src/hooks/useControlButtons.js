@@ -257,18 +257,7 @@ export function useControlButtons({
             }] : [])
         ] : []
         const hiddenUiButtons = !isUiVisible
-            ? [
-                { key: 'show-ui', label: 'Show UI', onClick: () => setIsUiVisible(true), variant: 'success' },
-                ...(!isSceneView
-                    ? [{
-                        key: 'switch-3d-view',
-                        label: '3D View',
-                        onClick: () => setPresentationMode('scene'),
-                        title: 'Return to the 3D scene while the UI stays hidden.'
-                    }]
-                    : []),
-                ...(isXrPresenting ? buildXrSessionButtons() : [])
-            ]
+            ? buildXrSessionButtons()
             : []
 
         return { sceneButtons, panelButtons, adminButtons, displayButtons, xrButtons, hiddenUiButtons }

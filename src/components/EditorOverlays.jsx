@@ -13,33 +13,18 @@ export default function EditorOverlays({
     statusItems
 }) {
     const [isStatusExpanded, setIsStatusExpanded] = useState(false)
+    const isDockedStatusPanel = typeof statusPanelClassName === 'string' && statusPanelClassName.includes('status-panel-docked')
+    const showExpandedStatusRows = isDockedStatusPanel || isStatusExpanded
+    const shouldRenderStatusPanel = isUiVisible && shouldShowStatusPanel
+    const hiddenXrButtons = !isUiVisible && Array.isArray(hiddenUiButtons)
+        ? hiddenUiButtons.filter((button) => ['enter-vr', 'enter-ar', 'exit-xr'].includes(button.key))
+        : []
 
     useEffect(() => {
-        if (!shouldShowStatusPanel) {
+        if (!shouldRenderStatusPanel) {
             setIsStatusExpanded(false)
         }
-    }, [shouldShowStatusPanel])
-
-    const renderButton = (button) => {
-        const classNames = ['toggle-button']
-        if (button.variant === 'success') classNames.push('success-button')
-        if (button.variant === 'warning') classNames.push('warning-button')
-        if (button.variant === 'danger') classNames.push('clear-button')
-        if (button.isActive) classNames.push('active')
-        return (
-            <button
-                key={button.key}
-                type="button"
-                className={classNames.filter(Boolean).join(' ')}
-                onClick={button.onClick}
-                disabled={button.disabled}
-                title={button.title}
-            >
-                <span>{button.label}</span>
-                {button.hint && <span className="button-hint">{button.hint}</span>}
-            </button>
-        )
-    }
+    }, [shouldRenderStatusPanel])
 
     return (
         <>
@@ -60,12 +45,20 @@ export default function EditorOverlays({
                 </div>
             )}
 
-            {!isUiVisible && Array.isArray(hiddenUiButtons) && hiddenUiButtons.length > 0 && (
-                <div className="hidden-ui-quick-menu" data-testid="hidden-ui-quick-menu">
-                    <div className="hidden-ui-quick-header">Quick Controls</div>
-                    <div className="hidden-ui-quick-buttons">
-                        {hiddenUiButtons.map(renderButton)}
-                    </div>
+            {hiddenXrButtons.length > 0 && (
+                <div className="hidden-ui-xr-controls" data-testid="hidden-ui-xr-controls">
+                    {hiddenXrButtons.map((button) => (
+                        <button
+                            key={button.key}
+                            type="button"
+                            className="toggle-button hidden-ui-xr-button"
+                            onClick={button.onClick}
+                            disabled={button.disabled}
+                            title={button.title}
+                        >
+                            {button.label}
+                        </button>
+                    ))}
                 </div>
             )}
 
@@ -87,8 +80,8 @@ export default function EditorOverlays({
                 </div>
             )}
 
-            {shouldShowStatusPanel && (
-                <div className={[statusPanelClassName, isStatusExpanded ? 'is-expanded' : 'is-collapsed'].join(' ')}>
+            {shouldRenderStatusPanel && (
+                <div className={[statusPanelClassName, showExpandedStatusRows ? 'is-expanded' : 'is-collapsed'].join(' ')}>
                     <div className="status-header">
                         <div className="status-title">
                             <span className={statusDotClass} aria-hidden="true" />
@@ -96,17 +89,19 @@ export default function EditorOverlays({
                         </div>
                         <div className="status-header-actions">
                             <div className="status-summary">{statusSummary}</div>
-                            <button
-                                type="button"
-                                className="status-toggle-button"
-                                onClick={() => setIsStatusExpanded((prev) => !prev)}
-                                aria-expanded={isStatusExpanded}
-                            >
-                                {isStatusExpanded ? 'Hide' : 'Show'}
-                            </button>
+                            {!isDockedStatusPanel && (
+                                <button
+                                    type="button"
+                                    className="status-toggle-button"
+                                    onClick={() => setIsStatusExpanded((prev) => !prev)}
+                                    aria-expanded={showExpandedStatusRows}
+                                >
+                                    {showExpandedStatusRows ? 'Hide' : 'Show'}
+                                </button>
+                            )}
                         </div>
                     </div>
-                    {isStatusExpanded && (
+                    {showExpandedStatusRows && (
                         <div className="status-rows">
                             {statusItems.map(item => (
                                 <div key={item.key} className="status-row">

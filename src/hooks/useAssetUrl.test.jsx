@@ -44,6 +44,28 @@ describe('useAssetUrl', () => {
         expect(streamRemoteAssetMock).not.toHaveBeenCalled()
     })
 
+    it('loads restored archive blobs before same-origin /assets fallbacks', async () => {
+        const createObjectUrlSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:archive-video')
+        const revokeObjectUrlSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+        getAssetSourceUrlMock.mockReturnValue('/assets/video-archive')
+        getAssetBlobMock.mockResolvedValue(new Blob(['video'], { type: 'video/mp4' }))
+
+        const { result } = renderHook(() => useAssetUrl(
+            { id: 'video-archive', mimeType: 'video/mp4', name: 'clip.mp4' },
+            { preferRemoteSource: true }
+        ))
+
+        await waitFor(() => {
+            expect(result.current).toBe('blob:archive-video')
+        })
+
+        expect(getAssetBlobMock).toHaveBeenCalledWith('video-archive')
+        expect(streamRemoteAssetMock).not.toHaveBeenCalled()
+
+        createObjectUrlSpy.mockRestore()
+        revokeObjectUrlSpy.mockRestore()
+    })
+
     it('drops invalid cached html blobs and falls back to the remote asset stream', async () => {
         const createObjectUrlSpy = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:asset-1')
         const revokeObjectUrlSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})

@@ -11,6 +11,7 @@ import {
 import { useStatusItems } from '../hooks/useStatusItems.js'
 import { useStatusPanel } from '../hooks/useStatusPanel.js'
 import { useViewportMode } from '../hooks/useViewportMode.js'
+import { useControlSections } from '../hooks/useControlSections.js'
 import EditorLayout from './EditorLayout.jsx'
 
 export default function EditorLayoutContainer({
@@ -143,6 +144,7 @@ export default function EditorLayoutContainer({
 
     const {
         sceneButtons = [],
+        panelButtons = [],
         adminButtons = [],
         displayButtons = [],
         xrButtons = [],
@@ -297,6 +299,30 @@ export default function EditorLayoutContainer({
             ].filter((section) => Array.isArray(section.items) && section.items.length > 0)
         }
     }, [adminButtons, displayButtons, sceneButtons, xrButtons])
+    const controlSections = useControlSections({
+        isUiVisible,
+        sceneButtons: sceneButtons
+            .filter((button) => ![
+                'interaction-mode',
+                'group-selection',
+                'ungroup-selection',
+                'preferences'
+            ].includes(button.key))
+            .map((button) => {
+                if (button.key === 'save') return { ...button, label: 'Export Scene' }
+                if (button.key === 'load') return { ...button, label: 'Load Scene' }
+                return button
+            }),
+        panelButtons,
+        adminButtons: [],
+        displayButtons: displayButtons.filter((button) => ![
+            'presentation-scene',
+            'presentation-fixed-camera',
+            'presentation-code',
+            'xr-focus'
+        ].includes(button.key)),
+        xrButtons
+    })
 
     const mobileModel = useMemo(() => ({
         spaceButton: toolbarModel.identity?.spaceButton,
@@ -334,6 +360,7 @@ export default function EditorLayoutContainer({
             handleFileLoad={handleFileLoad}
             toolbarModel={toolbarModel}
             mobileModel={mobileModel}
+            controlSections={controlSections}
             panelEntries={panelEntries}
             hiddenUiButtons={hiddenUiButtons}
             isUiVisible={isUiVisible}

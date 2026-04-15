@@ -4,7 +4,7 @@ import SceneCanvas from './SceneCanvas.jsx'
 import PresentationCanvas from './PresentationCanvas.jsx'
 import EditorOverlays from './EditorOverlays.jsx'
 import EditorChrome from './EditorChrome.jsx'
-import DesktopWorkspaceShell from './DesktopWorkspaceShell.jsx'
+import ControlClusters from './ControlClusters.jsx'
 import MobileEditorShell from './MobileEditorShell.jsx'
 import WorldPanel from '../WorldPanel.jsx'
 import ViewPanel from '../ViewPanel.jsx'
@@ -21,6 +21,7 @@ export function EditorLayout({
     handleFileLoad,
     toolbarModel,
     mobileModel,
+    controlSections = [],
     panelEntries,
     hiddenUiButtons,
     isUiVisible,
@@ -186,14 +187,19 @@ export function EditorLayout({
                         isPhoneCompact={isPhoneCompact}
                     />
                 ) : (
-                    <DesktopWorkspaceShell
-                        toolbarModel={toolbarModel}
-                        panelEntries={panelEntries}
-                        renderPanelContent={renderPanelContent}
-                        selectedCount={selectedObjectIds?.length || 0}
-                        statusSummary={statusSummary}
-                        statusItems={statusItems}
-                    />
+                    <>
+                        {controlSections.length > 0 ? <ControlClusters controlSections={controlSections} /> : null}
+                        {panelEntries
+                            .filter((entry) => entry.isVisible)
+                            .map((entry) => (
+                                <React.Fragment key={entry.key}>
+                                    {renderPanelContent(entry, {
+                                        surfaceMode: 'floating',
+                                        onClose: entry.onClose
+                                    })}
+                                </React.Fragment>
+                            ))}
+                    </>
                 )
             )}
 
@@ -203,7 +209,7 @@ export function EditorLayout({
                 isFileDragActive={isFileDragActive}
                 hiddenUiButtons={hiddenUiButtons}
                 remoteCursorMarkers={remoteCursorMarkers}
-                shouldShowStatusPanel={false}
+                shouldShowStatusPanel={shouldShowStatusPanel}
                 statusPanelClassName={statusPanelClassName}
                 statusDotClass={statusDotClass}
                 statusSummary={statusSummary}

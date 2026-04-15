@@ -74,4 +74,5 @@ describe('DesktopWorkspaceShell', () => {
         fireEvent.click(within(drawer).getByRole('button', { name: 'Hide UI' }))
         expect(hideUi).toHaveBeenCalledTimes(1)
     })
+
 })

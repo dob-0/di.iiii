@@ -3,7 +3,7 @@ import { useMemo } from 'react'
 export function useStatusPanel({ statusItems = [], isStatusPanelVisible, isUiVisible }) {
     return useMemo(() => {
         const activeStatusCount = statusItems.filter(item => item.key !== 'server-status').length
-        const shouldShowStatusPanel = statusItems.length > 0 && isStatusPanelVisible && (isUiVisible || activeStatusCount > 0)
+        const shouldShowStatusPanel = statusItems.length > 0 && isStatusPanelVisible && isUiVisible
         const statusPanelClassName = [
             'status-panel',
             isUiVisible ? 'status-panel-docked' : 'status-panel-compact',
