@@ -1,0 +1,28 @@
+{
+  "generatedAt": "2026-04-15T03:25:46.612Z",
+  "releaseId": "cpanel-20260415-032546",
+  "deployEnv": "production",
+  "sourceRef": "main",
+  "gitCommit": "9899073080c727ff3de3e08c97b27dbf92da93e1",
+  "deploymentMode": "cpanel-nodejs-app",
+  "frontendApiBaseUrl": "/serverXR",
+  "git": {
+    "branch": "main",
+    "commit": "9899073080c727ff3de3e08c97b27dbf92da93e1"
+  },
+  "paths": {
+    "publicHtml": "public_html",
+    "serverXR": "serverXR",
+    "shared": "shared"
+  },
+  "omittedLegacyPaths": [
+    "public_html/serverXR"
+  ],
+  "notes": [
+    "Sync public_html contents to your web root.",
+    "Sync serverXR and shared as sibling folders in your home directory.",
+    "Do not deploy a public_html/serverXR proxy folder; the cPanel Node.js App owns /serverXR.",
+    "Generate serverXR/.env from environment-specific secrets before restarting the Node.js App.",
+    "serverXR/release.json is copied with the backend bundle so /api/health can report the active release."
+  ]
+}

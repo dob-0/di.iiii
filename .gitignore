@@ -1,0 +1,36 @@
+# Node / build output
+node_modules/
+dist/
+.vite/
+.cache/
+coverage/
+tmp/
+.archive/
+.deploy/
+
+# Env and local config
+.env
+.env.*.local
+.env.local
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS noise
+.DS_Store
+
+# Local workspace-only files
+.codex
+open_call/
+docs/checkpoints/
+.cpanel.yml
+
+# Server data
+serverXR/data/
+serverXR/uploads/
+serverXR/.env
+serverXR/.env.local
