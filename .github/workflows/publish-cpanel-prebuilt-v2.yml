@@ -72,27 +72,42 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          PUBLISH_DIR="$(mktemp -d)"
+          CONTENT_DIR="$(mktemp -d)"
+          BRANCH_DIR="$(mktemp -d)"
           rsync -az \
             --exclude='.git' \
             --exclude='node_modules' \
             --exclude='serverXR/node_modules' \
             --exclude='dist' \
             --exclude='.deploy' \
-            ./ "${PUBLISH_DIR}/"
-          mkdir -p "${PUBLISH_DIR}/.deploy"
-          cp -R .deploy/cpanel "${PUBLISH_DIR}/.deploy/cpanel"
-          cp deploy/cpanel/cpanel.prebuilt.yml "${PUBLISH_DIR}/.cpanel.yml"
-          rm -f "${PUBLISH_DIR}/deploy/cpanel/cpanel.prebuilt.yml"
-          printf '%s\n' "${SOURCE_REF}" > "${PUBLISH_DIR}/.cpanel-source-ref"
-          printf '%s\n' "${DEPLOY_ENV}" > "${PUBLISH_DIR}/.cpanel-deploy-env"
-          cd "${PUBLISH_DIR}"
+            ./ "${CONTENT_DIR}/"
+          mkdir -p "${CONTENT_DIR}/.deploy"
+          cp -R .deploy/cpanel "${CONTENT_DIR}/.deploy/cpanel"
+          cp deploy/cpanel/cpanel.prebuilt.yml "${CONTENT_DIR}/.cpanel.yml"
+          rm -f "${CONTENT_DIR}/deploy/cpanel/cpanel.prebuilt.yml"
+          printf '%s\n' "${SOURCE_REF}" > "${CONTENT_DIR}/.cpanel-source-ref"
+          printf '%s\n' "${DEPLOY_ENV}" > "${CONTENT_DIR}/.cpanel-deploy-env"
+
+          cd "${BRANCH_DIR}"
           git init
-          git checkout -b "${TARGET_BRANCH}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git fetch --depth=1 origin "${TARGET_BRANCH}"; then
+            git checkout -B "${TARGET_BRANCH}" FETCH_HEAD
+            git rm -r --ignore-unmatch .
+            find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          else
+            git checkout --orphan "${TARGET_BRANCH}"
+          fi
+
+          rsync -az "${CONTENT_DIR}/" ./
           git add -A .
           git add -f .deploy .cpanel.yml .cpanel-source-ref .cpanel-deploy-env
-          git commit -m "Publish ${DEPLOY_ENV} cPanel prebuilt from ${SOURCE_REF}"
-          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
-          git push --force origin "${TARGET_BRANCH}"
+          if git diff --cached --quiet; then
+            echo "No cPanel release changes to publish."
+          else
+            git commit -m "Publish ${DEPLOY_ENV} cPanel prebuilt from ${SOURCE_REF}"
+            git push origin "HEAD:${TARGET_BRANCH}"
+          fi
