@@ -16,12 +16,12 @@ describe('getSocketConfigForRuntime', () => {
     it('builds nested socket paths from configured API bases and normalizes bearer tokens', () => {
         expect(getSocketConfigForRuntime({
             configuredBase: '/serverXR',
-            token: 'Bearer abc123',
+            token: 'Bearer abcdefghijklmnop',
             locationOrigin: 'https://example.com'
         })).toEqual({
             serverUrl: 'https://example.com',
             path: '/serverXR/socket.io',
-            auth: { token: 'abc123' }
+            auth: { token: 'abcdefghijklmnop' }
         })
     })
 
@@ -43,6 +43,18 @@ describe('getSocketConfigForRuntime', () => {
             locationOrigin: 'http://localhost:5173'
         })).toEqual({
             serverUrl: 'http://localhost:5173',
+            path: '/serverXR/socket.io',
+            auth: undefined
+        })
+    })
+
+    it('drops malformed socket auth tokens instead of forwarding them', () => {
+        expect(getSocketConfigForRuntime({
+            configuredBase: '/serverXR',
+            token: `sed -i "s|^VITE_API_TOKEN=.*|VITE_API_TOKEN=token|" ~/.config/dii/production.deploy.env`,
+            locationOrigin: 'https://example.com'
+        })).toEqual({
+            serverUrl: 'https://example.com',
             path: '/serverXR/socket.io',
             auth: undefined
         })

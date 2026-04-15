@@ -12,11 +12,16 @@ If you only remember one thing, remember this:
 ## Golden Path
 
 - local work happens on `dev`
+- normal work starts on `dev`
+- `staging` and `main` are promotion branches during normal flow
 - reviewed work is promoted to `staging`
 - staging is published from `staging`
 - production is published from `main`
 - GitHub publishes prebuilt `cpanel-*` branches
 - cPanel `Git Version Control` applies those branches on the host
+
+Do not start routine feature work on `main`.
+Use `main` as a starting point only for an emergency production hotfix.
 
 Canonical pieces:
 
@@ -29,49 +34,75 @@ Canonical pieces:
 
 ## Daily Workflow
 
+Typical start-of-session commands:
+
+```bash
+git switch dev
+git pull --ff-only origin dev
+npm run dev
+```
+
 ### To update staging
 
-1. commit and push `dev` normally while you work
-2. promote the approved commit from `dev` to `staging`
-3. push `staging`
-4. GitHub automatically publishes `cpanel-staging`
-5. in cPanel `Git Version Control`, update the staging clone if needed
-6. run `Deploy HEAD Commit` for the staging clone if the host did not auto-apply
-7. verify:
-   - `/main`
-   - `/<space>` for the space you are working on
-   - `/admin?space=main`
-   - `/main/studio`
-   - `/main/beta`
-   - `/serverXR/api/health`
-   - `/serverXR/api/spaces`
-   - assets
-   - live sync
-
-### To update production
-
-1. promote the already verified `staging` commit into `main`
-2. push `main`
-3. GitHub automatically publishes `cpanel-production`
-4. in cPanel `Git Version Control`, update the production clone if needed
-5. run `Deploy HEAD Commit` for the production clone if the host did not auto-apply
-6. verify production
-
-### Promotion Commands
-
-Use fast-forward promotions when the branches are still linear:
+1. Promote the approved source code:
 
 ```bash
 git switch staging
+git pull --ff-only origin staging
 git merge --ff-only dev
 git push origin staging
+```
 
+2. Wait for GitHub Actions to publish `cpanel-staging`.
+
+3. In cPanel `Git Version Control`, open:
+
+```text
+/home/distudio/repositories/di.iiii-staging
+```
+
+4. Click `Update from Remote`.
+
+5. Confirm the branch is `cpanel-staging`.
+
+6. Click `Deploy HEAD Commit`.
+
+7. Verify:
+
+```bash
+curl -s https://staging.di-studio.xyz/serverXR/api/health
+npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
+```
+
+### To update production
+
+1. Promote the already verified `staging` commit into `main`:
+
+```bash
 git switch main
+git pull --ff-only origin main
 git merge --ff-only staging
 git push origin main
 ```
 
-If a fast-forward is not possible, stop and cherry-pick or rebase the exact approved commit instead of creating a merge you did not mean to ship.
+2. Wait for GitHub Actions to publish `cpanel-production`.
+
+3. In cPanel `Git Version Control`, open the production clone.
+
+4. Click `Update from Remote`.
+
+5. Confirm the branch is `cpanel-production`.
+
+6. Click `Deploy HEAD Commit`.
+
+7. Verify:
+
+```bash
+curl -s https://di-studio.xyz/serverXR/api/health
+npm run smoke:cpanel -- --base-url https://di-studio.xyz
+```
+
+If a fast-forward is not possible during source promotion, stop and cherry-pick or rebase the exact approved commit instead of creating a merge you did not mean to ship.
 
 ## What Is Automatic Today
 
@@ -79,6 +110,7 @@ If a fast-forward is not possible, stop and cherry-pick or rebase the exact appr
 - the prebuilt branches are:
   - `cpanel-staging`
   - `cpanel-production`
+- `workflow_dispatch` exists for repair or recovery work, but it should not replace the normal `dev -> staging -> main` promotion flow
 
 ## Emergency Hotfix Path
 
@@ -89,6 +121,7 @@ When production needs an urgent fix, start from `main`, then bring the same comm
 - if cPanel `Git Version Control` exposes `Automatic Deployment`, enable it for the tracked `cpanel-*` clones
 - cPanel host apply is host-dependent
 - if the live site looks stale after GitHub finished, go to cPanel `Git Version Control` and run `Deploy HEAD Commit`
+- if cPanel says branches diverged, use the reset recovery steps in [cPanel Prebuilt Deploy](CPANEL_PREBUILT_DEPLOY.md)
 
 ## Runtime Contract
 

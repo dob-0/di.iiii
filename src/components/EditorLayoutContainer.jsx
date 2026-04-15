@@ -131,16 +131,12 @@ export default function EditorLayoutContainer({
         sceneStreamError
     })
 
-    const {
-        shouldShowStatusPanel,
-        statusPanelClassName,
-        statusSummary,
-        statusDotClass
-    } = useStatusPanel({
-        statusItems,
-        isStatusPanelVisible,
-        isUiVisible
-    })
+    const { shouldShowStatusPanel, statusPanelClassName, statusSummary, statusDotClass } =
+        useStatusPanel({
+            statusItems,
+            isStatusPanelVisible,
+            isUiVisible
+        })
 
     const {
         sceneButtons = [],
@@ -151,109 +147,113 @@ export default function EditorLayoutContainer({
         hiddenUiButtons = []
     } = controlButtons || {}
 
-    const panelEntries = useMemo(() => ([
-        {
-            key: 'view',
-            label: 'View',
-            isVisible: isViewPanelVisible,
-            onToggle: () => setIsViewPanelVisible((prev) => !prev),
-            onClose: () => setIsViewPanelVisible(false),
-            floatingPlacement: 'dock',
-            workspaceGroup: 'scene',
-            workspaceOrder: 10,
-            mobileGroup: 'scene',
-            mobileOrder: 10
-        },
-        {
-            key: 'world',
-            label: 'World',
-            isVisible: isWorldPanelVisible,
-            onToggle: () => setIsWorldPanelVisible((prev) => !prev),
-            onClose: () => setIsWorldPanelVisible(false),
-            floatingPlacement: 'dock',
-            workspaceGroup: 'scene',
-            workspaceOrder: 20,
-            mobileGroup: 'scene',
-            mobileOrder: 20
-        },
-        {
-            key: 'media',
-            label: 'Media',
-            isVisible: isMediaPanelVisible,
-            onToggle: () => setIsMediaPanelVisible((prev) => !prev),
-            onClose: () => setIsMediaPanelVisible(false),
-            floatingPlacement: 'dock',
-            workspaceGroup: 'files',
-            workspaceOrder: 10,
-            mobileGroup: 'files',
-            mobileOrder: 10
-        },
-        {
-            key: 'assets',
-            label: 'Assets',
-            isVisible: isAssetPanelVisible,
-            onToggle: () => setIsAssetPanelVisible((prev) => !prev),
-            onClose: () => setIsAssetPanelVisible(false),
-            floatingPlacement: 'dock',
-            workspaceGroup: 'files',
-            workspaceOrder: 20,
-            mobileGroup: 'files',
-            mobileOrder: 20
-        },
-        {
-            key: 'outliner',
-            label: 'Outliner',
-            isVisible: isOutlinerPanelVisible,
-            onToggle: () => setIsOutlinerPanelVisible((prev) => !prev),
-            onClose: () => setIsOutlinerPanelVisible(false),
-            floatingPlacement: 'dock',
-            workspaceGroup: 'scene',
-            workspaceOrder: 30,
-            mobileGroup: 'scene',
-            mobileOrder: 30
-        },
-        {
-            key: 'spaces',
-            label: 'Spaces',
-            isVisible: isSpacesPanelVisible,
-            onToggle: () => setIsSpacesPanelVisible((prev) => !prev),
-            onClose: () => setIsSpacesPanelVisible(false),
-            floatingPlacement: 'dock',
-            isAvailable: isAdminMode,
-            workspaceGroup: 'scene',
-            workspaceOrder: 40,
-            mobileGroup: 'scene',
-            mobileOrder: 40
-        },
-        {
-            key: 'inspector',
-            label: 'Inspector',
-            isVisible: isInspectorPanelVisible,
-            onToggle: () => setIsInspectorPanelVisible((prev) => !prev),
-            onClose: () => setIsInspectorPanelVisible(false),
-            floatingPlacement: 'dock',
-            workspaceGroup: 'selected',
-            workspaceOrder: 10,
-            mobileGroup: 'selected',
-            mobileOrder: 10
-        }
-    ].filter((entry) => entry.isAvailable !== false)), [
-        isAdminMode,
-        isAssetPanelVisible,
-        isInspectorPanelVisible,
-        isMediaPanelVisible,
-        isOutlinerPanelVisible,
-        isSpacesPanelVisible,
-        isViewPanelVisible,
-        isWorldPanelVisible,
-        setIsAssetPanelVisible,
-        setIsInspectorPanelVisible,
-        setIsMediaPanelVisible,
-        setIsOutlinerPanelVisible,
-        setIsSpacesPanelVisible,
-        setIsViewPanelVisible,
-        setIsWorldPanelVisible
-    ])
+    const panelEntries = useMemo(
+        () =>
+            [
+                {
+                    key: 'view',
+                    label: 'View',
+                    isVisible: isViewPanelVisible,
+                    onToggle: () => setIsViewPanelVisible((prev) => !prev),
+                    onClose: () => setIsViewPanelVisible(false),
+                    floatingPlacement: 'dock',
+                    workspaceGroup: 'scene',
+                    workspaceOrder: 10,
+                    mobileGroup: 'scene',
+                    mobileOrder: 10
+                },
+                {
+                    key: 'world',
+                    label: 'World',
+                    isVisible: isWorldPanelVisible,
+                    onToggle: () => setIsWorldPanelVisible((prev) => !prev),
+                    onClose: () => setIsWorldPanelVisible(false),
+                    floatingPlacement: 'dock',
+                    workspaceGroup: 'scene',
+                    workspaceOrder: 20,
+                    mobileGroup: 'scene',
+                    mobileOrder: 20
+                },
+                {
+                    key: 'media',
+                    label: 'Media',
+                    isVisible: isMediaPanelVisible,
+                    onToggle: () => setIsMediaPanelVisible((prev) => !prev),
+                    onClose: () => setIsMediaPanelVisible(false),
+                    floatingPlacement: 'dock',
+                    workspaceGroup: 'files',
+                    workspaceOrder: 10,
+                    mobileGroup: 'files',
+                    mobileOrder: 10
+                },
+                {
+                    key: 'assets',
+                    label: 'Assets',
+                    isVisible: isAssetPanelVisible,
+                    onToggle: () => setIsAssetPanelVisible((prev) => !prev),
+                    onClose: () => setIsAssetPanelVisible(false),
+                    floatingPlacement: 'dock',
+                    workspaceGroup: 'files',
+                    workspaceOrder: 20,
+                    mobileGroup: 'files',
+                    mobileOrder: 20
+                },
+                {
+                    key: 'outliner',
+                    label: 'Outliner',
+                    isVisible: isOutlinerPanelVisible,
+                    onToggle: () => setIsOutlinerPanelVisible((prev) => !prev),
+                    onClose: () => setIsOutlinerPanelVisible(false),
+                    floatingPlacement: 'dock',
+                    workspaceGroup: 'scene',
+                    workspaceOrder: 30,
+                    mobileGroup: 'scene',
+                    mobileOrder: 30
+                },
+                {
+                    key: 'spaces',
+                    label: 'Spaces',
+                    isVisible: isSpacesPanelVisible,
+                    onToggle: () => setIsSpacesPanelVisible((prev) => !prev),
+                    onClose: () => setIsSpacesPanelVisible(false),
+                    floatingPlacement: 'dock',
+                    isAvailable: isAdminMode,
+                    workspaceGroup: 'scene',
+                    workspaceOrder: 40,
+                    mobileGroup: 'scene',
+                    mobileOrder: 40
+                },
+                {
+                    key: 'inspector',
+                    label: 'Inspector',
+                    isVisible: isInspectorPanelVisible,
+                    onToggle: () => setIsInspectorPanelVisible((prev) => !prev),
+                    onClose: () => setIsInspectorPanelVisible(false),
+                    floatingPlacement: 'dock',
+                    workspaceGroup: 'selected',
+                    workspaceOrder: 10,
+                    mobileGroup: 'selected',
+                    mobileOrder: 10
+                }
+            ].filter((entry) => entry.isAvailable !== false),
+        [
+            isAdminMode,
+            isAssetPanelVisible,
+            isInspectorPanelVisible,
+            isMediaPanelVisible,
+            isOutlinerPanelVisible,
+            isSpacesPanelVisible,
+            isViewPanelVisible,
+            isWorldPanelVisible,
+            setIsAssetPanelVisible,
+            setIsInspectorPanelVisible,
+            setIsMediaPanelVisible,
+            setIsOutlinerPanelVisible,
+            setIsSpacesPanelVisible,
+            setIsViewPanelVisible,
+            setIsWorldPanelVisible
+        ]
+    )
 
     const toolbarModel = useMemo(() => {
         const buttonMap = new Map()
@@ -271,7 +271,11 @@ export default function EditorLayoutContainer({
             },
             modeButtons: {
                 interaction: buttonMap.get('interaction-mode') || null,
-                presentation: pick('presentation-scene', 'presentation-fixed-camera', 'presentation-code')
+                presentation: pick(
+                    'presentation-scene',
+                    'presentation-fixed-camera',
+                    'presentation-code'
+                )
             },
             primaryActions: pick('save', 'load'),
             historyActions: pick('undo', 'redo'),
@@ -279,12 +283,26 @@ export default function EditorLayoutContainer({
                 {
                     key: 'scene',
                     label: 'Scene',
-                    items: pick('new-space', 'group-selection', 'ungroup-selection', 'preferences', 'offline-mode', 'clear')
+                    items: pick(
+                        'new-space',
+                        'group-selection',
+                        'ungroup-selection',
+                        'preferences',
+                        'offline-mode',
+                        'clear'
+                    )
                 },
                 {
                     key: 'display',
                     label: 'Display',
-                    items: pick('fullscreen', 'status-panel', 'selection-lock', 'ui-default-toggle', 'hide-ui', 'xr-focus')
+                    items: pick(
+                        'fullscreen',
+                        'status-panel',
+                        'selection-lock',
+                        'ui-default-toggle',
+                        'hide-ui',
+                        'xr-focus'
+                    )
                 },
                 {
                     key: 'admin',
@@ -302,12 +320,15 @@ export default function EditorLayoutContainer({
     const controlSections = useControlSections({
         isUiVisible,
         sceneButtons: sceneButtons
-            .filter((button) => ![
-                'interaction-mode',
-                'group-selection',
-                'ungroup-selection',
-                'preferences'
-            ].includes(button.key))
+            .filter(
+                (button) =>
+                    ![
+                        'interaction-mode',
+                        'group-selection',
+                        'ungroup-selection',
+                        'preferences'
+                    ].includes(button.key)
+            )
             .map((button) => {
                 if (button.key === 'save') return { ...button, label: 'Export Scene' }
                 if (button.key === 'load') return { ...button, label: 'Load Scene' }
@@ -315,42 +336,51 @@ export default function EditorLayoutContainer({
             }),
         panelButtons,
         adminButtons: [],
-        displayButtons: displayButtons.filter((button) => ![
-            'presentation-scene',
-            'presentation-fixed-camera',
-            'presentation-code',
-            'xr-focus'
-        ].includes(button.key)),
+        displayButtons: displayButtons.filter(
+            (button) =>
+                ![
+                    'presentation-scene',
+                    'presentation-fixed-camera',
+                    'presentation-code',
+                    'xr-focus'
+                ].includes(button.key)
+        ),
         xrButtons
     })
 
-    const mobileModel = useMemo(() => ({
-        spaceButton: toolbarModel.identity?.spaceButton,
-        interactionModeButton: toolbarModel.modeButtons?.interaction
-            ? {
-                ...toolbarModel.modeButtons.interaction,
-                label: toolbarModel.modeButtons.interaction.label.replace('Mode: ', '')
-            }
-            : null,
-        presentationButtons: (toolbarModel.modeButtons?.presentation || []).map((button) => ({
-            ...button,
-            label: button.label === '2D Camera' ? '2D' : button.label.replace(' View', '')
-        })),
-        panelEntries,
-        moreSections: [
-            {
-                key: 'project',
-                label: 'Project',
-                items: toolbarModel.primaryActions || []
-            },
-            {
-                key: 'history',
-                label: 'History',
-                items: toolbarModel.historyActions || []
-            },
-            ...(toolbarModel.drawerSections || [])
-        ].filter((section) => Array.isArray(section.items) && section.items.length > 0)
-    }), [panelEntries, toolbarModel])
+    const mobileModel = useMemo(
+        () => ({
+            spaceButton: toolbarModel.identity?.spaceButton,
+            interactionModeButton: toolbarModel.modeButtons?.interaction
+                ? {
+                      ...toolbarModel.modeButtons.interaction,
+                      label: toolbarModel.modeButtons.interaction.label.replace('Mode: ', '')
+                  }
+                : null,
+            presentationButtons: (toolbarModel.modeButtons?.presentation || []).map((button) => ({
+                ...button,
+                label: button.label === '2D Camera' ? '2D' : button.label.replace(' View', '')
+            })),
+            xrButtons: xrButtons.filter((button) =>
+                ['enter-ar', 'enter-vr', 'exit-xr'].includes(button.key)
+            ),
+            panelEntries,
+            moreSections: [
+                {
+                    key: 'project',
+                    label: 'Project',
+                    items: toolbarModel.primaryActions || []
+                },
+                {
+                    key: 'history',
+                    label: 'History',
+                    items: toolbarModel.historyActions || []
+                },
+                ...(toolbarModel.drawerSections || [])
+            ].filter((section) => Array.isArray(section.items) && section.items.length > 0)
+        }),
+        [panelEntries, toolbarModel, xrButtons]
+    )
 
     return (
         <EditorLayout

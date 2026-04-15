@@ -21,6 +21,8 @@ Important:
 - `/serverXR` must be owned by the Node.js App, not by a static proxy directory
 - the canonical path is GitHub + cPanel `Git Version Control`
 - legacy/manual fallback material is archived under [docs/deploy/legacy/README.md](legacy/README.md)
+- normal work starts on `dev`
+- `staging` and `main` are promotion branches except during emergency hotfixes
 
 ## One-Time Setup
 
@@ -94,20 +96,63 @@ Recommended roots:
 
 ### Staging
 
-1. commit and push `dev`
-2. promote the approved commit to `staging`
-3. push `staging`
-4. let GitHub publish `cpanel-staging`
-5. in cPanel `Git Version Control`, update and deploy `HEAD` if needed
-6. verify staging smoke checks and real editor flows
+1. Promote the approved source commit:
+
+```bash
+git switch staging
+git pull --ff-only origin staging
+git merge --ff-only dev
+git push origin staging
+```
+
+2. Wait for GitHub Actions to publish `cpanel-staging`.
+
+3. In cPanel `Git Version Control`, open:
+
+```text
+/home/distudio/repositories/di.iiii-staging
+```
+
+4. Click `Update from Remote`.
+
+5. Confirm the checked-out branch is `cpanel-staging`.
+
+6. Click `Deploy HEAD Commit`.
+
+7. Verify staging:
+
+```bash
+curl -s https://staging.di-studio.xyz/serverXR/api/health
+npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
+```
 
 ### Production
 
-1. promote the staging-verified commit into `main`
-2. push `main`
-3. let GitHub publish `cpanel-production`
-4. in cPanel `Git Version Control`, update and deploy `HEAD` if needed
-5. verify production smoke checks
+1. Promote the staging-verified source commit:
+
+```bash
+git switch main
+git pull --ff-only origin main
+git merge --ff-only staging
+git push origin main
+```
+
+2. Wait for GitHub Actions to publish `cpanel-production`.
+
+3. In cPanel `Git Version Control`, open the production clone.
+
+4. Click `Update from Remote`.
+
+5. Confirm the checked-out branch is `cpanel-production`.
+
+6. Click `Deploy HEAD Commit`.
+
+7. Verify production:
+
+```bash
+curl -s https://di-studio.xyz/serverXR/api/health
+npm run smoke:cpanel -- --base-url https://di-studio.xyz
+```
 
 ## Automatic Behavior
 
@@ -139,3 +184,36 @@ Check:
 - `API_TOKEN`, `DATA_ROOT`, `SHARED_ROOT`, and `CORS_ORIGINS` are valid
 - dependencies are installed in the app root
 - the Passenger `.htaccess` inside the web-root `serverXR/` mount still points at the correct app root
+
+### cPanel says branches diverged
+
+If `Update from Remote` says `Diverging branches can't be fast-forwarded` or `Not possible to fast-forward`, do not deploy the old HEAD.
+
+Reset the cPanel clone to the remote artifact branch so it matches GitHub exactly, then deploy.
+
+For staging:
+
+```bash
+cd /home/distudio/repositories/di.iiii-staging
+git status --short
+git branch backup-cpanel-staging-before-reset-$(date +%Y%m%d-%H%M%S)
+git fetch origin cpanel-staging
+git reset --hard origin/cpanel-staging
+git status --short
+git log -1 --oneline
+```
+
+Then refresh cPanel `Git Version Control`, confirm the clone is on `cpanel-staging`, and click `Deploy HEAD Commit`.
+
+For production, use the production clone and replace `cpanel-staging` with `cpanel-production`.
+
+### Live site is healthy but stale
+
+Compare the live backend release metadata with the expected source branch:
+
+```bash
+git rev-parse --short origin/staging
+curl -s https://staging.di-studio.xyz/serverXR/api/health
+```
+
+If the live `release.gitCommit` is older than `origin/staging`, the missing step is cPanel deploy or Node.js app restart, not source promotion.

@@ -74,6 +74,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 spaceId: resolvedRouteSpaceId || nextDocument?.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
             }
         })
+        documentRef.current = normalized
         const nextEntryView = normalized.presentationState?.entryView || 'scene'
         setState((current) => ({
             ...current,
@@ -95,6 +96,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 return current
             }
             const nextDocument = applyProjectOps(current.document, ops || [])
+            documentRef.current = nextDocument
             const previousEntryView = current.document.presentationState?.entryView || 'scene'
             const nextEntryView = nextDocument.presentationState?.entryView || 'scene'
             if (!cameraViewRef.current || previousEntryView !== nextEntryView || nextEntryView === 'fixed-camera' || nextEntryView === 'code') {
@@ -114,16 +116,21 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
 
     const reloadDocument = useCallback(async () => {
         if (!projectId) return
-        setState((current) => ({
-            status: 'loading',
-            document: current.document?.projectMeta?.id === projectId ? current.document : null,
-            error: ''
-        }))
+        setState((current) => {
+            const nextDocument = current.document?.projectMeta?.id === projectId ? current.document : null
+            documentRef.current = nextDocument
+            return {
+                status: 'loading',
+                document: nextDocument,
+                error: ''
+            }
+        })
         try {
             const response = await getProjectDocument(projectId)
             versionRef.current = Number(response?.version) || 0
             applyIncomingDocument(response?.document || response || {})
         } catch (error) {
+            documentRef.current = null
             setState({
                 status: 'error',
                 document: null,

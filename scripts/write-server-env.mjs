@@ -20,6 +20,10 @@ const formatEnvValue = (value) => {
     return JSON.stringify(text)
 }
 
+const SAFE_SERVER_API_TOKEN_PATTERN = /^[A-Za-z0-9._~+/\-=]{16,}$/
+
+const normalizeServerApiToken = (value = '') => String(value || '').trim().replace(/^bearer\s+/i, '')
+
 const requiredValues = {
     NODE_ENV: process.env.NODE_ENV || 'production',
     PORT: process.env.PORT || '',
@@ -37,6 +41,14 @@ const missingEntries = Object.entries(requiredValues)
 
 if (missingEntries.length) {
     throw new Error(`Missing required environment values: ${missingEntries.join(', ')}`)
+}
+
+requiredValues.API_TOKEN = normalizeServerApiToken(requiredValues.API_TOKEN)
+
+if (!SAFE_SERVER_API_TOKEN_PATTERN.test(requiredValues.API_TOKEN)) {
+    throw new Error(
+        'Malformed API_TOKEN value. Expected a single token value without whitespace or shell commands.'
+    )
 }
 
 const optionalValues = {

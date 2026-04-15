@@ -35,6 +35,8 @@ const EMPTY_STATES = {
     }
 }
 
+const QUICK_XR_BUTTON_ORDER = ['enter-ar', 'enter-vr', 'exit-xr']
+
 const getButtonClassName = (button, extraClassName = '') => {
     const classNames = ['toggle-button', 'workspace-command-button', extraClassName]
     if (button?.variant === 'success') classNames.push('success-button')
@@ -44,28 +46,34 @@ const getButtonClassName = (button, extraClassName = '') => {
     return classNames.filter(Boolean).join(' ')
 }
 
-const orderEntries = (entries = []) => [...entries].sort((left, right) => {
-    const leftOrder = Number.isFinite(left.mobileOrder) ? left.mobileOrder : 999
-    const rightOrder = Number.isFinite(right.mobileOrder) ? right.mobileOrder : 999
-    return leftOrder - rightOrder
-})
+const getQuickXrLabel = (button) => {
+    if (button?.key === 'enter-ar') return 'AR'
+    if (button?.key === 'enter-vr') return 'VR'
+    if (button?.key === 'exit-xr') return 'Exit XR'
+    return button?.label || 'XR'
+}
 
-const groupEntries = (panelEntries = []) => panelEntries.reduce((accumulator, entry) => {
-    const groupKey = entry.mobileGroup || 'more'
-    if (!accumulator[groupKey]) {
-        accumulator[groupKey] = []
-    }
-    accumulator[groupKey].push(entry)
-    return accumulator
-}, {})
+const orderEntries = (entries = []) =>
+    [...entries].sort((left, right) => {
+        const leftOrder = Number.isFinite(left.mobileOrder) ? left.mobileOrder : 999
+        const rightOrder = Number.isFinite(right.mobileOrder) ? right.mobileOrder : 999
+        return leftOrder - rightOrder
+    })
+
+const groupEntries = (panelEntries = []) =>
+    panelEntries.reduce((accumulator, entry) => {
+        const groupKey = entry.mobileGroup || 'more'
+        if (!accumulator[groupKey]) {
+            accumulator[groupKey] = []
+        }
+        accumulator[groupKey].push(entry)
+        return accumulator
+    }, {})
 
 const findDefaultPanelKey = (entries = []) => orderEntries(entries)[0]?.key || null
 
-const panelStateEquals = (left = {}, right = {}) => (
-    left.scene === right.scene
-    && left.files === right.files
-    && left.selected === right.selected
-)
+const panelStateEquals = (left = {}, right = {}) =>
+    left.scene === right.scene && left.files === right.files && left.selected === right.selected
 
 function InlineEmptyState({ title, description }) {
     return (
@@ -95,7 +103,9 @@ function ActionSection({ section }) {
                         title={button.title}
                     >
                         <span className="workspace-command-label">{button.label}</span>
-                        {button.hint && <span className="workspace-command-hint">{button.hint}</span>}
+                        {button.hint && (
+                            <span className="workspace-command-hint">{button.hint}</span>
+                        )}
                     </button>
                 ))}
             </div>
@@ -110,7 +120,9 @@ function StatusSection({ statusSummary, statusItems = [] }) {
         <section className="workspace-section workspace-status-section">
             <header className="workspace-section-header">
                 <div className="workspace-section-title">Activity</div>
-                {statusSummary ? <div className="workspace-status-chip">{statusSummary}</div> : null}
+                {statusSummary ? (
+                    <div className="workspace-status-chip">{statusSummary}</div>
+                ) : null}
             </header>
             {statusItems.length > 0 && (
                 <div className="workspace-status-list">
@@ -118,15 +130,30 @@ function StatusSection({ statusSummary, statusItems = [] }) {
                         <div key={item.key} className="workspace-status-row">
                             <div className="workspace-status-row-top">
                                 <div className="workspace-status-label">{item.label}</div>
-                                {item.detail ? <div className="workspace-status-detail">{item.detail}</div> : null}
+                                {item.detail ? (
+                                    <div className="workspace-status-detail">{item.detail}</div>
+                                ) : null}
                             </div>
-                            {item.showBar !== false && (item.indeterminate || 'percent' in item) && (
-                                <div className={['status-bar', item.indeterminate ? 'indeterminate' : ''].filter(Boolean).join(' ')}>
-                                    {!item.indeterminate && 'percent' in item && (
-                                        <div className="status-progress" style={{ width: `${Math.max(0, Math.min(100, item.percent || 0))}%` }} />
-                                    )}
-                                </div>
-                            )}
+                            {item.showBar !== false &&
+                                (item.indeterminate || 'percent' in item) && (
+                                    <div
+                                        className={[
+                                            'status-bar',
+                                            item.indeterminate ? 'indeterminate' : ''
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' ')}
+                                    >
+                                        {!item.indeterminate && 'percent' in item && (
+                                            <div
+                                                className="status-progress"
+                                                style={{
+                                                    width: `${Math.max(0, Math.min(100, item.percent || 0))}%`
+                                                }}
+                                            />
+                                        )}
+                                    </div>
+                                )}
                         </div>
                     ))}
                 </div>
@@ -189,9 +216,11 @@ export default function MobileEditorShell({
     const activePanelEntry = useMemo(() => {
         if (!activeGroup || activeGroup === 'more') return null
         const panelKey = activePanelByGroup[activeGroup]
-        return groupedPanels[activeGroup]?.find((entry) => entry.key === panelKey)
-            || groupedPanels[activeGroup]?.[0]
-            || null
+        return (
+            groupedPanels[activeGroup]?.find((entry) => entry.key === panelKey) ||
+            groupedPanels[activeGroup]?.[0] ||
+            null
+        )
     }, [activeGroup, activePanelByGroup, groupedPanels])
 
     const openGroup = (groupKey) => {
@@ -210,14 +239,26 @@ export default function MobileEditorShell({
     }
 
     const moreSections = mobileModel?.moreSections || []
+    const quickXrButtons = useMemo(() => {
+        const buttons = mobileModel?.xrButtons || []
+        const buttonByKey = new Map(buttons.map((button) => [button.key, button]))
+        return QUICK_XR_BUTTON_ORDER.map((key) => buttonByKey.get(key)).filter(Boolean)
+    }, [mobileModel?.xrButtons])
     const workbenchState = activeGroup
-        ? (DEFAULT_SHEET_STATE[activeGroup] === 'expanded' ? 'utility-open' : 'compact-open')
+        ? DEFAULT_SHEET_STATE[activeGroup] === 'expanded'
+            ? 'utility-open'
+            : 'compact-open'
         : 'collapsed'
     const isWorkbenchOpen = Boolean(activeGroup)
-    const activeWorkbenchTitle = activeGroup === 'more'
-        ? 'Workspace'
-        : activePanelEntry?.mobileLabel || activePanelEntry?.label || GROUP_LABELS[activeGroup] || 'Menu'
-    const hasMoreContent = Boolean(statusSummary) || statusItems.length > 0 || moreSections.length > 0
+    const activeWorkbenchTitle =
+        activeGroup === 'more'
+            ? 'Workspace'
+            : activePanelEntry?.mobileLabel ||
+              activePanelEntry?.label ||
+              GROUP_LABELS[activeGroup] ||
+              'Menu'
+    const hasMoreContent =
+        Boolean(statusSummary) || statusItems.length > 0 || moreSections.length > 0
 
     const getGroupBadge = (groupKey) => {
         if (groupKey === 'selected' && selectedCount > 0) return selectedCount
@@ -231,7 +272,9 @@ export default function MobileEditorShell({
                 'mobile-editor-shell',
                 isPhoneCompact ? 'is-compact' : '',
                 `is-${workbenchState}`
-            ].filter(Boolean).join(' ')}
+            ]
+                .filter(Boolean)
+                .join(' ')}
         >
             <div className="workspace-appbar-shell workspace-appbar-shell-mobile">
                 <div className="workspace-appbar workspace-appbar-mobile">
@@ -239,12 +282,17 @@ export default function MobileEditorShell({
                         {mobileModel?.spaceButton && (
                             <button
                                 type="button"
-                                className={getButtonClassName(mobileModel.spaceButton, 'workspace-space-pill')}
+                                className={getButtonClassName(
+                                    mobileModel.spaceButton,
+                                    'workspace-space-pill'
+                                )}
                                 onClick={mobileModel.spaceButton.onClick}
                                 disabled={mobileModel.spaceButton.disabled}
                                 title={mobileModel.spaceButton.title}
                             >
-                                <span className="workspace-command-label">{mobileModel.spaceButton.label}</span>
+                                <span className="workspace-command-label">
+                                    {mobileModel.spaceButton.label}
+                                </span>
                             </button>
                         )}
                         {statusSummary ? (
@@ -256,20 +304,31 @@ export default function MobileEditorShell({
 
                     <div className="workspace-appbar-center">
                         {mobileModel?.interactionModeButton ? (
-                            <div className="workspace-segmented workspace-segmented-mobile" aria-label="Editor interaction mode">
+                            <div
+                                className="workspace-segmented workspace-segmented-mobile"
+                                aria-label="Editor interaction mode"
+                            >
                                 <button
                                     type="button"
-                                    className={getButtonClassName(mobileModel.interactionModeButton, 'workspace-segment')}
+                                    className={getButtonClassName(
+                                        mobileModel.interactionModeButton,
+                                        'workspace-segment'
+                                    )}
                                     onClick={mobileModel.interactionModeButton.onClick}
                                     title={mobileModel.interactionModeButton.title}
                                 >
-                                    <span className="workspace-command-label">{mobileModel.interactionModeButton.label}</span>
+                                    <span className="workspace-command-label">
+                                        {mobileModel.interactionModeButton.label}
+                                    </span>
                                 </button>
                             </div>
                         ) : null}
 
                         {mobileModel?.presentationButtons?.length ? (
-                            <div className="workspace-segmented workspace-segmented-mobile" aria-label="Presentation mode">
+                            <div
+                                className="workspace-segmented workspace-segmented-mobile"
+                                aria-label="Presentation mode"
+                            >
                                 {mobileModel.presentationButtons.map((button) => (
                                     <button
                                         key={button.key}
@@ -278,7 +337,9 @@ export default function MobileEditorShell({
                                         onClick={button.onClick}
                                         title={button.title}
                                     >
-                                        <span className="workspace-command-label">{button.label}</span>
+                                        <span className="workspace-command-label">
+                                            {button.label}
+                                        </span>
                                     </button>
                                 ))}
                             </div>
@@ -292,18 +353,28 @@ export default function MobileEditorShell({
                     <div className="mobile-workbench-panel" role="dialog" aria-modal="false">
                         <div className="mobile-workbench-header">
                             <div className="mobile-workbench-heading">
-                                <div className="mobile-workbench-kicker">{GROUP_LABELS[activeGroup]}</div>
+                                <div className="mobile-workbench-kicker">
+                                    {GROUP_LABELS[activeGroup]}
+                                </div>
                                 <div className="mobile-workbench-title">{activeWorkbenchTitle}</div>
                             </div>
                             <div className="mobile-workbench-actions">
-                                <button type="button" className="workspace-header-button" onClick={closeWorkbench}>
+                                <button
+                                    type="button"
+                                    className="workspace-header-button"
+                                    onClick={closeWorkbench}
+                                >
                                     Done
                                 </button>
                             </div>
                         </div>
 
                         {activeGroup !== 'more' && groupedPanels[activeGroup]?.length > 1 && (
-                            <div className="workspace-drawer-tabs mobile-workbench-tabs" role="tablist" aria-label={`${activeGroup} tabs`}>
+                            <div
+                                className="workspace-drawer-tabs mobile-workbench-tabs"
+                                role="tablist"
+                                aria-label={`${activeGroup} tabs`}
+                            >
                                 {groupedPanels[activeGroup].map((entry) => (
                                     <button
                                         key={entry.key}
@@ -311,7 +382,9 @@ export default function MobileEditorShell({
                                         className={[
                                             'workspace-drawer-tab',
                                             activePanelEntry?.key === entry.key ? 'is-active' : ''
-                                        ].filter(Boolean).join(' ')}
+                                        ]
+                                            .filter(Boolean)
+                                            .join(' ')}
                                         onClick={() => setActivePanel(activeGroup, entry.key)}
                                         role="tab"
                                         aria-selected={activePanelEntry?.key === entry.key}
@@ -326,7 +399,10 @@ export default function MobileEditorShell({
                             {activeGroup === 'more' ? (
                                 hasMoreContent ? (
                                     <>
-                                        <StatusSection statusSummary={statusSummary} statusItems={statusItems} />
+                                        <StatusSection
+                                            statusSummary={statusSummary}
+                                            statusItems={statusItems}
+                                        />
                                         {moreSections.map((section) => (
                                             <ActionSection key={section.key} section={section} />
                                         ))}
@@ -350,30 +426,56 @@ export default function MobileEditorShell({
                             ) : (
                                 <InlineEmptyState
                                     title={EMPTY_STATES[activeGroup]?.title || 'Nothing here yet'}
-                                    description={EMPTY_STATES[activeGroup]?.description || 'This workspace section is currently empty.'}
+                                    description={
+                                        EMPTY_STATES[activeGroup]?.description ||
+                                        'This workspace section is currently empty.'
+                                    }
                                 />
                             )}
                         </div>
                     </div>
                 )}
 
+                {quickXrButtons.length > 0 && (
+                    <div className="mobile-xr-launcher" aria-label="XR launch controls">
+                        {quickXrButtons.map((button) => (
+                            <button
+                                key={button.key}
+                                type="button"
+                                className={getButtonClassName(button, 'mobile-xr-button')}
+                                onClick={button.onClick}
+                                disabled={button.disabled}
+                                title={button.title}
+                            >
+                                <span className="workspace-command-label">
+                                    {getQuickXrLabel(button)}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                )}
+
                 <div className="mobile-workbench-nav">
-                {MOBILE_GROUPS.map((groupKey) => (
-                    <button
-                        key={groupKey}
-                        type="button"
-                        className={[
-                            'mobile-nav-button',
-                            activeGroup === groupKey ? 'is-active' : ''
-                        ].filter(Boolean).join(' ')}
-                        onClick={() => openGroup(groupKey)}
-                    >
-                        <span className="mobile-nav-label">{GROUP_LABELS[groupKey]}</span>
-                        {getGroupBadge(groupKey) ? (
-                            <span className="mobile-nav-badge" aria-hidden="true">{getGroupBadge(groupKey)}</span>
-                        ) : null}
-                    </button>
-                ))}
+                    {MOBILE_GROUPS.map((groupKey) => (
+                        <button
+                            key={groupKey}
+                            type="button"
+                            className={[
+                                'mobile-nav-button',
+                                activeGroup === groupKey ? 'is-active' : ''
+                            ]
+                                .filter(Boolean)
+                                .join(' ')}
+                            onClick={() => openGroup(groupKey)}
+                        >
+                            <span className="mobile-nav-label">{GROUP_LABELS[groupKey]}</span>
+                            {getGroupBadge(groupKey) ? (
+                                <span className="mobile-nav-badge" aria-hidden="true">
+                                    {getGroupBadge(groupKey)}
+                                </span>
+                            ) : null}
+                        </button>
+                    ))}
                 </div>
             </div>
         </div>
