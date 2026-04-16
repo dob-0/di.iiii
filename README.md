@@ -243,6 +243,37 @@ Simple model:
 - GitHub builds deploy artifacts
 - cPanel applies those artifacts to the host
 
+### One-command deploy shortcuts
+
+From the repo root:
+
+```bash
+npm run deploy:status
+npm run deploy:dev
+npm run deploy:staging
+npm run deploy:production
+npm run deploy:host:staging
+npm run deploy:host:production
+```
+
+Or use the single helper directly:
+
+```bash
+npm run deploy -- status
+npm run deploy -- staging
+npm run deploy -- production
+npm run deploy -- host staging
+npm run deploy -- host production
+```
+
+Important rules:
+
+- `dev` is integration only and does not deploy to hosting directly
+- run `deploy:dev` and `deploy:staging` from a clean `dev` branch
+- `deploy:production` promotes the exact current `origin/staging` commit into `main`
+- `deploy:host:*` is for the matching cPanel clone or host shell, not your laptop
+- use `npm run deploy -- smoke staging` or `npm run deploy -- smoke production` to verify quickly
+
 Branch mapping:
 
 - `staging` source branch publishes `cpanel-staging`
