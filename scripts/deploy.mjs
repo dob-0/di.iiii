@@ -6,6 +6,11 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, '..')
 const nodeCommand = process.execPath
+const remoteDefaults = {
+    sshTarget: process.env.DEPLOY_SSH_TARGET || 'distudio@di-studio.xyz',
+    stagingRepo: process.env.DEPLOY_REMOTE_STAGING_REPO || '/home/distudio/repositories/di.iiii-staging',
+    productionRepo: process.env.DEPLOY_REMOTE_PRODUCTION_REPO || '/home/distudio/repositories/di.iiii-production'
+}
 
 const rawArgs = process.argv.slice(2)
 const options = {
@@ -36,6 +41,8 @@ Usage:
   npm run deploy -- production
   npm run deploy -- host staging
   npm run deploy -- host production
+  npm run deploy -- remote staging
+  npm run deploy -- remote production
   npm run deploy -- smoke staging
   npm run deploy -- smoke production
   npm run deploy -- build staging
@@ -48,12 +55,15 @@ Shortcuts:
   npm run deploy:production
   npm run deploy:host:staging
   npm run deploy:host:production
+  npm run deploy:remote:staging
+  npm run deploy:remote:production
 
 Rules:
   - dev does not deploy to hosting directly
   - run dev/staging promotion commands from a clean dev branch
   - production promotion ships the exact current origin/staging commit to main
   - host commands are for the cPanel clone or server repo, not your laptop
+  - remote commands SSH from your laptop into the cPanel host and run the host apply there
 
 Flags:
   --dry-run
@@ -209,6 +219,9 @@ const normalizeAction = (values) => {
         case 'hosting':
         case 'apply':
             return `host:${second}`
+        case 'remote':
+        case 'ssh':
+            return `remote:${second}`
         case 'smoke':
         case 'check':
             return `smoke:${second}`
@@ -236,6 +249,21 @@ const printStatus = async () => {
     console.log('  dev -> integration only')
     console.log('  staging -> https://staging.di-studio.xyz')
     console.log('  production -> https://di-studio.xyz')
+    console.log(`Remote staging host: ${remoteDefaults.sshTarget}:${remoteDefaults.stagingRepo}`)
+    console.log(`Remote production host: ${remoteDefaults.sshTarget}:${remoteDefaults.productionRepo}`)
+}
+
+const buildRemoteDeployCommand = (deployEnv) => {
+    const repoPath = deployEnv === 'staging'
+        ? remoteDefaults.stagingRepo
+        : remoteDefaults.productionRepo
+    const cpanelBranch = deployEnv === 'staging' ? 'cpanel-staging' : 'cpanel-production'
+
+    return [
+        'ssh',
+        remoteDefaults.sshTarget,
+        `cd ${quoteArg(repoPath)} && git pull --ff-only origin ${cpanelBranch} && bash scripts/cpanel-apply-prebuilt-release.sh ${deployEnv}`
+    ]
 }
 
 const handlers = {
@@ -300,6 +328,24 @@ const handlers = {
             return
         }
         console.log('Applied the production prebuilt release on this host.')
+    },
+    'remote:staging': async () => {
+        const [command, ...args] = buildRemoteDeployCommand('staging')
+        await runMaybe(command, args)
+        if (options.dryRun) {
+            console.log('Would SSH to the cPanel host and apply the staging prebuilt release there.')
+            return
+        }
+        console.log('Triggered the staging prebuilt release on the remote cPanel host.')
+    },
+    'remote:production': async () => {
+        const [command, ...args] = buildRemoteDeployCommand('production')
+        await runMaybe(command, args)
+        if (options.dryRun) {
+            console.log('Would SSH to the cPanel host and apply the production prebuilt release there.')
+            return
+        }
+        console.log('Triggered the production prebuilt release on the remote cPanel host.')
     },
     'smoke:staging': async () => {
         await runMaybe(nodeCommand, ['scripts/smoke-check-cpanel.mjs', '--base-url', 'https://staging.di-studio.xyz'])
