@@ -254,6 +254,8 @@ npm run deploy:staging
 npm run deploy:production
 npm run deploy:host:staging
 npm run deploy:host:production
+npm run deploy:remote:staging
+npm run deploy:remote:production
 ```
 
 Or use the single helper directly:
@@ -264,6 +266,8 @@ npm run deploy -- staging
 npm run deploy -- production
 npm run deploy -- host staging
 npm run deploy -- host production
+npm run deploy -- remote staging
+npm run deploy -- remote production
 ```
 
 Important rules:
@@ -272,7 +276,22 @@ Important rules:
 - run `deploy:dev` and `deploy:staging` from a clean `dev` branch
 - `deploy:production` promotes the exact current `origin/staging` commit into `main`
 - `deploy:host:*` is for the matching cPanel clone or host shell, not your laptop
+- `deploy:remote:*` is the laptop command and SSHes into the cPanel host for you
 - use `npm run deploy -- smoke staging` or `npm run deploy -- smoke production` to verify quickly
+
+Laptop remote defaults:
+
+- SSH target: `distudio@di-studio.xyz`
+- staging repo: `/home/distudio/repositories/di.iiii-staging`
+- production repo: `/home/distudio/repositories/di.iiii-production`
+
+Override them if needed:
+
+```bash
+DEPLOY_SSH_TARGET=your-user@your-host npm run deploy:remote:staging
+DEPLOY_REMOTE_STAGING_REPO=/some/other/path npm run deploy:remote:staging
+DEPLOY_REMOTE_PRODUCTION_REPO=/some/other/path npm run deploy:remote:production
+```
 
 Branch mapping:
 

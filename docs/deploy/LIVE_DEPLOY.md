@@ -43,6 +43,8 @@ npm run deploy:staging
 npm run deploy:production
 npm run deploy:host:staging
 npm run deploy:host:production
+npm run deploy:remote:staging
+npm run deploy:remote:production
 ```
 
 Equivalent single helper form:
@@ -53,6 +55,8 @@ npm run deploy -- staging
 npm run deploy -- production
 npm run deploy -- host staging
 npm run deploy -- host production
+npm run deploy -- remote staging
+npm run deploy -- remote production
 ```
 
 Rules:
@@ -61,7 +65,14 @@ Rules:
 - run `deploy:dev` and `deploy:staging` from a clean `dev` branch
 - `deploy:production` promotes the exact current `origin/staging` commit into `main`
 - `deploy:host:*` is only for the matching cPanel clone or host shell
+- `deploy:remote:*` is the laptop-side command and SSHes into the cPanel host to run the host apply
 - `npm run deploy -- smoke staging` and `npm run deploy -- smoke production` are the quick verification commands
+
+Default laptop remote target:
+
+- SSH target: `distudio@di-studio.xyz`
+- staging repo: `/home/distudio/repositories/di.iiii-staging`
+- production repo: `/home/distudio/repositories/di.iiii-production`
 
 ## Daily Workflow
 
