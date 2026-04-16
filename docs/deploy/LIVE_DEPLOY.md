@@ -32,6 +32,37 @@ Canonical pieces:
 - apply script:
   - [scripts/cpanel-apply-prebuilt-release.sh](../../scripts/cpanel-apply-prebuilt-release.sh)
 
+## Shortcut Commands
+
+From the repo root:
+
+```bash
+npm run deploy:status
+npm run deploy:dev
+npm run deploy:staging
+npm run deploy:production
+npm run deploy:host:staging
+npm run deploy:host:production
+```
+
+Equivalent single helper form:
+
+```bash
+npm run deploy -- status
+npm run deploy -- staging
+npm run deploy -- production
+npm run deploy -- host staging
+npm run deploy -- host production
+```
+
+Rules:
+
+- `dev` is the integration lane only and does not deploy to hosting directly
+- run `deploy:dev` and `deploy:staging` from a clean `dev` branch
+- `deploy:production` promotes the exact current `origin/staging` commit into `main`
+- `deploy:host:*` is only for the matching cPanel clone or host shell
+- `npm run deploy -- smoke staging` and `npm run deploy -- smoke production` are the quick verification commands
+
 ## Daily Workflow
 
 Typical start-of-session commands:
