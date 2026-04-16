@@ -1,0 +1,351 @@
+import { spawn } from 'node:child_process'
+import path from 'node:path'
+import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const repoRoot = path.resolve(__dirname, '..')
+const nodeCommand = process.execPath
+
+const rawArgs = process.argv.slice(2)
+const options = {
+    dryRun: false,
+    allowDirty: false
+}
+const positionals = []
+
+for (const value of rawArgs) {
+    if (value === '--dry-run') {
+        options.dryRun = true
+        continue
+    }
+    if (value === '--allow-dirty') {
+        options.allowDirty = true
+        continue
+    }
+    positionals.push(value)
+}
+
+const printHelp = () => {
+    console.log(`Simple deploy helper
+
+Usage:
+  npm run deploy -- status
+  npm run deploy -- dev
+  npm run deploy -- staging
+  npm run deploy -- production
+  npm run deploy -- host staging
+  npm run deploy -- host production
+  npm run deploy -- smoke staging
+  npm run deploy -- smoke production
+  npm run deploy -- build staging
+  npm run deploy -- build production
+
+Shortcuts:
+  npm run deploy:status
+  npm run deploy:dev
+  npm run deploy:staging
+  npm run deploy:production
+  npm run deploy:host:staging
+  npm run deploy:host:production
+
+Rules:
+  - dev does not deploy to hosting directly
+  - run dev/staging promotion commands from a clean dev branch
+  - production promotion ships the exact current origin/staging commit to main
+  - host commands are for the cPanel clone or server repo, not your laptop
+
+Flags:
+  --dry-run
+  --allow-dirty
+`)
+}
+
+const quoteArg = (value) => {
+    if (!value) return "''"
+    if (/^[A-Za-z0-9_./:=+-]+$/.test(value)) {
+        return value
+    }
+    return `'${value.replace(/'/g, `'\\''`)}'`
+}
+
+const formatCommand = (command, args) => [command, ...args].map(quoteArg).join(' ')
+
+const captureCommand = (command, args, extraOptions = {}) => new Promise((resolve) => {
+    const child = spawn(command, args, {
+        cwd: extraOptions.cwd || repoRoot,
+        env: extraOptions.env || process.env,
+        stdio: ['ignore', 'pipe', 'pipe']
+    })
+
+    let stdout = ''
+    let stderr = ''
+
+    child.stdout?.on('data', (chunk) => {
+        stdout += chunk.toString()
+    })
+    child.stderr?.on('data', (chunk) => {
+        stderr += chunk.toString()
+    })
+    child.on('error', (error) => {
+        resolve({
+            code: 1,
+            stdout: '',
+            stderr: error.message
+        })
+    })
+    child.on('exit', (code) => {
+        resolve({
+            code: code ?? 1,
+            stdout: stdout.trim(),
+            stderr: stderr.trim()
+        })
+    })
+})
+
+const runCommand = (command, args, extraOptions = {}) => new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+        cwd: extraOptions.cwd || repoRoot,
+        env: extraOptions.env || process.env,
+        stdio: 'inherit'
+    })
+
+    child.on('error', (error) => {
+        reject(error)
+    })
+    child.on('exit', (code) => {
+        if (code === 0) {
+            resolve()
+            return
+        }
+        reject(new Error(`${formatCommand(command, args)} exited with code ${code ?? 'unknown'}`))
+    })
+})
+
+const runMaybe = async (command, args, extraOptions = {}) => {
+    if (options.dryRun) {
+        console.log(`[dry-run] ${formatCommand(command, args)}`)
+        return
+    }
+    await runCommand(command, args, extraOptions)
+}
+
+const readGit = async (args) => {
+    const result = await captureCommand('git', args)
+    if (result.code !== 0) {
+        const stderr = result.stderr || `git ${args.join(' ')} failed`
+        throw new Error(stderr)
+    }
+    return result.stdout
+}
+
+const getCurrentBranch = async () => {
+    const currentBranch = await readGit(['branch', '--show-current'])
+    return currentBranch.trim()
+}
+
+const getCurrentCommit = async () => {
+    const currentCommit = await readGit(['rev-parse', '--short', 'HEAD'])
+    return currentCommit.trim()
+}
+
+const getWorktreeState = async () => {
+    const worktree = await readGit(['status', '--short'])
+    return worktree.trim()
+}
+
+const ensureCleanWorktree = async () => {
+    if (options.allowDirty || options.dryRun) {
+        return
+    }
+
+    const worktree = await getWorktreeState()
+    if (worktree) {
+        throw new Error(
+            'Worktree is not clean. Commit or stash your changes first, or rerun with --allow-dirty.'
+        )
+    }
+}
+
+const ensureBranch = async (expectedBranch, actionLabel) => {
+    const currentBranch = await getCurrentBranch()
+    if (currentBranch !== expectedBranch) {
+        throw new Error(`${actionLabel} must run from '${expectedBranch}', but you are on '${currentBranch}'.`)
+    }
+}
+
+const normalizeEnv = (value) => {
+    switch ((value || '').toLowerCase()) {
+        case 'prod':
+            return 'production'
+        case 'stage':
+            return 'staging'
+        default:
+            return (value || '').toLowerCase()
+    }
+}
+
+const normalizeAction = (values) => {
+    if (values.length === 0) {
+        return 'help'
+    }
+
+    const [firstRaw, secondRaw] = values
+    const first = (firstRaw || '').toLowerCase()
+    const second = normalizeEnv(secondRaw)
+
+    switch (first) {
+        case 'help':
+        case '--help':
+        case '-h':
+            return 'help'
+        case 'status':
+            return 'status'
+        case 'dev':
+        case 'staging':
+        case 'production':
+            return first
+        case 'host':
+        case 'hosting':
+        case 'apply':
+            return `host:${second}`
+        case 'smoke':
+        case 'check':
+            return `smoke:${second}`
+        case 'build':
+        case 'release':
+            return `build:${second}`
+        default:
+            return first
+    }
+}
+
+const action = normalizeAction(positionals)
+
+const printStatus = async () => {
+    const [branch, commit, worktree] = await Promise.all([
+        getCurrentBranch(),
+        getCurrentCommit(),
+        getWorktreeState()
+    ])
+
+    console.log(`Branch: ${branch || '(detached HEAD)'}`)
+    console.log(`Commit: ${commit}`)
+    console.log(`Worktree: ${worktree ? 'dirty' : 'clean'}`)
+    console.log('Deploy lanes:')
+    console.log('  dev -> integration only')
+    console.log('  staging -> https://staging.di-studio.xyz')
+    console.log('  production -> https://di-studio.xyz')
+}
+
+const handlers = {
+    help: async () => {
+        printHelp()
+    },
+    status: async () => {
+        await printStatus()
+    },
+    dev: async () => {
+        await ensureCleanWorktree()
+        await ensureBranch('dev', 'deploy dev')
+        await runMaybe('git', ['push', 'origin', 'HEAD:dev'])
+        if (options.dryRun) {
+            console.log('Would promote current dev HEAD to origin/dev.')
+            console.log('Dev is the integration lane only; it does not deploy to hosting directly.')
+            return
+        }
+        console.log('Promoted current dev HEAD to origin/dev.')
+        console.log('Dev is the integration lane only; it does not deploy to hosting directly.')
+    },
+    staging: async () => {
+        await ensureCleanWorktree()
+        await ensureBranch('dev', 'deploy staging')
+        await runMaybe('git', ['push', 'origin', 'HEAD:dev', 'HEAD:staging'])
+        if (options.dryRun) {
+            console.log('Would promote current dev HEAD to origin/dev and origin/staging.')
+            console.log('GitHub would then publish cpanel-staging automatically.')
+            console.log('Next on the host: npm run deploy -- host staging')
+            return
+        }
+        console.log('Promoted current dev HEAD to origin/dev and origin/staging.')
+        console.log('GitHub should now publish cpanel-staging automatically.')
+        console.log('Next: run `npm run deploy -- host staging` on the staging host, or click cPanel Deploy HEAD Commit.')
+    },
+    production: async () => {
+        await ensureCleanWorktree()
+        await runMaybe('git', ['fetch', 'origin', 'staging'])
+        await runMaybe('git', ['push', 'origin', 'FETCH_HEAD:main'])
+        if (options.dryRun) {
+            console.log('Would promote the current origin/staging commit to origin/main.')
+            console.log('GitHub would then publish cpanel-production automatically.')
+            console.log('Next on the host: npm run deploy -- host production')
+            return
+        }
+        console.log('Promoted the current origin/staging commit to origin/main.')
+        console.log('GitHub should now publish cpanel-production automatically.')
+        console.log('Next: run `npm run deploy -- host production` on the production host, or click cPanel Deploy HEAD Commit.')
+    },
+    'host:staging': async () => {
+        await runMaybe('bash', ['scripts/cpanel-apply-prebuilt-release.sh', 'staging'])
+        if (options.dryRun) {
+            console.log('Would apply the staging prebuilt release on this host.')
+            return
+        }
+        console.log('Applied the staging prebuilt release on this host.')
+    },
+    'host:production': async () => {
+        await runMaybe('bash', ['scripts/cpanel-apply-prebuilt-release.sh', 'production'])
+        if (options.dryRun) {
+            console.log('Would apply the production prebuilt release on this host.')
+            return
+        }
+        console.log('Applied the production prebuilt release on this host.')
+    },
+    'smoke:staging': async () => {
+        await runMaybe(nodeCommand, ['scripts/smoke-check-cpanel.mjs', '--base-url', 'https://staging.di-studio.xyz'])
+    },
+    'smoke:production': async () => {
+        await runMaybe(nodeCommand, ['scripts/smoke-check-cpanel.mjs', '--base-url', 'https://di-studio.xyz'])
+    },
+    'build:staging': async () => {
+        await runMaybe(nodeCommand, ['scripts/stage-cpanel-nodeapp-release.mjs'], {
+            env: {
+                ...process.env,
+                DEPLOY_ENV: 'staging'
+            }
+        })
+        if (options.dryRun) {
+            console.log('Would build the local staging cPanel bundle in .deploy/cpanel/.')
+            return
+        }
+        console.log('Built the local staging cPanel bundle in .deploy/cpanel/.')
+    },
+    'build:production': async () => {
+        await runMaybe(nodeCommand, ['scripts/stage-cpanel-nodeapp-release.mjs'], {
+            env: {
+                ...process.env,
+                DEPLOY_ENV: 'production'
+            }
+        })
+        if (options.dryRun) {
+            console.log('Would build the local production cPanel bundle in .deploy/cpanel/.')
+            return
+        }
+        console.log('Built the local production cPanel bundle in .deploy/cpanel/.')
+    }
+}
+
+const main = async () => {
+    const handler = handlers[action]
+    if (!handler) {
+        printHelp()
+        throw new Error(`Unsupported deploy command '${positionals.join(' ')}'.`)
+    }
+
+    await handler()
+}
+
+main().catch((error) => {
+    console.error(`[deploy] ${error.message}`)
+    process.exitCode = 1
+})
