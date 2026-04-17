@@ -155,11 +155,12 @@ describe('project contracts', () => {
     it('uploads and serves project assets from the hybrid project container', async () => {
         const server = await startServer()
 
-        await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+        const createResponse = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title: 'Asset Project', slug: 'asset-project' })
         })
+        expect(createResponse.status).toBe(201)
 
         const formData = new FormData()
         formData.append('asset', new Blob(['beta-asset'], { type: 'text/plain' }), 'asset.txt')
