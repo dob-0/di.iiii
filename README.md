@@ -274,6 +274,36 @@ Important rules:
 - `deploy:host:*` is for the matching cPanel clone or host shell, not your laptop
 - use `npm run deploy -- smoke staging` or `npm run deploy -- smoke production` to verify quickly
 
+### Auto deploy on this host
+
+This host does not allow SSH, so true laptop-to-server push deploy is not available.
+
+The closest automatic flow is:
+
+1. push `staging` or `main` from your laptop
+2. GitHub publishes `cpanel-staging` or `cpanel-production`
+3. cPanel auto-applies that branch by cron
+
+Host-side poll/apply command:
+
+```bash
+cd /home/distudio/repositories/di.iiii-staging
+bash scripts/cpanel-poll-deploy.sh staging
+```
+
+```bash
+cd /home/distudio/repositories/di.iiii-production
+bash scripts/cpanel-poll-deploy.sh production
+```
+
+Recommended cPanel Cron Jobs:
+
+```cron
+*/2 * * * * cd /home/distudio/repositories/di.iiii-staging && bash scripts/cpanel-poll-deploy.sh staging >> /home/distudio/logs/staging-auto-deploy.log 2>&1
+*/2 * * * * cd /home/distudio/repositories/di.iiii-production && bash scripts/cpanel-poll-deploy.sh production >> /home/distudio/logs/production-auto-deploy.log 2>&1
+```
+
+That gives you near-automatic deploys from git without logging into cPanel every time.
 Branch mapping:
 
 - `staging` source branch publishes `cpanel-staging`
