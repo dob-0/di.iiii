@@ -13,9 +13,26 @@ Current baseline:
 Start here:
 
 - [Checkpoint 2026-04-09](docs/checkpoints/2026-04-09.md)
+- [Project Audit And Growth Plan 2026-04-17](docs/architecture/PROJECT_AUDIT_2026-04-17.md)
 - [Live Deploy Runbook](docs/deploy/LIVE_DEPLOY.md)
 - [cPanel Prebuilt Deploy](docs/deploy/CPANEL_PREBUILT_DEPLOY.md)
 - [Project Surfaces](docs/architecture/PROJECT_SURFACES.md)
+
+## Current Health
+
+Verified on `2026-04-17`:
+
+- `npm run lint` passed
+- `npm run build` passed
+- `npm run test` passed
+- `npm run test:server-contracts` passed
+
+Operational truth:
+
+- normal work starts on `dev`
+- `npm run deploy:staging` is the laptop command for staging promotion on the current host
+- `npm run deploy:production` is the laptop command for production promotion after staging is approved
+- GitHub publishes the `cpanel-*` branches and cPanel cron applies them automatically on the current shared host
 
 ## Current Truth
 
@@ -245,29 +262,21 @@ Simple model:
 
 ### One-command deploy shortcuts
 
-From the repo root:
+Normal commands from the repo root on the current host:
 
 ```bash
 npm run deploy:status
-npm run deploy:dev
 npm run deploy:staging
 npm run deploy:production
-npm run deploy:host:staging
-npm run deploy:host:production
-npm run deploy:remote:staging
-npm run deploy:remote:production
+npm run deploy -- smoke staging
+npm run deploy -- smoke production
 ```
 
-Or use the single helper directly:
+Host-only recovery commands:
 
 ```bash
-npm run deploy -- status
-npm run deploy -- staging
-npm run deploy -- production
 npm run deploy -- host staging
 npm run deploy -- host production
-npm run deploy -- remote staging
-npm run deploy -- remote production
 ```
 
 Important rules:
@@ -276,21 +285,19 @@ Important rules:
 - run `deploy:dev` and `deploy:staging` from a clean `dev` branch
 - `deploy:production` fast-forwards `main` to `origin/staging` when possible, or creates a merge commit on top of `main` that prefers `staging` on conflicting hunks when the branches have both moved
 - `deploy:host:*` is for the matching cPanel clone or host shell, not your laptop
-- `deploy:remote:*` is the laptop command and SSHes into the cPanel host for you
+- `deploy:remote:*` exists only for future SSH-capable hosts and is not part of the current shared-host flow
 - use `npm run deploy -- smoke staging` or `npm run deploy -- smoke production` to verify quickly
 
-Laptop remote defaults:
-
-- SSH target: `distudio@di-studio.xyz`
-- staging repo: `/home/distudio/repositories/di.iiii-staging`
-- production repo: `/home/distudio/repositories/di.iiii-production`
-
-Override them if needed:
+Current hosting flow:
 
 ```bash
-DEPLOY_SSH_TARGET=your-user@your-host npm run deploy:remote:staging
-DEPLOY_REMOTE_STAGING_REPO=/some/other/path npm run deploy:remote:staging
-DEPLOY_REMOTE_PRODUCTION_REPO=/some/other/path npm run deploy:remote:production
+npm run deploy:staging
+# wait about 1-2 minutes for GitHub publish + cPanel cron apply
+curl -s https://staging.di-studio.xyz/serverXR/api/health
+
+npm run deploy:production
+# wait about 1-2 minutes for GitHub publish + cPanel cron apply
+curl -s https://di-studio.xyz/serverXR/api/health
 ```
 
 ### Auto deploy on this host
@@ -324,6 +331,13 @@ Recommended cPanel Cron Jobs:
 
 That gives you near-automatic deploys from git without logging into cPanel every time.
 
+Use cPanel `Terminal` only for:
+
+- first-time bootstrap
+- cron setup
+- recovery when a cPanel clone diverges
+- manual host apply if cron is paused
+
 Branch mapping:
 
 - `staging` source branch publishes `cpanel-staging`
@@ -332,40 +346,33 @@ Branch mapping:
 
 ### Fast path
 
-Use this when you are on `dev`, the change is committed, and you want to test the same
-commit on the real staging phone URL.
+Use this when you are on `dev`, the change is committed, and you want the simplest real deploy path:
 
-1. Push current `dev` commit to GitHub staging:
-
-```bash
-git push origin HEAD:dev HEAD:staging
-```
-
-GitHub Actions automatically builds and publishes `cpanel-staging`.
-
-2. Apply the new staging artifact on the server:
+1. Ship the current `dev` commit to staging:
 
 ```bash
-cd /home/distudio/repositories/di.iiii-staging
-git pull --ff-only origin cpanel-staging
-bash scripts/cpanel-apply-prebuilt-release.sh staging
+npm run deploy:staging
 ```
 
-3. Check real staging on desktop and mobile:
+2. Wait about 1-2 minutes, then verify staging:
 
 ```bash
 curl -s https://staging.di-studio.xyz/serverXR/api/health
 npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
 ```
 
-4. After staging passes, promote the verified staging branch to production:
+3. After staging passes, ship production:
 
 ```bash
 npm run deploy:production
 ```
 
-GitHub Actions automatically builds and publishes `cpanel-production`. Apply it in the
-production cPanel clone, then verify `https://di-studio.xyz`.
+4. Wait about 1-2 minutes, then verify production:
+
+```bash
+curl -s https://di-studio.xyz/serverXR/api/health
+npm run smoke:cpanel -- --base-url https://di-studio.xyz
+```
 
 Current automation note:
 

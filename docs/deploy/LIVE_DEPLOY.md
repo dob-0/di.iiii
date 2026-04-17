@@ -18,7 +18,7 @@ If you only remember one thing, remember this:
 - staging is published from `staging`
 - production is published from `main`
 - GitHub publishes prebuilt `cpanel-*` branches
-- cPanel `Git Version Control` applies those branches on the host
+- cPanel clones plus cron apply those branches on the current host
 
 Do not start routine feature work on `main`.
 Use `main` as a starting point only for an emergency production hotfix.
@@ -43,8 +43,6 @@ npm run deploy:staging
 npm run deploy:production
 npm run deploy:host:staging
 npm run deploy:host:production
-npm run deploy:remote:staging
-npm run deploy:remote:production
 ```
 
 Equivalent single helper form:
@@ -55,8 +53,6 @@ npm run deploy -- staging
 npm run deploy -- production
 npm run deploy -- host staging
 npm run deploy -- host production
-npm run deploy -- remote staging
-npm run deploy -- remote production
 ```
 
 Rules:
@@ -65,14 +61,15 @@ Rules:
 - run `deploy:dev` and `deploy:staging` from a clean `dev` branch
 - `deploy:production` fast-forwards `main` when possible, or creates a merge commit on top of `main` that prefers `staging` on conflicting hunks if `main` and `staging` have both moved
 - `deploy:host:*` is only for the matching cPanel clone or host shell
-- `deploy:remote:*` is the laptop-side command and SSHes into the cPanel host to run the host apply
+- `deploy:remote:*` is optional for a future SSH-capable host and is not part of the current shared-host flow
 - `npm run deploy -- smoke staging` and `npm run deploy -- smoke production` are the quick verification commands
 
-Default laptop remote target:
+Current host truth:
 
-- SSH target: `distudio@di-studio.xyz`
-- staging repo: `/home/distudio/repositories/di.iiii-staging`
-- production repo: `/home/distudio/repositories/di.iiii-production`
+- use `npm run deploy:staging` from your laptop
+- verify staging
+- use `npm run deploy:production` from your laptop
+- cPanel cron applies the published `cpanel-*` branches automatically
 
 ## Auto Apply Via Cron
 
@@ -112,27 +109,12 @@ npm run dev
 1. Promote the approved source code:
 
 ```bash
-git switch staging
-git pull --ff-only origin staging
-git merge --ff-only dev
-git push origin staging
+npm run deploy:staging
 ```
 
-2. Wait for GitHub Actions to publish `cpanel-staging`.
+2. Wait about 1-2 minutes for GitHub publish plus cPanel cron.
 
-3. In cPanel `Git Version Control`, open:
-
-```text
-/home/distudio/repositories/di.iiii-staging
-```
-
-4. Click `Update from Remote`.
-
-5. Confirm the branch is `cpanel-staging`.
-
-6. Click `Deploy HEAD Commit`.
-
-7. Verify:
+3. Verify:
 
 ```bash
 curl -s https://staging.di-studio.xyz/serverXR/api/health
@@ -147,17 +129,9 @@ npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
 npm run deploy:production
 ```
 
-2. Wait for GitHub Actions to publish `cpanel-production`.
+2. Wait about 1-2 minutes for GitHub publish plus cPanel cron.
 
-3. In cPanel `Git Version Control`, open the production clone.
-
-4. Click `Update from Remote`.
-
-5. Confirm the branch is `cpanel-production`.
-
-6. Click `Deploy HEAD Commit`.
-
-7. Verify:
+3. Verify:
 
 ```bash
 curl -s https://di-studio.xyz/serverXR/api/health
@@ -180,9 +154,9 @@ When production needs an urgent fix, start from `main`, then bring the same comm
 
 ## What May Still Be Manual
 
-- if cPanel `Git Version Control` exposes `Automatic Deployment`, enable it for the tracked `cpanel-*` clones
-- cPanel host apply is host-dependent
-- if the live site looks stale after GitHub finished, go to cPanel `Git Version Control` and run `Deploy HEAD Commit`
+- first-time cron setup in cPanel
+- host recovery when a cPanel clone diverges
+- manual cPanel apply if cron is disabled or delayed
 - if cPanel says branches diverged, use the reset recovery steps in [cPanel Prebuilt Deploy](CPANEL_PREBUILT_DEPLOY.md)
 
 ## Runtime Contract
