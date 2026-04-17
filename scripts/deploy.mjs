@@ -63,7 +63,7 @@ Shortcuts:
 Rules:
   - dev does not deploy to hosting directly
   - run dev/staging promotion commands from a clean dev branch
-  - production promotion fast-forwards main when possible, or merges origin/staging into main if the branches diverged
+  - production promotion fast-forwards main when possible, or merges origin/staging into main with staging-preferred conflict resolution if the branches diverged
   - host commands are for the cPanel clone or server repo, not your laptop
   - remote commands SSH from your laptop into the cPanel host and run the host apply there
 
@@ -413,7 +413,7 @@ const handlers = {
 
         if (options.dryRun) {
             console.log(
-                `Would create a merge commit on top of origin/main (${shortCommit(mainCommit)}) that brings in origin/staging (${shortCommit(stagingCommit)}), then push that merge to origin/main.`
+                `Would create a merge commit on top of origin/main (${shortCommit(mainCommit)}) that brings in origin/staging (${shortCommit(stagingCommit)}), preferring staging on conflicting hunks, then push that merge to origin/main.`
             )
             console.log('GitHub would then publish cpanel-production automatically.')
             console.log('Next on the host: let cron apply production automatically, or run npm run deploy -- host production')
@@ -427,9 +427,12 @@ const handlers = {
             await runCommand('git', ['switch', '--detach', 'origin/main'])
             switchedHead = true
 
+            // Keep main-only history, but let the approved staging branch win on conflicting lines.
             const mergeResult = await captureCommand('git', [
                 'merge',
                 '--no-ff',
+                '-X',
+                'theirs',
                 '-m',
                 'Promote origin/staging to main for production deploy',
                 'origin/staging'
@@ -439,7 +442,7 @@ const handlers = {
 
             if (mergeResult.code !== 0) {
                 throw new Error(
-                    `Could not automatically merge origin/staging (${shortCommit(stagingCommit)}) into origin/main (${shortCommit(mainCommit)}). Resolve the branch drift manually and rerun deploy:production.`
+                    `Could not automatically merge origin/staging (${shortCommit(stagingCommit)}) into origin/main (${shortCommit(mainCommit)}) even with staging-preferred conflict resolution. Resolve the branch drift manually and rerun deploy:production.`
                 )
             }
 

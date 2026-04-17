@@ -274,7 +274,7 @@ Important rules:
 
 - `dev` is integration only and does not deploy to hosting directly
 - run `deploy:dev` and `deploy:staging` from a clean `dev` branch
-- `deploy:production` fast-forwards `main` to `origin/staging` when possible, or creates a merge commit on top of `main` when the branches have both moved
+- `deploy:production` fast-forwards `main` to `origin/staging` when possible, or creates a merge commit on top of `main` that prefers `staging` on conflicting hunks when the branches have both moved
 - `deploy:host:*` is for the matching cPanel clone or host shell, not your laptop
 - `deploy:remote:*` is the laptop command and SSHes into the cPanel host for you
 - use `npm run deploy -- smoke staging` or `npm run deploy -- smoke production` to verify quickly
@@ -592,7 +592,7 @@ For production, use the production cPanel clone and replace `cpanel-staging` wit
 - staged bundle: `.deploy/cpanel/`
 - host apply script: `scripts/cpanel-apply-prebuilt-release.sh`
 
-`deploy:production` will refuse to roll `main` back if `staging` is behind. If the helper cannot merge `staging` into `main` cleanly, stop and resolve the drift before shipping.
+`deploy:production` will refuse to roll `main` back if `staging` is behind. If the helper cannot merge `staging` into `main` even with staging-preferred conflict resolution, stop and resolve the drift before shipping.
 
 Important runtime rules:
 
