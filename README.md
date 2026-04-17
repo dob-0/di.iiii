@@ -254,6 +254,8 @@ npm run deploy:staging
 npm run deploy:production
 npm run deploy:host:staging
 npm run deploy:host:production
+npm run deploy:remote:staging
+npm run deploy:remote:production
 ```
 
 Or use the single helper directly:
@@ -264,15 +266,32 @@ npm run deploy -- staging
 npm run deploy -- production
 npm run deploy -- host staging
 npm run deploy -- host production
+npm run deploy -- remote staging
+npm run deploy -- remote production
 ```
 
 Important rules:
 
 - `dev` is integration only and does not deploy to hosting directly
 - run `deploy:dev` and `deploy:staging` from a clean `dev` branch
-- `deploy:production` promotes the exact current `origin/staging` commit into `main`
+- `deploy:production` fast-forwards `main` to `origin/staging` when possible, or creates a merge commit on top of `main` that prefers `staging` on conflicting hunks when the branches have both moved
 - `deploy:host:*` is for the matching cPanel clone or host shell, not your laptop
+- `deploy:remote:*` is the laptop command and SSHes into the cPanel host for you
 - use `npm run deploy -- smoke staging` or `npm run deploy -- smoke production` to verify quickly
+
+Laptop remote defaults:
+
+- SSH target: `distudio@di-studio.xyz`
+- staging repo: `/home/distudio/repositories/di.iiii-staging`
+- production repo: `/home/distudio/repositories/di.iiii-production`
+
+Override them if needed:
+
+```bash
+DEPLOY_SSH_TARGET=your-user@your-host npm run deploy:remote:staging
+DEPLOY_REMOTE_STAGING_REPO=/some/other/path npm run deploy:remote:staging
+DEPLOY_REMOTE_PRODUCTION_REPO=/some/other/path npm run deploy:remote:production
+```
 
 ### Auto deploy on this host
 
@@ -304,6 +323,7 @@ Recommended cPanel Cron Jobs:
 ```
 
 That gives you near-automatic deploys from git without logging into cPanel every time.
+
 Branch mapping:
 
 - `staging` source branch publishes `cpanel-staging`
@@ -338,11 +358,10 @@ curl -s https://staging.di-studio.xyz/serverXR/api/health
 npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
 ```
 
-4. After staging passes, promote that exact staging commit to production:
+4. After staging passes, promote the verified staging branch to production:
 
 ```bash
-git fetch origin staging
-git push origin FETCH_HEAD:main
+npm run deploy:production
 ```
 
 GitHub Actions automatically builds and publishes `cpanel-production`. Apply it in the
@@ -439,13 +458,10 @@ The staging health response must show:
 }
 ```
 
-Only after staging is verified, promote the same commit to production:
+Only after staging is verified, promote the staging branch to production:
 
 ```bash
-git switch main
-git pull --ff-only origin main
-git merge --ff-only staging
-git push origin main
+npm run deploy:production
 ```
 
 Wait for GitHub Actions to publish `cpanel-production`, then confirm the production artifact exists:
@@ -538,10 +554,7 @@ The health JSON should include:
 Use this only after staging is verified.
 
 ```bash
-git switch main
-git pull --ff-only origin main
-git merge --ff-only staging
-git push origin main
+npm run deploy:production
 ```
 
 Then in cPanel `Git Version Control`, open the production repo tracking `cpanel-production`, click `Update from Remote`, then `Deploy HEAD Commit`.
@@ -579,7 +592,7 @@ For production, use the production cPanel clone and replace `cpanel-staging` wit
 - staged bundle: `.deploy/cpanel/`
 - host apply script: `scripts/cpanel-apply-prebuilt-release.sh`
 
-If `--ff-only` fails during source promotion, stop and either rebase or cherry-pick the exact approved commit instead of forcing a merge you do not trust.
+`deploy:production` will refuse to roll `main` back if `staging` is behind. If the helper cannot merge `staging` into `main` even with staging-preferred conflict resolution, stop and resolve the drift before shipping.
 
 Important runtime rules:
 
