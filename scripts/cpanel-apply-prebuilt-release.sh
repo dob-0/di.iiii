@@ -2,6 +2,8 @@
 
 set -euo pipefail
 
+export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:${PATH:-}"
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 cd "${REPO_ROOT}"
@@ -86,6 +88,26 @@ APP_ROOT_REL="${CPANEL_SERVERXR_ROOT#${HOME}/}"
 if [[ "${APP_ROOT_REL}" == "${CPANEL_SERVERXR_ROOT}" ]]; then
   APP_ROOT_REL="${CPANEL_SERVERXR_ROOT#/home/$(whoami)/}"
 fi
+
+find_cloudlinux_selector() {
+  local candidate=""
+  for candidate in \
+    "${CLOUDLINUX_SELECTOR_BIN:-}" \
+    "$(command -v cloudlinux-selector 2>/dev/null || true)" \
+    /usr/bin/cloudlinux-selector \
+    /usr/sbin/cloudlinux-selector \
+    /usr/local/bin/cloudlinux-selector \
+    /usr/local/sbin/cloudlinux-selector
+  do
+    if [[ -n "${candidate}" && -x "${candidate}" ]]; then
+      printf '%s\n' "${candidate}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+CLOUDLINUX_SELECTOR_BIN="$(find_cloudlinux_selector || true)"
 
 required_vars=(
   API_TOKEN
@@ -193,12 +215,13 @@ if [[ ! -f "${CPANEL_WEB_ROOT}/serverXR/.htaccess" ]]; then
 fi
 cp .deploy/cpanel/serverXR/.env.generated "${CPANEL_SERVERXR_ROOT}/.env"
 
-if command -v cloudlinux-selector >/dev/null 2>&1; then
+if [[ -n "${CLOUDLINUX_SELECTOR_BIN}" ]]; then
+  echo "[cpanel-prebuilt] Using CloudLinux selector at ${CLOUDLINUX_SELECTOR_BIN}"
   if [[ -e "${CPANEL_SERVERXR_ROOT}/node_modules" && ! -L "${CPANEL_SERVERXR_ROOT}/node_modules" ]]; then
     echo "[cpanel-prebuilt] Removing app-root node_modules directory so CloudLinux can recreate its managed symlink."
     rm -rf "${CPANEL_SERVERXR_ROOT}/node_modules"
   fi
-  cloudlinux-selector install-modules --json --interpreter nodejs --user "$(whoami)" --app-root "${APP_ROOT_REL}"
+  "${CLOUDLINUX_SELECTOR_BIN}" install-modules --json --interpreter nodejs --user "$(whoami)" --app-root "${APP_ROOT_REL}"
 else
   (
     cd "${CPANEL_SERVERXR_ROOT}"
@@ -208,8 +231,8 @@ fi
 
 if [[ "${CPANEL_SKIP_RESTART:-0}" == "1" ]]; then
   echo "[cpanel-prebuilt] Skipping Node.js App restart because CPANEL_SKIP_RESTART=1."
-elif command -v cloudlinux-selector >/dev/null 2>&1; then
-  cloudlinux-selector restart --json --interpreter nodejs --user "$(whoami)" --app-root "${APP_ROOT_REL}"
+elif [[ -n "${CLOUDLINUX_SELECTOR_BIN}" ]]; then
+  "${CLOUDLINUX_SELECTOR_BIN}" restart --json --interpreter nodejs --user "$(whoami)" --app-root "${APP_ROOT_REL}"
 else
   echo "[cpanel-prebuilt] cloudlinux-selector not found. Restart the Node.js App manually in cPanel." >&2
 fi
