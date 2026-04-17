@@ -43,6 +43,8 @@ npm run deploy:staging
 npm run deploy:production
 npm run deploy:host:staging
 npm run deploy:host:production
+npm run deploy:remote:staging
+npm run deploy:remote:production
 ```
 
 Equivalent single helper form:
@@ -53,15 +55,24 @@ npm run deploy -- staging
 npm run deploy -- production
 npm run deploy -- host staging
 npm run deploy -- host production
+npm run deploy -- remote staging
+npm run deploy -- remote production
 ```
 
 Rules:
 
 - `dev` is the integration lane only and does not deploy to hosting directly
 - run `deploy:dev` and `deploy:staging` from a clean `dev` branch
-- `deploy:production` promotes the exact current `origin/staging` commit into `main`
+- `deploy:production` fast-forwards `main` when possible, or creates a merge commit on top of `main` that prefers `staging` on conflicting hunks if `main` and `staging` have both moved
 - `deploy:host:*` is only for the matching cPanel clone or host shell
+- `deploy:remote:*` is the laptop-side command and SSHes into the cPanel host to run the host apply
 - `npm run deploy -- smoke staging` and `npm run deploy -- smoke production` are the quick verification commands
+
+Default laptop remote target:
+
+- SSH target: `distudio@di-studio.xyz`
+- staging repo: `/home/distudio/repositories/di.iiii-staging`
+- production repo: `/home/distudio/repositories/di.iiii-production`
 
 ## Auto Apply Via Cron
 
@@ -85,6 +96,7 @@ Suggested cron entries:
 ```
 
 This is pull-based auto-deploy rather than SSH push deploy, but on this host it is the simplest fully repeatable option.
+
 ## Daily Workflow
 
 Typical start-of-session commands:
@@ -129,13 +141,10 @@ npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
 
 ### To update production
 
-1. Promote the already verified `staging` commit into `main`:
+1. Promote the already verified `staging` branch into `main`:
 
 ```bash
-git switch main
-git pull --ff-only origin main
-git merge --ff-only staging
-git push origin main
+npm run deploy:production
 ```
 
 2. Wait for GitHub Actions to publish `cpanel-production`.
@@ -155,7 +164,7 @@ curl -s https://di-studio.xyz/serverXR/api/health
 npm run smoke:cpanel -- --base-url https://di-studio.xyz
 ```
 
-If a fast-forward is not possible during source promotion, stop and cherry-pick or rebase the exact approved commit instead of creating a merge you did not mean to ship.
+If the helper cannot merge `staging` into `main` even with staging-preferred conflict resolution, stop and resolve the branch drift before shipping.
 
 ## What Is Automatic Today
 

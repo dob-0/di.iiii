@@ -19,6 +19,8 @@
     "deploy:production": "node scripts/deploy.mjs production",
     "deploy:host:staging": "node scripts/deploy.mjs host staging",
     "deploy:host:production": "node scripts/deploy.mjs host production",
+    "deploy:remote:staging": "node scripts/deploy.mjs remote staging",
+    "deploy:remote:production": "node scripts/deploy.mjs remote production",
     "deploy:cpanel": "node scripts/stage-cpanel-nodeapp-release.mjs",
     "env:serverxr": "node scripts/write-server-env.mjs",
     "smoke:cpanel": "node scripts/smoke-check-cpanel.mjs",

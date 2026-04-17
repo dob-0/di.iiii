@@ -3,9 +3,16 @@ import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
+import { getProductionPromotionPlan } from './deploy-lib.mjs'
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const repoRoot = path.resolve(__dirname, '..')
 const nodeCommand = process.execPath
+const remoteDefaults = {
+    sshTarget: process.env.DEPLOY_SSH_TARGET || 'distudio@di-studio.xyz',
+    stagingRepo: process.env.DEPLOY_REMOTE_STAGING_REPO || '/home/distudio/repositories/di.iiii-staging',
+    productionRepo: process.env.DEPLOY_REMOTE_PRODUCTION_REPO || '/home/distudio/repositories/di.iiii-production'
+}
 
 const rawArgs = process.argv.slice(2)
 const options = {
@@ -36,6 +43,8 @@ Usage:
   npm run deploy -- production
   npm run deploy -- host staging
   npm run deploy -- host production
+  npm run deploy -- remote staging
+  npm run deploy -- remote production
   npm run deploy -- smoke staging
   npm run deploy -- smoke production
   npm run deploy -- build staging
@@ -48,12 +57,15 @@ Shortcuts:
   npm run deploy:production
   npm run deploy:host:staging
   npm run deploy:host:production
+  npm run deploy:remote:staging
+  npm run deploy:remote:production
 
 Rules:
   - dev does not deploy to hosting directly
   - run dev/staging promotion commands from a clean dev branch
-  - production promotion ships the exact current origin/staging commit to main
+  - production promotion fast-forwards main when possible, or merges origin/staging into main with staging-preferred conflict resolution if the branches diverged
   - host commands are for the cPanel clone or server repo, not your laptop
+  - remote commands SSH from your laptop into the cPanel host and run the host apply there
 
 Flags:
   --dry-run
@@ -149,9 +161,42 @@ const getCurrentCommit = async () => {
     return currentCommit.trim()
 }
 
+const getFullCommit = async (ref) => {
+    const commit = await readGit(['rev-parse', '--verify', ref])
+    return commit.trim()
+}
+
 const getWorktreeState = async () => {
     const worktree = await readGit(['status', '--short'])
     return worktree.trim()
+}
+
+const getHeadState = async () => {
+    const branch = await getCurrentBranch()
+    if (branch) {
+        return {
+            type: 'branch',
+            ref: branch
+        }
+    }
+
+    return {
+        type: 'detached',
+        ref: await getFullCommit('HEAD')
+    }
+}
+
+const restoreHeadState = async (headState) => {
+    if (!headState || options.dryRun) {
+        return
+    }
+
+    if (headState.type === 'branch') {
+        await runCommand('git', ['switch', headState.ref])
+        return
+    }
+
+    await runCommand('git', ['switch', '--detach', headState.ref])
 }
 
 const ensureCleanWorktree = async () => {
@@ -173,6 +218,39 @@ const ensureBranch = async (expectedBranch, actionLabel) => {
         throw new Error(`${actionLabel} must run from '${expectedBranch}', but you are on '${currentBranch}'.`)
     }
 }
+
+const isAncestor = async (ancestorRef, descendantRef) => {
+    const result = await captureCommand('git', ['merge-base', '--is-ancestor', ancestorRef, descendantRef])
+    if (result.code === 0) {
+        return true
+    }
+    if (result.code === 1) {
+        return false
+    }
+    throw new Error(result.stderr || `Unable to compare ${ancestorRef} and ${descendantRef}.`)
+}
+
+const hasMergeInProgress = async () => {
+    const result = await captureCommand('git', ['rev-parse', '-q', '--verify', 'MERGE_HEAD'])
+    if (result.code === 0) {
+        return true
+    }
+    if (result.code === 1) {
+        return false
+    }
+    throw new Error(result.stderr || 'Unable to inspect merge state.')
+}
+
+const printCapturedOutput = (result) => {
+    if (result.stdout) {
+        console.log(result.stdout)
+    }
+    if (result.stderr) {
+        console.error(result.stderr)
+    }
+}
+
+const shortCommit = (value) => value.slice(0, 7)
 
 const normalizeEnv = (value) => {
     switch ((value || '').toLowerCase()) {
@@ -209,6 +287,9 @@ const normalizeAction = (values) => {
         case 'hosting':
         case 'apply':
             return `host:${second}`
+        case 'remote':
+        case 'ssh':
+            return `remote:${second}`
         case 'smoke':
         case 'check':
             return `smoke:${second}`
@@ -236,6 +317,21 @@ const printStatus = async () => {
     console.log('  dev -> integration only')
     console.log('  staging -> https://staging.di-studio.xyz')
     console.log('  production -> https://di-studio.xyz')
+    console.log(`Remote staging host: ${remoteDefaults.sshTarget}:${remoteDefaults.stagingRepo}`)
+    console.log(`Remote production host: ${remoteDefaults.sshTarget}:${remoteDefaults.productionRepo}`)
+}
+
+const buildRemoteDeployCommand = (deployEnv) => {
+    const repoPath = deployEnv === 'staging'
+        ? remoteDefaults.stagingRepo
+        : remoteDefaults.productionRepo
+    const cpanelBranch = deployEnv === 'staging' ? 'cpanel-staging' : 'cpanel-production'
+
+    return [
+        'ssh',
+        remoteDefaults.sshTarget,
+        `cd ${quoteArg(repoPath)} && git pull --ff-only origin ${cpanelBranch} && bash scripts/cpanel-apply-prebuilt-release.sh ${deployEnv}`
+    ]
 }
 
 const handlers = {
@@ -273,17 +369,101 @@ const handlers = {
     },
     production: async () => {
         await ensureCleanWorktree()
-        await runMaybe('git', ['fetch', 'origin', 'staging'])
-        await runMaybe('git', ['push', 'origin', 'FETCH_HEAD:main'])
-        if (options.dryRun) {
-            console.log('Would promote the current origin/staging commit to origin/main.')
-            console.log('GitHub would then publish cpanel-production automatically.')
-            console.log('Next on the host: npm run deploy -- host production')
+        await runMaybe('git', ['fetch', 'origin', 'main', 'staging'])
+
+        const [mainCommit, stagingCommit, mainInStaging, stagingInMain] = await Promise.all([
+            getFullCommit('origin/main'),
+            getFullCommit('origin/staging'),
+            isAncestor('origin/main', 'origin/staging'),
+            isAncestor('origin/staging', 'origin/main')
+        ])
+
+        const plan = getProductionPromotionPlan({
+            mainCommit,
+            stagingCommit,
+            mainInStaging,
+            stagingInMain
+        })
+
+        if (plan.type === 'noop') {
+            console.log(`origin/main already matches origin/staging at ${shortCommit(mainCommit)}.`)
+            console.log('Nothing to promote.')
             return
         }
-        console.log('Promoted the current origin/staging commit to origin/main.')
-        console.log('GitHub should now publish cpanel-production automatically.')
-        console.log('Next: run `npm run deploy -- host production` on the production host, or click cPanel Deploy HEAD Commit.')
+
+        if (plan.type === 'abort-main-ahead') {
+            throw new Error(
+                `origin/main (${shortCommit(mainCommit)}) already contains origin/staging (${shortCommit(stagingCommit)}) and additional commits. Refusing to roll production back. Bring the main-only work into staging first, then rerun deploy:production.`
+            )
+        }
+
+        if (plan.type === 'fast-forward') {
+            await runMaybe('git', ['push', 'origin', `${stagingCommit}:main`])
+            if (options.dryRun) {
+                console.log(`Would fast-forward origin/main from ${shortCommit(mainCommit)} to ${shortCommit(stagingCommit)}.`)
+                console.log('GitHub would then publish cpanel-production automatically.')
+                console.log('Next on the host: let cron apply production automatically, or run npm run deploy -- host production')
+                return
+            }
+            console.log(`Fast-forwarded origin/main from ${shortCommit(mainCommit)} to ${shortCommit(stagingCommit)}.`)
+            console.log('GitHub should now publish cpanel-production automatically.')
+            console.log('Next: let cron apply production automatically, or run `npm run deploy -- host production` on the production host.')
+            return
+        }
+
+        if (options.dryRun) {
+            console.log(
+                `Would create a merge commit on top of origin/main (${shortCommit(mainCommit)}) that brings in origin/staging (${shortCommit(stagingCommit)}), preferring staging on conflicting hunks, then push that merge to origin/main.`
+            )
+            console.log('GitHub would then publish cpanel-production automatically.')
+            console.log('Next on the host: let cron apply production automatically, or run npm run deploy -- host production')
+            return
+        }
+
+        const originalHead = await getHeadState()
+        let switchedHead = false
+
+        try {
+            await runCommand('git', ['switch', '--detach', 'origin/main'])
+            switchedHead = true
+
+            // Keep main-only history, but let the approved staging branch win on conflicting lines.
+            const mergeResult = await captureCommand('git', [
+                'merge',
+                '--no-ff',
+                '-X',
+                'theirs',
+                '-m',
+                'Promote origin/staging to main for production deploy',
+                'origin/staging'
+            ])
+
+            printCapturedOutput(mergeResult)
+
+            if (mergeResult.code !== 0) {
+                throw new Error(
+                    `Could not automatically merge origin/staging (${shortCommit(stagingCommit)}) into origin/main (${shortCommit(mainCommit)}) even with staging-preferred conflict resolution. Resolve the branch drift manually and rerun deploy:production.`
+                )
+            }
+
+            const mergedCommit = await getCurrentCommit()
+            await runCommand('git', ['push', 'origin', 'HEAD:main'])
+
+            console.log(
+                `Merged origin/staging (${shortCommit(stagingCommit)}) into origin/main (${shortCommit(mainCommit)}) as ${mergedCommit}.`
+            )
+            console.log('GitHub should now publish cpanel-production automatically.')
+            console.log('Next: let cron apply production automatically, or run `npm run deploy -- host production` on the production host.')
+        } catch (error) {
+            if (switchedHead && await hasMergeInProgress()) {
+                await runCommand('git', ['merge', '--abort'])
+            }
+            throw error
+        } finally {
+            if (switchedHead) {
+                await restoreHeadState(originalHead)
+            }
+        }
     },
     'host:staging': async () => {
         await runMaybe('bash', ['scripts/cpanel-apply-prebuilt-release.sh', 'staging'])
@@ -300,6 +480,24 @@ const handlers = {
             return
         }
         console.log('Applied the production prebuilt release on this host.')
+    },
+    'remote:staging': async () => {
+        const [command, ...args] = buildRemoteDeployCommand('staging')
+        await runMaybe(command, args)
+        if (options.dryRun) {
+            console.log('Would SSH to the cPanel host and apply the staging prebuilt release there.')
+            return
+        }
+        console.log('Triggered the staging prebuilt release on the remote cPanel host.')
+    },
+    'remote:production': async () => {
+        const [command, ...args] = buildRemoteDeployCommand('production')
+        await runMaybe(command, args)
+        if (options.dryRun) {
+            console.log('Would SSH to the cPanel host and apply the production prebuilt release there.')
+            return
+        }
+        console.log('Triggered the production prebuilt release on the remote cPanel host.')
     },
     'smoke:staging': async () => {
         await runMaybe(nodeCommand, ['scripts/smoke-check-cpanel.mjs', '--base-url', 'https://staging.di-studio.xyz'])
