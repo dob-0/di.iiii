@@ -63,7 +63,7 @@ Rules:
 
 - `dev` is the integration lane only and does not deploy to hosting directly
 - run `deploy:dev` and `deploy:staging` from a clean `dev` branch
-- `deploy:production` fast-forwards `main` when possible, or creates a merge commit on top of `main` if `main` and `staging` have both moved
+- `deploy:production` fast-forwards `main` when possible, or creates a merge commit on top of `main` that prefers `staging` on conflicting hunks if `main` and `staging` have both moved
 - `deploy:host:*` is only for the matching cPanel clone or host shell
 - `deploy:remote:*` is the laptop-side command and SSHes into the cPanel host to run the host apply
 - `npm run deploy -- smoke staging` and `npm run deploy -- smoke production` are the quick verification commands
@@ -164,7 +164,7 @@ curl -s https://di-studio.xyz/serverXR/api/health
 npm run smoke:cpanel -- --base-url https://di-studio.xyz
 ```
 
-If the helper cannot cleanly merge `staging` into `main`, stop and resolve the branch drift before shipping.
+If the helper cannot merge `staging` into `main` even with staging-preferred conflict resolution, stop and resolve the branch drift before shipping.
 
 ## What Is Automatic Today
 
