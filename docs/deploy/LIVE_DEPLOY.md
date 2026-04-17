@@ -63,6 +63,28 @@ Rules:
 - `deploy:host:*` is only for the matching cPanel clone or host shell
 - `npm run deploy -- smoke staging` and `npm run deploy -- smoke production` are the quick verification commands
 
+## Auto Apply Via Cron
+
+If the host does not allow SSH but does allow cPanel `Terminal` and `Cron Jobs`, use:
+
+```bash
+cd /home/distudio/repositories/di.iiii-staging
+bash scripts/cpanel-poll-deploy.sh staging
+```
+
+```bash
+cd /home/distudio/repositories/di.iiii-production
+bash scripts/cpanel-poll-deploy.sh production
+```
+
+Suggested cron entries:
+
+```cron
+*/2 * * * * cd /home/distudio/repositories/di.iiii-staging && bash scripts/cpanel-poll-deploy.sh staging >> /home/distudio/logs/staging-auto-deploy.log 2>&1
+*/2 * * * * cd /home/distudio/repositories/di.iiii-production && bash scripts/cpanel-poll-deploy.sh production >> /home/distudio/logs/production-auto-deploy.log 2>&1
+```
+
+This is pull-based auto-deploy rather than SSH push deploy, but on this host it is the simplest fully repeatable option.
 ## Daily Workflow
 
 Typical start-of-session commands:
