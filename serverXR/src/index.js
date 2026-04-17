@@ -387,8 +387,8 @@ app.use((err, req, res, next) => {
 const PORT = config.port
 
 initStorage()
-  .then(() => {
-    ensureDefaultSpace().catch((error) => console.warn('Failed to ensure default space', error))
+  .then(async () => {
+    await ensureDefaultSpace()
     pruneSpaces().catch((error) => console.warn('Failed to prune spaces', error))
     setInterval(() => {
       pruneSpaces().catch((error) => console.warn('Failed to prune spaces', error))
