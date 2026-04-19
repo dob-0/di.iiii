@@ -126,10 +126,10 @@ const SAFE_PUBLIC_API_TOKEN_PATTERN = /^[A-Za-z0-9._~+/\-=]{16,}$/
 
 const normalizePublicApiToken = (value) => normalizeValue(value).replace(/^bearer\s+/i, '')
 
-const assertValidPublicApiToken = (value) => {
+const normalizeOptionalPublicApiToken = (value) => {
     const normalized = normalizePublicApiToken(value)
     if (!normalized) {
-        throw new Error('Missing VITE_API_TOKEN for cPanel release build.')
+        return ''
     }
     if (!SAFE_PUBLIC_API_TOKEN_PATTERN.test(normalized)) {
         throw new Error(
@@ -173,7 +173,10 @@ const buildReleaseEnv = async () => {
         env.VITE_API_TOKEN = rootEnv.VITE_API_TOKEN
     }
 
-    env.VITE_API_TOKEN = assertValidPublicApiToken(env.VITE_API_TOKEN)
+    env.VITE_API_TOKEN = normalizeOptionalPublicApiToken(env.VITE_API_TOKEN)
+    if (!env.VITE_API_TOKEN) {
+        delete env.VITE_API_TOKEN
+    }
 
     return env
 }

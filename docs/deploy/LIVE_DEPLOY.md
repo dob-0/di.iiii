@@ -173,7 +173,7 @@ Per environment keep these aligned:
 - `DATA_ROOT=<environment specific>`
 - `SHARED_ROOT=<environment specific>`
 - `CORS_ORIGINS=<environment specific>`
-- `API_TOKEN` and `VITE_API_TOKEN` must match
+- `API_TOKEN` is server-only for normal builds; leave `VITE_API_TOKEN` unset unless you intentionally need legacy browser-token compatibility
 
 ## Public Surfaces
 
