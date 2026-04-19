@@ -17,6 +17,7 @@ Start here:
 - [Live Deploy Runbook](docs/deploy/LIVE_DEPLOY.md)
 - [cPanel Prebuilt Deploy](docs/deploy/CPANEL_PREBUILT_DEPLOY.md)
 - [Project Surfaces](docs/architecture/PROJECT_SURFACES.md)
+- [Recursive Node Core](docs/architecture/RECURSIVE_NODE_CORE.md)
 
 ## Current Health
 
@@ -67,12 +68,17 @@ Also keep these boundaries in mind:
 
 ## Platform Surfaces
 
-This platform currently has five active surfaces:
+This platform currently has six active surfaces:
+
+- `Local Blank Workspace`
+    - route: `/`
+    - opens the blank white recursive node workspace
+    - local/bootstrap authoring surface before choosing a saved space project
 
 - `Public Space View`
     - route: `/<space>`
     - shows the live published project for a space
-    - falls back to V1 when no live project is published
+    - opens the blank recursive node workspace when no live project is published
 - `Studio`
     - route: `/<space>/studio`
     - compatibility alias: `/studio` for `main`
@@ -85,14 +91,16 @@ This platform currently has five active surfaces:
     - route: `/admin?space=<space>`
     - operator/debugging surface
 - `V1 Legacy`
-    - route: `/<space>` when no live project is published
-    - fallback/history editor and compatibility lane
+    - compatibility/history editor code path
+    - kept for migration and old scene support, not the default no-published-space route
 
 Current direction:
 
+- `/` is now the clean node-first starting surface
+- `/<space>` without a published project now starts from the same node-first workspace
 - Studio is the stable main product lane
-- Beta is the active experimental/v2 lane
-- V1 remains the compatibility and fallback lane
+- Beta is the active experimental/v2 lane and the current home of the recursive node editor
+- V1 remains the compatibility and migration lane
 - public routes should stay simple even if the editor model grows
 
 ## Space Model
@@ -122,24 +130,79 @@ Important nuance:
 - Studio/Beta now treat the route space as authoritative
 - if a project request hits a missing space, the client can auto-provision that space and retry
 
+## Recursive Node Core
+
+This is the long-term concept that new work should follow.
+
+Canonical rule:
+
+- everything is a node
+- the desk is a node
+- floating UI is also nodes, just mounted in `view`
+- world settings are nodes like `world.color`, `world.light`, `world.grid`, and `world.camera`
+- authored panels are nodes like `view.panel`, `view.inspector`, `view.assets`, `view.browser`
+- content and runtime are nodes like `geom.cube`, `app.browser`, `script.js`, `script.py`, `asset.image`, `asset.video`, and `asset.model`
+
+The canonical project document now aims at:
+
+- `rootNodeId`
+- `nodes[]`
+- `edges[]`
+- `assets[]`
+- `templates[]`
+- `workspaceState`
+
+The root graph always begins with two root surfaces:
+
+- `world.root`
+- `view.root`
+
+Default blank start:
+
+- white world
+- white view layer
+- no authored panels
+- no geometry
+- authoring begins by double-clicking and creating nodes
+
+Primary authoring gesture:
+
+- double-click in the 3D world -> create a world node
+- double-click in the 2D view -> create a view node
+
+Important implementation note for future work:
+
+- `src/shared/projectSchema.js` is the source of truth for the recursive node document shape
+- legacy `worldState` and `windowLayout` still exist only as compatibility mirrors for older surfaces
+- new behavior should prefer node definitions and node ops over adding more permanent logic to the V1 object/window model
+
+Current implementation status:
+
+- `/` opens the blank local node workspace
+- Beta contains the first real recursive node editor surface
+- `/<space>` opens a published project when one exists, otherwise it starts a blank node workspace for that space
+- Studio and V1 are not fully node-native yet, so bridge code is still present on purpose
+
 ## Repo Map
 
 - `src/RootApp.jsx`
     - top-level route switch
 - `src/SpaceSurfaceApp.jsx`
-    - chooses public viewer vs V1 fallback for `/<space>`
+    - chooses blank node workspace, public viewer, or legacy preferences shell
 - `src/components/`
     - shared desktop/mobile/admin UI
 - `src/hooks/`
     - app orchestration, spaces UI, V1 logic
 - `src/project/`
     - shared project model used by Studio and Beta
+- `src/project/nodeRegistry.js`
+    - node definitions for the recursive editor
 - `src/project/components/PublicProjectViewer.jsx`
     - live public viewer
 - `src/studio/`
     - Studio route/UI layer
 - `src/beta/`
-    - Beta route/UI layer
+    - Beta route/UI layer and current recursive node workspace
 - `serverXR/`
     - backend app
 - `shared/`
@@ -184,6 +247,7 @@ npm run dev
 
 Useful local URLs:
 
+- `http://localhost:5173/`
 - `http://localhost:5173/main`
 - `http://localhost:5173/main/studio`
 - `http://localhost:5173/main/beta`
@@ -222,7 +286,7 @@ There are two collaboration models in the repo.
 - Socket.IO handles roster and cursors
 - a space can point `publishedProjectId` at one live project
 - `/<space>` opens the public viewer when a live project exists
-- otherwise `/<space>` falls back to V1
+- otherwise `/<space>` opens the blank recursive node workspace for that space
 
 ## ServerXR
 

@@ -2,10 +2,12 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
+import { detectAssetMediaKind } from '../utils/mediaAssetTypes.js'
 
 export default function ImageObject({ assetRef, data, opacity = 1, linkActive }) {
     const assetUrl = useAssetUrl(assetRef, { preferRemoteSource: true })
-    const isImageType = !assetRef?.mimeType || assetRef.mimeType.startsWith('image/')
+    const assetKind = detectAssetMediaKind(assetRef)
+    const isImageType = !assetRef?.mimeType || assetKind === 'image'
     const sourceUrl = (isImageType ? assetUrl : null) || data || null
     const textureRef = useRef(null)
     const [texture, setTexture] = useState(null)

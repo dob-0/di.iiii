@@ -12,6 +12,7 @@ import ImageObject from '../../objectComponents/ImageObject.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
 import AudioObject from '../../objectComponents/AudioObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
+import { detectEntityTypeForAsset } from '../../utils/mediaAssetTypes.js'
 
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
@@ -21,9 +22,10 @@ function EntityVisual({ entity, assetMap, selected, onSelect }) {
     const appearance = entity.components?.appearance || {}
     const media = entity.components?.media || {}
     const asset = media.assetId ? assetMap.get(media.assetId) : null
+    const visualType = asset ? detectEntityTypeForAsset(asset, entity.type) : entity.type
 
     let content = null
-    switch (entity.type) {
+    switch (visualType) {
     case 'box':
         content = <BoxObject color={appearance.color} boxSize={entity.components?.primitive?.size} />
         break
