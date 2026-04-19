@@ -1,5 +1,5 @@
-import { Suspense, useMemo, useRef } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Suspense, useEffect, useMemo, useRef } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
 import { Grid, Html, OrbitControls } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
@@ -11,15 +11,41 @@ import ImageObject from '../../objectComponents/ImageObject.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
 import AudioObject from '../../objectComponents/AudioObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
+import { detectEntityTypeForAsset } from '../../utils/mediaAssetTypes.js'
+
+function CameraControls({ savedView = {} }) {
+    const controlsRef = useRef(null)
+    const { camera } = useThree()
+    const position = useMemo(
+        () => savedView.position || [0, 2.4, 6.5],
+        [savedView.position]
+    )
+    const target = useMemo(
+        () => savedView.target || [0, 0.75, 0],
+        [savedView.target]
+    )
+
+    useEffect(() => {
+        camera.position.set(position[0], position[1], position[2])
+        camera.updateProjectionMatrix()
+        if (controlsRef.current?.target) {
+            controlsRef.current.target.set(target[0], target[1], target[2])
+            controlsRef.current.update()
+        }
+    }, [camera, position, target])
+
+    return <OrbitControls ref={controlsRef} makeDefault target={target} />
+}
 
 function EntityVisual({ entity, assetMap, selected, onSelect }) {
     const transform = entity.components?.transform || {}
     const appearance = entity.components?.appearance || {}
     const media = entity.components?.media || {}
     const asset = media.assetId ? assetMap.get(media.assetId) : null
+    const visualType = asset ? detectEntityTypeForAsset(asset, entity.type) : entity.type
 
     let content = null
-    switch (entity.type) {
+    switch (visualType) {
         case 'box':
             content = <BoxObject color={appearance.color} boxSize={entity.components?.primitive?.size} />
             break
@@ -101,39 +127,130 @@ function EntityVisual({ entity, assetMap, selected, onSelect }) {
             }}
         >
             {content}
-            {selected && (
+            {selected ? (
                 <Html position={[0, 1.8, 0]} center>
                     <span className="beta-selection-pill">{entity.name}</span>
                 </Html>
-            )}
+            ) : null}
         </group>
     )
 }
 
-function SceneContent({ document, selectedEntityId, onSelectEntity }) {
+function NodeVisual({ node, selected, onSelect }) {
+    if (node.definitionId === 'geom.cube') {
+        return (
+            <group
+                position={node.spatial?.position || [0, 0, 0]}
+                rotation={node.spatial?.rotation || [0, 0, 0]}
+                scale={node.spatial?.scale || [1, 1, 1]}
+                onClick={(event) => {
+                    event.stopPropagation()
+                    onSelect?.(node.id)
+                }}
+            >
+                <BoxObject color={node.params?.color || '#5fa8ff'} boxSize={node.params?.size || [1, 1, 1]} />
+                {selected ? (
+                    <Html position={[0, 1.5, 0]} center>
+                        <span className="beta-selection-pill">{node.label}</span>
+                    </Html>
+                ) : null}
+            </group>
+        )
+    }
+
+    if (node.definitionId === 'app.browser') {
+        const width = Math.max(220, Number(node.params?.width) || 360)
+        const height = Math.max(180, Number(node.params?.height) || 240)
+        return (
+            <group
+                position={node.spatial?.position || [0, 1.2, 0]}
+                rotation={node.spatial?.rotation || [0, 0, 0]}
+                scale={node.spatial?.scale || [1, 1, 1]}
+                onClick={(event) => {
+                    event.stopPropagation()
+                    onSelect?.(node.id)
+                }}
+            >
+                <mesh>
+                    <planeGeometry args={[width / 180, height / 180]} />
+                    <meshBasicMaterial color="#ffffff" />
+                </mesh>
+                <Html transform position={[0, 0, 0.01]} distanceFactor={1.2}>
+                    <div className="beta-world-browser-node" style={{ width: `${width}px`, height: `${height}px` }}>
+                        <div className="beta-world-browser-node-bar">
+                            <strong>{node.params?.title || node.label}</strong>
+                            <span>{node.params?.url || 'https://example.com'}</span>
+                        </div>
+                        <iframe
+                            title={node.params?.title || node.label}
+                            src={node.params?.url || 'https://example.com'}
+                            sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                        />
+                    </div>
+                </Html>
+                {selected ? (
+                    <Html position={[0, (height / 200) + 0.3, 0]} center>
+                        <span className="beta-selection-pill">{node.label}</span>
+                    </Html>
+                ) : null}
+            </group>
+        )
+    }
+
+    return null
+}
+
+function SceneContent({
+    document,
+    selectedEntityId,
+    selectedNodeId,
+    onSelectEntity,
+    onSelectNode,
+    onWorldDoubleClick
+}) {
     const assetMap = useMemo(() => new Map((document.assets || []).map((asset) => [asset.id, asset])), [document.assets])
+    const renderableNodes = useMemo(
+        () => (document.nodes || []).filter((node) => node.mount?.surface === 'world' && node.mount?.mode === 'spatial'),
+        [document.nodes]
+    )
+
     return (
         <>
-            <color attach="background" args={[document.worldState?.backgroundColor || '#ebe7df']} />
+            <color attach="background" args={[document.worldState?.backgroundColor || '#ffffff']} />
             <ambientLight
                 color={document.worldState?.ambientLight?.color || '#ffffff'}
-                intensity={document.worldState?.ambientLight?.intensity || 0.85}
+                intensity={document.worldState?.ambientLight?.intensity || 0.8}
             />
             <directionalLight
                 color={document.worldState?.directionalLight?.color || '#fff7ea'}
-                intensity={document.worldState?.directionalLight?.intensity || 1.15}
+                intensity={document.worldState?.directionalLight?.intensity || 1.05}
                 position={document.worldState?.directionalLight?.position || [8, 12, 4]}
             />
-            {document.worldState?.gridVisible !== false && (
+            {document.worldState?.gridVisible ? (
                 <Grid
                     args={[document.worldState?.gridSize || 24, document.worldState?.gridSize || 24]}
-                    cellColor="#8b8577"
-                    sectionColor="#4a4742"
+                    cellColor="#d0d0d0"
+                    sectionColor="#ababab"
                     position={[0, 0, 0]}
                     fadeDistance={60}
                     fadeStrength={1}
                 />
-            )}
+            ) : null}
+            <mesh
+                rotation={[-Math.PI / 2, 0, 0]}
+                position={[0, 0, 0]}
+                onDoubleClick={(event) => {
+                    event.stopPropagation()
+                    onWorldDoubleClick?.({
+                        point: event.point?.toArray?.() || [0, 0, 0],
+                        clientX: event.nativeEvent?.clientX || 0,
+                        clientY: event.nativeEvent?.clientY || 0
+                    })
+                }}
+            >
+                <planeGeometry args={[400, 400]} />
+                <meshBasicMaterial transparent opacity={0} />
+            </mesh>
             <Suspense fallback={null}>
                 {(document.entities || []).map((entity) => (
                     <EntityVisual
@@ -144,6 +261,14 @@ function SceneContent({ document, selectedEntityId, onSelectEntity }) {
                         onSelect={onSelectEntity}
                     />
                 ))}
+                {renderableNodes.map((node) => (
+                    <NodeVisual
+                        key={node.id}
+                        node={node}
+                        selected={node.id === selectedNodeId}
+                        onSelect={onSelectNode}
+                    />
+                ))}
             </Suspense>
         </>
     )
@@ -152,7 +277,11 @@ function SceneContent({ document, selectedEntityId, onSelectEntity }) {
 export default function BetaViewport({
     document,
     selectedEntityId,
+    selectedNodeId,
     onSelectEntity,
+    onSelectNode,
+    onClearSelection,
+    onWorldDoubleClick,
     cursors = {},
     onCursorMove,
     onCursorLeave
@@ -181,13 +310,16 @@ export default function BetaViewport({
                     near: 0.1,
                     far: 200
                 }}
-                onPointerMissed={() => onSelectEntity?.(null)}
+                onPointerMissed={() => onClearSelection?.()}
             >
-                <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />
+                <CameraControls savedView={camera} />
                 <SceneContent
                     document={document}
                     selectedEntityId={selectedEntityId}
+                    selectedNodeId={selectedNodeId}
                     onSelectEntity={onSelectEntity}
+                    onSelectNode={onSelectNode}
+                    onWorldDoubleClick={onWorldDoubleClick}
                 />
             </Canvas>
             <div className="beta-cursor-layer">

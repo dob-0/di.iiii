@@ -1,5 +1,6 @@
 import { apiBaseUrl, apiFetch } from '../../services/apiClient.js'
 import { createServerSpace } from '../../services/serverSpaces.js'
+import { resolveAssetMimeType } from '../../utils/mediaAssetTypes.js'
 
 export const DEFAULT_PROJECT_SPACE_ID = 'main'
 
@@ -113,7 +114,11 @@ export const uploadProjectAsset = async (projectId, file, options = {}) => {
         method: 'POST',
         body: formData
     })
-    return data.asset
+    if (!data.asset) return data.asset
+    return {
+        ...data.asset,
+        mimeType: resolveAssetMimeType(data.asset)
+    }
 }
 
 export const buildProjectEventsUrl = (projectId) => `${apiBaseUrl}/api/projects/${projectId}/events`

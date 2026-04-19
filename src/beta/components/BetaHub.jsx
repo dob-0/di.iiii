@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildPreferencesPath } from '../../utils/spaceRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
+import { uploadImportedProjectAssets } from '../../project/import/projectImportAssets.js'
 import {
     DEFAULT_PROJECT_SPACE_ID,
     createProject,
@@ -13,15 +14,6 @@ import {
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioHubPath } from '../../studio/utils/studioRouting.js'
 import { buildBetaProjectPath, navigateToBetaPath } from '../utils/betaRouting.js'
-
-const detectEntityTypeFromMime = (mimeType = '') => {
-    if (mimeType.startsWith('image/')) return 'image'
-    if (mimeType.startsWith('video/')) return 'video'
-    if (mimeType.startsWith('audio/')) return 'audio'
-    if (mimeType.startsWith('model/')) return 'model'
-    if (mimeType === 'application/octet-stream') return 'model'
-    return null
-}
 
 export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [projects, setProjects] = useState([])
@@ -72,6 +64,8 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         setIsBusy(true)
         setStatus(`Importing ${file.name}...`)
         setImportWarnings([])
+        let createdProjectId = null
+        let importCommitted = false
         try {
             const { document, assetFiles, warnings } = await importLegacySceneFile(file)
             const response = await createProject(spaceId, {
@@ -79,38 +73,32 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                 slug: document.projectMeta.title,
                 source: 'beta-v2'
             })
-            const assetMap = new Map()
-            for (const [assetId, assetFile] of assetFiles.entries()) {
-                const uploaded = await uploadProjectAsset(response.project.id, assetFile, { assetId })
-                assetMap.set(assetId, uploaded)
-            }
-            const nextDocument = {
+            createdProjectId = response.project.id
+            const baseDocument = {
                 ...document,
                 projectMeta: {
                     ...document.projectMeta,
-                    id: response.project.id,
+                    id: createdProjectId,
                     spaceId,
                     source: 'beta-v2'
-                },
-                assets: document.assets.map((asset) => {
-                    const uploaded = assetMap.get(asset.id)
-                    return uploaded || asset
-                }),
-                entities: document.entities.map((entity) => {
-                    const type = detectEntityTypeFromMime(assetMap.get(entity.components?.media?.assetId)?.mimeType || '')
-                    if (!entity.components?.media?.assetId || !assetMap.get(entity.components.media.assetId)) {
-                        return entity
-                    }
-                    return {
-                        ...entity,
-                        type: type || entity.type
-                    }
+                }
+            }
+            const { document: nextDocument } = await uploadImportedProjectAssets({
+                projectId: createdProjectId,
+                document: baseDocument,
+                assetFiles,
+                uploadProjectAsset
+            })
+            await updateProjectDocument(createdProjectId, nextDocument)
+            importCommitted = true
+            setImportWarnings(warnings)
+            openProject(createdProjectId)
+        } catch (error) {
+            if (createdProjectId && !importCommitted) {
+                await deleteProject(createdProjectId).catch((cleanupError) => {
+                    console.warn(`Failed to clean up partial import ${createdProjectId}`, cleanupError)
                 })
             }
-            await updateProjectDocument(response.project.id, nextDocument)
-            setImportWarnings(warnings)
-            openProject(response.project.id)
-        } catch (error) {
             setStatus(error.message || 'Unable to import legacy scene.')
         } finally {
             setIsBusy(false)

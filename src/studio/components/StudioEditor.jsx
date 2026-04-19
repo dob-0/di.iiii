@@ -12,16 +12,9 @@ import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { useStudioLayoutPrefs } from '../hooks/useStudioLayoutPrefs.js'
 import StudioShell from './StudioShell.jsx'
+import { detectEntityTypeForAsset } from '../../utils/mediaAssetTypes.js'
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
-
-const detectEntityTypeFromFile = (file) => {
-    const mime = file?.type || file?.mimeType || ''
-    if (mime.startsWith('image/')) return 'image'
-    if (mime.startsWith('video/')) return 'video'
-    if (mime.startsWith('audio/')) return 'audio'
-    return 'model'
-}
 
 const getStarterPlacement = (count = 0) => [((count % 4) - 1.5) * 1.4, 0, Math.floor(count / 4) * -1.8]
 
@@ -178,7 +171,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 type: 'upsertAsset',
                 payload: { asset }
             }, { activityMessage: `Imported ${file.name}.` })
-            handleCreateEntity(detectEntityTypeFromFile(file), asset)
+            handleCreateEntity(detectEntityTypeForAsset(asset || file), asset)
         }
         event.target.value = ''
     }
@@ -449,7 +442,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             controlsRef={controlsRef}
             xrState={{ ...xr, xrStore: xr.xrStore }}
             onCreateEntity={handleCreateEntity}
-            onCreateFromAsset={(asset) => handleCreateEntity(detectEntityTypeFromFile(asset), asset)}
+            onCreateFromAsset={(asset) => handleCreateEntity(detectEntityTypeForAsset(asset), asset)}
             onAssetFilesSelected={handleAssetFilesSelected}
             onDeleteSelected={handleDeleteSelected}
             onSelectEntity={(entityId) => dispatch({ type: 'select-entity', entityId })}

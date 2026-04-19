@@ -58,8 +58,6 @@ export function useSceneArchiveIO({
     }, [])
 
     const handleSave = useCallback(async () => {
-        setRemoteSceneVersion?.(null)
-        resetRemoteAssets?.()
         const sceneData = {
             ...getBaseSceneData(),
             savedView: getSavedViewData() // Save the current view
@@ -91,8 +89,6 @@ export function useSceneArchiveIO({
         getBaseSceneData,
         getSavedViewData,
         persistSceneDataWithStatus,
-        resetRemoteAssets,
-        setRemoteSceneVersion,
         updateSceneSignature
     ])
 
@@ -161,6 +157,7 @@ export function useSceneArchiveIO({
             backgroundColor: sceneData.backgroundColor || defaultScene.backgroundColor,
             gridSize: sceneData.gridSize || defaultScene.gridSize,
             gridAppearance: sceneData.gridAppearance || defaultGridAppearance,
+            transformSnaps: sceneData.transformSnaps || defaultScene.transformSnaps,
             isGridVisible:
                 typeof sceneData.isGridVisible === 'boolean'
                     ? sceneData.isGridVisible
