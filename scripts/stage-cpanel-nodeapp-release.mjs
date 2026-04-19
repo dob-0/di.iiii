@@ -135,7 +135,7 @@ const normalizeOptionalPublicApiToken = (value) => {
         throw new Error(
             'Malformed VITE_API_TOKEN for cPanel release build. ' +
             'Expected a single token value, but received whitespace or shell characters. ' +
-            'Check the GitHub Actions secret SERVERXR_API_TOKEN or the local .env value.'
+            'Leave VITE_API_TOKEN unset for normal builds, or check the local .env value.'
         )
     }
     return normalized
