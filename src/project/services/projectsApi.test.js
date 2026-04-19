@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createProject, listProjects } from './projectsApi.js'
+import { createProject, listProjects, uploadProjectAsset } from './projectsApi.js'
 
 const apiFetch = vi.fn()
 const createServerSpace = vi.fn()
@@ -81,5 +81,27 @@ describe('projectsApi', () => {
             }
         })
         expect(response).toEqual({ project: { id: 'wcc-project' } })
+    })
+
+    it('normalizes uploaded project asset MIME from filenames when the server returns a generic type', async () => {
+        apiFetch.mockResolvedValue({
+            asset: {
+                id: 'asset-1',
+                name: 'clip.mp4',
+                mimeType: 'application/octet-stream',
+                size: 11,
+                url: '/serverXR/api/projects/project-1/assets/asset-1'
+            }
+        })
+
+        const asset = await uploadProjectAsset(
+            'project-1',
+            new File(['video'], 'clip.mp4', { type: 'application/octet-stream' })
+        )
+
+        expect(asset).toEqual(expect.objectContaining({
+            id: 'asset-1',
+            mimeType: 'video/mp4'
+        }))
     })
 })

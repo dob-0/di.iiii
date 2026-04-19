@@ -18,6 +18,8 @@ export const normalizeClientApiToken = (value = '') => {
 
 const API_TOKEN = normalizeClientApiToken(import.meta.env.VITE_API_TOKEN || '')
 
+export const normalizeSessionApiToken = (value = '') => String(value || '').trim().replace(/^bearer\s+/i, '')
+
 const getHostnameFromOrigin = (origin = '') => {
     if (!origin) return ''
     try {
@@ -153,7 +155,50 @@ const createServerUnavailableError = (message, cause = null) => {
     return error
 }
 
-export async function apiFetch(path, { method = 'GET', headers, body, json = true } = {}) {
+const isWriteMethod = (method = 'GET') => !['GET', 'HEAD', 'OPTIONS'].includes(String(method).toUpperCase())
+
+const shouldAttemptInteractiveAuth = (path, method, authRetry) => {
+    if (!authRetry || !isWriteMethod(method)) return false
+    if (String(path || '').includes('/api/auth/session')) return false
+    return typeof window !== 'undefined' && typeof window.prompt === 'function'
+}
+
+const promptForApiToken = () => {
+    if (typeof window === 'undefined' || typeof window.prompt !== 'function') {
+        return ''
+    }
+    return normalizeSessionApiToken(window.prompt('Enter the server edit token to continue.') || '')
+}
+
+const createHttpError = async (response) => {
+    const text = await response.text()
+    let message = text || `Request failed with status ${response.status}`
+    let data = null
+    if (text) {
+        try {
+            data = JSON.parse(text)
+            if (data?.error) {
+                message = data.error
+            }
+        } catch {
+            // ignore
+        }
+    }
+    const error = new Error(message)
+    error.status = response.status
+    if (data) {
+        error.data = data
+    }
+    return error
+}
+
+export async function apiFetch(path, {
+    method = 'GET',
+    headers,
+    body,
+    json = true,
+    authRetry = true
+} = {}) {
     if (!hasServerApi) {
         throw new Error('API base URL is not configured')
     }
@@ -162,7 +207,11 @@ export async function apiFetch(path, { method = 'GET', headers, body, json = tru
     }
     const url = path.startsWith('http') ? path : `${apiBaseUrl}${path}`
     const authHeaders = API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : {}
-    const init = { method, headers: { ...authHeaders, ...(headers ? { ...headers } : {}) } }
+    const init = {
+        method,
+        credentials: 'include',
+        headers: { ...authHeaders, ...(headers ? { ...headers } : {}) }
+    }
     if (body instanceof FormData) {
         init.body = body
     } else if (body !== undefined) {
@@ -181,23 +230,19 @@ export async function apiFetch(path, { method = 'GET', headers, body, json = tru
         throw error
     }
     if (!response.ok) {
-        const text = await response.text()
-        let message = text || `Request failed with status ${response.status}`
-        let data = null
-        if (text) {
-            try {
-                data = JSON.parse(text)
-                if (data?.error) {
-                    message = data.error
-                }
-            } catch {
-                // ignore
+        const error = await createHttpError(response)
+        if (error.status === 401 && shouldAttemptInteractiveAuth(path, method, authRetry)) {
+            const token = promptForApiToken()
+            if (token) {
+                await loginApiSession(token)
+                return apiFetch(path, {
+                    method,
+                    headers,
+                    body,
+                    json,
+                    authRetry: false
+                })
             }
-        }
-        const error = new Error(message)
-        error.status = response.status
-        if (data) {
-            error.data = data
         }
         throw error
     }
@@ -206,3 +251,17 @@ export async function apiFetch(path, { method = 'GET', headers, body, json = tru
     }
     return response.json()
 }
+
+export const getApiSession = async () => apiFetch('/api/auth/session')
+
+export const loginApiSession = async (token) => apiFetch('/api/auth/session', {
+    method: 'POST',
+    body: { token: normalizeSessionApiToken(token) },
+    authRetry: false
+})
+
+export const logoutApiSession = async () => apiFetch('/api/auth/session', {
+    method: 'DELETE',
+    json: false,
+    authRetry: false
+})

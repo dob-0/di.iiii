@@ -10,6 +10,12 @@ vi.mock('./App.jsx', () => ({
     }
 }))
 
+vi.mock('./beta/BlankNodeWorkspaceApp.jsx', () => ({
+    default: function MockBlankNodeWorkspaceApp({ spaceId }) {
+        return <div>blank-node-workspace:{spaceId || 'main'}</div>
+    }
+}))
+
 vi.mock('./project/components/PublicProjectViewer.jsx', () => ({
     default: function MockPublicProjectViewer({ spaceId, projectId }) {
         return <div>public-project-viewer:{spaceId}:{projectId}</div>
@@ -39,7 +45,14 @@ describe('SpaceSurfaceApp', () => {
         expect(await screen.findByText('public-project-viewer:main:live-project')).toBeInTheDocument()
     })
 
-    it('falls back to the legacy app when no published project is configured', async () => {
+    it('opens the blank node workspace on the bare root route', () => {
+        render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: null }} />)
+
+        expect(screen.getByText('blank-node-workspace:main')).toBeInTheDocument()
+        expect(getServerSpace).not.toHaveBeenCalled()
+    })
+
+    it('opens the blank node workspace when no published project is configured', async () => {
         getServerSpace.mockResolvedValue({
             id: 'main',
             label: 'Main Space',
@@ -49,7 +62,7 @@ describe('SpaceSurfaceApp', () => {
         render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'main' }} />)
 
         await waitFor(() => {
-            expect(screen.getByText('legacy-app')).toBeInTheDocument()
+            expect(screen.getByText('blank-node-workspace:main')).toBeInTheDocument()
         })
     })
 
@@ -72,7 +85,7 @@ describe('SpaceSurfaceApp', () => {
         await act(async () => {
             await Promise.resolve()
         })
-        expect(screen.getByText('legacy-app')).toBeInTheDocument()
+        expect(screen.getByText('blank-node-workspace:main')).toBeInTheDocument()
 
         await act(async () => {
             await vi.advanceTimersByTimeAsync(2100)
