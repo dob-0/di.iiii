@@ -18,6 +18,7 @@ Start here:
 - [cPanel Prebuilt Deploy](docs/deploy/CPANEL_PREBUILT_DEPLOY.md)
 - [Project Surfaces](docs/architecture/PROJECT_SURFACES.md)
 - [Recursive Node Core](docs/architecture/RECURSIVE_NODE_CORE.md)
+- [Private Dev And Public Showcase Workflow](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
 
 ## Current Health
 
