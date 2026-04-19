@@ -3,10 +3,21 @@ import {
     normalizeProjectDocument,
     normalizeEntity
 } from '../../shared/projectSchema.js'
+import { normalizeLegacyAssetKey } from './projectImportAssets.js'
+import { resolveAssetMimeType } from '../../utils/mediaAssetTypes.js'
 
-const coerceAssetId = (value) => {
-    const text = String(value || '').trim()
-    return /^[a-f0-9-]{8,64}$/i.test(text) ? text : null
+const addLegacyAssetMeta = (assetsById, asset = {}) => {
+    const id = normalizeLegacyAssetKey(asset?.id)
+    if (!id || assetsById.has(id)) return
+    assetsById.set(id, {
+        id,
+        name: asset.name || id,
+        mimeType: resolveAssetMimeType(asset),
+        size: Math.max(0, Number(asset.size) || 0),
+        createdAt: Number(asset.createdAt) || Date.now(),
+        url: typeof asset.url === 'string' ? asset.url.trim() : '',
+        source: 'import'
+    })
 }
 
 const mapLegacyObjectToEntity = (object, warnings = []) => {
@@ -100,7 +111,7 @@ const mapLegacyObjectToEntity = (object, warnings = []) => {
                 components: {
                     ...base.components,
                     media: {
-                        assetId: coerceAssetId(object.assetRef?.id || object.asset?.id),
+                        assetId: normalizeLegacyAssetKey(object.assetRef?.id || object.asset?.id),
                         autoplay: object.audioAutoplay ?? object.videoAutoplay ?? object.autoplay ?? (object.type !== 'image'),
                         loop: object.audioLoop ?? object.videoLoop ?? true,
                         muted: object.type === 'video' ? true : false,
@@ -131,7 +142,9 @@ const parseLegacySceneFile = async (file) => {
             const entry = zip.file(asset.archivePath)
             if (!entry) continue
             const blob = await entry.async('blob')
-            assetFiles.set(asset.id, new File([blob], asset.name || asset.id, { type: asset.mimeType || blob.type }))
+            const legacyAssetId = normalizeLegacyAssetKey(asset.id || asset.archivePath)
+            if (!legacyAssetId) continue
+            assetFiles.set(legacyAssetId, new File([blob], asset.name || legacyAssetId, { type: asset.mimeType || blob.type }))
         }
         return { scene, assetFiles }
     }
@@ -141,6 +154,36 @@ const parseLegacySceneFile = async (file) => {
         scene: JSON.parse(text),
         assetFiles: new Map()
     }
+}
+
+const collectLegacyAssetManifest = (scene = {}, assetFiles = new Map()) => {
+    const assetsById = new Map()
+    const assetsManifest = Array.isArray(scene.assets) ? scene.assets : []
+    assetsManifest.forEach((asset) => addLegacyAssetMeta(assetsById, asset))
+    ;(Array.isArray(scene.objects) ? scene.objects : []).forEach((object) => {
+        addLegacyAssetMeta(assetsById, object?.assetRef)
+        addLegacyAssetMeta(assetsById, object?.asset)
+        addLegacyAssetMeta(assetsById, object?.materialsAssetRef)
+        if (Array.isArray(object?.assets)) {
+            object.assets.forEach((asset) => addLegacyAssetMeta(assetsById, asset))
+        }
+    })
+    assetFiles.forEach((assetFile, assetId) => {
+        const legacyAssetId = normalizeLegacyAssetKey(assetId)
+        if (!legacyAssetId) return
+        assetsById.set(legacyAssetId, {
+            ...(assetsById.get(legacyAssetId) || {}),
+            id: legacyAssetId,
+            name: assetFile.name || assetsById.get(legacyAssetId)?.name || legacyAssetId,
+            mimeType: resolveAssetMimeType({
+                name: assetFile.name || assetsById.get(legacyAssetId)?.name || legacyAssetId,
+                mimeType: assetFile.type || assetsById.get(legacyAssetId)?.mimeType || ''
+            }),
+            size: assetFile.size ?? assetsById.get(legacyAssetId)?.size ?? 0,
+            source: 'import'
+        })
+    })
+    return Array.from(assetsById.values())
 }
 
 export async function importLegacySceneFile(file) {
@@ -163,13 +206,7 @@ export async function importLegacySceneFile(file) {
             directionalLight: scene?.directionalLight,
             savedView: scene?.savedView || scene?.default3DView
         },
-        assets: Array.from(assetFiles.entries()).map(([assetId, assetFile]) => ({
-            id: coerceAssetId(assetId) || undefined,
-            name: assetFile.name,
-            mimeType: assetFile.type,
-            size: assetFile.size,
-            source: 'import'
-        }))
+        assets: collectLegacyAssetManifest(scene, assetFiles)
     })
 
     return {

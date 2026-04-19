@@ -160,10 +160,6 @@ if (shouldAutoStartLocalServer && parsedApiBase) {
     clientEnv.VITE_PROXY_API_TARGET = `${parsedApiBase.protocol}//${parsedApiBase.hostname}:${parsedApiBase.port}`
 }
 
-if (!process.env.VITE_API_TOKEN && serverEnvFile.API_TOKEN) {
-    clientEnv.VITE_API_TOKEN = serverEnvFile.API_TOKEN
-}
-
 console.log(`[dev-stack] Starting front-end with VITE_API_BASE_URL=${clientEnv.VITE_API_BASE_URL}`)
 if (clientEnv.VITE_PROXY_API_TARGET) {
     console.log(`[dev-stack] Proxying ${clientEnv.VITE_API_BASE_URL} to ${clientEnv.VITE_PROXY_API_TARGET}`)
