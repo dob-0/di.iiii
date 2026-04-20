@@ -2,11 +2,6 @@ import { useEffect, useState } from 'react'
 import { deleteAsset, getAssetBlob } from '../storage/assetStore.js'
 import { getAssetSourceUrl, streamRemoteAsset } from '../services/assetSources.js'
 import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
-import {
-    getExpectedPlayableTopLevel,
-    inferMimeTypeFromName,
-    isGenericMimeType
-} from '../utils/mediaAssetTypes.js'
 
 const FRONTEND_ASSET_PATH_REGEX = /^\/assets\/[^/]+$/i
 
@@ -31,10 +26,9 @@ export function useAssetUrl(assetRef, options = {}) {
     const [objectUrl, setObjectUrl] = useState(null)
     const preferRemoteSource = options?.preferRemoteSource === true
 
-    const directAssetUrl = typeof assetRef?.url === 'string' ? assetRef.url.trim() : ''
-    const remoteUrl = (assetId ? getAssetSourceUrl(assetId) : null) || directAssetUrl || null
+    const remoteUrl = assetId ? getAssetSourceUrl(assetId) : null
     const canPreferRemoteSource = preferRemoteSource && remoteUrl && !isFrontendAssetFallbackUrl(remoteUrl)
-    const expectedTopLevelType = getExpectedPlayableTopLevel(assetRef)
+    const expectedTopLevelType = assetRef?.mimeType ? assetRef.mimeType.split('/')[0] : null
 
     useEffect(() => {
         let revokedUrl = null
@@ -43,17 +37,13 @@ export function useAssetUrl(assetRef, options = {}) {
             ? [expectedTopLevelType]
             : ['image', 'video', 'audio']
 
-        if (canPreferRemoteSource) {
-            setObjectUrl(remoteUrl)
+        if (!assetId) {
+            setObjectUrl(null)
             return () => {}
         }
 
-        if (!assetId) {
-            if (remoteUrl && !isFrontendAssetFallbackUrl(remoteUrl)) {
-                setObjectUrl(remoteUrl)
-            } else {
-                setObjectUrl(null)
-            }
+        if (canPreferRemoteSource) {
+            setObjectUrl(remoteUrl)
             return () => {}
         }
 
@@ -61,12 +51,11 @@ export function useAssetUrl(assetRef, options = {}) {
 
         const applyBlob = (blob) => {
             if (isCancelled || !blob) return
-            const resolvedType = blob.type || assetRef?.mimeType || inferMimeTypeFromName(assetRef?.name) || ''
+            const resolvedType = blob.type || assetRef?.mimeType || ''
             const blobTopLevel = (resolvedType || '').split('/')[0] || ''
-            const acceptsGenericBinary = expectedTopLevelType && isGenericMimeType(resolvedType)
             const typeAllowed = blobTopLevel ? allowedTopLevels.includes(blobTopLevel) : true
             const typeMatches = !expectedTopLevelType || blobTopLevel === expectedTopLevelType
-            if (isHtmlLikeMimeType(resolvedType) || (!acceptsGenericBinary && (!typeAllowed || !typeMatches))) {
+            if (isHtmlLikeMimeType(resolvedType) || !typeAllowed || !typeMatches) {
                 console.warn(`Asset ${assetId} unsupported MIME: ${resolvedType || 'unknown'}`)
                 setObjectUrl(null)
                 return false
@@ -74,10 +63,7 @@ export function useAssetUrl(assetRef, options = {}) {
             if (revokedUrl) {
                 URL.revokeObjectURL(revokedUrl)
             }
-            const normalizedBlob = acceptsGenericBinary
-                ? new Blob([blob], { type: inferMimeTypeFromName(assetRef?.name) || blob.type })
-                : blob
-            revokedUrl = URL.createObjectURL(normalizedBlob)
+            revokedUrl = URL.createObjectURL(blob)
             setObjectUrl(revokedUrl)
             return true
         }
@@ -108,10 +94,6 @@ export function useAssetUrl(assetRef, options = {}) {
                 if (remoteUrl) {
                     console.warn(`Failed to stream asset ${assetId}`, error)
                 }
-            }
-            if (remoteUrl && !isFrontendAssetFallbackUrl(remoteUrl)) {
-                setObjectUrl(remoteUrl)
-                return
             }
             setObjectUrl(null)
         }

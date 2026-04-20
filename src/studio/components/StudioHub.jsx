@@ -20,7 +20,6 @@ import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildPreferencesPath } from '../../utils/spaceRouting.js'
 import { buildBetaHubPath } from '../../beta/utils/betaRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
-import { uploadImportedProjectAssets } from '../../project/import/projectImportAssets.js'
 import {
     DEFAULT_PROJECT_SPACE_ID,
     createProject,
@@ -31,6 +30,15 @@ import {
 } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
+
+const detectEntityTypeFromMime = (mimeType = '') => {
+    if (mimeType.startsWith('image/')) return 'image'
+    if (mimeType.startsWith('video/')) return 'video'
+    if (mimeType.startsWith('audio/')) return 'audio'
+    if (mimeType.startsWith('model/')) return 'model'
+    if (mimeType === 'application/octet-stream') return 'model'
+    return null
+}
 
 const formatProjectSourceLabel = (source = '') => {
     switch (source) {
@@ -101,8 +109,6 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         setIsBusy(true)
         setImportWarnings([])
         setStatus(`Importing ${file.name}...`)
-        let createdProjectId = null
-        let importCommitted = false
         try {
             const { document, assetFiles, warnings } = await importLegacySceneFile(file)
             const response = await createProject(spaceId, {
@@ -110,32 +116,34 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                 slug: document.projectMeta.title,
                 source: 'legacy-import-studio'
             })
-            createdProjectId = response.project.id
-            const baseDocument = {
+            const assetMap = new Map()
+            for (const [assetId, assetFile] of assetFiles.entries()) {
+                const uploaded = await uploadProjectAsset(response.project.id, assetFile, { assetId })
+                assetMap.set(assetId, uploaded)
+            }
+            const nextDocument = {
                 ...document,
                 projectMeta: {
                     ...document.projectMeta,
-                    id: createdProjectId,
+                    id: response.project.id,
                     spaceId,
                     source: 'legacy-import-studio'
-                }
-            }
-            const { document: nextDocument } = await uploadImportedProjectAssets({
-                projectId: createdProjectId,
-                document: baseDocument,
-                assetFiles,
-                uploadProjectAsset
-            })
-            await updateProjectDocument(createdProjectId, nextDocument)
-            importCommitted = true
-            setImportWarnings(warnings)
-            openProject(createdProjectId)
-        } catch (error) {
-            if (createdProjectId && !importCommitted) {
-                await deleteProject(createdProjectId).catch((cleanupError) => {
-                    console.warn(`Failed to clean up partial import ${createdProjectId}`, cleanupError)
+                },
+                assets: document.assets.map((asset) => assetMap.get(asset.id) || asset),
+                entities: document.entities.map((entity) => {
+                    const uploaded = assetMap.get(entity.components?.media?.assetId)
+                    if (!uploaded) return entity
+                    const nextType = detectEntityTypeFromMime(uploaded.mimeType)
+                    return {
+                        ...entity,
+                        type: nextType || entity.type
+                    }
                 })
             }
+            await updateProjectDocument(response.project.id, nextDocument)
+            setImportWarnings(warnings)
+            openProject(response.project.id)
+        } catch (error) {
             setStatus(error.message || 'Unable to import legacy scene.')
         } finally {
             setIsBusy(false)

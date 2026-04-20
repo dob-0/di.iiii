@@ -226,50 +226,6 @@ describe('server write contracts', () => {
         expect(authenticated.status).toBe(201)
     })
 
-    it('accepts signed auth session cookies for production writes', async () => {
-        const server = await startServer({
-            nodeEnv: 'production',
-            extraEnv: {
-                AUTH_SESSION_COOKIE_SECURE: 'false'
-            }
-        })
-
-        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: server.apiToken })
-        })
-        expect(login.status).toBe(200)
-        const loginPayload = await login.json()
-        expect(loginPayload.authenticated).toBe(true)
-
-        const setCookie = login.headers.get('set-cookie') || ''
-        expect(setCookie).toContain('dii_serverxr_session=')
-        expect(setCookie).toContain('HttpOnly')
-        expect(setCookie).toContain('SameSite=Lax')
-
-        const cookie = setCookie.split(';')[0]
-        const sessionStatus = await fetch(`${server.baseUrl}/api/auth/session`, {
-            headers: { Cookie: cookie }
-        })
-        expect(sessionStatus.status).toBe(200)
-        await expect(sessionStatus.json()).resolves.toMatchObject({
-            requireAuth: true,
-            authenticated: true,
-            type: 'session'
-        })
-
-        const created = await fetch(`${server.baseUrl}/api/spaces`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                Cookie: cookie
-            },
-            body: JSON.stringify({ label: 'Cookie Space', slug: 'cookie-space' })
-        })
-        expect(created.status).toBe(201)
-    })
-
     it('allows writes outside production when REQUIRE_AUTH is unset', async () => {
         const server = await startServer({ nodeEnv: 'test' })
 

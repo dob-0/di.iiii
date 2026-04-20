@@ -89,7 +89,6 @@ export function useProjectPresence({
         const socket = io(serverUrl, {
             path,
             auth,
-            withCredentials: true,
             reconnection: true
         })
 

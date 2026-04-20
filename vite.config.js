@@ -102,8 +102,7 @@ export default {
         proxy: {
             '/serverXR': {
                 target: DEV_PROXY_API_TARGET,
-                changeOrigin: true,
-                ws: true
+                changeOrigin: true
             }
         }
     },

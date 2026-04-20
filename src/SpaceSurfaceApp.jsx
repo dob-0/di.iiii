@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import App from './App.jsx'
-import BlankNodeWorkspaceApp from './beta/BlankNodeWorkspaceApp.jsx'
 import { getServerSpace, supportsServerSpaces } from './services/serverSpaces.js'
 import { APP_PAGE_PREFERENCES } from './utils/spaceRouting.js'
 import PublicProjectViewer from './project/components/PublicProjectViewer.jsx'
@@ -8,12 +7,31 @@ import PublicProjectViewer from './project/components/PublicProjectViewer.jsx'
 const DEFAULT_SPACE_ID = 'main'
 const SPACE_META_REFRESH_MS = 2000
 
+function SurfaceLoadingScreen() {
+    return (
+        <main
+            style={{
+                minHeight: '100vh',
+                display: 'grid',
+                placeItems: 'center',
+                background: 'radial-gradient(circle at top, #18222d 0%, #06090d 55%, #020304 100%)',
+                color: '#f5f7fa',
+                fontFamily: '"Segoe UI", sans-serif'
+            }}
+        >
+            <div style={{ textAlign: 'center', padding: '2rem' }}>
+                <p style={{ margin: 0, opacity: 0.72, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.75rem' }}>
+                    Loading space
+                </p>
+            </div>
+        </main>
+    )
+}
+
 export default function SpaceSurfaceApp({ routeState }) {
     const page = routeState?.page || null
-    const hasExplicitSpaceId = Boolean(routeState?.spaceId)
     const spaceId = routeState?.spaceId || DEFAULT_SPACE_ID
-    const isLocalRootWorkspace = page !== APP_PAGE_PREFERENCES && !hasExplicitSpaceId
-    const shouldResolvePublishedSurface = !isLocalRootWorkspace && page !== APP_PAGE_PREFERENCES && supportsServerSpaces && Boolean(spaceId)
+    const shouldResolvePublishedSurface = page !== APP_PAGE_PREFERENCES && supportsServerSpaces && Boolean(spaceId)
     const [surfaceState, setSurfaceState] = useState({
         status: 'idle',
         space: null
@@ -78,8 +96,8 @@ export default function SpaceSurfaceApp({ routeState }) {
 
     const publishedProjectId = surfaceState.space?.publishedProjectId || null
 
-    if (isLocalRootWorkspace) {
-        return <BlankNodeWorkspaceApp spaceId={spaceId} />
+    if (shouldResolvePublishedSurface && surfaceState.status === 'loading' && !surfaceState.space) {
+        return <SurfaceLoadingScreen />
     }
 
     if (shouldResolvePublishedSurface && publishedProjectId) {
@@ -93,9 +111,5 @@ export default function SpaceSurfaceApp({ routeState }) {
         )
     }
 
-    if (page === APP_PAGE_PREFERENCES) {
-        return <App />
-    }
-
-    return <BlankNodeWorkspaceApp spaceId={spaceId} />
+    return <App />
 }

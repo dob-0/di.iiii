@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 set -euo pipefail
-umask 022
 
 export PATH="/usr/local/bin:/usr/bin:/bin:/usr/local/sbin:/usr/sbin:/sbin:${PATH:-}"
 
@@ -112,6 +111,7 @@ CLOUDLINUX_SELECTOR_BIN="$(find_cloudlinux_selector || true)"
 
 required_vars=(
   API_TOKEN
+  VITE_API_TOKEN
 )
 
 for key in "${required_vars[@]}"; do
@@ -169,24 +169,6 @@ sync_tree_tar() {
   tar -cf - "$@" -C "${source_dir}" . | tar -xf - -C "${target_dir}"
 }
 
-normalize_deploy_permissions() {
-  echo "[cpanel-prebuilt] Normalizing deployed file permissions."
-
-  find "${CPANEL_WEB_ROOT}" -type d -exec chmod 755 {} +
-  find "${CPANEL_WEB_ROOT}" -type f -exec chmod 644 {} +
-
-  if [[ "${DATA_ROOT}" == "${CPANEL_SERVERXR_ROOT}" || "${DATA_ROOT}" == "${CPANEL_SERVERXR_ROOT}/"* ]]; then
-    find "${CPANEL_SERVERXR_ROOT}" -path "${DATA_ROOT}" -prune -o -type d -exec chmod 755 {} +
-    find "${CPANEL_SERVERXR_ROOT}" -path "${DATA_ROOT}" -prune -o -type f -exec chmod 644 {} +
-  else
-    find "${CPANEL_SERVERXR_ROOT}" -type d -exec chmod 755 {} +
-    find "${CPANEL_SERVERXR_ROOT}" -type f -exec chmod 644 {} +
-  fi
-
-  find "${CPANEL_SHARED_ROOT}" -type d -exec chmod 755 {} +
-  find "${CPANEL_SHARED_ROOT}" -type f -exec chmod 644 {} +
-}
-
 if command -v rsync >/dev/null 2>&1; then
   rsync -az --delete \
     --exclude='cgi-bin' \
@@ -232,11 +214,6 @@ if [[ ! -f "${CPANEL_WEB_ROOT}/serverXR/.htaccess" ]]; then
   : > "${CPANEL_WEB_ROOT}/serverXR/.htaccess"
 fi
 cp .deploy/cpanel/serverXR/.env.generated "${CPANEL_SERVERXR_ROOT}/.env"
-normalize_deploy_permissions
-chmod 600 "${CPANEL_SERVERXR_ROOT}/.env" .deploy/cpanel/serverXR/.env.generated
-if [[ -f "${CPANEL_SERVERXR_ROOT}/.env.generated" ]]; then
-  chmod 600 "${CPANEL_SERVERXR_ROOT}/.env.generated"
-fi
 
 if [[ -n "${CLOUDLINUX_SELECTOR_BIN}" ]]; then
   echo "[cpanel-prebuilt] Using CloudLinux selector at ${CLOUDLINUX_SELECTOR_BIN}"
@@ -255,8 +232,6 @@ fi
 if [[ "${CPANEL_SKIP_RESTART:-0}" == "1" ]]; then
   echo "[cpanel-prebuilt] Skipping Node.js App restart because CPANEL_SKIP_RESTART=1."
 elif [[ -n "${CLOUDLINUX_SELECTOR_BIN}" ]]; then
-  mkdir -p "${CPANEL_SERVERXR_ROOT}/tmp"
-  touch "${CPANEL_SERVERXR_ROOT}/tmp/restart.txt"
   "${CLOUDLINUX_SELECTOR_BIN}" restart --json --interpreter nodejs --user "$(whoami)" --app-root "${APP_ROOT_REL}"
 else
   echo "[cpanel-prebuilt] cloudlinux-selector not found. Restart the Node.js App manually in cPanel." >&2
