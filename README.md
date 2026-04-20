@@ -1,244 +1,149 @@
-# dii Platform
+# di.i
 
-Web-based spatial editor platform built with React, Vite, Three.js, and a Node backend in `serverXR` for persistence, assets, SSE, presence, and deploy-time runtime wiring.
+**Web XR Node-Based Reality Creation Language**
 
-Current baseline:
+*Web XR Spatial-Sync Creator Network*
 
-- package version: `0.2.0`
-- runtime baseline: Node `22.x`
-- integration branch: `dev`
-- stable preview branch: `staging`
-- production branch: `main`
+`di.i` is an open-source, node-based Web XR reality creation system. It behaves like a visual programming language for linking digital logic, spatial media, and real environments through authored nodes, shared spaces, and live project documents. It is built on the web as a serious medium and universal substrate, not as a browser-only limitation.
 
-Start here:
+## What di.i is
 
-- [Checkpoint 2026-04-09](docs/checkpoints/2026-04-09.md)
-- [Project Audit And Growth Plan 2026-04-17](docs/architecture/PROJECT_AUDIT_2026-04-17.md)
-- [Live Deploy Runbook](docs/deploy/LIVE_DEPLOY.md)
-- [cPanel Prebuilt Deploy](docs/deploy/CPANEL_PREBUILT_DEPLOY.md)
-- [Project Surfaces](docs/architecture/PROJECT_SURFACES.md)
-- [Recursive Node Core](docs/architecture/RECURSIVE_NODE_CORE.md)
-- [Private Dev And Public Showcase Workflow](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
+`di.i` is both a software platform and a studio-network direction.
 
-## Current Health
-
-Verified on `2026-04-17`:
-
-- `npm run lint` passed
-- `npm run build` passed
-- `npm run test` passed
-- `npm run test:server-contracts` passed
-
-Operational truth:
-
-- normal work starts on `dev`
-- `npm run deploy:staging` is the laptop command for staging promotion on the current host
-- `npm run deploy:production` is the laptop command for production promotion after staging is approved
-- GitHub publishes the `cpanel-*` branches and cPanel cron applies them automatically on the current shared host
+- As software, it is a web-based authoring system built with React, Vite, Three.js, Web XR, and a Node backend in `serverXR`.
+- As a model, it treats authored reality as a graph of nodes, surfaces, projects, assets, and runtime relationships.
+- As a direction, it aims toward broader reality creation across virtual and physical environments, while staying grounded in the web as an everywhere layer.
+- As a working repo, it currently contains the stable Studio lane, the experimental Beta lane, compatibility V1/editor history, and the backend/runtime contract that holds them together.
 
 ## Current Truth
 
-This repo is easiest to understand as three branches:
+This is the current shipped and working reality of the repo.
 
-- `dev` = active development and integration, and the normal place to start work
-- `staging` = stable preview and promotion lane
-- `main` = production and public lane, and promotion-only except for urgent hotfixes
+- Package/runtime baseline:
+  - package version `0.2.0`
+  - Node `22.x`
+  - npm `10.x`
+- Branch lanes:
+  - `dev` = active development and integration
+  - `staging` = stable preview and promotion lane
+  - `main` = production lane
+- Product lanes:
+  - `Studio` is the stable main authoring lane
+  - `Beta` is the experimental node-first lane
+  - `V1` remains the fallback and compatibility lane
+- Public route behavior:
+  - `/<space>` shows the live published project for a space
+  - if no project is published, it falls back to the blank node workspace for that space
+- Backend role:
+  - `serverXR` is authoritative for spaces, projects, assets, ops, SSE, presence, and edit enforcement
+- Data model:
+  - spaces are the public and management unit
+  - projects are editable documents inside a space
+  - a space may point at one `publishedProjectId` for its live public route
+- Current limits:
+  - persistence is still single-host filesystem storage
+  - write protection uses session/token-based auth, not full user identity, roles, and audit trails yet
 
-Normal promotion path:
+## North Star
 
-- `dev -> staging -> main`
+This is the intended long-term direction that should guide new work.
 
-Emergency hotfix path:
+- `di.i` should behave like a Web XR visual programming language for creating realities, not only scenes or layouts.
+- Everything important should become node-native:
+  - world behavior
+  - view behavior
+  - authored media
+  - runtime tools
+  - nested or recursive projects
+- The canonical authored model should continue moving toward recursive node-first documents and node ops.
+- The web should remain a universal substrate for authoring, sharing, and runtime connectivity even as the system grows beyond a single web app surface.
+- Physical-world sync, hardware-linked environments, and broader multichannel reality creation are part of the real direction of the project, grounded in public/context work and experiments, but they are not yet fully productized repo capability.
 
-- `main -> staging + dev`
+## Still Transitional
 
-That model matters more than any old deploy note or spare workflow file.
+This repo is intentionally between generations.
 
-Simple rule:
+- `Studio` is the main product lane, but it is not fully node-native yet.
+- `Beta` contains the first real recursive node editor surface, but it is not the only canonical product truth.
+- `V1` still exists because compatibility and migration still matter.
+- Legacy fields like `worldState` and `windowLayout` are still present as compatibility mirrors.
+- Legacy entity/object behavior still coexists with newer node-first behavior.
+- Filesystem persistence and the current auth model are good enough for the present host/setup, but they are not the long-term scale target.
 
-- start normal work on `dev`
-- promote into `staging` only after local checks pass
-- promote into `main` only after staging is verified
-- start on `main` only when production needs an emergency hotfix
+## Core Model
 
-Also keep these boundaries in mind:
+- `space`
+  - the public and management unit
+  - owns routes such as `/<space>`, `/<space>/studio`, `/<space>/beta`, and `/admin?space=<space>`
+- `project`
+  - the editable authored document inside a space
+  - stored and synced independently from the public route
+- `publishedProjectId`
+  - the project currently exposed on the public route for a space
+- canonical project direction
+  - `rootNodeId`
+  - `nodes[]`
+  - `edges[]`
+  - `assets[]`
+  - `templates[]`
+  - `workspaceState`
 
-- code is promoted between environments
-- scene data and uploaded assets are not automatically shared between environments
-- `/serverXR` stays owned by the cPanel Node.js App in both staging and production
+Source-of-truth guidance:
 
-## Platform Surfaces
+- `src/project/` is the shared project logic center for document state, sync, presence, API behavior, and viewer/editor coordination.
+- `src/shared/projectSchema.js` is the long-term schema center for the recursive node-first document model.
+- `shared/` and `src/shared/` carry cross-runtime schema and contract logic.
+- `worldState`, `windowLayout`, and older entity structures should be treated as compatibility bridges, not the long-term canonical center of the system.
 
-This platform currently has six active surfaces:
+## Surfaces And Lanes
 
-- `Local Blank Workspace`
-    - route: `/`
-    - opens the blank white recursive node workspace
-    - local/bootstrap authoring surface before choosing a saved space project
+| Surface | Route | Role | Status |
+| --- | --- | --- | --- |
+| Local Blank Workspace | `/` | clean local node-first starting point | Active |
+| Public Space View | `/<space>` | live published project route for a space | Active |
+| Studio | `/<space>/studio` | stable main authoring workspace | Canonical main lane |
+| Beta | `/<space>/beta` | experimental node-first and research lane | Experimental |
+| Admin/Ops | `/admin?space=<space>` | operator/debug/status surface | Active |
+| V1 Legacy | compatibility/history code path | fallback and migration/editor history lane | Compatibility |
+| `serverXR` | `/serverXR` | backend runtime for spaces, projects, assets, ops, presence | Required |
 
-- `Public Space View`
-    - route: `/<space>`
-    - shows the live published project for a space
-    - opens the blank recursive node workspace when no live project is published
-- `Studio`
-    - route: `/<space>/studio`
-    - compatibility alias: `/studio` for `main`
-    - stable main authoring surface
-- `Beta`
-    - route: `/<space>/beta`
-    - compatibility alias: `/beta` for `main`
-    - active experimental/v2 lane kept alongside Studio
-- `Admin/Ops`
-    - route: `/admin?space=<space>`
-    - operator/debugging surface
-- `V1 Legacy`
-    - compatibility/history editor code path
-    - kept for migration and old scene support, not the default no-published-space route
+## Where Work Should Happen
 
-Current direction:
-
-- `/` is now the clean node-first starting surface
-- `/<space>` without a published project now starts from the same node-first workspace
-- Studio is the stable main product lane
-- Beta is the active experimental/v2 lane and the current home of the recursive node editor
-- V1 remains the compatibility and migration lane
-- public routes should stay simple even if the editor model grows
-
-## Space Model
-
-Spaces are first-class now.
-
-Each space can have:
-
-- a public route: `/<space>`
-- a Studio route: `/<space>/studio`
-- a Beta route: `/<space>/beta`
-- an Admin route: `/admin?space=<space>`
-
-Management capabilities now available in the work lane:
-
-- create spaces
-- open newly created spaces directly in `Public`, `Studio`, `Beta`, or `Admin`
-- rename space labels without changing the space ID/URL
-- delete spaces
-- create and delete projects inside a space
-- publish or clear a live project for a space
-
-Important nuance:
-
-- the space ID controls the URL
-- the label is safe to rename
-- Studio/Beta now treat the route space as authoritative
-- if a project request hits a missing space, the client can auto-provision that space and retry
-
-## Recursive Node Core
-
-This is the long-term concept that new work should follow.
-
-Canonical rule:
-
-- everything is a node
-- the desk is a node
-- floating UI is also nodes, just mounted in `view`
-- world settings are nodes like `world.color`, `world.light`, `world.grid`, and `world.camera`
-- authored panels are nodes like `view.panel`, `view.inspector`, `view.assets`, `view.browser`
-- content and runtime are nodes like `geom.cube`, `app.browser`, `script.js`, `script.py`, `asset.image`, `asset.video`, and `asset.model`
-
-The canonical project document now aims at:
-
-- `rootNodeId`
-- `nodes[]`
-- `edges[]`
-- `assets[]`
-- `templates[]`
-- `workspaceState`
-
-The root graph always begins with two root surfaces:
-
-- `world.root`
-- `view.root`
-
-Default blank start:
-
-- white world
-- white view layer
-- no authored panels
-- no geometry
-- authoring begins by double-clicking and creating nodes
-
-Primary authoring gesture:
-
-- double-click in the 3D world -> create a world node
-- double-click in the 2D view -> create a view node
-
-Important implementation note for future work:
-
-- `src/shared/projectSchema.js` is the source of truth for the recursive node document shape
-- legacy `worldState` and `windowLayout` still exist only as compatibility mirrors for older surfaces
-- new behavior should prefer node definitions and node ops over adding more permanent logic to the V1 object/window model
-
-Current implementation status:
-
-- `/` opens the blank local node workspace
-- Beta contains the first real recursive node editor surface
-- `/<space>` opens a published project when one exists, otherwise it starts a blank node workspace for that space
-- Studio and V1 are not fully node-native yet, so bridge code is still present on purpose
-
-## Repo Map
-
-- `src/RootApp.jsx`
-    - top-level route switch
-- `src/SpaceSurfaceApp.jsx`
-    - chooses blank node workspace, public viewer, or legacy preferences shell
-- `src/components/`
-    - shared desktop/mobile/admin UI
-- `src/hooks/`
-    - app orchestration, spaces UI, V1 logic
-- `src/project/`
-    - shared project model used by Studio and Beta
-- `src/project/nodeRegistry.js`
-    - node definitions for the recursive editor
-- `src/project/components/PublicProjectViewer.jsx`
-    - live public viewer
 - `src/studio/`
-    - Studio route/UI layer
+  - stable main authoring lane
+  - default place for main-lane authoring UI work
 - `src/beta/`
-    - Beta route/UI layer and current recursive node workspace
+  - experimental and research lane
+  - place for node-first/editor-v2 exploration
+- `src/project/`
+  - shared document, sync, presence, asset, and viewer/editor logic
+  - the safest default place for cross-lane project behavior
+- `src/shared/` and `shared/`
+  - schema/runtime contract layer
 - `serverXR/`
-    - backend app
-- `shared/`
-    - backend/shared schemas used by runtime
-- `src/shared/`
-    - frontend/shared schemas
-- `scripts/`
-    - dev stack, deploy, smoke, checkpoint, and release tooling
-- `docs/`
-    - checkpoints, deploy notes, testing, and architecture docs
+  - backend runtime, auth, assets, persistence, SSE, and presence
+- older orchestration surfaces
+  - `src/App.jsx`, `src/components/`, and `src/hooks/` still carry important active behavior
+  - do not automatically treat them as the best long-term home for new canonical behavior
 
-## Requirements
+Default contribution rules:
 
-- Node `22.x`
-- npm `10.x`
+- Prefer `Studio` for main user-facing product work unless the task is explicitly experimental.
+- Prefer `src/project/` for shared document and collaboration behavior.
+- Prefer node-first definitions and ops over growing legacy object/window systems.
+- Treat V1-oriented edits as compatibility work unless the task is explicitly about legacy support or migration.
 
-Recommended setup:
+## Working Process
+
+### Local setup
 
 ```bash
 nvm use
 npm install
-cd serverXR && npm install
+npm --prefix serverXR install
 ```
 
-This repo includes `.nvmrc` with the Node 22 baseline.
-
-## Local Development
-
-Run the full stack from the repo root:
-
-```bash
-npm run dev
-```
-
-Typical start-of-session commands:
+### Normal start-of-session flow
 
 ```bash
 git switch dev
@@ -246,7 +151,17 @@ git pull --ff-only origin dev
 npm run dev
 ```
 
-Useful local URLs:
+### Core local commands
+
+```bash
+npm run dev
+npm run lint
+npm run build
+npm run test
+npm run test:server-contracts
+```
+
+Useful local routes:
 
 - `http://localhost:5173/`
 - `http://localhost:5173/main`
@@ -255,457 +170,136 @@ Useful local URLs:
 - `http://localhost:5173/admin?space=main`
 - `http://localhost:4000/serverXR/api/health`
 
-Useful scripts:
+### Branch and promotion rules
 
-```bash
-npm run dev:client
-npm run dev:server
-npm run build
-npm run lint
-npm run test
-npm run test:server-contracts
-npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
-npm run checkpoint -- --environment staging --note "checkpoint note"
-```
+- normal work starts on `dev`
+- normal promotion path is `dev -> staging -> main`
+- do not start routine feature work on `main`
+- use `main` directly only for emergency production hotfixes
 
-## Collaboration Model
+### Release summary
 
-There are two collaboration models in the repo.
-
-### V1
-
-- `spaces` are the authoritative shared unit
-- durable scene ops are authoritative
-- SSE handles sync and catch-up
-- Socket.IO handles presence only
-
-### Studio/Beta Project Model
-
-- `projects` are the editable unit inside a space
-- durable project ops are authoritative
-- SSE carries project document updates
-- Socket.IO handles roster and cursors
-- a space can point `publishedProjectId` at one live project
-- `/<space>` opens the public viewer when a live project exists
-- otherwise `/<space>` opens the blank recursive node workspace for that space
-
-## ServerXR
-
-`serverXR` handles:
-
-- spaces
-- scenes
-- project documents
-- assets
-- ops history
-- SSE streams
-- Socket.IO presence/cursors
-- auth and edit locks
-
-Important environment variables:
-
-- `PORT`
-- `APP_BASE_PATH`
-- `DATA_ROOT`
-- `SHARED_ROOT`
-- `API_TOKEN`
-- `REQUIRE_AUTH`
-- `CORS_ORIGINS`
-- `MAX_UPLOAD_MB`
-
-More detail lives in [serverXR/README.md](serverXR/README.md).
-
-## Deploy Workflow
-
-Simple model:
-
-- write code on `dev`
-- promote preview-ready code to `staging`
-- promote staging-verified code to `main`
-- GitHub builds deploy artifacts
-- cPanel applies those artifacts to the host
-
-### One-command deploy shortcuts
-
-Normal commands from the repo root on the current host:
-
-```bash
-npm run deploy:status
-npm run deploy:staging
-npm run deploy:production
-npm run deploy -- smoke staging
-npm run deploy -- smoke production
-```
-
-Host-only recovery commands:
-
-```bash
-npm run deploy -- host staging
-npm run deploy -- host production
-```
-
-Important rules:
-
-- `dev` is integration only and does not deploy to hosting directly
-- run `deploy:dev` and `deploy:staging` from a clean `dev` branch
-- `deploy:production` fast-forwards `main` to `origin/staging` when possible, or creates a merge commit on top of `main` that prefers `staging` on conflicting hunks when the branches have both moved
-- `deploy:host:*` is for the matching cPanel clone or host shell, not your laptop
-- `deploy:remote:*` exists only for future SSH-capable hosts and is not part of the current shared-host flow
-- use `npm run deploy -- smoke staging` or `npm run deploy -- smoke production` to verify quickly
-
-Current hosting flow:
+From the repo root:
 
 ```bash
 npm run deploy:staging
-# wait about 1-2 minutes for GitHub publish + cPanel cron apply
-curl -s https://staging.di-studio.xyz/serverXR/api/health
-
-npm run deploy:production
-# wait about 1-2 minutes for GitHub publish + cPanel cron apply
-curl -s https://di-studio.xyz/serverXR/api/health
-```
-
-### Auto deploy on this host
-
-This host does not allow SSH, so true laptop-to-server push deploy is not available.
-
-The closest automatic flow is:
-
-1. push `staging` or `main` from your laptop
-2. GitHub publishes `cpanel-staging` or `cpanel-production`
-3. cPanel auto-applies that branch by cron
-
-Host-side poll/apply command:
-
-```bash
-cd /home/distudio/repositories/di.iiii-staging
-bash scripts/cpanel-poll-deploy.sh staging
-```
-
-```bash
-cd /home/distudio/repositories/di.iiii-production
-bash scripts/cpanel-poll-deploy.sh production
-```
-
-Recommended cPanel Cron Jobs:
-
-```cron
-*/2 * * * * cd /home/distudio/repositories/di.iiii-staging && bash scripts/cpanel-poll-deploy.sh staging >> /home/distudio/logs/staging-auto-deploy.log 2>&1
-*/2 * * * * cd /home/distudio/repositories/di.iiii-production && bash scripts/cpanel-poll-deploy.sh production >> /home/distudio/logs/production-auto-deploy.log 2>&1
-```
-
-That gives you near-automatic deploys from git without logging into cPanel every time.
-
-Use cPanel `Terminal` only for:
-
-- first-time bootstrap
-- cron setup
-- recovery when a cPanel clone diverges
-- manual host apply if cron is paused
-
-Branch mapping:
-
-- `staging` source branch publishes `cpanel-staging`
-- `main` source branch publishes `cpanel-production`
-- `dev` does not deploy directly
-
-### Fast path
-
-Use this when you are on `dev`, the change is committed, and you want the simplest real deploy path:
-
-1. Ship the current `dev` commit to staging:
-
-```bash
-npm run deploy:staging
-```
-
-2. Wait about 1-2 minutes, then verify staging:
-
-```bash
-curl -s https://staging.di-studio.xyz/serverXR/api/health
-npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
-```
-
-3. After staging passes, ship production:
-
-```bash
 npm run deploy:production
 ```
 
-4. Wait about 1-2 minutes, then verify production:
-
-```bash
-curl -s https://di-studio.xyz/serverXR/api/health
-npm run smoke:cpanel -- --base-url https://di-studio.xyz
-```
-
-Current automation note:
-
-- pushing `staging` already auto-builds the deploy artifact
-- the live cPanel apply step is still manual unless cPanel auto-deploy/webhook or a GitHub
-  Actions SSH deploy secret is configured
-- the safest current workflow is automatic build plus the short server apply command above
-
-### Full workflow circle
-
-Use this when you make a fix, test it, put it on staging, verify it, then ship it to production.
-
-Start clean and sync `dev`:
-
-```bash
-git status --short --branch
-git fetch origin
-git switch dev
-git pull --ff-only origin dev
-```
-
-Make your code change, then test locally:
-
-```bash
-npm run lint
-npm run build
-npm run test
-npm run test:server-contracts
-```
-
-Commit and push the fix to `dev`:
-
-```bash
-git status --short
-git add <changed-files>
-git commit -m "fix: short clear description"
-git push origin dev
-```
-
-Promote the exact tested `dev` commit to staging:
-
-```bash
-git switch staging
-git pull --ff-only origin staging
-git merge --ff-only dev
-git push origin staging
-```
-
-Wait for GitHub Actions to publish `cpanel-staging`, then confirm the cPanel artifact exists:
-
-```bash
-git fetch origin cpanel-staging
-git log -1 --oneline origin/cpanel-staging
-git show origin/cpanel-staging:.deploy/cpanel/release.json
-```
-
-Apply staging in cPanel:
-
-```text
-cPanel -> Git Version Control -> /home/distudio/repositories/di.iiii-staging
-Click Update from Remote
-Confirm branch is cpanel-staging
-Click Deploy HEAD Commit
-```
-
-If the cPanel button does not apply the release, use SSH:
-
-```bash
-cd /home/distudio/repositories/di.iiii-staging
-git pull --ff-only origin cpanel-staging
-bash scripts/cpanel-apply-prebuilt-release.sh staging
-```
-
-Verify staging:
-
-```bash
-curl -s https://staging.di-studio.xyz/serverXR/api/health
-npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
-```
-
-The staging health response must show:
-
-```json
-{
-    "release": {
-        "deployEnv": "staging",
-        "sourceRef": "staging",
-        "gitCommit": "<the staging source commit>"
-    }
-}
-```
-
-Only after staging is verified, promote the staging branch to production:
-
-```bash
-npm run deploy:production
-```
-
-Wait for GitHub Actions to publish `cpanel-production`, then confirm the production artifact exists:
-
-```bash
-git fetch origin cpanel-production
-git log -1 --oneline origin/cpanel-production
-git show origin/cpanel-production:.deploy/cpanel/release.json
-```
-
-Apply production in cPanel:
-
-```text
-cPanel -> Git Version Control -> production cPanel repo tracking cpanel-production
-Click Update from Remote
-Confirm branch is cpanel-production
-Click Deploy HEAD Commit
-```
-
-If the production cPanel button does not apply the release, use SSH and adjust the repo path if cPanel shows a different production clone path:
-
-```bash
-cd /home/distudio/repositories/di.iiii-production
-git pull --ff-only origin cpanel-production
-bash scripts/cpanel-apply-prebuilt-release.sh production
-```
-
-Verify production:
-
-```bash
-curl -s https://di-studio.xyz/serverXR/api/health
-npm run smoke:cpanel -- --base-url https://di-studio.xyz
-```
-
-Stop rules:
-
-- if `git status --short` shows unexpected changes, stop and inspect before switching branches
-- if any `git pull --ff-only` or `git merge --ff-only` fails, stop and decide whether to rebase or cherry-pick
-- if staging verification fails, do not promote to `main`
-- if cPanel says branches diverged, use the recovery steps below before deploying
-
-### Easy staging deploy
-
-Use this when you want to update `https://staging.di-studio.xyz`.
-
-1. Promote the approved source code:
-
-```bash
-git switch staging
-git pull --ff-only origin staging
-git merge --ff-only dev
-git push origin staging
-```
-
-2. Wait for GitHub Actions to publish `cpanel-staging`.
-
-3. In cPanel `Git Version Control`, open the staging repo:
-
-```text
-/home/distudio/repositories/di.iiii-staging
-```
-
-4. Click `Update from Remote`.
-
-5. Confirm the checked-out branch is `cpanel-staging` and the HEAD commit changed to the latest published cPanel commit.
-
-6. Click `Deploy HEAD Commit`.
-
-7. Verify the deployed backend reports the same source commit as `origin/staging`:
-
-```bash
-curl -s https://staging.di-studio.xyz/serverXR/api/health
-npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
-```
-
-The health JSON should include:
-
-```json
-{
-    "release": {
-        "deployEnv": "staging",
-        "sourceRef": "staging",
-        "gitCommit": "<current staging source commit>"
-    }
-}
-```
-
-### Easy production deploy
-
-Use this only after staging is verified.
-
-```bash
-npm run deploy:production
-```
-
-Then in cPanel `Git Version Control`, open the production repo tracking `cpanel-production`, click `Update from Remote`, then `Deploy HEAD Commit`.
-
-Verify:
-
-```bash
-curl -s https://di-studio.xyz/serverXR/api/health
-npm run smoke:cpanel -- --base-url https://di-studio.xyz
-```
-
-### If cPanel says branches diverged
-
-This is a recovery path for a cPanel clone that is stuck on an older artifact commit. Do not click `Deploy HEAD Commit` while cPanel is still on the old commit.
-
-For staging, run this in cPanel Terminal or SSH:
-
-```bash
-cd /home/distudio/repositories/di.iiii-staging
-git status --short
-git branch backup-cpanel-staging-before-reset-$(date +%Y%m%d-%H%M%S)
-git fetch origin cpanel-staging
-git reset --hard origin/cpanel-staging
-git status --short
-git log -1 --oneline
-```
-
-Then refresh cPanel `Git Version Control` and click `Deploy HEAD Commit`.
-
-For production, use the production cPanel clone and replace `cpanel-staging` with `cpanel-production`.
-
-### Deploy pieces
-
-- workflow: `.github/workflows/publish-cpanel-prebuilt-v2.yml`
-- staged bundle: `.deploy/cpanel/`
-- host apply script: `scripts/cpanel-apply-prebuilt-release.sh`
-
-`deploy:production` will refuse to roll `main` back if `staging` is behind. If the helper cannot merge `staging` into `main` even with staging-preferred conflict resolution, stop and resolve the drift before shipping.
-
-Important runtime rules:
-
-- do not delete the web-root `serverXR/` mount directory
-- do not replace Passenger with PM2 unless there is a host emergency
-- `SHARED_ROOT` is part of the runtime contract
-- staging and production content stay separate unless you intentionally sync them
-
-Emergency-only fallback material is archived under `docs/deploy/legacy/` and `legacy/`.
-
-## Testing
-
-Main checks:
-
-```bash
-npm run lint
-npm run build
-npm run test
-npm run test:server-contracts
-```
-
-Note:
-
-- backend contract tests bind to loopback ports
-- if they fail with `listen EPERM 127.0.0.1`, treat that as an environment restriction first
-
-## Current Development Focus
-
-Now:
-
-- keep deploy truth boring and stable
-- keep per-space routes and management flows predictable
-- keep Studio/Beta/public routes aligned
-- keep runtime path assumptions explicit with `DATA_ROOT` and `SHARED_ROOT`
-
-Next:
-
-- improve management UX around spaces and projects
-- reduce remaining Beta-era assumptions in Studio
-- keep V1 compatibility without letting it define the whole product
-
-## Contact
-
-write me: `d0b@duck.com`
+Normal release rule:
+
+1. work on `dev`
+2. validate locally
+3. promote to `staging`
+4. verify staging
+5. promote to `main`
+
+Use the dedicated deploy docs for host-specific details, emergency recovery, and cPanel-specific operations.
+
+## Status Dashboard
+
+| Area | Current State |
+| --- | --- |
+| Main authoring lane | `Studio` |
+| Experimental lane | `Beta` |
+| Public route | `/<space>` shows the published project or blank node workspace |
+| Backend authority | `serverXR` owns spaces, projects, assets, ops, presence, and edit enforcement |
+| Canonical model direction | recursive node-first project documents |
+| Shared logic center | `src/project/` |
+| Schema center | `src/shared/projectSchema.js` |
+| Compatibility bridges | `worldState`, `windowLayout`, legacy entities, V1 flows |
+| Persistence | single-host filesystem-backed |
+| Auth state | session/token-based, not full identity/role/audit model yet |
+| Physical sync/hardware layer | real direction grounded in experiments/context, not fully productized repo capability |
+| Verified checks | `npm run lint`, `npm run build`, `npm run test`, `npm run test:server-contracts` passed on `2026-04-17` |
+
+Active transitions:
+
+- `Studio` is moving toward deeper shared project logic and eventual fuller node-native behavior.
+- `Beta` is the live experimental home of the recursive node editor.
+- `V1` remains in place for migration, compatibility, and history-sensitive work.
+- Public routes stay intentionally simple even as the authoring model grows more capable.
+
+Unknowns that still matter:
+
+- long-term identity/role/auth model
+- storage beyond single-host filesystem persistence
+- fuller Studio parity with the node-first model
+- productized physical sync and hardware-linked runtime layers
+
+## For Future Humans And AI
+
+Start here before making assumptions about the repo.
+
+- Treat `Current Truth` as shipped/working reality.
+- Treat `North Star` as direction, not automatic present capability.
+- Treat `Still Transitional` as a warning label around bridge code, compatibility behavior, and mixed-generation architecture.
+
+How to identify source of truth:
+
+- project model and shared editor behavior:
+  - `src/project/`
+- long-term project schema:
+  - `src/shared/projectSchema.js`
+- backend contract and persistence:
+  - `serverXR/`
+- deeper product/architecture intent:
+  - `docs/architecture/`
+
+What not to mistake for canonical:
+
+- legacy mirrors are not the future data model
+- V1 compatibility behavior is not the default product direction
+- large old orchestration files are not always the right home for new permanent logic
+- physical/hardware sync should not be described as fully productized unless the repo truth has caught up
+
+Safe defaults for new work:
+
+- put shared project behavior in `src/project/`
+- prefer node-first behavior over new permanent legacy behavior
+- use `Studio` as the default main product lane
+- use `Beta` when the task is explicitly experimental, research-oriented, or node-first
+- update docs when architectural truth, workflow truth, or lane truth changes
+
+What to read next by task:
+
+- product architecture:
+  - [Recursive Node Core](docs/architecture/RECURSIVE_NODE_CORE.md)
+  - [Project Surfaces](docs/architecture/PROJECT_SURFACES.md)
+  - [Project Audit And Growth Plan](docs/architecture/PROJECT_AUDIT_2026-04-17.md)
+- backend/runtime:
+  - [serverXR README](serverXR/README.md)
+- deploy/release:
+  - [Live Deploy Runbook](docs/deploy/LIVE_DEPLOY.md)
+  - [cPanel Prebuilt Deploy](docs/deploy/CPANEL_PREBUILT_DEPLOY.md)
+- public context and studio framing:
+  - [Public Deck Context](docs/deck/)
+
+## Context And Supporting Docs
+
+`di.i` is grounded in real XR, spatial, and artistic practice. This repo is the software core of that direction, but it sits inside a broader context of studio work, experiments, collaborations, and public-facing research around linking virtual and physical environments.
+
+Public vision and repo model:
+
+- this repo is the private working source of truth for active development, deployment, experiments, and unfinished integration work
+- the public repo is the curated public/showcase surface for audited source, docs, portfolio context, and the broader `di.i` vision
+- do not push raw `dev` work, local archives, `.env` files, generated backend env files, cPanel/private host paths, or private uploads directly to the public repo
+- the public repo should receive intentionally selected material from this repo after it is reviewed, cleaned, and aligned with the `di.i` Web XR reality-creation story
+- the live website may be public while the working process, staging details, and private operational material stay protected in this repo
+
+Use the materials below as context and proof, not as replacements for repo truth:
+
+- architecture and repo direction
+  - [Project Audit And Growth Plan](docs/architecture/PROJECT_AUDIT_2026-04-17.md)
+  - [Project Surfaces](docs/architecture/PROJECT_SURFACES.md)
+  - [Recursive Node Core](docs/architecture/RECURSIVE_NODE_CORE.md)
+- workflow and deployment
+  - [Live Deploy Runbook](docs/deploy/LIVE_DEPLOY.md)
+  - [Private Dev And Public Showcase Workflow](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
+  - [serverXR README](serverXR/README.md)
+- checkpoints and current movement
+  - [Checkpoint 2026-04-09](docs/checkpoints/2026-04-09.md)
+- public/studio context
+  - [Public Deck Context](docs/deck/)
+
+The root README should stay evergreen. Dated milestones, external applications, or time-sensitive movement belong in supporting docs, checkpoints, or deck material rather than in this canonical entrypoint.
