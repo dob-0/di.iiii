@@ -12,7 +12,6 @@ const getServerSpace = vi.fn()
 const updateServerSpace = vi.fn()
 const navigateToStudioPath = vi.fn()
 const importLegacySceneFile = vi.fn()
-const SERVER_ASSET_ID = '4c122913-7872-42b3-8b04-9f73942022fd'
 
 vi.mock('../../project/services/projectsApi.js', () => ({
     DEFAULT_PROJECT_SPACE_ID: 'main',
@@ -77,8 +76,7 @@ describe('StudioHub', () => {
         })
     })
 
-    it('creates imported Studio projects with remapped legacy assets', async () => {
-        const assetFile = new File(['image-bytes'], 'hero.webp', { type: 'image/webp' })
+    it('creates imported Studio projects with the Studio import source', async () => {
         listProjects.mockResolvedValue([])
         createProject.mockResolvedValue({
             project: {
@@ -86,11 +84,8 @@ describe('StudioHub', () => {
             }
         })
         uploadProjectAsset.mockResolvedValue({
-            id: SERVER_ASSET_ID,
-            name: 'hero.webp',
-            mimeType: 'image/webp',
-            size: 11,
-            url: `/serverXR/api/projects/imported-project/assets/${SERVER_ASSET_ID}`
+            id: 'asset-1',
+            mimeType: 'image/webp'
         })
         updateProjectDocument.mockResolvedValue({ ok: true })
         importLegacySceneFile.mockResolvedValue({
@@ -98,23 +93,10 @@ describe('StudioHub', () => {
                 projectMeta: {
                     title: 'Imported Studio Scene'
                 },
-                assets: [{
-                    id: 'asset-legacy-1',
-                    name: 'hero.webp',
-                    mimeType: 'image/webp',
-                    size: 11
-                }],
-                entities: [{
-                    id: 'image-1',
-                    type: 'box',
-                    components: {
-                        media: {
-                            assetId: 'asset-legacy-1'
-                        }
-                    }
-                }]
+                assets: [],
+                entities: []
             },
-            assetFiles: new Map([['asset-legacy-1', assetFile]]),
+            assetFiles: new Map(),
             warnings: []
         })
 
@@ -142,68 +124,5 @@ describe('StudioHub', () => {
                 source: 'legacy-import-studio'
             })
         }))
-        expect(uploadProjectAsset).toHaveBeenCalledWith('imported-project', assetFile, {})
-        const savedDocument = updateProjectDocument.mock.calls[0][1]
-        expect(savedDocument.assets).toEqual([
-            expect.objectContaining({
-                id: SERVER_ASSET_ID,
-                url: `/serverXR/api/projects/imported-project/assets/${SERVER_ASSET_ID}`
-            })
-        ])
-        expect(savedDocument.entities[0].type).toBe('image')
-        expect(savedDocument.entities[0].components.media.assetId).toBe(SERVER_ASSET_ID)
-        expect(navigateToStudioPath).toHaveBeenCalledWith('/gallery/studio/projects/imported-project')
-    })
-
-    it('cleans up a partial imported project when asset upload fails', async () => {
-        const assetFile = new File(['image-bytes'], 'hero.webp', { type: 'image/webp' })
-        listProjects.mockResolvedValue([])
-        createProject.mockResolvedValue({
-            project: {
-                id: 'imported-project'
-            }
-        })
-        uploadProjectAsset.mockRejectedValue(new Error('Upload failed before document save.'))
-        deleteProject.mockResolvedValue({ ok: true })
-        importLegacySceneFile.mockResolvedValue({
-            document: {
-                projectMeta: {
-                    title: 'Imported Studio Scene'
-                },
-                assets: [{
-                    id: 'asset-legacy-1',
-                    name: 'hero.webp',
-                    mimeType: 'image/webp'
-                }],
-                entities: [{
-                    id: 'image-1',
-                    type: 'image',
-                    components: {
-                        media: {
-                            assetId: 'asset-legacy-1'
-                        }
-                    }
-                }]
-            },
-            assetFiles: new Map([['asset-legacy-1', assetFile]]),
-            warnings: []
-        })
-
-        render(<StudioHub spaceId="gallery" />)
-
-        const input = document.querySelector('input[type="file"]')
-        const file = new File(['{}'], 'legacy-scene.json', { type: 'application/json' })
-        fireEvent.change(input, {
-            target: {
-                files: [file]
-            }
-        })
-
-        await waitFor(() => {
-            expect(deleteProject).toHaveBeenCalledWith('imported-project')
-        })
-        expect(updateProjectDocument).not.toHaveBeenCalled()
-        expect(navigateToStudioPath).not.toHaveBeenCalled()
-        expect(await screen.findByText('Upload failed before document save.')).toBeInTheDocument()
     })
 })

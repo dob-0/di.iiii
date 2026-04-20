@@ -159,7 +159,6 @@ export function useSpaceSocket(spaceId, userId, userName) {
     const socket = io(serverUrl, {
       path,
       auth,
-      withCredentials: true,
       reconnection: false
     })
 

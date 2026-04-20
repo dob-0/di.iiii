@@ -120,9 +120,6 @@ Environment variables:
 | `SPACE_TTL_MS` | Inactivity window before temporary spaces are pruned. | `2592000000` |
 | `API_TOKEN` | Token required for write requests. | _none_ |
 | `REQUIRE_AUTH` | Enforce `API_TOKEN` for writes. | `NODE_ENV`-aware |
-| `AUTH_SESSION_TTL_MS` | Lifetime for browser edit sessions created through `/api/auth/session`. | `43200000` |
-| `AUTH_SESSION_COOKIE_SECURE` | Mark edit-session cookies `Secure`. | `true` in production |
-| `AUTH_SESSION_COOKIE_NAME` | Cookie name for edit sessions. | `dii_serverxr_session` |
 | `CORS_ORIGINS` | Comma-separated allowlist of origins. | _none_ |
 | `MAX_UPLOAD_MB` | Max asset upload size in MB. | `100` |
 | `SHARED_ROOT` | Override for shared schema loading. Use this when staging and production keep separate shared folders outside the repo. | repo-local `shared/` fallback |
@@ -130,8 +127,6 @@ Environment variables:
 Security notes:
 
 - in production, unauthenticated writes are rejected unless `REQUIRE_AUTH=false`
-- browser editors should use the http-only session flow instead of a compiled `VITE_API_TOKEN`
-- bearer-token auth remains available for automation and emergency compatibility
 - if a space has `allowEdits=false`, scene, asset, and realtime mutations are rejected with `403`
 
 ## Runtime Contract
@@ -142,7 +137,7 @@ These values matter more than old deploy folklore:
 - staging should use `SHARED_ROOT=/home/distudio/shared-staging`
 - production should use `DATA_ROOT=/home/distudio/serverXR/data`
 - production should use `SHARED_ROOT=/home/distudio/shared`
-- `API_TOKEN` stays server-only for normal builds; browser editors create an http-only auth session when a protected write needs it
+- `API_TOKEN` and `VITE_API_TOKEN` should match inside each environment
 - the Node app mount stays `/serverXR` in both environments
 
 If `/serverXR/api/health` fails, check this order:

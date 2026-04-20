@@ -82,9 +82,6 @@ const maxUploadBytes = Math.max(1, maxUploadMb) * 1024 * 1024
 const dataDir = resolveDir(process.env.DATA_ROOT, DEFAULT_DATA_DIR)
 const spacesDir = resolveDir(process.env.SPACES_DIR, path.join(dataDir, 'spaces'))
 const uploadsDir = resolveDir(process.env.UPLOADS_DIR, path.join(dataDir, 'uploads'))
-const authSessionTtlMs = parseNumber(process.env.AUTH_SESSION_TTL_MS, 1000 * 60 * 60 * 12)
-const authSessionCookieName = (process.env.AUTH_SESSION_COOKIE_NAME || 'dii_serverxr_session').trim()
-const authSessionCookieSecure = parseBool(process.env.AUTH_SESSION_COOKIE_SECURE, isProduction)
 
 if (requireAuth && !apiToken) {
   throw new Error('API_TOKEN is required when REQUIRE_AUTH is enabled.')
@@ -98,12 +95,6 @@ const config = {
   requireAuth,
   corsOrigins,
   maxUploadBytes,
-  authSession: {
-    cookieName: authSessionCookieName || 'dii_serverxr_session',
-    cookiePath: basePath || '/',
-    cookieSecure: authSessionCookieSecure,
-    ttlMs: authSessionTtlMs
-  },
   directories: {
     root: ROOT_DIR,
     publicDir: path.resolve(ROOT_DIR, 'public'),

@@ -53,7 +53,7 @@ if [[ "${DRY_RUN}" != "--dry-run" ]]; then
   fi
 fi
 
-run_or_echo git fetch origin "${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}"
+run_or_echo git fetch origin "${TARGET_BRANCH}"
 
 LOCAL_HEAD="$(git rev-parse HEAD)"
 REMOTE_HEAD="$(git rev-parse "origin/${TARGET_BRANCH}")"

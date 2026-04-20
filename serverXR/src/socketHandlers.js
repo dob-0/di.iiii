@@ -1,6 +1,5 @@
 const { Server } = require('socket.io')
 const { buildCorsOriginHandler } = require('./config')
-const { readCookie, verifyAuthSessionValue } = require('./authSession')
 
 // Store active connections
 const spaceConnections = new Map()
@@ -13,18 +12,6 @@ const readSocketToken = (socket) => {
   if (!header) return ''
   const normalized = String(header).trim()
   return normalized.replace(/^bearer\s+/i, '')
-}
-
-const isSocketAuthenticated = (socket, config) => {
-  const token = readSocketToken(socket)
-  if (token && token === config.apiToken) {
-    return true
-  }
-  const sessionValue = readCookie(
-    socket?.handshake?.headers?.cookie || '',
-    config.authSession?.cookieName
-  )
-  return verifyAuthSessionValue(sessionValue, { secret: config.apiToken }).valid
 }
 
 const getSocketPath = (basePath = '') => {
@@ -44,15 +31,15 @@ function initializeSocket(httpServer, config) {
     path: getSocketPath(config.basePath),
     cors: {
       origin: buildCorsOriginHandler(config.corsOrigins),
-      methods: ['GET', 'POST'],
-      credentials: true
+      methods: ['GET', 'POST']
     }
   })
 
   // Middleware for authentication
   io.use((socket, next) => {
     if (config.requireAuth) {
-      if (!isSocketAuthenticated(socket, config)) {
+      const token = readSocketToken(socket)
+      if (!token || token !== config.apiToken) {
         next(new Error('Unauthorized'))
         return
       }

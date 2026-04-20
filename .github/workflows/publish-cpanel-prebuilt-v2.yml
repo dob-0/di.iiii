@@ -64,6 +64,7 @@ jobs:
       - name: Stage cPanel release
         env:
           VITE_API_BASE_URL: /serverXR
+          VITE_API_TOKEN: ${{ secrets.SERVERXR_API_TOKEN }}
         run: node scripts/stage-cpanel-nodeapp-release.mjs
 
       - name: Publish target branch

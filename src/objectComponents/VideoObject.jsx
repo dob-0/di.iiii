@@ -3,111 +3,73 @@ import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
 import { attachVideoPlaybackRetry, configureVideoElement } from '../utils/videoPlayback.js'
-import { detectAssetMediaKind } from '../utils/mediaAssetTypes.js'
-
-const HAVE_CURRENT_DATA = 2
-const DEFAULT_VIDEO_SIZE = [1, 1]
-
-export const hasUsableVideoFrame = (video) => {
-    const readyState = Number(video?.readyState) || 0
-    const width = Number(video?.videoWidth) || 0
-    const height = Number(video?.videoHeight) || 0
-    return readyState >= HAVE_CURRENT_DATA && width > 0 && height > 0
-}
-
-const getVideoPlaneSize = (video) => {
-    const width = Number(video?.videoWidth) || 0
-    const height = Number(video?.videoHeight) || 0
-    if (width <= 0 || height <= 0) {
-        return null
-    }
-    const aspect = width / height
-    return [Math.max(aspect * 3, 1), 3]
-}
 
 function useVideoTextureSource(sourceUrl) {
     const [texture, setTexture] = useState(null)
-    const [size, setSize] = useState(DEFAULT_VIDEO_SIZE)
     const [playbackBlocked, setPlaybackBlocked] = useState(false)
 
     useEffect(() => {
         const resolvedSrc = typeof sourceUrl === 'string' ? sourceUrl.trim() : ''
         if (!resolvedSrc || resolvedSrc === 'blob:null') {
             setTexture(null)
-            setSize(DEFAULT_VIDEO_SIZE)
             setPlaybackBlocked(false)
-            return () => {}
+            return
         }
 
-        let disposed = false
-        let tex = null
         const video = document.createElement('video')
         configureVideoElement(video, resolvedSrc, { preload: 'auto' })
 
-        setTexture(null)
-        setSize(DEFAULT_VIDEO_SIZE)
-        setPlaybackBlocked(false)
-
-        const disposeTexture = () => {
-            if (!tex) return
-            tex.dispose()
-            tex = null
-        }
-
-        const syncSize = () => {
-            const nextSize = getVideoPlaneSize(video)
-            if (nextSize) {
-                setSize(nextSize)
-            }
-        }
-
-        const publishTextureWhenReady = () => {
-            if (disposed) return
-            syncSize()
-            if (!hasUsableVideoFrame(video)) return
-            if (!tex) {
-                tex = new THREE.VideoTexture(video)
-                tex.colorSpace = THREE.SRGBColorSpace
-                tex.minFilter = THREE.LinearFilter
-                tex.magFilter = THREE.LinearFilter
-                tex.needsUpdate = true
-            }
-            setTexture(tex)
-        }
+        const tex = new THREE.VideoTexture(video)
+        tex.colorSpace = THREE.SRGBColorSpace
+        tex.minFilter = THREE.LinearFilter
+        tex.magFilter = THREE.LinearFilter
+        tex.needsUpdate = true
 
         const detachPlaybackRetry = attachVideoPlaybackRetry(video, {
             onBlockedChange: setPlaybackBlocked
         })
 
-        video.addEventListener('loadedmetadata', syncSize)
-        video.addEventListener('loadeddata', publishTextureWhenReady)
-        video.addEventListener('canplay', publishTextureWhenReady)
-        video.addEventListener('playing', publishTextureWhenReady)
-        publishTextureWhenReady()
+        setTexture(tex)
 
         return () => {
-            disposed = true
-            video.removeEventListener('loadedmetadata', syncSize)
-            video.removeEventListener('loadeddata', publishTextureWhenReady)
-            video.removeEventListener('canplay', publishTextureWhenReady)
-            video.removeEventListener('playing', publishTextureWhenReady)
             detachPlaybackRetry()
             video.pause()
             video.src = ''
-            disposeTexture()
+            tex.dispose()
         }
     }, [sourceUrl])
 
-    return { texture, playbackBlocked, size }
+    return { texture, playbackBlocked }
 }
 
 export default function VideoObject({ assetRef, data, opacity = 1, linkActive }) {
     const assetUrl = useAssetUrl(assetRef, { preferRemoteSource: true })
-    const assetKind = detectAssetMediaKind(assetRef)
-    const isVideoType = !assetRef?.mimeType || assetKind === 'video'
+    const isVideoType = !assetRef?.mimeType || assetRef.mimeType.startsWith('video/')
     const rawSource = (isVideoType ? assetUrl : null) || data || null
     const sourceUrl = typeof rawSource === 'string' ? rawSource.trim() : null
-    const { texture, playbackBlocked, size } = useVideoTextureSource(sourceUrl)
+    const [size, setSize] = useState([1, 1])
+    const { texture, playbackBlocked } = useVideoTextureSource(sourceUrl)
+
+    useEffect(() => {
+        const resolvedSrc = typeof sourceUrl === 'string' ? sourceUrl.trim() : ''
+        if (!resolvedSrc || resolvedSrc === 'blob:null') {
+            setSize([1, 1])
+            return
+        }
+
+        const video = document.createElement('video')
+        configureVideoElement(video, resolvedSrc, { preload: 'metadata' })
+        const handleMetadata = () => {
+            const aspect = video.videoWidth / (video.videoHeight || 1)
+            setSize([Math.max(aspect * 3, 1), 3])
+            video.removeEventListener('loadedmetadata', handleMetadata)
+        }
+        video.addEventListener('loadedmetadata', handleMetadata)
+        return () => {
+            video.removeEventListener('loadedmetadata', handleMetadata)
+            video.src = ''
+        }
+    }, [sourceUrl])
 
     if (!texture) {
         return null

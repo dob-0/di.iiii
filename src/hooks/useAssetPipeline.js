@@ -480,7 +480,7 @@ export function useAssetPipeline({
                         const materialEntry = candidates.shift()
                         consumedMaterialIndices.add(materialEntry.index)
                         try {
-                            const materialMeta = await ingestAssetFile(materialEntry.file)
+                            const materialMeta = await saveAssetFromFile(materialEntry.file)
                             overridesPayload.materialsAssetRef = materialMeta
                         } catch (error) {
                             console.error(`Failed to store material file ${materialEntry.file.name}`, error)
@@ -516,7 +516,7 @@ export function useAssetPipeline({
             const detail = failureDetails.length ? `\n\n${failureDetails.join('\n')}` : ''
             alert(`Some files could not be added: ${unsupported.join(', ')}${detail}`)
         }
-    }, [getFileTypeForObject, handleAddAssetObject, ingestAssetFile])
+    }, [getFileTypeForObject, handleAddAssetObject])
 
     const computeGroundPosition = useCallback((clientX, clientY) => {
         const canvas = document.querySelector('canvas')

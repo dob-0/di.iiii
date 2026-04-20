@@ -126,16 +126,16 @@ const SAFE_PUBLIC_API_TOKEN_PATTERN = /^[A-Za-z0-9._~+/\-=]{16,}$/
 
 const normalizePublicApiToken = (value) => normalizeValue(value).replace(/^bearer\s+/i, '')
 
-const normalizeOptionalPublicApiToken = (value) => {
+const assertValidPublicApiToken = (value) => {
     const normalized = normalizePublicApiToken(value)
     if (!normalized) {
-        return ''
+        throw new Error('Missing VITE_API_TOKEN for cPanel release build.')
     }
     if (!SAFE_PUBLIC_API_TOKEN_PATTERN.test(normalized)) {
         throw new Error(
             'Malformed VITE_API_TOKEN for cPanel release build. ' +
             'Expected a single token value, but received whitespace or shell characters. ' +
-            'Leave VITE_API_TOKEN unset for normal builds, or check the local .env value.'
+            'Check the GitHub Actions secret SERVERXR_API_TOKEN or the local .env value.'
         )
     }
     return normalized
@@ -173,10 +173,7 @@ const buildReleaseEnv = async () => {
         env.VITE_API_TOKEN = rootEnv.VITE_API_TOKEN
     }
 
-    env.VITE_API_TOKEN = normalizeOptionalPublicApiToken(env.VITE_API_TOKEN)
-    if (!env.VITE_API_TOKEN) {
-        delete env.VITE_API_TOKEN
-    }
+    env.VITE_API_TOKEN = assertValidPublicApiToken(env.VITE_API_TOKEN)
 
     return env
 }

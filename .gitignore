@@ -26,9 +26,6 @@ pnpm-debug.log*
 # Local workspace-only files
 .codex
 open_call/
-scene examples/
-*.dii-project.zip
-*.scene.zip
 docs/checkpoints/
 .cpanel.yml
 

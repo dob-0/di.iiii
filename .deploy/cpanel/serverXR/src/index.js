@@ -7,13 +7,6 @@ const multer = require('multer')
 const path = require('node:path')
 const crypto = require('node:crypto')
 const { config, buildCorsOriginHandler } = require('./config')
-const {
-  createAuthSessionValue,
-  readCookie,
-  serializeAuthSessionCookie,
-  serializeExpiredAuthSessionCookie,
-  verifyAuthSessionValue
-} = require('./authSession')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { initializeSocket } = require('./socketHandlers')
 const { loadReleaseInfo } = require('./releaseInfo')
@@ -279,104 +272,11 @@ const readAuthToken = (req) => {
   return null
 }
 
-const normalizeAuthToken = (value = '') => String(value || '').trim().replace(/^bearer\s+/i, '')
-
-const readAuthSession = (req) => {
-  const value = readCookie(req.get('cookie') || '', config.authSession.cookieName)
-  const result = verifyAuthSessionValue(value, { secret: config.apiToken })
-  if (!result.valid) {
-    return { authenticated: false, type: 'session', reason: result.reason }
-  }
-  return {
-    authenticated: true,
-    type: 'session',
-    session: result.session
-  }
-}
-
-const getAuthState = (req) => {
-  const token = normalizeAuthToken(readAuthToken(req))
-  if (token && token === config.apiToken) {
-    return { authenticated: true, type: 'token' }
-  }
-  return readAuthSession(req)
-}
-
-const getPublicAuthState = (req) => {
-  if (!config.requireAuth) {
-    return { authenticated: true, type: 'disabled' }
-  }
-  return getAuthState(req)
-}
-
-const setAuthSessionCookie = (res, value) => {
-  res.setHeader('Set-Cookie', serializeAuthSessionCookie(value, {
-    name: config.authSession.cookieName,
-    path: config.authSession.cookiePath,
-    secure: config.authSession.cookieSecure,
-    ttlMs: config.authSession.ttlMs
-  }))
-}
-
-const clearAuthSessionCookie = (res) => {
-  res.setHeader('Set-Cookie', serializeExpiredAuthSessionCookie({
-    name: config.authSession.cookieName,
-    path: config.authSession.cookiePath,
-    secure: config.authSession.cookieSecure
-  }))
-}
-
-router.get('/api/auth/session', (req, res) => {
-  const state = getPublicAuthState(req)
-  res.json({
-    requireAuth: config.requireAuth,
-    authenticated: Boolean(state.authenticated),
-    type: state.type || null,
-    expiresAt: state.session?.expiresAt || null
-  })
-})
-
-router.post('/api/auth/session', (req, res) => {
-  if (!config.requireAuth) {
-    clearAuthSessionCookie(res)
-    res.json({
-      requireAuth: false,
-      authenticated: true,
-      type: 'disabled',
-      expiresAt: null
-    })
-    return
-  }
-
-  const token = normalizeAuthToken(req.body?.token)
-  if (!token || token !== config.apiToken) {
-    clearAuthSessionCookie(res)
-    res.status(401).json({ error: 'Unauthorized' })
-    return
-  }
-
-  const session = createAuthSessionValue({
-    secret: config.apiToken,
-    ttlMs: config.authSession.ttlMs
-  })
-  setAuthSessionCookie(res, session.value)
-  res.json({
-    requireAuth: true,
-    authenticated: true,
-    type: 'session',
-    expiresAt: session.expiresAt
-  })
-})
-
-router.delete('/api/auth/session', (req, res) => {
-  clearAuthSessionCookie(res)
-  res.status(204).end()
-})
-
 const requireWriteAuth = (req, res, next) => {
   if (!config.requireAuth) return next()
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next()
-  if (getAuthState(req).authenticated) {
+  const token = readAuthToken(req)
+  if (token && token === config.apiToken) {
     return next()
   }
   res.status(401).json({ error: 'Unauthorized' })
