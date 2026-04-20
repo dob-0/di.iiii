@@ -6,6 +6,46 @@
 
 `di.i` is an open-source, node-based Web XR reality creation system. It behaves like a visual programming language for linking digital logic, spatial media, and real environments through authored nodes, shared spaces, and live project documents. It is built on the web as a serious medium and universal substrate, not as a browser-only limitation.
 
+## Project Links
+
+- Live site: [di-studio.xyz](https://di-studio.xyz)
+- Public repo and contributor front door: [dob-0/di.i](https://github.com/dob-0/di.i)
+- Private working and deployment repo: [dob-0/di.iiii](https://github.com/dob-0/di.iiii)
+- Public-context materials: [docs/deck](docs/deck/)
+- Public/private workflow: [Private Dev And Public Showcase Workflow](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
+- Deployment runbook: [Live Deploy Runbook](docs/deploy/LIVE_DEPLOY.md)
+
+## Repo And Hosting Topology
+
+```mermaid
+flowchart LR
+    work["Daily work"] --> dev["dob-0/di.iiii<br/>private repo"]
+    dev --> branchDev["dev"]
+    branchDev --> branchStaging["staging"]
+    branchStaging --> branchMain["main"]
+    branchMain --> release["cpanel-* release branches"]
+    release --> hosting["di-studio.xyz<br/>live hosting"]
+    branchMain --> curate["curated public export"]
+    curate --> public["dob-0/di.i<br/>public repo"]
+    public --> discover["public docs<br/>issues / PRs<br/>developer discovery"]
+```
+
+## Repositories
+
+- `dob-0/di.iiii`
+  - private working repo
+  - active source of truth for development, staging, deployment automation, and hosting-connected release flow
+  - branch model: `dev -> staging -> main`
+  - hosting should deploy from this repo and its generated release branches
+- `dob-0/di.i`
+  - public repo
+  - curated source, docs, public narrative, and contributor/discovery entrypoint
+  - should receive reviewed exports from `di.iiii`, not raw `dev` history or private operational material
+- relationship
+  - private work happens in `di.iiii`
+  - public code/docs are intentionally promoted into `di.i`
+  - production hosting must not treat `di.i` as the deploy source of truth
+
 ## What di.i is
 
 `di.i` is both a software platform and a studio-network direction.
@@ -281,6 +321,13 @@ What to read next by task:
 
 Public vision and repo model:
 
+- `dob-0/di.iiii` is the private working and deployment source of truth
+- `dob-0/di.i` is the public repo, public narrative surface, and contributor/discovery entrypoint
+- hosting should deploy from the private repo release lanes and generated `cpanel-*` branches, not from the public showcase repo
+- the public repo should point people to the live site and curated source, while the private repo keeps raw operations, staging details, and host-specific workflow
+- intended topology:
+  - `di.iiii:dev -> di.iiii:staging -> di.iiii:main -> hosting`
+  - `di.iiii:main -> curated export -> di.i:main`
 - this repo is the private working source of truth for active development, deployment, experiments, and unfinished integration work
 - the public repo is the curated public/showcase surface for audited source, docs, portfolio context, and the broader `di.i` vision
 - do not push raw `dev` work, local archives, `.env` files, generated backend env files, cPanel/private host paths, or private uploads directly to the public repo
