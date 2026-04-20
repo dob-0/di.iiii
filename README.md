@@ -39,10 +39,12 @@ flowchart LR
   - hosting should deploy from this repo and its generated release branches
 - `dob-0/di.i`
   - public repo
+  - main public showcase and open-source place for people to collaborate and create
   - curated source, docs, public narrative, and contributor/discovery entrypoint
   - should receive reviewed exports from `di.iiii`, not raw `dev` history or private operational material
 - relationship
   - private work happens in `di.iiii`
+  - `di.i` is the visible public place where collaboration happens in the open
   - public code/docs are intentionally promoted into `di.i`
   - production hosting must not treat `di.i` as the deploy source of truth
 
