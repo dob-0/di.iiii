@@ -1,0 +1,51 @@
+name: Sync public di.i
+
+on:
+  push:
+    branches:
+      - dev
+      - staging
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout di.iiii
+        uses: actions/checkout@v4
+
+      - name: Checkout di.i
+        uses: actions/checkout@v4
+        with:
+          repository: dob-0/di.i
+          ref: ${{ github.ref_name }}
+          token: ${{ secrets.DI_I_SYNC_TOKEN }}
+          path: di.i-public
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run sync script
+        run: node scripts/sync-public-di-i.mjs --dest di.i-public
+
+      - name: Commit and push to di.i
+        working-directory: di.i-public
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing to sync."
+            exit 0
+          fi
+          git commit -m "sync: from di.iiii@${{ github.ref_name }} (${{ github.sha }})"
+          git push origin ${{ github.ref_name }}
