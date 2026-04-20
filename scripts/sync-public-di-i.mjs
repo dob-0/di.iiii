@@ -66,6 +66,7 @@ const BLOCKED_PREFIXES = [
     'docs/ops/',
     'legacy/',
     'open_call/',
+    'public/serverXR/',
     'scene examples/',
     'serverXR/data/',
     'serverXR/uploads/',
@@ -79,6 +80,9 @@ const BLOCKED_FILES = new Set([
     '.github/workflows/release.yml',
     'docs/deck/README.md',
     'docs/deck/di.ii XR studio_network .pdf',
+    'public/.htaccess',
+    'public/clear-default-scene.php',
+    'public/upload-default-scene.php',
     'serverXR/README.md'
 ])
 
@@ -197,12 +201,22 @@ const main = async () => {
     await writeJson(path.join(destDir, 'package.json'), buildPublicPackage(privatePackage))
     await writeJson(path.join(destDir, 'package-lock.json'), buildPublicLockfile(privateLock))
 
+    // Copy public-README.md → README.md in destination
+    const publicReadmeSrc = path.join(ROOT_DIR, 'public-README.md')
+    try {
+        const readmeBuffer = await fs.readFile(publicReadmeSrc)
+        await fs.writeFile(path.join(destDir, 'README.md'), readmeBuffer)
+        copied.push('public-README.md -> README.md')
+    } catch {
+        // Ignore if not present.
+    }
+
     const summary = {
         source: 'worktree',
         destDir: toPosix(destDir),
         syncedCount: copied.length,
         skipped: skipEntries,
-        generatedFiles: ['package.json', 'package-lock.json']
+        generatedFiles: ['package.json', 'package-lock.json', 'README.md']
     }
 
     console.log(JSON.stringify(summary, null, 2))
