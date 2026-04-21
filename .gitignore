@@ -8,11 +8,26 @@ tmp/
 .archive/
 .deploy/
 
-# Env and local config
+# Env and local config — never commit files with real secrets
 .env
-.env.*.local
 .env.local
+.env.*.local
 *.local
+
+# Additional credential / secret file patterns
+.env.production
+.env.staging
+.env.development
+*.pem
+*.key
+*.p12
+*.pfx
+*.cert
+*.crt
+secrets/
+.secrets/
+credentials/
+config/secrets.*
 
 # Logs
 npm-debug.log*
