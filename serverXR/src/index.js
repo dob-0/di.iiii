@@ -6,6 +6,14 @@ const morgan = require('morgan')
 const multer = require('multer')
 const path = require('node:path')
 const crypto = require('node:crypto')
+const {
+  formatAuthScopeLabel,
+  formatAuthRoleLabel,
+  hasRequiredAuthRole,
+  isAuthScopeAllowedForSpace,
+  normalizeAuthRole,
+  normalizeAuthScopeSpaces
+} = require('./authAccess')
 const { config, buildCorsOriginHandler } = require('./config')
 const {
   createAuthSessionValue,
@@ -265,6 +273,26 @@ app.use((req, res, next) => {
 const router = express.Router()
 router.use(express.static(PUBLIC_DIR))
 
+const buildAuthState = ({
+  authenticated = false,
+  type = null,
+  role = null,
+  subject = null,
+  label = null,
+  spaces = undefined,
+  session = null,
+  reason = null
+} = {}) => ({
+  authenticated: Boolean(authenticated),
+  type: type || null,
+  role: normalizeAuthRole(role, null),
+  subject: subject || null,
+  label: label || null,
+  spaces: normalizeAuthScopeSpaces(spaces, null),
+  ...(session ? { session } : {}),
+  ...(reason ? { reason } : {})
+})
+
 const readAuthToken = (req) => {
   const header = req.get('authorization')
   if (header) {
@@ -283,28 +311,53 @@ const normalizeAuthToken = (value = '') => String(value || '').trim().replace(/^
 
 const readAuthSession = (req) => {
   const value = readCookie(req.get('cookie') || '', config.authSession.cookieName)
-  const result = verifyAuthSessionValue(value, { secret: config.apiToken })
+  const result = verifyAuthSessionValue(value, { secret: config.auth.sessionSecret })
   if (!result.valid) {
-    return { authenticated: false, type: 'session', reason: result.reason }
+    return buildAuthState({ authenticated: false, type: 'session', reason: result.reason })
+  }
+  const role = normalizeAuthRole(result.session?.role, null)
+  if (!role) {
+    return buildAuthState({ authenticated: false, type: 'session', reason: 'legacy' })
   }
   return {
-    authenticated: true,
-    type: 'session',
+    ...buildAuthState({
+      authenticated: true,
+      type: 'session',
+      role,
+      subject: result.session?.subject,
+      label: result.session?.label,
+      spaces: result.session?.spaces,
+      session: result.session
+    }),
     session: result.session
   }
 }
 
 const getAuthState = (req) => {
   const token = normalizeAuthToken(readAuthToken(req))
-  if (token && token === config.apiToken) {
-    return { authenticated: true, type: 'token' }
+  const identity = config.auth.resolveIdentity(token)
+  if (identity) {
+    return buildAuthState({
+      authenticated: true,
+      type: 'token',
+      role: identity.role,
+      subject: identity.subject,
+      label: identity.label,
+      spaces: identity.spaces
+    })
   }
   return readAuthSession(req)
 }
 
 const getPublicAuthState = (req) => {
   if (!config.requireAuth) {
-    return { authenticated: true, type: 'disabled' }
+    return buildAuthState({
+      authenticated: true,
+      type: 'disabled',
+      role: 'admin',
+      subject: 'auth-disabled',
+      label: 'Auth Disabled'
+    })
   }
   return getAuthState(req)
 }
@@ -327,11 +380,15 @@ const clearAuthSessionCookie = (res) => {
 }
 
 router.get('/api/auth/session', (req, res) => {
-  const state = getPublicAuthState(req)
+  const state = req.authState || getPublicAuthState(req)
   res.json({
     requireAuth: config.requireAuth,
     authenticated: Boolean(state.authenticated),
     type: state.type || null,
+    role: state.role || null,
+    subject: state.subject || null,
+    label: state.label || null,
+    spaces: state.spaces,
     expiresAt: state.session?.expiresAt || null
   })
 })
@@ -349,21 +406,32 @@ router.post('/api/auth/session', (req, res) => {
   }
 
   const token = normalizeAuthToken(req.body?.token)
-  if (!token || token !== config.apiToken) {
+  const identity = config.auth.resolveIdentity(token)
+  if (!identity) {
     clearAuthSessionCookie(res)
     res.status(401).json({ error: 'Unauthorized' })
     return
   }
 
   const session = createAuthSessionValue({
-    secret: config.apiToken,
-    ttlMs: config.authSession.ttlMs
+    secret: config.auth.sessionSecret,
+    ttlMs: config.authSession.ttlMs,
+    session: {
+      subject: identity.subject,
+      label: identity.label,
+      role: identity.role,
+      spaces: identity.spaces
+    }
   })
   setAuthSessionCookie(res, session.value)
   res.json({
     requireAuth: true,
     authenticated: true,
     type: 'session',
+    role: identity.role,
+    subject: identity.subject,
+    label: identity.label,
+    spaces: identity.spaces,
     expiresAt: session.expiresAt
   })
 })
@@ -373,16 +441,84 @@ router.delete('/api/auth/session', (req, res) => {
   res.status(204).end()
 })
 
-const requireWriteAuth = (req, res, next) => {
-  if (!config.requireAuth) return next()
-  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next()
-  if (getAuthState(req).authenticated) {
-    return next()
-  }
-  res.status(401).json({ error: 'Unauthorized' })
+router.use((req, res, next) => {
+  req.authState = getPublicAuthState(req)
+  next()
+})
+
+const sendRoleError = (res, status, requiredRole, currentRole = null, error = null) => {
+  res.status(status).json({
+    error: error || (status === 401 ? 'Unauthorized' : `${formatAuthRoleLabel(requiredRole)} role required.`),
+    requiredRole,
+    ...(currentRole ? { currentRole } : {})
+  })
 }
 
-router.use('/api', requireWriteAuth)
+const sendScopeError = (res, status, {
+  requiredSpaceId = null,
+  allowedSpaces = null,
+  error = null
+} = {}) => {
+  res.status(status).json({
+    error: error || 'Space access denied.',
+    ...(requiredSpaceId ? { requiredSpaceId } : {}),
+    allowedSpaces,
+    allowedSpaceLabel: formatAuthScopeLabel(allowedSpaces)
+  })
+}
+
+const requireWriteRole = (requiredRole = 'editor') => (req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next()
+  if (!config.requireAuth) return next()
+  const resolvedRole = req.requiredWriteRole || requiredRole
+  const state = req.authState || getPublicAuthState(req)
+  if (!state.authenticated) {
+    return sendRoleError(res, 401, resolvedRole, state.role)
+  }
+  if (hasRequiredAuthRole(state.role, resolvedRole)) {
+    const requiredSpaceId = req.requiredSpaceId || null
+    if (!isAuthScopeAllowedForSpace(state.spaces, requiredSpaceId)) {
+      return sendScopeError(res, 403, {
+        requiredSpaceId,
+        allowedSpaces: state.spaces
+      })
+    }
+    return next()
+  }
+  return sendRoleError(res, 403, resolvedRole, state.role)
+}
+
+const requireAdminWrite = requireWriteRole('admin')
+
+router.use('/api/spaces', (req, res, next) => {
+  if (req.method === 'POST' && (req.path === '/' || req.path === '')) {
+    req.requiredWriteRole = 'admin'
+  }
+  next()
+})
+
+router.use('/api/spaces/:spaceId', (req, res, next) => {
+  req.requiredSpaceId = normalizeSpaceId(req.params.spaceId) || null
+  if (['PATCH', 'DELETE'].includes(req.method) && (req.path === '/' || req.path === '')) {
+    req.requiredWriteRole = 'admin'
+  }
+  next()
+})
+
+router.use('/api/projects/:projectId', async (req, res, next) => {
+  try {
+    const project = await resolveProjectContext(req.params.projectId)
+    req.requiredSpaceId = project?.spaceId || null
+    if (req.method === 'DELETE' && (req.path === '/' || req.path === '')) {
+      req.requiredWriteRole = 'admin'
+    }
+    next()
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.use('/api', requireWriteRole('editor'))
 
 const resolveProjectContext = async (projectId) => {
   const normalized = normalizeProjectId(projectId)
@@ -418,6 +554,7 @@ registerSpaceRoutes(router, {
   normalizeIncomingOps,
   normalizeProjectId,
   normalizeSpaceId,
+  requireAdminWrite,
   onDeleteSpace: async (spaceId) => removeProjectIndexEntriesForSpace(SPACES_DIR, spaceId),
   readJson,
   readOpsHistory,
@@ -504,9 +641,8 @@ initStorage()
         const meta = await loadSpaceMeta(normalized)
         return meta?.allowEdits !== false
       },
-      projectExists: async (projectId) => {
-        const resolved = await findProjectById(SPACES_DIR, projectId)
-        return Boolean(resolved)
+      resolveProjectContext: async (projectId) => {
+        return findProjectById(SPACES_DIR, projectId)
       }
     })
     console.log('[Socket.IO] Initialized for real-time collaboration')

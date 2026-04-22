@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useThree } from '@react-three/fiber'
 import { Grid, Html, OrbitControls } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
@@ -136,13 +136,20 @@ function EntityVisual({ entity, assetMap, selected, onSelect }) {
     )
 }
 
-function NodeVisual({ node, selected, onSelect }) {
+function NodeVisual({ node, selected, onSelect, onPointerDown, nodeScale = 1 }) {
+    const nodeScaleFactor = node.spatial?.scale ? [
+        (node.spatial.scale[0] || 1) * nodeScale,
+        (node.spatial.scale[1] || 1) * nodeScale,
+        (node.spatial.scale[2] || 1) * nodeScale
+    ] : [nodeScale, nodeScale, nodeScale]
+
     if (node.definitionId === 'geom.cube') {
         return (
             <group
                 position={node.spatial?.position || [0, 0, 0]}
                 rotation={node.spatial?.rotation || [0, 0, 0]}
-                scale={node.spatial?.scale || [1, 1, 1]}
+                scale={nodeScaleFactor}
+                onPointerDown={onPointerDown}
                 onClick={(event) => {
                     event.stopPropagation()
                     onSelect?.(node.id)
@@ -165,7 +172,8 @@ function NodeVisual({ node, selected, onSelect }) {
             <group
                 position={node.spatial?.position || [0, 1.2, 0]}
                 rotation={node.spatial?.rotation || [0, 0, 0]}
-                scale={node.spatial?.scale || [1, 1, 1]}
+                scale={nodeScaleFactor}
+                onPointerDown={onPointerDown}
                 onClick={(event) => {
                     event.stopPropagation()
                     onSelect?.(node.id)
@@ -206,17 +214,20 @@ function SceneContent({
     selectedNodeId,
     onSelectEntity,
     onSelectNode,
-    onWorldDoubleClick
+    onWorldDoubleClick,
+    onMoveNode
 }) {
     const assetMap = useMemo(() => new Map((document.assets || []).map((asset) => [asset.id, asset])), [document.assets])
     const renderableNodes = useMemo(
         () => (document.nodes || []).filter((node) => node.mount?.surface === 'world' && node.mount?.mode === 'spatial'),
         [document.nodes]
     )
+    const [draggingNodeId, setDraggingNodeId] = useState(null)
+    const dragNodeYRef = useRef(0)
 
     return (
         <>
-            <color attach="background" args={[document.worldState?.backgroundColor || '#ffffff']} />
+            <color attach="background" args={[document.worldState?.backgroundColor || '#0a0e16']} />
             <ambientLight
                 color={document.worldState?.ambientLight?.color || '#ffffff'}
                 intensity={document.worldState?.ambientLight?.intensity || 0.8}
@@ -226,11 +237,11 @@ function SceneContent({
                 intensity={document.worldState?.directionalLight?.intensity || 1.05}
                 position={document.worldState?.directionalLight?.position || [8, 12, 4]}
             />
-            {document.worldState?.gridVisible ? (
+            {document.worldState?.gridVisible !== false ? (
                 <Grid
                     args={[document.worldState?.gridSize || 24, document.worldState?.gridSize || 24]}
-                    cellColor="#d0d0d0"
-                    sectionColor="#ababab"
+                    cellColor="rgba(255,255,255,0.10)"
+                    sectionColor="rgba(255,255,255,0.22)"
                     position={[0, 0, 0]}
                     fadeDistance={60}
                     fadeStrength={1}
@@ -241,11 +252,23 @@ function SceneContent({
                 position={[0, 0, 0]}
                 onDoubleClick={(event) => {
                     event.stopPropagation()
+                    if (draggingNodeId) return
                     onWorldDoubleClick?.({
                         point: event.point?.toArray?.() || [0, 0, 0],
                         clientX: event.nativeEvent?.clientX || 0,
                         clientY: event.nativeEvent?.clientY || 0
                     })
+                }}
+                onPointerMove={(event) => {
+                    if (!draggingNodeId) return
+                    event.stopPropagation()
+                    const point = event.point?.toArray?.() || [0, 0, 0]
+                    onMoveNode?.(draggingNodeId, [point[0], dragNodeYRef.current, point[2]])
+                }}
+                onPointerUp={(event) => {
+                    if (!draggingNodeId) return
+                    event.stopPropagation()
+                    setDraggingNodeId(null)
                 }}
             >
                 <planeGeometry args={[400, 400]} />
@@ -267,6 +290,14 @@ function SceneContent({
                         node={node}
                         selected={node.id === selectedNodeId}
                         onSelect={onSelectNode}
+                        nodeScale={nodeScale}
+                        onPointerDown={(event) => {
+                            if (event.button !== 0) return
+                            event.stopPropagation()
+                            dragNodeYRef.current = node.spatial?.position?.[1] || 0
+                            setDraggingNodeId(node.id)
+                            onSelectNode?.(node.id)
+                        }}
                     />
                 ))}
             </Suspense>
@@ -282,12 +313,19 @@ export default function BetaViewport({
     onSelectNode,
     onClearSelection,
     onWorldDoubleClick,
+    onMoveNode,
     cursors = {},
     onCursorMove,
-    onCursorLeave
+    onCursorLeave,
+    nodeScale = 1
 }) {
     const viewportRef = useRef(null)
     const camera = document.worldState?.savedView || {}
+    const spatialNodes = useMemo(
+        () => (document.nodes || []).filter((node) => node.mount?.surface === 'world' && node.mount?.mode === 'spatial'),
+        [document.nodes]
+    )
+    const isEmpty = spatialNodes.length === 0 && (document.entities || []).length === 0
 
     const handlePointerMove = (event) => {
         const rect = viewportRef.current?.getBoundingClientRect?.()
@@ -302,6 +340,14 @@ export default function BetaViewport({
 
     return (
         <div className="beta-viewport-shell" ref={viewportRef} onPointerMove={handlePointerMove} onPointerLeave={onCursorLeave}>
+            {isEmpty ? (
+                <div className="beta-viewport-empty-hint" onDoubleClick={(event) => {
+                    event.stopPropagation()
+                    onWorldDoubleClick?.({ point: [0, 0, 0], clientX: event.clientX, clientY: event.clientY })
+                }}>
+                    <span>double-click to add a node</span>
+                </div>
+            ) : null}
             <Canvas
                 shadows
                 camera={{
@@ -320,6 +366,7 @@ export default function BetaViewport({
                     onSelectEntity={onSelectEntity}
                     onSelectNode={onSelectNode}
                     onWorldDoubleClick={onWorldDoubleClick}
+                    onMoveNode={onMoveNode}
                 />
             </Canvas>
             <div className="beta-cursor-layer">

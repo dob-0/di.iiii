@@ -27,6 +27,8 @@ pnpm-debug.log*
 .codex
 open_call/
 scene examples/
+CLAUDE.local.md
+**/CLAUDE.local.md
 *.dii-project.zip
 *.scene.zip
 docs/checkpoints/

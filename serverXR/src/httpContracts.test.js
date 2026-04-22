@@ -256,7 +256,9 @@ describe('server write contracts', () => {
         await expect(sessionStatus.json()).resolves.toMatchObject({
             requireAuth: true,
             authenticated: true,
-            type: 'session'
+            type: 'session',
+            role: 'admin',
+            subject: 'legacy-admin'
         })
 
         const created = await fetch(`${server.baseUrl}/api/spaces`, {
@@ -268,6 +270,161 @@ describe('server write contracts', () => {
             body: JSON.stringify({ label: 'Cookie Space', slug: 'cookie-space' })
         })
         expect(created.status).toBe(201)
+    })
+
+    it('limits editor credentials to allowed spaces and reserves space management for admins', async () => {
+        const editorToken = 'editor-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                EDITOR_API_TOKEN: editorToken,
+                EDITOR_ALLOWED_SPACES: 'role-space'
+            }
+        })
+
+        const createSpaceResponse = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(server.apiToken)
+            },
+            body: JSON.stringify({ label: 'Role Space', slug: 'role-space' })
+        })
+        expect(createSpaceResponse.status).toBe(201)
+
+        const createOtherSpaceResponse = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(server.apiToken)
+            },
+            body: JSON.stringify({ label: 'Other Space', slug: 'other-space' })
+        })
+        expect(createOtherSpaceResponse.status).toBe(201)
+
+        const editorProjectResponse = await fetch(`${server.baseUrl}/api/spaces/role-space/projects`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(editorToken)
+            },
+            body: JSON.stringify({ title: 'Editor Project', slug: 'editor-project', source: 'studio-v3' })
+        })
+        expect(editorProjectResponse.status).toBe(201)
+
+        const otherProject = await createServerProject(server, 'other-space', {
+            title: 'Other Project',
+            slug: 'other-project'
+        })
+
+        const deniedOtherSpaceWrite = await fetch(`${server.baseUrl}/api/spaces/other-space/projects`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(editorToken)
+            },
+            body: JSON.stringify({ title: 'Blocked Project', slug: 'blocked-project', source: 'studio-v3' })
+        })
+        expect(deniedOtherSpaceWrite.status).toBe(403)
+        await expect(deniedOtherSpaceWrite.json()).resolves.toMatchObject({
+            error: 'Space access denied.',
+            requiredSpaceId: 'other-space',
+            allowedSpaces: ['role-space']
+        })
+
+        const deniedOtherProjectWrite = await fetch(`${server.baseUrl}/api/projects/${otherProject.id}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(editorToken)
+            },
+            body: JSON.stringify({ title: 'Blocked Rename' })
+        })
+        expect(deniedOtherProjectWrite.status).toBe(403)
+        await expect(deniedOtherProjectWrite.json()).resolves.toMatchObject({
+            error: 'Space access denied.',
+            requiredSpaceId: 'other-space',
+            allowedSpaces: ['role-space']
+        })
+
+        const deniedCreate = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(editorToken)
+            },
+            body: JSON.stringify({ label: 'Denied Space', slug: 'denied-space' })
+        })
+        expect(deniedCreate.status).toBe(403)
+        await expect(deniedCreate.json()).resolves.toMatchObject({
+            error: 'Admin role required.',
+            requiredRole: 'admin',
+            currentRole: 'editor'
+        })
+
+        const editorLogin = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: editorToken })
+        })
+        expect(editorLogin.status).toBe(200)
+        await expect(editorLogin.json()).resolves.toMatchObject({
+            authenticated: true,
+            role: 'editor',
+            subject: 'editor',
+            spaces: ['role-space']
+        })
+        const editorCookie = (editorLogin.headers.get('set-cookie') || '').split(';')[0]
+
+        const deniedPublish = await fetch(`${server.baseUrl}/api/spaces/role-space`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Cookie: editorCookie
+            },
+            body: JSON.stringify({ publishedProjectId: 'editor-project' })
+        })
+        expect(deniedPublish.status).toBe(403)
+        await expect(deniedPublish.json()).resolves.toMatchObject({
+            error: 'Admin role required.',
+            requiredRole: 'admin',
+            currentRole: 'editor'
+        })
+
+        const deniedDelete = await fetch(`${server.baseUrl}/api/projects/editor-project`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(editorToken)
+            }
+        })
+        expect(deniedDelete.status).toBe(403)
+        await expect(deniedDelete.json()).resolves.toMatchObject({
+            error: 'Admin role required.',
+            requiredRole: 'admin',
+            currentRole: 'editor'
+        })
+
+        const editorSession = await fetch(`${server.baseUrl}/api/auth/session`, {
+            headers: { Cookie: editorCookie }
+        })
+        expect(editorSession.status).toBe(200)
+        await expect(editorSession.json()).resolves.toMatchObject({
+            requireAuth: true,
+            authenticated: true,
+            type: 'session',
+            role: 'editor',
+            subject: 'editor',
+            spaces: ['role-space']
+        })
+
+        const adminDelete = await fetch(`${server.baseUrl}/api/projects/editor-project`, {
+            method: 'DELETE',
+            headers: withAuth(server.apiToken)
+        })
+        expect(adminDelete.status).toBe(200)
+        await expect(adminDelete.json()).resolves.toMatchObject({ ok: true })
     })
 
     it('allows writes outside production when REQUIRE_AUTH is unset', async () => {
