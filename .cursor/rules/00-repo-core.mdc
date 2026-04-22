@@ -1,4 +1,5 @@
 ---
+title: Cursor Rule Bridge
 description: Repo Root repo-wide routing defaults
 globs: []
 alwaysApply: true

@@ -1,4 +1,5 @@
 ---
+title: Cursor Rule Bridge
 description: serverXR Backend Source guidance
 globs: ["serverXR/src/**/*"]
 alwaysApply: false

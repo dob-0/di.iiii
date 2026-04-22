@@ -113,9 +113,11 @@ const renderClaudeBridge = (scope) => {
   const relativeFile = scopeBridgePath(scope, 'CLAUDE.md')
   return `${generatedHeader(scopeAgentsPath(scope))}
 
+# Claude Code Bridge
+
 @AGENTS.md
 
-## Claude Code Bridge
+## Details
 
 - This is the native Claude entrypoint for ${scope.title}.
 - Keep canonical instructions in [AGENTS.md](${scopeAgentsLinkFromSelf}), not here.
@@ -128,9 +130,11 @@ const renderGeminiBridge = (scope) => {
   const relativeFile = scopeBridgePath(scope, 'GEMINI.md')
   return `${generatedHeader(scopeAgentsPath(scope))}
 
+# Gemini Bridge
+
 @AGENTS.md
 
-## Gemini Bridge
+## Details
 
 - This is the native Gemini entrypoint for ${scope.title}.
 - Keep canonical instructions in [AGENTS.md](${scopeAgentsLinkFromSelf}), not here.
@@ -178,11 +182,13 @@ const renderCursorRule = (scope) => {
   const relativeFile = normalizePath(path.join('.cursor/rules', scope.cursorRuleFile))
   const frontmatter = scope.alwaysApply
     ? `---
+title: Cursor Rule Bridge
 description: ${scope.title} repo-wide routing defaults
 globs: []
 alwaysApply: true
 ---`
     : `---
+title: Cursor Rule Bridge
 description: ${scope.title} guidance
 globs: ["${scope.applyTo}"]
 alwaysApply: false

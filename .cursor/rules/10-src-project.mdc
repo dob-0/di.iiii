@@ -1,4 +1,5 @@
 ---
+title: Cursor Rule Bridge
 description: Shared Project Layer guidance
 globs: ["src/project/**/*"]
 alwaysApply: false

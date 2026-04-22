@@ -1,4 +1,5 @@
 ---
+title: Cursor Rule Bridge
 description: Beta Experimental Lane guidance
 globs: ["src/beta/**/*"]
 alwaysApply: false

@@ -1,4 +1,5 @@
 ---
+title: Cursor Rule Bridge
 description: Shared Schema Runtime guidance
 globs: ["src/shared/**/*"]
 alwaysApply: false

@@ -1,4 +1,5 @@
 ---
+title: Cursor Rule Bridge
 description: Deploy Docs And Templates guidance
 globs: ["deploy/**/*"]
 alwaysApply: false
