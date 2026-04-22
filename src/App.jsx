@@ -492,10 +492,7 @@ function AppInner() {
         handleKeepCurrentWorld,
         handleReloadFromServer,
         handlePublishToServer,
-        handleToggleOfflineMode,
-        getBaseSceneData,
-        getSavedViewData,
-        scheduleLocalSceneSave
+        handleToggleOfflineMode
     } = useAppSyncCoordinatorState({
         liveSyncFeatureEnabled: LIVE_SYNC_FEATURE_ENABLED,
         shouldSyncServerScene,
