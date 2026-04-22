@@ -124,7 +124,6 @@ export default function DesktopWindow({
             role="dialog"
             aria-label={title}
             tabIndex={-1}
-            onDoubleClick={(event) => event.stopPropagation()}
             style={{
                 transform: `translate(${draft.x}px, ${draft.y}px)`,
                 width: draft.width,

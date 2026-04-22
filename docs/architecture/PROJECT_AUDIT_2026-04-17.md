@@ -12,7 +12,7 @@ The project is in a healthy working state.
 
 The biggest constraints on future growth are not deploy anymore.
 
-- the write-auth model now has a first server-session increment, but still needs real user identity and roles
+- the current write-auth model ships a client token in the browser
 - the frontend has several very large orchestration files
 - the public bundle is still heavy for mobile
 - persistence is still single-host filesystem storage, which will limit scale and analytics
@@ -117,27 +117,25 @@ This is a real asset for moving faster safely.
 
 ## Main Findings
 
-### High: Auth Still Needs Real Identity And Roles
+### High: Current Client Auth Token Is Not Real Security
 
-Update `2026-04-19`: normal builds no longer need to ship `VITE_API_TOKEN` in the browser. Protected writes can establish an http-only server session through `/api/auth/session`, and bearer-token auth remains available for automation and legacy compatibility.
+The frontend sends `VITE_API_TOKEN` as a bearer token on API requests.
 
 Relevant files:
 
 - [src/services/apiClient.js](../../src/services/apiClient.js)
-- [serverXR/src/authSession.js](../../serverXR/src/authSession.js)
 - [scripts/cpanel-apply-prebuilt-release.sh](../../scripts/cpanel-apply-prebuilt-release.sh)
 
 Impact:
 
-- the old browser-token path is still available if `VITE_API_TOKEN` is intentionally set
-- session auth removes the default compiled-token leak, but it is still a shared edit-token model
-- there is still no real user identity, role boundary, or meaningful audit trail yet
+- any user who can load the editor bundle can extract the write token from the shipped client code
+- this protects against accidental unauthenticated writes, but not against an informed attacker
+- there is no real user identity, role boundary, or meaningful audit trail yet
 
 Recommendation:
 
-- keep `API_TOKEN` server-only for normal builds
-- treat the shared edit token as a temporary gate, not true auth
-- move to real user sessions, signed actions, roles, and audit trails before scaling team usage or public editing
+- treat the current token as a temporary write gate, not true auth
+- move to real user sessions, signed actions, or server-side auth before scaling team usage or public editing
 
 ### High: Persistence Is Still Single-Host Filesystem Storage
 
@@ -270,7 +268,7 @@ When the project outgrows shared hosting, move to:
 
 ### Next 30 Days
 
-- build on the server-session auth increment with real identity, permissions, and audit trails
+- remove client-shipped write token as the main security boundary
 - split `App.jsx`, `PreferencesPage.jsx`, and `StudioShell.jsx` into domain modules
 - add one end-to-end test for `create space -> create project -> publish -> public route updates`
 - add bundle budget checks for the public route
