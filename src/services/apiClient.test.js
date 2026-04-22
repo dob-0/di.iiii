@@ -99,4 +99,39 @@ describe('apiFetch auth sessions', () => {
             credentials: 'include'
         }))
     })
+
+    it('can prompt for a stronger token when the server requires admin access', async () => {
+        const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue(' admin-token ')
+        const fetchMock = vi.fn()
+            .mockResolvedValueOnce(new Response(JSON.stringify({
+                error: 'Admin role required.',
+                requiredRole: 'admin',
+                currentRole: 'editor'
+            }), {
+                status: 403,
+                headers: { 'Content-Type': 'application/json' }
+            }))
+            .mockResolvedValueOnce(new Response(JSON.stringify({ authenticated: true, role: 'admin' }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            }))
+            .mockResolvedValueOnce(new Response(JSON.stringify({ space: { id: 'main' } }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            }))
+        vi.stubGlobal('fetch', fetchMock)
+
+        const result = await apiFetch('/api/spaces/main', {
+            method: 'PATCH',
+            body: { publishedProjectId: 'main-project' }
+        })
+
+        expect(promptSpy).toHaveBeenCalledWith('Enter the server admin token to continue.')
+        expect(result.space.id).toBe('main')
+        expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+            'http://localhost:3000/serverXR/api/spaces/main',
+            'http://localhost:3000/serverXR/api/auth/session',
+            'http://localhost:3000/serverXR/api/spaces/main'
+        ])
+    })
 })

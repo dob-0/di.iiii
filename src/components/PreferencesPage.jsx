@@ -1,5 +1,5 @@
 /* global __APP_VERSION__, __APP_GIT_BRANCH__, __APP_GIT_COMMIT__ */
-import React, { useCallback, useContext, useEffect, useState } from 'react'
+import { useCallback, useContext, useEffect, useState } from 'react'
 import {
     ActionsContext,
     SceneContext,
@@ -11,397 +11,33 @@ import {
 } from '../contexts/AppContexts.js'
 import { useRuntimeConsole } from '../hooks/useRuntimeConsole.js'
 import { useStatusItems } from '../hooks/useStatusItems.js'
-import { buildBetaHubPath } from '../beta/utils/betaRouting.js'
-import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
-import { buildAppSpacePath, buildPreferencesPath } from '../utils/spaceRouting.js'
-
-const formatTimestamp = (value) => {
-    if (!value) return 'n/a'
-    try {
-        return new Date(value).toLocaleString()
-    } catch {
-        return String(value)
-    }
-}
-
-const formatJson = (value) => {
-    if (value == null) return 'n/a'
-    try {
-        return JSON.stringify(value, null, 2)
-    } catch {
-        return String(value)
-    }
-}
-
-const normalizeBuildValue = (value, fallback = 'n/a') => {
-    if (typeof value !== 'string') return fallback
-    const normalized = value.trim()
-    return normalized || fallback
-}
-
-const readLocalStorageKeys = () => {
-    if (typeof window === 'undefined') return []
-    try {
-        return Object.keys(window.localStorage).sort()
-    } catch {
-        return []
-    }
-}
-
-const trimNumeric = (value, fractionDigits = 1) => {
-    const numeric = Number(value)
-    if (!Number.isFinite(numeric)) return '0'
-    return numeric
-        .toFixed(fractionDigits)
-        .replace(/\.00$/, '')
-        .replace(/(\.\d)0$/, '$1')
-}
-
-const formatVector = (value, fractionDigits = 1) => {
-    if (!Array.isArray(value)) return 'n/a'
-    return value.map((entry) => trimNumeric(entry, fractionDigits)).join(', ')
-}
-
-const getObjectDisplayLabel = (obj = {}) => {
-    if (typeof obj?.name === 'string' && obj.name.trim()) {
-        return obj.name.trim()
-    }
-    if (typeof obj?.data === 'string' && obj.data.trim()) {
-        return obj.data.trim().replace(/\s+/g, ' ').slice(0, 26)
-    }
-    if (typeof obj?.type === 'string' && obj.type.trim()) {
-        return `${obj.type.charAt(0).toUpperCase()}${obj.type.slice(1)}`
-    }
-    return obj?.id || 'Object'
-}
-
-const getTypeColor = (type = 'object') => {
-    let hash = 0
-    const source = String(type || 'object')
-    for (let index = 0; index < source.length; index += 1) {
-        hash = ((hash << 5) - hash) + source.charCodeAt(index)
-        hash |= 0
-    }
-    const hue = Math.abs(hash) % 360
-    return `hsl(${hue} 72% 62%)`
-}
-
-const buildScenePreviewDots = (objects = [], selectedIds = []) => {
-    if (!Array.isArray(objects) || objects.length === 0) return []
-
-    const selectedSet = new Set(selectedIds || [])
-    const previewObjects = objects.slice(0, 120)
-    const positions = previewObjects.map((obj) => ({
-        id: obj.id,
-        x: Number(obj?.position?.[0]) || 0,
-        z: Number(obj?.position?.[2]) || 0
-    }))
-
-    const minX = Math.min(...positions.map((entry) => entry.x))
-    const maxX = Math.max(...positions.map((entry) => entry.x))
-    const minZ = Math.min(...positions.map((entry) => entry.z))
-    const maxZ = Math.max(...positions.map((entry) => entry.z))
-    const spanX = Math.max(1, maxX - minX)
-    const spanZ = Math.max(1, maxZ - minZ)
-
-    return previewObjects.map((obj, index) => {
-        const match = positions[index]
-        const isSelected = selectedSet.has(obj.id)
-        const isHidden = obj?.isVisible === false
-        return {
-            id: obj.id,
-            label: getObjectDisplayLabel(obj),
-            isSelected,
-            isHidden,
-            color: getTypeColor(obj.type),
-            left: 7 + (((match?.x || 0) - minX) / spanX) * 86,
-            top: 10 + (((match?.z || 0) - minZ) / spanZ) * 78,
-            showLabel: isSelected || index < 3,
-            title: `${getObjectDisplayLabel(obj)} • ${obj?.type || 'object'} • ${formatVector(obj?.position, 2)}`
-        }
-    })
-}
-
-const getActionButtonClassName = (button = {}) => {
-    const classNames = ['toggle-button']
-    if (button.isActive) classNames.push('active')
-    if (button.variant === 'success') classNames.push('success-button')
-    if (button.variant === 'warning') classNames.push('warning-button')
-    return classNames.join(' ')
-}
-
-function ModuleSection({ title, subtitle, className = '', actions = null, children }) {
-    return (
-        <section className={['preferences-module', className].filter(Boolean).join(' ')}>
-            <header className="preferences-module-header">
-                <div>
-                    <h2>{title}</h2>
-                    {subtitle ? <span>{subtitle}</span> : null}
-                </div>
-                {actions ? <div className="preferences-module-actions">{actions}</div> : null}
-            </header>
-            {children}
-        </section>
-    )
-}
-
-function MetricCard({ label, value, tone = 'default' }) {
-    return (
-        <div className={`preferences-metric-card tone-${tone}`}>
-            <div className="preferences-metric-value">{value}</div>
-            <div className="preferences-metric-label">{label}</div>
-        </div>
-    )
-}
-
-function StatusItemCard({ item }) {
-    const progressPercent = Math.max(0, Math.min(100, item.percent || 0))
-
-    return (
-        <div className="preferences-status-card">
-            <div className="preferences-status-top">
-                <div className="preferences-status-label">{item.label}</div>
-                {item.detail && <div className="preferences-status-detail">{item.detail}</div>}
-            </div>
-            {item.showBar !== false && (item.indeterminate || 'percent' in item) && (
-                <div className={`preferences-status-bar ${item.indeterminate ? 'indeterminate' : ''}`}>
-                    {!item.indeterminate && <div className="preferences-status-fill" style={{ width: `${progressPercent}%` }} />}
-                </div>
-            )}
-        </div>
-    )
-}
-
-function InfoPair({ label, value, mono = false }) {
-    return (
-        <div className="preferences-info-row">
-            <div className="preferences-info-label">{label}</div>
-            <div className={`preferences-info-value ${mono ? 'mono' : ''}`}>{value}</div>
-        </div>
-    )
-}
-
-function SignalNode({ label, value, detail, tone = 'default' }) {
-    return (
-        <div className={`preferences-signal-node tone-${tone}`}>
-            <div className="preferences-signal-top">
-                <span className="preferences-signal-label">{label}</span>
-                <span className="preferences-signal-value">{value}</span>
-            </div>
-            <div className="preferences-signal-detail">{detail}</div>
-        </div>
-    )
-}
-
-function CollaboratorCard({ participant }) {
-    return (
-        <div className="preferences-collaborator-card">
-            <div className="preferences-collaborator-top">
-                <div>
-                    <div className="preferences-collaborator-name">{participant.displayName || participant.userName || 'Unknown user'}</div>
-                    <div className="preferences-collaborator-meta mono">
-                        Session {participant.sessionTail || 'n/a'}
-                    </div>
-                </div>
-                <div className={`preferences-collaborator-pill ${participant.isSelf ? 'active' : ''}`}>
-                    {participant.isSelf ? 'You' : 'Online'}
-                </div>
-            </div>
-            <div className="preferences-collaborator-detail">
-                {participant.cursorLabel || 'No cursor yet'}
-            </div>
-            <div className="preferences-collaborator-detail">
-                Joined {formatTimestamp(participant.joinedAt)}
-            </div>
-        </div>
-    )
-}
-
-function OperatorLinkCard({ label, href }) {
-    return (
-        <a className="preferences-link-card" href={href} target="_blank" rel="noreferrer">
-            <span className="preferences-link-label">{label}</span>
-            <span className="preferences-link-value mono">{href}</span>
-        </a>
-    )
-}
-
-const buildSpaceRouteBundle = (spaceId) => ({
-    publicPath: buildAppSpacePath(spaceId),
-    studioPath: buildStudioHubPath(spaceId),
-    betaPath: buildBetaHubPath(spaceId),
-    adminPath: buildPreferencesPath(spaceId)
-})
-
-function SpacePreviewRow({ space, isActive, routes, onOpenRoute, onCopy }) {
-    return (
-        <div className={`preferences-space-row ${isActive ? 'is-active' : ''}`}>
-            <div className="preferences-space-top">
-                <div>
-                    <div className="preferences-space-name">{space?.label || space?.id || 'Space'}</div>
-                    <div className="preferences-space-meta mono">{space?.id || 'n/a'}</div>
-                </div>
-                <div className="preferences-space-flags">
-                    {space?.isPermanent ? <span className="preferences-badge">Permanent</span> : <span className="preferences-badge muted">Temp</span>}
-                    {space?.allowEdits === false ? <span className="preferences-badge warning">Locked</span> : <span className="preferences-badge success">Open</span>}
-                </div>
-            </div>
-            <div className="preferences-space-actions">
-                <button type="button" className="preferences-inline-action" onClick={() => onOpenRoute?.(routes?.publicPath)}>
-                    Public
-                </button>
-                <button type="button" className="preferences-inline-action" onClick={() => onOpenRoute?.(routes?.studioPath)}>
-                    Studio
-                </button>
-                <button type="button" className="preferences-inline-action" onClick={() => onOpenRoute?.(routes?.betaPath)}>
-                    Beta
-                </button>
-                <button type="button" className="preferences-inline-action" onClick={() => onOpenRoute?.(routes?.adminPath)}>
-                    Admin
-                </button>
-                <button type="button" className="preferences-inline-action" onClick={() => onCopy?.(space?.id)}>
-                    Copy Public
-                </button>
-            </div>
-        </div>
-    )
-}
-
-function ScenePreviewMap({ dots = [], backgroundColor, onSelectObject }) {
-    if (!dots.length) {
-        return (
-            <div className="preferences-preview-surface">
-                <div className="preferences-preview-empty">No objects in this space yet.</div>
-            </div>
-        )
-    }
-
-    return (
-        <div
-            className="preferences-preview-surface"
-            style={{ '--preferences-preview-background': backgroundColor || '#081019' }}
-        >
-            {dots.map((dot) => (
-                <button
-                    key={dot.id}
-                    type="button"
-                    className={[
-                        'preferences-preview-dot',
-                        dot.isSelected ? 'is-selected' : '',
-                        dot.isHidden ? 'is-hidden' : ''
-                    ].filter(Boolean).join(' ')}
-                    style={{
-                        left: `${dot.left}%`,
-                        top: `${dot.top}%`,
-                        '--preferences-preview-dot-color': dot.color
-                    }}
-                    title={dot.title}
-                    onClick={() => onSelectObject?.(dot.id)}
-                >
-                    <span className="preferences-preview-dot-core" />
-                    {dot.showLabel ? <span className="preferences-preview-dot-label">{dot.label}</span> : null}
-                </button>
-            ))}
-        </div>
-    )
-}
-
-function ArchitectureCanvas({ nodes = [], links = [], selectedNodeId, onSelectNode }) {
-    if (!nodes.length) {
-        return (
-            <div className="preferences-architecture-canvas">
-                <div className="preferences-preview-empty">No architecture signals available yet.</div>
-            </div>
-        )
-    }
-
-    return (
-        <div className="preferences-architecture-canvas">
-            <svg className="preferences-architecture-lines" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-                {links.map((link) => (
-                    <line
-                        key={link.key}
-                        x1={link.from.x}
-                        y1={link.from.y}
-                        x2={link.to.x}
-                        y2={link.to.y}
-                        className={`preferences-architecture-line ${link.tone ? `tone-${link.tone}` : ''}`}
-                    />
-                ))}
-            </svg>
-
-            <div className="preferences-architecture-legend">
-                <span className="preferences-badge">scene graph</span>
-                <span className="preferences-badge success">live</span>
-                <span className="preferences-badge warning">attention</span>
-            </div>
-
-            {nodes.map((node) => (
-                <button
-                    key={node.id}
-                    type="button"
-                    className={[
-                        'preferences-architecture-node',
-                        `tone-${node.tone || 'default'}`,
-                        selectedNodeId === node.id ? 'is-selected' : ''
-                    ].join(' ')}
-                    style={{
-                        left: `${node.x}%`,
-                        top: `${node.y}%`
-                    }}
-                    onClick={() => onSelectNode?.(node.id)}
-                    title={node.tooltip || node.detail}
-                >
-                    <div className="preferences-architecture-node-head">
-                        <span className="preferences-architecture-node-kicker">{node.kicker}</span>
-                        <span className="preferences-architecture-node-status">{node.status}</span>
-                    </div>
-                    <strong className="preferences-architecture-node-title">{node.label}</strong>
-                    <span className="preferences-architecture-node-detail">{node.detail}</span>
-                    <span className="preferences-architecture-node-meta mono">{node.meta}</span>
-                </button>
-            ))}
-        </div>
-    )
-}
-
-function ObjectFeedRow({ obj, isSelected, onSelect }) {
-    const label = getObjectDisplayLabel(obj)
-    const isHidden = obj?.isVisible === false
-
-    return (
-        <button
-            type="button"
-            className={`preferences-object-row ${isSelected ? 'is-selected' : ''}`}
-            onClick={() => onSelect?.(obj?.id)}
-        >
-            <div className="preferences-object-main">
-                <div className="preferences-object-top">
-                    <div className="preferences-object-name">{label}</div>
-                    <div className="preferences-object-badges">
-                        <span className="preferences-badge">{obj?.type || 'object'}</span>
-                        {isHidden ? <span className="preferences-badge muted">Hidden</span> : null}
-                        {isSelected ? <span className="preferences-badge success">Selected</span> : null}
-                    </div>
-                </div>
-                <div className="preferences-object-meta mono">
-                    {obj?.id || 'n/a'}
-                </div>
-            </div>
-            <div className="preferences-object-coordinates mono">
-                {formatVector(obj?.position, 2)}
-            </div>
-        </button>
-    )
-}
+import { buildPreferencesPath } from '../utils/spaceRouting.js'
+import {
+    ArchitectureCanvas,
+    buildScenePreviewDots,
+    buildSpaceRouteBundle,
+    CollaboratorCard,
+    formatJson,
+    formatTimestamp,
+    formatVector,
+    getActionButtonClassName,
+    getObjectDisplayLabel,
+    getTypeColor,
+    InfoPair,
+    MetricCard,
+    ModuleSection,
+    normalizeBuildValue,
+    ObjectFeedRow,
+    OperatorLinkCard,
+    readLocalStorageKeys,
+    ScenePreviewMap,
+    SignalNode,
+    SpacePreviewRow,
+    StatusItemCard
+} from './preferences/PreferencesShared.jsx'
 
 export default function PreferencesPage({ onNavigateToEditor }) {
-    const {
-        objects,
-        selectedObjectId,
-        selectedObjectIds,
-        sceneVersion
-    } = useContext(SceneContext)
+    const { objects, selectedObjectId, selectedObjectIds, sceneVersion } = useContext(SceneContext)
     const sceneSettings = useContext(SceneSettingsContext)
     const ui = useContext(UiContext)
     const sync = useContext(SyncContext)
@@ -440,31 +76,36 @@ export default function PreferencesPage({ onNavigateToEditor }) {
         sceneStreamError: sync?.sceneStreamError
     })
 
-    const xrSnapshot = typeof xr?.getXrDiagnosticsSnapshot === 'function'
-        ? xr.getXrDiagnosticsSnapshot()
-        : null
+    const xrSnapshot =
+        typeof xr?.getXrDiagnosticsSnapshot === 'function' ? xr.getXrDiagnosticsSnapshot() : null
     const currentSpace = (spaces?.spaces || []).find((space) => space.id === sync?.spaceId) || null
     const selectedCount = selectedObjectIds?.length || (selectedObjectId ? 1 : 0)
     const selectedObject = (objects || []).find((obj) => obj.id === selectedObjectId) || null
     const visibleObjectCount = (objects || []).filter((obj) => obj?.isVisible !== false).length
     const hiddenObjectCount = Math.max(0, (objects?.length || 0) - visibleObjectCount)
     const localStorageKeys = readLocalStorageKeys()
-    const runtimeLogText = entries.map((entry) => `[${formatTimestamp(entry.timestamp)}] ${entry.level.toUpperCase()} ${entry.message}`).join('\n')
+    const runtimeLogText = entries
+        .map(
+            (entry) =>
+                `[${formatTimestamp(entry.timestamp)}] ${entry.level.toUpperCase()} ${entry.message}`
+        )
+        .join('\n')
     const runtimePreviewEntries = entries.slice().reverse().slice(0, 14)
     const spacesPreview = Array.isArray(spaces?.spaces) ? spaces.spaces.slice(0, 8) : []
     const activityPreviewItems = statusItems.slice(0, 6)
     const scenePreviewDots = buildScenePreviewDots(objects || [], selectedObjectIds || [])
-    const environmentSnapshot = typeof window === 'undefined'
-        ? null
-        : {
-            href: window.location.href,
-            viewport: `${window.innerWidth} x ${window.innerHeight}`,
-            devicePixelRatio: window.devicePixelRatio || 1,
-            visibility: document?.visibilityState || 'n/a',
-            language: navigator?.language || 'n/a',
-            online: navigator?.onLine ? 'Online' : 'Offline',
-            userAgent: navigator?.userAgent || 'n/a'
-        }
+    const environmentSnapshot =
+        typeof window === 'undefined'
+            ? null
+            : {
+                  href: window.location.href,
+                  viewport: `${window.innerWidth} x ${window.innerHeight}`,
+                  devicePixelRatio: window.devicePixelRatio || 1,
+                  visibility: document?.visibilityState || 'n/a',
+                  language: navigator?.language || 'n/a',
+                  online: navigator?.onLine ? 'Online' : 'Offline',
+                  userAgent: navigator?.userAgent || 'n/a'
+              }
     const currentSpaceRoutes = buildSpaceRouteBundle(sync?.spaceId)
     const frontendBuild = {
         version: normalizeBuildValue(__APP_VERSION__, '0.0.0'),
@@ -479,11 +120,9 @@ export default function PreferencesPage({ onNavigateToEditor }) {
         const controller = typeof AbortController !== 'undefined' ? new AbortController() : null
 
         const loadRuntimeHealth = async () => {
-            setRuntimeHealth((current) => (
-                current.status === 'ready'
-                    ? current
-                    : { status: 'loading', data: null, error: '' }
-            ))
+            setRuntimeHealth((current) =>
+                current.status === 'ready' ? current : { status: 'loading', data: null, error: '' }
+            )
 
             try {
                 const response = await fetch(`${window.location.origin}/serverXR/api/health`, {
@@ -518,30 +157,65 @@ export default function PreferencesPage({ onNavigateToEditor }) {
     }, [])
 
     const runtimeRelease = runtimeHealth.data?.release || {}
-    const releaseDeployEnv = runtimeRelease.deployEnv || (runtimeHealth.status === 'ready' ? 'local/unreleased' : 'n/a')
-    const releaseId = runtimeRelease.releaseId || (runtimeHealth.status === 'ready' ? 'local/unreleased' : 'n/a')
+    const releaseDeployEnv =
+        runtimeRelease.deployEnv || (runtimeHealth.status === 'ready' ? 'local/unreleased' : 'n/a')
+    const releaseId =
+        runtimeRelease.releaseId || (runtimeHealth.status === 'ready' ? 'local/unreleased' : 'n/a')
     const releaseSourceRef = runtimeRelease.sourceRef || 'n/a'
     const releaseGitCommit = runtimeRelease.gitCommit || 'n/a'
-    const releaseGeneratedAt = runtimeRelease.generatedAt ? formatTimestamp(runtimeRelease.generatedAt) : 'n/a'
-    const backendMode = runtimeHealth.data?.mode || (runtimeHealth.status === 'error' ? 'unreachable' : 'n/a')
+    const releaseGeneratedAt = runtimeRelease.generatedAt
+        ? formatTimestamp(runtimeRelease.generatedAt)
+        : 'n/a'
+    const backendMode =
+        runtimeHealth.data?.mode || (runtimeHealth.status === 'error' ? 'unreachable' : 'n/a')
     const backendNodeVersion = runtimeHealth.data?.nodeVersion || 'n/a'
-    const backendHealthStatus = runtimeHealth.status === 'ready'
-        ? 'Connected'
-        : runtimeHealth.status === 'error'
-            ? `Unavailable (${runtimeHealth.error})`
-            : 'Loading...'
+    const backendHealthStatus =
+        runtimeHealth.status === 'ready'
+            ? 'Connected'
+            : runtimeHealth.status === 'error'
+              ? `Unavailable (${runtimeHealth.error})`
+              : 'Loading...'
 
-    const operatorLinks = typeof window === 'undefined'
-        ? []
-        : [
-            { key: 'public', label: 'Public', href: `${window.location.origin}${currentSpaceRoutes.publicPath}` },
-            { key: 'studio', label: 'Studio', href: `${window.location.origin}${currentSpaceRoutes.studioPath}` },
-            { key: 'beta', label: 'Beta', href: `${window.location.origin}${currentSpaceRoutes.betaPath}` },
-            { key: 'admin', label: 'Admin', href: `${window.location.origin}${buildPreferencesPath(sync?.spaceId)}` },
-            { key: 'monitor', label: 'Backend Monitor', href: `${window.location.origin}/serverXR/` },
-            { key: 'health', label: 'Backend Health', href: `${window.location.origin}/serverXR/api/health` },
-            { key: 'events', label: 'Recent Events', href: `${window.location.origin}/serverXR/api/events` }
-        ]
+    const operatorLinks =
+        typeof window === 'undefined'
+            ? []
+            : [
+                  {
+                      key: 'public',
+                      label: 'Public',
+                      href: `${window.location.origin}${currentSpaceRoutes.publicPath}`
+                  },
+                  {
+                      key: 'studio',
+                      label: 'Studio',
+                      href: `${window.location.origin}${currentSpaceRoutes.studioPath}`
+                  },
+                  {
+                      key: 'beta',
+                      label: 'Beta',
+                      href: `${window.location.origin}${currentSpaceRoutes.betaPath}`
+                  },
+                  {
+                      key: 'admin',
+                      label: 'Admin',
+                      href: `${window.location.origin}${buildPreferencesPath(sync?.spaceId)}`
+                  },
+                  {
+                      key: 'monitor',
+                      label: 'Backend Monitor',
+                      href: `${window.location.origin}/serverXR/`
+                  },
+                  {
+                      key: 'health',
+                      label: 'Backend Health',
+                      href: `${window.location.origin}/serverXR/api/health`
+                  },
+                  {
+                      key: 'events',
+                      label: 'Recent Events',
+                      href: `${window.location.origin}/serverXR/api/events`
+                  }
+              ]
 
     const panelButtons = [
         {
@@ -593,15 +267,19 @@ export default function PreferencesPage({ onNavigateToEditor }) {
             isActive: ui?.isSpacesPanelVisible,
             onClick: () => ui?.setIsSpacesPanelVisible?.((prev) => !prev),
             disabled: !ui?.isAdminMode,
-            title: ui?.isAdminMode ? 'Toggle the spaces manager panel.' : 'Enable Admin mode to use the spaces panel.'
+            title: ui?.isAdminMode
+                ? 'Toggle the spaces manager panel.'
+                : 'Enable Admin mode to use the spaces panel.'
         }
     ]
 
-    const objectTypeEntries = Object.entries((objects || []).reduce((accumulator, obj) => {
-        const key = obj?.type || 'object'
-        accumulator[key] = (accumulator[key] || 0) + 1
-        return accumulator
-    }, {}))
+    const objectTypeEntries = Object.entries(
+        (objects || []).reduce((accumulator, obj) => {
+            const key = obj?.type || 'object'
+            accumulator[key] = (accumulator[key] || 0) + 1
+            return accumulator
+        }, {})
+    )
         .sort((left, right) => right[1] - left[1])
         .slice(0, 8)
         .map(([type, count]) => ({
@@ -648,8 +326,14 @@ export default function PreferencesPage({ onNavigateToEditor }) {
             key: 'stream',
             label: 'Stream',
             value: sync?.sceneStreamState || 'idle',
-            detail: sync?.sceneStreamError || (sync?.isLiveSyncEnabled ? 'live edits' : 'presence only'),
-            tone: sync?.isSceneStreamConnected ? 'success' : (sync?.sceneStreamError ? 'warning' : 'muted')
+            detail:
+                sync?.sceneStreamError ||
+                (sync?.isLiveSyncEnabled ? 'live edits' : 'presence only'),
+            tone: sync?.isSceneStreamConnected
+                ? 'success'
+                : sync?.sceneStreamError
+                  ? 'warning'
+                  : 'muted'
         },
         {
             key: 'save',
@@ -661,9 +345,9 @@ export default function PreferencesPage({ onNavigateToEditor }) {
         {
             key: 'xr',
             label: 'XR',
-            value: (xrSnapshot?.support?.ar || xrSnapshot?.support?.vr) ? 'Ready' : 'Standby',
+            value: xrSnapshot?.support?.ar || xrSnapshot?.support?.vr ? 'Ready' : 'Standby',
             detail: xrSnapshot?.lastStartError?.message || 'diagnostics available',
-            tone: (xrSnapshot?.support?.ar || xrSnapshot?.support?.vr) ? 'accent' : 'muted'
+            tone: xrSnapshot?.support?.ar || xrSnapshot?.support?.vr ? 'accent' : 'muted'
         }
     ]
 
@@ -790,7 +474,10 @@ export default function PreferencesPage({ onNavigateToEditor }) {
             facts: [
                 { label: 'UI', value: ui?.isUiVisible ? 'Visible' : 'Hidden' },
                 { label: 'Mode', value: ui?.interactionMode === 'edit' ? 'Edit' : 'Navigate' },
-                { label: 'Layout', value: `${ui?.layoutMode || 'floating'} / ${ui?.layoutSide || 'right'}` },
+                {
+                    label: 'Layout',
+                    value: `${ui?.layoutMode || 'floating'} / ${ui?.layoutSide || 'right'}`
+                },
                 { label: 'Selection', value: ui?.isSelectionLocked ? 'Locked' : 'Free' }
             ],
             actions: [
@@ -851,28 +538,40 @@ export default function PreferencesPage({ onNavigateToEditor }) {
             y: 80,
             kicker: 'inspect',
             label: selectedObject ? getObjectDisplayLabel(selectedObject) : 'Selected Object',
-            status: selectedObject ? (selectedObject.type || 'object') : 'idle',
+            status: selectedObject ? selectedObject.type || 'object' : 'idle',
             detail: selectedObject ? formatVector(selectedObject.position, 2) : 'nothing selected',
             meta: selectedObject?.id || 'Select an object in the editor',
             tone: selectedObject ? 'accent' : 'muted',
             tooltip: 'Currently selected scene object.',
-            facts: selectedObject ? [
-                { label: 'Object ID', value: selectedObject.id, mono: true },
-                { label: 'Type', value: selectedObject.type || 'object' },
-                { label: 'Position', value: formatVector(selectedObject.position, 2), mono: true },
-                { label: 'Rotation', value: formatVector(selectedObject.rotation, 2), mono: true },
-                { label: 'Scale', value: formatVector(selectedObject.scale, 2), mono: true }
-            ] : [
-                { label: 'State', value: 'No object selected' },
-                { label: 'Hint', value: 'Select an object in the editor or preview map.' }
-            ],
-            actions: selectedObject ? [
-                {
-                    key: 'open-selected',
-                    label: 'Open In Editor',
-                    onClick: () => onNavigateToEditor?.(sync?.spaceId)
-                }
-            ] : []
+            facts: selectedObject
+                ? [
+                      { label: 'Object ID', value: selectedObject.id, mono: true },
+                      { label: 'Type', value: selectedObject.type || 'object' },
+                      {
+                          label: 'Position',
+                          value: formatVector(selectedObject.position, 2),
+                          mono: true
+                      },
+                      {
+                          label: 'Rotation',
+                          value: formatVector(selectedObject.rotation, 2),
+                          mono: true
+                      },
+                      { label: 'Scale', value: formatVector(selectedObject.scale, 2), mono: true }
+                  ]
+                : [
+                      { label: 'State', value: 'No object selected' },
+                      { label: 'Hint', value: 'Select an object in the editor or preview map.' }
+                  ],
+            actions: selectedObject
+                ? [
+                      {
+                          key: 'open-selected',
+                          label: 'Open In Editor',
+                          onClick: () => onNavigateToEditor?.(sync?.spaceId)
+                      }
+                  ]
+                : []
         },
         {
             id: 'sync',
@@ -883,13 +582,22 @@ export default function PreferencesPage({ onNavigateToEditor }) {
             status: sync?.isLiveSyncEnabled ? 'live' : 'presence',
             detail: sync?.sceneStreamState || 'idle',
             meta: sync?.isSocketConnected ? 'socket connected' : 'socket offline',
-            tone: sync?.isSceneStreamConnected ? 'success' : (sync?.sceneStreamError ? 'warning' : 'default'),
+            tone: sync?.isSceneStreamConnected
+                ? 'success'
+                : sync?.sceneStreamError
+                  ? 'warning'
+                  : 'default',
             tooltip: 'Socket presence, scene stream, and live collaboration state.',
             facts: [
                 { label: 'Socket', value: sync?.isSocketConnected ? 'Connected' : 'Disconnected' },
                 { label: 'Scene Stream', value: sync?.sceneStreamState || 'idle' },
                 { label: 'Live Sync', value: sync?.isLiveSyncEnabled ? 'On' : 'Off' },
-                { label: 'Mode', value: sync?.liveSyncFeatureEnabled ? 'Collaborative editing enabled' : 'Presence only' }
+                {
+                    label: 'Mode',
+                    value: sync?.liveSyncFeatureEnabled
+                        ? 'Collaborative editing enabled'
+                        : 'Presence only'
+                }
             ]
         },
         {
@@ -901,12 +609,23 @@ export default function PreferencesPage({ onNavigateToEditor }) {
             status: `${entries.length}`,
             detail: entries[entries.length - 1]?.message || 'no console events yet',
             meta: entries[entries.length - 1]?.level?.toUpperCase?.() || 'quiet',
-            tone: entries[entries.length - 1]?.level === 'error' ? 'warning' : (entries.length ? 'accent' : 'muted'),
+            tone:
+                entries[entries.length - 1]?.level === 'error'
+                    ? 'warning'
+                    : entries.length
+                      ? 'accent'
+                      : 'muted',
             tooltip: 'Recent runtime console events and diagnostics.',
             facts: [
                 { label: 'Entries', value: String(entries.length) },
-                { label: 'Latest Level', value: entries[entries.length - 1]?.level?.toUpperCase?.() || 'n/a' },
-                { label: 'Latest Time', value: formatTimestamp(entries[entries.length - 1]?.timestamp) },
+                {
+                    label: 'Latest Level',
+                    value: entries[entries.length - 1]?.level?.toUpperCase?.() || 'n/a'
+                },
+                {
+                    label: 'Latest Time',
+                    value: formatTimestamp(entries[entries.length - 1]?.timestamp)
+                },
                 { label: 'Console', value: entries.length ? 'active' : 'idle' }
             ],
             actions: [
@@ -930,7 +649,10 @@ export default function PreferencesPage({ onNavigateToEditor }) {
             tooltip: 'ServerXR publishing, backend monitor, and health state.',
             facts: [
                 { label: 'Publish', value: sync?.canPublishToServer ? 'Available' : 'Unavailable' },
-                { label: 'Server Spaces', value: sync?.supportsServerSpaces ? 'Supported' : 'Unavailable' },
+                {
+                    label: 'Server Spaces',
+                    value: sync?.supportsServerSpaces ? 'Supported' : 'Unavailable'
+                },
                 { label: 'Offline Mode', value: sync?.isOfflineMode ? 'On' : 'Off' },
                 { label: 'Server Sync', value: sync?.serverSyncInfo?.label || 'n/a' }
             ],
@@ -953,16 +675,25 @@ export default function PreferencesPage({ onNavigateToEditor }) {
             y: 80,
             kicker: 'xr',
             label: 'XR Runtime',
-            status: (xrSnapshot?.support?.ar || xrSnapshot?.support?.vr) ? 'ready' : 'standby',
+            status: xrSnapshot?.support?.ar || xrSnapshot?.support?.vr ? 'ready' : 'standby',
             detail: xrSnapshot?.lastStartError?.message || 'diagnostics available',
             meta: `${xrSnapshot?.support?.ar ? 'AR' : 'no AR'} / ${xrSnapshot?.support?.vr ? 'VR' : 'no VR'}`,
-            tone: (xrSnapshot?.support?.ar || xrSnapshot?.support?.vr) ? 'accent' : 'muted',
+            tone: xrSnapshot?.support?.ar || xrSnapshot?.support?.vr ? 'accent' : 'muted',
             tooltip: 'XR feature support and recent diagnostics.',
             facts: [
                 { label: 'AR', value: xrSnapshot?.support?.ar ? 'Supported' : 'No' },
                 { label: 'VR', value: xrSnapshot?.support?.vr ? 'Supported' : 'No' },
-                { label: 'Secure Context', value: xrSnapshot?.environment?.secureContext ? 'Yes' : 'No' },
-                { label: 'Visibility', value: xrSnapshot?.environment?.visibilityState || environmentSnapshot?.visibility || 'n/a' }
+                {
+                    label: 'Secure Context',
+                    value: xrSnapshot?.environment?.secureContext ? 'Yes' : 'No'
+                },
+                {
+                    label: 'Visibility',
+                    value:
+                        xrSnapshot?.environment?.visibilityState ||
+                        environmentSnapshot?.visibility ||
+                        'n/a'
+                }
             ],
             actions: [
                 {
@@ -992,14 +723,17 @@ export default function PreferencesPage({ onNavigateToEditor }) {
         ['sync', 'backend'],
         ['sync', 'runtime'],
         ['backend', 'xr']
-    ].map(([fromId, toId]) => ({
-        key: `${fromId}-${toId}`,
-        from: architectureNodeIndex.get(fromId),
-        to: architectureNodeIndex.get(toId),
-        tone: buildLinkTone(fromId, toId)
-    })).filter((link) => link.from && link.to)
+    ]
+        .map(([fromId, toId]) => ({
+            key: `${fromId}-${toId}`,
+            from: architectureNodeIndex.get(fromId),
+            to: architectureNodeIndex.get(toId),
+            tone: buildLinkTone(fromId, toId)
+        }))
+        .filter((link) => link.from && link.to)
 
-    const activeArchitectureNode = architectureNodeIndex.get(selectedNodeId) || architectureNodes[0] || null
+    const activeArchitectureNode =
+        architectureNodeIndex.get(selectedNodeId) || architectureNodes[0] || null
 
     const toggleEditLock = useCallback(() => {
         if (!sync?.spaceId) return
@@ -1105,14 +839,34 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                 <div className="preferences-topbar-metrics">
                     <MetricCard label="Objects" value={objects?.length || 0} />
                     <MetricCard label="Visible" value={visibleObjectCount} tone="success" />
-                    <MetricCard label="Selected" value={selectedCount} tone={selectedCount ? 'accent' : 'default'} />
-                    <MetricCard label="Hidden" value={hiddenObjectCount} tone={hiddenObjectCount ? 'warning' : 'default'} />
-                    <MetricCard label="Socket" value={sync?.isSocketConnected ? 'Live' : 'Down'} tone={sync?.isSocketConnected ? 'success' : 'warning'} />
-                    <MetricCard label="Roster" value={sync?.participantRoster?.length || 0} tone={sync?.participantRoster?.length ? 'accent' : 'default'} />
+                    <MetricCard
+                        label="Selected"
+                        value={selectedCount}
+                        tone={selectedCount ? 'accent' : 'default'}
+                    />
+                    <MetricCard
+                        label="Hidden"
+                        value={hiddenObjectCount}
+                        tone={hiddenObjectCount ? 'warning' : 'default'}
+                    />
+                    <MetricCard
+                        label="Socket"
+                        value={sync?.isSocketConnected ? 'Live' : 'Down'}
+                        tone={sync?.isSocketConnected ? 'success' : 'warning'}
+                    />
+                    <MetricCard
+                        label="Roster"
+                        value={sync?.participantRoster?.length || 0}
+                        tone={sync?.participantRoster?.length ? 'accent' : 'default'}
+                    />
                 </div>
 
                 <div className="preferences-topbar-actions">
-                    <button type="button" className="toggle-button" onClick={() => onNavigateToEditor?.(sync?.spaceId)}>
+                    <button
+                        type="button"
+                        className="toggle-button"
+                        onClick={() => onNavigateToEditor?.(sync?.spaceId)}
+                    >
                         Back to Editor
                     </button>
                     <button type="button" className="toggle-button" onClick={copySnapshot}>
@@ -1124,10 +878,18 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                     <button type="button" className="toggle-button" onClick={copyOperatorLinks}>
                         Copy Links
                     </button>
-                    <button type="button" className="toggle-button" onClick={() => window.location.reload()}>
+                    <button
+                        type="button"
+                        className="toggle-button"
+                        onClick={() => window.location.reload()}
+                    >
                         Refresh
                     </button>
-                    <button type="button" className="toggle-button warning-button" onClick={() => xr?.showXrDiagnostics?.()}>
+                    <button
+                        type="button"
+                        className="toggle-button warning-button"
+                        onClick={() => xr?.showXrDiagnostics?.()}
+                    >
                         XR Debug
                     </button>
                 </div>
@@ -1151,16 +913,18 @@ export default function PreferencesPage({ onNavigateToEditor }) {
 
                     <ModuleSection title="Spaces" subtitle={`${spacesPreview.length} available`}>
                         <div className="preferences-space-list">
-                            {spacesPreview.length ? spacesPreview.map((space) => (
-                                <SpacePreviewRow
-                                    key={space.id}
-                                    space={space}
-                                    isActive={space.id === sync?.spaceId}
-                                    routes={buildSpaceRouteBundle(space.id)}
-                                    onOpenRoute={openRoute}
-                                    onCopy={actions?.handleCopySpaceLink}
-                                />
-                            )) : (
+                            {spacesPreview.length ? (
+                                spacesPreview.map((space) => (
+                                    <SpacePreviewRow
+                                        key={space.id}
+                                        space={space}
+                                        isActive={space.id === sync?.spaceId}
+                                        routes={buildSpaceRouteBundle(space.id)}
+                                        onOpenRoute={openRoute}
+                                        onCopy={actions?.handleCopySpaceLink}
+                                    />
+                                ))
+                            ) : (
                                 <div className="preferences-empty">No spaces discovered yet.</div>
                             )}
                         </div>
@@ -1169,12 +933,19 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                     <ModuleSection title="Operator Links" subtitle="Open support surfaces">
                         <div className="preferences-link-list">
                             {operatorLinks.map((link) => (
-                                <OperatorLinkCard key={link.key} label={link.label} href={link.href} />
+                                <OperatorLinkCard
+                                    key={link.key}
+                                    label={link.label}
+                                    href={link.href}
+                                />
                             ))}
                         </div>
                     </ModuleSection>
 
-                    <ModuleSection title="Presence" subtitle={`${sync?.participantRoster?.length || 0} online`}>
+                    <ModuleSection
+                        title="Presence"
+                        subtitle={`${sync?.participantRoster?.length || 0} online`}
+                    >
                         <label className="preferences-field">
                             <span className="preferences-field-label">Display name</span>
                             <input
@@ -1187,13 +958,21 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                             />
                         </label>
                         <div className="preferences-collaborator-list">
-                            {sync?.participantRoster?.length ? sync.participantRoster.map((participant) => (
-                                <CollaboratorCard
-                                    key={participant.socketId || participant.userId || participant.displayName}
-                                    participant={participant}
-                                />
-                            )) : (
-                                <div className="preferences-empty">No collaborators are connected to this space yet.</div>
+                            {sync?.participantRoster?.length ? (
+                                sync.participantRoster.map((participant) => (
+                                    <CollaboratorCard
+                                        key={
+                                            participant.socketId ||
+                                            participant.userId ||
+                                            participant.displayName
+                                        }
+                                        participant={participant}
+                                    />
+                                ))
+                            ) : (
+                                <div className="preferences-empty">
+                                    No collaborators are connected to this space yet.
+                                </div>
                             )}
                         </div>
                     </ModuleSection>
@@ -1214,16 +993,26 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                     onSelectNode={setSelectedNodeId}
                                 />
                                 <div className="preferences-stage-hud">
-                                    <span className="preferences-badge">space {sync?.spaceId || 'main'}</span>
-                                    <span className="preferences-badge">{objects?.length || 0} objects</span>
-                                    <span className="preferences-badge success">{sync?.isSocketConnected ? 'socket live' : 'socket down'}</span>
-                                    <span className="preferences-badge muted">{entries.length} logs</span>
+                                    <span className="preferences-badge">
+                                        space {sync?.spaceId || 'main'}
+                                    </span>
+                                    <span className="preferences-badge">
+                                        {objects?.length || 0} objects
+                                    </span>
+                                    <span className="preferences-badge success">
+                                        {sync?.isSocketConnected ? 'socket live' : 'socket down'}
+                                    </span>
+                                    <span className="preferences-badge muted">
+                                        {entries.length} logs
+                                    </span>
                                 </div>
                             </div>
 
                             <div className="preferences-stage-sidebar">
                                 <div className="preferences-stage-sidebar-block">
-                                    <div className="preferences-stage-sidebar-title">Scene Radar</div>
+                                    <div className="preferences-stage-sidebar-title">
+                                        Scene Radar
+                                    </div>
                                     <div className="preferences-stage-radar">
                                         <ScenePreviewMap
                                             dots={scenePreviewDots}
@@ -1234,35 +1023,54 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                 </div>
 
                                 <div className="preferences-stage-sidebar-block">
-                                    <div className="preferences-stage-sidebar-title">Type Matrix</div>
+                                    <div className="preferences-stage-sidebar-title">
+                                        Type Matrix
+                                    </div>
                                     <div className="preferences-type-list">
-                                        {objectTypeEntries.length ? objectTypeEntries.map((entry) => (
-                                            <div key={entry.type} className="preferences-type-row">
-                                                <div className="preferences-type-label">{entry.type}</div>
-                                                <div className="preferences-type-bar">
-                                                    <div
-                                                        className="preferences-type-fill"
-                                                        style={{
-                                                            width: `${(entry.count / objectTypeMax) * 100}%`,
-                                                            background: `linear-gradient(90deg, ${entry.color}, rgba(255,255,255,0.14))`
-                                                        }}
-                                                    />
+                                        {objectTypeEntries.length ? (
+                                            objectTypeEntries.map((entry) => (
+                                                <div
+                                                    key={entry.type}
+                                                    className="preferences-type-row"
+                                                >
+                                                    <div className="preferences-type-label">
+                                                        {entry.type}
+                                                    </div>
+                                                    <div className="preferences-type-bar">
+                                                        <div
+                                                            className="preferences-type-fill"
+                                                            style={{
+                                                                width: `${(entry.count / objectTypeMax) * 100}%`,
+                                                                background: `linear-gradient(90deg, ${entry.color}, rgba(255,255,255,0.14))`
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div className="preferences-type-count mono">
+                                                        {entry.count}
+                                                    </div>
                                                 </div>
-                                                <div className="preferences-type-count mono">{entry.count}</div>
+                                            ))
+                                        ) : (
+                                            <div className="preferences-empty">
+                                                No objects to classify.
                                             </div>
-                                        )) : (
-                                            <div className="preferences-empty">No objects to classify.</div>
                                         )}
                                     </div>
                                 </div>
 
                                 <div className="preferences-stage-sidebar-block">
-                                    <div className="preferences-stage-sidebar-title">Activity Signals</div>
+                                    <div className="preferences-stage-sidebar-title">
+                                        Activity Signals
+                                    </div>
                                     <div className="preferences-status-grid compact">
-                                        {activityPreviewItems.length ? activityPreviewItems.map((item) => (
-                                            <StatusItemCard key={item.key} item={item} />
-                                        )) : (
-                                            <div className="preferences-empty">No active status items right now.</div>
+                                        {activityPreviewItems.length ? (
+                                            activityPreviewItems.map((item) => (
+                                                <StatusItemCard key={item.key} item={item} />
+                                            ))
+                                        ) : (
+                                            <div className="preferences-empty">
+                                                No active status items right now.
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -1276,15 +1084,19 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         className="preferences-module-feed"
                     >
                         <div className="preferences-object-feed">
-                            {objectFeedEntries.length ? objectFeedEntries.map((obj) => (
-                                <ObjectFeedRow
-                                    key={obj.id}
-                                    obj={obj}
-                                    isSelected={obj.id === selectedObjectId}
-                                    onSelect={actions?.selectObject}
-                                />
-                            )) : (
-                                <div className="preferences-empty">Scene objects will appear here as they are added.</div>
+                            {objectFeedEntries.length ? (
+                                objectFeedEntries.map((obj) => (
+                                    <ObjectFeedRow
+                                        key={obj.id}
+                                        obj={obj}
+                                        isSelected={obj.id === selectedObjectId}
+                                        onSelect={actions?.selectObject}
+                                    />
+                                ))
+                            ) : (
+                                <div className="preferences-empty">
+                                    Scene objects will appear here as they are added.
+                                </div>
                             )}
                         </div>
                     </ModuleSection>
@@ -1293,26 +1105,47 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         title="Runtime Terminal"
                         subtitle={`${entries.length} entries`}
                         className="preferences-module-terminal"
-                        actions={(
+                        actions={
                             <>
-                                <button type="button" className="preferences-inline-action" onClick={copyRuntimeLog}>
+                                <button
+                                    type="button"
+                                    className="preferences-inline-action"
+                                    onClick={copyRuntimeLog}
+                                >
                                     Copy
                                 </button>
-                                <button type="button" className="preferences-inline-action warning" onClick={clearEntries}>
+                                <button
+                                    type="button"
+                                    className="preferences-inline-action warning"
+                                    onClick={clearEntries}
+                                >
                                     Clear
                                 </button>
                             </>
-                        )}
+                        }
                     >
                         <div className="preferences-console">
-                            {runtimePreviewEntries.length ? runtimePreviewEntries.map((entry) => (
-                                <div key={entry.id} className={`preferences-console-line ${entry.level}`}>
-                                    <span className="preferences-console-time">{new Date(entry.timestamp).toLocaleTimeString()}</span>
-                                    <span className="preferences-console-level">{entry.level.toUpperCase()}</span>
-                                    <span className="preferences-console-message">{entry.message}</span>
+                            {runtimePreviewEntries.length ? (
+                                runtimePreviewEntries.map((entry) => (
+                                    <div
+                                        key={entry.id}
+                                        className={`preferences-console-line ${entry.level}`}
+                                    >
+                                        <span className="preferences-console-time">
+                                            {new Date(entry.timestamp).toLocaleTimeString()}
+                                        </span>
+                                        <span className="preferences-console-level">
+                                            {entry.level.toUpperCase()}
+                                        </span>
+                                        <span className="preferences-console-message">
+                                            {entry.message}
+                                        </span>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="preferences-empty">
+                                    Console output will appear here as the app runs.
                                 </div>
-                            )) : (
-                                <div className="preferences-empty">Console output will appear here as the app runs.</div>
                             )}
                         </div>
                     </ModuleSection>
@@ -1323,10 +1156,16 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         className="preferences-module-storage"
                     >
                         <div className="preferences-storage-list">
-                            {localStorageKeys.length ? localStorageKeys.map((key) => (
-                                <div key={key} className="preferences-storage-key mono">{key}</div>
-                            )) : (
-                                <div className="preferences-empty">No readable localStorage keys detected.</div>
+                            {localStorageKeys.length ? (
+                                localStorageKeys.map((key) => (
+                                    <div key={key} className="preferences-storage-key mono">
+                                        {key}
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="preferences-empty">
+                                    No readable localStorage keys detected.
+                                </div>
                             )}
                         </div>
                         <pre className="preferences-code-block">{formatJson(projectSnapshot)}</pre>
@@ -1334,10 +1173,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                 </main>
 
                 <aside className="preferences-rail preferences-rail-right">
-                    <ModuleSection
-                        title="Command Deck"
-                        subtitle="Core admin actions"
-                    >
+                    <ModuleSection title="Command Deck" subtitle="Core admin actions">
                         <div className="preferences-command-grid">
                             {managementButtons.map((button) => (
                                 <button
@@ -1354,10 +1190,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         </div>
                     </ModuleSection>
 
-                    <ModuleSection
-                        title="Panel Matrix"
-                        subtitle="Dock and workspace visibility"
-                    >
+                    <ModuleSection title="Panel Matrix" subtitle="Dock and workspace visibility">
                         <div className="preferences-panel-grid">
                             {panelButtons.map((button) => (
                                 <button
@@ -1378,25 +1211,31 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                     <ModuleSection
                         title="Node Inspector"
                         subtitle={activeArchitectureNode?.label || 'No node selected'}
-                        actions={activeArchitectureNode?.actions?.length ? (
-                            <>
-                                {activeArchitectureNode.actions.map((action) => (
-                                    <button
-                                        key={action.key}
-                                        type="button"
-                                        className="preferences-inline-action"
-                                        onClick={action.onClick}
-                                    >
-                                        {action.label}
-                                    </button>
-                                ))}
-                            </>
-                        ) : null}
+                        actions={
+                            activeArchitectureNode?.actions?.length ? (
+                                <>
+                                    {activeArchitectureNode.actions.map((action) => (
+                                        <button
+                                            key={action.key}
+                                            type="button"
+                                            className="preferences-inline-action"
+                                            onClick={action.onClick}
+                                        >
+                                            {action.label}
+                                        </button>
+                                    ))}
+                                </>
+                            ) : null
+                        }
                     >
                         {activeArchitectureNode ? (
                             <>
                                 <InfoPair label="Zone" value={activeArchitectureNode.kicker} />
-                                <InfoPair label="Status" value={activeArchitectureNode.status} mono />
+                                <InfoPair
+                                    label="Status"
+                                    value={activeArchitectureNode.status}
+                                    mono
+                                />
                                 <InfoPair label="Detail" value={activeArchitectureNode.detail} />
                                 <InfoPair label="Meta" value={activeArchitectureNode.meta} mono />
                                 {(activeArchitectureNode.facts || []).map((fact) => (
@@ -1409,33 +1248,63 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                 ))}
                             </>
                         ) : (
-                            <div className="preferences-empty">Select a node in the architecture map to inspect it.</div>
+                            <div className="preferences-empty">
+                                Select a node in the architecture map to inspect it.
+                            </div>
                         )}
                     </ModuleSection>
 
                     <ModuleSection
                         title="Selected Object"
                         subtitle={selectedObject ? selectedObject.type : 'No active selection'}
-                        actions={selectedObject ? (
-                            <button
-                                type="button"
-                                className="preferences-inline-action"
-                                onClick={() => onNavigateToEditor?.(sync?.spaceId)}
-                            >
-                                Open In Editor
-                            </button>
-                        ) : null}
+                        actions={
+                            selectedObject ? (
+                                <button
+                                    type="button"
+                                    className="preferences-inline-action"
+                                    onClick={() => onNavigateToEditor?.(sync?.spaceId)}
+                                >
+                                    Open In Editor
+                                </button>
+                            ) : null
+                        }
                     >
                         {selectedObject ? (
                             <>
-                                <InfoPair label="Name" value={getObjectDisplayLabel(selectedObject)} />
+                                <InfoPair
+                                    label="Name"
+                                    value={getObjectDisplayLabel(selectedObject)}
+                                />
                                 <InfoPair label="Object ID" value={selectedObject.id} mono />
                                 <InfoPair label="Type" value={selectedObject.type || 'object'} />
-                                <InfoPair label="Position" value={formatVector(selectedObject.position, 2)} mono />
-                                <InfoPair label="Rotation" value={formatVector(selectedObject.rotation, 2)} mono />
-                                <InfoPair label="Scale" value={formatVector(selectedObject.scale, 2)} mono />
-                                <InfoPair label="Visible" value={selectedObject.isVisible === false ? 'No' : 'Yes'} />
-                                <InfoPair label="Link" value={selectedObject.linkActive ? (selectedObject.linkUrl || 'enabled') : 'off'} mono />
+                                <InfoPair
+                                    label="Position"
+                                    value={formatVector(selectedObject.position, 2)}
+                                    mono
+                                />
+                                <InfoPair
+                                    label="Rotation"
+                                    value={formatVector(selectedObject.rotation, 2)}
+                                    mono
+                                />
+                                <InfoPair
+                                    label="Scale"
+                                    value={formatVector(selectedObject.scale, 2)}
+                                    mono
+                                />
+                                <InfoPair
+                                    label="Visible"
+                                    value={selectedObject.isVisible === false ? 'No' : 'Yes'}
+                                />
+                                <InfoPair
+                                    label="Link"
+                                    value={
+                                        selectedObject.linkActive
+                                            ? selectedObject.linkUrl || 'enabled'
+                                            : 'off'
+                                    }
+                                    mono
+                                />
                             </>
                         ) : (
                             <div className="preferences-empty">
@@ -1444,37 +1313,81 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         )}
                     </ModuleSection>
 
-                    <ModuleSection
-                        title="Scene Config"
-                        subtitle="Live scene values"
-                    >
-                        <InfoPair label="Background" value={sceneSettings?.backgroundColor || 'n/a'} mono />
-                        <InfoPair label="Grid Size" value={String(sceneSettings?.gridSize ?? 'n/a')} />
+                    <ModuleSection title="Scene Config" subtitle="Live scene values">
+                        <InfoPair
+                            label="Background"
+                            value={sceneSettings?.backgroundColor || 'n/a'}
+                            mono
+                        />
+                        <InfoPair
+                            label="Grid Size"
+                            value={String(sceneSettings?.gridSize ?? 'n/a')}
+                        />
                         <InfoPair label="Ambient Light" value={ambientLightSummary} mono />
                         <InfoPair label="Directional Light" value={directionalLightSummary} mono />
-                        <InfoPair label="Camera Mode" value={sceneSettings?.cameraSettings?.orthographic ? 'Orthographic' : 'Perspective'} />
-                        <InfoPair label="Shadows" value={sceneSettings?.renderSettings?.shadows ? 'On' : 'Off'} />
-                        <InfoPair label="Antialias" value={sceneSettings?.renderSettings?.antialias ? 'On' : 'Off'} />
-                        <InfoPair label="Grid Fade" value={String(sceneSettings?.gridAppearance?.fadeDistance ?? 'n/a')} />
+                        <InfoPair
+                            label="Camera Mode"
+                            value={
+                                sceneSettings?.cameraSettings?.orthographic
+                                    ? 'Orthographic'
+                                    : 'Perspective'
+                            }
+                        />
+                        <InfoPair
+                            label="Shadows"
+                            value={sceneSettings?.renderSettings?.shadows ? 'On' : 'Off'}
+                        />
+                        <InfoPair
+                            label="Antialias"
+                            value={sceneSettings?.renderSettings?.antialias ? 'On' : 'Off'}
+                        />
+                        <InfoPair
+                            label="Grid Fade"
+                            value={String(sceneSettings?.gridAppearance?.fadeDistance ?? 'n/a')}
+                        />
                     </ModuleSection>
 
                     <ModuleSection
                         title="Browser / XR"
                         subtitle="Runtime context"
-                        actions={(
-                            <button type="button" className="preferences-inline-action" onClick={() => xr?.showXrDiagnostics?.()}>
+                        actions={
+                            <button
+                                type="button"
+                                className="preferences-inline-action"
+                                onClick={() => xr?.showXrDiagnostics?.()}
+                            >
                                 Copy XR
                             </button>
-                        )}
+                        }
                     >
-                        <InfoPair label="Current URL" value={environmentSnapshot?.href || 'n/a'} mono />
-                        <InfoPair label="Viewport" value={environmentSnapshot?.viewport || 'n/a'} mono />
-                        <InfoPair label="Pixel Ratio" value={String(environmentSnapshot?.devicePixelRatio ?? 'n/a')} />
-                        <InfoPair label="Visibility" value={environmentSnapshot?.visibility || 'n/a'} />
+                        <InfoPair
+                            label="Current URL"
+                            value={environmentSnapshot?.href || 'n/a'}
+                            mono
+                        />
+                        <InfoPair
+                            label="Viewport"
+                            value={environmentSnapshot?.viewport || 'n/a'}
+                            mono
+                        />
+                        <InfoPair
+                            label="Pixel Ratio"
+                            value={String(environmentSnapshot?.devicePixelRatio ?? 'n/a')}
+                        />
+                        <InfoPair
+                            label="Visibility"
+                            value={environmentSnapshot?.visibility || 'n/a'}
+                        />
                         <InfoPair label="Language" value={environmentSnapshot?.language || 'n/a'} />
                         <InfoPair label="Network" value={environmentSnapshot?.online || 'n/a'} />
-                        <InfoPair label="AR Supported" value={xrSnapshot?.support?.ar ? 'Yes' : 'No'} />
-                        <InfoPair label="VR Supported" value={xrSnapshot?.support?.vr ? 'Yes' : 'No'} />
+                        <InfoPair
+                            label="AR Supported"
+                            value={xrSnapshot?.support?.ar ? 'Yes' : 'No'}
+                        />
+                        <InfoPair
+                            label="VR Supported"
+                            value={xrSnapshot?.support?.vr ? 'Yes' : 'No'}
+                        />
                     </ModuleSection>
 
                     <ModuleSection
@@ -1501,15 +1414,41 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         <InfoPair label="Public Path" value={currentSpaceRoutes.publicPath} mono />
                         <InfoPair label="Studio Path" value={currentSpaceRoutes.studioPath} mono />
                         <InfoPair label="Beta Path" value={currentSpaceRoutes.betaPath} mono />
-                        <InfoPair label="Admin Path" value={buildPreferencesPath(sync?.spaceId)} mono />
+                        <InfoPair
+                            label="Admin Path"
+                            value={buildPreferencesPath(sync?.spaceId)}
+                            mono
+                        />
                         <InfoPair label="Scene Version" value={String(sceneVersion)} />
-                        <InfoPair label="Display Name" value={sync?.effectiveDisplayName || 'n/a'} />
-                        <InfoPair label="Sync Mode" value={sync?.liveSyncFeatureEnabled && sync?.isLiveSyncEnabled ? 'Live collaborative editing' : 'Presence only + publish'} />
-                        <InfoPair label="Socket" value={sync?.isSocketConnected ? 'Connected' : 'Disconnected'} />
+                        <InfoPair
+                            label="Display Name"
+                            value={sync?.effectiveDisplayName || 'n/a'}
+                        />
+                        <InfoPair
+                            label="Sync Mode"
+                            value={
+                                sync?.liveSyncFeatureEnabled && sync?.isLiveSyncEnabled
+                                    ? 'Live collaborative editing'
+                                    : 'Presence only + publish'
+                            }
+                        />
+                        <InfoPair
+                            label="Socket"
+                            value={sync?.isSocketConnected ? 'Connected' : 'Disconnected'}
+                        />
                         <InfoPair label="Scene Stream" value={sync?.sceneStreamState || 'idle'} />
-                        <InfoPair label="Collaborators" value={String(sync?.collaborators?.length || 0)} />
-                        <InfoPair label="Local Save" value={sync?.localSaveStatus?.label || 'n/a'} />
-                        <InfoPair label="Server Sync" value={sync?.serverSyncInfo?.label || 'n/a'} />
+                        <InfoPair
+                            label="Collaborators"
+                            value={String(sync?.collaborators?.length || 0)}
+                        />
+                        <InfoPair
+                            label="Local Save"
+                            value={sync?.localSaveStatus?.label || 'n/a'}
+                        />
+                        <InfoPair
+                            label="Server Sync"
+                            value={sync?.serverSyncInfo?.label || 'n/a'}
+                        />
                     </ModuleSection>
                 </aside>
             </div>

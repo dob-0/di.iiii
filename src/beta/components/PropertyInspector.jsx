@@ -77,33 +77,39 @@ export default function PropertyInspector({
                 <h4>{title}</h4>
                 {subtitle ? <p>{subtitle}</p> : null}
             </header>
-            {sections.map((section) => {
-                const sectionValue = values[section.id] || values[section.component] || {}
-                return (
-                    <section key={section.id} className="beta-property-section">
-                        <h5>{section.label}</h5>
-                        <div className="beta-property-grid">
-                            {section.fields.map((field) => {
-                                const value = readNestedValue(sectionValue, field.path)
-                                return (
-                                    <label key={`${section.id}-${field.label}`} className="beta-property-field">
-                                        <span>{field.label}</span>
-                                        <PropertyField
-                                            field={field}
-                                            value={value}
-                                            assetOptions={assetOptions}
-                                            onChange={(nextValue) => {
-                                                const nextSectionValue = setNestedValue(sectionValue, field.path, nextValue)
-                                                onSectionChange?.(field.component || section.id, nextSectionValue)
-                                            }}
-                                        />
-                                    </label>
-                                )
-                            })}
-                        </div>
-                    </section>
-                )
-            })}
+            <div className="beta-property-sections-scroll">
+                {sections.map((section) => {
+                    const sectionValue = values[section.id] || values[section.component] || {}
+                    return (
+                        <section key={section.id} className="beta-property-section">
+                            <h5>{section.label}</h5>
+                            <div className="beta-property-grid">
+                                {section.fields.map((field) => {
+                                    const value = readNestedValue(sectionValue, field.path)
+                                    const isFullWidth = field.type === 'textarea' || field.type === 'select' || field.type === 'asset'
+                                    return (
+                                        <label
+                                            key={`${section.id}-${field.label}`}
+                                            className={`beta-property-field${field.type === 'checkbox' ? ' beta-checkbox-field' : ''}${isFullWidth ? ' beta-full-width-field' : ''}`}
+                                        >
+                                            <span>{field.label}</span>
+                                            <PropertyField
+                                                field={field}
+                                                value={value}
+                                                assetOptions={assetOptions}
+                                                onChange={(nextValue) => {
+                                                    const nextSectionValue = setNestedValue(sectionValue, field.path, nextValue)
+                                                    onSectionChange?.(field.component || section.id, nextSectionValue)
+                                                }}
+                                            />
+                                        </label>
+                                    )
+                                })}
+                            </div>
+                        </section>
+                    )
+                })}
+            </div>
         </div>
     )
 }
