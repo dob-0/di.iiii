@@ -1,6 +1,6 @@
 # di.i
 
-**Web XR Node-Based Reality Creation Language**
+## Web XR Node-Based Reality Creation Language
 
 `di.i` is a web-based XR authoring platform for building spaces, projects, media, and node-driven behaviors on the web. This private repo, `dob-0/di.iiii`, is the active working and deployment source of truth. The public repo, `dob-0/di.i`, is the curated public-facing mirror and contributor front door.
 
