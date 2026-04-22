@@ -66,6 +66,7 @@ const BLOCKED_PREFIXES = [
     'docs/ops/',
     'legacy/',
     'open_call/',
+    'public/serverXR/',
     'scene examples/',
     'serverXR/data/',
     'serverXR/uploads/',
@@ -79,6 +80,9 @@ const BLOCKED_FILES = new Set([
     '.github/workflows/release.yml',
     'docs/deck/README.md',
     'docs/deck/di.ii XR studio_network .pdf',
+    'public/.htaccess',
+    'public/clear-default-scene.php',
+    'public/upload-default-scene.php',
     'serverXR/README.md'
 ])
 

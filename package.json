@@ -12,6 +12,8 @@
     "dev:client": "vite",
     "dev:server": "npm --prefix serverXR run dev",
     "build": "vite build",
+    "docs:ai:sync": "node scripts/sync-agent-docs.mjs",
+    "docs:ai:check": "node scripts/check-agent-docs.mjs",
     "deploy": "node scripts/deploy.mjs",
     "deploy:status": "node scripts/deploy.mjs status",
     "deploy:dev": "node scripts/deploy.mjs dev",

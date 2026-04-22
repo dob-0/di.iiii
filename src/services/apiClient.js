@@ -157,17 +157,22 @@ const createServerUnavailableError = (message, cause = null) => {
 
 const isWriteMethod = (method = 'GET') => !['GET', 'HEAD', 'OPTIONS'].includes(String(method).toUpperCase())
 
-const shouldAttemptInteractiveAuth = (path, method, authRetry) => {
+const shouldAttemptInteractiveAuth = (path, method, authRetry, error = null) => {
     if (!authRetry || !isWriteMethod(method)) return false
     if (String(path || '').includes('/api/auth/session')) return false
+    if (error?.status === 403 && !error?.data?.requiredRole) return false
+    if (error?.status && ![401, 403].includes(error.status)) return false
     return typeof window !== 'undefined' && typeof window.prompt === 'function'
 }
 
-const promptForApiToken = () => {
+const promptForApiToken = (requiredRole = 'editor') => {
     if (typeof window === 'undefined' || typeof window.prompt !== 'function') {
         return ''
     }
-    return normalizeSessionApiToken(window.prompt('Enter the server edit token to continue.') || '')
+    const promptMessage = requiredRole === 'admin'
+        ? 'Enter the server admin token to continue.'
+        : 'Enter the server edit token to continue.'
+    return normalizeSessionApiToken(window.prompt(promptMessage) || '')
 }
 
 const createHttpError = async (response) => {
@@ -231,8 +236,8 @@ export async function apiFetch(path, {
     }
     if (!response.ok) {
         const error = await createHttpError(response)
-        if (error.status === 401 && shouldAttemptInteractiveAuth(path, method, authRetry)) {
-            const token = promptForApiToken()
+        if (shouldAttemptInteractiveAuth(path, method, authRetry, error)) {
+            const token = promptForApiToken(error?.data?.requiredRole || 'editor')
             if (token) {
                 await loginApiSession(token)
                 return apiFetch(path, {

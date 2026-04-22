@@ -213,6 +213,43 @@ export const NODE_DEFINITIONS = {
             }
         ]
     },
+    'app.printer3d': {
+        id: 'app.printer3d',
+        label: '3D Printer',
+        family: 'app',
+        surface: 'world',
+        mode: 'hidden',
+        singleton: false,
+        defaultParams: {
+            title: '3D Printer',
+            studioProfileId: '',
+            model: 'Prusa MK4',
+            endpoint: '',
+            buildVolumeX: 250,
+            buildVolumeY: 210,
+            buildVolumeZ: 220,
+            defaultMaterial: 'PLA',
+            nozzleMm: 0.4
+        },
+        previewKind: 'panel',
+        sections: [
+            {
+                id: 'params',
+                label: 'Printer',
+                fields: [
+                    { label: 'Title', component: 'params', path: ['title'], type: 'text' },
+                    { label: 'Studio Profile', component: 'params', path: ['studioProfileId'], type: 'select', options: [{ label: 'None', value: '' }] },
+                    { label: 'Model', component: 'params', path: ['model'], type: 'text' },
+                    { label: 'Endpoint', component: 'params', path: ['endpoint'], type: 'text' },
+                    { label: 'Build X (mm)', component: 'params', path: ['buildVolumeX'], type: 'number', min: 50, step: 1 },
+                    { label: 'Build Y (mm)', component: 'params', path: ['buildVolumeY'], type: 'number', min: 50, step: 1 },
+                    { label: 'Build Z (mm)', component: 'params', path: ['buildVolumeZ'], type: 'number', min: 50, step: 1 },
+                    { label: 'Default Material', component: 'params', path: ['defaultMaterial'], type: 'text' },
+                    { label: 'Nozzle (mm)', component: 'params', path: ['nozzleMm'], type: 'number', min: 0.1, step: 0.05 }
+                ]
+            }
+        ]
+    },
     'view.panel': {
         id: 'view.panel',
         label: 'Panel',
@@ -416,14 +453,66 @@ export const NODE_DEFINITIONS = {
                 fields: [{ label: 'Title', component: 'params', path: ['title'], type: 'text' }]
             }
         ]
+    },
+    'world.3d': {
+        id: 'world.3d',
+        label: '3D World',
+        family: 'world',
+        surface: 'root',
+        mode: 'card',
+        singleton: false,
+        defaultParams: {
+            title: 'World',
+            backgroundColor: '#0a0e16',
+            gridVisible: true
+        },
+        previewKind: 'cube',
+        sections: [{
+            id: 'params',
+            label: 'World',
+            fields: [
+                { label: 'Title', component: 'params', path: ['title'], type: 'text' },
+                { label: 'Background', component: 'params', path: ['backgroundColor'], type: 'color' },
+                { label: 'Grid Visible', component: 'params', path: ['gridVisible'], type: 'checkbox' }
+            ]
+        }]
+    },
+    'world.2d': {
+        id: 'world.2d',
+        label: '2D World',
+        family: 'world',
+        surface: 'root',
+        mode: 'card',
+        singleton: false,
+        defaultParams: {
+            title: 'World'
+        },
+        previewKind: 'panel',
+        sections: [{
+            id: 'params',
+            label: 'World',
+            fields: [
+                { label: 'Title', component: 'params', path: ['title'], type: 'text' }
+            ]
+        }]
     }
 }
 
-const DEFAULT_WORLD_DEFINITION_IDS = ['geom.cube', 'world.color', 'world.grid', 'world.light', 'world.camera', 'app.browser']
+const DEFAULT_WORLD_DEFINITION_IDS = ['geom.cube', 'world.color', 'world.grid', 'world.light', 'world.camera', 'app.browser', 'app.printer3d']
 const DEFAULT_VIEW_DEFINITION_IDS = ['view.panel', 'view.text', 'view.inspector', 'view.assets', 'view.browser']
+const DEFAULT_ROOT_DEFINITION_IDS = ['world.3d', 'world.2d']
 
 export const listNodeDefinitionsForSurface = (surface = 'world') => {
-    const allowed = surface === 'view' ? DEFAULT_VIEW_DEFINITION_IDS : DEFAULT_WORLD_DEFINITION_IDS
+    let allowed = DEFAULT_WORLD_DEFINITION_IDS
+    if (surface === 'view') allowed = DEFAULT_VIEW_DEFINITION_IDS
+    else if (surface === 'root') allowed = DEFAULT_ROOT_DEFINITION_IDS
+    else if (surface === 'all') {
+        allowed = [
+            ...DEFAULT_ROOT_DEFINITION_IDS,
+            ...DEFAULT_WORLD_DEFINITION_IDS,
+            ...DEFAULT_VIEW_DEFINITION_IDS
+        ]
+    }
     return allowed.map((definitionId) => NODE_DEFINITIONS[definitionId]).filter(Boolean)
 }
 

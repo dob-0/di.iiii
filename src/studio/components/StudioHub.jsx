@@ -294,6 +294,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                             </Button>
                                             <Button
                                                 size="small"
+                                                variant="outlined"
                                                 color="error"
                                                 onClick={() => handleDeleteProject(project)}
                                             >

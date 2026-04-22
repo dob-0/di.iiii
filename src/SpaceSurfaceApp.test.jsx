@@ -52,7 +52,7 @@ describe('SpaceSurfaceApp', () => {
         expect(getServerSpace).not.toHaveBeenCalled()
     })
 
-    it('opens the blank node workspace when no published project is configured', async () => {
+    it('falls back to the legacy editor when no published project is configured', async () => {
         getServerSpace.mockResolvedValue({
             id: 'main',
             label: 'Main Space',
@@ -62,7 +62,7 @@ describe('SpaceSurfaceApp', () => {
         render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'main' }} />)
 
         await waitFor(() => {
-            expect(screen.getByText('blank-node-workspace:main')).toBeInTheDocument()
+            expect(screen.getByText('legacy-app')).toBeInTheDocument()
         })
     })
 
@@ -85,7 +85,7 @@ describe('SpaceSurfaceApp', () => {
         await act(async () => {
             await Promise.resolve()
         })
-        expect(screen.getByText('blank-node-workspace:main')).toBeInTheDocument()
+        expect(screen.getByText('legacy-app')).toBeInTheDocument()
 
         await act(async () => {
             await vi.advanceTimersByTimeAsync(2100)
@@ -93,6 +93,16 @@ describe('SpaceSurfaceApp', () => {
         })
 
         expect(screen.getByText('public-project-viewer:main:live-project')).toBeInTheDocument()
+    })
+
+    it('keeps the legacy editor available if space metadata fails to load', async () => {
+        getServerSpace.mockRejectedValue(new Error('network down'))
+
+        render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'main' }} />)
+
+        await waitFor(() => {
+            expect(screen.getByText('legacy-app')).toBeInTheDocument()
+        })
     })
 
     it('keeps preferences routed through the legacy app shell', () => {

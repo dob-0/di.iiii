@@ -97,5 +97,5 @@ export default function SpaceSurfaceApp({ routeState }) {
         return <App />
     }
 
-    return <BlankNodeWorkspaceApp spaceId={spaceId} />
+    return <App />
 }
