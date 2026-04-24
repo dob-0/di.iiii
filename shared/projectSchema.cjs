@@ -1,5 +1,9 @@
-const PROJECT_DOCUMENT_VERSION = 2
-const VECTOR_SIZE = 3
+// Manual CJS mirror of src/shared/projectSchema.js (keep in lockstep).
+// Server-side consumers (serverXR) load this via loadSharedModule('projectSchema.cjs').
+// This file intentionally does NOT import the client-only node registry,
+// so it accepts any typeId without validation.
+
+const PROJECT_DOCUMENT_VERSION = 4
 
 const ENTITY_TYPES = new Set([
   'box',
@@ -14,6 +18,10 @@ const ENTITY_TYPES = new Set([
 ])
 
 const WINDOW_IDS = ['viewport', 'assets', 'inspector', 'outliner', 'activity', 'project']
+
+const LEGACY_ROOT_NODE_IDS = new Set(['root-node', 'world-root', 'view-root'])
+const LEGACY_ROOT_TYPE_IDS = new Set(['core.project', 'world.root', 'view.root'])
+const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar', 'world.light', 'world.background', 'world.grid'])
 
 const cloneValue = (value) => {
   if (Array.isArray(value)) {
@@ -58,78 +66,12 @@ const generateId = (prefix = 'id') => {
 const defaultWindowLayout = {
   activeWindowId: 'viewport',
   windows: {
-    viewport: {
-      id: 'viewport',
-      title: 'Viewport',
-      visible: true,
-      minimized: false,
-      pinned: true,
-      x: 24,
-      y: 176,
-      width: 860,
-      height: 580,
-      zIndex: 3
-    },
-    assets: {
-      id: 'assets',
-      title: 'Assets',
-      visible: true,
-      minimized: false,
-      pinned: false,
-      x: 910,
-      y: 176,
-      width: 360,
-      height: 360,
-      zIndex: 4
-    },
-    inspector: {
-      id: 'inspector',
-      title: 'Inspector',
-      visible: true,
-      minimized: false,
-      pinned: false,
-      x: 910,
-      y: 552,
-      width: 360,
-      height: 420,
-      zIndex: 5
-    },
-    outliner: {
-      id: 'outliner',
-      title: 'Outliner',
-      visible: false,
-      minimized: false,
-      pinned: false,
-      x: 24,
-      y: 620,
-      width: 280,
-      height: 260,
-      zIndex: 2
-    },
-    activity: {
-      id: 'activity',
-      title: 'Activity',
-      visible: false,
-      minimized: false,
-      pinned: false,
-      x: 320,
-      y: 620,
-      width: 340,
-      height: 260,
-      zIndex: 1
-    },
-    project: {
-      id: 'project',
-      title: 'Project',
-      visible: false,
-      minimized: false,
-      pinned: false,
-      x: 680,
-      y: 620,
-      width: 320,
-      height: 260,
-      zIndex: 1
-    }
+    viewport: { id: 'viewport', title: 'Viewport', visible: true, minimized: false, pinned: true, x: 24, y: 176, width: 860, height: 580, zIndex: 3 },
+    assets: { id: 'assets', title: 'Assets', visible: true, minimized: false, pinned: false, x: 910, y: 176, width: 360, height: 360, zIndex: 4 },
+    inspector: { id: 'inspector', title: 'Inspector', visible: true, minimized: false, pinned: false, x: 910, y: 552, width: 360, height: 420, zIndex: 5 },
+    outliner: { id: 'outliner', title: 'Outliner', visible: false, minimized: false, pinned: false, x: 24, y: 620, width: 280, height: 260, zIndex: 2 },
+    activity: { id: 'activity', title: 'Activity', visible: false, minimized: false, pinned: false, x: 320, y: 620, width: 340, height: 260, zIndex: 1 },
+    project: { id: 'project', title: 'Project', visible: false, minimized: false, pinned: false, x: 680, y: 620, width: 320, height: 260, zIndex: 1 }
   }
 }
 
@@ -137,20 +79,9 @@ const defaultWorldState = {
   backgroundColor: '#ebe7df',
   gridVisible: true,
   gridSize: 24,
-  ambientLight: {
-    color: '#ffffff',
-    intensity: 0.85
-  },
-  directionalLight: {
-    color: '#fff7ea',
-    intensity: 1.15,
-    position: [8, 12, 4]
-  },
-  savedView: {
-    mode: 'perspective',
-    position: [0, 2.4, 6.5],
-    target: [0, 0.75, 0]
-  }
+  ambientLight: { color: '#ffffff', intensity: 0.85 },
+  directionalLight: { color: '#fff7ea', intensity: 1.15, position: [8, 12, 4] },
+  savedView: { mode: 'perspective', position: [0, 2.4, 6.5], target: [0, 0.75, 0] }
 }
 
 const defaultXrState = {
@@ -184,16 +115,18 @@ const defaultPublishState = {
   lastExportAt: 0
 }
 
+const defaultWorkspaceState = {
+  activeSurface: 'world',
+  selectedNodeId: null
+}
+
 const defaultProjectDocument = {
   version: PROJECT_DOCUMENT_VERSION,
-  projectMeta: {
-    id: '',
-    spaceId: 'main',
-    title: 'Untitled Project',
-    createdAt: 0,
-    updatedAt: 0,
-    source: 'project'
-  },
+  projectMeta: { id: '', spaceId: 'main', title: 'Untitled Project', createdAt: 0, updatedAt: 0, source: 'project' },
+  nodes: [],
+  edges: [],
+  templates: [],
+  workspaceState: defaultWorkspaceState,
   entities: [],
   worldState: defaultWorldState,
   xrState: defaultXrState,
@@ -205,15 +138,8 @@ const defaultProjectDocument = {
 
 const buildDefaultComponentsForType = (type = 'box') => {
   const base = {
-    transform: {
-      position: [0, 0, 0],
-      rotation: [0, 0, 0],
-      scale: [1, 1, 1]
-    },
-    appearance: {
-      color: '#5fa8ff',
-      opacity: 1
-    }
+    transform: { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] },
+    appearance: { color: '#5fa8ff', opacity: 1 }
   }
 
   switch (type) {
@@ -227,15 +153,7 @@ const buildDefaultComponentsForType = (type = 'box') => {
       base.primitive = { shape: 'cylinder', radiusTop: 0.45, radiusBottom: 0.45, height: 1.2 }
       break
     case 'text':
-      base.text = {
-        value: 'New Text',
-        variant: '2d',
-        fontFamily: 'Inter, sans-serif',
-        fontWeight: '600',
-        fontStyle: 'normal',
-        fontSize3D: 0.45,
-        depth3D: 0.08
-      }
+      base.text = { value: 'New Text', variant: '2d', fontFamily: 'Inter, sans-serif', fontWeight: '600', fontStyle: 'normal', fontSize3D: 0.45, depth3D: 0.08 }
       break
     case 'image':
       base.media = { assetId: null, fit: 'contain', autoplay: false, loop: false, muted: true }
@@ -290,11 +208,7 @@ const normalizeWindowLayout = (layout = {}) => {
   const source = layout && typeof layout === 'object' ? layout : {}
   const windows = {}
   WINDOW_IDS.forEach((windowId) => {
-    windows[windowId] = normalizeWindowState(
-      windowId,
-      source.windows?.[windowId],
-      defaultWindowLayout.windows[windowId]
-    )
+    windows[windowId] = normalizeWindowState(windowId, source.windows?.[windowId], defaultWindowLayout.windows[windowId])
   })
   const requestedActive = ensureString(source.activeWindowId, defaultWindowLayout.activeWindowId)
   return {
@@ -307,9 +221,7 @@ const normalizeEntity = (entity = {}) => {
   const rawType = ensureString(entity.type, 'box')
   const type = ENTITY_TYPES.has(rawType) ? rawType : 'box'
   const defaultComponents = buildDefaultComponentsForType(type)
-  const sourceComponents = entity.components && typeof entity.components === 'object'
-    ? cloneValue(entity.components)
-    : {}
+  const sourceComponents = entity.components && typeof entity.components === 'object' ? cloneValue(entity.components) : {}
   const transformSource = sourceComponents.transform || {}
   const appearanceSource = sourceComponents.appearance || {}
   const nextComponents = {
@@ -412,9 +324,7 @@ const normalizePresentationFixedCamera = (camera = {}, worldState = defaultWorld
   return {
     ...cloneValue(defaultPresentationFixedCamera),
     ...cloneValue(source),
-    projection: ['perspective', 'orthographic'].includes(projection)
-      ? projection
-      : defaultPresentationFixedCamera.projection,
+    projection: ['perspective', 'orthographic'].includes(projection) ? projection : defaultPresentationFixedCamera.projection,
     position: ensureVector(source.position, worldView.position || defaultPresentationFixedCamera.position),
     target: ensureVector(source.target, worldView.target || defaultPresentationFixedCamera.target),
     fov: Math.max(1, ensureNumber(source.fov, defaultPresentationFixedCamera.fov)),
@@ -435,9 +345,7 @@ const normalizePresentationState = (presentation = {}, worldState = defaultWorld
     mode: ['scene', 'fixed-camera', 'code'].includes(mode) ? mode : defaultPresentationState.mode,
     fixedCamera: normalizePresentationFixedCamera(source.fixedCamera, worldState),
     codeHtml: typeof source.codeHtml === 'string' ? source.codeHtml : defaultPresentationState.codeHtml,
-    entryView: ['scene', 'fixed-camera', 'code'].includes(entryView)
-      ? entryView
-      : defaultPresentationState.entryView
+    entryView: ['scene', 'fixed-camera', 'code'].includes(entryView) ? entryView : defaultPresentationState.entryView
   }
 }
 
@@ -448,9 +356,7 @@ const normalizePublishState = (publish = {}) => {
     ...cloneValue(defaultPublishState),
     ...cloneValue(source),
     shareEnabled: ensureBoolean(source.shareEnabled, defaultPublishState.shareEnabled),
-    xrDefaultMode: ['none', 'vr', 'ar'].includes(xrDefaultMode)
-      ? xrDefaultMode
-      : defaultPublishState.xrDefaultMode,
+    xrDefaultMode: ['none', 'vr', 'ar'].includes(xrDefaultMode) ? xrDefaultMode : defaultPublishState.xrDefaultMode,
     lastExportAt: Math.max(0, ensureNumber(source.lastExportAt, defaultPublishState.lastExportAt))
   }
 }
@@ -468,12 +374,139 @@ const normalizeProjectMeta = (meta = {}) => {
   }
 }
 
+const mergeLegacyValues = (source = {}) => {
+  const values = source.values && typeof source.values === 'object' ? cloneValue(source.values) : {}
+  if (source.params && typeof source.params === 'object') {
+    for (const [key, value] of Object.entries(source.params)) {
+      if (values[key] === undefined) values[key] = cloneValue(value)
+    }
+  }
+  if (source.spatial?.position && values.position === undefined) values.position = cloneValue(source.spatial.position)
+  if (source.spatial?.rotation && values.rotation === undefined) values.rotation = cloneValue(source.spatial.rotation)
+  if (source.spatial?.scale && values.scale === undefined) values.scale = cloneValue(source.spatial.scale)
+  if (source.frame?.width !== undefined && values.width === undefined) values.width = source.frame.width
+  if (source.frame?.height !== undefined && values.height === undefined) values.height = source.frame.height
+  return values
+}
+
+const normalizeProjectNode = (node = {}) => {
+  const source = node && typeof node === 'object' ? node : {}
+  const typeId = ensureString(source.typeId, ensureString(source.definitionId, ''))
+  if (!typeId) return null
+  if (LEGACY_ROOT_TYPE_IDS.has(typeId)) return null
+  if (LEGACY_ROOT_NODE_IDS.has(source.id)) return null
+
+  const values = mergeLegacyValues(source)
+  const graphX = Number.isFinite(Number(source.graphX))
+    ? Number(source.graphX)
+    : Number.isFinite(Number(source.params?.canvasPosition?.x))
+      ? Number(source.params.canvasPosition.x)
+      : 0
+  const graphY = Number.isFinite(Number(source.graphY))
+    ? Number(source.graphY)
+    : Number.isFinite(Number(source.params?.canvasPosition?.y))
+      ? Number(source.params.canvasPosition.y)
+      : 0
+  const assetRef = ensureString(
+    source.assetRef,
+    Array.isArray(source.assetBindings) && source.assetBindings[0]?.assetId
+      ? source.assetBindings[0].assetId
+      : ''
+  ) || null
+
+  return {
+    id: ensureString(source.id, generateId('node')),
+    typeId,
+    label: ensureString(source.label, typeId),
+    values,
+    graphX,
+    graphY,
+    runtimeId: source.runtimeId ?? null,
+    assetRef
+  }
+}
+
+const normalizeProjectEdge = (edge = {}) => {
+  const source = edge && typeof edge === 'object' ? edge : {}
+  const fromNodeId = ensureString(source.fromNodeId, ensureString(source.sourceId, ''))
+  const toNodeId = ensureString(source.toNodeId, ensureString(source.targetId, ''))
+  if (!fromNodeId || !toNodeId) return null
+  const fromPort = ensureString(source.fromPort, 'out')
+  const toPort = ensureString(source.toPort, ensureString(source.label, 'in'))
+  return {
+    id: ensureString(source.id, generateId('edge')),
+    fromNodeId,
+    fromPort,
+    toNodeId,
+    toPort
+  }
+}
+
+const normalizeTemplate = (template = {}) => {
+  const source = template && typeof template === 'object' ? template : {}
+  return {
+    id: ensureString(source.id, generateId('template')),
+    label: ensureString(source.label, 'Untitled Template'),
+    typeId: ensureString(source.typeId, ensureString(source.definitionId, '')),
+    values: source.values && typeof source.values === 'object' ? cloneValue(source.values) : {}
+  }
+}
+
+const normalizeWorkspaceState = (workspace = {}) => {
+  const source = workspace && typeof workspace === 'object' ? workspace : {}
+  const activeSurface = ensureString(source.activeSurface, defaultWorkspaceState.activeSurface)
+  return {
+    ...cloneValue(defaultWorkspaceState),
+    ...cloneValue(source),
+    activeSurface: ['world', 'view', 'graph'].includes(activeSurface) ? activeSurface : defaultWorkspaceState.activeSurface,
+    selectedNodeId: ensureString(source.selectedNodeId, '') || null
+  }
+}
+
+const normalizeNodesList = (list = []) => {
+  const seenSingletons = new Set()
+  const out = []
+  for (const raw of Array.isArray(list) ? list : []) {
+    const normalized = normalizeProjectNode(raw)
+    if (!normalized) continue
+    if (SINGLETON_TYPE_IDS.has(normalized.typeId)) {
+      if (seenSingletons.has(normalized.typeId)) continue
+      seenSingletons.add(normalized.typeId)
+    }
+    out.push(normalized)
+  }
+  return out
+}
+
+const normalizeEdgesList = (list = [], nodeIds = new Set()) => {
+  const out = []
+  for (const raw of Array.isArray(list) ? list : []) {
+    const normalized = normalizeProjectEdge(raw)
+    if (!normalized) continue
+    if (!nodeIds.has(normalized.fromNodeId) || !nodeIds.has(normalized.toNodeId)) continue
+    out.push(normalized)
+  }
+  return out
+}
+
 const normalizeProjectDocument = (document = {}) => {
   const source = document && typeof document === 'object' ? document : {}
   const worldState = normalizeWorldState(source.worldState)
+  const workspaceState = normalizeWorkspaceState(source.workspaceState)
+  const nodes = normalizeNodesList(source.nodes)
+  const nodeIds = new Set(nodes.map((node) => node.id))
+  const edges = normalizeEdgesList(source.edges, nodeIds)
+
   return {
     version: PROJECT_DOCUMENT_VERSION,
     projectMeta: normalizeProjectMeta(source.projectMeta),
+    nodes,
+    edges,
+    templates: Array.isArray(source.templates) ? source.templates.map(normalizeTemplate) : [],
+    workspaceState: {
+      ...workspaceState,
+      selectedNodeId: nodeIds.has(workspaceState.selectedNodeId) ? workspaceState.selectedNodeId : null
+    },
     entities: Array.isArray(source.entities) ? source.entities.map(normalizeEntity) : [],
     worldState,
     xrState: normalizeXrState(source.xrState),
@@ -506,6 +539,8 @@ const applyProjectOps = (document, ops = []) => {
   let nextDocument = normalizeProjectDocument(document)
   let entities = new Map(nextDocument.entities.map((entity) => [entity.id, entity]))
   let assets = new Map(nextDocument.assets.map((asset) => [asset.id, asset]))
+  let nodes = new Map(nextDocument.nodes.map((node) => [node.id, node]))
+  let edges = new Map(nextDocument.edges.map((edge) => [edge.id, edge]))
 
   ops.forEach((op) => {
     const payload = op?.payload || {}
@@ -519,8 +554,7 @@ const applyProjectOps = (document, ops = []) => {
       case 'updateEntity': {
         const entityId = ensureString(payload.entityId)
         if (!entityId || !entities.has(entityId)) break
-        const nextEntity = normalizeEntity(mergePatch(entities.get(entityId), payload.patch || {}))
-        entities.set(entityId, nextEntity)
+        entities.set(entityId, normalizeEntity(mergePatch(entities.get(entityId), payload.patch || {})))
         break
       }
       case 'updateComponent': {
@@ -528,21 +562,85 @@ const applyProjectOps = (document, ops = []) => {
         const component = ensureString(payload.component)
         if (!entityId || !component || !entities.has(entityId)) break
         const entity = entities.get(entityId)
-        const patchedEntity = normalizeEntity({
+        entities.set(entityId, normalizeEntity({
           ...entity,
           components: {
             ...entity.components,
             [component]: mergePatch(entity.components?.[component], payload.patch || {})
           }
-        })
-        entities.set(entityId, patchedEntity)
+        }))
         break
       }
       case 'deleteEntity': {
         const entityId = ensureString(payload.entityId)
-        if (entityId) {
-          entities.delete(entityId)
+        if (entityId) entities.delete(entityId)
+        break
+      }
+      case 'createNode': {
+        if (!payload.node) break
+        const node = normalizeProjectNode(payload.node)
+        if (!node) break
+        if (SINGLETON_TYPE_IDS.has(node.typeId)) {
+          const duplicate = Array.from(nodes.values()).some((existing) => existing.typeId === node.typeId)
+          if (duplicate) break
         }
+        nodes.set(node.id, node)
+        break
+      }
+      case 'updateNode': {
+        const nodeId = ensureString(payload.nodeId)
+        if (!nodeId || !nodes.has(nodeId)) break
+        const existing = nodes.get(nodeId)
+        const patch = payload.patch || {}
+        const nextValues = patch.values && typeof patch.values === 'object'
+          ? { ...existing.values, ...cloneValue(patch.values) }
+          : existing.values
+        const merged = {
+          ...existing,
+          ...(patch.label !== undefined ? { label: ensureString(patch.label, existing.label) } : {}),
+          ...(patch.graphX !== undefined ? { graphX: ensureNumber(patch.graphX, existing.graphX) } : {}),
+          ...(patch.graphY !== undefined ? { graphY: ensureNumber(patch.graphY, existing.graphY) } : {}),
+          ...(patch.runtimeId !== undefined ? { runtimeId: patch.runtimeId } : {}),
+          ...(patch.assetRef !== undefined ? { assetRef: patch.assetRef || null } : {}),
+          values: nextValues
+        }
+        nodes.set(nodeId, merged)
+        break
+      }
+      case 'deleteNode': {
+        const nodeId = ensureString(payload.nodeId)
+        if (!nodeId) break
+        nodes.delete(nodeId)
+        for (const [edgeId, edge] of edges) {
+          if (edge.fromNodeId === nodeId || edge.toNodeId === nodeId) edges.delete(edgeId)
+        }
+        if (nextDocument.workspaceState.selectedNodeId === nodeId) {
+          nextDocument.workspaceState = normalizeWorkspaceState({
+            ...nextDocument.workspaceState,
+            selectedNodeId: null
+          })
+        }
+        break
+      }
+      case 'createEdge': {
+        if (!payload.edge) break
+        const edge = normalizeProjectEdge(payload.edge)
+        if (!edge) break
+        if (!nodes.has(edge.fromNodeId) || !nodes.has(edge.toNodeId)) break
+        edges.set(edge.id, edge)
+        break
+      }
+      case 'updateEdge': {
+        const edgeId = ensureString(payload.edgeId)
+        if (!edgeId || !edges.has(edgeId)) break
+        const merged = normalizeProjectEdge(mergePatch(edges.get(edgeId), payload.patch || {}))
+        if (!merged) break
+        edges.set(edgeId, merged)
+        break
+      }
+      case 'deleteEdge': {
+        const edgeId = ensureString(payload.edgeId)
+        if (edgeId) edges.delete(edgeId)
         break
       }
       case 'setWorldState': {
@@ -582,6 +680,10 @@ const applyProjectOps = (document, ops = []) => {
         })
         break
       }
+      case 'setWorkspaceState': {
+        nextDocument.workspaceState = normalizeWorkspaceState(mergePatch(nextDocument.workspaceState, payload.patch || {}))
+        break
+      }
       case 'setProjectMeta': {
         nextDocument.projectMeta = normalizeProjectMeta(mergePatch(nextDocument.projectMeta, payload.patch || {}))
         break
@@ -594,9 +696,7 @@ const applyProjectOps = (document, ops = []) => {
       }
       case 'deleteAsset': {
         const assetId = ensureString(payload.assetId)
-        if (assetId) {
-          assets.delete(assetId)
-        }
+        if (assetId) assets.delete(assetId)
         break
       }
       case 'replaceDocument': {
@@ -604,6 +704,8 @@ const applyProjectOps = (document, ops = []) => {
           nextDocument = normalizeProjectDocument(payload.document)
           entities = new Map(nextDocument.entities.map((entity) => [entity.id, entity]))
           assets = new Map(nextDocument.assets.map((asset) => [asset.id, asset]))
+          nodes = new Map(nextDocument.nodes.map((node) => [node.id, node]))
+          edges = new Map(nextDocument.edges.map((edge) => [edge.id, edge]))
         }
         break
       }
@@ -614,6 +716,8 @@ const applyProjectOps = (document, ops = []) => {
 
   nextDocument.entities = Array.from(entities.values())
   nextDocument.assets = Array.from(assets.values())
+  nextDocument.nodes = Array.from(nodes.values())
+  nextDocument.edges = Array.from(edges.values())
   nextDocument.projectMeta.updatedAt = Date.now()
   return normalizeProjectDocument(nextDocument)
 }
@@ -638,6 +742,8 @@ module.exports = {
   normalizePresentationState,
   normalizePublishState,
   normalizeProjectDocument,
+  normalizeProjectNode,
+  normalizeProjectEdge,
   normalizeProjectMeta,
   normalizeWindowLayout,
   applyProjectOps

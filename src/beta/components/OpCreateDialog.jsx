@@ -1,9 +1,59 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
-    NODE_FAMILY_TABS,
-    filterNodeDefinitions,
-    getNodeDefinition
+    NODE_CATEGORIES,
+    listNodeTypes,
+    getNodeType
 } from '../../project/nodeRegistry.js'
+
+const NODE_FAMILY_TABS = NODE_CATEGORIES.map((category) => ({ id: category.id, label: category.label }))
+
+const portToField = (port) => {
+    const label = port.label || port.id
+    const path = [port.id]
+    if (port.type === 'color') return { label, path, type: 'color' }
+    if (port.type === 'boolean') return { label, path, type: 'checkbox' }
+    if (port.type === 'number') return { label, path, type: 'number', min: port.min, max: port.max, step: port.step }
+    if (port.type === 'string') {
+        const isMultiline = port.id === 'body' || port.id === 'text'
+        return { label, path, type: isMultiline ? 'textarea' : 'text' }
+    }
+    if (port.type === 'vec3') return { label, path, type: 'vec3' }
+    return null
+}
+
+const derivePreviewKind = (type) => {
+    if (!type) return 'panel'
+    if (type.id === 'value.color') return 'color'
+    if (type.id.startsWith('geom.')) return 'cube'
+    if (type.id === 'view.browser') return 'browser'
+    return 'panel'
+}
+
+const toDefinitionShim = (type) => {
+    if (!type) return null
+    const defaults = { ...(type.defaultValues || {}) }
+    for (const port of type.inputs || []) {
+        if (port.default !== undefined && defaults[port.id] === undefined) defaults[port.id] = port.default
+    }
+    const fields = (type.inputs || []).map(portToField).filter(Boolean)
+    const surface = type.render === 'panel-2d' ? 'view' : 'world'
+    const mode = type.render === 'spatial-3d'
+        ? 'spatial'
+        : type.render === 'panel-2d'
+            ? 'panel'
+            : 'hidden'
+    return {
+        id: type.id,
+        label: type.label,
+        family: type.category,
+        surface,
+        mode,
+        singleton: Boolean(type.singleton),
+        previewKind: derivePreviewKind(type),
+        defaultParams: defaults,
+        sections: fields.length ? [{ id: 'params', label: 'Params', fields }] : []
+    }
+}
 
 const cloneValue = (value) => {
     if (Array.isArray(value)) return value.map(cloneValue)
@@ -108,15 +158,15 @@ export default function OpCreateDialog({
     const [family, setFamily] = useState('all')
     const [query, setQuery] = useState('')
     const availableDefinitions = useMemo(
-        () => filterNodeDefinitions({ surface, family: 'all', query }),
-        [query, surface]
+        () => listNodeTypes({ query }).map(toDefinitionShim).filter(Boolean),
+        [query]
     )
     const definitions = useMemo(
-        () => filterNodeDefinitions({ surface, family, query }),
-        [family, query, surface]
+        () => listNodeTypes({ category: family, query }).map(toDefinitionShim).filter(Boolean),
+        [family, query]
     )
     const [selectedId, setSelectedId] = useState('')
-    const selectedDefinition = getNodeDefinition(selectedId) || definitions[0] || null
+    const selectedDefinition = (selectedId ? toDefinitionShim(getNodeType(selectedId)) : null) || definitions[0] || null
     const [draftParams, setDraftParams] = useState({})
 
     useEffect(() => {

@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useState } from 'react'
-import BetaApp from './beta/BetaApp.jsx'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { getBetaLocationState, isBetaLocation } from './beta/utils/betaRouting.js'
+import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
+import LandingPage from './landing/LandingPage.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
-import StudioApp from './studio/StudioApp.jsx'
 import { getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
-import { getAppLocationState } from './utils/spaceRouting.js'
+import { APP_PAGE_PREFERENCES, getAppLocationState } from './utils/spaceRouting.js'
+
+const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
+const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 
 export default function RootApp() {
     const [locationState, setLocationState] = useState(() => ({
@@ -25,12 +28,48 @@ export default function RootApp() {
         return () => window.removeEventListener('popstate', handlePopState)
     }, [])
 
-    const isStudio = useMemo(() => isStudioLocation(locationState.studioState), [locationState.studioState])
+    const isStudio = useMemo(
+        () => isStudioLocation(locationState.studioState),
+        [locationState.studioState]
+    )
     const isBeta = useMemo(() => isBetaLocation(locationState.betaState), [locationState.betaState])
 
     if (isStudio) {
-        return <StudioApp initialRoute={locationState.studioState} />
+        return (
+            <Suspense
+                fallback={
+                    <RouteSurfaceFallback
+                        label="Loading Studio"
+                        detail="Preparing the main authoring workspace..."
+                    />
+                }
+            >
+                <StudioApp initialRoute={locationState.studioState} />
+            </Suspense>
+        )
     }
 
-    return isBeta ? <BetaApp initialRoute={locationState.betaState} /> : <SpaceSurfaceApp routeState={locationState.appState} />
+    if (isBeta) {
+        return (
+            <Suspense
+                fallback={
+                    <RouteSurfaceFallback
+                        label="Loading Beta"
+                        detail="Preparing the experimental workspace..."
+                    />
+                }
+            >
+                <BetaApp initialRoute={locationState.betaState} />
+            </Suspense>
+        )
+    }
+
+    const appState = locationState.appState
+    const isRootLanding = !appState.spaceId && appState.page !== APP_PAGE_PREFERENCES
+
+    if (isRootLanding) {
+        return <LandingPage />
+    }
+
+    return <SpaceSurfaceApp routeState={appState} />
 }

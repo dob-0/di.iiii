@@ -1,4 +1,6 @@
-export const PROJECT_DOCUMENT_VERSION = 3
+import { getNodeType } from '../project/nodeRegistry.js'
+
+export const PROJECT_DOCUMENT_VERSION = 4
 export const ENTITY_TYPES = [
     'box',
     'sphere',
@@ -11,43 +13,11 @@ export const ENTITY_TYPES = [
     'model'
 ]
 export const WINDOW_IDS = ['viewport', 'assets', 'inspector', 'outliner', 'activity', 'project']
-export const PROJECT_ROOT_NODE_ID = 'root-node'
-export const PROJECT_WORLD_ROOT_NODE_ID = 'world-root'
-export const PROJECT_VIEW_ROOT_NODE_ID = 'view-root'
-export const PROJECT_ROOT_GRAPH_ID = 'root-graph'
 
 const ENTITY_TYPE_SET = new Set(ENTITY_TYPES)
-const PROJECT_NODE_SURFACES = ['graph', 'world', 'view']
-const PROJECT_NODE_MODES = ['hidden', 'spatial', 'panel', 'overlay']
-const LEGACY_WINDOW_NODE_DEFINITIONS = {
-    assets: 'view.assets',
-    inspector: 'view.inspector',
-    outliner: 'view.outliner',
-    activity: 'view.activity',
-    project: 'view.project'
-}
-const VIEW_NODE_WINDOW_IDS = Object.fromEntries(
-    Object.entries(LEGACY_WINDOW_NODE_DEFINITIONS).map(([windowId, definitionId]) => [definitionId, windowId])
-)
-const NODE_LABELS = {
-    'core.project': 'Project Root',
-    'world.root': 'World Root',
-    'view.root': 'View Root',
-    'world.color': 'World Color',
-    'world.grid': 'World Grid',
-    'world.light': 'World Light',
-    'world.camera': 'World Camera',
-    'geom.cube': 'Cube',
-    'app.browser': 'Browser',
-    'view.panel': 'Panel',
-    'view.text': 'Text',
-    'view.browser': 'Browser Panel',
-    'view.inspector': 'Inspector',
-    'view.assets': 'Assets',
-    'view.outliner': 'Outliner',
-    'view.activity': 'Activity',
-    'view.project': 'Project'
-}
+const LEGACY_ROOT_NODE_IDS = new Set(['root-node', 'world-root', 'view-root'])
+const LEGACY_ROOT_TYPE_IDS = new Set(['core.project', 'world.root', 'view.root'])
+const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar', 'world.light', 'world.background', 'world.grid'])
 
 export const cloneValue = (value) => {
     if (Array.isArray(value)) {
@@ -157,76 +127,14 @@ export const defaultPublishState = {
 
 export const defaultWorkspaceState = {
     activeSurface: 'world',
-    selectedNodeId: null,
-    activeGraphId: PROJECT_ROOT_GRAPH_ID,
-    enteredNodeId: PROJECT_ROOT_NODE_ID
+    selectedNodeId: null
 }
-
-const defaultNodeFrame = {
-    x: 96,
-    y: 140,
-    width: 360,
-    height: 280,
-    zIndex: 6,
-    dock: 'floating',
-    minimized: false,
-    visible: true,
-    pinned: false,
-    title: ''
-}
-
-const defaultNodeSpatial = {
-    position: [0, 0, 0],
-    rotation: [0, 0, 0],
-    scale: [1, 1, 1],
-    bounds: [1, 1, 1]
-}
-
-const buildDefaultRootNodes = () => ([
-    {
-        id: PROJECT_ROOT_NODE_ID,
-        definitionId: 'core.project',
-        label: 'Project Root',
-        family: 'core',
-        parentId: '',
-        mount: { surface: 'graph', mode: 'hidden' },
-        params: {},
-        runtime: {},
-        childGraphId: PROJECT_ROOT_GRAPH_ID
-    },
-    {
-        id: PROJECT_WORLD_ROOT_NODE_ID,
-        definitionId: 'world.root',
-        label: 'World Root',
-        family: 'world',
-        parentId: PROJECT_ROOT_NODE_ID,
-        mount: { surface: 'world', mode: 'hidden' },
-        params: {},
-        runtime: {}
-    },
-    {
-        id: PROJECT_VIEW_ROOT_NODE_ID,
-        definitionId: 'view.root',
-        label: 'View Root',
-        family: 'view',
-        parentId: PROJECT_ROOT_NODE_ID,
-        mount: { surface: 'view', mode: 'hidden' },
-        params: {},
-        runtime: {}
-    }
-])
-
-const buildDefaultRootEdges = () => ([
-    { id: 'edge-root-world', sourceId: PROJECT_ROOT_NODE_ID, targetId: PROJECT_WORLD_ROOT_NODE_ID, label: 'world' },
-    { id: 'edge-root-view', sourceId: PROJECT_ROOT_NODE_ID, targetId: PROJECT_VIEW_ROOT_NODE_ID, label: 'view' }
-])
 
 export const defaultProjectDocument = {
     version: PROJECT_DOCUMENT_VERSION,
     projectMeta: { id: '', spaceId: 'main', title: 'Untitled Project', createdAt: 0, updatedAt: 0, source: 'project' },
-    rootNodeId: PROJECT_ROOT_NODE_ID,
-    nodes: buildDefaultRootNodes(),
-    edges: buildDefaultRootEdges(),
+    nodes: [],
+    edges: [],
     templates: [],
     workspaceState: defaultWorkspaceState,
     entities: [],
@@ -473,98 +381,71 @@ export const normalizeProjectMeta = (meta = {}) => {
     }
 }
 
-const normalizeNodeMount = (mount = {}, fallbackSurface = 'graph', fallbackMode = 'hidden') => {
-    const source = mount && typeof mount === 'object' ? mount : {}
-    const surface = ensureString(source.surface, fallbackSurface)
-    const mode = ensureString(source.mode, fallbackMode)
-    return {
-        surface: PROJECT_NODE_SURFACES.includes(surface) ? surface : fallbackSurface,
-        mode: PROJECT_NODE_MODES.includes(mode) ? mode : fallbackMode
+const mergeLegacyValues = (source = {}) => {
+    const values = source.values && typeof source.values === 'object' ? cloneValue(source.values) : {}
+    if (source.params && typeof source.params === 'object') {
+        for (const [key, value] of Object.entries(source.params)) {
+            if (values[key] === undefined) values[key] = cloneValue(value)
+        }
     }
-}
-
-const normalizeNodeFrame = (frame = {}, fallback = defaultNodeFrame) => {
-    const source = frame && typeof frame === 'object' ? frame : {}
-    return {
-        ...cloneValue(defaultNodeFrame),
-        ...cloneValue(fallback || {}),
-        ...cloneValue(source),
-        x: ensureNumber(source.x, fallback?.x ?? defaultNodeFrame.x),
-        y: ensureNumber(source.y, fallback?.y ?? defaultNodeFrame.y),
-        width: Math.max(240, ensureNumber(source.width, fallback?.width ?? defaultNodeFrame.width)),
-        height: Math.max(180, ensureNumber(source.height, fallback?.height ?? defaultNodeFrame.height)),
-        zIndex: Math.max(1, ensureNumber(source.zIndex, fallback?.zIndex ?? defaultNodeFrame.zIndex)),
-        dock: ensureString(source.dock, fallback?.dock ?? defaultNodeFrame.dock),
-        minimized: ensureBoolean(source.minimized, fallback?.minimized ?? defaultNodeFrame.minimized),
-        visible: ensureBoolean(source.visible, fallback?.visible ?? defaultNodeFrame.visible),
-        pinned: ensureBoolean(source.pinned, fallback?.pinned ?? defaultNodeFrame.pinned),
-        title: ensureString(source.title, fallback?.title ?? defaultNodeFrame.title)
-    }
-}
-
-const normalizeNodeSpatial = (spatial = {}, fallback = defaultNodeSpatial) => {
-    const source = spatial && typeof spatial === 'object' ? spatial : {}
-    const base = fallback && typeof fallback === 'object' ? fallback : defaultNodeSpatial
-    return {
-        position: ensureVector(source.position, base.position || defaultNodeSpatial.position),
-        rotation: ensureVector(source.rotation, base.rotation || defaultNodeSpatial.rotation),
-        scale: ensureVector(source.scale, base.scale || defaultNodeSpatial.scale),
-        bounds: ensureVector(source.bounds, base.bounds || defaultNodeSpatial.bounds)
-    }
+    if (source.spatial?.position && values.position === undefined) values.position = cloneValue(source.spatial.position)
+    if (source.spatial?.rotation && values.rotation === undefined) values.rotation = cloneValue(source.spatial.rotation)
+    if (source.spatial?.scale && values.scale === undefined) values.scale = cloneValue(source.spatial.scale)
+    if (source.frame?.width !== undefined && values.width === undefined) values.width = source.frame.width
+    if (source.frame?.height !== undefined && values.height === undefined) values.height = source.frame.height
+    return values
 }
 
 export const normalizeProjectNode = (node = {}) => {
     const source = node && typeof node === 'object' ? node : {}
-    const definitionId = ensureString(source.definitionId, 'core.space')
-    const family = ensureString(source.family, definitionId.split('.')[0] || 'core')
-    const inferredSurface = source.frame
-        ? 'view'
-        : (source.spatial
-            ? 'world'
-            : (definitionId.startsWith('view.')
-                ? 'view'
-                : ((definitionId.startsWith('world.') || definitionId.startsWith('geom.') || definitionId.startsWith('app.'))
-                    ? 'world'
-                    : 'graph')))
-    const inferredMode = source.frame
-        ? 'panel'
-        : (source.spatial ? 'spatial' : (inferredSurface === 'view' ? 'panel' : 'hidden'))
-    const mount = normalizeNodeMount(source.mount, inferredSurface, inferredMode)
-    const normalized = {
+    const typeId = ensureString(source.typeId, ensureString(source.definitionId, ''))
+    if (!typeId) return null
+    if (LEGACY_ROOT_TYPE_IDS.has(typeId)) return null
+    if (LEGACY_ROOT_NODE_IDS.has(source.id)) return null
+
+    const values = mergeLegacyValues(source)
+    const graphX = Number.isFinite(Number(source.graphX))
+        ? Number(source.graphX)
+        : Number.isFinite(Number(source.params?.canvasPosition?.x))
+            ? Number(source.params.canvasPosition.x)
+            : 0
+    const graphY = Number.isFinite(Number(source.graphY))
+        ? Number(source.graphY)
+        : Number.isFinite(Number(source.params?.canvasPosition?.y))
+            ? Number(source.params.canvasPosition.y)
+            : 0
+    const assetRef = ensureString(
+        source.assetRef,
+        Array.isArray(source.assetBindings) && source.assetBindings[0]?.assetId
+            ? source.assetBindings[0].assetId
+            : ''
+    ) || null
+
+    return {
         id: ensureString(source.id, generateId('node')),
-        definitionId,
-        label: ensureString(source.label, NODE_LABELS[definitionId] || definitionId),
-        family,
-        parentId: ensureString(source.parentId, ''),
-        params: source.params && typeof source.params === 'object' ? cloneValue(source.params) : {},
-        inputs: Array.isArray(source.inputs) ? cloneValue(source.inputs) : [],
-        outputs: Array.isArray(source.outputs) ? cloneValue(source.outputs) : [],
-        runtime: source.runtime && typeof source.runtime === 'object' ? cloneValue(source.runtime) : {},
-        mount,
-        spatial: null,
-        frame: null,
-        assetBindings: Array.isArray(source.assetBindings) ? cloneValue(source.assetBindings) : [],
-        childGraphId: ensureString(source.childGraphId, ''),
-        legacyEntityId: ensureString(source.legacyEntityId, '')
+        typeId,
+        label: ensureString(source.label, typeId),
+        values,
+        graphX,
+        graphY,
+        runtimeId: source.runtimeId ?? null,
+        assetRef
     }
-
-    if (source.spatial || mount.mode === 'spatial') {
-        normalized.spatial = normalizeNodeSpatial(source.spatial)
-    }
-    if (source.frame || mount.surface === 'view') {
-        normalized.frame = normalizeNodeFrame(source.frame)
-    }
-
-    return normalized
 }
 
-const normalizeProjectEdge = (edge = {}) => {
+export const normalizeProjectEdge = (edge = {}) => {
     const source = edge && typeof edge === 'object' ? edge : {}
+    const fromNodeId = ensureString(source.fromNodeId, ensureString(source.sourceId, ''))
+    const toNodeId = ensureString(source.toNodeId, ensureString(source.targetId, ''))
+    if (!fromNodeId || !toNodeId) return null
+    const fromPort = ensureString(source.fromPort, 'out')
+    const toPort = ensureString(source.toPort, ensureString(source.label, 'in'))
     return {
         id: ensureString(source.id, generateId('edge')),
-        sourceId: ensureString(source.sourceId, ''),
-        targetId: ensureString(source.targetId, ''),
-        label: ensureString(source.label, '')
+        fromNodeId,
+        fromPort,
+        toNodeId,
+        toPort
     }
 }
 
@@ -573,8 +454,8 @@ const normalizeTemplate = (template = {}) => {
     return {
         id: ensureString(source.id, generateId('template')),
         label: ensureString(source.label, 'Untitled Template'),
-        definitionId: ensureString(source.definitionId, ''),
-        params: source.params && typeof source.params === 'object' ? cloneValue(source.params) : {}
+        typeId: ensureString(source.typeId, ensureString(source.definitionId, '')),
+        values: source.values && typeof source.values === 'object' ? cloneValue(source.values) : {}
     }
 }
 
@@ -584,374 +465,71 @@ export const normalizeWorkspaceState = (workspace = {}) => {
     return {
         ...cloneValue(defaultWorkspaceState),
         ...cloneValue(source),
-        activeSurface: PROJECT_NODE_SURFACES.includes(activeSurface) ? activeSurface : defaultWorkspaceState.activeSurface,
-        selectedNodeId: ensureString(source.selectedNodeId, '') || null,
-        activeGraphId: ensureString(source.activeGraphId, defaultWorkspaceState.activeGraphId),
-        enteredNodeId: ensureString(source.enteredNodeId, defaultWorkspaceState.enteredNodeId)
+        activeSurface: ['world', 'view', 'graph'].includes(activeSurface) ? activeSurface : defaultWorkspaceState.activeSurface,
+        selectedNodeId: ensureString(source.selectedNodeId, '') || null
     }
 }
 
-const ensureRootNodes = (nodes = []) => {
-    const map = new Map()
-    nodes.forEach((node) => {
-        const normalized = normalizeProjectNode(node)
-        map.set(normalized.id, normalized)
-    })
-
-    buildDefaultRootNodes().forEach((rootNode) => {
-        const existing = map.get(rootNode.id)
-        map.set(rootNode.id, normalizeProjectNode(mergePatch(rootNode, existing || {})))
-    })
-
-    return [
-        map.get(PROJECT_ROOT_NODE_ID),
-        map.get(PROJECT_WORLD_ROOT_NODE_ID),
-        map.get(PROJECT_VIEW_ROOT_NODE_ID),
-        ...Array.from(map.values()).filter((node) => ![
-            PROJECT_ROOT_NODE_ID,
-            PROJECT_WORLD_ROOT_NODE_ID,
-            PROJECT_VIEW_ROOT_NODE_ID
-        ].includes(node.id))
-    ]
-}
-
-const buildLegacyWindowNode = (windowId, windowState) => normalizeProjectNode({
-    id: `legacy-window-${windowId}`,
-    definitionId: LEGACY_WINDOW_NODE_DEFINITIONS[windowId] || 'view.panel',
-    label: windowState.title || NODE_LABELS[LEGACY_WINDOW_NODE_DEFINITIONS[windowId]] || windowId,
-    family: 'view',
-    parentId: PROJECT_VIEW_ROOT_NODE_ID,
-    mount: { surface: 'view', mode: 'panel' },
-    params: {
-        title: windowState.title || NODE_LABELS[LEGACY_WINDOW_NODE_DEFINITIONS[windowId]] || windowId
-    },
-    frame: {
-        title: windowState.title || NODE_LABELS[LEGACY_WINDOW_NODE_DEFINITIONS[windowId]] || windowId,
-        x: windowState.x,
-        y: windowState.y,
-        width: windowState.width,
-        height: windowState.height,
-        zIndex: windowState.zIndex,
-        visible: windowState.visible,
-        minimized: windowState.minimized,
-        pinned: windowState.pinned
-    }
-})
-
-const buildLegacyWorldNodes = (worldState) => ([
-    normalizeProjectNode({
-        id: 'legacy-world-color',
-        definitionId: 'world.color',
-        label: 'World Color',
-        family: 'world',
-        parentId: PROJECT_WORLD_ROOT_NODE_ID,
-        mount: { surface: 'world', mode: 'hidden' },
-        params: { color: worldState.backgroundColor }
-    }),
-    normalizeProjectNode({
-        id: 'legacy-world-grid',
-        definitionId: 'world.grid',
-        label: 'World Grid',
-        family: 'world',
-        parentId: PROJECT_WORLD_ROOT_NODE_ID,
-        mount: { surface: 'world', mode: 'hidden' },
-        params: { visible: worldState.gridVisible, size: worldState.gridSize }
-    }),
-    normalizeProjectNode({
-        id: 'legacy-world-light',
-        definitionId: 'world.light',
-        label: 'World Light',
-        family: 'world',
-        parentId: PROJECT_WORLD_ROOT_NODE_ID,
-        mount: { surface: 'world', mode: 'hidden' },
-        params: {
-            ambientColor: worldState.ambientLight.color,
-            ambientIntensity: worldState.ambientLight.intensity,
-            directionalColor: worldState.directionalLight.color,
-            directionalIntensity: worldState.directionalLight.intensity,
-            directionalPosition: worldState.directionalLight.position
+const normalizeNodesList = (list = []) => {
+    const seenSingletons = new Set()
+    const out = []
+    for (const raw of Array.isArray(list) ? list : []) {
+        const normalized = normalizeProjectNode(raw)
+        if (!normalized) continue
+        if (SINGLETON_TYPE_IDS.has(normalized.typeId)) {
+            if (seenSingletons.has(normalized.typeId)) continue
+            seenSingletons.add(normalized.typeId)
         }
-    }),
-    normalizeProjectNode({
-        id: 'legacy-world-camera',
-        definitionId: 'world.camera',
-        label: 'World Camera',
-        family: 'world',
-        parentId: PROJECT_WORLD_ROOT_NODE_ID,
-        mount: { surface: 'world', mode: 'hidden' },
-        params: {
-            mode: worldState.savedView.mode,
-            position: worldState.savedView.position,
-            target: worldState.savedView.target
-        }
-    })
-])
-
-const buildNodesFromSource = (source = {}, worldState = defaultWorldState, windowLayout = defaultWindowLayout) => {
-    const sourceHasNodes = Array.isArray(source.nodes) && source.nodes.length > 0
-    if (sourceHasNodes) {
-        return ensureRootNodes(source.nodes)
+        out.push(normalized)
     }
-
-    const nodes = buildDefaultRootNodes()
-    const shouldMigrateLegacyWorld = Boolean(source.worldState && typeof source.worldState === 'object')
-    const shouldMigrateLegacyWindows = Boolean(source.windowLayout && typeof source.windowLayout === 'object')
-
-    if (shouldMigrateLegacyWorld) {
-        nodes.push(...buildLegacyWorldNodes(worldState))
-    }
-
-    if (shouldMigrateLegacyWindows) {
-        WINDOW_IDS.filter((windowId) => windowId !== 'viewport').forEach((windowId) => {
-            nodes.push(buildLegacyWindowNode(windowId, windowLayout.windows[windowId]))
-        })
-    }
-
-    return ensureRootNodes(nodes)
+    return out
 }
 
-const deriveEdgesFromNodes = (nodes = []) => {
-    const edges = buildDefaultRootEdges()
-    nodes.forEach((node) => {
-        if (!node.parentId) return
-        const isDefaultRootEdge = (
-            (node.id === PROJECT_WORLD_ROOT_NODE_ID && node.parentId === PROJECT_ROOT_NODE_ID)
-            || (node.id === PROJECT_VIEW_ROOT_NODE_ID && node.parentId === PROJECT_ROOT_NODE_ID)
-        )
-        if (isDefaultRootEdge) return
-        edges.push({
-            id: `edge-${node.parentId}-${node.id}`,
-            sourceId: node.parentId,
-            targetId: node.id,
-            label: ''
-        })
-    })
-    return edges.map(normalizeProjectEdge)
-}
-
-export const deriveWorldStateFromNodes = (nodes = [], fallbackWorldState = defaultWorldState) => {
-    const nextWorldState = normalizeWorldState(fallbackWorldState)
-    ;(Array.isArray(nodes) ? nodes : []).forEach((node) => {
-        switch (node.definitionId) {
-            case 'world.color':
-                nextWorldState.backgroundColor = ensureString(node.params?.color, nextWorldState.backgroundColor)
-                break
-            case 'world.grid':
-                nextWorldState.gridVisible = ensureBoolean(node.params?.visible, nextWorldState.gridVisible)
-                nextWorldState.gridSize = Math.max(1, ensureNumber(node.params?.size, nextWorldState.gridSize))
-                break
-            case 'world.light':
-                nextWorldState.ambientLight = {
-                    color: ensureString(node.params?.ambientColor, nextWorldState.ambientLight.color),
-                    intensity: ensureNumber(node.params?.ambientIntensity, nextWorldState.ambientLight.intensity)
-                }
-                nextWorldState.directionalLight = {
-                    color: ensureString(node.params?.directionalColor, nextWorldState.directionalLight.color),
-                    intensity: ensureNumber(node.params?.directionalIntensity, nextWorldState.directionalLight.intensity),
-                    position: ensureVector(node.params?.directionalPosition, nextWorldState.directionalLight.position)
-                }
-                break
-            case 'world.camera':
-                nextWorldState.savedView = {
-                    mode: ensureString(node.params?.mode, nextWorldState.savedView.mode),
-                    position: ensureVector(node.params?.position, nextWorldState.savedView.position),
-                    target: ensureVector(node.params?.target, nextWorldState.savedView.target)
-                }
-                break
-            default:
-                break
-        }
-    })
-    return nextWorldState
-}
-
-export const deriveWindowLayoutFromNodes = (nodes = [], fallbackWindowLayout = defaultWindowLayout) => {
-    const nextLayout = normalizeWindowLayout(fallbackWindowLayout)
-    const windows = cloneValue(nextLayout.windows)
-
-    ;(Array.isArray(nodes) ? nodes : []).forEach((node) => {
-        const windowId = VIEW_NODE_WINDOW_IDS[node.definitionId]
-        if (!windowId) return
-        const title = ensureString(node.frame?.title, ensureString(node.params?.title, node.label))
-        windows[windowId] = normalizeWindowState(windowId, {
-            ...windows[windowId],
-            title,
-            x: node.frame?.x,
-            y: node.frame?.y,
-            width: node.frame?.width,
-            height: node.frame?.height,
-            zIndex: node.frame?.zIndex,
-            visible: node.frame?.visible,
-            minimized: node.frame?.minimized,
-            pinned: node.frame?.pinned
-        }, defaultWindowLayout.windows[windowId])
-    })
-
-    const activeWindow = Object.values(windows)
-        .filter((windowState) => windowState.visible)
-        .sort((left, right) => (right.zIndex || 0) - (left.zIndex || 0))[0]
-
-    return normalizeWindowLayout({
-        activeWindowId: activeWindow?.id || nextLayout.activeWindowId,
-        windows
-    })
+const normalizeEdgesList = (list = [], nodeIds = new Set()) => {
+    const out = []
+    for (const raw of Array.isArray(list) ? list : []) {
+        const normalized = normalizeProjectEdge(raw)
+        if (!normalized) continue
+        if (!nodeIds.has(normalized.fromNodeId) || !nodeIds.has(normalized.toNodeId)) continue
+        out.push(normalized)
+    }
+    return out
 }
 
 export const normalizeProjectDocument = (document = {}) => {
     const source = document && typeof document === 'object' ? document : {}
-    const legacyWorldState = normalizeWorldState(source.worldState)
-    const legacyWindowLayout = normalizeWindowLayout(source.windowLayout)
-    const nodes = buildNodesFromSource(source, legacyWorldState, legacyWindowLayout)
-    const worldState = deriveWorldStateFromNodes(
-        nodes,
-        source.worldState && typeof source.worldState === 'object' ? legacyWorldState : defaultWorldState
-    )
-    const windowLayout = deriveWindowLayoutFromNodes(nodes, legacyWindowLayout)
-    const rootNodeId = ensureString(source.rootNodeId, PROJECT_ROOT_NODE_ID)
+    const worldState = normalizeWorldState(source.worldState)
     const workspaceState = normalizeWorkspaceState(source.workspaceState)
+    const nodes = normalizeNodesList(source.nodes)
+    const nodeIds = new Set(nodes.map((node) => node.id))
+    const edges = normalizeEdgesList(source.edges, nodeIds)
 
     return {
         version: PROJECT_DOCUMENT_VERSION,
         projectMeta: normalizeProjectMeta(source.projectMeta),
-        rootNodeId: nodes.some((node) => node.id === rootNodeId) ? rootNodeId : PROJECT_ROOT_NODE_ID,
         nodes,
-        edges: Array.isArray(source.edges) && source.edges.length
-            ? source.edges.map(normalizeProjectEdge)
-            : deriveEdgesFromNodes(nodes),
+        edges,
         templates: Array.isArray(source.templates) ? source.templates.map(normalizeTemplate) : [],
         workspaceState: {
             ...workspaceState,
-            selectedNodeId: nodes.some((node) => node.id === workspaceState.selectedNodeId)
-                ? workspaceState.selectedNodeId
-                : null
+            selectedNodeId: nodeIds.has(workspaceState.selectedNodeId) ? workspaceState.selectedNodeId : null
         },
         entities: Array.isArray(source.entities) ? source.entities.map(normalizeEntity) : [],
         worldState,
         xrState: normalizeXrState(source.xrState),
         presentationState: normalizePresentationState(source.presentationState, worldState),
         publishState: normalizePublishState(source.publishState),
-        windowLayout,
+        windowLayout: normalizeWindowLayout(source.windowLayout),
         assets: Array.isArray(source.assets) ? source.assets.map(normalizeAsset) : []
     }
 }
 
-const getNodeIdByDefinition = (nodeMap, definitionId) => {
-    for (const node of nodeMap.values()) {
-        if (node.definitionId === definitionId) return node.id
+const validateNodeTypeId = (typeId) => {
+    try {
+        return Boolean(getNodeType(typeId))
+    } catch {
+        return true
     }
-    return ''
-}
-
-const upsertNodeByDefinition = (nodeMap, definitionId, buildNode) => {
-    const existingId = getNodeIdByDefinition(nodeMap, definitionId)
-    const nextNode = normalizeProjectNode(buildNode(existingId ? nodeMap.get(existingId) : null, existingId))
-    nodeMap.set(nextNode.id, nextNode)
-}
-
-const syncWorldStatePatchToNodes = (nodeMap, patch, worldState) => {
-    if (!patch || typeof patch !== 'object') return
-
-    if (Object.prototype.hasOwnProperty.call(patch, 'backgroundColor')) {
-        upsertNodeByDefinition(nodeMap, 'world.color', (existing, existingId) => ({
-            ...(existing || {}),
-            id: existingId || 'legacy-world-color',
-            definitionId: 'world.color',
-            label: 'World Color',
-            family: 'world',
-            parentId: PROJECT_WORLD_ROOT_NODE_ID,
-            mount: { surface: 'world', mode: 'hidden' },
-            params: {
-                ...(existing?.params || {}),
-                color: worldState.backgroundColor
-            }
-        }))
-    }
-
-    if (Object.prototype.hasOwnProperty.call(patch, 'gridVisible') || Object.prototype.hasOwnProperty.call(patch, 'gridSize')) {
-        upsertNodeByDefinition(nodeMap, 'world.grid', (existing, existingId) => ({
-            ...(existing || {}),
-            id: existingId || 'legacy-world-grid',
-            definitionId: 'world.grid',
-            label: 'World Grid',
-            family: 'world',
-            parentId: PROJECT_WORLD_ROOT_NODE_ID,
-            mount: { surface: 'world', mode: 'hidden' },
-            params: {
-                ...(existing?.params || {}),
-                visible: worldState.gridVisible,
-                size: worldState.gridSize
-            }
-        }))
-    }
-
-    if (Object.prototype.hasOwnProperty.call(patch, 'ambientLight') || Object.prototype.hasOwnProperty.call(patch, 'directionalLight')) {
-        upsertNodeByDefinition(nodeMap, 'world.light', (existing, existingId) => ({
-            ...(existing || {}),
-            id: existingId || 'legacy-world-light',
-            definitionId: 'world.light',
-            label: 'World Light',
-            family: 'world',
-            parentId: PROJECT_WORLD_ROOT_NODE_ID,
-            mount: { surface: 'world', mode: 'hidden' },
-            params: {
-                ...(existing?.params || {}),
-                ambientColor: worldState.ambientLight.color,
-                ambientIntensity: worldState.ambientLight.intensity,
-                directionalColor: worldState.directionalLight.color,
-                directionalIntensity: worldState.directionalLight.intensity,
-                directionalPosition: worldState.directionalLight.position
-            }
-        }))
-    }
-
-    if (Object.prototype.hasOwnProperty.call(patch, 'savedView')) {
-        upsertNodeByDefinition(nodeMap, 'world.camera', (existing, existingId) => ({
-            ...(existing || {}),
-            id: existingId || 'legacy-world-camera',
-            definitionId: 'world.camera',
-            label: 'World Camera',
-            family: 'world',
-            parentId: PROJECT_WORLD_ROOT_NODE_ID,
-            mount: { surface: 'world', mode: 'hidden' },
-            params: {
-                ...(existing?.params || {}),
-                mode: worldState.savedView.mode,
-                position: worldState.savedView.position,
-                target: worldState.savedView.target
-            }
-        }))
-    }
-}
-
-const syncWindowStateToNodes = (nodeMap, windowId, windowState) => {
-    const definitionId = LEGACY_WINDOW_NODE_DEFINITIONS[windowId]
-    if (!definitionId) return
-
-    upsertNodeByDefinition(nodeMap, definitionId, (existing, existingId) => ({
-        ...(existing || {}),
-        id: existingId || `legacy-window-${windowId}`,
-        definitionId,
-        label: windowState.title || NODE_LABELS[definitionId] || windowId,
-        family: 'view',
-        parentId: PROJECT_VIEW_ROOT_NODE_ID,
-        mount: { surface: 'view', mode: 'panel' },
-        params: {
-            ...(existing?.params || {}),
-            title: windowState.title || NODE_LABELS[definitionId] || windowId
-        },
-        frame: {
-            ...(existing?.frame || {}),
-            title: windowState.title || NODE_LABELS[definitionId] || windowId,
-            x: windowState.x,
-            y: windowState.y,
-            width: windowState.width,
-            height: windowState.height,
-            zIndex: windowState.zIndex,
-            visible: windowState.visible,
-            minimized: windowState.minimized,
-            pinned: windowState.pinned
-        }
-    }))
 }
 
 export const applyProjectOps = (document, ops = []) => {
@@ -959,6 +537,7 @@ export const applyProjectOps = (document, ops = []) => {
     let entities = new Map(nextDocument.entities.map((entity) => [entity.id, entity]))
     let assets = new Map(nextDocument.assets.map((asset) => [asset.id, asset]))
     let nodes = new Map(nextDocument.nodes.map((node) => [node.id, node]))
+    let edges = new Map(nextDocument.edges.map((edge) => [edge.id, edge]))
 
     ops.forEach((op) => {
         const payload = op?.payload || {}
@@ -997,19 +576,42 @@ export const applyProjectOps = (document, ops = []) => {
             case 'createNode': {
                 if (!payload.node) break
                 const node = normalizeProjectNode(payload.node)
+                if (!node) break
+                if (!validateNodeTypeId(node.typeId)) break
+                if (SINGLETON_TYPE_IDS.has(node.typeId)) {
+                    const duplicate = Array.from(nodes.values()).some((existing) => existing.typeId === node.typeId)
+                    if (duplicate) break
+                }
                 nodes.set(node.id, node)
                 break
             }
             case 'updateNode': {
                 const nodeId = ensureString(payload.nodeId)
                 if (!nodeId || !nodes.has(nodeId)) break
-                nodes.set(nodeId, normalizeProjectNode(mergePatch(nodes.get(nodeId), payload.patch || {})))
+                const existing = nodes.get(nodeId)
+                const patch = payload.patch || {}
+                const nextValues = patch.values && typeof patch.values === 'object'
+                    ? { ...existing.values, ...cloneValue(patch.values) }
+                    : existing.values
+                const merged = {
+                    ...existing,
+                    ...(patch.label !== undefined ? { label: ensureString(patch.label, existing.label) } : {}),
+                    ...(patch.graphX !== undefined ? { graphX: ensureNumber(patch.graphX, existing.graphX) } : {}),
+                    ...(patch.graphY !== undefined ? { graphY: ensureNumber(patch.graphY, existing.graphY) } : {}),
+                    ...(patch.runtimeId !== undefined ? { runtimeId: patch.runtimeId } : {}),
+                    ...(patch.assetRef !== undefined ? { assetRef: patch.assetRef || null } : {}),
+                    values: nextValues
+                }
+                nodes.set(nodeId, merged)
                 break
             }
             case 'deleteNode': {
                 const nodeId = ensureString(payload.nodeId)
                 if (!nodeId) break
                 nodes.delete(nodeId)
+                for (const [edgeId, edge] of edges) {
+                    if (edge.fromNodeId === nodeId || edge.toNodeId === nodeId) edges.delete(edgeId)
+                }
                 if (nextDocument.workspaceState.selectedNodeId === nodeId) {
                     nextDocument.workspaceState = normalizeWorkspaceState({
                         ...nextDocument.workspaceState,
@@ -1018,9 +620,29 @@ export const applyProjectOps = (document, ops = []) => {
                 }
                 break
             }
+            case 'createEdge': {
+                if (!payload.edge) break
+                const edge = normalizeProjectEdge(payload.edge)
+                if (!edge) break
+                if (!nodes.has(edge.fromNodeId) || !nodes.has(edge.toNodeId)) break
+                edges.set(edge.id, edge)
+                break
+            }
+            case 'updateEdge': {
+                const edgeId = ensureString(payload.edgeId)
+                if (!edgeId || !edges.has(edgeId)) break
+                const merged = normalizeProjectEdge(mergePatch(edges.get(edgeId), payload.patch || {}))
+                if (!merged) break
+                edges.set(edgeId, merged)
+                break
+            }
+            case 'deleteEdge': {
+                const edgeId = ensureString(payload.edgeId)
+                if (edgeId) edges.delete(edgeId)
+                break
+            }
             case 'setWorldState': {
                 nextDocument.worldState = normalizeWorldState(mergePatch(nextDocument.worldState, payload.patch || {}))
-                syncWorldStatePatchToNodes(nodes, payload.patch || {}, nextDocument.worldState)
                 break
             }
             case 'setXrState': {
@@ -1054,7 +676,6 @@ export const applyProjectOps = (document, ops = []) => {
                     windows,
                     activeWindowId: payload.focus ? windowId : nextDocument.windowLayout.activeWindowId
                 })
-                syncWindowStateToNodes(nodes, windowId, nextDocument.windowLayout.windows[windowId])
                 break
             }
             case 'setWorkspaceState': {
@@ -1082,6 +703,7 @@ export const applyProjectOps = (document, ops = []) => {
                     entities = new Map(nextDocument.entities.map((entity) => [entity.id, entity]))
                     assets = new Map(nextDocument.assets.map((asset) => [asset.id, asset]))
                     nodes = new Map(nextDocument.nodes.map((node) => [node.id, node]))
+                    edges = new Map(nextDocument.edges.map((edge) => [edge.id, edge]))
                 }
                 break
             }
@@ -1092,10 +714,8 @@ export const applyProjectOps = (document, ops = []) => {
 
     nextDocument.entities = Array.from(entities.values())
     nextDocument.assets = Array.from(assets.values())
-    nextDocument.nodes = ensureRootNodes(Array.from(nodes.values()))
-    nextDocument.rootNodeId = nextDocument.nodes.some((node) => node.id === nextDocument.rootNodeId)
-        ? nextDocument.rootNodeId
-        : PROJECT_ROOT_NODE_ID
+    nextDocument.nodes = Array.from(nodes.values())
+    nextDocument.edges = Array.from(edges.values())
     nextDocument.projectMeta.updatedAt = Date.now()
     return normalizeProjectDocument(nextDocument)
 }

@@ -20,16 +20,22 @@ const safeEqual = (left = '', right = '') => {
 const createAuthSessionValue = ({
   secret,
   now = Date.now(),
-  ttlMs = DEFAULT_SESSION_TTL_MS
+  ttlMs = DEFAULT_SESSION_TTL_MS,
+  session = null
 } = {}) => {
   if (!secret) {
     throw new Error('Auth session secret is required.')
   }
   const expiresAt = now + Math.max(1, Number(ttlMs) || DEFAULT_SESSION_TTL_MS)
+  const normalizedSession = session && typeof session === 'object' ? session : {}
   const payload = Buffer.from(JSON.stringify({
-    version: 1,
+    version: 3,
     issuedAt: now,
-    expiresAt
+    expiresAt,
+    ...(normalizedSession.subject ? { subject: String(normalizedSession.subject).trim() } : {}),
+    ...(normalizedSession.label ? { label: String(normalizedSession.label).trim() } : {}),
+    ...(normalizedSession.role ? { role: String(normalizedSession.role).trim().toLowerCase() } : {}),
+    ...(Array.isArray(normalizedSession.spaces) ? { spaces: normalizedSession.spaces } : {})
   })).toString('base64url')
   return {
     value: `${payload}.${signPayload(payload, secret)}`,

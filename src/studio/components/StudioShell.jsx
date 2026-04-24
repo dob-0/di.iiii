@@ -609,32 +609,40 @@ export default function StudioShell({
                         <Typography variant="subtitle2" color="text.secondary">Studio</Typography>
                         <Typography variant="h6" noWrap>{document.projectMeta?.title || document.projectMeta?.id || 'Studio project'}</Typography>
                     </Stack>
-                    <Chip
-                        size="small"
-                        color={statusColor}
-                        label={`Stream ${syncState.sceneStreamState} • Presence ${presence.presenceState}`}
-                    />
-                    <AvatarGroup max={4} sx={{ '& .MuiAvatar-root': { width: 30, height: 30, fontSize: 12 } }}>
-                        {presence.users.map((user) => (
-                            <Tooltip key={user.socketId || user.userId} title={user.userName || user.userId}>
-                                <Avatar>{(user.userName || user.userId || '?').slice(0, 1).toUpperCase()}</Avatar>
-                            </Tooltip>
-                        ))}
-                    </AvatarGroup>
-                    <Button
-                        color="inherit"
-                        startIcon={<SlideshowIcon />}
-                        onClick={() => updateLayout({ bottomOpen: true, bottomTab: 'present' })}
-                    >
-                        Present
-                    </Button>
-                    <Button
-                        color="inherit"
-                        startIcon={<ShareIcon />}
-                        onClick={() => updateLayout({ bottomOpen: true, bottomTab: 'publish' })}
-                    >
-                        Share
-                    </Button>
+                    {!isMobile ? (
+                        <Chip
+                            size="small"
+                            color={statusColor}
+                            label={`${syncState.sceneStreamState} · ${presence.presenceState}`}
+                        />
+                    ) : null}
+                    {!isMobile ? (
+                        <AvatarGroup max={4} sx={{ '& .MuiAvatar-root': { width: 30, height: 30, fontSize: 12 } }}>
+                            {presence.users.map((user) => (
+                                <Tooltip key={user.socketId || user.userId} title={user.userName || user.userId}>
+                                    <Avatar>{(user.userName || user.userId || '?').slice(0, 1).toUpperCase()}</Avatar>
+                                </Tooltip>
+                            ))}
+                        </AvatarGroup>
+                    ) : null}
+                    {!isMobile ? (
+                        <Button
+                            color="inherit"
+                            startIcon={<SlideshowIcon />}
+                            onClick={() => updateLayout({ bottomOpen: true, bottomTab: 'present' })}
+                        >
+                            Present
+                        </Button>
+                    ) : null}
+                    {!isMobile ? (
+                        <Button
+                            color="inherit"
+                            startIcon={<ShareIcon />}
+                            onClick={() => updateLayout({ bottomOpen: true, bottomTab: 'publish' })}
+                        >
+                            Share
+                        </Button>
+                    ) : null}
                     <Tooltip title="Inspector">
                         <IconButton color="inherit" onClick={() => updateLayout({ rightOpen: !layout.rightOpen })}>
                             <TuneIcon />
@@ -826,6 +834,7 @@ export default function StudioShell({
                         <BottomNavigationAction value="library" label="Library" icon={<ViewSidebarIcon />} />
                         <BottomNavigationAction value="inspector" label="Inspector" icon={<TuneIcon />} />
                         <BottomNavigationAction value="activity" label="Activity" icon={<InsightsIcon />} />
+                        <BottomNavigationAction value="present" label="Present" icon={<SlideshowIcon />} />
                         <BottomNavigationAction value="publish" label="Publish" icon={<ShareIcon />} />
                     </BottomNavigation>
                 </Paper>

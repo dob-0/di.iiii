@@ -2,6 +2,7 @@ const BETA_BASE_PATH = ((import.meta.env.BASE_URL) || '/').replace(/\/+$/, '') |
 
 export const BETA_PAGE_HUB = 'hub'
 export const BETA_PAGE_PROJECT = 'project'
+export const BETA_PAGE_PROJECTS = 'projects'
 export const BETA_RESERVED_SEGMENT = 'beta'
 export const DEFAULT_BETA_SPACE_ID = 'main'
 
@@ -22,6 +23,14 @@ export const buildBetaHubPath = (spaceId = null) => {
         return `${prefix}/${BETA_RESERVED_SEGMENT}`.replace(/\/{2,}/g, '/')
     }
     return `${prefix}/${spaceId}/${BETA_RESERVED_SEGMENT}`.replace(/\/{2,}/g, '/')
+}
+
+export const buildBetaProjectsPath = (spaceId = null) => {
+    const prefix = getBasePrefix()
+    if (!spaceId) {
+        return `${prefix}/${BETA_RESERVED_SEGMENT}/projects`.replace(/\/{2,}/g, '/')
+    }
+    return `${prefix}/${spaceId}/${BETA_RESERVED_SEGMENT}/projects`.replace(/\/{2,}/g, '/')
 }
 
 export const buildBetaProjectPath = (projectId, spaceId = null) => {
@@ -60,6 +69,15 @@ export const getBetaLocationState = (
             }
         }
 
+        if (segments[2] === 'projects') {
+            return {
+                isBeta: true,
+                page: BETA_PAGE_PROJECTS,
+                projectId: null,
+                spaceId: segments[0]
+            }
+        }
+
         return {
             isBeta: true,
             page: BETA_PAGE_HUB,
@@ -73,6 +91,15 @@ export const getBetaLocationState = (
             isBeta: true,
             page: BETA_PAGE_PROJECT,
             projectId: segments[2],
+            spaceId: defaultSpaceId
+        }
+    }
+
+    if (segments[1] === 'projects') {
+        return {
+            isBeta: true,
+            page: BETA_PAGE_PROJECTS,
+            projectId: null,
             spaceId: defaultSpaceId
         }
     }
