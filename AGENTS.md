@@ -2,6 +2,10 @@
 
 Short routing guide for AI agents working in `di.i`.
 
+## Start Here
+
+- **[PROGRESS.md](PROGRESS.md)** — read this first. Running session log, current workstream status, and easy-win tasks for the next developer. Update it before stopping work.
+
 ## Canonical AI Docs
 
 - `AGENTS.md` files are the canonical short routing layer
