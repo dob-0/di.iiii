@@ -130,14 +130,13 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     return (
         <main className="beta-hub">
             <section className="beta-hub-hero">
-                <div className="beta-hub-actions" style={{ gap: '0.5rem', justifyContent: 'flex-start' }}>
-                    <span className="beta-chip">V2 Beta</span>
-                    <span className="beta-chip" style={{ background: 'rgba(255,255,255,0.08)' }}>Space {spaceId}</span>
+                <div className="beta-hub-wordmark">
+                    <span className="beta-hub-di-sq" />
+                    <span className="beta-hub-di-sq" />
+                    <span className="beta-hub-di-sq" />
                 </div>
-                <h1>Desktop Editor V2</h1>
-                <p>
-                    Asset-first, windowed, and document-driven. This is the experimental workspace for this space, while Studio remains the official main workspace.
-                </p>
+                <h1>di.i studio_</h1>
+                <p className="beta-hub-tagline">node workspace · space {spaceId}</p>
                 <div className="beta-hub-actions">
                     <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Project title" />
                     <button type="button" onClick={handleCreate} disabled={isBusy}>Create New Project</button>
