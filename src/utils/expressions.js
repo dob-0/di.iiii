@@ -64,7 +64,6 @@ export const evaluateExpressionString = (expression, context = {}, options = {})
         if (!Number.isFinite(result)) return null;
         return result;
     } catch (error) {
-        console.warn('Expression evaluation failed', error);
         return null;
     }
 };

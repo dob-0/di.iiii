@@ -49,7 +49,6 @@ export default function ModelObject({
                         }
                     }
                 } catch (error) {
-                    console.error(`Failed to read asset blob ${ref.id}`, error)
                 }
                 try {
                     const streamed = await streamRemoteAsset(ref.id)
@@ -111,7 +110,6 @@ export default function ModelObject({
 
         const handleError = (error) => {
             if (disposed) return
-            console.error('Failed to load model', error)
             setLoadedScene(null)
         }
 

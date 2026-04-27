@@ -105,7 +105,6 @@ export function useServerPublishing({
                 alert('Server scene not available.')
             }
         } catch (error) {
-            console.warn('Failed to reload server scene', error)
             alert('Error: Could not reload scene from server.')
         }
     }, [
@@ -229,7 +228,6 @@ export function useServerPublishing({
             markServerSync?.('Published to server')
             alert('Scene synced to server.')
         } catch (error) {
-            console.warn('Failed to publish scene to server', error)
             if (error?.status === 409) {
                 const latestVersion = error?.data?.latestVersion
                 const reloadMessage = latestVersion
@@ -262,7 +260,6 @@ export function useServerPublishing({
                     }
                     alert('Server scene overwritten with your copy.')
                 } catch (forceError) {
-                    console.warn('Force publish failed', forceError)
                     alert(forceError?.message || 'Error: Force publish failed.')
                 }
                 return

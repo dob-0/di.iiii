@@ -36,14 +36,12 @@ export const resolveAssetEntries = async (objects, { getAssetBlob, getAssetSourc
             if (sourceUrl) {
                 const response = await fetch(sourceUrl)
                 if (!response.ok) {
-                    console.warn(`Failed to fetch remote asset for export: ${sourceUrl}`)
                     continue
                 }
                 const remoteBlob = await response.blob()
                 entries.push({ meta, blob: remoteBlob, source: 'remote', sourceUrl })
             }
         } catch (error) {
-            console.error(`Failed to read asset ${assetId} for export`, error)
         }
     }
     return entries
@@ -81,7 +79,6 @@ export const loadSceneArchive = async (arrayBuffer, applyLoadedScene, options) =
     const blobLoader = async (asset) => {
         const assetFile = zip.file(asset.archivePath)
         if (!assetFile) {
-            console.warn(`Missing asset file in archive: ${asset.archivePath}`)
             return null
         }
         return assetFile.async('blob')

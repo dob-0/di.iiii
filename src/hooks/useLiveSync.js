@@ -250,7 +250,6 @@ export function useLiveSync({
                             continue
                         }
                     } else {
-                        console.warn('Unable to sync live scene ops', error)
                     }
                     break
                 }
@@ -385,7 +384,6 @@ export function useLiveSync({
                     setSceneVersionValue(latestVersion)
                 }
             } catch (error) {
-                console.warn('Failed to catch up live scene ops', error)
             }
         }
 

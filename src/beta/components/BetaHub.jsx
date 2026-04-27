@@ -96,7 +96,6 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         } catch (error) {
             if (createdProjectId && !importCommitted) {
                 await deleteProject(createdProjectId).catch((cleanupError) => {
-                    console.warn(`Failed to clean up partial import ${createdProjectId}`, cleanupError)
                 })
             }
             setStatus(error.message || 'Unable to import legacy scene.')

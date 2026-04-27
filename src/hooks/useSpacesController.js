@@ -76,11 +76,9 @@ export function useSpacesController({
             if (error?.isServerUnavailable) {
                 if (!serverUnavailableNoticeRef.current) {
                     serverUnavailableNoticeRef.current = true
-                    console.warn(error.message)
                 }
             } else {
                 serverUnavailableNoticeRef.current = false
-                console.warn('Failed to load server spaces', error)
             }
             setSpaces(localSpaces)
         }
@@ -175,13 +173,11 @@ export function useSpacesController({
                 } catch (error) {
                     const status = typeof error?.status === 'number' ? error.status : null
                     if (status === 401 || status === 403) {
-                        console.warn('Server auth failed; creating local space instead.', error)
                         fellBackToLocal = true
                         fallbackMessage = 'Server auth required. Created a local space instead.'
                     } else if (status && status >= 400 && status < 500) {
                         throw error
                     } else {
-                        console.warn('Server unavailable; creating local space instead.', error)
                         fellBackToLocal = true
                         fallbackMessage = 'Server unavailable. Created a local space instead.'
                     }
@@ -205,7 +201,6 @@ export function useSpacesController({
             }
             navigateToResolvedSpace(url)
         } catch (error) {
-            console.warn('Failed to create space', error)
             const message = error?.message || 'Could not create space. Please try again.'
             alert(message)
         } finally {
@@ -224,7 +219,6 @@ export function useSpacesController({
             await navigator.clipboard.writeText(url)
             return true
         } catch (error) {
-            console.warn('Clipboard API unavailable, showing link prompt.', error)
             window.prompt('Copy space link', url)
             return false
         }

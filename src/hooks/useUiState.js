@@ -99,7 +99,6 @@ export function useUiState({
             try {
                 window.localStorage.setItem(LAYOUT_MODE_STORAGE_KEY, next)
             } catch (error) {
-                console.warn('Could not persist layout mode', error)
             }
             return next
         })
@@ -113,7 +112,6 @@ export function useUiState({
             try {
                 window.localStorage.setItem(LAYOUT_SIDE_STORAGE_KEY, next)
             } catch (error) {
-                console.warn('Could not persist layout side', error)
             }
             return next
         })
@@ -162,7 +160,6 @@ export function useUiState({
             const stored = window.localStorage.getItem(selectionLockKey)
             setIsSelectionLocked(stored === 'true')
         } catch (error) {
-            console.warn('Could not read selection lock preference', error)
         }
     }, [selectionLockKey])
 
@@ -171,7 +168,6 @@ export function useUiState({
         try {
             window.localStorage.setItem(selectionLockKey, isSelectionLocked ? 'true' : 'false')
         } catch (error) {
-            console.warn('Could not persist selection lock preference', error)
         }
     }, [isSelectionLocked, selectionLockKey])
 
@@ -182,7 +178,6 @@ export function useUiState({
             try {
                 window.localStorage.setItem(UI_DEFAULT_STORAGE_KEY, next ? 'true' : 'false')
             } catch (error) {
-                console.warn('Unable to persist UI default visibility', error)
             }
             setIsUiVisible(next)
             return next
@@ -208,7 +203,6 @@ export function useUiState({
             try {
                 window.localStorage.setItem(interactionModeStorageKey, nextMode)
             } catch (error) {
-                console.warn('Could not persist interaction mode', error)
             }
             if (nextMode === 'edit') {
                 setIsGizmoVisible(true)
@@ -228,7 +222,6 @@ export function useUiState({
         try {
             window.localStorage.setItem(uiVisibleStorageKey, isUiVisible ? 'true' : 'false')
         } catch (error) {
-            console.warn('Could not persist UI visibility preference', error)
         }
     }, [isUiVisible, uiVisibleStorageKey])
 

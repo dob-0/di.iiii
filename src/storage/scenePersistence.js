@@ -31,7 +31,6 @@ const evictSceneStorageEntry = (keepKey) => {
             if (candidateKey === keepKey) continue
             if (window.localStorage.getItem(candidateKey) !== null) {
                 window.localStorage.removeItem(candidateKey)
-                console.warn(`Removed stored scene for space ${space.id} to free quota.`)
                 return true
             }
         }
@@ -40,12 +39,10 @@ const evictSceneStorageEntry = (keepKey) => {
             if (!key || key === keepKey) continue
             if (key === LOCAL_STORAGE_KEY || key.startsWith(STORAGE_KEY_PREFIX)) {
                 window.localStorage.removeItem(key)
-                console.warn(`Removed stored scene "${key}" to free quota.`)
                 return true
             }
         }
     } catch (error) {
-        console.warn('Failed to evict stored scene data', error)
     }
     return false
 }
@@ -78,7 +75,6 @@ export const persistSceneToLocalStorage = (sceneData, storageKey = LOCAL_STORAGE
             throw error
         }
     } catch (error) {
-        console.error('Failed to save scene to localStorage:', error)
         alert('Error: Could not save scene. Please export your work and clear saved scenes.')
         return false
     }

@@ -116,7 +116,6 @@ export function useScenePersistenceCoordinator({
         try {
             latestServerPayloadRef.current = factory()
         } catch (error) {
-            console.warn('Failed to build server scene payload', error)
             return
         }
         if (pendingServerSaveRef.current) {
@@ -140,7 +139,6 @@ export function useScenePersistenceCoordinator({
                     setSceneVersion?.(response.newVersion)
                 }
             } catch (error) {
-                console.warn('Unable to sync scene to server', error)
             }
         }, 1200)
     }, [liveClientIdRef, sceneVersionRef, setSceneVersion, shouldSyncServerScene, spaceId, submitSceneOps])

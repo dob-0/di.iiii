@@ -97,7 +97,6 @@ export default function SelectableObject({ obj, isSelected, isPrimarySelected = 
             
             // Forward transform events only when live scene emitters are explicitly enabled.
             if (socketEmit?.objectChanged) {
-                console.log('[Socket.IO] Broadcasting transform from gizmo:', obj.id)
                 socketEmit.objectChanged(obj.id, 'transform', updatedObject)
             }
         }

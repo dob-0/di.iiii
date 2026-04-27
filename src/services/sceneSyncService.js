@@ -35,7 +35,6 @@ export function createSceneSyncService() {
             try {
                 onPatch(JSON.parse(event.data))
             } catch (error) {
-                console.warn('Failed to parse scene patch event', error)
             }
         }
 
@@ -44,7 +43,6 @@ export function createSceneSyncService() {
             try {
                 onCursor(JSON.parse(event.data))
             } catch (error) {
-                console.warn('Failed to parse cursor event', error)
             }
         }
 
@@ -53,7 +51,6 @@ export function createSceneSyncService() {
             try {
                 onReady(JSON.parse(event.data))
             } catch (error) {
-                console.warn('Failed to parse ready event', error)
             }
         }
 

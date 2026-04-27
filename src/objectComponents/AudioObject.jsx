@@ -47,7 +47,6 @@ export default function AudioObject({
                 ctx.close?.()
                 if (!cancelled) setCanUsePositional(true)
             } catch (error) {
-                console.warn('Skipping positional audio; decode failed', error)
                 if (!cancelled) setCanUsePositional(false)
             }
         }
@@ -72,7 +71,6 @@ export default function AudioObject({
                     await audio.play().catch(() => {})
                 }
             } catch (error) {
-                console.warn('Audio playback failed', error)
             }
         }
         syncPlayback()

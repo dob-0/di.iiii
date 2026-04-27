@@ -130,7 +130,6 @@ export function useSceneInitializer({
                             return
                         }
                     } catch (error) {
-                        console.warn('Failed to load server scene (admin prefer)', error)
                     }
                 }
                 if (!savedData) {
@@ -151,7 +150,6 @@ export function useSceneInitializer({
                                 return
                             }
                         } catch (error) {
-                            console.warn('Failed to load server scene on first open', error)
                         }
                     }
 
@@ -169,7 +167,6 @@ export function useSceneInitializer({
                 }
 
                 if (!sceneData.version || sceneData.version < SCENE_DATA_VERSION) {
-                    console.warn('Old or invalid scene data version. Clearing localStorage.')
                     localStorage.removeItem(sceneStorageKey)
                     initializeBlankScene()
                     return
@@ -214,7 +211,6 @@ export function useSceneInitializer({
                 updateSceneSignature(normalizedSceneData)
                 persistSceneDataWithStatus(normalizedSceneData, 'Loaded scene locally')
             } catch (error) {
-                console.error('Failed to load scene from localStorage. Clearing.', error)
                 localStorage.removeItem(sceneStorageKey)
                 if (!isCancelled) {
                     initializeBlankScene()

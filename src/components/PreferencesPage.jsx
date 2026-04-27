@@ -428,7 +428,6 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                 return
             }
         } catch (error) {
-            console.warn(`Failed to copy ${label.toLowerCase()}`, error)
         }
 
         if (typeof window !== 'undefined' && typeof window.prompt === 'function') {

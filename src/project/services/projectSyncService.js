@@ -32,7 +32,6 @@ export function createProjectSyncService() {
             try {
                 onProjectOp(JSON.parse(event.data))
             } catch (error) {
-                console.warn('Failed to parse project-op event', error)
             }
         }
 
@@ -41,7 +40,6 @@ export function createProjectSyncService() {
             try {
                 onReady(JSON.parse(event.data))
             } catch (error) {
-                console.warn('Failed to parse ready event', error)
             }
         }
 
