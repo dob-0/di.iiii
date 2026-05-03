@@ -104,6 +104,48 @@ Common mistakes to avoid:
 - do not assume older orchestration files are the right long-term home for new canonical behavior
 - do not push private ops material, raw staging details, `.env` files, or host-specific deployment secrets into the public repo
 
+### Task Request Template (Use This For AI Work)
+
+Use this structure when assigning AI tasks to avoid extra edits, extra tool usage, or wrong priority:
+
+- goal: one exact outcome
+- priority: 1, 2, 3 (highest to lowest)
+- scope: allowed files/folders only
+- non-goals: explicit exclusions
+- constraints: performance, security, style, or API rules
+- output: expected response format/length
+- done criteria: objective checks (tests, behavior, lint)
+
+Strict add-ons (recommended):
+
+- clarify limit: ask max 2 questions, then proceed safely
+- scope lock: do not edit outside listed files/folders
+- output contract: summary + changed files + validation + risks only
+- progress bar: `status | phase X/Y | XX% | current | next`
+
+Example:
+
+- goal: fix project restore bug for missing assets
+- priority: correctness first, then minimal diff, then tests
+- scope: `src/project/`, `serverXR/src/assetRoutes.js`
+- non-goals: no UI refactor, no schema changes
+- constraints: keep current API shape and auth behavior
+- output: short summary + changed files + validation result
+- done criteria: missing assets no longer crash restore, tests pass
+
+Copy-paste strict template:
+
+- goal: ...
+- priority: 1) ... 2) ... 3) ...
+- scope: ...
+- non-goals: ...
+- constraints: ...
+- clarify limit: ask max 2 questions
+- scope lock: do not edit outside scope
+- output contract: summary + changed files + validation + risks
+- progress bar: status | phase X/Y | XX% | current | next
+- done criteria: ...
+
 ## Quick Start
 
 Local setup:

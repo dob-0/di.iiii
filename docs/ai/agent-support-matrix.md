@@ -8,6 +8,15 @@ This page explains how the repo supports major agent ecosystems while keeping on
 - generated bridge files: vendor-native entrypoints
 - goal: wide tool compatibility without maintaining five divergent instruction systems by hand
 
+## Universal Runtime Contract
+
+All supported agent entrypoints must inherit and follow the same root behavior contract from `AGENTS.md`:
+
+- startup read order
+- task contract (goal/priority/scope/non-goals/output/done criteria)
+- progress status bar updates during active work
+- scoped execution and concise result format
+
 ## Matrix
 
 | Tool family | Versioned repo entrypoints | Scope model | Local/private overrides |

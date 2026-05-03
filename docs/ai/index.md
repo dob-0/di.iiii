@@ -21,6 +21,7 @@ Read in this order:
 
 ## Deep Reference Pages
 
+- [golden_rules.md](golden_rules.md) — hard-won solutions + agent behavior rules (read this early)
 - [architecture.md](architecture.md)
 - [workflows.md](workflows.md)
 - [testing.md](testing.md)
