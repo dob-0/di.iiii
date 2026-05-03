@@ -130,6 +130,7 @@ export function useSceneInitializer({
                             return
                         }
                     } catch (error) {
+                        console.warn('[scene] Failed to load server scene (pre-saved):', error?.message)
                     }
                 }
                 if (!savedData) {
@@ -150,6 +151,7 @@ export function useSceneInitializer({
                                 return
                             }
                         } catch (error) {
+                            console.warn('[scene] Failed to load server scene (no local):', error?.message)
                         }
                     }
 

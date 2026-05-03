@@ -96,6 +96,7 @@ export function useAssetUrl(assetRef, options = {}) {
                     }
                 }
             } catch (error) {
+                // ignore
             }
             try {
                 const streamed = await streamRemoteAsset(assetId)
@@ -104,6 +105,7 @@ export function useAssetUrl(assetRef, options = {}) {
                 }
             } catch (error) {
                 if (remoteUrl) {
+                    // ignore
                 }
             }
             if (remoteUrl && !isFrontendAssetFallbackUrl(remoteUrl)) {

@@ -42,6 +42,7 @@ export const resolveAssetEntries = async (objects, { getAssetBlob, getAssetSourc
                 entries.push({ meta, blob: remoteBlob, source: 'remote', sourceUrl })
             }
         } catch (error) {
+            // ignore
         }
     }
     return entries

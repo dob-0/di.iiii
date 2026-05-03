@@ -139,6 +139,7 @@ export function useScenePersistenceCoordinator({
                     setSceneVersion?.(response.newVersion)
                 }
             } catch (error) {
+                // ignore
             }
         }, 1200)
     }, [liveClientIdRef, sceneVersionRef, setSceneVersion, shouldSyncServerScene, spaceId, submitSceneOps])

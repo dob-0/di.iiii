@@ -35,6 +35,7 @@ export function createSceneSyncService() {
             try {
                 onPatch(JSON.parse(event.data))
             } catch (error) {
+                // ignore
             }
         }
 
@@ -43,6 +44,7 @@ export function createSceneSyncService() {
             try {
                 onCursor(JSON.parse(event.data))
             } catch (error) {
+                // ignore
             }
         }
 
@@ -51,6 +53,7 @@ export function createSceneSyncService() {
             try {
                 onReady(JSON.parse(event.data))
             } catch (error) {
+                // ignore
             }
         }
 

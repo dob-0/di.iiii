@@ -71,6 +71,7 @@ export default function AudioObject({
                     await audio.play().catch(() => {})
                 }
             } catch (error) {
+                // ignore
             }
         }
         syncPlayback()

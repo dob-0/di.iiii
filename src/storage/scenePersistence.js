@@ -43,6 +43,7 @@ const evictSceneStorageEntry = (keepKey) => {
             }
         }
     } catch (error) {
+        // ignore
     }
     return false
 }

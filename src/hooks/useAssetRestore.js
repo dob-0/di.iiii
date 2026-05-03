@@ -82,8 +82,10 @@ export function useAssetRestore({
                         if (response.ok) {
                             blob = await response.blob()
                         } else {
+                            // ignore
                         }
                     } catch (fetchError) {
+                        // ignore
                     }
                 }
                 if (!blob) return
@@ -126,9 +128,11 @@ export function useAssetRestore({
                             setAssetSource(fallbackEntry)
                         }
                     } catch (error) {
+                        // ignore
                     }
                 }
-            } catch (error) {
+            } catch {
+                // ignore — individual asset restore failure does not abort the batch
             } finally {
                 completed += 1
                 setAssetRestoreProgress?.(prev => ({

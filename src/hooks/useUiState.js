@@ -99,6 +99,7 @@ export function useUiState({
             try {
                 window.localStorage.setItem(LAYOUT_MODE_STORAGE_KEY, next)
             } catch (error) {
+                // ignore
             }
             return next
         })
@@ -112,6 +113,7 @@ export function useUiState({
             try {
                 window.localStorage.setItem(LAYOUT_SIDE_STORAGE_KEY, next)
             } catch (error) {
+                // ignore
             }
             return next
         })
@@ -160,6 +162,7 @@ export function useUiState({
             const stored = window.localStorage.getItem(selectionLockKey)
             setIsSelectionLocked(stored === 'true')
         } catch (error) {
+            // ignore
         }
     }, [selectionLockKey])
 
@@ -168,6 +171,7 @@ export function useUiState({
         try {
             window.localStorage.setItem(selectionLockKey, isSelectionLocked ? 'true' : 'false')
         } catch (error) {
+            // ignore
         }
     }, [isSelectionLocked, selectionLockKey])
 
@@ -178,6 +182,7 @@ export function useUiState({
             try {
                 window.localStorage.setItem(UI_DEFAULT_STORAGE_KEY, next ? 'true' : 'false')
             } catch (error) {
+                // ignore
             }
             setIsUiVisible(next)
             return next
@@ -203,6 +208,7 @@ export function useUiState({
             try {
                 window.localStorage.setItem(interactionModeStorageKey, nextMode)
             } catch (error) {
+                // ignore
             }
             if (nextMode === 'edit') {
                 setIsGizmoVisible(true)
@@ -222,6 +228,7 @@ export function useUiState({
         try {
             window.localStorage.setItem(uiVisibleStorageKey, isUiVisible ? 'true' : 'false')
         } catch (error) {
+            // ignore
         }
     }, [isUiVisible, uiVisibleStorageKey])
 

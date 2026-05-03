@@ -49,6 +49,7 @@ export default function ModelObject({
                         }
                     }
                 } catch (error) {
+                    // ignore
                 }
                 try {
                     const streamed = await streamRemoteAsset(ref.id)

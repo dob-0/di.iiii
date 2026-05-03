@@ -67,6 +67,7 @@ export function useAssetPipeline({
                 return new File([blob], file.name.replace(/\.[^/.]+$/, '.webp'), { type: blob.type })
             }
         } catch (error) {
+            // ignore
         }
         return file
     }, [])
@@ -255,7 +256,8 @@ export function useAssetPipeline({
                 }
                 return obj
             }))
-        } catch (error) {
+        } catch {
+            // ignore — media optimization failure falls back to original asset
         } finally {
             endMediaOptimizationFeedback()
         }
@@ -477,6 +479,7 @@ export function useAssetPipeline({
                             const materialMeta = await ingestAssetFile(materialEntry.file)
                             overridesPayload.materialsAssetRef = materialMeta
                         } catch (error) {
+                            // ignore
                         }
                     }
                 }

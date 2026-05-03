@@ -250,6 +250,7 @@ export function useLiveSync({
                             continue
                         }
                     } else {
+                        console.warn('[sync] Op flush failed:', error?.message)
                     }
                     break
                 }
@@ -384,6 +385,7 @@ export function useLiveSync({
                     setSceneVersionValue(latestVersion)
                 }
             } catch (error) {
+                console.warn('[sync] Catch-up fetch failed:', error?.message)
             }
         }
 

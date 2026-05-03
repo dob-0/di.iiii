@@ -254,6 +254,7 @@ export function useXrAr({
                 return
             }
         } catch (error) {
+            // ignore
         }
 
         if (typeof window !== 'undefined' && typeof window.prompt === 'function') {

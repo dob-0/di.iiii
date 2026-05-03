@@ -51,6 +51,7 @@ export default function ImageObject({ assetRef, data, opacity = 1, linkActive })
             undefined,
             (error) => {
                 if (!isCancelled) {
+                    // ignore
                 }
             }
         )
