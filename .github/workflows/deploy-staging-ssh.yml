@@ -1,0 +1,141 @@
+name: Deploy Staging over SSH
+
+on:
+  push:
+    branches:
+      - staging
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: staging-ssh-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: ${{ vars.ENABLE_SSH_STAGING_DEPLOY == 'true' }}
+    runs-on: ubuntu-latest
+    environment: staging
+    env:
+      VITE_API_BASE_URL: ${{ vars.STAGING_API_BASE_URL || '/serverXR' }}
+      STAGING_RESTART_COMMAND: ${{ vars.STAGING_RESTART_COMMAND }}
+      STAGING_SSH_HOST: ${{ secrets.STAGING_SSH_HOST }}
+      STAGING_SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+      STAGING_SSH_PORT: ${{ secrets.STAGING_SSH_PORT }}
+      STAGING_SSH_PRIVATE_KEY: ${{ secrets.STAGING_SSH_PRIVATE_KEY }}
+      STAGING_WEB_ROOT: ${{ secrets.STAGING_WEB_ROOT }}
+      STAGING_SERVER_ROOT: ${{ secrets.STAGING_SERVER_ROOT }}
+      STAGING_SHARED_ROOT: ${{ secrets.STAGING_SHARED_ROOT }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: npm --prefix serverXR ci
+
+      - name: Validate
+        run: |
+          set -euo pipefail
+          npm run lint
+          npm run test
+          npm run build
+
+      - name: Write backend release manifest
+        run: |
+          set -euo pipefail
+          cat > serverXR/release.json <<JSON
+          {
+            "generatedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "releaseId": "ssh-staging-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}",
+            "deployEnv": "staging",
+            "sourceRef": "${GITHUB_REF_NAME}",
+            "gitCommit": "${GITHUB_SHA}",
+            "deploymentMode": "ssh-rsync"
+          }
+          JSON
+
+      - name: Check SSH deploy configuration
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in \
+            STAGING_SSH_HOST \
+            STAGING_SSH_USER \
+            STAGING_SSH_PRIVATE_KEY \
+            STAGING_WEB_ROOT \
+            STAGING_SERVER_ROOT \
+            STAGING_SHARED_ROOT
+          do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Missing required GitHub environment secret: ${name}"
+              missing=1
+            fi
+          done
+          if [ -z "${STAGING_RESTART_COMMAND:-}" ]; then
+            echo "::error::Missing required GitHub environment variable: STAGING_RESTART_COMMAND"
+            missing=1
+          fi
+          exit "${missing}"
+
+      - name: Configure SSH
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${STAGING_SSH_PRIVATE_KEY}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${STAGING_SSH_PORT:-22}" "${STAGING_SSH_HOST}" >> ~/.ssh/known_hosts
+
+      - name: Deploy over rsync
+        run: |
+          set -euo pipefail
+          SSH_PORT="${STAGING_SSH_PORT:-22}"
+          REMOTE="${STAGING_SSH_USER}@${STAGING_SSH_HOST}"
+          SSH=(ssh -p "${SSH_PORT}" -o StrictHostKeyChecking=yes "${REMOTE}")
+          RSYNC_SSH="ssh -p ${SSH_PORT} -o StrictHostKeyChecking=yes"
+
+          quote_remote() {
+            printf '%q' "$1"
+          }
+
+          WEB_ROOT_Q="$(quote_remote "${STAGING_WEB_ROOT}")"
+          SERVER_ROOT_Q="$(quote_remote "${STAGING_SERVER_ROOT}")"
+          SHARED_ROOT_Q="$(quote_remote "${STAGING_SHARED_ROOT}")"
+          RESTART_COMMAND_Q="$(quote_remote "${STAGING_RESTART_COMMAND}")"
+
+          "${SSH[@]}" "mkdir -p ${WEB_ROOT_Q} ${SERVER_ROOT_Q} ${SHARED_ROOT_Q}"
+
+          rsync -az --delete -e "${RSYNC_SSH}" dist/ "${REMOTE}:${STAGING_WEB_ROOT}/"
+
+          rsync -az --delete -e "${RSYNC_SSH}" \
+            --exclude='node_modules' \
+            --exclude='data' \
+            --exclude='uploads' \
+            --exclude='.env' \
+            serverXR/package.json \
+            serverXR/package-lock.json \
+            serverXR/release.json \
+            serverXR/src \
+            serverXR/public \
+            "${REMOTE}:${STAGING_SERVER_ROOT}/"
+
+          rsync -az --delete -e "${RSYNC_SSH}" shared/ "${REMOTE}:${STAGING_SHARED_ROOT}/"
+
+          "${SSH[@]}" "SERVER_ROOT=${SERVER_ROOT_Q} RESTART_COMMAND=${RESTART_COMMAND_Q} bash -s" <<'REMOTE_SCRIPT'
+          set -euo pipefail
+          cd "${SERVER_ROOT}"
+          npm ci --omit=dev
+          eval "${RESTART_COMMAND}"
+          REMOTE_SCRIPT

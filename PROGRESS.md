@@ -26,10 +26,15 @@ Read this before starting work. Update it before stopping.
     - removed unused imports/destructures in Beta, Preferences, and node registry tests
     - converted intentionally ignored catch bindings to bare `catch`
     - made Beta graph/world/view interactive surfaces keyboard-addressable
+- Added the opt-in SSH/VPS staging deploy path:
+    - GitHub Actions workflow for `staging` / manual SSH rsync deploys
+    - deployment docs for required GitHub variables/secrets and host shape
+    - live deploy docs now point to the future SSH staging path while keeping cPanel as current truth
 
 ### Validation
 
 - `git diff --check` passed after whitespace cleanup.
+- SSH deploy workflow structural check passed.
 - `npm run docs:ai:sync` passed — bridges already up to date.
 - `npm run docs:ai:check` passed.
 - `npm run lint` passed with 0 warnings.
