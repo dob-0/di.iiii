@@ -48,7 +48,7 @@ export default function ModelObject({
                             return { blob, type: 'blob' }
                         }
                     }
-                } catch (error) {
+                } catch {
                     // ignore
                 }
                 try {

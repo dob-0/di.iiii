@@ -84,7 +84,7 @@ export function useAssetRestore({
                         } else {
                             // ignore
                         }
-                    } catch (fetchError) {
+                    } catch {
                         // ignore
                     }
                 }
@@ -127,7 +127,7 @@ export function useAssetRestore({
                             fallbackAssets.push(fallbackEntry)
                             setAssetSource(fallbackEntry)
                         }
-                    } catch (error) {
+                    } catch {
                         // ignore
                     }
                 }

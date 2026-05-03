@@ -155,7 +155,7 @@ export default function ViewPanel({ onClose, surfaceMode = 'floating' }) {
             setPresentationSourceType('html')
             setPresentationMode('code')
             setPresentationHtml(nextHtml)
-        } catch (error) {
+        } catch {
             // ignore
         }
     }

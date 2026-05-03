@@ -46,7 +46,7 @@ export default function AudioObject({
                 await ctx.decodeAudioData(arrayBuffer.slice(0))
                 ctx.close?.()
                 if (!cancelled) setCanUsePositional(true)
-            } catch (error) {
+            } catch {
                 if (!cancelled) setCanUsePositional(false)
             }
         }
@@ -70,7 +70,7 @@ export default function AudioObject({
                 } else if (!audio.isPlaying) {
                     await audio.play().catch(() => {})
                 }
-            } catch (error) {
+            } catch {
                 // ignore
             }
         }

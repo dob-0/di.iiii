@@ -77,7 +77,7 @@ export function useSceneArchiveIO({
                 getAssetSourceUrl
             })
             downloadBlob(archiveBlob, buildProjectPackageName())
-        } catch (error) {
+        } catch {
             alert('Error: Could not create project package.')
         }
     }, [

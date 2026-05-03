@@ -99,14 +99,17 @@ export default function NodePalette({
     return (
         <div
             className="beta-node-palette-backdrop"
+            role="presentation"
             onMouseDown={(event) => {
                 if (event.target === event.currentTarget) onClose()
             }}
         >
             <div
                 className="beta-node-palette"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Create node"
                 style={{ left: pos.x, top: pos.y }}
-                onMouseDown={(event) => event.stopPropagation()}
             >
                 <div className="beta-node-palette-input-row">
                     <input

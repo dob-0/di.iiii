@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
     NODE_TYPES,
-    NODE_CATEGORIES,
     PORT_TYPES,
     createNode,
     createEdge,
     listNodeTypes,
-    getNodeType,
-    getPortType,
     arePortsCompatible,
     getNodeInputs,
     getNodeOutputs,

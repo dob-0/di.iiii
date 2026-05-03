@@ -66,7 +66,7 @@ export function useAssetPipeline({
             if (blob && blob.size < file.size) {
                 return new File([blob], file.name.replace(/\.[^/.]+$/, '.webp'), { type: blob.type })
             }
-        } catch (error) {
+        } catch {
             // ignore
         }
         return file
@@ -174,7 +174,7 @@ export function useAssetPipeline({
             const extension = kind === 'video' ? '.webm' : '.webm'
             const newName = file.name.replace(/\.[^/.]+$/, extension)
             return new File([optimizedBlob], newName, { type: optimizedBlob.type })
-        } catch (error) {
+        } catch {
             if (kind === 'audio') {
                 // Some audio blobs can't be decoded/captured; keep original silently
                 if (stopTimeout) {
@@ -303,7 +303,7 @@ export function useAssetPipeline({
             const optimizedSource = new File([blob], filename, { type: originalMeta.mimeType || (targetObject.type === 'video' ? 'video/mp4' : 'audio/mpeg') })
             await startMediaOptimization(originalMeta, optimizedSource, targetObject.type)
             return true
-        } catch (error) {
+        } catch {
             alert('Failed to optimize this media. Please try again or re-upload the original file.')
             return false
         } finally {
@@ -364,7 +364,7 @@ export function useAssetPipeline({
             }
             upsertRemoteAssetEntry?.(entry, serverAssetBaseUrl)
             return entry
-        } catch (error) {
+        } catch {
             return null
         } finally {
             if (trackPending) {
@@ -478,7 +478,7 @@ export function useAssetPipeline({
                         try {
                             const materialMeta = await ingestAssetFile(materialEntry.file)
                             overridesPayload.materialsAssetRef = materialMeta
-                        } catch (error) {
+                        } catch {
                             // ignore
                         }
                     }

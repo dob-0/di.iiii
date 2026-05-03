@@ -104,7 +104,7 @@ export function useServerPublishing({
             } else {
                 alert('Server scene not available.')
             }
-        } catch (error) {
+        } catch {
             alert('Error: Could not reload scene from server.')
         }
     }, [

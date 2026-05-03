@@ -34,7 +34,7 @@ export function createSceneSyncService() {
             if (!event?.data || typeof onPatch !== 'function') return
             try {
                 onPatch(JSON.parse(event.data))
-            } catch (error) {
+            } catch {
                 // ignore
             }
         }
@@ -43,7 +43,7 @@ export function createSceneSyncService() {
             if (!event?.data || typeof onCursor !== 'function') return
             try {
                 onCursor(JSON.parse(event.data))
-            } catch (error) {
+            } catch {
                 // ignore
             }
         }
@@ -52,7 +52,7 @@ export function createSceneSyncService() {
             if (!event?.data || typeof onReady !== 'function') return
             try {
                 onReady(JSON.parse(event.data))
-            } catch (error) {
+            } catch {
                 // ignore
             }
         }

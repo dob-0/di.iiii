@@ -253,7 +253,7 @@ export function useXrAr({
                 )
                 return
             }
-        } catch (error) {
+        } catch {
             // ignore
         }
 
@@ -320,7 +320,7 @@ export function useXrAr({
         try {
             const session = xrStore.getState().session
             await session?.end()
-        } catch (error) {
+        } catch {
             alert('Could not exit the XR session cleanly. Please try again.')
         }
     }, [xrStore])

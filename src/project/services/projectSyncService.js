@@ -31,7 +31,7 @@ export function createProjectSyncService() {
             if (!event?.data || typeof onProjectOp !== 'function') return
             try {
                 onProjectOp(JSON.parse(event.data))
-            } catch (error) {
+            } catch {
                 // ignore
             }
         }
@@ -40,7 +40,7 @@ export function createProjectSyncService() {
             if (!event?.data || typeof onReady !== 'function') return
             try {
                 onReady(JSON.parse(event.data))
-            } catch (error) {
+            } catch {
                 // ignore
             }
         }

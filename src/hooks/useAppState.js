@@ -546,9 +546,11 @@ export function useAppState() {
         setServerAssetSyncProgress
     })
 
-    getBaseSceneDataRef.current = getBaseSceneDataFromSync
-    getSavedViewDataRef.current = getSavedViewDataFromSync
-    scheduleLocalSceneSaveRef.current = scheduleLocalSceneSaveFromSync
+    useEffect(() => {
+        getBaseSceneDataRef.current = getBaseSceneDataFromSync
+        getSavedViewDataRef.current = getSavedViewDataFromSync
+        scheduleLocalSceneSaveRef.current = scheduleLocalSceneSaveFromSync
+    }, [getBaseSceneDataFromSync, getSavedViewDataFromSync, scheduleLocalSceneSaveFromSync])
 
     const {
         canCreateGroupSelection,

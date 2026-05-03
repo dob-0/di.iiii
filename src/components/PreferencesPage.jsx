@@ -26,7 +26,6 @@ export default function PreferencesPage({ onNavigateToEditor }) {
         selectedObject,
         visibleObjectCount,
         hiddenObjectCount,
-        selectedNodeId,
         setSelectedNodeId,
         architectureNodes,
         architectureLinks,

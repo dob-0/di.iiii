@@ -63,7 +63,7 @@ export const evaluateExpressionString = (expression, context = {}, options = {})
         const result = evaluator(...fnValues);
         if (!Number.isFinite(result)) return null;
         return result;
-    } catch (error) {
+    } catch {
         return null;
     }
 };

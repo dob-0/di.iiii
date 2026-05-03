@@ -322,6 +322,18 @@ export default function BetaViewport({
         })
     }
 
+    const handleViewportKeyDown = (event) => {
+        if (event.key !== 'Enter' || event.target !== event.currentTarget) return
+        const rect = viewportRef.current?.getBoundingClientRect?.()
+        if (!rect) return
+        event.preventDefault()
+        onWorldDoubleClick?.({
+            point: [0, 0, 0],
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2
+        })
+    }
+
     const handlePointerMove = (event) => {
         const rect = viewportRef.current?.getBoundingClientRect?.()
         if (!rect || !rect.width || !rect.height) return
@@ -337,15 +349,16 @@ export default function BetaViewport({
         <div
             className="beta-viewport-shell"
             ref={viewportRef}
+            role="button"
+            tabIndex={0}
+            aria-label="Create a world node"
             onPointerMove={handlePointerMove}
             onPointerLeave={onCursorLeave}
             onDoubleClick={handleViewportDoubleClick}
+            onKeyDown={handleViewportKeyDown}
         >
             {isEmpty ? (
-                <div className="beta-viewport-empty-hint" onDoubleClick={(event) => {
-                    event.stopPropagation()
-                    onWorldDoubleClick?.({ point: [0, 0, 0], clientX: event.clientX, clientY: event.clientY })
-                }}>
+                <div className="beta-viewport-empty-hint">
                     <span>double-click to add a node</span>
                 </div>
             ) : null}

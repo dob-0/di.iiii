@@ -208,7 +208,7 @@ export function useSpaceSocket(spaceId, userId, userName) {
       userCursorListenersRef.current.forEach((listener) => {
         try {
           listener(data)
-        } catch (error) {
+        } catch {
             // ignore
         }
       })

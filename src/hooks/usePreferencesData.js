@@ -18,7 +18,6 @@ import {
     formatJson,
     formatTimestamp,
     formatVector,
-    getActionButtonClassName,
     getObjectDisplayLabel,
     getTypeColor,
     normalizeBuildValue,
@@ -305,9 +304,9 @@ export function usePreferencesData({ onNavigateToEditor }) {
         }
     }, [])
 
-    const copySnapshot = useCallback(async () => {
+    const copySnapshot = async () => {
         await copyText('Project snapshot', formatJson(projectSnapshot))
-    }, [copyText, projectSnapshot])
+    }
 
     const copyRuntimeLog = useCallback(async () => {
         await copyText('Runtime log', runtimeLogText || 'No runtime log entries yet.')
@@ -318,10 +317,10 @@ export function usePreferencesData({ onNavigateToEditor }) {
         window.location.assign(path)
     }, [])
 
-    const copyOperatorLinks = useCallback(async () => {
+    const copyOperatorLinks = async () => {
         const linkText = operatorLinks.map((link) => `${link.label}: ${link.href}`).join('\n')
         await copyText('Operator links', linkText || 'No operator links available.')
-    }, [copyText, operatorLinks])
+    }
 
     const architectureNodes = [
         {

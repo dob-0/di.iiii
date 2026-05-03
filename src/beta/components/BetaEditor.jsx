@@ -690,6 +690,15 @@ export default function BetaEditor({
     const visibleSelection = Boolean(selectedNode || selectedEntity)
     const activeSurface = workspaceState.activeSurface || 'graph'
 
+    const handleViewSurfaceKeyDown = (event) => {
+        if (event.key !== 'Enter' || event.target !== event.currentTarget) return
+        const rect = event.currentTarget.getBoundingClientRect()
+        openPalette('view', {
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2
+        })
+    }
+
     useEffect(() => {
         if (!visibleSelection || activeSurface === 'graph') return undefined
         const handler = (event) => {
@@ -825,12 +834,16 @@ export default function BetaEditor({
                 ) : null}
 
                 {activeSurface === 'view' ? (
-                    <section
+                    <div
                         className="beta-view-surface"
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Create a view node"
                         onDoubleClick={(event) => {
                             if (event.target?.closest?.(VIEW_DOUBLE_CLICK_IGNORE_SELECTOR)) return
                             openPalette('view', { clientX: event.clientX, clientY: event.clientY })
                         }}
+                        onKeyDown={handleViewSurfaceKeyDown}
                     >
                         {!visibleViewNodes.length ? (
                             <div className="beta-empty-view-state">
@@ -838,7 +851,7 @@ export default function BetaEditor({
                                 <p>Double-click to add a node.</p>
                             </div>
                         ) : null}
-                    </section>
+                    </div>
                 ) : null}
 
                 {activeSurface === 'view' ? visibleViewNodes.map((node, index) => {

@@ -42,7 +42,7 @@ const evictSceneStorageEntry = (keepKey) => {
                 return true
             }
         }
-    } catch (error) {
+    } catch {
         // ignore
     }
     return false
@@ -75,7 +75,7 @@ export const persistSceneToLocalStorage = (sceneData, storageKey = LOCAL_STORAGE
             }
             throw error
         }
-    } catch (error) {
+    } catch {
         alert('Error: Could not save scene. Please export your work and clear saved scenes.')
         return false
     }

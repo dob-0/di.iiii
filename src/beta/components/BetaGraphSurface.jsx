@@ -151,8 +151,32 @@ export default function BetaGraphSurface({
         onDoubleClick({ clientX: event.clientX, clientY: event.clientY })
     }
 
+    const handleSectionKeyDown = (event) => {
+        if (event.key !== 'Enter' || event.target !== event.currentTarget || !onDoubleClick) return
+        const rect = event.currentTarget.getBoundingClientRect()
+        onDoubleClick({
+            clientX: rect.left + rect.width / 2,
+            clientY: rect.top + rect.height / 2
+        })
+    }
+
+    const handleNodeKeyDown = (event, nodeId) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        event.preventDefault()
+        onSelectNode?.(nodeId)
+    }
+
     return (
-        <section className="beta-graph-surface" ref={containerRef} style={{ position: 'relative', overflow: 'auto', height: '100%', background: '#111' }} onDoubleClick={handleSectionDoubleClick}>
+        <div
+            className="beta-graph-surface"
+            ref={containerRef}
+            role="button"
+            tabIndex={0}
+            aria-label="Create a graph node"
+            style={{ position: 'relative', overflow: 'auto', height: '100%', background: '#111' }}
+            onDoubleClick={handleSectionDoubleClick}
+            onKeyDown={handleSectionKeyDown}
+        >
             {nodes.length === 0 ? (
                 <div className="beta-empty-state" style={{ padding: 24, color: '#aaa', pointerEvents: 'none' }}>Double-click to add a node.</div>
             ) : null}
@@ -189,7 +213,10 @@ export default function BetaGraphSurface({
                             width: CARD_WIDTH,
                             height: h,
                         }}
+                        role="button"
+                        tabIndex={0}
                         onClick={() => onSelectNode?.(node.id)}
+                        onKeyDown={(event) => handleNodeKeyDown(event, node.id)}
                         onDoubleClick={(event) => event.stopPropagation()}
                     >
                         <header className="beta-graph-node-header">
@@ -232,6 +259,6 @@ export default function BetaGraphSurface({
                     </div>
                 )
             })}
-        </section>
+        </div>
     )
 }

@@ -115,7 +115,7 @@ export function useScenePersistenceCoordinator({
         if (!shouldSyncServerScene) return
         try {
             latestServerPayloadRef.current = factory()
-        } catch (error) {
+        } catch {
             return
         }
         if (pendingServerSaveRef.current) {
@@ -138,7 +138,7 @@ export function useScenePersistenceCoordinator({
                 if (typeof response?.newVersion === 'number') {
                     setSceneVersion?.(response.newVersion)
                 }
-            } catch (error) {
+            } catch {
                 // ignore
             }
         }, 1200)

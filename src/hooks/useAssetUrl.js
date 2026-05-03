@@ -95,7 +95,7 @@ export function useAssetUrl(assetRef, options = {}) {
                         // ignore cache cleanup errors and continue to the remote source
                     }
                 }
-            } catch (error) {
+            } catch {
                 // ignore
             }
             try {
@@ -103,7 +103,7 @@ export function useAssetUrl(assetRef, options = {}) {
                 if (applyBlob(streamed)) {
                     return
                 }
-            } catch (error) {
+            } catch {
                 if (remoteUrl) {
                     // ignore
                 }

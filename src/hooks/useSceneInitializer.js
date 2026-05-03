@@ -212,7 +212,7 @@ export function useSceneInitializer({
 
                 updateSceneSignature(normalizedSceneData)
                 persistSceneDataWithStatus(normalizedSceneData, 'Loaded scene locally')
-            } catch (error) {
+            } catch {
                 localStorage.removeItem(sceneStorageKey)
                 if (!isCancelled) {
                     initializeBlankScene()

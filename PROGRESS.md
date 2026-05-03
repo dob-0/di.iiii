@@ -21,13 +21,18 @@ Read this before starting work. Update it before stopping.
     - fallback catch annotations and visible sync warnings
     - di.i visual identity refresh across landing, Studio, Beta, and shared surfaces
 - Completed quick Beta editor win: Delete/Backspace now deletes selected nodes/entities in World/View surfaces, while Graph keeps its existing graph-local handler.
+- Cleared the remaining lint warnings:
+    - moved `useAppState` ref updates out of render and into an effect
+    - removed unused imports/destructures in Beta, Preferences, and node registry tests
+    - converted intentionally ignored catch bindings to bare `catch`
+    - made Beta graph/world/view interactive surfaces keyboard-addressable
 
 ### Validation
 
 - `git diff --check` passed after whitespace cleanup.
 - `npm run docs:ai:sync` passed — bridges already up to date.
 - `npm run docs:ai:check` passed.
-- `npm run lint` passed with existing warnings only.
+- `npm run lint` passed with 0 warnings.
 - `npm run test` passed: 66 files / 219 tests.
 - `npm run build` passed.
 - `npm run test:server-contracts` passed: 2 files / 16 tests.

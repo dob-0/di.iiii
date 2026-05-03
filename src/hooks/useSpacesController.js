@@ -218,7 +218,7 @@ export function useSpacesController({
         try {
             await navigator.clipboard.writeText(url)
             return true
-        } catch (error) {
+        } catch {
             window.prompt('Copy space link', url)
             return false
         }
