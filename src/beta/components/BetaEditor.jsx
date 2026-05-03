@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PropertyInspector from './PropertyInspector.jsx'
 import DesktopWindow from './DesktopWindow.jsx'
 import BetaViewport from './BetaViewport.jsx'
@@ -319,7 +319,7 @@ export default function BetaEditor({
         }
     }
 
-    const handleDeleteSelected = () => {
+    const handleDeleteSelected = useCallback(() => {
         if (selectedNode) {
             applyLocalOps([
                 {
@@ -339,7 +339,7 @@ export default function BetaEditor({
             payload: { entityId: selectedEntity.id }
         }, { activityMessage: `Deleted ${selectedEntity.name}.`, activityLevel: 'warning' })
         dispatch({ type: 'select-entity', entityId: null })
-    }
+    }, [applyLocalOps, dispatch, selectedEntity, selectedNode])
 
     const handleResetLocalWorkspace = () => {
         if (!isLocalWorkspace) return
