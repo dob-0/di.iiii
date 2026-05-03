@@ -34,6 +34,7 @@ Read this before starting work. Update it before stopping.
     - deleted stale remote `copilot/help-with-pull-request` branch with no open PR
     - fast-forwarded local `main` and `staging` refs to their upstreams
     - closed PRs #9/#10 and deleted their `copilot/*` branches after confirmation to keep only needed branches
+- Stabilized the PreferencesPage runtime metadata test by waiting for async backend health metadata before asserting release fields.
 
 ### Validation
 
