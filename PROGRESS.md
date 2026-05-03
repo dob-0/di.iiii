@@ -33,13 +33,13 @@ Read this before starting work. Update it before stopping.
 - Cleaned branch hygiene after the deploy workflow push:
     - deleted stale remote `copilot/help-with-pull-request` branch with no open PR
     - fast-forwarded local `main` and `staging` refs to their upstreams
-    - left open PR branches untouched pending an explicit close/delete decision
+    - closed PRs #9/#10 and deleted their `copilot/*` branches after confirmation to keep only needed branches
 
 ### Validation
 
 - `git diff --check` passed after whitespace cleanup.
 - SSH deploy workflow structural check passed.
-- Branch cleanup verification passed: remote branch count is now 7; worktree clean on `dev`.
+- Branch cleanup verification passed: remote branch count is now 5; only `dev`, `staging`, `main`, `cpanel-staging`, and `cpanel-production` remain.
 - `npm run docs:ai:sync` passed — bridges already up to date.
 - `npm run docs:ai:check` passed.
 - `npm run lint` passed with 0 warnings.
