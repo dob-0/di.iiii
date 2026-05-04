@@ -5,6 +5,30 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-05-04c — Manifesto Shortcut Capture Rule
+
+**Who:** Copilot
+
+### Done this session
+
+- Added a permanent manifesto section requiring short reusable solution notes after solved tasks.
+- Defined a compact template: Problem, Short way, Verification, Source files/commands.
+
+### Why
+
+- Prevent repeat investigation of already solved paths.
+- Keep operational memory compact and immediately actionable.
+
+### Files changed
+
+- `MANIFESTO.md`
+
+### Follow-up update
+
+- Added a concrete shortcut entry for staging publish failures: missing `deploy/cpanel/cpanel.prebuilt.yml`, repromote flow, and verification checklist.
+
+---
+
 ## 2026-05-04b — Outliner Panel + Tests
 
 **Who:** Gevorg + Claude

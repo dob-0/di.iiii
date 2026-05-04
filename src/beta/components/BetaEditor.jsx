@@ -736,15 +736,6 @@ export default function BetaEditor({
         openCreateDialog(surface, placement)
     }
 
-    const handleViewSurfaceKeyDown = (event) => {
-        if (event.key !== 'Enter' || event.target !== event.currentTarget) return
-        const rect = event.currentTarget.getBoundingClientRect()
-        openPalette('view', {
-            clientX: rect.left + rect.width / 2,
-            clientY: rect.top + rect.height / 2
-        })
-    }
-
     useEffect(() => {
         if (!visibleSelection || activeSurface === 'graph') return undefined
         const handler = (event) => {

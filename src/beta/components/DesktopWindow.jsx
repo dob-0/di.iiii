@@ -90,7 +90,7 @@ export default function DesktopWindow({
             window.removeEventListener('pointerup', handlePointerUp)
             window.removeEventListener('pointercancel', handlePointerUp)
         }
-    }, [draft, minTop, onPatch])
+    }, [draft, minTop, onPatch, canvasZoom])
 
     const startDrag = (event) => {
         event.preventDefault()

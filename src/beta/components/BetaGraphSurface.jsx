@@ -141,7 +141,6 @@ export default function BetaGraphSurface({
         }
         container.addEventListener('wheel', handleWheel, { passive: false })
         return () => container.removeEventListener('wheel', handleWheel)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     useEffect(() => {
@@ -156,8 +155,6 @@ export default function BetaGraphSurface({
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
     }, [selectedNodeId, onDeleteNode])
-
-    const containerRect = () => containerRef.current?.getBoundingClientRect?.() || { left: 0, top: 0 }
 
     const handleOutputPointerDown = (event, node, port) => {
         if (event.button !== 0) return

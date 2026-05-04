@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
     NODE_CATEGORIES,
-    listNodeTypes,
-    getNodeType
+    listNodeTypes
 } from '../../project/nodeRegistry.js'
 import { filterNodeTypesForSurface } from '../utils/nodeSurfaceFilters.js'
 

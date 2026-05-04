@@ -85,3 +85,36 @@ These are not immediate tasks. They are directions to preserve headroom for:
 ## Voices That Count
 
 Decisions that touch the non-negotiables need the voice of the product owner (Gevorg). Don't redesign auth, storage format, publish model, or the decentralization path from a single task prompt.
+
+---
+
+## Solved Shortcuts (Operational Memory)
+
+When a task is solved, write a short reusable solution note so the next session does not re-research the same path.
+
+Minimum note format:
+
+- Problem
+- Short way (exact steps that worked)
+- Verification (how it was proven)
+- Source files or commands used
+
+Keep it brief and actionable. Capture the path that worked, not a long narrative.
+
+### Shortcut: Staging Not Fresh After Push
+
+- Problem: staging site still serves an old build or throws runtime errors after staging was updated.
+- Short way:
+	1. Check publish workflow result for `publish-cpanel-prebuilt-v2.yml`.
+	2. If `Publish target branch` fails with missing `deploy/cpanel/cpanel.prebuilt.yml`, restore that file.
+	3. Commit and run `npm run deploy:staging`.
+	4. Confirm `origin/cpanel-staging` moved to a newer commit.
+- Verification:
+	- Workflow conclusion is `success`.
+	- `git ls-remote --heads origin staging cpanel-staging` shows updated prebuilt branch head.
+	- Staging browser path loads node palette and node inspector without the prior runtime error.
+- Source files or commands used:
+	- `deploy/cpanel/cpanel.prebuilt.yml`
+	- `.github/workflows/publish-cpanel-prebuilt-v2.yml`
+	- `npm run deploy:staging`
+	- `gh run list --workflow publish-cpanel-prebuilt-v2.yml`
