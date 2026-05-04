@@ -111,6 +111,20 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    'value.string': {
+        id: 'value.string',
+        label: 'String',
+        category: 'source',
+        runtime: 'any',
+        singleton: false,
+        inputs: [],
+        outputs: [
+            { id: 'out', type: 'string', label: 'Value' },
+        ],
+        defaultValues: { value: '' },
+        render: 'hidden',
+    },
+
     'time': {
         id: 'time',
         label: 'Time',
@@ -664,11 +678,12 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'color',    type: 'color',  label: 'Color',    default: '#ffffff'  },
-            { id: 'width',    type: 'number', label: 'Width',    default: 2          },
-            { id: 'height',   type: 'number', label: 'Height',   default: 2          },
-            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0, 0]  },
-            { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
+            { id: 'color',      type: 'color',  label: 'Color',      default: '#ffffff'  },
+            { id: 'width',      type: 'number', label: 'Width',      default: 2          },
+            { id: 'height',     type: 'number', label: 'Height',     default: 2          },
+            { id: 'textureUrl', type: 'string', label: 'Texture URL', default: ''        },
+            { id: 'position',   type: 'vec3',   label: 'Position',   default: [0, 0, 0]  },
+            { id: 'rotation',   type: 'vec3',   label: 'Rotation',   default: [0, 0, 0]  },
         ],
         outputs: [
             { id: 'out', type: 'geometry', label: 'Geometry' },

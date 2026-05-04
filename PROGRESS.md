@@ -5,6 +5,261 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-05-04b — Outliner Panel + Tests
+
+**Who:** Gevorg + Claude
+
+### Done this session
+
+**Outliner panel (node count badge → clickable toggle):**
+
+- Converted `<span class="beta-topbar-node-count">` to a `<button>` that toggles an Outliner window
+- `surfaceNodes` memo reuses the filtered array for both the count and the outliner list (was computing separately before)
+- Created `OutlinerPanelWindow.jsx` — lists nodes for the active surface, shows type label + node label, highlights selected node with `is-selected`
+- Outliner window is a floating `DesktopWindow`, draggable/resizable, available on all three surfaces
+- CSS: node count button gets `appearance: none` reset, hover/active color brightening; `.beta-outliner button.is-selected` added
+
+**Tests:**
+
+- `OutlinerPanelWindow.test.jsx` — 5 tests: empty state, node list rendering, typeId fallback, is-selected class, click callback
+- `BetaEditor.test.jsx` — 4 new outliner toggle tests: no button when empty, button appears with nodes, opens dialog on click, closes on second click
+
+### Validation
+
+- `npm run test` — 79 files / 270 tests — all pass
+
+### Easy wins (pick any next)
+
+1. **Bundle size follow-up** — drei subpath imports (note: `sideEffects: false` is already set in drei's package.json so tree-shaking from the index works; investigate whether chunk inflation from dynamic import boundaries is addressable with a different Rollup strategy instead)
+2. **Routing** — replace manual `window.location`/`popstate` with a router library (medium-large scope; current system is clean and tested — weigh carefully)
+3. **Outliner node-type icon/colour** — add a coloured dot next to each type label using the `category` colour map already in nodeRegistry
+
+---
+
+## 2026-05-04 — geom.plane Texture + Initial Bundle Optimization
+
+**Who:** Gevorg + Claude
+
+### Done this session
+
+**`geom.plane` texture support:**
+
+- Added `textureUrl` string port to `geom.plane` in `nodeRegistry.js`
+- Added `PlaneWithTexture` component in `BetaViewport.jsx` using `useTexture` from drei
+- When `textureUrl` is set, renders with texture mapped; falls back to solid color otherwise
+- Loads lazily inside existing `<Suspense>` boundary — no new Suspense needed
+
+**Initial bundle optimization (index.js: 459kB → 30kB gzip):**
+
+- Made `App`, `BlankNodeWorkspaceApp`, and `PublicProjectViewer` lazy in `SpaceSurfaceApp.jsx`
+- Made `SceneCanvas`, `PresentationCanvas`, and drei `Loader` lazy in `EditorLayout.jsx`
+- Fixed `SpaceSurfaceApp.test.jsx` — two sync `getByText` checks updated to async `findByText` to match new lazy rendering
+- Updated `manualChunks` in `vite.config.js`: merged `xr-vendor` into `react-three`, added `@react-spring/three` to prevent circular chunk warnings; removed stale comment
+- Known tradeoff: Three.js lazy chunks are larger than original (tree-shaking is less aggressive across dynamic import boundaries). Initial render is dramatically faster for landing pages and non-3D workflows.
+
+### Validation
+
+- `npm run lint` — 0 errors, 5 pre-existing warnings (unchanged)
+- `npm run test` — 78 files / 261 tests — all pass
+
+### Easy wins (pick any next)
+
+1. **GitHub Actions deploy** — replace cPanel cron. Push to `staging` → build → rsync + SSH restart. IE role. New workflow file.
+2. **Outliner panel** — node count badge in topbar has no click target. Wire it to an outliner panel.
+3. **Bundle size follow-up** — `drei` tree-shaking regresses with lazy imports. Root fix: use drei subpath imports (`@react-three/drei/web/Grid`) instead of top-level index in viewport components. ~15 targeted import changes.
+4. **Routing** — replace manual `window.location`/`popstate` with a router library.
+
+---
+
+## 2026-05-04 — Undo/Redo + AI Company Structure + Ollama Integration
+
+**Who:** Gevorg + Claude
+
+### Changes
+
+**Undo/redo in Beta editor:**
+- Wrapped `applyLocalOps` with a history-tracking layer inside `BetaEditor.jsx`
+- All structural ops (everything except `setWorkspaceState`) push the current document to a 50-entry undo stack
+- `Ctrl+Z` / `Cmd+Z` restores previous document state via `replace-document` dispatch
+- `Ctrl+Shift+Z` / `Ctrl+Y` redoes
+- Input/textarea fields correctly ignore the shortcut
+- Fixed stale `windowLayout.test.js` assertions (expected old formula values, now reflect `bottom + 8`)
+
+**AI company structure** (`docs/ai/roles/`):
+- 10 role cards: UI/UX Engineer, Node System Engineer, 3D/Viewport Engineer, Backend/API Engineer, Schema/Protocol Engineer, Infrastructure Engineer, QA/Test Engineer, Security Auditor, Technical Architect, Documentation Engineer
+- Each card has: owned files, forbidden files, elite domain knowledge, done criteria
+- Role routing table added to root `AGENTS.md`
+
+**Token efficiency + Ollama integration:**
+- `scripts/ollama-task.sh` — safe CLI wrapper for 5 Ollama tiers (fast/deep/coder/general/tiny)
+- `dob-fast` and `dob-deep` are project-fine-tuned — called without system prompt override
+- Model routing guide at `docs/ai/roles/model-routing.md`
+- Token budget rules added to `AGENTS.md` (startup context limits, tool budgets)
+- All 4 AI tools (Claude, Gemini, Copilot, Cursor) now receive role routing table + token efficiency rules via their bridge files
+- `npm run docs:ai:sync` regenerates all 16 bridge files automatically
+
+### Validation
+
+- `npm run lint` — 0 errors, 5 pre-existing warnings (unchanged)
+- `npm run test` — 78 files / 261 tests — all pass
+- `npm run docs:ai:check` — pass
+
+### Easy wins (pick any next)
+
+1. **`geom.plane` texture** — add `textureUrl` port in `nodeRegistry.js`, read with `useTexture` in `BetaViewport.jsx`. ~30 lines. NSE + VPE.
+2. **GitHub Actions deploy** — replace cPanel cron. Push to `staging` → build → rsync + SSH restart. IE role. New workflow file.
+3. **Content-addressed asset IDs** — swap `crypto.randomUUID()` for `SHA-256(file content)` in upload routes. ~10 lines. BAE role.
+4. **Outliner panel** — node count badge in topbar has no click target. Wire it to an outliner panel.
+
+---
+
+## 2026-05-04 — Beta Layout Fixes + Full Surface Testing
+
+**Who:** Copilot
+
+### Done this session
+
+Created `default-scene-test` project and systematically tested all three Beta editor surfaces. Found and fixed 4 layout bugs.
+
+**Fixed:**
+1. **Dead space below topbar**: `DEFAULT_BETA_WORKSPACE_TOP` was 168px (old value from before topbar redesign). Changed to 64px, updated `getWorkspaceTopInset` formula to `return bottom > 0 ? bottom + 8 : DEFAULT_BETA_WORKSPACE_TOP`.
+2. **Viewport starts at y=0 when workflow strip hidden**: `workflowHeight` fallback was `0`, so surfaces started under topbar. Changed fallback to `workspaceTop`.
+3. **Workflow strip not hiding when cube exists**: `hasWorldContent = entities.length > 0` only checked legacy entities. Beta nodes live in `document.nodes`. Fixed to `entities.length > 0 || nodes.length > 0`.
+4. **Inspector overlapping workflow strip**: `.beta-selection-scaffold` had `top: 64px` hardcoded in CSS. When workflow strip height ~150px, inspector overlapped it. Added `style={{ top: workflowHeight + 'px' }}` to override.
+
+**Tested and verified:**
+- World surface: cube visible at [0,0.5,0], clickable, inspector updates on selection, no layout overlaps
+- Graph surface: node cards visible, port connections show, inspector works, no overlaps  
+- View surface: text panel floating window at correct position, draggable, workflow strip hides when view nodes exist
+
+**Files changed:**
+- `src/beta/utils/windowLayout.js` — DEFAULT_BETA_WORKSPACE_TOP 168→64, formula updated
+- `src/beta/components/BetaEditor.jsx` — 4 fixes: workflowHeight fallback, hasWorldContent, inspector top, (surface switching)
+
+### Follow-up fixes
+
+- Made Beta selection surface-aware so World/View no longer inherit an unrelated selected node from another surface.
+- Scoped the topbar node count to the active surface instead of counting the full mixed document.
+- Filtered `view.image` asset picker options to image assets only so the node UI no longer offers incompatible project assets.
+- Added focused tests for the asset-filtering inspector behavior.
+- Fixed `OpCreateDialog` render loop on `Add View Node` / `Add World Node`: stable selection now comes from the memoized definitions list, which prevents the `Maximum update depth exceeded` warning when opening the create dialog.
+- Completed live Beta checks for remaining todos: View surface OK, add-node flow OK (created Browser node), and graph wiring OK (created a `value.color -> geom.cube.color` edge in `default-scene-test`).
+
+### Validation
+
+- `npm run lint` — pass
+- All surfaces load cleanly with no console errors
+- Cube visible and selectable in World; inspector shows Cube ports
+- Graph shows node cards with ports; edges visible as wires
+- View shows floating text panel at correct y position; no overlap with topbar
+
+---
+
+## 2026-05-04 — Beta Graph Node Dragging + Visibility Fix
+
+**Who:** Codex
+
+### Done this session
+
+- Fixed Beta Graph surface not showing node cards: removed inline `position: 'relative'` that was breaking `position: absolute; inset: 0` CSS.
+- Fixed `topInset` calculation to use `offsetTop + offsetHeight` for proper workflow strip offset.
+- Added auto-scroll to Graph surface on mount to show nodes.
+- **Added drag-to-move for graph nodes**: nodes now respond to click-and-drag to reposition in the graph canvas. Cursor changes to `grab`/`grabbing` to indicate affordance.
+- Connected drag callback (`onMoveNode`) to persist `graphX`/`graphY` via `updateNode` operations.
+- **Fixed UI overlap issues**: Workflow strip now hides when content exists on the active surface (hidden on World when entities exist, hidden on Graph when nodes exist, hidden on View when view nodes exist).
+
+### Validation
+
+- Node cards visible and interactive.
+- Graph drag-to-move tested: moved node by (150px, 100px) and confirmed position updated.
+- Workflow strip hidden on all surfaces with content (tested World and Graph).
+- World viewport fully visible with no overlays.
+- Graph editor showing 6 nodes with connection wires visible.
+- Inspector panel positioned non-overlapping on right.
+- All surfaces layout correctly with topbar and optional workflow hints.
+
+### Completed Features
+
+✅ Graph visibility (nodes now show)
+✅ Node dragging (drag to reposition)  
+✅ UI layout (no overlaps, clean workspace)
+✅ Workflow hinting (shows only when empty)
+
+
+---
+
+## 2026-05-03 — Beta Empty World Affordance
+
+**Who:** Gevorg + Codex
+
+### Done this session
+
+- Replaced the faint empty-world hint with a visible onboarding overlay in Beta World.
+- Added a bright framed target area, crosshair, and a centered `Add World Node` button so users do not have to guess where to double-click.
+- Kept double-click support, but added a direct first-action button for dark-grid scenes where the interaction was too hidden.
+- Added focused viewport tests for the empty-world CTA.
+
+### Validation
+
+- `npm run lint` passed.
+- `npm run test -- src/beta/components/BetaViewport.test.jsx src/beta/components/BetaHelpDialog.test.jsx src/beta/components/BetaHub.test.jsx src/beta/utils/betaGuide.test.js src/beta/components/BetaEditor.test.jsx` passed.
+
+---
+
+## 2026-05-03 — Beta Visitor/Creator First Landing
+
+**Who:** Gevorg + Codex
+
+### Done this session
+
+- Added a visual Beta hub onboarding split for two audiences: `For Visitors` and `For Creators`.
+- Added audience-specific steps and actions so visitors can go to the public space while creators can jump into project creation.
+- Extended the in-app Beta help `Start Here` section with matching visitor/creator guidance cards.
+- Updated the Beta user manual so the written docs now begin with the same two entry paths.
+
+### Validation
+
+- `npm run lint` passed.
+- `npm run test -- src/beta/components/BetaHub.test.jsx src/beta/components/BetaHelpDialog.test.jsx src/beta/utils/betaGuide.test.js src/beta/components/BetaEditor.test.jsx` passed.
+
+---
+
+## 2026-05-03 — Beta Help Flow + User Manual
+
+**Who:** Gevorg + Codex
+
+### Done this session
+
+- Added a Beta in-app help system with surface-aware guidance for `Start Here`, `World`, `View`, and `Graph`.
+- Added a topbar `Help` button plus a workflow-strip `How To Use ...` action so users can open guidance from multiple places.
+- Added shared Beta guide content in code so the in-app steps stay consistent.
+- Added a written Beta manual at `docs/beta/USER_MANUAL.md` covering first steps, first connections, and current Beta expectations.
+
+### Validation
+
+- `npm run lint` passed.
+- `npm run test -- src/beta/components/BetaHelpDialog.test.jsx src/beta/utils/betaGuide.test.js src/beta/utils/surfaceWorkflow.test.js src/beta/components/BetaEditor.test.jsx` passed.
+
+---
+
+## 2026-05-03 — Beta Workflow Strip Layout Fix
+
+**Who:** Gevorg + Codex
+
+### Done this session
+
+- Fixed Beta surface overlap caused by the new workflow strip floating above World/View/Graph content.
+- Measured workflow strip height in `BetaEditor.jsx` and passed a live top inset into each active surface.
+- Updated `BetaGraphSurface.jsx` and `BetaViewport.jsx` to reserve that inset instead of rendering under the strip.
+- Updated Beta surface CSS so the workflow strip participates in normal layout and the View surface honors a dynamic top offset.
+
+### Validation
+
+- `npm run lint` passed.
+- `npm run test -- src/beta/components/BetaEditor.test.jsx src/beta/components/BetaGraphSurface.test.jsx src/beta/utils/surfaceWorkflow.test.js` passed.
+
+---
+
 ## 2026-05-03 — Handoff Cleanup · Logical Commits · Beta Delete Key
 
 **Who:** Gevorg + Codex

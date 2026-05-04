@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { createEdge, createNode } from '../../project/nodeRegistry.js'
+import { createNodeGraphContext } from './nodeGraphRuntime.js'
 import { getBetaWorldBackgroundColor } from './viewportWorldState.js'
 
 describe('getBetaWorldBackgroundColor', () => {
@@ -22,5 +24,16 @@ describe('getBetaWorldBackgroundColor', () => {
         })).toBe('#05070a')
 
         expect(getBetaWorldBackgroundColor({ nodes: [] })).toBe('#0a0e16')
+    })
+
+    it('resolves a graph-driven background color', () => {
+        const colorNode = createNode('value.color', { id: 'color-1', values: { value: '#112233' } })
+        const backgroundNode = createNode('world.background', { id: 'bg-1' })
+        const document = {
+            nodes: [colorNode, backgroundNode],
+            edges: [createEdge('color-1', 'out', 'bg-1', 'color')]
+        }
+
+        expect(getBetaWorldBackgroundColor(document, createNodeGraphContext(document))).toBe('#112233')
     })
 })

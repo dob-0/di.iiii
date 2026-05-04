@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildPreferencesPath } from '../../utils/spaceRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
@@ -14,6 +14,7 @@ import {
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioHubPath } from '../../studio/utils/studioRouting.js'
 import { buildBetaProjectPath, navigateToBetaPath } from '../utils/betaRouting.js'
+import { GUIDE_AUDIENCES } from '../utils/betaGuide.js'
 
 export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [projects, setProjects] = useState([])
@@ -21,6 +22,7 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [status, setStatus] = useState('Loading beta projects...')
     const [isBusy, setIsBusy] = useState(false)
     const [importWarnings, setImportWarnings] = useState([])
+    const titleInputRef = useRef(null)
 
     const loadProjects = useCallback(async () => {
         setStatus('Loading beta projects...')
@@ -126,6 +128,19 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         }
     }
 
+    const focusCreateInput = () => {
+        titleInputRef.current?.focus?.()
+        titleInputRef.current?.select?.()
+    }
+
+    const handleAudienceAction = (audienceId) => {
+        if (audienceId === 'visitor') {
+            window.location.assign(buildAppSpacePath(spaceId))
+            return
+        }
+        focusCreateInput()
+    }
+
     return (
         <main className="beta-hub">
             <div className="beta-hub-layout">
@@ -139,8 +154,41 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     <p className="beta-hub-tagline">space · {spaceId}</p>
                 </header>
 
+                <section className="beta-hub-onboarding" aria-label="Beta onboarding">
+                    <div className="beta-hub-onboarding-copy">
+                        <span className="beta-window-kicker">First Landing</span>
+                        <h2>Choose a path.</h2>
+                        <p>Look first, or build first.</p>
+                    </div>
+                    <div className="beta-hub-onboarding-grid">
+                        {GUIDE_AUDIENCES.map((audience) => (
+                            <section key={audience.id} className="beta-hub-onboarding-card">
+                                <div className="beta-hub-onboarding-mark" aria-hidden="true">
+                                    <span>{audience.glyph}</span>
+                                </div>
+                                <span className="beta-window-kicker">{audience.label}</span>
+                                <h3>{audience.title}</h3>
+                                <div className="beta-hub-onboarding-chip-row">
+                                    {audience.tags.map((tag) => (
+                                        <span key={tag} className="beta-hub-onboarding-chip">{tag}</span>
+                                    ))}
+                                </div>
+                                <ol className="beta-hub-onboarding-steps">
+                                    {audience.steps.map((step) => (
+                                        <li key={step}>{step}</li>
+                                    ))}
+                                </ol>
+                                <button type="button" onClick={() => handleAudienceAction(audience.id)}>
+                                    {audience.actionLabel}
+                                </button>
+                            </section>
+                        ))}
+                    </div>
+                </section>
+
                 <div className="beta-hub-create-row">
                     <input
+                        ref={titleInputRef}
                         className="beta-hub-title-input"
                         value={title}
                         onChange={(event) => setTitle(event.target.value)}

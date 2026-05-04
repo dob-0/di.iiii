@@ -8,6 +8,59 @@ Short routing guide for AI agents working in `di.i`.
 - **[MANIFESTO.md](MANIFESTO.md)** — platform vision and non-negotiables. Read before any architectural or product decision.
 - **[docs/ai/golden_rules.md](docs/ai/golden_rules.md)** — living record of hard-won solutions and agent behavior rules. Add to it when you discover something worth keeping.
 
+## AI Company — Role Assignment
+
+Before starting any task, assign a role. Every task has exactly one primary owner.
+
+```text
+CSS / layout / visual?              → docs/ai/roles/ui-ux-engineer.md
+nodeRegistry / ports / graph model? → docs/ai/roles/node-system-engineer.md
+Three.js / viewport / XR render?    → docs/ai/roles/viewport-3d-engineer.md
+serverXR / SQLite / auth / API?     → docs/ai/roles/backend-api-engineer.md
+shared schema / op-log / CRDT?      → docs/ai/roles/schema-protocol-engineer.md
+Docker / GitHub Actions / deploy?   → docs/ai/roles/infrastructure-engineer.md
+tests / lint / validation?          → docs/ai/roles/qa-test-engineer.md
+auth review / secrets / security?   → docs/ai/roles/security-auditor.md
+AGENTS.md / MANIFESTO / arch?       → docs/ai/roles/technical-architect.md
+docs / PROGRESS / golden rules?     → docs/ai/roles/documentation-engineer.md
+```
+
+Full company guide: **[docs/ai/roles/README.md](docs/ai/roles/README.md)**
+
+Read your role card before acting. Your scope is locked to what the card's "Owns" section lists. Files under "Must Never Touch" are off-limits — do not read, do not edit them.
+
+## Token Efficiency — Burn the Minimum
+
+**Model selection:** Use the cheapest model that can do the job correctly.
+
+```text
+Free (Ollama local):
+  bash scripts/ollama-task.sh fast  "..."   → dob-fast  (project-fine-tuned, Q&A, docs)
+  bash scripts/ollama-task.sh deep  "..."   → dob-deep  (project-fine-tuned, deep analysis)
+  bash scripts/ollama-task.sh coder "..."   → qwen3-coder:30b (test design, logic)
+
+Paid (Claude API):
+  Haiku   → single-file edits, lint fixes, small test additions
+  Sonnet  → feature work, layout bugs, multi-file changes  ← DEFAULT
+  Opus    → architecture decisions, auth/security, non-negotiables review
+```
+
+Full routing guide: [docs/ai/roles/model-routing.md](docs/ai/roles/model-routing.md)
+
+**Startup: read only what you need.**
+
+1. `AGENTS.md` — auto-loaded, always
+2. `PROGRESS.md` — always
+3. Nearest scoped `AGENTS.md` for the area you will edit
+4. Your role card
+5. Stop. Execute. Read more only if blocked.
+
+Do NOT pre-read golden_rules, architecture.md, every component "just in case".
+
+**Tool budget per task:** stop and summarize after every 5 tool calls. If you exceed 10 file reads before making an edit, you are scanning too broadly — narrow the scope or ask.
+
+**Delegate to Ollama first** for any task that is analysis, documentation, or planning. Only escalate to Claude when file edits are required.
+
 ## Universal Startup Contract (All Models)
 
 This contract applies to all agent entrypoints in this repo (Claude, Gemini, Copilot, Cursor, and AGENTS-native readers).
@@ -29,6 +82,7 @@ During active work:
 Apply this by default unless the user says otherwise:
 
 - ask at most 2 clarifying questions
+- if the prompt or command is short, ambiguous, or under-specified, pause, think, and ask the smallest clarifying question before editing files or taking irreversible action
 - lock scope to declared files/systems
 - do the highest-priority item first
 - avoid optional extras unless requested

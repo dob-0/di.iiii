@@ -1,11 +1,11 @@
 export const BETA_WINDOW_PADDING = 12
-export const DEFAULT_BETA_WORKSPACE_TOP = 168
+export const DEFAULT_BETA_WORKSPACE_TOP = 64
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
-export function getWorkspaceTopInset({ topbarRect = null, padding = 16 } = {}) {
+export function getWorkspaceTopInset({ topbarRect = null, padding = 8 } = {}) {
     const bottom = Math.max(0, Number(topbarRect?.bottom) || 0)
-    return Math.max(DEFAULT_BETA_WORKSPACE_TOP, bottom + padding)
+    return bottom > 0 ? bottom + padding : DEFAULT_BETA_WORKSPACE_TOP
 }
 
 export function clampWindowFrame(frame = {}, bounds = {}) {

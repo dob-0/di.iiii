@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { listNodeTypes } from '../../project/nodeRegistry.js'
+import { filterNodeTypesForSurface } from '../utils/nodeSurfaceFilters.js'
 
 const PALETTE_WIDTH = 280
 const PALETTE_MAX_HEIGHT = 320
@@ -49,7 +50,7 @@ export default function NodePalette({
     const [activeIndex, setActiveIndex] = useState(0)
     const inputRef = useRef(null)
 
-    const definitions = listNodeTypes({ query }).map(toDefinitionShim).filter(Boolean)
+    const definitions = filterNodeTypesForSurface(listNodeTypes({ query }), surface).map(toDefinitionShim).filter(Boolean)
 
     useEffect(() => {
         if (!open) return

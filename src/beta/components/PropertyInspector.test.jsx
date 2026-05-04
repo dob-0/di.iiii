@@ -73,4 +73,30 @@ describe('PropertyInspector', () => {
 
         expect(screen.getByText('—')).toBeTruthy()
     })
+
+    it('filters asset picker options to the field asset kind', () => {
+        render(
+            <PropertyInspector
+                title="Image"
+                sections={[
+                    {
+                        id: 'values',
+                        label: 'Ports',
+                        fields: [
+                            { label: 'Source', path: ['src'], type: 'asset', portType: 'texture', assetKind: 'image' }
+                        ]
+                    }
+                ]}
+                values={{ values: { src: '' } }}
+                assetOptions={[
+                    { id: 'img-1', name: 'poster.webp', mimeType: 'image/webp' },
+                    { id: 'vid-1', name: 'clip.mp4', mimeType: 'video/mp4' }
+                ]}
+                onSectionChange={() => {}}
+            />
+        )
+
+        expect(screen.getByRole('option', { name: 'poster.webp' })).toBeTruthy()
+        expect(screen.queryByRole('option', { name: 'clip.mp4' })).toBeNull()
+    })
 })

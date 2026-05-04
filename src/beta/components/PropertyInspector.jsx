@@ -1,4 +1,5 @@
 import { cloneValue } from '../../shared/projectSchema.js'
+import { detectAssetMediaKind } from '../../utils/mediaAssetTypes.js'
 
 const setNestedValue = (value, path, nextValue) => {
     const draft = cloneValue(value)
@@ -13,6 +14,11 @@ const setNestedValue = (value, path, nextValue) => {
 }
 
 const readNestedValue = (value, path = []) => path.reduce((current, key) => current?.[key], value)
+
+const getAssetOptionsForField = (field, assetOptions = []) => {
+    if (!field?.assetKind) return assetOptions
+    return assetOptions.filter((asset) => detectAssetMediaKind(asset) === field.assetKind)
+}
 
 function PropertyField({ field, value, onChange, assetOptions = [] }) {
     if (field.type === 'textarea') {
@@ -37,7 +43,7 @@ function PropertyField({ field, value, onChange, assetOptions = [] }) {
         return (
             <select value={value || ''} onChange={(event) => onChange(event.target.value || null)}>
                 <option value="">Unassigned</option>
-                {assetOptions.map((asset) => (
+                {getAssetOptionsForField(field, assetOptions).map((asset) => (
                     <option key={asset.id} value={asset.id}>{asset.name}</option>
                 ))}
             </select>

@@ -112,7 +112,7 @@ export default {
         outDir: '../dist', // Output in the dist/ folder
         emptyOutDir: true, // Empty the folder first
         sourcemap: false,
-        // 3D dependencies are large; raise warning threshold while we keep chunks split.
+        // 3D dependencies are large; raise warning threshold so CI stays clean.
         chunkSizeWarningLimit: 1500,
         rollupOptions:
         {

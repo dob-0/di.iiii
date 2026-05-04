@@ -10,3 +10,5 @@ applyTo: "src/shared/**/*"
 - This scope primarily owns canonical cross-runtime schema defaults, normalization, versioning, and op application.
 - Use [../../docs/ai/index.md](../../docs/ai/index.md) for deeper cross-repo reference.
 - Keep canonical instructions in `AGENTS.md`; this file is a generated path-specific bridge.
+- Primary role(s) for this area: **Schema/Protocol Engineer (SPE)** — read [docs/ai/roles/schema-protocol-engineer.md](../../docs/ai/roles/schema-protocol-engineer.md) before editing.
+- Minimum model tier for edits here: **Opus**.

@@ -126,6 +126,12 @@ describe('createNode', () => {
         expect(node.values.portDefs).toEqual([])
     })
 
+    it('creates a string source node with an empty value', () => {
+        const node = createNode('value.string')
+        expect(node.typeId).toBe('value.string')
+        expect(node.values.value).toBe('')
+    })
+
     it('creates universe.node0 with root defaults', () => {
         const node = createNode('universe.node0')
         expect(node.typeId).toBe('universe.node0')

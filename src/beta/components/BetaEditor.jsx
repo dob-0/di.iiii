@@ -3,46 +3,26 @@ import PropertyInspector from './PropertyInspector.jsx'
 import DesktopWindow from './DesktopWindow.jsx'
 import BetaViewport from './BetaViewport.jsx'
 import BetaGraphSurface from './BetaGraphSurface.jsx'
+import BetaViewSurface from './BetaViewSurface.jsx'
 import OpCreateDialog from './OpCreateDialog.jsx'
 import NodePalette from './NodePalette.jsx'
+import TextPanelWindow from './TextPanelWindow.jsx'
+import ImagePanelWindow from './ImagePanelWindow.jsx'
+import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
+import BetaHelpDialog from './BetaHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { getInspectorSections } from '../../project/entityRegistry.js'
 import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.js'
+import { deriveNodeInspectorSections } from '../utils/nodeInspectorSections.js'
+import { createNodeGraphContext, evaluateNodeInputs } from '../utils/nodeGraphRuntime.js'
+import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
+import { matchesNodeTypeSurface } from '../utils/nodeSurfaceFilters.js'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 
-const portToInspectorField = (port) => {
-    const label = port.label || port.id
-    const path = [port.id]
-    if (port.type === 'color') return { label, path, type: 'color', portType: 'color' }
-    if (port.type === 'boolean') return { label, path, type: 'checkbox', portType: 'boolean' }
-    if (port.type === 'number') return { label, path, type: 'number', min: port.min, max: port.max, step: port.step, portType: 'number' }
-    if (port.type === 'string') {
-        const isMultiline = port.id === 'body' || port.id === 'text'
-        return { label, path, type: isMultiline ? 'textarea' : 'text', portType: 'string' }
-    }
-    if (port.type === 'vec3') return { label, path, type: 'vec3', portType: 'vec3' }
-    if (port.type === 'geometry' || port.type === 'texture' || port.type === 'signal') {
-        return { label, path, type: 'connection', portType: port.type }
-    }
-    return { label, path, type: 'text', portType: port.type || 'any' }
-}
-
-const deriveInspectorSections = (node) => {
-    if (!node) return []
-    const typeId = node.typeId || node.definitionId
-    const type = getNodeType(typeId)
-    const ports = type?.isNull
-        ? (node.values?.portDefs || []).filter((p) => p.dir === 'in')
-        : (type?.inputs || [])
-    if (!ports.length) return []
-    const fields = ports.map(portToInspectorField).filter(Boolean)
-    if (!fields.length) return []
-    return [{ id: 'values', label: 'Ports', fields }]
-}
 import { buildBetaProjectsPath, navigateToBetaPath } from '../utils/betaRouting.js'
 import { DEFAULT_PROJECT_SPACE_ID } from '../../project/services/projectsApi.js'
 import { getWorkspaceTopInset } from '../utils/windowLayout.js'
@@ -122,15 +102,6 @@ function BrowserPanelWindow({ node }) {
     )
 }
 
-function TextPanelWindow({ node }) {
-    return (
-        <div className="beta-window-stack">
-            <h4>{node.values?.title || node.label}</h4>
-            <p>{node.values?.text || 'This panel is ready for authored UI.'}</p>
-        </div>
-    )
-}
-
 export default function BetaEditor({
     projectId,
     spaceId = DEFAULT_PROJECT_SPACE_ID,
@@ -154,6 +125,9 @@ export default function BetaEditor({
         placement: null
     })
     const [overflowOpen, setOverflowOpen] = useState(false)
+    const [helpOpen, setHelpOpen] = useState(false)
+    const [outlinerOpen, setOutlinerOpen] = useState(false)
+    const [outlinerFrame, setOutlinerFrame] = useState({ x: 24, y: 56, width: 240, height: 360, zIndex: 20, minimized: false, pinned: false })
 
     const initialStoreState = useMemo(() => {
         if (projectId || !localStorageKey) return undefined
@@ -169,7 +143,7 @@ export default function BetaEditor({
         clientIdPrefix: 'beta-client',
         opIdPrefix: 'beta-op'
     })
-    const { applyLocalOps } = projectSync
+    const { applyLocalOps: _applyLocalOps } = projectSync
     const presence = useProjectPresence({
         projectId,
         displayName,
@@ -179,7 +153,9 @@ export default function BetaEditor({
         userIdPrefix: 'beta-user'
     })
     const topbarRef = useRef(null)
+    const workflowRef = useRef(null)
     const [workspaceTop, setWorkspaceTop] = useState(168)
+    const [workflowHeight, setWorkflowHeight] = useState(0)
     const [nodeScale, setNodeScale] = useState(() => {
         try {
             const saved = window.localStorage.getItem(NODE_SCALE_KEY)
@@ -190,6 +166,23 @@ export default function BetaEditor({
         const deviceType = detectDeviceType()
         return getDefaultNodeScale(deviceType)
     })
+    const [viewZoom, setViewZoom] = useState(1)
+    const [viewPanX, setViewPanX] = useState(60)
+    const [viewPanY, setViewPanY] = useState(60)
+
+    const historyRef = useRef([])
+    const redoRef = useRef([])
+    const documentRef = useRef(state.document)
+    useEffect(() => { documentRef.current = state.document }, [state.document])
+
+    const applyLocalOps = useCallback((ops, options) => {
+        const arr = Array.isArray(ops) ? ops : [ops]
+        if (arr.some(op => op.type !== 'setWorkspaceState')) {
+            historyRef.current = [...historyRef.current.slice(-49), documentRef.current]
+            redoRef.current = []
+        }
+        return _applyLocalOps(ops, options)
+    }, [_applyLocalOps])
 
     const document = state.document
     const isLocalWorkspace = !projectId
@@ -204,6 +197,8 @@ export default function BetaEditor({
         () => nodes.filter(isPanelNode),
         [nodes]
     )
+    const activeSurface = workspaceState.activeSurface || 'graph'
+    const workflow = getSurfaceWorkflow(activeSurface)
     const visibleViewNodes = useMemo(
         () => viewNodes.filter((node) => node.values?.frame?.visible !== false),
         [viewNodes]
@@ -212,6 +207,17 @@ export default function BetaEditor({
         () => Math.max(6, ...visibleViewNodes.map((node) => node.values?.frame?.zIndex || 1)),
         [visibleViewNodes]
     )
+    const surfaceSelectedNode = useMemo(() => {
+        if (!selectedNode) return null
+        const selectedType = getNodeType(selectedNode.typeId)
+        return matchesNodeTypeSurface(selectedType, activeSurface) ? selectedNode : null
+    }, [activeSurface, selectedNode])
+    const surfaceSelectedEntity = activeSurface === 'world' ? selectedEntity : null
+    const surfaceNodes = useMemo(
+        () => authoredNodes.filter((node) => matchesNodeTypeSurface(getNodeType(node.typeId), activeSurface)),
+        [activeSurface, authoredNodes]
+    )
+    const surfaceNodeCount = surfaceNodes.length
 
     useEffect(() => {
         if (!isLocalWorkspace || !localStorageKey) return
@@ -247,6 +253,28 @@ export default function BetaEditor({
             resizeObserver?.disconnect?.()
         }
     }, [presence.users.length])
+
+    useLayoutEffect(() => {
+        const updateWorkflowHeight = () => {
+            const el = workflowRef.current
+            const nextHeight = el ? el.offsetTop + el.offsetHeight : workspaceTop
+            setWorkflowHeight(nextHeight)
+        }
+
+        updateWorkflowHeight()
+        window.addEventListener('resize', updateWorkflowHeight)
+
+        let resizeObserver = null
+        if (typeof ResizeObserver !== 'undefined' && workflowRef.current) {
+            resizeObserver = new ResizeObserver(updateWorkflowHeight)
+            resizeObserver.observe(workflowRef.current)
+        }
+
+        return () => {
+            window.removeEventListener('resize', updateWorkflowHeight)
+            resizeObserver?.disconnect?.()
+        }
+    }, [activeSurface, workflow.actionLabel, workflow.description, workflow.title, workspaceTop])
 
     const selectNode = (nodeId, patch = {}) => {
         dispatch({ type: 'select-entity', entityId: null })
@@ -286,24 +314,24 @@ export default function BetaEditor({
     }
 
     const handleInspectorChange = (component, nextComponentValue) => {
-        if (selectedNode) {
+        if (surfaceSelectedNode) {
             const patch = { [component]: nextComponentValue }
             if (component === 'values') patch.params = nextComponentValue
             applyLocalOps({
                 type: 'updateNode',
                 payload: {
-                    nodeId: selectedNode.id,
+                    nodeId: surfaceSelectedNode.id,
                     patch
                 }
             })
             return
         }
 
-        if (selectedEntity) {
+        if (surfaceSelectedEntity) {
             applyLocalOps({
                 type: 'updateComponent',
                 payload: {
-                    entityId: selectedEntity.id,
+                    entityId: surfaceSelectedEntity.id,
                     component,
                     patch: nextComponentValue
                 }
@@ -320,26 +348,26 @@ export default function BetaEditor({
     }
 
     const handleDeleteSelected = useCallback(() => {
-        if (selectedNode) {
+        if (surfaceSelectedNode) {
             applyLocalOps([
                 {
                     type: 'deleteNode',
-                    payload: { nodeId: selectedNode.id }
+                    payload: { nodeId: surfaceSelectedNode.id }
                 },
                 {
                     type: 'setWorkspaceState',
                     payload: { patch: { selectedNodeId: null } }
                 }
-            ], { activityMessage: `Deleted ${selectedNode.label}.`, activityLevel: 'warning' })
+            ], { activityMessage: `Deleted ${surfaceSelectedNode.label}.`, activityLevel: 'warning' })
             return
         }
-        if (!selectedEntity) return
+        if (!surfaceSelectedEntity) return
         applyLocalOps({
             type: 'deleteEntity',
-            payload: { entityId: selectedEntity.id }
-        }, { activityMessage: `Deleted ${selectedEntity.name}.`, activityLevel: 'warning' })
+            payload: { entityId: surfaceSelectedEntity.id }
+        }, { activityMessage: `Deleted ${surfaceSelectedEntity.name}.`, activityLevel: 'warning' })
         dispatch({ type: 'select-entity', entityId: null })
-    }, [applyLocalOps, dispatch, selectedEntity, selectedNode])
+    }, [applyLocalOps, dispatch, surfaceSelectedEntity, surfaceSelectedNode])
 
     const handleResetLocalWorkspace = () => {
         if (!isLocalWorkspace) return
@@ -352,10 +380,10 @@ export default function BetaEditor({
         })
     }
 
-    const inspectorSections = selectedNode
-        ? deriveInspectorSections(selectedNode)
-        : (selectedEntity
-            ? getInspectorSections(selectedEntity)
+    const inspectorSections = surfaceSelectedNode
+        ? deriveNodeInspectorSections(surfaceSelectedNode)
+        : (surfaceSelectedEntity
+            ? getInspectorSections(surfaceSelectedEntity)
             : [
                 {
                     id: 'worldState',
@@ -368,11 +396,11 @@ export default function BetaEditor({
                 }
             ])
 
-    const inspectorValues = selectedNode
-        ? { values: { ...(selectedNode.values || {}) } }
-        : (selectedEntity ? selectedEntity.components : { worldState: document.worldState })
-    const inspectorTitle = selectedNode ? selectedNode.label : (selectedEntity ? selectedEntity.name : 'World')
-    const inspectorSubtitle = selectedNode ? selectedNode.typeId : (selectedEntity ? selectedEntity.type : 'Scene defaults')
+    const inspectorValues = surfaceSelectedNode
+        ? { values: { ...(surfaceSelectedNode.values || {}) } }
+        : (surfaceSelectedEntity ? surfaceSelectedEntity.components : { worldState: document.worldState })
+    const inspectorTitle = surfaceSelectedNode ? surfaceSelectedNode.label : (surfaceSelectedEntity ? surfaceSelectedEntity.name : 'World')
+    const inspectorSubtitle = surfaceSelectedNode ? surfaceSelectedNode.typeId : (surfaceSelectedEntity ? surfaceSelectedEntity.type : 'Scene defaults')
 
     const openCreateDialog = (surface, placement = null) => {
         setCreateDialogState({
@@ -422,8 +450,8 @@ export default function BetaEditor({
         const values = buildNodeValues(definition.id, params, place)
         const nextNode = createNode(definition.id, {
             values,
-            graphX: Math.max(20, (place.clientX || 280) - (ROOT_WORLD_CARD_WIDTH / 2)),
-            graphY: Math.max(workspaceTop + 12, (place.clientY || (workspaceTop + 160)) - (ROOT_WORLD_CARD_HEIGHT / 2))
+            graphX: Math.max(20, (place.graphX ?? place.clientX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2)),
+            graphY: Math.max(20, (place.graphY ?? place.clientY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2))
         })
         if (!nextNode) return
         const nodeRender = getNodeType(definition.id)?.render || 'hidden'
@@ -667,7 +695,7 @@ export default function BetaEditor({
     }
 
     const hostInspector = (
-        <aside className="beta-selection-scaffold">
+        <aside className="beta-selection-scaffold" style={{ top: workflowHeight + 'px' }}>
             <PropertyInspector
                 title={inspectorTitle}
                 subtitle={inspectorSubtitle}
@@ -680,15 +708,33 @@ export default function BetaEditor({
         </aside>
     )
 
+    const assetMap = useMemo(() => new Map((document.assets || []).map((asset) => [asset.id, asset])), [document.assets])
+    const graphContext = useMemo(() => createNodeGraphContext(document), [document])
+
     const renderViewNodeContent = (node) => {
+        const resolvedValues = evaluateNodeInputs(node, graphContext)
         if (node.typeId === 'view.browser') {
-            return <BrowserPanelWindow node={node} />
+            return <BrowserPanelWindow node={{ ...node, values: resolvedValues }} />
         }
-        return <TextPanelWindow node={node} />
+        if (node.typeId === 'view.image') {
+            return <ImagePanelWindow node={node} values={resolvedValues} assetMap={assetMap} />
+        }
+        return <TextPanelWindow node={node} values={resolvedValues} />
     }
 
-    const visibleSelection = Boolean(selectedNode || selectedEntity)
-    const activeSurface = workspaceState.activeSurface || 'graph'
+    const visibleSelection = Boolean(surfaceSelectedNode || surfaceSelectedEntity)
+
+    const openSurfaceCreate = (surface) => {
+        const placement = {
+            clientX: Math.round(window.innerWidth * 0.5),
+            clientY: Math.round(workspaceTop + ((window.innerHeight - workspaceTop) * 0.35))
+        }
+        if (surface === 'graph') {
+            openPalette('graph', placement)
+            return
+        }
+        openCreateDialog(surface, placement)
+    }
 
     const handleViewSurfaceKeyDown = (event) => {
         if (event.key !== 'Enter' || event.target !== event.currentTarget) return
@@ -712,6 +758,30 @@ export default function BetaEditor({
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
     }, [activeSurface, handleDeleteSelected, visibleSelection])
+
+    useEffect(() => {
+        const handler = (event) => {
+            const tag = event.target?.tagName?.toLowerCase?.()
+            if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
+            const isUndo = (event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey
+            const isRedo = (event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))
+            if (!isUndo && !isRedo) return
+            event.preventDefault()
+            if (isUndo && historyRef.current.length > 0) {
+                redoRef.current = [...redoRef.current.slice(-49), documentRef.current]
+                const prev = historyRef.current.at(-1)
+                historyRef.current = historyRef.current.slice(0, -1)
+                dispatch({ type: 'replace-document', document: prev, version: state.version })
+            } else if (isRedo && redoRef.current.length > 0) {
+                historyRef.current = [...historyRef.current.slice(-49), documentRef.current]
+                const next = redoRef.current.at(-1)
+                redoRef.current = redoRef.current.slice(0, -1)
+                dispatch({ type: 'replace-document', document: next, version: state.version })
+            }
+        }
+        window.addEventListener('keydown', handler)
+        return () => window.removeEventListener('keydown', handler)
+    }, [dispatch, state.version])
 
     const handleMoveWorldNode = (nodeId, nextPosition) => {
         applyLocalOps({
@@ -749,6 +819,12 @@ export default function BetaEditor({
                     <button type="button" className={activeSurface === 'graph' ? 'is-active' : ''} onClick={() => activateSurface('graph')}>Graph</button>
                 </div>
                 <div className="beta-topbar-right">
+                    <button type="button" className="beta-topbar-primary-action" onClick={() => openSurfaceCreate(activeSurface)}>
+                        {workflow.actionLabel}
+                    </button>
+                    <button type="button" className="beta-topbar-help-action" onClick={() => setHelpOpen(true)}>
+                        Help
+                    </button>
                     <div className="beta-topbar-scale-control">
                         <label htmlFor="node-scale-select">Size:</label>
                         <select
@@ -764,8 +840,15 @@ export default function BetaEditor({
                             ))}
                         </select>
                     </div>
-                    {authoredNodes.length > 0 && (
-                        <span className="beta-topbar-node-count">{authoredNodes.length} nodes</span>
+                    {surfaceNodeCount > 0 && (
+                        <button
+                            type="button"
+                            className={`beta-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
+                            onClick={() => setOutlinerOpen((v) => !v)}
+                            title="Toggle outliner"
+                        >
+                            {surfaceNodeCount} nodes
+                        </button>
                     )}
                     <div className="beta-topbar-overflow">
                         <button type="button" className="beta-topbar-overflow-btn" onClick={() => setOverflowOpen((v) => !v)}>⋯</button>
@@ -791,15 +874,47 @@ export default function BetaEditor({
 
             {state.loading ? <div className="beta-overlay-message">Loading project…</div> : null}
             {state.loadError ? <div className="beta-overlay-message is-error">{state.loadError}</div> : null}
-            {(selectedEntity || selectedNode) && (
+            {visibleSelection && (
                 <button type="button" className="beta-delete-fab" onClick={handleDeleteSelected}>
                     Delete
                 </button>
             )}
 
             <section className="beta-surface-shell" style={{ paddingTop: `${workspaceTop}px` }}>
+                {(() => {
+                    const hasWorldContent = entities.length > 0 || nodes.length > 0
+                    const hasGraphContent = nodes.length > 0
+                    const hasViewContent = visibleViewNodes.length > 0
+                    const showWorkflow = 
+                        (activeSurface === 'world' && !hasWorldContent) ||
+                        (activeSurface === 'graph' && !hasGraphContent) ||
+                        (activeSurface === 'view' && !hasViewContent)
+                    return showWorkflow ? (
+                        <div className="beta-surface-workflow" ref={workflowRef}>
+                            <div className="beta-surface-workflow-copy">
+                                <strong>{workflow.title}</strong>
+                                <p>{workflow.description}</p>
+                            </div>
+                            <div className="beta-surface-workflow-actions">
+                                <button type="button" onClick={() => openSurfaceCreate(activeSurface)}>
+                                    {workflow.actionLabel}
+                                </button>
+                                <button type="button" onClick={() => setHelpOpen(true)}>
+                                    How To Use {workflow.surfaceLabel}
+                                </button>
+                                {activeSurface !== 'graph' ? (
+                                    <button type="button" onClick={() => activateSurface('graph')}>
+                                        Open Graph
+                                    </button>
+                                ) : null}
+                            </div>
+                        </div>
+                    ) : null
+                })()}
+
                 {activeSurface === 'graph' ? (
                     <BetaGraphSurface
+                        topInset={workflowHeight}
                         nodes={nodes}
                         edges={document.edges || []}
                         selectedNodeId={workspaceState.selectedNodeId}
@@ -808,19 +923,28 @@ export default function BetaEditor({
                             type: 'createEdge',
                             payload: { edge: payload }
                         })}
+                        onDeleteEdge={(edgeId) => applyLocalOps({
+                            type: 'deleteEdge',
+                            payload: { edgeId }
+                        })}
                         onDeleteNode={(nodeId) => applyLocalOps([
                             { type: 'deleteNode', payload: { nodeId } },
                             { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
                         ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })}
+                        onMoveNode={(nodeId, nextX, nextY) => applyLocalOps({
+                            type: 'updateNode',
+                            payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
+                        })}
                         onDoubleClick={(placement) => openPalette('graph', placement)}
                     />
                 ) : null}
 
                 {activeSurface === 'world' ? (
                     <BetaViewport
+                        topInset={workflowHeight}
                         document={document}
-                        selectedEntityId={state.selectedEntityId}
-                        selectedNodeId={workspaceState.selectedNodeId}
+                        selectedEntityId={surfaceSelectedEntity?.id || null}
+                        selectedNodeId={surfaceSelectedNode?.id || null}
                         onSelectEntity={selectEntity}
                         onSelectNode={selectNode}
                         onClearSelection={clearSelection}
@@ -834,78 +958,96 @@ export default function BetaEditor({
                 ) : null}
 
                 {activeSurface === 'view' ? (
-                    <div
-                        className="beta-view-surface"
-                        role="button"
-                        tabIndex={0}
-                        aria-label="Create a view node"
-                        onDoubleClick={(event) => {
-                            if (event.target?.closest?.(VIEW_DOUBLE_CLICK_IGNORE_SELECTOR)) return
-                            openPalette('view', { clientX: event.clientX, clientY: event.clientY })
-                        }}
-                        onKeyDown={handleViewSurfaceKeyDown}
+                    <BetaViewSurface
+                        topInset={workflowHeight}
+                        zoom={viewZoom}
+                        panX={viewPanX}
+                        panY={viewPanY}
+                        onZoomChange={setViewZoom}
+                        onPanChange={(x, y) => { setViewPanX(x); setViewPanY(y) }}
+                        onDoubleClick={(placement) => openPalette('view', placement)}
                     >
-                        {!visibleViewNodes.length ? (
-                            <div className="beta-empty-view-state">
-                                <h2>Blank view.</h2>
-                                <p>Double-click to add a node.</p>
-                            </div>
-                        ) : null}
-                    </div>
+                        {visibleViewNodes.map((node, index) => {
+                            const windowState = buildWindowStateFromNode(node, index)
+                            return (
+                                <DesktopWindow
+                                    key={node.id}
+                                    windowState={windowState}
+                                    title={windowState.title}
+                                    kicker={node.typeId}
+                                    canvasZoom={viewZoom}
+                                    onFocus={() => {
+                                        selectNode(node.id)
+                                        applyLocalOps({
+                                            type: 'updateNode',
+                                            payload: {
+                                                nodeId: node.id,
+                                                patch: { values: { frame: { ...(node.values?.frame || {}), zIndex: topZIndex + 1 } } }
+                                            }
+                                        })
+                                    }}
+                                    onPatch={(patch) => applyLocalOps({
+                                        type: 'updateNode',
+                                        payload: {
+                                            nodeId: node.id,
+                                            patch: { values: { frame: { ...(node.values?.frame || {}), ...patch } } }
+                                        }
+                                    })}
+                                    onClose={() => applyLocalOps({
+                                        type: 'updateNode',
+                                        payload: {
+                                            nodeId: node.id,
+                                            patch: { values: { frame: { ...(node.values?.frame || {}), visible: false } } }
+                                        }
+                                    })}
+                                    onToggleMinimize={() => applyLocalOps({
+                                        type: 'updateNode',
+                                        payload: {
+                                            nodeId: node.id,
+                                            patch: { values: { frame: { ...(node.values?.frame || {}), minimized: !node.values?.frame?.minimized } } }
+                                        }
+                                    })}
+                                    onTogglePin={() => applyLocalOps({
+                                        type: 'updateNode',
+                                        payload: {
+                                            nodeId: node.id,
+                                            patch: { values: { frame: { ...(node.values?.frame || {}), pinned: !node.values?.frame?.pinned } } }
+                                        }
+                                    })}
+                                >
+                                    {renderViewNodeContent(node)}
+                                </DesktopWindow>
+                            )
+                        })}
+                    </BetaViewSurface>
                 ) : null}
-
-                {activeSurface === 'view' ? visibleViewNodes.map((node, index) => {
-                    const windowState = buildWindowStateFromNode(node, index)
-                    return (
-                        <DesktopWindow
-                            key={node.id}
-                            windowState={windowState}
-                            title={windowState.title}
-                            minTop={workspaceTop}
-                            onFocus={() => {
-                                selectNode(node.id)
-                                applyLocalOps({
-                                    type: 'updateNode',
-                                    payload: {
-                                        nodeId: node.id,
-                                        patch: { values: { frame: { ...(node.values?.frame || {}), zIndex: topZIndex + 1 } } }
-                                    }
-                                })
-                            }}
-                            onPatch={(patch) => applyLocalOps({
-                                type: 'updateNode',
-                                payload: {
-                                    nodeId: node.id,
-                                    patch: { values: { frame: { ...(node.values?.frame || {}), ...patch } } }
-                                }
-                            })}
-                            onClose={() => applyLocalOps({
-                                type: 'updateNode',
-                                payload: {
-                                    nodeId: node.id,
-                                    patch: { values: { frame: { ...(node.values?.frame || {}), visible: false } } }
-                                }
-                            })}
-                            onToggleMinimize={() => applyLocalOps({
-                                type: 'updateNode',
-                                payload: {
-                                    nodeId: node.id,
-                                    patch: { values: { frame: { ...(node.values?.frame || {}), minimized: !node.values?.frame?.minimized } } }
-                                }
-                            })}
-                            onTogglePin={() => applyLocalOps({
-                                type: 'updateNode',
-                                payload: {
-                                    nodeId: node.id,
-                                    patch: { values: { frame: { ...(node.values?.frame || {}), pinned: !node.values?.frame?.pinned } } }
-                                }
-                            })}
-                        >
-                            {renderViewNodeContent(node)}
-                        </DesktopWindow>
-                    )
-                }) : null}
             </section>
+
+            {outlinerOpen && (
+                <DesktopWindow
+                    windowState={outlinerFrame}
+                    title="Outliner"
+                    kicker={activeSurface}
+                    minTop={workspaceTop}
+                    onFocus={() => setOutlinerFrame((f) => ({ ...f, zIndex: 20 }))}
+                    onPatch={(patch) => setOutlinerFrame((f) => ({ ...f, ...patch }))}
+                    onClose={() => setOutlinerOpen(false)}
+                    onToggleMinimize={() => setOutlinerFrame((f) => ({ ...f, minimized: !f.minimized }))}
+                    onTogglePin={() => setOutlinerFrame((f) => ({ ...f, pinned: !f.pinned }))}
+                >
+                    <OutlinerPanelWindow
+                        nodes={surfaceNodes}
+                        selectedNodeId={workspaceState.selectedNodeId || null}
+                        onSelectNode={(nodeId) => selectNode(nodeId)}
+                    />
+                </DesktopWindow>
+            )}
+
+            <BetaHelpDialog
+                open={helpOpen}
+                surface={activeSurface}
+                onClose={() => setHelpOpen(false)}
+            />
 
             {visibleSelection && activeSurface !== 'view' ? hostInspector : null}
 

@@ -1,4 +1,13 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(bash scripts/ollama-task.sh *)",
+      "Bash(bash scripts/capture-rule.sh *)",
+      "Bash(bash scripts/golden-rules-check.sh)",
+      "Bash(ollama list)",
+      "Bash(curl -s http://localhost:11434/api/tags)"
+    ]
+  },
   "hooks": {
     "Stop": [
       {

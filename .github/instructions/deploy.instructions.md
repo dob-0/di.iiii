@@ -10,3 +10,5 @@ applyTo: "deploy/**/*"
 - This scope primarily owns versioned deployment docs, env examples, and checked-in deploy templates.
 - Use [../../docs/ai/index.md](../../docs/ai/index.md) for deeper cross-repo reference.
 - Keep canonical instructions in `AGENTS.md`; this file is a generated path-specific bridge.
+- Primary role(s) for this area: **Infrastructure Engineer (IE)** — read [docs/ai/roles/infrastructure-engineer.md](../../docs/ai/roles/infrastructure-engineer.md) before editing.
+- Minimum model tier for edits here: **Haiku**.

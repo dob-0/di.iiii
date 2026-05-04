@@ -315,7 +315,8 @@ function registerSpaceRoutes(router, {
         }
         assetId = requested
       } else {
-        assetId = crypto.randomUUID()
+        const buf = await fsp.readFile(req.file.path)
+        assetId = crypto.createHash('sha256').update(buf).digest('hex')
       }
       const finalPath = path.join(assetsDir, assetId)
       const metaPath = path.join(assetsDir, `${assetId}.json`)

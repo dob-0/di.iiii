@@ -11,3 +11,6 @@ alwaysApply: false
 - This scope primarily owns developer automation, release helpers, maintenance scripts, and repeatable repo tasks.
 - Use [../../docs/ai/index.md](../../docs/ai/index.md) for deeper reference.
 - Keep shared instructions in canonical `AGENTS.md` and `docs/ai/`, not in Cursor rule files.
+- Primary role(s) for this area: **Infrastructure Engineer (IE)** — read `docs/ai/roles/infrastructure-engineer.md` before editing.
+- Minimum model tier for edits here: **Haiku**.
+

@@ -10,3 +10,5 @@ applyTo: "serverXR/src/**/*"
 - This scope primarily owns backend auth, persistence, routes, uploads, publish state, SSE, and Socket.IO behavior.
 - Use [../../docs/ai/index.md](../../docs/ai/index.md) for deeper cross-repo reference.
 - Keep canonical instructions in `AGENTS.md`; this file is a generated path-specific bridge.
+- Primary role(s) for this area: **Backend/API Engineer (BAE)** — read [docs/ai/roles/backend-api-engineer.md](../../docs/ai/roles/backend-api-engineer.md) before editing.
+- Minimum model tier for edits here: **Sonnet**.

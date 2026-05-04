@@ -11,3 +11,6 @@ alwaysApply: false
 - This scope primarily owns shared project-document logic, sync, presence, imports, and public viewer behavior.
 - Use [../../docs/ai/index.md](../../docs/ai/index.md) for deeper reference.
 - Keep shared instructions in canonical `AGENTS.md` and `docs/ai/`, not in Cursor rule files.
+- Primary role(s) for this area: **Node System Engineer (NSE), Schema/Protocol Engineer (SPE)** — read `docs/ai/roles/node-system-engineer.md` before editing.
+- Minimum model tier for edits here: **Sonnet**.
+

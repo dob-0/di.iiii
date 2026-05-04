@@ -10,3 +10,5 @@ applyTo: "scripts/**/*"
 - This scope primarily owns developer automation, release helpers, maintenance scripts, and repeatable repo tasks.
 - Use [../../docs/ai/index.md](../../docs/ai/index.md) for deeper cross-repo reference.
 - Keep canonical instructions in `AGENTS.md`; this file is a generated path-specific bridge.
+- Primary role(s) for this area: **Infrastructure Engineer (IE)** — read [docs/ai/roles/infrastructure-engineer.md](../../docs/ai/roles/infrastructure-engineer.md) before editing.
+- Minimum model tier for edits here: **Haiku**.

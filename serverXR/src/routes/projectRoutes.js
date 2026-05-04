@@ -295,7 +295,8 @@ function registerProjectRoutes(router, {
           return res.status(400).json({ error: 'Invalid asset id.' })
         }
       } else {
-        assetId = crypto.randomUUID()
+        const buf = await fsp.readFile(req.file.path)
+        assetId = crypto.createHash('sha256').update(buf).digest('hex')
       }
       const finalPath = path.join(assetsDir, assetId)
       const metaPath = path.join(assetsDir, `${assetId}.json`)
