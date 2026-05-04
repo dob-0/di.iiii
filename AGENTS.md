@@ -4,7 +4,8 @@ Short routing guide for AI agents working in `di.i`.
 
 ## Start Here
 
-- **[PROGRESS.md](PROGRESS.md)** — read this first. Running session log, current workstream status, and easy-win tasks for the next developer. Update it before stopping work.
+- **[CURRENT.md](CURRENT.md)** — read this FIRST, every session, no exceptions. ≤50 lines. Last commit, what works, what's broken, and a known-fixes table that prevents re-investigating already-solved problems. Update the known-fixes table whenever you solve something that took > 5 minutes.
+- **[PROGRESS.md](PROGRESS.md)** — full session history. Read only if you need context beyond what CURRENT.md covers. Update it before stopping work.
 - **[MANIFESTO.md](MANIFESTO.md)** — platform vision and non-negotiables. Read before any architectural or product decision.
 - **[docs/ai/golden_rules.md](docs/ai/golden_rules.md)** — living record of hard-won solutions and agent behavior rules. Add to it when you discover something worth keeping.
 
@@ -50,10 +51,11 @@ Full routing guide: [docs/ai/roles/model-routing.md](docs/ai/roles/model-routing
 **Startup: read only what you need.**
 
 1. `AGENTS.md` — auto-loaded, always
-2. `PROGRESS.md` — always
+2. `CURRENT.md` — always, read in full (≤50 lines, takes 30 seconds, prevents re-doing solved work)
 3. Nearest scoped `AGENTS.md` for the area you will edit
 4. Your role card
 5. Stop. Execute. Read more only if blocked.
+6. `PROGRESS.md` — only if you need full session history beyond what CURRENT.md covers
 
 Do NOT pre-read golden_rules, architecture.md, every component "just in case".
 
@@ -68,6 +70,7 @@ This contract applies to all agent entrypoints in this repo (Claude, Gemini, Cop
 At project open:
 
 - read root `AGENTS.md` first
+- read `CURRENT.md` immediately after — it has the known-fixes table and prevents re-doing solved work
 - read the nearest scoped `AGENTS.md` before edits
 - use `docs/ai/index.md` only for deeper reference
 

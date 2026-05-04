@@ -198,6 +198,40 @@ A good task size for a single agent session: one file split, one bug fix, one in
 
 ---
 
+### Vite manualChunks: include every package that imports `three`
+
+**Rule:** Every npm package that directly or transitively imports `three` must be listed in the `three-vendor` manualChunks group. Missing even one causes a circular chunk initialisation order that crashes the app in production (TDZ: `Cannot access 'X' before initialization`).
+
+**Why:** Rollup splits chunks lazily. If `detect-gpu` lands in `vendor` and imports `three`, Rollup creates a `three-vendor → vendor → three-vendor` cycle. This is invisible in dev (Vite serves unbundled) and invisible in a local prod build unless you watch for the `circular dependency` warning. It only crashes at runtime in environments with strict module initialisation order (SES, lockdown, some CDN caches).
+
+**Required three-vendor members (as of 2026-05-04):**
+
+```text
+three, three-mesh-bvh, three-stdlib,
+@react-three/*, @react-spring/*, troika-*,
+camera-controls, detect-gpu, maath,
+@monogrid/gainmap-js, meshoptimizer, meshline,
+r3f-perf, @pmndrs/*, @iwer/*, iwer
+```
+
+**How to verify:** `npx vite build` must complete with **zero** `circular dependency` warnings. If you see one, the newly-warned package must move into `three-vendor`.
+
+**Files:** `vite.config.js`
+
+---
+
+### Always check CURRENT.md before investigating any runtime error
+
+**Rule:** Before spending tool calls on an error, read `CURRENT.md`. It has a known-fixes table. If the symptom matches, apply the documented fix directly — do not re-investigate.
+
+**Why:** Multiple AI sessions (Copilot, Codex, Claude) have independently re-investigated the same TDZ crash, the same auth spinner, and the same deploy flow — burning credits each time. `CURRENT.md` exists to stop this.
+
+**How:** `CURRENT.md` is ≤50 lines. Reading it costs one tool call. Skipping it risks wasting 20+.
+
+**Files:** `CURRENT.md`, `AGENTS.md`
+
+---
+
 ### Capture rules mid-session, not at the end
 
 **Rule:** Run `capture-rule.sh` the moment you find a non-obvious solution — not at stop time.

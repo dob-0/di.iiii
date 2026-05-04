@@ -118,3 +118,26 @@ Keep it brief and actionable. Capture the path that worked, not a long narrative
 	- `.github/workflows/publish-cpanel-prebuilt-v2.yml`
 	- `npm run deploy:staging`
 	- `gh run list --workflow publish-cpanel-prebuilt-v2.yml`
+
+---
+
+### Shortcut: White Screen / TDZ Crash in Production (`Cannot access X before initialization`)
+
+- Problem: App loads fine locally and in dev build, but production build shows a white screen or console `TDZ` / `Cannot access 'X' before initialization` errors.
+- Root cause: `vite.config.js` `manualChunks` was missing drei peer deps (`detect-gpu`, `maath`, `camera-controls`, `@monogrid/gainmap-js`, `@react-spring/three`). Those deps landed in `vendor`, imported `three`, creating a `three-vendor → vendor → three-vendor` circular init order that only crashes in production (SES/lockdown environments).
+- Short way:
+	1. Open `vite.config.js`.
+	2. In `manualChunks`, confirm ALL of the following are in the `three-vendor` group: `three`, `three-mesh-bvh`, `three-stdlib`, `@react-three/*`, `@react-spring/*`, `troika-*`, `camera-controls`, `detect-gpu`, `maath`, `@monogrid/gainmap-js`, `meshoptimizer`, `meshline`.
+	3. Run `npx vite build` — output must show **no** `circular dependency` warning.
+- Verification: `npx vite build` clean, white screen gone on staging.
+- Source files: `vite.config.js`
+
+---
+
+### Shortcut: Auth Hangs / Infinite Spinner on Load
+
+- Problem: App shows a spinner that never goes away, especially when the backend is slow or unreachable.
+- Root cause: `getApiSession()` fetch had no timeout — it hung indefinitely on network failure.
+- Short way: `useAuthSession.js` wraps the fetch in `AbortController` with an 8 000 ms timeout. `apiClient.js` `apiFetch` accepts and forwards a `signal` option.
+- Verification: Kill the backend, reload — spinner disappears after ≤8 s and shows a Retry button.
+- Source files: `src/hooks/useAuthSession.js`, `src/services/apiClient.js`, `src/components/AuthGate.jsx`
