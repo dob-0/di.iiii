@@ -113,7 +113,7 @@ export default {
         emptyOutDir: true, // Empty the folder first
         sourcemap: false,
         // 3D dependencies are large; raise warning threshold so CI stays clean.
-        chunkSizeWarningLimit: 1500,
+        chunkSizeWarningLimit: 2000,
         rollupOptions:
         {
             output:
@@ -127,29 +127,22 @@ export default {
                     const parts = normalizedId.split('node_modules/')[1].split('/')
                     const pkg = parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0]
 
+                    // All Three.js / R3F / XR packages in one chunk to avoid
+                    // cross-chunk TDZ errors from circular initialization order.
                     if (
                         pkg === 'three'
-                        || pkg === '@react-three/fiber'
+                        || pkg.startsWith('@react-three')
                         || pkg.startsWith('three-')
                         || pkg.startsWith('troika-')
                         || pkg === 'meshoptimizer'
                         || pkg === 'meshline'
-                    )
-                        return 'three-core'
-
-                    if (
-                        pkg === '@react-three/xr'
+                        || pkg === 'r3f-perf'
+                        || pkg === '@react-three/xr'
                         || pkg === '@pmndrs/xr'
                         || pkg.startsWith('iwer')
                         || pkg.startsWith('@iwer/')
                     )
-                        return 'xr-vendor'
-
-                    if (
-                        pkg.startsWith('@react-three')
-                        || pkg === 'r3f-perf'
-                    )
-                        return 'react-three'
+                        return 'three-vendor'
 
                     if (pkg === 'react' || pkg === 'react-dom')
                         return 'react-vendor'
