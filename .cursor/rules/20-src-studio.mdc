@@ -11,3 +11,6 @@ alwaysApply: false
 - This scope primarily owns the main shipped Studio authoring lane, shell, routing, and Studio-only UX.
 - Use [../../docs/ai/index.md](../../docs/ai/index.md) for deeper reference.
 - Keep shared instructions in canonical `AGENTS.md` and `docs/ai/`, not in Cursor rule files.
+- Primary role(s) for this area: **UI/UX Engineer (UX)** — read `docs/ai/roles/ui-ux-engineer.md` before editing.
+- Minimum model tier for edits here: **Sonnet**.
+

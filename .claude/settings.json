@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash scripts/ollama-task.sh *)",
+      "Bash(bash scripts/capture-rule.sh *)",
+      "Bash(bash scripts/golden-rules-check.sh)",
+      "Bash(ollama list)",
+      "Bash(curl -s http://localhost:11434/api/tags)"
+    ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/golden-rules-check.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -qE \"(auth|session|db\\.js|migrate|spaceStore|projectStore|Dockerfile|config\\.js)\" && echo \"\" && echo \"  ● High-signal file edited: $FILE\" && echo \"    If this revealed something non-obvious → ./scripts/capture-rule.sh\" && echo \"\"; exit 0'"
+          }
+        ]
+      }
+    ]
+  }
+}

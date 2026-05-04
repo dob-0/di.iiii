@@ -6,6 +6,8 @@ const morgan = require('morgan')
 const multer = require('multer')
 const path = require('node:path')
 const crypto = require('node:crypto')
+const { initDb } = require('./db')
+const { migrateFromFilesystem } = require('./migrate')
 const {
   formatAuthScopeLabel,
   formatAuthRoleLabel,
@@ -59,6 +61,7 @@ const {
 const PUBLIC_DIR = config.directories.publicDir
 const SPACES_DIR = config.directories.spacesDir
 const UPLOADS_DIR = config.directories.uploadsDir
+const DB_PATH = config.directories.dbPath
 const RECENT_LIMIT = 25
 const DEFAULT_TTL_MS = config.defaultTtlMs
 const MAX_OP_HISTORY = 500
@@ -162,6 +165,8 @@ const upload = multer({
 
 async function initStorage() {
   await Promise.all([ensureDir(SPACES_DIR), ensureDir(UPLOADS_DIR)])
+  initDb(DB_PATH)
+  await migrateFromFilesystem(SPACES_DIR)
 }
 
 const app = express()

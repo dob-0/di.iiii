@@ -2,6 +2,99 @@
 
 Short routing guide for AI agents working in `di.i`.
 
+## Start Here
+
+- **[PROGRESS.md](PROGRESS.md)** — read this first. Running session log, current workstream status, and easy-win tasks for the next developer. Update it before stopping work.
+- **[MANIFESTO.md](MANIFESTO.md)** — platform vision and non-negotiables. Read before any architectural or product decision.
+- **[docs/ai/golden_rules.md](docs/ai/golden_rules.md)** — living record of hard-won solutions and agent behavior rules. Add to it when you discover something worth keeping.
+
+## AI Company — Role Assignment
+
+Before starting any task, assign a role. Every task has exactly one primary owner.
+
+```text
+CSS / layout / visual?              → docs/ai/roles/ui-ux-engineer.md
+nodeRegistry / ports / graph model? → docs/ai/roles/node-system-engineer.md
+Three.js / viewport / XR render?    → docs/ai/roles/viewport-3d-engineer.md
+serverXR / SQLite / auth / API?     → docs/ai/roles/backend-api-engineer.md
+shared schema / op-log / CRDT?      → docs/ai/roles/schema-protocol-engineer.md
+Docker / GitHub Actions / deploy?   → docs/ai/roles/infrastructure-engineer.md
+tests / lint / validation?          → docs/ai/roles/qa-test-engineer.md
+auth review / secrets / security?   → docs/ai/roles/security-auditor.md
+AGENTS.md / MANIFESTO / arch?       → docs/ai/roles/technical-architect.md
+docs / PROGRESS / golden rules?     → docs/ai/roles/documentation-engineer.md
+```
+
+Full company guide: **[docs/ai/roles/README.md](docs/ai/roles/README.md)**
+
+Read your role card before acting. Your scope is locked to what the card's "Owns" section lists. Files under "Must Never Touch" are off-limits — do not read, do not edit them.
+
+## Token Efficiency — Burn the Minimum
+
+**Model selection:** Use the cheapest model that can do the job correctly.
+
+```text
+Free (Ollama local):
+  bash scripts/ollama-task.sh fast  "..."   → dob-fast  (project-fine-tuned, Q&A, docs)
+  bash scripts/ollama-task.sh deep  "..."   → dob-deep  (project-fine-tuned, deep analysis)
+  bash scripts/ollama-task.sh coder "..."   → qwen3-coder:30b (test design, logic)
+
+Paid (Claude API):
+  Haiku   → single-file edits, lint fixes, small test additions
+  Sonnet  → feature work, layout bugs, multi-file changes  ← DEFAULT
+  Opus    → architecture decisions, auth/security, non-negotiables review
+```
+
+Full routing guide: [docs/ai/roles/model-routing.md](docs/ai/roles/model-routing.md)
+
+**Startup: read only what you need.**
+
+1. `AGENTS.md` — auto-loaded, always
+2. `PROGRESS.md` — always
+3. Nearest scoped `AGENTS.md` for the area you will edit
+4. Your role card
+5. Stop. Execute. Read more only if blocked.
+
+Do NOT pre-read golden_rules, architecture.md, every component "just in case".
+
+**Tool budget per task:** stop and summarize after every 5 tool calls. If you exceed 10 file reads before making an edit, you are scanning too broadly — narrow the scope or ask.
+
+**Delegate to Ollama first** for any task that is analysis, documentation, or planning. Only escalate to Claude when file edits are required.
+
+## Universal Startup Contract (All Models)
+
+This contract applies to all agent entrypoints in this repo (Claude, Gemini, Copilot, Cursor, and AGENTS-native readers).
+
+At project open:
+
+- read root `AGENTS.md` first
+- read the nearest scoped `AGENTS.md` before edits
+- use `docs/ai/index.md` only for deeper reference
+
+During active work:
+
+- follow Default Task Mode and AI Task Contract below
+- emit the required progress status bar updates
+- keep responses scoped, concise, and validation-backed
+
+## Default Task Mode
+
+Apply this by default unless the user says otherwise:
+
+- ask at most 2 clarifying questions
+- if the prompt or command is short, ambiguous, or under-specified, pause, think, and ask the smallest clarifying question before editing files or taking irreversible action
+- lock scope to declared files/systems
+- do the highest-priority item first
+- avoid optional extras unless requested
+- end with: summary, changed files, validation, unresolved risks
+
+Progress status bar (required during active work):
+
+- format: `status | phase X/Y | XX% | current | next`
+- update every 3 to 5 tool calls or after each meaningful edit batch
+- keep each update to one line unless a blocker appears
+- if blocked: append `| blocked: <reason>` and request the smallest missing input
+
 ## Canonical AI Docs
 
 - `AGENTS.md` files are the canonical short routing layer
@@ -35,6 +128,43 @@ Short routing guide for AI agents working in `di.i`.
 - prefer node-first behavior over growing legacy systems
 - treat `worldState`, `windowLayout`, and old entity structures as compatibility bridges
 - treat `V1` edits as compatibility work unless the task is explicitly legacy-focused
+
+## AI Task Contract (Required)
+
+Before acting on a task, lock these fields in order:
+
+- goal: one exact outcome
+- priority: ordered list, highest first
+- scope: allowed files and systems
+- non-goals: what must not be changed
+- output: expected format and length
+- done criteria: objective checks
+
+If any field is missing and the task can cause broad or destructive edits, ask for clarification before changing files.
+
+Strict execution rules:
+
+- ask at most 2 clarifying questions, then proceed with the safest bounded interpretation
+- do not silently expand scope beyond declared files/systems
+- if requested scope is broad, propose a narrowed scope first and wait for confirmation
+- report only task-relevant findings; defer optional ideas unless asked
+- always end with: changed files, validations run, unresolved risks
+
+## MCP / Tool-Usage Guardrails
+
+- use the minimum number of tools needed to satisfy the goal
+- avoid broad scans when a scoped file read/search is enough
+- avoid edits outside declared scope
+- after every 3 to 5 tool calls, summarize what was learned and what is next
+- if tool output conflicts with the task request, stop and resolve the conflict before proceeding
+- if a tool action is expensive or potentially destructive, confirm intent first
+
+Response format contract:
+
+- summary: 2 to 4 lines max
+- changes: file list with one-line reason each
+- validation: exact commands and pass/fail
+- risks: only concrete unresolved items
 
 ## Do Not Assume
 

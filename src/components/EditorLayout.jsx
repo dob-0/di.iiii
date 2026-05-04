@@ -1,7 +1,7 @@
 ﻿import React from 'react'
-import { Loader } from '@react-three/drei'
-import SceneCanvas from './SceneCanvas.jsx'
-import PresentationCanvas from './PresentationCanvas.jsx'
+const SceneCanvas = React.lazy(() => import('./SceneCanvas.jsx'))
+const PresentationCanvas = React.lazy(() => import('./PresentationCanvas.jsx'))
+const Loader = React.lazy(() => import('@react-three/drei').then(m => ({ default: m.Loader })))
 import EditorOverlays from './EditorOverlays.jsx'
 import EditorChrome from './EditorChrome.jsx'
 import ControlClusters from './ControlClusters.jsx'
@@ -216,31 +216,33 @@ export function EditorLayout({
                 statusItems={statusItems}
             />
 
-            {!isLoading && (
-                isCodeView ? (
-                    <PresentationCanvas
-                        presentation={presentation}
-                        onCanvasPointerMove={handleCanvasPointerMove}
-                        onCanvasPointerLeave={handleCanvasPointerLeave}
-                    />
-                ) : (
-                    <SceneCanvas
-                        cameraSettings={currentCameraSettings}
-                        cameraPosition={cameraPosition}
-                        renderSettings={renderSettings}
-                        rendererRef={rendererRef}
-                        isGizmoVisible={isGizmoVisible}
-                        selectedObjectIds={selectedObjectIds}
-                        isPointerDragging={isPointerDragging}
-                        clearSelection={clearSelection}
-                        xrStore={xrStore}
-                        onCanvasPointerMove={handleCanvasPointerMove}
-                        onCanvasPointerLeave={handleCanvasPointerLeave}
-                    />
-                )
-            )}
+            <React.Suspense fallback={null}>
+                {!isLoading && (
+                    isCodeView ? (
+                        <PresentationCanvas
+                            presentation={presentation}
+                            onCanvasPointerMove={handleCanvasPointerMove}
+                            onCanvasPointerLeave={handleCanvasPointerLeave}
+                        />
+                    ) : (
+                        <SceneCanvas
+                            cameraSettings={currentCameraSettings}
+                            cameraPosition={cameraPosition}
+                            renderSettings={renderSettings}
+                            rendererRef={rendererRef}
+                            isGizmoVisible={isGizmoVisible}
+                            selectedObjectIds={selectedObjectIds}
+                            isPointerDragging={isPointerDragging}
+                            clearSelection={clearSelection}
+                            xrStore={xrStore}
+                            onCanvasPointerMove={handleCanvasPointerMove}
+                            onCanvasPointerLeave={handleCanvasPointerLeave}
+                        />
+                    )
+                )}
 
-            {!isCodeView && <Loader />}
+                {!isCodeView && <Loader />}
+            </React.Suspense>
         </div>
     )
 }

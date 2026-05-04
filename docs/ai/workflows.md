@@ -23,6 +23,58 @@ This page tells an agent where to start and what to check next.
 5. update canonical docs first when architecture or workflow truth changes
 6. run `npm run docs:ai:sync` after canonical AI-doc changes
 
+## Task Intake Checklist
+
+Before editing, confirm the task has:
+
+- one clear goal
+- ordered priorities
+- explicit scope
+- explicit non-goals
+- objective done criteria
+
+If the task is ambiguous and could affect architecture, data safety, auth, or release behavior, ask a clarifying question first.
+
+Clarification limit:
+
+- ask at most 2 clarifying questions
+- if still ambiguous, proceed with the safest narrow interpretation
+- state assumptions explicitly before edits
+
+Scope lock:
+
+- do not modify files outside declared scope
+- if a required dependency is out of scope, stop and request scope expansion
+
+## MCP / Tool Budgeting
+
+When working with MCP and editor tools:
+
+- select the smallest tool set that can complete the task
+- prefer scoped reads/searches over repo-wide scans
+- avoid exploratory loops after the required evidence is gathered
+- summarize progress every 3 to 5 tool calls
+- stop and reconcile if tool output and user intent diverge
+
+Result contract:
+
+- concise summary
+- changed files and why
+- validation commands with pass/fail
+- unresolved risks only
+
+## Progress Telemetry
+
+During active execution, emit concise progress updates in this format:
+
+- `status | phase X/Y | XX% | current | next`
+
+Rules:
+
+- update every 3 to 5 tool calls or after each meaningful edit batch
+- if blocked, include: `blocked: <reason>` and request only the missing input
+- keep updates short and operational; avoid repeating full plans
+
 ## Shared Vs Lane-Specific Changes
 
 Push changes downward only when needed:

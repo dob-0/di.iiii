@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
-import App from './App.jsx'
-import BlankNodeWorkspaceApp from './beta/BlankNodeWorkspaceApp.jsx'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { getServerSpace, supportsServerSpaces } from './services/serverSpaces.js'
 import { APP_PAGE_PREFERENCES } from './utils/spaceRouting.js'
-import PublicProjectViewer from './project/components/PublicProjectViewer.jsx'
+
+const App = lazy(() => import('./App.jsx'))
+const BlankNodeWorkspaceApp = lazy(() => import('./beta/BlankNodeWorkspaceApp.jsx'))
+const PublicProjectViewer = lazy(() => import('./project/components/PublicProjectViewer.jsx'))
 
 const DEFAULT_SPACE_ID = 'main'
 const SPACE_META_REFRESH_MS = 2000
@@ -79,23 +80,29 @@ export default function SpaceSurfaceApp({ routeState }) {
     const publishedProjectId = surfaceState.space?.publishedProjectId || null
 
     if (isLocalRootWorkspace) {
-        return <BlankNodeWorkspaceApp spaceId={spaceId} />
+        return (
+            <Suspense fallback={null}>
+                <BlankNodeWorkspaceApp spaceId={spaceId} />
+            </Suspense>
+        )
     }
 
     if (shouldResolvePublishedSurface && publishedProjectId) {
         return (
-            <PublicProjectViewer
-                key={`${spaceId}:${publishedProjectId}`}
-                spaceId={spaceId}
-                projectId={publishedProjectId}
-                spaceLabel={surfaceState.space?.label || spaceId}
-            />
+            <Suspense fallback={null}>
+                <PublicProjectViewer
+                    key={`${spaceId}:${publishedProjectId}`}
+                    spaceId={spaceId}
+                    projectId={publishedProjectId}
+                    spaceLabel={surfaceState.space?.label || spaceId}
+                />
+            </Suspense>
         )
     }
 
     if (page === APP_PAGE_PREFERENCES) {
-        return <App />
+        return <Suspense fallback={null}><App /></Suspense>
     }
 
-    return <App />
+    return <Suspense fallback={null}><App /></Suspense>
 }

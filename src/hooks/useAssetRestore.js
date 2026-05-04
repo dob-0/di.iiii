@@ -41,7 +41,6 @@ export function useAssetRestore({
     const handleAssetStoreQuotaExceeded = useCallback(() => {
         if (assetStoreQuotaExceededRef.current) return
         assetStoreQuotaExceededRef.current = true
-        console.warn('Asset storage quota exceeded; assets will stream from the server.')
         if (!assetStoreQuotaAlertedRef.current) {
             assetStoreQuotaAlertedRef.current = true
             alert('Browser storage is full. Assets will stream from the server instead of being cached locally.')
@@ -83,10 +82,10 @@ export function useAssetRestore({
                         if (response.ok) {
                             blob = await response.blob()
                         } else {
-                            console.warn(`Failed to fetch remote asset ${item.id} from URL`, item.url)
+                            // ignore
                         }
-                    } catch (fetchError) {
-                        console.warn(`Error fetching asset ${item?.id} from URL`, fetchError)
+                    } catch {
+                        // ignore
                     }
                 }
                 if (!blob) return
@@ -128,12 +127,12 @@ export function useAssetRestore({
                             fallbackAssets.push(fallbackEntry)
                             setAssetSource(fallbackEntry)
                         }
-                    } catch (error) {
-                        console.warn(`Failed to create fallback source for asset ${item?.id}`, error)
+                    } catch {
+                        // ignore
                     }
                 }
-            } catch (error) {
-                console.error(`Failed to restore asset ${item?.id}`, error)
+            } catch {
+                // ignore — individual asset restore failure does not abort the batch
             } finally {
                 completed += 1
                 setAssetRestoreProgress?.(prev => ({

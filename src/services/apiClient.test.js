@@ -64,74 +64,31 @@ describe('apiFetch auth sessions', () => {
         }))
     })
 
-    it('can establish a server session and retry a rejected write once', async () => {
-        const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue(' Bearer dev-token ')
-        const fetchMock = vi.fn()
-            .mockResolvedValueOnce(new Response(JSON.stringify({ error: 'Unauthorized' }), {
-                status: 401,
-                headers: { 'Content-Type': 'application/json' }
-            }))
-            .mockResolvedValueOnce(new Response(JSON.stringify({ authenticated: true }), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
-            }))
-            .mockResolvedValueOnce(new Response(JSON.stringify({ space: { id: 'main' } }), {
-                status: 201,
-                headers: { 'Content-Type': 'application/json' }
-            }))
+    it('throws on 401 without prompting the user', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { 'Content-Type': 'application/json' }
+        }))
         vi.stubGlobal('fetch', fetchMock)
 
-        const result = await apiFetch('/api/spaces', {
-            method: 'POST',
-            body: { label: 'Main' }
-        })
-
-        expect(promptSpy).toHaveBeenCalledTimes(1)
-        expect(result.space.id).toBe('main')
-        expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-            'http://localhost:3000/serverXR/api/spaces',
-            'http://localhost:3000/serverXR/api/auth/session',
-            'http://localhost:3000/serverXR/api/spaces'
-        ])
-        expect(fetchMock.mock.calls[1][1]).toEqual(expect.objectContaining({
-            method: 'POST',
-            body: JSON.stringify({ token: 'dev-token' }),
-            credentials: 'include'
-        }))
+        await expect(apiFetch('/api/spaces', { method: 'POST', body: { label: 'Main' } }))
+            .rejects.toMatchObject({ status: 401 })
+        expect(fetchMock).toHaveBeenCalledTimes(1)
     })
 
-    it('can prompt for a stronger token when the server requires admin access', async () => {
-        const promptSpy = vi.spyOn(window, 'prompt').mockReturnValue(' admin-token ')
-        const fetchMock = vi.fn()
-            .mockResolvedValueOnce(new Response(JSON.stringify({
-                error: 'Admin role required.',
-                requiredRole: 'admin',
-                currentRole: 'editor'
-            }), {
-                status: 403,
-                headers: { 'Content-Type': 'application/json' }
-            }))
-            .mockResolvedValueOnce(new Response(JSON.stringify({ authenticated: true, role: 'admin' }), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
-            }))
-            .mockResolvedValueOnce(new Response(JSON.stringify({ space: { id: 'main' } }), {
-                status: 200,
-                headers: { 'Content-Type': 'application/json' }
-            }))
+    it('throws on 403 without prompting the user', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+            error: 'Admin role required.',
+            requiredRole: 'admin',
+            currentRole: 'editor'
+        }), {
+            status: 403,
+            headers: { 'Content-Type': 'application/json' }
+        }))
         vi.stubGlobal('fetch', fetchMock)
 
-        const result = await apiFetch('/api/spaces/main', {
-            method: 'PATCH',
-            body: { publishedProjectId: 'main-project' }
-        })
-
-        expect(promptSpy).toHaveBeenCalledWith('Enter the server admin token to continue.')
-        expect(result.space.id).toBe('main')
-        expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
-            'http://localhost:3000/serverXR/api/spaces/main',
-            'http://localhost:3000/serverXR/api/auth/session',
-            'http://localhost:3000/serverXR/api/spaces/main'
-        ])
+        await expect(apiFetch('/api/spaces/main', { method: 'PATCH', body: {} }))
+            .rejects.toMatchObject({ status: 403 })
+        expect(fetchMock).toHaveBeenCalledTimes(1)
     })
 })

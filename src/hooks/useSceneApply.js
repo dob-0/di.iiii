@@ -95,7 +95,6 @@ export function useSceneApply({
                         // try next candidate
                     }
                 }
-                console.warn(`Failed to hydrate asset ${asset.id}: no sources available.`)
                 return null
             })
             mergedManifest = mergeAssetsManifest(assetsManifest, fallbackAssets)

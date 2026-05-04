@@ -11,13 +11,13 @@ describe('windowLayout', () => {
             topbarRect: {
                 bottom: 132
             }
-        })).toBe(168)
+        })).toBe(140)
 
         expect(getWorkspaceTopInset({
             topbarRect: {
                 bottom: 210
             }
-        })).toBe(226)
+        })).toBe(218)
     })
 
     it('clamps windows below the workspace chrome and inside the viewport', () => {

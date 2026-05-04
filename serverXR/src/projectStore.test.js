@@ -4,16 +4,16 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const {
     deleteProject,
     ensureProject,
     findProjectById,
-    readProjectIndex,
-    writeProjectIndex
+    readProjectIndex
 } = require('./projectStore.js')
+const { initDb, closeDb } = require('./db.js')
 
 const tempDirs = []
 
@@ -23,56 +23,50 @@ const createSpacesDir = async () => {
     return dir
 }
 
+beforeEach(() => {
+    initDb(':memory:')
+})
+
 afterEach(async () => {
+    closeDb()
     await Promise.all(tempDirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })))
 })
 
-describe('projectStore index', () => {
-    it('updates project-index.json on create and delete', async () => {
+describe('projectStore', () => {
+    it('creates a project and finds it by id', async () => {
         const spacesDir = await createSpacesDir()
 
         await ensureProject(spacesDir, 'main', 'alpha-project', { title: 'Alpha Project' })
-        expect(await readProjectIndex(spacesDir)).toEqual({
-            'alpha-project': 'main'
+
+        const resolved = await findProjectById(spacesDir, 'alpha-project')
+        expect(resolved).toMatchObject({
+            spaceId: 'main',
+            projectId: 'alpha-project'
         })
+        expect(resolved.meta.title).toBe('Alpha Project')
+    })
+
+    it('readProjectIndex returns a projectId→spaceId map from the DB', async () => {
+        const spacesDir = await createSpacesDir()
+
+        await ensureProject(spacesDir, 'main', 'alpha-project', { title: 'Alpha Project' })
+        expect(await readProjectIndex(spacesDir)).toEqual({ 'alpha-project': 'main' })
 
         await deleteProject(spacesDir, 'main', 'alpha-project')
         expect(await readProjectIndex(spacesDir)).toEqual({})
     })
 
-    it('repairs a stale index entry when a lookup points at the wrong space', async () => {
+    it('findProjectById returns null for unknown projects', async () => {
         const spacesDir = await createSpacesDir()
-
-        await ensureProject(spacesDir, 'main', 'stale-project', { title: 'Stale Project' })
-        await writeProjectIndex(spacesDir, {
-            'stale-project': 'gallery'
-        })
-
-        const resolved = await findProjectById(spacesDir, 'stale-project')
-
-        expect(resolved).toMatchObject({
-            spaceId: 'main',
-            projectId: 'stale-project'
-        })
-        expect(await readProjectIndex(spacesDir)).toEqual({
-            'stale-project': 'main'
-        })
+        expect(await findProjectById(spacesDir, 'nonexistent')).toBeNull()
     })
 
-    it('repairs a missing index by scanning spaces once and writing the result back', async () => {
+    it('deleteProject removes the project from the DB and disk', async () => {
         const spacesDir = await createSpacesDir()
+        await ensureProject(spacesDir, 'gallery', 'delete-me', { title: 'Delete Me' })
+        expect(await findProjectById(spacesDir, 'delete-me')).not.toBeNull()
 
-        await ensureProject(spacesDir, 'gallery', 'repair-project', { title: 'Repair Project' })
-        await writeProjectIndex(spacesDir, {})
-
-        const resolved = await findProjectById(spacesDir, 'repair-project')
-
-        expect(resolved).toMatchObject({
-            spaceId: 'gallery',
-            projectId: 'repair-project'
-        })
-        expect(await readProjectIndex(spacesDir)).toEqual({
-            'repair-project': 'gallery'
-        })
+        await deleteProject(spacesDir, 'gallery', 'delete-me')
+        expect(await findProjectById(spacesDir, 'delete-me')).toBeNull()
     })
 })

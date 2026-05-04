@@ -4,6 +4,7 @@ import {
     listNodeTypes,
     getNodeType
 } from '../../project/nodeRegistry.js'
+import { filterNodeTypesForSurface } from '../utils/nodeSurfaceFilters.js'
 
 const NODE_FAMILY_TABS = NODE_CATEGORIES.map((category) => ({ id: category.id, label: category.label }))
 
@@ -158,15 +159,18 @@ export default function OpCreateDialog({
     const [family, setFamily] = useState('all')
     const [query, setQuery] = useState('')
     const availableDefinitions = useMemo(
-        () => listNodeTypes({ query }).map(toDefinitionShim).filter(Boolean),
-        [query]
+        () => filterNodeTypesForSurface(listNodeTypes({ query }), surface).map(toDefinitionShim).filter(Boolean),
+        [query, surface]
     )
     const definitions = useMemo(
-        () => listNodeTypes({ category: family, query }).map(toDefinitionShim).filter(Boolean),
-        [family, query]
+        () => filterNodeTypesForSurface(listNodeTypes({ category: family, query }), surface).map(toDefinitionShim).filter(Boolean),
+        [family, query, surface]
     )
     const [selectedId, setSelectedId] = useState('')
-    const selectedDefinition = (selectedId ? toDefinitionShim(getNodeType(selectedId)) : null) || definitions[0] || null
+    const selectedDefinition = useMemo(
+        () => definitions.find((definition) => definition.id === selectedId) || definitions[0] || null,
+        [definitions, selectedId]
+    )
     const [draftParams, setDraftParams] = useState({})
 
     useEffect(() => {

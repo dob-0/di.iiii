@@ -19,8 +19,25 @@ Read in this order:
 2. the nearest scoped `AGENTS.md` for the area you are editing
 3. the relevant deep-reference page in this folder
 
+## AI Engineering Company — Role Cards
+
+Every task has an owner. Route to the right role before starting work.
+
+- [roles/README.md](roles/README.md) — company overview, org chart, routing guide
+- [roles/ui-ux-engineer.md](roles/ui-ux-engineer.md) — CSS, layout, visual identity, React render
+- [roles/node-system-engineer.md](roles/node-system-engineer.md) — nodeRegistry, ports, graph model, runtime
+- [roles/viewport-3d-engineer.md](roles/viewport-3d-engineer.md) — Three.js, BetaViewport, XR rendering
+- [roles/backend-api-engineer.md](roles/backend-api-engineer.md) — serverXR, SQLite, auth, API routes
+- [roles/schema-protocol-engineer.md](roles/schema-protocol-engineer.md) — shared/, op-log, CRDT rules
+- [roles/infrastructure-engineer.md](roles/infrastructure-engineer.md) — Docker, GitHub Actions, deploy
+- [roles/qa-test-engineer.md](roles/qa-test-engineer.md) — tests, lint, validation
+- [roles/security-auditor.md](roles/security-auditor.md) — auth patterns, secrets, non-negotiables
+- [roles/technical-architect.md](roles/technical-architect.md) — cross-cutting decisions, MANIFESTO.md
+- [roles/documentation-engineer.md](roles/documentation-engineer.md) — docs/, PROGRESS.md, golden rules
+
 ## Deep Reference Pages
 
+- [golden_rules.md](golden_rules.md) — hard-won solutions + agent behavior rules (read this early)
 - [architecture.md](architecture.md)
 - [workflows.md](workflows.md)
 - [testing.md](testing.md)

@@ -16,8 +16,6 @@ export const normalizeClientApiToken = (value = '') => {
     return normalized
 }
 
-const API_TOKEN = normalizeClientApiToken(import.meta.env.VITE_API_TOKEN || '')
-
 export const normalizeSessionApiToken = (value = '') => String(value || '').trim().replace(/^bearer\s+/i, '')
 
 const getHostnameFromOrigin = (origin = '') => {
@@ -155,26 +153,6 @@ const createServerUnavailableError = (message, cause = null) => {
     return error
 }
 
-const isWriteMethod = (method = 'GET') => !['GET', 'HEAD', 'OPTIONS'].includes(String(method).toUpperCase())
-
-const shouldAttemptInteractiveAuth = (path, method, authRetry, error = null) => {
-    if (!authRetry || !isWriteMethod(method)) return false
-    if (String(path || '').includes('/api/auth/session')) return false
-    if (error?.status === 403 && !error?.data?.requiredRole) return false
-    if (error?.status && ![401, 403].includes(error.status)) return false
-    return typeof window !== 'undefined' && typeof window.prompt === 'function'
-}
-
-const promptForApiToken = (requiredRole = 'editor') => {
-    if (typeof window === 'undefined' || typeof window.prompt !== 'function') {
-        return ''
-    }
-    const promptMessage = requiredRole === 'admin'
-        ? 'Enter the server admin token to continue.'
-        : 'Enter the server edit token to continue.'
-    return normalizeSessionApiToken(window.prompt(promptMessage) || '')
-}
-
 const createHttpError = async (response) => {
     const text = await response.text()
     let message = text || `Request failed with status ${response.status}`
@@ -201,8 +179,7 @@ export async function apiFetch(path, {
     method = 'GET',
     headers,
     body,
-    json = true,
-    authRetry = true
+    json = true
 } = {}) {
     if (!hasServerApi) {
         throw new Error('API base URL is not configured')
@@ -211,11 +188,10 @@ export async function apiFetch(path, {
         throw createServerUnavailableError('ServerXR is temporarily unavailable.')
     }
     const url = path.startsWith('http') ? path : `${apiBaseUrl}${path}`
-    const authHeaders = API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : {}
     const init = {
         method,
         credentials: 'include',
-        headers: { ...authHeaders, ...(headers ? { ...headers } : {}) }
+        headers: headers || {}
     }
     if (body instanceof FormData) {
         init.body = body
@@ -235,21 +211,7 @@ export async function apiFetch(path, {
         throw error
     }
     if (!response.ok) {
-        const error = await createHttpError(response)
-        if (shouldAttemptInteractiveAuth(path, method, authRetry, error)) {
-            const token = promptForApiToken(error?.data?.requiredRole || 'editor')
-            if (token) {
-                await loginApiSession(token)
-                return apiFetch(path, {
-                    method,
-                    headers,
-                    body,
-                    json,
-                    authRetry: false
-                })
-            }
-        }
-        throw error
+        throw await createHttpError(response)
     }
     if (!json) {
         return response
@@ -261,12 +223,10 @@ export const getApiSession = async () => apiFetch('/api/auth/session')
 
 export const loginApiSession = async (token) => apiFetch('/api/auth/session', {
     method: 'POST',
-    body: { token: normalizeSessionApiToken(token) },
-    authRetry: false
+    body: { token: normalizeSessionApiToken(token) }
 })
 
 export const logoutApiSession = async () => apiFetch('/api/auth/session', {
     method: 'DELETE',
-    json: false,
-    authRetry: false
+    json: false
 })

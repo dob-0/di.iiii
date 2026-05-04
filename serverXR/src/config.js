@@ -138,6 +138,7 @@ const maxUploadBytes = Math.max(1, maxUploadMb) * 1024 * 1024
 const dataDir = resolveDir(process.env.DATA_ROOT, DEFAULT_DATA_DIR)
 const spacesDir = resolveDir(process.env.SPACES_DIR, path.join(dataDir, 'spaces'))
 const uploadsDir = resolveDir(process.env.UPLOADS_DIR, path.join(dataDir, 'uploads'))
+const dbPath = resolveDir(process.env.DB_PATH, path.join(dataDir, 'di.db'))
 const authSessionTtlMs = parseNumber(process.env.AUTH_SESSION_TTL_MS, 1000 * 60 * 60 * 12)
 const authSessionCookieName = (process.env.AUTH_SESSION_COOKIE_NAME || 'dii_serverxr_session').trim()
 const authSessionCookieSecure = parseBool(process.env.AUTH_SESSION_COOKIE_SECURE, isProduction)
@@ -206,7 +207,8 @@ const config = {
     publicDir: path.resolve(ROOT_DIR, 'public'),
     dataDir,
     spacesDir,
-    uploadsDir
+    uploadsDir,
+    dbPath
   },
   defaultTtlMs: Number(process.env.SPACE_TTL_MS || 1000 * 60 * 60 * 24 * 30)
 }

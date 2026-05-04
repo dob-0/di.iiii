@@ -175,6 +175,16 @@ Behavior rules:
 | `MAX_UPLOAD_MB` | Max asset upload size in MB. | `100` |
 | `SHARED_ROOT` | Override for shared schema loading. Use this when staging and production keep separate shared folders outside the repo. | repo-local `shared/` fallback |
 
+Security notes:
+
+- in production, unauthenticated writes are rejected unless `REQUIRE_AUTH=false`
+- browser editors should use the http-only session flow instead of a compiled `VITE_API_TOKEN`
+- bearer-token auth remains available for automation and emergency compatibility
+- signed browser sessions now carry `role`, `subject`, and `label`
+- `editor` access covers scene/project authoring, while `admin` is required for space creation, project deletion, space settings, publishing, and space deletion
+- tokens and sessions can optionally be limited to specific spaces, and scoped credentials are rejected before they can mutate other spaces or projects
+- if a space has `allowEdits=false`, scene, asset, and realtime mutations are rejected with `403`
+
 ## Runtime Contract
 
 These values matter more than older deploy folklore:
@@ -183,10 +193,10 @@ These values matter more than older deploy folklore:
 - staging should use `SHARED_ROOT=/home/distudio/shared-staging`
 - production should use `DATA_ROOT=/home/distudio/serverXR/data`
 - production should use `SHARED_ROOT=/home/distudio/shared`
+- `API_TOKEN` stays server-only for normal builds; browser editors create an http-only auth session when a protected write needs it
+- prefer a dedicated `EDITOR_API_TOKEN` for day-to-day authoring and reserve admin tokens for space/publish management
+- use `EDITOR_ALLOWED_SPACES` or scoped `AUTH_IDENTITIES` entries when an editor should only operate inside named spaces
 - the Node app mount stays `/serverXR` in both environments
-- `API_TOKEN` should stay server-only for normal builds
-- use browser auth sessions for protected editing
-- prefer a dedicated `EDITOR_API_TOKEN` for day-to-day editing
 - reserve admin tokens for publish and space-management work
 
 If `/serverXR/api/health` fails, check in this order:

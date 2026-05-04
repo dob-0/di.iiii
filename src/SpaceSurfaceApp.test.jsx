@@ -45,10 +45,10 @@ describe('SpaceSurfaceApp', () => {
         expect(await screen.findByText('public-project-viewer:main:live-project')).toBeInTheDocument()
     })
 
-    it('opens the blank node workspace on the bare root route', () => {
+    it('opens the blank node workspace on the bare root route', async () => {
         render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: null }} />)
 
-        expect(screen.getByText('blank-node-workspace:main')).toBeInTheDocument()
+        expect(await screen.findByText('blank-node-workspace:main')).toBeInTheDocument()
         expect(getServerSpace).not.toHaveBeenCalled()
     })
 
@@ -105,10 +105,10 @@ describe('SpaceSurfaceApp', () => {
         })
     })
 
-    it('keeps preferences routed through the legacy app shell', () => {
+    it('keeps preferences routed through the legacy app shell', async () => {
         render(<SpaceSurfaceApp routeState={{ page: 'preferences', spaceId: 'main' }} />)
 
-        expect(screen.getByText('legacy-app')).toBeInTheDocument()
+        expect(await screen.findByText('legacy-app')).toBeInTheDocument()
         expect(getServerSpace).not.toHaveBeenCalled()
     })
 })

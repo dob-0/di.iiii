@@ -146,7 +146,6 @@ export function useXrAr({
             applySupportState(supportedModes, null)
             return { environment, checkedAt, supportedModes, error: null }
         } catch (error) {
-            console.error('Failed to detect WebXR support', error)
             const serializedError = serializeXrError(error)
             applySupportState(DEFAULT_SUPPORTED_XR_MODES, serializedError)
             return {
@@ -245,7 +244,6 @@ export function useXrAr({
         })
         const diagnosticText = JSON.stringify(snapshot, null, 2)
 
-        console.info('XR diagnostics', snapshot)
 
         try {
             if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
@@ -255,8 +253,8 @@ export function useXrAr({
                 )
                 return
             }
-        } catch (error) {
-            console.warn('Failed to copy XR diagnostics', error)
+        } catch {
+            // ignore
         }
 
         if (typeof window !== 'undefined' && typeof window.prompt === 'function') {
@@ -314,7 +312,6 @@ export function useXrAr({
             if (isMountedRef.current) {
                 setLastXrStartError(serializedError)
             }
-            console.error(`Failed to start ${mode.toUpperCase()} session:`, error)
             alert(formatXrStartError(mode, error))
         }
     }, [refreshXrSupport, xrSessionInit, isXrPresenting, xrStore, controlsRef, default3DView, setCameraPosition, setCameraTarget])
@@ -323,8 +320,7 @@ export function useXrAr({
         try {
             const session = xrStore.getState().session
             await session?.end()
-        } catch (error) {
-            console.error('Failed to exit XR session:', error)
+        } catch {
             alert('Could not exit the XR session cleanly. Please try again.')
         }
     }, [xrStore])

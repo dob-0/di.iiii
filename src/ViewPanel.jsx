@@ -155,8 +155,8 @@ export default function ViewPanel({ onClose, surfaceMode = 'floating' }) {
             setPresentationSourceType('html')
             setPresentationMode('code')
             setPresentationHtml(nextHtml)
-        } catch (error) {
-            console.error('Unable to import HTML presentation file', error)
+        } catch {
+            // ignore
         }
     }
 

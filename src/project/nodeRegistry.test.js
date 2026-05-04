@@ -1,13 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import {
     NODE_TYPES,
-    NODE_CATEGORIES,
     PORT_TYPES,
     createNode,
     createEdge,
     listNodeTypes,
-    getNodeType,
-    getPortType,
     arePortsCompatible,
     getNodeInputs,
     getNodeOutputs,
@@ -127,6 +124,12 @@ describe('createNode', () => {
         expect(node.typeId).toBe('node.null')
         expect(node.values.body).toBe('')
         expect(node.values.portDefs).toEqual([])
+    })
+
+    it('creates a string source node with an empty value', () => {
+        const node = createNode('value.string')
+        expect(node.typeId).toBe('value.string')
+        expect(node.values.value).toBe('')
     })
 
     it('creates universe.node0 with root defaults', () => {

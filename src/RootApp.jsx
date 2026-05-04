@@ -1,5 +1,6 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 import { getBetaLocationState, isBetaLocation } from './beta/utils/betaRouting.js'
+import AuthGate from './components/AuthGate.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import LandingPage from './landing/LandingPage.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
@@ -9,7 +10,7 @@ import { APP_PAGE_PREFERENCES, getAppLocationState } from './utils/spaceRouting.
 const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 
-export default function RootApp() {
+function AppRouter() {
     const [locationState, setLocationState] = useState(() => ({
         betaState: getBetaLocationState(),
         studioState: getStudioLocationState(),
@@ -72,4 +73,12 @@ export default function RootApp() {
     }
 
     return <SpaceSurfaceApp routeState={appState} />
+}
+
+export default function RootApp() {
+    return (
+        <AuthGate>
+            <AppRouter />
+        </AuthGate>
+    )
 }

@@ -10,3 +10,5 @@ applyTo: "src/studio/**/*"
 - This scope primarily owns the main shipped Studio authoring lane, shell, routing, and Studio-only UX.
 - Use [../../docs/ai/index.md](../../docs/ai/index.md) for deeper cross-repo reference.
 - Keep canonical instructions in `AGENTS.md`; this file is a generated path-specific bridge.
+- Primary role(s) for this area: **UI/UX Engineer (UX)** — read [docs/ai/roles/ui-ux-engineer.md](../../docs/ai/roles/ui-ux-engineer.md) before editing.
+- Minimum model tier for edits here: **Sonnet**.

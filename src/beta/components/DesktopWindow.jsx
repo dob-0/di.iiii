@@ -4,13 +4,15 @@ import { clampWindowFrame } from '../utils/windowLayout.js'
 export default function DesktopWindow({
     windowState,
     title,
+    kicker = '',
     children,
     onFocus,
     onPatch,
     onClose,
     onToggleMinimize,
     onTogglePin,
-    minTop = undefined
+    minTop = undefined,
+    canvasZoom = 1
 }) {
     const [draft, setDraft] = useState(() => ({
         x: windowState.x,
@@ -42,8 +44,8 @@ export default function DesktopWindow({
             if (state.mode === 'drag') {
                 setDraft((current) => clampWindowFrame({
                     ...current,
-                    x: Math.max(12, state.origin.x + event.clientX - state.startX),
-                    y: Math.max(12, state.origin.y + event.clientY - state.startY)
+                    x: Math.max(12, state.origin.x + (event.clientX - state.startX) / canvasZoom),
+                    y: Math.max(12, state.origin.y + (event.clientY - state.startY) / canvasZoom)
                 }, {
                     minTop,
                     viewportWidth: window.innerWidth,
@@ -53,8 +55,8 @@ export default function DesktopWindow({
             if (state.mode === 'resize') {
                 setDraft((current) => clampWindowFrame({
                     ...current,
-                    width: Math.max(260, state.origin.width + event.clientX - state.startX),
-                    height: Math.max(180, state.origin.height + event.clientY - state.startY)
+                    width: Math.max(260, state.origin.width + (event.clientX - state.startX) / canvasZoom),
+                    height: Math.max(180, state.origin.height + (event.clientY - state.startY) / canvasZoom)
                 }, {
                     minTop,
                     viewportWidth: window.innerWidth,
@@ -134,7 +136,7 @@ export default function DesktopWindow({
         >
             <header className="beta-window-header" onPointerDown={startDrag}>
                 <div>
-                    <span className="beta-window-kicker">{windowState.id}</span>
+                    {kicker ? <span className="beta-window-kicker">{kicker}</span> : null}
                     <h3>{title}</h3>
                 </div>
                 <div className="beta-window-actions">

@@ -18,12 +18,17 @@ export const REQUIRED_AI_DOC_FILES = [
   'docs/ai/private-overrides.md'
 ]
 
+// primaryRoles: which company roles own files in this scope (see docs/ai/roles/)
+// primaryModel: minimum Claude model tier for edits in this scope
 export const AI_DOC_SCOPES = [
   {
     dir: '.',
     slug: 'repo-root',
     title: 'Repo Root',
     role: 'repo-wide routing, lane selection, validation defaults, and documentation policy',
+    primaryRoles: ['Technical Architect (TA)', 'Documentation Engineer (DE)'],
+    primaryModel: 'Sonnet',
+    roleCard: 'docs/ai/roles/technical-architect.md',
     cursorRuleFile: '00-repo-core.mdc',
     alwaysApply: true
   },
@@ -32,6 +37,9 @@ export const AI_DOC_SCOPES = [
     slug: 'src-project',
     title: 'Shared Project Layer',
     role: 'shared project-document logic, sync, presence, imports, and public viewer behavior',
+    primaryRoles: ['Node System Engineer (NSE)', 'Schema/Protocol Engineer (SPE)'],
+    primaryModel: 'Sonnet',
+    roleCard: 'docs/ai/roles/node-system-engineer.md',
     applyTo: 'src/project/**/*',
     cursorRuleFile: '10-src-project.mdc'
   },
@@ -40,6 +48,9 @@ export const AI_DOC_SCOPES = [
     slug: 'src-studio',
     title: 'Studio Main Lane',
     role: 'the main shipped Studio authoring lane, shell, routing, and Studio-only UX',
+    primaryRoles: ['UI/UX Engineer (UX)'],
+    primaryModel: 'Sonnet',
+    roleCard: 'docs/ai/roles/ui-ux-engineer.md',
     applyTo: 'src/studio/**/*',
     cursorRuleFile: '20-src-studio.mdc'
   },
@@ -48,6 +59,9 @@ export const AI_DOC_SCOPES = [
     slug: 'src-shared',
     title: 'Shared Schema Runtime',
     role: 'canonical cross-runtime schema defaults, normalization, versioning, and op application',
+    primaryRoles: ['Schema/Protocol Engineer (SPE)'],
+    primaryModel: 'Opus',
+    roleCard: 'docs/ai/roles/schema-protocol-engineer.md',
     applyTo: 'src/shared/**/*',
     cursorRuleFile: '30-src-shared.mdc'
   },
@@ -56,6 +70,9 @@ export const AI_DOC_SCOPES = [
     slug: 'src-beta',
     title: 'Beta Experimental Lane',
     role: 'experimental node-first editor workflows and Beta-specific UX',
+    primaryRoles: ['UI/UX Engineer (UX)', 'Node System Engineer (NSE)', '3D/Viewport Engineer (VPE)'],
+    primaryModel: 'Sonnet',
+    roleCard: 'docs/ai/roles/ui-ux-engineer.md',
     applyTo: 'src/beta/**/*',
     cursorRuleFile: '40-src-beta.mdc'
   },
@@ -64,6 +81,9 @@ export const AI_DOC_SCOPES = [
     slug: 'serverxr-src',
     title: 'serverXR Backend Source',
     role: 'backend auth, persistence, routes, uploads, publish state, SSE, and Socket.IO behavior',
+    primaryRoles: ['Backend/API Engineer (BAE)'],
+    primaryModel: 'Sonnet',
+    roleCard: 'docs/ai/roles/backend-api-engineer.md',
     applyTo: 'serverXR/src/**/*',
     cursorRuleFile: '50-serverxr-src.mdc'
   },
@@ -72,6 +92,9 @@ export const AI_DOC_SCOPES = [
     slug: 'scripts',
     title: 'Automation Scripts',
     role: 'developer automation, release helpers, maintenance scripts, and repeatable repo tasks',
+    primaryRoles: ['Infrastructure Engineer (IE)'],
+    primaryModel: 'Haiku',
+    roleCard: 'docs/ai/roles/infrastructure-engineer.md',
     applyTo: 'scripts/**/*',
     cursorRuleFile: '60-scripts.mdc'
   },
@@ -80,6 +103,9 @@ export const AI_DOC_SCOPES = [
     slug: 'deploy',
     title: 'Deploy Docs And Templates',
     role: 'versioned deployment docs, env examples, and checked-in deploy templates',
+    primaryRoles: ['Infrastructure Engineer (IE)'],
+    primaryModel: 'Haiku',
+    roleCard: 'docs/ai/roles/infrastructure-engineer.md',
     applyTo: 'deploy/**/*',
     cursorRuleFile: '70-deploy.mdc'
   }
@@ -143,6 +169,35 @@ const renderGeminiBridge = (scope) => {
 `
 }
 
+const ROLE_ROUTING_TABLE = `## Role Assignment (read before editing)
+
+Every task has one primary owner. Match the file path to the role, read the role card, lock scope.
+
+| Path | Primary Role | Role Card | Min Model |
+|------|-------------|-----------|-----------|
+| \`src/beta/styles/\`, \`src/styles/\`, \`*.css\` | UI/UX Engineer (UX) | \`docs/ai/roles/ui-ux-engineer.md\` | Sonnet |
+| \`src/beta/components/\`, \`src/studio/\` | UI/UX Engineer (UX) | \`docs/ai/roles/ui-ux-engineer.md\` | Sonnet |
+| \`src/beta/components/BetaViewport.jsx\`, \`src/objectComponents/\` | 3D/Viewport Engineer (VPE) | \`docs/ai/roles/viewport-3d-engineer.md\` | Sonnet |
+| \`src/project/nodeRegistry.js\`, \`src/beta/utils/node*.js\` | Node System Engineer (NSE) | \`docs/ai/roles/node-system-engineer.md\` | Sonnet |
+| \`serverXR/src/\` | Backend/API Engineer (BAE) | \`docs/ai/roles/backend-api-engineer.md\` | Sonnet |
+| \`shared/\`, \`src/shared/\` | Schema/Protocol Engineer (SPE) | \`docs/ai/roles/schema-protocol-engineer.md\` | Opus |
+| \`scripts/\`, \`deploy/\`, \`.github/workflows/\`, \`Dockerfile\` | Infrastructure Engineer (IE) | \`docs/ai/roles/infrastructure-engineer.md\` | Haiku |
+| \`*.test.js\`, \`*.test.jsx\` | QA/Test Engineer (QA) | \`docs/ai/roles/qa-test-engineer.md\` | Haiku |
+| \`AGENTS.md\`, \`MANIFESTO.md\`, \`docs/architecture/\` | Technical Architect (TA) | \`docs/ai/roles/technical-architect.md\` | Opus |
+| \`docs/\`, \`PROGRESS.md\`, \`golden_rules.md\` | Documentation Engineer (DE) | \`docs/ai/roles/documentation-engineer.md\` | Ollama dob-fast |
+
+Full guide: \`docs/ai/roles/README.md\` · Model routing: \`docs/ai/roles/model-routing.md\`
+
+**Scope lock:** read your role card before acting. Files under "Must Never Touch" in your card are off-limits — do not read, do not edit them.`
+
+const TOKEN_EFFICIENCY_RULES = `## Token / Context Efficiency
+
+- Read \`AGENTS.md\`, \`PROGRESS.md\`, nearest scoped \`AGENTS.md\`, and your role card — then stop loading files.
+- Do not pre-read docs, architecture files, or tests "just in case". Read them only if blocked.
+- Use targeted grep over directory scans. Stop and summarize every 5 tool calls.
+- Free local analysis: \`bash scripts/ollama-task.sh fast "question"\` — burns zero API credits.
+- Model tiers: Ollama (free, analysis only) → Haiku (simple edits) → Sonnet (features) → Opus (arch/security only).`
+
 const renderCopilotRepoInstructions = () => `# GitHub Copilot Repository Instructions
 
 ${generatedHeader('AGENTS.md and docs/ai/')}
@@ -159,10 +214,20 @@ ${generatedHeader('AGENTS.md and docs/ai/')}
   - \`src/shared/\` for canonical schema/runtime truth
   - \`serverXR/src/\` for auth, persistence, routes, publish state, and realtime behavior
 - After canonical AI-doc changes, run \`npm run docs:ai:sync\` and \`npm run docs:ai:check\`.
+
+${ROLE_ROUTING_TABLE}
+
+${TOKEN_EFFICIENCY_RULES}
 `
 
 const renderCopilotScopeInstructions = (scope) => {
   const relativeFile = normalizePath(path.join('.github/instructions', `${scope.slug}.instructions.md`))
+  const rolesLine = scope.primaryRoles
+    ? `- Primary role(s) for this area: **${scope.primaryRoles.join(', ')}** — read [${scope.roleCard}](${linkFrom(relativeFile, scope.roleCard)}) before editing.`
+    : ''
+  const modelLine = scope.primaryModel
+    ? `- Minimum model tier for edits here: **${scope.primaryModel}**.`
+    : ''
   return `---
 applyTo: "${scope.applyTo}"
 ---
@@ -175,11 +240,21 @@ ${generatedHeader(scopeAgentsPath(scope))}
 - This scope primarily owns ${scope.role}.
 - Use [${docsIndexFrom(relativeFile)}](${docsIndexFrom(relativeFile)}) for deeper cross-repo reference.
 - Keep canonical instructions in \`AGENTS.md\`; this file is a generated path-specific bridge.
+${rolesLine}
+${modelLine}
 `
 }
 
 const renderCursorRule = (scope) => {
   const relativeFile = normalizePath(path.join('.cursor/rules', scope.cursorRuleFile))
+  const rolesLine = scope.primaryRoles
+    ? `- Primary role(s) for this area: **${scope.primaryRoles.join(', ')}** — read \`${scope.roleCard}\` before editing.`
+    : ''
+  const modelLine = scope.primaryModel
+    ? `- Minimum model tier for edits here: **${scope.primaryModel}**.`
+    : ''
+  const alwaysBlock = scope.alwaysApply ? `\n${ROLE_ROUTING_TABLE}\n\n${TOKEN_EFFICIENCY_RULES}` : ''
+
   const frontmatter = scope.alwaysApply
     ? `---
 title: Cursor Rule Bridge
@@ -202,6 +277,9 @@ ${generatedHeader(scopeAgentsPath(scope))}
 - This scope primarily owns ${scope.role}.
 - Use [${docsIndexFrom(relativeFile)}](${docsIndexFrom(relativeFile)}) for deeper reference.
 - Keep shared instructions in canonical \`AGENTS.md\` and \`docs/ai/\`, not in Cursor rule files.
+${rolesLine}
+${modelLine}
+${alwaysBlock}
 `
 }
 

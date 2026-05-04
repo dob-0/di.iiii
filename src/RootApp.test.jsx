@@ -2,6 +2,10 @@ import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import RootApp from './RootApp.jsx'
 
+vi.mock('./hooks/useAuthSession.js', () => ({
+    default: () => ({ requireAuth: false, authenticated: true, loading: false, login: vi.fn(), logout: vi.fn(), refresh: vi.fn() })
+}))
+
 vi.mock('./beta/BetaApp.jsx', () => ({
     default: function MockBetaApp({ initialRoute }) {
         return (

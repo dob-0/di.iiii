@@ -271,8 +271,8 @@ export default function AssetPanel({ onClose, surfaceMode = 'floating' }) {
         if (!blob) {
             try {
                 blob = await streamRemoteAsset(preferredAssetId)
-            } catch (error) {
-                console.warn('Failed to stream asset', error)
+            } catch {
+                // ignore
             }
         }
         if (!blob) {

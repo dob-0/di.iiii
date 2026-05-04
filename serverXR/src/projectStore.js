@@ -2,6 +2,7 @@ const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
+const { getDb } = require('./db')
 const { loadSharedModule } = require('./sharedRuntime')
 const {
   defaultProjectDocument,
@@ -17,25 +18,31 @@ const PROJECT_INDEX_FILE = 'project-index.json'
 const PROJECT_ID_REGEX = /^[a-z0-9-]{3,64}$/
 const ASSET_ID_REGEX = /^[a-f0-9-]{8,64}$/i
 
-const safeSlug = (value = '') => {
-  return String(value)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 64)
-}
+const safeSlug = (value = '') => String(value)
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/g, '-')
+  .replace(/-+/g, '-')
+  .replace(/^-+|-+$/g, '')
+  .slice(0, 64)
 
 const normalizeProjectId = (value) => {
   const slug = safeSlug(value)
-  if (!slug || !PROJECT_ID_REGEX.test(slug)) {
-    return null
-  }
-  return slug
+  return (slug && PROJECT_ID_REGEX.test(slug)) ? slug : null
 }
 
 const isValidProjectId = (value = '') => PROJECT_ID_REGEX.test(String(value).trim())
 const isValidAssetId = (value = '') => ASSET_ID_REGEX.test(String(value).trim())
+
+const rowToMeta = (row) => !row ? null : ({
+  id: row.id,
+  spaceId: row.space_id,
+  title: row.title,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+  lastTouchedAt: row.last_touched_at,
+  documentVersion: row.document_version,
+  source: row.source
+})
 
 const buildProjectMeta = (spaceId, projectId, overrides = {}) => {
   const now = Date.now()
@@ -67,117 +74,83 @@ const getProjectPaths = (spacesDir, spaceId, projectId) => {
   }
 }
 
-const readProjectIndex = async (spacesDir) => {
-  const index = await readJson(getProjectIndexPath(spacesDir), {})
-  return index && typeof index === 'object' && !Array.isArray(index) ? index : {}
-}
-
-const writeProjectIndex = async (spacesDir, index = {}) => {
-  await writeJson(getProjectIndexPath(spacesDir), index)
-}
-
-const setProjectIndexEntry = async (spacesDir, projectId, spaceId) => {
-  const index = await readProjectIndex(spacesDir)
-  index[projectId] = spaceId
-  await writeProjectIndex(spacesDir, index)
-  return index
-}
-
-const removeProjectIndexEntry = async (spacesDir, projectId) => {
-  const index = await readProjectIndex(spacesDir)
-  if (!(projectId in index)) {
-    return index
+// Prepared statements cached per DB instance (auto-resets when DB is replaced, e.g. in tests)
+let _s = null
+let _dbRef = null
+const s = () => {
+  const db = getDb()
+  if (_s && _dbRef === db) return _s
+  _dbRef = db
+  _s = {
+    selectById:       db.prepare('SELECT * FROM projects WHERE id = ?'),
+    selectBySpace:    db.prepare('SELECT * FROM projects WHERE id = ? AND space_id = ?'),
+    selectBySpaceAll: db.prepare('SELECT * FROM projects WHERE space_id = ? ORDER BY updated_at DESC'),
+    selectAllIndex:   db.prepare('SELECT id, space_id FROM projects'),
+    insert:           db.prepare('INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
+    upsert:           db.prepare('INSERT OR REPLACE INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
+    update:           db.prepare('UPDATE projects SET title=?, document_version=?, source=?, updated_at=?, last_touched_at=? WHERE id=?'),
+    deleteById:       db.prepare('DELETE FROM projects WHERE id = ?'),
+    opsSelect:        db.prepare('SELECT data FROM project_ops WHERE project_id = ? ORDER BY version ASC'),
+    opsDeleteAll:     db.prepare('DELETE FROM project_ops WHERE project_id = ?'),
+    opsInsert:        db.prepare('INSERT INTO project_ops (project_id, version, data, created_at) VALUES (?, ?, ?, ?)'),
+    opsCount:         db.prepare('SELECT COUNT(*) as cnt FROM project_ops WHERE project_id = ?'),
+    opsTrim:          db.prepare('DELETE FROM project_ops WHERE project_id = ? AND seq IN (SELECT seq FROM project_ops WHERE project_id = ? ORDER BY seq ASC LIMIT ?)'),
+    ensureSpace:      db.prepare('INSERT OR IGNORE INTO spaces (id, label, permanent, allow_edits, scene_version, created_at, updated_at, last_touched_at) VALUES (?, ?, 0, 1, 0, ?, ?, ?)'),
   }
-  delete index[projectId]
-  await writeProjectIndex(spacesDir, index)
-  return index
+  return _s
 }
 
-const removeProjectIndexEntriesForSpace = async (spacesDir, spaceId) => {
-  const index = await readProjectIndex(spacesDir)
-  let changed = false
-  Object.entries(index).forEach(([projectId, indexedSpaceId]) => {
-    if (indexedSpaceId === spaceId) {
-      delete index[projectId]
-      changed = true
+// readProjectIndex and writeProjectIndex kept for backward-compat with callers
+const readProjectIndex = async (spacesDir) =>
+  Object.fromEntries(s().selectAllIndex.all().map(r => [r.id, r.space_id]))
+
+const writeProjectIndex = async (spacesDir, index = {}) => {}
+
+const loadProjectMeta = async (spacesDir, spaceId, projectId) =>
+  rowToMeta(s().selectBySpace.get(projectId, spaceId))
+
+const saveProjectMeta = async (spacesDir, spaceId, projectId, meta) => {
+  s().upsert.run(
+    projectId, spaceId,
+    meta.title ?? 'Untitled Project',
+    meta.documentVersion ?? 0,
+    meta.source ?? 'project',
+    meta.createdAt ?? Date.now(),
+    meta.updatedAt ?? Date.now(),
+    meta.lastTouchedAt ?? Date.now()
+  )
+}
+
+const upsertProjectMeta = async (spacesDir, spaceId, projectId, updates = {}) => {
+  const db = getDb()
+  const { insert, update, selectById } = s()
+  const now = Date.now()
+  return db.transaction(() => {
+    const row = selectById.get(projectId)
+    if (!row) {
+      const meta = buildProjectMeta(spaceId, projectId, updates)
+      insert.run(projectId, spaceId, meta.title, meta.documentVersion, meta.source, meta.createdAt, meta.updatedAt, meta.lastTouchedAt)
+      return meta
     }
-  })
-  if (changed) {
-    await writeProjectIndex(spacesDir, index)
-  }
-  return index
+    const nextTitle   = updates.title !== undefined ? (String(updates.title || '').trim() || row.title) : row.title
+    const nextVersion = updates.documentVersion !== undefined ? (Number(updates.documentVersion) || 0) : row.document_version
+    const nextSource  = updates.source !== undefined ? updates.source : row.source
+    const nextTouched = updates.touch === false ? row.last_touched_at : now
+    update.run(nextTitle, nextVersion, nextSource, now, nextTouched, projectId)
+    return rowToMeta({ ...row, title: nextTitle, document_version: nextVersion, source: nextSource, updated_at: now, last_touched_at: nextTouched })
+  })()
 }
 
 const normalizeProjectTimestamp = (value, fallback) => {
   const next = Number(value)
-  if (Number.isFinite(next) && next > 0) {
-    return next
-  }
-  return fallback
-}
-
-const loadProjectMeta = async (spacesDir, spaceId, projectId) => {
-  const { metaPath } = getProjectPaths(spacesDir, spaceId, projectId)
-  return readJson(metaPath, null)
-}
-
-const saveProjectMeta = async (spacesDir, spaceId, projectId, meta) => {
-  const { metaPath } = getProjectPaths(spacesDir, spaceId, projectId)
-  await writeJson(metaPath, meta)
-}
-
-const upsertProjectMeta = async (spacesDir, spaceId, projectId, updates = {}) => {
-  const existing = await loadProjectMeta(spacesDir, spaceId, projectId)
-  const nextMeta = existing
-    ? {
-        ...existing,
-        ...(updates.title !== undefined ? { title: updates.title } : {}),
-        ...(updates.documentVersion !== undefined ? { documentVersion: Number(updates.documentVersion) || 0 } : {}),
-        ...(updates.source !== undefined ? { source: updates.source } : {}),
-        updatedAt: Date.now(),
-        lastTouchedAt: updates.touch === false ? existing.lastTouchedAt : Date.now()
-      }
-    : buildProjectMeta(spaceId, projectId, updates)
-  await saveProjectMeta(spacesDir, spaceId, projectId, nextMeta)
-  return nextMeta
-}
-
-const ensureProject = async (spacesDir, spaceId, projectId, overrides = {}) => {
-  const { projectDir, assetsDir, documentPath, opsPath } = getProjectPaths(spacesDir, spaceId, projectId)
-  await ensureDir(projectDir)
-  await ensureDir(assetsDir)
-  const meta = await upsertProjectMeta(spacesDir, spaceId, projectId, overrides)
-  const existingDocument = await readJson(documentPath, null)
-  if (!existingDocument) {
-    await writeJson(documentPath, normalizeProjectDocument({
-      ...defaultProjectDocument,
-      projectMeta: {
-        id: projectId,
-        spaceId,
-        title: meta.title,
-        createdAt: meta.createdAt,
-        updatedAt: meta.updatedAt,
-        source: meta.source
-      }
-    }))
-  }
-  const existingOps = await readJson(opsPath, null)
-  if (!existingOps) {
-    await writeJson(opsPath, [])
-  }
-  await setProjectIndexEntry(spacesDir, projectId, spaceId)
-  return meta
+  return (Number.isFinite(next) && next > 0) ? next : fallback
 }
 
 const coerceProjectDocument = (spaceId, projectId, document = null, projectMeta = null) => {
   const now = Date.now()
   const normalized = normalizeProjectDocument(document || {
     ...defaultProjectDocument,
-    projectMeta: {
-      ...defaultProjectDocument.projectMeta,
-      id: projectId,
-      spaceId
-    }
+    projectMeta: { ...defaultProjectDocument.projectMeta, id: projectId, spaceId }
   })
   const fallbackCreatedAt = normalizeProjectTimestamp(projectMeta?.createdAt, now)
   return {
@@ -188,10 +161,7 @@ const coerceProjectDocument = (spaceId, projectId, document = null, projectMeta 
       spaceId,
       title: normalized.projectMeta?.title || projectMeta?.title || 'Untitled Project',
       createdAt: normalizeProjectTimestamp(normalized.projectMeta?.createdAt, fallbackCreatedAt),
-      updatedAt: normalizeProjectTimestamp(
-        normalized.projectMeta?.updatedAt,
-        normalizeProjectTimestamp(projectMeta?.updatedAt, fallbackCreatedAt)
-      ),
+      updatedAt: normalizeProjectTimestamp(normalized.projectMeta?.updatedAt, normalizeProjectTimestamp(projectMeta?.updatedAt, fallbackCreatedAt)),
       source: normalized.projectMeta?.source || projectMeta?.source || 'project'
     }
   }
@@ -214,80 +184,73 @@ const writeProjectDocument = async (spacesDir, spaceId, projectId, document) => 
   await writeJson(documentPath, coerceProjectDocument(spaceId, projectId, document, projectMeta))
 }
 
-const readProjectOps = async (spacesDir, spaceId, projectId) => {
-  const { opsPath } = getProjectPaths(spacesDir, spaceId, projectId)
-  return readJson(opsPath, [])
-}
+const readProjectOps = async (spacesDir, spaceId, projectId) =>
+  s().opsSelect.all(projectId).map(r => JSON.parse(r.data))
 
 const writeProjectOps = async (spacesDir, spaceId, projectId, ops) => {
-  const { opsPath } = getProjectPaths(spacesDir, spaceId, projectId)
-  await writeJson(opsPath, Array.isArray(ops) ? ops : [])
+  const { opsDeleteAll, opsInsert } = s()
+  const now = Date.now()
+  getDb().transaction(() => {
+    opsDeleteAll.run(projectId)
+    for (const op of (Array.isArray(ops) ? ops : [])) {
+      opsInsert.run(projectId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now)
+    }
+  })()
 }
 
 const appendProjectOps = async (spacesDir, spaceId, projectId, ops, maxHistory = 500) => {
-  const existing = await readProjectOps(spacesDir, spaceId, projectId)
-  const combined = existing.concat(Array.isArray(ops) ? ops : [])
-  const trimmed = combined.length > maxHistory ? combined.slice(combined.length - maxHistory) : combined
-  await writeProjectOps(spacesDir, spaceId, projectId, trimmed)
-  return trimmed
+  if (!Array.isArray(ops) || ops.length === 0) return
+  const { opsInsert, opsCount, opsTrim } = s()
+  const now = Date.now()
+  getDb().transaction(() => {
+    for (const op of ops) {
+      opsInsert.run(projectId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? now)
+    }
+    const { cnt } = opsCount.get(projectId)
+    if (cnt > maxHistory) opsTrim.run(projectId, projectId, cnt - maxHistory)
+  })()
 }
 
-const listProjectsInSpace = async (spacesDir, spaceId) => {
-  const projectsDir = getSpaceProjectsDir(spacesDir, spaceId)
-  await ensureDir(projectsDir)
-  const entries = await fsp.readdir(projectsDir, { withFileTypes: true })
-  const result = []
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue
-    const meta = await loadProjectMeta(spacesDir, spaceId, entry.name)
-    if (meta) {
-      result.push(meta)
-    }
+const ensureProject = async (spacesDir, spaceId, projectId, overrides = {}) => {
+  const { projectDir, assetsDir, documentPath } = getProjectPaths(spacesDir, spaceId, projectId)
+  await ensureDir(projectDir)
+  await ensureDir(assetsDir)
+  const now = Date.now()
+  s().ensureSpace.run(spaceId, spaceId, now, now, now)
+  const meta = await upsertProjectMeta(spacesDir, spaceId, projectId, overrides)
+  const existingDocument = await readJson(documentPath, null)
+  if (!existingDocument) {
+    await writeJson(documentPath, normalizeProjectDocument({
+      ...defaultProjectDocument,
+      projectMeta: { id: projectId, spaceId, title: meta.title, createdAt: meta.createdAt, updatedAt: meta.updatedAt, source: meta.source }
+    }))
   }
-  return result.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+  return meta
 }
+
+const listProjectsInSpace = async (spacesDir, spaceId) =>
+  s().selectBySpaceAll.all(spaceId).map(rowToMeta)
 
 const findProjectById = async (spacesDir, projectId) => {
-  const normalizedId = normalizeProjectId(projectId)
-  if (!normalizedId) return null
-  const projectIndex = await readProjectIndex(spacesDir)
-  const indexedSpaceId = typeof projectIndex[normalizedId] === 'string' ? projectIndex[normalizedId] : ''
-  if (indexedSpaceId) {
-    const indexedPaths = getProjectPaths(spacesDir, indexedSpaceId, normalizedId)
-    const indexedMeta = await readJson(indexedPaths.metaPath, null)
-    if (indexedMeta) {
-      return {
-        ...indexedPaths,
-        spaceId: indexedSpaceId,
-        projectId: normalizedId,
-        meta: indexedMeta
-      }
-    }
-    await removeProjectIndexEntry(spacesDir, normalizedId)
+  const normalized = normalizeProjectId(projectId)
+  if (!normalized) return null
+  const row = s().selectById.get(normalized)
+  if (!row) return null
+  return {
+    ...getProjectPaths(spacesDir, row.space_id, normalized),
+    spaceId: row.space_id,
+    projectId: normalized,
+    meta: rowToMeta(row)
   }
-  const spaceEntries = await fsp.readdir(spacesDir, { withFileTypes: true }).catch(() => [])
-  for (const entry of spaceEntries) {
-    if (!entry.isDirectory()) continue
-    const paths = getProjectPaths(spacesDir, entry.name, normalizedId)
-    const meta = await readJson(paths.metaPath, null)
-    if (meta) {
-      await setProjectIndexEntry(spacesDir, normalizedId, entry.name)
-      return {
-        ...paths,
-        spaceId: entry.name,
-        projectId: normalizedId,
-        meta
-      }
-    }
-  }
-  return null
 }
 
 const deleteProject = async (spacesDir, spaceId, projectId) => {
+  s().deleteById.run(projectId)
   const { projectDir } = getProjectPaths(spacesDir, spaceId, projectId)
   await fsp.rm(projectDir, { recursive: true, force: true })
-  await removeProjectIndexEntry(spacesDir, projectId)
 }
+
+const removeProjectIndexEntriesForSpace = async (spacesDir, spaceId) => {}
 
 const buildProjectAssetMeta = ({ assetId, file, source = 'server' }) => ({
   id: assetId || crypto.randomUUID(),
@@ -322,7 +285,7 @@ module.exports = {
   readProjectOps,
   removeProjectIndexEntriesForSpace,
   saveProjectMeta,
-  setProjectIndexEntry,
+  setProjectIndexEntry: async () => {},
   upsertProjectMeta,
   appendProjectOps,
   writeJson,

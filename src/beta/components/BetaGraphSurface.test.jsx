@@ -80,4 +80,84 @@ describe('BetaGraphSurface', () => {
         const paths = container.querySelectorAll('svg path')
         expect(paths.length).toBeGreaterThan(0)
     })
+
+    it('supports zooming in and out with graph controls', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { getByRole, getByText } = render(
+            <BetaGraphSurface
+                nodes={[colorNode]}
+                edges={[]}
+            />
+        )
+
+        expect(getByText('100%')).toBeTruthy()
+        fireEvent.click(getByRole('button', { name: 'Zoom in' }))
+        expect(getByText('110%')).toBeTruthy()
+        fireEvent.click(getByRole('button', { name: 'Zoom out' }))
+        expect(getByText('100%')).toBeTruthy()
+    })
+
+    it('calls onDeleteEdge when a wire path is clicked', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const cubeNode = makeNode('geom.cube', { id: 'cube-1', graphX: 320 })
+        const onDeleteEdge = vi.fn()
+
+        const { container } = render(
+            <BetaGraphSurface
+                nodes={[colorNode, cubeNode]}
+                edges={[{ id: 'edge-1', fromNodeId: 'color-1', fromPort: 'out', toNodeId: 'cube-1', toPort: 'color' }]}
+                onDeleteEdge={onDeleteEdge}
+            />
+        )
+
+        const wire = container.querySelector('svg path')
+        expect(wire).toBeTruthy()
+        fireEvent.click(wire)
+        expect(onDeleteEdge).toHaveBeenCalledWith('edge-1')
+    })
+
+    it('highlights a wire in red on hover and restores on leave', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const cubeNode = makeNode('geom.cube', { id: 'cube-1', graphX: 320 })
+
+        const { container } = render(
+            <BetaGraphSurface
+                nodes={[colorNode, cubeNode]}
+                edges={[{ id: 'edge-1', fromNodeId: 'color-1', fromPort: 'out', toNodeId: 'cube-1', toPort: 'color' }]}
+                onDeleteEdge={vi.fn()}
+            />
+        )
+
+        const wire = container.querySelector('svg path')
+        const strokeBefore = wire.getAttribute('stroke')
+        fireEvent.pointerEnter(wire)
+        expect(wire.getAttribute('stroke')).toBe('#ff5555')
+        fireEvent.pointerLeave(wire)
+        expect(wire.getAttribute('stroke')).toBe(strokeBefore)
+    })
+
+    it('pans the graph when dragging empty space', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { container } = render(
+            <BetaGraphSurface
+                nodes={[colorNode]}
+                edges={[]}
+            />
+        )
+
+        const surface = container.querySelector('.beta-graph-surface')
+        const stage = container.querySelector('.beta-graph-stage')
+        expect(surface).toBeTruthy()
+        expect(stage).toBeTruthy()
+
+        const transformBefore = stage.style.transform
+
+        fireEvent.pointerDown(surface, { button: 0, clientX: 200, clientY: 180 })
+        fireEvent.pointerMove(window, { clientX: 250, clientY: 220 })
+        fireEvent.pointerUp(window)
+
+        const transformAfter = stage.style.transform
+        // pan should have moved — transforms must differ
+        expect(transformAfter).not.toBe(transformBefore)
+    })
 })

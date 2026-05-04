@@ -53,7 +53,6 @@ export function useObjectActions({
         // Forward transform events only when live scene emitters are explicitly enabled.
         if (socketEmit?.objectChanged && modifiedObjects.length > 0) {
             modifiedObjects.forEach(obj => {
-                console.log('[Socket.IO] Broadcasting transform:', mode, obj.id)
                 socketEmit.objectChanged(obj.id, mode, obj)
             })
         }

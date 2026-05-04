@@ -10,3 +10,5 @@ applyTo: "src/project/**/*"
 - This scope primarily owns shared project-document logic, sync, presence, imports, and public viewer behavior.
 - Use [../../docs/ai/index.md](../../docs/ai/index.md) for deeper cross-repo reference.
 - Keep canonical instructions in `AGENTS.md`; this file is a generated path-specific bridge.
+- Primary role(s) for this area: **Node System Engineer (NSE), Schema/Protocol Engineer (SPE)** — read [docs/ai/roles/node-system-engineer.md](../../docs/ai/roles/node-system-engineer.md) before editing.
+- Minimum model tier for edits here: **Sonnet**.

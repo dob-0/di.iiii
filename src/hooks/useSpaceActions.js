@@ -25,12 +25,10 @@ export function useSpaceActions({
             } catch (error) {
                 const status = typeof error?.status === 'number' ? error.status : null
                 if (status && status !== 404) {
-                    console.warn('Failed to delete server space', error)
                     alert('Could not delete the server space. Please try again.')
                     return
                 }
                 if (!status) {
-                    console.warn('Server unavailable; removing local space only.', error)
                     alert('Server is unavailable. Removed local link only.')
                 }
             }
@@ -48,12 +46,10 @@ export function useSpaceActions({
             } catch (error) {
                 const status = typeof error?.status === 'number' ? error.status : null
                 if (status && status !== 404) {
-                    console.warn('Failed to update server space', error)
                     alert('Could not update the server space. Please try again.')
                     return
                 }
                 if (!status) {
-                    console.warn('Server unavailable; keeping local change only.', error)
                     alert('Server is unavailable. Local change only.')
                 }
             }
@@ -71,12 +67,10 @@ export function useSpaceActions({
             } catch (error) {
                 const status = typeof error?.status === 'number' ? error.status : null
                 if (status && status !== 404) {
-                    console.warn('Failed to update server space edit lock', error)
                     alert('Could not update the server space permissions. Please try again.')
                     return
                 }
                 if (!status) {
-                    console.warn('Server unavailable; keeping local change only.', error)
                     alert('Server is unavailable. Local change only.')
                 }
             }
@@ -100,12 +94,10 @@ export function useSpaceActions({
             } catch (error) {
                 const status = typeof error?.status === 'number' ? error.status : null
                 if (status && status !== 404) {
-                    console.warn('Failed to rename server space', error)
                     alert('Could not rename the server space. Please try again.')
                     return
                 }
                 if (!status) {
-                    console.warn('Server unavailable; keeping local rename only.', error)
                     alert('Server is unavailable. Local rename only.')
                 }
             }

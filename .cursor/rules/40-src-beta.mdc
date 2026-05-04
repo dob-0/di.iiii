@@ -11,3 +11,6 @@ alwaysApply: false
 - This scope primarily owns experimental node-first editor workflows and Beta-specific UX.
 - Use [../../docs/ai/index.md](../../docs/ai/index.md) for deeper reference.
 - Keep shared instructions in canonical `AGENTS.md` and `docs/ai/`, not in Cursor rule files.
+- Primary role(s) for this area: **UI/UX Engineer (UX), Node System Engineer (NSE), 3D/Viewport Engineer (VPE)** — read `docs/ai/roles/ui-ux-engineer.md` before editing.
+- Minimum model tier for edits here: **Sonnet**.
+

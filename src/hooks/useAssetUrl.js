@@ -67,7 +67,6 @@ export function useAssetUrl(assetRef, options = {}) {
             const typeAllowed = blobTopLevel ? allowedTopLevels.includes(blobTopLevel) : true
             const typeMatches = !expectedTopLevelType || blobTopLevel === expectedTopLevelType
             if (isHtmlLikeMimeType(resolvedType) || (!acceptsGenericBinary && (!typeAllowed || !typeMatches))) {
-                console.warn(`Asset ${assetId} unsupported MIME: ${resolvedType || 'unknown'}`)
                 setObjectUrl(null)
                 return false
             }
@@ -96,17 +95,17 @@ export function useAssetUrl(assetRef, options = {}) {
                         // ignore cache cleanup errors and continue to the remote source
                     }
                 }
-            } catch (error) {
-                console.warn(`Failed to read asset blob ${assetId}`, error)
+            } catch {
+                // ignore
             }
             try {
                 const streamed = await streamRemoteAsset(assetId)
                 if (applyBlob(streamed)) {
                     return
                 }
-            } catch (error) {
+            } catch {
                 if (remoteUrl) {
-                    console.warn(`Failed to stream asset ${assetId}`, error)
+                    // ignore
                 }
             }
             if (remoteUrl && !isFrontendAssetFallbackUrl(remoteUrl)) {
