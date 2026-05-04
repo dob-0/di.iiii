@@ -34,6 +34,7 @@
     font-size: 13px;
     letter-spacing: 0.18em;
     text-transform: lowercase;
+    -webkit-user-select: none;
     user-select: none;
     pointer-events: none;
 }
@@ -63,6 +64,7 @@
     cursor: grab;
     transition: border-color 0.14s, background 0.14s;
     touch-action: none;
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -114,6 +116,7 @@
 
 .beta-world-node-enter {
     margin-top: calc(6px * var(--card-scale, 1));
+    -webkit-appearance: none;
     appearance: none;
     border: 1px solid var(--di-cyan-border);
     border-radius: 0;
@@ -145,6 +148,7 @@
 }
 
 .beta-printer-profile-actions button {
+    -webkit-appearance: none;
     appearance: none;
     border: 1px solid rgba(107, 147, 255, 0.4);
     background: rgba(63, 105, 246, 0.12);
@@ -277,6 +281,7 @@
     letter-spacing: 0.16em;
     text-transform: lowercase;
     color: rgba(244, 247, 251, 0.3);
+    -webkit-user-select: none;
     user-select: none;
 }
 
@@ -288,6 +293,7 @@
 }
 
 .beta-world-type-card {
+    -webkit-appearance: none;
     appearance: none;
     width: 220px;
     min-height: 200px;
@@ -442,6 +448,7 @@
 }
 
 .beta-hub-onboarding-card button {
+    -webkit-appearance: none;
     appearance: none;
     justify-self: start;
     border: 1px solid rgba(77, 249, 255, 0.3);
@@ -483,6 +490,7 @@
 
 .beta-hub-create-btn,
 .beta-hub-import-btn {
+    -webkit-appearance: none;
     appearance: none;
     border: none;
     border-left: 1px solid var(--di-cyan-border);
@@ -540,6 +548,7 @@
 }
 
 .beta-hub-footer button {
+    -webkit-appearance: none;
     appearance: none;
     border: none;
     border-right: 1px solid var(--di-cyan-border);
@@ -680,6 +689,7 @@
 }
 
 .beta-project-list li > button.danger {
+    -webkit-appearance: none;
     appearance: none;
     border: none;
     border-left: 1px solid var(--di-cyan-border);
@@ -745,6 +755,7 @@
 .beta-primitive-row button,
 .beta-window-actions button,
 .beta-assets-list button {
+    -webkit-appearance: none;
     appearance: none;
     border: 1px solid var(--di-cyan-border);
     border-radius: 0;
@@ -801,6 +812,7 @@
 }
 
 .beta-topbar-back {
+    -webkit-appearance: none;
     appearance: none;
     border: none;
     border-radius: 0;
@@ -838,6 +850,7 @@
 }
 
 .beta-topbar-surfaces button {
+    -webkit-appearance: none;
     appearance: none;
     border: none;
     border-radius: 0;
@@ -868,6 +881,7 @@
 }
 
 .beta-topbar-primary-action {
+    -webkit-appearance: none;
     appearance: none;
     border: 1px solid rgba(77, 249, 255, 0.38);
     border-radius: 0;
@@ -903,6 +917,7 @@
 }
 
 .beta-topbar-scale-control select {
+    -webkit-appearance: none;
     appearance: none;
     border: none;
     border-radius: 0;
@@ -922,6 +937,7 @@
 }
 
 .beta-topbar-node-count {
+    -webkit-appearance: none;
     appearance: none;
     border: none;
     background: transparent;
@@ -944,6 +960,7 @@
 }
 
 .beta-topbar-overflow-btn {
+    -webkit-appearance: none;
     appearance: none;
     border: none;
     border-radius: 0;
@@ -976,6 +993,7 @@
 }
 
 .beta-topbar-overflow-menu button {
+    -webkit-appearance: none;
     appearance: none;
     border: none;
     border-radius: 0;
@@ -999,6 +1017,7 @@
     bottom: 24px;
     right: 24px;
     z-index: 1300;
+    -webkit-appearance: none;
     appearance: none;
     border: 1px solid rgba(220, 80, 70, 0.4);
     border-radius: 0;
@@ -1171,6 +1190,7 @@
 }
 
 .beta-viewport-empty-panel button {
+    -webkit-appearance: none;
     appearance: none;
     justify-self: center;
     border: 1px solid rgba(77, 249, 255, 0.3);
@@ -1321,6 +1341,7 @@
     padding: 7px 10px;
     font-size: 12px;
     font-family: inherit;
+    -webkit-appearance: none;
     appearance: none;
     -moz-appearance: textfield;
     box-sizing: border-box;
@@ -1574,6 +1595,7 @@
 }
 
 .beta-surface-workflow-actions button {
+    -webkit-appearance: none;
     appearance: none;
     border: 1px solid rgba(77, 249, 255, 0.3);
     border-radius: 0;
@@ -1592,6 +1614,7 @@
 }
 
 .beta-topbar-help-action {
+    -webkit-appearance: none;
     appearance: none;
     border: 1px solid rgba(77, 249, 255, 0.3);
     background: rgba(77, 249, 255, 0.08);
@@ -1755,6 +1778,7 @@
     cursor: pointer;
     font-size: 12px;
     -webkit-user-select: none;
+    -webkit-user-select: none;
     user-select: none;
     overflow: visible;
     transition: border-color 0.1s;
@@ -1861,6 +1885,7 @@
 .beta-op-create-scrim {
     position: absolute;
     inset: 0;
+    -webkit-appearance: none;
     appearance: none;
     border: 0;
     background: transparent;
@@ -1921,6 +1946,7 @@
 .beta-op-list button,
 .beta-help-header button,
 .beta-help-footer button {
+    -webkit-appearance: none;
     appearance: none;
     border: none;
     cursor: pointer;
@@ -1977,6 +2003,7 @@
 .beta-help-scrim {
     position: absolute;
     inset: 0;
+    -webkit-appearance: none;
     appearance: none;
     border: 0;
     background: transparent;
@@ -2037,6 +2064,7 @@
 
 .beta-help-mode-tabs button,
 .beta-help-tabs button {
+    -webkit-appearance: none;
     appearance: none;
     border: 1px solid var(--di-cyan-border);
     background: rgba(77, 249, 255, 0.04);
