@@ -51,6 +51,7 @@
     border-radius: 24px;
     background: rgba(255,255,255,0.84);
     box-shadow: 0 28px 70px rgba(52, 39, 16, 0.16);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     color: #23180a;
 }

@@ -1565,6 +1565,7 @@
     padding: 14px 16px;
     border: 1px solid var(--di-cyan-border);
     background: rgba(8, 12, 20, 0.92);
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
 }
 
