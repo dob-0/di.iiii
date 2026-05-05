@@ -118,7 +118,7 @@ export default function BetaEditor({
         open: false,
         surface: 'world',
         placement: null
-                                            {surfaceNodeCount} nodes
+    })
     const [paletteState, setPaletteState] = useState({
         open: false,
         surface: 'world',
@@ -848,6 +848,7 @@ export default function BetaEditor({
                             className={`beta-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
                             onClick={() => setOutlinerOpen((v) => !v)}
                             title="Toggle outliner"
+                            aria-label={`${surfaceNodeCount} nodes`}
                         >
                             {surfaceNodeCount} {surfaceNodeCount === 1 ? 'node' : 'nodes'}
                         </button>
