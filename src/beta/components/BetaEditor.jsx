@@ -118,7 +118,7 @@ export default function BetaEditor({
         open: false,
         surface: 'world',
         placement: null
-    })
+                                            {surfaceNodeCount} nodes
     const [paletteState, setPaletteState] = useState({
         open: false,
         surface: 'world',
