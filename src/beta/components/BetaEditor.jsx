@@ -128,6 +128,8 @@ export default function BetaEditor({
     const [helpOpen, setHelpOpen] = useState(false)
     const [outlinerOpen, setOutlinerOpen] = useState(false)
     const [outlinerFrame, setOutlinerFrame] = useState({ x: 24, y: 56, width: 240, height: 360, zIndex: 20, minimized: false, pinned: false })
+    const [graphWindowOpen, setGraphWindowOpen] = useState(false)
+    const [viewportWindowOpen, setViewportWindowOpen] = useState(false)
 
     const initialStoreState = useMemo(() => {
         if (projectId || !localStorageKey) return undefined
@@ -217,7 +219,7 @@ export default function BetaEditor({
         () => authoredNodes.filter((node) => matchesNodeTypeSurface(getNodeType(node.typeId), activeSurface)),
         [activeSurface, authoredNodes]
     )
-    const surfaceNodeCount = surfaceNodes.length
+    const surfaceNodeCount = authoredNodes.length
 
     useEffect(() => {
         if (!isLocalWorkspace || !localStorageKey) return
@@ -432,8 +434,8 @@ export default function BetaEditor({
         }
         if (render === 'panel-2d') {
             values.frame = {
-                x: Math.max(24, (place?.clientX || 280) - 180),
-                y: Math.max(workspaceTop + 24, (place?.clientY || (workspaceTop + 180)) - 36),
+                x: ((place?.clientX ?? 280) - 180),
+                y: Math.max(workspaceTop + 24, (place?.clientY ?? (workspaceTop + 180)) - 36),
                 width: 360,
                 height: 280,
                 zIndex: topZIndex + 1,
@@ -450,7 +452,7 @@ export default function BetaEditor({
         const values = buildNodeValues(definition.id, params, place)
         const nextNode = createNode(definition.id, {
             values,
-            graphX: Math.max(20, (place.graphX ?? place.clientX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2)),
+            graphX: (place.graphX ?? place.clientX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2),
             graphY: Math.max(20, (place.graphY ?? place.clientY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2))
         })
         if (!nextNode) return
@@ -465,7 +467,7 @@ export default function BetaEditor({
         setPaletteState({ open: false, surface: paletteState.surface, placement: null })
     }
 
-    const handleStartFromNodeZero = () => {
+    const handleStartFromNodeZero = (placement = null) => {
         const existing = authoredNodes.find((node) => node.typeId === 'universe.node0')
         if (existing) {
             dispatch({ type: 'select-entity', entityId: null })
@@ -481,15 +483,19 @@ export default function BetaEditor({
             return
         }
 
+        const graphX = (placement?.graphX ?? placement?.clientX ?? 200) - (ROOT_WORLD_CARD_WIDTH / 2)
+        const graphY = Math.max(20, (placement?.graphY ?? placement?.clientY ?? (workspaceTop + 160)) - (ROOT_WORLD_CARD_HEIGHT / 2))
+        const placementForValues = {
+            clientX: placement?.clientX ?? 220,
+            clientY: placement?.clientY ?? (workspaceTop + 160)
+        }
+
         const node = createNode('universe.node0', {
-            graphX: 120,
-            graphY: workspaceTop + 84,
+            graphX,
+            graphY,
             values: buildNodeValues('universe.node0', {
                 title: 'Node 0'
-            }, {
-                clientX: 220,
-                clientY: workspaceTop + 160
-            })
+            }, placementForValues)
         })
         if (!node) return
 
@@ -506,6 +512,10 @@ export default function BetaEditor({
                 }
             }
         ], { activityMessage: 'Created Node 0.' })
+    }
+
+    const handleWorldSurfaceDoubleClick = (placement) => {
+        openPalette('world', placement)
     }
 
     const handleCreateStreamingPrototype = () => {
@@ -666,7 +676,7 @@ export default function BetaEditor({
                 nextValues.frame = {
                     ...prevFrame,
                     visible: true,
-                    x: placement.clientX ? Math.max(24, placement.clientX - 180) : (prevFrame.x || 96),
+                    x: placement.clientX != null ? (placement.clientX - 180) : (prevFrame.x ?? 96),
                     y: placement.clientY ? Math.max(workspaceTop + 24, placement.clientY - 36) : (prevFrame.y || 140),
                     zIndex: topZIndex + 1,
                     title: params?.title || prevFrame.title || existingSingleton.label
@@ -785,9 +795,8 @@ export default function BetaEditor({
 
     return (
         <main
-            className={`beta-editor-shell beta-editor-shell-${activeSurface}`}
+            className="beta-editor-shell"
             onDoubleClick={(event) => {
-                if (activeSurface !== 'view') return
                 if (event.target?.closest?.(VIEW_DOUBLE_CLICK_IGNORE_SELECTOR)) return
                 openPalette('view', {
                     clientX: event.clientX,
@@ -804,14 +813,16 @@ export default function BetaEditor({
                     </button>
                     <span className="beta-topbar-name" title={workspaceTitle}>{workspaceTitle}</span>
                 </div>
-                <div className="beta-topbar-surfaces">
-                    <button type="button" className={activeSurface === 'world' ? 'is-active' : ''} onClick={() => activateSurface('world')}>World</button>
-                    <button type="button" className={activeSurface === 'view' ? 'is-active' : ''} onClick={() => activateSurface('view')}>View</button>
-                    <button type="button" className={activeSurface === 'graph' ? 'is-active' : ''} onClick={() => activateSurface('graph')}>Graph</button>
+                <div className="beta-topbar-windows">
+                    <button type="button" className={graphWindowOpen ? 'is-active' : ''} onClick={() => setGraphWindowOpen((v) => !v)}>Graph</button>
+                    <button type="button" className={viewportWindowOpen ? 'is-active' : ''} onClick={() => setViewportWindowOpen((v) => !v)}>World</button>
                 </div>
                 <div className="beta-topbar-right">
-                    <button type="button" className="beta-topbar-primary-action" onClick={() => openSurfaceCreate(activeSurface)}>
-                        {workflow.actionLabel}
+                    <button type="button" className="beta-topbar-primary-action" onClick={() => openCreateDialog('view', {
+                        clientX: Math.round(window.innerWidth * 0.5),
+                        clientY: Math.round(workspaceTop + ((window.innerHeight - workspaceTop) * 0.35))
+                    })}>
+                        New Window
                     </button>
                     <button type="button" className="beta-topbar-help-action" onClick={() => setHelpOpen(true)}>
                         Help
@@ -838,15 +849,15 @@ export default function BetaEditor({
                             onClick={() => setOutlinerOpen((v) => !v)}
                             title="Toggle outliner"
                         >
-                            {surfaceNodeCount} nodes
+                            {surfaceNodeCount} {surfaceNodeCount === 1 ? 'node' : 'nodes'}
                         </button>
                     )}
                     <div className="beta-topbar-overflow">
                         <button type="button" className="beta-topbar-overflow-btn" onClick={() => setOverflowOpen((v) => !v)}>⋯</button>
                         {overflowOpen && (
                             <div className="beta-topbar-overflow-menu">
-                                <button type="button" onClick={() => { openCreateDialog('world'); setOverflowOpen(false) }}>Add World Node</button>
-                                <button type="button" onClick={() => { openCreateDialog('view'); setOverflowOpen(false) }}>Add View Node</button>
+                                <button type="button" onClick={() => { openCreateDialog('world'); setOverflowOpen(false) }}>Place World Node</button>
+                                <button type="button" onClick={() => { openCreateDialog('view'); setOverflowOpen(false) }}>Place View Node</button>
                                 <button type="button" onClick={() => { handleStartFromNodeZero(); setOverflowOpen(false) }}>Start From Node 0</button>
                                 <button type="button" onClick={() => { handleCreateStreamingPrototype(); setOverflowOpen(false) }}>Create Streaming Prototype</button>
                                 {isLocalWorkspace && (
@@ -872,93 +883,17 @@ export default function BetaEditor({
             )}
 
             <section className="beta-surface-shell" style={{ paddingTop: `${workspaceTop}px` }}>
-                {(() => {
-                    const hasWorldContent = entities.length > 0 || nodes.length > 0
-                    const hasGraphContent = nodes.length > 0
-                    const hasViewContent = visibleViewNodes.length > 0
-                    const showWorkflow = 
-                        (activeSurface === 'world' && !hasWorldContent) ||
-                        (activeSurface === 'graph' && !hasGraphContent) ||
-                        (activeSurface === 'view' && !hasViewContent)
-                    return showWorkflow ? (
-                        <div className="beta-surface-workflow" ref={workflowRef}>
-                            <div className="beta-surface-workflow-copy">
-                                <strong>{workflow.title}</strong>
-                                <p>{workflow.description}</p>
-                            </div>
-                            <div className="beta-surface-workflow-actions">
-                                <button type="button" onClick={() => openSurfaceCreate(activeSurface)}>
-                                    {workflow.actionLabel}
-                                </button>
-                                <button type="button" onClick={() => setHelpOpen(true)}>
-                                    How To Use {workflow.surfaceLabel}
-                                </button>
-                                {activeSurface !== 'graph' ? (
-                                    <button type="button" onClick={() => activateSurface('graph')}>
-                                        Open Graph
-                                    </button>
-                                ) : null}
-                            </div>
-                        </div>
-                    ) : null
-                })()}
 
-                {activeSurface === 'graph' ? (
-                    <BetaGraphSurface
-                        topInset={workflowHeight}
-                        nodes={nodes}
-                        edges={document.edges || []}
-                        selectedNodeId={workspaceState.selectedNodeId}
-                        onSelectNode={selectNode}
-                        onCreateEdge={(payload) => applyLocalOps({
-                            type: 'createEdge',
-                            payload: { edge: payload }
-                        })}
-                        onDeleteEdge={(edgeId) => applyLocalOps({
-                            type: 'deleteEdge',
-                            payload: { edgeId }
-                        })}
-                        onDeleteNode={(nodeId) => applyLocalOps([
-                            { type: 'deleteNode', payload: { nodeId } },
-                            { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
-                        ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })}
-                        onMoveNode={(nodeId, nextX, nextY) => applyLocalOps({
-                            type: 'updateNode',
-                            payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
-                        })}
-                        onDoubleClick={(placement) => openPalette('graph', placement)}
-                    />
-                ) : null}
-
-                {activeSurface === 'world' ? (
-                    <BetaViewport
-                        topInset={workflowHeight}
-                        document={document}
-                        selectedEntityId={surfaceSelectedEntity?.id || null}
-                        selectedNodeId={surfaceSelectedNode?.id || null}
-                        onSelectEntity={selectEntity}
-                        onSelectNode={selectNode}
-                        onClearSelection={clearSelection}
-                        onWorldDoubleClick={(placement) => openPalette('world', placement)}
-                        onMoveNode={handleMoveWorldNode}
-                        cursors={presence.cursors}
-                        onCursorMove={presence.emitCursor}
-                        onCursorLeave={presence.clearCursor}
-                        nodeScale={nodeScale}
-                    />
-                ) : null}
-
-                {activeSurface === 'view' ? (
-                    <BetaViewSurface
-                        topInset={workflowHeight}
-                        zoom={viewZoom}
-                        panX={viewPanX}
-                        panY={viewPanY}
-                        onZoomChange={setViewZoom}
-                        onPanChange={(x, y) => { setViewPanX(x); setViewPanY(y) }}
-                        onDoubleClick={(placement) => openPalette('view', placement)}
-                    >
-                        {visibleViewNodes.map((node, index) => {
+                <BetaViewSurface
+                    topInset={workflowHeight}
+                    zoom={viewZoom}
+                    panX={viewPanX}
+                    panY={viewPanY}
+                    onZoomChange={setViewZoom}
+                    onPanChange={(x, y) => { setViewPanX(x); setViewPanY(y) }}
+                    onDoubleClick={(placement) => openPalette('view', placement)}
+                >
+                    {visibleViewNodes.map((node, index) => {
                             const windowState = buildWindowStateFromNode(node, index)
                             return (
                                 <DesktopWindow
@@ -966,6 +901,8 @@ export default function BetaEditor({
                                     windowState={windowState}
                                     title={windowState.title}
                                     kicker={node.typeId}
+                                    allowOverflowLeft
+                                    allowOverflowTop
                                     canvasZoom={viewZoom}
                                     onFocus={() => {
                                         selectNode(node.id)
@@ -1011,8 +948,65 @@ export default function BetaEditor({
                             )
                         })}
                     </BetaViewSurface>
-                ) : null}
             </section>
+
+            {graphWindowOpen && (
+                <div className="beta-system-window beta-system-window-graph" style={{ top: `${workspaceTop}px` }}>
+                    <div className="beta-system-window-bar">
+                        <span className="beta-system-window-title">Graph</span>
+                        <button type="button" className="beta-system-window-close" onClick={() => setGraphWindowOpen(false)}>×</button>
+                    </div>
+                    <BetaGraphSurface
+                        topInset={0}
+                        nodes={nodes}
+                        edges={document.edges || []}
+                        selectedNodeId={workspaceState.selectedNodeId}
+                        onSelectNode={selectNode}
+                        onCreateEdge={(payload) => applyLocalOps({
+                            type: 'createEdge',
+                            payload: { edge: payload }
+                        })}
+                        onDeleteEdge={(edgeId) => applyLocalOps({
+                            type: 'deleteEdge',
+                            payload: { edgeId }
+                        })}
+                        onDeleteNode={(nodeId) => applyLocalOps([
+                            { type: 'deleteNode', payload: { nodeId } },
+                            { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
+                        ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })}
+                        onMoveNode={(nodeId, nextX, nextY) => applyLocalOps({
+                            type: 'updateNode',
+                            payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
+                        })}
+                        onDoubleClick={(placement) => openPalette('graph', placement)}
+                    />
+                </div>
+            )}
+
+            {viewportWindowOpen && (
+                <div className="beta-system-window beta-system-window-viewport" style={{ top: `${workspaceTop}px` }}>
+                    <div className="beta-system-window-bar">
+                        <span className="beta-system-window-title">World</span>
+                        <button type="button" className="beta-system-window-close" onClick={() => setViewportWindowOpen(false)}>×</button>
+                    </div>
+                    <BetaViewport
+                        topInset={0}
+                        document={document}
+                        selectedEntityId={surfaceSelectedEntity?.id || null}
+                        selectedNodeId={surfaceSelectedNode?.id || null}
+                        onSelectEntity={selectEntity}
+                        onSelectNode={selectNode}
+                        onClearSelection={clearSelection}
+                        onWorldDoubleClick={handleWorldSurfaceDoubleClick}
+                        onMoveNode={handleMoveWorldNode}
+                        cursors={presence.cursors}
+                        onCursorMove={presence.emitCursor}
+                        onCursorLeave={presence.clearCursor}
+                        nodeScale={nodeScale}
+                        showEmptyHint={false}
+                    />
+                </div>
+            )}
 
             {outlinerOpen && (
                 <DesktopWindow

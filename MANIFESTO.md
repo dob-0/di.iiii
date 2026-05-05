@@ -101,6 +101,25 @@ Minimum note format:
 
 Keep it brief and actionable. Capture the path that worked, not a long narrative.
 
+### Shortcut: Smart Staging Deploy (No Guesswork)
+
+- Problem: Deploy request arrives while the branch has uncommitted or mixed-scope changes.
+- Short way:
+	1. Never deploy from a dirty worktree unless explicitly approved.
+	2. Commit only the intended deploy scope (or clearly approved full scope), then deploy from that commit.
+	3. Run `npm run deploy:staging` from `dev` only.
+	4. Verify publish pipeline status, then run staging smoke checks.
+- Verification:
+	- `git status --short --branch` shows clean worktree before deploy.
+	- `gh run list --workflow publish-cpanel-prebuilt-v2.yml` shows the latest staging publish succeeded.
+	- `npm run deploy -- smoke staging` passes.
+	- `https://staging.di-studio.xyz` and `https://staging.di-studio.xyz/serverXR/api/health` respond correctly.
+- Source files or commands used:
+	- `scripts/deploy.mjs`
+	- `CURRENT.md` deploy commands
+	- `npm run deploy:staging`
+	- `npm run deploy -- smoke staging`
+
 ### Shortcut: Staging Not Fresh After Push
 
 - Problem: staging site still serves an old build or throws runtime errors after staging was updated.
