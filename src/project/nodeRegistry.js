@@ -510,7 +510,7 @@ export const NODE_TYPES = {
             active: true,
             hostHint: 'any',
         },
-        render: 'panel-2d',
+        render: 'hidden',
     },
 
     'universe.world': {

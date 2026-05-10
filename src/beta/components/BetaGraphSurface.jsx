@@ -53,6 +53,7 @@ export default function BetaGraphSurface({
     edges = [],
     selectedNodeId = null,
     onSelectNode,
+    onEnterNode,
     onCreateEdge,
     onDeleteEdge,
     onDeleteNode,
@@ -404,12 +405,13 @@ export default function BetaGraphSurface({
                                     event.currentTarget.setPointerCapture(event.pointerId)
                                 }}
                                 onKeyDown={(event) => handleNodeKeyDown(event, node.id)}
-                                onDoubleClick={(event) => event.stopPropagation()}
+                                onDoubleClick={(event) => { event.stopPropagation(); onEnterNode?.(node.id) }}
                             >
                                 <header className="beta-graph-node-header">
                                     <span className="beta-graph-node-icon" />
                                     <span className="beta-graph-node-label">{node.label}</span>
                                     <span className="beta-graph-node-category">{typeDef?.category || ''}</span>
+                                    <span className="beta-graph-node-enter-hint" title="Double-click to enter">›</span>
                                 </header>
                                 <div style={{ position: 'relative', height: h - HEADER_HEIGHT }}>
                                     {inputs.map((port, idx) => (

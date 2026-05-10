@@ -129,12 +129,13 @@ describe('BetaEditor canvas mode', () => {
 
         render(<BetaEditor localStorageKey={CANVAS_STORAGE_KEY} canvasMode />)
 
-        expect(screen.queryByRole('button', { name: /enter node 0/i })).toBeNull()
         // Graph is the primary surface — no toggle button needed
         expect(screen.queryByRole('button', { name: /graph/i })).toBeNull()
         // World button only appears after a spatial node is added
         expect(screen.queryByRole('button', { name: /world/i })).toBeNull()
-        expect(screen.getByRole('dialog', { name: 'Node 0' })).toBeInTheDocument()
+        // Node 0 is no longer a floating panel — topbar is its presence, scope label shows its name
+        expect(screen.queryByRole('dialog', { name: 'Node 0' })).toBeNull()
+        expect(screen.getAllByText('Node 0').length).toBeGreaterThan(0)
     })
 })
 

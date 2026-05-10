@@ -881,6 +881,99 @@
     white-space: nowrap;
 }
 
+.beta-topbar-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.beta-topbar-crumb-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.beta-topbar-crumb-sep {
+    color: rgba(244, 247, 251, 0.25);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.beta-topbar-crumb {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.45);
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.beta-topbar-crumb:hover {
+    background: rgba(77, 249, 255, 0.08);
+    color: var(--di-cyan);
+}
+
+.beta-topbar-crumb.is-current {
+    color: rgba(244, 247, 251, 0.9);
+    font-weight: 600;
+    background: rgba(77, 249, 255, 0.06);
+    border: 1px solid var(--di-cyan-border);
+}
+
+/* Depth indicator — subtle inset when inside a node */
+.beta-surface-shell.is-inside-node {
+    box-shadow: inset 0 0 0 2px rgba(77, 249, 255, 0.08);
+}
+
+/* Scope label — "Inside: NodeName" bar at top of graph */
+.beta-scope-label {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 16px;
+    height: 32px;
+    background: rgba(77, 249, 255, 0.04);
+    border-bottom: 1px solid rgba(77, 249, 255, 0.1);
+    pointer-events: auto;
+}
+
+.beta-scope-exit {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.45);
+    font-size: 11px;
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.beta-scope-exit:hover {
+    background: rgba(77, 249, 255, 0.08);
+    color: var(--di-cyan);
+}
+
+.beta-scope-name {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: rgba(244, 247, 251, 0.5);
+    letter-spacing: 0.06em;
+}
+
 .beta-topbar-surfaces {
     display: flex;
     align-items: center;
@@ -2004,6 +2097,19 @@
     white-space: nowrap;
     flex-shrink: 0;
     font-family: 'JetBrains Mono', monospace;
+}
+
+.beta-graph-node-enter-hint {
+    font-size: 13px;
+    color: rgba(244, 247, 251, 0.2);
+    flex-shrink: 0;
+    line-height: 1;
+    transition: color 0.15s;
+}
+
+.beta-graph-node-card:hover .beta-graph-node-enter-hint,
+.beta-graph-node-card.is-selected .beta-graph-node-enter-hint {
+    color: rgba(77, 249, 255, 0.7);
 }
 
 .beta-graph-port-row {

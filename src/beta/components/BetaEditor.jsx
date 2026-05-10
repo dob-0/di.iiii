@@ -113,6 +113,7 @@ export default function BetaEditor({
     const [outlinerFrame, setOutlinerFrame] = useState({ x: 24, y: 56, width: 240, height: 360, zIndex: 20, minimized: false, pinned: false })
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
     const [isWorldOverlay, setIsWorldOverlay] = useState(false)
+    const [navStack, setNavStack] = useState([null])
 
     const initialStoreState = useMemo(() => {
         if (projectId || !localStorageKey) return undefined
@@ -198,10 +199,15 @@ export default function BetaEditor({
         () => authoredNodes.filter((node) => matchesNodeTypeSurface(getNodeType(node.typeId), activeSurface)),
         [activeSurface, authoredNodes]
     )
-    // Panel nodes are already visible as floating windows — skip them as graph cards
+    const currentScopeId = navStack[navStack.length - 1]
+    // Panel nodes float as windows; graph cards are non-panel, non-context nodes in the current scope
     const graphCardNodes = useMemo(
-        () => nodes.filter((node) => getNodeType(node.typeId)?.render !== 'panel-2d'),
-        [nodes]
+        () => nodes.filter((node) => {
+            if (getNodeType(node.typeId)?.render === 'panel-2d') return false
+            if (node.typeId === 'universe.node0') return false  // topbar is node0's presence
+            return (node.parentId || null) === currentScopeId
+        }),
+        [nodes, currentScopeId]
     )
     const surfaceNodeCount = authoredNodes.length
     const hasAnyNodes = surfaceNodeCount > 0
@@ -219,6 +225,10 @@ export default function BetaEditor({
         [authoredNodes]
     )
     const hasWorldNode = Boolean(worldNode)
+    const currentScopeNode = useMemo(
+        () => currentScopeId ? (authoredNodes.find((n) => n.id === currentScopeId) || null) : null,
+        [currentScopeId, authoredNodes]
+    )
     const topbarLocationText = useMemo(() => {
         if (!hasNodeZero) return 'Double-click to place Node 0'
         if (!hasGraphNodes && !hasWorldNode) return 'Double-click to place your first node'
@@ -230,6 +240,7 @@ export default function BetaEditor({
         setIsWorldFullscreen(false)
         setIsWorldOverlay(false)
         setOutlinerOpen(false)
+        setNavStack([null])
     }, [hasAnyNodes])
 
     useEffect(() => {
@@ -238,6 +249,14 @@ export default function BetaEditor({
             setIsWorldOverlay(false)
         }
     }, [hasWorldNode])
+
+    // Auto-enter Node 0's scope on load or when it first appears
+    useEffect(() => {
+        if (!hasNodeZero) return
+        const node0 = authoredNodes.find((n) => n.typeId === 'universe.node0')
+        if (node0) setNavStack((prev) => prev.includes(node0.id) ? prev : [null, node0.id])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hasNodeZero])
 
     useEffect(() => {
         if (!isLocalWorkspace || !localStorageKey) return
@@ -332,6 +351,22 @@ export default function BetaEditor({
             }
         })
     }
+
+    const handleEnterNode = useCallback((nodeId) => {
+        const node = authoredNodes.find((n) => n.id === nodeId)
+        if (!node) return
+        if (node.typeId === 'universe.world') setIsWorldFullscreen(true)
+        setNavStack((prev) => [...prev, nodeId])
+    }, [authoredNodes])
+
+    const handleNavigateToScope = useCallback((targetIndex) => {
+        setNavStack((prev) => {
+            const next = prev.slice(0, targetIndex + 1)
+            const newScopeId = next[next.length - 1]
+            if (worldNode && newScopeId !== worldNode.id) setIsWorldFullscreen(false)
+            return next
+        })
+    }, [worldNode])
 
     const handleInspectorChange = (component, nextComponentValue) => {
         if (surfaceSelectedNode) {
@@ -469,7 +504,8 @@ export default function BetaEditor({
         const nextNode = createNode(definition.id, {
             values,
             graphX: (place.graphX ?? place.clientX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2),
-            graphY: Math.max(20, (place.graphY ?? place.clientY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2))
+            graphY: Math.max(20, (place.graphY ?? place.clientY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2)),
+            parentId: currentScopeId
         })
         if (!nextNode) return
         const nodeRender = getNodeType(definition.id)?.render || 'hidden'
@@ -486,16 +522,7 @@ export default function BetaEditor({
     const handleStartFromNodeZero = (placement = null) => {
         const existing = authoredNodes.find((node) => node.typeId === 'universe.node0')
         if (existing) {
-            dispatch({ type: 'select-entity', entityId: null })
-            applyLocalOps({
-                type: 'setWorkspaceState',
-                payload: {
-                    patch: {
-                        activeSurface: 'graph',
-                        selectedNodeId: existing.id
-                    }
-                }
-            }, { activityMessage: 'Focused Node 0.' })
+            if (!navStack.includes(existing.id)) setNavStack([null, existing.id])
             return
         }
 
@@ -523,11 +550,13 @@ export default function BetaEditor({
                 payload: {
                     patch: {
                         activeSurface: 'graph',
-                        selectedNodeId: node.id
+                        selectedNodeId: null
                     }
                 }
             }
         ], { activityMessage: 'Created Node 0.' })
+        // Enter Node 0's interior — canvas becomes its world
+        setNavStack([null, node.id])
     }
 
     const handleWorldSurfaceDoubleClick = (placement) => {
@@ -748,6 +777,11 @@ export default function BetaEditor({
         const handler = (event) => {
             const tag = event.target?.tagName?.toLowerCase?.()
             if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
+            if (event.key === 'Escape' && navStack.length > 1) {
+                event.preventDefault()
+                handleNavigateToScope(navStack.length - 2)
+                return
+            }
             const isUndo = (event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey
             const isRedo = (event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))
             if (!isUndo && !isRedo) return
@@ -766,7 +800,7 @@ export default function BetaEditor({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [dispatch, state.version])
+    }, [dispatch, handleNavigateToScope, navStack.length, state.version])
 
     const handleMoveWorldNode = (nodeId, nextPosition) => {
         applyLocalOps({
@@ -776,7 +810,7 @@ export default function BetaEditor({
     }
 
     const workspaceTitle = isLocalWorkspace ? 'Blank White Workspace' : (document.projectMeta?.title || 'Beta Project')
-    const graphTopInset = hasNodeZero ? workspaceTop : 0
+    const graphTopInset = hasNodeZero ? workspaceTop + (currentScopeId ? 32 : 0) : 0
 
     return (
         <main className="beta-editor-shell">
@@ -792,7 +826,30 @@ export default function BetaEditor({
                             <span className="beta-topbar-name" title={workspaceTitle}>{workspaceTitle}</span>
                         </div>
                         <div className="beta-topbar-center">
-                            <span className="beta-topbar-location" aria-live="polite">{topbarLocationText}</span>
+                            {navStack.length > 1 ? (
+                                <nav className="beta-topbar-breadcrumb" aria-label="Node scope">
+                                    <button type="button" className="beta-topbar-crumb" onClick={() => handleNavigateToScope(0)}>◈</button>
+                                    {navStack.slice(1).map((scopeId, i) => {
+                                        const crumbNode = authoredNodes.find((n) => n.id === scopeId)
+                                        const stackIndex = i + 1
+                                        const isLast = stackIndex === navStack.length - 1
+                                        return (
+                                            <span key={scopeId} className="beta-topbar-crumb-group">
+                                                <span className="beta-topbar-crumb-sep">›</span>
+                                                <button
+                                                    type="button"
+                                                    className={`beta-topbar-crumb${isLast ? ' is-current' : ''}`}
+                                                    onClick={() => handleNavigateToScope(stackIndex)}
+                                                >
+                                                    {crumbNode?.label || 'Node'}
+                                                </button>
+                                            </span>
+                                        )
+                                    })}
+                                </nav>
+                            ) : (
+                                <span className="beta-topbar-location" aria-live="polite">{topbarLocationText}</span>
+                            )}
                             {hasWorldNode && (
                                 <div className="beta-topbar-windows">
                                     <button
@@ -876,13 +933,21 @@ export default function BetaEditor({
                 </button>
             )}
 
-            <section className={`beta-surface-shell${isWorldOverlay && !isWorldFullscreen ? ' is-world-overlay' : ''}`}>
+            <section className={`beta-surface-shell${isWorldOverlay && !isWorldFullscreen ? ' is-world-overlay' : ''}${navStack.length > 1 ? ' is-inside-node' : ''}`}>
+                {currentScopeNode && (
+                    <div className="beta-scope-label">
+                        <button type="button" className="beta-scope-exit" onClick={() => handleNavigateToScope(navStack.length - 2)}>← Exit</button>
+                        <span className="beta-scope-name">{currentScopeNode.label}</span>
+                    </div>
+                )}
                 {/* Graph is the primary surface — always visible */}
                 <BetaGraphSurface
+                    key={currentScopeId || 'root'}
                     topInset={graphTopInset}
                     nodes={graphCardNodes}
                     edges={document.edges || []}
                     selectedNodeId={workspaceState.selectedNodeId}
+                    onEnterNode={handleEnterNode}
                     onSelectNode={selectNode}
                     onCreateEdge={(payload) => applyLocalOps({
                         type: 'createEdge',
