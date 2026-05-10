@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { listNodeTypes } from '../../project/nodeRegistry.js'
 import { filterNodeTypesForSurface } from '../utils/nodeSurfaceFilters.js'
 
@@ -49,6 +49,13 @@ export default function NodePalette({
     const [query, setQuery] = useState('')
     const [activeIndex, setActiveIndex] = useState(0)
     const inputRef = useRef(null)
+    const listRef = useRef(null)
+
+    const scrollActiveIntoView = useCallback((index) => {
+        if (!listRef.current) return
+        const item = listRef.current.querySelectorAll('li')[index]
+        item?.scrollIntoView({ block: 'nearest' })
+    }, [])
 
     const definitions = filterNodeTypesForSurface(listNodeTypes({ query }), surface).map(toDefinitionShim).filter(Boolean)
 
@@ -83,12 +90,20 @@ export default function NodePalette({
         }
         if (event.key === 'ArrowDown') {
             event.preventDefault()
-            setActiveIndex((i) => Math.min(i + 1, definitions.length - 1))
+            setActiveIndex((i) => {
+                const next = Math.min(i + 1, definitions.length - 1)
+                scrollActiveIntoView(next)
+                return next
+            })
             return
         }
         if (event.key === 'ArrowUp') {
             event.preventDefault()
-            setActiveIndex((i) => Math.max(i - 1, 0))
+            setActiveIndex((i) => {
+                const next = Math.max(i - 1, 0)
+                scrollActiveIntoView(next)
+                return next
+            })
             return
         }
         if (event.key === 'Enter') {
@@ -125,8 +140,8 @@ export default function NodePalette({
                     />
                 </div>
                 {definitions.length > 0 ? (
-                    <ul className="beta-node-palette-list">
-                        {definitions.slice(0, 8).map((definition, index) => (
+                    <ul ref={listRef} className="beta-node-palette-list">
+                        {definitions.map((definition, index) => (
                             <li key={definition.id}>
                                 <button
                                     type="button"

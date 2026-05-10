@@ -12,6 +12,8 @@ export default function DesktopWindow({
     onToggleMinimize,
     onTogglePin,
     minTop = undefined,
+    allowOverflowLeft = false,
+    allowOverflowTop = false,
     canvasZoom = 1
 }) {
     const [draft, setDraft] = useState(() => ({
@@ -31,10 +33,12 @@ export default function DesktopWindow({
             height: windowState.height
         }, {
             minTop,
+            allowOverflowLeft,
+            allowOverflowTop,
             viewportWidth: typeof window !== 'undefined' ? window.innerWidth : undefined,
             viewportHeight: typeof window !== 'undefined' ? window.innerHeight : undefined
         }))
-    }, [minTop, windowState.height, windowState.width, windowState.x, windowState.y])
+    }, [allowOverflowLeft, allowOverflowTop, minTop, windowState.height, windowState.width, windowState.x, windowState.y])
 
     useEffect(() => {
         if (!interactionRef.current) return undefined
@@ -44,10 +48,12 @@ export default function DesktopWindow({
             if (state.mode === 'drag') {
                 setDraft((current) => clampWindowFrame({
                     ...current,
-                    x: Math.max(12, state.origin.x + (event.clientX - state.startX) / canvasZoom),
-                    y: Math.max(12, state.origin.y + (event.clientY - state.startY) / canvasZoom)
+                    x: state.origin.x + (event.clientX - state.startX) / canvasZoom,
+                    y: state.origin.y + (event.clientY - state.startY) / canvasZoom
                 }, {
                     minTop,
+                    allowOverflowLeft,
+                    allowOverflowTop,
                     viewportWidth: window.innerWidth,
                     viewportHeight: window.innerHeight
                 }))
@@ -59,6 +65,8 @@ export default function DesktopWindow({
                     height: Math.max(180, state.origin.height + (event.clientY - state.startY) / canvasZoom)
                 }, {
                     minTop,
+                    allowOverflowLeft,
+                    allowOverflowTop,
                     viewportWidth: window.innerWidth,
                     viewportHeight: window.innerHeight
                 }))
@@ -70,6 +78,8 @@ export default function DesktopWindow({
             if (!state) return
             const nextFrame = clampWindowFrame(draft, {
                 minTop,
+                allowOverflowLeft,
+                allowOverflowTop,
                 viewportWidth: window.innerWidth,
                 viewportHeight: window.innerHeight
             })
@@ -90,7 +100,7 @@ export default function DesktopWindow({
             window.removeEventListener('pointerup', handlePointerUp)
             window.removeEventListener('pointercancel', handlePointerUp)
         }
-    }, [draft, minTop, onPatch, canvasZoom])
+    }, [allowOverflowLeft, allowOverflowTop, draft, minTop, onPatch, canvasZoom])
 
     const startDrag = (event) => {
         event.preventDefault()

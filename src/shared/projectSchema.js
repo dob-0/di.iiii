@@ -17,7 +17,7 @@ export const WINDOW_IDS = ['viewport', 'assets', 'inspector', 'outliner', 'activ
 const ENTITY_TYPE_SET = new Set(ENTITY_TYPES)
 const LEGACY_ROOT_NODE_IDS = new Set(['root-node', 'world-root', 'view-root'])
 const LEGACY_ROOT_TYPE_IDS = new Set(['core.project', 'world.root', 'view.root'])
-const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar', 'world.light', 'world.background', 'world.grid'])
+const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar', 'world.light', 'world.background', 'world.grid', 'universe.world'])
 
 export const cloneValue = (value) => {
     if (Array.isArray(value)) {
@@ -429,7 +429,8 @@ export const normalizeProjectNode = (node = {}) => {
         graphX,
         graphY,
         runtimeId: source.runtimeId ?? null,
-        assetRef
+        assetRef,
+        parentId: ensureString(source.parentId, '') || null
     }
 }
 

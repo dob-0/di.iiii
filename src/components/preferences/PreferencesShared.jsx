@@ -231,7 +231,9 @@ export const buildSpaceRouteBundle = (spaceId) => ({
     adminPath: buildPreferencesPath(spaceId)
 })
 
-export function SpacePreviewRow({ space, isActive, routes, onOpenRoute, onCopy }) {
+export function SpacePreviewRow({ space, isActive, onOpenRoute, onCopy }) {
+    const routes = buildSpaceRouteBundle(space?.id)
+
     return (
         <div className={`preferences-space-row ${isActive ? 'is-active' : ''}`}>
             <div className="preferences-space-top">

@@ -3,11 +3,11 @@ import PropertyInspector from './PropertyInspector.jsx'
 import DesktopWindow from './DesktopWindow.jsx'
 import BetaViewport from './BetaViewport.jsx'
 import BetaGraphSurface from './BetaGraphSurface.jsx'
-import BetaViewSurface from './BetaViewSurface.jsx'
-import OpCreateDialog from './OpCreateDialog.jsx'
 import NodePalette from './NodePalette.jsx'
 import TextPanelWindow from './TextPanelWindow.jsx'
 import ImagePanelWindow from './ImagePanelWindow.jsx'
+import Node0PanelWindow from './Node0PanelWindow.jsx'
+import WorldPanelWindow from './WorldPanelWindow.jsx'
 import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
 import BetaHelpDialog from './BetaHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
@@ -41,20 +41,8 @@ const DISPLAY_NAME_KEY = 'dii.beta.displayName'
 const NODE_SCALE_KEY = 'dii.beta.nodeScale'
 const ROOT_WORLD_CARD_WIDTH = 160
 const ROOT_WORLD_CARD_HEIGHT = 120
-const VIEW_DOUBLE_CLICK_IGNORE_SELECTOR = [
-    '.beta-topbar',
-    '.beta-window',
-    '.beta-op-create-backdrop',
-    '.beta-selection-scaffold',
-    'button',
-    'input',
-    'textarea',
-    'select',
-    'label',
-    'iframe'
-].join(',')
-
 const WINDOW_DEFAULT_POSITIONS = {
+    'universe.world':  { x: 120,  y: 60, width: 680, height: 480 },
     'view.inspector':  { x: 24,   y: 56, width: 320, height: 480 },
     'view.assets':     { x: 24,   y: 56, width: 280, height: 380 },
     'view.outliner':   { x: 24,   y: 56, width: 240, height: 360 },
@@ -114,11 +102,6 @@ export default function BetaEditor({
             return ''
         }
     })
-    const [createDialogState, setCreateDialogState] = useState({
-        open: false,
-        surface: 'world',
-        placement: null
-    })
     const [paletteState, setPaletteState] = useState({
         open: false,
         surface: 'world',
@@ -128,8 +111,8 @@ export default function BetaEditor({
     const [helpOpen, setHelpOpen] = useState(false)
     const [outlinerOpen, setOutlinerOpen] = useState(false)
     const [outlinerFrame, setOutlinerFrame] = useState({ x: 24, y: 56, width: 240, height: 360, zIndex: 20, minimized: false, pinned: false })
-    const [graphWindowOpen, setGraphWindowOpen] = useState(false)
-    const [viewportWindowOpen, setViewportWindowOpen] = useState(false)
+    const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
+    const [isWorldOverlay, setIsWorldOverlay] = useState(false)
 
     const initialStoreState = useMemo(() => {
         if (projectId || !localStorageKey) return undefined
@@ -168,10 +151,6 @@ export default function BetaEditor({
         const deviceType = detectDeviceType()
         return getDefaultNodeScale(deviceType)
     })
-    const [viewZoom, setViewZoom] = useState(1)
-    const [viewPanX, setViewPanX] = useState(60)
-    const [viewPanY, setViewPanY] = useState(60)
-
     const historyRef = useRef([])
     const redoRef = useRef([])
     const documentRef = useRef(state.document)
@@ -219,7 +198,46 @@ export default function BetaEditor({
         () => authoredNodes.filter((node) => matchesNodeTypeSurface(getNodeType(node.typeId), activeSurface)),
         [activeSurface, authoredNodes]
     )
+    // Panel nodes are already visible as floating windows — skip them as graph cards
+    const graphCardNodes = useMemo(
+        () => nodes.filter((node) => getNodeType(node.typeId)?.render !== 'panel-2d'),
+        [nodes]
+    )
     const surfaceNodeCount = authoredNodes.length
+    const hasAnyNodes = surfaceNodeCount > 0
+    const hasNodeZero = useMemo(
+        () => authoredNodes.some((node) => node.typeId === 'universe.node0'),
+        [authoredNodes]
+    )
+    const createdNodesExcludingNodeZero = useMemo(
+        () => authoredNodes.filter((node) => node.typeId !== 'universe.node0'),
+        [authoredNodes]
+    )
+    const hasGraphNodes = createdNodesExcludingNodeZero.length > 0
+    const worldNode = useMemo(
+        () => authoredNodes.find((node) => node.typeId === 'universe.world') || null,
+        [authoredNodes]
+    )
+    const hasWorldNode = Boolean(worldNode)
+    const topbarLocationText = useMemo(() => {
+        if (!hasNodeZero) return 'Double-click to place Node 0'
+        if (!hasGraphNodes && !hasWorldNode) return 'Double-click to place your first node'
+        return workflow.title
+    }, [hasGraphNodes, hasNodeZero, hasWorldNode, workflow.title])
+
+    useEffect(() => {
+        if (hasAnyNodes) return
+        setIsWorldFullscreen(false)
+        setIsWorldOverlay(false)
+        setOutlinerOpen(false)
+    }, [hasAnyNodes])
+
+    useEffect(() => {
+        if (!hasWorldNode) {
+            setIsWorldFullscreen(false)
+            setIsWorldOverlay(false)
+        }
+    }, [hasWorldNode])
 
     useEffect(() => {
         if (!isLocalWorkspace || !localStorageKey) return
@@ -404,14 +422,6 @@ export default function BetaEditor({
     const inspectorTitle = surfaceSelectedNode ? surfaceSelectedNode.label : (surfaceSelectedEntity ? surfaceSelectedEntity.name : 'World')
     const inspectorSubtitle = surfaceSelectedNode ? surfaceSelectedNode.typeId : (surfaceSelectedEntity ? surfaceSelectedEntity.type : 'Scene defaults')
 
-    const openCreateDialog = (surface, placement = null) => {
-        setCreateDialogState({
-            open: true,
-            surface,
-            placement
-        })
-    }
-
     const openPalette = (surface, placement = null) => {
         setPaletteState({
             open: true,
@@ -433,11 +443,17 @@ export default function BetaEditor({
             ]
         }
         if (render === 'panel-2d') {
+            const isWorldNode = definitionId === 'universe.world'
+            const defaultW = isWorldNode ? 680 : 360
+            const defaultH = isWorldNode ? 480 : 280
+            const defaultX = isWorldNode
+                ? Math.max(16, (place?.clientX ?? 400) - 340)
+                : ((place?.clientX ?? 280) - 180)
             values.frame = {
-                x: ((place?.clientX ?? 280) - 180),
+                x: defaultX,
                 y: Math.max(workspaceTop + 24, (place?.clientY ?? (workspaceTop + 180)) - 36),
-                width: 360,
-                height: 280,
+                width: defaultW,
+                height: defaultH,
                 zIndex: topZIndex + 1,
                 title: params?.title || type?.label || definitionId,
                 visible: true
@@ -652,58 +668,6 @@ export default function BetaEditor({
         })
     }
 
-    const activateSurface = (surface) => {
-        applyLocalOps({
-            type: 'setWorkspaceState',
-            payload: { patch: { activeSurface: surface } }
-        })
-    }
-
-    const handleCreateNode = ({ definition, params, openGraph = false }) => {
-        if (!definition) return
-        const existingSingleton = definition.singleton
-            ? authoredNodes.find((node) => node.typeId === definition.id)
-            : null
-        const placement = createDialogState.placement || {}
-        const nextSurface = openGraph ? 'graph' : definition.surface
-        const ops = []
-        let selectedNodeId = existingSingleton?.id || null
-
-        if (existingSingleton) {
-            const nextValues = { ...(existingSingleton.values || {}), ...(params || {}) }
-            if (definition.surface === 'view') {
-                const prevFrame = existingSingleton.values?.frame || {}
-                nextValues.frame = {
-                    ...prevFrame,
-                    visible: true,
-                    x: placement.clientX != null ? (placement.clientX - 180) : (prevFrame.x ?? 96),
-                    y: placement.clientY ? Math.max(workspaceTop + 24, placement.clientY - 36) : (prevFrame.y || 140),
-                    zIndex: topZIndex + 1,
-                    title: params?.title || prevFrame.title || existingSingleton.label
-                }
-            }
-            ops.push({
-                type: 'updateNode',
-                payload: { nodeId: existingSingleton.id, patch: { values: nextValues } }
-            })
-        } else {
-            const values = buildNodeValues(definition.id, params, placement)
-            const nextNode = createNode(definition.id, { values })
-            if (!nextNode) return
-            selectedNodeId = nextNode.id
-            ops.push({ type: 'createNode', payload: { node: nextNode } })
-        }
-
-        ops.push({
-            type: 'setWorkspaceState',
-            payload: { patch: { selectedNodeId, activeSurface: nextSurface } }
-        })
-
-        dispatch({ type: 'select-entity', entityId: null })
-        applyLocalOps(ops, { activityMessage: `Created ${definition.label} node.` })
-        setCreateDialogState({ open: false, surface: 'world', placement: null })
-    }
-
     const hostInspector = (
         <aside className="beta-selection-scaffold" style={{ top: workflowHeight + 'px' }}>
             <PropertyInspector
@@ -723,6 +687,38 @@ export default function BetaEditor({
 
     const renderViewNodeContent = (node) => {
         const resolvedValues = evaluateNodeInputs(node, graphContext)
+        if (node.typeId === 'universe.node0') {
+            return <Node0PanelWindow node={{ ...node, values: resolvedValues }} />
+        }
+        if (node.typeId === 'universe.world') {
+            return (
+                <WorldPanelWindow
+                    document={document}
+                    selectedEntityId={surfaceSelectedEntity?.id || null}
+                    selectedNodeId={surfaceSelectedNode?.id || null}
+                    onSelectEntity={selectEntity}
+                    onSelectNode={selectNode}
+                    onClearSelection={clearSelection}
+                    onWorldDoubleClick={handleWorldSurfaceDoubleClick}
+                    onMoveNode={handleMoveWorldNode}
+                    cursors={presence.cursors}
+                    onCursorMove={presence.emitCursor}
+                    onCursorLeave={presence.clearCursor}
+                    nodeScale={nodeScale}
+                    onEnterFullscreen={() => setIsWorldFullscreen(true)}
+                    onEnterOverlay={() => {
+                        setIsWorldOverlay(true)
+                        applyLocalOps({
+                            type: 'updateNode',
+                            payload: {
+                                nodeId: node.id,
+                                patch: { values: { frame: { ...(node.values?.frame || {}), visible: false } } }
+                            }
+                        })
+                    }}
+                />
+            )
+        }
         if (node.typeId === 'view.browser') {
             return <BrowserPanelWindow node={{ ...node, values: resolvedValues }} />
         }
@@ -733,18 +729,6 @@ export default function BetaEditor({
     }
 
     const visibleSelection = Boolean(surfaceSelectedNode || surfaceSelectedEntity)
-
-    const openSurfaceCreate = (surface) => {
-        const placement = {
-            clientX: Math.round(window.innerWidth * 0.5),
-            clientY: Math.round(workspaceTop + ((window.innerHeight - workspaceTop) * 0.35))
-        }
-        if (surface === 'graph') {
-            openPalette('graph', placement)
-            return
-        }
-        openCreateDialog(surface, placement)
-    }
 
     useEffect(() => {
         if (!visibleSelection || activeSurface === 'graph') return undefined
@@ -792,87 +776,96 @@ export default function BetaEditor({
     }
 
     const workspaceTitle = isLocalWorkspace ? 'Blank White Workspace' : (document.projectMeta?.title || 'Beta Project')
+    const graphTopInset = hasNodeZero ? workspaceTop : 0
 
     return (
-        <main
-            className="beta-editor-shell"
-            onDoubleClick={(event) => {
-                if (event.target?.closest?.(VIEW_DOUBLE_CLICK_IGNORE_SELECTOR)) return
-                openPalette('view', {
-                    clientX: event.clientX,
-                    clientY: event.clientY
-                })
-            }}
-        >
-            <header className="beta-topbar" ref={topbarRef}>
-                <div className="beta-topbar-left">
-                    <button type="button" className="beta-topbar-back" onClick={() => {
-                        navigateToBetaPath(buildBetaProjectsPath(resolvedSpaceId))
-                    }}>
-                        ← {isLocalWorkspace ? 'Projects' : 'Hub'}
-                    </button>
-                    <span className="beta-topbar-name" title={workspaceTitle}>{workspaceTitle}</span>
-                </div>
-                <div className="beta-topbar-windows">
-                    <button type="button" className={graphWindowOpen ? 'is-active' : ''} onClick={() => setGraphWindowOpen((v) => !v)}>Graph</button>
-                    <button type="button" className={viewportWindowOpen ? 'is-active' : ''} onClick={() => setViewportWindowOpen((v) => !v)}>World</button>
-                </div>
-                <div className="beta-topbar-right">
-                    <button type="button" className="beta-topbar-primary-action" onClick={() => openCreateDialog('view', {
-                        clientX: Math.round(window.innerWidth * 0.5),
-                        clientY: Math.round(workspaceTop + ((window.innerHeight - workspaceTop) * 0.35))
-                    })}>
-                        New Window
-                    </button>
-                    <button type="button" className="beta-topbar-help-action" onClick={() => setHelpOpen(true)}>
-                        Help
-                    </button>
-                    <div className="beta-topbar-scale-control">
-                        <label htmlFor="node-scale-select">Size:</label>
-                        <select
-                            id="node-scale-select"
-                            value={nodeScale}
-                            onChange={(e) => setNodeScale(parseFloat(e.target.value))}
-                            title="Adjust node size for mobile, tablet, VR, or desktop viewing"
-                        >
-                            {getAvailableScales().map((s) => (
-                                <option key={s.value} value={s.value}>
-                                    {s.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    {surfaceNodeCount > 0 && (
-                        <button
-                            type="button"
-                            className={`beta-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
-                            onClick={() => setOutlinerOpen((v) => !v)}
-                            title="Toggle outliner"
-                            aria-label={`${surfaceNodeCount} nodes`}
-                        >
-                            {surfaceNodeCount} {surfaceNodeCount === 1 ? 'node' : 'nodes'}
-                        </button>
-                    )}
-                    <div className="beta-topbar-overflow">
-                        <button type="button" className="beta-topbar-overflow-btn" onClick={() => setOverflowOpen((v) => !v)}>⋯</button>
-                        {overflowOpen && (
-                            <div className="beta-topbar-overflow-menu">
-                                <button type="button" onClick={() => { openCreateDialog('world'); setOverflowOpen(false) }}>Place World Node</button>
-                                <button type="button" onClick={() => { openCreateDialog('view'); setOverflowOpen(false) }}>Place View Node</button>
-                                <button type="button" onClick={() => { handleStartFromNodeZero(); setOverflowOpen(false) }}>Start From Node 0</button>
-                                <button type="button" onClick={() => { handleCreateStreamingPrototype(); setOverflowOpen(false) }}>Create Streaming Prototype</button>
-                                {isLocalWorkspace && (
-                                    <button type="button" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Reset Workspace</button>
-                                )}
-                                {presence.users.length > 0 && presence.users.map((user) => (
-                                    <span key={user.socketId || user.userId} className="beta-user-pill">
-                                        {user.userName}
-                                    </span>
-                                ))}
+        <main className="beta-editor-shell">
+            <header className={`beta-topbar${hasNodeZero ? ' is-seeded' : ''}`} ref={topbarRef}>
+                {hasNodeZero && (
+                    <>
+                        <div className="beta-topbar-left">
+                            <button type="button" className="beta-topbar-back" onClick={() => {
+                                navigateToBetaPath(buildBetaProjectsPath(resolvedSpaceId))
+                            }}>
+                                ← {isLocalWorkspace ? 'Projects' : 'Hub'}
+                            </button>
+                            <span className="beta-topbar-name" title={workspaceTitle}>{workspaceTitle}</span>
+                        </div>
+                        <div className="beta-topbar-center">
+                            <span className="beta-topbar-location" aria-live="polite">{topbarLocationText}</span>
+                            {hasWorldNode && (
+                                <div className="beta-topbar-windows">
+                                    <button
+                                        type="button"
+                                        className={isWorldOverlay || isWorldFullscreen ? 'is-active' : ''}
+                                        onClick={() => {
+                                            if (isWorldFullscreen) { setIsWorldFullscreen(false); return }
+                                            if (isWorldOverlay) { setIsWorldOverlay(false); return }
+                                            const currentlyVisible = worldNode?.values?.frame?.visible !== false
+                                            applyLocalOps({
+                                                type: 'updateNode',
+                                                payload: {
+                                                    nodeId: worldNode.id,
+                                                    patch: { values: { frame: { ...(worldNode.values?.frame || {}), visible: !currentlyVisible } } }
+                                                }
+                                            })
+                                        }}
+                                    >
+                                        {isWorldFullscreen ? '← World' : isWorldOverlay ? '← Overlay' : 'World'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="beta-topbar-right">
+                            <button type="button" className="beta-topbar-help-action" onClick={() => setHelpOpen(true)}>
+                                Help
+                            </button>
+                            <div className="beta-topbar-scale-control">
+                                <label htmlFor="node-scale-select">Size:</label>
+                                <select
+                                    id="node-scale-select"
+                                    value={nodeScale}
+                                    onChange={(e) => setNodeScale(parseFloat(e.target.value))}
+                                    title="Adjust node size for mobile, tablet, VR, or desktop viewing"
+                                >
+                                    {getAvailableScales().map((s) => (
+                                        <option key={s.value} value={s.value}>
+                                            {s.label}
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
-                        )}
-                    </div>
-                </div>
+                            {surfaceNodeCount > 0 && (
+                                <button
+                                    type="button"
+                                    className={`beta-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
+                                    onClick={() => setOutlinerOpen((v) => !v)}
+                                    title="Toggle outliner"
+                                    aria-label={`${surfaceNodeCount} nodes`}
+                                >
+                                    {surfaceNodeCount} {surfaceNodeCount === 1 ? 'node' : 'nodes'}
+                                </button>
+                            )}
+                            <div className="beta-topbar-overflow">
+                                <button type="button" className="beta-topbar-overflow-btn" onClick={() => setOverflowOpen((v) => !v)}>⋯</button>
+                                {overflowOpen && (
+                                    <div className="beta-topbar-overflow-menu">
+                                        <button type="button" onClick={() => { handleStartFromNodeZero(); setOverflowOpen(false) }}>Node 0</button>
+                                        <button type="button" onClick={() => { handleCreateStreamingPrototype(); setOverflowOpen(false) }}>Streaming Prototype</button>
+                                        {isLocalWorkspace && (
+                                            <button type="button" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Reset Workspace</button>
+                                        )}
+                                        {presence.users.length > 0 && presence.users.map((user) => (
+                                            <span key={user.socketId || user.userId} className="beta-user-pill">
+                                                {user.userName}
+                                            </span>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </>
+                )}
             </header>
 
             {state.loading ? <div className="beta-overlay-message">Loading project…</div> : null}
@@ -883,115 +876,121 @@ export default function BetaEditor({
                 </button>
             )}
 
-            <section className="beta-surface-shell" style={{ paddingTop: `${workspaceTop}px` }}>
-
-                <BetaViewSurface
-                    topInset={workflowHeight}
-                    zoom={viewZoom}
-                    panX={viewPanX}
-                    panY={viewPanY}
-                    onZoomChange={setViewZoom}
-                    onPanChange={(x, y) => { setViewPanX(x); setViewPanY(y) }}
-                    onDoubleClick={(placement) => openPalette('view', placement)}
-                >
-                    {visibleViewNodes.map((node, index) => {
-                            const windowState = buildWindowStateFromNode(node, index)
-                            return (
-                                <DesktopWindow
-                                    key={node.id}
-                                    windowState={windowState}
-                                    title={windowState.title}
-                                    kicker={node.typeId}
-                                    allowOverflowLeft
-                                    allowOverflowTop
-                                    canvasZoom={viewZoom}
-                                    onFocus={() => {
-                                        selectNode(node.id)
-                                        applyLocalOps({
-                                            type: 'updateNode',
-                                            payload: {
-                                                nodeId: node.id,
-                                                patch: { values: { frame: { ...(node.values?.frame || {}), zIndex: topZIndex + 1 } } }
-                                            }
-                                        })
-                                    }}
-                                    onPatch={(patch) => applyLocalOps({
-                                        type: 'updateNode',
-                                        payload: {
-                                            nodeId: node.id,
-                                            patch: { values: { frame: { ...(node.values?.frame || {}), ...patch } } }
-                                        }
-                                    })}
-                                    onClose={() => applyLocalOps({
-                                        type: 'updateNode',
-                                        payload: {
-                                            nodeId: node.id,
-                                            patch: { values: { frame: { ...(node.values?.frame || {}), visible: false } } }
-                                        }
-                                    })}
-                                    onToggleMinimize={() => applyLocalOps({
-                                        type: 'updateNode',
-                                        payload: {
-                                            nodeId: node.id,
-                                            patch: { values: { frame: { ...(node.values?.frame || {}), minimized: !node.values?.frame?.minimized } } }
-                                        }
-                                    })}
-                                    onTogglePin={() => applyLocalOps({
-                                        type: 'updateNode',
-                                        payload: {
-                                            nodeId: node.id,
-                                            patch: { values: { frame: { ...(node.values?.frame || {}), pinned: !node.values?.frame?.pinned } } }
-                                        }
-                                    })}
-                                >
-                                    {renderViewNodeContent(node)}
-                                </DesktopWindow>
-                            )
-                        })}
-                    </BetaViewSurface>
+            <section className={`beta-surface-shell${isWorldOverlay && !isWorldFullscreen ? ' is-world-overlay' : ''}`}>
+                {/* Graph is the primary surface — always visible */}
+                <BetaGraphSurface
+                    topInset={graphTopInset}
+                    nodes={graphCardNodes}
+                    edges={document.edges || []}
+                    selectedNodeId={workspaceState.selectedNodeId}
+                    onSelectNode={selectNode}
+                    onCreateEdge={(payload) => applyLocalOps({
+                        type: 'createEdge',
+                        payload: { edge: payload }
+                    })}
+                    onDeleteEdge={(edgeId) => applyLocalOps({
+                        type: 'deleteEdge',
+                        payload: { edgeId }
+                    })}
+                    onDeleteNode={(nodeId) => applyLocalOps([
+                        { type: 'deleteNode', payload: { nodeId } },
+                        { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
+                    ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })}
+                    onMoveNode={(nodeId, nextX, nextY) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
+                    })}
+                    onDoubleClick={(placement) => {
+                        if (!hasNodeZero) {
+                            handleStartFromNodeZero(placement)
+                            return
+                        }
+                        openPalette('graph', placement)
+                    }}
+                />
+                {/* Panel nodes float above the graph as viewport-fixed windows */}
+                {visibleViewNodes.map((node, index) => {
+                    const windowState = buildWindowStateFromNode(node, index)
+                    return (
+                        <DesktopWindow
+                            key={node.id}
+                            windowState={windowState}
+                            title={windowState.title}
+                            kicker={node.typeId}
+                            allowOverflowLeft
+                            allowOverflowTop
+                            onFocus={() => {
+                                selectNode(node.id)
+                                applyLocalOps({
+                                    type: 'updateNode',
+                                    payload: {
+                                        nodeId: node.id,
+                                        patch: { values: { frame: { ...(node.values?.frame || {}), zIndex: topZIndex + 1 } } }
+                                    }
+                                })
+                            }}
+                            onPatch={(patch) => applyLocalOps({
+                                type: 'updateNode',
+                                payload: {
+                                    nodeId: node.id,
+                                    patch: { values: { frame: { ...(node.values?.frame || {}), ...patch } } }
+                                }
+                            })}
+                            onClose={() => applyLocalOps({
+                                type: 'updateNode',
+                                payload: {
+                                    nodeId: node.id,
+                                    patch: { values: { frame: { ...(node.values?.frame || {}), visible: false } } }
+                                }
+                            })}
+                            onToggleMinimize={() => applyLocalOps({
+                                type: 'updateNode',
+                                payload: {
+                                    nodeId: node.id,
+                                    patch: { values: { frame: { ...(node.values?.frame || {}), minimized: !node.values?.frame?.minimized } } }
+                                }
+                            })}
+                            onTogglePin={() => applyLocalOps({
+                                type: 'updateNode',
+                                payload: {
+                                    nodeId: node.id,
+                                    patch: { values: { frame: { ...(node.values?.frame || {}), pinned: !node.values?.frame?.pinned } } }
+                                }
+                            })}
+                        >
+                            {renderViewNodeContent(node)}
+                        </DesktopWindow>
+                    )
+                })}
             </section>
 
-            {graphWindowOpen && (
-                <div className="beta-system-window beta-system-window-graph" style={{ top: `${workspaceTop}px` }}>
-                    <div className="beta-system-window-bar">
-                        <span className="beta-system-window-title">Graph</span>
-                        <button type="button" className="beta-system-window-close" onClick={() => setGraphWindowOpen(false)}>×</button>
-                    </div>
-                    <BetaGraphSurface
+            {/* Fullscreen world — takes over the full viewport */}
+            {hasWorldNode && isWorldFullscreen && (
+                <div className="beta-world-fullscreen" style={{ top: `${workspaceTop}px` }}>
+                    <BetaViewport
                         topInset={0}
-                        nodes={nodes}
-                        edges={document.edges || []}
-                        selectedNodeId={workspaceState.selectedNodeId}
+                        document={document}
+                        selectedEntityId={surfaceSelectedEntity?.id || null}
+                        selectedNodeId={surfaceSelectedNode?.id || null}
+                        onSelectEntity={selectEntity}
                         onSelectNode={selectNode}
-                        onCreateEdge={(payload) => applyLocalOps({
-                            type: 'createEdge',
-                            payload: { edge: payload }
-                        })}
-                        onDeleteEdge={(edgeId) => applyLocalOps({
-                            type: 'deleteEdge',
-                            payload: { edgeId }
-                        })}
-                        onDeleteNode={(nodeId) => applyLocalOps([
-                            { type: 'deleteNode', payload: { nodeId } },
-                            { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
-                        ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })}
-                        onMoveNode={(nodeId, nextX, nextY) => applyLocalOps({
-                            type: 'updateNode',
-                            payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
-                        })}
-                        onDoubleClick={(placement) => openPalette('graph', placement)}
+                        onClearSelection={clearSelection}
+                        onWorldDoubleClick={handleWorldSurfaceDoubleClick}
+                        onMoveNode={handleMoveWorldNode}
+                        cursors={presence.cursors}
+                        onCursorMove={presence.emitCursor}
+                        onCursorLeave={presence.clearCursor}
+                        nodeScale={nodeScale}
+                        showEmptyHint={false}
                     />
                 </div>
             )}
 
-            {viewportWindowOpen && (
-                <div className="beta-system-window beta-system-window-viewport" style={{ top: `${workspaceTop}px` }}>
-                    <div className="beta-system-window-bar">
-                        <span className="beta-system-window-title">World</span>
-                        <button type="button" className="beta-system-window-close" onClick={() => setViewportWindowOpen(false)}>×</button>
-                    </div>
+            {/* Overlay world — 3D scene renders behind the graph */}
+            {hasWorldNode && isWorldOverlay && !isWorldFullscreen && (
+                <div className="beta-world-overlay">
                     <BetaViewport
-                        topInset={0}
+                        topInset={workspaceTop}
                         document={document}
                         selectedEntityId={surfaceSelectedEntity?.id || null}
                         selectedNodeId={surfaceSelectedNode?.id || null}
@@ -1035,7 +1034,7 @@ export default function BetaEditor({
                 onClose={() => setHelpOpen(false)}
             />
 
-            {visibleSelection && activeSurface !== 'view' ? hostInspector : null}
+            {visibleSelection ? hostInspector : null}
 
             <NodePalette
                 open={paletteState.open}
@@ -1045,12 +1044,6 @@ export default function BetaEditor({
                 onCreate={handlePaletteCreate}
             />
 
-            <OpCreateDialog
-                open={createDialogState.open}
-                surface={createDialogState.surface}
-                onClose={() => setCreateDialogState({ open: false, surface: 'world', placement: null })}
-                onCreate={handleCreateNode}
-            />
         </main>
     )
 }

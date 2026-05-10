@@ -172,6 +172,7 @@ function renderPreferencesPage() {
     )
 }
 
+
 describe('PreferencesPage', () => {
     it('renders runtime build metadata and updates the node inspector when a node is selected', async () => {
         vi.spyOn(globalThis, 'fetch').mockResolvedValue({
@@ -225,4 +226,5 @@ describe('PreferencesPage', () => {
         expect(within(snapshotSection).getByText('/main/studio')).toBeInTheDocument()
         expect(within(snapshotSection).getByText('/main/beta')).toBeInTheDocument()
     })
+
 })

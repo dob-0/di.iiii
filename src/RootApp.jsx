@@ -3,12 +3,12 @@ import { BrowserRouter, useLocation } from 'react-router-dom'
 import { getBetaLocationState, isBetaLocation } from './beta/utils/betaRouting.js'
 import AuthGate from './components/AuthGate.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
-import LandingPage from './landing/LandingPage.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 import { getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
 import { APP_PAGE_PREFERENCES, getAppLocationState } from './utils/spaceRouting.js'
 
 const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
+const BlankNodeWorkspaceApp = lazy(() => import('./beta/BlankNodeWorkspaceApp.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 
 function AppRouter() {
@@ -50,7 +50,11 @@ function AppRouter() {
     const isRootLanding = !appState.spaceId && appState.page !== APP_PAGE_PREFERENCES
 
     if (isRootLanding) {
-        return <LandingPage />
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="Preparing workspace..." />}>
+                <BlankNodeWorkspaceApp />
+            </Suspense>
+        )
     }
 
     return <SpaceSurfaceApp routeState={appState} />

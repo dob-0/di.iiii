@@ -34,6 +34,52 @@ describe('nodeGraphRuntime', () => {
         expect(evaluateNodeOutput(add, 'out', context)).toBe(5)
     })
 
+    it('evaluates subtract/divide/mod/power operators', () => {
+        const a = createNode('value.number', { id: 'a', values: { value: 9 } })
+        const b = createNode('value.number', { id: 'b', values: { value: 4 } })
+        const subtract = createNode('math.subtract', { id: 'subtract' })
+        const divide = createNode('math.divide', { id: 'divide' })
+        const mod = createNode('math.mod', { id: 'mod' })
+        const pow = createNode('math.pow', { id: 'pow' })
+        const context = createNodeGraphContext({
+            nodes: [a, b, subtract, divide, mod, pow],
+            edges: [
+                createEdge('a', 'out', 'subtract', 'a'),
+                createEdge('b', 'out', 'subtract', 'b'),
+                createEdge('a', 'out', 'divide', 'a'),
+                createEdge('b', 'out', 'divide', 'b'),
+                createEdge('a', 'out', 'mod', 'a'),
+                createEdge('b', 'out', 'mod', 'b'),
+                createEdge('a', 'out', 'pow', 'a'),
+                createEdge('b', 'out', 'pow', 'b')
+            ]
+        })
+
+        expect(evaluateNodeOutput(subtract, 'out', context)).toBe(5)
+        expect(evaluateNodeOutput(divide, 'out', context)).toBe(2.25)
+        expect(evaluateNodeOutput(mod, 'out', context)).toBe(1)
+        expect(evaluateNodeOutput(pow, 'out', context)).toBe(6561)
+    })
+
+    it('returns zero for divide/mod by zero', () => {
+        const a = createNode('value.number', { id: 'a', values: { value: 10 } })
+        const zero = createNode('value.number', { id: 'zero', values: { value: 0 } })
+        const divide = createNode('math.divide', { id: 'divide' })
+        const mod = createNode('math.mod', { id: 'mod' })
+        const context = createNodeGraphContext({
+            nodes: [a, zero, divide, mod],
+            edges: [
+                createEdge('a', 'out', 'divide', 'a'),
+                createEdge('zero', 'out', 'divide', 'b'),
+                createEdge('a', 'out', 'mod', 'a'),
+                createEdge('zero', 'out', 'mod', 'b')
+            ]
+        })
+
+        expect(evaluateNodeOutput(divide, 'out', context)).toBe(0)
+        expect(evaluateNodeOutput(mod, 'out', context)).toBe(0)
+    })
+
     it('resolves full input sets for view nodes, including string content', () => {
         const text = createNode('value.string', { id: 'text-1', values: { value: 'Hello graph' } })
         const panel = createNode('view.text', { id: 'panel-1' })

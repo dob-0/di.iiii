@@ -37,7 +37,7 @@ export const GUIDE_SECTIONS = [
         label: 'Start Here',
         icon: '◎',
         title: 'Start small',
-        description: 'One visible node. One connection.',
+        description: 'Start empty. Double-click to create node 0.',
         callouts: [
             { icon: '◫', title: 'World', detail: 'Place scene nodes' },
             { icon: '▤', title: 'View', detail: 'Make panels' },
@@ -49,10 +49,10 @@ export const GUIDE_SECTIONS = [
             ['Close', 'Esc closes help']
         ],
         steps: [
-            'Pick World, View, or Graph.',
-            'Add one node.',
-            'Edit it in the inspector.',
-            'Connect one value.'
+            'First page is empty.',
+            'Double-click to create node 0.',
+            'Then add nodes one by one.',
+            'Connect values when needed.'
         ],
         tips: [
             'Best starters: Text, Image, Cube.',
@@ -77,10 +77,10 @@ export const GUIDE_SECTIONS = [
             ['Delete', 'Delete or Backspace']
         ],
         steps: [
-            'Open World.',
-            'Add a node.',
-            'Tune size, color, position.',
-            'Use Graph to drive it.'
+            'Start with nothing.',
+            'Create node 0.',
+            'Add nodes one by one.',
+            'Use Graph when you need values.'
         ],
         tips: [
             'World is the 3D scene.',

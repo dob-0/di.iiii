@@ -22,6 +22,13 @@ const makeWorkspaceDoc = (nodes = []) => JSON.stringify({
     workspaceState: {}
 })
 
+const makeNodeZero = () => ({
+    id: 'node-0',
+    typeId: 'universe.node0',
+    label: 'Node 0',
+    values: { title: 'Node 0' }
+})
+
 describe('BetaEditor outliner toggle', () => {
     afterEach(() => {
         window.localStorage.removeItem(OUTLINER_STORAGE_KEY)
@@ -35,29 +42,38 @@ describe('BetaEditor outliner toggle', () => {
     it('shows the node count button when nodes exist on the active surface', () => {
         window.localStorage.setItem(
             OUTLINER_STORAGE_KEY,
-            makeWorkspaceDoc([{ id: 'c1', typeId: 'geom.cube', label: 'Test Cube', values: {} }])
+            makeWorkspaceDoc([
+                makeNodeZero(),
+                { id: 'c1', typeId: 'geom.cube', label: 'Test Cube', values: {} }
+            ])
         )
         render(<BetaEditor localStorageKey={OUTLINER_STORAGE_KEY} />)
-        expect(screen.getByRole('button', { name: /1 nodes/i })).toBeTruthy()
+        expect(screen.getByRole('button', { name: /2 nodes/i })).toBeTruthy()
     })
 
     it('opens the outliner dialog when the node count button is clicked', () => {
         window.localStorage.setItem(
             OUTLINER_STORAGE_KEY,
-            makeWorkspaceDoc([{ id: 'c1', typeId: 'geom.cube', label: 'Test Cube', values: {} }])
+            makeWorkspaceDoc([
+                makeNodeZero(),
+                { id: 'c1', typeId: 'geom.cube', label: 'Test Cube', values: {} }
+            ])
         )
         render(<BetaEditor localStorageKey={OUTLINER_STORAGE_KEY} />)
-        fireEvent.click(screen.getByRole('button', { name: /1 nodes/i }))
+        fireEvent.click(screen.getByRole('button', { name: /2 nodes/i }))
         expect(screen.getByRole('dialog', { name: 'Outliner' })).toBeTruthy()
     })
 
     it('closes the outliner when the count button is clicked again', () => {
         window.localStorage.setItem(
             OUTLINER_STORAGE_KEY,
-            makeWorkspaceDoc([{ id: 'c1', typeId: 'geom.cube', label: 'Test Cube', values: {} }])
+            makeWorkspaceDoc([
+                makeNodeZero(),
+                { id: 'c1', typeId: 'geom.cube', label: 'Test Cube', values: {} }
+            ])
         )
         render(<BetaEditor localStorageKey={OUTLINER_STORAGE_KEY} />)
-        const btn = screen.getByRole('button', { name: /1 nodes/i })
+        const btn = screen.getByRole('button', { name: /2 nodes/i })
         fireEvent.click(btn)
         expect(screen.getByRole('dialog', { name: 'Outliner' })).toBeTruthy()
         fireEvent.click(btn)
@@ -88,6 +104,37 @@ describe('BetaEditor undo/redo', () => {
         expect(() => {
             fireEvent.keyDown(input, { key: 'z', ctrlKey: true })
         }).not.toThrow()
+    })
+})
+
+describe('BetaEditor canvas mode', () => {
+    const CANVAS_STORAGE_KEY = 'test-canvas-node0'
+
+    afterEach(() => {
+        window.localStorage.removeItem(CANVAS_STORAGE_KEY)
+    })
+
+    it('auto-enters Node 0 when a blank workspace already has one', () => {
+        window.localStorage.setItem(
+            CANVAS_STORAGE_KEY,
+            makeWorkspaceDoc([
+                {
+                    id: 'node-0',
+                    typeId: 'universe.node0',
+                    label: 'Node 0',
+                    values: { title: 'Node 0' }
+                }
+            ])
+        )
+
+        render(<BetaEditor localStorageKey={CANVAS_STORAGE_KEY} canvasMode />)
+
+        expect(screen.queryByRole('button', { name: /enter node 0/i })).toBeNull()
+        // Graph is the primary surface — no toggle button needed
+        expect(screen.queryByRole('button', { name: /graph/i })).toBeNull()
+        // World button only appears after a spatial node is added
+        expect(screen.queryByRole('button', { name: /world/i })).toBeNull()
+        expect(screen.getByRole('dialog', { name: 'Node 0' })).toBeInTheDocument()
     })
 })
 

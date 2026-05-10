@@ -797,10 +797,26 @@
     display: flex;
     align-items: center;
     gap: 8px;
+    height: 0;
+    padding: 0;
+    overflow: hidden;
+    background: var(--di-black);
+    border-bottom: none;
+    pointer-events: none;
+}
+
+.beta-topbar.is-seeded {
     height: 48px;
     padding: 0 16px;
-    background: var(--di-black);
     border-bottom: 1px solid var(--di-cyan-border);
+    pointer-events: auto;
+    overflow: visible;
+    animation: betaTopbarReveal 0.35s ease both;
+}
+
+@keyframes betaTopbarReveal {
+    from { opacity: 0; }
+    to   { opacity: 1; }
 }
 
 .beta-topbar-left {
@@ -839,6 +855,30 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 180px;
+}
+
+.beta-topbar-center {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    flex: 1;
+    justify-content: center;
+}
+
+.beta-topbar-location {
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(77, 249, 255, 0.04);
+    color: rgba(244, 247, 251, 0.74);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    white-space: nowrap;
 }
 
 .beta-topbar-surfaces {
@@ -900,6 +940,28 @@
     color: var(--di-cyan);
 }
 
+/* ── Node 0 shortcut — the root entry point ── */
+.beta-topbar-node0-action {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-cyan);
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+}
+
+.beta-topbar-node0-action:hover {
+    background: var(--di-cyan-dim);
+    border-color: var(--di-cyan);
+}
+
 .beta-topbar-scale-control {
     display: flex;
     align-items: center;
@@ -959,7 +1021,42 @@
     position: relative;
 }
 
+/* ── Graph / World surface toggles ── */
 .beta-topbar-windows {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    justify-content: center;
+}
+
+.beta-topbar-windows button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-text-muted);
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: color 0.1s, background 0.1s;
+    height: 48px;
+}
+
+.beta-topbar-windows button:hover {
+    color: var(--di-text);
+    background: var(--di-cyan-dim);
+}
+
+.beta-topbar-windows button.is-active {
+    color: var(--di-cyan);
+    border-bottom: 2px solid var(--di-cyan);
+}
+
+/* ── Overflow button ── */
+.beta-topbar-overflow-btn {
     -webkit-appearance: none;
     appearance: none;
     border: none;
@@ -967,7 +1064,7 @@
     background: transparent;
     color: rgba(244, 247, 251, 0.48);
     padding: 6px 10px;
-.beta-topbar-windows button {
+    cursor: pointer;
     font-size: 16px;
     line-height: 1;
 }
@@ -977,19 +1074,19 @@
     color: #f4f7fb;
 }
 
+/* ── Overflow dropdown menu ── */
 .beta-topbar-overflow-menu {
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-.beta-topbar-windows button:hover {
     min-width: 180px;
     border-radius: 0;
     background: #0a0a0a;
-.beta-topbar-windows button.is-active {
-
+    border: 1px solid var(--di-cyan-border);
     padding: 6px;
     display: grid;
     gap: 2px;
+    z-index: 1500;
 }
 
 .beta-topbar-overflow-menu button {
@@ -1094,6 +1191,80 @@
     cursor: nwse-resize;
     border-radius: 0;
     background: rgba(77, 249, 255, 0.04);
+}
+
+/* ── World panel window ── */
+
+.beta-world-panel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.beta-world-panel-actions {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    display: flex;
+    gap: 6px;
+    z-index: 10;
+}
+
+.beta-world-panel-btn {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(10, 10, 10, 0.72);
+    color: var(--di-cyan);
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    transition: background 0.1s;
+}
+
+.beta-world-panel-btn:hover {
+    background: var(--di-cyan-dim);
+}
+
+/* ── World fullscreen mode ── */
+
+.beta-world-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+}
+
+/* ── World overlay mode (3D behind graph) ── */
+
+.beta-world-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.beta-world-overlay > * {
+    pointer-events: auto;
+}
+
+.beta-surface-shell.is-world-overlay {
+    background: transparent;
+    pointer-events: none;
+}
+
+.beta-surface-shell.is-world-overlay > * {
+    pointer-events: auto;
+}
+
+.beta-surface-shell.is-world-overlay .beta-graph-surface {
+    background: transparent;
 }
 
 .beta-viewport-shell,

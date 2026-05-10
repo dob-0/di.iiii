@@ -117,7 +117,6 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                         key={space.id}
                                         space={space}
                                         isActive={space.id === sync?.spaceId}
-                                        routes={currentSpaceRoutes}
                                         onOpenRoute={openRoute}
                                         onCopy={actions?.handleCopySpaceLink}
                                     />

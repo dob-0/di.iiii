@@ -73,7 +73,7 @@ describe('NODE_TYPES', () => {
         const rootType = NODE_TYPES['universe.node0']
         expect(rootType).toBeTruthy()
         expect(rootType.category).toBe('universe')
-        expect(rootType.render).toBe('hidden')
+        expect(rootType.render).toBe('panel-2d')
         expect(rootType.defaultValues.title).toBe('Node 0')
     })
 

@@ -346,7 +346,8 @@ export default function BetaViewport({
     cursors = {},
     onCursorMove,
     onCursorLeave,
-    nodeScale = 1
+    nodeScale = 1,
+    showEmptyHint = true
 }) {
     const viewportRef = useRef(null)
     const camera = document.worldState?.savedView || {}
@@ -405,13 +406,13 @@ export default function BetaViewport({
             style={{ top: `${topInset}px` }}
             role="button"
             tabIndex={0}
-            aria-label="Create a world node"
+            aria-label="World surface — double-click to place a node"
             onPointerMove={handlePointerMove}
             onPointerLeave={onCursorLeave}
             onDoubleClick={handleViewportDoubleClick}
             onKeyDown={handleViewportKeyDown}
         >
-            {isEmpty ? (
+            {showEmptyHint && isEmpty ? (
                 <div className="beta-viewport-empty-hint">
                     <div className="beta-viewport-empty-stage" aria-hidden="true">
                         <div className="beta-viewport-empty-grid" />
@@ -419,10 +420,10 @@ export default function BetaViewport({
                     </div>
                     <div className="beta-viewport-empty-panel">
                         <span className="beta-window-kicker">World</span>
-                        <strong>Add your first scene node</strong>
-                        <p>Double-click anywhere, or use the button.</p>
+                        <strong>Cursor is material.</strong>
+                        <p>Double-click anywhere to place a node, or use the button below.</p>
                         <button type="button" onClick={openWorldCreateAtCenter}>
-                            Add World Node
+                            Place Node
                         </button>
                     </div>
                 </div>

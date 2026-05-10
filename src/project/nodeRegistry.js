@@ -510,7 +510,31 @@ export const NODE_TYPES = {
             active: true,
             hostHint: 'any',
         },
-        render: 'hidden',
+        render: 'panel-2d',
+    },
+
+    'universe.world': {
+        id: 'universe.world',
+        label: 'World',
+        category: 'universe',
+        runtime: 'any',
+        singleton: true,
+        inputs: [
+            { id: 'title',    type: 'string',  label: 'Title',    default: 'World'    },
+            { id: 'bgColor',  type: 'color',   label: 'Sky',      default: '#0a0e16'  },
+            { id: 'gridSize', type: 'number',  label: 'Grid',     default: 24         },
+        ],
+        outputs: [
+            { id: 'state',  type: 'any',    label: 'World State' },
+            { id: 'signal', type: 'signal', label: 'Changed'     },
+        ],
+        defaultValues: {
+            title: 'World',
+            bgColor: '#0a0e16',
+            gridSize: 24,
+            hostHint: 'any',
+        },
+        render: 'panel-2d',
     },
 
     'universe.space': {
@@ -768,6 +792,23 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    'math.subtract': {
+        id: 'math.subtract',
+        label: 'Subtract',
+        category: 'math',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'a', type: 'number', label: 'A', default: 0 },
+            { id: 'b', type: 'number', label: 'B', default: 0 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
     'math.multiply': {
         id: 'math.multiply',
         label: 'Multiply',
@@ -777,6 +818,57 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'a', type: 'number', label: 'A', default: 1 },
             { id: 'b', type: 'number', label: 'B', default: 1 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'math.divide': {
+        id: 'math.divide',
+        label: 'Divide',
+        category: 'math',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'a', type: 'number', label: 'A', default: 0 },
+            { id: 'b', type: 'number', label: 'B', default: 1 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'math.mod': {
+        id: 'math.mod',
+        label: 'Modulo',
+        category: 'math',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'a', type: 'number', label: 'A', default: 0 },
+            { id: 'b', type: 'number', label: 'B', default: 1 },
+        ],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Result' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'math.pow': {
+        id: 'math.pow',
+        label: 'Power',
+        category: 'math',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'a', type: 'number', label: 'Base', default: 1 },
+            { id: 'b', type: 'number', label: 'Exponent', default: 1 },
         ],
         outputs: [
             { id: 'out', type: 'number', label: 'Result' },
@@ -950,6 +1042,7 @@ export const createNode = (typeId, options = {}) => {
         graphX:    options.graphX    ?? 0,
         graphY:    options.graphY    ?? 0,
         runtimeId: options.runtimeId || null,
+        parentId:  options.parentId  || null,
     }
 }
 

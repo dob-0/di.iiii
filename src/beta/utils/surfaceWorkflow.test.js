@@ -5,21 +5,21 @@ describe('getSurfaceWorkflow', () => {
     it('returns world guidance', () => {
         expect(getSurfaceWorkflow('world')).toMatchObject({
             title: 'World builds the scene',
-            actionLabel: 'Add World Node'
+            actionLabel: 'Place Node'
         })
     })
 
     it('returns view guidance', () => {
         expect(getSurfaceWorkflow('view')).toMatchObject({
             title: 'View builds the interface',
-            actionLabel: 'Add View Node'
+            actionLabel: 'Place Node'
         })
     })
 
     it('defaults to graph guidance', () => {
         expect(getSurfaceWorkflow('graph')).toMatchObject({
             title: 'Graph connects everything',
-            actionLabel: 'Add Graph Node'
+            actionLabel: 'Place Node'
         })
         expect(getSurfaceWorkflow('unknown')).toMatchObject({
             title: 'Graph connects everything'

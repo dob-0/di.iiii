@@ -214,8 +214,8 @@ export default function BetaGraphSurface({
             const node = nodeById.get(draggingNodeId)
             if (!node) return
             const point = clientPointToGraphPoint(event.clientX, event.clientY)
-            const nextX = Math.max(0, point.x - dragOffsetRef.current.x)
-            const nextY = Math.max(0, point.y - dragOffsetRef.current.y)
+            const nextX = point.x - dragOffsetRef.current.x
+            const nextY = point.y - dragOffsetRef.current.y
             onMoveNode?.(draggingNodeId, nextX, nextY)
         }
         const up = () => setDraggingNodeId(null)
@@ -334,7 +334,7 @@ export default function BetaGraphSurface({
                 <button type="button" aria-label="Zoom in" onClick={() => updateZoom(zoom + GRAPH_ZOOM_STEP)}>+</button>
             </div>
             {nodes.length === 0 ? (
-                <div className="beta-empty-state" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', color: '#aaa', pointerEvents: 'none' }}>Double-click to add a node.</div>
+                <div className="beta-empty-state" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', color: '#aaa', pointerEvents: 'none' }}>Cursor is material. Double-click to place nodes.</div>
             ) : null}
             <div
                 className="beta-graph-stage"

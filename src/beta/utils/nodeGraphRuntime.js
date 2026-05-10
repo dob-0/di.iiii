@@ -60,10 +60,38 @@ export const evaluateNodeOutput = (node, portId, context, stack = new Set()) => 
                     + asNumber(evaluateNodeInput(node, 'b', context, nextStack))
             }
             break
+        case 'math.subtract':
+            if (portId === 'out') {
+                return asNumber(evaluateNodeInput(node, 'a', context, nextStack))
+                    - asNumber(evaluateNodeInput(node, 'b', context, nextStack))
+            }
+            break
         case 'math.multiply':
             if (portId === 'out') {
                 return asNumber(evaluateNodeInput(node, 'a', context, nextStack))
                     * asNumber(evaluateNodeInput(node, 'b', context, nextStack), 1)
+            }
+            break
+        case 'math.divide':
+            if (portId === 'out') {
+                const numerator = asNumber(evaluateNodeInput(node, 'a', context, nextStack))
+                const denominator = asNumber(evaluateNodeInput(node, 'b', context, nextStack), 1)
+                return denominator === 0 ? 0 : numerator / denominator
+            }
+            break
+        case 'math.mod':
+            if (portId === 'out') {
+                const value = asNumber(evaluateNodeInput(node, 'a', context, nextStack))
+                const divisor = asNumber(evaluateNodeInput(node, 'b', context, nextStack), 1)
+                return divisor === 0 ? 0 : value % divisor
+            }
+            break
+        case 'math.pow':
+            if (portId === 'out') {
+                return Math.pow(
+                    asNumber(evaluateNodeInput(node, 'a', context, nextStack)),
+                    asNumber(evaluateNodeInput(node, 'b', context, nextStack), 1)
+                )
             }
             break
         case 'math.sin':

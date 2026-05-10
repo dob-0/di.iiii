@@ -38,6 +38,44 @@ describe('windowLayout', () => {
         }))
     })
 
+    it('allows view windows to overflow left while still clamping top and right edges', () => {
+        expect(clampWindowFrame({
+            x: -120,
+            y: 20,
+            width: 360,
+            height: 240
+        }, {
+            minTop: 180,
+            allowOverflowLeft: true,
+            viewportWidth: 1024,
+            viewportHeight: 768
+        })).toEqual(expect.objectContaining({
+            x: -120,
+            y: 180,
+            width: 360,
+            height: 240
+        }))
+    })
+
+    it('allows view windows to overflow above the top inset while still clamping the right and bottom edges', () => {
+        expect(clampWindowFrame({
+            x: 24,
+            y: -140,
+            width: 360,
+            height: 240
+        }, {
+            minTop: 180,
+            allowOverflowTop: true,
+            viewportWidth: 1024,
+            viewportHeight: 768
+        })).toEqual(expect.objectContaining({
+            x: 24,
+            y: -140,
+            width: 360,
+            height: 240
+        }))
+    })
+
     it('builds adjustment ops only for overlapping visible windows', () => {
         expect(getWorkspaceAdjustmentOps([
             { id: 'viewport', visible: true, y: 24 },

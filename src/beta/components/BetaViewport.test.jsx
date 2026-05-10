@@ -39,8 +39,8 @@ describe('BetaViewport', () => {
             />
         )
 
-        expect(screen.getByText('Add your first scene node')).toBeTruthy()
-        expect(screen.getByRole('button', { name: 'Add World Node' })).toBeTruthy()
+        expect(screen.getByText('Cursor is material.')).toBeTruthy()
+        expect(screen.getByRole('button', { name: 'Place Node' })).toBeTruthy()
     })
 
     it('uses the empty-world button to open world creation', () => {
@@ -52,7 +52,7 @@ describe('BetaViewport', () => {
             />
         )
 
-        fireEvent.click(screen.getByRole('button', { name: 'Add World Node' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Place Node' }))
 
         expect(onWorldDoubleClick).toHaveBeenCalledTimes(1)
     })

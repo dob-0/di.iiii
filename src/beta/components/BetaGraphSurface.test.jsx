@@ -160,4 +160,27 @@ describe('BetaGraphSurface', () => {
         // pan should have moved — transforms must differ
         expect(transformAfter).not.toBe(transformBefore)
     })
+
+    it('allows dragging nodes into negative graph coordinates', () => {
+        const onMoveNode = vi.fn()
+        const colorNode = makeNode('value.color', { id: 'color-1', graphX: 40, graphY: 30 })
+        const { container } = render(
+            <BetaGraphSurface
+                nodes={[colorNode]}
+                edges={[]}
+                onMoveNode={onMoveNode}
+            />
+        )
+
+        const nodeCard = container.querySelector('.beta-graph-node-card')
+        expect(nodeCard).toBeTruthy()
+        nodeCard.setPointerCapture = vi.fn()
+
+        fireEvent.pointerDown(nodeCard, { button: 0, clientX: 50, clientY: 40, pointerId: 1 })
+        fireEvent.pointerMove(window, { clientX: -30, clientY: -20 })
+        fireEvent.pointerUp(window)
+
+        expect(onMoveNode).toHaveBeenCalled()
+        expect(onMoveNode.mock.calls.at(-1)).toEqual(['color-1', -40, -30])
+    })
 })
