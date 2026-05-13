@@ -54,3 +54,27 @@ cloudlinux-selector restart --json --interpreter nodejs --user "$USER" --app-roo
 - Server status: `https://your-domain/serverXR/`
 - Health: `https://your-domain/serverXR/api/health`
 - Events: `https://your-domain/serverXR/api/events`
+
+## Compatibility Guardrails (cPanel)
+
+cPanel environments are sensitive to native Node modules (binary addons).
+
+- Avoid native dependencies in `serverXR/package.json` for cPanel deploy branches.
+- In particular, do not introduce `better-sqlite3` on cPanel targets.
+- The GitHub workflow `publish-cpanel-prebuilt-v2.yml` runs `scripts/check-cpanel-compat.mjs` and blocks incompatible releases.
+
+## Update Checklist (Staging)
+
+```bash
+cd ~/repositories/di.iiii-staging
+git fetch --prune origin
+git checkout cpanel-staging
+git pull --ff-only origin cpanel-staging
+bash scripts/cpanel-apply-prebuilt-release.sh staging
+curl -sS -i --max-time 20 https://staging.di-studio.xyz/serverXR/api/health | head -n 30
+```
+
+If `cpanel-poll-deploy.sh` reports `already up to date`, it will not apply by default.
+
+- Run `bash scripts/cpanel-apply-prebuilt-release.sh staging` to force apply.
+- Or set `CPANEL_APPLY_WHEN_UPTODATE=1` before running poll.

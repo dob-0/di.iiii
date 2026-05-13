@@ -206,6 +206,31 @@ Rules:
 - do not start routine feature work on `main`
 - use `main` directly only for emergency production hotfixes
 
+## cPanel Safety Rules
+
+If you deploy to cPanel (`cpanel-staging` / `cpanel-production`), follow these rules to avoid backend outages.
+
+- Do not add native Node dependencies in `serverXR` (for example `better-sqlite3`) on cPanel deploy branches.
+- cPanel hosts may not have compatible `glibc`/Python toolchains for native addon install/rebuild.
+- The cPanel publish workflow now enforces this with `scripts/check-cpanel-compat.mjs`.
+
+Safe cPanel update flow:
+
+```bash
+cd ~/repositories/di.iiii-staging
+git fetch --prune origin
+git checkout cpanel-staging
+git pull --ff-only origin cpanel-staging
+bash scripts/cpanel-apply-prebuilt-release.sh staging
+curl -sS -i --max-time 20 https://staging.di-studio.xyz/serverXR/api/health | head -n 30
+```
+
+Notes:
+
+- `scripts/cpanel-poll-deploy.sh staging` only applies when the tracked commit changes.
+- If it says `already up to date`, run `bash scripts/cpanel-apply-prebuilt-release.sh staging` to force re-apply.
+- You can opt into forced apply behavior by setting `CPANEL_APPLY_WHEN_UPTODATE=1` before running poll.
+
 ## Repo And Hosting Topology
 
 ```mermaid
