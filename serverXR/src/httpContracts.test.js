@@ -162,35 +162,42 @@ const createServerProject = async (server, spaceId, {
     return payload.project
 }
 
-const createReadOnlySpace = async (server, spaceId = 'locked-space') => {
-    const response = await fetch(`${server.baseUrl}/api/spaces`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
-        body: JSON.stringify({ slug: spaceId, label: 'Locked Space', permanent: true, allowEdits: false })
-    })
-    expect(response.status).toBe(201)
-    return spaceId
+const createReadOnlySpace = async (dataRoot, spaceId = 'locked-space') => {
+  const spaceDir = path.join(dataRoot, 'spaces', spaceId)
+  await mkdir(path.join(spaceDir, 'assets'), { recursive: true })
+    await writeFile(path.join(spaceDir, 'meta.json'), JSON.stringify({
+        id: spaceId,
+        label: 'Locked Space',
+        permanent: true,
+        allowEdits: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        lastTouchedAt: Date.now(),
+        sceneVersion: 0
+    }, null, 2))
+  return spaceId
 }
 
-const createSpaceWithScene = async (server, {
-    spaceId = 'asset-space',
-    scene
+const createSpaceWithScene = async (dataRoot, {
+  spaceId = 'asset-space',
+  scene,
+  sceneVersion = 7
 } = {}) => {
-    const createRes = await fetch(`${server.baseUrl}/api/spaces`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
-        body: JSON.stringify({ slug: spaceId, label: 'Asset Space', permanent: true })
-    })
-    expect(createRes.status).toBe(201)
-    if (scene) {
-        const sceneRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/scene`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
-            body: JSON.stringify(scene)
-        })
-        expect(sceneRes.status).toBe(200)
-    }
-    return spaceId
+  const spaceDir = path.join(dataRoot, 'spaces', spaceId)
+  await mkdir(path.join(spaceDir, 'assets'), { recursive: true })
+  await writeFile(path.join(spaceDir, 'meta.json'), JSON.stringify({
+    id: spaceId,
+    label: 'Asset Space',
+    permanent: true,
+    allowEdits: true,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    lastTouchedAt: Date.now(),
+    sceneVersion
+  }, null, 2))
+  await writeFile(path.join(spaceDir, 'scene.json'), JSON.stringify(scene, null, 2))
+  await writeFile(path.join(spaceDir, 'ops.json'), JSON.stringify([], null, 2))
+  return spaceId
 }
 
 afterEach(async () => {
@@ -465,7 +472,7 @@ describe('server write contracts', () => {
     it('hydrates a scene asset manifest from object asset refs for legacy scenes', async () => {
         const server = await startServer({ nodeEnv: 'production', requireAuth: true })
         const assetId = '4c122913-7872-42b3-8b04-9f73942022fd'
-        const spaceId = await createSpaceWithScene(server, {
+        const spaceId = await createSpaceWithScene(server.dataRoot, {
             scene: {
                 version: 4,
                 objects: [{
@@ -495,7 +502,7 @@ describe('server write contracts', () => {
         expect(response.status).toBe(200)
 
         const payload = await response.json()
-        expect(payload.version).toBe(1)
+        expect(payload.version).toBe(7)
         expect(payload.scene.assetsBaseUrl).toBe(`/serverXR/api/spaces/${spaceId}/assets`)
         expect(payload.scene.assets).toEqual([
             expect.objectContaining({
@@ -511,7 +518,7 @@ describe('server write contracts', () => {
         const server = await startServer({ nodeEnv: 'production', requireAuth: true })
         const assetId = '4c122913-7872-42b3-8b04-9f73942022fd'
         const missingAssetId = '5d233024-8983-4ba6-a7df-61818c45ec60'
-        const spaceId = await createSpaceWithScene(server, {
+        const spaceId = await createSpaceWithScene(server.dataRoot, {
             scene: {
                 version: 4,
                 objects: [{
@@ -657,7 +664,7 @@ describe('server write contracts', () => {
 
     it('rejects read-only scene, asset, and live mutations with 403', async () => {
         const server = await startServer({ nodeEnv: 'production', requireAuth: true })
-        const spaceId = await createReadOnlySpace(server)
+        const spaceId = await createReadOnlySpace(server.dataRoot)
 
         const opsResponse = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/ops`, {
             method: 'POST',
