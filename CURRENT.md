@@ -7,7 +7,7 @@ Updated at the end of every session. Replace content — do not append.
 
 ## Last commit
 
-`3e8824a` — feat(beta): graph-first workspace, world node, and palette improvements
+`d68b665` — fix: sync shared/projectSchema.cjs with ESM source (deleteNode cascade)
 Branch: `dev` = `staging` = `cpanel-staging` — staging.di-studio.xyz is live.
 
 ## What works
@@ -15,15 +15,15 @@ Branch: `dev` = `staging` = `cpanel-staging` — staging.di-studio.xyz is live.
 - Beta editor: graph-first layout, node palette (all nodes, scrollable), undo/redo, outliner
 - Beta topbar: hidden until Node 0 is placed (Node 0 is the seed that awakens the UI)
 - World node (`universe.world`): panel window with embedded 3D scene, fullscreen mode, overlay mode (3D behind graph)
-- Studio editor: project hub, 3D scene, inspector, assets, spaces
+- Studio editor: project hub, 3D scene, inspector, assets, spaces, undo/redo (Ctrl+Z/Y)
 - Auth: session-cookie login, role-based access, 8 s timeout
 - Deploy: push to `staging` → GitHub Actions `publish-cpanel-prebuilt-v2.yml` → builds → pushes `cpanel-staging` → cPanel auto-deploys
+- Docker: `docker compose up --build -d` runs full stack locally on port 8080 (Podman-compatible)
 
 ## What is broken / open
 
 - `deploy-staging-ssh.yml` always fails (SSH secrets not in GitHub) — ignore it, cPanel pipeline is the real path
 - Browser back/forward can be inconsistent (mixed history: react-router `navigate` + raw `pushState`)
-- No undo/redo in Studio editor (Beta has it)
 
 ## Known fixes — check here before investigating
 
@@ -36,6 +36,7 @@ Branch: `dev` = `staging` = `cpanel-staging` — staging.di-studio.xyz is live.
 | Graph nodes stop at left edge while dragging | Drag clamped `x >= 0` | Allow overflow left, clamp top/right only | `BetaGraphSurface.jsx` `DesktopWindow.jsx` `windowLayout.js` |
 | Staging serves old build after push | Actions workflow still running | Wait 2–3 min: `gh run list --workflow publish-cpanel-prebuilt-v2.yml` | `.github/workflows/` |
 | `assetId is required` on upload | Dead `|| crypto.randomUUID()` fallback removed | SHA-256 must be computed before calling `buildProjectAssetMeta` | `serverXR/src/projectStore.js` |
+| 503 after deploy (server crashes on start) | `shared/projectSchema.cjs` out of sync with `src/shared/projectSchema.js` | Always update both files together; CJS is what serverXR actually loads | `shared/projectSchema.cjs` |
 
 ## Deploy
 
