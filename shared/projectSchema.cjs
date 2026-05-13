@@ -610,11 +610,19 @@ const applyProjectOps = (document, ops = []) => {
       case 'deleteNode': {
         const nodeId = ensureString(payload.nodeId)
         if (!nodeId) break
-        nodes.delete(nodeId)
-        for (const [edgeId, edge] of edges) {
-          if (edge.fromNodeId === nodeId || edge.toNodeId === nodeId) edges.delete(edgeId)
+        const toDelete = new Set()
+        const collect = (id) => {
+          toDelete.add(id)
+          for (const [, child] of nodes) {
+            if (child.parentId === id) collect(child.id)
+          }
         }
-        if (nextDocument.workspaceState.selectedNodeId === nodeId) {
+        collect(nodeId)
+        for (const id of toDelete) nodes.delete(id)
+        for (const [edgeId, edge] of edges) {
+          if (toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId)) edges.delete(edgeId)
+        }
+        if (toDelete.has(nextDocument.workspaceState.selectedNodeId)) {
           nextDocument.workspaceState = normalizeWorkspaceState({
             ...nextDocument.workspaceState,
             selectedNodeId: null
