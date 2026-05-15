@@ -9,7 +9,8 @@ My name is Gevorg Aram Grigoryan, and I am applying with br_id_ge, an XR perform
 I work at the intersection of XR, performance, and media art, building spatial systems for collective creation. My current focus is on telepresence formats where distance, latency, and embodiment are treated as artistic material rather than technical limitations.
 
 Project beta version preview:
-- Staging URL: https://staging.di-studio.xyz/br_id_ge/
+- main URL: <https://di-studio.xyz/br_id_ge/>
+- Staging URL: <https://staging.di-studio.xyz/br_id_ge/>
 - Access token: 9a0eecda9fbf80b96065f88b68c3935ebad27c2a09792f2880a7b48bfb15f0dc
 - Sign-in steps: open URL, paste token, click Sign in
 
@@ -38,18 +39,29 @@ Finale vision:
 At Festival der Zukunft, we propose a live demonstration where two remote nodes and the AI Stitch layer produce one synchronized XR performance in real time, showing both the artistic and technical potential of distributed XR creation.
 
 Project links:
-- br_id_ge: https://github.com/dob-0/br_id_ge
-- di.iiii platform: https://github.com/dob-0/di.iiii
-- pe.portal_engine: https://github.com/dob-0/pe.portal_engine
+- br_id_ge: <https://github.com/dob-0/br_id_ge>
+- di.iiii platform: <https://github.com/dob-0/di.iiii>
+- pe.portal_engine: <https://github.com/dob-0/pe.portal_engine>
 
 Supporting materials:
-- Gevorg CV: https://drive.google.com/file/d/1zYK0cw1Kzkj5JuX9kewF7dVUOV_uov0p/view?usp=sharing
-- di portfolio: https://drive.google.com/file/d/1nlT6Lm3PUNpAwLutzbwbaqnBDgpzeGmD/view?usp=drive_link
+- Gevorg CV: <https://drive.google.com/file/d/1zYK0cw1Kzkj5JuX9kewF7dVUOV_uov0p/view?usp=sharing>
+- di portfolio: <https://drive.google.com/file/d/1nlT6Lm3PUNpAwLutzbwbaqnBDgpzeGmD/view?usp=drive_link>
+
+Participants and partner links:
+- Gevorg Aram Grigoryan: GitHub <https://github.com/dob-0> | Instagram <https://www.instagram.com/dob______/> | Twitch <https://www.twitch.tv/dob__________>
+- Emilya Nikoghosyan: GitHub <https://github.com/emilyanikoghosyan> | Instagram <https://www.instagram.com/emilya_nikogosyan/>
+- Ani Khachikyan: Instagram <https://www.instagram.com/ani___khachikyan/>
+- Arsen Miqayelyan: Instagram <https://www.instagram.com/arsentrampmiqayelyan/>
+- Syuzanna Ginosyan: Instagram <https://www.instagram.com/ginosyansuzy/>
+- Hannes Kopke: Instagram <https://www.instagram.com/ritagrechen/>
+- Hayfilm Cluster: Instagram <https://www.instagram.com/hayfilmcluster/>
+- Gyumri State Drama Theater: Instagram <https://www.instagram.com/gyumritheatre/>
+- Festival of the Future / XR HUB Bavaria (open call): <https://xrhub-bavaria.de/new-realities-wettbewerb-2026-reicht-eure-xr-ideen-ein/>
 
 Thank you for considering this submission.
 I would be happy to share additional material and present the concept in more detail.
 
 Best regards,
 Gevorg Aram Grigoryan
-GitHub: https://github.com/dob-0
-Instagram: https://www.instagram.com/dob______/
+GitHub: <https://github.com/dob-0>
+Instagram: <https://www.instagram.com/dob______/>
