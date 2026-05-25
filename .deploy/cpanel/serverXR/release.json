@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-04-20T00:18:21.180Z",
-  "releaseId": "cpanel-20260420-001821",
+  "generatedAt": "2026-05-25T11:30:37.555Z",
+  "releaseId": "cpanel-20260525-113037",
   "deployEnv": "production",
   "sourceRef": "main",
   "gitCommit": "3ac8e219d616ed7ebff09aa5de554374a10b155b",
