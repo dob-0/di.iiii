@@ -196,6 +196,11 @@ Normal promotion path:
 From the repo root:
 
 ```bash
+# Single-command end-to-end (promote -> publish -> remote apply via SSH):
+npm run deploy:staging:all
+npm run deploy:production:all
+
+# Conservative, two-step (promote then host apply):
 npm run deploy:staging
 npm run deploy:production
 ```
@@ -205,6 +210,19 @@ Rules:
 - normal work starts on `dev`
 - do not start routine feature work on `main`
 - use `main` directly only for emergency production hotfixes
+
+**Deployment Policy (No-SSH)**
+
+- Access model: this project enforces a no-SSH policy for routine deploys. Developers do NOT SSH from laptops to the host. Use the cPanel Web Terminal, cPanel UI, or the host-side cron/poll mechanism instead.
+- Single-command (no-SSH) deploy: run `npm run deploy:all` locally. This promotes staging then production without attempting an SSH apply. The host must run `scripts/cpanel-poll-deploy.sh` as a cron job to auto-apply published `cpanel-*` branches.
+- Do NOT use `deploy:staging:all` or `deploy:production:all` unless you explicitly have SSH access and documented approval. Those scripts invoke remote SSH steps and are off-limits under the no-SSH policy.
+- Validate the no-SSH deploy contract with the helper test:
+
+```bash
+npm run test:deploy-workflow
+```
+
+This will fail if the single-command deploy references SSH/remote tokens. AI agents and humans must run this check before attempting a repo-driven deploy.
 
 ## Extended Experience Deploy (Manual + Branch)
 

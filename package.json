@@ -35,6 +35,7 @@
     "preview": "vite preview",
     "lint": "eslint src --ext .js,.jsx",
     "test": "vitest run",
+    "test:deploy-workflow": "node scripts/validate-deploy-no-ssh.mjs",
     "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js",
     "test:ui": "vitest",
     "format": "prettier --write ."
