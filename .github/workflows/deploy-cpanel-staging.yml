@@ -31,7 +31,7 @@ jobs:
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASS }}
           protocol: ftps
-          local-dir: ./.deploy/cpanel/public_html
+          local-dir: ./.deploy/cpanel/public_html/
           server-dir: ${{ secrets.FTP_REMOTE_PATH }}/public_html
 
       - name: Upload shared folder to server
@@ -41,7 +41,7 @@ jobs:
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASS }}
           protocol: ftps
-          local-dir: ./.deploy/cpanel/shared
+          local-dir: ./.deploy/cpanel/shared/
           server-dir: ${{ secrets.FTP_REMOTE_PATH }}/shared-staging
 
       - name: Upload serverXR backend files
@@ -51,7 +51,7 @@ jobs:
           username: ${{ secrets.FTP_USER }}
           password: ${{ secrets.FTP_PASS }}
           protocol: ftps
-          local-dir: ./.deploy/cpanel/serverXR
+          local-dir: ./.deploy/cpanel/serverXR/
           server-dir: ${{ secrets.FTP_REMOTE_PATH }}/serverXR-staging
 
       - name: Upload backend env (.env)
