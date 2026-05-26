@@ -1,0 +1,110 @@
+name: Deploy cPanel Staging
+
+on:
+  push:
+    branches:
+      - cpanel-staging
+
+jobs:
+  deploy:
+    name: Build & Deploy to cPanel (staging)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build cPanel release
+        run: npm run deploy:cpanel
+
+      - name: Upload public_html to server
+        uses: SamKirkland/FTP-Deploy-Action@4.3.0
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASS }}
+          protocol: ftps
+          local-dir: ./.deploy/cpanel/public_html
+          server-dir: ${{ secrets.FTP_REMOTE_PATH }}/public_html
+
+      - name: Upload shared folder to server
+        uses: SamKirkland/FTP-Deploy-Action@4.3.0
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASS }}
+          protocol: ftps
+          local-dir: ./.deploy/cpanel/shared
+          server-dir: ${{ secrets.FTP_REMOTE_PATH }}/shared-staging
+
+      - name: Upload serverXR backend files
+        uses: SamKirkland/FTP-Deploy-Action@4.3.0
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USER }}
+          password: ${{ secrets.FTP_PASS }}
+          protocol: ftps
+          local-dir: ./.deploy/cpanel/serverXR
+          server-dir: ${{ secrets.FTP_REMOTE_PATH }}/serverXR-staging
+
+      - name: Upload backend env (.env)
+        run: |
+          # try FTPS upload, fallback to FTP
+          set -euo pipefail
+          if [ -f .deploy/cpanel/serverXR/.env.generated ]; then
+            curl -sS --ftp-create-dirs --ftp-ssl -T .deploy/cpanel/serverXR/.env.generated "ftp://${{ secrets.FTP_HOST }}/${{ secrets.FTP_REMOTE_PATH }}/serverXR-staging/.env" --user "${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}" || \
+            curl -sS --ftp-create-dirs -T .deploy/cpanel/serverXR/.env.generated "ftp://${{ secrets.FTP_HOST }}/${{ secrets.FTP_REMOTE_PATH }}/serverXR-staging/.env" --user "${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}"
+          else
+            echo "No .env.generated present to upload; ensure deploy produced .deploy/cpanel/serverXR/.env.generated"
+            exit 1
+          fi
+
+      - name: Overwrite root .htaccess (clear legacy rewrite rules)
+        run: |
+          cat > clear_htaccess <<'HTA'
+          # Minimal .htaccess to prevent legacy serverXR proxy rewrites
+          <IfModule mod_rewrite.c>
+          RewriteEngine Off
+          </IfModule>
+          HTA
+          curl -sS --ftp-create-dirs --ftp-ssl -T clear_htaccess "ftp://${{ secrets.FTP_HOST }}/${{ secrets.FTP_REMOTE_PATH }}/public_html/.htaccess" --user "${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}" || \
+          curl -sS --ftp-create-dirs -T clear_htaccess "ftp://${{ secrets.FTP_HOST }}/${{ secrets.FTP_REMOTE_PATH }}/public_html/.htaccess" --user "${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}"
+
+      - name: Trigger Node app restart (write restart.txt)
+        run: |
+          ts=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "$ts" > restart.txt
+          curl -sS --ftp-create-dirs --ftp-ssl -T restart.txt "ftp://${{ secrets.FTP_HOST }}/${{ secrets.FTP_REMOTE_PATH }}/serverXR-staging/tmp/restart.txt" --user "${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}" || \
+          curl -sS --ftp-create-dirs -T restart.txt "ftp://${{ secrets.FTP_HOST }}/${{ secrets.FTP_REMOTE_PATH }}/serverXR-staging/tmp/restart.txt" --user "${{ secrets.FTP_USER }}:${{ secrets.FTP_PASS }}"
+
+      - name: Smoke test (health endpoint)
+        env:
+          SMOKE_URL: ${{ secrets.CPANEL_SMOKE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SMOKE_URL:-}" ]; then
+            echo "Set secret CPANEL_SMOKE_URL to https://staging.di-studio.xyz" >&2
+            exit 1
+          fi
+          for i in 1 2 3 4 5; do
+            echo "Attempt $i: curl -s -o /dev/null -w '%{http_code}' ${SMOKE_URL}/serverXR/api/health"
+            status=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "${SMOKE_URL}/serverXR/api/health" || echo "000")
+            echo "status=$status"
+            if [ "$status" = "200" ]; then
+              echo "Smoke test passed"
+              exit 0
+            fi
+            sleep 6
+          done
+          echo "Smoke test failed" >&2
+          exit 1
+
+      - name: Completed
+        run: echo "cPanel staging deploy finished"
