@@ -32,7 +32,7 @@ jobs:
           password: ${{ secrets.FTP_PASS }}
           protocol: ftps
           local-dir: ./.deploy/cpanel/public_html/
-          server-dir: ${{ secrets.FTP_REMOTE_PATH }}/public_html
+          server-dir: ${{ secrets.FTP_REMOTE_PATH }}/public_html/
 
       - name: Upload shared folder to server
         uses: SamKirkland/FTP-Deploy-Action@4.3.0
@@ -42,7 +42,7 @@ jobs:
           password: ${{ secrets.FTP_PASS }}
           protocol: ftps
           local-dir: ./.deploy/cpanel/shared/
-          server-dir: ${{ secrets.FTP_REMOTE_PATH }}/shared-staging
+          server-dir: ${{ secrets.FTP_REMOTE_PATH }}/shared-staging/
 
       - name: Upload serverXR backend files
         uses: SamKirkland/FTP-Deploy-Action@4.3.0
@@ -52,7 +52,7 @@ jobs:
           password: ${{ secrets.FTP_PASS }}
           protocol: ftps
           local-dir: ./.deploy/cpanel/serverXR/
-          server-dir: ${{ secrets.FTP_REMOTE_PATH }}/serverXR-staging
+          server-dir: ${{ secrets.FTP_REMOTE_PATH }}/serverXR-staging/
 
       - name: Upload backend env (.env)
         run: |
