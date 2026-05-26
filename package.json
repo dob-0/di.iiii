@@ -19,6 +19,7 @@
     "deploy:dev": "node scripts/deploy.mjs dev",
     "deploy:staging": "node scripts/deploy.mjs staging",
     "deploy:production": "node scripts/deploy.mjs production",
+    "deploy:all": "node scripts/deploy.mjs staging && node scripts/deploy.mjs production",
     "deploy:staging:all": "node scripts/deploy.mjs staging && node scripts/deploy.mjs remote staging",
     "deploy:production:all": "node scripts/deploy.mjs production && node scripts/deploy.mjs remote production",
     "deploy:host:staging": "node scripts/deploy.mjs host staging",
