@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { useLocation } from 'react-router-dom'
 import {
     APP_PAGE_EDITOR,
     APP_PAGE_PREFERENCES,
@@ -7,10 +7,10 @@ import {
     buildPreferencesPath,
     getAppLocationState
 } from '../utils/spaceRouting.js'
+import { appNavigate } from '../utils/appNavigate.js'
 
 export function useAppRoute({ defaultSpaceId } = {}) {
     const location = useLocation()
-    const rrNavigate = useNavigate()
 
     const route = useMemo(() => {
         const appState = getAppLocationState(location)
@@ -29,8 +29,8 @@ export function useAppRoute({ defaultSpaceId } = {}) {
             ? buildPreferencesPath(normalizedRoute.spaceId)
             : buildAppSpacePath(normalizedRoute.spaceId)
         window.scrollTo(0, 0)
-        rrNavigate(nextPath, { replace })
-    }, [rrNavigate, defaultSpaceId])
+        appNavigate(nextPath, { replace })
+    }, [defaultSpaceId])
 
     const navigateToEditor = useCallback((spaceId = route.spaceId) => {
         navigate({ page: APP_PAGE_EDITOR, spaceId })

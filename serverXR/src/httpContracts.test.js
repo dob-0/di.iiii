@@ -412,6 +412,37 @@ describe('server write contracts', () => {
             spaces: ['role-space']
         })
 
+        const mixedSessionAndTokenStatus = await fetch(`${server.baseUrl}/api/auth/session`, {
+            headers: {
+                Cookie: editorCookie,
+                ...withAuth(server.apiToken)
+            }
+        })
+        expect(mixedSessionAndTokenStatus.status).toBe(200)
+        await expect(mixedSessionAndTokenStatus.json()).resolves.toMatchObject({
+            authenticated: true,
+            type: 'session',
+            role: 'editor',
+            subject: 'editor',
+            spaces: ['role-space']
+        })
+
+        const mixedSessionAndAdminTokenWrite = await fetch(`${server.baseUrl}/api/spaces/role-space`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Cookie: editorCookie,
+                ...withAuth(server.apiToken)
+            },
+            body: JSON.stringify({ publishedProjectId: null })
+        })
+        expect(mixedSessionAndAdminTokenWrite.status).toBe(403)
+        await expect(mixedSessionAndAdminTokenWrite.json()).resolves.toMatchObject({
+            error: 'Admin role required.',
+            requiredRole: 'admin',
+            currentRole: 'editor'
+        })
+
         const adminDelete = await fetch(`${server.baseUrl}/api/projects/editor-project`, {
             method: 'DELETE',
             headers: withAuth(server.apiToken)
@@ -653,6 +684,60 @@ describe('server write contracts', () => {
         await expect(publishResponse.json()).resolves.toMatchObject({
             error: 'Published project not found in this space.'
         })
+    })
+
+    it('rejects invalid published project ids and accepts empty-string clear', async () => {
+        const server = await startServer({ nodeEnv: 'production', requireAuth: true })
+
+        const createSpaceResponse = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(server.apiToken)
+            },
+            body: JSON.stringify({ label: 'Publish Edge Space', slug: 'publish-edge-space' })
+        })
+        expect(createSpaceResponse.status).toBe(201)
+
+        const project = await createServerProject(server, 'publish-edge-space', {
+            title: 'Publish Edge Project',
+            slug: 'publish-edge-project'
+        })
+
+        const publishResponse = await fetch(`${server.baseUrl}/api/spaces/publish-edge-space`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(server.apiToken)
+            },
+            body: JSON.stringify({ publishedProjectId: project.id })
+        })
+        expect(publishResponse.status).toBe(200)
+
+        const invalidPublishResponse = await fetch(`${server.baseUrl}/api/spaces/publish-edge-space`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(server.apiToken)
+            },
+            body: JSON.stringify({ publishedProjectId: '***' })
+        })
+        expect(invalidPublishResponse.status).toBe(400)
+        await expect(invalidPublishResponse.json()).resolves.toMatchObject({
+            error: 'Invalid published project id.'
+        })
+
+        const clearWithEmptyString = await fetch(`${server.baseUrl}/api/spaces/publish-edge-space`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(server.apiToken)
+            },
+            body: JSON.stringify({ publishedProjectId: '' })
+        })
+        expect(clearWithEmptyString.status).toBe(200)
+        const clearedPayload = await clearWithEmptyString.json()
+        expect(clearedPayload.space.publishedProjectId).toBeNull()
     })
 
     it('rejects read-only scene, asset, and live mutations with 403', async () => {

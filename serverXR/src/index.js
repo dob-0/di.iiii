@@ -339,6 +339,10 @@ const readAuthSession = (req) => {
 }
 
 const getAuthState = (req) => {
+  const sessionState = readAuthSession(req)
+  if (sessionState.authenticated) {
+    return sessionState
+  }
   const token = normalizeAuthToken(readAuthToken(req))
   const identity = config.auth.resolveIdentity(token)
   if (identity) {
@@ -351,7 +355,7 @@ const getAuthState = (req) => {
       spaces: identity.spaces
     })
   }
-  return readAuthSession(req)
+  return sessionState
 }
 
 const getPublicAuthState = (req) => {

@@ -7,8 +7,8 @@ Updated at the end of every session. Replace content — do not append.
 
 ## Last commit
 
-`d68b665` — fix: sync shared/projectSchema.cjs with ESM source (deleteNode cascade)
-Branch: `dev` = `staging` = `cpanel-staging` — staging.di-studio.xyz is live.
+`deb5e38` — docs: align repo visibility and mirror status
+Branch focus: active development on `dev`; promote through `staging` for live verification.
 
 ## What works
 
@@ -23,7 +23,6 @@ Branch: `dev` = `staging` = `cpanel-staging` — staging.di-studio.xyz is live.
 ## What is broken / open
 
 - `deploy-staging-ssh.yml` always fails (SSH secrets not in GitHub) — ignore it, cPanel pipeline is the real path
-- Browser back/forward can be inconsistent (mixed history: react-router `navigate` + raw `pushState`)
 
 ## Known fixes — check here before investigating
 
@@ -32,7 +31,8 @@ Branch: `dev` = `staging` = `cpanel-staging` — staging.di-studio.xyz is live.
 | White screen / TDZ crash in prod | `manualChunks` missing drei peer deps → circular chunk init order | All drei peer deps in `three-vendor`: `detect-gpu`, `maath`, `camera-controls`, `@monogrid/gainmap-js`, `@react-spring/three` | `vite.config.js` |
 | Infinite loading / auth never resolves | No timeout on session fetch | `AbortController` 8 000 ms timeout | `src/hooks/useAuthSession.js` |
 | 100+ cascade errors when backend is 503 | `requireAuth` stays false → `AuthGate` skips error screen | Error check moved before `!requireAuth` | `src/components/AuthGate.jsx` |
-| Page does not change after clicking a link | `navigateToBetaPath` uses raw `pushState` + synthetic `popstate` — this is correct | Do not replace these helpers | `src/beta/utils/betaRouting.js` |
+| Browser can escalate role when both cookie + bearer token are sent | Auth resolution prioritized token over session | Auth now prefers valid session cookie, then falls back to token | `serverXR/src/index.js` |
+| Browser back/forward can be inconsistent after route changes | Mixed manual history mutations and router navigation caused divergent history ownership | Route through `appNavigate`; use router `navigate` when mounted and full page navigation fallback when not mounted | `src/utils/appNavigate.js` `src/hooks/useAppRoute.js` |
 | Graph nodes stop at left edge while dragging | Drag clamped `x >= 0` | Allow overflow left, clamp top/right only | `BetaGraphSurface.jsx` `DesktopWindow.jsx` `windowLayout.js` |
 | Staging serves old build after push | Actions workflow still running | Wait 2–3 min: `gh run list --workflow publish-cpanel-prebuilt-v2.yml` | `.github/workflows/` |
 | `assetId is required` on upload | Dead `|| crypto.randomUUID()` fallback removed | SHA-256 must be computed before calling `buildProjectAssetMeta` | `serverXR/src/projectStore.js` |
