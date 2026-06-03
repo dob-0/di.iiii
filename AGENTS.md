@@ -107,8 +107,8 @@ Progress status bar (required during active work):
 
 ## What This Repo Is
 
-- private working repo: `dob-0/di.iiii`
-- public mirror repo: `dob-0/di.i`
+- primary public repo: `dob-0/di.iiii`
+- legacy mirror repo: `dob-0/di.i` (currently hidden/inactive)
 - main shipped editor: `Studio`
 - experimental node-first lane: `Beta`
 - compatibility lane: `V1`

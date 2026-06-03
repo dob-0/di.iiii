@@ -2,7 +2,7 @@
 
 ## Web XR Node-Based Reality Creation Language
 
-`di.i` is a web-based XR authoring platform for building spaces, projects, media, and node-driven behaviors on the web. This private repo, `dob-0/di.iiii`, is the active working and deployment source of truth. The public repo, `dob-0/di.i`, is the curated public-facing mirror and contributor front door.
+`di.i` is a web-based XR authoring platform for building spaces, projects, media, and node-driven behaviors on the web. This repo, `dob-0/di.iiii`, is the active public working and deployment source of truth. The old mirror repo, `dob-0/di.i`, is currently hidden/inactive and not part of the active workflow.
 
 ## Start Here
 
@@ -19,13 +19,13 @@
 Project links:
 
 - live site: [di-studio.xyz](https://di-studio.xyz)
-- public repo: [dob-0/di.i](https://github.com/dob-0/di.i)
-- private repo: [dob-0/di.iiii](https://github.com/dob-0/di.iiii)
+- primary public repo: [dob-0/di.iiii](https://github.com/dob-0/di.iiii)
+- legacy mirror (currently hidden): [dob-0/di.i](https://github.com/dob-0/di.i)
 - latest checkpoint: [Checkpoint 2026-04-21](docs/checkpoints/2026-04-21.md)
 - AI quick context: [AGENTS.md](AGENTS.md)
 - AI knowledge base: [docs/ai/index.md](docs/ai/index.md)
 - public-context materials: [docs/deck](docs/deck/)
-- public/private workflow: [Private Dev And Public Showcase Workflow](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
+- repo visibility and mirror status: [Private Dev And Public Showcase Workflow](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
 - deploy runbook: [Live Deploy Runbook](docs/deploy/LIVE_DEPLOY.md)
 
 ## Current Truth
@@ -95,7 +95,7 @@ Use these defaults unless the task clearly says otherwise.
 - prefer node-first behavior over growing legacy object/window systems
 - treat `worldState`, `windowLayout`, and older entity structures as compatibility bridges
 - treat `V1` work as compatibility work unless the task is explicitly about migration or legacy support
-- do not treat the public repo `di.i` as the deploy source of truth
+- do not treat `di.i` as active source of truth; use `di.iiii` for development and deploy flow
 
 Common mistakes to avoid:
 
@@ -307,22 +307,20 @@ Notes:
 
 ```mermaid
 flowchart LR
-    work["Daily work"] --> dev["dob-0/di.iiii<br/>private repo"]
+    work["Daily work"] --> dev["dob-0/di.iiii<br/>primary public repo"]
     dev --> branchDev["dev"]
     branchDev --> branchStaging["staging"]
     branchStaging --> branchMain["main"]
     branchMain --> release["cpanel-* release branches"]
     release --> hosting["di-studio.xyz<br/>live hosting"]
-    branchMain --> curate["curated public export"]
-    curate --> public["dob-0/di.i<br/>public repo"]
-    public --> discover["public docs<br/>issues / PRs<br/>developer discovery"]
+    branchMain --> legacy["dob-0/di.i<br/>legacy hidden mirror"]
 ```
 
 Working rule:
 
-- private work, staging truth, deployment automation, and unfinished integration live in `di.iiii`
-- curated public source and public-facing narrative live in `di.i`
-- production hosting should deploy from the private repo and its generated release branches, not from the public repo
+- active work, staging truth, deployment automation, and production flow live in `di.iiii`
+- `di.i` is a legacy hidden mirror and is not the active collaboration/deploy lane
+- production hosting deploys from `di.iiii` and its generated release branches
 
 ## Read Next
 
@@ -337,7 +335,7 @@ By task:
 - latest checkpoint: [Checkpoint 2026-04-21](docs/checkpoints/2026-04-21.md)
 - development framework: [Project Development And Optimization Framework](docs/roadmaps/PROJECT_DEVELOPMENT_FRAMEWORK.md)
 - deploy/release: [Live Deploy Runbook](docs/deploy/LIVE_DEPLOY.md)
-- public/private repo workflow: [Private Dev And Public Showcase Workflow](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
+- repo visibility and mirror status: [Private Dev And Public Showcase Workflow](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
 - public/context materials: [docs/deck](docs/deck/)
 
 ## Evergreen Rule

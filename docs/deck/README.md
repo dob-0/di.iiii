@@ -17,7 +17,7 @@ Do not use it for:
 Helpful links:
 
 - root repo overview: [README](../../README.md)
-- public/private workflow: [Private Dev And Public Showcase Workflow](../ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
+- repo visibility and mirror status: [Repository Visibility And Mirror Status](../ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
 
 For humans and AI agents:
 
