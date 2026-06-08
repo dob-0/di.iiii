@@ -10,6 +10,10 @@ Current baseline:
 - stable preview branch: `staging`
 - production branch: `main`
 
+> Active development happens on `dev`.  
+> `main` contains stable public updates.  
+> See [CHANGELOG.md](CHANGELOG.md) for released changes and progress.
+
 Start here:
 
 - [Checkpoint 2026-04-09](docs/checkpoints/2026-04-09.md)
@@ -58,6 +62,14 @@ Simple rule:
 - promote into `staging` only after local checks pass
 - promote into `main` only after staging is verified
 - start on `main` only when production needs an emergency hotfix
+
+### Workflow Rules
+
+- no direct commits to `main`
+- all active work goes to `dev`
+- merge to `main` only by pull request
+- keep `main` stable
+- update `CHANGELOG.md` when a merge to `main` includes notable changes
 
 Also keep these boundaries in mind:
 
