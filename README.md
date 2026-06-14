@@ -49,6 +49,15 @@ This is where the project is going, but not all of it is fully shipped yet.
 - keep the web as the universal authoring and runtime substrate
 - support broader spatial, physical-world, and hardware-linked reality creation over time
 
+## Space + Project Workflow
+
+Use this as the default path for new work in a space:
+
+1. Create or open a space from the admin surface or the spaces panel. Space creation provisions the server record and a blank scene.
+2. Open `/<space>/studio` for the main development lane. Create new projects there, import legacy scenes, and keep the long-term working copy.
+3. Use `/<space>/beta` for experimental or node-first work when the project needs research-style iteration.
+4. Publish the chosen project to the public route by setting `publishedProjectId` for the space; `/<space>` then shows the live project viewer.
+
 Important distinction:
 
 - `Current Truth` = what is real in the repo now
@@ -205,6 +214,18 @@ Rules:
 - normal work starts on `dev`
 - do not start routine feature work on `main`
 - use `main` directly only for emergency production hotfixes
+
+## Public Mirror
+
+Use this when you want `di.iiii` to publish public context into the `br_id_ge` checkout:
+
+```bash
+npm run sync:public:br_id_ge -- --dest /path/to/br_id_ge
+```
+
+- Mirrors the public docs/shell info pack into a cloned `br_id_ge` repo.
+- Good for shared public context, not for secrets or private ops material.
+- Keep using `br_id_ge`'s own repo sync if you want to push changes back from that side.
 
 ## Extended Experience Deploy (Manual + Branch)
 

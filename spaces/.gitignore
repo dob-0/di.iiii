@@ -1,0 +1,2 @@
+# Binary asset files are not tracked — download them with: npm run space:pull:assets -- <spaceId>
+*/assets/

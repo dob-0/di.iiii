@@ -5,6 +5,22 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-06-10 — Space and project workflow
+
+**Who:** Copilot
+
+### Done this session
+
+- Documented the default space → Studio/Beta → public workflow in `README.md`.
+- Added a workflow card to Studio Hub for space creation, project development, and publishing.
+- Added a workflow card to Beta Hub for experimental project development and handoff to Studio.
+
+### Validation
+
+- `npm run build`
+
+---
+
 ## 2026-05-10 — Beta graph-first workspace + world node
 
 **Who:** Gevorg + Claude

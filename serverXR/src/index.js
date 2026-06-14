@@ -30,6 +30,7 @@ const { loadReleaseInfo } = require('./releaseInfo')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
+const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { createSpaceStore } = require('./spaceStore')
 const { loadSharedModule } = require('./sharedRuntime')
 const {
@@ -605,6 +606,14 @@ registerProjectRoutes(router, {
   upsertProjectMeta,
   writeJson,
   writeProjectDocument
+})
+
+registerSyncRoutes(router, {
+  config,
+  getSpacePaths,
+  readJson,
+  writeJson,
+  upsertSpaceMeta,
 })
 
 const mountTargets = new Set([config.mountPath])

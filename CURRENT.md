@@ -7,7 +7,7 @@ Updated at the end of every session. Replace content — do not append.
 
 ## Last commit
 
-`d7a84c1` — fix: harden routing and auth contracts
+`(this session)` — feat: space sync workflow — scripts + UI
 Branch focus: active development on `dev`; promote through `staging` for live verification.
 
 ## What works
@@ -19,10 +19,22 @@ Branch focus: active development on `dev`; promote through `staging` for live ve
 - Auth: session-cookie login, role-based access, 8 s timeout
 - Deploy: push to `staging` → GitHub Actions `publish-cpanel-prebuilt-v2.yml` → builds → pushes `cpanel-staging` → cPanel auto-deploys
 - Docker: `docker compose up --build -d` runs full stack locally on port 8080 (Podman-compatible)
+- Space sync: `npm run space:new/pull/push` CLI scripts + `SpaceSyncPanel` UI in BetaHub (↓ get latest / ↑ publish buttons)
+- n000 space: pulled locally to `spaces/n000/scene.json` and `serverXR/data/spaces/n000/`
 
 ## What is broken / open
 
 - `deploy-staging-ssh.yml` always fails (SSH secrets not in GitHub) — ignore it, cPanel pipeline is the real path
+- `↑ publish` button greys out until `LIVE_API_TOKEN` is set in `serverXR/.env.local`
+
+## Space sync setup (per machine)
+
+Add to `serverXR/.env.local` (gitignored):
+```
+LIVE_API_URL=https://di-studio.xyz/serverXR
+LIVE_API_TOKEN=<editor-or-admin-token>
+```
+Then: `npm run space:pull -- n000` or use the buttons in the BetaHub UI.
 
 ## Known fixes — check here before investigating
 

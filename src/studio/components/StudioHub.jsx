@@ -51,6 +51,25 @@ const formatProjectSourceLabel = (source = '') => {
     }
 }
 
+const studioWorkflowSteps = [
+    {
+        title: 'Create or open a space',
+        body: 'Use the spaces panel or admin route to create the server-backed space shell.'
+    },
+    {
+        title: 'Develop in Studio',
+        body: 'Create projects here, import legacy scenes, and keep the main working copy in this lane.'
+    },
+    {
+        title: 'Promote when ready',
+        body: 'Set the live project for the space and send viewers to the public route.'
+    },
+    {
+        title: 'Use Beta for experiments',
+        body: 'Hand off node-first or research changes to Beta before they become the stable path.'
+    }
+]
+
 export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [projects, setProjects] = useState([])
     const [title, setTitle] = useState('Untitled Project')
@@ -259,6 +278,37 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                             </Stack>
                         </Stack>
                     </Stack>
+
+                    <Card variant="outlined" sx={{ bgcolor: 'rgba(255,255,255,0.03)' }}>
+                        <CardContent>
+                            <Stack spacing={2}>
+                                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" flexWrap="wrap" useFlexGap>
+                                    <Typography variant="overline" color="text.secondary">Workflow</Typography>
+                                    <Chip label="Space → Studio → Public" size="small" variant="outlined" />
+                                </Stack>
+                                <Grid container spacing={1.5}>
+                                    {studioWorkflowSteps.map((step, index) => (
+                                        <Grid key={step.title} size={{ xs: 12, md: 6, xl: 3 }}>
+                                            <Stack
+                                                spacing={1}
+                                                sx={{
+                                                    height: '100%',
+                                                    p: 1.5,
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                    borderRadius: 2,
+                                                    bgcolor: index === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'
+                                                }}
+                                            >
+                                                <Typography variant="subtitle2" fontWeight={700}>{step.title}</Typography>
+                                                <Typography variant="body2" color="text.secondary">{step.body}</Typography>
+                                            </Stack>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            </Stack>
+                        </CardContent>
+                    </Card>
 
                     {status ? <Alert severity={status.includes('Unable') ? 'error' : 'info'}>{status}</Alert> : null}
                     {importWarnings.length ? (
