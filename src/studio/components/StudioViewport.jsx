@@ -1,6 +1,6 @@
-import { Suspense, useMemo, useRef } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { Grid, Html, OrbitControls } from '@react-three/drei'
+import { Grid, Html, OrbitControls, TransformControls } from '@react-three/drei'
 import { XR, useXR } from '@react-three/xr'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
@@ -17,26 +17,22 @@ import { detectEntityTypeForAsset } from '../../utils/mediaAssetTypes.js'
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
 
-function EntityVisual({ entity, assetMap, selected, onSelect }) {
+function EntityContent({ entity, assetMap }) {
     const transform = entity.components?.transform || {}
     const appearance = entity.components?.appearance || {}
     const media = entity.components?.media || {}
     const asset = media.assetId ? assetMap.get(media.assetId) : null
     const visualType = asset ? detectEntityTypeForAsset(asset, entity.type) : entity.type
 
-    let content = null
     switch (visualType) {
     case 'box':
-        content = <BoxObject color={appearance.color} boxSize={entity.components?.primitive?.size} />
-        break
+        return <BoxObject color={appearance.color} boxSize={entity.components?.primitive?.size} />
     case 'sphere':
-        content = <SphereObject color={appearance.color} sphereRadius={entity.components?.primitive?.radius} />
-        break
+        return <SphereObject color={appearance.color} sphereRadius={entity.components?.primitive?.radius} />
     case 'cone':
-        content = <ConeObject color={appearance.color} coneRadius={entity.components?.primitive?.radius} coneHeight={entity.components?.primitive?.height} />
-        break
+        return <ConeObject color={appearance.color} coneRadius={entity.components?.primitive?.radius} coneHeight={entity.components?.primitive?.height} />
     case 'cylinder':
-        content = (
+        return (
             <CylinderObject
                 color={appearance.color}
                 cylinderRadiusTop={entity.components?.primitive?.radiusTop}
@@ -44,9 +40,8 @@ function EntityVisual({ entity, assetMap, selected, onSelect }) {
                 cylinderHeight={entity.components?.primitive?.height}
             />
         )
-        break
     case 'text':
-        content = entity.components?.text?.variant === '3d'
+        return entity.components?.text?.variant === '3d'
             ? (
                 <Text3DObject
                     data={entity.components?.text?.value}
@@ -67,15 +62,12 @@ function EntityVisual({ entity, assetMap, selected, onSelect }) {
                     fontStyle={entity.components?.text?.fontStyle}
                 />
             )
-        break
     case 'image':
-        content = <ImageObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
-        break
+        return <ImageObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
     case 'video':
-        content = <VideoObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
-        break
+        return <VideoObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
     case 'audio':
-        content = (
+        return (
             <AudioObject
                 assetRef={asset || null}
                 data={asset?.url || null}
@@ -87,32 +79,85 @@ function EntityVisual({ entity, assetMap, selected, onSelect }) {
                 audioPaused={false}
             />
         )
-        break
     case 'model':
-        content = <ModelObject assetRef={asset || null} data={asset?.url || null} modelColor={appearance.color} applyModelColor={false} opacity={appearance.opacity} />
-        break
+        return <ModelObject assetRef={asset || null} data={asset?.url || null} modelColor={appearance.color} applyModelColor={false} opacity={appearance.opacity} />
     default:
-        content = <BoxObject color={appearance.color} boxSize={[1, 1, 1]} />
-        break
+        return <BoxObject color={appearance.color} boxSize={[1, 1, 1]} />
     }
+}
+
+function SelectableEntity({ entity, assetMap, selected, editMode, gizmoMode, onSelect, onTransformCommit, orbitRef }) {
+    const groupRef = useRef()
+    const tcRef = useRef()
+    const isDragging = useRef(false)
+
+    // Sync Three.js group from entity data only when not dragging
+    useEffect(() => {
+        if (!groupRef.current || isDragging.current) return
+        const t = entity.components?.transform || {}
+        groupRef.current.position.set(...(t.position || [0, 0, 0]))
+        groupRef.current.rotation.set(...(t.rotation || [0, 0, 0]))
+        groupRef.current.scale.set(...(t.scale || [1, 1, 1]))
+    }, [entity.components?.transform])
+
+    const gizmoActive = selected && editMode === 'edit'
+
+    // Attach TransformControls to the group
+    useEffect(() => {
+        const tc = tcRef.current
+        const group = groupRef.current
+        if (!tc || !group || !gizmoActive) return
+        tc.attach(group)
+        tc.setSpace('local')
+        return () => { tc.detach() }
+    }, [gizmoActive])
+
+    // Drag events: disable orbit during drag, commit on release
+    useEffect(() => {
+        const tc = tcRef.current
+        if (!tc || !gizmoActive) return
+
+        const handleDraggingChanged = (e) => {
+            isDragging.current = e.value
+            if (orbitRef?.current) orbitRef.current.enabled = !e.value
+            if (!e.value && groupRef.current) {
+                const { position, rotation, scale } = groupRef.current
+                onTransformCommit?.(entity.id, {
+                    position: [position.x, position.y, position.z],
+                    rotation: [rotation.x, rotation.y, rotation.z],
+                    scale: [scale.x, scale.y, scale.z]
+                })
+            }
+        }
+        tc.addEventListener('dragging-changed', handleDraggingChanged)
+        return () => tc.removeEventListener('dragging-changed', handleDraggingChanged)
+    }, [gizmoActive, entity.id, onTransformCommit, orbitRef])
+
+    const t = entity.components?.transform || {}
 
     return (
-        <group
-            position={transform.position || [0, 0, 0]}
-            rotation={transform.rotation || [0, 0, 0]}
-            scale={transform.scale || [1, 1, 1]}
-            onClick={(event) => {
-                event.stopPropagation()
-                onSelect?.(entity.id)
-            }}
-        >
-            {content}
-            {selected && (
-                <Html position={[0, 1.8, 0]} center>
-                    <span className="studio-selection-pill">{entity.name}</span>
-                </Html>
+        <>
+            <group
+                ref={groupRef}
+                position={t.position || [0, 0, 0]}
+                rotation={t.rotation || [0, 0, 0]}
+                scale={t.scale || [1, 1, 1]}
+                onClick={(e) => {
+                    e.stopPropagation()
+                    onSelect?.(entity.id)
+                }}
+            >
+                <EntityContent entity={entity} assetMap={assetMap} />
+                {selected && (
+                    <Html position={[0, 1.8, 0]} center>
+                        <span className="studio-selection-pill">{entity.name}</span>
+                    </Html>
+                )}
+            </group>
+            {gizmoActive && (
+                <TransformControls ref={tcRef} mode={gizmoMode} />
             )}
-        </group>
+        </>
     )
 }
 
@@ -145,7 +190,7 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, enabled = true }
     )
 }
 
-function StudioSceneContent({ document, selectedEntityId, onSelectEntity }) {
+function StudioSceneContent({ document, selectedEntityId, onSelectEntity, editMode, gizmoMode, onTransformCommit, controlsRef }) {
     const isArMode = useXR((state) => state.mode === 'immersive-ar')
     const assetMap = useMemo(() => new Map((document.assets || []).map((asset) => [asset.id, asset])), [document.assets])
 
@@ -173,17 +218,85 @@ function StudioSceneContent({ document, selectedEntityId, onSelectEntity }) {
                 )}
                 <Suspense fallback={null}>
                     {(document.entities || []).map((entity) => (
-                        <EntityVisual
+                        <SelectableEntity
                             key={entity.id}
                             entity={entity}
                             assetMap={assetMap}
                             selected={entity.id === selectedEntityId}
+                            editMode={editMode}
+                            gizmoMode={gizmoMode}
                             onSelect={onSelectEntity}
+                            onTransformCommit={onTransformCommit}
+                            orbitRef={controlsRef}
                         />
                     ))}
                 </Suspense>
             </group>
         </>
+    )
+}
+
+const TOOLBAR_BTN = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '5px',
+    padding: '5px 11px',
+    borderRadius: '6px',
+    border: '1px solid rgba(255,255,255,0.12)',
+    background: 'rgba(15,23,34,0.82)',
+    color: '#c8d8e8',
+    fontSize: '12px',
+    fontWeight: 600,
+    fontFamily: 'inherit',
+    cursor: 'pointer',
+    backdropFilter: 'blur(8px)',
+    transition: 'background 0.12s, border-color 0.12s, color 0.12s',
+    userSelect: 'none',
+    whiteSpace: 'nowrap'
+}
+
+const TOOLBAR_BTN_ACTIVE = {
+    background: 'rgba(79,214,255,0.18)',
+    borderColor: '#4fd6ff',
+    color: '#4fd6ff'
+}
+
+function ViewportToolbar({ editMode, setEditMode, gizmoMode, setGizmoMode }) {
+    const btn = (label, isActive, onClick) => (
+        <button
+            type="button"
+            style={isActive ? { ...TOOLBAR_BTN, ...TOOLBAR_BTN_ACTIVE } : TOOLBAR_BTN}
+            onClick={onClick}
+        >
+            {label}
+        </button>
+    )
+
+    return (
+        <div
+            style={{
+                position: 'absolute',
+                bottom: 14,
+                left: '50%',
+                transform: 'translateX(-50%)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                zIndex: 10,
+                pointerEvents: 'auto'
+            }}
+        >
+            {btn('Navigate', editMode === 'navigate', () => setEditMode('navigate'))}
+            {btn('Edit', editMode === 'edit', () => setEditMode('edit'))}
+            {editMode === 'edit' && (
+                <>
+                    <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.15)', margin: '0 2px' }} />
+                    {btn('Move', gizmoMode === 'translate', () => setGizmoMode('translate'))}
+                    {btn('Rotate', gizmoMode === 'rotate', () => setGizmoMode('rotate'))}
+                    {btn('Scale', gizmoMode === 'scale', () => setGizmoMode('scale'))}
+                </>
+            )}
+        </div>
     )
 }
 
@@ -198,6 +311,11 @@ export default function StudioViewport({
     onCameraChange,
     controlsRef,
     xrStore,
+    editMode = 'navigate',
+    gizmoMode = 'translate',
+    setEditMode,
+    setGizmoMode,
+    onTransformCommit,
     enableNavigation = true
 }) {
     const viewportRef = useRef(null)
@@ -244,9 +362,23 @@ export default function StudioViewport({
                         document={document}
                         selectedEntityId={selectedEntityId}
                         onSelectEntity={onSelectEntity}
+                        editMode={editMode}
+                        gizmoMode={gizmoMode}
+                        onTransformCommit={onTransformCommit}
+                        controlsRef={controlsRef}
                     />
                 </XR>
             </Canvas>
+
+            {setEditMode && (
+                <ViewportToolbar
+                    editMode={editMode}
+                    setEditMode={setEditMode}
+                    gizmoMode={gizmoMode}
+                    setGizmoMode={setGizmoMode}
+                />
+            )}
+
             <div className="studio-cursor-layer">
                 {Object.values(cursors).map((cursor) => (
                     <div

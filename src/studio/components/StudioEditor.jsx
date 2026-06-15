@@ -263,6 +263,14 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         }
     }
 
+    const handleTransformCommit = useCallback((entityId, transform) => {
+        if (!entityId) return
+        applyLocalOps({
+            type: 'updateComponent',
+            payload: { entityId, component: 'transform', patch: transform }
+        })
+    }, [applyLocalOps])
+
     const handleCameraViewChange = (nextView) => {
         if (!nextView) return
         setCameraView({
@@ -493,6 +501,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onExitXr={xr.handleExitXrSession}
             onBackToHub={() => navigateToStudioPath(buildStudioHubPath(resolvedSpaceId))}
             onCameraViewChange={handleCameraViewChange}
+            onTransformCommit={handleTransformCommit}
             liveProjectState={{
                 spaceId: resolvedSpaceId,
                 spaceLabel: spaceMeta?.label || resolvedSpaceId,

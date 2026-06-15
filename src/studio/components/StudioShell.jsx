@@ -161,9 +161,12 @@ export default function StudioShell({
     onEnterXr,
     onExitXr,
     onBackToHub,
-    onCameraViewChange
+    onCameraViewChange,
+    onTransformCommit
 }) {
     const [utilityMenuAnchor, setUtilityMenuAnchor] = useState(null)
+    const [viewportEditMode, setViewportEditMode] = useState('navigate')
+    const [viewportGizmoMode, setViewportGizmoMode] = useState('translate')
     const leftTab = layout.leftTab || 'library'
     const bottomTab = layout.bottomTab || 'activity'
     const statusColor = getStatusChipColor(syncState.sceneStreamState, presence.presenceState)
@@ -446,6 +449,11 @@ export default function StudioShell({
                     controlsRef={controlsRef}
                     xrStore={xrState.xrStore}
                     onCameraChange={onCameraViewChange}
+                    editMode={viewportEditMode}
+                    gizmoMode={viewportGizmoMode}
+                    setEditMode={setViewportEditMode}
+                    setGizmoMode={setViewportGizmoMode}
+                    onTransformCommit={onTransformCommit}
                 />
 
                 {loading ? (

@@ -38,7 +38,12 @@ export default function StudioPresentationSurface({
     cameraView,
     controlsRef,
     xrStore,
-    onCameraChange
+    onCameraChange,
+    editMode,
+    gizmoMode,
+    setEditMode,
+    setGizmoMode,
+    onTransformCommit
 }) {
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
@@ -121,6 +126,11 @@ export default function StudioPresentationSurface({
             xrStore={xrStore}
             onCameraChange={previewMode === 'fixed-camera' ? undefined : onCameraChange}
             enableNavigation={previewMode !== 'fixed-camera'}
+            editMode={editMode}
+            gizmoMode={gizmoMode}
+            setEditMode={setEditMode}
+            setGizmoMode={setGizmoMode}
+            onTransformCommit={onTransformCommit}
         />
     )
 }
