@@ -106,6 +106,9 @@ const defaultPresentationState = {
   mode: 'scene',
   fixedCamera: defaultPresentationFixedCamera,
   codeHtml: '',
+  codeSourceType: 'html',
+  codeUrl: '',
+  codeFiles: [],
   entryView: 'scene'
 }
 
@@ -345,6 +348,13 @@ const normalizePresentationState = (presentation = {}, worldState = defaultWorld
     mode: ['scene', 'fixed-camera', 'code'].includes(mode) ? mode : defaultPresentationState.mode,
     fixedCamera: normalizePresentationFixedCamera(source.fixedCamera, worldState),
     codeHtml: typeof source.codeHtml === 'string' ? source.codeHtml : defaultPresentationState.codeHtml,
+    codeSourceType: source.codeSourceType === 'url' ? 'url' : defaultPresentationState.codeSourceType,
+    codeUrl: typeof source.codeUrl === 'string' ? source.codeUrl.trim() : defaultPresentationState.codeUrl,
+    codeFiles: Array.isArray(source.codeFiles)
+      ? source.codeFiles
+          .filter((f) => f && typeof f.name === 'string' && typeof f.content === 'string')
+          .map((f) => ({ name: f.name.trim(), content: f.content }))
+      : defaultPresentationState.codeFiles,
     entryView: ['scene', 'fixed-camera', 'code'].includes(entryView) ? entryView : defaultPresentationState.entryView
   }
 }

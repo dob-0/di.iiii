@@ -1,4 +1,7 @@
+import { useRef, useState } from 'react'
+import JSZip from 'jszip'
 import {
+    Box,
     Button,
     Card,
     Dialog,
@@ -7,6 +10,7 @@ import {
     FormControl,
     FormControlLabel,
     IconButton,
+    InputAdornment,
     InputLabel,
     List,
     ListItemButton,
@@ -16,16 +20,33 @@ import {
     Select,
     Stack,
     Switch,
+    Tab,
+    Tabs,
     TextField,
+    ToggleButton,
+    ToggleButtonGroup,
     Typography
 } from '@mui/material'
+import AddIcon from '@mui/icons-material/Add'
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
 import CloseIcon from '@mui/icons-material/Close'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import DownloadIcon from '@mui/icons-material/Download'
+import FileUploadIcon from '@mui/icons-material/FileUpload'
+import FolderOpenIcon from '@mui/icons-material/FolderOpen'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ShareIcon from '@mui/icons-material/Share'
 import SmartphoneIcon from '@mui/icons-material/Smartphone'
 import ViewInArIcon from '@mui/icons-material/ViewInAr'
+import { presentationStarterTemplates } from '../../utils/presentationTemplates.js'
+import {
+    bundleCodeFiles,
+    fileLanguage,
+    isSupportedFile,
+    normalizeFileName,
+    SUPPORTED_EXTENSIONS
+} from '../../utils/codeFilesBundle.js'
 
 const formatTimestamp = (value) => {
     if (!value) return 'Not yet'
@@ -225,6 +246,137 @@ export function PresentPanel({
     onSaveCurrentCamera,
     onUseCurrentCameraAsFixed
 }) {
+    const singleFileInputRef = useRef(null)
+    const zipInputRef = useRef(null)
+    const folderInputRef = useRef(null)
+    const [activeFileName, setActiveFileName] = useState('index.html')
+    const [showAddFile, setShowAddFile] = useState(false)
+    const [newFileName, setNewFileName] = useState('')
+
+    const isCodeMode = (presentationState.mode || 'scene') === 'code'
+    const isUrlSource = (presentationState.codeSourceType || 'html') === 'url'
+    const files = presentationState.codeFiles || []
+    const codeUrl = presentationState.codeUrl || ''
+    const hasLegacyHtml = Boolean(presentationState.codeHtml && files.length === 0)
+    const activeFile = files.find((f) => f.name === activeFileName) || files[0] || null
+
+    const setFiles = (nextFiles) => onPresentationPatch({ codeFiles: nextFiles })
+
+    const updateActiveContent = (content) => {
+        const name = activeFile?.name
+        if (!name) return
+        setFiles(files.map((f) => (f.name === name ? { ...f, content } : f)))
+    }
+
+    const addFile = () => {
+        const name = newFileName.trim()
+        if (!name || files.find((f) => f.name === name)) return
+        setFiles([...files, { name, content: '' }])
+        setActiveFileName(name)
+        setNewFileName('')
+        setShowAddFile(false)
+    }
+
+    const removeFile = (name) => {
+        const next = files.filter((f) => f.name !== name)
+        setFiles(next)
+        if (activeFileName === name) setActiveFileName(next[0]?.name || '')
+    }
+
+    const handleImportSingle = async (event) => {
+        const file = event.target.files?.[0]
+        event.target.value = ''
+        if (!file) return
+        const content = await file.text()
+        const name = normalizeFileName(file.name)
+        const existing = files.find((f) => f.name === name)
+        if (existing) {
+            setFiles(files.map((f) => (f.name === name ? { ...f, content } : f)))
+        } else {
+            setFiles([...files, { name, content }])
+        }
+        setActiveFileName(name)
+    }
+
+    const handleImportZip = async (event) => {
+        const file = event.target.files?.[0]
+        event.target.value = ''
+        if (!file) return
+        try {
+            const zip = await JSZip.loadAsync(file)
+            const entries = []
+            zip.forEach((relativePath, entry) => {
+                if (!entry.dir && isSupportedFile(relativePath)) entries.push({ relativePath, entry })
+            })
+            const loaded = await Promise.all(
+                entries.map(async ({ relativePath, entry }) => ({
+                    name: normalizeFileName(relativePath),
+                    content: await entry.async('text')
+                }))
+            )
+            if (loaded.length > 0) {
+                setFiles(loaded)
+                const root = loaded.find((f) => f.name === 'index.html') || loaded[0]
+                setActiveFileName(root.name)
+            }
+        } catch {
+            // ignore malformed zips
+        }
+    }
+
+    const handleImportFolder = async (event) => {
+        const fileList = Array.from(event.target.files || [])
+        event.target.value = ''
+        if (!fileList.length) return
+        const loaded = await Promise.all(
+            fileList
+                .filter((f) => isSupportedFile(f.name))
+                .map(async (f) => ({
+                    name: normalizeFileName(f.webkitRelativePath || f.name),
+                    content: await f.text()
+                }))
+        )
+        if (loaded.length > 0) {
+            setFiles(loaded)
+            const root = loaded.find((f) => f.name.endsWith('index.html')) || loaded[0]
+            setActiveFileName(root.name)
+        }
+    }
+
+    const handleExportZip = async () => {
+        if (files.length === 0) return
+        const zip = new JSZip()
+        for (const f of files) zip.file(f.name, f.content)
+        const blob = await zip.generateAsync({ type: 'blob' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'project.zip'
+        a.click()
+        window.setTimeout(() => URL.revokeObjectURL(url), 1_000)
+    }
+
+    const handleOpenPreview = () => {
+        if (files.length === 0) return
+        const bundled = bundleCodeFiles(files)
+        if (!bundled) return
+        const url = URL.createObjectURL(new Blob([bundled], { type: 'text/html' }))
+        window.open(url, '_blank', 'noopener,noreferrer')
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    }
+
+    const handleMigrateLegacy = () => {
+        const nextFiles = [{ name: 'index.html', content: presentationState.codeHtml }]
+        onPresentationPatch({ codeFiles: nextFiles, codeHtml: '' })
+        setActiveFileName('index.html')
+    }
+
+    const applyTemplate = (template) => {
+        const nextFiles = [{ name: 'index.html', content: template.html }]
+        onPresentationPatch({ codeFiles: nextFiles, codeSourceType: 'html' })
+        setActiveFileName('index.html')
+    }
+
     return (
         <Stack spacing={2} sx={{ p: 2 }}>
             <FormControl fullWidth size="small">
@@ -255,13 +407,166 @@ export function PresentPanel({
                 <Button variant="outlined" onClick={onSaveCurrentCamera}>Save current view</Button>
                 <Button variant="contained" onClick={onUseCurrentCameraAsFixed}>Use current camera</Button>
             </Stack>
-            <TextField
-                multiline
-                minRows={8}
-                label="Code preview HTML"
-                value={presentationState.codeHtml || ''}
-                onChange={(event) => onPresentationPatch({ codeHtml: event.target.value })}
-            />
+
+            {isCodeMode && (
+                <Stack spacing={1.5}>
+                    <ToggleButtonGroup
+                        size="small"
+                        exclusive
+                        value={isUrlSource ? 'url' : 'files'}
+                        onChange={(_, value) => { if (value) onPresentationPatch({ codeSourceType: value === 'url' ? 'url' : 'html' }) }}
+                    >
+                        <ToggleButton value="files">Files</ToggleButton>
+                        <ToggleButton value="url">Public Link</ToggleButton>
+                    </ToggleButtonGroup>
+
+                    {isUrlSource ? (
+                        <TextField
+                            size="small"
+                            label="Preview URL"
+                            placeholder="https://example.com"
+                            type="url"
+                            value={codeUrl}
+                            onChange={(event) => onPresentationPatch({ codeUrl: event.target.value })}
+                            helperText="Point the space at an external page, prototype, or published microsite."
+                        />
+                    ) : files.length === 0 ? (
+                        <Stack spacing={1.5}>
+                            {hasLegacyHtml && (
+                                <Card variant="outlined" sx={{ p: 1.5 }}>
+                                    <Stack spacing={1}>
+                                        <Typography variant="body2">You have existing HTML — convert it to a file project?</Typography>
+                                        <Button size="small" variant="contained" onClick={handleMigrateLegacy}>
+                                            Convert to index.html
+                                        </Button>
+                                    </Stack>
+                                </Card>
+                            )}
+                            <Typography variant="caption" color="text.secondary">Start from a template</Typography>
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 1 }}>
+                                {presentationStarterTemplates.map((template) => (
+                                    <Paper
+                                        key={template.id}
+                                        variant="outlined"
+                                        onClick={() => applyTemplate(template)}
+                                        sx={{ p: 1, cursor: 'pointer', '&:hover': { borderColor: 'primary.light', bgcolor: 'action.hover' } }}
+                                    >
+                                        <Typography variant="caption" color="text.secondary" display="block">{template.eyebrow}</Typography>
+                                        <Typography variant="body2" fontWeight={600}>{template.name}</Typography>
+                                    </Paper>
+                                ))}
+                            </Box>
+                            <Typography variant="caption" color="text.secondary">Or import existing files</Typography>
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                <Button size="small" variant="outlined" startIcon={<FileUploadIcon />} onClick={() => singleFileInputRef.current?.click()}>
+                                    Import file
+                                </Button>
+                                <Button size="small" variant="outlined" startIcon={<FileUploadIcon />} onClick={() => zipInputRef.current?.click()}>
+                                    Import .zip
+                                </Button>
+                                <Button size="small" variant="outlined" startIcon={<FolderOpenIcon />} onClick={() => folderInputRef.current?.click()}>
+                                    Import folder
+                                </Button>
+                            </Stack>
+                        </Stack>
+                    ) : (
+                        <Stack spacing={1}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                                <Tabs
+                                    value={activeFile?.name || false}
+                                    onChange={(_, name) => setActiveFileName(name)}
+                                    variant="scrollable"
+                                    scrollButtons="auto"
+                                    sx={{ flex: 1, minWidth: 0, '& .MuiTab-root': { minWidth: 0, px: 1.5, py: 0.5, fontSize: '0.75rem' } }}
+                                >
+                                    {files.map((f) => (
+                                        <Tab
+                                            key={f.name}
+                                            value={f.name}
+                                            label={
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                    <span>{f.name}</span>
+                                                    {files.length > 1 && (
+                                                        <IconButton
+                                                            size="small"
+                                                            onClick={(e) => { e.stopPropagation(); removeFile(f.name) }}
+                                                            sx={{ p: 0, ml: 0.25 }}
+                                                        >
+                                                            <CloseIcon sx={{ fontSize: 12 }} />
+                                                        </IconButton>
+                                                    )}
+                                                </Box>
+                                            }
+                                        />
+                                    ))}
+                                </Tabs>
+                                <IconButton size="small" onClick={() => setShowAddFile(true)} title="Add file">
+                                    <AddIcon fontSize="small" />
+                                </IconButton>
+                            </Box>
+
+                            {showAddFile && (
+                                <Stack direction="row" spacing={1}>
+                                    <TextField
+                                        size="small"
+                                        placeholder="style.css"
+                                        value={newFileName}
+                                        onChange={(e) => setNewFileName(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') addFile(); if (e.key === 'Escape') { setShowAddFile(false); setNewFileName('') } }}
+                                        InputProps={{
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {fileLanguage(newFileName) || 'text'}
+                                                    </Typography>
+                                                </InputAdornment>
+                                            )
+                                        }}
+                                        sx={{ flex: 1 }}
+                                        helperText={`Supported: ${SUPPORTED_EXTENSIONS.join(', ')}`}
+                                    />
+                                    <Button size="small" variant="contained" onClick={addFile} disabled={!newFileName.trim()}>Add</Button>
+                                    <Button size="small" onClick={() => { setShowAddFile(false); setNewFileName('') }}>Cancel</Button>
+                                </Stack>
+                            )}
+
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                <Button size="small" variant="outlined" startIcon={<FileUploadIcon />} onClick={() => singleFileInputRef.current?.click()}>
+                                    Import file
+                                </Button>
+                                <Button size="small" variant="outlined" startIcon={<FileUploadIcon />} onClick={() => zipInputRef.current?.click()}>
+                                    Import .zip
+                                </Button>
+                                <Button size="small" variant="outlined" startIcon={<FolderOpenIcon />} onClick={() => folderInputRef.current?.click()}>
+                                    Import folder
+                                </Button>
+                                <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={handleExportZip}>
+                                    Export .zip
+                                </Button>
+                                <Button size="small" variant="outlined" startIcon={<OpenInNewIcon />} onClick={handleOpenPreview} disabled={!bundleCodeFiles(files)}>
+                                    Preview
+                                </Button>
+                            </Stack>
+
+                            {activeFile && (
+                                <TextField
+                                    key={activeFile.name}
+                                    multiline
+                                    minRows={12}
+                                    label={activeFile.name}
+                                    value={activeFile.content}
+                                    onChange={(e) => updateActiveContent(e.target.value)}
+                                    inputProps={{ style: { fontFamily: 'monospace', fontSize: '0.78rem' } }}
+                                />
+                            )}
+                        </Stack>
+                    )}
+
+                    <input ref={singleFileInputRef} type="file" accept={SUPPORTED_EXTENSIONS.map((e) => `.${e}`).join(',')} aria-label="Import single file" style={{ display: 'none' }} onChange={handleImportSingle} />
+                    <input ref={zipInputRef} type="file" accept=".zip,application/zip" aria-label="Import zip" style={{ display: 'none' }} onChange={handleImportZip} />
+                    <input ref={folderInputRef} type="file" webkitdirectory="" aria-label="Import folder" style={{ display: 'none' }} onChange={handleImportFolder} />
+                </Stack>
+            )}
         </Stack>
     )
 }

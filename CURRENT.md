@@ -7,7 +7,7 @@ Updated at the end of every session. Replace content — do not append.
 
 ## Last commit
 
-`(this session)` — feat: space sync workflow — scripts + UI
+`(this session)` — feat: multi-file code editor + resizable panels in Studio — file tabs, zip/folder import, inline bundler, export, drag-resize all three panels
 Branch focus: active development on `dev`; promote through `staging` for live verification.
 
 ## What works

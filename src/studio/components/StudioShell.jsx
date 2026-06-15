@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import {
     AppBar,
     Avatar,
@@ -48,8 +48,69 @@ import {
 } from './StudioShellPanels.jsx'
 
 const APP_BAR_HEIGHT = 72
-const DESKTOP_BOTTOM_HEIGHT = 300
 const MOBILE_BOTTOM_NAV_HEIGHT = 68
+
+const LEFT_WIDTH_MIN = 220
+const LEFT_WIDTH_MAX = 600
+const RIGHT_WIDTH_MIN = 220
+const RIGHT_WIDTH_MAX = 600
+const BOTTOM_HEIGHT_MIN = 140
+const BOTTOM_HEIGHT_MAX = 720
+
+function ResizeHandle({ direction, onDrag, onStart, sx = {} }) {
+    const isHorizontal = direction === 'left' || direction === 'right'
+    const cursor = isHorizontal ? 'col-resize' : 'row-resize'
+    const startRef = useRef(null)
+
+    const handlePointerDown = useCallback((e) => {
+        e.preventDefault()
+        e.currentTarget.setPointerCapture(e.pointerId)
+        startRef.current = { x: e.clientX, y: e.clientY }
+        onStart?.()
+    }, [onStart])
+
+    const handlePointerMove = useCallback((e) => {
+        if (!startRef.current) return
+        onDrag(e.clientX - startRef.current.x, e.clientY - startRef.current.y)
+    }, [onDrag])
+
+    const handlePointerUp = useCallback((e) => {
+        e.currentTarget.releasePointerCapture(e.pointerId)
+        startRef.current = null
+    }, [])
+
+    return (
+        <Box
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            sx={{
+                position: 'fixed',
+                cursor,
+                userSelect: 'none',
+                touchAction: 'none',
+                zIndex: (theme) => theme.zIndex.drawer + 2,
+                '&::after': {
+                    content: '""',
+                    position: 'absolute',
+                    bgcolor: 'transparent',
+                    transition: 'background-color 0.15s',
+                    ...(isHorizontal ? {
+                        top: 0, bottom: 0,
+                        left: '50%', transform: 'translateX(-50%)',
+                        width: 2
+                    } : {
+                        left: 0, right: 0,
+                        top: '50%', transform: 'translateY(-50%)',
+                        height: 2
+                    })
+                },
+                '&:hover::after': { bgcolor: 'primary.main' },
+                ...sx
+            }}
+        />
+    )
+}
 
 const getStatusChipColor = (streamState, presenceState) => {
     if (streamState === 'connected' && presenceState === 'connected') return 'success'
@@ -106,8 +167,27 @@ export default function StudioShell({
     const leftTab = layout.leftTab || 'library'
     const bottomTab = layout.bottomTab || 'activity'
     const statusColor = getStatusChipColor(syncState.sceneStreamState, presence.presenceState)
-    const bottomHeight = isMobile ? 360 : DESKTOP_BOTTOM_HEIGHT
+    const bottomHeight = layout.bottomHeight || (isMobile ? 360 : 300)
     const bottomInset = layout.bottomOpen ? bottomHeight : (isMobile ? MOBILE_BOTTOM_NAV_HEIGHT : 0)
+
+    const leftStartRef = useRef(null)
+    const rightStartRef = useRef(null)
+    const bottomStartRef = useRef(null)
+
+    const onLeftDrag = useCallback((dx) => {
+        if (leftStartRef.current === null) return
+        updateLayout({ leftWidth: Math.min(LEFT_WIDTH_MAX, Math.max(LEFT_WIDTH_MIN, leftStartRef.current + dx)) })
+    }, [updateLayout])
+
+    const onRightDrag = useCallback((dx) => {
+        if (rightStartRef.current === null) return
+        updateLayout({ rightWidth: Math.min(RIGHT_WIDTH_MAX, Math.max(RIGHT_WIDTH_MIN, rightStartRef.current - dx)) })
+    }, [updateLayout])
+
+    const onBottomDrag = useCallback((_, dy) => {
+        if (bottomStartRef.current === null) return
+        updateLayout({ bottomHeight: Math.min(BOTTOM_HEIGHT_MAX, Math.max(BOTTOM_HEIGHT_MIN, bottomStartRef.current - dy)) })
+    }, [updateLayout])
     const viewportMargins = useMemo(() => ({
         ml: isDesktop && layout.leftOpen ? `${layout.leftWidth}px` : 0,
         mr: isDesktop && layout.rightOpen ? `${layout.rightWidth}px` : 0,
@@ -207,7 +287,7 @@ export default function StudioShell({
     )
 
     return (
-        <Box className="studio-shell-root studio-editor-root">
+        <Box className="studio-shell-root studio-editor-root" sx={{ bgcolor: 'background.default', minHeight: '100vh' }}>
             <AppBar position="fixed" color="transparent" elevation={0} className="studio-appbar">
                 <Toolbar sx={{ minHeight: `${APP_BAR_HEIGHT}px !important`, gap: 1.5 }}>
                     <IconButton color="inherit" onClick={() => updateLayout({ leftOpen: !layout.leftOpen })}>
@@ -295,7 +375,7 @@ export default function StudioShell({
                     sx: {
                         width: layout.leftWidth,
                         top: `${APP_BAR_HEIGHT}px`,
-                        height: `calc(100% - ${APP_BAR_HEIGHT}px - ${bottomInset}px)`
+                        height: `calc(100% - ${APP_BAR_HEIGHT}px)`
                     }
                 }}
             >
@@ -327,7 +407,7 @@ export default function StudioShell({
                     sx: {
                         width: layout.rightWidth,
                         top: `${APP_BAR_HEIGHT}px`,
-                        height: `calc(100% - ${APP_BAR_HEIGHT}px - ${bottomInset}px)`
+                        height: `calc(100% - ${APP_BAR_HEIGHT}px)`
                     }
                 }}
             >
@@ -389,8 +469,9 @@ export default function StudioShell({
                 PaperProps={{
                     sx: {
                         height: bottomHeight,
-                        left: isDesktop && layout.leftOpen ? `${layout.leftWidth}px` : 0,
-                        right: isDesktop && layout.rightOpen ? `${layout.rightWidth}px` : 0
+                        left: 0,
+                        right: 0,
+                        zIndex: (theme) => theme.zIndex.drawer + 1
                     }
                 }}
             >
@@ -446,6 +527,31 @@ export default function StudioShell({
                         <BottomNavigationAction value="publish" label="Publish" icon={<ShareIcon />} />
                     </BottomNavigation>
                 </Paper>
+            ) : null}
+
+            {isDesktop && layout.leftOpen ? (
+                <ResizeHandle
+                    direction="right"
+                    onStart={() => { leftStartRef.current = layout.leftWidth }}
+                    onDrag={onLeftDrag}
+                    sx={{ top: APP_BAR_HEIGHT, bottom: 0, left: layout.leftWidth - 3, width: 6 }}
+                />
+            ) : null}
+            {isDesktop && layout.rightOpen ? (
+                <ResizeHandle
+                    direction="left"
+                    onStart={() => { rightStartRef.current = layout.rightWidth }}
+                    onDrag={onRightDrag}
+                    sx={{ top: APP_BAR_HEIGHT, bottom: 0, right: layout.rightWidth - 3, width: 6 }}
+                />
+            ) : null}
+            {layout.bottomOpen ? (
+                <ResizeHandle
+                    direction="top"
+                    onStart={() => { bottomStartRef.current = bottomHeight }}
+                    onDrag={onBottomDrag}
+                    sx={{ left: 0, right: 0, bottom: bottomHeight - 3, height: 6 }}
+                />
             ) : null}
 
             <PopoutDialog
