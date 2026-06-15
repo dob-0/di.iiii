@@ -340,6 +340,7 @@ export default function StudioViewport({
             onPointerLeave={onCursorLeave}
         >
             <Canvas
+                style={{ height: '100dvh' }}
                 shadows
                 camera={{
                     position: camera.position || [0, 2.4, 6.5],
