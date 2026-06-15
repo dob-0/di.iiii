@@ -759,6 +759,13 @@
 
 .insp-input[type="number"] {
     font-variant-numeric: tabular-nums;
+    -moz-appearance: textfield;
+}
+
+.insp-input[type="number"]::-webkit-inner-spin-button,
+.insp-input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 .insp-select {
