@@ -251,6 +251,7 @@ export default function StudioShell({
                     presentationState={document.presentationState}
                     onPresentationPatch={onPresentationPatch}
                     onSaveCurrentCamera={onSaveCurrentCamera}
+                    assets={document.assets || []}
                 />
             )
         }

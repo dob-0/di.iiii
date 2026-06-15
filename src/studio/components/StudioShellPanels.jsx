@@ -240,10 +240,36 @@ export function ActivityPanel({ activity = [] }) {
     )
 }
 
+const resolveAssetUrl = (asset) => {
+    if (!asset?.url) return ''
+    try {
+        return new URL(asset.url, window.location.origin).href
+    } catch {
+        return asset.url
+    }
+}
+
+const generateAssetTemplate = (asset) => {
+    const url = resolveAssetUrl(asset)
+    const topLevel = (asset.mimeType || '').split('/')[0]
+    const base = `* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { width: 100vw; height: 100vh; overflow: hidden; background: #000; }`
+    if (topLevel === 'video') {
+        return `<!doctype html>\n<html><head>\n<meta charset="UTF-8">\n<style>\n${base}\nvideo { width: 100%; height: 100%; object-fit: cover; display: block; }\n</style>\n</head><body>\n<video src="${url}" autoplay loop muted playsinline></video>\n</body></html>`
+    }
+    if (topLevel === 'image') {
+        return `<!doctype html>\n<html><head>\n<meta charset="UTF-8">\n<style>\n${base}\nimg { width: 100%; height: 100%; object-fit: cover; display: block; }\n</style>\n</head><body>\n<img src="${url}" alt="${asset.name}">\n</body></html>`
+    }
+    if (topLevel === 'audio') {
+        return `<!doctype html>\n<html><head>\n<meta charset="UTF-8">\n<style>\n${base}\nbody { display: flex; align-items: center; justify-content: center; color: #fff; font-family: system-ui; }\naudio { width: min(480px, 90vw); }\n</style>\n</head><body>\n<audio src="${url}" controls autoplay></audio>\n</body></html>`
+    }
+    return `<!doctype html>\n<html><head><meta charset="UTF-8"></head><body style="background:#000;color:#fff;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh">\n<a href="${url}" style="color:#6ee7ff">${asset.name}</a>\n</body></html>`
+}
+
 export function PresentPanel({
     presentationState,
     onPresentationPatch,
-    onSaveCurrentCamera
+    onSaveCurrentCamera,
+    assets = []
 }) {
     const singleFileInputRef = useRef(null)
     const zipInputRef = useRef(null)
@@ -376,6 +402,12 @@ export function PresentPanel({
         setActiveFileName('index.html')
     }
 
+    const applyAsset = (asset) => {
+        const nextFiles = [{ name: 'index.html', content: generateAssetTemplate(asset) }]
+        onPresentationPatch({ codeFiles: nextFiles, codeSourceType: 'html' })
+        setActiveFileName('index.html')
+    }
+
     return (
         <Stack spacing={2} sx={{ p: 2 }}>
             <FormControl fullWidth size="small">
@@ -437,6 +469,27 @@ export function PresentPanel({
                                         </Button>
                                     </Stack>
                                 </Card>
+                            )}
+                            {assets.length > 0 && (
+                                <>
+                                    <Typography variant="caption" color="text.secondary">From space assets</Typography>
+                                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 1 }}>
+                                        {assets.map((asset) => {
+                                            const topLevel = (asset.mimeType || '').split('/')[0]
+                                            return (
+                                                <Paper
+                                                    key={asset.id}
+                                                    variant="outlined"
+                                                    onClick={() => applyAsset(asset)}
+                                                    sx={{ p: 1, cursor: 'pointer', '&:hover': { borderColor: 'primary.light', bgcolor: 'action.hover' } }}
+                                                >
+                                                    <Typography variant="caption" color="text.secondary" display="block">{topLevel || 'file'}</Typography>
+                                                    <Typography variant="body2" fontWeight={600} noWrap title={asset.name}>{asset.name}</Typography>
+                                                </Paper>
+                                            )
+                                        })}
+                                    </Box>
+                                </>
                             )}
                             <Typography variant="caption" color="text.secondary">Start from a template</Typography>
                             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 1 }}>
