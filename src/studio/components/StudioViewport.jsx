@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Grid, Html, OrbitControls, TransformControls } from '@react-three/drei'
 import { XR, useXR } from '@react-three/xr'
@@ -261,6 +261,72 @@ const TOOLBAR_BTN_ACTIVE = {
     color: '#4fd6ff'
 }
 
+function FullscreenButton() {
+    const [isFs, setIsFs] = useState(Boolean(document.fullscreenElement))
+
+    useEffect(() => {
+        const handler = () => setIsFs(Boolean(document.fullscreenElement))
+        document.addEventListener('fullscreenchange', handler)
+        return () => document.removeEventListener('fullscreenchange', handler)
+    }, [])
+
+    const toggle = () => {
+        if (document.fullscreenElement) {
+            document.exitFullscreen()
+        } else {
+            document.documentElement.requestFullscreen()
+        }
+    }
+
+    return (
+        <button
+            type="button"
+            onClick={toggle}
+            title={isFs ? 'Exit fullscreen' : 'Fullscreen'}
+            style={{
+                position: 'absolute',
+                bottom: 14,
+                right: 14,
+                zIndex: 10,
+                width: 30,
+                height: 30,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'rgba(15,23,34,0.55)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 6,
+                color: 'rgba(255,255,255,0.55)',
+                cursor: 'pointer',
+                backdropFilter: 'blur(6px)',
+                padding: 0,
+                transition: 'color 0.12s, border-color 0.12s, background 0.12s',
+                pointerEvents: 'auto'
+            }}
+            onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#fff'
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)'
+                e.currentTarget.style.background = 'rgba(15,23,34,0.82)'
+            }}
+            onMouseLeave={(e) => {
+                e.currentTarget.style.color = 'rgba(255,255,255,0.55)'
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                e.currentTarget.style.background = 'rgba(15,23,34,0.55)'
+            }}
+        >
+            {isFs ? (
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <path d="M5 1H1v4M9 1h4v4M5 13H1V9M9 13h4V9" />
+                </svg>
+            ) : (
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+                    <path d="M1 5V1h4M9 1h4v4M13 9v4H9M5 13H1V9" />
+                </svg>
+            )}
+        </button>
+    )
+}
+
 function ViewportToolbar({ editMode, setEditMode, gizmoMode, setGizmoMode }) {
     const btn = (label, isActive, onClick) => (
         <button
@@ -379,6 +445,8 @@ export default function StudioViewport({
                     setGizmoMode={setGizmoMode}
                 />
             )}
+
+            <FullscreenButton />
 
             <div className="studio-cursor-layer">
                 {Object.values(cursors).map((cursor) => (
