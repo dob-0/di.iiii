@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Button } from '@mui/material'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import StudioInspector from './StudioInspector.jsx'
 import StudioPresentationSurface from './StudioPresentationSurface.jsx'
 import StudioFloatingPanel from './StudioFloatingPanel.jsx'
@@ -122,16 +120,13 @@ export default function StudioShell({
     }, [])
 
     const inspectorFooter = (
-        <Button
-            variant="outlined"
-            color="error"
-            size="small"
+        <button
+            className="scc-btn spa-btn-wide insp-delete-btn"
             disabled={!selectedEntity}
             onClick={onDeleteSelected}
-            startIcon={<DeleteOutlineIcon />}
         >
-            Delete
-        </Button>
+            × Delete entity
+        </button>
     )
 
     return (
