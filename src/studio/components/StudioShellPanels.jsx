@@ -88,83 +88,82 @@ export function PanelHeader({ title, onClose, action = null }) {
 export function LibraryPanel({ onCreateEntity, onAssetFilesSelected, canDeleteSelection, onDeleteSelected }) {
     const types = ['box', 'sphere', 'cone', 'cylinder', 'text']
     return (
-        <Stack spacing={2} sx={{ p: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-                Add primitives, text, and media.
-            </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                {types.map((type) => (
-                    <Button key={type} variant="outlined" size="small" onClick={() => onCreateEntity(type)}>
-                        {type}
-                    </Button>
-                ))}
-            </Stack>
-            <Button component="label" variant="contained" startIcon={<AddPhotoAlternateIcon />}>
-                Import assets
-                <input hidden type="file" multiple onChange={onAssetFilesSelected} />
-            </Button>
-            <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteOutlineIcon />}
-                disabled={!canDeleteSelection}
-                onClick={onDeleteSelected}
-            >
-                Delete selected
-            </Button>
-        </Stack>
+        <>
+            <div className="scc-section">
+                <div className="scc-section-label">Primitives</div>
+                <div className="scc-buttons">
+                    {types.map((type) => (
+                        <button key={type} className="scc-btn" onClick={() => onCreateEntity(type)}>
+                            {type}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            <div className="scc-section">
+                <div className="scc-section-label">Actions</div>
+                <div className="spa-actions">
+                    <label className="scc-btn spa-btn-wide" style={{ cursor: 'pointer' }}>
+                        ↑ Import assets
+                        <input type="file" multiple onChange={onAssetFilesSelected} style={{ display: 'none' }} />
+                    </label>
+                    <button className="scc-btn spa-btn-wide" disabled={!canDeleteSelection} onClick={onDeleteSelected}>
+                        × Delete selected
+                    </button>
+                </div>
+            </div>
+        </>
     )
 }
 
 export function AssetsPanel({ assets = [], onAssetFilesSelected, onCreateFromAsset }) {
     return (
-        <Stack spacing={1.5} sx={{ p: 2 }}>
-            <Button component="label" variant="contained" startIcon={<AddPhotoAlternateIcon />}>
-                Import assets
-                <input hidden type="file" multiple onChange={onAssetFilesSelected} />
-            </Button>
-            <List dense disablePadding sx={{ display: 'grid', gap: 1 }}>
-                {assets.length ? assets.map((asset) => (
-                    <Paper key={asset.id} variant="outlined">
-                        <ListItemButton onClick={() => onCreateFromAsset(asset)}>
-                            <ListItemText
-                                primary={asset.name}
-                                secondary={`${assetTypeLabel(asset.mimeType)} • ${asset.mimeType}`}
-                            />
-                        </ListItemButton>
-                    </Paper>
-                )) : (
-                    <Card variant="outlined" sx={{ p: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                            No assets yet.
-                        </Typography>
-                    </Card>
+        <>
+            <div className="scc-section">
+                <label className="scc-btn spa-btn-wide" style={{ cursor: 'pointer' }}>
+                    ↑ Import assets
+                    <input type="file" multiple onChange={onAssetFilesSelected} style={{ display: 'none' }} />
+                </label>
+            </div>
+            <div className="scc-section">
+                <div className="scc-section-label">Space assets ({assets.length})</div>
+                {assets.length === 0 ? (
+                    <p className="sfp-empty">No assets yet.</p>
+                ) : (
+                    <div className="spa-list">
+                        {assets.map((asset) => (
+                            <button key={asset.id} className="spa-item" onClick={() => onCreateFromAsset?.(asset)}>
+                                <span className="spa-name">{asset.name}</span>
+                                <span className="spa-type">{assetTypeLabel(asset.mimeType)}</span>
+                            </button>
+                        ))}
+                    </div>
                 )}
-            </List>
-        </Stack>
+            </div>
+        </>
     )
 }
 
 export function StructurePanel({ entities = [], selectedEntityId, onSelectEntity }) {
     return (
-        <List dense disablePadding sx={{ p: 2, display: 'grid', gap: 1 }}>
-            {entities.length ? entities.map((entity) => (
-                <Paper key={entity.id} variant="outlined">
-                    <ListItemButton
-                        selected={entity.id === selectedEntityId}
-                        onClick={() => onSelectEntity(entity.id)}
-                    >
-                        <ListItemText primary={entity.name} secondary={entity.type} />
-                    </ListItemButton>
-                </Paper>
-            )) : (
-                <Card variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                        No entities yet.
-                    </Typography>
-                </Card>
+        <div className="scc-section">
+            <div className="scc-section-label">Entities ({entities.length})</div>
+            {entities.length === 0 ? (
+                <p className="sfp-empty">No entities yet.</p>
+            ) : (
+                <div className="spa-list">
+                    {entities.map((entity) => (
+                        <button
+                            key={entity.id}
+                            className={`spa-item${entity.id === selectedEntityId ? ' active' : ''}`}
+                            onClick={() => onSelectEntity(entity.id)}
+                        >
+                            <span className="spa-name">{entity.name || entity.id}</span>
+                            <span className="spa-type">{entity.type}</span>
+                        </button>
+                    ))}
+                </div>
             )}
-        </List>
+        </div>
     )
 }
 
@@ -218,25 +217,26 @@ export function ProjectPanel({
 
 export function ActivityPanel({ activity = [] }) {
     return (
-        <Stack spacing={1.25} sx={{ p: 2 }}>
-            {activity.length ? activity.map((entry) => (
-                <Paper key={entry.id} variant="outlined" sx={{ p: 1.5 }}>
-                    <Stack direction="row" justifyContent="space-between" spacing={1}>
-                        <Typography variant="subtitle2" textTransform="capitalize">{entry.level}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            {formatTimestamp(entry.timestamp)}
-                        </Typography>
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary">{entry.message}</Typography>
-                </Paper>
-            )) : (
-                <Card variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                        No project activity yet.
-                    </Typography>
-                </Card>
+        <div className="scc-section">
+            <div className="scc-section-label">Recent activity</div>
+            {activity.length === 0 ? (
+                <p className="sfp-empty">No project activity yet.</p>
+            ) : (
+                <div className="spa-activity">
+                    {[...activity].reverse().map((entry) => (
+                        <div key={entry.id} className="spa-activity-entry">
+                            <div className="spa-activity-header">
+                                <span className={`spa-activity-level spa-activity-level--${entry.level || 'info'}`}>
+                                    {entry.level || 'info'}
+                                </span>
+                                <span className="spa-activity-time">{formatTimestamp(entry.timestamp)}</span>
+                            </div>
+                            <p className="spa-activity-msg">{entry.message}</p>
+                        </div>
+                    ))}
+                </div>
             )}
-        </Stack>
+        </div>
     )
 }
 
