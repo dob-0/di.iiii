@@ -19,15 +19,16 @@ import {
 
 const DEFAULT_POSITIONS = () => {
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1280
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 800
     return {
         library:   { x: 16, y: 16 },
         assets:    { x: 308, y: 16 },
         inspector: { x: vw - 296, y: 16 },
-        structure: { x: 16, y: 320 },
-        present:   { x: 308, y: 16 },
-        publish:   { x: 308, y: 16 },
-        activity:  { x: 16, y: 200 },
-        world:     { x: 16, y: 320 },
+        structure: { x: 16, y: Math.round(vh * 0.45) },
+        present:   { x: Math.round(vw * 0.35), y: 16 },
+        publish:   { x: vw - 296, y: Math.round(vh * 0.45) },
+        activity:  { x: Math.round(vw * 0.35), y: Math.round(vh * 0.45) },
+        world:     { x: 308, y: Math.round(vh * 0.45) },
     }
 }
 
@@ -148,8 +149,6 @@ export default function StudioShell({
                 onCameraChange={onCameraViewChange}
                 editMode={viewportEditMode}
                 gizmoMode={viewportGizmoMode}
-                setEditMode={setViewportEditMode}
-                setGizmoMode={setViewportGizmoMode}
                 onTransformCommit={onTransformCommit}
             />
 
