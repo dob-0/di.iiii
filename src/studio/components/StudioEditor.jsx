@@ -105,9 +105,6 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         position: document.worldState?.savedView?.position || defaultWorldState.savedView.position,
         target: document.worldState?.savedView?.target || defaultWorldState.savedView.target
     }))
-    const [isStreamingScene, setIsStreamingScene] = useState(false)
-    const cameraViewRef = useRef(cameraView)
-    useEffect(() => { cameraViewRef.current = cameraView }, [cameraView])
 
     useEffect(() => {
         const savedView = document.worldState?.savedView || defaultWorldState.savedView
@@ -301,37 +298,6 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         })
     }
 
-    const handleFireCue = useCallback((name) => {
-        presence.emitStudioSignal({ type: 'cue', name, payload: {} })
-    }, [presence])
-
-    const handleToggleSceneStream = useCallback(() => {
-        setIsStreamingScene((prev) => !prev)
-    }, [])
-
-    useEffect(() => {
-        if (!isStreamingScene) return
-        const id = setInterval(() => {
-            const cam = cameraViewRef.current
-            const ents = documentRef.current?.entities || []
-            presence.emitStudioSignal({
-                type: 'scene',
-                payload: {
-                    camera: cam ? { position: cam.position, target: cam.target } : null,
-                    entities: ents.map((e) => ({
-                        id: e.id,
-                        type: e.type,
-                        position: e.position,
-                        rotation: e.rotation,
-                        scale: e.scale,
-                        label: e.label
-                    }))
-                }
-            })
-        }, 250)
-        return () => clearInterval(id)
-    }, [isStreamingScene, presence])
-
     const handleCopyShareLink = async () => {
         const isLiveProject = spaceMeta?.publishedProjectId === projectId
         const sharePath = isLiveProject
@@ -510,9 +476,6 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onPresentationPatch={handlePresentationPatch}
             onPublishPatch={handlePublishPatch}
             onSaveCurrentCamera={handleSaveCurrentCamera}
-            onFireCue={handleFireCue}
-            isStreamingScene={isStreamingScene}
-            onToggleSceneStream={handleToggleSceneStream}
             onCopyShareLink={handleCopyShareLink}
             onExportProject={handleExportProject}
             onImportProjectFile={handleImportProjectFile}
