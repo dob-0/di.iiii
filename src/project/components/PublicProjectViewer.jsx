@@ -9,8 +9,9 @@ import {
 import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import useXrAr from '../../hooks/useXrAr.js'
 import StudioViewport from '../../studio/components/StudioViewport.jsx'
-import { buildPresentationPreviewDocument } from '../../utils/presentationPreviewDocument.js'
+import { buildPresentationPreviewDocument, STUDIO_SIGNAL_MESSAGE_TYPE } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
+import { useProjectPresence } from '../hooks/useProjectPresence.js'
 
 const overlayButtonStyle = {
     appearance: 'none',
@@ -35,13 +36,7 @@ const overlayCardStyle = {
     backdropFilter: 'blur(12px)'
 }
 
-const resolveViewerCamera = (document) => {
-    const entryView = document.presentationState?.entryView || 'scene'
-    if (entryView === 'fixed-camera') {
-        return document.presentationState?.fixedCamera || document.worldState?.savedView || null
-    }
-    return document.worldState?.savedView || null
-}
+const resolveViewerCamera = (document) => document.worldState?.savedView || null
 
 export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '' }) {
     const [state, setState] = useState({
@@ -55,6 +50,8 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const versionRef = useRef(0)
     const cameraViewRef = useRef(null)
     const documentRef = useRef(null)
+    const iframeRef = useRef(null)
+    const { onStudioSignal } = useProjectPresence({ projectId })
 
     useEffect(() => {
         cameraViewRef.current = cameraView
@@ -65,6 +62,14 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     }, [state.document])
 
     const resolvedRouteSpaceId = spaceId || DEFAULT_PROJECT_SPACE_ID
+
+    useEffect(() => {
+        return onStudioSignal((signal) => {
+            const win = iframeRef.current?.contentWindow
+            if (!win) return
+            win.postMessage({ ...signal, __src: STUDIO_SIGNAL_MESSAGE_TYPE }, '*')
+        })
+    }, [onStudioSignal])
 
     const applyIncomingDocument = useCallback((nextDocument) => {
         const normalized = normalizeProjectDocument({
@@ -84,7 +89,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             error: ''
         }))
         setCameraView((currentCamera) => {
-            if (!currentCamera || nextEntryView === 'fixed-camera' || nextEntryView === 'code') {
+            if (!currentCamera || nextEntryView === 'code') {
                 return resolveViewerCamera(normalized)
             }
             return currentCamera
@@ -100,7 +105,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             documentRef.current = nextDocument
             const previousEntryView = current.document.presentationState?.entryView || 'scene'
             const nextEntryView = nextDocument.presentationState?.entryView || 'scene'
-            if (!cameraViewRef.current || previousEntryView !== nextEntryView || nextEntryView === 'fixed-camera' || nextEntryView === 'code') {
+            if (!cameraViewRef.current || previousEntryView !== nextEntryView || nextEntryView === 'code') {
                 setCameraView(resolveViewerCamera(nextDocument))
             }
             return {
@@ -208,6 +213,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             {showCodeView && document ? (
                 presentationState.codeSourceType === 'url' && presentationState.codeUrl?.trim() ? (
                     <iframe
+                        ref={iframeRef}
                         title={viewerTitle}
                         src={presentationState.codeUrl.trim()}
                         loading="lazy"
@@ -222,6 +228,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     />
                 ) : rawHtml ? (
                     <iframe
+                        ref={iframeRef}
                         title={viewerTitle}
                         srcDoc={previewDocument}
                         sandbox="allow-scripts allow-forms allow-popups allow-modals"
@@ -250,11 +257,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     cameraView={cameraView || resolveViewerCamera(document)}
                     controlsRef={controlsRef}
                     xrStore={xr.xrStore}
-                    onCameraChange={(nextView) => {
-                        if (entryView === 'fixed-camera') return
-                        setCameraView(nextView)
-                    }}
-                    enableNavigation={entryView !== 'fixed-camera'}
+                    onCameraChange={setCameraView}
                 />
             ) : null}
 

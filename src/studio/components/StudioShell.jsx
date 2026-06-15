@@ -154,6 +154,9 @@ export default function StudioShell({
     onSetLiveProject,
     onClearLiveProject,
     onSaveCurrentCamera,
+    onFireCue,
+    isStreamingScene,
+    onToggleSceneStream,
     onCopyShareLink,
     onExportProject,
     onImportProjectFile,
@@ -251,6 +254,9 @@ export default function StudioShell({
                     presentationState={document.presentationState}
                     onPresentationPatch={onPresentationPatch}
                     onSaveCurrentCamera={onSaveCurrentCamera}
+                    onFireCue={onFireCue}
+                    isStreamingScene={isStreamingScene}
+                    onToggleSceneStream={onToggleSceneStream}
                 />
             )
         }

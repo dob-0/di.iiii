@@ -1,4 +1,32 @@
 export const PREVIEW_HOST_MESSAGE_TYPE = 'dii-preview'
+export const STUDIO_SIGNAL_MESSAGE_TYPE = 'dii-studio-signal'
+
+const STUDIO_RUNTIME_SCRIPT = `(() => {
+    var _cue = {};
+    var _scene = [];
+    var _any = [];
+
+    window.studio = {
+        onCue: function(name, fn) {
+            if (!_cue[name]) _cue[name] = [];
+            _cue[name].push(fn);
+        },
+        onScene: function(fn) { _scene.push(fn); },
+        onAny: function(fn) { _any.push(fn); }
+    };
+
+    window.addEventListener('message', function(e) {
+        var msg = e.data;
+        if (!msg || msg.__src !== ${JSON.stringify(STUDIO_SIGNAL_MESSAGE_TYPE)}) return;
+        _any.forEach(function(fn) { try { fn(msg); } catch(err) {} });
+        if (msg.type === 'cue') {
+            (_cue[msg.name] || []).forEach(function(fn) { try { fn(msg.payload); } catch(err) {} });
+        }
+        if (msg.type === 'scene') {
+            _scene.forEach(function(fn) { try { fn(msg.payload); } catch(err) {} });
+        }
+    });
+})();`
 
 export const PREVIEW_ISSUE_CODES = {
     storageUnavailable: 'storage_unavailable',
@@ -131,7 +159,7 @@ const PREVIEW_BOOTSTRAP_SCRIPT = `(() => {
 })();`
 
 const injectBootstrap = (documentSource) => {
-    const bootstrapTag = `<script>${PREVIEW_BOOTSTRAP_SCRIPT}</script>`
+    const bootstrapTag = `<script>${STUDIO_RUNTIME_SCRIPT}\n${PREVIEW_BOOTSTRAP_SCRIPT}</script>`
     const openHeadPattern = /<head(\s[^>]*)?>/i
     const openHtmlPattern = /<html(\s[^>]*)?>/i
 

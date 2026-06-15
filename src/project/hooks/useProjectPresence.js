@@ -68,6 +68,7 @@ export function useProjectPresence({
     }, [anonymousLabel, displayName, displayNameStorageKey, localUserId, legacyDisplayNameStorageKeys])
     const socketRef = useRef(null)
     const throttleRef = useRef({ lastSentAt: 0, pending: null, timerId: null })
+    const studioSignalListenersRef = useRef(new Set())
     const [presenceState, setPresenceState] = useState('disconnected')
     const [users, setUsers] = useState([])
     const [cursors, setCursors] = useState({})
@@ -140,6 +141,12 @@ export function useProjectPresence({
             })
         })
 
+        socket.on('studio-signal', (payload) => {
+            studioSignalListenersRef.current.forEach((fn) => {
+                try { fn(payload) } catch { /* ignore */ }
+            })
+        })
+
         socket.on('project-cursor', (payload) => {
             const key = payload.socketId || payload.userId
             if (!key) return
@@ -209,6 +216,16 @@ export function useProjectPresence({
         }
     }, [flushPendingCursor, projectId])
 
+    const emitStudioSignal = useCallback((payload) => {
+        if (!socketRef.current?.connected || !projectId) return
+        socketRef.current.emit('studio-signal', { projectId, payload })
+    }, [projectId])
+
+    const onStudioSignal = useCallback((fn) => {
+        studioSignalListenersRef.current.add(fn)
+        return () => studioSignalListenersRef.current.delete(fn)
+    }, [])
+
     const clearCursor = useCallback(() => {
         const state = throttleRef.current
         state.pending = null
@@ -225,6 +242,8 @@ export function useProjectPresence({
         users,
         cursors,
         emitCursor,
-        clearCursor
+        clearCursor,
+        emitStudioSignal,
+        onStudioSignal
     }
 }

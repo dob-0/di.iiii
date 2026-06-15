@@ -243,7 +243,10 @@ export function ActivityPanel({ activity = [] }) {
 export function PresentPanel({
     presentationState,
     onPresentationPatch,
-    onSaveCurrentCamera
+    onSaveCurrentCamera,
+    onFireCue,
+    isStreamingScene,
+    onToggleSceneStream
 }) {
     const singleFileInputRef = useRef(null)
     const zipInputRef = useRef(null)
@@ -251,6 +254,16 @@ export function PresentPanel({
     const [activeFileName, setActiveFileName] = useState('index.html')
     const [showAddFile, setShowAddFile] = useState(false)
     const [newFileName, setNewFileName] = useState('')
+    const [cueInput, setCueInput] = useState('')
+    const [recentCues, setRecentCues] = useState([])
+
+    const fireCue = (name) => {
+        const trimmed = (name || '').trim()
+        if (!trimmed) return
+        onFireCue?.(trimmed)
+        setRecentCues((prev) => [trimmed, ...prev.filter((c) => c !== trimmed)].slice(0, 6))
+        setCueInput('')
+    }
 
     const isCodeMode = (presentationState.mode || 'scene') === 'code'
     const isUrlSource = (presentationState.codeSourceType || 'html') === 'url'
@@ -402,6 +415,39 @@ export function PresentPanel({
             </FormControl>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
                 <Button variant="outlined" onClick={onSaveCurrentCamera}>Save current view</Button>
+            </Stack>
+
+            <Stack spacing={1}>
+                <Typography variant="caption" color="text.secondary">Live signals</Typography>
+                <Stack direction="row" spacing={1}>
+                    <TextField
+                        size="small"
+                        placeholder="cue name"
+                        value={cueInput}
+                        onChange={(e) => setCueInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') fireCue(cueInput) }}
+                        sx={{ flex: 1 }}
+                    />
+                    <Button variant="contained" size="small" onClick={() => fireCue(cueInput)}>Fire</Button>
+                </Stack>
+                {recentCues.length > 0 && (
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                        {recentCues.map((cue) => (
+                            <Button key={cue} size="small" variant="outlined" onClick={() => fireCue(cue)}
+                                sx={{ fontSize: '0.72rem', py: 0.25 }}>
+                                {cue}
+                            </Button>
+                        ))}
+                    </Stack>
+                )}
+                <Button
+                    size="small"
+                    variant={isStreamingScene ? 'contained' : 'outlined'}
+                    color={isStreamingScene ? 'success' : 'inherit'}
+                    onClick={onToggleSceneStream}
+                >
+                    {isStreamingScene ? 'Streaming scene ●' : 'Stream scene state'}
+                </Button>
             </Stack>
 
             {isCodeMode && (

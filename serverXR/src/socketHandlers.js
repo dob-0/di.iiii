@@ -371,6 +371,26 @@ function initializeSocket(httpServer, config) {
       })
     })
 
+    socket.on('studio-signal', async (data) => {
+      const { projectId, payload } = data || {}
+      if (!projectId || !payload) return
+      let projectSpaceId = socket.data?.projectSpaces?.get(projectId)
+      if (!projectSpaceId) {
+        const project = await ensureProjectAvailable(projectId, socket)
+        if (!project) return
+        projectSpaceId = project.spaceId || null
+        if (!socket.data.projectSpaces) {
+          socket.data.projectSpaces = new Map()
+        }
+        socket.data.projectSpaces.set(project.projectId || projectId, projectSpaceId)
+      }
+      if (!isAuthScopeAllowedForSpace(socket.data?.authState?.spaces, projectSpaceId)) return
+      io.to(`project-${projectId}`).emit('studio-signal', {
+        ...payload,
+        t: Date.now()
+      })
+    })
+
     socket.on('project-cursor', async (data) => {
       const { projectId, cursor, userId, userName } = data || {}
       if (!projectId) return
