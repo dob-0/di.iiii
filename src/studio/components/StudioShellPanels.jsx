@@ -535,15 +535,13 @@ export function PresentPanel({
                                             label={
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                     <span>{f.name}</span>
-                                                    {files.length > 1 && (
-                                                        <IconButton
-                                                            size="small"
-                                                            onClick={(e) => { e.stopPropagation(); removeFile(f.name) }}
-                                                            sx={{ p: 0, ml: 0.25 }}
-                                                        >
-                                                            <CloseIcon sx={{ fontSize: 12 }} />
-                                                        </IconButton>
-                                                    )}
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(e) => { e.stopPropagation(); removeFile(f.name) }}
+                                                        sx={{ p: 0, ml: 0.25 }}
+                                                    >
+                                                        <CloseIcon sx={{ fontSize: 12 }} />
+                                                    </IconButton>
                                                 </Box>
                                             }
                                         />
