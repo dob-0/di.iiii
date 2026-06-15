@@ -21,10 +21,7 @@ const overlayInnerStyle = {
     backdropFilter: 'blur(12px)'
 }
 
-const resolveStudioPreviewCamera = (document, cameraView, previewMode) => {
-    if (previewMode === 'fixed-camera') {
-        return document.presentationState?.fixedCamera || document.worldState?.savedView || cameraView || null
-    }
+const resolveStudioPreviewCamera = (document, cameraView) => {
     return cameraView || document.worldState?.savedView || null
 }
 
@@ -48,7 +45,7 @@ export default function StudioPresentationSurface({
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
     const showCodeView = previewMode === 'code'
-    const resolvedCamera = resolveStudioPreviewCamera(document, cameraView, previewMode)
+    const resolvedCamera = resolveStudioPreviewCamera(document, cameraView)
     const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
     const rawHtml = hasFiles
         ? bundleCodeFiles(presentationState.codeFiles)
@@ -124,8 +121,7 @@ export default function StudioPresentationSurface({
             cameraView={resolvedCamera}
             controlsRef={controlsRef}
             xrStore={xrStore}
-            onCameraChange={previewMode === 'fixed-camera' ? undefined : onCameraChange}
-            enableNavigation={previewMode !== 'fixed-camera'}
+            onCameraChange={onCameraChange}
             editMode={editMode}
             gizmoMode={gizmoMode}
             setEditMode={setEditMode}

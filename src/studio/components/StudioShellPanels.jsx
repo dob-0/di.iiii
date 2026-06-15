@@ -243,8 +243,7 @@ export function ActivityPanel({ activity = [] }) {
 export function PresentPanel({
     presentationState,
     onPresentationPatch,
-    onSaveCurrentCamera,
-    onUseCurrentCameraAsFixed
+    onSaveCurrentCamera
 }) {
     const singleFileInputRef = useRef(null)
     const zipInputRef = useRef(null)
@@ -387,7 +386,6 @@ export function PresentPanel({
                     onChange={(event) => onPresentationPatch({ mode: event.target.value })}
                 >
                     <MenuItem value="scene">3D scene</MenuItem>
-                    <MenuItem value="fixed-camera">Fixed camera</MenuItem>
                     <MenuItem value="code">Code view</MenuItem>
                 </Select>
             </FormControl>
@@ -399,13 +397,11 @@ export function PresentPanel({
                     onChange={(event) => onPresentationPatch({ entryView: event.target.value })}
                 >
                     <MenuItem value="scene">3D scene</MenuItem>
-                    <MenuItem value="fixed-camera">Fixed camera</MenuItem>
                     <MenuItem value="code">Code view</MenuItem>
                 </Select>
             </FormControl>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
                 <Button variant="outlined" onClick={onSaveCurrentCamera}>Save current view</Button>
-                <Button variant="contained" onClick={onUseCurrentCameraAsFixed}>Use current camera</Button>
             </Stack>
 
             {isCodeMode && (

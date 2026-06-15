@@ -298,23 +298,6 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         })
     }
 
-    const handleUseCurrentCameraAsFixed = () => {
-        const snapshot = readCurrentCameraSnapshot(controlsRef, {
-            ...document.presentationState?.fixedCamera,
-            position: cameraView.position,
-            target: cameraView.target
-        })
-        handlePresentationPatch({
-            mode: 'fixed-camera',
-            fixedCamera: snapshot
-        })
-        dispatch({
-            type: 'append-activity',
-            level: 'info',
-            message: 'Updated the fixed presentation camera from the current viewport.'
-        })
-    }
-
     const handleCopyShareLink = async () => {
         const isLiveProject = spaceMeta?.publishedProjectId === projectId
         const sharePath = isLiveProject
@@ -493,7 +476,6 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onPresentationPatch={handlePresentationPatch}
             onPublishPatch={handlePublishPatch}
             onSaveCurrentCamera={handleSaveCurrentCamera}
-            onUseCurrentCameraAsFixed={handleUseCurrentCameraAsFixed}
             onCopyShareLink={handleCopyShareLink}
             onExportProject={handleExportProject}
             onImportProjectFile={handleImportProjectFile}
