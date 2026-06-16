@@ -1,4 +1,4 @@
-const Database = require('better-sqlite3')
+const { Database: WasmDatabase } = require('node-sqlite3-wasm')
 
 let _db = null
 
@@ -64,15 +64,54 @@ const SCHEMA = `
   );
 `
 
+// Wrap a raw node-sqlite3-wasm Statement to accept variadic positional args
+// like better-sqlite3 does (stmt.run(a, b, c) instead of stmt.run([a, b, c])).
+function wrapStmt(raw) {
+  return {
+    get: (...args) => raw.get(args),
+    run: (...args) => raw.run(args),
+    all: (...args) => raw.all(args),
+  }
+}
+
+// Patch a WasmDatabase instance to expose the better-sqlite3 surface used
+// by this codebase: .pragma(), .transaction(), and variadic .prepare().
+function addCompatLayer(db) {
+  db.pragma = (str) => { db.exec('PRAGMA ' + str) }
+
+  const origPrepare = db.prepare.bind(db)
+  db.prepare = (sql) => wrapStmt(origPrepare(sql))
+
+  // better-sqlite3: db.transaction(fn) returns a callable that runs fn inside
+  // a BEGIN/COMMIT/ROLLBACK block.  Nested calls (already in transaction) just
+  // execute fn directly, matching better-sqlite3's deferred-transaction behavior.
+  db.transaction = (fn) => (...args) => {
+    if (db.inTransaction) return fn(...args)
+    db.exec('BEGIN')
+    try {
+      const result = fn(...args)
+      db.exec('COMMIT')
+      return result
+    } catch (e) {
+      try { db.exec('ROLLBACK') } catch {}
+      throw e
+    }
+  }
+
+  return db
+}
+
 function initDb(dbPath) {
   if (_db) {
     try { _db.close() } catch {}
     _db = null
   }
-  _db = new Database(dbPath)
-  _db.pragma('journal_mode = WAL')
-  _db.pragma('foreign_keys = ON')
-  _db.exec(SCHEMA)
+  const raw = new WasmDatabase(dbPath)
+  addCompatLayer(raw)
+  raw.pragma('journal_mode = WAL')
+  raw.pragma('foreign_keys = ON')
+  raw.exec(SCHEMA)
+  _db = raw
   return _db
 }
 
