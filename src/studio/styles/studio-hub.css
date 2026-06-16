@@ -1,83 +1,87 @@
-/* Studio Hub — matches landing page aesthetic */
+/* Studio Hub — minimalist, time-saving */
 
-.sh-header {
-    padding-bottom: 28px;
+/* ─── TOP ROW ──────────────────────────────────────────────── */
+.sh-top-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding-bottom: 12px;
     border-bottom: 1px solid var(--di-cyan-border);
-}
-
-.sh-eyebrow {
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--di-cyan);
-    opacity: 0.65;
-    font-family: var(--di-mono);
-    margin: 0 0 10px;
+    margin-bottom: 10px;
 }
 
 .sh-title {
-    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    font-size: clamp(1.4rem, 3vw, 2rem);
     font-weight: 700;
     letter-spacing: -0.04em;
     color: var(--di-text);
-    margin: 0 0 10px;
-    line-height: 1.1;
-}
-
-.sh-desc {
-    font-size: 0.88rem;
-    color: var(--di-text-muted);
-    line-height: 1.7;
-    max-width: 520px;
     margin: 0;
+    line-height: 1;
 }
 
-/* ─── CREATE PANEL ─────────────────────────────────────────── */
-.sh-create-panel {
-    border: 1px solid var(--di-cyan-border);
-    padding: 20px;
-    background: rgba(77, 249, 255, 0.02);
+.sh-btn-new {
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: var(--di-cyan);
+    color: #000;
+    border: none;
+    padding: 7px 18px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: background 0.1s;
+    border-radius: 0;
+    font-family: inherit;
+    flex-shrink: 0;
+}
+
+.sh-btn-new:hover { background: #fff; }
+.sh-btn-new:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ─── SECONDARY ROW ────────────────────────────────────────── */
+.sh-secondary-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+}
+
+.sh-link {
+    font-size: 0.75rem;
+    color: var(--di-text-muted);
+    font-family: var(--di-mono);
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+    transition: color 0.1s;
+}
+
+.sh-link:hover { color: var(--di-cyan); }
+.sh-link-disabled { opacity: 0.35; pointer-events: none; }
+
+.sh-sep {
+    color: var(--di-cyan-border);
+    font-size: 0.75rem;
+    user-select: none;
 }
 
 /* ─── STATUS ───────────────────────────────────────────────── */
 .sh-status {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     color: var(--di-text-muted);
     font-family: var(--di-mono);
-    letter-spacing: 0.02em;
-    padding: 6px 0;
+    letter-spacing: 0.03em;
+    margin: 0 0 20px;
 }
 
-.sh-status-error {
-    color: rgba(255, 109, 96, 0.8);
-}
-
-.sh-warn {
-    font-size: 0.8rem;
-    color: rgba(255, 200, 80, 0.7);
-    font-family: var(--di-mono);
-    border: 1px solid rgba(255, 200, 80, 0.15);
-    padding: 8px 12px;
-    line-height: 1.5;
-}
-
-/* ─── PROJECTS SECTION LABEL ───────────────────────────────── */
-.sh-section-label {
-    font-size: 0.68rem;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--di-cyan);
-    opacity: 0.55;
-    font-family: var(--di-mono);
-    margin: 0;
-}
+.sh-status-error { color: rgba(255, 109, 96, 0.75); }
 
 /* ─── PROJECT GRID ─────────────────────────────────────────── */
 .sh-projects-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 1px;
     background: var(--di-cyan-border);
     border: 1px solid var(--di-cyan-border);
@@ -85,20 +89,18 @@
 
 .sh-project-card {
     background: var(--di-surface);
-    padding: 22px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    min-height: 170px;
+    gap: 8px;
+    min-height: 150px;
     transition: background 0.1s;
 }
 
-.sh-project-card:hover {
-    background: rgba(77, 249, 255, 0.04);
-}
+.sh-project-card:hover { background: rgba(77, 249, 255, 0.04); }
 
 .sh-project-title {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 600;
     color: var(--di-text);
     margin: 0;
@@ -106,43 +108,43 @@
 }
 
 .sh-project-id {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     color: var(--di-text-muted);
     font-family: var(--di-mono);
     word-break: break-all;
     margin: 0;
-    opacity: 0.7;
+    opacity: 0.5;
 }
 
 .sh-project-meta {
     margin-top: auto;
     display: flex;
-    gap: 6px;
+    gap: 5px;
     flex-wrap: wrap;
 }
 
 .sh-meta-tag {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     color: var(--di-text-muted);
     font-family: var(--di-mono);
     letter-spacing: 0.04em;
     border: 1px solid var(--di-cyan-border);
-    padding: 2px 7px;
+    padding: 1px 6px;
 }
 
 .sh-project-actions {
     display: flex;
-    gap: 8px;
-    padding-top: 4px;
+    gap: 6px;
+    padding-top: 2px;
 }
 
 .sh-btn-open {
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     font-weight: 600;
     background: var(--di-cyan);
     color: #000;
     border: none;
-    padding: 6px 14px;
+    padding: 5px 12px;
     cursor: pointer;
     letter-spacing: 0.02em;
     transition: background 0.1s;
@@ -153,12 +155,11 @@
 .sh-btn-open:hover { background: #fff; }
 
 .sh-btn-delete {
-    font-size: 0.78rem;
-    font-weight: 500;
+    font-size: 0.75rem;
     background: transparent;
-    color: rgba(255, 109, 96, 0.5);
-    border: 1px solid rgba(255, 109, 96, 0.18);
-    padding: 5px 14px;
+    color: rgba(255, 109, 96, 0.4);
+    border: 1px solid rgba(255, 109, 96, 0.15);
+    padding: 4px 12px;
     cursor: pointer;
     letter-spacing: 0.02em;
     transition: color 0.1s, border-color 0.1s;
@@ -167,16 +168,6 @@
 }
 
 .sh-btn-delete:hover {
-    color: rgba(255, 109, 96, 0.9);
-    border-color: rgba(255, 109, 96, 0.45);
-}
-
-/* ─── MUI OVERRIDES ────────────────────────────────────────── */
-.sh-create-panel .MuiOutlinedInput-root,
-.sh-create-panel .MuiOutlinedInput-notchedOutline {
-    border-radius: 0 !important;
-}
-
-.sh-create-panel .MuiButton-root {
-    border-radius: 0 !important;
+    color: rgba(255, 109, 96, 0.85);
+    border-color: rgba(255, 109, 96, 0.4);
 }
