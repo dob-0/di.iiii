@@ -5,9 +5,9 @@ This file describes the current safe deployment model for the dii platform.
 ## Canonical Model
 
 - source branches:
-  - `dev` for active development
-  - `staging` for stable preview
-  - `main` for production
+  - `dev` — active development and staging source
+  - `main` — production
+- there is no `staging` source branch — staging is a GitHub Actions deploy environment
 - canonical publish workflow:
   - [.github/workflows/publish-cpanel-prebuilt-v2.yml](../../.github/workflows/publish-cpanel-prebuilt-v2.yml)
 - canonical server apply step:
@@ -22,7 +22,7 @@ Important:
 - the canonical path is GitHub + cPanel `Git Version Control`
 - legacy/manual fallback material is archived under [docs/deploy/legacy/README.md](legacy/README.md)
 - normal work starts on `dev`
-- `staging` and `main` are promotion branches except during emergency hotfixes
+- push `dev` to publish staging; merge `dev` into `main` and push to publish production
 
 ## One-Time Setup
 
@@ -96,13 +96,10 @@ Recommended roots:
 
 ### Staging
 
-1. Promote the approved source commit:
+1. Push `dev` (staging deploys automatically):
 
 ```bash
-git switch staging
-git pull --ff-only origin staging
-git merge --ff-only dev
-git push origin staging
+git push origin dev
 ```
 
 2. Wait for GitHub Actions to publish `cpanel-staging`.
@@ -128,13 +125,10 @@ npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
 
 ### Production
 
-1. Promote the staging-verified source commit:
+1. Merge the verified `dev` into `main`:
 
 ```bash
-git switch main
-git pull --ff-only origin main
-git merge --ff-only staging
-git push origin main
+git checkout main && git merge dev --no-edit && git push origin main && git checkout dev
 ```
 
 2. Wait for GitHub Actions to publish `cpanel-production`.
@@ -156,7 +150,7 @@ npm run smoke:cpanel -- --base-url https://di-studio.xyz
 
 ## Automatic Behavior
 
-- GitHub-side publish is automatic on pushes to `staging` and `main`
+- GitHub-side publish is automatic on pushes to `dev` (→ `cpanel-staging`) and `main` (→ `cpanel-production`)
 - if cPanel `Git Version Control` exposes `Automatic Deployment`, enable it on the tracked `cpanel-staging` and `cpanel-production` clones
 - cPanel-side apply may still require `Deploy HEAD Commit`, depending on host behavior
 
@@ -212,8 +206,8 @@ For production, use the production clone and replace `cpanel-staging` with `cpan
 Compare the live backend release metadata with the expected source branch:
 
 ```bash
-git rev-parse --short origin/staging
+git rev-parse --short origin/dev
 curl -s https://staging.di-studio.xyz/serverXR/api/health
 ```
 
-If the live `release.gitCommit` is older than `origin/staging`, the missing step is cPanel deploy or Node.js app restart, not source promotion.
+If the live `release.gitCommit` is older than `origin/dev`, the missing step is cPanel deploy or Node.js app restart, not source promotion.

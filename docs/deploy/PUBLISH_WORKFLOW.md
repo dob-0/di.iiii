@@ -6,7 +6,7 @@ How to push content to a live public route (`/<space>`).
 
 If you deploy to cPanel (`cpanel-staging` / `cpanel-production`), follow these rules to avoid backend outages.
 
-- Do not add native Node dependencies in `serverXR` (for example `better-sqlite3`) on cPanel deploy branches.
+- Do not add native Node dependencies (C++ addons) in `serverXR` on cPanel deploy branches. The SQLite driver is the Node.js built-in `node:sqlite` — zero native deps.
 - cPanel hosts may not have compatible `glibc`/Python toolchains for native addon install/rebuild.
 - The cPanel publish workflow now enforces this with `scripts/check-cpanel-compat.mjs`.
 

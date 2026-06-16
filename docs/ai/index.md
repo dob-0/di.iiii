@@ -1,6 +1,6 @@
 # AI Docs Index
 
-This is the deep-reference layer for AI agents working in `di.i`.
+This is the deep-reference layer for AI agents working in `di.iiii`.
 
 Use this directory for durable, structured context that is too large or too detailed for startup instruction files.
 

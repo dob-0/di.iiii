@@ -18,23 +18,21 @@ It is a GitHub-to-cPanel Git flow:
 
 Branch and environment mapping:
 
-- `staging` -> `cpanel-staging`
-- `main` -> `cpanel-production`
-- `dev` -> no direct deploy branch
+- `dev` -> `cpanel-staging` -> staging.di-studio.xyz
+- `main` -> `cpanel-production` -> di-studio.xyz
 
 That means:
 
-- `dev` is the integration lane
-- `staging` is the stable preview lane
-- `main` is the public lane
+- `dev` is the integration and staging source lane
+- `main` is the production lane
 - normal work starts on `dev`
-- `staging` and `main` are promotion branches during the normal path
+- there is no `staging` source branch — staging is a GitHub Actions deploy environment
 
 ## What The Workflow Does
 
 The canonical workflow:
 
-1. runs automatically on pushes to `staging` and `main`
+1. runs automatically on pushes to `dev` and `main`
 2. can also be run manually with `workflow_dispatch`
 3. checks out the source ref
 4. installs dependencies on GitHub Actions
@@ -42,7 +40,7 @@ The canonical workflow:
 6. stages `.deploy/cpanel`
 7. publishes a prebuilt commit to the target environment branch
 
-`workflow_dispatch` is useful for repair or recovery work, but it should not be used to bypass the normal `dev -> staging -> main` promotion path.
+`workflow_dispatch` is useful for repair or recovery work, but it should not be used to bypass the normal `dev -> main` promotion path.
 
 The prebuilt branch contains:
 
@@ -61,7 +59,7 @@ The prebuilt branch contains:
 
 Automatic:
 
-- push to `staging` -> GitHub publishes `cpanel-staging`
+- push to `dev` -> GitHub publishes `cpanel-staging`
 - push to `main` -> GitHub publishes `cpanel-production`
 
 Sometimes still manual:
@@ -76,13 +74,10 @@ If GitHub already published the correct `cpanel-*` branch but the site is stale,
 
 Use this for `https://staging.di-studio.xyz`.
 
-1. Promote the approved source commit to `staging`:
+1. Push `dev` (staging deploys automatically from `dev`):
 
 ```bash
-git switch staging
-git pull --ff-only origin staging
-git merge --ff-only dev
-git push origin staging
+git push origin dev
 ```
 
 2. Wait for GitHub Actions to publish `cpanel-staging`.
@@ -114,8 +109,8 @@ The health response should include:
 {
   "release": {
     "deployEnv": "staging",
-    "sourceRef": "staging",
-    "gitCommit": "<current staging source commit>"
+    "sourceRef": "dev",
+    "gitCommit": "<current dev source commit>"
   }
 }
 ```
@@ -124,13 +119,10 @@ The health response should include:
 
 Use this only after staging is verified.
 
-1. Promote the verified source commit to `main`:
+1. Merge `dev` into `main`:
 
 ```bash
-git switch main
-git pull --ff-only origin main
-git merge --ff-only staging
-git push origin main
+git checkout main && git merge dev --no-edit && git push origin main && git checkout dev
 ```
 
 2. Wait for GitHub Actions to publish `cpanel-production`.
@@ -207,12 +199,10 @@ That apply step:
 In other words, the canonical human flow is:
 
 1. work and integrate on `dev`
-2. promote approved work to `staging` and push `staging`
-3. let GitHub publish `cpanel-staging`
-4. verify staging
-5. promote the verified commit to `main` and push `main`
-6. let GitHub publish `cpanel-production`
-7. in cPanel `Git Version Control`, update and deploy `HEAD` if it did not apply automatically
+2. push `dev` → GitHub publishes `cpanel-staging` automatically
+3. verify staging at `https://staging.di-studio.xyz`
+4. merge `dev` into `main` and push `main` → GitHub publishes `cpanel-production`
+5. in cPanel `Git Version Control`, update and deploy `HEAD` if it did not apply automatically
 
 If GitHub already has the right `cpanel-*` branch but the live site still serves an older build, the missing step is in cPanel, not in GitHub.
 

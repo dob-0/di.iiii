@@ -62,32 +62,3 @@ How do dii_ii and dii_iiii diverge and how do we merge them
 Design the storage migration from filesystem to Postgres
 ```
 
----
-
-## Active Task Queue
-
-### Ready to apply now
-- [x] Remove 92 console.log lines — done
-- [x] Fix sourcemap in vite.config.js — done
-- [x] Add lazy loading to RootApp.jsx — done
-
-### Next up (dob-deep)
-- [ ] Commit auth work from dii_iiii (authSession + authAccess)
-- [ ] Integrate landing page from dii_ii
-- [ ] Add lazy loading to Studio/Beta internal routes
-- [ ] Split useAssetPipeline (609L) into 3 smaller hooks
-
-### Bigger (Claude)
-- [ ] Merge dii_ii + dii_iiii into one clean branch
-- [ ] Plan App.jsx domain split
-- [ ] Storage migration design (filesystem → Postgres)
-
----
-
-## Git Hygiene
-Stale branches to delete (all merged or abandoned):
-```
-main-pre-realign, main-prod-fix, main-prod-tight, main-ui-promote,
-production-asset-guardrail, production-hotfix, production-hotfix-2026-04-13,
-rollback-production-old-ui-20260420, promote-staging-to-main-ee7f4ce
-```

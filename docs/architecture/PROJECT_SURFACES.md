@@ -47,8 +47,6 @@ This repo currently behaves like one platform with multiple editor generations r
 
 - branch `dev`
   - active development and integration lane
-- branch `staging`
-  - stable preview and staging source
 - branch `main`
   - production source
 - current package cycle

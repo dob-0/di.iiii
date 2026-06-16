@@ -23,7 +23,7 @@ World Creative Commons (`wcc-space` branch) is a major feature addition authored
 
 ### Phase 2 — Staging integration
 
-- [ ] Merge `wcc-space` into a `wcc-integration` branch off `staging`
+- [ ] Merge `wcc-space` into a `wcc-integration` branch off `dev`
 - [ ] Run full validation: `npm run lint && npm run build && npm run test -- --run && npm run test:server-contracts`
 - [ ] Boot with Docker and manually verify auth, space load, op-log, and publish flow
 - [ ] Check no regressions in Studio / Beta / V1 lanes

@@ -47,7 +47,7 @@ If the task crosses two roles, name the **primary** role and list the **secondar
 When giving a task to any AI agent (Claude, Copilot, Gemini, Cursor), prepend:
 
 ```
-You are the [Role Name] for di.i.
+You are the [Role Name] for di.iiii.
 Read your full role card before acting: docs/ai/roles/[role-file].md
 Your scope is locked to that card's "Owns" section.
 Files in "Must Never Touch" are off-limits — do not read, do not edit them.

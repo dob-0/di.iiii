@@ -1,6 +1,6 @@
-# di.i — Team Universe
+# di.iiii — Team Universe
 
-The people who make di.i work span a wide range of roles. This document maps the universe of contributors — technical and creative — to the parts of the platform they own, and links each role to the skills that guide their work.
+The people who make di.iiii work span a wide range of roles. This document maps the universe of contributors — technical and creative — to the parts of the platform they own, and links each role to the skills that guide their work.
 
 ---
 

@@ -9,7 +9,7 @@ active_branch: dev
 
 ## Last commit
 
-`6bbbde1` — chore: remove dead scripts, unused deps, and orphaned npm scripts
+`ac4d4f6` — docs: full docs revision — branch flow, SQLite driver, di.i refs
 Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production).
 
 ## What works
@@ -26,7 +26,7 @@ Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (product
 
 ## What is broken / open
 
-- `↑ publish` button greys out until `LIVE_API_TOKEN` is set in `serverXR/.env.local`
+- Nothing currently known.
 
 ## Space sync setup (per machine)
 
