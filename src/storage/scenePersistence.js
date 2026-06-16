@@ -76,7 +76,7 @@ export const persistSceneToLocalStorage = (sceneData, storageKey = LOCAL_STORAGE
             throw error
         }
     } catch {
-        alert('Error: Could not save scene. Please export your work and clear saved scenes.')
+        console.error('[scenePersistence] Could not save scene: localStorage quota exhausted and eviction failed.')
         return false
     }
 }

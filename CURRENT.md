@@ -9,7 +9,7 @@ active_branch: dev
 
 ## Last commit
 
-`9ca9ee5` — replace node-sqlite3-wasm with Node.js built-in node:sqlite
+`6bbbde1` — chore: remove dead scripts, unused deps, and orphaned npm scripts
 Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production).
 
 ## What works

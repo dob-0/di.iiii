@@ -54,14 +54,13 @@ export function useSceneStore(options = {}) {
     }, [])
 
     useEffect(() => {
+        const validIds = new Set(objects.map(obj => obj.id))
         setSelectedObjectIds(prev => {
             if (!Array.isArray(prev) || prev.length === 0) return prev
-            const validIds = new Set(objects.map(obj => obj.id))
             const next = prev.filter(id => validIds.has(id))
-            if (next.length === prev.length) return prev
-            setSelectedObjectId(next.length ? next[next.length - 1] : null)
-            return next
+            return next.length === prev.length ? prev : next
         })
+        setSelectedObjectId(prev => (prev && validIds.has(prev) ? prev : null))
     }, [objects])
 
     return useMemo(() => ({

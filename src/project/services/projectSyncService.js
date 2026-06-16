@@ -38,11 +38,13 @@ export function createProjectSyncService() {
 
         const handleReady = (event) => {
             if (!event?.data || typeof onReady !== 'function') return
+            let parsed
             try {
-                onReady(JSON.parse(event.data))
+                parsed = JSON.parse(event.data)
             } catch {
-                // ignore
+                return
             }
+            Promise.resolve(onReady(parsed)).catch(() => {})
         }
 
         source.addEventListener('project-op', handleProjectOp)

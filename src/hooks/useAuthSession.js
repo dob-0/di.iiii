@@ -29,6 +29,7 @@ export default function useAuthSession() {
             setState({ ...DEFAULT_STATE, ...data })
             setError(null)
         } catch (err) {
+            setState(DEFAULT_STATE)
             setError(err?.message || 'Failed to reach server')
         } finally {
             clearTimeout(tid)
