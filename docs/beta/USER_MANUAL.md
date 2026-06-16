@@ -1,6 +1,6 @@
 # Beta User Manual
 
-Beta is the experimental node-first editor lane in di.i. The easiest way to learn it is to make one visible thing first, then connect a graph value into it.
+Beta is the experimental node-first editor lane in di.iiii. The easiest way to learn it is to make one visible thing first, then connect a graph value into it.
 
 ## Two entry paths
 

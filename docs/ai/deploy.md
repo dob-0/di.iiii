@@ -5,7 +5,8 @@ This page is the AI-safe deployment map. Keep host-specific or secret material o
 ## Canonical Deployment Model
 
 - normal branch flow is `dev -> main`
-- production hosting deploys from `dob-0/di.iiii` release flow; `dob-0/di.i` is currently a hidden/inactive mirror
+- `dev` push deploys to `staging.di-studio.xyz`; `main` push deploys to `di-studio.xyz`
+- prebuilt `cpanel-*` branches are the release artifacts consumed by cPanel Git Version Control
 - prebuilt `cpanel-*` branches are the release artifacts consumed by cPanel Git Version Control
 - `/serverXR` stays owned by the cPanel Node.js App
 

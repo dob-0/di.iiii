@@ -116,7 +116,7 @@ Architectural decisions validated through real work. Add to this list when a sol
 
 ### Storage: SQLite over JSON files for concurrent writes
 
-**Rule:** Use SQLite (via `better-sqlite3`) for all structured metadata. Do not use JSON files for anything that is written by concurrent requests.
+**Rule:** Use SQLite (via the Node.js built-in `node:sqlite` / `DatabaseSync`) for all structured metadata. Do not use JSON files for anything that is written by concurrent requests.
 
 **Why:** Multiple simultaneous requests were racing to read-modify-write the same `meta.json` and `ops.json` files, producing corrupt data and lost ops. SQLite serializes writes atomically at the OS level.
 
@@ -133,7 +133,7 @@ Architectural decisions validated through real work. Add to this list when a sol
 
 **Rule:** Call `db.prepare(sql)` once when creating the store and reuse the statement object on every call. Do not call `db.prepare()` inside a hot function.
 
-**Why:** `better-sqlite3` compiles SQL on every `db.prepare()` call. Caching the result at module init gave ~30–50% latency reduction on metadata hot paths (space list, project lookup).
+**Why:** `node:sqlite`'s `DatabaseSync` compiles SQL on every `db.prepare()` call. Caching the result at module init gave ~30–50% latency reduction on metadata hot paths (space list, project lookup).
 
 **Pattern:**
 ```js
@@ -144,6 +144,18 @@ function findSpace(id) { return getSpace.get(id) }
 // Bad — compiled on every call
 function findSpace(id) { return db.prepare('SELECT * FROM spaces WHERE id = ?').get(id) }
 ```
+
+---
+
+### cPanel SQLite: use node:sqlite, never better-sqlite3 or WASM
+
+**Rule:** On cPanel shared hosting, the only working SQLite driver is the Node.js built-in `node:sqlite` (`DatabaseSync`). Do not use `better-sqlite3` (no prebuilt for Node 24, no C++ toolchain on host) or `node-sqlite3-wasm` (CloudLinux LVE memory cap blocks WASM instantiation).
+
+**Why:** Both alternatives crash on cPanel's CloudLinux environment. `better-sqlite3` fails with `gyp ERR! not ok` during `npm install`. `node-sqlite3-wasm` throws `RangeError: WebAssembly.Instance(): Out of memory` at startup. `node:sqlite` is stable since Node 22.5+, requires zero native compilation, and works inside the LVE memory limit.
+
+**How:** `const { DatabaseSync } = require('node:sqlite')`. The `better-sqlite3` surface (`.pragma()`, `.transaction()`) is patched via a compat layer in `serverXR/src/db.js`. `StatementSync` already accepts variadic positional args natively — no wrapping needed.
+
+**Files:** `serverXR/src/db.js`, `scripts/check-cpanel-compat.mjs`
 
 ---
 

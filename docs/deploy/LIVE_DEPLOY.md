@@ -4,21 +4,17 @@ This is the shortest practical runbook for normal future work.
 
 If you only remember one thing, remember this:
 
-- `dev` = active development
-- `staging` = stable preview
-- `main` = production
-- normal promotion path: `dev -> staging -> main`
+- `dev` = active development → deploys to `staging.di-studio.xyz`
+- `main` = production → deploys to `di-studio.xyz`
+- normal promotion path: `dev -> main`
 
 ## Golden Path
 
 - local work happens on `dev`
-- normal work starts on `dev`
-- `staging` and `main` are promotion branches during normal flow
-- reviewed work is promoted to `staging`
-- staging is published from `staging`
-- production is published from `main`
-- GitHub publishes prebuilt `cpanel-*` branches
-- cPanel clones plus cron apply those branches on the current host
+- push `dev` → GitHub Actions publishes `cpanel-staging` → staging.di-studio.xyz updates
+- verify staging
+- merge `dev` into `main` and push → GitHub Actions publishes `cpanel-production` → production updates
+- there is no `staging` source branch — staging is a GitHub Actions environment, not a branch
 
 Do not start routine feature work on `main`.
 Use `main` as a starting point only for an emergency production hotfix.
@@ -57,19 +53,18 @@ npm run deploy -- host production
 
 Rules:
 
-- `dev` is the integration lane only and does not deploy to hosting directly
-- run `deploy:dev` and `deploy:staging` from a clean `dev` branch
-- `deploy:production` fast-forwards `main` when possible, or creates a merge commit on top of `main` that prefers `staging` on conflicting hunks if `main` and `staging` have both moved
+- `dev` is the integration lane — pushing it triggers the staging deploy automatically
+- `deploy:production` merges `dev` into `main` and pushes
 - `deploy:host:*` is only for the matching cPanel clone or host shell
 - `deploy:remote:*` is optional for a future SSH-capable host and is not part of the current shared-host flow
-- `npm run deploy -- smoke staging` and `npm run deploy -- smoke production` are the quick verification commands
+- `npm run smoke:cpanel` is the quick verification command
 
 Current host truth:
 
-- use `npm run deploy:staging` from your laptop
-- verify staging
-- use `npm run deploy:production` from your laptop
-- cPanel cron applies the published `cpanel-*` branches automatically
+- push `dev` (or run `npm run deploy:staging`) to update staging
+- verify staging at `https://staging.di-studio.xyz`
+- run `npm run deploy:production` to merge `dev` into `main` and push to production
+- cPanel applies the published `cpanel-*` branches automatically
 
 Future SSH/VPS staging path:
 
@@ -112,13 +107,15 @@ npm run dev
 
 ### To update staging
 
-1. Promote the approved source code:
+1. Push `dev`:
 
 ```bash
+git push origin dev
+# or
 npm run deploy:staging
 ```
 
-2. Wait about 1-2 minutes for GitHub publish plus cPanel cron.
+2. Wait about 1-2 minutes for GitHub Actions to publish `cpanel-staging`.
 
 3. Verify:
 
@@ -129,10 +126,11 @@ npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
 
 ### To update production
 
-1. Promote the already verified `staging` branch into `main`:
+1. Merge the verified `dev` into `main`:
 
 ```bash
 npm run deploy:production
+# equivalent to: git checkout main && git merge dev --no-edit && git push origin main && git checkout dev
 ```
 
 2. Wait about 1-2 minutes for GitHub publish plus cPanel cron.
@@ -144,19 +142,19 @@ curl -s https://di-studio.xyz/serverXR/api/health
 npm run smoke:cpanel -- --base-url https://di-studio.xyz
 ```
 
-If the helper cannot merge `staging` into `main` even with staging-preferred conflict resolution, stop and resolve the branch drift before shipping.
+Resolve any merge conflicts between `dev` and `main` before shipping.
 
 ## What Is Automatic Today
 
-- GitHub-side prebuilt publish is automatic on pushes to `staging` and `main`
+- GitHub-side prebuilt publish is automatic on pushes to `dev` and `main`
 - the prebuilt branches are:
-  - `cpanel-staging`
-  - `cpanel-production`
-- `workflow_dispatch` exists for repair or recovery work, but it should not replace the normal `dev -> staging -> main` promotion flow
+  - `cpanel-staging` (from `dev` push)
+  - `cpanel-production` (from `main` push)
+- `workflow_dispatch` exists for repair or recovery work, but it should not replace the normal `dev -> main` promotion flow
 
 ## Emergency Hotfix Path
 
-When production needs an urgent fix, start from `main`, then bring the same commit back into `staging` and `dev` so the branches do not drift apart.
+When production needs an urgent fix, start from `main`, then bring the same commit back into `dev` so the branches do not drift apart.
 
 ## What May Still Be Manual
 

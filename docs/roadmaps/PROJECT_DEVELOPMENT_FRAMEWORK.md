@@ -17,7 +17,7 @@ Keep the project pointed at this shape:
 - `V1` is compatibility and fallback, not the default place for new product investment
 - `src/project/` is the shared project/document center
 - `serverXR` is authoritative for auth, persistence, publish state, realtime catch-up, and presence contracts
-- `dev -> staging -> main` is the normal release path
+- `dev -> main` is the normal release path (`dev` push deploys to staging, `main` push deploys to production)
 
 ## Framework Goals
 
@@ -68,7 +68,7 @@ Use this lane for work that improves speed, load time, responsiveness, and codeb
 
 Use this lane for work that keeps the project easy to run and safe to promote.
 
-- preserve the `dev -> staging -> main` promotion path
+- preserve the `dev -> main` promotion path
 - keep deploy automation simple and well documented
 - update docs when repo truth changes
 - keep validation commands green and easy to trust
