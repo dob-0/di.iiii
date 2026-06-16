@@ -25,7 +25,7 @@ Support tools:
 
 | Repo | Purpose | Stack | Branch |
 |------|---------|-------|--------|
-| `dob-0/di.iiii` | Platform, editor, serverXR | React 18 + Three.js + R3F + Node/Express + SQLite | `dev → staging → main` |
+| `dob-0/di.iiii` | Platform, editor, serverXR | React 18 + Three.js + R3F + Node/Express + SQLite (`node:sqlite`) | `dev → main` |
 | `dob-0/br_id_ge` | Performance prototype, GitHub Pages site | Vanilla JS + Three.js (index.html SPA) + Node ws | `main` |
 | `dob-0/_ii` | Live terminal VJ engine | Python 3 + curses | `main` |
 | `emilyanikoghosyan/di.iiii` | WCC fork; `wcc-space` branch | Same as di.iiii | `wcc-space` (79 commits ahead of main as of June 2026) |
@@ -52,7 +52,6 @@ _ii communicates with its own Debian machine via SSH (`scripts/sync.sh`). No con
 | Source | Target | Mechanism |
 |--------|--------|-----------|
 | di.iiii `src/` | di.iiii `dist/` | `npm run build` (Vite) |
-| di.iiii `DEVELOPMENT.md`, `index.html`, `docs/PROJECT.md` | br_id_ge repo | `npm run sync:public:br_id_ge` → `scripts/sync-public-br-id-ge.mjs` |
 | di.iiii `AGENTS.md` | `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.cursor/rules/*.mdc` | `npm run docs:ai:sync` (auto-runs via PostToolUse hook) |
 | br_id_ge `main` | GitHub Pages (`dob-0.github.io/br_id_ge/`) | `.github/workflows/pages.yml` on push |
 | WCC `wcc-space` | di.iiii `main` | Not yet merged (see `docs/WCC_MERGE_PLAN.md`) |
