@@ -12,9 +12,6 @@ import {
     IconButton,
     InputAdornment,
     InputLabel,
-    List,
-    ListItemButton,
-    ListItemText,
     MenuItem,
     Paper,
     Select,
@@ -28,9 +25,7 @@ import {
     Typography
 } from '@mui/material'
 import AddIcon from '@mui/icons-material/Add'
-import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
 import CloseIcon from '@mui/icons-material/Close'
-import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 import DownloadIcon from '@mui/icons-material/Download'
 import FileUploadIcon from '@mui/icons-material/FileUpload'
 import FolderOpenIcon from '@mui/icons-material/FolderOpen'

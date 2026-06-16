@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { CameraControls, Grid, Html, TransformControls } from '@react-three/drei'
 import { XR, useXR } from '@react-three/xr'
@@ -17,7 +17,6 @@ const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
 
 function EntityContent({ entity, assetMap }) {
-    const transform = entity.components?.transform || {}
     const appearance = entity.components?.appearance || {}
     const media = entity.components?.media || {}
     const asset = media.assetId ? assetMap.get(media.assetId) : null
@@ -239,6 +238,7 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         if (!cc) return
         const isOrtho = (cameraView?.fov ?? 50) < 20
         cc.mouseButtons.left = isOrtho ? CC_ACTION.TRUCK : CC_ACTION.ROTATE
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [cameraView?.fov])
 
     // Smooth FOV lerp — runs every frame inside the R3F canvas
@@ -262,6 +262,7 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
         }
         cc.addEventListener('controlstart', handleStart)
         return () => cc.removeEventListener('controlstart', handleStart)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [onRotateStart])
 
     if (isXrPresenting || !enabled) return null

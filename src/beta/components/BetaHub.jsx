@@ -17,15 +17,6 @@ import { buildBetaProjectPath, navigateToBetaPath } from '../utils/betaRouting.j
 import { GUIDE_AUDIENCES } from '../utils/betaGuide.js'
 import SpaceSyncPanel from '../../components/SpaceSyncPanel.jsx'
 
-const detectEntityTypeFromMime = (mimeType = '') => {
-    if (mimeType.startsWith('image/')) return 'image'
-    if (mimeType.startsWith('video/')) return 'video'
-    if (mimeType.startsWith('audio/')) return 'audio'
-    if (mimeType.startsWith('model/')) return 'model'
-    if (mimeType === 'application/octet-stream') return 'model'
-    return null
-}
-
 export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [projects, setProjects] = useState([])
     const [title, setTitle] = useState('Untitled Project')
@@ -157,7 +148,7 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         <span className="beta-hub-di-sq" />
                         <span className="beta-hub-di-sq" />
                     </div>
-                    <h1 className="beta-hub-title">di.i beta</h1>
+                    <h1 className="beta-hub-title">di.iiii beta</h1>
                     <p className="beta-hub-tagline">space · {spaceId}</p>
                 </header>
 

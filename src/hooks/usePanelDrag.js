@@ -51,6 +51,7 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
         const dy = event.clientY - state.startY
         const next = clampToViewport(state.originX + dx, state.originY + dy)
         setOffset(next)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     const endDrag = useCallback(() => {

@@ -9,27 +9,6 @@ const PublicProjectViewer = lazy(() => import('./project/components/PublicProjec
 const DEFAULT_SPACE_ID = 'main'
 const SPACE_META_REFRESH_MS = 2000
 
-function SurfaceLoadingScreen() {
-    return (
-        <main
-            style={{
-                minHeight: '100vh',
-                display: 'grid',
-                placeItems: 'center',
-                background: 'radial-gradient(circle at top, #18222d 0%, #06090d 55%, #020304 100%)',
-                color: '#f5f7fa',
-                fontFamily: '"Segoe UI", sans-serif'
-            }}
-        >
-            <div style={{ textAlign: 'center', padding: '2rem' }}>
-                <p style={{ margin: 0, opacity: 0.72, letterSpacing: '0.08em', textTransform: 'uppercase', fontSize: '0.75rem' }}>
-                    Loading space
-                </p>
-            </div>
-        </main>
-    )
-}
-
 export default function SpaceSurfaceApp({ routeState }) {
     const page = routeState?.page || null
     const hasExplicitSpaceId = Boolean(routeState?.spaceId)

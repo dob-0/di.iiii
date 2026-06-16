@@ -32,15 +32,6 @@ import {
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioProjectPath, buildStudioSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
 
-const detectEntityTypeFromMime = (mimeType = '') => {
-    if (mimeType.startsWith('image/')) return 'image'
-    if (mimeType.startsWith('video/')) return 'video'
-    if (mimeType.startsWith('audio/')) return 'audio'
-    if (mimeType.startsWith('model/')) return 'model'
-    if (mimeType === 'application/octet-stream') return 'model'
-    return null
-}
-
 const formatProjectSourceLabel = (source = '') => {
     switch (source) {
         case 'studio-v3':

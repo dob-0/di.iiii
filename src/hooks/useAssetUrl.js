@@ -106,7 +106,7 @@ export function useAssetUrl(assetRef, options = {}) {
                 URL.revokeObjectURL(revokedUrl)
             }
         }
-    }, [assetId, assetRef?.mimeType, assetRef?.name, canPreferRemoteSource, expectedTopLevelType, remoteUrl])
+    }, [acceptsGenericBinary, assetId, assetRef?.mimeType, assetRef?.name, canPreferRemoteSource, expectedTopLevelType, remoteUrl])
 
     return objectUrl
 }

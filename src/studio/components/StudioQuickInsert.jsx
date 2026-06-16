@@ -27,8 +27,8 @@ export default function StudioQuickInsert({ position, onClose, onCreateEntity, o
     const topAssets = assets.slice(0, 6)
 
     return (
-        <div className="sqi-overlay" onClick={onClose}>
-            <div className="sqi-popup" style={{ left, top }} onClick={(e) => e.stopPropagation()}>
+        <div className="sqi-overlay" onClick={onClose} onKeyDown={(e) => e.key === 'Escape' && onClose()} role="button" tabIndex={0} aria-label="Close quick insert">
+            <div className="sqi-popup" style={{ left, top }} onClick={(e) => e.stopPropagation()} role="none">
                 <div className="sqi-section-label">Add entity</div>
                 <div className="sqi-grid">
                     {ENTITY_TYPES.map(({ key, label }) => (

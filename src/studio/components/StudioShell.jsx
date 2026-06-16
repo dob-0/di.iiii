@@ -199,7 +199,7 @@ export default function StudioShell({
     }
 
     return (
-        <div className="sfp-root" onDoubleClick={handleViewportDoubleClick}>
+        <div className="sfp-root" onDoubleClick={handleViewportDoubleClick} role="application" aria-label="3D viewport">
             <StudioViewportLayout
                 layout={vpLayout}
                 onSplit={vpSplit}

@@ -1,5 +1,5 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
+import { Suspense, useMemo, useRef, useState } from 'react'
+import { Canvas } from '@react-three/fiber'
 import { Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
@@ -12,7 +12,6 @@ import VideoObject from '../../objectComponents/VideoObject.jsx'
 import AudioObject from '../../objectComponents/AudioObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
 import { getNodeType } from '../../project/nodeRegistry.js'
-import { detectEntityTypeForAsset } from '../../utils/mediaAssetTypes.js'
 import { getBetaWorldBackgroundColor } from '../utils/viewportWorldState.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../utils/nodeGraphRuntime.js'
 
@@ -40,29 +39,6 @@ const asPositiveVec3 = (value, fallback = [1, 1, 1], min = 0.001, max = 100) => 
     })
 }
 
-function CameraControls({ savedView = {} }) {
-    const controlsRef = useRef(null)
-    const { camera } = useThree()
-    const position = useMemo(
-        () => savedView.position || [0, 2.4, 6.5],
-        [savedView.position]
-    )
-    const target = useMemo(
-        () => savedView.target || [0, 0.75, 0],
-        [savedView.target]
-    )
-
-    useEffect(() => {
-        camera.position.set(position[0], position[1], position[2])
-        camera.updateProjectionMatrix()
-        if (controlsRef.current?.target) {
-            controlsRef.current.target.set(target[0], target[1], target[2])
-            controlsRef.current.update()
-        }
-    }, [camera, position, target])
-
-    return <OrbitControls ref={controlsRef} makeDefault target={target} />
-}
 
 function EntityVisual({ entity, assetMap, selected, onSelect }) {
     const transform = entity.components?.transform || {}

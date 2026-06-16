@@ -224,10 +224,6 @@ export default function BetaEditor({
         [authoredNodes]
     )
     const hasWorldNode = Boolean(worldNode)
-    const currentScopeNode = useMemo(
-        () => currentScopeId ? (authoredNodes.find((n) => n.id === currentScopeId) || null) : null,
-        [currentScopeId, authoredNodes]
-    )
     const topbarLocationText = useMemo(() => {
         if (!hasNodeZero) return 'Double-click to place Node 0'
         if (!hasGraphNodes && !hasWorldNode) return 'Double-click to place your first node'

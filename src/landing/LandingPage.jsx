@@ -104,7 +104,7 @@ export default function LandingPage() {
                     </Typography>
 
                     <Typography className="lp-wordmark" component="h1">
-                        di<span className="lp-dot">.</span>i
+                        di<span className="lp-dot">.</span>iiii
                     </Typography>
 
                     <Typography className="lp-tagline">
@@ -141,9 +141,9 @@ export default function LandingPage() {
             <Box className="lp-section" component="section" id="what">
                 <Box className="lp-section-inner">
                     <Typography className="lp-section-eyebrow">The platform</Typography>
-                    <Typography className="lp-section-title" component="h2">What is di.i?</Typography>
+                    <Typography className="lp-section-title" component="h2">What is di.iiii?</Typography>
                     <Typography className="lp-section-body">
-                        di.i is a collaborative 3D spatial editor that runs entirely in your web browser.
+                        di.iiii is a collaborative 3D spatial editor that runs entirely in your web browser.
                         Think of it as a shared whiteboard — but in three dimensions.
                         Build scenes, place objects, set up lighting and cameras,
                         and invite others to join the same space in real time.
@@ -198,7 +198,7 @@ export default function LandingPage() {
             <Box className="lp-section" component="section" id="how">
                 <Box className="lp-section-inner">
                     <Typography className="lp-section-eyebrow">Getting started</Typography>
-                    <Typography className="lp-section-title" component="h2">How to use di.i</Typography>
+                    <Typography className="lp-section-title" component="h2">How to use di.iiii</Typography>
                     <Typography className="lp-section-body">
                         You can be building your first 3D scene in under two minutes.
                     </Typography>
@@ -230,7 +230,7 @@ export default function LandingPage() {
                     <Typography className="lp-section-eyebrow">Audience</Typography>
                     <Typography className="lp-section-title" component="h2">Made for everyone</Typography>
                     <Typography className="lp-section-body">
-                        di.i works for artists, developers, organizers, and automated systems alike.
+                        di.iiii works for artists, developers, organizers, and automated systems alike.
                     </Typography>
 
                     <Box className="lp-audience-grid">
@@ -269,7 +269,7 @@ export default function LandingPage() {
                     <Typography className="lp-section-eyebrow">API &amp; agents</Typography>
                     <Typography className="lp-section-title" component="h2">For AI agents &amp; developers</Typography>
                     <Typography className="lp-section-body">
-                        di.i exposes a structured REST API via serverXR. Agents and automated systems can
+                        di.iiii exposes a structured REST API via serverXR. Agents and automated systems can
                         read scene state, list spaces, check health, and authenticate — all via JSON endpoints.
                     </Typography>
 
@@ -278,7 +278,7 @@ export default function LandingPage() {
                             <Typography className="lp-ai-block-title">Platform identity</Typography>
                             <Box className="lp-code-block">
                                 {[
-                                    ['name', 'di.i'],
+                                    ['name', 'di.iiii'],
                                     ['type', '3D spatial editor / WebXR platform'],
                                     ['version', '0.2.0'],
                                     ['backend', 'serverXR (Node.js)'],
