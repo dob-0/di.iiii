@@ -15,7 +15,7 @@ This repo, `dob-0/di.iiii`, is the active working and deployment source of truth
 - public unit: `space`
 - editable document inside a space: `project`
 - live public route for a space: `publishedProjectId`
-- normal branch flow: `dev -> staging -> main`
+- normal branch flow: `dev -> main` (staging is a GitHub Actions deploy environment, not a branch)
 - runtime baseline: Node `22.x`, npm `10.x`
 
 Project links:
@@ -175,16 +175,6 @@ Rules:
 - do not start routine feature work on `main`
 - use `main` directly only for emergency production hotfixes
 
-## Public Mirror
-
-To sync public context into the `br_id_ge` checkout:
-
-```bash
-npm run sync:public:br_id_ge -- --dest /path/to/br_id_ge
-```
-
-Keep secrets and private ops material out of this sync. See [docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md) for mirror rules.
-
 ## Publishing Content to a Space
 
 For pushing teaser pages, multi-file experiences, or project packages to a live `/<space>` route, see the [Publish Workflow](docs/deploy/PUBLISH_WORKFLOW.md). Options: in-app update, branch-hosted URL, ZIP import, full code deploy.
@@ -194,12 +184,10 @@ For pushing teaser pages, multi-file experiences, or project packages to a live 
 ```mermaid
 flowchart LR
     work["Daily work"] --> dev["dob-0/di.iiii<br/>primary public repo"]
-    dev --> branchDev["dev"]
-    branchDev --> branchStaging["staging"]
-    branchStaging --> branchMain["main"]
+    dev --> branchDev["dev branch<br/>→ staging.di-studio.xyz"]
+    branchDev --> branchMain["main branch<br/>→ di-studio.xyz"]
     branchMain --> release["cpanel-* release branches"]
-    release --> hosting["di-studio.xyz<br/>live hosting"]
-    branchMain --> legacy["dob-0/di.i<br/>legacy hidden mirror"]
+    release --> hosting["cPanel hosting"]
 ```
 
 Working rule:
