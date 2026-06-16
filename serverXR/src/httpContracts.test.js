@@ -85,11 +85,7 @@ const startServer = async ({
     delete childEnv.SPACES_DIR
     delete childEnv.UPLOADS_DIR
 
-    if (requireAuth === undefined) {
-        delete childEnv.REQUIRE_AUTH
-    } else {
-        childEnv.REQUIRE_AUTH = String(requireAuth)
-    }
+    childEnv.REQUIRE_AUTH = requireAuth === undefined ? '' : String(requireAuth)
 
     const child = spawn(process.execPath, [SERVER_ENTRY], {
         cwd: sandboxCwd,
