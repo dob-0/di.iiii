@@ -9,7 +9,7 @@ import { getStudioLocationState, isStudioLocation } from './studio/utils/studioR
 import { APP_PAGE_PREFERENCES, getAppLocationState } from './utils/spaceRouting.js'
 
 const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
-const BlankNodeWorkspaceApp = lazy(() => import('./beta/BlankNodeWorkspaceApp.jsx'))
+const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 
 function AppRouter() {
@@ -57,8 +57,8 @@ function AppRouter() {
 
     if (isRootLanding) {
         return (
-            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="Preparing workspace..." />}>
-                <BlankNodeWorkspaceApp />
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <LandingPage />
             </Suspense>
         )
     }
