@@ -1049,3 +1049,37 @@
     flex: 1;
     overflow: hidden;
 }
+
+/* Camera settings drawer */
+.svl-settings {
+    position: absolute;
+    top: 32px;
+    left: 8px;
+    z-index: 10;
+    background: rgba(18, 18, 22, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+    padding: 8px 10px;
+    backdrop-filter: blur(8px);
+    min-width: 180px;
+}
+.svl-settings-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    color: rgba(255,255,255,0.6);
+}
+.svl-settings-row input[type=range] {
+    flex: 1;
+    accent-color: var(--di-accent, #00e5ff);
+    height: 2px;
+}
+.svl-settings-row span:last-child {
+    min-width: 28px;
+    text-align: right;
+    color: rgba(255,255,255,0.9);
+}
+.svl-tbtn--active {
+    color: var(--di-accent, #00e5ff) !important;
+}

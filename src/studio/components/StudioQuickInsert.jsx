@@ -6,6 +6,10 @@ const ENTITY_TYPES = [
     { key: 'cone', label: '△ Cone' },
     { key: 'cylinder', label: '⬡ Cylinder' },
     { key: 'text', label: 'T Text' },
+    { key: 'pointLight', label: '· Point Light' },
+    { key: 'spotLight', label: '▽ Spot Light' },
+    { key: 'directionalLight', label: '↘ Dir. Light' },
+    { key: 'ambientLight', label: '☀ Ambient' },
 ]
 
 export default function StudioQuickInsert({ position, onClose, onCreateEntity, onCreateFromAsset, assets = [] }) {

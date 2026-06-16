@@ -81,6 +81,54 @@ function EntityContent({ entity, assetMap }) {
         )
     case 'model':
         return <ModelObject assetRef={asset || null} data={asset?.url || null} modelColor={appearance.color} applyModelColor={false} opacity={appearance.opacity} />
+    case 'pointLight': {
+        const l = entity.components?.light || {}
+        return (
+            <>
+                <pointLight color={l.color || '#ffffff'} intensity={l.intensity ?? 1} distance={l.distance ?? 10} decay={l.decay ?? 2} />
+                <mesh>
+                    <sphereGeometry args={[0.08, 8, 8]} />
+                    <meshStandardMaterial color={l.color || '#ffffff'} emissive={l.color || '#ffffff'} emissiveIntensity={1} />
+                </mesh>
+            </>
+        )
+    }
+    case 'spotLight': {
+        const l = entity.components?.light || {}
+        return (
+            <>
+                <spotLight color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} />
+                <mesh>
+                    <coneGeometry args={[0.07, 0.2, 8]} />
+                    <meshStandardMaterial color={l.color || '#ffffff'} emissive={l.color || '#ffffff'} emissiveIntensity={0.8} />
+                </mesh>
+            </>
+        )
+    }
+    case 'directionalLight': {
+        const l = entity.components?.light || {}
+        return (
+            <>
+                <directionalLight color={l.color || '#fff7ea'} intensity={l.intensity ?? 1.5} />
+                <mesh>
+                    <boxGeometry args={[0.15, 0.15, 0.15]} />
+                    <meshStandardMaterial color={l.color || '#fff7ea'} emissive={l.color || '#fff7ea'} emissiveIntensity={0.8} />
+                </mesh>
+            </>
+        )
+    }
+    case 'ambientLight': {
+        const l = entity.components?.light || {}
+        return (
+            <>
+                <ambientLight color={l.color || '#ffffff'} intensity={l.intensity ?? 0.5} />
+                <mesh>
+                    <sphereGeometry args={[0.12, 12, 12]} />
+                    <meshStandardMaterial color={l.color || '#ffffff'} emissive={l.color || '#ffffff'} emissiveIntensity={0.4} wireframe />
+                </mesh>
+            </>
+        )
+    }
     default:
         return <BoxObject color={appearance.color} boxSize={[1, 1, 1]} />
     }
@@ -406,7 +454,7 @@ export default function StudioViewport({
             onPointerLeave={onCursorLeave}
         >
             <Canvas
-                style={{ height: '100dvh' }}
+                style={{ height: '100%' }}
                 shadows
                 camera={{
                     position: camera.position || [0, 2.4, 6.5],

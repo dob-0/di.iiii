@@ -180,6 +180,23 @@ export const buildDefaultComponentsForType = (type = 'box') => {
         case 'model':
             base.media = { assetId: null, autoplay: false, loop: false, muted: false }
             break
+        case 'pointLight':
+            base.appearance = { color: '#ffffff', opacity: 1 }
+            base.light = { color: '#ffffff', intensity: 1, distance: 10, decay: 2 }
+            break
+        case 'spotLight':
+            base.appearance = { color: '#ffffff', opacity: 1 }
+            base.light = { color: '#ffffff', intensity: 2, distance: 20, angle: 0.52, penumbra: 0.2, decay: 2 }
+            break
+        case 'directionalLight':
+            base.appearance = { color: '#ffffff', opacity: 1 }
+            base.light = { color: '#fff7ea', intensity: 1.5 }
+            break
+        case 'ambientLight':
+            base.transform = { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }
+            base.appearance = { color: '#ffffff', opacity: 1 }
+            base.light = { color: '#ffffff', intensity: 0.5 }
+            break
         case 'box':
         default:
             base.primitive = { shape: 'box', size: [1, 1, 1] }

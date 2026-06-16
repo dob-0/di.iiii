@@ -86,15 +86,31 @@ export function PanelHeader({ title, onClose, action = null }) {
 }
 
 export function LibraryPanel({ onCreateEntity, onAssetFilesSelected, canDeleteSelection, onDeleteSelected }) {
-    const types = ['box', 'sphere', 'cone', 'cylinder', 'text']
+    const primitives = ['box', 'sphere', 'cone', 'cylinder', 'text']
+    const lights = [
+        { type: 'pointLight', label: 'Point' },
+        { type: 'spotLight', label: 'Spot' },
+        { type: 'directionalLight', label: 'Directional' },
+        { type: 'ambientLight', label: 'Ambient' },
+    ]
     return (
         <>
             <div className="scc-section">
                 <div className="scc-section-label">Primitives</div>
                 <div className="scc-buttons">
-                    {types.map((type) => (
+                    {primitives.map((type) => (
                         <button key={type} className="scc-btn" onClick={() => onCreateEntity(type)}>
                             {type}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            <div className="scc-section">
+                <div className="scc-section-label">Lights</div>
+                <div className="scc-buttons">
+                    {lights.map(({ type, label }) => (
+                        <button key={type} className="scc-btn" onClick={() => onCreateEntity(type)}>
+                            {label}
                         </button>
                     ))}
                 </div>
