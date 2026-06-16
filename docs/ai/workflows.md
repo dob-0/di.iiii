@@ -86,7 +86,7 @@ Push changes downward only when needed:
 
 ## Branch And Release Flow
 
-- normal branch flow: `dev -> staging -> main`
+- normal branch flow: `dev -> main`
 - start routine work on `dev`
 - use `main` directly only for emergency production hotfixes
 - deployment automation and host apply scripts live in `scripts/` and `deploy/`

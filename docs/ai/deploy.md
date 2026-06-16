@@ -4,7 +4,7 @@ This page is the AI-safe deployment map. Keep host-specific or secret material o
 
 ## Canonical Deployment Model
 
-- normal branch flow is `dev -> staging -> main`
+- normal branch flow is `dev -> main`
 - production hosting deploys from `dob-0/di.iiii` release flow; `dob-0/di.i` is currently a hidden/inactive mirror
 - prebuilt `cpanel-*` branches are the release artifacts consumed by cPanel Git Version Control
 - `/serverXR` stays owned by the cPanel Node.js App
@@ -22,7 +22,6 @@ This page is the AI-safe deployment map. Keep host-specific or secret material o
 From the repo root:
 
 ```bash
-npm run deploy:staging
 npm run deploy:production
 npm run deploy:cpanel
 ```

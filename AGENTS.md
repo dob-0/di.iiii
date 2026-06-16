@@ -189,7 +189,7 @@ npm run docs:ai:check
 
 ## Release Rule
 
-- normal branch flow: `dev -> staging -> main`
+- normal branch flow: `dev -> main`
 - do not start routine feature work on `main`
 - use `main` directly only for emergency production hotfixes
 

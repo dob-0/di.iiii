@@ -61,7 +61,7 @@ You may read any file to understand what to build or deploy. You do not edit pro
 - ~€4/mo: 2 vCPU, 4GB RAM, 40GB SSD
 - PM2 for process management
 - Nginx reverse proxy
-- GitHub Actions: push to `staging` → build → SSH rsync → restart PM2
+- GitHub Actions: push to `main` → build → push `cpanel-production` → cPanel auto-deploys
 - SQLite and assets on a mounted volume
 
 ### Docker Build Rule — Critical
@@ -81,23 +81,22 @@ Why: `serverXR/src/sharedRuntime.js` loads `../../shared` which resolves to `/sh
 ### Branch Flow
 
 ```
-dev → staging → main
+dev → main
 ```
 
 - Routine feature work: start on `dev`
-- Staging deploy: `staging` branch
-- Production deploy: `main` branch
+- Production deploy: merge `dev` into `main` and push
 - Emergency hotfix only: work directly on `main`
 
-The cPanel cron deploys `main` to production and `staging` to the staging environment.
+Pushing to `main` triggers `publish-cpanel-prebuilt-v2.yml` which builds and pushes to `cpanel-production`. cPanel cron picks it up within a few minutes.
 
 ---
 
 ## GitHub Actions Patterns
 
-### SSH Deploy Workflow (opt-in, for VPS)
+### SSH Deploy Workflow (opt-in, for future VPS)
 
-Trigger: push to `staging` or manual dispatch.
+Trigger: push to `main` or manual dispatch.
 
 Steps:
 1. Checkout repo
