@@ -191,26 +191,29 @@ body.is-landing .account-btn-wrapper {
     overflow: hidden;
     padding: 48px 24px 40px;
     border-bottom: 1px solid var(--di-cyan-border);
+    background: #000;
 }
 
-.lp-grid-bg {
+.lp-hero-canvas {
     position: absolute;
     inset: 0;
-    background-image:
-        linear-gradient(var(--di-cyan-border) 1px, transparent 1px),
-        linear-gradient(90deg, var(--di-cyan-border) 1px, transparent 1px);
-    background-size: 52px 52px;
-    opacity: 0.18;
+    z-index: 0;
     pointer-events: none;
 }
 
-.lp-glow-bg {
-    display: none;
+.lp-hero-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse at 50% 50%, transparent 25%, rgba(0,0,0,0.5) 100%),
+        linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.6) 100%);
 }
 
 .lp-hero-inner {
     position: relative;
-    z-index: 1;
+    z-index: 2;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -824,12 +827,19 @@ body.is-landing .account-btn-wrapper {
 }
 
 @media (max-width: 520px) {
+    .lp-hero-canvas { display: none; }
+
     .lp-section {
         padding: 64px 20px;
     }
 
     .lp-hero {
         padding: 32px 20px 40px;
+        background:
+            linear-gradient(var(--di-cyan-border) 1px, transparent 1px),
+            linear-gradient(90deg, var(--di-cyan-border) 1px, transparent 1px),
+            #000;
+        background-size: 52px 52px, 52px 52px, auto;
     }
 
     .lp-feature-grid {
