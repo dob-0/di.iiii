@@ -1,4 +1,4 @@
-const { Database: WasmDatabase } = require('node-sqlite3-wasm')
+const { DatabaseSync } = require('node:sqlite')
 
 let _db = null
 
@@ -64,29 +64,20 @@ const SCHEMA = `
   );
 `
 
-// Wrap a raw node-sqlite3-wasm Statement to accept variadic positional args
-// like better-sqlite3 does (stmt.run(a, b, c) instead of stmt.run([a, b, c])).
-function wrapStmt(raw) {
-  return {
-    get: (...args) => raw.get(args),
-    run: (...args) => raw.run(args),
-    all: (...args) => raw.all(args),
-  }
-}
-
-// Patch a WasmDatabase instance to expose the better-sqlite3 surface used
-// by this codebase: .pragma(), .transaction(), and variadic .prepare().
+// Patch a DatabaseSync instance to expose the better-sqlite3 surface used
+// by this codebase: .pragma() and .transaction().
+// node:sqlite's StatementSync already accepts variadic positional args,
+// so .prepare() needs no wrapping.
 function addCompatLayer(db) {
   db.pragma = (str) => { db.exec('PRAGMA ' + str) }
 
-  const origPrepare = db.prepare.bind(db)
-  db.prepare = (sql) => wrapStmt(origPrepare(sql))
-
   // better-sqlite3: db.transaction(fn) returns a callable that runs fn inside
-  // a BEGIN/COMMIT/ROLLBACK block.  Nested calls (already in transaction) just
-  // execute fn directly, matching better-sqlite3's deferred-transaction behavior.
+  // a BEGIN/COMMIT/ROLLBACK block. Track nesting so re-entrant calls run
+  // inline instead of starting a nested BEGIN (which SQLite rejects).
+  let _inTx = false
   db.transaction = (fn) => (...args) => {
-    if (db.inTransaction) return fn(...args)
+    if (_inTx) return fn(...args)
+    _inTx = true
     db.exec('BEGIN')
     try {
       const result = fn(...args)
@@ -95,6 +86,8 @@ function addCompatLayer(db) {
     } catch (e) {
       try { db.exec('ROLLBACK') } catch {}
       throw e
+    } finally {
+      _inTx = false
     }
   }
 
@@ -106,12 +99,12 @@ function initDb(dbPath) {
     try { _db.close() } catch {}
     _db = null
   }
-  const raw = new WasmDatabase(dbPath)
-  addCompatLayer(raw)
-  raw.pragma('journal_mode = WAL')
-  raw.pragma('foreign_keys = ON')
-  raw.exec(SCHEMA)
-  _db = raw
+  const db = new DatabaseSync(dbPath)
+  addCompatLayer(db)
+  db.pragma('journal_mode = WAL')
+  db.pragma('foreign_keys = ON')
+  db.exec(SCHEMA)
+  _db = db
   return _db
 }
 
