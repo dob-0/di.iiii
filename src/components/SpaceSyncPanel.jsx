@@ -27,6 +27,11 @@ export default function SpaceSyncPanel({ spaceId, className = '' }) {
     }, [checkStatus])
 
     const run = async (action) => {
+        if (action === 'push' && !canPush) {
+            setState(ERR)
+            setMessage('set LIVE_API_TOKEN in server .env.local to enable publishing')
+            return
+        }
         abortRef.current?.abort()
         const controller = new AbortController()
         abortRef.current = controller
@@ -86,8 +91,8 @@ export default function SpaceSyncPanel({ spaceId, className = '' }) {
                 type="button"
                 className="beta-hub-sync-btn"
                 onClick={() => run('push')}
-                disabled={state === BUSY || !canPush}
-                title={canPush ? 'Publish your local version to the live server' : 'LIVE_API_TOKEN not set in server .env.local'}
+                disabled={state === BUSY}
+                title="Publish your local version to the live server"
             >
                 ↑ publish
             </button>
