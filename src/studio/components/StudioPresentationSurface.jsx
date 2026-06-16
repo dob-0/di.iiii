@@ -45,8 +45,11 @@ export default function StudioPresentationSurface({
 }) {
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
+    const isFixedCamera = previewMode === 'fixed-camera'
     const showCodeView = previewMode === 'code'
-    const resolvedCamera = resolveStudioPreviewCamera(document, cameraView)
+    const resolvedCamera = isFixedCamera
+        ? (presentationState.fixedCamera || resolveStudioPreviewCamera(document, cameraView))
+        : resolveStudioPreviewCamera(document, cameraView)
     const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
     const rawHtml = hasFiles
         ? bundleCodeFiles(presentationState.codeFiles)
@@ -129,6 +132,7 @@ export default function StudioPresentationSurface({
             setEditMode={setEditMode}
             setGizmoMode={setGizmoMode}
             onTransformCommit={onTransformCommit}
+            enableNavigation={isFixedCamera ? false : undefined}
         />
     )
 }
