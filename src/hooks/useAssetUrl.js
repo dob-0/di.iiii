@@ -25,6 +25,7 @@ export function useAssetUrl(assetRef, options = {}) {
     const assetId = assetRef?.id
     const [objectUrl, setObjectUrl] = useState(null)
     const preferRemoteSource = options?.preferRemoteSource === true
+    const acceptsGenericBinary = options?.acceptsGenericBinary === true
 
     const remoteUrl = assetId ? getAssetSourceUrl(assetId) : null
     const canPreferRemoteSource = preferRemoteSource && remoteUrl && !isFrontendAssetFallbackUrl(remoteUrl)

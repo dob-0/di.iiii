@@ -29,6 +29,20 @@ export const cloneValue = (value) => {
     return value
 }
 
+export const mergePatch = (target, patch) => {
+    if (Array.isArray(patch)) return cloneValue(patch)
+    if (!patch || typeof patch !== 'object') return patch
+    const base = target && typeof target === 'object' ? cloneValue(target) : {}
+    Object.entries(patch).forEach(([key, value]) => {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            base[key] = mergePatch(base[key], value)
+        } else {
+            base[key] = cloneValue(value)
+        }
+    })
+    return base
+}
+
 export const ensureVector = (value, fallback = [0, 0, 0]) => {
     const source = Array.isArray(value) ? value : []
     return fallback.map((entry, index) => {
@@ -63,7 +77,7 @@ export const defaultWindowLayout = {
     activeWindowId: 'viewport',
     windows: {
         viewport: { id: 'viewport', title: 'Viewport', visible: true, minimized: false, pinned: true, x: 24, y: 176, width: 860, height: 580, zIndex: 3 },
-        assets: { id: 'assets', title: 'Assets', visible: true, minimized: false, pinned: false, x: 910, y: 176, width: 360, height: 360, zIndex: 4 },
+        assets: { id: 'assets', title: 'Assets', visible: false, minimized: false, pinned: false, x: 910, y: 176, width: 360, height: 360, zIndex: 4 },
         inspector: { id: 'inspector', title: 'Inspector', visible: true, minimized: false, pinned: false, x: 910, y: 552, width: 360, height: 420, zIndex: 5 },
         outliner: { id: 'outliner', title: 'Outliner', visible: false, minimized: false, pinned: false, x: 24, y: 620, width: 280, height: 260, zIndex: 2 },
         activity: { id: 'activity', title: 'Activity', visible: false, minimized: false, pinned: false, x: 320, y: 620, width: 340, height: 260, zIndex: 1 },
@@ -539,6 +553,7 @@ export const normalizeProjectDocument = (document = {}) => {
 }
 
 const validateNodeTypeId = (typeId) => {
+    if (!typeId || typeof typeId !== 'string') return false
     try {
         return Boolean(getNodeType(typeId))
     } catch {

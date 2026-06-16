@@ -10,6 +10,12 @@ vi.mock('./App.jsx', () => ({
     }
 }))
 
+vi.mock('./beta/BlankNodeWorkspaceApp.jsx', () => ({
+    default: function MockBlankNodeWorkspaceApp({ spaceId }) {
+        return <div>blank-node-workspace:{spaceId || 'main'}</div>
+    }
+}))
+
 vi.mock('./project/components/PublicProjectViewer.jsx', () => ({
     default: function MockPublicProjectViewer({ spaceId, projectId }) {
         return <div>public-project-viewer:{spaceId}:{projectId}</div>

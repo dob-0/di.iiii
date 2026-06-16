@@ -32,8 +32,10 @@ function SurfaceLoadingScreen() {
 
 export default function SpaceSurfaceApp({ routeState }) {
     const page = routeState?.page || null
+    const hasExplicitSpaceId = Boolean(routeState?.spaceId)
     const spaceId = routeState?.spaceId || DEFAULT_SPACE_ID
-    const shouldResolvePublishedSurface = page !== APP_PAGE_PREFERENCES && supportsServerSpaces && Boolean(spaceId)
+    const isLocalRootWorkspace = page !== APP_PAGE_PREFERENCES && !hasExplicitSpaceId
+    const shouldResolvePublishedSurface = !isLocalRootWorkspace && page !== APP_PAGE_PREFERENCES && supportsServerSpaces && Boolean(spaceId)
     const [surfaceState, setSurfaceState] = useState({
         status: 'idle',
         space: null

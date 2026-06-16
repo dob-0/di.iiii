@@ -166,8 +166,11 @@ export default function BetaEditor({
     }, [_applyLocalOps])
 
     const document = state.document
+    const isLocalWorkspace = !projectId
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     const entities = document.entities || []
+    const nodes = useMemo(() => document.nodes || [], [document.nodes])
+    const workspaceState = document.workspaceState || {}
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
     const selectedNode = nodes.find((node) => node.id === workspaceState.selectedNodeId) || null
     const authoredNodes = nodes
@@ -335,8 +338,20 @@ export default function BetaEditor({
         })
     }
 
-    const pushWindowOp = (windowId, patch = {}, focus = false) => {
-        applyLocalOps(buildWindowPatch(document, windowId, patch, focus))
+    const selectEntity = (entityId) => {
+        dispatch({ type: 'select-entity', entityId })
+        applyLocalOps({
+            type: 'setWorkspaceState',
+            payload: { patch: { selectedNodeId: null } }
+        })
+    }
+
+    const clearSelection = () => {
+        dispatch({ type: 'select-entity', entityId: null })
+        applyLocalOps({
+            type: 'setWorkspaceState',
+            payload: { patch: { selectedNodeId: null } }
+        })
     }
 
     const handleEnterNode = useCallback((nodeId) => {

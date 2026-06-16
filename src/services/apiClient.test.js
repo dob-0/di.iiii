@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { getApiBaseUrlForRuntime, normalizeClientApiToken } from './apiClient.js'
+import { describe, expect, it, vi } from 'vitest'
+import { apiFetch, getApiBaseUrlForRuntime, normalizeClientApiToken, normalizeSessionApiToken } from './apiClient.js'
 
 describe('getApiBaseUrlForRuntime', () => {
     it('uses the same-origin API path in dev for loopback server URLs', () => {

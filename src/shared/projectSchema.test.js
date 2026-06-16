@@ -61,7 +61,7 @@ describe('projectSchema', () => {
         const base = normalizeProjectDocument({})
         const afterCreate = applyProjectOps(base, [
             {
-                type: 'createEntity',
+                type: 'createNode',
                 payload: {
                     node: {
                         id: 'cube-1',

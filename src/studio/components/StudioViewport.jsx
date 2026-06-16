@@ -21,6 +21,7 @@ function EntityContent({ entity, assetMap }) {
     const appearance = entity.components?.appearance || {}
     const media = entity.components?.media || {}
     const asset = media.assetId ? assetMap.get(media.assetId) : null
+    const visualType = appearance.type
 
     switch (visualType) {
     case 'box':

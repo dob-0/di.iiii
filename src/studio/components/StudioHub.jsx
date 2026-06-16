@@ -150,21 +150,6 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     source: 'legacy-import-studio'
                 }
             }
-            const { document: nextDocument } = await uploadImportedProjectAssets({
-                projectId: createdProjectId,
-                document: baseDocument,
-                assetFiles,
-                uploadProjectAsset
-            })
-            await updateProjectDocument(createdProjectId, nextDocument)
-            importCommitted = true
-            setImportWarnings(warnings)
-            openProject(createdProjectId)
-        } catch (error) {
-            if (createdProjectId && !importCommitted) {
-                await deleteProject(createdProjectId).catch((cleanupError) => {
-                })
-            }
             await updateProjectDocument(response.project.id, nextDocument)
             setImportWarnings(warnings)
             openProject(response.project.id)

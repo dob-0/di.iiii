@@ -17,6 +17,13 @@ const {
   normalizeAuthRole,
   normalizeAuthScopeSpaces
 } = require('./authAccess')
+const {
+  createAuthSessionValue,
+  readCookie,
+  serializeAuthSessionCookie,
+  serializeExpiredAuthSessionCookie,
+  verifyAuthSessionValue
+} = require('./authSession')
 const { config, buildCorsOriginHandler } = require('./config')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { initializeSocket } = require('./socketHandlers')
