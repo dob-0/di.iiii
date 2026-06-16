@@ -59,6 +59,8 @@ const startServer = async () => {
             NODE_ENV: 'test',
             APP_BASE_PATH: '/serverXR',
             DATA_ROOT: sandboxDataRoot,
+            API_TOKEN: 'test-token',
+            REQUIRE_AUTH: '',
             CORS_ORIGINS: '*'
         },
         stdio: ['ignore', 'pipe', 'pipe']
