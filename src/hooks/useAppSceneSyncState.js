@@ -1,0 +1,105 @@
+import { useRef, useState } from 'react'
+import { useAppSyncSessionState } from './useAppSyncSessionState.js'
+
+export function useAppSceneSyncState({
+    liveSyncFeatureEnabled,
+    sceneStorageKey,
+    spaceId,
+    canAccessServerSpaces,
+    isOfflineMode,
+    isLiveSyncEnabled,
+    isPointerDragging,
+    buildSpaceApiUrl,
+    serverAssetBaseUrl,
+    supportsServerSpaces,
+    getServerScene,
+    getServerSceneOps,
+    submitSceneOps,
+    sceneSettings,
+    objects,
+    renderSettings,
+    setRenderSettings,
+    presentation,
+    setPresentation,
+    sceneVersion,
+    setSceneVersion,
+    persistSceneDataWithStatus,
+    markServerSync,
+    setAssetRestoreProgress,
+    setRemoteAssetsManifest,
+    resetRemoteAssets,
+    resetAssetStoreQuotaState,
+    restoreAssetsFromPayload,
+    clearSelection,
+    getAssetUrlCandidates,
+    getAssetSourceUrl,
+    defaultGridAppearance,
+    defaultRenderSettings,
+    defaultSceneRemoteBase,
+    legacySceneRemoteBase,
+    setObjects,
+    setIsGridVisible,
+    setIsGizmoVisible,
+    setIsPerfVisible,
+} = {}) {
+    const [remoteSceneVersion, setRemoteSceneVersion] = useState(null)
+    const sceneVersionRef = useRef(sceneVersion)
+    const fileInputRef = useRef()
+    const skipServerLoadRef = useRef(false)
+
+    const sessionState = useAppSyncSessionState({
+        liveSyncFeatureEnabled,
+        sceneStorageKey,
+        spaceId,
+        canAccessServerSpaces,
+        isOfflineMode,
+        isLiveSyncEnabled,
+        isPointerDragging,
+        buildSpaceApiUrl,
+        serverAssetBaseUrl,
+        supportsServerSpaces,
+        getServerScene,
+        getServerSceneOps,
+        submitSceneOps,
+        sceneSettings,
+        objects,
+        renderSettings,
+        setRenderSettings,
+        presentation,
+        setPresentation,
+        sceneVersion,
+        setSceneVersion,
+        sceneVersionRef,
+        setRemoteSceneVersion,
+        skipServerLoadRef,
+        persistSceneDataWithStatus,
+        markServerSync,
+        setAssetRestoreProgress,
+        setRemoteAssetsManifest,
+        resetRemoteAssets,
+        resetAssetStoreQuotaState,
+        restoreAssetsFromPayload,
+        clearSelection,
+        getAssetUrlCandidates,
+        getAssetSourceUrl,
+        defaultGridAppearance,
+        defaultRenderSettings,
+        defaultSceneRemoteBase,
+        legacySceneRemoteBase,
+        setObjects,
+        setIsGridVisible,
+        setIsGizmoVisible,
+        setIsPerfVisible
+    })
+
+    return {
+        remoteSceneVersion,
+        sceneVersionRef,
+        fileInputRef,
+        skipServerLoadRef,
+        setRemoteSceneVersion,
+        ...sessionState
+    }
+}
+
+export default useAppSceneSyncState

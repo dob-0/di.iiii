@@ -1,0 +1,8 @@
+.inspector-panel .gizmo-mode-button {
+    align-items: center;
+}
+.inspector-panel .panel-content {
+    flex: 1;
+    max-height: none;
+    overflow: auto;
+}

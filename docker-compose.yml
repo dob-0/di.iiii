@@ -1,0 +1,87 @@
+name: dii
+
+# ─── Node 0 stack ──────────────────────────────────────────────────────────────
+# Run locally:
+#   cp .env.example .env
+#   docker compose up --build -d
+#
+# Run with public Cloudflare Tunnel (no account needed):
+#   docker compose --profile tunnel up --build -d
+#   docker compose logs tunnel   ← grab the *.trycloudflare.com URL
+#
+# Modes:
+#   Standalone  — no extra config, fully self-contained
+#   Networked   — set FEDERATION_PEERS to connect to other nodes (coming soon)
+# ───────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Backend: serverXR ────────────────────────────────────────────────────────
+  server:
+    build:
+      context: .
+      dockerfile: serverXR/Dockerfile
+    volumes:
+      - data:/data
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      APP_BASE_PATH: /serverXR
+      DATA_ROOT: /data
+
+      # Auth — set REQUIRE_AUTH=true to lock the instance
+      REQUIRE_AUTH: ${REQUIRE_AUTH:-false}
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}
+      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-}
+      AUTH_SESSION_COOKIE_SECURE: ${AUTH_SESSION_COOKIE_SECURE:-false}
+
+      # Uploads
+      MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-100}
+
+      # CORS — leave empty when client and server share the same nginx origin
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:4000/serverXR/api/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ── Frontend: nginx + React SPA ───────────────────────────────────────────────
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Empty = relative URLs, nginx proxies /serverXR/* to the server container.
+        # Set only if client and server are on different origins.
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+    ports:
+      - "${PORT:-80}:80"
+    depends_on:
+      server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Cloudflare Tunnel — optional, profile: tunnel ─────────────────────────────
+  # Exposes the stack publicly with no port forwarding or static IP.
+  # Quick tunnel (no account): random *.trycloudflare.com URL, watch the logs.
+  # Named tunnel (your domain): set CLOUDFLARE_TUNNEL_TOKEN in .env instead.
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: >
+      tunnel --no-autoupdate
+      ${CLOUDFLARE_TUNNEL_TOKEN:+run --token ${CLOUDFLARE_TUNNEL_TOKEN}}
+      ${CLOUDFLARE_TUNNEL_TOKEN:-url http://client:80}
+    depends_on:
+      client:
+        condition: service_started
+    restart: unless-stopped
+    profiles: ["tunnel"]
+
+# ── Volumes ───────────────────────────────────────────────────────────────────
+volumes:
+  data:
+    # SQLite DB + uploaded assets — the node's sovereign data store.
+    # Back it up with: docker run --rm -v dii_data:/data -v $(pwd):/backup alpine tar czf /backup/data-backup.tar.gz /data

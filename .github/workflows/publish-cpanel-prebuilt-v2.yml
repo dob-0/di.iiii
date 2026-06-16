@@ -1,0 +1,108 @@
+name: Publish cPanel Release
+
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Branch or ref to build from
+        required: false
+        default: ''
+      deploy_env:
+        description: Target environment
+        required: true
+        type: choice
+        options: [staging, production]
+        default: staging
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'production' || 'staging' }}
+    env:
+      SOURCE_REF:    ${{ inputs.source_ref != '' && inputs.source_ref || github.ref_name }}
+      DEPLOY_ENV:    ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'production' || 'staging' }}
+      TARGET_BRANCH: ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'cpanel-production' || 'cpanel-staging' }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SOURCE_REF }}
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Check cPanel backend compatibility
+        run: node scripts/check-cpanel-compat.mjs --deploy-env "${DEPLOY_ENV}"
+
+      - name: Install server dependencies
+        run: npm --prefix serverXR ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Stage release
+        env:
+          VITE_API_BASE_URL: /serverXR
+          VITE_API_TOKEN: ${{ secrets.SERVERXR_API_TOKEN }}
+        run: node scripts/stage-cpanel-nodeapp-release.mjs
+
+      - name: Publish to ${{ env.TARGET_BRANCH }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          CONTENT_DIR="$(mktemp -d)"
+          BRANCH_DIR="$(mktemp -d)"
+
+          rsync -az \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='serverXR/node_modules' \
+            --exclude='dist' \
+            --exclude='.deploy' \
+            ./ "${CONTENT_DIR}/"
+
+          mkdir -p "${CONTENT_DIR}/.deploy"
+          cp -R .deploy/cpanel "${CONTENT_DIR}/.deploy/cpanel"
+          cp deploy/cpanel/cpanel.prebuilt.yml "${CONTENT_DIR}/.cpanel.yml"
+          rm -f "${CONTENT_DIR}/deploy/cpanel/cpanel.prebuilt.yml"
+          printf '%s\n' "${SOURCE_REF}" > "${CONTENT_DIR}/.cpanel-source-ref"
+          printf '%s\n' "${DEPLOY_ENV}" > "${CONTENT_DIR}/.cpanel-deploy-env"
+
+          cd "${BRANCH_DIR}"
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          if git fetch --depth=1 origin "${TARGET_BRANCH}"; then
+            git checkout -B "${TARGET_BRANCH}" FETCH_HEAD
+            git rm -r --ignore-unmatch .
+            find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          else
+            git checkout --orphan "${TARGET_BRANCH}"
+          fi
+
+          rsync -az "${CONTENT_DIR}/" ./
+          git add -A .
+          git add -f .deploy .cpanel.yml .cpanel-source-ref .cpanel-deploy-env
+          if git diff --cached --quiet; then
+            echo "No changes to publish."
+          else
+            git commit -m "Publish ${DEPLOY_ENV} cPanel prebuilt from ${SOURCE_REF}"
+            git push origin "HEAD:${TARGET_BRANCH}"
+          fi
