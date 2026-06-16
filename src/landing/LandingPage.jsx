@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Box, Button, Stack, Typography } from '@mui/material'
 import './landing.css'
 
@@ -90,8 +91,24 @@ const CAPABILITIES = [
 ]
 
 export default function LandingPage() {
+    useEffect(() => {
+        document.body.classList.add('is-landing')
+        return () => document.body.classList.remove('is-landing')
+    }, [])
+
     return (
         <Box className="lp-root" data-page="landing">
+
+            {/* ── NAV ──────────────────────────────────────────── */}
+            <nav className="lp-nav">
+                <a href="/" className="lp-nav-logo">di<span className="lp-dot">.</span>iiii</a>
+                <div className="lp-nav-links">
+                    <a href="/studio" className="lp-nav-link">Studio</a>
+                    <a href="/beta" className="lp-nav-link">Beta</a>
+                    <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
+                </div>
+                <a href="/studio" className="lp-nav-cta">Open Studio</a>
+            </nav>
 
             {/* ── HERO ─────────────────────────────────────────── */}
             <Box className="lp-hero" component="section">
@@ -348,6 +365,20 @@ export default function LandingPage() {
                     </Typography>
                 </Box>
             </Box>
+
+            {/* ── FOOTER ───────────────────────────────────────── */}
+            <footer className="lp-footer">
+                <div className="lp-footer-inner">
+                    <span className="lp-footer-brand">di<span className="lp-dot">.</span>iiii</span>
+                    <nav className="lp-footer-nav" aria-label="Footer navigation">
+                        <a href="/studio" className="lp-footer-link">Studio</a>
+                        <a href="/beta" className="lp-footer-link">Beta</a>
+                        <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
+                        <a href="/serverXR/api/health" className="lp-footer-link">API</a>
+                    </nav>
+                    <span className="lp-footer-note">Open source · Web XR · Yerevan</span>
+                </div>
+            </footer>
 
         </Box>
     )

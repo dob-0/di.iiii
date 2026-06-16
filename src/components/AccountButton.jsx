@@ -57,6 +57,7 @@ export default function AccountButton({ authState, onLogout }) {
     return (
         <>
             <Box
+                className="account-btn-wrapper"
                 onClick={handleOpen}
                 sx={{
                     position: 'fixed',
