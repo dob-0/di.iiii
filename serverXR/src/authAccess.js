@@ -1,4 +1,5 @@
 const AUTH_ROLE_LEVELS = Object.freeze({
+  guest: 0,
   viewer: 1,
   editor: 2,
   admin: 3

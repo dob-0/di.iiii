@@ -1,4 +1,5 @@
 require('dotenv').config()
+require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env.local'), override: true })
 const express = require('express')
 const http = require('http')
 const cors = require('cors')
@@ -31,6 +32,7 @@ const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
+const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { createSpaceStore } = require('./spaceStore')
 const { loadSharedModule } = require('./sharedRuntime')
 const {
@@ -389,8 +391,46 @@ const clearAuthSessionCookie = (res) => {
   }))
 }
 
+const GUEST_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30
+
+const issueGuestSession = (res) => {
+  const guestId = `guest:${crypto.randomUUID()}`
+  const result = createAuthSessionValue({
+    secret: config.auth.sessionSecret,
+    ttlMs: GUEST_SESSION_TTL_MS,
+    session: {
+      subject: guestId,
+      label: 'Guest',
+      role: 'editor',
+      spaces: GUEST_SPACES
+    }
+  })
+  setAuthSessionCookie(res, result.value)
+  return { guestId, expiresAt: result.expiresAt }
+}
+
+registerAuthRoutes(router, {
+  config,
+  createAuthSessionValue,
+  setAuthSessionCookie
+})
+
 router.get('/api/auth/session', (req, res) => {
-  const state = req.authState || getPublicAuthState(req)
+  let state = req.authState || getPublicAuthState(req)
+
+  if (!state.authenticated && config.requireAuth && config.auth.sessionSecret) {
+    const { guestId, expiresAt } = issueGuestSession(res)
+    state = buildAuthState({
+      authenticated: true,
+      type: 'guest',
+      role: 'editor',
+      subject: guestId,
+      label: 'Guest',
+      spaces: GUEST_SPACES,
+      session: { expiresAt }
+    })
+  }
+
   res.json({
     requireAuth: config.requireAuth,
     authenticated: Boolean(state.authenticated),

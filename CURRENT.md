@@ -9,7 +9,7 @@ active_branch: dev
 
 ## Last commit
 
-`a0bd700` — fix: sync studio and automation updates
+`(this session)` — feat: guest sessions + GitHub/Google OAuth in serverXR
 Branch focus: active development on `dev`; promote through `staging` for live verification.
 
 ## What works

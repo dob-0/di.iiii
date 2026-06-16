@@ -45,6 +45,19 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_project_ops ON project_ops(project_id, version);
 
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL,
+    provider_id TEXT NOT NULL,
+    email TEXT,
+    display_name TEXT,
+    avatar_url TEXT,
+    role TEXT NOT NULL DEFAULT 'editor',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_users_provider ON users(provider, provider_id);
+
   CREATE TABLE IF NOT EXISTS migrations (
     key TEXT PRIMARY KEY,
     completed_at INTEGER NOT NULL
