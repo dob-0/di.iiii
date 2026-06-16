@@ -263,6 +263,14 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         }
     }
 
+    const handleTransformCommit = useCallback((entityId, transform) => {
+        if (!entityId) return
+        applyLocalOps({
+            type: 'updateComponent',
+            payload: { entityId, component: 'transform', patch: transform }
+        })
+    }, [applyLocalOps])
+
     const handleCameraViewChange = (nextView) => {
         if (!nextView) return
         setCameraView({
@@ -287,23 +295,6 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             type: 'append-activity',
             level: 'info',
             message: 'Saved current camera as the editor default view.'
-        })
-    }
-
-    const handleUseCurrentCameraAsFixed = () => {
-        const snapshot = readCurrentCameraSnapshot(controlsRef, {
-            ...document.presentationState?.fixedCamera,
-            position: cameraView.position,
-            target: cameraView.target
-        })
-        handlePresentationPatch({
-            mode: 'fixed-camera',
-            fixedCamera: snapshot
-        })
-        dispatch({
-            type: 'append-activity',
-            level: 'info',
-            message: 'Updated the fixed presentation camera from the current viewport.'
         })
     }
 
@@ -485,7 +476,6 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onPresentationPatch={handlePresentationPatch}
             onPublishPatch={handlePublishPatch}
             onSaveCurrentCamera={handleSaveCurrentCamera}
-            onUseCurrentCameraAsFixed={handleUseCurrentCameraAsFixed}
             onCopyShareLink={handleCopyShareLink}
             onExportProject={handleExportProject}
             onImportProjectFile={handleImportProjectFile}
@@ -493,6 +483,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onExitXr={xr.handleExitXrSession}
             onBackToHub={() => navigateToStudioPath(buildStudioHubPath(resolvedSpaceId))}
             onCameraViewChange={handleCameraViewChange}
+            onTransformCommit={handleTransformCommit}
             liveProjectState={{
                 spaceId: resolvedSpaceId,
                 spaceLabel: spaceMeta?.label || resolvedSpaceId,

@@ -10,6 +10,7 @@ import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectS
 import useXrAr from '../../hooks/useXrAr.js'
 import StudioViewport from '../../studio/components/StudioViewport.jsx'
 import { buildPresentationPreviewDocument } from '../../utils/presentationPreviewDocument.js'
+import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 
 const overlayButtonStyle = {
     appearance: 'none',
@@ -148,7 +149,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const presentationState = document?.presentationState || {}
     const entryView = presentationState.entryView || 'scene'
     const showCodeView = entryView === 'code'
-    const previewDocument = buildPresentationPreviewDocument(presentationState.codeHtml || '')
+    const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
+    const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
+    const previewDocument = buildPresentationPreviewDocument(rawHtml)
     const xrDefaultMode = publishState.xrDefaultMode || 'none'
     const xr = useXrAr({
         default3DView: cameraView || resolveViewerCamera(document || {}),
@@ -203,7 +206,21 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             }}
         >
             {showCodeView && document ? (
-                document.presentationState?.codeHtml ? (
+                presentationState.codeSourceType === 'url' && presentationState.codeUrl?.trim() ? (
+                    <iframe
+                        title={viewerTitle}
+                        src={presentationState.codeUrl.trim()}
+                        loading="lazy"
+                        sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        style={{
+                            border: 0,
+                            width: '100%',
+                            height: '100vh',
+                            background: '#05070a'
+                        }}
+                    />
+                ) : rawHtml ? (
                     <iframe
                         title={viewerTitle}
                         srcDoc={previewDocument}

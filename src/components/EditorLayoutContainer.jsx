@@ -323,7 +323,6 @@ export default function EditorLayoutContainer({
             .filter(
                 (button) =>
                     ![
-                        'interaction-mode',
                         'group-selection',
                         'ungroup-selection',
                         'preferences'

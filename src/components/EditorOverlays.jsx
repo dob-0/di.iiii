@@ -17,7 +17,7 @@ export default function EditorOverlays({
     const showExpandedStatusRows = isDockedStatusPanel || isStatusExpanded
     const shouldRenderStatusPanel = isUiVisible && shouldShowStatusPanel
     const hiddenXrButtons = !isUiVisible && Array.isArray(hiddenUiButtons)
-        ? hiddenUiButtons.filter((button) => ['enter-vr', 'enter-ar', 'exit-xr'].includes(button.key))
+        ? hiddenUiButtons.filter((button) => ['enter-vr', 'enter-ar', 'exit-xr', 'interaction-mode'].includes(button.key))
         : []
 
     useEffect(() => {

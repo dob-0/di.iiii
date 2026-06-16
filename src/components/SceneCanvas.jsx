@@ -34,10 +34,12 @@ export default function SceneCanvas({
     return (
         <div
             className="scene-canvas-shell"
+            style={{ position: 'fixed', inset: 0, width: '100vw', height: '100dvh' }}
             onPointerMove={onCanvasPointerMove}
             onPointerLeave={onCanvasPointerLeave}
         >
             <Canvas
+                style={{ height: '100dvh' }}
                 orthographic={cameraSettings?.orthographic}
                 camera={cameraProps}
                 dpr={renderSettings.dpr}

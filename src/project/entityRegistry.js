@@ -167,6 +167,63 @@ const DEFINITIONS = {
                 fields: [{ label: 'Asset', component: 'media', path: ['assetId'], type: 'asset' }]
             }
         ]
+    },
+    pointLight: {
+        label: 'Point Light',
+        sections: [
+            { id: 'transform', label: 'Transform', fields: [
+                VECTOR_FIELD('Position X', 'transform', ['position', 0]),
+                VECTOR_FIELD('Position Y', 'transform', ['position', 1]),
+                VECTOR_FIELD('Position Z', 'transform', ['position', 2])
+            ]},
+            { id: 'light', label: 'Light', fields: [
+                { label: 'Color', component: 'light', path: ['color'], type: 'color' },
+                { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 20, step: 0.1 },
+                { label: 'Distance', component: 'light', path: ['distance'], type: 'number', min: 0, max: 100, step: 0.5 },
+                { label: 'Decay', component: 'light', path: ['decay'], type: 'number', min: 0, max: 4, step: 0.1 }
+            ]}
+        ]
+    },
+    spotLight: {
+        label: 'Spot Light',
+        sections: [
+            { id: 'transform', label: 'Transform', fields: [
+                VECTOR_FIELD('Position X', 'transform', ['position', 0]),
+                VECTOR_FIELD('Position Y', 'transform', ['position', 1]),
+                VECTOR_FIELD('Position Z', 'transform', ['position', 2])
+            ]},
+            { id: 'light', label: 'Light', fields: [
+                { label: 'Color', component: 'light', path: ['color'], type: 'color' },
+                { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 20, step: 0.1 },
+                { label: 'Distance', component: 'light', path: ['distance'], type: 'number', min: 0, max: 100, step: 0.5 },
+                { label: 'Angle (rad)', component: 'light', path: ['angle'], type: 'number', min: 0.01, max: 1.57, step: 0.01 },
+                { label: 'Penumbra', component: 'light', path: ['penumbra'], type: 'number', min: 0, max: 1, step: 0.05 },
+                { label: 'Decay', component: 'light', path: ['decay'], type: 'number', min: 0, max: 4, step: 0.1 }
+            ]}
+        ]
+    },
+    directionalLight: {
+        label: 'Directional Light',
+        sections: [
+            { id: 'transform', label: 'Transform', fields: [
+                VECTOR_FIELD('Position X', 'transform', ['position', 0]),
+                VECTOR_FIELD('Position Y', 'transform', ['position', 1]),
+                VECTOR_FIELD('Position Z', 'transform', ['position', 2])
+            ]},
+            { id: 'light', label: 'Light', fields: [
+                { label: 'Color', component: 'light', path: ['color'], type: 'color' },
+                { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 20, step: 0.1 }
+            ]}
+        ]
+    },
+    ambientLight: {
+        label: 'Ambient Light',
+        sections: [
+            { id: 'light', label: 'Light', fields: [
+                { label: 'Color', component: 'light', path: ['color'], type: 'color' },
+                { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 4, step: 0.05 }
+            ]}
+        ]
     }
 }
 

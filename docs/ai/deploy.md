@@ -5,13 +5,14 @@ This page is the AI-safe deployment map. Keep host-specific or secret material o
 ## Canonical Deployment Model
 
 - normal branch flow is `dev -> staging -> main`
-- production hosting deploys from the private repo release flow, not the public mirror repo
+- production hosting deploys from `dob-0/di.iiii` release flow; `dob-0/di.i` is currently a hidden/inactive mirror
 - prebuilt `cpanel-*` branches are the release artifacts consumed by cPanel Git Version Control
 - `/serverXR` stays owned by the cPanel Node.js App
 
 ## Main Places To Read
 
 - human deploy runbook: [../deploy/LIVE_DEPLOY.md](../deploy/LIVE_DEPLOY.md)
+- publish content to a space (Options A–D): [../deploy/PUBLISH_WORKFLOW.md](../deploy/PUBLISH_WORKFLOW.md)
 - cPanel bundle notes: [../../deploy/cpanel/DEPLOY.md](../../deploy/cpanel/DEPLOY.md)
 - backend runtime contract: [../../serverXR/README.md](../../serverXR/README.md)
 - automation entrypoint: [../../scripts/AGENTS.md](../../scripts/AGENTS.md)

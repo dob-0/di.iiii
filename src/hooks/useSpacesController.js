@@ -16,6 +16,7 @@ import {
 } from '../services/serverSpaces.js'
 import { buildBetaHubPath } from '../beta/utils/betaRouting.js'
 import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
+import { appNavigate } from '../utils/appNavigate.js'
 import { slugifySpaceName } from '../utils/spaceNames.js'
 import { buildPreferencesPath } from '../utils/spaceRouting.js'
 import { defaultScene, SCENE_DATA_VERSION } from '../state/sceneStore.js'
@@ -130,7 +131,7 @@ export function useSpacesController({
             navigateToSpace(url)
             return
         }
-        window.location.assign(url)
+        appNavigate(url)
     }, [navigateToSpace])
 
     const {

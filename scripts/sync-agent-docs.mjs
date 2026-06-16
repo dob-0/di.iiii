@@ -352,15 +352,35 @@ export const syncGeneratedAgentDocs = async () => {
 const isMain = path.resolve(process.argv[1] || '') === __filename
 
 if (isMain) {
-  const results = await syncGeneratedAgentDocs()
-  const changed = results.filter((entry) => entry.changed)
+  const dryRun = process.argv.includes('--dry-run')
 
-  if (!changed.length) {
-    console.log('AI doc bridges are already up to date.')
+  if (dryRun) {
+    const entries = getGeneratedEntries()
+    const changed = []
+    for (const entry of entries) {
+      const absolutePath = toAbsolute(entry.path)
+      let current = null
+      try { current = await fs.readFile(absolutePath, 'utf8') } catch { /* new file */ }
+      const next = entry.content.endsWith('\n') ? entry.content : `${entry.content}\n`
+      if (current !== next) changed.push(entry.path)
+    }
+    if (!changed.length) {
+      console.log('dry-run: AI doc bridges are already up to date.')
+    } else {
+      console.log('dry-run: these files would be updated:')
+      changed.forEach((p) => console.log(`- ${p}`))
+    }
   } else {
-    console.log('Updated AI doc bridges:')
-    changed.forEach((entry) => {
-      console.log(`- ${entry.relativePath}`)
-    })
+    const results = await syncGeneratedAgentDocs()
+    const changed = results.filter((entry) => entry.changed)
+
+    if (!changed.length) {
+      console.log('AI doc bridges are already up to date.')
+    } else {
+      console.log('Updated AI doc bridges:')
+      changed.forEach((entry) => {
+        console.log(`- ${entry.relativePath}`)
+      })
+    }
   }
 }

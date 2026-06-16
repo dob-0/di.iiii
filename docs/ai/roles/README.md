@@ -1,6 +1,6 @@
-# di.i AI Engineering Collective
+# di.iiii AI Engineering Collective
 
-This is the role system for AI agents working in di.i. Every task has an owner. Every owner has a locked scope. Scope isolation is what keeps UI from breaking when you fix the backend, and what keeps the schema safe when you style a button.
+This is the role system for AI agents working in di.iiii. Every task has an owner. Every owner has a locked scope. Scope isolation is what keeps UI from breaking when you fix the backend, and what keeps the schema safe when you style a button.
 
 ---
 
@@ -44,7 +44,7 @@ If the task crosses two roles, name the **primary** role and list the **secondar
 
 ## How to Use a Role Card
 
-When giving a task to any AI agent (Claude, Copilot, Codex, Gemini, Cursor), prepend:
+When giving a task to any AI agent (Claude, Copilot, Gemini, Cursor), prepend:
 
 ```
 You are the [Role Name] for di.i.

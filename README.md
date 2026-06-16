@@ -1,8 +1,10 @@
-# di.i
+# di.iiii
 
-## Web XR Node-Based Reality Creation Language
+## Web XR Authoring Platform
 
-`di.i` is a web-based XR authoring platform for building spaces, projects, media, and node-driven behaviors on the web. This private repo, `dob-0/di.iiii`, is the active working and deployment source of truth. The public repo, `dob-0/di.i`, is the curated public-facing mirror and contributor front door.
+`di.iiii` is a browser-native platform for building and publishing spatial XR experiences — 3D scenes, node-driven behaviors, and AR/VR spaces — without leaving the web. The editor runs in the browser; the backend owns persistence, auth, and publish state; spaces are the public unit. No native installs, no engine lock-in, creator-owned data.
+
+This repo, `dob-0/di.iiii`, is the active working and deployment source of truth. The old mirror `dob-0/di.i` is hidden/inactive.
 
 ## Start Here
 
@@ -19,13 +21,13 @@
 Project links:
 
 - live site: [di-studio.xyz](https://di-studio.xyz)
-- public repo: [dob-0/di.i](https://github.com/dob-0/di.i)
-- private repo: [dob-0/di.iiii](https://github.com/dob-0/di.iiii)
+- primary public repo: [dob-0/di.iiii](https://github.com/dob-0/di.iiii)
+- legacy mirror (hidden, inactive): [dob-0/di.i](https://github.com/dob-0/di.i)
 - latest checkpoint: [Checkpoint 2026-04-21](docs/checkpoints/2026-04-21.md)
 - AI quick context: [AGENTS.md](AGENTS.md)
 - AI knowledge base: [docs/ai/index.md](docs/ai/index.md)
 - public-context materials: [docs/deck](docs/deck/)
-- public/private workflow: [Private Dev And Public Showcase Workflow](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
+- repo visibility and mirror status: [Private Dev And Public Showcase Workflow](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
 - deploy runbook: [Live Deploy Runbook](docs/deploy/LIVE_DEPLOY.md)
 
 ## Current Truth
@@ -48,6 +50,15 @@ This is where the project is going, but not all of it is fully shipped yet.
 - prefer shared project logic over expanding older one-off editor paths
 - keep the web as the universal authoring and runtime substrate
 - support broader spatial, physical-world, and hardware-linked reality creation over time
+
+## Space + Project Workflow
+
+Use this as the default path for new work in a space:
+
+1. Create or open a space from the admin surface or the spaces panel. Space creation provisions the server record and a blank scene.
+2. Open `/<space>/studio` for the main development lane. Create new projects there, import legacy scenes, and keep the long-term working copy.
+3. Use `/<space>/beta` for experimental or node-first work when the project needs research-style iteration.
+4. Publish the chosen project to the public route by setting `publishedProjectId` for the space; `/<space>` then shows the live project viewer.
 
 Important distinction:
 
@@ -95,7 +106,6 @@ Use these defaults unless the task clearly says otherwise.
 - prefer node-first behavior over growing legacy object/window systems
 - treat `worldState`, `windowLayout`, and older entity structures as compatibility bridges
 - treat `V1` work as compatibility work unless the task is explicitly about migration or legacy support
-- do not treat the public repo `di.i` as the deploy source of truth
 
 Common mistakes to avoid:
 
@@ -104,47 +114,7 @@ Common mistakes to avoid:
 - do not assume older orchestration files are the right long-term home for new canonical behavior
 - do not push private ops material, raw staging details, `.env` files, or host-specific deployment secrets into the public repo
 
-### Task Request Template (Use This For AI Work)
-
-Use this structure when assigning AI tasks to avoid extra edits, extra tool usage, or wrong priority:
-
-- goal: one exact outcome
-- priority: 1, 2, 3 (highest to lowest)
-- scope: allowed files/folders only
-- non-goals: explicit exclusions
-- constraints: performance, security, style, or API rules
-- output: expected response format/length
-- done criteria: objective checks (tests, behavior, lint)
-
-Strict add-ons (recommended):
-
-- clarify limit: ask max 2 questions, then proceed safely
-- scope lock: do not edit outside listed files/folders
-- output contract: summary + changed files + validation + risks only
-- progress bar: `status | phase X/Y | XX% | current | next`
-
-Example:
-
-- goal: fix project restore bug for missing assets
-- priority: correctness first, then minimal diff, then tests
-- scope: `src/project/`, `serverXR/src/assetRoutes.js`
-- non-goals: no UI refactor, no schema changes
-- constraints: keep current API shape and auth behavior
-- output: short summary + changed files + validation result
-- done criteria: missing assets no longer crash restore, tests pass
-
-Copy-paste strict template:
-
-- goal: ...
-- priority: 1) ... 2) ... 3) ...
-- scope: ...
-- non-goals: ...
-- constraints: ...
-- clarify limit: ask max 2 questions
-- scope lock: do not edit outside scope
-- output contract: summary + changed files + validation + risks
-- progress bar: status | phase X/Y | XX% | current | next
-- done criteria: ...
+For AI task assignments, use the task request template in [AGENTS.md](AGENTS.md).
 
 ## Quick Start
 
@@ -206,123 +176,38 @@ Rules:
 - do not start routine feature work on `main`
 - use `main` directly only for emergency production hotfixes
 
-## Extended Experience Deploy (Manual + Branch)
+## Public Mirror
 
-For single-page teaser updates, use the in-app presentation tools.
-For larger experiences (multiple assets/files), prefer branch/versioned deploys over ZIP handoffs.
-
-### Visual quality checklist (public teaser pages)
-
-Before publishing a teaser page on `/<space>`:
-
-1. Fill the full viewport (`100vh`) and avoid empty black regions.
-2. Keep one strong headline, one core concept line, and one platform relation block.
-3. Ensure mobile readability (single-column fallback below ~920px).
-4. Keep contrast high and type large enough for projection/screen capture.
-5. Include explicit relation text:
-  - `di.ii` = open-source XR platform
-  - `br_id_ge` = project built on di.ii
-6. Verify on staging before promotion.
-
-### Option A: Manual in-app update (fast teaser changes)
-
-Use this when updating copy, layout, or quick visual HTML for a live public route.
-
-1. Open `/<space>/studio/projects/<projectId>`.
-2. Open `Present`.
-3. Set `Public entry view` to `Code view` (or `Fixed camera` / `3D scene` as needed).
-4. Update `Code preview HTML` and verify the result on `/<space>`.
-
-Notes:
-
-- This is best for rapid content iteration.
-- Keep this path for lightweight updates, not full application deployments.
-
-### Option B: Branch + URL source workflow (recommended for multi-file content)
-
-Use this when the experience has multiple files, custom scripts/styles, or needs repeatable updates.
-
-1. Build and host the experience from a versioned branch/release path.
-2. In Studio `Present`, keep `Public entry view` as `Code view` and set the source to the hosted URL (or embed a stable iframe wrapper).
-3. Validate on `staging` and then promote through normal branch deploy flow.
-
-Notes:
-
-- This gives better rollback, diffs, and CI checks than manual ZIP transfer.
-- Treat the public route as a stable shell that points to versioned content.
-
-### Option C: ZIP package workflow (fallback only)
-
-Use ZIP only when branch-based hosting is not available.
-
-1. Export a project package from Studio (`Export project`).
-2. Re-import via Studio Hub `Import legacy scene` (supports `.zip` / `.json`).
-3. Validate in `staging` and publish the project to the target space route.
-
-Notes:
-
-- The ZIP flow is for project packages, not arbitrary web app bundles.
-- Imported assets are normalized into project document + asset storage.
-
-### Option D: Full code deploy (extended runtime/application changes)
-
-Use this when the change requires runtime code, component behavior, or platform-level updates.
-
-1. Implement and validate in `dev`.
-2. Promote via `npm run deploy:staging`.
-3. Verify staging.
-4. Promote via `npm run deploy:production`.
-
-Notes:
-
-- This is the correct path for long-term, multi-file, versioned behavior.
-- Prefer branch-based deploys over ad-hoc host edits for reliability and rollback.
-
-## cPanel Safety Rules
-
-If you deploy to cPanel (`cpanel-staging` / `cpanel-production`), follow these rules to avoid backend outages.
-
-- Do not add native Node dependencies in `serverXR` (for example `better-sqlite3`) on cPanel deploy branches.
-- cPanel hosts may not have compatible `glibc`/Python toolchains for native addon install/rebuild.
-- The cPanel publish workflow now enforces this with `scripts/check-cpanel-compat.mjs`.
-
-Safe cPanel update flow:
+To sync public context into the `br_id_ge` checkout:
 
 ```bash
-cd ~/repositories/di.iiii-staging
-git fetch --prune origin
-git checkout cpanel-staging
-git pull --ff-only origin cpanel-staging
-bash scripts/cpanel-apply-prebuilt-release.sh staging
-curl -sS -i --max-time 20 https://staging.di-studio.xyz/serverXR/api/health | head -n 30
+npm run sync:public:br_id_ge -- --dest /path/to/br_id_ge
 ```
 
-Notes:
+Keep secrets and private ops material out of this sync. See [docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md) for mirror rules.
 
-- `scripts/cpanel-poll-deploy.sh staging` only applies when the tracked commit changes.
-- If it says `already up to date`, run `bash scripts/cpanel-apply-prebuilt-release.sh staging` to force re-apply.
-- You can opt into forced apply behavior by setting `CPANEL_APPLY_WHEN_UPTODATE=1` before running poll.
+## Publishing Content to a Space
+
+For pushing teaser pages, multi-file experiences, or project packages to a live `/<space>` route, see the [Publish Workflow](docs/deploy/PUBLISH_WORKFLOW.md). Options: in-app update, branch-hosted URL, ZIP import, full code deploy.
 
 ## Repo And Hosting Topology
 
 ```mermaid
 flowchart LR
-    work["Daily work"] --> dev["dob-0/di.iiii<br/>private repo"]
+    work["Daily work"] --> dev["dob-0/di.iiii<br/>primary public repo"]
     dev --> branchDev["dev"]
     branchDev --> branchStaging["staging"]
     branchStaging --> branchMain["main"]
     branchMain --> release["cpanel-* release branches"]
     release --> hosting["di-studio.xyz<br/>live hosting"]
-    branchMain --> curate["curated public export"]
-    curate --> public["dob-0/di.i<br/>public repo"]
-    public --> discover["public docs<br/>issues / PRs<br/>developer discovery"]
+    branchMain --> legacy["dob-0/di.i<br/>legacy hidden mirror"]
 ```
 
 Working rule:
 
-- private work, staging truth, deployment automation, and unfinished integration live in `di.iiii`
-- curated public source and public-facing narrative live in `di.i`
-- production hosting should deploy from the private repo and its generated release branches, not from the public repo
+- active work, staging truth, deployment automation, and production flow live in `di.iiii`
+- `di.i` is a legacy hidden mirror and is not the active collaboration/deploy lane
+- production hosting deploys from `di.iiii` and its generated release branches
 
 ## Read Next
 
@@ -337,7 +222,8 @@ By task:
 - latest checkpoint: [Checkpoint 2026-04-21](docs/checkpoints/2026-04-21.md)
 - development framework: [Project Development And Optimization Framework](docs/roadmaps/PROJECT_DEVELOPMENT_FRAMEWORK.md)
 - deploy/release: [Live Deploy Runbook](docs/deploy/LIVE_DEPLOY.md)
-- public/private repo workflow: [Private Dev And Public Showcase Workflow](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
+- publishing content to spaces: [Publish Workflow](docs/deploy/PUBLISH_WORKFLOW.md)
+- repo visibility and mirror status: [Private Dev And Public Showcase Workflow](docs/ops/PRIVATE_DEV_PUBLIC_SHOWCASE.md)
 - public/context materials: [docs/deck](docs/deck/)
 
 ## Evergreen Rule

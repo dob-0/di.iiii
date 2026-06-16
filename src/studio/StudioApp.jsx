@@ -1,8 +1,10 @@
 import { useMemo } from 'react'
 import { CssBaseline, GlobalStyles, ThemeProvider, createTheme } from '@mui/material'
 import StudioHub from './components/StudioHub.jsx'
+import StudioSpacesHub from './components/StudioSpacesHub.jsx'
 import StudioEditor from './components/StudioEditor.jsx'
 import {
+    STUDIO_PAGE_SPACES,
     STUDIO_PAGE_HUB,
     STUDIO_PAGE_PROJECT
 } from './utils/studioRouting.js'
@@ -62,7 +64,10 @@ export default function StudioApp({ initialRoute }) {
         if (route.page === STUDIO_PAGE_HUB) {
             return <StudioHub spaceId={route.spaceId} />
         }
-        return <StudioHub spaceId={route.spaceId} />
+        if (route.page === STUDIO_PAGE_SPACES) {
+            return <StudioSpacesHub />
+        }
+        return <StudioSpacesHub />
     }, [route.page, route.projectId, route.spaceId])
 
     return (

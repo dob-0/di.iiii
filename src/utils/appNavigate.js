@@ -8,7 +8,9 @@ export const appNavigate = (path, { replace = false } = {}) => {
         return
     }
     if (typeof window === 'undefined') return
-    const method = replace ? 'replaceState' : 'pushState'
-    window.history[method]({}, '', path)
-    window.dispatchEvent(new PopStateEvent('popstate'))
+    if (replace) {
+        window.location.replace(path)
+        return
+    }
+    window.location.assign(path)
 }

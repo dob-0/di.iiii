@@ -1,6 +1,6 @@
-# dii Control Server
+# di.iiii Control Server
 
-`serverXR` is the Node/Express backend for `di.i`. It runs behind the cPanel Node.js App model, serves the monitor UI, persists space and project data, and is authoritative for edit enforcement, publish state, assets, SSE, and collaborator presence.
+`serverXR` is the Node/Express backend for `di.iiii`. It runs behind the cPanel Node.js App model, serves the monitor UI, persists space and project data, and is authoritative for edit enforcement, publish state, assets, SSE, and collaborator presence.
 
 Runtime baseline:
 
@@ -44,6 +44,8 @@ Simple product split:
 | `src/config.js` | env loading, directory config, auth identity config, CORS setup |
 | `src/authAccess.js` | auth roles, labels, and space-scope checks |
 | `src/authSession.js` | signed browser session cookies |
+| `src/db.js` | SQLite setup, schema migrations, prepared statement cache |
+| `src/migrate.js` | first-startup JSON-to-SQLite migration from legacy file storage |
 | `src/spaceStore.js` | space persistence and V1 scene storage |
 | `src/projectStore.js` | project persistence and project-doc storage |
 | `src/socketHandlers.js` | Socket.IO presence and cursor behavior |

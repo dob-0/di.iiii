@@ -257,7 +257,7 @@ export function useControlButtons({
             }] : [])
         ] : []
         const hiddenUiButtons = !isUiVisible
-            ? buildXrSessionButtons()
+            ? [...buildXrSessionButtons(), interactionModeButton]
             : []
 
         return { sceneButtons, panelButtons, adminButtons, displayButtons, xrButtons, hiddenUiButtons }

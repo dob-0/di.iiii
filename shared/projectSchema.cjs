@@ -21,7 +21,7 @@ const WINDOW_IDS = ['viewport', 'assets', 'inspector', 'outliner', 'activity', '
 
 const LEGACY_ROOT_NODE_IDS = new Set(['root-node', 'world-root', 'view-root'])
 const LEGACY_ROOT_TYPE_IDS = new Set(['core.project', 'world.root', 'view.root'])
-const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar', 'world.light', 'world.background', 'world.grid'])
+const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar', 'world.light', 'world.background', 'world.grid', 'universe.world'])
 
 const cloneValue = (value) => {
   if (Array.isArray(value)) {
@@ -106,6 +106,9 @@ const defaultPresentationState = {
   mode: 'scene',
   fixedCamera: defaultPresentationFixedCamera,
   codeHtml: '',
+  codeSourceType: 'html',
+  codeUrl: '',
+  codeFiles: [],
   entryView: 'scene'
 }
 
@@ -345,6 +348,13 @@ const normalizePresentationState = (presentation = {}, worldState = defaultWorld
     mode: ['scene', 'fixed-camera', 'code'].includes(mode) ? mode : defaultPresentationState.mode,
     fixedCamera: normalizePresentationFixedCamera(source.fixedCamera, worldState),
     codeHtml: typeof source.codeHtml === 'string' ? source.codeHtml : defaultPresentationState.codeHtml,
+    codeSourceType: source.codeSourceType === 'url' ? 'url' : defaultPresentationState.codeSourceType,
+    codeUrl: typeof source.codeUrl === 'string' ? source.codeUrl.trim() : defaultPresentationState.codeUrl,
+    codeFiles: Array.isArray(source.codeFiles)
+      ? source.codeFiles
+          .filter((f) => f && typeof f.name === 'string' && typeof f.content === 'string')
+          .map((f) => ({ name: f.name.trim(), content: f.content }))
+      : defaultPresentationState.codeFiles,
     entryView: ['scene', 'fixed-camera', 'code'].includes(entryView) ? entryView : defaultPresentationState.entryView
   }
 }

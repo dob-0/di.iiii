@@ -11,6 +11,7 @@ import {
 } from '../contexts/AppContexts.js'
 import { useRuntimeConsole } from './useRuntimeConsole.js'
 import { useStatusItems } from './useStatusItems.js'
+import { appNavigate } from '../utils/appNavigate.js'
 import { buildPreferencesPath } from '../utils/spaceRouting.js'
 import {
     buildScenePreviewDots,
@@ -313,8 +314,8 @@ export function usePreferencesData({ onNavigateToEditor }) {
     }, [copyText, runtimeLogText])
 
     const openRoute = useCallback((path) => {
-        if (typeof window === 'undefined' || !path) return
-        window.location.assign(path)
+        if (!path) return
+        appNavigate(path)
     }, [])
 
     const copyOperatorLinks = async () => {

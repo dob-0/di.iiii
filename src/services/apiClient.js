@@ -232,3 +232,7 @@ export const logoutApiSession = async () => apiFetch('/api/auth/session', {
     method: 'DELETE',
     json: false
 })
+
+export const getApiAuthProviders = async () => apiFetch('/api/auth/providers')
+
+export const getOAuthUrl = (provider) => `${apiBaseUrl}/api/auth/${provider}`

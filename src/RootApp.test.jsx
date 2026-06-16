@@ -41,11 +41,11 @@ describe('RootApp', () => {
         window.history.pushState({}, '', '/')
     })
 
-    it('renders the studio hub on /studio as the main-space compatibility route', async () => {
+    it('renders the spaces index on /studio', async () => {
         window.history.pushState({}, '', '/studio')
         render(<RootApp />)
 
-        expect(await screen.findByText('studio-app:hub:main')).toBeInTheDocument()
+        expect(await screen.findByText('studio-app:spaces:')).toBeInTheDocument()
     })
 
     it('renders the space-scoped studio editor route on /gallery/studio/projects/:id', async () => {

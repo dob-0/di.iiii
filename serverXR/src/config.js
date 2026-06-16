@@ -182,6 +182,9 @@ if (requireAuth && !authSessionSecret) {
   throw new Error('AUTH_SESSION_SECRET or an auth token is required when REQUIRE_AUTH is enabled.')
 }
 
+const oauthCallbackBase = (process.env.OAUTH_CALLBACK_BASE_URL || '').replace(/\/+$/, '')
+const oauthFrontendUrl = (process.env.OAUTH_FRONTEND_URL || '/').replace(/\/+$/, '') || '/'
+
 const config = {
   port: Number(process.env.PORT) || 4000,
   basePath,
@@ -208,7 +211,25 @@ const config = {
     spacesDir,
     uploadsDir
   },
-  defaultTtlMs: Number(process.env.SPACE_TTL_MS || 1000 * 60 * 60 * 24 * 30)
+  defaultTtlMs: Number(process.env.SPACE_TTL_MS || 1000 * 60 * 60 * 24 * 30),
+  liveSync: {
+    url: (process.env.LIVE_API_URL || 'https://di-studio.xyz/serverXR').replace(/\/+$/, ''),
+    token: (process.env.LIVE_API_TOKEN || '').trim()
+  },
+  oauth: {
+    callbackBase: oauthCallbackBase,
+    frontendUrl: oauthFrontendUrl,
+    github: {
+      clientId: (process.env.GITHUB_CLIENT_ID || '').trim(),
+      clientSecret: (process.env.GITHUB_CLIENT_SECRET || '').trim(),
+      enabled: Boolean((process.env.GITHUB_CLIENT_ID || '').trim())
+    },
+    google: {
+      clientId: (process.env.GOOGLE_CLIENT_ID || '').trim(),
+      clientSecret: (process.env.GOOGLE_CLIENT_SECRET || '').trim(),
+      enabled: Boolean((process.env.GOOGLE_CLIENT_ID || '').trim())
+    }
+  }
 }
 
 module.exports = { config, normalizeBasePath, isCorsOriginAllowed, buildCorsOriginHandler }

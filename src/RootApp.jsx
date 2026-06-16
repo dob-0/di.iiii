@@ -14,7 +14,10 @@ const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 
 function AppRouter() {
     const rrNavigate = useNavigate()
-    useEffect(() => { setAppNavigate(rrNavigate) }, [rrNavigate])
+    useEffect(() => {
+        setAppNavigate(rrNavigate)
+        return () => setAppNavigate(null)
+    }, [rrNavigate])
     const location = useLocation()
     const betaState = getBetaLocationState(location)
     const studioState = getStudioLocationState(location)

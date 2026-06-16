@@ -116,6 +116,9 @@ export const defaultPresentationState = {
     mode: 'scene',
     fixedCamera: defaultPresentationFixedCamera,
     codeHtml: '',
+    codeSourceType: 'html',
+    codeUrl: '',
+    codeFiles: [],
     entryView: 'scene'
 }
 
@@ -176,6 +179,23 @@ export const buildDefaultComponentsForType = (type = 'box') => {
             break
         case 'model':
             base.media = { assetId: null, autoplay: false, loop: false, muted: false }
+            break
+        case 'pointLight':
+            base.appearance = { color: '#ffffff', opacity: 1 }
+            base.light = { color: '#ffffff', intensity: 1, distance: 10, decay: 2 }
+            break
+        case 'spotLight':
+            base.appearance = { color: '#ffffff', opacity: 1 }
+            base.light = { color: '#ffffff', intensity: 2, distance: 20, angle: 0.52, penumbra: 0.2, decay: 2 }
+            break
+        case 'directionalLight':
+            base.appearance = { color: '#ffffff', opacity: 1 }
+            base.light = { color: '#fff7ea', intensity: 1.5 }
+            break
+        case 'ambientLight':
+            base.transform = { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }
+            base.appearance = { color: '#ffffff', opacity: 1 }
+            base.light = { color: '#ffffff', intensity: 0.5 }
             break
         case 'box':
         default:
@@ -352,6 +372,13 @@ export const normalizePresentationState = (presentation = {}, worldState = defau
         mode: ['scene', 'fixed-camera', 'code'].includes(mode) ? mode : defaultPresentationState.mode,
         fixedCamera: normalizePresentationFixedCamera(source.fixedCamera, worldState),
         codeHtml: typeof source.codeHtml === 'string' ? source.codeHtml : defaultPresentationState.codeHtml,
+        codeSourceType: source.codeSourceType === 'url' ? 'url' : defaultPresentationState.codeSourceType,
+        codeUrl: typeof source.codeUrl === 'string' ? source.codeUrl.trim() : defaultPresentationState.codeUrl,
+        codeFiles: Array.isArray(source.codeFiles)
+            ? source.codeFiles
+                .filter((f) => f && typeof f.name === 'string' && typeof f.content === 'string')
+                .map((f) => ({ name: f.name.trim(), content: f.content }))
+            : defaultPresentationState.codeFiles,
         entryView: ['scene', 'fixed-camera', 'code'].includes(entryView) ? entryView : defaultPresentationState.entryView
     }
 }

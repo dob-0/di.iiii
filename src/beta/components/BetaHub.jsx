@@ -12,9 +12,11 @@ import {
     uploadProjectAsset
 } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
+import { appNavigate } from '../../utils/appNavigate.js'
 import { buildStudioHubPath } from '../../studio/utils/studioRouting.js'
 import { buildBetaProjectPath, navigateToBetaPath } from '../utils/betaRouting.js'
 import { GUIDE_AUDIENCES } from '../utils/betaGuide.js'
+import SpaceSyncPanel from '../../components/SpaceSyncPanel.jsx'
 
 export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [projects, setProjects] = useState([])
@@ -23,6 +25,12 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [isBusy, setIsBusy] = useState(false)
     const [importWarnings, setImportWarnings] = useState([])
     const titleInputRef = useRef(null)
+    const workflowSteps = [
+        'Create or open the space from the admin surface or spaces panel.',
+        'Start a beta project or import a legacy scene for experimental work.',
+        'Keep the node-first iteration here while you test layout, routing, and sync.',
+        'Move stable work into Studio and publish it to the public space route.'
+    ]
 
     const loadProjects = useCallback(async () => {
         setStatus('Loading beta projects...')
@@ -135,7 +143,7 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
 
     const handleAudienceAction = (audienceId) => {
         if (audienceId === 'visitor') {
-            window.location.assign(buildAppSpacePath(spaceId))
+            appNavigate(buildAppSpacePath(spaceId))
             return
         }
         focusCreateInput()
@@ -183,6 +191,26 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                 </button>
                             </section>
                         ))}
+                        <section className="beta-hub-onboarding-card">
+                            <div className="beta-hub-onboarding-mark" aria-hidden="true">
+                                <span>↔</span>
+                            </div>
+                            <span className="beta-window-kicker">Workflow</span>
+                            <h3>Space → Beta → Studio</h3>
+                            <div className="beta-hub-onboarding-chip-row">
+                                <span className="beta-hub-onboarding-chip">space</span>
+                                <span className="beta-hub-onboarding-chip">project</span>
+                                <span className="beta-hub-onboarding-chip">publish</span>
+                            </div>
+                            <ol className="beta-hub-onboarding-steps">
+                                {workflowSteps.map((step) => (
+                                    <li key={step}>{step}</li>
+                                ))}
+                            </ol>
+                            <button type="button" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>
+                                open studio
+                            </button>
+                        </section>
                     </div>
                 </section>
 
@@ -228,10 +256,12 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     )}
                 </div>
 
+                <SpaceSyncPanel spaceId={spaceId} />
+
                 <footer className="beta-hub-footer">
-                    <button type="button" onClick={() => window.location.assign(buildStudioHubPath(spaceId))}>studio</button>
-                    <button type="button" onClick={() => window.location.assign(buildAppSpacePath(spaceId))}>public</button>
-                    <button type="button" onClick={() => window.location.assign(buildPreferencesPath(spaceId))}>admin</button>
+                    <button type="button" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>studio</button>
+                    <button type="button" onClick={() => appNavigate(buildAppSpacePath(spaceId))}>public</button>
+                    <button type="button" onClick={() => appNavigate(buildPreferencesPath(spaceId))}>admin</button>
                 </footer>
 
                 {importWarnings.length ? (

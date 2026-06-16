@@ -25,6 +25,48 @@ const exists = async (relativePath) => {
   }
 }
 
+const readSkillFrontmatter = (content) => {
+  const match = content.match(/^---\n([\s\S]*?)\n---\n/)
+  if (!match) return null
+  const fields = {}
+  for (const line of match[1].split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const separator = trimmed.indexOf(':')
+    if (separator <= 0) continue
+    const key = trimmed.slice(0, separator).trim()
+    let value = trimmed.slice(separator + 1).trim()
+    if ((value.startsWith("'") && value.endsWith("'")) || (value.startsWith('"') && value.endsWith('"'))) {
+      value = value.slice(1, -1)
+    }
+    fields[key] = value
+  }
+  return fields
+}
+
+const REQUIRED_SKILL_SECTIONS = [
+  '## When to Use',
+  '## Outcome',
+  '## Validation',
+  '## Completion Checks'
+]
+
+const hasOperationalSection = (content) => (
+  /^##\s+.*\b(Procedure|Flow|Workflow|Steps)\b/im.test(content)
+)
+
+const listSkillFiles = async () => {
+  const skillsRoot = toAbsolute('.github/skills')
+  try {
+    const entries = await fs.readdir(skillsRoot, { withFileTypes: true })
+    return entries
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => normalizePath(path.join('.github/skills', entry.name, 'SKILL.md')))
+  } catch {
+    return []
+  }
+}
+
 const canonicalScopeFiles = AI_DOC_SCOPES.map((scope) => (
   scope.dir === '.'
     ? 'AGENTS.md'
@@ -94,6 +136,56 @@ const main = async () => {
     const index = await readFile('docs/ai/index.md')
     for (const relativePath of canonicalScopeFiles) {
       ensureContains(index, relativePath, 'docs/ai/index.md', errors)
+    }
+  }
+
+  const skillFiles = await listSkillFiles()
+  const seenSkillNames = new Set()
+
+  for (const skillPath of skillFiles) {
+    if (!await exists(skillPath)) {
+      errors.push(`Missing generated skill file: ${skillPath}`)
+      continue
+    }
+
+    const content = await readFile(skillPath)
+    for (const pattern of forbiddenPatterns) {
+      if (pattern.test(content)) {
+        errors.push(`${skillPath} contains a forbidden private-host pattern: ${pattern}`)
+      }
+    }
+    const frontmatter = readSkillFrontmatter(content)
+    if (!frontmatter) {
+      errors.push(`${skillPath} is missing YAML frontmatter`)
+      continue
+    }
+
+    for (const requiredField of ['name', 'description', 'argument-hint']) {
+      if (!frontmatter[requiredField]?.trim()) {
+        errors.push(`${skillPath} is missing required frontmatter field: ${requiredField}`)
+      }
+    }
+
+    for (const section of REQUIRED_SKILL_SECTIONS) {
+      if (!content.includes(section)) {
+        errors.push(`${skillPath} is missing required section: ${section}`)
+      }
+    }
+
+    if (!hasOperationalSection(content)) {
+      errors.push(`${skillPath} is missing an operational section (Procedure/Flow/Workflow/Steps)`)
+    }
+
+    const expectedName = path.basename(path.dirname(skillPath))
+    if (frontmatter.name && frontmatter.name !== expectedName) {
+      errors.push(`${skillPath} has mismatched name field: expected "${expectedName}", got "${frontmatter.name}"`)
+    }
+
+    if (frontmatter.name) {
+      if (seenSkillNames.has(frontmatter.name)) {
+        errors.push(`Duplicate skill name found: ${frontmatter.name}`)
+      }
+      seenSkillNames.add(frontmatter.name)
     }
   }
 

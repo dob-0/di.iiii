@@ -1,4 +1,7 @@
+import { useRef, useState } from 'react'
+import JSZip from 'jszip'
 import {
+    Box,
     Button,
     Card,
     Dialog,
@@ -7,6 +10,7 @@ import {
     FormControl,
     FormControlLabel,
     IconButton,
+    InputAdornment,
     InputLabel,
     List,
     ListItemButton,
@@ -16,16 +20,33 @@ import {
     Select,
     Stack,
     Switch,
+    Tab,
+    Tabs,
     TextField,
+    ToggleButton,
+    ToggleButtonGroup,
     Typography
 } from '@mui/material'
+import AddIcon from '@mui/icons-material/Add'
 import AddPhotoAlternateIcon from '@mui/icons-material/AddPhotoAlternate'
 import CloseIcon from '@mui/icons-material/Close'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
+import DownloadIcon from '@mui/icons-material/Download'
+import FileUploadIcon from '@mui/icons-material/FileUpload'
+import FolderOpenIcon from '@mui/icons-material/FolderOpen'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ShareIcon from '@mui/icons-material/Share'
 import SmartphoneIcon from '@mui/icons-material/Smartphone'
 import ViewInArIcon from '@mui/icons-material/ViewInAr'
+import { presentationStarterTemplates } from '../../utils/presentationTemplates.js'
+import {
+    bundleCodeFiles,
+    fileLanguage,
+    isSupportedFile,
+    normalizeFileName,
+    SUPPORTED_EXTENSIONS
+} from '../../utils/codeFilesBundle.js'
 
 const formatTimestamp = (value) => {
     if (!value) return 'Not yet'
@@ -65,85 +86,100 @@ export function PanelHeader({ title, onClose, action = null }) {
 }
 
 export function LibraryPanel({ onCreateEntity, onAssetFilesSelected, canDeleteSelection, onDeleteSelected }) {
-    const types = ['box', 'sphere', 'cone', 'cylinder', 'text']
+    const primitives = ['box', 'sphere', 'cone', 'cylinder', 'text']
+    const lights = [
+        { type: 'pointLight', label: 'Point' },
+        { type: 'spotLight', label: 'Spot' },
+        { type: 'directionalLight', label: 'Directional' },
+        { type: 'ambientLight', label: 'Ambient' },
+    ]
     return (
-        <Stack spacing={2} sx={{ p: 2 }}>
-            <Typography variant="body2" color="text.secondary">
-                Add primitives, text, and media.
-            </Typography>
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                {types.map((type) => (
-                    <Button key={type} variant="outlined" size="small" onClick={() => onCreateEntity(type)}>
-                        {type}
-                    </Button>
-                ))}
-            </Stack>
-            <Button component="label" variant="contained" startIcon={<AddPhotoAlternateIcon />}>
-                Import assets
-                <input hidden type="file" multiple onChange={onAssetFilesSelected} />
-            </Button>
-            <Button
-                variant="outlined"
-                color="error"
-                startIcon={<DeleteOutlineIcon />}
-                disabled={!canDeleteSelection}
-                onClick={onDeleteSelected}
-            >
-                Delete selected
-            </Button>
-        </Stack>
+        <>
+            <div className="scc-section">
+                <div className="scc-section-label">Primitives</div>
+                <div className="scc-buttons">
+                    {primitives.map((type) => (
+                        <button key={type} className="scc-btn" onClick={() => onCreateEntity(type)}>
+                            {type}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            <div className="scc-section">
+                <div className="scc-section-label">Lights</div>
+                <div className="scc-buttons">
+                    {lights.map(({ type, label }) => (
+                        <button key={type} className="scc-btn" onClick={() => onCreateEntity(type)}>
+                            {label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            <div className="scc-section">
+                <div className="scc-section-label">Actions</div>
+                <div className="spa-actions">
+                    <label className="scc-btn spa-btn-wide" style={{ cursor: 'pointer' }}>
+                        ↑ Import assets
+                        <input type="file" multiple onChange={onAssetFilesSelected} style={{ display: 'none' }} />
+                    </label>
+                    <button className="scc-btn spa-btn-wide" disabled={!canDeleteSelection} onClick={onDeleteSelected}>
+                        × Delete selected
+                    </button>
+                </div>
+            </div>
+        </>
     )
 }
 
 export function AssetsPanel({ assets = [], onAssetFilesSelected, onCreateFromAsset }) {
     return (
-        <Stack spacing={1.5} sx={{ p: 2 }}>
-            <Button component="label" variant="contained" startIcon={<AddPhotoAlternateIcon />}>
-                Import assets
-                <input hidden type="file" multiple onChange={onAssetFilesSelected} />
-            </Button>
-            <List dense disablePadding sx={{ display: 'grid', gap: 1 }}>
-                {assets.length ? assets.map((asset) => (
-                    <Paper key={asset.id} variant="outlined">
-                        <ListItemButton onClick={() => onCreateFromAsset(asset)}>
-                            <ListItemText
-                                primary={asset.name}
-                                secondary={`${assetTypeLabel(asset.mimeType)} • ${asset.mimeType}`}
-                            />
-                        </ListItemButton>
-                    </Paper>
-                )) : (
-                    <Card variant="outlined" sx={{ p: 2 }}>
-                        <Typography variant="body2" color="text.secondary">
-                            No assets yet.
-                        </Typography>
-                    </Card>
+        <>
+            <div className="scc-section">
+                <label className="scc-btn spa-btn-wide" style={{ cursor: 'pointer' }}>
+                    ↑ Import assets
+                    <input type="file" multiple onChange={onAssetFilesSelected} style={{ display: 'none' }} />
+                </label>
+            </div>
+            <div className="scc-section">
+                <div className="scc-section-label">Space assets ({assets.length})</div>
+                {assets.length === 0 ? (
+                    <p className="sfp-empty">No assets yet.</p>
+                ) : (
+                    <div className="spa-list">
+                        {assets.map((asset) => (
+                            <button key={asset.id} className="spa-item" onClick={() => onCreateFromAsset?.(asset)}>
+                                <span className="spa-name">{asset.name}</span>
+                                <span className="spa-type">{assetTypeLabel(asset.mimeType)}</span>
+                            </button>
+                        ))}
+                    </div>
                 )}
-            </List>
-        </Stack>
+            </div>
+        </>
     )
 }
 
 export function StructurePanel({ entities = [], selectedEntityId, onSelectEntity }) {
     return (
-        <List dense disablePadding sx={{ p: 2, display: 'grid', gap: 1 }}>
-            {entities.length ? entities.map((entity) => (
-                <Paper key={entity.id} variant="outlined">
-                    <ListItemButton
-                        selected={entity.id === selectedEntityId}
-                        onClick={() => onSelectEntity(entity.id)}
-                    >
-                        <ListItemText primary={entity.name} secondary={entity.type} />
-                    </ListItemButton>
-                </Paper>
-            )) : (
-                <Card variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                        No entities yet.
-                    </Typography>
-                </Card>
+        <div className="scc-section">
+            <div className="scc-section-label">Entities ({entities.length})</div>
+            {entities.length === 0 ? (
+                <p className="sfp-empty">No entities yet.</p>
+            ) : (
+                <div className="spa-list">
+                    {entities.map((entity) => (
+                        <button
+                            key={entity.id}
+                            className={`spa-item${entity.id === selectedEntityId ? ' active' : ''}`}
+                            onClick={() => onSelectEntity(entity.id)}
+                        >
+                            <span className="spa-name">{entity.name || entity.id}</span>
+                            <span className="spa-type">{entity.type}</span>
+                        </button>
+                    ))}
+                </div>
             )}
-        </List>
+        </div>
     )
 }
 
@@ -197,34 +233,197 @@ export function ProjectPanel({
 
 export function ActivityPanel({ activity = [] }) {
     return (
-        <Stack spacing={1.25} sx={{ p: 2 }}>
-            {activity.length ? activity.map((entry) => (
-                <Paper key={entry.id} variant="outlined" sx={{ p: 1.5 }}>
-                    <Stack direction="row" justifyContent="space-between" spacing={1}>
-                        <Typography variant="subtitle2" textTransform="capitalize">{entry.level}</Typography>
-                        <Typography variant="caption" color="text.secondary">
-                            {formatTimestamp(entry.timestamp)}
-                        </Typography>
-                    </Stack>
-                    <Typography variant="body2" color="text.secondary">{entry.message}</Typography>
-                </Paper>
-            )) : (
-                <Card variant="outlined" sx={{ p: 2 }}>
-                    <Typography variant="body2" color="text.secondary">
-                        No project activity yet.
-                    </Typography>
-                </Card>
+        <div className="scc-section">
+            <div className="scc-section-label">Recent activity</div>
+            {activity.length === 0 ? (
+                <p className="sfp-empty">No project activity yet.</p>
+            ) : (
+                <div className="spa-activity">
+                    {[...activity].reverse().map((entry) => (
+                        <div key={entry.id} className="spa-activity-entry">
+                            <div className="spa-activity-header">
+                                <span className={`spa-activity-level spa-activity-level--${entry.level || 'info'}`}>
+                                    {entry.level || 'info'}
+                                </span>
+                                <span className="spa-activity-time">{formatTimestamp(entry.timestamp)}</span>
+                            </div>
+                            <p className="spa-activity-msg">{entry.message}</p>
+                        </div>
+                    ))}
+                </div>
             )}
-        </Stack>
+        </div>
     )
+}
+
+const resolveAssetUrl = (asset) => {
+    if (!asset?.url) return ''
+    try {
+        return new URL(asset.url, window.location.origin).href
+    } catch {
+        return asset.url
+    }
+}
+
+const generateAssetTemplate = (asset) => {
+    const url = resolveAssetUrl(asset)
+    const topLevel = (asset.mimeType || '').split('/')[0]
+    const base = `* { margin: 0; padding: 0; box-sizing: border-box; }\nbody { width: 100vw; height: 100vh; overflow: hidden; background: #000; }`
+    if (topLevel === 'video') {
+        return `<!doctype html>\n<html><head>\n<meta charset="UTF-8">\n<style>\n${base}\nvideo { width: 100%; height: 100%; object-fit: cover; display: block; }\n</style>\n</head><body>\n<video src="${url}" autoplay loop muted playsinline></video>\n</body></html>`
+    }
+    if (topLevel === 'image') {
+        return `<!doctype html>\n<html><head>\n<meta charset="UTF-8">\n<style>\n${base}\nimg { width: 100%; height: 100%; object-fit: cover; display: block; }\n</style>\n</head><body>\n<img src="${url}" alt="${asset.name}">\n</body></html>`
+    }
+    if (topLevel === 'audio') {
+        return `<!doctype html>\n<html><head>\n<meta charset="UTF-8">\n<style>\n${base}\nbody { display: flex; align-items: center; justify-content: center; color: #fff; font-family: system-ui; }\naudio { width: min(480px, 90vw); }\n</style>\n</head><body>\n<audio src="${url}" controls autoplay></audio>\n</body></html>`
+    }
+    return `<!doctype html>\n<html><head><meta charset="UTF-8"></head><body style="background:#000;color:#fff;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh">\n<a href="${url}" style="color:#6ee7ff">${asset.name}</a>\n</body></html>`
 }
 
 export function PresentPanel({
     presentationState,
     onPresentationPatch,
     onSaveCurrentCamera,
-    onUseCurrentCameraAsFixed
+    assets = []
 }) {
+    const singleFileInputRef = useRef(null)
+    const zipInputRef = useRef(null)
+    const folderInputRef = useRef(null)
+    const [activeFileName, setActiveFileName] = useState('index.html')
+    const [showAddFile, setShowAddFile] = useState(false)
+    const [newFileName, setNewFileName] = useState('')
+
+    const isCodeMode = (presentationState.mode || 'scene') === 'code'
+    const isUrlSource = (presentationState.codeSourceType || 'html') === 'url'
+    const files = presentationState.codeFiles || []
+    const codeUrl = presentationState.codeUrl || ''
+    const hasLegacyHtml = Boolean(presentationState.codeHtml && files.length === 0)
+    const activeFile = files.find((f) => f.name === activeFileName) || files[0] || null
+
+    const setFiles = (nextFiles) => onPresentationPatch({ codeFiles: nextFiles })
+
+    const updateActiveContent = (content) => {
+        const name = activeFile?.name
+        if (!name) return
+        setFiles(files.map((f) => (f.name === name ? { ...f, content } : f)))
+    }
+
+    const addFile = () => {
+        const name = newFileName.trim()
+        if (!name || files.find((f) => f.name === name)) return
+        setFiles([...files, { name, content: '' }])
+        setActiveFileName(name)
+        setNewFileName('')
+        setShowAddFile(false)
+    }
+
+    const removeFile = (name) => {
+        const next = files.filter((f) => f.name !== name)
+        setFiles(next)
+        if (activeFileName === name) setActiveFileName(next[0]?.name || '')
+    }
+
+    const handleImportSingle = async (event) => {
+        const file = event.target.files?.[0]
+        event.target.value = ''
+        if (!file) return
+        const content = await file.text()
+        const name = normalizeFileName(file.name)
+        const existing = files.find((f) => f.name === name)
+        if (existing) {
+            setFiles(files.map((f) => (f.name === name ? { ...f, content } : f)))
+        } else {
+            setFiles([...files, { name, content }])
+        }
+        setActiveFileName(name)
+    }
+
+    const handleImportZip = async (event) => {
+        const file = event.target.files?.[0]
+        event.target.value = ''
+        if (!file) return
+        try {
+            const zip = await JSZip.loadAsync(file)
+            const entries = []
+            zip.forEach((relativePath, entry) => {
+                if (!entry.dir && isSupportedFile(relativePath)) entries.push({ relativePath, entry })
+            })
+            const loaded = await Promise.all(
+                entries.map(async ({ relativePath, entry }) => ({
+                    name: normalizeFileName(relativePath),
+                    content: await entry.async('text')
+                }))
+            )
+            if (loaded.length > 0) {
+                setFiles(loaded)
+                const root = loaded.find((f) => f.name === 'index.html') || loaded[0]
+                setActiveFileName(root.name)
+            }
+        } catch {
+            // ignore malformed zips
+        }
+    }
+
+    const handleImportFolder = async (event) => {
+        const fileList = Array.from(event.target.files || [])
+        event.target.value = ''
+        if (!fileList.length) return
+        const loaded = await Promise.all(
+            fileList
+                .filter((f) => isSupportedFile(f.name))
+                .map(async (f) => ({
+                    name: normalizeFileName(f.webkitRelativePath || f.name),
+                    content: await f.text()
+                }))
+        )
+        if (loaded.length > 0) {
+            setFiles(loaded)
+            const root = loaded.find((f) => f.name.endsWith('index.html')) || loaded[0]
+            setActiveFileName(root.name)
+        }
+    }
+
+    const handleExportZip = async () => {
+        if (files.length === 0) return
+        const zip = new JSZip()
+        for (const f of files) zip.file(f.name, f.content)
+        const blob = await zip.generateAsync({ type: 'blob' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'project.zip'
+        a.click()
+        window.setTimeout(() => URL.revokeObjectURL(url), 1_000)
+    }
+
+    const handleOpenPreview = () => {
+        if (files.length === 0) return
+        const bundled = bundleCodeFiles(files)
+        if (!bundled) return
+        const url = URL.createObjectURL(new Blob([bundled], { type: 'text/html' }))
+        window.open(url, '_blank', 'noopener,noreferrer')
+        window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    }
+
+    const handleMigrateLegacy = () => {
+        const nextFiles = [{ name: 'index.html', content: presentationState.codeHtml }]
+        onPresentationPatch({ codeFiles: nextFiles, codeHtml: '' })
+        setActiveFileName('index.html')
+    }
+
+    const applyTemplate = (template) => {
+        const nextFiles = [{ name: 'index.html', content: template.html }]
+        onPresentationPatch({ codeFiles: nextFiles, codeSourceType: 'html' })
+        setActiveFileName('index.html')
+    }
+
+    const applyAsset = (asset) => {
+        const nextFiles = [{ name: 'index.html', content: generateAssetTemplate(asset) }]
+        onPresentationPatch({ codeFiles: nextFiles, codeSourceType: 'html' })
+        setActiveFileName('index.html')
+    }
+
     return (
         <Stack spacing={2} sx={{ p: 2 }}>
             <FormControl fullWidth size="small">
@@ -235,7 +434,6 @@ export function PresentPanel({
                     onChange={(event) => onPresentationPatch({ mode: event.target.value })}
                 >
                     <MenuItem value="scene">3D scene</MenuItem>
-                    <MenuItem value="fixed-camera">Fixed camera</MenuItem>
                     <MenuItem value="code">Code view</MenuItem>
                 </Select>
             </FormControl>
@@ -247,21 +445,191 @@ export function PresentPanel({
                     onChange={(event) => onPresentationPatch({ entryView: event.target.value })}
                 >
                     <MenuItem value="scene">3D scene</MenuItem>
-                    <MenuItem value="fixed-camera">Fixed camera</MenuItem>
                     <MenuItem value="code">Code view</MenuItem>
                 </Select>
             </FormControl>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
                 <Button variant="outlined" onClick={onSaveCurrentCamera}>Save current view</Button>
-                <Button variant="contained" onClick={onUseCurrentCameraAsFixed}>Use current camera</Button>
             </Stack>
-            <TextField
-                multiline
-                minRows={8}
-                label="Code preview HTML"
-                value={presentationState.codeHtml || ''}
-                onChange={(event) => onPresentationPatch({ codeHtml: event.target.value })}
-            />
+
+            {isCodeMode && (
+                <Stack spacing={1.5}>
+                    <ToggleButtonGroup
+                        size="small"
+                        exclusive
+                        value={isUrlSource ? 'url' : 'files'}
+                        onChange={(_, value) => { if (value) onPresentationPatch({ codeSourceType: value === 'url' ? 'url' : 'html' }) }}
+                    >
+                        <ToggleButton value="files">Files</ToggleButton>
+                        <ToggleButton value="url">Public Link</ToggleButton>
+                    </ToggleButtonGroup>
+
+                    {isUrlSource ? (
+                        <TextField
+                            size="small"
+                            label="Preview URL"
+                            placeholder="https://example.com"
+                            type="url"
+                            value={codeUrl}
+                            onChange={(event) => onPresentationPatch({ codeUrl: event.target.value })}
+                            helperText="Point the space at an external page, prototype, or published microsite."
+                        />
+                    ) : files.length === 0 ? (
+                        <Stack spacing={1.5}>
+                            {hasLegacyHtml && (
+                                <Card variant="outlined" sx={{ p: 1.5 }}>
+                                    <Stack spacing={1}>
+                                        <Typography variant="body2">You have existing HTML — convert it to a file project?</Typography>
+                                        <Button size="small" variant="contained" onClick={handleMigrateLegacy}>
+                                            Convert to index.html
+                                        </Button>
+                                    </Stack>
+                                </Card>
+                            )}
+                            {assets.length > 0 && (
+                                <>
+                                    <Typography variant="caption" color="text.secondary">From space assets</Typography>
+                                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 1 }}>
+                                        {assets.map((asset) => {
+                                            const topLevel = (asset.mimeType || '').split('/')[0]
+                                            return (
+                                                <Paper
+                                                    key={asset.id}
+                                                    variant="outlined"
+                                                    onClick={() => applyAsset(asset)}
+                                                    sx={{ p: 1, cursor: 'pointer', '&:hover': { borderColor: 'primary.light', bgcolor: 'action.hover' } }}
+                                                >
+                                                    <Typography variant="caption" color="text.secondary" display="block">{topLevel || 'file'}</Typography>
+                                                    <Typography variant="body2" fontWeight={600} noWrap title={asset.name}>{asset.name}</Typography>
+                                                </Paper>
+                                            )
+                                        })}
+                                    </Box>
+                                </>
+                            )}
+                            <Typography variant="caption" color="text.secondary">Start from a template</Typography>
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 1 }}>
+                                {presentationStarterTemplates.map((template) => (
+                                    <Paper
+                                        key={template.id}
+                                        variant="outlined"
+                                        onClick={() => applyTemplate(template)}
+                                        sx={{ p: 1, cursor: 'pointer', '&:hover': { borderColor: 'primary.light', bgcolor: 'action.hover' } }}
+                                    >
+                                        <Typography variant="caption" color="text.secondary" display="block">{template.eyebrow}</Typography>
+                                        <Typography variant="body2" fontWeight={600}>{template.name}</Typography>
+                                    </Paper>
+                                ))}
+                            </Box>
+                            <Typography variant="caption" color="text.secondary">Or import existing files</Typography>
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                <Button size="small" variant="outlined" startIcon={<FileUploadIcon />} onClick={() => singleFileInputRef.current?.click()}>
+                                    Import file
+                                </Button>
+                                <Button size="small" variant="outlined" startIcon={<FileUploadIcon />} onClick={() => zipInputRef.current?.click()}>
+                                    Import .zip
+                                </Button>
+                                <Button size="small" variant="outlined" startIcon={<FolderOpenIcon />} onClick={() => folderInputRef.current?.click()}>
+                                    Import folder
+                                </Button>
+                            </Stack>
+                        </Stack>
+                    ) : (
+                        <Stack spacing={1}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, flexWrap: 'wrap' }}>
+                                <Tabs
+                                    value={activeFile?.name || false}
+                                    onChange={(_, name) => setActiveFileName(name)}
+                                    variant="scrollable"
+                                    scrollButtons="auto"
+                                    sx={{ flex: 1, minWidth: 0, '& .MuiTab-root': { minWidth: 0, px: 1.5, py: 0.5, fontSize: '0.75rem' } }}
+                                >
+                                    {files.map((f) => (
+                                        <Tab
+                                            key={f.name}
+                                            value={f.name}
+                                            label={
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                    <span>{f.name}</span>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={(e) => { e.stopPropagation(); removeFile(f.name) }}
+                                                        sx={{ p: 0, ml: 0.25 }}
+                                                    >
+                                                        <CloseIcon sx={{ fontSize: 12 }} />
+                                                    </IconButton>
+                                                </Box>
+                                            }
+                                        />
+                                    ))}
+                                </Tabs>
+                                <IconButton size="small" onClick={() => setShowAddFile(true)} title="Add file">
+                                    <AddIcon fontSize="small" />
+                                </IconButton>
+                            </Box>
+
+                            {showAddFile && (
+                                <Stack direction="row" spacing={1}>
+                                    <TextField
+                                        size="small"
+                                        placeholder="style.css"
+                                        value={newFileName}
+                                        onChange={(e) => setNewFileName(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') addFile(); if (e.key === 'Escape') { setShowAddFile(false); setNewFileName('') } }}
+                                        InputProps={{
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <Typography variant="caption" color="text.secondary">
+                                                        {fileLanguage(newFileName) || 'text'}
+                                                    </Typography>
+                                                </InputAdornment>
+                                            )
+                                        }}
+                                        sx={{ flex: 1 }}
+                                        helperText={`Supported: ${SUPPORTED_EXTENSIONS.join(', ')}`}
+                                    />
+                                    <Button size="small" variant="contained" onClick={addFile} disabled={!newFileName.trim()}>Add</Button>
+                                    <Button size="small" onClick={() => { setShowAddFile(false); setNewFileName('') }}>Cancel</Button>
+                                </Stack>
+                            )}
+
+                            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                <Button size="small" variant="outlined" startIcon={<FileUploadIcon />} onClick={() => singleFileInputRef.current?.click()}>
+                                    Import file
+                                </Button>
+                                <Button size="small" variant="outlined" startIcon={<FileUploadIcon />} onClick={() => zipInputRef.current?.click()}>
+                                    Import .zip
+                                </Button>
+                                <Button size="small" variant="outlined" startIcon={<FolderOpenIcon />} onClick={() => folderInputRef.current?.click()}>
+                                    Import folder
+                                </Button>
+                                <Button size="small" variant="outlined" startIcon={<DownloadIcon />} onClick={handleExportZip}>
+                                    Export .zip
+                                </Button>
+                                <Button size="small" variant="outlined" startIcon={<OpenInNewIcon />} onClick={handleOpenPreview} disabled={!bundleCodeFiles(files)}>
+                                    Preview
+                                </Button>
+                            </Stack>
+
+                            {activeFile && (
+                                <TextField
+                                    key={activeFile.name}
+                                    multiline
+                                    minRows={12}
+                                    label={activeFile.name}
+                                    value={activeFile.content}
+                                    onChange={(e) => updateActiveContent(e.target.value)}
+                                    inputProps={{ style: { fontFamily: 'monospace', fontSize: '0.78rem' } }}
+                                />
+                            )}
+                        </Stack>
+                    )}
+
+                    <input ref={singleFileInputRef} type="file" accept={SUPPORTED_EXTENSIONS.map((e) => `.${e}`).join(',')} aria-label="Import single file" style={{ display: 'none' }} onChange={handleImportSingle} />
+                    <input ref={zipInputRef} type="file" accept=".zip,application/zip" aria-label="Import zip" style={{ display: 'none' }} onChange={handleImportZip} />
+                    <input ref={folderInputRef} type="file" webkitdirectory="" aria-label="Import folder" style={{ display: 'none' }} onChange={handleImportFolder} />
+                </Stack>
+            )}
         </Stack>
     )
 }
