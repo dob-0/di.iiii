@@ -5,6 +5,7 @@ const {
   normalizeAuthRole,
   normalizeAuthScopeSpaces
 } = require('./authAccess')
+const { readCookie, verifyAuthSessionValue } = require('./authSession')
 const { buildCorsOriginHandler } = require('./config')
 
 // Store active connections
