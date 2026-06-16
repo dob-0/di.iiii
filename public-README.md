@@ -1,10 +1,10 @@
-# di.i
+# di.iiii
 
 **Web XR Node-Based Reality Creation Language**
 
 *Web XR Spatial-Sync Creator Network*
 
-`di.i` is an open-source, node-based Web XR reality creation system. It behaves like a visual programming language for linking digital logic, spatial media, and real environments through authored nodes, shared spaces, and live project documents. Built on the web as a serious medium and universal substrate, not as a browser-only limitation.
+`di.iiii` is an open-source, node-based Web XR reality creation system. It behaves like a visual programming language for linking digital logic, spatial media, and real environments through authored nodes, shared spaces, and live project documents. Built on the web as a serious medium and universal substrate, not as a browser-only limitation.
 
 ## Live
 
@@ -12,7 +12,7 @@
 
 ## What di.i is
 
-- **As software** — a web-based authoring system built with React, Vite, Three.js, WebXR, and a Node.js backend (`serverXR`)
+- **As software** — a web-based authoring system built with React, Vite, Three.js, WebXR, and a Node.js backend (`serverXR`). SQLite via the built-in `node:sqlite` module — zero native deps.
 - **As a model** — treats authored reality as a graph of nodes, surfaces, projects, assets, and runtime relationships
 - **As a direction** — aims toward broader reality creation across virtual and physical environments, while staying grounded in the web as an everywhere layer
 - **As a working repo** — contains the stable Studio lane, the experimental Beta lane, compatibility V1/editor history, and the backend/runtime contract that holds them together
@@ -22,7 +22,7 @@
 | Layer | Tech |
 |---|---|
 | Frontend | React, Vite, Three.js, React Three Fiber, WebXR |
-| Backend | Node.js, Express, Socket.IO (`serverXR/`) |
+| Backend | Node.js, Express, Socket.IO, SQLite (`node:sqlite`) (`serverXR/`) |
 | Shared | JSON schema contracts (`shared/`) |
 | Tests | Vitest |
 
@@ -95,7 +95,7 @@ Contribution rules:
 
 ## North Star
 
-- `di.i` should behave like a Web XR visual programming language for creating realities, not only scenes or layouts
+- `di.iiii` should behave like a Web XR visual programming language for creating realities, not only scenes or layouts
 - Everything important should become node-native: world behavior, view behavior, authored media, runtime tools, nested projects
 - The web remains a universal substrate for authoring, sharing, and runtime connectivity
 
@@ -112,6 +112,6 @@ Contribution rules:
 
 ## Contributing
 
-Issues and pull requests are welcome. This repo is the public collaboration home for `di.i`.
+Issues and pull requests are welcome. This repo is the public collaboration home for `di.iiii`.
 
 For architecture context see [docs/architecture/](docs/architecture/).
