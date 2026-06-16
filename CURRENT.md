@@ -9,8 +9,8 @@ active_branch: dev
 
 ## Last commit
 
-`(this session)` — feat: guest sessions + GitHub/Google OAuth in serverXR
-Branch focus: active development on `dev`; promote through `staging` for live verification.
+`9ca9ee5` — replace node-sqlite3-wasm with Node.js built-in node:sqlite
+Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production).
 
 ## What works
 
@@ -19,14 +19,13 @@ Branch focus: active development on `dev`; promote through `staging` for live ve
 - World node (`universe.world`): panel window with embedded 3D scene, fullscreen mode, overlay mode (3D behind graph)
 - Studio editor: project hub, 3D scene, inspector, assets, spaces, undo/redo (Ctrl+Z/Y)
 - Auth: session-cookie login, role-based access, 8 s timeout
-- Deploy: push to `main` → GitHub Actions `publish-cpanel-prebuilt-v2.yml` → builds → pushes `cpanel-production` → cPanel auto-deploys
+- Deploy: push `dev` → staging.di-studio.xyz, push `main` → di-studio.xyz (via `publish-cpanel-prebuilt-v2.yml`)
 - Docker: `docker compose up --build -d` runs full stack locally on port 8080 (Podman-compatible)
 - Space sync: `npm run space:new/pull/push` CLI scripts + `SpaceSyncPanel` UI in BetaHub (↓ get latest / ↑ publish buttons)
 - n000 space: pulled locally to `spaces/n000/scene.json` and `serverXR/data/spaces/n000/`
 
 ## What is broken / open
 
-- Branch flow simplified to `dev → main` only; staging branch deleted
 - `↑ publish` button greys out until `LIVE_API_TOKEN` is set in `serverXR/.env.local`
 
 ## Space sync setup (per machine)
@@ -52,6 +51,7 @@ Then: `npm run space:pull -- n000` or use the buttons in the BetaHub UI.
 | `assetId is required` on upload | Dead `|| crypto.randomUUID()` fallback removed | SHA-256 must be computed before calling `buildProjectAssetMeta` | `serverXR/src/projectStore.js` |
 | 503 after deploy (server crashes on start) | `shared/projectSchema.cjs` out of sync with `src/shared/projectSchema.js` | Always update both files together; CJS is what serverXR actually loads | `shared/projectSchema.cjs` |
 | V1 `/main` objects not draggable | `interaction-mode` button excluded from desktop controls; UI hidden by default gives no affordance to switch to Edit mode | Removed `'interaction-mode'` from exclusion filter in `EditorLayoutContainer`; added it to `hiddenUiButtons` + `EditorOverlays` filter so "Mode: Edit/Navigate" button shows even when UI is hidden | `src/components/EditorLayoutContainer.jsx`, `src/hooks/useControlButtons.js`, `src/components/EditorOverlays.jsx` |
+| 503 after deploy — SQLite OOM or build failure | CloudLinux LVE blocks WASM (`node-sqlite3-wasm` OOM), no C++ toolchain for `better-sqlite3` prebuilt | Use Node.js built-in `node:sqlite` (`DatabaseSync`) — zero deps, no WASM, works on Node 22.5+ and 24+ | `serverXR/src/db.js` |
 | Beta canvas requires two double-clicks | `preventDefault` on `pointerdown` suppresses `dblclick` (Pointer Events spec); pan start fires on first click of a double-click | Added `event.detail >= 2` guard in `handleSurfacePointerDown`; `user-select: none` on surface CSS replaces the prevented default | `BetaGraphSurface.jsx` `beta.css` |
 | Cursor shows wrong type across Beta editor | Multiple issues: I-beam on topbar spans, `grabbing` flash on single click, `crosshair` persists during node/window drag, input ports wrong cursor, window header buttons blocked by `preventDefault` | Added `isPanMoving` state (cursor only `grabbing` on actual drag movement); `cursor: default; user-select: none` on topbar; `draggingNodeId` in surface cursor; port `--in`/`--out` classes; `dragMode` state in DesktopWindow with button-target guard in `startDrag` | `BetaGraphSurface.jsx` `DesktopWindow.jsx` `beta.css` |
 | Node 0 UI messy — duplicate "Node 0" shown in topbar AND scope bar below it | Scope bar (`← Exit \| Node 0`) was rendered inside the shell AND breadcrumb in topbar both showed Node 0, causing visual redundancy | Removed scope bar entirely; topbar breadcrumb (`◈ › Node 0`) is the single navigation source; `graphTopInset` simplified to `workspaceTop`; canvas hint updates to "Double-click to place your first node." when inside Node 0 | `BetaEditor.jsx` `BetaGraphSurface.jsx` `beta.css` |
@@ -59,7 +59,13 @@ Then: `npm run space:pull -- n000` or use the buttons in the BetaHub UI.
 ## Deploy
 
 ```bash
+# staging  — push dev
+git push origin dev
+
+# production — merge dev → main
 git checkout main && git merge dev --no-edit && git push origin main && git checkout dev
+
+# monitor
 gh run list --workflow publish-cpanel-prebuilt-v2.yml
 ```
 
