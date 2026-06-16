@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMediaQuery, useTheme } from '@mui/material'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
@@ -67,12 +67,21 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     })
     const store = useProjectStore()
     const { state, dispatch } = store
-    const { applyLocalOps, replaceDocument } = useProjectDocumentSync({
+    const { applyLocalOps: _applyLocalOps, replaceDocument } = useProjectDocumentSync({
         projectId,
         store,
         clientIdPrefix: 'studio-client',
         opIdPrefix: 'studio-op'
     })
+    const historyRef = useRef([])
+    const redoRef = useRef([])
+    const documentRef = useRef(state.document)
+    useEffect(() => { documentRef.current = state.document }, [state.document])
+    const applyLocalOps = useCallback((ops, options) => {
+        historyRef.current = [...historyRef.current.slice(-49), documentRef.current]
+        redoRef.current = []
+        return _applyLocalOps(ops, options)
+    }, [_applyLocalOps])
     const presence = useProjectPresence({
         projectId,
         displayName,
@@ -119,6 +128,30 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             // ignore local storage errors
         }
     }, [displayName])
+
+    useEffect(() => {
+        const handler = (event) => {
+            const tag = event.target?.tagName?.toLowerCase?.()
+            if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
+            const isUndo = (event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey
+            const isRedo = (event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))
+            if (!isUndo && !isRedo) return
+            event.preventDefault()
+            if (isUndo && historyRef.current.length > 0) {
+                redoRef.current = [...redoRef.current.slice(-49), documentRef.current]
+                const prev = historyRef.current.at(-1)
+                historyRef.current = historyRef.current.slice(0, -1)
+                dispatch({ type: 'replace-document', document: prev, version: state.version })
+            } else if (isRedo && redoRef.current.length > 0) {
+                historyRef.current = [...historyRef.current.slice(-49), documentRef.current]
+                const next = redoRef.current.at(-1)
+                redoRef.current = redoRef.current.slice(0, -1)
+                dispatch({ type: 'replace-document', document: next, version: state.version })
+            }
+        }
+        window.addEventListener('keydown', handler)
+        return () => window.removeEventListener('keydown', handler)
+    }, [dispatch, state.version])
 
     useEffect(() => {
         let cancelled = false
@@ -237,6 +270,14 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         }
     }
 
+    const handleTransformCommit = useCallback((entityId, transform) => {
+        if (!entityId) return
+        applyLocalOps({
+            type: 'updateComponent',
+            payload: { entityId, component: 'transform', patch: transform }
+        })
+    }, [applyLocalOps])
+
     const handleCameraViewChange = (nextView) => {
         if (!nextView) return
         setCameraView({
@@ -261,23 +302,6 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             type: 'append-activity',
             level: 'info',
             message: 'Saved current camera as the editor default view.'
-        })
-    }
-
-    const handleUseCurrentCameraAsFixed = () => {
-        const snapshot = readCurrentCameraSnapshot(controlsRef, {
-            ...document.presentationState?.fixedCamera,
-            position: cameraView.position,
-            target: cameraView.target
-        })
-        handlePresentationPatch({
-            mode: 'fixed-camera',
-            fixedCamera: snapshot
-        })
-        dispatch({
-            type: 'append-activity',
-            level: 'info',
-            message: 'Updated the fixed presentation camera from the current viewport.'
         })
     }
 
@@ -459,7 +483,6 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onPresentationPatch={handlePresentationPatch}
             onPublishPatch={handlePublishPatch}
             onSaveCurrentCamera={handleSaveCurrentCamera}
-            onUseCurrentCameraAsFixed={handleUseCurrentCameraAsFixed}
             onCopyShareLink={handleCopyShareLink}
             onExportProject={handleExportProject}
             onImportProjectFile={handleImportProjectFile}
@@ -467,6 +490,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onExitXr={xr.handleExitXrSession}
             onBackToHub={() => navigateToStudioPath(buildStudioHubPath(resolvedSpaceId))}
             onCameraViewChange={handleCameraViewChange}
+            onTransformCommit={handleTransformCommit}
             liveProjectState={{
                 spaceId: resolvedSpaceId,
                 spaceLabel: spaceMeta?.label || resolvedSpaceId,

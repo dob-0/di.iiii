@@ -1,4 +1,6 @@
-export const PROJECT_DOCUMENT_VERSION = 2
+import { getNodeType } from '../project/nodeRegistry.js'
+
+export const PROJECT_DOCUMENT_VERSION = 4
 export const ENTITY_TYPES = [
     'box',
     'sphere',
@@ -13,6 +15,9 @@ export const ENTITY_TYPES = [
 export const WINDOW_IDS = ['viewport', 'assets', 'inspector', 'outliner', 'activity', 'project']
 
 const ENTITY_TYPE_SET = new Set(ENTITY_TYPES)
+const LEGACY_ROOT_NODE_IDS = new Set(['root-node', 'world-root', 'view-root'])
+const LEGACY_ROOT_TYPE_IDS = new Set(['core.project', 'world.root', 'view.root'])
+const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar', 'world.light', 'world.background', 'world.grid', 'universe.world'])
 
 export const cloneValue = (value) => {
     if (Array.isArray(value)) {
@@ -22,6 +27,20 @@ export const cloneValue = (value) => {
         return Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, cloneValue(nested)]))
     }
     return value
+}
+
+export const mergePatch = (target, patch) => {
+    if (Array.isArray(patch)) return cloneValue(patch)
+    if (!patch || typeof patch !== 'object') return patch
+    const base = target && typeof target === 'object' ? cloneValue(target) : {}
+    Object.entries(patch).forEach(([key, value]) => {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+            base[key] = mergePatch(base[key], value)
+        } else {
+            base[key] = cloneValue(value)
+        }
+    })
+    return base
 }
 
 export const ensureVector = (value, fallback = [0, 0, 0]) => {
@@ -58,7 +77,7 @@ export const defaultWindowLayout = {
     activeWindowId: 'viewport',
     windows: {
         viewport: { id: 'viewport', title: 'Viewport', visible: true, minimized: false, pinned: true, x: 24, y: 176, width: 860, height: 580, zIndex: 3 },
-        assets: { id: 'assets', title: 'Assets', visible: true, minimized: false, pinned: false, x: 910, y: 176, width: 360, height: 360, zIndex: 4 },
+        assets: { id: 'assets', title: 'Assets', visible: false, minimized: false, pinned: false, x: 910, y: 176, width: 360, height: 360, zIndex: 4 },
         inspector: { id: 'inspector', title: 'Inspector', visible: true, minimized: false, pinned: false, x: 910, y: 552, width: 360, height: 420, zIndex: 5 },
         outliner: { id: 'outliner', title: 'Outliner', visible: false, minimized: false, pinned: false, x: 24, y: 620, width: 280, height: 260, zIndex: 2 },
         activity: { id: 'activity', title: 'Activity', visible: false, minimized: false, pinned: false, x: 320, y: 620, width: 340, height: 260, zIndex: 1 },
@@ -97,6 +116,9 @@ export const defaultPresentationState = {
     mode: 'scene',
     fixedCamera: defaultPresentationFixedCamera,
     codeHtml: '',
+    codeSourceType: 'html',
+    codeUrl: '',
+    codeFiles: [],
     entryView: 'scene'
 }
 
@@ -106,9 +128,18 @@ export const defaultPublishState = {
     lastExportAt: 0
 }
 
+export const defaultWorkspaceState = {
+    activeSurface: 'world',
+    selectedNodeId: null
+}
+
 export const defaultProjectDocument = {
     version: PROJECT_DOCUMENT_VERSION,
     projectMeta: { id: '', spaceId: 'main', title: 'Untitled Project', createdAt: 0, updatedAt: 0, source: 'project' },
+    nodes: [],
+    edges: [],
+    templates: [],
+    workspaceState: defaultWorkspaceState,
     entities: [],
     worldState: defaultWorldState,
     xrState: defaultXrState,
@@ -148,6 +179,23 @@ export const buildDefaultComponentsForType = (type = 'box') => {
             break
         case 'model':
             base.media = { assetId: null, autoplay: false, loop: false, muted: false }
+            break
+        case 'pointLight':
+            base.appearance = { color: '#ffffff', opacity: 1 }
+            base.light = { color: '#ffffff', intensity: 1, distance: 10, decay: 2 }
+            break
+        case 'spotLight':
+            base.appearance = { color: '#ffffff', opacity: 1 }
+            base.light = { color: '#ffffff', intensity: 2, distance: 20, angle: 0.52, penumbra: 0.2, decay: 2 }
+            break
+        case 'directionalLight':
+            base.appearance = { color: '#ffffff', opacity: 1 }
+            base.light = { color: '#fff7ea', intensity: 1.5 }
+            break
+        case 'ambientLight':
+            base.transform = { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }
+            base.appearance = { color: '#ffffff', opacity: 1 }
+            base.light = { color: '#ffffff', intensity: 0.5 }
             break
         case 'box':
         default:
@@ -324,6 +372,13 @@ export const normalizePresentationState = (presentation = {}, worldState = defau
         mode: ['scene', 'fixed-camera', 'code'].includes(mode) ? mode : defaultPresentationState.mode,
         fixedCamera: normalizePresentationFixedCamera(source.fixedCamera, worldState),
         codeHtml: typeof source.codeHtml === 'string' ? source.codeHtml : defaultPresentationState.codeHtml,
+        codeSourceType: source.codeSourceType === 'url' ? 'url' : defaultPresentationState.codeSourceType,
+        codeUrl: typeof source.codeUrl === 'string' ? source.codeUrl.trim() : defaultPresentationState.codeUrl,
+        codeFiles: Array.isArray(source.codeFiles)
+            ? source.codeFiles
+                .filter((f) => f && typeof f.name === 'string' && typeof f.content === 'string')
+                .map((f) => ({ name: f.name.trim(), content: f.content }))
+            : defaultPresentationState.codeFiles,
         entryView: ['scene', 'fixed-camera', 'code'].includes(entryView) ? entryView : defaultPresentationState.entryView
     }
 }
@@ -353,12 +408,140 @@ export const normalizeProjectMeta = (meta = {}) => {
     }
 }
 
+const mergeLegacyValues = (source = {}) => {
+    const values = source.values && typeof source.values === 'object' ? cloneValue(source.values) : {}
+    if (source.params && typeof source.params === 'object') {
+        for (const [key, value] of Object.entries(source.params)) {
+            if (values[key] === undefined) values[key] = cloneValue(value)
+        }
+    }
+    if (source.spatial?.position && values.position === undefined) values.position = cloneValue(source.spatial.position)
+    if (source.spatial?.rotation && values.rotation === undefined) values.rotation = cloneValue(source.spatial.rotation)
+    if (source.spatial?.scale && values.scale === undefined) values.scale = cloneValue(source.spatial.scale)
+    if (source.frame?.width !== undefined && values.width === undefined) values.width = source.frame.width
+    if (source.frame?.height !== undefined && values.height === undefined) values.height = source.frame.height
+    return values
+}
+
+export const normalizeProjectNode = (node = {}) => {
+    const source = node && typeof node === 'object' ? node : {}
+    const typeId = ensureString(source.typeId, ensureString(source.definitionId, ''))
+    if (!typeId) return null
+    if (LEGACY_ROOT_TYPE_IDS.has(typeId)) return null
+    if (LEGACY_ROOT_NODE_IDS.has(source.id)) return null
+
+    const values = mergeLegacyValues(source)
+    const graphX = Number.isFinite(Number(source.graphX))
+        ? Number(source.graphX)
+        : Number.isFinite(Number(source.params?.canvasPosition?.x))
+            ? Number(source.params.canvasPosition.x)
+            : 0
+    const graphY = Number.isFinite(Number(source.graphY))
+        ? Number(source.graphY)
+        : Number.isFinite(Number(source.params?.canvasPosition?.y))
+            ? Number(source.params.canvasPosition.y)
+            : 0
+    const assetRef = ensureString(
+        source.assetRef,
+        Array.isArray(source.assetBindings) && source.assetBindings[0]?.assetId
+            ? source.assetBindings[0].assetId
+            : ''
+    ) || null
+
+    return {
+        id: ensureString(source.id, generateId('node')),
+        typeId,
+        label: ensureString(source.label, typeId),
+        values,
+        graphX,
+        graphY,
+        runtimeId: source.runtimeId ?? null,
+        assetRef,
+        parentId: ensureString(source.parentId, '') || null
+    }
+}
+
+export const normalizeProjectEdge = (edge = {}) => {
+    const source = edge && typeof edge === 'object' ? edge : {}
+    const fromNodeId = ensureString(source.fromNodeId, ensureString(source.sourceId, ''))
+    const toNodeId = ensureString(source.toNodeId, ensureString(source.targetId, ''))
+    if (!fromNodeId || !toNodeId) return null
+    const fromPort = ensureString(source.fromPort, 'out')
+    const toPort = ensureString(source.toPort, ensureString(source.label, 'in'))
+    return {
+        id: ensureString(source.id, generateId('edge')),
+        fromNodeId,
+        fromPort,
+        toNodeId,
+        toPort
+    }
+}
+
+const normalizeTemplate = (template = {}) => {
+    const source = template && typeof template === 'object' ? template : {}
+    return {
+        id: ensureString(source.id, generateId('template')),
+        label: ensureString(source.label, 'Untitled Template'),
+        typeId: ensureString(source.typeId, ensureString(source.definitionId, '')),
+        values: source.values && typeof source.values === 'object' ? cloneValue(source.values) : {}
+    }
+}
+
+export const normalizeWorkspaceState = (workspace = {}) => {
+    const source = workspace && typeof workspace === 'object' ? workspace : {}
+    const activeSurface = ensureString(source.activeSurface, defaultWorkspaceState.activeSurface)
+    return {
+        ...cloneValue(defaultWorkspaceState),
+        ...cloneValue(source),
+        activeSurface: ['world', 'view', 'graph'].includes(activeSurface) ? activeSurface : defaultWorkspaceState.activeSurface,
+        selectedNodeId: ensureString(source.selectedNodeId, '') || null
+    }
+}
+
+const normalizeNodesList = (list = []) => {
+    const seenSingletons = new Set()
+    const out = []
+    for (const raw of Array.isArray(list) ? list : []) {
+        const normalized = normalizeProjectNode(raw)
+        if (!normalized) continue
+        if (SINGLETON_TYPE_IDS.has(normalized.typeId)) {
+            if (seenSingletons.has(normalized.typeId)) continue
+            seenSingletons.add(normalized.typeId)
+        }
+        out.push(normalized)
+    }
+    return out
+}
+
+const normalizeEdgesList = (list = [], nodeIds = new Set()) => {
+    const out = []
+    for (const raw of Array.isArray(list) ? list : []) {
+        const normalized = normalizeProjectEdge(raw)
+        if (!normalized) continue
+        if (!nodeIds.has(normalized.fromNodeId) || !nodeIds.has(normalized.toNodeId)) continue
+        out.push(normalized)
+    }
+    return out
+}
+
 export const normalizeProjectDocument = (document = {}) => {
     const source = document && typeof document === 'object' ? document : {}
     const worldState = normalizeWorldState(source.worldState)
+    const workspaceState = normalizeWorkspaceState(source.workspaceState)
+    const nodes = normalizeNodesList(source.nodes)
+    const nodeIds = new Set(nodes.map((node) => node.id))
+    const edges = normalizeEdgesList(source.edges, nodeIds)
+
     return {
         version: PROJECT_DOCUMENT_VERSION,
         projectMeta: normalizeProjectMeta(source.projectMeta),
+        nodes,
+        edges,
+        templates: Array.isArray(source.templates) ? source.templates.map(normalizeTemplate) : [],
+        workspaceState: {
+            ...workspaceState,
+            selectedNodeId: nodeIds.has(workspaceState.selectedNodeId) ? workspaceState.selectedNodeId : null
+        },
         entities: Array.isArray(source.entities) ? source.entities.map(normalizeEntity) : [],
         worldState,
         xrState: normalizeXrState(source.xrState),
@@ -369,24 +552,21 @@ export const normalizeProjectDocument = (document = {}) => {
     }
 }
 
-export const mergePatch = (target, patch) => {
-    if (Array.isArray(patch)) return cloneValue(patch)
-    if (!patch || typeof patch !== 'object') return patch
-    const base = target && typeof target === 'object' ? cloneValue(target) : {}
-    Object.entries(patch).forEach(([key, value]) => {
-        if (value && typeof value === 'object' && !Array.isArray(value)) {
-            base[key] = mergePatch(base[key], value)
-        } else {
-            base[key] = cloneValue(value)
-        }
-    })
-    return base
+const validateNodeTypeId = (typeId) => {
+    if (!typeId || typeof typeId !== 'string') return false
+    try {
+        return Boolean(getNodeType(typeId))
+    } catch {
+        return true
+    }
 }
 
 export const applyProjectOps = (document, ops = []) => {
     let nextDocument = normalizeProjectDocument(document)
     let entities = new Map(nextDocument.entities.map((entity) => [entity.id, entity]))
     let assets = new Map(nextDocument.assets.map((asset) => [asset.id, asset]))
+    let nodes = new Map(nextDocument.nodes.map((node) => [node.id, node]))
+    let edges = new Map(nextDocument.edges.map((edge) => [edge.id, edge]))
 
     ops.forEach((op) => {
         const payload = op?.payload || {}
@@ -422,6 +602,83 @@ export const applyProjectOps = (document, ops = []) => {
                 if (entityId) entities.delete(entityId)
                 break
             }
+            case 'createNode': {
+                if (!payload.node) break
+                const node = normalizeProjectNode(payload.node)
+                if (!node) break
+                if (!validateNodeTypeId(node.typeId)) break
+                if (SINGLETON_TYPE_IDS.has(node.typeId)) {
+                    const duplicate = Array.from(nodes.values()).some((existing) => existing.typeId === node.typeId)
+                    if (duplicate) break
+                }
+                nodes.set(node.id, node)
+                break
+            }
+            case 'updateNode': {
+                const nodeId = ensureString(payload.nodeId)
+                if (!nodeId || !nodes.has(nodeId)) break
+                const existing = nodes.get(nodeId)
+                const patch = payload.patch || {}
+                const nextValues = patch.values && typeof patch.values === 'object'
+                    ? { ...existing.values, ...cloneValue(patch.values) }
+                    : existing.values
+                const merged = {
+                    ...existing,
+                    ...(patch.label !== undefined ? { label: ensureString(patch.label, existing.label) } : {}),
+                    ...(patch.graphX !== undefined ? { graphX: ensureNumber(patch.graphX, existing.graphX) } : {}),
+                    ...(patch.graphY !== undefined ? { graphY: ensureNumber(patch.graphY, existing.graphY) } : {}),
+                    ...(patch.runtimeId !== undefined ? { runtimeId: patch.runtimeId } : {}),
+                    ...(patch.assetRef !== undefined ? { assetRef: patch.assetRef || null } : {}),
+                    values: nextValues
+                }
+                nodes.set(nodeId, merged)
+                break
+            }
+            case 'deleteNode': {
+                const nodeId = ensureString(payload.nodeId)
+                if (!nodeId) break
+                // Collect the node and all descendants
+                const toDelete = new Set()
+                const collect = (id) => {
+                    toDelete.add(id)
+                    for (const [, child] of nodes) {
+                        if (child.parentId === id) collect(child.id)
+                    }
+                }
+                collect(nodeId)
+                for (const id of toDelete) nodes.delete(id)
+                for (const [edgeId, edge] of edges) {
+                    if (toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId)) edges.delete(edgeId)
+                }
+                if (toDelete.has(nextDocument.workspaceState.selectedNodeId)) {
+                    nextDocument.workspaceState = normalizeWorkspaceState({
+                        ...nextDocument.workspaceState,
+                        selectedNodeId: null
+                    })
+                }
+                break
+            }
+            case 'createEdge': {
+                if (!payload.edge) break
+                const edge = normalizeProjectEdge(payload.edge)
+                if (!edge) break
+                if (!nodes.has(edge.fromNodeId) || !nodes.has(edge.toNodeId)) break
+                edges.set(edge.id, edge)
+                break
+            }
+            case 'updateEdge': {
+                const edgeId = ensureString(payload.edgeId)
+                if (!edgeId || !edges.has(edgeId)) break
+                const merged = normalizeProjectEdge(mergePatch(edges.get(edgeId), payload.patch || {}))
+                if (!merged) break
+                edges.set(edgeId, merged)
+                break
+            }
+            case 'deleteEdge': {
+                const edgeId = ensureString(payload.edgeId)
+                if (edgeId) edges.delete(edgeId)
+                break
+            }
             case 'setWorldState': {
                 nextDocument.worldState = normalizeWorldState(mergePatch(nextDocument.worldState, payload.patch || {}))
                 break
@@ -455,6 +712,10 @@ export const applyProjectOps = (document, ops = []) => {
                 })
                 break
             }
+            case 'setWorkspaceState': {
+                nextDocument.workspaceState = normalizeWorkspaceState(mergePatch(nextDocument.workspaceState, payload.patch || {}))
+                break
+            }
             case 'setProjectMeta': {
                 nextDocument.projectMeta = normalizeProjectMeta(mergePatch(nextDocument.projectMeta, payload.patch || {}))
                 break
@@ -475,6 +736,8 @@ export const applyProjectOps = (document, ops = []) => {
                     nextDocument = normalizeProjectDocument(payload.document)
                     entities = new Map(nextDocument.entities.map((entity) => [entity.id, entity]))
                     assets = new Map(nextDocument.assets.map((asset) => [asset.id, asset]))
+                    nodes = new Map(nextDocument.nodes.map((node) => [node.id, node]))
+                    edges = new Map(nextDocument.edges.map((edge) => [edge.id, edge]))
                 }
                 break
             }
@@ -485,6 +748,8 @@ export const applyProjectOps = (document, ops = []) => {
 
     nextDocument.entities = Array.from(entities.values())
     nextDocument.assets = Array.from(assets.values())
+    nextDocument.nodes = Array.from(nodes.values())
+    nextDocument.edges = Array.from(edges.values())
     nextDocument.projectMeta.updatedAt = Date.now()
     return normalizeProjectDocument(nextDocument)
 }

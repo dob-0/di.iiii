@@ -58,8 +58,7 @@ export default function Menu({ x, y, onClose }) {
         try {
             await handleAssetFilesUpload(files)
             onClose()
-        } catch (error) {
-            console.error('Failed to add file asset:', error)
+        } catch {
             alert('Error: Could not add this file. Please try again with a different file.')
         } finally {
             setIsUploading(false)

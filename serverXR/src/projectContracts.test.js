@@ -59,6 +59,8 @@ const startServer = async () => {
             NODE_ENV: 'test',
             APP_BASE_PATH: '/serverXR',
             DATA_ROOT: sandboxDataRoot,
+            API_TOKEN: 'test-token',
+            REQUIRE_AUTH: '',
             CORS_ORIGINS: '*'
         },
         stdio: ['ignore', 'pipe', 'pipe']
@@ -150,6 +152,69 @@ describe('project contracts', () => {
         const opsPayload = await opsResponse.json()
         expect(opsPayload.ops).toHaveLength(1)
         expect(opsPayload.latestVersion).toBe(1)
+    })
+
+    it('rejects stale project ops with 409 and does not mutate the document', async () => {
+        const server = await startServer()
+
+        const createResponse = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Conflict Project', slug: 'conflict-project', source: 'studio-v3' })
+        })
+        expect(createResponse.status).toBe(201)
+
+        const firstWrite = await fetch(`${server.baseUrl}/api/projects/conflict-project/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [{
+                    type: 'createEntity',
+                    payload: {
+                        entity: {
+                            id: 'entity-1',
+                            type: 'box',
+                            name: 'First Entity'
+                        }
+                    }
+                }]
+            })
+        })
+        expect(firstWrite.status).toBe(200)
+
+        const staleWrite = await fetch(`${server.baseUrl}/api/projects/conflict-project/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [{
+                    type: 'createEntity',
+                    payload: {
+                        entity: {
+                            id: 'entity-2',
+                            type: 'box',
+                            name: 'Stale Entity'
+                        }
+                    }
+                }]
+            })
+        })
+        expect(staleWrite.status).toBe(409)
+        await expect(staleWrite.json()).resolves.toMatchObject({
+            latestVersion: 1,
+            pendingOps: [
+                expect.objectContaining({ version: 1, type: 'createEntity' })
+            ]
+        })
+
+        const documentResponse = await fetch(`${server.baseUrl}/api/projects/conflict-project/document`)
+        expect(documentResponse.status).toBe(200)
+        const documentPayload = await documentResponse.json()
+        expect(documentPayload.version).toBe(1)
+        expect(documentPayload.document.entities).toEqual([
+            expect.objectContaining({ id: 'entity-1', name: 'First Entity' })
+        ])
     })
 
     it('uploads and serves project assets from the hybrid project container', async () => {

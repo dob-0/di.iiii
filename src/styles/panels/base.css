@@ -2,11 +2,10 @@
 .floating-panel {
     display: flex;
     flex-direction: column;
-    border-radius: 16px;
-    background: linear-gradient(170deg, rgba(18,26,42,0.95), rgba(7,11,19,0.92));
+    border-radius: 0;
+    background: var(--di-surface);
     color: var(--ui-text-primary);
-    box-shadow: 0 22px 55px rgba(0,0,0,0.55);
-    border: 1px solid rgba(255,255,255,0.08);
+    border: 1px solid var(--di-cyan-border);
     overflow: hidden;
     font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -15,8 +14,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 10px 12px;
-    background: rgba(255,255,255,0.02);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    background: transparent;
+    border-bottom: 1px solid var(--di-cyan-border);
 }
 .draggable-panel {
     position: fixed;
@@ -37,7 +36,6 @@
     width: 14px;
     height: 14px;
     cursor: se-resize;
-    background: linear-gradient(135deg, transparent 55%, rgba(255,255,255,0.12) 55%);
     opacity: 0.6;
 }
 .panel-resizer:hover,
@@ -103,7 +101,7 @@
 .floating-panel .prop-row input[type="color"],
 .floating-panel .prop-row-stacked input[type="color"] {
     border: 1px solid var(--ui-border-strong);
-    border-radius: 4px;
+    border-radius: 0;
     width: 34px;
     height: 22px;
     padding: 0;
@@ -115,8 +113,8 @@
     width: 100%;
     box-sizing: border-box;
     padding: 4px 6px;
-    border-radius: 4px;
-    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 0;
+    border: 1px solid var(--di-cyan-border);
     background: rgba(7,11,20,0.65);
     color: var(--ui-text-primary);
     font-size: 12px;
@@ -131,7 +129,7 @@
     width: 100%;
     min-width: 0;
     height: 6px;
-    border-radius: 999px;
+    border-radius: 0;
     appearance: none;
     background: linear-gradient(90deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
     outline: none;
@@ -158,8 +156,8 @@
     font-weight: 600;
     color: var(--ui-text-primary);
     background: linear-gradient(140deg, rgba(255,255,255,0.03), rgba(0,0,0,0.25));
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 8px;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
     cursor: pointer;
     transition: background 0.15s ease, border-color 0.15s ease;
 }

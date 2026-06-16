@@ -60,6 +60,13 @@ REMOTE_HEAD="$(git rev-parse "origin/${TARGET_BRANCH}")"
 
 if [[ "${LOCAL_HEAD}" == "${REMOTE_HEAD}" ]]; then
   echo "[cpanel-poll] ${DEPLOY_ENV}: already up to date at ${LOCAL_HEAD:0:7}"
+  if [[ "${CPANEL_APPLY_WHEN_UPTODATE:-0}" == "1" ]]; then
+    echo "[cpanel-poll] ${DEPLOY_ENV}: CPANEL_APPLY_WHEN_UPTODATE=1, running apply step anyway."
+    run_or_echo bash scripts/cpanel-apply-prebuilt-release.sh "${DEPLOY_ENV}"
+  else
+    echo "[cpanel-poll] ${DEPLOY_ENV}: to force re-apply on the same commit, run:"
+    echo "[cpanel-poll]   bash scripts/cpanel-apply-prebuilt-release.sh ${DEPLOY_ENV}"
+  fi
   exit 0
 fi
 

@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
     APP_PAGE_EDITOR,
     APP_PAGE_PREFERENCES,
@@ -6,32 +7,20 @@ import {
     buildPreferencesPath,
     getAppLocationState
 } from '../utils/spaceRouting.js'
+import { appNavigate } from '../utils/appNavigate.js'
 
 export function useAppRoute({ defaultSpaceId } = {}) {
-    const readRoute = useCallback(() => {
-        const route = getAppLocationState()
+    const location = useLocation()
+
+    const route = useMemo(() => {
+        const appState = getAppLocationState(location)
         return {
-            page: route.page || APP_PAGE_EDITOR,
-            spaceId: route.spaceId || defaultSpaceId
+            page: appState.page || APP_PAGE_EDITOR,
+            spaceId: appState.spaceId || defaultSpaceId
         }
-    }, [defaultSpaceId])
-
-    const [route, setRoute] = useState(() => readRoute())
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return undefined
-
-        const handlePopState = () => {
-            setRoute(readRoute())
-        }
-
-        window.addEventListener('popstate', handlePopState)
-        return () => window.removeEventListener('popstate', handlePopState)
-    }, [readRoute])
+    }, [location, defaultSpaceId])
 
     const navigate = useCallback((nextRoute, { replace = false } = {}) => {
-        if (typeof window === 'undefined') return
-
         const normalizedRoute = {
             page: nextRoute?.page || APP_PAGE_EDITOR,
             spaceId: nextRoute?.spaceId || defaultSpaceId
@@ -39,11 +28,8 @@ export function useAppRoute({ defaultSpaceId } = {}) {
         const nextPath = normalizedRoute.page === APP_PAGE_PREFERENCES
             ? buildPreferencesPath(normalizedRoute.spaceId)
             : buildAppSpacePath(normalizedRoute.spaceId)
-        const historyMethod = replace ? 'replaceState' : 'pushState'
-
-        window.history[historyMethod]({}, '', nextPath)
         window.scrollTo(0, 0)
-        setRoute(normalizedRoute)
+        appNavigate(nextPath, { replace })
     }, [defaultSpaceId])
 
     const navigateToEditor = useCallback((spaceId = route.spaceId) => {

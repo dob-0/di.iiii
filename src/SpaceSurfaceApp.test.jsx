@@ -10,6 +10,12 @@ vi.mock('./App.jsx', () => ({
     }
 }))
 
+vi.mock('./beta/BlankNodeWorkspaceApp.jsx', () => ({
+    default: function MockBlankNodeWorkspaceApp({ spaceId }) {
+        return <div>blank-node-workspace:{spaceId || 'main'}</div>
+    }
+}))
+
 vi.mock('./project/components/PublicProjectViewer.jsx', () => ({
     default: function MockPublicProjectViewer({ spaceId, projectId }) {
         return <div>public-project-viewer:{spaceId}:{projectId}</div>
@@ -39,7 +45,14 @@ describe('SpaceSurfaceApp', () => {
         expect(await screen.findByText('public-project-viewer:main:live-project')).toBeInTheDocument()
     })
 
-    it('falls back to the legacy app when no published project is configured', async () => {
+    it('opens the blank node workspace on the bare root route', async () => {
+        render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: null }} />)
+
+        expect(await screen.findByText('blank-node-workspace:main')).toBeInTheDocument()
+        expect(getServerSpace).not.toHaveBeenCalled()
+    })
+
+    it('falls back to the legacy editor when no published project is configured', async () => {
         getServerSpace.mockResolvedValue({
             id: 'main',
             label: 'Main Space',
@@ -82,10 +95,20 @@ describe('SpaceSurfaceApp', () => {
         expect(screen.getByText('public-project-viewer:main:live-project')).toBeInTheDocument()
     })
 
-    it('keeps preferences routed through the legacy app shell', () => {
+    it('keeps the legacy editor available if space metadata fails to load', async () => {
+        getServerSpace.mockRejectedValue(new Error('network down'))
+
+        render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'main' }} />)
+
+        await waitFor(() => {
+            expect(screen.getByText('legacy-app')).toBeInTheDocument()
+        })
+    })
+
+    it('keeps preferences routed through the legacy app shell', async () => {
         render(<SpaceSurfaceApp routeState={{ page: 'preferences', spaceId: 'main' }} />)
 
-        expect(screen.getByText('legacy-app')).toBeInTheDocument()
+        expect(await screen.findByText('legacy-app')).toBeInTheDocument()
         expect(getServerSpace).not.toHaveBeenCalled()
     })
 })

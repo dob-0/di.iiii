@@ -81,7 +81,7 @@ export function useProjectPresence({
         const hasWindow = typeof window !== 'undefined'
         const { serverUrl, path, auth } = getSocketConfigForRuntime({
             configuredBase: import.meta.env.VITE_API_BASE_URL || '',
-            token: import.meta.env.VITE_API_TOKEN || '',
+            token: '',
             isDev: Boolean(import.meta.env.DEV),
             locationOrigin: hasWindow ? window.location.origin : ''
         })

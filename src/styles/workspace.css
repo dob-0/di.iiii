@@ -75,6 +75,7 @@
     border-radius: 0 10px 0 0;
     background: var(--workspace-chrome-surface);
     box-shadow: var(--workspace-shadow);
+    -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
     z-index: 111;
 }
@@ -91,6 +92,7 @@
     border-right: none;
     background: var(--workspace-chrome-surface);
     box-shadow: var(--workspace-shadow);
+    -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
 }
 
@@ -269,6 +271,7 @@
     border-top: none;
     background: var(--workspace-chrome-surface);
     box-shadow: var(--workspace-shadow);
+    -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
     overflow: hidden;
 }
@@ -704,6 +707,7 @@
     border: 1px solid var(--workspace-border-strong);
     background: var(--workspace-chrome-surface);
     box-shadow: var(--workspace-shadow);
+    -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
     overflow: hidden;
     z-index: 116;

@@ -16,7 +16,7 @@ export const normalizeClientApiToken = (value = '') => {
     return normalized
 }
 
-const API_TOKEN = normalizeClientApiToken(import.meta.env.VITE_API_TOKEN || '')
+export const normalizeSessionApiToken = (value = '') => String(value || '').trim().replace(/^bearer\s+/i, '')
 
 const getHostnameFromOrigin = (origin = '') => {
     if (!origin) return ''
@@ -153,7 +153,35 @@ const createServerUnavailableError = (message, cause = null) => {
     return error
 }
 
-export async function apiFetch(path, { method = 'GET', headers, body, json = true } = {}) {
+const createHttpError = async (response) => {
+    const text = await response.text()
+    let message = text || `Request failed with status ${response.status}`
+    let data = null
+    if (text) {
+        try {
+            data = JSON.parse(text)
+            if (data?.error) {
+                message = data.error
+            }
+        } catch {
+            // ignore
+        }
+    }
+    const error = new Error(message)
+    error.status = response.status
+    if (data) {
+        error.data = data
+    }
+    return error
+}
+
+export async function apiFetch(path, {
+    method = 'GET',
+    headers,
+    body,
+    json = true,
+    signal = undefined
+} = {}) {
     if (!hasServerApi) {
         throw new Error('API base URL is not configured')
     }
@@ -161,8 +189,12 @@ export async function apiFetch(path, { method = 'GET', headers, body, json = tru
         throw createServerUnavailableError('ServerXR is temporarily unavailable.')
     }
     const url = path.startsWith('http') ? path : `${apiBaseUrl}${path}`
-    const authHeaders = API_TOKEN ? { Authorization: `Bearer ${API_TOKEN}` } : {}
-    const init = { method, headers: { ...authHeaders, ...(headers ? { ...headers } : {}) } }
+    const init = {
+        method,
+        credentials: 'include',
+        headers: headers || {},
+        ...(signal !== undefined ? { signal } : {})
+    }
     if (body instanceof FormData) {
         init.body = body
     } else if (body !== undefined) {
@@ -181,28 +213,26 @@ export async function apiFetch(path, { method = 'GET', headers, body, json = tru
         throw error
     }
     if (!response.ok) {
-        const text = await response.text()
-        let message = text || `Request failed with status ${response.status}`
-        let data = null
-        if (text) {
-            try {
-                data = JSON.parse(text)
-                if (data?.error) {
-                    message = data.error
-                }
-            } catch {
-                // ignore
-            }
-        }
-        const error = new Error(message)
-        error.status = response.status
-        if (data) {
-            error.data = data
-        }
-        throw error
+        throw await createHttpError(response)
     }
     if (!json) {
         return response
     }
     return response.json()
 }
+
+export const getApiSession = async (opts = {}) => apiFetch('/api/auth/session', opts)
+
+export const loginApiSession = async (token) => apiFetch('/api/auth/session', {
+    method: 'POST',
+    body: { token: normalizeSessionApiToken(token) }
+})
+
+export const logoutApiSession = async () => apiFetch('/api/auth/session', {
+    method: 'DELETE',
+    json: false
+})
+
+export const getApiAuthProviders = async () => apiFetch('/api/auth/providers')
+
+export const getOAuthUrl = (provider) => `${apiBaseUrl}/api/auth/${provider}`

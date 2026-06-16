@@ -10,6 +10,20 @@ cd "${REPO_ROOT}"
 
 CURRENT_BRANCH="${CPANEL_DEPLOY_BRANCH:-$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)}"
 DEPLOY_ENV="${1:-${CPANEL_DEPLOY_ENV:-}}"
+DEPLOY_ENV_META_FILE="${CPANEL_DEPLOY_ENV_FILE:-.cpanel-deploy-env}"
+
+if [[ -z "${DEPLOY_ENV}" ]]; then
+  if [[ -f "${DEPLOY_ENV_META_FILE}" ]]; then
+    META_DEPLOY_ENV="$(head -n 1 "${DEPLOY_ENV_META_FILE}" | tr -d '\r' | xargs)"
+    case "${META_DEPLOY_ENV}" in
+      staging|production)
+        DEPLOY_ENV="${META_DEPLOY_ENV}"
+        echo "[cpanel-prebuilt] Using deploy environment from ${DEPLOY_ENV_META_FILE}: ${DEPLOY_ENV}"
+        ;;
+    esac
+  fi
+
+fi
 
 if [[ -z "${DEPLOY_ENV}" ]]; then
   case "${CURRENT_BRANCH}" in

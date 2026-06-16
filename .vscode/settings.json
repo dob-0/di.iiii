@@ -1,0 +1,6 @@
+{
+  "vscode-edge-devtools.webhint": false,
+  "files.associations": {
+    ".github/workflows/*.yml": "yaml"
+  }
+}

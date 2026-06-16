@@ -1,4 +1,5 @@
 import { cloneValue } from '../../shared/projectSchema.js'
+import { detectAssetMediaKind } from '../../utils/mediaAssetTypes.js'
 
 const setNestedValue = (value, path, nextValue) => {
     const draft = cloneValue(value)
@@ -13,6 +14,11 @@ const setNestedValue = (value, path, nextValue) => {
 }
 
 const readNestedValue = (value, path = []) => path.reduce((current, key) => current?.[key], value)
+
+const getAssetOptionsForField = (field, assetOptions = []) => {
+    if (!field?.assetKind) return assetOptions
+    return assetOptions.filter((asset) => detectAssetMediaKind(asset) === field.assetKind)
+}
 
 function PropertyField({ field, value, onChange, assetOptions = [] }) {
     if (field.type === 'textarea') {
@@ -37,7 +43,7 @@ function PropertyField({ field, value, onChange, assetOptions = [] }) {
         return (
             <select value={value || ''} onChange={(event) => onChange(event.target.value || null)}>
                 <option value="">Unassigned</option>
-                {assetOptions.map((asset) => (
+                {getAssetOptionsForField(field, assetOptions).map((asset) => (
                     <option key={asset.id} value={asset.id}>{asset.name}</option>
                 ))}
             </select>
@@ -53,6 +59,34 @@ function PropertyField({ field, value, onChange, assetOptions = [] }) {
                 step={field.step ?? 0.1}
                 onChange={(event) => onChange(Number(event.target.value))}
             />
+        )
+    }
+    if (field.type === 'vec3') {
+        const arr = Array.isArray(value) ? value : [0, 0, 0]
+        return (
+            <div style={{ display: 'flex', gap: 4 }}>
+                {[0, 1, 2].map((axis) => (
+                    <input
+                        key={axis}
+                        type="number"
+                        value={Number.isFinite(Number(arr[axis])) ? arr[axis] : 0}
+                        step={field.step ?? 0.1}
+                        style={{ width: '100%', minWidth: 0 }}
+                        onChange={(event) => {
+                            const next = [arr[0] ?? 0, arr[1] ?? 0, arr[2] ?? 0]
+                            next[axis] = Number(event.target.value)
+                            onChange(next)
+                        }}
+                    />
+                ))}
+            </div>
+        )
+    }
+    if (field.type === 'connection') {
+        return (
+            <span style={{ opacity: 0.6, fontSize: '0.8em' }}>
+                {value == null ? '—' : 'connected'}
+            </span>
         )
     }
     return <input type="text" value={value || ''} onChange={(event) => onChange(event.target.value)} />
@@ -77,33 +111,39 @@ export default function PropertyInspector({
                 <h4>{title}</h4>
                 {subtitle ? <p>{subtitle}</p> : null}
             </header>
-            {sections.map((section) => {
-                const sectionValue = values[section.id] || values[section.component] || {}
-                return (
-                    <section key={section.id} className="beta-property-section">
-                        <h5>{section.label}</h5>
-                        <div className="beta-property-grid">
-                            {section.fields.map((field) => {
-                                const value = readNestedValue(sectionValue, field.path)
-                                return (
-                                    <label key={`${section.id}-${field.label}`} className="beta-property-field">
-                                        <span>{field.label}</span>
-                                        <PropertyField
-                                            field={field}
-                                            value={value}
-                                            assetOptions={assetOptions}
-                                            onChange={(nextValue) => {
-                                                const nextSectionValue = setNestedValue(sectionValue, field.path, nextValue)
-                                                onSectionChange?.(field.component || section.id, nextSectionValue)
-                                            }}
-                                        />
-                                    </label>
-                                )
-                            })}
-                        </div>
-                    </section>
-                )
-            })}
+            <div className="beta-property-sections-scroll">
+                {sections.map((section) => {
+                    const sectionValue = values[section.id] || values[section.component] || {}
+                    return (
+                        <section key={section.id} className="beta-property-section">
+                            <h5>{section.label}</h5>
+                            <div className="beta-property-grid">
+                                {section.fields.map((field) => {
+                                    const value = readNestedValue(sectionValue, field.path)
+                                    const isFullWidth = field.type === 'textarea' || field.type === 'select' || field.type === 'asset'
+                                    return (
+                                        <label
+                                            key={`${section.id}-${field.label}`}
+                                            className={`beta-property-field${field.type === 'checkbox' ? ' beta-checkbox-field' : ''}${isFullWidth ? ' beta-full-width-field' : ''}`}
+                                        >
+                                            <span>{field.label}</span>
+                                            <PropertyField
+                                                field={field}
+                                                value={value}
+                                                assetOptions={assetOptions}
+                                                onChange={(nextValue) => {
+                                                    const nextSectionValue = setNestedValue(sectionValue, field.path, nextValue)
+                                                    onSectionChange?.(field.component || section.id, nextSectionValue)
+                                                }}
+                                            />
+                                        </label>
+                                    )
+                                })}
+                            </div>
+                        </section>
+                    )
+                })}
+            </div>
         </div>
     )
 }

@@ -1,0 +1,651 @@
+{
+  "version": 4,
+  "objects": [
+    {
+      "id": "509b2c3a-2234-450e-90ce-8e17c0e5d4f3",
+      "type": "text-3d",
+      "data": "hiii",
+      "assetRef": null,
+      "position": [
+        -3,
+        0,
+        -4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        2.26,
+        1,
+        1.66
+      ],
+      "color": "#000000",
+      "isVisible": true,
+      "fontWeight": "normal",
+      "fontStyle": "normal",
+      "linkUrl": "",
+      "linkActive": false,
+      "fontSize3D": 0.5,
+      "depth3D": 0.2,
+      "bevelEnabled3D": true,
+      "bevelThickness3D": 0.02,
+      "bevelSize3D": 0.01,
+      "font3D": "helvetiker_regular",
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "2cbccf21-676a-47e3-8320-82e899f93c82",
+      "type": "text-3d",
+      "data": "barevvv",
+      "assetRef": null,
+      "position": [
+        -3,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "color": "#000000",
+      "isVisible": true,
+      "fontWeight": "normal",
+      "fontStyle": "normal",
+      "linkUrl": "",
+      "linkActive": false,
+      "fontSize3D": 0.5,
+      "depth3D": 0.2,
+      "bevelEnabled3D": true,
+      "bevelThickness3D": 0.02,
+      "bevelSize3D": 0.01,
+      "font3D": "helvetiker_regular",
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "mqcy4l3i-n987s1",
+      "type": "box",
+      "data": null,
+      "assetRef": null,
+      "position": [
+        -1,
+        0,
+        -2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "color": "#0000ff",
+      "isVisible": true,
+      "fontWeight": "normal",
+      "fontStyle": "normal",
+      "linkUrl": "",
+      "linkActive": false,
+      "boxSize": [
+        1,
+        1,
+        1
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "f7c2c12a-b96a-4dd7-ae32-f297adcd7255",
+      "type": "cone",
+      "data": null,
+      "assetRef": null,
+      "position": [
+        -3,
+        0,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "color": "#00ccff",
+      "isVisible": true,
+      "fontWeight": "normal",
+      "fontStyle": "normal",
+      "linkUrl": "",
+      "linkActive": false,
+      "coneRadius": 0.5,
+      "coneHeight": 1.5,
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "36a291b3-aaad-4126-8a26-1318e4a17d98",
+      "type": "cylinder",
+      "data": null,
+      "assetRef": null,
+      "position": [
+        -1,
+        0,
+        2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "color": "#a855f7",
+      "isVisible": true,
+      "fontWeight": "normal",
+      "fontStyle": "normal",
+      "linkUrl": "",
+      "linkActive": false,
+      "cylinderRadiusTop": 0.5,
+      "cylinderRadiusBottom": 0.5,
+      "cylinderHeight": 1.5,
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "mqcyn87p-ognk2j",
+      "type": "box",
+      "data": null,
+      "assetRef": null,
+      "position": [
+        0,
+        0,
+        -1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "color": "#0000ff",
+      "isVisible": true,
+      "fontWeight": "normal",
+      "fontStyle": "normal",
+      "linkUrl": "",
+      "linkActive": false,
+      "boxSize": [
+        1,
+        1,
+        1
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "mqcynccj-a7m85v",
+      "type": "cylinder",
+      "data": null,
+      "assetRef": null,
+      "position": [
+        4,
+        0,
+        -1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "color": "#a855f7",
+      "isVisible": true,
+      "fontWeight": "normal",
+      "fontStyle": "normal",
+      "linkUrl": "",
+      "linkActive": false,
+      "cylinderRadiusTop": 0.5,
+      "cylinderRadiusBottom": 0.5,
+      "cylinderHeight": 1.5,
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "mqcyo8qr-aw7vf0",
+      "type": "sphere",
+      "data": null,
+      "assetRef": null,
+      "position": [
+        4,
+        0,
+        9
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "color": "#ffcc00",
+      "isVisible": true,
+      "fontWeight": "normal",
+      "fontStyle": "normal",
+      "linkUrl": "",
+      "linkActive": false,
+      "sphereRadius": 0.5,
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "mqcyoe8r-96z0y6",
+      "type": "cylinder",
+      "data": null,
+      "assetRef": null,
+      "position": [
+        6,
+        0,
+        4
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "color": "#a855f7",
+      "isVisible": true,
+      "fontWeight": "normal",
+      "fontStyle": "normal",
+      "linkUrl": "",
+      "linkActive": false,
+      "cylinderRadiusTop": 0.5,
+      "cylinderRadiusBottom": 0.5,
+      "cylinderHeight": 1.5,
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "86547755-a48b-4d69-b45f-b22e32b8ac44",
+      "type": "box",
+      "data": null,
+      "assetRef": null,
+      "position": [
+        3,
+        0,
+        5
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "color": "#0000ff",
+      "isVisible": true,
+      "fontWeight": "normal",
+      "fontStyle": "normal",
+      "linkUrl": "",
+      "linkActive": false,
+      "boxSize": [
+        1,
+        1,
+        1
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "mqczbiln-1dvpcl",
+      "type": "box",
+      "data": null,
+      "assetRef": null,
+      "position": [
+        0,
+        0,
+        1
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "color": "#0000ff",
+      "isVisible": true,
+      "fontWeight": "normal",
+      "fontStyle": "normal",
+      "linkUrl": "",
+      "linkActive": false,
+      "boxSize": [
+        1,
+        1,
+        1
+      ],
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ]
+    },
+    {
+      "id": "mqczbviw-n06d1k",
+      "type": "cylinder",
+      "data": null,
+      "assetRef": null,
+      "position": [
+        -3,
+        0,
+        -2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "color": "#a855f7",
+      "isVisible": true,
+      "fontWeight": "normal",
+      "fontStyle": "normal",
+      "linkUrl": "",
+      "linkActive": false,
+      "cylinderRadiusTop": 0.5,
+      "cylinderRadiusBottom": 0.5,
+      "cylinderHeight": 1.5,
+      "positionExpressions": [
+        null,
+        null,
+        null
+      ],
+      "rotationExpressions": [
+        null,
+        null,
+        null
+      ],
+      "scaleExpressions": [
+        null,
+        null,
+        null
+      ]
+    }
+  ],
+  "backgroundColor": "#8ff0a4",
+  "gridSize": 20,
+  "isGridVisible": true,
+  "isGizmoVisible": true,
+  "isPerfVisible": false,
+  "ambientLight": {
+    "color": "#ffffff",
+    "intensity": 0.8
+  },
+  "directionalLight": {
+    "color": "#ffffff",
+    "intensity": 1,
+    "position": [
+      10,
+      10,
+      5
+    ]
+  },
+  "transformSnaps": {
+    "translation": 0.1,
+    "rotation": 15,
+    "scale": 0.1
+  },
+  "presentation": {
+    "mode": "scene",
+    "sourceType": "html",
+    "url": "",
+    "html": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>XR Studio / Deploy View</title>\n    <style>\n      :root {\n        color-scheme: dark;\n        --bg: #090c10;\n        --bg-secondary: #10151c;\n        --panel: rgba(15, 20, 28, 0.88);\n        --panel-strong: rgba(18, 24, 34, 0.94);\n        --line: rgba(255, 255, 255, 0.1);\n        --text: #eef3ff;\n        --muted: #98a4bb;\n        --accent: #6ee7ff;\n        --accent-strong: #9bff8a;\n      }\n\n      * {\n        box-sizing: border-box;\n      }\n\n      body {\n        margin: 0;\n        min-height: 100vh;\n        font-family: \"Space Grotesk\", \"Inter\", system-ui, sans-serif;\n        background:\n          radial-gradient(circle at 10% 10%, rgba(110, 231, 255, 0.18), transparent 30%),\n          radial-gradient(circle at 90% 15%, rgba(155, 255, 138, 0.12), transparent 26%),\n          linear-gradient(180deg, #0b0f15 0%, #090c10 100%);\n        color: var(--text);\n      }\n\n      .shell {\n        min-height: 100vh;\n        display: grid;\n        grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.95fr);\n      }\n\n      .hero,\n      .rail {\n        padding: clamp(24px, 4vw, 48px);\n      }\n\n      .hero {\n        display: flex;\n        flex-direction: column;\n        justify-content: space-between;\n        gap: 32px;\n        border-right: 1px solid var(--line);\n      }\n\n      .kicker,\n      .label {\n        font-size: 11px;\n        font-weight: 700;\n        letter-spacing: 0.22em;\n        text-transform: uppercase;\n        color: var(--accent);\n      }\n\n      h1 {\n        margin: 18px 0 18px;\n        max-width: 9ch;\n        font-size: clamp(3rem, 7vw, 6.6rem);\n        line-height: 0.92;\n        letter-spacing: -0.06em;\n      }\n\n      .lead {\n        max-width: 56ch;\n        margin: 0;\n        font-size: 1.02rem;\n        line-height: 1.8;\n        color: var(--muted);\n      }\n\n      .hero-grid {\n        display: grid;\n        grid-template-columns: repeat(3, minmax(0, 1fr));\n        gap: 14px;\n      }\n\n      .metric,\n      .panel {\n        border: 1px solid var(--line);\n        background: var(--panel);\n        backdrop-filter: blur(18px);\n      }\n\n      .metric {\n        min-height: 112px;\n        padding: 18px;\n      }\n\n      .metric strong {\n        display: block;\n        margin-top: 10px;\n        font-size: 1.15rem;\n      }\n\n      .metric span,\n      .panel p,\n      .panel li {\n        color: var(--muted);\n      }\n\n      .rail {\n        display: flex;\n        flex-direction: column;\n        gap: 16px;\n        background: linear-gradient(180deg, rgba(16, 21, 28, 0.92), rgba(9, 12, 16, 0.96));\n      }\n\n      .panel {\n        padding: 18px;\n        background: var(--panel-strong);\n      }\n\n      .panel h2 {\n        margin: 10px 0 12px;\n        font-size: 1rem;\n        letter-spacing: -0.03em;\n      }\n\n      .panel p {\n        margin: 0;\n        line-height: 1.7;\n      }\n\n      .panel ul {\n        margin: 12px 0 0;\n        padding-left: 18px;\n        line-height: 1.7;\n      }\n\n      .cta-row {\n        display: flex;\n        flex-wrap: wrap;\n        gap: 12px;\n      }\n\n      .button {\n        display: inline-flex;\n        align-items: center;\n        justify-content: center;\n        min-height: 46px;\n        padding: 0 18px;\n        border: 1px solid var(--line);\n        text-decoration: none;\n        color: var(--text);\n        background: rgba(255, 255, 255, 0.02);\n      }\n\n      .button.primary {\n        color: #071017;\n        background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);\n        border-color: transparent;\n        font-weight: 700;\n      }\n\n      .code {\n        font-family: \"JetBrains Mono\", \"SFMono-Regular\", Consolas, monospace;\n        font-size: 0.86rem;\n        color: #c7d3e8;\n      }\n\n      @media (max-width: 960px) {\n        .shell {\n          grid-template-columns: 1fr;\n        }\n\n        .hero {\n          border-right: 0;\n          border-bottom: 1px solid var(--line);\n        }\n\n        .hero-grid {\n          grid-template-columns: 1fr;\n        }\n      }\n    </style>\n  </head>\n  <body>\n    <main class=\"shell\">\n      <section class=\"hero\">\n        <div>\n          <div class=\"kicker\">XR Studio / Code View / Deploy Ready</div>\n          <h1>Build the space like a launch page.</h1>\n          <p class=\"lead\">\n            This starter is for artist microsites, public programme pages, open calls, and client-facing launches.\n            Replace the copy, colors, links, and sections below while keeping everything in one portable HTML file.\n          </p>\n        </div>\n\n        <div class=\"hero-grid\">\n          <article class=\"metric\">\n            <div class=\"label\">Mode</div>\n            <strong>Single-file HTML</strong>\n            <span>Best for reliable preview, export, and handoff.</span>\n          </article>\n          <article class=\"metric\">\n            <div class=\"label\">Studio</div>\n            <strong>Artist + XR Workflow</strong>\n            <span>Good for bespoke client pages that still live inside the editor.</span>\n          </article>\n          <article class=\"metric\">\n            <div class=\"label\">Delivery</div>\n            <strong>Preview, export, publish</strong>\n            <span>Paste custom code or move this file into a real deploy pipeline later.</span>\n          </article>\n        </div>\n      </section>\n\n      <aside class=\"rail\">\n        <section class=\"panel\">\n          <div class=\"label\">Structure</div>\n          <h2>What to edit first</h2>\n          <ul>\n            <li>Swap the headline and deck for the artist or project.</li>\n            <li>Turn the right-side panels into programme, credits, schedule, or CTA blocks.</li>\n            <li>Wire your publish link, form link, or contact email into the buttons.</li>\n          </ul>\n        </section>\n\n        <section class=\"panel\">\n          <div class=\"label\">Deploy Notes</div>\n          <h2>Keep this handoff clean</h2>\n          <p>\n            Static HTML is the lowest-friction path inside this sandbox. Full React, Babel, or CDN-heavy experiments\n            can still work, but they are better once the project already has its own public host.\n          </p>\n        </section>\n\n        <section class=\"panel\">\n          <div class=\"label\">Actions</div>\n          <h2>Next steps</h2>\n          <div class=\"cta-row\">\n            <a class=\"button primary\" href=\"mailto:studio@example.com?subject=Space%20launch\">Launch Inquiry</a>\n            <a class=\"button\" href=\"https://example.com\">Public Link</a>\n          </div>\n          <p class=\"code\" style=\"margin-top: 14px;\">\n            Tip: keep this file self-contained while the design is moving quickly.\n          </p>\n        </section>\n      </aside>\n    </main>\n  </body>\n</html>",
+    "fixedCamera": {
+      "projection": "perspective",
+      "position": [
+        0,
+        1.6,
+        4
+      ],
+      "target": [
+        0,
+        1,
+        0
+      ],
+      "fov": 60,
+      "zoom": 1,
+      "near": 0.1,
+      "far": 200,
+      "locked": true
+    }
+  },
+  "default3DView": {
+    "position": [
+      0,
+      1.6,
+      4
+    ],
+    "target": [
+      0,
+      1,
+      0
+    ]
+  },
+  "savedView": {
+    "viewMode": "3D",
+    "position": [
+      0,
+      1.6,
+      4
+    ],
+    "target": [
+      0,
+      1,
+      0
+    ]
+  },
+  "gridAppearance": {
+    "cellSize": 0.75,
+    "cellThickness": 0.3,
+    "sectionSize": 6,
+    "sectionThickness": 0.65,
+    "fadeDistance": 42,
+    "fadeStrength": 0.35,
+    "offset": 0.015,
+    "color": "#2b313d",
+    "sectionColor": "#465063"
+  },
+  "renderSettings": {
+    "dpr": [
+      1,
+      2
+    ],
+    "toneMapping": "ACESFilmic",
+    "toneMappingExposure": 1,
+    "shadows": true,
+    "shadowType": 2,
+    "antialias": true,
+    "powerPreference": "high-performance"
+  }
+}

@@ -11,6 +11,7 @@ const DEFAULT_LAYOUTS = {
         rightOpen: true,
         rightWidth: 360,
         bottomOpen: true,
+        bottomHeight: 300,
         bottomTab: 'activity',
         popouts: {
             assets: false,
@@ -26,6 +27,7 @@ const DEFAULT_LAYOUTS = {
         rightOpen: false,
         rightWidth: 340,
         bottomOpen: false,
+        bottomHeight: 300,
         bottomTab: 'activity',
         popouts: {
             assets: false,
@@ -41,6 +43,7 @@ const DEFAULT_LAYOUTS = {
         rightOpen: false,
         rightWidth: 320,
         bottomOpen: true,
+        bottomHeight: 360,
         bottomTab: 'activity',
         popouts: {
             assets: false,

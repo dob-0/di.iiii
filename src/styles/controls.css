@@ -149,8 +149,10 @@
 }
 
 .scene-canvas-shell {
-    width: 100%;
-    height: 100%;
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
 }
 
 .scene-canvas-shell canvas {
@@ -165,6 +167,7 @@
     border-color: rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.86);
     box-shadow: 0 18px 42px rgba(0, 0, 0, 0.18);
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     text-shadow: none;
 }
@@ -258,6 +261,7 @@
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 14px;
     background: rgba(8, 13, 22, 0.84);
+    -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
     box-shadow: 0 16px 30px rgba(0, 0, 0, 0.22);
 }
@@ -303,6 +307,7 @@
     border: 1px solid rgba(255,255,255,0.12);
     border-radius: 16px;
     background: rgba(8, 13, 22, 0.94);
+    -webkit-backdrop-filter: blur(18px);
     backdrop-filter: blur(18px);
     box-shadow: 0 24px 50px rgba(0, 0, 0, 0.34);
 }

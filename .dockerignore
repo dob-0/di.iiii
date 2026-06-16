@@ -1,0 +1,10 @@
+.git
+node_modules
+serverXR/node_modules
+serverXR/data
+dist
+.env
+.env.*
+*.local
+*.log
+coverage

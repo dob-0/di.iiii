@@ -31,8 +31,8 @@ export function createProjectSyncService() {
             if (!event?.data || typeof onProjectOp !== 'function') return
             try {
                 onProjectOp(JSON.parse(event.data))
-            } catch (error) {
-                console.warn('Failed to parse project-op event', error)
+            } catch {
+                // ignore
             }
         }
 
@@ -40,8 +40,8 @@ export function createProjectSyncService() {
             if (!event?.data || typeof onReady !== 'function') return
             try {
                 onReady(JSON.parse(event.data))
-            } catch (error) {
-                console.warn('Failed to parse ready event', error)
+            } catch {
+                // ignore
             }
         }
 

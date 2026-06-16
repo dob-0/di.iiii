@@ -1,4 +1,10 @@
 const { Server } = require('socket.io')
+const {
+  hasRequiredAuthRole,
+  isAuthScopeAllowedForSpace,
+  normalizeAuthRole,
+  normalizeAuthScopeSpaces
+} = require('./authAccess')
 const { buildCorsOriginHandler } = require('./config')
 
 // Store active connections
@@ -12,6 +18,51 @@ const readSocketToken = (socket) => {
   if (!header) return ''
   const normalized = String(header).trim()
   return normalized.replace(/^bearer\s+/i, '')
+}
+
+const getSocketAuthState = (socket, config) => {
+  const token = readSocketToken(socket)
+  const identity = config?.auth?.resolveIdentity?.(token)
+  if (identity) {
+    return {
+      authenticated: true,
+      type: 'token',
+      role: normalizeAuthRole(identity.role, null),
+      subject: identity.subject || null,
+      label: identity.label || null,
+      spaces: normalizeAuthScopeSpaces(identity.spaces, null)
+    }
+  }
+  const sessionValue = readCookie(
+    socket?.handshake?.headers?.cookie || '',
+    config.authSession?.cookieName
+  )
+  const result = verifyAuthSessionValue(sessionValue, {
+    secret: config?.auth?.sessionSecret || config.apiToken
+  })
+  if (!result.valid) {
+    return {
+      authenticated: false,
+      type: 'session',
+      reason: result.reason
+    }
+  }
+  const role = normalizeAuthRole(result.session?.role, null)
+  if (!role) {
+    return {
+      authenticated: false,
+      type: 'session',
+      reason: 'legacy'
+    }
+  }
+  return {
+    authenticated: true,
+    type: 'session',
+    role,
+    subject: result.session?.subject || null,
+    label: result.session?.label || null,
+    spaces: normalizeAuthScopeSpaces(result.session?.spaces, null)
+  }
 }
 
 const getSocketPath = (basePath = '') => {
@@ -37,17 +88,44 @@ function initializeSocket(httpServer, config) {
 
   // Middleware for authentication
   io.use((socket, next) => {
-    if (config.requireAuth) {
-      const token = readSocketToken(socket)
-      if (!token || token !== config.apiToken) {
-        next(new Error('Unauthorized'))
-        return
+    if (!config.requireAuth) {
+      socket.data.authState = {
+        authenticated: true,
+        type: 'disabled',
+        role: 'admin'
       }
+      next()
+      return
+    }
+    const authState = getSocketAuthState(socket, config)
+    socket.data.authState = authState
+    if (!authState.authenticated) {
+      next(new Error('Unauthorized'))
+      return
+    }
+    if (!hasRequiredAuthRole(authState.role, 'editor')) {
+      next(new Error('Forbidden'))
+      return
     }
     next()
   })
 
+  const ensureSpaceAccess = async (spaceId, socket) => {
+    const authState = socket.data?.authState || {}
+    if (!isAuthScopeAllowedForSpace(authState.spaces, spaceId)) {
+      socket.emit('space-forbidden', {
+        spaceId,
+        message: 'Space access denied.'
+      })
+      return false
+    }
+    return true
+  }
+
   const ensureEditableSpace = async (spaceId, socket) => {
+    if (!(await ensureSpaceAccess(spaceId, socket))) {
+      return false
+    }
     if (typeof config.canEditSpace !== 'function') {
       return true
     }
@@ -71,13 +149,22 @@ function initializeSocket(httpServer, config) {
   }
 
   const ensureProjectAvailable = async (projectId, socket) => {
-    if (typeof config.projectExists !== 'function') {
-      return true
+    if (typeof config.resolveProjectContext !== 'function') {
+      return { projectId }
     }
     try {
-      const exists = await config.projectExists(projectId)
-      if (exists) {
-        return true
+      const project = await config.resolveProjectContext(projectId)
+      if (project) {
+        const authState = socket.data?.authState || {}
+        if (!isAuthScopeAllowedForSpace(authState.spaces, project.spaceId)) {
+          socket.emit('project-forbidden', {
+            projectId,
+            spaceId: project.spaceId,
+            message: 'Project access denied.'
+          })
+          return null
+        }
+        return project
       }
       socket.emit('project-missing', {
         projectId,
@@ -90,7 +177,7 @@ function initializeSocket(httpServer, config) {
         message: 'Unable to verify project.'
       })
     }
-    return false
+    return null
   }
 
   const joinConnectionBucket = ({
@@ -154,6 +241,13 @@ function initializeSocket(httpServer, config) {
     socket.on('join-space', (data) => {
       const { spaceId, userId, userName } = data
       if (!spaceId) return
+      if (!isAuthScopeAllowedForSpace(socket.data?.authState?.spaces, spaceId)) {
+        socket.emit('space-forbidden', {
+          spaceId,
+          message: 'Space access denied.'
+        })
+        return
+      }
 
       console.log(`[Socket] ${userName} joined space: ${spaceId}`)
       joinConnectionBucket({
@@ -171,7 +265,12 @@ function initializeSocket(httpServer, config) {
     socket.on('join-project', async (data) => {
       const { projectId, userId, userName } = data || {}
       if (!projectId) return
-      if (!(await ensureProjectAvailable(projectId, socket))) return
+      const project = await ensureProjectAvailable(projectId, socket)
+      if (!project) return
+      if (!socket.data.projectSpaces) {
+        socket.data.projectSpaces = new Map()
+      }
+      socket.data.projectSpaces.set(project.projectId || projectId, project.spaceId || null)
 
       console.log(`[Socket] ${userName} joined project: ${projectId}`)
       joinConnectionBucket({
@@ -261,6 +360,7 @@ function initializeSocket(httpServer, config) {
     socket.on('user-cursor', (data) => {
       const { spaceId, cursor } = data
       if (!spaceId) return
+      if (!isAuthScopeAllowedForSpace(socket.data?.authState?.spaces, spaceId)) return
 
       socket.to(`space-${spaceId}`).emit('user-cursor', {
         userId: socket.id,
@@ -269,9 +369,20 @@ function initializeSocket(httpServer, config) {
       })
     })
 
-    socket.on('project-cursor', (data) => {
+    socket.on('project-cursor', async (data) => {
       const { projectId, cursor, userId, userName } = data || {}
       if (!projectId) return
+      let projectSpaceId = socket.data?.projectSpaces?.get(projectId)
+      if (!projectSpaceId) {
+        const project = await ensureProjectAvailable(projectId, socket)
+        if (!project) return
+        projectSpaceId = project.spaceId || null
+        if (!socket.data.projectSpaces) {
+          socket.data.projectSpaces = new Map()
+        }
+        socket.data.projectSpaces.set(project.projectId || projectId, projectSpaceId)
+      }
+      if (!isAuthScopeAllowedForSpace(socket.data?.authState?.spaces, projectSpaceId)) return
 
       socket.to(`project-${projectId}`).emit('project-cursor', {
         userId: userId || socket.id,
@@ -286,6 +397,7 @@ function initializeSocket(httpServer, config) {
     socket.on('selection-changed', (data) => {
       const { spaceId, selectedObjects } = data
       if (!spaceId) return
+      if (!isAuthScopeAllowedForSpace(socket.data?.authState?.spaces, spaceId)) return
 
       socket.to(`space-${spaceId}`).emit('selection-changed', {
         userId: socket.id,
@@ -317,6 +429,7 @@ function initializeSocket(httpServer, config) {
           leftEvent: 'project-user-left'
         })
       }
+      socket.data.projectSpaces?.clear?.()
     })
 
     // Error handling

@@ -1,36 +1,77 @@
-import { useEffect, useMemo, useState } from 'react'
-import BetaApp from './beta/BetaApp.jsx'
+import { Suspense, lazy, useEffect } from 'react'
+import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom'
+import { setAppNavigate } from './utils/appNavigate.js'
 import { getBetaLocationState, isBetaLocation } from './beta/utils/betaRouting.js'
+import AuthGate from './components/AuthGate.jsx'
+import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
-import StudioApp from './studio/StudioApp.jsx'
 import { getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
-import { getAppLocationState } from './utils/spaceRouting.js'
+import { APP_PAGE_PREFERENCES, getAppLocationState } from './utils/spaceRouting.js'
 
-export default function RootApp() {
-    const [locationState, setLocationState] = useState(() => ({
-        betaState: getBetaLocationState(),
-        studioState: getStudioLocationState(),
-        appState: getAppLocationState()
-    }))
+const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
+const BlankNodeWorkspaceApp = lazy(() => import('./beta/BlankNodeWorkspaceApp.jsx'))
+const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 
+function AppRouter() {
+    const rrNavigate = useNavigate()
     useEffect(() => {
-        const handlePopState = () => {
-            setLocationState({
-                betaState: getBetaLocationState(),
-                studioState: getStudioLocationState(),
-                appState: getAppLocationState()
-            })
-        }
-        window.addEventListener('popstate', handlePopState)
-        return () => window.removeEventListener('popstate', handlePopState)
-    }, [])
+        setAppNavigate(rrNavigate)
+        return () => setAppNavigate(null)
+    }, [rrNavigate])
+    const location = useLocation()
+    const betaState = getBetaLocationState(location)
+    const studioState = getStudioLocationState(location)
+    const appState = getAppLocationState(location)
 
-    const isStudio = useMemo(() => isStudioLocation(locationState.studioState), [locationState.studioState])
-    const isBeta = useMemo(() => isBetaLocation(locationState.betaState), [locationState.betaState])
-
-    if (isStudio) {
-        return <StudioApp initialRoute={locationState.studioState} />
+    if (isStudioLocation(studioState)) {
+        return (
+            <Suspense
+                fallback={
+                    <RouteSurfaceFallback
+                        label="Loading Studio"
+                        detail="Preparing the main authoring workspace..."
+                    />
+                }
+            >
+                <StudioApp initialRoute={studioState} />
+            </Suspense>
+        )
     }
 
-    return isBeta ? <BetaApp initialRoute={locationState.betaState} /> : <SpaceSurfaceApp routeState={locationState.appState} />
+    if (isBetaLocation(betaState)) {
+        return (
+            <Suspense
+                fallback={
+                    <RouteSurfaceFallback
+                        label="Loading Beta"
+                        detail="Preparing the experimental workspace..."
+                    />
+                }
+            >
+                <BetaApp initialRoute={betaState} />
+            </Suspense>
+        )
+    }
+
+    const isRootLanding = !appState.spaceId && appState.page !== APP_PAGE_PREFERENCES
+
+    if (isRootLanding) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="Preparing workspace..." />}>
+                <BlankNodeWorkspaceApp />
+            </Suspense>
+        )
+    }
+
+    return <SpaceSurfaceApp routeState={appState} />
+}
+
+export default function RootApp() {
+    return (
+        <BrowserRouter>
+            <AuthGate>
+                <AppRouter />
+            </AuthGate>
+        </BrowserRouter>
+    )
 }

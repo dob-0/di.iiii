@@ -97,7 +97,7 @@ const getSocketConfig = () => {
   const hasWindow = typeof window !== 'undefined'
   return getSocketConfigForRuntime({
     configuredBase: import.meta.env.VITE_API_BASE_URL || '',
-    token: import.meta.env.VITE_API_TOKEN || '',
+    token: '',
     isDev: Boolean(import.meta.env.DEV),
     locationOrigin: hasWindow ? window.location.origin : ''
   })
@@ -164,16 +164,13 @@ export function useSpaceSocket(spaceId, userId, userName) {
 
     socket.on('connect', () => {
       clearServerUnavailable()
-      console.log('[Socket.IO] Connected to server')
       setIsConnected(true)
 
       // Join the space
       socket.emit('join-space', { spaceId: normalizedSpaceId, userId, userName })
-      console.log('[Socket.IO] Joining space:', normalizedSpaceId)
     })
 
     socket.on('disconnect', () => {
-      console.log('[Socket.IO] Disconnected from server')
       setIsConnected(false)
     })
 
@@ -181,18 +178,15 @@ export function useSpaceSocket(spaceId, userId, userName) {
       setIsConnected(false)
       setUsersInSpace([])
       markServerUnavailable()
-      console.error('[Socket.IO] Connection error:', error.message)
       socket.disconnect()
       scheduleRetry(getServerUnavailableRetryDelay())
     })
 
     socket.on('users-in-space', (users) => {
-      console.log('[Socket.IO] Users in space:', users)
       setUsersInSpace(Array.isArray(users) ? users : [])
     })
 
     socket.on('user-joined', (data) => {
-      console.log('[Socket.IO] User joined:', data.userName)
       setUsersInSpace(prev => mergeUsers(prev, [{
         userId: data.userId,
         userName: data.userName,
@@ -202,7 +196,6 @@ export function useSpaceSocket(spaceId, userId, userName) {
     })
 
     socket.on('user-left', (data) => {
-      console.log('[Socket.IO] User left:', data.userName)
       setUsersInSpace(prev => prev.filter((user) => {
         if (data.socketId && user.socketId === data.socketId) return false
         if (data.userId && user.userId === data.userId) return false
@@ -214,8 +207,8 @@ export function useSpaceSocket(spaceId, userId, userName) {
       userCursorListenersRef.current.forEach((listener) => {
         try {
           listener(data)
-        } catch (error) {
-          console.error('[Socket.IO] user-cursor listener failed', error)
+        } catch {
+            // ignore
         }
       })
     })
@@ -247,7 +240,6 @@ export function useSpaceSocket(spaceId, userId, userName) {
   // Emit object change
   const emitObjectChanged = useCallback((objectId, action, payload) => {
     if (socketRef.current?.connected) {
-      console.log('[Socket.IO] Emitting object-changed:', objectId, action)
       socketRef.current.emit('object-changed', {
         spaceId: normalizedSpaceId,
         objectId,

@@ -1,5 +1,6 @@
 import StudioViewport from './StudioViewport.jsx'
 import { buildPresentationPreviewDocument } from '../../utils/presentationPreviewDocument.js'
+import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 
 const overlayCardStyle = {
     position: 'absolute',
@@ -20,10 +21,7 @@ const overlayInnerStyle = {
     backdropFilter: 'blur(12px)'
 }
 
-const resolveStudioPreviewCamera = (document, cameraView, previewMode) => {
-    if (previewMode === 'fixed-camera') {
-        return document.presentationState?.fixedCamera || document.worldState?.savedView || cameraView || null
-    }
+const resolveStudioPreviewCamera = (document, cameraView) => {
     return cameraView || document.worldState?.savedView || null
 }
 
@@ -37,20 +35,64 @@ export default function StudioPresentationSurface({
     cameraView,
     controlsRef,
     xrStore,
-    onCameraChange
+    onCameraChange,
+    onRotateStart,
+    editMode,
+    gizmoMode,
+    setEditMode,
+    setGizmoMode,
+    onTransformCommit
 }) {
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
+    const isFixedCamera = previewMode === 'fixed-camera'
     const showCodeView = previewMode === 'code'
-    const resolvedCamera = resolveStudioPreviewCamera(document, cameraView, previewMode)
-    const previewDocument = buildPresentationPreviewDocument(presentationState.codeHtml || '')
+    const resolvedCamera = isFixedCamera
+        ? (presentationState.fixedCamera || resolveStudioPreviewCamera(document, cameraView))
+        : resolveStudioPreviewCamera(document, cameraView)
+    const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
+    const rawHtml = hasFiles
+        ? bundleCodeFiles(presentationState.codeFiles)
+        : (presentationState.codeHtml || '')
+    const previewDocument = buildPresentationPreviewDocument(rawHtml)
 
     if (showCodeView) {
-        if (!presentationState.codeHtml) {
+        const isUrlSource = presentationState.codeSourceType === 'url'
+        const codeUrl = (presentationState.codeUrl || '').trim()
+
+        if (isUrlSource) {
+            if (!codeUrl) {
+                return (
+                    <div style={overlayCardStyle}>
+                        <div style={overlayInnerStyle}>
+                            <strong>No URL set.</strong> Add a public link in the Present panel.
+                        </div>
+                    </div>
+                )
+            }
+            return (
+                <iframe
+                    title={document.projectMeta?.title || document.projectMeta?.id || 'Studio URL preview'}
+                    src={codeUrl}
+                    loading="lazy"
+                    sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    style={{
+                        border: 0,
+                        width: '100%',
+                        height: '100%',
+                        display: 'block',
+                        background: '#05070a'
+                    }}
+                />
+            )
+        }
+
+        if (!rawHtml) {
             return (
                 <div style={overlayCardStyle}>
                     <div style={overlayInnerStyle}>
-                        <strong>Code preview is empty.</strong>
+                        <strong>Code preview is empty.</strong> Add files or pick a starter in the Present panel.
                     </div>
                 </div>
             )
@@ -83,8 +125,14 @@ export default function StudioPresentationSurface({
             cameraView={resolvedCamera}
             controlsRef={controlsRef}
             xrStore={xrStore}
-            onCameraChange={previewMode === 'fixed-camera' ? undefined : onCameraChange}
-            enableNavigation={previewMode !== 'fixed-camera'}
+            onCameraChange={onCameraChange}
+            onRotateStart={onRotateStart}
+            editMode={editMode}
+            gizmoMode={gizmoMode}
+            setEditMode={setEditMode}
+            setGizmoMode={setGizmoMode}
+            onTransformCommit={onTransformCommit}
+            enableNavigation={isFixedCamera ? false : undefined}
         />
     )
 }

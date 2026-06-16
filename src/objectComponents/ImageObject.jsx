@@ -49,7 +49,7 @@ export default function ImageObject({ assetRef, data, opacity = 1, linkActive })
             undefined,
             (error) => {
                 if (!isCancelled) {
-                    console.warn('Failed to load image texture', resolvedSrc, error)
+                    // ignore
                 }
             }
         )

@@ -250,7 +250,7 @@ export function useLiveSync({
                             continue
                         }
                     } else {
-                        console.warn('Unable to sync live scene ops', error)
+                        console.warn('[sync] Op flush failed:', error?.message)
                     }
                     break
                 }
@@ -385,7 +385,7 @@ export function useLiveSync({
                     setSceneVersionValue(latestVersion)
                 }
             } catch (error) {
-                console.warn('Failed to catch up live scene ops', error)
+                console.warn('[sync] Catch-up fetch failed:', error?.message)
             }
         }
 

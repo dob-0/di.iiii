@@ -16,6 +16,7 @@ import AddIcon from '@mui/icons-material/Add'
 import UploadFileIcon from '@mui/icons-material/UploadFile'
 import HistoryIcon from '@mui/icons-material/History'
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward'
+import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildPreferencesPath } from '../../utils/spaceRouting.js'
 import { buildBetaHubPath } from '../../beta/utils/betaRouting.js'
@@ -29,7 +30,7 @@ import {
     uploadProjectAsset
 } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
-import { buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { buildStudioProjectPath, buildStudioSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
 
 const detectEntityTypeFromMime = (mimeType = '') => {
     if (mimeType.startsWith('image/')) return 'image'
@@ -57,6 +58,25 @@ const formatProjectSourceLabel = (source = '') => {
             return source
     }
 }
+
+const studioWorkflowSteps = [
+    {
+        title: 'Create or open a space',
+        body: 'Use the spaces panel or admin route to create the server-backed space shell.'
+    },
+    {
+        title: 'Develop in Studio',
+        body: 'Create projects here, import legacy scenes, and keep the main working copy in this lane.'
+    },
+    {
+        title: 'Promote when ready',
+        body: 'Set the live project for the space and send viewers to the public route.'
+    },
+    {
+        title: 'Use Beta for experiments',
+        body: 'Hand off node-first or research changes to Beta before they become the stable path.'
+    }
+]
 
 export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [projects, setProjects] = useState([])
@@ -128,17 +148,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     id: response.project.id,
                     spaceId,
                     source: 'legacy-import-studio'
-                },
-                assets: document.assets.map((asset) => assetMap.get(asset.id) || asset),
-                entities: document.entities.map((entity) => {
-                    const uploaded = assetMap.get(entity.components?.media?.assetId)
-                    if (!uploaded) return entity
-                    const nextType = detectEntityTypeFromMime(uploaded.mimeType)
-                    return {
-                        ...entity,
-                        type: nextType || entity.type
-                    }
-                })
+                }
             }
             await updateProjectDocument(response.project.id, nextDocument)
             setImportWarnings(warnings)
@@ -176,6 +186,17 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         <Box className="studio-shell-root studio-hub-root">
             <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 } }}>
                 <Stack spacing={3}>
+                    <Box>
+                        <Button
+                            size="small"
+                            variant="text"
+                            color="inherit"
+                            sx={{ opacity: 0.6, '&:hover': { opacity: 1 } }}
+                            onClick={() => navigateToStudioPath(buildStudioSpacesPath())}
+                        >
+                            ← All Spaces
+                        </Button>
+                    </Box>
                     <Stack
                         direction={{ xs: 'column', lg: 'row' }}
                         spacing={3}
@@ -246,27 +267,58 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                 <Button
                                     variant="text"
                                     color="inherit"
-                                    onClick={() => window.location.assign(buildAppSpacePath(spaceId))}
+                                    onClick={() => appNavigate(buildAppSpacePath(spaceId))}
                                 >
                                     Open public route
                                 </Button>
                                 <Button
                                     variant="text"
                                     color="inherit"
-                                    onClick={() => window.location.assign(buildBetaHubPath(spaceId))}
+                                    onClick={() => appNavigate(buildBetaHubPath(spaceId))}
                                 >
                                     Open beta experimental
                                 </Button>
                                 <Button
                                     variant="text"
                                     color="inherit"
-                                    onClick={() => window.location.assign(buildPreferencesPath(spaceId))}
+                                    onClick={() => appNavigate(buildPreferencesPath(spaceId))}
                                 >
                                     Open admin
                                 </Button>
                             </Stack>
                         </Stack>
                     </Stack>
+
+                    <Card variant="outlined" sx={{ bgcolor: 'rgba(255,255,255,0.03)' }}>
+                        <CardContent>
+                            <Stack spacing={2}>
+                                <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" flexWrap="wrap" useFlexGap>
+                                    <Typography variant="overline" color="text.secondary">Workflow</Typography>
+                                    <Chip label="Space → Studio → Public" size="small" variant="outlined" />
+                                </Stack>
+                                <Grid container spacing={1.5}>
+                                    {studioWorkflowSteps.map((step, index) => (
+                                        <Grid key={step.title} size={{ xs: 12, md: 6, xl: 3 }}>
+                                            <Stack
+                                                spacing={1}
+                                                sx={{
+                                                    height: '100%',
+                                                    p: 1.5,
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                    borderRadius: 2,
+                                                    bgcolor: index === 0 ? 'rgba(255,255,255,0.02)' : 'transparent'
+                                                }}
+                                            >
+                                                <Typography variant="subtitle2" fontWeight={700}>{step.title}</Typography>
+                                                <Typography variant="body2" color="text.secondary">{step.body}</Typography>
+                                            </Stack>
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            </Stack>
+                        </CardContent>
+                    </Card>
 
                     {status ? <Alert severity={status.includes('Unable') ? 'error' : 'info'}>{status}</Alert> : null}
                     {importWarnings.length ? (
@@ -302,6 +354,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                             </Button>
                                             <Button
                                                 size="small"
+                                                variant="outlined"
                                                 color="error"
                                                 onClick={() => handleDeleteProject(project)}
                                             >

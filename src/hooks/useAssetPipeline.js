@@ -66,8 +66,8 @@ export function useAssetPipeline({
             if (blob && blob.size < file.size) {
                 return new File([blob], file.name.replace(/\.[^/.]+$/, '.webp'), { type: blob.type })
             }
-        } catch (error) {
-            console.warn('Failed to optimize image, falling back to original.', error)
+        } catch {
+            // ignore
         }
         return file
     }, [])
@@ -174,17 +174,15 @@ export function useAssetPipeline({
             const extension = kind === 'video' ? '.webm' : '.webm'
             const newName = file.name.replace(/\.[^/.]+$/, extension)
             return new File([optimizedBlob], newName, { type: optimizedBlob.type })
-        } catch (error) {
+        } catch {
             if (kind === 'audio') {
                 // Some audio blobs can't be decoded/captured; keep original silently
-                console.info('Skipping audio optimization; using original file.', error?.message || error)
                 if (stopTimeout) {
                     clearTimeout(stopTimeout)
                 }
                 URL.revokeObjectURL(objectUrl)
                 return file
             }
-            console.warn(`Failed to optimize ${kind} file`, error)
             if (stopTimeout) {
                 clearTimeout(stopTimeout)
             }
@@ -258,8 +256,8 @@ export function useAssetPipeline({
                 }
                 return obj
             }))
-        } catch (error) {
-            console.warn('Media optimization failed', error)
+        } catch {
+            // ignore — media optimization failure falls back to original asset
         } finally {
             endMediaOptimizationFeedback()
         }
@@ -305,8 +303,7 @@ export function useAssetPipeline({
             const optimizedSource = new File([blob], filename, { type: originalMeta.mimeType || (targetObject.type === 'video' ? 'video/mp4' : 'audio/mpeg') })
             await startMediaOptimization(originalMeta, optimizedSource, targetObject.type)
             return true
-        } catch (error) {
-            console.warn('Manual media optimization failed', error)
+        } catch {
             alert('Failed to optimize this media. Please try again or re-upload the original file.')
             return false
         } finally {
@@ -367,8 +364,7 @@ export function useAssetPipeline({
             }
             upsertRemoteAssetEntry?.(entry, serverAssetBaseUrl)
             return entry
-        } catch (error) {
-            console.warn('Failed to upload asset to server', error)
+        } catch {
             return null
         } finally {
             if (trackPending) {
@@ -482,8 +478,8 @@ export function useAssetPipeline({
                         try {
                             const materialMeta = await saveAssetFromFile(materialEntry.file)
                             overridesPayload.materialsAssetRef = materialMeta
-                        } catch (error) {
-                            console.error(`Failed to store material file ${materialEntry.file.name}`, error)
+                        } catch {
+                            // ignore
                         }
                     }
                 }
@@ -492,7 +488,6 @@ export function useAssetPipeline({
             try {
                 await handleAddAssetObject(file, fileIntent.type, overridesPayload)
             } catch (error) {
-                console.error(`Failed to add file ${file.name}`, error)
                 unsupported.push(file.name)
                 failureDetails.push(error?.message ? `${file.name}: ${error.message}` : file.name)
             } finally {

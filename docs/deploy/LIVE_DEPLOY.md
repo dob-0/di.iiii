@@ -71,6 +71,12 @@ Current host truth:
 - use `npm run deploy:production` from your laptop
 - cPanel cron applies the published `cpanel-*` branches automatically
 
+Future SSH/VPS staging path:
+
+- [.github/workflows/deploy-staging-ssh.yml](../../.github/workflows/deploy-staging-ssh.yml)
+- [SSH_STAGING_DEPLOY.md](SSH_STAGING_DEPLOY.md)
+- disabled by default until `ENABLE_SSH_STAGING_DEPLOY=true` and staging SSH secrets are configured
+
 ## Auto Apply Via Cron
 
 If the host does not allow SSH but does allow cPanel `Terminal` and `Cron Jobs`, use:

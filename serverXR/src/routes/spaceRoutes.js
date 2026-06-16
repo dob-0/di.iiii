@@ -22,6 +22,7 @@ function registerSpaceRoutes(router, {
   normalizeIncomingOps,
   normalizeProjectId,
   normalizeSpaceId,
+  requireAdminWrite = (req, res, next) => next(),
   readJson,
   readOpsHistory,
   saveSpaceMeta,
@@ -67,7 +68,7 @@ function registerSpaceRoutes(router, {
     }
   })
 
-  router.post('/api/spaces', async (req, res, next) => {
+  router.post('/api/spaces', requireAdminWrite, async (req, res, next) => {
     try {
       const { label = '', slug, permanent = false, allowEdits } = req.body || {}
       const desired = slug || label || ''
@@ -101,7 +102,7 @@ function registerSpaceRoutes(router, {
     }
   })
 
-  router.patch('/api/spaces/:spaceId', async (req, res, next) => {
+  router.patch('/api/spaces/:spaceId', requireAdminWrite, async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
       if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
@@ -136,7 +137,7 @@ function registerSpaceRoutes(router, {
     }
   })
 
-  router.delete('/api/spaces/:spaceId', async (req, res, next) => {
+  router.delete('/api/spaces/:spaceId', requireAdminWrite, async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
       if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
@@ -314,7 +315,8 @@ function registerSpaceRoutes(router, {
         }
         assetId = requested
       } else {
-        assetId = crypto.randomUUID()
+        const buf = await fsp.readFile(req.file.path)
+        assetId = crypto.createHash('sha256').update(buf).digest('hex')
       }
       const finalPath = path.join(assetsDir, assetId)
       const metaPath = path.join(assetsDir, `${assetId}.json`)

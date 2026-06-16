@@ -1,3 +1,4 @@
+require('dotenv').config({ path: require('node:path').resolve(__dirname, '../.env.local') })
 require('dotenv').config()
 const express = require('express')
 const http = require('http')
@@ -6,6 +7,23 @@ const morgan = require('morgan')
 const multer = require('multer')
 const path = require('node:path')
 const crypto = require('node:crypto')
+const { initDb } = require('./db')
+const { migrateFromFilesystem } = require('./migrate')
+const {
+  formatAuthScopeLabel,
+  formatAuthRoleLabel,
+  hasRequiredAuthRole,
+  isAuthScopeAllowedForSpace,
+  normalizeAuthRole,
+  normalizeAuthScopeSpaces
+} = require('./authAccess')
+const {
+  createAuthSessionValue,
+  readCookie,
+  serializeAuthSessionCookie,
+  serializeExpiredAuthSessionCookie,
+  verifyAuthSessionValue
+} = require('./authSession')
 const { config, buildCorsOriginHandler } = require('./config')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { initializeSocket } = require('./socketHandlers')
@@ -13,6 +31,8 @@ const { loadReleaseInfo } = require('./releaseInfo')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
+const { registerSyncRoutes } = require('./routes/syncRoutes')
+const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { createSpaceStore } = require('./spaceStore')
 const { loadSharedModule } = require('./sharedRuntime')
 const {
@@ -44,6 +64,7 @@ const {
 const PUBLIC_DIR = config.directories.publicDir
 const SPACES_DIR = config.directories.spacesDir
 const UPLOADS_DIR = config.directories.uploadsDir
+const DB_PATH = config.directories.dbPath
 const RECENT_LIMIT = 25
 const DEFAULT_TTL_MS = config.defaultTtlMs
 const MAX_OP_HISTORY = 500
@@ -147,6 +168,8 @@ const upload = multer({
 
 async function initStorage() {
   await Promise.all([ensureDir(SPACES_DIR), ensureDir(UPLOADS_DIR)])
+  initDb(DB_PATH)
+  await migrateFromFilesystem(SPACES_DIR)
 }
 
 const app = express()
@@ -258,6 +281,26 @@ app.use((req, res, next) => {
 const router = express.Router()
 router.use(express.static(PUBLIC_DIR))
 
+const buildAuthState = ({
+  authenticated = false,
+  type = null,
+  role = null,
+  subject = null,
+  label = null,
+  spaces = undefined,
+  session = null,
+  reason = null
+} = {}) => ({
+  authenticated: Boolean(authenticated),
+  type: type || null,
+  role: normalizeAuthRole(role, null),
+  subject: subject || null,
+  label: label || null,
+  spaces: normalizeAuthScopeSpaces(spaces, null),
+  ...(session ? { session } : {}),
+  ...(reason ? { reason } : {})
+})
+
 const readAuthToken = (req) => {
   const header = req.get('authorization')
   if (header) {
@@ -272,17 +315,260 @@ const readAuthToken = (req) => {
   return null
 }
 
-const requireWriteAuth = (req, res, next) => {
-  if (!config.requireAuth) return next()
-  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next()
-  const token = readAuthToken(req)
-  if (token && token === config.apiToken) {
-    return next()
+const normalizeAuthToken = (value = '') => String(value || '').trim().replace(/^bearer\s+/i, '')
+
+const readAuthSession = (req) => {
+  const value = readCookie(req.get('cookie') || '', config.authSession.cookieName)
+  const result = verifyAuthSessionValue(value, { secret: config.auth.sessionSecret })
+  if (!result.valid) {
+    return buildAuthState({ authenticated: false, type: 'session', reason: result.reason })
   }
-  res.status(401).json({ error: 'Unauthorized' })
+  const role = normalizeAuthRole(result.session?.role, null)
+  if (!role) {
+    return buildAuthState({ authenticated: false, type: 'session', reason: 'legacy' })
+  }
+  return {
+    ...buildAuthState({
+      authenticated: true,
+      type: 'session',
+      role,
+      subject: result.session?.subject,
+      label: result.session?.label,
+      spaces: result.session?.spaces,
+      session: result.session
+    }),
+    session: result.session
+  }
 }
 
-router.use('/api', requireWriteAuth)
+const getAuthState = (req) => {
+  const sessionState = readAuthSession(req)
+  if (sessionState.authenticated) {
+    return sessionState
+  }
+  const token = normalizeAuthToken(readAuthToken(req))
+  const identity = config.auth.resolveIdentity(token)
+  if (identity) {
+    return buildAuthState({
+      authenticated: true,
+      type: 'token',
+      role: identity.role,
+      subject: identity.subject,
+      label: identity.label,
+      spaces: identity.spaces
+    })
+  }
+  return sessionState
+}
+
+const getPublicAuthState = (req) => {
+  if (!config.requireAuth) {
+    return buildAuthState({
+      authenticated: true,
+      type: 'disabled',
+      role: 'admin',
+      subject: 'auth-disabled',
+      label: 'Auth Disabled'
+    })
+  }
+  return getAuthState(req)
+}
+
+const setAuthSessionCookie = (res, value) => {
+  res.setHeader('Set-Cookie', serializeAuthSessionCookie(value, {
+    name: config.authSession.cookieName,
+    path: config.authSession.cookiePath,
+    secure: config.authSession.cookieSecure,
+    ttlMs: config.authSession.ttlMs
+  }))
+}
+
+const clearAuthSessionCookie = (res) => {
+  res.setHeader('Set-Cookie', serializeExpiredAuthSessionCookie({
+    name: config.authSession.cookieName,
+    path: config.authSession.cookiePath,
+    secure: config.authSession.cookieSecure
+  }))
+}
+
+const GUEST_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30
+
+const issueGuestSession = (res) => {
+  const guestId = `guest:${crypto.randomUUID()}`
+  const result = createAuthSessionValue({
+    secret: config.auth.sessionSecret,
+    ttlMs: GUEST_SESSION_TTL_MS,
+    session: {
+      subject: guestId,
+      label: 'Guest',
+      role: 'editor',
+      spaces: GUEST_SPACES
+    }
+  })
+  setAuthSessionCookie(res, result.value)
+  return { guestId, expiresAt: result.expiresAt }
+}
+
+registerAuthRoutes(router, {
+  config,
+  createAuthSessionValue,
+  setAuthSessionCookie
+})
+
+router.get('/api/auth/session', (req, res) => {
+  let state = req.authState || getPublicAuthState(req)
+
+  if (!state.authenticated && config.requireAuth && config.auth.sessionSecret) {
+    const { guestId, expiresAt } = issueGuestSession(res)
+    state = buildAuthState({
+      authenticated: true,
+      type: 'guest',
+      role: 'editor',
+      subject: guestId,
+      label: 'Guest',
+      spaces: GUEST_SPACES,
+      session: { expiresAt }
+    })
+  }
+
+  res.json({
+    requireAuth: config.requireAuth,
+    authenticated: Boolean(state.authenticated),
+    type: state.type || null,
+    role: state.role || null,
+    subject: state.subject || null,
+    label: state.label || null,
+    spaces: state.spaces,
+    expiresAt: state.session?.expiresAt || null
+  })
+})
+
+router.post('/api/auth/session', (req, res) => {
+  if (!config.requireAuth) {
+    clearAuthSessionCookie(res)
+    res.json({
+      requireAuth: false,
+      authenticated: true,
+      type: 'disabled',
+      expiresAt: null
+    })
+    return
+  }
+
+  const token = normalizeAuthToken(req.body?.token)
+  const identity = config.auth.resolveIdentity(token)
+  if (!identity) {
+    clearAuthSessionCookie(res)
+    res.status(401).json({ error: 'Unauthorized' })
+    return
+  }
+
+  const session = createAuthSessionValue({
+    secret: config.auth.sessionSecret,
+    ttlMs: config.authSession.ttlMs,
+    session: {
+      subject: identity.subject,
+      label: identity.label,
+      role: identity.role,
+      spaces: identity.spaces
+    }
+  })
+  setAuthSessionCookie(res, session.value)
+  res.json({
+    requireAuth: true,
+    authenticated: true,
+    type: 'session',
+    role: identity.role,
+    subject: identity.subject,
+    label: identity.label,
+    spaces: identity.spaces,
+    expiresAt: session.expiresAt
+  })
+})
+
+router.delete('/api/auth/session', (req, res) => {
+  clearAuthSessionCookie(res)
+  res.status(204).end()
+})
+
+router.use((req, res, next) => {
+  req.authState = getPublicAuthState(req)
+  next()
+})
+
+const sendRoleError = (res, status, requiredRole, currentRole = null, error = null) => {
+  res.status(status).json({
+    error: error || (status === 401 ? 'Unauthorized' : `${formatAuthRoleLabel(requiredRole)} role required.`),
+    requiredRole,
+    ...(currentRole ? { currentRole } : {})
+  })
+}
+
+const sendScopeError = (res, status, {
+  requiredSpaceId = null,
+  allowedSpaces = null,
+  error = null
+} = {}) => {
+  res.status(status).json({
+    error: error || 'Space access denied.',
+    ...(requiredSpaceId ? { requiredSpaceId } : {}),
+    allowedSpaces,
+    allowedSpaceLabel: formatAuthScopeLabel(allowedSpaces)
+  })
+}
+
+const requireWriteRole = (requiredRole = 'editor') => (req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next()
+  if (!config.requireAuth) return next()
+  const resolvedRole = req.requiredWriteRole || requiredRole
+  const state = req.authState || getPublicAuthState(req)
+  if (!state.authenticated) {
+    return sendRoleError(res, 401, resolvedRole, state.role)
+  }
+  if (hasRequiredAuthRole(state.role, resolvedRole)) {
+    const requiredSpaceId = req.requiredSpaceId || null
+    if (!isAuthScopeAllowedForSpace(state.spaces, requiredSpaceId)) {
+      return sendScopeError(res, 403, {
+        requiredSpaceId,
+        allowedSpaces: state.spaces
+      })
+    }
+    return next()
+  }
+  return sendRoleError(res, 403, resolvedRole, state.role)
+}
+
+const requireAdminWrite = requireWriteRole('admin')
+
+router.use('/api/spaces', (req, res, next) => {
+  if (req.method === 'POST' && (req.path === '/' || req.path === '')) {
+    req.requiredWriteRole = 'admin'
+  }
+  next()
+})
+
+router.use('/api/spaces/:spaceId', (req, res, next) => {
+  req.requiredSpaceId = normalizeSpaceId(req.params.spaceId) || null
+  if (['PATCH', 'DELETE'].includes(req.method) && (req.path === '/' || req.path === '')) {
+    req.requiredWriteRole = 'admin'
+  }
+  next()
+})
+
+router.use('/api/projects/:projectId', async (req, res, next) => {
+  try {
+    const project = await resolveProjectContext(req.params.projectId)
+    req.requiredSpaceId = project?.spaceId || null
+    if (req.method === 'DELETE' && (req.path === '/' || req.path === '')) {
+      req.requiredWriteRole = 'admin'
+    }
+    next()
+  } catch (error) {
+    next(error)
+  }
+})
+
+router.use('/api', requireWriteRole('editor'))
 
 const resolveProjectContext = async (projectId) => {
   const normalized = normalizeProjectId(projectId)
@@ -318,6 +604,7 @@ registerSpaceRoutes(router, {
   normalizeIncomingOps,
   normalizeProjectId,
   normalizeSpaceId,
+  requireAdminWrite,
   onDeleteSpace: async (spaceId) => removeProjectIndexEntriesForSpace(SPACES_DIR, spaceId),
   readJson,
   readOpsHistory,
@@ -359,6 +646,14 @@ registerProjectRoutes(router, {
   upsertProjectMeta,
   writeJson,
   writeProjectDocument
+})
+
+registerSyncRoutes(router, {
+  config,
+  getSpacePaths,
+  readJson,
+  writeJson,
+  upsertSpaceMeta,
 })
 
 const mountTargets = new Set([config.mountPath])
@@ -404,9 +699,8 @@ initStorage()
         const meta = await loadSpaceMeta(normalized)
         return meta?.allowEdits !== false
       },
-      projectExists: async (projectId) => {
-        const resolved = await findProjectById(SPACES_DIR, projectId)
-        return Boolean(resolved)
+      resolveProjectContext: async (projectId) => {
+        return findProjectById(SPACES_DIR, projectId)
       }
     })
     console.log('[Socket.IO] Initialized for real-time collaboration')

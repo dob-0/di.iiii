@@ -1,0 +1,20 @@
+# Production override — pull pre-built images instead of building locally.
+#
+# Usage on any server:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# Build and push images (run locally or in CI):
+#   docker build -t ghcr.io/${REGISTRY_USER}/dii-server:latest -f serverXR/Dockerfile .
+#   docker build -t ghcr.io/${REGISTRY_USER}/dii-client:latest .
+#   docker push ghcr.io/${REGISTRY_USER}/dii-server:latest
+#   docker push ghcr.io/${REGISTRY_USER}/dii-client:latest
+
+services:
+  server:
+    build: !reset null
+    image: ghcr.io/${REGISTRY_USER:-youruser}/dii-server:${IMAGE_TAG:-latest}
+
+  client:
+    build: !reset null
+    image: ghcr.io/${REGISTRY_USER:-youruser}/dii-client:${IMAGE_TAG:-latest}

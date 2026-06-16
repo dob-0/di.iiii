@@ -11,13 +11,13 @@ describe('windowLayout', () => {
             topbarRect: {
                 bottom: 132
             }
-        })).toBe(168)
+        })).toBe(140)
 
         expect(getWorkspaceTopInset({
             topbarRect: {
                 bottom: 210
             }
-        })).toBe(226)
+        })).toBe(218)
     })
 
     it('clamps windows below the workspace chrome and inside the viewport', () => {
@@ -33,6 +33,44 @@ describe('windowLayout', () => {
         })).toEqual(expect.objectContaining({
             x: 12,
             y: 180,
+            width: 360,
+            height: 240
+        }))
+    })
+
+    it('allows view windows to overflow left while still clamping top and right edges', () => {
+        expect(clampWindowFrame({
+            x: -120,
+            y: 20,
+            width: 360,
+            height: 240
+        }, {
+            minTop: 180,
+            allowOverflowLeft: true,
+            viewportWidth: 1024,
+            viewportHeight: 768
+        })).toEqual(expect.objectContaining({
+            x: -120,
+            y: 180,
+            width: 360,
+            height: 240
+        }))
+    })
+
+    it('allows view windows to overflow above the top inset while still clamping the right and bottom edges', () => {
+        expect(clampWindowFrame({
+            x: 24,
+            y: -140,
+            width: 360,
+            height: 240
+        }, {
+            minTop: 180,
+            allowOverflowTop: true,
+            viewportWidth: 1024,
+            viewportHeight: 768
+        })).toEqual(expect.objectContaining({
+            x: 24,
+            y: -140,
             width: 360,
             height: 240
         }))

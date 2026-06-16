@@ -172,6 +172,7 @@ function renderPreferencesPage() {
     )
 }
 
+
 describe('PreferencesPage', () => {
     it('renders runtime build metadata and updates the node inspector when a node is selected', async () => {
         vi.spyOn(globalThis, 'fetch').mockResolvedValue({
@@ -196,7 +197,7 @@ describe('PreferencesPage', () => {
         expect(screen.getByText('Scene Radar')).toBeInTheDocument()
         expect(await screen.findByText('Build / Release')).toBeInTheDocument()
         expect(screen.getByText('0.2.0')).toBeInTheDocument()
-        expect(screen.getByText('cpanel-20260415-150000')).toBeInTheDocument()
+        expect(await screen.findByText('cpanel-20260415-150000')).toBeInTheDocument()
         expect(screen.getByText('abcdef1234567890')).toBeInTheDocument()
 
         const runtimeNode = screen.getAllByRole('button').find((button) => (
@@ -225,4 +226,5 @@ describe('PreferencesPage', () => {
         expect(within(snapshotSection).getByText('/main/studio')).toBeInTheDocument()
         expect(within(snapshotSection).getByText('/main/beta')).toBeInTheDocument()
     })
+
 })

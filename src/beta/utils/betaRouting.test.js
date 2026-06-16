@@ -3,8 +3,10 @@ import {
     DEFAULT_BETA_SPACE_ID,
     BETA_PAGE_HUB,
     BETA_PAGE_PROJECT,
+    BETA_PAGE_PROJECTS,
     buildBetaHubPath,
     buildBetaProjectPath,
+    buildBetaProjectsPath,
     getBetaLocationState
 } from './betaRouting.js'
 
@@ -14,6 +16,8 @@ describe('betaRouting', () => {
         expect(buildBetaHubPath('main')).toBe('/main/beta')
         expect(buildBetaProjectPath('demo-project')).toBe('/beta/projects/demo-project')
         expect(buildBetaProjectPath('demo-project', 'gallery')).toBe('/gallery/beta/projects/demo-project')
+        expect(buildBetaProjectsPath()).toBe('/beta/projects')
+        expect(buildBetaProjectsPath('gallery')).toBe('/gallery/beta/projects')
     })
 
     it('parses the compatibility beta routes as the default space beta', () => {
@@ -30,6 +34,13 @@ describe('betaRouting', () => {
             projectId: 'demo-project',
             spaceId: DEFAULT_BETA_SPACE_ID
         })
+
+        expect(getBetaLocationState({ pathname: '/beta/projects', search: '' })).toEqual({
+            isBeta: true,
+            page: BETA_PAGE_PROJECTS,
+            projectId: null,
+            spaceId: DEFAULT_BETA_SPACE_ID
+        })
     })
 
     it('parses space-scoped beta routes', () => {
@@ -44,6 +55,13 @@ describe('betaRouting', () => {
             isBeta: true,
             page: BETA_PAGE_PROJECT,
             projectId: 'demo-project',
+            spaceId: 'gallery'
+        })
+
+        expect(getBetaLocationState({ pathname: '/gallery/beta/projects', search: '' })).toEqual({
+            isBeta: true,
+            page: BETA_PAGE_PROJECTS,
+            projectId: null,
             spaceId: 'gallery'
         })
     })

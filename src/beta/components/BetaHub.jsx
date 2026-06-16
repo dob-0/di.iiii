@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildPreferencesPath } from '../../utils/spaceRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
@@ -11,8 +11,11 @@ import {
     uploadProjectAsset
 } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
+import { appNavigate } from '../../utils/appNavigate.js'
 import { buildStudioHubPath } from '../../studio/utils/studioRouting.js'
 import { buildBetaProjectPath, navigateToBetaPath } from '../utils/betaRouting.js'
+import { GUIDE_AUDIENCES } from '../utils/betaGuide.js'
+import SpaceSyncPanel from '../../components/SpaceSyncPanel.jsx'
 
 const detectEntityTypeFromMime = (mimeType = '') => {
     if (mimeType.startsWith('image/')) return 'image'
@@ -29,6 +32,13 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [status, setStatus] = useState('Loading beta projects...')
     const [isBusy, setIsBusy] = useState(false)
     const [importWarnings, setImportWarnings] = useState([])
+    const titleInputRef = useRef(null)
+    const workflowSteps = [
+        'Create or open the space from the admin surface or spaces panel.',
+        'Start a beta project or import a legacy scene for experimental work.',
+        'Keep the node-first iteration here while you test layout, routing, and sync.',
+        'Move stable work into Studio and publish it to the public space route.'
+    ]
 
     const loadProjects = useCallback(async () => {
         setStatus('Loading beta projects...')
@@ -91,21 +101,7 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     id: response.project.id,
                     spaceId,
                     source: 'beta-v2'
-                },
-                assets: document.assets.map((asset) => {
-                    const uploaded = assetMap.get(asset.id)
-                    return uploaded || asset
-                }),
-                entities: document.entities.map((entity) => {
-                    const type = detectEntityTypeFromMime(assetMap.get(entity.components?.media?.assetId)?.mimeType || '')
-                    if (!entity.components?.media?.assetId || !assetMap.get(entity.components.media.assetId)) {
-                        return entity
-                    }
-                    return {
-                        ...entity,
-                        type: type || entity.type
-                    }
-                })
+                }
             }
             await updateProjectDocument(response.project.id, nextDocument)
             setImportWarnings(warnings)
@@ -139,39 +135,103 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         }
     }
 
+    const focusCreateInput = () => {
+        titleInputRef.current?.focus?.()
+        titleInputRef.current?.select?.()
+    }
+
+    const handleAudienceAction = (audienceId) => {
+        if (audienceId === 'visitor') {
+            appNavigate(buildAppSpacePath(spaceId))
+            return
+        }
+        focusCreateInput()
+    }
+
     return (
         <main className="beta-hub">
-            <section className="beta-hub-hero">
-                <div className="beta-hub-actions" style={{ gap: '0.5rem', justifyContent: 'flex-start' }}>
-                    <span className="beta-chip">V2 Beta</span>
-                    <span className="beta-chip" style={{ background: 'rgba(255,255,255,0.08)' }}>Space {spaceId}</span>
-                </div>
-                <h1>Desktop Editor V2</h1>
-                <p>
-                    Asset-first, windowed, and document-driven. This is the experimental workspace for this space, while Studio remains the official main workspace.
-                </p>
-                <div className="beta-hub-actions">
-                    <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Project title" />
-                    <button type="button" onClick={handleCreate} disabled={isBusy}>Create New Project</button>
-                    <label className="beta-file-button">
-                        <input type="file" accept=".zip,.json,application/zip,application/json" onChange={handleImport} />
-                        Import V1 Local Scene
-                    </label>
-                    <button type="button" onClick={() => window.location.assign(buildAppSpacePath(spaceId))}>
-                        Open public route
-                    </button>
-                    <button type="button" onClick={() => window.location.assign(buildStudioHubPath(spaceId))}>
-                        Open Studio workspace
-                    </button>
-                    <button type="button" onClick={() => window.location.assign(buildPreferencesPath(spaceId))}>
-                        Open admin
-                    </button>
-                </div>
-            </section>
+            <div className="beta-hub-layout">
+                <header className="beta-hub-header">
+                    <div className="beta-hub-wordmark">
+                        <span className="beta-hub-di-sq" />
+                        <span className="beta-hub-di-sq" />
+                        <span className="beta-hub-di-sq" />
+                    </div>
+                    <h1 className="beta-hub-title">di.i beta</h1>
+                    <p className="beta-hub-tagline">space · {spaceId}</p>
+                </header>
 
-            <section className="beta-hub-grid">
-                <div className="beta-card">
-                    <h2>Recent Projects</h2>
+                <section className="beta-hub-onboarding" aria-label="Beta onboarding">
+                    <div className="beta-hub-onboarding-copy">
+                        <span className="beta-window-kicker">First Landing</span>
+                        <h2>Choose a path.</h2>
+                        <p>Look first, or build first.</p>
+                    </div>
+                    <div className="beta-hub-onboarding-grid">
+                        {GUIDE_AUDIENCES.map((audience) => (
+                            <section key={audience.id} className="beta-hub-onboarding-card">
+                                <div className="beta-hub-onboarding-mark" aria-hidden="true">
+                                    <span>{audience.glyph}</span>
+                                </div>
+                                <span className="beta-window-kicker">{audience.label}</span>
+                                <h3>{audience.title}</h3>
+                                <div className="beta-hub-onboarding-chip-row">
+                                    {audience.tags.map((tag) => (
+                                        <span key={tag} className="beta-hub-onboarding-chip">{tag}</span>
+                                    ))}
+                                </div>
+                                <ol className="beta-hub-onboarding-steps">
+                                    {audience.steps.map((step) => (
+                                        <li key={step}>{step}</li>
+                                    ))}
+                                </ol>
+                                <button type="button" onClick={() => handleAudienceAction(audience.id)}>
+                                    {audience.actionLabel}
+                                </button>
+                            </section>
+                        ))}
+                        <section className="beta-hub-onboarding-card">
+                            <div className="beta-hub-onboarding-mark" aria-hidden="true">
+                                <span>↔</span>
+                            </div>
+                            <span className="beta-window-kicker">Workflow</span>
+                            <h3>Space → Beta → Studio</h3>
+                            <div className="beta-hub-onboarding-chip-row">
+                                <span className="beta-hub-onboarding-chip">space</span>
+                                <span className="beta-hub-onboarding-chip">project</span>
+                                <span className="beta-hub-onboarding-chip">publish</span>
+                            </div>
+                            <ol className="beta-hub-onboarding-steps">
+                                {workflowSteps.map((step) => (
+                                    <li key={step}>{step}</li>
+                                ))}
+                            </ol>
+                            <button type="button" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>
+                                open studio
+                            </button>
+                        </section>
+                    </div>
+                </section>
+
+                <div className="beta-hub-create-row">
+                    <input
+                        ref={titleInputRef}
+                        className="beta-hub-title-input"
+                        value={title}
+                        onChange={(event) => setTitle(event.target.value)}
+                        placeholder="project title"
+                        onKeyDown={(e) => e.key === 'Enter' && !isBusy && handleCreate()}
+                    />
+                    <button type="button" className="beta-hub-create-btn" onClick={handleCreate} disabled={isBusy}>
+                        new
+                    </button>
+                    <label className="beta-hub-import-btn">
+                        <input type="file" accept=".zip,.json,application/zip,application/json" onChange={handleImport} />
+                        import
+                    </label>
+                </div>
+
+                <div className="beta-hub-projects">
                     {projects.length ? (
                         <ul className="beta-project-list">
                             {projects.map((project) => (
@@ -185,53 +245,32 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                         className="danger"
                                         onClick={() => handleDeleteProject(project)}
                                     >
-                                        Delete
+                                        ×
                                     </button>
                                 </li>
                             ))}
                         </ul>
                     ) : (
-                        <p>{status}</p>
+                        <p className="beta-hub-empty">{status}</p>
                     )}
                 </div>
-                <div className="beta-card">
-                    <h2>Role In The Platform</h2>
-                    <ul className="beta-inline-list">
-                        <li>Beta lane for alternative and experimental project workflow</li>
-                        <li>Useful for testing ideas without replacing the main Studio surface</li>
-                        <li>Kept alongside Studio instead of replacing it</li>
-                    </ul>
-                </div>
-                <div className="beta-card">
-                    <h2>What V2 Reuses</h2>
-                    <ul className="beta-inline-list">
-                        <li>Server auth/edit lock and CORS hardening</li>
-                        <li>Asset upload and fetch transport</li>
-                        <li>Three/R3F graphics stack</li>
-                        <li>Socket presence + cursor transport</li>
-                    </ul>
-                </div>
-                <div className="beta-card">
-                    <h2>What V2 Replaces</h2>
-                    <ul className="beta-inline-list">
-                        <li>Legacy objects[] scene model</li>
-                        <li>Old panel shell split vs float duplication</li>
-                        <li>Main editor orchestration in App.jsx</li>
-                        <li>Legacy render composition</li>
-                    </ul>
-                </div>
-            </section>
 
-            {importWarnings.length ? (
-                <section className="beta-card beta-import-warnings">
-                    <h2>Import Warnings</h2>
-                    <ul className="beta-inline-list">
+                <SpaceSyncPanel spaceId={spaceId} />
+
+                <footer className="beta-hub-footer">
+                    <button type="button" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>studio</button>
+                    <button type="button" onClick={() => appNavigate(buildAppSpacePath(spaceId))}>public</button>
+                    <button type="button" onClick={() => appNavigate(buildPreferencesPath(spaceId))}>admin</button>
+                </footer>
+
+                {importWarnings.length ? (
+                    <div className="beta-hub-warnings">
                         {importWarnings.map((warning) => (
-                            <li key={warning}>{warning}</li>
+                            <p key={warning}>{warning}</p>
                         ))}
-                    </ul>
-                </section>
-            ) : null}
+                    </div>
+                ) : null}
+            </div>
         </main>
     )
 }

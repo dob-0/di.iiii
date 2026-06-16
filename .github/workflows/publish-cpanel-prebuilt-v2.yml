@@ -3,22 +3,20 @@ name: Publish cPanel Release (Canonical)
 on:
   push:
     branches:
-      - staging
       - main
   workflow_dispatch:
     inputs:
       source_ref:
         description: Source branch or ref to build from
         required: true
-        default: staging
+        default: main
       deploy_env:
         description: Target prebuilt environment branch
         required: true
         type: choice
         options:
-          - staging
           - production
-        default: staging
+        default: production
 
 permissions:
   contents: write
@@ -26,11 +24,11 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_env || (github.ref_name == 'staging' && 'staging' || 'production') }}
+    environment: production
     env:
       SOURCE_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.source_ref || github.ref_name }}
-      DEPLOY_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.deploy_env || (github.ref_name == 'staging' && 'staging' || 'production') }}
-      TARGET_BRANCH: ${{ github.event_name == 'workflow_dispatch' && (inputs.deploy_env == 'staging' && 'cpanel-staging' || 'cpanel-production') || (github.ref_name == 'staging' && 'cpanel-staging' || 'cpanel-production') }}
+      DEPLOY_ENV: production
+      TARGET_BRANCH: cpanel-production
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -46,6 +44,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Validate cPanel backend compatibility
+        run: node scripts/check-cpanel-compat.mjs --deploy-env "${DEPLOY_ENV}"
 
       - name: Install server dependencies
         run: |
@@ -108,6 +109,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No cPanel release changes to publish."
           else
-            git commit -m "Publish ${DEPLOY_ENV} cPanel prebuilt from ${SOURCE_REF}"
+            git commit -m "Publish production cPanel prebuilt from ${SOURCE_REF}"
             git push origin "HEAD:${TARGET_BRANCH}"
           fi

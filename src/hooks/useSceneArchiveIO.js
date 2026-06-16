@@ -79,8 +79,7 @@ export function useSceneArchiveIO({
                 getAssetSourceUrl
             })
             downloadBlob(archiveBlob, buildProjectPackageName())
-        } catch (error) {
-            console.error('Failed to create download file:', error)
+        } catch {
             alert('Error: Could not create project package.')
         }
     }, [
@@ -233,7 +232,6 @@ export function useSceneArchiveIO({
             try {
                 await handleArchiveSceneLoad(e.target.result)
             } catch (error) {
-                console.error('Failed to load project package:', error)
                 alert(`Error: Could not load project package. ${error.message || 'The file might be corrupt or not valid.'}`)
                 return
             }

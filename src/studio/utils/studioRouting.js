@@ -1,5 +1,6 @@
 const STUDIO_BASE_PATH = ((import.meta.env.BASE_URL) || '/').replace(/\/+$/, '') || '/'
 
+export const STUDIO_PAGE_SPACES = 'spaces'
 export const STUDIO_PAGE_HUB = 'hub'
 export const STUDIO_PAGE_PROJECT = 'project'
 export const STUDIO_RESERVED_SEGMENT = 'studio'
@@ -16,10 +17,15 @@ const stripBasePath = (pathname = '/') => {
     return pathname
 }
 
+export const buildStudioSpacesPath = () => {
+    const prefix = getBasePrefix()
+    return `${prefix}/${STUDIO_RESERVED_SEGMENT}`.replace(/\/{2,}/g, '/')
+}
+
 export const buildStudioHubPath = (spaceId = null) => {
     const prefix = getBasePrefix()
     if (!spaceId) {
-        return `${prefix}/${STUDIO_RESERVED_SEGMENT}`.replace(/\/{2,}/g, '/')
+        return `${prefix}/${spaceId || DEFAULT_STUDIO_SPACE_ID}/${STUDIO_RESERVED_SEGMENT}`.replace(/\/{2,}/g, '/')
     }
     return `${prefix}/${spaceId}/${STUDIO_RESERVED_SEGMENT}`.replace(/\/{2,}/g, '/')
 }
@@ -77,6 +83,15 @@ export const getStudioLocationState = (
         }
     }
 
+    if (segments.length === 1) {
+        return {
+            isStudio: true,
+            page: STUDIO_PAGE_SPACES,
+            projectId: null,
+            spaceId: null
+        }
+    }
+
     return {
         isStudio: true,
         page: STUDIO_PAGE_HUB,
@@ -87,9 +102,4 @@ export const getStudioLocationState = (
 
 export const isStudioLocation = (locationState = null) => Boolean(locationState?.isStudio)
 
-export const navigateToStudioPath = (path, { replace = false } = {}) => {
-    if (typeof window === 'undefined') return
-    const method = replace ? 'replaceState' : 'pushState'
-    window.history[method]({}, '', path)
-    window.dispatchEvent(new PopStateEvent('popstate'))
-}
+export { appNavigate as navigateToStudioPath } from '../../utils/appNavigate.js'

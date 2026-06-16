@@ -98,8 +98,8 @@ export function useUiState({
             const next = prev === 'floating' ? 'split' : 'floating'
             try {
                 window.localStorage.setItem(LAYOUT_MODE_STORAGE_KEY, next)
-            } catch (error) {
-                console.warn('Could not persist layout mode', error)
+            } catch {
+                // ignore
             }
             return next
         })
@@ -112,8 +112,8 @@ export function useUiState({
             const next = sides[(currentIndex + 1) % sides.length]
             try {
                 window.localStorage.setItem(LAYOUT_SIDE_STORAGE_KEY, next)
-            } catch (error) {
-                console.warn('Could not persist layout side', error)
+            } catch {
+                // ignore
             }
             return next
         })
@@ -161,8 +161,8 @@ export function useUiState({
         try {
             const stored = window.localStorage.getItem(selectionLockKey)
             setIsSelectionLocked(stored === 'true')
-        } catch (error) {
-            console.warn('Could not read selection lock preference', error)
+        } catch {
+            // ignore
         }
     }, [selectionLockKey])
 
@@ -170,8 +170,8 @@ export function useUiState({
         if (typeof window === 'undefined') return
         try {
             window.localStorage.setItem(selectionLockKey, isSelectionLocked ? 'true' : 'false')
-        } catch (error) {
-            console.warn('Could not persist selection lock preference', error)
+        } catch {
+            // ignore
         }
     }, [isSelectionLocked, selectionLockKey])
 
@@ -181,8 +181,8 @@ export function useUiState({
             const next = !prev
             try {
                 window.localStorage.setItem(UI_DEFAULT_STORAGE_KEY, next ? 'true' : 'false')
-            } catch (error) {
-                console.warn('Unable to persist UI default visibility', error)
+            } catch {
+                // ignore
             }
             setIsUiVisible(next)
             return next
@@ -207,8 +207,8 @@ export function useUiState({
             const nextMode = resolved === 'edit' ? 'edit' : 'navigate'
             try {
                 window.localStorage.setItem(interactionModeStorageKey, nextMode)
-            } catch (error) {
-                console.warn('Could not persist interaction mode', error)
+            } catch {
+                // ignore
             }
             if (nextMode === 'edit') {
                 setIsGizmoVisible(true)
@@ -227,8 +227,8 @@ export function useUiState({
         if (typeof window === 'undefined') return
         try {
             window.localStorage.setItem(uiVisibleStorageKey, isUiVisible ? 'true' : 'false')
-        } catch (error) {
-            console.warn('Could not persist UI visibility preference', error)
+        } catch {
+            // ignore
         }
     }, [isUiVisible, uiVisibleStorageKey])
 
