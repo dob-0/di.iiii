@@ -52,6 +52,7 @@ export default function BetaGraphSurface({
     nodes = [],
     edges = [],
     selectedNodeId = null,
+    emptyHint = 'Cursor is material. Double-click to place nodes.',
     onSelectNode,
     onEnterNode,
     onCreateEdge,
@@ -64,6 +65,7 @@ export default function BetaGraphSurface({
     const [pendingWire, setPendingWire] = useState(null)
     const [draggingNodeId, setDraggingNodeId] = useState(null)
     const [isPanning, setIsPanning] = useState(false)
+    const [isPanMoving, setIsPanMoving] = useState(false)
     const [hoveredWireId, setHoveredWireId] = useState(null)
     const dragOffsetRef = useRef({ x: 0, y: 0 })
     const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
@@ -184,10 +186,12 @@ export default function BetaGraphSurface({
 
     const handleSurfacePointerDown = (event) => {
         if (!shouldStartPan(event) || isDraggingWire) return
+        if (event.detail >= 2) return
         event.preventDefault()
         const vp = viewportRef.current
         panStartRef.current = { x: event.clientX, y: event.clientY, panX: vp.panX, panY: vp.panY }
         setIsPanning(true)
+        setIsPanMoving(false)
     }
     
     useEffect(() => {
@@ -231,6 +235,7 @@ export default function BetaGraphSurface({
     useEffect(() => {
         if (!isPanning) return undefined
         const move = (event) => {
+            setIsPanMoving(true)
             const dx = event.clientX - panStartRef.current.x
             const dy = event.clientY - panStartRef.current.y
             const nx = panStartRef.current.panX + dx
@@ -240,7 +245,10 @@ export default function BetaGraphSurface({
             setPanX(nx)
             setPanY(ny)
         }
-        const up = () => setIsPanning(false)
+        const up = () => {
+            setIsPanning(false)
+            setIsPanMoving(false)
+        }
         window.addEventListener('pointermove', move)
         window.addEventListener('pointerup', up)
         return () => {
@@ -324,7 +332,7 @@ export default function BetaGraphSurface({
             role="button"
             tabIndex={0}
             aria-label="Create a graph node"
-            style={{ top: `${topInset}px`, cursor: isPanning ? 'grabbing' : undefined }}
+            style={{ top: `${topInset}px`, cursor: (draggingNodeId || isPanMoving) ? 'grabbing' : undefined }}
             onDoubleClick={handleSectionDoubleClick}
             onKeyDown={handleSectionKeyDown}
             onPointerDown={handleSurfacePointerDown}
@@ -335,7 +343,7 @@ export default function BetaGraphSurface({
                 <button type="button" aria-label="Zoom in" onClick={() => updateZoom(zoom + GRAPH_ZOOM_STEP)}>+</button>
             </div>
             {nodes.length === 0 ? (
-                <div className="beta-empty-state" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', color: '#aaa', pointerEvents: 'none' }}>Cursor is material. Double-click to place nodes.</div>
+                <div className="beta-empty-state" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', color: '#aaa', pointerEvents: 'none' }}>{emptyHint}</div>
             ) : null}
             <div
                 className="beta-graph-stage"
@@ -421,7 +429,7 @@ export default function BetaGraphSurface({
                                             style={{ top: idx * PORT_ROW_HEIGHT }}
                                         >
                                             <span
-                                                className="beta-graph-port-dot"
+                                                className="beta-graph-port-dot beta-graph-port-dot--in"
                                                 onPointerUp={(event) => handleInputPointerUp(event, node, port)}
                                                 style={{ background: getPortType(port.type).color, left: -PORT_DOT_RADIUS }}
                                                 title={`${port.label || port.id} (${port.type})`}
@@ -437,7 +445,7 @@ export default function BetaGraphSurface({
                                         >
                                             <span className="beta-graph-port-label">{port.label || port.id}</span>
                                             <span
-                                                className="beta-graph-port-dot"
+                                                className="beta-graph-port-dot beta-graph-port-dot--out"
                                                 onPointerDown={(event) => handleOutputPointerDown(event, node, port)}
                                                 style={{ background: getPortType(port.type).color, right: -PORT_DOT_RADIUS }}
                                                 title={`${port.label || port.id} (${port.type})`}

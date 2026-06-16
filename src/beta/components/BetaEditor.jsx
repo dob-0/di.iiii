@@ -815,7 +815,7 @@ export default function BetaEditor({
     }
 
     const workspaceTitle = isLocalWorkspace ? 'Blank White Workspace' : (document.projectMeta?.title || 'Beta Project')
-    const graphTopInset = hasNodeZero ? workspaceTop + (currentScopeId ? 32 : 0) : 0
+    const graphTopInset = hasNodeZero ? workspaceTop : 0
 
     return (
         <main className="beta-editor-shell">
@@ -851,6 +851,14 @@ export default function BetaEditor({
                                             </span>
                                         )
                                     })}
+                                </nav>
+                            ) : hasNodeZero ? (
+                                <nav className="beta-topbar-breadcrumb" aria-label="Node scope">
+                                    <button type="button" className="beta-topbar-crumb is-current">◈</button>
+                                    <span className="beta-topbar-crumb-group">
+                                        <span className="beta-topbar-crumb-sep">›</span>
+                                        <button type="button" className="beta-topbar-crumb" onClick={() => handleStartFromNodeZero()}>Node 0</button>
+                                    </span>
                                 </nav>
                             ) : (
                                 <span className="beta-topbar-location" aria-live="polite">{topbarLocationText}</span>
@@ -939,17 +947,12 @@ export default function BetaEditor({
             )}
 
             <section className={`beta-surface-shell${isWorldOverlay && !isWorldFullscreen ? ' is-world-overlay' : ''}${navStack.length > 1 ? ' is-inside-node' : ''}`}>
-                {currentScopeNode && (
-                    <div className="beta-scope-label">
-                        <button type="button" className="beta-scope-exit" onClick={() => handleNavigateToScope(navStack.length - 2)}>← Exit</button>
-                        <span className="beta-scope-name">{currentScopeNode.label}</span>
-                    </div>
-                )}
                 {/* Graph is the primary surface — always visible */}
                 <BetaGraphSurface
                     key={currentScopeId || 'root'}
                     topInset={graphTopInset}
                     nodes={graphCardNodes}
+                    emptyHint={hasNodeZero ? 'Double-click to place your first node.' : 'Cursor is material. Double-click to place Node 0.'}
                     edges={document.edges || []}
                     selectedNodeId={workspaceState.selectedNodeId}
                     onEnterNode={handleEnterNode}
@@ -973,6 +976,10 @@ export default function BetaEditor({
                     onDoubleClick={(placement) => {
                         if (!hasNodeZero) {
                             handleStartFromNodeZero(placement)
+                            return
+                        }
+                        if (currentScopeId === null) {
+                            handleStartFromNodeZero()
                             return
                         }
                         openPalette('graph', placement)

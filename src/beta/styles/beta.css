@@ -852,6 +852,8 @@
     background: var(--di-black);
     border-bottom: none;
     pointer-events: none;
+    cursor: default;
+    user-select: none;
 }
 
 .beta-topbar.is-seeded {
@@ -981,47 +983,6 @@
     box-shadow: inset 0 0 0 2px rgba(77, 249, 255, 0.08);
 }
 
-/* Scope label — "Inside: NodeName" bar at top of graph */
-.beta-scope-label {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 10;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0 16px;
-    height: 32px;
-    background: rgba(77, 249, 255, 0.04);
-    border-bottom: 1px solid rgba(77, 249, 255, 0.1);
-    pointer-events: auto;
-}
-
-.beta-scope-exit {
-    -webkit-appearance: none;
-    appearance: none;
-    border: none;
-    background: transparent;
-    color: rgba(244, 247, 251, 0.45);
-    font-size: 11px;
-    cursor: pointer;
-    padding: 3px 8px;
-    border-radius: 4px;
-    flex-shrink: 0;
-}
-
-.beta-scope-exit:hover {
-    background: rgba(77, 249, 255, 0.08);
-    color: var(--di-cyan);
-}
-
-.beta-scope-name {
-    font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
-    color: rgba(244, 247, 251, 0.5);
-    letter-spacing: 0.06em;
-}
 
 .beta-topbar-surfaces {
     display: flex;
@@ -1802,6 +1763,7 @@
     bottom: 0;
     background: #080c14;
     overflow: hidden;
+    cursor: grab;
 }
 
 .beta-view-canvas-stage {
@@ -2030,6 +1992,8 @@
     position: absolute;
     inset: 0;
     overflow: hidden;
+    cursor: crosshair;
+    user-select: none;
     background:
         linear-gradient(0deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
         linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
@@ -2100,6 +2064,10 @@
 
 .beta-graph-node-card:hover {
     border-color: rgba(77, 249, 255, 0.55);
+}
+
+.beta-graph-node-card:active {
+    cursor: grabbing;
 }
 
 .beta-graph-node-card.is-selected {
@@ -2187,8 +2155,10 @@
     border-radius: 0;
     border: 1.5px solid var(--di-black);
     pointer-events: auto;
-    cursor: crosshair;
 }
+
+.beta-graph-port-dot--out { cursor: crosshair; }
+.beta-graph-port-dot--in  { cursor: pointer; }
 
 .beta-graph-port-label {
     font-size: 11px;
