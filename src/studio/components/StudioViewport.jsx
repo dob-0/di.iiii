@@ -221,7 +221,12 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, enabled = true }
             ref={controlsRef}
             makeDefault
             enableDamping
-            dampingFactor={0.08}
+            dampingFactor={0.2}
+            rotateSpeed={0.85}
+            panSpeed={0.9}
+            zoomSpeed={0.9}
+            zoomToCursor
+            screenSpacePanning
             minDistance={0.35}
             maxDistance={250}
             target={cameraView?.target || [0, 0.75, 0]}
