@@ -11,19 +11,27 @@ export default function SpaceSyncPanel({ spaceId, className = '' }) {
     const [message, setMessage] = useState('')
     const [status, setStatus] = useState(null)
     const abortRef = useRef(null)
+    const statusAbortRef = useRef(null)
 
     const checkStatus = useCallback(async () => {
+        statusAbortRef.current?.abort()
+        const controller = new AbortController()
+        statusAbortRef.current = controller
         try {
-            const data = await apiFetch(`/api/sync/spaces/${spaceId}/status`)
+            const data = await apiFetch(`/api/sync/spaces/${spaceId}/status`, { signal: controller.signal })
             setStatus(data)
-        } catch {
+        } catch (error) {
+            if (error.name === 'AbortError') return
             setStatus(null)
         }
     }, [spaceId])
 
     useEffect(() => {
         checkStatus()
-        return () => abortRef.current?.abort()
+        return () => {
+            statusAbortRef.current?.abort()
+            abortRef.current?.abort()
+        }
     }, [checkStatus])
 
     const run = async (action) => {
