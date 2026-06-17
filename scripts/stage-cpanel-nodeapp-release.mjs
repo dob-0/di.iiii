@@ -265,6 +265,7 @@ await copyIfPresent(path.join(serverRoot, 'ecosystem.config.js'), path.join(rele
 await copyIfPresent(path.join(serverRoot, 'README.md'), path.join(releaseServerRoot, 'README.md'))
 await copyIfPresent(path.join(serverRoot, '.env.example'), path.join(releaseServerRoot, '.env.example'))
 await copyIfPresent(path.join(templateRoot, 'serverXR.env.production.example'), path.join(releaseServerRoot, '.env.production.example'))
+await copyIfPresent(path.join(templateRoot, 'serverXR.env.staging.example'), path.join(releaseServerRoot, '.env.staging.example'))
 
 await ensureDir(releaseSharedRoot)
 await copyDirectory(sharedRoot, releaseSharedRoot, (sourcePath) => sourcePath.endsWith('.cjs') || !path.extname(sourcePath))
@@ -281,14 +282,16 @@ const serializedReleaseManifest = `${JSON.stringify(releaseManifest, null, 2)}\n
 await writeFile(path.join(releaseRoot, 'release.json'), serializedReleaseManifest, 'utf8')
 await writeFile(path.join(releaseServerRoot, 'release.json'), serializedReleaseManifest, 'utf8')
 
+const isStaging = releaseManifest.deployEnv === 'staging'
+const serverEnvTemplateName = isStaging ? '.env.staging.example' : '.env.production.example'
 const frontendEnvExample = await readFile(path.join(templateRoot, 'frontend.env.production.example'), 'utf8')
-const serverEnvExample = await readFile(path.join(templateRoot, 'serverXR.env.production.example'), 'utf8')
+const serverEnvExample = await readFile(path.join(releaseServerRoot, serverEnvTemplateName), 'utf8')
 
 console.log('')
 console.log('[deploy:cpanel] Release staged successfully.')
 console.log(`[deploy:cpanel] Output: ${releaseRoot}`)
 console.log(`[deploy:cpanel] Frontend env template: ${path.join(releaseRoot, 'frontend.env.production.example')}`)
-console.log(`[deploy:cpanel] Server env template: ${path.join(releaseServerRoot, '.env.production.example')}`)
+console.log(`[deploy:cpanel] Server env template: ${path.join(releaseServerRoot, serverEnvTemplateName)}`)
 console.log(`[deploy:cpanel] Deploy env: ${releaseManifest.deployEnv}`)
 if (releaseManifest.sourceRef) {
     console.log(`[deploy:cpanel] Source ref: ${releaseManifest.sourceRef}`)
@@ -300,5 +303,5 @@ console.log('')
 console.log('[deploy:cpanel] frontend.env.production.example')
 console.log(frontendEnvExample.trim())
 console.log('')
-console.log('[deploy:cpanel] serverXR/.env.production.example')
+console.log(`[deploy:cpanel] serverXR/${serverEnvTemplateName}`)
 console.log(serverEnvExample.trim())

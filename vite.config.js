@@ -1,6 +1,5 @@
 import react from '@vitejs/plugin-react'
 import { transformWithEsbuild } from 'vite'
-import restart from 'vite-plugin-restart'
 import fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import path from 'node:path'
@@ -25,6 +24,27 @@ const readGitValue = (args) => {
 const APP_VERSION = String(APP_PACKAGE?.version || '').trim() || '0.0.0'
 const APP_GIT_BRANCH = readGitValue('branch --show-current') || readGitValue('rev-parse --abbrev-ref HEAD')
 const APP_GIT_COMMIT = readGitValue('rev-parse --short HEAD')
+
+// Restart the dev server when files in public/ change (vite doesn't watch publicDir by default).
+const restartOnPublicChangePlugin = () => {
+    const publicDir = path.resolve(ROOT_DIR, 'public')
+    let timer
+    return {
+        name: 'restart-on-public-change',
+        apply: 'serve',
+        configureServer(server) {
+            server.watcher.add(publicDir)
+            const handleChange = (file) => {
+                if (!file.startsWith(publicDir)) return
+                clearTimeout(timer)
+                timer = setTimeout(() => server.restart(), 500)
+            }
+            server.watcher.on('add', handleChange)
+            server.watcher.on('change', handleChange)
+            server.watcher.on('unlink', handleChange)
+        }
+    }
+}
 
 const stubXrEmulatorPlugin = () => ({
     name: 'stub-xr-emulator',
@@ -72,7 +92,7 @@ export default {
     [
         stubXrEmulatorPlugin(),
         // Restart server on static/public file change
-        restart({ restart: [ '../public/**', ] }),
+        restartOnPublicChangePlugin(),
 
         // React support
         react(),

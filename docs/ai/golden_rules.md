@@ -256,3 +256,21 @@ r3f-perf, @pmndrs/*, @iwer/*, iwer
 ```
 
 **Files:** `scripts/capture-rule.sh`, `scripts/golden-rules-check.sh`
+
+---
+
+### UI: one primary action, zero preamble, instant default path
+
+**Rule:** Every screen must have exactly one primary action visible without scrolling. Remove descriptions, panels, and secondary UI that delay reaching it. The default path must require zero configuration — create with auto-names, open with one click, defer options to the next screen.
+
+**Why:** The Studio Hub had a full description block, a labeled create panel with a title field, and a secondary button row — all before the project list. A user who just wants to open a project had to visually parse all of it first. Replacing it with a single `Projects` header + `+ New` button + immediate project grid dropped time-to-first-click to near zero. The title field was removed entirely: projects auto-name on create and can be renamed inside the editor.
+
+**Principles that follow from this:**
+- Input fields belong inside the flow they serve, not in the hub. If the user needs to name something, prompt them after creation, not before.
+- Descriptions tell users what the screen does. If the screen's title doesn't make that obvious, fix the title — don't add prose.
+- Secondary actions (Import, Admin, Beta, Public) belong in a de-emphasized secondary row: same row, tiny mono text, no visual weight.
+- Destructive actions (Delete) should be present but visually quiet — low contrast until hovered.
+
+**How:** Before shipping any hub or list screen, count the clicks from page load to the main action. If it's more than one, remove whatever is in the way. If it requires reading, remove or relocate the text.
+
+**Files:** `src/studio/components/StudioHub.jsx`, `src/studio/styles/studio-hub.css`, `src/landing/landing.css`

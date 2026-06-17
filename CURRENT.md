@@ -9,7 +9,8 @@ active_branch: dev
 
 ## Last commit
 
-`ac4d4f6` — docs: full docs revision — branch flow, SQLite driver, di.i refs
+`ca23475` — fix npm audit: patch 8 of 11 vulnerabilities, pin postcss via override
+(this session: closed remaining 3 — vite 6→8, @vitejs/plugin-react 4→6, vitest 4.0→4.1.9, pinned esbuild@0.28.1 explicitly; `npm audit` now reports 0 vulnerabilities)
 Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production).
 
 ## What works
@@ -55,6 +56,8 @@ Then: `npm run space:pull -- n000` or use the buttons in the BetaHub UI.
 | Beta canvas requires two double-clicks | `preventDefault` on `pointerdown` suppresses `dblclick` (Pointer Events spec); pan start fires on first click of a double-click | Added `event.detail >= 2` guard in `handleSurfacePointerDown`; `user-select: none` on surface CSS replaces the prevented default | `BetaGraphSurface.jsx` `beta.css` |
 | Cursor shows wrong type across Beta editor | Multiple issues: I-beam on topbar spans, `grabbing` flash on single click, `crosshair` persists during node/window drag, input ports wrong cursor, window header buttons blocked by `preventDefault` | Added `isPanMoving` state (cursor only `grabbing` on actual drag movement); `cursor: default; user-select: none` on topbar; `draggingNodeId` in surface cursor; port `--in`/`--out` classes; `dragMode` state in DesktopWindow with button-target guard in `startDrag` | `BetaGraphSurface.jsx` `DesktopWindow.jsx` `beta.css` |
 | Node 0 UI messy — duplicate "Node 0" shown in topbar AND scope bar below it | Scope bar (`← Exit \| Node 0`) was rendered inside the shell AND breadcrumb in topbar both showed Node 0, causing visual redundancy | Removed scope bar entirely; topbar breadcrumb (`◈ › Node 0`) is the single navigation source; `graphTopInset` simplified to `workspaceTop`; canvas hint updates to "Double-click to place your first node." when inside Node 0 | `BetaEditor.jsx` `BetaGraphSurface.jsx` `beta.css` |
+| Vite 8 build fails: `Cannot find package 'esbuild'` in custom JSX-transform plugin | Vite 8 dropped its bundled esbuild (switched to rolldown/oxc by default); `transformWithEsbuild` now needs esbuild as an explicit dependency | Added `esbuild@0.28.1` (patched, outside vulnerable `0.17.0-0.28.0` range) as a direct devDependency | `package.json` `vite.config.js` |
+| CI `npm ci` ERESOLVE after bumping vite to 8 (local `npm install` looked fine) | `vite-plugin-restart`'s peerDependency caps at `vite@^7`; `npm ci` enforces strict peer resolution with no `--legacy-peer-deps` fallback like local installs can use | Inlined its ~20-line restart-on-`public/`-change logic directly as a plugin in `vite.config.js` and dropped the dependency — removes the peer conflict entirely instead of masking it | `vite.config.js` `package.json` |
 
 ## Deploy
 
