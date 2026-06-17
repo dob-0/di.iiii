@@ -14,6 +14,9 @@ const PANEL_BUTTONS = [
 
 export default function StudioControlCluster({
     spaceName,
+    projectName,
+    onViewLive,
+    canViewLive = false,
     editMode,
     onSetEditMode,
     gizmoMode,
@@ -47,7 +50,9 @@ export default function StudioControlCluster({
         <div ref={panelRef} style={dragStyle} className="scc-wrap" {...panelPointerProps}>
             <div className="scc-cluster">
                 <div className="scc-header" {...dragProps}>
-                    <span className="scc-space-name">{spaceName || 'Studio'}</span>
+                    <span className="scc-space-name">
+                        {spaceName || 'Studio'}{projectName ? ` · ${projectName}` : ''}
+                    </span>
                     {syncState && (
                         <span className={`scc-sync-dot scc-sync-dot--${syncState.sceneStreamState || 'idle'}`} title={syncState.sceneStreamState} />
                     )}
@@ -107,6 +112,9 @@ export default function StudioControlCluster({
                                 <button className="scc-btn" onClick={onFullscreen} title="Toggle fullscreen">⛶ Fullscreen</button>
                                 <button className="scc-btn" onClick={onHideUI} title="Hide UI (H)">Hide UI</button>
                                 <button className="scc-btn" onClick={onBackToHub} title="Back to hub">← Hub</button>
+                                {canViewLive && (
+                                    <button className="scc-btn" onClick={onViewLive} title="Open the public space URL in a new tab">↗ View live</button>
+                                )}
                             </div>
                         </div>
 

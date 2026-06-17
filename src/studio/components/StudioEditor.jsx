@@ -305,6 +305,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         })
     }
 
+    const handleViewLive = () => {
+        const url = `${window.location.origin}${buildAppSpacePath(resolvedSpaceId)}`
+        window.open(url, '_blank', 'noopener,noreferrer')
+    }
+
     const handleCopyShareLink = async () => {
         const isLiveProject = spaceMeta?.publishedProjectId === projectId
         const sharePath = isLiveProject
@@ -320,7 +325,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             dispatch({
                 type: 'append-activity',
                 level: 'info',
-                message: isLiveProject ? 'Copied the live space link.' : 'Copied the project share link.'
+                message: `${isLiveProject ? 'Copied the live space link' : 'Copied the project share link'}: ${url}`
             })
         } catch (error) {
             dispatch({
@@ -484,6 +489,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onPublishPatch={handlePublishPatch}
             onSaveCurrentCamera={handleSaveCurrentCamera}
             onCopyShareLink={handleCopyShareLink}
+            onViewLive={handleViewLive}
             onExportProject={handleExportProject}
             onImportProjectFile={handleImportProjectFile}
             onEnterXr={xr.handleEnterXrSession}

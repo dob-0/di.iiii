@@ -1,4 +1,5 @@
 export const PREVIEW_HOST_MESSAGE_TYPE = 'dii-preview'
+export const PREVIEW_ENTER_EXHIBITION_KIND = 'enter-exhibition'
 
 export const PREVIEW_ISSUE_CODES = {
     storageUnavailable: 'storage_unavailable',
@@ -10,8 +11,21 @@ const SANDBOX_ERROR_PATTERN = /(sandbox|denied|securityerror|not allowed|blocked
 
 const PREVIEW_BOOTSTRAP_SCRIPT = `(() => {
     const MESSAGE_TYPE = ${JSON.stringify(PREVIEW_HOST_MESSAGE_TYPE)};
+    const ENTER_EXHIBITION_KIND = ${JSON.stringify(PREVIEW_ENTER_EXHIBITION_KIND)};
     const ISSUE_CODES = ${JSON.stringify(PREVIEW_ISSUE_CODES)};
     const issueState = new Set();
+
+    window.diiEnterExhibition = () => {
+        try {
+            window.parent?.postMessage({
+                source: MESSAGE_TYPE,
+                type: MESSAGE_TYPE,
+                kind: ENTER_EXHIBITION_KIND
+            }, '*');
+        } catch {
+            // Ignore cross-context messaging failures in preview bootstrap.
+        }
+    };
 
     const sendIssues = () => {
         try {

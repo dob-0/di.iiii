@@ -49,8 +49,8 @@ async function migrateFromFilesystem(spacesDir) {
   let opsImported = 0
 
   const insertSpace = db.prepare(`
-    INSERT OR IGNORE INTO spaces (id, label, permanent, allow_edits, published_project_id, scene_version, created_at, updated_at, last_touched_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR IGNORE INTO spaces (id, label, permanent, allow_edits, is_public, published_project_id, scene_version, created_at, updated_at, last_touched_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `)
   const insertSpaceOp = db.prepare(
     'INSERT OR IGNORE INTO space_ops (space_id, version, data, created_at) VALUES (?, ?, ?, ?)'
@@ -71,6 +71,7 @@ async function migrateFromFilesystem(spacesDir) {
           meta.label ?? spaceId,
           meta.permanent ? 1 : 0,
           meta.allowEdits !== false ? 1 : 0,
+          meta.isPublic ? 1 : 0,
           meta.publishedProjectId ?? null,
           meta.sceneVersion ?? 0,
           meta.createdAt ?? Date.now(),

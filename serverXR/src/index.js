@@ -31,6 +31,8 @@ const { loadReleaseInfo } = require('./releaseInfo')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
+const { registerUserRoutes } = require('./routes/userRoutes')
+const { listUsers, findUserById, setUserSpaces } = require('./userStore')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { createSpaceStore } = require('./spaceStore')
@@ -540,6 +542,47 @@ const requireWriteRole = (requiredRole = 'editor') => (req, res, next) => {
 
 const requireAdminWrite = requireWriteRole('admin')
 
+// Unlike requireWriteRole, this applies to every method including GET/HEAD —
+// for admin-only resources (like user management) that have no public read path.
+const requireAdminAlways = (req, res, next) => {
+  if (!config.requireAuth) return next()
+  const state = req.authState || getPublicAuthState(req)
+  if (!state.authenticated) {
+    return sendRoleError(res, 401, 'admin', state.role)
+  }
+  if (!hasRequiredAuthRole(state.role, 'admin')) {
+    return sendRoleError(res, 403, 'admin', state.role)
+  }
+  return next()
+}
+
+const requireReadRole = (requiredRole = 'viewer') => async (req, res, next) => {
+  if (!['GET', 'HEAD'].includes(req.method)) return next()
+  if (!config.requireAuth) return next()
+  const spaceId = req.requiredSpaceId
+  if (!spaceId) return next()
+  try {
+    const meta = await loadSpaceMeta(spaceId)
+    if (meta?.isPublic) return next()
+  } catch (error) {
+    return next(error)
+  }
+  const state = req.authState || getPublicAuthState(req)
+  if (!state.authenticated) {
+    return sendRoleError(res, 401, requiredRole, state.role)
+  }
+  if (!hasRequiredAuthRole(state.role, requiredRole)) {
+    return sendRoleError(res, 403, requiredRole, state.role)
+  }
+  if (!isAuthScopeAllowedForSpace(state.spaces, spaceId)) {
+    return sendScopeError(res, 403, {
+      requiredSpaceId: spaceId,
+      allowedSpaces: state.spaces
+    })
+  }
+  return next()
+}
+
 router.use('/api/spaces', (req, res, next) => {
   if (req.method === 'POST' && (req.path === '/' || req.path === '')) {
     req.requiredWriteRole = 'admin'
@@ -568,6 +611,7 @@ router.use('/api/projects/:projectId', async (req, res, next) => {
   }
 })
 
+router.use('/api', requireReadRole('viewer'))
 router.use('/api', requireWriteRole('editor'))
 
 const resolveProjectContext = async (projectId) => {
@@ -582,6 +626,13 @@ registerStatusRoutes(router, {
   recentEvents,
   releaseInfo,
   startedAt
+})
+
+registerUserRoutes(router, {
+  requireAdminAlways,
+  listUsers,
+  findUserById,
+  setUserSpaces
 })
 
 registerSpaceRoutes(router, {

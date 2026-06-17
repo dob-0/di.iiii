@@ -19,6 +19,7 @@ import { execFileSync } from 'node:child_process'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { SCENE_DATA_VERSION } from '../src/shared/sceneSchema.js'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
@@ -76,7 +77,7 @@ const apiFetch = async (url, options = {}) => {
     return body
 }
 
-const BLANK_SCENE = { version: 1, objects: [], assets: [] }
+const BLANK_SCENE = { version: SCENE_DATA_VERSION, objects: [], assets: [] }
 
 const main = async () => {
     const localEnv = {

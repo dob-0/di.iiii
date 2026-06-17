@@ -2,8 +2,36 @@ import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import RootApp from './RootApp.jsx'
 
+const mockUseAuthSession = vi.fn(() => ({
+    requireAuth: false,
+    authenticated: true,
+    loading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    refresh: vi.fn()
+}))
+
 vi.mock('./hooks/useAuthSession.js', () => ({
-    default: () => ({ requireAuth: false, authenticated: true, loading: false, login: vi.fn(), logout: vi.fn(), refresh: vi.fn() })
+    default: () => mockUseAuthSession()
+}))
+
+vi.mock('./services/serverSpaces.js', () => ({
+    supportsServerSpaces: true,
+    getServerSpace: (spaceId) => Promise.resolve({ id: spaceId, isPublic: spaceId === 'wcc' })
+}))
+
+vi.mock('./components/AuthGate.jsx', () => ({
+    default: function MockAuthGate({ children, requiredSpaceId = null }) {
+        const { requireAuth, authenticated, spaces } = mockUseAuthSession()
+        if (!requireAuth) return children
+        if (!authenticated) {
+            return <div>Enter your access token to continue.</div>
+        }
+        if (requiredSpaceId && Array.isArray(spaces) && !spaces.includes(requiredSpaceId)) {
+            return <div>Access restricted — your session isn&apos;t scoped to &ldquo;{requiredSpaceId}&rdquo;.</div>
+        }
+        return children
+    }
 }))
 
 vi.mock('./beta/BetaApp.jsx', () => ({
@@ -68,6 +96,69 @@ describe('RootApp', () => {
 
         window.history.pushState({}, '', '/main')
         render(<RootApp />)
-        expect(screen.getByText('space-surface-app:editor:main')).toBeInTheDocument()
+        expect(await screen.findByText('space-surface-app:editor:main')).toBeInTheDocument()
+    })
+})
+
+describe('RootApp public space gating', () => {
+    afterEach(() => {
+        window.history.pushState({}, '', '/')
+        mockUseAuthSession.mockReturnValue({
+            requireAuth: false,
+            authenticated: true,
+            loading: false,
+            login: vi.fn(),
+            logout: vi.fn(),
+            refresh: vi.fn()
+        })
+    })
+
+    it('bypasses the login gate for a space marked isPublic', async () => {
+        mockUseAuthSession.mockReturnValue({
+            requireAuth: true,
+            authenticated: false,
+            loading: false,
+            login: vi.fn(),
+            logout: vi.fn(),
+            refresh: vi.fn()
+        })
+        window.history.pushState({}, '', '/wcc')
+        render(<RootApp />)
+
+        expect(await screen.findByText('space-surface-app:editor:wcc')).toBeInTheDocument()
+        expect(screen.queryByText('Enter your access token to continue.')).not.toBeInTheDocument()
+    })
+
+    it('still shows the login gate for a non-public space', async () => {
+        mockUseAuthSession.mockReturnValue({
+            requireAuth: true,
+            authenticated: false,
+            loading: false,
+            login: vi.fn(),
+            logout: vi.fn(),
+            refresh: vi.fn()
+        })
+        window.history.pushState({}, '', '/main')
+        render(<RootApp />)
+
+        expect(await screen.findByText('Enter your access token to continue.')).toBeInTheDocument()
+        expect(screen.queryByText('space-surface-app:editor:main')).not.toBeInTheDocument()
+    })
+
+    it('shows an access-restricted message for an authenticated but out-of-scope session', async () => {
+        mockUseAuthSession.mockReturnValue({
+            requireAuth: true,
+            authenticated: true,
+            spaces: ['main'],
+            loading: false,
+            login: vi.fn(),
+            logout: vi.fn(),
+            refresh: vi.fn()
+        })
+        window.history.pushState({}, '', '/gallery')
+        render(<RootApp />)
+
+        expect(await screen.findByText(/Access restricted/)).toBeInTheDocument()
+        expect(screen.queryByText('space-surface-app:editor:gallery')).not.toBeInTheDocument()
     })
 })

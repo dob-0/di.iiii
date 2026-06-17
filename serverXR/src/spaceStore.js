@@ -43,6 +43,7 @@ function createSpaceStore({
     label: row.label,
     permanent: Boolean(row.permanent),
     allowEdits: Boolean(row.allow_edits),
+    isPublic: Boolean(row.is_public),
     publishedProjectId: row.published_project_id || null,
     sceneVersion: row.scene_version || 0,
     createdAt: row.created_at,
@@ -57,6 +58,7 @@ function createSpaceStore({
       label: (overrides.label && String(overrides.label).trim()) || spaceId,
       permanent: Boolean(overrides.permanent),
       allowEdits: overrides.allowEdits !== false,
+      isPublic: Boolean(overrides.isPublic),
       publishedProjectId: overrides.publishedProjectId || null,
       createdAt: overrides.createdAt || now,
       updatedAt: now,
@@ -77,9 +79,9 @@ function createSpaceStore({
       selectExists:  db.prepare('SELECT 1 FROM spaces WHERE id = ?'),
       selectAll:     db.prepare('SELECT * FROM spaces ORDER BY updated_at DESC'),
       selectStale:   db.prepare('SELECT id FROM spaces WHERE permanent = 0 AND last_touched_at < ?'),
-      upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, label, permanent, allow_edits, published_project_id, scene_version, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-      insert:        db.prepare('INSERT INTO spaces (id, label, permanent, allow_edits, published_project_id, scene_version, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-      update:        db.prepare('UPDATE spaces SET label=?, permanent=?, allow_edits=?, published_project_id=?, scene_version=?, updated_at=?, last_touched_at=? WHERE id=?'),
+      upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, label, permanent, allow_edits, is_public, published_project_id, scene_version, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      insert:        db.prepare('INSERT INTO spaces (id, label, permanent, allow_edits, is_public, published_project_id, scene_version, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      update:        db.prepare('UPDATE spaces SET label=?, permanent=?, allow_edits=?, is_public=?, published_project_id=?, scene_version=?, updated_at=?, last_touched_at=? WHERE id=?'),
       deleteById:    db.prepare('DELETE FROM spaces WHERE id = ?'),
       opsSelect:     db.prepare('SELECT data FROM space_ops WHERE space_id = ? ORDER BY version ASC'),
       opsDeleteAll:  db.prepare('DELETE FROM space_ops WHERE space_id = ?'),
@@ -98,6 +100,7 @@ function createSpaceStore({
       meta.label ?? '',
       meta.permanent ? 1 : 0,
       meta.allowEdits !== false ? 1 : 0,
+      meta.isPublic ? 1 : 0,
       meta.publishedProjectId ?? null,
       meta.sceneVersion ?? 0,
       meta.createdAt ?? Date.now(),
@@ -118,17 +121,18 @@ function createSpaceStore({
       const row = selectById.get(spaceId)
       if (!row) {
         const meta = buildMeta(spaceId, updates)
-        insert.run(spaceId, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0, meta.publishedProjectId ?? null, meta.sceneVersion ?? 0, meta.createdAt, meta.updatedAt, meta.lastTouchedAt)
+        insert.run(spaceId, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0, meta.isPublic ? 1 : 0, meta.publishedProjectId ?? null, meta.sceneVersion ?? 0, meta.createdAt, meta.updatedAt, meta.lastTouchedAt)
         return meta
       }
       const nextLabel     = 'label'            in updates ? (updates.label ?? '')                                                                    : row.label
       const nextPermanent = 'permanent'        in updates ? (Boolean(updates.permanent) ? 1 : 0)                                                    : row.permanent
       const nextEdits     = 'allowEdits'       in updates ? (updates.allowEdits !== false ? 1 : 0)                                                  : row.allow_edits
+      const nextPublic    = 'isPublic'         in updates ? (Boolean(updates.isPublic) ? 1 : 0)                                                      : row.is_public
       const nextPublished = 'publishedProjectId' in updates ? (updates.publishedProjectId ?? null)                                                   : row.published_project_id
       const nextVersion   = 'sceneVersion'     in updates ? (Number.isFinite(Number(updates.sceneVersion)) ? Number(updates.sceneVersion) : row.scene_version) : row.scene_version
       const nextTouched   = updates.touch !== false ? now : row.last_touched_at
-      update.run(nextLabel, nextPermanent, nextEdits, nextPublished, nextVersion, now, nextTouched, spaceId)
-      return rowToMeta({ ...row, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, published_project_id: nextPublished, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched })
+      update.run(nextLabel, nextPermanent, nextEdits, nextPublic, nextPublished, nextVersion, now, nextTouched, spaceId)
+      return rowToMeta({ ...row, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, published_project_id: nextPublished, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched })
     })()
   }
 
