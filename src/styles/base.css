@@ -50,6 +50,17 @@ body,
     background: var(--di-black);
     cursor: default;
     color: var(--di-text);
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+input,
+textarea,
+[contenteditable="true"]
+{
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 

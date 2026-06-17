@@ -1252,6 +1252,9 @@
     cursor: grab;
     border-bottom: 1px solid var(--di-cyan-border);
     background: rgba(77, 249, 255, 0.04);
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 .beta-window-header h3,
@@ -1290,6 +1293,9 @@
     cursor: nwse-resize;
     border-radius: 0;
     background: rgba(77, 249, 255, 0.04);
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
 }
 
 /* ── World panel window ── */
@@ -1989,6 +1995,7 @@
     inset: 0;
     overflow: hidden;
     cursor: crosshair;
+    touch-action: none;
     user-select: none;
     background:
         linear-gradient(0deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
@@ -2051,7 +2058,7 @@
     color: var(--di-text);
     cursor: pointer;
     font-size: 12px;
-    -webkit-user-select: none;
+    touch-action: none;
     -webkit-user-select: none;
     user-select: none;
     overflow: visible;
