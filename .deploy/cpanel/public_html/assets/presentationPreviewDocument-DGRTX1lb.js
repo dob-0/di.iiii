@@ -1,7 +1,20 @@
-var e=`dii-preview`,t={storageUnavailable:`storage_unavailable`,sandboxApiDenied:`sandbox_api_denied`},n=`(() => {
+var e=`dii-preview`,t=`enter-exhibition`,n={storageUnavailable:`storage_unavailable`,sandboxApiDenied:`sandbox_api_denied`},r=`(() => {
     const MESSAGE_TYPE = ${JSON.stringify(e)};
-    const ISSUE_CODES = ${JSON.stringify(t)};
+    const ENTER_EXHIBITION_KIND = ${JSON.stringify(t)};
+    const ISSUE_CODES = ${JSON.stringify(n)};
     const issueState = new Set();
+
+    window.diiEnterExhibition = () => {
+        try {
+            window.parent?.postMessage({
+                source: MESSAGE_TYPE,
+                type: MESSAGE_TYPE,
+                kind: ENTER_EXHIBITION_KIND
+            }, '*');
+        } catch {
+            // Ignore cross-context messaging failures in preview bootstrap.
+        }
+    };
 
     const sendIssues = () => {
         try {
@@ -118,7 +131,7 @@ var e=`dii-preview`,t={storageUnavailable:`storage_unavailable`,sandboxApiDenied
     }
 
     sendIssues();
-})();`,r=e=>{let t=`<script>${n}<\/script>`,r=/<head(\s[^>]*)?>/i,i=/<html(\s[^>]*)?>/i;return r.test(e)?e.replace(r,e=>`${e}
+})();`,i=e=>{let t=`<script>${r}<\/script>`,n=/<head(\s[^>]*)?>/i,i=/<html(\s[^>]*)?>/i;return n.test(e)?e.replace(n,e=>`${e}
 <meta charset="UTF-8" />
 ${t}`):i.test(e)?e.replace(i,e=>`${e}
 <head>
@@ -134,4 +147,4 @@ ${t}
 <body>
 ${e}
 </body>
-</html>`};function i(e=``){return r(String(e||``))}function a(e){switch(e){case t.storageUnavailable:return`Storage unavailable in sandboxed preview.`;case t.sandboxApiDenied:return`A sandboxed browser API was denied in preview.`;default:return`Preview ran into a sandboxed browser limitation.`}}function o(e=[]){let n=new Set;return(Array.isArray(e)?e:[]).forEach(e=>{typeof e==`string`&&(e===t.storageUnavailable||e===t.sandboxApiDenied)&&n.add(e)}),Array.from(n)}export{o as i,i as n,a as r,e as t};
+</html>`};function a(e=``){return i(String(e||``))}function o(e){switch(e){case n.storageUnavailable:return`Storage unavailable in sandboxed preview.`;case n.sandboxApiDenied:return`A sandboxed browser API was denied in preview.`;default:return`Preview ran into a sandboxed browser limitation.`}}function s(e=[]){let t=new Set;return(Array.isArray(e)?e:[]).forEach(e=>{typeof e==`string`&&(e===n.storageUnavailable||e===n.sandboxApiDenied)&&t.add(e)}),Array.from(t)}export{s as a,o as i,e as n,a as r,t};

@@ -4,7 +4,7 @@ import useAuthSession from '../hooks/useAuthSession.js'
 import { getApiAuthProviders, getOAuthUrl, hasServerApi } from '../services/apiClient.js'
 import AccountButton from './AccountButton.jsx'
 
-export default function AuthGate({ children }) {
+export default function AuthGate({ children, requiredSpaceId = null }) {
     const authSession = useAuthSession()
     const { requireAuth, authenticated, loading, error, refresh, login } = authSession
     const [token, setToken] = useState('')
@@ -50,13 +50,33 @@ export default function AuthGate({ children }) {
         )
     }
 
-    if (!hasServerApi || !requireAuth || authenticated) {
+    if (!hasServerApi || !requireAuth) {
+        return <>{children}</>
+    }
+
+    if (authenticated) {
+        const { spaces } = authSession
+        const inScope = !requiredSpaceId || !Array.isArray(spaces) || spaces.includes(requiredSpaceId)
+        if (!inScope) {
+            return (
+                <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
+                    <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
+                        <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
+                            di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
+                        </Typography>
+                        <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                            Access restricted — your session isn&apos;t scoped to &ldquo;{requiredSpaceId}&rdquo;.
+                            {spaces.length > 0 ? ` Allowed: ${spaces.join(', ')}.` : ' Allowed: no spaces.'}
+                        </Typography>
+                        <AccountButton authState={authSession} onLogout={refresh} />
+                    </Stack>
+                </Box>
+            )
+        }
         return (
             <>
                 {children}
-                {requireAuth && authenticated && (
-                    <AccountButton authState={authSession} onLogout={refresh} />
-                )}
+                <AccountButton authState={authSession} onLogout={refresh} />
             </>
         )
     }

@@ -8,6 +8,7 @@ const SCHEMA = `
     label TEXT NOT NULL DEFAULT '',
     permanent INTEGER NOT NULL DEFAULT 0,
     allow_edits INTEGER NOT NULL DEFAULT 1,
+    is_public INTEGER NOT NULL DEFAULT 0,
     published_project_id TEXT,
     scene_version INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
@@ -53,6 +54,7 @@ const SCHEMA = `
     display_name TEXT,
     avatar_url TEXT,
     role TEXT NOT NULL DEFAULT 'editor',
+    spaces TEXT,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
   );
@@ -94,6 +96,14 @@ function addCompatLayer(db) {
   return db
 }
 
+// CREATE TABLE IF NOT EXISTS only covers fresh databases; existing ones need
+// columns added explicitly since SQLite has no "ADD COLUMN IF NOT EXISTS".
+function ensureColumn(db, table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all()
+  if (columns.some((col) => col.name === column)) return
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
+}
+
 function initDb(dbPath) {
   if (_db) {
     try { _db.close() } catch {}
@@ -104,6 +114,8 @@ function initDb(dbPath) {
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
   db.exec(SCHEMA)
+  ensureColumn(db, 'spaces', 'is_public', 'INTEGER NOT NULL DEFAULT 0')
+  ensureColumn(db, 'users', 'spaces', 'TEXT')
   _db = db
   return _db
 }

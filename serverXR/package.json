@@ -6,7 +6,7 @@
     "node": ">=22.5.0"
   },
   "scripts": {
-    "dev": "node --watch src/index.js",
+    "dev": "node --watch-path=src --watch-path=.env --watch-path=.env.local src/index.js",
     "start": "node src/index.js"
   },
   "dependencies": {

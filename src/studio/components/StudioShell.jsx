@@ -68,6 +68,7 @@ export default function StudioShell({
     onClearLiveProject,
     onSaveCurrentCamera,
     onCopyShareLink,
+    onViewLive,
     onExportProject,
     onImportProjectFile,
     onEnterXr,
@@ -259,7 +260,10 @@ export default function StudioShell({
                     )}
 
                     <StudioControlCluster
-                        spaceName={document?.projectMeta?.title || document?.projectMeta?.id || 'Studio'}
+                        spaceName={liveProjectState?.spaceLabel || 'Studio'}
+                        projectName={document?.projectMeta?.title || document?.projectMeta?.id || ''}
+                        onViewLive={onViewLive}
+                        canViewLive={Boolean(liveProjectState?.isLiveProject)}
                         editMode={viewportEditMode}
                         onSetEditMode={setViewportEditMode}
                         gizmoMode={viewportGizmoMode}

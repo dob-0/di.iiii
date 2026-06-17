@@ -109,7 +109,7 @@ function registerSpaceRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const { label, permanent, allowEdits, publishedProjectId } = req.body || {}
+      const { label, permanent, allowEdits, isPublic, publishedProjectId } = req.body || {}
       let nextPublishedProjectId
       if (publishedProjectId !== undefined) {
         if (publishedProjectId === null || publishedProjectId === '') {
@@ -129,6 +129,7 @@ function registerSpaceRoutes(router, {
         ...(label !== undefined ? { label } : {}),
         ...(permanent !== undefined ? { permanent } : {}),
         ...(allowEdits !== undefined ? { allowEdits } : {}),
+        ...(isPublic !== undefined ? { isPublic: Boolean(isPublic) } : {}),
         ...(publishedProjectId !== undefined ? { publishedProjectId: nextPublishedProjectId } : {})
       })
       res.json({ space: meta })

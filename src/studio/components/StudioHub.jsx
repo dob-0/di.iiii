@@ -33,8 +33,16 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [projects, setProjects] = useState([])
     const [status, setStatus] = useState('loading...')
     const [isBusy, setIsBusy] = useState(false)
+    const [spaceLabel, setSpaceLabel] = useState(spaceId)
 
     const mostRecentProject = useMemo(() => projects[0] || null, [projects])
+
+    useEffect(() => {
+        setSpaceLabel(spaceId)
+        getServerSpace(spaceId).then((space) => {
+            if (space?.label) setSpaceLabel(space.label)
+        }).catch(() => {})
+    }, [spaceId])
 
     const loadProjects = useCallback(async () => {
         setStatus('loading...')
@@ -117,7 +125,10 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
 
                 {/* Top row */}
                 <div className="sh-top-row">
-                    <h1 className="sh-title">Projects</h1>
+                    <div>
+                        <p className="sh-space-context">Space: {spaceLabel}</p>
+                        <h1 className="sh-title">Projects</h1>
+                    </div>
                     <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
                         + New
                     </button>
