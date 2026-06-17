@@ -1,4 +1,4 @@
-import { Avatar, Box, Button, CircularProgress, Divider, Popover, Stack, Typography } from '@mui/material'
+import { Avatar, Box, Button, CircularProgress, Divider, Popover, Stack, Tooltip, Typography } from '@mui/material'
 import { useEffect, useRef, useState } from 'react'
 import { getApiAuthProviders, getOAuthUrl, logoutApiSession } from '../services/apiClient.js'
 
@@ -61,28 +61,39 @@ export default function AccountButton({ authState, onLogout }) {
                 onClick={handleOpen}
                 sx={{
                     position: 'fixed',
-                    top: 10,
-                    right: 10,
+                    top: '8px',
+                    right: '8px',
                     zIndex: 9999,
                     cursor: 'pointer'
                 }}
             >
                 {isGuest ? (
-                    <Button
-                        size="small"
-                        variant="outlined"
-                        sx={{
-                            textTransform: 'none',
-                            fontSize: 12,
-                            borderColor: 'var(--ui-border)',
-                            color: 'var(--ui-text-muted)',
-                            background: 'var(--ui-surface)',
-                            backdropFilter: 'blur(8px)',
-                            '&:hover': { borderColor: 'var(--ui-accent)', color: 'var(--ui-text-primary)' }
-                        }}
-                    >
-                        Sign in
-                    </Button>
+                    <Tooltip title="Sign in" placement="bottom-end">
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            sx={{
+                                minWidth: 0,
+                                width: 28,
+                                height: 28,
+                                borderRadius: '50%',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                p: 0,
+                                borderColor: 'var(--ui-border)',
+                                color: 'var(--ui-text-muted)',
+                                background: 'var(--ui-surface)',
+                                backdropFilter: 'blur(8px)',
+                                '&:hover': { borderColor: 'var(--ui-accent)', color: 'var(--ui-text-primary)' }
+                            }}
+                        >
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+                                <path d="M10 17l5-5-5-5" />
+                                <path d="M15 12H3" />
+                            </svg>
+                        </Button>
+                    </Tooltip>
                 ) : (
                     <Avatar
                         src={authState?.avatarUrl || undefined}
