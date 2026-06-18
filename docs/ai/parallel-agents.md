@@ -22,8 +22,9 @@ For an artist/contributor who just wants their own sandbox and doesn't need tigh
 
 1. They fork `dob-0/di.iiii` on GitHub to their own account
 2. They clone their fork and work on it freely — nothing they do can affect the real repo
-3. When ready to share, they push to their fork and open a Pull Request against `dob-0/di.iiii`'s `dev` branch
-4. We review the PR (or `gh pr checkout <number>` to test locally first), then merge it into `dev` from our side
+3. **Before starting any new task**, pull latest upstream first: `git fetch upstream && git merge --ff-only upstream/dev` (requires `git remote add upstream https://github.com/dob-0/di.iiii.git` once, per `ONBOARDING.md`). Skipping this is the most common cause of stale-branch conflicts on the eventual PR.
+4. When ready to share, they push to their fork and open a Pull Request against `dob-0/di.iiii`'s `dev` branch
+5. We review the PR (or `gh pr checkout <number>` to test locally first), then merge it into `dev` from our side
 
 This is the lowest-overhead option: no worktree setup, no branch-naming convention to teach, no risk of touching files outside their own copy. The cost is that sync only happens at PR boundaries — fine for someone contributing occasionally, too slow for back-and-forth pairing within one session.
 
@@ -33,7 +34,13 @@ Opening the PR is still a manual step by default. A contributor who wants their 
 
 ### Default behavior for an agent working in a fork
 
-If you are an agent doing fork-based contributor work (Mode 0), commit and push to your own fork automatically once a task is complete and validated (lint/build/test passing) — do not wait to be asked for each push. This is safe specifically because your push target is your own fork's branch, which can never affect `dob-0/di.iiii` directly: the `auto-pr.yml` workflow surfaces it as a PR, and a human reviews and merges from the upstream side. This default does **not** extend to pushing directly to `dob-0/di.iiii` (any branch, including `dev`) or to merging a PR — those stay explicit, human-requested actions.
+The full unattended loop, every task, no need to ask permission for any of these three steps:
+
+1. **Sync first** — `git fetch upstream && git merge --ff-only upstream/dev` before starting work, so the task is never built on a stale base
+2. **Work, then validate** — lint/build/test must pass before moving on
+3. **Commit and push to your own fork** — automatic once validated, no need to wait to be asked
+
+This is safe specifically because your push target is your own fork's branch, which can never affect `dob-0/di.iiii` directly: the `auto-pr.yml` workflow surfaces it as a PR, and a human reviews and merges from the upstream side. This default does **not** extend to pushing directly to `dob-0/di.iiii` (any branch, including `dev`) or to merging a PR — those stay explicit, human-requested actions.
 
 ## Mode 1: Git Worktree (preferred for same-repo parallel work)
 
