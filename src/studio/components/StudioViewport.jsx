@@ -370,10 +370,10 @@ function StudioSceneContent({
                         args={[document.worldState?.gridSize || 24, document.worldState?.gridSize || 24]}
                         cellSize={document.worldState?.gridCellSize ?? 0.75}
                         cellThickness={document.worldState?.gridCellThickness ?? 0.3}
-                        color={document.worldState?.gridCellColor || '#526070'}
+                        color={document.worldState?.gridCellColor || '#2a6e73'}
                         sectionSize={document.worldState?.gridSectionSize ?? 6}
                         sectionThickness={document.worldState?.gridSectionThickness ?? 0.65}
-                        sectionColor={document.worldState?.gridSectionColor || '#7cccf1'}
+                        sectionColor={document.worldState?.gridSectionColor || '#4df9ff'}
                         fadeDistance={document.worldState?.gridFadeDistance ?? 80}
                         fadeStrength={document.worldState?.gridFadeStrength ?? 1}
                     />
