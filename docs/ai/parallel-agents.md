@@ -1,10 +1,31 @@
 # Parallel Agent Workflow
 
-How to run more than one agent on `di.iiii` at the same time without agents clobbering each other's edits.
+How to run more than one agent or person on `di.iiii` at the same time without anyone clobbering anyone else's edits.
 
 ## The Core Rule
 
-Two agents must never write to the same working directory at the same time. A single shared working tree means uncommitted edits from one agent look like stray/conflicting changes to the other (this happened — see golden_rules.md). Use one of the two isolation modes below instead.
+Two agents (or people) must never write to the same working directory at the same time. A single shared working tree means uncommitted edits from one look like stray/conflicting changes to the other (this happened — see golden_rules.md). Pick one of the three isolation modes below based on how close the collaboration needs to be.
+
+## Choosing A Mode
+
+| Mode | Use when | Sync mechanism |
+|---|---|---|
+| [Fork](#mode-0-fork-simplest-for-newcomers) | A new or occasional contributor, low setup overhead, no need for fast back-and-forth | GitHub Pull Request |
+| [Worktree](#mode-1-git-worktree-preferred-for-same-repo-parallel-work) | Trusted regular contributor/agent working tight loops alongside others in the same session | Push branch + local merge into `dev` |
+| [Role-scoped same branch](#mode-2-role-scoped-same-branch-work-lighter-weight-higher-risk) | Two agents, no time to set up isolation, scopes provably don't overlap | None needed — no shared files touched |
+
+Start simple. Fork is the default for "someone new wants to help." Reach for worktree once a contributor is doing rapid iterative work that benefits from staying in sync with `dev` without round-tripping through GitHub each time.
+
+## Mode 0: Fork (simplest for newcomers)
+
+For an artist/contributor who just wants their own sandbox and doesn't need tight sync:
+
+1. They fork `dob-0/di.iiii` on GitHub to their own account
+2. They clone their fork and work on it freely — nothing they do can affect the real repo
+3. When ready to share, they push to their fork and open a Pull Request against `dob-0/di.iiii`'s `dev` branch
+4. We review the PR (or `gh pr checkout <number>` to test locally first), then merge it into `dev` from our side
+
+This is the lowest-overhead option: no worktree setup, no branch-naming convention to teach, no risk of touching files outside their own copy. The cost is that sync only happens at PR boundaries — fine for someone contributing occasionally, too slow for back-and-forth pairing within one session.
 
 ## Mode 1: Git Worktree (preferred for same-repo parallel work)
 
