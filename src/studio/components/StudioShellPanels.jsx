@@ -354,6 +354,243 @@ const generateAssetTemplate = (asset) => {
     return `<!doctype html>\n<html><head><meta charset="UTF-8"></head><body style="background:#000;color:#fff;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh">\n<a href="${url}" style="color:#6ee7ff">${asset.name}</a>\n</body></html>`
 }
 
+export function FilesPanel({
+    presentationState,
+    onPresentationPatch,
+    spaceAssets = []
+}) {
+    const singleFileInputRef = useRef(null)
+    const zipInputRef = useRef(null)
+    const folderInputRef = useRef(null)
+    const [activeFileName, setActiveFileName] = useState('index.html')
+    const [showAddFile, setShowAddFile] = useState(false)
+    const [newFileName, setNewFileName] = useState('')
+    const [copied, setCopied] = useState(null)
+    const [assetsOpen, setAssetsOpen] = useState(true)
+
+    const files = presentationState?.codeFiles || []
+    const hasLegacyHtml = Boolean(presentationState?.codeHtml && files.length === 0)
+    const activeFile = files.find((f) => f.name === activeFileName) || files[0] || null
+
+    const setFiles = (nextFiles) => onPresentationPatch({ codeFiles: nextFiles })
+
+    const updateActiveContent = (content) => {
+        const name = activeFile?.name
+        if (!name) return
+        setFiles(files.map((f) => (f.name === name ? { ...f, content } : f)))
+    }
+
+    const addFile = () => {
+        const name = newFileName.trim()
+        if (!name || files.find((f) => f.name === name)) return
+        setFiles([...files, { name, content: '' }])
+        setActiveFileName(name)
+        setNewFileName('')
+        setShowAddFile(false)
+    }
+
+    const removeFile = (name) => {
+        const next = files.filter((f) => f.name !== name)
+        setFiles(next)
+        if (activeFileName === name) setActiveFileName(next[0]?.name || '')
+    }
+
+    const handleImportSingle = async (event) => {
+        const file = event.target.files?.[0]
+        event.target.value = ''
+        if (!file) return
+        const content = await file.text()
+        const name = normalizeFileName(file.name)
+        const existing = files.find((f) => f.name === name)
+        if (existing) {
+            setFiles(files.map((f) => (f.name === name ? { ...f, content } : f)))
+        } else {
+            setFiles([...files, { name, content }])
+        }
+        setActiveFileName(name)
+    }
+
+    const handleImportZip = async (event) => {
+        const file = event.target.files?.[0]
+        event.target.value = ''
+        if (!file) return
+        try {
+            const zip = await JSZip.loadAsync(file)
+            const entries = []
+            zip.forEach((relativePath, entry) => {
+                if (!entry.dir && isSupportedFile(relativePath)) entries.push({ relativePath, entry })
+            })
+            const loaded = await Promise.all(
+                entries.map(async ({ relativePath, entry }) => ({
+                    name: normalizeFileName(relativePath),
+                    content: await entry.async('text')
+                }))
+            )
+            if (loaded.length > 0) {
+                setFiles(loaded)
+                const root = loaded.find((f) => f.name === 'index.html') || loaded[0]
+                setActiveFileName(root.name)
+            }
+        } catch { /* ignore malformed zips */ }
+    }
+
+    const handleImportFolder = async (event) => {
+        const fileList = Array.from(event.target.files || [])
+        event.target.value = ''
+        if (!fileList.length) return
+        const loaded = await Promise.all(
+            fileList
+                .filter((f) => isSupportedFile(f.name))
+                .map(async (f) => ({
+                    name: normalizeFileName(f.webkitRelativePath || f.name),
+                    content: await f.text()
+                }))
+        )
+        if (loaded.length > 0) {
+            setFiles(loaded)
+            const root = loaded.find((f) => f.name.endsWith('index.html')) || loaded[0]
+            setActiveFileName(root.name)
+        }
+    }
+
+    const handleExportZip = async () => {
+        if (files.length === 0) return
+        const zip = new JSZip()
+        for (const f of files) zip.file(f.name, f.content)
+        const blob = await zip.generateAsync({ type: 'blob' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url; a.download = 'project.zip'; a.click()
+        window.setTimeout(() => URL.revokeObjectURL(url), 1_000)
+    }
+
+    const copyAssetUrl = (asset) => {
+        navigator.clipboard.writeText(`/serverXR${asset.url}`).catch(() => {})
+        setCopied(asset.id)
+        setTimeout(() => setCopied(null), 1500)
+    }
+
+    return (
+        <Stack spacing={0} sx={{ p: 0, height: '100%' }}>
+            {/* ── file tabs ── */}
+            {files.length > 0 ? (
+                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, px: 1, pt: 0.5 }}>
+                        <Tabs
+                            value={activeFile?.name || false}
+                            onChange={(_, name) => setActiveFileName(name)}
+                            variant="scrollable"
+                            scrollButtons="auto"
+                            sx={{ flex: 1, minWidth: 0, '& .MuiTab-root': { minWidth: 0, px: 1.5, py: 0.5, fontSize: '0.72rem' } }}
+                        >
+                            {files.map((f) => (
+                                <Tab
+                                    key={f.name}
+                                    value={f.name}
+                                    label={
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <span>{f.name}</span>
+                                            <IconButton size="small" onClick={(e) => { e.stopPropagation(); removeFile(f.name) }} sx={{ p: 0, ml: 0.25 }}>
+                                                <CloseIcon sx={{ fontSize: 11 }} />
+                                            </IconButton>
+                                        </Box>
+                                    }
+                                />
+                            ))}
+                        </Tabs>
+                        <IconButton size="small" onClick={() => setShowAddFile((v) => !v)} title="New file">
+                            <AddIcon fontSize="small" />
+                        </IconButton>
+                    </Box>
+                    {showAddFile && (
+                        <Stack direction="row" spacing={1} sx={{ px: 1, pb: 1 }}>
+                            <TextField
+                                autoFocus size="small" placeholder="style.css"
+                                value={newFileName} onChange={(e) => setNewFileName(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') addFile(); if (e.key === 'Escape') { setShowAddFile(false); setNewFileName('') } }}
+                                sx={{ flex: 1 }}
+                            />
+                            <Button size="small" variant="contained" onClick={addFile} disabled={!newFileName.trim()}>Add</Button>
+                        </Stack>
+                    )}
+                </Box>
+            ) : (
+                <Box sx={{ p: 1.5, borderBottom: 1, borderColor: 'divider' }}>
+                    {hasLegacyHtml && (
+                        <Button size="small" variant="outlined" fullWidth sx={{ mb: 1 }}
+                            onClick={() => { onPresentationPatch({ codeFiles: [{ name: 'index.html', content: presentationState.codeHtml }], codeHtml: '' }); setActiveFileName('index.html') }}
+                        >Convert legacy HTML → index.html</Button>
+                    )}
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>No code files yet</Typography>
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                        <Button size="small" variant="outlined" onClick={() => singleFileInputRef.current?.click()}>+ File</Button>
+                        <Button size="small" variant="outlined" onClick={() => zipInputRef.current?.click()}>+ .zip</Button>
+                        <Button size="small" variant="outlined" onClick={() => folderInputRef.current?.click()}>+ folder</Button>
+                        <Button size="small" variant="outlined" onClick={() => { setFiles([{ name: 'index.html', content: '' }]); setActiveFileName('index.html') }}>blank index.html</Button>
+                    </Stack>
+                </Box>
+            )}
+
+            {/* ── code editor ── */}
+            {activeFile && (
+                <Box sx={{ px: 1, pt: 1, flex: 1 }}>
+                    <TextField
+                        key={activeFile.name}
+                        multiline fullWidth
+                        minRows={14}
+                        value={activeFile.content}
+                        onChange={(e) => updateActiveContent(e.target.value)}
+                        inputProps={{ style: { fontFamily: 'monospace', fontSize: '0.76rem', lineHeight: 1.5 } }}
+                        sx={{ '& .MuiInputBase-root': { p: 1 } }}
+                    />
+                    <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.75, mb: 1 }}>
+                        <Button size="small" variant="outlined" onClick={() => singleFileInputRef.current?.click()}>↑ Import</Button>
+                        <Button size="small" variant="outlined" onClick={() => zipInputRef.current?.click()}>↑ .zip</Button>
+                        <Button size="small" variant="outlined" onClick={() => folderInputRef.current?.click()}>↑ folder</Button>
+                        <Button size="small" variant="outlined" onClick={handleExportZip}>↓ Export</Button>
+                    </Stack>
+                </Box>
+            )}
+
+            {/* ── space assets ── */}
+            {spaceAssets.length > 0 && (
+                <Box sx={{ borderTop: 1, borderColor: 'divider', px: 1.5, py: 1 }}>
+                    <Button size="small" variant="text" onClick={() => setAssetsOpen((v) => !v)}
+                        sx={{ fontSize: '0.7rem', color: 'text.secondary', p: 0, mb: 0.5 }}>
+                        {assetsOpen ? '▾' : '▸'} Space assets ({spaceAssets.length})
+                    </Button>
+                    {assetsOpen && (
+                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 0.75 }}>
+                            {spaceAssets.map((asset) => (
+                                <Paper key={asset.id} variant="outlined" onClick={() => copyAssetUrl(asset)}
+                                    title={`${asset.name}\nClick to copy URL`}
+                                    sx={{ p: 0.5, cursor: 'pointer', overflow: 'hidden', '&:hover': { borderColor: 'primary.light' } }}>
+                                    {asset.mimeType?.startsWith('image/') ? (
+                                        <Box component="img" src={`/serverXR${asset.url}`} alt=""
+                                            sx={{ width: '100%', height: 48, objectFit: 'cover', display: 'block', mb: 0.25 }} />
+                                    ) : (
+                                        <Box sx={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', fontSize: '0.65rem' }}>
+                                            {(asset.mimeType || '').split('/')[0] || 'file'}
+                                        </Box>
+                                    )}
+                                    <Typography variant="caption" noWrap display="block"
+                                        sx={{ fontSize: '0.6rem', color: copied === asset.id ? 'success.main' : 'text.secondary' }}>
+                                        {copied === asset.id ? 'copied!' : asset.name}
+                                    </Typography>
+                                </Paper>
+                            ))}
+                        </Box>
+                    )}
+                </Box>
+            )}
+
+            <input ref={singleFileInputRef} type="file" accept={SUPPORTED_EXTENSIONS.map((e) => `.${e}`).join(',')} aria-label="Import single file" style={{ display: 'none' }} onChange={handleImportSingle} />
+            <input ref={zipInputRef} type="file" accept=".zip,application/zip" aria-label="Import zip" style={{ display: 'none' }} onChange={handleImportZip} />
+            <input ref={folderInputRef} type="file" webkitdirectory="" aria-label="Import folder" style={{ display: 'none' }} onChange={handleImportFolder} />
+        </Stack>
+    )
+}
+
 export function PresentPanel({
     presentationState,
     onPresentationPatch,

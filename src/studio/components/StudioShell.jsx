@@ -9,6 +9,7 @@ import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import {
     ActivityPanel,
     AssetsPanel,
+    FilesPanel,
     LibraryPanel,
     PresentPanel,
     ProjectPanel,
@@ -22,6 +23,7 @@ const DEFAULT_POSITIONS = () => {
     return {
         library:   { x: 16, y: 16 },
         assets:    { x: 308, y: 16 },
+        files:     { x: Math.round(vw * 0.25), y: 16 },
         inspector: { x: vw - 296, y: 16 },
         structure: { x: 16, y: Math.round(vh * 0.45) },
         present:   { x: Math.round(vw * 0.35), y: 16 },
@@ -227,6 +229,11 @@ export default function StudioShell({
                     {isOpen('assets') && (
                         <StudioFloatingPanel key={`assets-${layoutKey}`} title="Assets" onClose={() => toggle('assets')} initialPosition={positions.assets} initialWidth={260} snapEdges={snapEdges}>
                             <AssetsPanel assets={assetOptions} spaceAssets={spaceAssets} onAssetFilesSelected={onAssetFilesSelected} onCreateFromAsset={onCreateFromAsset} />
+                        </StudioFloatingPanel>
+                    )}
+                    {isOpen('files') && (
+                        <StudioFloatingPanel key={`files-${layoutKey}`} title="Files" onClose={() => toggle('files')} initialPosition={positions.files} initialWidth={480} minWidth={320} maxWidth={800} snapEdges={snapEdges}>
+                            <FilesPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} spaceAssets={spaceAssets} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('inspector') && (

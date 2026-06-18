@@ -4,6 +4,7 @@ import { usePanelDrag } from '../../hooks/usePanelDrag.js'
 const PANEL_BUTTONS = [
     { key: 'library', label: 'Library' },
     { key: 'assets', label: 'Assets' },
+    { key: 'files', label: 'Files' },
     { key: 'inspector', label: 'Inspector' },
     { key: 'structure', label: 'Structure' },
     { key: 'present', label: 'Present' },

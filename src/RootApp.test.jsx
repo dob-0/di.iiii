@@ -122,7 +122,7 @@ describe('RootApp public space gating', () => {
             logout: vi.fn(),
             refresh: vi.fn()
         })
-        window.history.pushState({}, '', '/wcc')
+        window.history.pushState({}, '', '/wcc/scene')
         render(<RootApp />)
 
         expect(await screen.findByText('space-surface-app:editor:wcc')).toBeInTheDocument()
