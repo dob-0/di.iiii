@@ -31,6 +31,10 @@ This is the lowest-overhead option: no worktree setup, no branch-naming conventi
 
 Opening the PR is still a manual step by default. A contributor who wants their fork to auto-open (or update) a PR every time they push can copy [../templates/fork-auto-pr.yml](../templates/fork-auto-pr.yml) into their own fork at `.github/workflows/auto-pr.yml`. It needs a personal access token saved as a fork-side secret (`UPSTREAM_PR_TOKEN`) since the default `GITHUB_TOKEN` can't open PRs on a different repo — see the comments in the template for exact setup steps. This only automates *opening* the PR; review and merge into `dev` on the upstream side stays manual.
 
+### Default behavior for an agent working in a fork
+
+If you are an agent doing fork-based contributor work (Mode 0), commit and push to your own fork automatically once a task is complete and validated (lint/build/test passing) — do not wait to be asked for each push. This is safe specifically because your push target is your own fork's branch, which can never affect `dob-0/di.iiii` directly: the `auto-pr.yml` workflow surfaces it as a PR, and a human reviews and merges from the upstream side. This default does **not** extend to pushing directly to `dob-0/di.iiii` (any branch, including `dev`) or to merging a PR — those stay explicit, human-requested actions.
+
 ## Mode 1: Git Worktree (preferred for same-repo parallel work)
 
 Each agent gets its own checkout of the repo, sharing the same `.git` history, on its own branch.
