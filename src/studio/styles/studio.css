@@ -770,6 +770,29 @@
     cursor: default;
 }
 
+.insp-vec3-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.insp-vec3-row {
+    display: flex;
+    gap: 6px;
+}
+
+.insp-vec3-row .insp-field--compact {
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+}
+
+.insp-field--compact .insp-label {
+    text-align: center;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
 .insp-input,
 .insp-select,
 .insp-textarea {
