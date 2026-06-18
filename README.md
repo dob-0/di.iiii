@@ -150,6 +150,21 @@ Useful local routes:
 - `http://localhost:5173/admin?space=main`
 - `http://localhost:4000/serverXR/api/health`
 
+## Contributing
+
+New contributor or AI agent joining the project? Start with [ONBOARDING.md](ONBOARDING.md) — it covers prerequisites, fork + clone, local env setup, and `npm run dev`.
+
+Default contribution model is fork-based:
+
+1. Fork `dob-0/di.iiii`, clone your fork, work there freely
+2. Validate before sharing: `npm run lint && npm run build && npm run test`
+3. Push to your fork and open a PR against this repo's `dev` branch (or let [docs/templates/fork-auto-pr.yml](docs/templates/fork-auto-pr.yml) open it for you automatically on push, once set up)
+4. We review and merge into `dev` from the upstream side
+
+An AI agent working in your own fork can validate, commit, and push on its own once a task is done — pushing only ever updates your fork, never `dob-0/di.iiii` directly, so this is safe to leave unattended. Merging into `dev`/`main` always stays an explicit, human-requested action.
+
+For running more than one agent/contributor at once without anyone's edits colliding (git worktrees, role-scoped file ownership, fork isolation), see [docs/ai/parallel-agents.md](docs/ai/parallel-agents.md).
+
 ## Release Flow
 
 Normal promotion path:
@@ -193,6 +208,8 @@ flowchart LR
 By task:
 
 - AI knowledge base: [docs/ai/index.md](docs/ai/index.md)
+- new contributor setup: [ONBOARDING.md](ONBOARDING.md)
+- running multiple agents/contributors at once: [docs/ai/parallel-agents.md](docs/ai/parallel-agents.md)
 - shared project logic: [src/project/AGENTS.md](src/project/AGENTS.md)
 - backend/runtime: [serverXR README](serverXR/README.md)
 - project architecture: [Project Surfaces](docs/architecture/PROJECT_SURFACES.md)
