@@ -17,10 +17,10 @@ top-left shows the live value, and a colored guide line appears when you constra
 
 | Shortcut | Action |
 |----------|--------|
-| `G` | Grab / move (object follows mouse) |
-| `R` | Rotate |
-| `S` | Scale |
-| `X` / `Y` / `Z` | Constrain to that axis — **press again** for local, **again** to release |
+| `G` | Grab / move — object follows the mouse immediately |
+| `R` | Rotate — **arms** the operator but does not yet track the mouse; press `X`/`Y`/`Z` to pick an axis and start tracking |
+| `S` | Scale — object follows the mouse immediately |
+| `X` / `Y` / `Z` | Constrain to that axis — **press again** for local, **again** to release. For `R` specifically, pressing one of these is also what starts mouse tracking |
 | `Shift` + `X`/`Y`/`Z` | Constrain to the plane perpendicular to that axis |
 | type a number | Enter an exact value (e.g. `G` `X` `2` = move 2 m on X); `-` and `.` work; `Backspace` edits |
 | hold `Shift` | Precision (slow) mode |
@@ -66,11 +66,6 @@ With nothing selected (or not in Edit mode) `G`/`R`/`S` just set the drag-handle
 | `H` | Hide / show UI |
 | `Shift+A` | Auto-tile open panels |
 | `Shift+R` | Reset panel positions |
-
-### Not yet in Studio
-
-- **Select all / multi-select** — Studio currently selects a single entity at a time.
-- **Keyboard axis lock (X/Y/Z)** — drag the axis handle on the gizmo directly instead.
 
 ## Main app editor (`/<space>`)
 
