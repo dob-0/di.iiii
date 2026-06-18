@@ -10,6 +10,10 @@
       "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
     }
   },
+  "statusLine": {
+    "type": "command",
+    "command": "bash scripts/claude-statusline.sh"
+  },
   "permissions": {
     "defaultMode": "auto",
     "allow": [
@@ -61,6 +65,12 @@
       "Bash(gh pr view *)",
       "Bash(gh issue list *)",
       "Bash(gh issue view *)",
+
+      "Bash(git show *)",
+      "Bash(npm test)",
+      "Bash(npm test *)",
+      "Bash(npm info *)",
+      "Bash(npm audit)",
 
       "Bash(git -C /home/nooo/di.iiii remote set-url origin git@github.com:dob-0/di.iiii.git)",
       "Bash(git -C /home/nooo/di.iiii push origin dev)"
