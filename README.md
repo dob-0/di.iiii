@@ -150,20 +150,15 @@ Useful local routes:
 - `http://localhost:5173/admin?space=main`
 - `http://localhost:4000/serverXR/api/health`
 
-## Contributing
+## Self-Hosting (this branch)
 
-New contributor or AI agent joining the project? Start with [ONBOARDING.md](ONBOARDING.md) — it covers prerequisites, fork + clone, local env setup, and `npm run dev`.
+This `self-host` branch is the clean, local-only copy — no GitHub CLI, no
+token, no fork, no PR flow. Start with [ONBOARDING.md](ONBOARDING.md): clone,
+`npm install`, create `serverXR/.env`, `npm run dev`.
 
-Default contribution model is fork-based:
-
-1. Fork `dob-0/di.iiii`, clone your fork, work there freely
-2. Validate before sharing: `npm run lint && npm run build && npm run test`
-3. Push to your fork and open a PR against this repo's `dev` branch (or let [docs/templates/fork-auto-pr.yml](docs/templates/fork-auto-pr.yml) open it for you automatically on push, once set up)
-4. We review and merge into `dev` from the upstream side
-
-An AI agent working in your own fork can validate, commit, and push on its own once a task is done — pushing only ever updates your fork, never `dob-0/di.iiii` directly, so this is safe to leave unattended. Merging into `dev`/`main` always stays an explicit, human-requested action.
-
-For running more than one agent/contributor at once without anyone's edits colliding (git worktrees, role-scoped file ownership, fork isolation), see [docs/ai/parallel-agents.md](docs/ai/parallel-agents.md).
+If you want to contribute changes back or collaborate with others instead of
+just running your own copy, switch to the `dev` branch — it has the full
+fork + PR contribution workflow (see `docs/ai/parallel-agents.md` there).
 
 ## Release Flow
 
