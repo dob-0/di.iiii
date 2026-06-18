@@ -151,6 +151,19 @@ export default function StudioShell({
             if (e.key === 'Escape' && quickInsert) {
                 setQuickInsert(null)
             }
+            // Blender-style gizmo mode keys (translate/rotate/scale)
+            if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                if (e.key === 'g' || e.key === 'G') {
+                    e.preventDefault()
+                    setViewportGizmoMode('translate')
+                } else if (e.key === 'r' || e.key === 'R') {
+                    e.preventDefault()
+                    setViewportGizmoMode('rotate')
+                } else if (e.key === 's' || e.key === 'S') {
+                    e.preventDefault()
+                    setViewportGizmoMode('scale')
+                }
+            }
             // Arrangement hotkeys (Shift+A = tile, Shift+R = reset)
             if (e.shiftKey && (e.key === 'a' || e.key === 'A')) {
                 e.preventDefault()
