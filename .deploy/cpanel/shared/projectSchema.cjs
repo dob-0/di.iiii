@@ -76,15 +76,15 @@ const defaultWindowLayout = {
 }
 
 const defaultWorldState = {
-  backgroundColor: '#ebe7df',
+  backgroundColor: '#0a1118',
   gridVisible: true,
   gridSize: 24,
   gridCellSize: 0.75,
   gridCellThickness: 0.3,
-  gridCellColor: '#526070',
+  gridCellColor: '#2a6e73',
   gridSectionSize: 6,
   gridSectionThickness: 0.65,
-  gridSectionColor: '#7cccf1',
+  gridSectionColor: '#4df9ff',
   gridFadeDistance: 80,
   gridFadeStrength: 1,
   gridOffset: 0.015,
