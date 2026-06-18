@@ -9,8 +9,8 @@ active_branch: dev (working directly on dev — SpaceHub, space creation, git-to
 
 ## Last commit
 
-`1b90867` — chore: add serena MCP server and custom subagents/commands
-(this session: finished Present/Files panel split refactor (`f21255d`); set GitHub/Google OAuth client ID+secret env vars on both staging and production cPanel hosts — `GET /api/auth/providers` now returns `{github:true, google:true}` on both. No code change needed, was a pure ops/env gap. Separate GitHub OAuth apps exist per environment: `staging di`, `di-studio` (prod), `di-studio-local` (local dev).)
+`378cba5` — fix: control-cluster panel itself ignored the Snap-to-edge toggle
+(this session: installed two Claude Code plugins from `claude-plugins-official` — `frontend-design` (UI/UX aesthetic guidance) and `security-guidance` (auth/secrets review); skipped marketplace `code-review`/`pr-review-toolkit` to avoid clashing with this repo's own checked-in `/code-review`/`/review`/`/security-review` skills; recorded the choice in Claude Code memory (`project_plugins.md`) so future sessions install the same set; `enabledPlugins` added to `.claude/settings.json`. Other parallel-agent work landed on `dev` this session: edge-snap toggle test+fix, statusline tuning (`6cab50c`..`378cba5`).)
 Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production).
 
 ## What works
@@ -33,6 +33,7 @@ Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (product
 
 - `feature/landing-pages` branch is uncommitted local work — lint/build/full test suite/server-contracts all pass; the read-scope fix and Studio nav fixes were manually verified live (curl + Playwright browser). The new `/api/users` admin endpoints are covered by automated tests only (no real OAuth round-trip exercised — GitHub/Google aren't configured in this dev environment). Commit and do a manual Docker check before merging to `dev`.
 - Known follow-up (not blocking): `GET /api/spaces` (the full space list) still has no scope check — it only returns metadata (ids/labels/flags), not content, but it does reveal which spaces exist to anyone authenticated for any space.
+- `.claude/settings.json` has an uncommitted `enabledPlugins` change (frontend-design, security-guidance) on the main `dev` checkout — needs a commit/push.
 
 ## Space sync setup (per machine)
 
