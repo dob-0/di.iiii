@@ -228,6 +228,75 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         dispatch({ type: 'select-entity', entityId: null })
     }
 
+    const handleDuplicateSelected = () => {
+        if (!selectedEntity) return
+        const sourcePosition = selectedEntity.components?.transform?.position || [0, 0, 0]
+        const entity = createEntityOfType(selectedEntity.type, {
+            name: `${selectedEntity.name} copy`,
+            components: {
+                ...structuredClone(selectedEntity.components),
+                transform: {
+                    ...structuredClone(selectedEntity.components?.transform),
+                    position: [sourcePosition[0] + 0.4, sourcePosition[1], sourcePosition[2] + 0.4]
+                }
+            }
+        })
+        applyLocalOps({
+            type: 'createEntity',
+            payload: { entity }
+        }, { activityMessage: `Duplicated ${selectedEntity.name}.` })
+        dispatch({ type: 'select-entity', entityId: entity.id })
+    }
+
+    const handleFrameSelected = () => {
+        if (!selectedEntity) return
+        const cc = controlsRef.current
+        if (!cc) return
+        const [tx, ty, tz] = selectedEntity.components?.transform?.position || [0, 0, 0]
+        const offset = [
+            cc._camera.position.x - cc._target.x,
+            cc._camera.position.y - cc._target.y,
+            cc._camera.position.z - cc._target.z
+        ]
+        cc.setLookAt(tx + offset[0], ty + offset[1], tz + offset[2], tx, ty, tz, true)
+    }
+
+    useEffect(() => {
+        const handler = (event) => {
+            const tag = event.target?.tagName?.toLowerCase?.()
+            if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
+
+            // Blender-style duplicate
+            if (event.shiftKey && (event.key === 'd' || event.key === 'D')) {
+                if (!selectedEntity) return
+                event.preventDefault()
+                handleDuplicateSelected()
+                return
+            }
+            // Blender-style delete
+            if (event.key === 'x' || event.key === 'X' || event.key === 'Delete' || event.key === 'Backspace') {
+                if (!selectedEntity) return
+                event.preventDefault()
+                handleDeleteSelected()
+                return
+            }
+            // Blender-style frame selected (View > Frame Selected, default numpad ".")
+            if (event.key === '.') {
+                if (!selectedEntity) return
+                event.preventDefault()
+                handleFrameSelected()
+                return
+            }
+            // Deselect
+            if (event.key === 'Escape' && selectedEntity) {
+                dispatch({ type: 'select-entity', entityId: null })
+            }
+        }
+        window.addEventListener('keydown', handler)
+        return () => window.removeEventListener('keydown', handler)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedEntity, dispatch])
+
     const handleWorldPatch = (patch) => {
         applyLocalOps({
             type: 'setWorldState',
