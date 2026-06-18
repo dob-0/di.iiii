@@ -41,6 +41,7 @@ export default function StudioShell({
     onDisplayNameChange,
     selectedEntity,
     selectedEntityId,
+    selectedEntityIds = [],
     entities,
     inspectorSections,
     inspectorValues,
@@ -80,12 +81,18 @@ export default function StudioShell({
     onBackToHub,
     onCameraViewChange,
     onTransformCommit,
+    onToggleSelectEntity,
+    transformOp = null,
+    onStartTransform,
+    onTransformCommitMany,
+    onTransformCancel,
 }) {
     const { open, toggle, isOpen } = useStudioPanelState()
     const { layout: vpLayout, split: vpSplit, close: vpClose, setRatio: vpSetRatio } = useViewportLayout()
     const [uiHidden, setUiHidden] = useState(false)
     const [viewportEditMode, setViewportEditMode] = useState('navigate')
     const [viewportGizmoMode, setViewportGizmoMode] = useState('translate')
+    const [viewportGizmoVisible, setViewportGizmoVisible] = useState(true)
     const [quickInsert, setQuickInsert] = useState(null)
     const [positions, setPositions] = useState(DEFAULT_POSITIONS)
     const [layoutKey, setLayoutKey] = useState(0)
@@ -152,17 +159,26 @@ export default function StudioShell({
             if (e.key === 'Escape' && quickInsert) {
                 setQuickInsert(null)
             }
-            // Blender-style gizmo mode keys (translate/rotate/scale)
+            // Blender-style gizmo mode keys. In edit mode with a selection they start a
+            // modal grab/rotate/scale (object follows the mouse); otherwise they just set
+            // the drag-handle gizmo mode. T toggles gizmo visibility.
             if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
-                if (e.key === 'g' || e.key === 'G') {
+                const modeForKey = (e.key === 'g' || e.key === 'G') ? 'translate'
+                    : (e.key === 'r' || e.key === 'R') ? 'rotate'
+                    : (e.key === 's' || e.key === 'S') ? 'scale'
+                    : null
+                const canModal = viewportEditMode === 'edit' && selectedEntityIds.length > 0
+                if (modeForKey) {
                     e.preventDefault()
-                    setViewportGizmoMode('translate')
-                } else if (e.key === 'r' || e.key === 'R') {
+                    if (canModal && onStartTransform) {
+                        onStartTransform(modeForKey)
+                    } else {
+                        setViewportGizmoMode(modeForKey)
+                        setViewportGizmoVisible(true)
+                    }
+                } else if (e.key === 't' || e.key === 'T') {
                     e.preventDefault()
-                    setViewportGizmoMode('rotate')
-                } else if (e.key === 's' || e.key === 'S') {
-                    e.preventDefault()
-                    setViewportGizmoMode('scale')
+                    setViewportGizmoVisible((v) => !v)
                 }
             }
             // Arrangement hotkeys (Shift+A = tile, Shift+R = reset)
@@ -177,7 +193,7 @@ export default function StudioShell({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [quickInsert, tileLayout, resetLayout])
+    }, [quickInsert, tileLayout, resetLayout, viewportEditMode, selectedEntityIds, onStartTransform])
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return
@@ -206,14 +222,20 @@ export default function StudioShell({
     const viewportShared = {
         document,
         selectedEntityId,
+        selectedEntityIds,
         onSelectEntity,
+        onToggleSelectEntity,
         cursors: presence?.cursors,
         onCursorMove: presence?.emitCursor,
         onCursorLeave: presence?.clearCursor,
         xrStore: xrState?.xrStore,
         editMode: viewportEditMode,
         gizmoMode: viewportGizmoMode,
+        gizmoVisible: viewportGizmoVisible,
+        transformOp,
         onTransformCommit,
+        onTransformCommitMany,
+        onTransformCancel,
     }
 
     return (

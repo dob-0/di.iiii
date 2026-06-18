@@ -8,6 +8,7 @@ export const createProjectStoreState = ({
     document: normalizeProjectDocument(document || {}),
     version: Number(version) || 0,
     selectedEntityId: null,
+    selectedEntityIds: [],
     loading: false,
     loadError: null,
     activity: [],
@@ -31,7 +32,8 @@ export function projectStoreReducer(state, action) {
                 loadError: null,
                 version: Number(action.version) || 0,
                 document: normalizeProjectDocument(action.document || {}),
-                selectedEntityId: null
+                selectedEntityId: null,
+                selectedEntityIds: []
             }
         case 'load-error':
             return {
@@ -59,8 +61,30 @@ export function projectStoreReducer(state, action) {
         case 'select-entity':
             return {
                 ...state,
-                selectedEntityId: action.entityId || null
+                selectedEntityId: action.entityId || null,
+                selectedEntityIds: action.entityId ? [action.entityId] : []
             }
+        case 'toggle-entity-selection': {
+            const id = action.entityId
+            if (!id) return state
+            const exists = state.selectedEntityIds.includes(id)
+            const nextIds = exists
+                ? state.selectedEntityIds.filter((entityId) => entityId !== id)
+                : [...state.selectedEntityIds, id]
+            return {
+                ...state,
+                selectedEntityIds: nextIds,
+                selectedEntityId: exists ? (nextIds.at(-1) || null) : id
+            }
+        }
+        case 'select-entities': {
+            const nextIds = Array.isArray(action.entityIds) ? action.entityIds.filter(Boolean) : []
+            return {
+                ...state,
+                selectedEntityIds: nextIds,
+                selectedEntityId: nextIds.at(-1) || null
+            }
+        }
         case 'append-activity': {
             const nextEntry = {
                 id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,

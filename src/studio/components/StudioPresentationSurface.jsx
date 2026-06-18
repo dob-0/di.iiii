@@ -28,7 +28,9 @@ const resolveStudioPreviewCamera = (document, cameraView) => {
 export default function StudioPresentationSurface({
     document,
     selectedEntityId,
+    selectedEntityIds = [],
     onSelectEntity,
+    onToggleSelectEntity,
     cursors = {},
     onCursorMove,
     onCursorLeave,
@@ -39,9 +41,13 @@ export default function StudioPresentationSurface({
     onRotateStart,
     editMode,
     gizmoMode,
+    gizmoVisible = true,
+    transformOp = null,
     setEditMode,
     setGizmoMode,
-    onTransformCommit
+    onTransformCommit,
+    onTransformCommitMany,
+    onTransformCancel
 }) {
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
@@ -118,7 +124,9 @@ export default function StudioPresentationSurface({
         <StudioViewport
             document={document}
             selectedEntityId={selectedEntityId}
+            selectedEntityIds={selectedEntityIds}
             onSelectEntity={onSelectEntity}
+            onToggleSelectEntity={onToggleSelectEntity}
             cursors={cursors}
             onCursorMove={onCursorMove}
             onCursorLeave={onCursorLeave}
@@ -129,9 +137,13 @@ export default function StudioPresentationSurface({
             onRotateStart={onRotateStart}
             editMode={editMode}
             gizmoMode={gizmoMode}
+            gizmoVisible={gizmoVisible}
+            transformOp={transformOp}
             setEditMode={setEditMode}
             setGizmoMode={setGizmoMode}
             onTransformCommit={onTransformCommit}
+            onTransformCommitMany={onTransformCommitMany}
+            onTransformCancel={onTransformCancel}
             enableNavigation={isFixedCamera ? false : undefined}
         />
     )

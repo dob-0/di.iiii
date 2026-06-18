@@ -76,6 +76,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     })
     const historyRef = useRef([])
     const redoRef = useRef([])
+    const clipboardRef = useRef(null)
     const documentRef = useRef(state.document)
     useEffect(() => { documentRef.current = state.document }, [state.document])
     const applyLocalOps = useCallback((ops, options) => {
@@ -98,6 +99,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const { assets: spaceAssets, refresh: refreshSpaceAssets } = useSpaceAssets(resolvedSpaceId)
     const entities = document.entities || []
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
+    const selectedEntityIds = state.selectedEntityIds || []
+    const selectedEntities = entities.filter((entity) => selectedEntityIds.includes(entity.id))
+    const [transformOp, setTransformOp] = useState(null)
+    const transformOpRef = useRef(null)
+    useEffect(() => { transformOpRef.current = transformOp }, [transformOp])
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
     const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'lg'))
@@ -220,32 +226,75 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     }
 
     const handleDeleteSelected = () => {
-        if (!selectedEntity) return
-        applyLocalOps({
-            type: 'deleteEntity',
-            payload: { entityId: selectedEntity.id }
-        }, { activityMessage: `Deleted ${selectedEntity.name}.`, activityLevel: 'warning' })
+        const targets = selectedEntities.length ? selectedEntities : (selectedEntity ? [selectedEntity] : [])
+        if (!targets.length) return
+        applyLocalOps(
+            targets.map((entity) => ({ type: 'deleteEntity', payload: { entityId: entity.id } })),
+            {
+                activityMessage: targets.length === 1
+                    ? `Deleted ${targets[0].name}.`
+                    : `Deleted ${targets.length} entities.`,
+                activityLevel: 'warning'
+            }
+        )
         dispatch({ type: 'select-entity', entityId: null })
     }
 
-    const handleDuplicateSelected = () => {
-        if (!selectedEntity) return
-        const sourcePosition = selectedEntity.components?.transform?.position || [0, 0, 0]
-        const entity = createEntityOfType(selectedEntity.type, {
-            name: `${selectedEntity.name} copy`,
+    // Build a new entity from any source (selected entity or clipboard), offset
+    // slightly on X/Z so the copy doesn't sit exactly on top of the original.
+    const cloneEntityFrom = (source) => {
+        const sourcePosition = source.components?.transform?.position || [0, 0, 0]
+        return createEntityOfType(source.type, {
+            name: `${source.name} copy`,
             components: {
-                ...structuredClone(selectedEntity.components),
+                ...structuredClone(source.components),
                 transform: {
-                    ...structuredClone(selectedEntity.components?.transform),
+                    ...structuredClone(source.components?.transform),
                     position: [sourcePosition[0] + 0.4, sourcePosition[1], sourcePosition[2] + 0.4]
                 }
             }
         })
+    }
+
+    const handleDuplicateSelected = () => {
+        const targets = selectedEntities.length ? selectedEntities : (selectedEntity ? [selectedEntity] : [])
+        if (!targets.length) return
+        const clones = targets.map(cloneEntityFrom)
+        applyLocalOps(
+            clones.map((entity) => ({ type: 'createEntity', payload: { entity } })),
+            {
+                activityMessage: clones.length === 1
+                    ? `Duplicated ${targets[0].name}.`
+                    : `Duplicated ${clones.length} entities.`
+            }
+        )
+        dispatch({ type: 'select-entities', entityIds: clones.map((entity) => entity.id) })
+    }
+
+    const handleCopySelected = () => {
+        if (!selectedEntity) return
+        clipboardRef.current = {
+            type: selectedEntity.type,
+            name: selectedEntity.name,
+            components: structuredClone(selectedEntity.components)
+        }
+    }
+
+    const handlePasteClipboard = () => {
+        const source = clipboardRef.current
+        if (!source) return
+        const entity = cloneEntityFrom(source)
         applyLocalOps({
             type: 'createEntity',
             payload: { entity }
-        }, { activityMessage: `Duplicated ${selectedEntity.name}.` })
+        }, { activityMessage: `Pasted ${source.name}.` })
         dispatch({ type: 'select-entity', entityId: entity.id })
+    }
+
+    const handleCutSelected = () => {
+        if (!selectedEntity) return
+        handleCopySelected()
+        handleDeleteSelected()
     }
 
     const handleFrameSelected = () => {
@@ -266,22 +315,60 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             const tag = event.target?.tagName?.toLowerCase?.()
             if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
 
-            // Blender-style duplicate
-            if (event.shiftKey && (event.key === 'd' || event.key === 'D')) {
+            // While a modal transform is running, the operator owns the keyboard
+            // (X/Y/Z constrain, Enter/Esc finish) — don't let these shortcuts fire.
+            if (transformOpRef.current) return
+
+            const meta = event.ctrlKey || event.metaKey
+            const key = event.key
+
+            // Select all (A) / deselect all (Alt+A) — Blender style
+            if (!meta && (key === 'a' || key === 'A')) {
+                event.preventDefault()
+                if (event.altKey) {
+                    dispatch({ type: 'select-entities', entityIds: [] })
+                } else {
+                    dispatch({ type: 'select-entities', entityIds: entities.map((entity) => entity.id) })
+                }
+                return
+            }
+
+            // Clipboard — Copy (Ctrl/Cmd+C), Paste (Ctrl/Cmd+V), Cut (Ctrl/Cmd+X)
+            if (meta && (key === 'c' || key === 'C')) {
+                if (!selectedEntity) return
+                event.preventDefault()
+                handleCopySelected()
+                return
+            }
+            if (meta && (key === 'v' || key === 'V')) {
+                if (!clipboardRef.current) return
+                event.preventDefault()
+                handlePasteClipboard()
+                return
+            }
+            if (meta && (key === 'x' || key === 'X')) {
+                if (!selectedEntity) return
+                event.preventDefault()
+                handleCutSelected()
+                return
+            }
+
+            // Duplicate — Shift+D (Blender) or Ctrl/Cmd+D
+            if ((event.shiftKey || meta) && (key === 'd' || key === 'D')) {
                 if (!selectedEntity) return
                 event.preventDefault()
                 handleDuplicateSelected()
                 return
             }
-            // Blender-style delete
-            if (event.key === 'x' || event.key === 'X' || event.key === 'Delete' || event.key === 'Backspace') {
+            // Delete — X / Delete / Backspace (without Ctrl/Cmd; Ctrl/Cmd+X is Cut)
+            if (!meta && (key === 'x' || key === 'X' || key === 'Delete' || key === 'Backspace')) {
                 if (!selectedEntity) return
                 event.preventDefault()
                 handleDeleteSelected()
                 return
             }
-            // Blender-style frame selected (View > Frame Selected, default numpad ".")
-            if (event.key === '.') {
+            // Frame selected — F (Maya/Unity) or "." (Blender numpad). Both supported.
+            if (event.key === 'f' || event.key === 'F' || event.key === '.') {
                 if (!selectedEntity) return
                 event.preventDefault()
                 handleFrameSelected()
@@ -295,7 +382,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedEntity, dispatch])
+    }, [selectedEntity, selectedEntities, entities, dispatch])
 
     const handleWorldPatch = (patch) => {
         applyLocalOps({
@@ -356,6 +443,27 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             payload: { entityId, component: 'transform', patch: transform }
         })
     }, [applyLocalOps])
+
+    // Commit several entity transforms at once (modal multi-object move) as a single
+    // undo step.
+    const handleTransformCommitMany = useCallback((list) => {
+        const ops = (list || [])
+            .filter((entry) => entry?.id && entry.transform)
+            .map((entry) => ({
+                type: 'updateComponent',
+                payload: { entityId: entry.id, component: 'transform', patch: entry.transform }
+            }))
+        if (ops.length) applyLocalOps(ops)
+        setTransformOp(null)
+    }, [applyLocalOps])
+
+    const handleStartTransform = useCallback((mode) => {
+        setTransformOp({ mode, seq: Date.now() })
+    }, [])
+
+    const handleTransformCancel = useCallback(() => {
+        setTransformOp(null)
+    }, [])
 
     const handleCameraViewChange = (nextView) => {
         if (!nextView) return
@@ -547,6 +655,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onDisplayNameChange={setDisplayName}
             selectedEntity={selectedEntity}
             selectedEntityId={state.selectedEntityId}
+            selectedEntityIds={selectedEntityIds}
             entities={entities}
             inspectorSections={inspectorSections}
             inspectorValues={inspectorValues}
@@ -566,6 +675,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onAssetFilesSelected={handleAssetFilesSelected}
             onDeleteSelected={handleDeleteSelected}
             onSelectEntity={(entityId) => dispatch({ type: 'select-entity', entityId })}
+            onToggleSelectEntity={(entityId) => dispatch({ type: 'toggle-entity-selection', entityId })}
             onInspectorChange={handleInspectorChange}
             onWorldPatch={handleWorldPatch}
             onRenderSettingsPatch={handleRenderSettingsPatch}
@@ -582,6 +692,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onBackToHub={() => navigateToStudioPath(buildStudioHubPath(resolvedSpaceId))}
             onCameraViewChange={handleCameraViewChange}
             onTransformCommit={handleTransformCommit}
+            transformOp={transformOp}
+            onStartTransform={handleStartTransform}
+            onTransformCommitMany={handleTransformCommitMany}
+            onTransformCancel={handleTransformCancel}
             liveProjectState={{
                 spaceId: resolvedSpaceId,
                 spaceLabel: spaceMeta?.label || resolvedSpaceId,
