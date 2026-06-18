@@ -40,7 +40,7 @@ export default function StudioControlCluster({
     const [collapsed, setCollapsed] = useState(false)
 
     const initialPos = { x: typeof window !== 'undefined' ? window.innerWidth - 340 : 860, y: 16 }
-    const { panelRef, dragProps, dragStyle, panelPointerProps } = usePanelDrag(initialPos, { baseZ: 1500 })
+    const { panelRef, dragProps, dragStyle, panelPointerProps } = usePanelDrag(initialPos, { baseZ: 1500, snapEdges })
 
     const canVr = xrState?.canEnterVr
     const canAr = xrState?.canEnterAr
@@ -84,7 +84,7 @@ export default function StudioControlCluster({
                                 {editMode === 'edit' && (
                                     <>
                                         <div className="scc-sep" />
-                                        <button className={`scc-btn scc-btn--icon ${gizmoMode === 'translate' ? 'active' : ''}`} onClick={() => onSetGizmoMode('translate')} title="Move (T)">T</button>
+                                        <button className={`scc-btn scc-btn--icon ${gizmoMode === 'translate' ? 'active' : ''}`} onClick={() => onSetGizmoMode('translate')} title="Move (G)">G</button>
                                         <button className={`scc-btn scc-btn--icon ${gizmoMode === 'rotate' ? 'active' : ''}`} onClick={() => onSetGizmoMode('rotate')} title="Rotate (R)">R</button>
                                         <button className={`scc-btn scc-btn--icon ${gizmoMode === 'scale' ? 'active' : ''}`} onClick={() => onSetGizmoMode('scale')} title="Scale (S)">S</button>
                                     </>

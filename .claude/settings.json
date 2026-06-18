@@ -1,17 +1,5 @@
 {
-  "mcpServers": {
-    "sqlite": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sqlite", "/home/nooo/di.iiii/serverXR/data/di.db"],
-      "env": {}
-    },
-    "serena": {
-      "command": "uvx",
-      "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
-    }
-  },
   "permissions": {
-    "defaultMode": "auto",
     "allow": [
       "Bash(bash scripts/ollama-task.sh *)",
       "Bash(bash scripts/capture-rule.sh *)",
@@ -19,12 +7,10 @@
       "Bash(ollama list)",
       "Bash(ollama *)",
       "Bash(curl -s http://localhost:11434/api/tags)",
-
       "Bash(npm run *)",
       "Bash(npm install)",
       "Bash(npm install *)",
       "Bash(npx *)",
-
       "Bash(git status)",
       "Bash(git diff *)",
       "Bash(git log *)",
@@ -36,35 +22,35 @@
       "Bash(git branch *)",
       "Bash(git merge --no-edit *)",
       "Bash(git stash *)",
-
       "Bash(bash scripts/*)",
       "Bash(node scripts/*)",
       "Bash(node *)",
-
       "Bash(curl -s http://localhost:*)",
       "Bash(curl http://localhost:*)",
-
       "Bash(docker compose *)",
       "Bash(docker ps)",
       "Bash(docker logs *)",
       "Bash(docker images)",
-
       "Bash(find . *)",
       "Bash(grep *)",
       "Bash(grep -r *)",
       "Bash(ls *)",
       "Bash(wc *)",
-
       "Bash(gh run list *)",
       "Bash(gh run view *)",
       "Bash(gh pr list *)",
       "Bash(gh pr view *)",
       "Bash(gh issue list *)",
       "Bash(gh issue view *)",
-
+      "Bash(git show *)",
+      "Bash(npm test)",
+      "Bash(npm test *)",
+      "Bash(npm info *)",
+      "Bash(npm audit)",
       "Bash(git -C /home/nooo/di.iiii remote set-url origin git@github.com:dob-0/di.iiii.git)",
       "Bash(git -C /home/nooo/di.iiii push origin dev)"
-    ]
+    ],
+    "defaultMode": "auto"
   },
   "hooks": {
     "SessionStart": [
@@ -118,8 +104,8 @@
           {
             "type": "command",
             "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -qE \"\\.(js|jsx|cjs|mjs)$\" || exit 0; echo \"$FILE\" | grep -q \"node_modules\" && exit 0; RESULT=$(npx eslint \"$FILE\" 2>&1); CODE=$?; [[ $CODE -eq 0 ]] && exit 0; printf \"\\n  ✗ Lint failed in %s:\\n%s\\n  → Fix before committing\\n\" \"$FILE\" \"$RESULT\"; exit 2'",
-            "asyncRewake": true,
-            "statusMessage": "Linting..."
+            "statusMessage": "Linting...",
+            "asyncRewake": true
           }
         ]
       },
@@ -129,11 +115,39 @@
           {
             "type": "command",
             "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -q \"AGENTS.md\" || exit 0; RESULT=$(npm run docs:ai:sync --silent 2>&1 && npm run docs:ai:check --silent 2>&1); CODE=$?; [[ $CODE -eq 0 ]] && printf \"  ● docs:ai:sync ran after AGENTS.md edit\\n\" && exit 0; printf \"  ✗ docs:ai:sync failed:\\n%s\\n  → Run npm run docs:ai:sync manually\\n\" \"$RESULT\"; exit 2'",
-            "asyncRewake": true,
-            "statusMessage": "Syncing AI docs..."
+            "statusMessage": "Syncing AI docs...",
+            "asyncRewake": true
           }
         ]
       }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash scripts/claude-statusline.sh"
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "security-guidance@claude-plugins-official": true
+  },
+  "mcpServers": {
+    "sqlite": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sqlite",
+        "/home/nooo/di.iiii/serverXR/data/di.db"
+      ],
+      "env": {}
+    },
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server"
+      ]
+    }
   }
 }
