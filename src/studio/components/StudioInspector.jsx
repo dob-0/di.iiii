@@ -122,6 +122,31 @@ const groupVectorFields = (fields = []) => {
     return groups
 }
 
+function InspSlider({ field, value, onChange }) {
+    const num = Number.isFinite(Number(value)) ? Number(value) : field.min
+    const pct = ((num - field.min) / (field.max - field.min)) * 100
+    return (
+        <div className="insp-field">
+            <div className="insp-slider-header">
+                <label className="insp-label">{field.label}</label>
+                <span className="insp-slider-value">{num}</span>
+            </div>
+            <input
+                type="range"
+                className="insp-slider"
+                value={num}
+                min={field.min}
+                max={field.max}
+                step={field.step ?? 0.1}
+                onChange={(e) => onChange(Number(e.target.value))}
+                style={{ '--insp-slider-fill': `${pct}%` }}
+            />
+        </div>
+    )
+}
+
+const isBoundedNumber = (field) => field.type === 'number' && Number.isFinite(field.min) && Number.isFinite(field.max)
+
 function InspField({ field, value, assetOptions = [], onChange }) {
     if (field.type === 'checkbox') {
         return (
@@ -189,7 +214,9 @@ function InspField({ field, value, assetOptions = [], onChange }) {
     }
 
     if (field.type === 'number') {
-        return <InspNumber field={field} value={value} onChange={onChange} />
+        return isBoundedNumber(field)
+            ? <InspSlider field={field} value={value} onChange={onChange} />
+            : <InspNumber field={field} value={value} onChange={onChange} />
     }
 
     return (

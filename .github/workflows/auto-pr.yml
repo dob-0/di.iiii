@@ -1,0 +1,46 @@
+name: Auto-open PR to upstream dev
+
+# Fork-side workflow (Mode 0 in docs/ai/parallel-agents.md). Copied from
+# docs/templates/fork-auto-pr.yml per dob-0/di.iiii's AUTO_PR_SETUP_REQUEST.
+#
+# Every push to a branch other than dev/main in this fork opens a PR against
+# dob-0/di.iiii's dev branch if one doesn't already exist for that branch.
+# Pushing more commits to the same branch updates the open PR automatically.
+#
+# Requires a repo secret UPSTREAM_PR_TOKEN (fine-grained PAT with
+# "Pull requests: write" + "Contents: read" on dob-0/di.iiii, or a classic
+# token with "repo" scope). The default GITHUB_TOKEN cannot open PRs on a
+# different repo, which is why this secret is required.
+
+on:
+  push:
+    branches-ignore:
+      - dev
+      - main
+
+jobs:
+  open-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Open PR against upstream dev if none exists
+        env:
+          GH_TOKEN: ${{ secrets.UPSTREAM_PR_TOKEN }}
+        run: |
+          BRANCH="${GITHUB_REF_NAME}"
+          OWNER="${GITHUB_REPOSITORY_OWNER}"
+
+          existing=$(gh pr list --repo dob-0/di.iiii --head "${OWNER}:${BRANCH}" --state open --json number --jq '.[0].number')
+
+          if [ -n "$existing" ]; then
+            echo "PR #$existing already open for ${OWNER}:${BRANCH} — nothing to do."
+            exit 0
+          fi
+
+          gh pr create \
+            --repo dob-0/di.iiii \
+            --base dev \
+            --head "${OWNER}:${BRANCH}" \
+            --title "${BRANCH}" \
+            --body "Auto-opened from fork branch \`${BRANCH}\`. See commits for details."

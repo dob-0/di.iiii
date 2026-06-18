@@ -7,7 +7,6 @@ import {
     Dialog,
     DialogContent,
     DialogTitle,
-    Divider,
     FormControl,
     FormControlLabel,
     IconButton,
@@ -15,7 +14,6 @@ import {
     MenuItem,
     Paper,
     Select,
-    Slider,
     Stack,
     Switch,
     Tab,
@@ -204,43 +202,13 @@ export function StructurePanel({ entities = [], selectedEntityId, onSelectEntity
     )
 }
 
-function NumberField({ label, value, onChange, min, max, step = 1, sx }) {
+function NumberField({ label, value, onChange, min, max, step = 1 }) {
     return (
-        <TextField
-            label={label}
-            size="small"
-            type="number"
-            value={value}
-            onChange={(event) => {
-                const next = Number(event.target.value)
-                if (Number.isFinite(next)) onChange(next)
-            }}
-            inputProps={{ min, max, step }}
-            sx={sx}
-        />
-    )
-}
-
-const AXIS_COLORS = ['#ff6b6b', '#4ae3a5', '#4db2ff']
-
-function MiniBox({ label, value, onChange, min, max, step = 1, color }) {
-    return (
-        <Box sx={{
-            flex: 1,
-            minWidth: 0,
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 1,
-            bgcolor: 'rgba(255,255,255,0.02)',
-            p: '4px 6px'
-        }}>
-            <Typography sx={{
-                fontSize: 9, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase',
-                color: color || 'text.secondary', textAlign: 'center', display: 'block', mb: 0.25
-            }}>
-                {label}
-            </Typography>
+        <div className="insp-field">
+            <label className="insp-label">{label}</label>
             <input
                 type="number"
+                className="insp-input"
                 value={value}
                 min={min}
                 max={max}
@@ -249,44 +217,97 @@ function MiniBox({ label, value, onChange, min, max, step = 1, color }) {
                     const next = Number(event.target.value)
                     if (Number.isFinite(next)) onChange(next)
                 }}
-                style={{
-                    width: '100%', boxSizing: 'border-box', textAlign: 'center',
-                    background: 'rgba(2,4,9,0.45)', border: '1px solid rgba(255,255,255,0.12)',
-                    borderRadius: 4, color: 'inherit', fontSize: 11, padding: '3px 4px'
-                }}
             />
-        </Box>
+        </div>
     )
 }
 
+const AXIS_COLOR_VARS = ['var(--axis-x)', 'var(--axis-y)', 'var(--axis-z)']
+
 function MiniRow({ fields }) {
     return (
-        <Stack direction="row" spacing={0.75}>
-            {fields.map((field, index) => (
-                <MiniBox key={field.label} {...field} color={field.color ?? (field.axis ? AXIS_COLORS[index] : undefined)} />
-            ))}
-        </Stack>
+        <div className="insp-vec3-row">
+            {fields.map((field, index) => {
+                const color = field.color ?? (field.axis ? AXIS_COLOR_VARS[index] : undefined)
+                return (
+                    <div className="insp-field insp-field--compact" key={field.label}>
+                        <label className="insp-label" style={color ? { color } : undefined}>{field.label}</label>
+                        <input
+                            type="number"
+                            className="insp-input"
+                            value={field.value}
+                            min={field.min}
+                            max={field.max}
+                            step={field.step ?? 1}
+                            onChange={(event) => {
+                                const next = Number(event.target.value)
+                                if (Number.isFinite(next)) field.onChange(next)
+                            }}
+                        />
+                    </div>
+                )
+            })}
+        </div>
     )
 }
 
 function SliderField({ label, value, onChange, min, max, step }) {
+    const pct = ((value - min) / (max - min)) * 100
     return (
-        <Box>
-            <Stack direction="row" justifyContent="space-between">
-                <Typography variant="body2" color="text.secondary">{label}</Typography>
-                <Typography variant="body2" color="text.secondary">{value}</Typography>
-            </Stack>
-            <Slider size="small" value={value} min={min} max={max} step={step} onChange={(_, next) => onChange(next)} />
-        </Box>
+        <div className="insp-field">
+            <div className="insp-slider-header">
+                <label className="insp-label">{label}</label>
+                <span className="insp-slider-value">{value}</span>
+            </div>
+            <input
+                type="range"
+                className="insp-slider"
+                value={value}
+                min={min}
+                max={max}
+                step={step}
+                onChange={(event) => onChange(Number(event.target.value))}
+                style={{ '--insp-slider-fill': `${pct}%` }}
+            />
+        </div>
     )
 }
 
 function ColorField({ label, value, onChange }) {
     return (
-        <Stack direction="row" spacing={1.5} alignItems="center">
-            <Typography variant="body2" color="text.secondary" sx={{ flex: 1 }}>{label}</Typography>
-            <TextField size="small" type="color" value={value} onChange={(event) => onChange(event.target.value)} inputProps={{ 'aria-label': label }} />
-        </Stack>
+        <div className="insp-field">
+            <label className="insp-label">{label}</label>
+            <input type="color" className="insp-color" value={value} onChange={(event) => onChange(event.target.value)} aria-label={label} />
+        </div>
+    )
+}
+
+function ToggleField({ label, checked, onChange }) {
+    return (
+        <label className="insp-toggle">
+            <input type="checkbox" className="insp-toggle-input" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+            <span className="insp-toggle-track">
+                <span className="insp-toggle-thumb" />
+            </span>
+            <span className="insp-toggle-label">{label}</span>
+        </label>
+    )
+}
+
+function CollapsibleSection({ title, children, defaultOpen = true }) {
+    const [open, setOpen] = useState(defaultOpen)
+    return (
+        <div className="insp-section">
+            <button className="insp-section-btn" onClick={() => setOpen((v) => !v)}>
+                <span className="scc-section-label">{title}</span>
+                <span className="insp-arrow">{open ? '▾' : '▸'}</span>
+            </button>
+            {open && (
+                <div className="insp-section-body">
+                    {children}
+                </div>
+            )}
+        </div>
     )
 }
 
@@ -303,109 +324,95 @@ export function ProjectPanel({
     const render = document.renderSettings || defaultRenderSettings
 
     return (
-        <Stack spacing={2} sx={{ p: 2, maxHeight: '70vh', overflowY: 'auto' }}>
-            <TextField
-                label="Display name"
-                size="small"
-                value={displayName}
-                onChange={(event) => onDisplayNameChange(event.target.value)}
-            />
-            <TextField
-                label="Project title"
-                size="small"
-                value={document.projectMeta?.title || ''}
-                onChange={(event) => onProjectMetaPatch({ title: event.target.value })}
-            />
+        <div className="insp-root">
+            <div className="insp-header">
+                <span className="insp-title">{document.projectMeta?.title || 'Untitled Project'}</span>
+                <span className="insp-subtitle">PROJECT</span>
+            </div>
 
-            <Divider />
-            <Typography variant="subtitle2">World</Typography>
-            <ColorField label="Background" value={world.backgroundColor} onChange={(v) => onWorldPatch({ backgroundColor: v })} />
-            <FormControlLabel
-                control={<Switch checked={world.gridVisible !== false} onChange={(event) => onWorldPatch({ gridVisible: event.target.checked })} />}
-                label="Grid visible"
-            />
-            <NumberField label="Grid Size" value={world.gridSize} min={1} step={1} onChange={(v) => onWorldPatch({ gridSize: v })} />
-            <MiniRow fields={[
-                { label: 'Cell Size', value: world.gridCellSize, min: 0.05, step: 0.05, onChange: (v) => onWorldPatch({ gridCellSize: v }) },
-                { label: 'Cell Thick.', value: world.gridCellThickness, min: 0, step: 0.05, onChange: (v) => onWorldPatch({ gridCellThickness: v }) }
-            ]} />
-            <MiniRow fields={[
-                { label: 'Section Size', value: world.gridSectionSize, min: 0.5, step: 0.5, onChange: (v) => onWorldPatch({ gridSectionSize: v }) },
-                { label: 'Section Thick.', value: world.gridSectionThickness, min: 0, step: 0.05, onChange: (v) => onWorldPatch({ gridSectionThickness: v }) }
-            ]} />
-            <MiniRow fields={[
-                { label: 'Fade Dist.', value: world.gridFadeDistance, min: 0, step: 1, onChange: (v) => onWorldPatch({ gridFadeDistance: v }) },
-                { label: 'Fade Strength', value: world.gridFadeStrength, min: 0, step: 0.05, onChange: (v) => onWorldPatch({ gridFadeStrength: v }) }
-            ]} />
-            <ColorField label="Grid cell color" value={world.gridCellColor} onChange={(v) => onWorldPatch({ gridCellColor: v })} />
-            <ColorField label="Grid section color" value={world.gridSectionColor} onChange={(v) => onWorldPatch({ gridSectionColor: v })} />
+            <CollapsibleSection title="Identity">
+                <div className="insp-field">
+                    <label className="insp-label" htmlFor="studio-project-display-name">Display name</label>
+                    <input id="studio-project-display-name" className="insp-input" value={displayName} onChange={(event) => onDisplayNameChange(event.target.value)} />
+                </div>
+                <div className="insp-field">
+                    <label className="insp-label" htmlFor="studio-project-title">Project title</label>
+                    <input id="studio-project-title" className="insp-input" value={document.projectMeta?.title || ''} onChange={(event) => onProjectMetaPatch({ title: event.target.value })} />
+                </div>
+            </CollapsibleSection>
 
-            <Divider />
-            <Typography variant="subtitle2">Lighting</Typography>
-            <ColorField label="Ambient color" value={world.ambientLight?.color} onChange={(v) => onWorldPatch({ ambientLight: { color: v } })} />
-            <SliderField label="Ambient intensity" value={world.ambientLight?.intensity ?? 0.85} min={0} max={2} step={0.05} onChange={(v) => onWorldPatch({ ambientLight: { intensity: v } })} />
-            <ColorField label="Sun color" value={world.directionalLight?.color} onChange={(v) => onWorldPatch({ directionalLight: { color: v } })} />
-            <SliderField label="Sun intensity" value={world.directionalLight?.intensity ?? 1.15} min={0} max={3} step={0.05} onChange={(v) => onWorldPatch({ directionalLight: { intensity: v } })} />
-            <MiniRow fields={[0, 1, 2].map((axisIndex) => ({
-                label: ['X', 'Y', 'Z'][axisIndex],
-                axis: true,
-                value: world.directionalLight?.position?.[axisIndex] ?? [8, 12, 4][axisIndex],
-                min: -50, step: 0.5,
-                onChange: (v) => {
-                    const next = [...(world.directionalLight?.position || [8, 12, 4])]
-                    next[axisIndex] = v
-                    onWorldPatch({ directionalLight: { position: next } })
-                }
-            }))} />
+            <CollapsibleSection title="World">
+                <ColorField label="Background" value={world.backgroundColor} onChange={(v) => onWorldPatch({ backgroundColor: v })} />
+                <ToggleField label="Grid visible" checked={world.gridVisible !== false} onChange={(v) => onWorldPatch({ gridVisible: v })} />
+                <NumberField label="Grid Size" value={world.gridSize} min={1} step={1} onChange={(v) => onWorldPatch({ gridSize: v })} />
+                <NumberField label="Cell Size" value={world.gridCellSize} min={0.05} step={0.05} onChange={(v) => onWorldPatch({ gridCellSize: v })} />
+                <NumberField label="Cell Thickness" value={world.gridCellThickness} min={0} step={0.05} onChange={(v) => onWorldPatch({ gridCellThickness: v })} />
+                <NumberField label="Section Size" value={world.gridSectionSize} min={0.5} step={0.5} onChange={(v) => onWorldPatch({ gridSectionSize: v })} />
+                <NumberField label="Section Thickness" value={world.gridSectionThickness} min={0} step={0.05} onChange={(v) => onWorldPatch({ gridSectionThickness: v })} />
+                <NumberField label="Fade Distance" value={world.gridFadeDistance} min={0} step={1} onChange={(v) => onWorldPatch({ gridFadeDistance: v })} />
+                <NumberField label="Fade Strength" value={world.gridFadeStrength} min={0} step={0.05} onChange={(v) => onWorldPatch({ gridFadeStrength: v })} />
+                <ColorField label="Grid cell color" value={world.gridCellColor} onChange={(v) => onWorldPatch({ gridCellColor: v })} />
+                <ColorField label="Grid section color" value={world.gridSectionColor} onChange={(v) => onWorldPatch({ gridSectionColor: v })} />
+            </CollapsibleSection>
 
-            <Divider />
-            <Typography variant="subtitle2">Default camera</Typography>
-            <MiniRow fields={[
-                { label: 'FOV', value: world.savedView?.fov ?? 50, min: 1, max: 170, step: 1, onChange: (v) => onWorldPatch({ savedView: { fov: v } }) },
-                { label: 'Zoom', value: world.savedView?.zoom ?? 1, min: 0.01, step: 0.1, onChange: (v) => onWorldPatch({ savedView: { zoom: v } }) }
-            ]} />
-            <MiniRow fields={[
-                { label: 'Near', value: world.savedView?.near ?? 0.1, min: 0.001, step: 0.01, onChange: (v) => onWorldPatch({ savedView: { near: v } }) },
-                { label: 'Far', value: world.savedView?.far ?? 1000, min: 0.01, step: 10, onChange: (v) => onWorldPatch({ savedView: { far: v } }) }
-            ]} />
+            <CollapsibleSection title="Lighting">
+                <ColorField label="Ambient color" value={world.ambientLight?.color} onChange={(v) => onWorldPatch({ ambientLight: { color: v } })} />
+                <SliderField label="Ambient intensity" value={world.ambientLight?.intensity ?? 0.85} min={0} max={2} step={0.05} onChange={(v) => onWorldPatch({ ambientLight: { intensity: v } })} />
+                <ColorField label="Sun color" value={world.directionalLight?.color} onChange={(v) => onWorldPatch({ directionalLight: { color: v } })} />
+                <SliderField label="Sun intensity" value={world.directionalLight?.intensity ?? 1.15} min={0} max={3} step={0.05} onChange={(v) => onWorldPatch({ directionalLight: { intensity: v } })} />
+                <div className="insp-vec3-group">
+                    <span className="insp-label">Sun position</span>
+                    <MiniRow fields={[0, 1, 2].map((axisIndex) => ({
+                        label: ['X', 'Y', 'Z'][axisIndex],
+                        axis: true,
+                        value: world.directionalLight?.position?.[axisIndex] ?? [8, 12, 4][axisIndex],
+                        min: -50, step: 0.5,
+                        onChange: (v) => {
+                            const next = [...(world.directionalLight?.position || [8, 12, 4])]
+                            next[axisIndex] = v
+                            onWorldPatch({ directionalLight: { position: next } })
+                        }
+                    }))} />
+                </div>
+            </CollapsibleSection>
 
-            <Divider />
-            <Typography variant="subtitle2">Render</Typography>
-            <FormControlLabel
-                control={<Switch checked={render.shadows !== false} onChange={(event) => onRenderSettingsPatch({ shadows: event.target.checked })} />}
-                label="Shadows"
-            />
-            <FormControlLabel
-                control={<Switch checked={render.antialias !== false} onChange={(event) => onRenderSettingsPatch({ antialias: event.target.checked })} />}
-                label="Antialias"
-            />
-            <FormControl fullWidth size="small">
-                <InputLabel>Tone mapping</InputLabel>
-                <Select label="Tone mapping" value={render.toneMapping || 'ACESFilmic'} onChange={(event) => onRenderSettingsPatch({ toneMapping: event.target.value })}>
-                    <MenuItem value="ACESFilmic">ACES Filmic</MenuItem>
-                    <MenuItem value="none">None</MenuItem>
-                </Select>
-            </FormControl>
-            <SliderField label="Exposure" value={render.toneMappingExposure ?? 1} min={0} max={3} step={0.05} onChange={(v) => onRenderSettingsPatch({ toneMappingExposure: v })} />
-            <MiniRow fields={[
-                { label: 'Min DPR', value: render.dprMin ?? 1, min: 0.5, max: 4, step: 0.25, onChange: (v) => onRenderSettingsPatch({ dprMin: v }) },
-                { label: 'Max DPR', value: render.dprMax ?? 2, min: 0.5, max: 4, step: 0.25, onChange: (v) => onRenderSettingsPatch({ dprMax: v }) }
-            ]} />
+            <CollapsibleSection title="Default camera" defaultOpen={false}>
+                <NumberField label="FOV" value={world.savedView?.fov ?? 50} min={1} max={170} step={1} onChange={(v) => onWorldPatch({ savedView: { fov: v } })} />
+                <NumberField label="Zoom" value={world.savedView?.zoom ?? 1} min={0.01} step={0.1} onChange={(v) => onWorldPatch({ savedView: { zoom: v } })} />
+                <NumberField label="Near" value={world.savedView?.near ?? 0.1} min={0.001} step={0.01} onChange={(v) => onWorldPatch({ savedView: { near: v } })} />
+                <NumberField label="Far" value={world.savedView?.far ?? 1000} min={0.01} step={10} onChange={(v) => onWorldPatch({ savedView: { far: v } })} />
+            </CollapsibleSection>
 
-            <Button
-                variant="text"
-                color="inherit"
-                onClick={() => {
-                    onWorldPatch(defaultWorldState)
-                    onRenderSettingsPatch(defaultRenderSettings)
-                }}
-            >
-                Reset world &amp; render settings
-            </Button>
-            <Button variant="text" color="inherit" onClick={onOpenHub}>
-                Back to projects
-            </Button>
-        </Stack>
+            <CollapsibleSection title="Render" defaultOpen={false}>
+                <ToggleField label="Shadows" checked={render.shadows !== false} onChange={(v) => onRenderSettingsPatch({ shadows: v })} />
+                <ToggleField label="Antialias" checked={render.antialias !== false} onChange={(v) => onRenderSettingsPatch({ antialias: v })} />
+                <div className="insp-field">
+                    <label className="insp-label" htmlFor="studio-tone-mapping">Tone mapping</label>
+                    <select id="studio-tone-mapping" className="insp-select" value={render.toneMapping || 'ACESFilmic'} onChange={(event) => onRenderSettingsPatch({ toneMapping: event.target.value })}>
+                        <option value="ACESFilmic">ACES Filmic</option>
+                        <option value="none">None</option>
+                    </select>
+                </div>
+                <SliderField label="Exposure" value={render.toneMappingExposure ?? 1} min={0} max={3} step={0.05} onChange={(v) => onRenderSettingsPatch({ toneMappingExposure: v })} />
+                <NumberField label="Min DPR" value={render.dprMin ?? 1} min={0.5} max={4} step={0.25} onChange={(v) => onRenderSettingsPatch({ dprMin: v })} />
+                <NumberField label="Max DPR" value={render.dprMax ?? 2} min={0.5} max={4} step={0.25} onChange={(v) => onRenderSettingsPatch({ dprMax: v })} />
+            </CollapsibleSection>
+
+            <div className="insp-footer">
+                <button
+                    className="scc-btn spa-btn-wide"
+                    onClick={() => {
+                        onWorldPatch(defaultWorldState)
+                        onRenderSettingsPatch(defaultRenderSettings)
+                    }}
+                >
+                    Reset world &amp; render settings
+                </button>
+                <button className="scc-btn spa-btn-wide" style={{ marginTop: 6 }} onClick={onOpenHub}>
+                    Back to projects
+                </button>
+            </div>
+        </div>
     )
 }
 

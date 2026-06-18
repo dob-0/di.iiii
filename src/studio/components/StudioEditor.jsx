@@ -524,9 +524,9 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                     { label: 'Grid Visible', component: 'worldState', path: ['gridVisible'], type: 'checkbox' },
                     { label: 'Grid Size', component: 'worldState', path: ['gridSize'], type: 'number', min: 1, step: 1 },
                     { label: 'Ambient Color', component: 'worldState', path: ['ambientLight', 'color'], type: 'color' },
-                    { label: 'Ambient Intensity', component: 'worldState', path: ['ambientLight', 'intensity'], type: 'number', min: 0, step: 0.05 },
+                    { label: 'Ambient Intensity', component: 'worldState', path: ['ambientLight', 'intensity'], type: 'number', min: 0, max: 2, step: 0.05 },
                     { label: 'Sun Color', component: 'worldState', path: ['directionalLight', 'color'], type: 'color' },
-                    { label: 'Sun Intensity', component: 'worldState', path: ['directionalLight', 'intensity'], type: 'number', min: 0, step: 0.05 }
+                    { label: 'Sun Intensity', component: 'worldState', path: ['directionalLight', 'intensity'], type: 'number', min: 0, max: 3, step: 0.05 }
                 ]
             }
         ]

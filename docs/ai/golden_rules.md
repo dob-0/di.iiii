@@ -94,6 +94,9 @@ Guessing wrong on a destructive or architectural decision costs more than a one-
 ### Never commit .env files or secrets
 `.env`, credentials, API tokens, and session secrets are never committed. If a task requires adding a new secret, add the key to `.env.example` with a placeholder value only.
 
+### Never discard another agent's uncommitted changes
+If `git status` shows unstaged edits you didn't make, assume another agent is mid-task in the same working tree. `git stash push -- <file>` to set them aside if you need a clean tree for an unrelated operation (e.g. a branch merge), then `git stash pop` immediately after to restore them exactly as found. Never `git checkout --` or discard them. See [parallel-agents.md](parallel-agents.md) for the full multi-agent setup (prefer `git worktree` over sharing one tree).
+
 ---
 
 ## Core Solutions — Discovered in This Repo

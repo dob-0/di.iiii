@@ -38,6 +38,36 @@
     --axis-z: #4db2ff;
 }
 
+* {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(77, 249, 255, 0.35) rgba(255, 255, 255, 0.04);
+}
+
+*::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+}
+
+*::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+*::-webkit-scrollbar-thumb {
+    background: rgba(77, 249, 255, 0.3);
+    border-radius: 5px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: rgba(77, 249, 255, 0.5);
+    background-clip: content-box;
+}
+
+*::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
 html,
 body,
 #root

@@ -84,6 +84,10 @@ Push changes downward only when needed:
 - if the change is only the shipped main editor shell or UX, prefer `src/studio/`
 - if the change is deliberately experimental, prefer `src/beta/`
 
+## Running More Than One Agent
+
+If a second agent is or will be active on this repo at the same time, do not share a working tree — see [parallel-agents.md](parallel-agents.md) for the worktree setup and the stash-discipline rule for handling another agent's in-progress edits.
+
 ## Branch And Release Flow
 
 - normal branch flow: `dev -> main`

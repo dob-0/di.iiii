@@ -83,7 +83,10 @@ const spawnProcess = (command, args, options = {}) => {
     return spawn(command, args, {
         cwd: options.cwd,
         env: options.env,
-        stdio: 'inherit'
+        stdio: 'inherit',
+        // On Windows the npm launcher is `npm.cmd`; recent Node releases refuse to
+        // spawn `.cmd` files directly (`spawn EINVAL`) unless run through a shell.
+        shell: process.platform === 'win32'
     })
 }
 
