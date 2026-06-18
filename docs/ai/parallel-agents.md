@@ -27,6 +27,10 @@ For an artist/contributor who just wants their own sandbox and doesn't need tigh
 
 This is the lowest-overhead option: no worktree setup, no branch-naming convention to teach, no risk of touching files outside their own copy. The cost is that sync only happens at PR boundaries — fine for someone contributing occasionally, too slow for back-and-forth pairing within one session.
 
+### Optional: auto-open the PR
+
+Opening the PR is still a manual step by default. A contributor who wants their fork to auto-open (or update) a PR every time they push can copy [../templates/fork-auto-pr.yml](../templates/fork-auto-pr.yml) into their own fork at `.github/workflows/auto-pr.yml`. It needs a personal access token saved as a fork-side secret (`UPSTREAM_PR_TOKEN`) since the default `GITHUB_TOKEN` can't open PRs on a different repo — see the comments in the template for exact setup steps. This only automates *opening* the PR; review and merge into `dev` on the upstream side stays manual.
+
 ## Mode 1: Git Worktree (preferred for same-repo parallel work)
 
 Each agent gets its own checkout of the repo, sharing the same `.git` history, on its own branch.
