@@ -47,6 +47,7 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
     const handlePointerMove = useCallback((event) => {
         const state = dragStateRef.current
         if (!state) return
+        if (event.cancelable) event.preventDefault()
         const dx = event.clientX - state.startX
         const dy = event.clientY - state.startY
         const next = clampToViewport(state.originX + dx, state.originY + dy)
@@ -65,6 +66,7 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
 
     const handlePointerDown = useCallback((event) => {
         event.preventDefault()
+        event.currentTarget?.setPointerCapture?.(event.pointerId)
         bringToFront()
         dragStateRef.current = {
             startX: event.clientX,
