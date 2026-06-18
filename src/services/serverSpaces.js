@@ -86,6 +86,11 @@ export const overwriteServerScene = async (spaceId, sceneData) => {
     })
 }
 
+export const listServerSpaceAssets = async (spaceId) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/assets`)
+    return data.assets || []
+}
+
 export const uploadServerAsset = async (spaceId, file, options = {}) => {
     if (!spaceId) throw new Error('space id required')
     if (!file) throw new Error('file required')

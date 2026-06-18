@@ -7,6 +7,7 @@ import { useProjectStore } from '../../project/state/projectStore.js'
 import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { defaultWorldState, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import useXrAr from '../../hooks/useXrAr.js'
+import useSpaceAssets from '../../hooks/useSpaceAssets.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
@@ -94,6 +95,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     })
     const document = state.document
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
+    const { assets: spaceAssets, refresh: refreshSpaceAssets } = useSpaceAssets(resolvedSpaceId)
     const entities = document.entities || []
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
     const theme = useTheme()
@@ -214,6 +216,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             handleCreateEntity(detectEntityTypeFromFile(file), asset)
         }
         event.target.value = ''
+        refreshSpaceAssets()
     }
 
     const handleDeleteSelected = () => {
@@ -468,6 +471,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             inspectorSections={inspectorSections}
             inspectorValues={inspectorValues}
             assetOptions={document.assets || []}
+            spaceAssets={spaceAssets}
             presence={presence}
             syncState={syncState}
             layout={layout}

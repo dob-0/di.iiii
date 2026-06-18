@@ -126,7 +126,59 @@ export function LibraryPanel({ onCreateEntity, onAssetFilesSelected, canDeleteSe
     )
 }
 
-export function AssetsPanel({ assets = [], onAssetFilesSelected, onCreateFromAsset }) {
+function SpaceAssetDrawer({ spaceAssets }) {
+    const [copied, setCopied] = useState(null)
+    const [open, setOpen] = useState(false)
+    const copyUrl = (asset) => {
+        navigator.clipboard.writeText(`/serverXR${asset.url}`).catch(() => {})
+        setCopied(asset.id)
+        setTimeout(() => setCopied(null), 1500)
+    }
+    return (
+        <Box sx={{ mt: 1 }}>
+            <Button size="small" variant="text" onClick={() => setOpen((v) => !v)} sx={{ fontSize: '0.7rem', color: 'text.secondary', p: 0 }}>
+                {open ? '▾' : '▸'} Space assets ({spaceAssets.length})
+            </Button>
+            {open && (
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 0.75, mt: 0.75 }}>
+                    {spaceAssets.map((asset) => (
+                        <Paper
+                            key={asset.id}
+                            variant="outlined"
+                            onClick={() => copyUrl(asset)}
+                            title={`${asset.name}\nClick to copy URL`}
+                            sx={{ p: 0.5, cursor: 'pointer', overflow: 'hidden', '&:hover': { borderColor: 'primary.light' } }}
+                        >
+                            {asset.mimeType?.startsWith('image/') ? (
+                                <Box
+                                    component="img"
+                                    src={`/serverXR${asset.url}`}
+                                    alt=""
+                                    sx={{ width: '100%', height: 56, objectFit: 'cover', display: 'block', mb: 0.5 }}
+                                />
+                            ) : (
+                                <Box sx={{ height: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', fontSize: '0.7rem' }}>
+                                    {(asset.mimeType || '').split('/')[0] || 'file'}
+                                </Box>
+                            )}
+                            <Typography variant="caption" noWrap display="block" sx={{ fontSize: '0.65rem', color: copied === asset.id ? 'success.main' : 'text.secondary' }}>
+                                {copied === asset.id ? 'copied!' : asset.name}
+                            </Typography>
+                        </Paper>
+                    ))}
+                </Box>
+            )}
+        </Box>
+    )
+}
+
+export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelected, onCreateFromAsset }) {
+    const [copied, setCopied] = useState(null)
+    const copyUrl = (asset) => {
+        navigator.clipboard.writeText(`/serverXR${asset.url}`).catch(() => {})
+        setCopied(asset.id)
+        setTimeout(() => setCopied(null), 1500)
+    }
     return (
         <>
             <div className="scc-section">
@@ -135,8 +187,34 @@ export function AssetsPanel({ assets = [], onAssetFilesSelected, onCreateFromAss
                     <input type="file" multiple onChange={onAssetFilesSelected} style={{ display: 'none' }} />
                 </label>
             </div>
+            {spaceAssets.length > 0 && (
+                <div className="scc-section">
+                    <div className="scc-section-label">Space files ({spaceAssets.length})</div>
+                    <div className="spa-list">
+                        {spaceAssets.map((asset) => (
+                            <div key={asset.id} className="spa-item spa-item--space">
+                                {asset.mimeType?.startsWith('image/') && (
+                                    <img
+                                        src={`/serverXR${asset.url}`}
+                                        alt=""
+                                        className="spa-thumb"
+                                    />
+                                )}
+                                <span className="spa-name" title={asset.name}>{asset.name}</span>
+                                <button
+                                    className="spa-copy-btn"
+                                    onClick={() => copyUrl(asset)}
+                                    title="Copy URL"
+                                >
+                                    {copied === asset.id ? '✓' : 'URL'}
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
             <div className="scc-section">
-                <div className="scc-section-label">Space assets ({assets.length})</div>
+                <div className="scc-section-label">Scene assets ({assets.length})</div>
                 {assets.length === 0 ? (
                     <p className="sfp-empty">No assets yet.</p>
                 ) : (
@@ -280,7 +358,8 @@ export function PresentPanel({
     presentationState,
     onPresentationPatch,
     onSaveCurrentCamera,
-    assets = []
+    assets = [],
+    spaceAssets = []
 }) {
     const singleFileInputRef = useRef(null)
     const zipInputRef = useRef(null)
@@ -616,6 +695,9 @@ export function PresentPanel({
                                     onChange={(e) => updateActiveContent(e.target.value)}
                                     inputProps={{ style: { fontFamily: 'monospace', fontSize: '0.78rem' } }}
                                 />
+                            )}
+                            {spaceAssets.length > 0 && (
+                                <SpaceAssetDrawer spaceAssets={spaceAssets} />
                             )}
                         </Stack>
                     )}

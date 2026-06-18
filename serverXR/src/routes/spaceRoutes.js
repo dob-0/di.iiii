@@ -348,6 +348,31 @@ function registerSpaceRoutes(router, {
     }
   })
 
+  router.get('/api/spaces/:spaceId/assets', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      const { assetsDir } = getSpacePaths(spaceId)
+      const assetBaseUrl = `${req.baseUrl || ''}/api/spaces/${spaceId}/assets`
+      const files = await fsp.readdir(assetsDir).catch(() => [])
+      const assets = (
+        await Promise.all(
+          files
+            .filter(f => f.endsWith('.json'))
+            .map(async f => {
+              try {
+                const meta = JSON.parse(await fsp.readFile(path.join(assetsDir, f), 'utf-8'))
+                return { ...meta, url: `${assetBaseUrl}/${meta.id}` }
+              } catch { return null }
+            })
+        )
+      )
+        .filter(Boolean)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      res.json({ assets })
+    } catch (error) { next(error) }
+  })
+
   router.get('/api/spaces/:spaceId/assets/:assetId', async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)

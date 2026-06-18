@@ -92,7 +92,8 @@ function AppRouter() {
         )
     }
 
-    if (appState.spaceId === 'wcc' && appState.page !== APP_PAGE_PREFERENCES) {
+    const pathSegments = location.pathname.replace(/^\/+/, '').replace(/\/+$/, '').split('/')
+    if (appState.spaceId === 'wcc' && pathSegments.length === 1 && appState.page !== APP_PAGE_PREFERENCES) {
         return (
             <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
                 <WccLandingPage />

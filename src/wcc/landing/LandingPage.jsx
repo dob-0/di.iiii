@@ -26,7 +26,7 @@ const panels = [
         label: 'EXHIBITION',
         description: 'Enter the WCC: Women Creating Change virtual exhibition space.',
         action: 'Enter space',
-        href: '/studio/wcc'
+        href: '/wcc/scene'
     }
 ]
 
@@ -173,7 +173,7 @@ function BackgroundRippleField({ ripples }) {
 
 function EnterExhibitionButton({ className = '' }) {
     return (
-        <a className={`wcc-enter-button ${className}`} href="/studio/wcc" onClick={(event) => handleAppLinkClick(event, '/studio/wcc')}>
+        <a className={`wcc-enter-button ${className}`} href="/wcc/scene" onClick={(event) => handleAppLinkClick(event, '/wcc/scene')}>
             Enter exhibition
         </a>
     )

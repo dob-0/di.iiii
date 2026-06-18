@@ -43,6 +43,7 @@ export default function StudioShell({
     inspectorSections,
     inspectorValues,
     assetOptions,
+    spaceAssets = [],
     presence,
     syncState,
     // layout / updateLayout accepted but not used — new shell manages its own panel state
@@ -225,7 +226,7 @@ export default function StudioShell({
                     )}
                     {isOpen('assets') && (
                         <StudioFloatingPanel key={`assets-${layoutKey}`} title="Assets" onClose={() => toggle('assets')} initialPosition={positions.assets} initialWidth={260} snapEdges={snapEdges}>
-                            <AssetsPanel assets={assetOptions} onAssetFilesSelected={onAssetFilesSelected} onCreateFromAsset={onCreateFromAsset} />
+                            <AssetsPanel assets={assetOptions} spaceAssets={spaceAssets} onAssetFilesSelected={onAssetFilesSelected} onCreateFromAsset={onCreateFromAsset} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('inspector') && (
@@ -240,7 +241,7 @@ export default function StudioShell({
                     )}
                     {isOpen('present') && (
                         <StudioFloatingPanel key={`present-${layoutKey}`} title="Present" onClose={() => toggle('present')} initialPosition={positions.present} initialWidth={360} minWidth={300} maxWidth={700} snapEdges={snapEdges}>
-                            <PresentPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} onSaveCurrentCamera={onSaveCurrentCamera} assets={document?.assets || []} />
+                            <PresentPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} onSaveCurrentCamera={onSaveCurrentCamera} assets={document?.assets || []} spaceAssets={spaceAssets} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('publish') && (

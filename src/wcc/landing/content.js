@@ -1,7 +1,7 @@
 export const landingContent = {
     title: 'WCC: Women Creating Change',
     subtitle: '',
-    exhibitionHref: '/wcc/studio',
+    exhibitionHref: '/wcc/scene',
     artistWorks: [
         {
             id: 'meri-andreasyan-a-journey-of-remembrance',
