@@ -1,5 +1,6 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import * as THREE from 'three'
 import '../styles/studio.css'
 import { CameraControls, Grid, Html, TransformControls } from '@react-three/drei'
 import { XR, useXR } from '@react-three/xr'
@@ -208,6 +209,16 @@ function SelectableEntity({ entity, assetMap, selected, editMode, gizmoMode, onS
     )
 }
 
+function RenderSettingsEffect({ renderSettings }) {
+    const { gl } = useThree()
+    useEffect(() => {
+        gl.toneMapping = renderSettings?.toneMapping === 'none' ? THREE.NoToneMapping : THREE.ACESFilmicToneMapping
+        gl.toneMappingExposure = renderSettings?.toneMappingExposure ?? 1
+        gl.shadowMap.enabled = renderSettings?.shadows !== false
+    }, [gl, renderSettings?.toneMapping, renderSettings?.toneMappingExposure, renderSettings?.shadows])
+    return null
+}
+
 // ACTION values from camera-controls (binary flags):
 const CC_ACTION = { NONE: 0, ROTATE: 1, TRUCK: 2, SCREEN_PAN: 4, OFFSET: 8, DOLLY: 16, ZOOM: 32,
     TOUCH_DOLLY_TRUCK: 4096 }
@@ -305,6 +316,7 @@ function StudioSceneContent({ document, selectedEntityId, onSelectEntity, editMo
 
     return (
         <>
+            <RenderSettingsEffect renderSettings={document.renderSettings} />
             <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />
             <ambientLight
                 color={document.worldState?.ambientLight?.color || '#ffffff'}
@@ -318,11 +330,16 @@ function StudioSceneContent({ document, selectedEntityId, onSelectEntity, editMo
             <group position={isArMode ? AR_SCENE_POSITION : DEFAULT_SCENE_POSITION}>
                 {document.worldState?.gridVisible !== false && !isArMode && (
                     <Grid
+                        position={[0, -(document.worldState?.gridOffset ?? 0.015), 0]}
                         args={[document.worldState?.gridSize || 24, document.worldState?.gridSize || 24]}
-                        cellColor="#526070"
-                        sectionColor="#7cccf1"
-                        fadeDistance={80}
-                        fadeStrength={1}
+                        cellSize={document.worldState?.gridCellSize ?? 0.75}
+                        cellThickness={document.worldState?.gridCellThickness ?? 0.3}
+                        color={document.worldState?.gridCellColor || '#526070'}
+                        sectionSize={document.worldState?.gridSectionSize ?? 6}
+                        sectionThickness={document.worldState?.gridSectionThickness ?? 0.65}
+                        sectionColor={document.worldState?.gridSectionColor || '#7cccf1'}
+                        fadeDistance={document.worldState?.gridFadeDistance ?? 80}
+                        fadeStrength={document.worldState?.gridFadeStrength ?? 1}
                     />
                 )}
                 <Suspense fallback={null}>
@@ -517,7 +534,9 @@ export default function StudioViewport({
         >
             <Canvas
                 style={{ height: '100%' }}
-                shadows
+                shadows={document.renderSettings?.shadows !== false}
+                gl={{ antialias: document.renderSettings?.antialias !== false }}
+                dpr={[document.renderSettings?.dprMin ?? 1, document.renderSettings?.dprMax ?? 2]}
                 camera={{
                     position: camera.position || [0, 2.4, 6.5],
                     fov: camera.fov || 50,

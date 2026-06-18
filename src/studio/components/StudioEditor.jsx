@@ -304,6 +304,13 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         })
     }
 
+    const handleRenderSettingsPatch = (patch) => {
+        applyLocalOps({
+            type: 'setRenderSettings',
+            payload: { patch }
+        })
+    }
+
     const handleProjectMetaPatch = (patch) => {
         applyLocalOps({
             type: 'setProjectMeta',
@@ -367,7 +374,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             savedView: {
                 position: snapshot.position,
                 target: snapshot.target,
-                mode: 'perspective'
+                mode: 'perspective',
+                fov: snapshot.fov,
+                zoom: snapshot.zoom,
+                near: snapshot.near,
+                far: snapshot.far
             }
         })
         dispatch({
@@ -557,6 +568,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onSelectEntity={(entityId) => dispatch({ type: 'select-entity', entityId })}
             onInspectorChange={handleInspectorChange}
             onWorldPatch={handleWorldPatch}
+            onRenderSettingsPatch={handleRenderSettingsPatch}
             onProjectMetaPatch={handleProjectMetaPatch}
             onPresentationPatch={handlePresentationPatch}
             onPublishPatch={handlePublishPatch}

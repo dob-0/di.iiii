@@ -16,7 +16,7 @@ const setNestedValue = (value, path, nextValue) => {
 const readNestedValue = (value, path = []) =>
     path.reduce((cur, key) => cur?.[key], value)
 
-function InspNumber({ field, value, onChange }) {
+function InspNumber({ field, value, onChange, compact = false, axisColor }) {
     const baseStep = field.step ?? 0.1
     const fieldMin = field.min ?? -Infinity
     const fieldMax = field.max ?? Infinity
@@ -70,8 +70,8 @@ function InspNumber({ field, value, onChange }) {
     }, [applyDelta])
 
     return (
-        <div className="insp-field">
-            <label className="insp-label">{field.label}</label>
+        <div className={compact ? 'insp-field insp-field--compact' : 'insp-field'}>
+            <label className="insp-label" style={axisColor ? { color: axisColor } : undefined}>{field.label}</label>
             <div className="insp-num-wrap">
                 <input
                     ref={inputRef}
@@ -94,6 +94,32 @@ function InspNumber({ field, value, onChange }) {
             </div>
         </div>
     )
+}
+
+const AXIS_SUFFIXES = ['X', 'Y', 'Z']
+const AXIS_COLOR_VARS = ['var(--axis-x)', 'var(--axis-y)', 'var(--axis-z)']
+
+const groupVectorFields = (fields = []) => {
+    const groups = []
+    let i = 0
+    while (i < fields.length) {
+        const field = fields[i]
+        const base = field?.type === 'number' ? field.label?.match(/^(.+) X$/)?.[1] : null
+        const next1 = fields[i + 1]
+        const next2 = fields[i + 2]
+        if (
+            base &&
+            next1?.label === `${base} Y` && next1.component === field.component &&
+            next2?.label === `${base} Z` && next2.component === field.component
+        ) {
+            groups.push({ vector: true, base, fields: [field, next1, next2] })
+            i += 3
+        } else {
+            groups.push({ vector: false, field })
+            i += 1
+        }
+    }
+    return groups
 }
 
 function InspField({ field, value, assetOptions = [], onChange }) {
@@ -189,15 +215,34 @@ function InspSection({ section, sectionValue, assetOptions, onSectionChange }) {
             </button>
             {open && (
                 <div className="insp-section-body">
-                    {section.fields.map((field) => (
+                    {groupVectorFields(section.fields).map((group) => group.vector ? (
+                        <div className="insp-vec3-group" key={`${section.id}-${group.base}`}>
+                            <label className="insp-label">{group.base}</label>
+                            <div className="insp-vec3-row">
+                                {group.fields.map((field, axisIndex) => (
+                                    <InspNumber
+                                        key={field.label}
+                                        compact
+                                        axisColor={AXIS_COLOR_VARS[axisIndex]}
+                                        field={{ ...field, label: AXIS_SUFFIXES[axisIndex] }}
+                                        value={readNestedValue(sectionValue, field.path)}
+                                        onChange={(nextValue) => {
+                                            const next = setNestedValue(sectionValue, field.path, nextValue)
+                                            onSectionChange?.(field.component || section.id, next)
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    ) : (
                         <InspField
-                            key={`${section.id}-${field.label}`}
-                            field={field}
-                            value={readNestedValue(sectionValue, field.path)}
+                            key={`${section.id}-${group.field.label}`}
+                            field={group.field}
+                            value={readNestedValue(sectionValue, group.field.path)}
                             assetOptions={assetOptions}
                             onChange={(nextValue) => {
-                                const next = setNestedValue(sectionValue, field.path, nextValue)
-                                onSectionChange?.(field.component || section.id, next)
+                                const next = setNestedValue(sectionValue, group.field.path, nextValue)
+                                onSectionChange?.(group.field.component || section.id, next)
                             }}
                         />
                     ))}
