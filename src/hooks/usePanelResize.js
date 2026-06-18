@@ -20,6 +20,7 @@ export function usePanelResize(initialWidth = 260, options = {}) {
     const handlePointerMove = useCallback((event) => {
         const state = resizeStateRef.current
         if (!state) return
+        if (event.cancelable) event.preventDefault()
         const deltaX = event.clientX - state.startX
         const deltaY = event.clientY - state.startY
         setWidth(clamp(state.startWidth + deltaX, min, max))
@@ -35,6 +36,7 @@ export function usePanelResize(initialWidth = 260, options = {}) {
 
     const handlePointerDown = useCallback((event) => {
         event.preventDefault()
+        event.currentTarget?.setPointerCapture?.(event.pointerId)
         const rect = event.currentTarget?.parentElement?.getBoundingClientRect?.()
         resizeStateRef.current = {
             startX: event.clientX,
