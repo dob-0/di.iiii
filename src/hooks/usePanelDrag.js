@@ -22,7 +22,7 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
-    const clampToViewport = (x, y) => {
+    const clampToViewport = useCallback((x, y) => {
         const el = panelRef.current
         const vw = typeof window !== 'undefined' ? window.innerWidth : 0
         const vh = typeof window !== 'undefined' ? window.innerHeight : 0
@@ -42,7 +42,7 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
             else if (maxY - cy < snap) cy = maxY
         }
         return { x: cx, y: cy }
-    }
+    }, [snapEdges])
 
     const handlePointerMove = useCallback((event) => {
         const state = dragStateRef.current
@@ -51,8 +51,7 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
         const dy = event.clientY - state.startY
         const next = clampToViewport(state.originX + dx, state.originY + dy)
         setOffset(next)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [clampToViewport])
 
     const endDrag = useCallback(() => {
         dragStateRef.current = null
