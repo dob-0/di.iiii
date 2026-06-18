@@ -40,7 +40,7 @@ export default function StudioControlCluster({
     const [collapsed, setCollapsed] = useState(false)
 
     const initialPos = { x: typeof window !== 'undefined' ? window.innerWidth - 340 : 860, y: 16 }
-    const { panelRef, dragProps, dragStyle, panelPointerProps } = usePanelDrag(initialPos, { baseZ: 1500 })
+    const { panelRef, dragProps, dragStyle, panelPointerProps } = usePanelDrag(initialPos, { baseZ: 1500, snapEdges })
 
     const canVr = xrState?.canEnterVr
     const canAr = xrState?.canEnterAr
