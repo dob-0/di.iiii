@@ -819,6 +819,11 @@
 .insp-input[type="number"] {
     font-variant-numeric: tabular-nums;
     -moz-appearance: textfield;
+}
+
+/* Only inputs paired with .insp-num-arrows (see InspNumber) open their right edge —
+   a plain number field with no arrows next to it must keep its full border. */
+.insp-input.insp-num-input {
     border-radius: 4px 0 0 4px;
     border-right: none;
 }
