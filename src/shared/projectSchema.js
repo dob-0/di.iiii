@@ -89,9 +89,27 @@ export const defaultWorldState = {
     backgroundColor: '#ebe7df',
     gridVisible: true,
     gridSize: 24,
+    gridCellSize: 0.75,
+    gridCellThickness: 0.3,
+    gridCellColor: '#526070',
+    gridSectionSize: 6,
+    gridSectionThickness: 0.65,
+    gridSectionColor: '#7cccf1',
+    gridFadeDistance: 80,
+    gridFadeStrength: 1,
+    gridOffset: 0.015,
     ambientLight: { color: '#ffffff', intensity: 0.85 },
     directionalLight: { color: '#fff7ea', intensity: 1.15, position: [8, 12, 4] },
-    savedView: { mode: 'perspective', position: [0, 2.4, 6.5], target: [0, 0.75, 0] }
+    savedView: { mode: 'perspective', position: [0, 2.4, 6.5], target: [0, 0.75, 0], fov: 50, zoom: 1, near: 0.1, far: 1000 }
+}
+
+export const defaultRenderSettings = {
+    shadows: true,
+    antialias: true,
+    toneMapping: 'ACESFilmic',
+    toneMappingExposure: 1,
+    dprMin: 1,
+    dprMax: 2
 }
 
 export const defaultXrState = {
@@ -142,6 +160,7 @@ export const defaultProjectDocument = {
     workspaceState: defaultWorkspaceState,
     entities: [],
     worldState: defaultWorldState,
+    renderSettings: defaultRenderSettings,
     xrState: defaultXrState,
     presentationState: defaultPresentationState,
     publishState: defaultPublishState,
@@ -315,6 +334,15 @@ const normalizeWorldState = (world = {}) => {
         backgroundColor: ensureString(source.backgroundColor, defaultWorldState.backgroundColor),
         gridVisible: ensureBoolean(source.gridVisible, defaultWorldState.gridVisible),
         gridSize: Math.max(1, ensureNumber(source.gridSize, defaultWorldState.gridSize)),
+        gridCellSize: Math.max(0.05, ensureNumber(source.gridCellSize, defaultWorldState.gridCellSize)),
+        gridCellThickness: Math.max(0, ensureNumber(source.gridCellThickness, defaultWorldState.gridCellThickness)),
+        gridCellColor: ensureString(source.gridCellColor, defaultWorldState.gridCellColor),
+        gridSectionSize: Math.max(0.5, ensureNumber(source.gridSectionSize, defaultWorldState.gridSectionSize)),
+        gridSectionThickness: Math.max(0, ensureNumber(source.gridSectionThickness, defaultWorldState.gridSectionThickness)),
+        gridSectionColor: ensureString(source.gridSectionColor, defaultWorldState.gridSectionColor),
+        gridFadeDistance: Math.max(0, ensureNumber(source.gridFadeDistance, defaultWorldState.gridFadeDistance)),
+        gridFadeStrength: Math.max(0, ensureNumber(source.gridFadeStrength, defaultWorldState.gridFadeStrength)),
+        gridOffset: ensureNumber(source.gridOffset, defaultWorldState.gridOffset),
         ambientLight: {
             color: ensureString(source.ambientLight?.color, defaultWorldState.ambientLight.color),
             intensity: ensureNumber(source.ambientLight?.intensity, defaultWorldState.ambientLight.intensity)
@@ -327,8 +355,28 @@ const normalizeWorldState = (world = {}) => {
         savedView: {
             mode: ensureString(source.savedView?.mode, defaultWorldState.savedView.mode),
             position: ensureVector(source.savedView?.position, defaultWorldState.savedView.position),
-            target: ensureVector(source.savedView?.target, defaultWorldState.savedView.target)
+            target: ensureVector(source.savedView?.target, defaultWorldState.savedView.target),
+            fov: ensureNumber(source.savedView?.fov, defaultWorldState.savedView.fov),
+            zoom: ensureNumber(source.savedView?.zoom, defaultWorldState.savedView.zoom),
+            near: ensureNumber(source.savedView?.near, defaultWorldState.savedView.near),
+            far: ensureNumber(source.savedView?.far, defaultWorldState.savedView.far)
         }
+    }
+}
+
+const RENDER_TONE_MAPPINGS = new Set(['ACESFilmic', 'none'])
+
+const normalizeRenderSettings = (settings = {}) => {
+    const source = settings && typeof settings === 'object' ? settings : {}
+    return {
+        ...cloneValue(defaultRenderSettings),
+        ...cloneValue(source),
+        shadows: ensureBoolean(source.shadows, defaultRenderSettings.shadows),
+        antialias: ensureBoolean(source.antialias, defaultRenderSettings.antialias),
+        toneMapping: RENDER_TONE_MAPPINGS.has(source.toneMapping) ? source.toneMapping : defaultRenderSettings.toneMapping,
+        toneMappingExposure: Math.max(0, ensureNumber(source.toneMappingExposure, defaultRenderSettings.toneMappingExposure)),
+        dprMin: Math.max(0.5, ensureNumber(source.dprMin, defaultRenderSettings.dprMin)),
+        dprMax: Math.max(0.5, ensureNumber(source.dprMax, defaultRenderSettings.dprMax))
     }
 }
 
@@ -544,6 +592,7 @@ export const normalizeProjectDocument = (document = {}) => {
         },
         entities: Array.isArray(source.entities) ? source.entities.map(normalizeEntity) : [],
         worldState,
+        renderSettings: normalizeRenderSettings(source.renderSettings),
         xrState: normalizeXrState(source.xrState),
         presentationState: normalizePresentationState(source.presentationState, worldState),
         publishState: normalizePublishState(source.publishState),
@@ -681,6 +730,10 @@ export const applyProjectOps = (document, ops = []) => {
             }
             case 'setWorldState': {
                 nextDocument.worldState = normalizeWorldState(mergePatch(nextDocument.worldState, payload.patch || {}))
+                break
+            }
+            case 'setRenderSettings': {
+                nextDocument.renderSettings = normalizeRenderSettings(mergePatch(nextDocument.renderSettings, payload.patch || {}))
                 break
             }
             case 'setXrState': {

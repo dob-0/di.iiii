@@ -63,6 +63,7 @@ export default function StudioShell({
     onSelectEntity,
     onInspectorChange,
     onWorldPatch,
+    onRenderSettingsPatch,
     onProjectMetaPatch,
     onPresentationPatch,
     onPublishPatch,
@@ -276,7 +277,7 @@ export default function StudioShell({
                     )}
                     {isOpen('world') && (
                         <StudioFloatingPanel key={`world-${layoutKey}`} title="World" onClose={() => toggle('world')} initialPosition={positions.world} initialWidth={280} snapEdges={snapEdges}>
-                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onOpenHub={onBackToHub} />
+                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} />
                         </StudioFloatingPanel>
                     )}
 
