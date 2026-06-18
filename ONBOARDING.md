@@ -119,6 +119,24 @@ git push -u origin HEAD
 gh pr create --base dev            # open a PR (add --repo dob-0/di.iiii to target upstream)
 ```
 
+If you're using an AI agent to do the work: it can run the validate/commit/push
+steps above on its own once a task is done, without asking each time — pushing
+only ever updates your own fork, never upstream directly. See
+`docs/ai/parallel-agents.md` (Mode 0) for the exact contract.
+
+## 7b. Optional: auto-open the PR on push (one-time setup)
+
+Skip `gh pr create` entirely by letting a push open the PR for you:
+
+1. Copy `docs/templates/fork-auto-pr.yml` from upstream into your fork at
+   `.github/workflows/auto-pr.yml`
+2. Create a personal access token (fine-grained: `Pull requests: write` +
+   `Contents: read` scoped to `dob-0/di.iiii`) and save it as a repo secret
+   named `UPSTREAM_PR_TOKEN` in your fork's settings — this step needs a human
+   to click through GitHub's UI, an agent can't do it unattended
+3. From then on, every push to a non-`dev`/`main` branch in your fork opens
+   (or updates) a PR against `dob-0/di.iiii`'s `dev` automatically
+
 Branch rules (see `README.md` / `CURRENT.md`):
 
 - Normal work happens on **`dev`** → deploys to staging.
