@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500&amp;display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#0a0a0a; }
+  @media (max-width: 768px) {
+    /* Outer container */
+    #aw-root { margin: 4px !important; padding: 16px 20px 36px !important; }
+
+    /* "Artists Works." heading +2px */
+    #aw-inner h1 {
+      font-size: clamp(21px, 6vw, 32px) !important;
+      letter-spacing: -1px !important;
+      line-height: 0.94 !important;
+      margin: 8px 0 14px !important;
+    }
+
+    /* Kill hover-reveal images completely */
+    [data-reveal] { display: none !important; opacity: 0 !important; pointer-events: none !important; }
+
+    /* Row headers */
+    [data-head] {
+      min-height: auto !important;
+      padding: 13px 0 !important;
+      gap: 12px !important;
+      align-items: center !important;
+    }
+
+    /* Artwork title +4px */
+    [data-name] {
+      font-size: clamp(17px, 4.2vw, 22px) !important;
+      letter-spacing: -0.5px !important;
+      line-height: 1.1 !important;
+    }
+
+    /* Meta container spacing */
+    [data-name] + div { margin-top: 5px !important; }
+
+    /* Medium label +2px */
+    [data-name] + div span:first-child {
+      font-size: 13px !important;
+      margin-top: 0 !important;
+    }
+
+    /* Artist name +2px */
+    [data-name] + div span:last-child {
+      font-size: 17px !important;
+      margin-top: 8px !important;
+    }
+
+    /* + button +2px */
+    [data-plus] {
+      width: 31px !important;
+      height: 31px !important;
+      font-size: 20px !important;
+      flex-shrink: 0 !important;
+    }
+
+    /* Decorative dot */
+    [data-dot] { left: -14px !important; width: 7px !important; height: 7px !important; }
+
+    /* Stack panel content vertically */
+    [data-panel] > div {
+      flex-direction: column !important;
+      padding: 10px 0 22px !important;
+      margin: 0 !important;
+      gap: 16px !important;
+    }
+
+    /* Text column */
+    [data-panel] > div > div:first-child {
+      flex: none !important;
+      max-width: 100% !important;
+      width: 100% !important;
+    }
+
+    /* Image column */
+    [data-panel] > div > div:last-child {
+      flex: none !important;
+      min-height: auto !important;
+      width: 100% !important;
+      padding: 0 !important;
+      background-color: transparent !important;
+      border-radius: 0 !important;
+    }
+
+    /* Images: small and consistent */
+    [data-panel] img {
+      max-height: 130px !important;
+      width: 100% !important;
+      height: auto !important;
+      object-fit: contain !important;
+    }
+
+    /* Panel body text +2px */
+    [data-panel] p {
+      font-size: 15px !important;
+      line-height: 1.55 !important;
+      margin-bottom: 10px !important;
+      width: auto !important;
+      height: auto !important;
+    }
+
+    /* Fix hardcoded widths */
+    [data-panel] span { width: auto !important; height: auto !important; }
+
+    /* Credits +2px, left-align */
+    [data-panel] span[style*="text-align: right"] { text-align: left !important; font-size: 14px !important; }
+    [data-panel] span[style*="font-size: 16px"] { font-size: 14px !important; }
+
+    /* Footer +2px */
+    #aw-inner > div:last-child { margin-top: 28px !important; font-size: 12px !important; }
+  }
+</style>
+</helmet>
+<div id="aw-root" ref="{{ rootRef }}" style="position:relative; background:#000000; min-height:calc(100vh - 36px); margin:18px; color:#f2efe9; font-family:'Helvetica Neue', Arial, sans-serif; padding:64px 7vw 120px; -webkit-font-smoothing:antialiased;">
+  <canvas ref="{{ bgRef }}" style="position:absolute; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; display:block;"></canvas>
+  <div id="aw-inner" style="position:relative; z-index:1;">
+
+  <h1 style="font-weight:400; font-size:clamp(48px,8vw,128px); letter-spacing:-2.5px; line-height:0.96; margin:5vw 0 7vw; max-width:14ch;">Artists Works<span style="color: rgb(217, 0, 0); font-family: Roboto">.</span></h1>
+
+  <!-- ===== ROW 01 ===== -->
+  <div data-row="0" style="border-top:2px dotted rgba(217,0,0,0.45);">
+    <div data-head="" style="position:relative; display:flex; align-items:center; gap:5vw; padding:38px 0; min-height:150px; cursor:pointer; transition:padding .4s ease;" style-hover="padding-left:22px;">
+      <div style="flex: 1; min-width: 0; position: relative">
+        
+        <div data-name="" style="position: relative; font-size: clamp(30px,4.4vw,48px); font-weight: 400; letter-spacing: -1.4px; line-height: 1.04; color: #f2efe9; transition: color .35s ease"><span data-dot="" style="position:absolute; left:-32px; top:0.6em; width:12px; height:12px; border-radius:50%; background:#D90000; opacity:0; transform:translateY(-50%) translateX(-8px); transition:opacity .35s ease, transform .35s ease;"></span>The Concept of the Cyclic Void</div><div style="font-size:15px; letter-spacing:1.8px; text-transform:uppercase; margin-top:6px;"><span style="color: #a5a1a1; text-transform: lowercase; font-family: 'DM Sans', sans-serif; font-size: 13px; display: block; margin-top: 0">Mixed media animation</span><span style="color: #fafafa; text-transform: capitalize; font-family: 'DM Sans', sans-serif; font-size: 23px; display: block; margin-top: 14px">Arthur Jay Robin Sergo</span></div>
+      </div>
+      <img src="assets/cv1.png" style="position: absolute; right: 96px; top: 50%; transform: translateY(-50%) translateX(18px); width: 240px; height: 120px; object-fit: cover; border: 2px solid #D90000; border-radius: 0px; opacity: 0; transition: opacity .45s ease, transform .45s ease; pointer-events: none" data-reveal="">
+      <span data-plus="" style="width:46px; height:46px; flex:none; border:1.5px solid #D90000; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#D90000; font-size:26px; font-weight:300; line-height:1; transition:transform .45s ease;">+</span>
+    </div>
+    <div data-panel="" style="max-height:0; overflow:hidden; transition:max-height .65s cubic-bezier(.5,0,.1,1);">
+      
+    <div style="display: flex; gap: 5vw; align-items: flex-start; padding: 14px 0 56px 41px; position: relative; font-size: 16px">
+        <div style="flex:0 0 46%; max-width:580px;">
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">This project is about a world that is completely destroyed, where nothing is left. It takes place after the end of time itself, in a place where the line between the real world and the world of dreams does not matter anymore. Everything is in ruins, everyone is gone, and the history of humanity has been erased.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">Standing right between reality and a dream, the main character exists as a bridge between the absolute end and a new beginning. She is at the exact point where the past meets the future. Acting as our guide through this empty world, she walks this thin line to light a new spark — the fire of life and existence.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; font-family: 'DM Sans', sans-serif">This fire starts our story from the beginning. Instead of moving forward into the dark, this spark turns time into a big circle and throws us back into normal, everyday life. The story resets under a bright sun and a blue sky, back to the time when the world was still safe. This shows the main idea of the project — time does not move in a straight line. It is a circle where the end of everything is just the beginning of a new story.</p><div style="margin-top: 22px; padding-top: 18px; border-top: 1.5px dotted rgba(242,239,233,0.2); display: flex; flex-direction: column; gap: 4px; font-size: 13.5px; line-height: 1.5; color: #6b6b6b; font-family: Arial">
+            
+            <span style="font-family: DM Sans; color: #f2f2f2; width: 581px; height: 26px; font-size: 16px; text-align: right">Arthur — director, lead animation, 3d modeling, texture, script</span><span style="font-family: DM Sans; color: #f2f2f2; text-align: right; font-size: 16px">Jay — composer, sound design, music, sound effects</span>
+            <span style="font-family: DM Sans; color: #f2f2f2; text-align: right; font-size: 16px">Robin — storyboard, texture, script</span>
+            <span style="font-family: DM Sans; color: #f2f2f2; text-align: right; font-size: 16px">Sergo — sound editing, texture</span>
+          </div>
+          
+        </div>
+        <div style="flex: 1; border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-height: 320px; background-color: #000000">
+          
+          <img src="assets/cv2.png" style="width:100%; height:300px; object-fit:cover; border-radius:0px;">
+          <img src="assets/cv3.png" style="width:100%; height:300px; object-fit:cover; border-radius:0px;">
+        </div>
+      </div></div>
+  </div>
+
+  <!-- ===== ROW 02 ===== -->
+  <div data-row="1" style="border-top:2px dotted rgba(217,0,0,0.45);">
+    <div data-head="" style="position:relative; display:flex; align-items:center; gap:5vw; padding:38px 0; min-height:150px; cursor:pointer; transition:padding .4s ease;" style-hover="padding-left:22px;">
+      <div style="flex:1; min-width:0;">
+        <div data-name="" style="position: relative; font-size: clamp(30px,4.4vw,48px); font-weight: 400; letter-spacing: -1.4px; line-height: 1.04; color: #f2efe9; transition: color .35s ease"><span data-dot="" style="position:absolute; left:-32px; top:0.6em; width:12px; height:12px; border-radius:50%; background:#D90000; opacity:0; transform:translateY(-50%) translateX(-8px); transition:opacity .35s ease, transform .35s ease;"></span>Yielding</div>
+        <div style="font-size:15px; letter-spacing:1.8px; text-transform:uppercase; margin-top:6px;"><span style="color: #a5a1a1; text-transform: lowercase; font-family: 'DM Sans', sans-serif; font-size: 13px; display: block; margin-top: 0">Virtual installation</span><span style="color: #fafafa; text-transform: capitalize; font-family: 'DM Sans', sans-serif; font-size: 23px; display: block; margin-top: 14px">Jeny Gevorgyan</span></div>
+      </div>
+      <img src="./photo_2026-06-16_22-08-18-mqgyhjps.jpg" style="position: absolute; right: 96px; top: 50%; transform: translateY(-50%) translateX(18px); width: 240px; height: 120px; object-fit: cover; border: 2px solid #D90000; border-radius: 0px; opacity: 0; transition: opacity .45s ease, transform .45s ease; pointer-events: none" data-reveal="">
+      <span data-plus="" style="width:46px; height:46px; flex:none; border:1.5px solid #D90000; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#D90000; font-size:26px; font-weight:300; line-height:1; transition:transform .45s ease;">+</span>
+    </div>
+    <div data-panel="" style="max-height:0; overflow:hidden; transition:max-height .65s cubic-bezier(.5,0,.1,1);">
+      <div style="display:flex; gap:5vw; align-items:flex-start; padding:14px 0 56px 41px;">
+        <div style="flex:0 0 46%; max-width:580px;">
+          
+        <p style="font-size: 18px; line-height: 1.6; color: #ffffff; font-family: 'DM Sans', sans-serif; width: 423px; height: 100%">Yielding is a psychological manifestation that often remains within the personal sphere and, as a result, is rarely discussed. This work serves as a catalyst for dialogue and reflection. The fact that the visual reference is the road sign of the same name also allows for an exploration of the dogmatic aspect of yielding.</p></div>
+        <div style="flex:1; border-radius:22px; padding:24px; display:flex; align-items:center; justify-content:center; min-height:320px; background-color:#000000;"><img src="./photo_2026-06-16_22-08-18-mqgyhjps.jpg" style="max-width: 100%; max-height: 480px; object-fit: contain; border-radius: 0px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ROW 03 ===== -->
+  <div data-row="2" style="border-top:2px dotted rgba(217,0,0,0.45);">
+    <div data-head="" style="position:relative; display:flex; align-items:center; gap:5vw; padding:38px 0; min-height:150px; cursor:pointer; transition:padding .4s ease;" style-hover="padding-left:22px;">
+      <div style="flex:1; min-width:0;">
+        <div data-name="" style="position: relative; font-size: clamp(30px,4.4vw,48px); font-weight: 400; letter-spacing: -1.4px; line-height: 1.04; color: #f2efe9; transition: color .35s ease"><span data-dot="" style="position:absolute; left:-32px; top:0.6em; width:12px; height:12px; border-radius:50%; background:#D90000; opacity:0; transform:translateY(-50%) translateX(-8px); transition:opacity .35s ease, transform .35s ease;"></span>Historiography of Emptiness</div>
+        <div style="font-size:15px; letter-spacing:1.8px; text-transform:uppercase; margin-top:6px;"><span style="color: #a5a1a1; text-transform: lowercase; font-family: 'DM Sans', sans-serif; font-size: 13px; display: block; margin-top: 0">Textile installation, rug pile on sieve</span><span style="color: #fafafa; text-transform: capitalize; font-family: 'DM Sans', sans-serif; font-size: 23px; display: block; margin-top: 14px">Margarita Ghazaryan</span></div>
+      </div>
+      <img src="assets/margarita.png" style="position: absolute; right: 96px; top: 50%; transform: translateY(-50%) translateX(18px); width: 240px; height: 120px; object-fit: cover; border: 2px solid #D90000; border-radius: 0px; opacity: 0; transition: opacity .45s ease, transform .45s ease; pointer-events: none" data-reveal="">
+      <span data-plus="" style="width: 46px; height: 46px; flex: none; border: 1.5px solid #D90000; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #D90000; font-size: 26px; font-weight: 300; line-height: 1; transition: transform .45s ease">+</span>
+    </div>
+    <div data-panel="" style="max-height:0; overflow:hidden; transition:max-height .65s cubic-bezier(.5,0,.1,1);">
+      <div style="display:flex; gap:5vw; align-items:flex-start; padding:14px 0 56px 41px;">
+        <div style="flex:0 0 46%; max-width:580px;">
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">Portrait carpet weaving, which flourished during the Soviet period and became widespread across many countries of the Soviet Union, including Armenia, has historically functioned as a monumental and ideological medium. Within this tradition, a clear patriarchal logic prevailed: men were represented as individualized subjects within heroic narratives—military leaders, political figures, and cultural icons—while women were either stripped of individuality and transformed into collective allegories of grief and loss (such as “Mother Armenia”) or left in the shadows of history.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">The greatest paradox lies in the fact that these heroic male portraits were, for months at a time, woven largely by anonymous women through their own physical labor, dedicating their energy to the perpetuation of male dominance.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">Through this project, I, as a woman artist, seek to dismantle this hierarchy of patriarchal historiography. The work is built upon an ordinary household sieve. Here, the sieve functions as a filter of time and ideas—a device that, for centuries, has “sifted out” women’s names and stories from historical narratives.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">Using authentic traditional carpet-making techniques (hand-tied knots) on a metal mesh surface, I appropriate the structure of the classic portrait carpet, preserving its background and ornamental frame while removing the hero himself. In place of the male figure, the viewer is confronted with absence: the dense, cold grid of the sieve.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">Through this gesture, I not only reject the pedestal upon which the male hero has been placed, but also reclaim and reinterpret the very function of the sieve itself. This domestic object, traditionally associated with women’s confinement within the passive space of the kitchen, becomes in my hands an active tool directed against the very system that assigned it that symbolic meaning.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; font-family: 'DM Sans', sans-serif">I am no longer the anonymous woman silently reproducing a male-centered history. I am the artist who occupies and commands the textile space, deciding for herself who remains within history—and who is sifted out of it.</p>
+        </div>
+        <div style="flex: 1; border-radius: 22px; padding: 24px; display: flex; align-items: center; justify-content: center; min-height: 320px; background-color: #000000"><img src="assets/margarita.png" style="max-width: 100%; max-height: 480px; object-fit: contain; border-radius: 0px; width: 100%; height: 100%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ROW 04 ===== -->
+  <div data-row="3" style="border-top:2px dotted rgba(217,0,0,0.45);">
+    <div data-head="" style="position:relative; display:flex; align-items:center; gap:5vw; padding:38px 0; min-height:150px; cursor:pointer; transition:padding .4s ease;" style-hover="padding-left:22px;">
+      <div style="flex:1; min-width:0;">
+        <div data-name="" style="position: relative; font-size: clamp(30px,4.4vw,48px); font-weight: 400; letter-spacing: -1.4px; line-height: 1.04; color: #f2efe9; transition: color .35s ease"><span data-dot="" style="position:absolute; left:-32px; top:0.6em; width:12px; height:12px; border-radius:50%; background:#D90000; opacity:0; transform:translateY(-50%) translateX(-8px); transition:opacity .35s ease, transform .35s ease;"></span>A578</div>
+        <div style="font-size:15px; letter-spacing:1.8px; text-transform:uppercase; margin-top:6px;"><span style="color: #a5a1a1; text-transform: lowercase; font-family: 'DM Sans', sans-serif; font-size: 13px; display: block; margin-top: 0">3D models, text</span><span style="color: #fafafa; text-transform: capitalize; font-family: 'DM Sans', sans-serif; font-size: 23px; display: block; margin-top: 14px">Alla Virabyan</span></div>
+      </div>
+      <img src="assets/alla.png" style="position: absolute; right: 96px; top: 50%; transform: translateY(-50%) translateX(18px); width: 240px; height: 120px; object-fit: cover; border: 2px solid #D90000; border-radius: 0px; opacity: 0; transition: opacity .45s ease, transform .45s ease; pointer-events: none" data-reveal="">
+      <span data-plus="" style="width:46px; height:46px; flex:none; border:1.5px solid #D90000; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#D90000; font-size:26px; font-weight:300; line-height:1; transition:transform .45s ease;">+</span>
+    </div>
+    <div data-panel="" style="max-height:0; overflow:hidden; transition:max-height .65s cubic-bezier(.5,0,.1,1);">
+      <div style="display:flex; gap:5vw; align-items:flex-start; padding:14px 0 56px 41px;">
+        <div style="flex:0 0 46%; max-width:580px;">
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">This work is a map of my inner world, composed of different layers of my identity and personal symbols. The transparent figures represent characters that have accompanied me through various stages of life, while each object is connected to specific memories, emotions, and experiences. Together, they form a personal system through which I explore themes of identity, connection, protection, and inner balance.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">Speaking about my inner world, and especially opening it up to others, is a deeply hard process. I am constantly changing, yet there are certain core elements within me that remain untouched, helping me find my way back to my true center.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">This work is built entirely around those enduring pieces of myself. The transparent figures represent the different layers of my identity — characters that have accompanied me through various stages of life. At the very center is the representation of how I perceive myself.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">Every object here carries a deeply personal meaning for me. The thread symbolizes my need for connection, protection, and comfort, while the spiky spheres act as the inseparable anti-stress objects from my daily life, and the beaded string represents my search for inner balance and tranquility.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">From the outside, these figures may appear abstract or even random, but each one is intimately tied to my memories, emotions, and experiences. Together, they form a map of my inner world — a small, personal system I always return to, regardless of time, place, or the stage of life I am in.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; font-family: 'DM Sans', sans-serif">Through this work, I am opening a window into my private world, sharing the very symbols that have shaped both my identity and my artistic language.</p>
+        </div>
+        <div style="flex: 1; border-radius: 22px; padding: 24px; display: flex; align-items: center; justify-content: center; min-height: 320px; background-color: #000000"><img src="assets/alla.png" style="max-width: 100%; max-height: 480px; object-fit: contain; border-radius: 0px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ROW 05 ===== -->
+  <div data-row="4" style="border-top:2px dotted rgba(217,0,0,0.45);">
+    <div data-head="" style="position:relative; display:flex; align-items:center; gap:5vw; padding:38px 0; min-height:150px; cursor:pointer; transition:padding .4s ease;" style-hover="padding-left:22px;">
+      <div style="flex:1; min-width:0;">
+        <div data-name="" style="position: relative; font-size: clamp(30px,4.4vw,48px); font-weight: 400; letter-spacing: -1.4px; line-height: 1.04; color: #f2efe9; transition: color .35s ease"><span data-dot="" style="position:absolute; left:-32px; top:0.6em; width:12px; height:12px; border-radius:50%; background:#D90000; opacity:0; transform:translateY(-50%) translateX(-8px); transition:opacity .35s ease, transform .35s ease;"></span>Mask &amp; Naive</div>
+        <div style="font-size:15px; letter-spacing:1.8px; text-transform:uppercase; margin-top:6px;"><span style="color: #a5a1a1; text-transform: lowercase; font-family: 'DM Sans', sans-serif; font-size: 13px; display: block; margin-top: 0">3D models</span><span style="color: #fafafa; text-transform: capitalize; font-family: 'DM Sans', sans-serif; font-size: 23px; display: block; margin-top: 14px">Yeva Abgaryan</span></div>
+      </div>
+      <img src="assets/yeva-faceless.png" style="position: absolute; right: 96px; top: 50%; transform: translateY(-50%) translateX(18px); width: 240px; height: 120px; object-fit: cover; border: 2px solid #D90000; border-radius: 0px; opacity: 0; transition: opacity .45s ease, transform .45s ease; pointer-events: none" data-reveal="">
+      <span data-plus="" style="width:46px; height:46px; flex:none; border:1.5px solid #D90000; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#D90000; font-size:26px; font-weight:300; line-height:1; transition:transform .45s ease;">+</span>
+    </div>
+    <div data-panel="" style="max-height:0; overflow:hidden; transition:max-height .65s cubic-bezier(.5,0,.1,1);">
+      
+    <div style="display:flex; gap:5vw; align-items:flex-start; padding:14px 0 56px 41px;">
+        <div style="flex:0 0 46%; max-width:580px;">
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">These two sculptures represent different stages of the same emotional journey.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">Naive portrays a child holding a heart like a lollipop. It symbolizes the openness, trust, and unconditional love that children naturally carry. At first, the heart is pure and offered freely to the world. Yet, like a lollipop held for too long, it slowly gathers dust, dirt, fingerprints, and invisible traces of every encounter. These layers become a metaphor for experiences, expectations, disappointments, and childhood wounds. Over time, the heart becomes fragile, worn, and difficult to hold in the same innocent way. To protect it from completely falling apart, the child eventually puts it away.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">Faceless represents what comes after. The figure holds two smiling masks, each concealing a deeper emotional reality. It is a self-portrait shaped by the transition from childhood into adulthood. As the world asks for stability, composure, and acceptability, genuine emotions are gradually hidden behind carefully constructed expressions. The masks symbolize the roles we learn to perform in order to meet expectations, while the tears reveal the feelings that remain underneath.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; font-family: 'DM Sans', sans-serif">Together, the works describe a transformation: a child who once carried their heart openly eventually learns to protect it, replacing vulnerability with masks. The innocence is not lost, but hidden. What remains is the ongoing tension between who we truly are and who the world expects us to be.</p>
+        </div><div style="flex: 1; border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 18px; align-items: center; justify-content: center; background-color: #000000;">
+          <img src="assets/yeva-naive.png" style="width: 100%; object-fit: contain; border-radius: 14px;">
+          <img src="assets/yeva-faceless.png" style="width: 100%; object-fit: contain; border-radius: 14px;">
+        </div>
+        
+      </div></div>
+  </div>
+
+  <!-- ===== ROW 06 ===== -->
+  <div data-row="5" style="border-top:2px dotted rgba(217,0,0,0.45);">
+    <div data-head="" style="position:relative; display:flex; align-items:center; gap:5vw; padding:38px 0; min-height:150px; cursor:pointer; transition:padding .4s ease;" style-hover="padding-left:22px;">
+      <div style="flex:1; min-width:0;">
+        <div data-name="" style="position: relative; font-size: clamp(30px,4.4vw,48px); font-weight: 400; letter-spacing: -1.4px; line-height: 1.04; color: #f2efe9; transition: color .35s ease"><span data-dot="" style="position:absolute; left:-32px; top:0.6em; width:12px; height:12px; border-radius:50%; background:#D90000; opacity:0; transform:translateY(-50%) translateX(-8px); transition:opacity .35s ease, transform .35s ease;"></span>What My Mother Carried</div>
+        <div style="font-size:15px; letter-spacing:1.8px; text-transform:uppercase; margin-top:6px;"><span style="color: #a5a1a1; text-transform: lowercase; font-family: 'DM Sans', sans-serif; font-size: 13px; display: block; margin-top: 0">Poetry</span><span style="color: #fafafa; text-transform: capitalize; font-family: 'DM Sans', sans-serif; font-size: 23px; display: block; margin-top: 14px">Sanjay J Choudari</span></div>
+      </div>
+      <img src="assets/sanji.png" style="position: absolute; right: 96px; top: 50%; transform: translateY(-50%) translateX(18px); width: 240px; height: 120px; object-fit: cover; border: 2px solid #D90000; border-radius: 0px; opacity: 0; transition: opacity .45s ease, transform .45s ease; pointer-events: none" data-reveal="">
+      <span data-plus="" style="width:46px; height:46px; flex:none; border:1.5px solid #D90000; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#D90000; font-size:26px; font-weight:300; line-height:1; transition:transform .45s ease;">+</span>
+    </div>
+    <div data-panel="" style="max-height:0; overflow:hidden; transition:max-height .65s cubic-bezier(.5,0,.1,1);">
+      <div style="display:flex; gap:5vw; align-items:flex-start; padding:14px 0 56px 41px;">
+        <div style="flex:0 0 46%; max-width:580px;">
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">This work explores the invisible inheritance passed between generations of women—not through objects or traditions, but through fear, silence, and survival strategies. Set between memory and reality, the narrative follows a woman returning to the landscape of her childhood, where personal memories gradually reveal the deeper structures that shaped them.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">At the center of the work is the realization that fear is not created by a single event, person, or place. Rather, it emerges from ordinary social systems that quietly define who is allowed comfort, freedom, and visibility. Through recurring symbols—the fan, the veil, the snake, the kitchen, and childhood toys—the work examines how gender roles become embedded in everyday life and how children learn these hierarchies long before they can name them.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">The mother becomes a symbol of inherited resilience: a woman who carries both love and constraint, protection and submission. As the protagonist begins to understand her mother's experience, she recognizes that what has been passed down is not weakness but a method of survival within a system that demands silence.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; font-family: 'DM Sans', sans-serif">Moving between dream, memory, and reality, the work reflects on how personal trauma can transform collective structures into intimate emotional landscapes. Ultimately, it asks how inherited fear shapes identity, and whether it is possible to break cycles that have existed for generations.</p>
+        </div>
+        <div style="flex: 1; border-radius: 22px; padding: 24px; display: flex; align-items: center; justify-content: center; min-height: 320px; background-color: #000000"><img src="assets/sanji.png" style="max-width: 100%; max-height: 480px; object-fit: contain; border-radius: 0px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ROW 07 ===== -->
+  <div data-row="6" style="border-top:2px dotted rgba(217,0,0,0.45);">
+    <div data-head="" style="position:relative; display:flex; align-items:center; gap:5vw; padding:38px 0; min-height:150px; cursor:pointer; transition:padding .4s ease;" style-hover="padding-left:22px;">
+      <div style="flex:1; min-width:0;">
+        <div data-name="" style="position: relative; font-size: clamp(30px,4.4vw,48px); font-weight: 400; letter-spacing: -1.4px; line-height: 1.04; color: #f2efe9; transition: color .35s ease"><span data-dot="" style="position:absolute; left:-32px; top:0.6em; width:12px; height:12px; border-radius:50%; background:#D90000; opacity:0; transform:translateY(-50%) translateX(-8px); transition:opacity .35s ease, transform .35s ease;"></span>Womanhood</div>
+        <div style="font-size:15px; letter-spacing:1.8px; text-transform:uppercase; margin-top:6px;"><span style="color: #a5a1a1; text-transform: lowercase; font-family: 'DM Sans', sans-serif; font-size: 13px; display: block; margin-top: 0">Paper, pencils and ink</span><span style="color: #fafafa; text-transform: capitalize; font-family: 'DM Sans', sans-serif; font-size: 23px; display: block; margin-top: 14px">Nush Petrosyan</span></div>
+      </div>
+      <img src="assets/nush.jpg" style="position: absolute; right: 96px; top: 50%; transform: translateY(-50%) translateX(18px); object-fit: cover; object-position: top; border: 2px solid #D90000; border-radius: 0px; opacity: 0; transition: opacity .45s ease, transform .45s ease; pointer-events: none; height: 120px; align-self: flex-end; width: 240px; flex-grow: 29" data-reveal="">
+      <span data-plus="" style="width:46px; height:46px; flex:none; border:1.5px solid #D90000; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#D90000; font-size:26px; font-weight:300; line-height:1; transition:transform .45s ease;">+</span>
+    </div>
+    <div data-panel="" style="max-height:0; overflow:hidden; transition:max-height .65s cubic-bezier(.5,0,.1,1);">
+      <div style="display: flex; gap: 48px; align-items: center; border-radius: 22px; padding: 40px; margin: 0 0 56px 41px; background-color: #000000">
+        <div style="flex:0 0 46%; max-width:580px;">
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; font-family: 'DM Sans', sans-serif">I'm always inspired by women around me and interested in how other women live their own unique lives. How they perceive their own bodies and how being a woman affects their daily life, in a world which wasn't designed with them in mind.</p>
+        </div>
+        <div style="flex:1; display:flex; align-items:center; justify-content:center;"><img src="assets/nush.jpg" style="max-width: 100%; max-height: 520px; object-fit: contain; border-radius: 0px; width: 315px; height: 413px; position: relative; left: 0px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ROW 08 ===== -->
+  <div data-row="7" style="border-top:2px dotted rgba(217,0,0,0.45);">
+    <div data-head="" style="position:relative; display:flex; align-items:center; gap:5vw; padding:38px 0; min-height:150px; cursor:pointer; transition:padding .4s ease;" style-hover="padding-left:22px;">
+      
+      <img src="assets/ani.jpg" style="position: absolute; right: 96px; top: 50%; transform: translateY(-50%) translateX(18px); width: 240px; height: 120px; object-fit: cover; border: 2px solid #D90000; border-radius: 0px; opacity: 0; transition: opacity .45s ease, transform .45s ease; pointer-events: none" data-reveal="">
+      <div style="flex:1; min-width:0;">
+        <div data-name="" style="position:relative; font-size:clamp(30px,4.4vw,48px); font-weight:400; letter-spacing:-1.4px; line-height:1.04; color:#f2efe9; transition:color .35s ease;"><span data-dot="" style="position:absolute; left:-32px; top:0.6em; width:12px; height:12px; border-radius:50%; background:#D90000; opacity:0; transform:translateY(-50%) translateX(-8px); transition:opacity .35s ease, transform .35s ease;"></span>Untitled</div>
+        <div style="font-size:15px; letter-spacing:1.8px; text-transform:uppercase; margin-top:6px;"><span style="color: #a5a1a1; text-transform: lowercase; font-family: 'DM Sans', sans-serif; font-size: 13px; display: block; margin-top: 0">Digital art / gif</span><span style="color: #fafafa; text-transform: capitalize; font-family: 'DM Sans', sans-serif; font-size: 23px; display: block; margin-top: 14px">Ani Khachatryan</span></div>
+      </div><span data-plus="" style="width:46px; height:46px; flex:none; border:1.5px solid #D90000; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#D90000; font-size:26px; font-weight:300; line-height:1; transition:transform .45s ease;">+</span>
+    </div>
+    <div data-panel="" style="max-height:0; overflow:hidden; transition:max-height .65s cubic-bezier(.5,0,.1,1);">
+      <div style="display:flex; gap:5vw; align-items:flex-start; padding:14px 0 56px 41px;">
+        <div style="flex:0 0 46%; max-width:580px;">
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">People are different—not only from one another, but also within themselves. Different shadows live within us—some good, some dark, and some still undiscovered. Every person, phenomenon, or event reveals yet another “self,” and sometimes the hardest part is enduring this diversity within ourselves.</p>
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; font-family: 'DM Sans', sans-serif">How many “selves” have you already recognized within yourself? At what stage of self-discovery are you? How many people are inside you, and how many have you not yet met? Are you at peace with yourself, or are you still struggling with various aspects of your identity?</p>
+        </div>
+        <div style="flex: 1; border-radius: 22px; padding: 24px; display: flex; align-items: center; justify-content: center; min-height: 320px; background-color: #000000"><img src="assets/ani.jpg" style="max-width: 100%; max-height: 480px; object-fit: contain; border-radius: 0px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ROW 09 ===== -->
+  <div data-row="8" style="border-top:2px dotted rgba(217,0,0,0.45); border-bottom:2px dotted rgba(217,0,0,0.45);">
+    <div data-head="" style="position:relative; display:flex; align-items:center; gap:5vw; padding:38px 0; min-height:150px; cursor:pointer; transition:padding .4s ease;" style-hover="padding-left:22px;">
+      <div style="flex:1; min-width:0;">
+        <div data-name="" style="position:relative; font-size:clamp(30px,4.4vw,48px); font-weight:400; letter-spacing:-1.4px; line-height:1.04; color:#f2efe9; transition:color .35s ease;"><span data-dot="" style="position:absolute; left:-32px; top:0.6em; width:12px; height:12px; border-radius:50%; background:#D90000; opacity:0; transform:translateY(-50%) translateX(-8px); transition:opacity .35s ease, transform .35s ease;"></span>A Journey of Remembrance</div>
+        <div style="font-size:15px; letter-spacing:1.8px; text-transform:uppercase; margin-top:6px;"><span style="color: #a5a1a1; text-transform: lowercase; font-family: 'DM Sans', sans-serif; font-size: 13px; display: block; margin-top: 0">Frame by frame animation</span><span style="color: #fafafa; text-transform: capitalize; font-family: 'DM Sans', sans-serif; font-size: 23px; display: block; margin-top: 14px">Meri Andreasyan</span></div>
+      </div>
+      <img src="assets/meri.png" style="position: absolute; right: 96px; top: 50%; transform: translateY(-50%) translateX(18px); width: 240px; height: 120px; object-fit: cover; border: 2px solid #D90000; border-radius: 0px; opacity: 0; transition: opacity .45s ease, transform .45s ease; pointer-events: none" data-reveal="">
+      <span data-plus="" style="width:46px; height:46px; flex:none; border:1.5px solid #D90000; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#D90000; font-size:26px; font-weight:300; line-height:1; transition:transform .45s ease;">+</span>
+    </div>
+    <div data-panel="" style="max-height:0; overflow:hidden; transition:max-height .65s cubic-bezier(.5,0,.1,1);">
+      
+    <div style="display:flex; gap:5vw; align-items:flex-start; padding:14px 0 56px 41px;">
+        <div style="flex:0 0 46%; max-width:580px;">
+          <p style="font-size: 18px; line-height: 1.6; color: #ffffff; font-family: 'DM Sans', sans-serif; position: relative; top: 30px">The animation explores the journey of life as something deeply rooted in memory, ancestry, and the unseen parts of ourselves. Inspired by the idea that “if you forget your ancestors, you lose your shadow,” the project reflects on how our identity is shaped by those who came before us — through inherited stories, archetypes, and memory.</p>
+        </div>
+        <div style="flex:1; border-radius:22px; padding:24px; display:flex; align-items:center; justify-content:center; min-height:320px; background-color:#000000;"><img src="assets/meri.png" style="max-width: 100%; max-height: 480px; object-fit: contain; border-radius: 0px"></div>
+      </div></div>
+  </div>
+
+  </div>
+  <div style="margin-top:80px; position:relative; z-index:1; display:flex; align-items:center; gap:14px; font-size:13px; letter-spacing:2.5px; text-transform:uppercase; color:#6b6b6b;"><span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:50%; background:#D90000; display:block;"></span><span style="width:6px; height:6px; border-radius:50%; background:#3a3a3a; display:block;"></span><span style="width:9px; height:9px; border-radius:50%; background:#D90000; display:block;"></span></span>Click to open</div>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      rootRef: (el) => { this.root = el; },
+      bgRef: (el) => { if (el && el !== this._bgCanvas) { this._bgCanvas = el; this.bg = el; this.initBG(); } },
+    };
+  }
+  componentDidMount() { this.wire(); }
+  componentDidUpdate() { this.wire(); }
+  componentWillUnmount() { if (this._raf) { cancelAnimationFrame(this._raf); clearTimeout(this._raf); } if (this._resize) window.removeEventListener('resize', this._resize); }
+  initBG() {
+    const c = this.bg; if (!c) return;
+    if (this._raf) { cancelAnimationFrame(this._raf); clearTimeout(this._raf); }
+    if (this._resize) window.removeEventListener('resize', this._resize);
+    const ctx = c.getContext('2d');
+    let W = 0, H = 0, DPR = 1;
+    this._resize = () => {
+      DPR = Math.min(window.devicePixelRatio || 1, 2);
+      W = c.clientWidth; H = c.clientHeight;
+      c.width = W * DPR; c.height = H * DPR;
+      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    };
+    this._resize(); window.addEventListener('resize', this._resize);
+    const M = 22;
+    let L, R, T, B;
+    const bounds = () => { L = M; R = W - M; T = M; B = H - M; };
+    bounds();
+    const mobile = W <= 768;
+    const N = mobile
+      ? Math.max(8, Math.min(16, Math.round(H / 80)))
+      : Math.max(48, Math.min(150, Math.round(H / 24)));
+    const P = [];
+    const spawn = () => {
+      const big = Math.random() < 0.28;
+      const r = mobile
+        ? (big ? (Math.random() * 6 + 5) : (Math.random() * 4 + 2))
+        : (big ? (Math.random() * 40 + 30) : (Math.random() * 15 + 7));
+      return { x: L + r + Math.random() * (R - L - 2 * r), y: T + r + Math.random() * (B - T - 2 * r), r, vx: (Math.random() - 0.5) * 1.2, vy: 0 };
+    };
+    const spawnTop = () => {
+      const r = mobile ? (Math.random() * 4 + 3) : (Math.random() * 12 + 24);
+      return { x: L + r + Math.random() * (R - L - 2 * r), y: T + r + Math.random() * 24, r, vx: (Math.random() - 0.5) * 1.0, vy: Math.random() * 0.8 };
+    };
+    const spawnBig = () => {
+      const r = mobile ? (Math.random() * 4 + 3) : (Math.random() * 12 + 24);
+      return { x: L + r + Math.random() * (R - L - 2 * r), y: T + r + Math.random() * 24, r, vx: (Math.random() - 0.5) * 1.0, vy: 0 };
+    };
+    const CAP = N + 2;
+    // varied cadence: bursts of a few, then a quiet pause
+    let burst = 0, gap = 0, wait = 40;
+    const newWave = () => { burst = 1 + Math.floor(Math.random() * 5); gap = 4 + Math.floor(Math.random() * 14); wait = 60 + Math.floor(Math.random() * 200); };
+    newWave();
+    const G = 0.35, REST = 0.26, FR = 0.84;
+    let settleFrames = 0;
+    const reset = () => { P.length = 0; settleFrames = 0; newWave(); };
+    const tick = () => {
+      if (c.clientWidth !== W || c.clientHeight !== H) this._resize();
+      ctx.clearRect(0, 0, W, H);
+      bounds();
+      // varied rhythm: drop a small burst, then pause — so it doesn't constantly pull the eye
+      if (P.length < CAP) {
+        if (wait > 0) { wait--; }
+        else if (burst > 0) { if (--gap <= 0) { P.push(spawnTop()); burst--; gap = 4 + Math.floor(Math.random() * 14); } }
+        else { newWave(); }
+      }
+      for (const p of P) { p.vy += G; p.x += p.vx; p.y += p.vy; }
+      for (let it = 0; it < 4; it++) {
+        for (let i = 0; i < P.length; i++) for (let j = i + 1; j < P.length; j++) {
+          const a = P[i], b = P[j];
+          const dx = b.x - a.x, dy = b.y - a.y; const d = Math.hypot(dx, dy); const mn = a.r + b.r;
+          if (d > 0 && d < mn) {
+            const ov = (mn - d) / 2, nx = dx / d, ny = dy / d;
+            a.x -= nx * ov; a.y -= ny * ov; b.x += nx * ov; b.y += ny * ov;
+            const vn = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
+            if (vn < 0) { const imp = -(1 + REST) * vn / 2; a.vx -= imp * nx; a.vy -= imp * ny; b.vx += imp * nx; b.vy += imp * ny; }
+          }
+        }
+        for (const p of P) {
+          if (p.x < L + p.r) { p.x = L + p.r; p.vx = -p.vx * REST; }
+          if (p.x > R - p.r) { p.x = R - p.r; p.vx = -p.vx * REST; }
+          if (p.y > B - p.r) { p.y = B - p.r; p.vy = -p.vy * REST; p.vx *= FR; }
+          if (p.y < T + p.r) { p.y = T + p.r; p.vy = -p.vy * REST; }
+        }
+      }
+      ctx.fillStyle = '#D90000';
+      for (const p of P) { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill(); }
+      // never stop: settled dots are lifted back to the top to fall again, on a relaxed cadence
+      for (const p of P) {
+        if (Math.abs(p.vy) < 0.5 && Math.abs(p.vx) < 0.5) {
+          if ((p.rest = (p.rest || 0) + 1) > 220 + Math.random() * 360) {
+            p.x = L + p.r + Math.random() * (R - L - 2 * p.r);
+            p.y = T + p.r + Math.random() * 18;
+            p.vx = (Math.random() - 0.5) * 1.0; p.vy = Math.random() * 0.8; p.rest = 0;
+          }
+        } else p.rest = 0;
+      }
+      // rAF is suspended in some preview/offscreen contexts, so drive the loop with setTimeout
+      this._raf = setTimeout(tick, 22);
+    };
+    tick();
+  }
+  wire() {
+    const root = this.root;
+    if (!root || this._wired) return;
+    this._wired = true;
+    root.querySelectorAll('[data-row]').forEach((row) => {
+      const reveal = row.querySelector('[data-reveal]');
+      const head = row.querySelector('[data-head]');
+      const panel = row.querySelector('[data-panel]');
+      const plus = row.querySelector('[data-plus]');
+      const name = row.querySelector('[data-name]');
+      const dot = row.querySelector('[data-dot]');
+      row.addEventListener('mouseenter', () => {
+        if (reveal) { reveal.style.opacity = '1'; reveal.style.transform = 'translateY(-50%) translateX(0)'; }
+        if (name) name.style.color = '#D90000';
+        if (dot) { dot.style.opacity = '1'; dot.style.transform = 'translateY(-50%) translateX(0)'; }
+      });
+      row.addEventListener('mouseleave', () => {
+        if (reveal) { reveal.style.opacity = '0'; reveal.style.transform = 'translateY(-50%) translateX(18px)'; }
+        if (name) name.style.color = '#f2efe9';
+        if (dot) { dot.style.opacity = '0'; dot.style.transform = 'translateY(-50%) translateX(-8px)'; }
+      });
+      head.addEventListener('click', () => {
+        const isOpen = row.getAttribute('data-open') === '1';
+        root.querySelectorAll('[data-row]').forEach((r) => {
+          r.setAttribute('data-open', '0');
+          const p = r.querySelector('[data-panel]'); if (p) p.style.maxHeight = '0px';
+          const pl = r.querySelector('[data-plus]'); if (pl) pl.style.transform = 'rotate(0deg)';
+        });
+        if (!isOpen) {
+          row.setAttribute('data-open', '1');
+          if (panel) panel.style.maxHeight = '2600px';
+          if (plus) plus.style.transform = 'rotate(45deg)';
+        }
+      });
+    });
+  }
+}
+</script>
+</body>
+</html>
