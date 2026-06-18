@@ -202,22 +202,45 @@ export function StructurePanel({ entities = [], selectedEntityId, onSelectEntity
     )
 }
 
-function NumberField({ label, value, onChange, min, max, step = 1 }) {
+const clampNumber = (value, min, max) => {
+    let next = value
+    if (Number.isFinite(min)) next = Math.max(min, next)
+    if (Number.isFinite(max)) next = Math.min(max, next)
+    return next
+}
+
+function NumberBox({ value, onChange, min, max, step = 1 }) {
+    const bump = (dir) => {
+        const current = Number.isFinite(Number(value)) ? Number(value) : 0
+        onChange(clampNumber(parseFloat((current + dir * step).toFixed(10)), min, max))
+    }
     return (
-        <div className="insp-field">
-            <label className="insp-label">{label}</label>
+        <div className="insp-num-wrap">
             <input
                 type="number"
-                className="insp-input"
+                className="insp-input insp-num-input"
                 value={value}
                 min={min}
                 max={max}
                 step={step}
                 onChange={(event) => {
                     const next = Number(event.target.value)
-                    if (Number.isFinite(next)) onChange(next)
+                    if (Number.isFinite(next)) onChange(clampNumber(next, min, max))
                 }}
             />
+            <div className="insp-num-arrows">
+                <button type="button" className="insp-num-btn" onClick={() => bump(1)} tabIndex={-1}>▲</button>
+                <button type="button" className="insp-num-btn" onClick={() => bump(-1)} tabIndex={-1}>▼</button>
+            </div>
+        </div>
+    )
+}
+
+function NumberField({ label, value, onChange, min, max, step = 1 }) {
+    return (
+        <div className="insp-field">
+            <label className="insp-label">{label}</label>
+            <NumberBox value={value} onChange={onChange} min={min} max={max} step={step} />
         </div>
     )
 }
@@ -232,18 +255,7 @@ function MiniRow({ fields }) {
                 return (
                     <div className="insp-field insp-field--compact" key={field.label}>
                         <label className="insp-label" style={color ? { color } : undefined}>{field.label}</label>
-                        <input
-                            type="number"
-                            className="insp-input"
-                            value={field.value}
-                            min={field.min}
-                            max={field.max}
-                            step={field.step ?? 1}
-                            onChange={(event) => {
-                                const next = Number(event.target.value)
-                                if (Number.isFinite(next)) field.onChange(next)
-                            }}
-                        />
+                        <NumberBox value={field.value} onChange={field.onChange} min={field.min} max={field.max} step={field.step ?? 1} />
                     </div>
                 )
             })}
