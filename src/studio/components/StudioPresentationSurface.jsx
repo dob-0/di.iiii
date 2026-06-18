@@ -92,7 +92,7 @@ export default function StudioPresentationSurface({
             return (
                 <div style={overlayCardStyle}>
                     <div style={overlayInnerStyle}>
-                        <strong>Code preview is empty.</strong> Add files or pick a starter in the Present panel.
+                        <strong>Code preview is empty.</strong> Open the Files panel to add code.
                     </div>
                 </div>
             )

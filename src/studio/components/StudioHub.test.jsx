@@ -44,6 +44,7 @@ describe('StudioHub', () => {
         updateProjectDocument.mockReset()
         uploadProjectAsset.mockReset()
         getServerSpace.mockReset()
+        getServerSpace.mockResolvedValue(null)
         updateServerSpace.mockReset()
         navigateToStudioPath.mockReset()
         importLegacySceneFile.mockReset()

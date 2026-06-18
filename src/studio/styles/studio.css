@@ -539,6 +539,39 @@
     flex-shrink: 0;
 }
 
+.spa-item--space {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    cursor: default;
+}
+
+.spa-thumb {
+    width: 36px;
+    height: 36px;
+    object-fit: cover;
+    border-radius: 3px;
+    flex-shrink: 0;
+}
+
+.spa-copy-btn {
+    appearance: none;
+    background: rgba(77, 249, 255, 0.08);
+    border: 1px solid rgba(77, 249, 255, 0.2);
+    color: var(--di-cyan);
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-family: inherit;
+}
+
+.spa-copy-btn:hover {
+    background: rgba(77, 249, 255, 0.15);
+}
+
 .spa-activity {
     display: flex;
     flex-direction: column;

@@ -30,6 +30,7 @@ export const updateServerSpace = async (spaceId, updates = {}) => {
             label: updates.label,
             permanent: updates.isPermanent,
             allowEdits: updates.allowEdits,
+            isPublic: updates.isPublic,
             publishedProjectId: updates.publishedProjectId
         }
     })
@@ -83,6 +84,11 @@ export const overwriteServerScene = async (spaceId, sceneData) => {
         method: 'PUT',
         body: sceneData
     })
+}
+
+export const listServerSpaceAssets = async (spaceId) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/assets`)
+    return data.assets || []
 }
 
 export const uploadServerAsset = async (spaceId, file, options = {}) => {

@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import PublicProjectViewer from './PublicProjectViewer.jsx'
-import { PREVIEW_HOST_MESSAGE_TYPE } from '../../utils/presentationPreviewDocument.js'
+import { PREVIEW_ENTER_EXHIBITION_KIND, PREVIEW_HOST_MESSAGE_TYPE } from '../../utils/presentationPreviewDocument.js'
 
 const {
     syncState,
@@ -114,5 +114,60 @@ describe('PublicProjectViewer', () => {
             expect(iframe?.getAttribute('srcdoc')).toContain('Live code')
             expect(iframe?.getAttribute('srcdoc')).toContain(PREVIEW_HOST_MESSAGE_TYPE)
         })
+    })
+
+    it('swaps the code view for the 3D scene when the embedded page posts an enter-exhibition message', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: {
+                    id: 'wcc-project',
+                    title: 'WCC'
+                },
+                presentationState: {
+                    mode: 'code',
+                    entryView: 'code',
+                    codeHtml: '<button onclick="diiEnterExhibition()">Enter</button>'
+                },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({
+            ops: [],
+            latestVersion: 1
+        })
+
+        const { container } = render(
+            <PublicProjectViewer
+                spaceId="wcc"
+                projectId="wcc-project"
+                spaceLabel="WCC"
+            />
+        )
+
+        const iframe = await waitFor(() => {
+            const node = container.querySelector('iframe')
+            expect(node).not.toBeNull()
+            return node
+        })
+        Object.defineProperty(iframe, 'contentWindow', {
+            configurable: true,
+            value: window
+        })
+        await act(async () => {})
+
+        await act(async () => {
+            const event = new MessageEvent('message', {
+                data: { type: PREVIEW_HOST_MESSAGE_TYPE, kind: PREVIEW_ENTER_EXHIBITION_KIND }
+            })
+            Object.defineProperty(event, 'source', {
+                configurable: true,
+                value: window
+            })
+            window.dispatchEvent(event)
+        })
+
+        expect(await screen.findByText('viewer-scene:code')).toBeInTheDocument()
+        expect(container.querySelector('iframe')).toBeNull()
     })
 })

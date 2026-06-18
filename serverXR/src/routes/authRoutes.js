@@ -71,7 +71,7 @@ const registerAuthRoutes = (router, {
         subject: user.id,
         label: user.display_name || user.email || user.id,
         role: user.role,
-        spaces: null
+        spaces: user.spaces === null ? null : (Array.isArray(user.spaces) ? user.spaces : [])
       }
     })
     setAuthSessionCookie(res, session.value)

@@ -4,6 +4,10 @@
       "command": "npx",
       "args": ["-y", "@modelcontextprotocol/server-sqlite", "/home/nooo/di.iiii/serverXR/data/di.db"],
       "env": {}
+    },
+    "serena": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
     }
   },
   "permissions": {

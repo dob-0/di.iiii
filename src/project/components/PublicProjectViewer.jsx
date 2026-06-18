@@ -9,7 +9,11 @@ import {
 import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import useXrAr from '../../hooks/useXrAr.js'
 import StudioViewport from '../../studio/components/StudioViewport.jsx'
-import { buildPresentationPreviewDocument } from '../../utils/presentationPreviewDocument.js'
+import {
+    buildPresentationPreviewDocument,
+    PREVIEW_ENTER_EXHIBITION_KIND,
+    PREVIEW_HOST_MESSAGE_TYPE
+} from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 
 const overlayButtonStyle = {
@@ -50,7 +54,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         error: ''
     })
     const [cameraView, setCameraView] = useState(null)
+    const [viewMode, setViewMode] = useState(null)
     const controlsRef = useRef(null)
+    const iframeRef = useRef(null)
     const syncServiceRef = useRef(createProjectSyncService())
     const versionRef = useRef(0)
     const cameraViewRef = useRef(null)
@@ -147,7 +153,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const document = state.document
     const publishState = document?.publishState || {}
     const presentationState = document?.presentationState || {}
-    const entryView = presentationState.entryView || 'scene'
+    const entryView = viewMode || presentationState.entryView || 'scene'
     const showCodeView = entryView === 'code'
     const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
@@ -159,6 +165,22 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         setCameraPosition: (position) => setCameraView((current) => ({ ...(current || {}), position })),
         setCameraTarget: (target) => setCameraView((current) => ({ ...(current || {}), target }))
     })
+
+    useEffect(() => {
+        setViewMode(null)
+    }, [presentationState.entryView])
+
+    useEffect(() => {
+        if (!showCodeView) return undefined
+        const handleMessage = (event) => {
+            if (event.source !== iframeRef.current?.contentWindow) return
+            if (event.data?.type !== PREVIEW_HOST_MESSAGE_TYPE) return
+            if (event.data?.kind !== PREVIEW_ENTER_EXHIBITION_KIND) return
+            setViewMode('scene')
+        }
+        window.addEventListener('message', handleMessage)
+        return () => window.removeEventListener('message', handleMessage)
+    }, [showCodeView])
 
     useEffect(() => {
         if (!projectId) return undefined
@@ -222,6 +244,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     />
                 ) : rawHtml ? (
                     <iframe
+                        ref={iframeRef}
                         title={viewerTitle}
                         srcDoc={previewDocument}
                         sandbox="allow-scripts allow-forms allow-popups allow-modals"

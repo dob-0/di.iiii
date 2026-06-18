@@ -447,6 +447,109 @@ describe('server write contracts', () => {
         await expect(adminDelete.json()).resolves.toMatchObject({ ok: true })
     })
 
+    it('enforces the same space scope on reads as on writes, except for isPublic spaces', async () => {
+        const editorToken = 'reader-editor-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                EDITOR_API_TOKEN: editorToken,
+                EDITOR_ALLOWED_SPACES: 'role-space'
+            }
+        })
+
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ label: 'Role Space', slug: 'role-space' })
+        })
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ label: 'Other Space', slug: 'other-space' })
+        })
+
+        const deniedRead = await fetch(`${server.baseUrl}/api/spaces/other-space`, {
+            headers: withAuth(editorToken)
+        })
+        expect(deniedRead.status).toBe(403)
+        await expect(deniedRead.json()).resolves.toMatchObject({
+            error: 'Space access denied.',
+            requiredSpaceId: 'other-space',
+            allowedSpaces: ['role-space']
+        })
+
+        const unauthenticatedRead = await fetch(`${server.baseUrl}/api/spaces/other-space`)
+        expect(unauthenticatedRead.status).toBe(401)
+
+        const allowedRead = await fetch(`${server.baseUrl}/api/spaces/role-space`, {
+            headers: withAuth(editorToken)
+        })
+        expect(allowedRead.status).toBe(200)
+
+        const makePublic = await fetch(`${server.baseUrl}/api/spaces/other-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ isPublic: true })
+        })
+        expect(makePublic.status).toBe(200)
+
+        const publicReadNoAuth = await fetch(`${server.baseUrl}/api/spaces/other-space`)
+        expect(publicReadNoAuth.status).toBe(200)
+        await expect(publicReadNoAuth.json()).resolves.toMatchObject({
+            space: expect.objectContaining({ id: 'other-space', isPublic: true })
+        })
+
+        const publicReadOutOfScopeToken = await fetch(`${server.baseUrl}/api/spaces/other-space`, {
+            headers: withAuth(editorToken)
+        })
+        expect(publicReadOutOfScopeToken.status).toBe(200)
+    })
+
+    it('restricts /api/users to admins on every method, including GET', async () => {
+        const editorToken = 'user-mgmt-editor-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                EDITOR_API_TOKEN: editorToken
+            }
+        })
+
+        const unauthenticatedList = await fetch(`${server.baseUrl}/api/users`)
+        expect(unauthenticatedList.status).toBe(401)
+
+        const editorList = await fetch(`${server.baseUrl}/api/users`, {
+            headers: withAuth(editorToken)
+        })
+        expect(editorList.status).toBe(403)
+        await expect(editorList.json()).resolves.toMatchObject({
+            error: 'Admin role required.',
+            requiredRole: 'admin',
+            currentRole: 'editor'
+        })
+
+        const adminList = await fetch(`${server.baseUrl}/api/users`, {
+            headers: withAuth(server.apiToken)
+        })
+        expect(adminList.status).toBe(200)
+        await expect(adminList.json()).resolves.toMatchObject({ users: [] })
+
+        const editorPatch = await fetch(`${server.baseUrl}/api/users/some-user-id`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(editorToken) },
+            body: JSON.stringify({ spaces: ['main'] })
+        })
+        expect(editorPatch.status).toBe(403)
+
+        const adminPatchMissing = await fetch(`${server.baseUrl}/api/users/some-user-id`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ spaces: ['main'] })
+        })
+        expect(adminPatchMissing.status).toBe(404)
+    })
+
     it('allows writes outside production when REQUIRE_AUTH is unset', async () => {
         const server = await startServer({ nodeEnv: 'test' })
 
@@ -518,7 +621,9 @@ describe('server write contracts', () => {
             createdAt: 1773766320415
         }, null, 2))
 
-        const response = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/scene`)
+        const response = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/scene`, {
+            headers: withAuth(server.apiToken)
+        })
         expect(response.status).toBe(200)
 
         const payload = await response.json()
@@ -580,7 +685,9 @@ describe('server write contracts', () => {
         }, null, 2))
         expect(fs.existsSync(path.join(assetsDir, missingAssetId))).toBe(false)
 
-        const response = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/scene`)
+        const response = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/scene`, {
+            headers: withAuth(server.apiToken)
+        })
         expect(response.status).toBe(200)
 
         const payload = await response.json()
@@ -610,7 +717,9 @@ describe('server write contracts', () => {
             slug: 'showcase-live-project'
         })
 
-        const readResponse = await fetch(`${server.baseUrl}/api/spaces/showcase-space`)
+        const readResponse = await fetch(`${server.baseUrl}/api/spaces/showcase-space`, {
+            headers: withAuth(server.apiToken)
+        })
         expect(readResponse.status).toBe(200)
         const readPayload = await readResponse.json()
         expect(readPayload.space.publishedProjectId).toBeNull()

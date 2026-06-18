@@ -12,6 +12,7 @@ function registerSpaceRoutes(router, {
   ensureSpaceScene,
   ensureSpaceWritable,
   findProjectById,
+  findUserById = null,
   getLiveBucket,
   getSpacePaths,
   hydrateSceneAssetManifest,
@@ -27,6 +28,7 @@ function registerSpaceRoutes(router, {
   readOpsHistory,
   saveSpaceMeta,
   serveAsset,
+  setUserSpaces = null,
   spacesDir,
   spaceExists,
   upsertSpaceMeta,
@@ -68,7 +70,7 @@ function registerSpaceRoutes(router, {
     }
   })
 
-  router.post('/api/spaces', requireAdminWrite, async (req, res, next) => {
+  router.post('/api/spaces', async (req, res, next) => {
     try {
       const { label = '', slug, permanent = false, allowEdits } = req.body || {}
       const desired = slug || label || ''
@@ -82,6 +84,17 @@ function registerSpaceRoutes(router, {
       const meta = buildMeta(spaceId, { label, permanent, allowEdits })
       await saveSpaceMeta(spaceId, meta)
       await ensureSpaceScene(spaceId)
+
+      const sessionUserId = req.session?.user?.id
+      if (sessionUserId && findUserById && setUserSpaces) {
+        try {
+          const existing = findUserById(sessionUserId)
+          if (Array.isArray(existing?.spaces)) {
+            setUserSpaces(sessionUserId, [...existing.spaces, spaceId])
+          }
+        } catch { /* non-fatal */ }
+      }
+
       res.status(201).json({ space: meta })
     } catch (error) {
       next(error)
@@ -109,7 +122,7 @@ function registerSpaceRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const { label, permanent, allowEdits, publishedProjectId } = req.body || {}
+      const { label, permanent, allowEdits, isPublic, publishedProjectId } = req.body || {}
       let nextPublishedProjectId
       if (publishedProjectId !== undefined) {
         if (publishedProjectId === null || publishedProjectId === '') {
@@ -129,6 +142,7 @@ function registerSpaceRoutes(router, {
         ...(label !== undefined ? { label } : {}),
         ...(permanent !== undefined ? { permanent } : {}),
         ...(allowEdits !== undefined ? { allowEdits } : {}),
+        ...(isPublic !== undefined ? { isPublic: Boolean(isPublic) } : {}),
         ...(publishedProjectId !== undefined ? { publishedProjectId: nextPublishedProjectId } : {})
       })
       res.json({ space: meta })
@@ -345,6 +359,31 @@ function registerSpaceRoutes(router, {
       }
       next(error)
     }
+  })
+
+  router.get('/api/spaces/:spaceId/assets', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      const { assetsDir } = getSpacePaths(spaceId)
+      const assetBaseUrl = `${req.baseUrl || ''}/api/spaces/${spaceId}/assets`
+      const files = await fsp.readdir(assetsDir).catch(() => [])
+      const assets = (
+        await Promise.all(
+          files
+            .filter(f => f.endsWith('.json'))
+            .map(async f => {
+              try {
+                const meta = JSON.parse(await fsp.readFile(path.join(assetsDir, f), 'utf-8'))
+                return { ...meta, url: `${assetBaseUrl}/${meta.id}` }
+              } catch { return null }
+            })
+        )
+      )
+        .filter(Boolean)
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+      res.json({ assets })
+    } catch (error) { next(error) }
   })
 
   router.get('/api/spaces/:spaceId/assets/:assetId', async (req, res, next) => {

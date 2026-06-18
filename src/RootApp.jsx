@@ -5,12 +5,37 @@ import { getBetaLocationState, isBetaLocation } from './beta/utils/betaRouting.j
 import AuthGate from './components/AuthGate.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
+import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
 import { getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
 import { APP_PAGE_PREFERENCES, getAppLocationState } from './utils/spaceRouting.js'
 
 const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
+const WccLandingPage = lazy(() => import('./wcc/landing/LandingPage.jsx'))
+
+function ProtectedSurface({ children, requiredSpaceId = null }) {
+    return <AuthGate requiredSpaceId={requiredSpaceId}>{children}</AuthGate>
+}
+
+function SpaceSurfaceRoute({ appState }) {
+    const canBePublic = appState.page !== APP_PAGE_PREFERENCES
+    const { isPublic, loading } = useSpacePublicFlag(canBePublic ? appState.spaceId : null)
+
+    if (canBePublic && loading) {
+        return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+
+    if (canBePublic && isPublic) {
+        return <SpaceSurfaceApp routeState={appState} />
+    }
+
+    return (
+        <ProtectedSurface requiredSpaceId={appState.spaceId}>
+            <SpaceSurfaceApp routeState={appState} />
+        </ProtectedSurface>
+    )
+}
 
 function AppRouter() {
     const rrNavigate = useNavigate()
@@ -25,31 +50,35 @@ function AppRouter() {
 
     if (isStudioLocation(studioState)) {
         return (
-            <Suspense
-                fallback={
-                    <RouteSurfaceFallback
-                        label="Loading Studio"
-                        detail="Preparing the main authoring workspace..."
-                    />
-                }
-            >
-                <StudioApp initialRoute={studioState} />
-            </Suspense>
+            <ProtectedSurface requiredSpaceId={studioState.spaceId}>
+                <Suspense
+                    fallback={
+                        <RouteSurfaceFallback
+                            label="Loading Studio"
+                            detail="Preparing the main authoring workspace..."
+                        />
+                    }
+                >
+                    <StudioApp initialRoute={studioState} />
+                </Suspense>
+            </ProtectedSurface>
         )
     }
 
     if (isBetaLocation(betaState)) {
         return (
-            <Suspense
-                fallback={
-                    <RouteSurfaceFallback
-                        label="Loading Beta"
-                        detail="Preparing the experimental workspace..."
-                    />
-                }
-            >
-                <BetaApp initialRoute={betaState} />
-            </Suspense>
+            <ProtectedSurface requiredSpaceId={betaState.spaceId}>
+                <Suspense
+                    fallback={
+                        <RouteSurfaceFallback
+                            label="Loading Beta"
+                            detail="Preparing the experimental workspace..."
+                        />
+                    }
+                >
+                    <BetaApp initialRoute={betaState} />
+                </Suspense>
+            </ProtectedSurface>
         )
     }
 
@@ -63,15 +92,22 @@ function AppRouter() {
         )
     }
 
-    return <SpaceSurfaceApp routeState={appState} />
+    const pathSegments = location.pathname.replace(/^\/+/, '').replace(/\/+$/, '').split('/')
+    if (appState.spaceId === 'wcc' && pathSegments.length === 1 && appState.page !== APP_PAGE_PREFERENCES) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <WccLandingPage />
+            </Suspense>
+        )
+    }
+
+    return <SpaceSurfaceRoute appState={appState} />
 }
 
 export default function RootApp() {
     return (
         <BrowserRouter>
-            <AuthGate>
-                <AppRouter />
-            </AuthGate>
+            <AppRouter />
         </BrowserRouter>
     )
 }

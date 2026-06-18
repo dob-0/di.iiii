@@ -1,0 +1,29 @@
+name: Deploy space code files
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - 'spaces/*/code/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Push changed space code files to live
+        env:
+          LIVE_API_URL: ${{ secrets.LIVE_API_URL }}
+          LIVE_API_TOKEN: ${{ secrets.LIVE_API_TOKEN }}
+        run: |
+          for dir in spaces/*/code; do
+            [ -d "$dir" ] || continue
+            spaceId=$(echo "$dir" | cut -d/ -f2)
+            echo "Pushing code for space: $spaceId"
+            node scripts/space-code-push.mjs "$spaceId"
+          done

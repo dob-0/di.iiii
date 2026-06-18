@@ -144,8 +144,8 @@ function HeroScene() {
             <pointLight position={[0, 3, 0]} intensity={0.5} color="#4df9ff" distance={12} />
             <Grid
                 args={[30, 30]}
-                cellColor="rgba(77,249,255,0.05)"
-                sectionColor="rgba(77,249,255,0.13)"
+                cellColor="rgba(77,249,255,0.09)"
+                sectionColor="rgba(77,249,255,0.22)"
                 position={[0, 0, 0]}
                 fadeDistance={22}
                 fadeStrength={1}
