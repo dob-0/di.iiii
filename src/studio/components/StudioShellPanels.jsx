@@ -505,7 +505,7 @@ export function FilesPanel({
                     {showAddFile && (
                         <Stack direction="row" spacing={1} sx={{ px: 1, pb: 1 }}>
                             <TextField
-                                autoFocus size="small" placeholder="style.css"
+                                inputRef={el => el?.focus()} size="small" placeholder="style.css"
                                 value={newFileName} onChange={(e) => setNewFileName(e.target.value)}
                                 onKeyDown={(e) => { if (e.key === 'Enter') addFile(); if (e.key === 'Escape') { setShowAddFile(false); setNewFileName('') } }}
                                 sx={{ flex: 1 }}

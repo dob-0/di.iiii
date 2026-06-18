@@ -3,14 +3,14 @@
 **Every AI reads this before anything else. ≤50 lines. Read in full.**
 Updated at the end of every session. Replace content — do not append.
 
-active_branch: feature/landing-pages (off dev, uncommitted — review before merging)
+active_branch: dev (working directly on dev — SpaceHub, space creation, git-to-space deploy added)
 
 ---
 
 ## Last commit
 
-`ca23475` — fix npm audit: patch 8 of 11 vulnerabilities, pin postcss via override
-(this session: added per-space `isPublic` flag; fixed a real access-control gap where reads were never scope-checked; Studio nav/labeling fixes; then found and fixed OAuth sign-in defaulting to *unrestricted* editor access. Not yet committed.)
+`de3fc91` — feat: add Files panel (dedicated code editor + space asset browser in Studio)
+(this session, uncommitted: SpaceHub at `/studio` — space selector with inline create form; `POST /api/spaces` now open to any authenticated user (was admin-only); creating user auto-scoped to new space; `← Spaces` back-link in StudioHub; `space:code-push` CLI + GitHub Action to deploy `spaces/{id}/code/` to live project codeFiles. lint/build/297 tests pass.)
 Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production).
 
 ## What works

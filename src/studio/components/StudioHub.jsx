@@ -13,7 +13,7 @@ import {
     uploadProjectAsset
 } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
-import { buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { buildStudioProjectPath, buildStudioSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import '../styles/studio-hub.css'
 
 const formatRelativeDate = (iso) => {
@@ -152,7 +152,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         >
                             <input
                                 className="sh-new-input"
-                                autoFocus
+                                ref={el => el?.focus()}
                                 placeholder="Project name"
                                 value={creatingTitle}
                                 onChange={e => setCreatingTitle(e.target.value)}
@@ -166,6 +166,8 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
 
                 {/* Secondary actions */}
                 <div className="sh-secondary-row">
+                    <button className="sh-link" onClick={() => appNavigate(buildStudioSpacesPath())}>← Spaces</button>
+                    <span className="sh-sep">·</span>
                     <label className={`sh-link${isBusy ? ' sh-link-disabled' : ''}`}>
                         Import
                         <input

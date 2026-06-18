@@ -12,6 +12,7 @@ function registerSpaceRoutes(router, {
   ensureSpaceScene,
   ensureSpaceWritable,
   findProjectById,
+  findUserById = null,
   getLiveBucket,
   getSpacePaths,
   hydrateSceneAssetManifest,
@@ -27,6 +28,7 @@ function registerSpaceRoutes(router, {
   readOpsHistory,
   saveSpaceMeta,
   serveAsset,
+  setUserSpaces = null,
   spacesDir,
   spaceExists,
   upsertSpaceMeta,
@@ -68,7 +70,7 @@ function registerSpaceRoutes(router, {
     }
   })
 
-  router.post('/api/spaces', requireAdminWrite, async (req, res, next) => {
+  router.post('/api/spaces', async (req, res, next) => {
     try {
       const { label = '', slug, permanent = false, allowEdits } = req.body || {}
       const desired = slug || label || ''
@@ -82,6 +84,17 @@ function registerSpaceRoutes(router, {
       const meta = buildMeta(spaceId, { label, permanent, allowEdits })
       await saveSpaceMeta(spaceId, meta)
       await ensureSpaceScene(spaceId)
+
+      const sessionUserId = req.session?.user?.id
+      if (sessionUserId && findUserById && setUserSpaces) {
+        try {
+          const existing = findUserById(sessionUserId)
+          if (Array.isArray(existing?.spaces)) {
+            setUserSpaces(sessionUserId, [...existing.spaces, spaceId])
+          }
+        } catch { /* non-fatal */ }
+      }
+
       res.status(201).json({ space: meta })
     } catch (error) {
       next(error)
