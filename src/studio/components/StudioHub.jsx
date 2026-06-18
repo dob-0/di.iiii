@@ -4,6 +4,7 @@ import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath, buildPreferencesPath } from '../../utils/spaceRouting.js'
 import { buildBetaHubPath } from '../../beta/utils/betaRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
+import GridFloorBackground from '../../components/GridFloorBackground.jsx'
 import {
     DEFAULT_PROJECT_SPACE_ID,
     createProject,
@@ -133,7 +134,14 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
 
     return (
         <Box className="studio-shell-root studio-hub-root">
-            <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 } }}>
+            <GridFloorBackground
+                opacity={0.25}
+                cellOpacity={0.04}
+                sectionOpacity={0.12}
+                showNodes={false}
+                overlayGradient="radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0,0,0,0.6) 100%), linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.4) 100%)"
+            />
+            <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 }, position: 'relative', zIndex: 1 }}>
 
                 {/* Top row */}
                 <div className="sh-top-row">
