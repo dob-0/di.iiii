@@ -41,6 +41,7 @@ export default function StudioPresentationSurface({
     onRotateStart,
     editMode,
     gizmoMode,
+    gizmoAxis = null,
     gizmoVisible = true,
     transformOp = null,
     setEditMode,
@@ -137,6 +138,7 @@ export default function StudioPresentationSurface({
             onRotateStart={onRotateStart}
             editMode={editMode}
             gizmoMode={gizmoMode}
+            gizmoAxis={gizmoAxis}
             gizmoVisible={gizmoVisible}
             transformOp={transformOp}
             setEditMode={setEditMode}

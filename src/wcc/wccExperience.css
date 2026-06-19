@@ -1,0 +1,27 @@
+.wcc-experience {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    background: #070506;
+}
+
+.wcc-experience__landing {
+    position: absolute;
+    inset: 0;
+}
+
+.wcc-experience__scene {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+}
+
+/* Full-screen warp flash that hides the 2D -> 3D swap. */
+.wcc-experience__warp {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: radial-gradient(circle at 50% 50%, #d90000 0%, #070506 55%, #000000 100%);
+    pointer-events: none;
+    opacity: 0;
+}

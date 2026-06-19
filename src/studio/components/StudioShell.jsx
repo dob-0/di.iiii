@@ -75,6 +75,7 @@ export default function StudioShell({
     onCopyShareLink,
     onViewLive,
     onExportProject,
+    exportStatus,
     onImportProjectFile,
     onEnterXr,
     onExitXr,
@@ -83,7 +84,6 @@ export default function StudioShell({
     onTransformCommit,
     onToggleSelectEntity,
     transformOp = null,
-    onStartTransform,
     onTransformCommitMany,
     onTransformCancel,
 }) {
@@ -92,11 +92,18 @@ export default function StudioShell({
     const [uiHidden, setUiHidden] = useState(false)
     const [viewportEditMode, setViewportEditMode] = useState('navigate')
     const [viewportGizmoMode, setViewportGizmoMode] = useState('translate')
+    const [viewportGizmoAxis, setViewportGizmoAxis] = useState(null)
     const [viewportGizmoVisible, setViewportGizmoVisible] = useState(true)
     const [quickInsert, setQuickInsert] = useState(null)
     const [positions, setPositions] = useState(DEFAULT_POSITIONS)
     const [layoutKey, setLayoutKey] = useState(0)
     const [snapEdges, setSnapEdges] = useState(false)
+
+    const selectGizmoMode = useCallback((mode) => {
+        setViewportGizmoMode(mode)
+        setViewportGizmoAxis(null)
+        setViewportGizmoVisible(true)
+    }, [])
 
     const openRef = useRef(open)
     useEffect(() => { openRef.current = open }, [open])
@@ -159,23 +166,21 @@ export default function StudioShell({
             if (e.key === 'Escape' && quickInsert) {
                 setQuickInsert(null)
             }
-            // Blender-style gizmo mode keys. In edit mode with a selection they start a
-            // modal grab/rotate/scale (object follows the mouse); otherwise they just set
-            // the drag-handle gizmo mode. T toggles gizmo visibility.
+            // Transform keys mirror the G/R/S toolbar buttons. T toggles gizmo visibility.
             if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
                 const modeForKey = (e.key === 'g' || e.key === 'G') ? 'translate'
                     : (e.key === 'r' || e.key === 'R') ? 'rotate'
                     : (e.key === 's' || e.key === 'S') ? 'scale'
                     : null
-                const canModal = viewportEditMode === 'edit' && selectedEntityIds.length > 0
                 if (modeForKey) {
                     e.preventDefault()
-                    if (canModal && onStartTransform) {
-                        onStartTransform(modeForKey)
-                    } else {
-                        setViewportGizmoMode(modeForKey)
-                        setViewportGizmoVisible(true)
-                    }
+                    selectGizmoMode(modeForKey)
+                } else if (['x', 'y', 'z'].includes(e.key.toLowerCase())) {
+                    e.preventDefault()
+                    e.stopImmediatePropagation()
+                    const axis = e.key.toLowerCase()
+                    setViewportGizmoAxis((current) => current === axis ? null : axis)
+                    setViewportGizmoVisible(true)
                 } else if (e.key === 't' || e.key === 'T') {
                     e.preventDefault()
                     setViewportGizmoVisible((v) => !v)
@@ -193,7 +198,7 @@ export default function StudioShell({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [quickInsert, tileLayout, resetLayout, viewportEditMode, selectedEntityIds, onStartTransform])
+    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode])
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return
@@ -231,6 +236,7 @@ export default function StudioShell({
         xrStore: xrState?.xrStore,
         editMode: viewportEditMode,
         gizmoMode: viewportGizmoMode,
+        gizmoAxis: viewportGizmoAxis,
         gizmoVisible: viewportGizmoVisible,
         transformOp,
         onTransformCommit,
@@ -274,12 +280,26 @@ export default function StudioShell({
                     )}
                     {isOpen('inspector') && (
                         <StudioFloatingPanel key={`inspector-${layoutKey}`} title="Inspector" onClose={() => toggle('inspector')} initialPosition={positions.inspector} initialWidth={280} snapEdges={snapEdges}>
-                            <StudioInspector title={selectedEntity ? selectedEntity.name : 'World'} subtitle={selectedEntity ? selectedEntity.type : 'Project defaults'} sections={inspectorSections} values={inspectorValues} assetOptions={assetOptions} onSectionChange={onInspectorChange} footer={inspectorFooter} />
+                            <StudioInspector
+                                title={selectedEntityIds.length > 1 ? `${selectedEntityIds.length} selected` : (selectedEntity ? selectedEntity.name : 'World')}
+                                subtitle={selectedEntityIds.length > 1 ? `Primary: ${selectedEntity?.name || selectedEntityId}` : (selectedEntity ? selectedEntity.type : 'Project defaults')}
+                                sections={inspectorSections}
+                                values={inspectorValues}
+                                assetOptions={assetOptions}
+                                onSectionChange={onInspectorChange}
+                                footer={inspectorFooter}
+                            />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('structure') && (
                         <StudioFloatingPanel key={`structure-${layoutKey}`} title="Structure" onClose={() => toggle('structure')} initialPosition={positions.structure} initialWidth={240} snapEdges={snapEdges}>
-                            <StructurePanel entities={entities} selectedEntityId={selectedEntityId} onSelectEntity={onSelectEntity} />
+                            <StructurePanel
+                                entities={entities}
+                                selectedEntityId={selectedEntityId}
+                                selectedEntityIds={selectedEntityIds}
+                                onSelectEntity={onSelectEntity}
+                                onToggleSelectEntity={onToggleSelectEntity}
+                            />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('present') && (
@@ -289,7 +309,7 @@ export default function StudioShell({
                     )}
                     {isOpen('publish') && (
                         <StudioFloatingPanel key={`publish-${layoutKey}`} title="Publish" onClose={() => toggle('publish')} initialPosition={positions.publish} initialWidth={360} minWidth={300} snapEdges={snapEdges}>
-                            <PublishPanel document={document} publishState={document?.publishState} liveProjectState={liveProjectState} onPublishPatch={onPublishPatch} onSetLiveProject={onSetLiveProject} onClearLiveProject={onClearLiveProject} onCopyShareLink={onCopyShareLink} onExportProject={onExportProject} onImportProjectFile={onImportProjectFile} xrState={xrState} onEnterXr={onEnterXr} onExitXr={onExitXr} />
+                            <PublishPanel document={document} publishState={document?.publishState} liveProjectState={liveProjectState} onPublishPatch={onPublishPatch} onSetLiveProject={onSetLiveProject} onClearLiveProject={onClearLiveProject} onCopyShareLink={onCopyShareLink} onExportProject={onExportProject} exportStatus={exportStatus} onImportProjectFile={onImportProjectFile} xrState={xrState} onEnterXr={onEnterXr} onExitXr={onExitXr} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('activity') && (
@@ -311,7 +331,7 @@ export default function StudioShell({
                         editMode={viewportEditMode}
                         onSetEditMode={setViewportEditMode}
                         gizmoMode={viewportGizmoMode}
-                        onSetGizmoMode={setViewportGizmoMode}
+                        onSetGizmoMode={selectGizmoMode}
                         openPanels={open}
                         onTogglePanel={toggle}
                         onFullscreen={handleFullscreen}

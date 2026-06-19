@@ -1,6 +1,19 @@
 import { useMemo, useReducer } from 'react'
 import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectSchema.js'
 
+const uniqueIds = (ids) => Array.from(new Set((Array.isArray(ids) ? ids : []).filter(Boolean)))
+
+const selectionForDocument = (state, document) => {
+    const validIds = new Set((document.entities || []).map((entity) => entity.id))
+    const selectedEntityIds = uniqueIds(state.selectedEntityIds).filter((id) => validIds.has(id))
+    return {
+        selectedEntityIds,
+        selectedEntityId: selectedEntityIds.includes(state.selectedEntityId)
+            ? state.selectedEntityId
+            : (selectedEntityIds.at(-1) || null)
+    }
+}
+
 export const createProjectStoreState = ({
     document = null,
     version = 0
@@ -41,18 +54,24 @@ export function projectStoreReducer(state, action) {
                 loading: false,
                 loadError: action.error || 'Failed to load project.'
             }
-        case 'apply-ops':
+        case 'apply-ops': {
+            const document = applyProjectOps(state.document, action.ops || [])
             return {
                 ...state,
                 version: Number.isFinite(action.version) ? action.version : state.version,
-                document: applyProjectOps(state.document, action.ops || [])
+                document,
+                ...selectionForDocument(state, document)
             }
-        case 'replace-document':
+        }
+        case 'replace-document': {
+            const document = normalizeProjectDocument(action.document || {})
             return {
                 ...state,
                 version: Number.isFinite(action.version) ? action.version : state.version,
-                document: normalizeProjectDocument(action.document || {})
+                document,
+                ...selectionForDocument(state, document)
             }
+        }
         case 'set-version':
             return {
                 ...state,
@@ -78,7 +97,8 @@ export function projectStoreReducer(state, action) {
             }
         }
         case 'select-entities': {
-            const nextIds = Array.isArray(action.entityIds) ? action.entityIds.filter(Boolean) : []
+            const validIds = new Set((state.document.entities || []).map((entity) => entity.id))
+            const nextIds = uniqueIds(action.entityIds).filter((id) => validIds.has(id))
             return {
                 ...state,
                 selectedEntityIds: nextIds,

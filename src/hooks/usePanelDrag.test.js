@@ -1,5 +1,5 @@
 import { act, renderHook } from '@testing-library/react'
-import { describe, expect, it, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePanelDrag } from './usePanelDrag.js'
 
 function attachPanelRef(result, rect) {
@@ -84,5 +84,30 @@ describe('usePanelDrag', () => {
         })
 
         expect(result.current.dragStyle.transform).toBe('translate(8px, 100px)')
+    })
+
+    it('does not capture pointer presses from header controls', () => {
+        const { result } = renderHook(() => usePanelDrag({ x: 100, y: 100 }))
+        attachPanelRef(result, rect)
+        const button = document.createElement('button')
+        const header = document.createElement('div')
+        header.appendChild(button)
+        const preventDefault = vi.fn()
+        const setPointerCapture = vi.fn()
+
+        act(() => {
+            result.current.dragProps.onPointerDown({
+                target: button,
+                currentTarget: { setPointerCapture },
+                pointerId: 1,
+                clientX: 100,
+                clientY: 100,
+                preventDefault
+            })
+        })
+
+        expect(preventDefault).not.toHaveBeenCalled()
+        expect(setPointerCapture).not.toHaveBeenCalled()
+        expect(result.current.isDragging).toBe(false)
     })
 })

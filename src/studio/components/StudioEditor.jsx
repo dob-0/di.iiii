@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMediaQuery, useTheme } from '@mui/material'
+import { Vector3 } from 'three'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
+import { createStudioProjectBundle, readStudioProjectBundle } from '../../project/transfer/studioProjectBundle.js'
 import { defaultWorldState, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import useXrAr from '../../hooks/useXrAr.js'
 import useSpaceAssets from '../../hooks/useSpaceAssets.js'
@@ -12,6 +14,7 @@ import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.j
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { useStudioLayoutPrefs } from '../hooks/useStudioLayoutPrefs.js'
+import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
@@ -27,7 +30,7 @@ const detectEntityTypeFromFile = (file) => {
 const getStarterPlacement = (count = 0) => [((count % 4) - 1.5) * 1.4, 0, Math.floor(count / 4) * -1.8]
 
 const buildDownload = (content, filename, type = 'application/json') => {
-    const blob = new Blob([content], { type })
+    const blob = content instanceof Blob ? content : new Blob([content], { type })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
@@ -102,6 +105,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const selectedEntityIds = state.selectedEntityIds || []
     const selectedEntities = entities.filter((entity) => selectedEntityIds.includes(entity.id))
     const [transformOp, setTransformOp] = useState(null)
+    const [exportStatus, setExportStatus] = useState(null)
     const transformOpRef = useRef(null)
     useEffect(() => { transformOpRef.current = transformOp }, [transformOp])
     const theme = useTheme()
@@ -298,16 +302,24 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     }
 
     const handleFrameSelected = () => {
-        if (!selectedEntity) return
         const cc = controlsRef.current
         if (!cc) return
-        const [tx, ty, tz] = selectedEntity.components?.transform?.position || [0, 0, 0]
-        const offset = [
-            cc._camera.position.x - cc._target.x,
-            cc._camera.position.y - cc._target.y,
-            cc._camera.position.z - cc._target.z
-        ]
-        cc.setLookAt(tx + offset[0], ty + offset[1], tz + offset[2], tx, ty, tz, true)
+        const visibleEntities = entities.filter((entity) => entity.components?.runtime?.visible !== false)
+        const targets = selectedEntities.length ? selectedEntities.filter((entity) => entity.components?.runtime?.visible !== false) : visibleEntities
+        const sphere = getPointsBoundingSphere(
+            targets.map((entity) => entity.components?.transform?.position || [0, 0, 0]),
+            { minRadius: targets.length === 1 ? 0.75 : 1 }
+        )
+        const camera = cc.camera || cc._camera
+        if (!sphere || !camera) return
+        const previousTarget = cc._target || new Vector3()
+        const direction = camera.position.clone().sub(previousTarget)
+        if (direction.lengthSq() <= 1e-8) direction.set(0.8, 0.45, 1)
+        direction.normalize()
+        const halfFov = Math.max(0.01, (camera.fov || 50) * Math.PI / 360)
+        const distance = (sphere.radius * (targets.length === 1 ? 1.35 : 1.45)) / Math.sin(halfFov)
+        const position = sphere.center.clone().add(direction.multiplyScalar(distance))
+        cc.setLookAt(position.x, position.y, position.z, sphere.center.x, sphere.center.y, sphere.center.z, true)
     }
 
     useEffect(() => {
@@ -328,7 +340,12 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 if (event.altKey) {
                     dispatch({ type: 'select-entities', entityIds: [] })
                 } else {
-                    dispatch({ type: 'select-entities', entityIds: entities.map((entity) => entity.id) })
+                    dispatch({
+                        type: 'select-entities',
+                        entityIds: entities
+                            .filter((entity) => entity.components?.runtime?.visible !== false && entity.components?.runtime?.locked !== true)
+                            .map((entity) => entity.id)
+                    })
                 }
                 return
             }
@@ -360,8 +377,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 handleDuplicateSelected()
                 return
             }
-            // Delete — X / Delete / Backspace (without Ctrl/Cmd; Ctrl/Cmd+X is Cut)
-            if (!meta && (key === 'x' || key === 'X' || key === 'Delete' || key === 'Backspace')) {
+            // Delete / Backspace. Bare X is reserved for gizmo axis constraint.
+            if (!meta && (key === 'Delete' || key === 'Backspace')) {
                 if (!selectedEntity) return
                 event.preventDefault()
                 handleDeleteSelected()
@@ -573,7 +590,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         }
     }
 
-    const handleExportProject = () => {
+    const handleExportProject = async () => {
+        if (exportStatus && exportStatus.phase !== 'error') return
         const exportedAt = Date.now()
         const exportDocument = normalizeProjectDocument({
             ...document,
@@ -582,24 +600,41 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 lastExportAt: exportedAt
             }
         })
-        buildDownload(
-            JSON.stringify(exportDocument, null, 2),
-            `${document.projectMeta?.title || projectId}.studio.json`
-        )
-        handlePublishPatch({ lastExportAt: exportedAt })
-        dispatch({
-            type: 'append-activity',
-            level: 'info',
-            message: 'Exported the current project document.'
-        })
+        try {
+            setExportStatus({ phase: 'downloading', completed: 0, total: exportDocument.assets.length })
+            const bundle = await createStudioProjectBundle(exportDocument, { onProgress: setExportStatus })
+            buildDownload(bundle, `${document.projectMeta?.title || projectId}.studio.zip`, 'application/zip')
+            setExportStatus(null)
+            handlePublishPatch({ lastExportAt: exportedAt })
+            dispatch({
+                type: 'append-activity',
+                level: 'info',
+                message: `Exported project with ${exportDocument.assets.length} bundled assets.`
+            })
+        } catch (error) {
+            setExportStatus({ phase: 'error', message: error.message || 'unknown error' })
+            dispatch({
+                type: 'append-activity',
+                level: 'error',
+                message: `Could not export complete project: ${error.message || 'unknown error'}`
+            })
+        }
     }
 
     const handleImportProjectFile = async (event) => {
         const file = event.target.files?.[0]
         if (!file) return
         try {
-            const text = await file.text()
-            const imported = normalizeProjectDocument(JSON.parse(text))
+            const { document: importedDocument, assetFiles } = await readStudioProjectBundle(file)
+            const uploadedAssets = new Map()
+            for (const [assetId, assetFile] of assetFiles.entries()) {
+                const uploaded = await uploadProjectAsset(projectId, assetFile, { assetId, filename: assetFile.name })
+                uploadedAssets.set(assetId, uploaded)
+            }
+            const imported = normalizeProjectDocument({
+                ...importedDocument,
+                assets: importedDocument.assets.map((asset) => uploadedAssets.get(asset.id) || asset)
+            })
             await replaceDocument({
                 ...imported,
                 projectMeta: {
@@ -686,6 +721,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onCopyShareLink={handleCopyShareLink}
             onViewLive={handleViewLive}
             onExportProject={handleExportProject}
+            exportStatus={exportStatus}
             onImportProjectFile={handleImportProjectFile}
             onEnterXr={xr.handleEnterXrSession}
             onExitXr={xr.handleExitXrSession}

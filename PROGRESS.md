@@ -5,6 +5,64 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-06-19 — Portable Studio Export With Assets
+
+- Export now produces one `.studio.zip` containing `project.json` and every project asset binary under `assets/<asset-id>/`.
+- Asset-heavy exports now show live download/packing progress, fetch up to three assets concurrently, and use STORE mode instead of recompressing GLB/MP4/JPG payloads.
+- Manual browser automation against WCC (asset responses stubbed small) produced `wcc.studio.zip` with zero page errors.
+- Export fails with a visible activity error if any asset cannot be downloaded, preventing silently incomplete archives.
+- Import accepts both `.studio.zip` and legacy `.studio.json`; bundled assets are re-uploaded into the current project using their stable asset IDs before document replacement.
+- Bundle round-trip tests pass 3/3, full lint and build pass. The full suite reached 310/319 before nine files hit shared 5-second timeouts under sustained load; all nine passed 32/32 when rerun with two workers.
+
+---
+
+## 2026-06-19 — Studio V1 Selection/Highlight Parity
+
+- Added V1-style orange primary and green secondary bounding-box highlights that track transformed objects.
+- Selection IDs are deduplicated, validated against the document, and pruned after deletes/replacements.
+- `A` selects visible, unlocked entities; Alt+A and Escape clear; `F` frames the full visible selection or all visible entities when selection is empty.
+- Hidden entities no longer render. Locked entities can still be selected/inspected/highlighted but do not receive transform gizmos.
+- Structure supports Ctrl/Cmd/Shift additive selection and labels hidden, locked, and primary rows; Inspector reports selection count and primary entity.
+- Focused parity tests pass 14/14; complete suite passes 316/316 with four workers; full lint and production build pass.
+
+---
+
+## 2026-06-19 — Studio Multi-Selection Gizmo
+
+- `A` already selected all entities; Studio now renders one shared centroid gizmo for any selection of two or more.
+- Dragging G/R/S previews the matrix delta on every selected entity and commits one batched operation on release for coherent undo/history.
+- X/Y/Z axis visibility applies to the shared gizmo. Single selections retain the existing per-entity gizmo.
+- Matrix tests cover centroid, group translation, and group scaling; touched suites pass 10/10, scoped lint is clean, and production build passes.
+
+---
+
+## 2026-06-19 — Studio Transform Hotkey/Button Parity
+
+- Keyboard `G/R/S` now selects translate/rotate/scale gizmos exactly like clicking the matching toolbar buttons; it no longer launches the separate modal operator.
+- Added coverage for all three key-to-gizmo mappings and verifies the modal start callback is not called.
+- Added `X/Y/Z` constraints to the active gizmo by wiring axis state to `TransformControls.showX/showY/showZ`; repeated axis restores all, and changing G/R/S clears the constraint.
+- Bare X is now reserved for axis constraint; Delete/Backspace still delete and Ctrl/Cmd+X still cuts. Axis/mode tests (7/7), lint, and build pass.
+
+---
+
+## 2026-06-19 — Studio Floating Panel Controls
+
+- Fixed close/collapse controls being swallowed by draggable-header pointer capture in Firefox.
+- `usePanelDrag` now ignores interactive descendants when deciding whether to start a drag.
+- Added a regression test; focused test, full lint, and production build pass.
+
+---
+
+## 2026-06-19 — Duplicate Vite Dev-Stack Guard
+
+- Diagnosed Studio module-load failures on port 5174 as two concurrent `npm run dev` stacks.
+- Set `server.strictPort: true` so duplicate Vite startup fails instead of drifting away from the HMR port.
+- Stopped only the duplicate 5174 stack; the original frontend remains available on 5173.
+- Enabled WebSocket forwarding on the `/serverXR` Vite proxy so Socket.IO can upgrade from polling during local development.
+- Validation: `npm run build` passed; `/studio/StudioApp.jsx` returned 200 on 5173; duplicate `npm run dev:client` failed as expected with port-in-use.
+
+---
+
 ## 2026-06-10 — Space and project workflow
 
 **Who:** Copilot

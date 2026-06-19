@@ -65,6 +65,7 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
     }, [])
 
     const handlePointerDown = useCallback((event) => {
+        if (event.target?.closest?.('button, input, textarea, select, a, [role="button"]')) return
         event.preventDefault()
         event.currentTarget?.setPointerCapture?.(event.pointerId)
         bringToFront()

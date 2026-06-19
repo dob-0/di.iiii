@@ -140,6 +140,7 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     xrStore={shared.xrStore}
                     editMode={shared.editMode}
                     gizmoMode={shared.gizmoMode}
+                    gizmoAxis={shared.gizmoAxis}
                     gizmoVisible={shared.gizmoVisible}
                     transformOp={shared.transformOp}
                     onTransformCommit={shared.onTransformCommit}

@@ -15,6 +15,7 @@ import ImageObject from '../../objectComponents/ImageObject.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
 import AudioObject from '../../objectComponents/AudioObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
+import { applyPivotTransform, getSelectionCentroid } from '../utils/multiTransform.js'
 
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
@@ -135,10 +136,15 @@ function EntityContent({ entity, assetMap }) {
     }
 }
 
-function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, gizmoMode, gizmoVisible = true, overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
+function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
     const groupRef = useRef()
     const tcRef = useRef()
+    const highlightRef = useRef(null)
     const isDragging = useRef(false)
+    const { scene } = useThree()
+    const runtime = entity.components?.runtime || {}
+    const isVisible = runtime.visible !== false
+    const isLocked = runtime.locked === true
 
     // Sync Three.js group from entity data (or live modal-transform preview) when not dragging
     useEffect(() => {
@@ -149,7 +155,30 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
         groupRef.current.scale.set(...(t.scale || [1, 1, 1]))
     }, [overrideTransform, entity.components?.transform])
 
-    const gizmoActive = isPrimary && editMode === 'edit' && gizmoVisible
+    useEffect(() => {
+        if (!selected || !isVisible || !groupRef.current) return undefined
+        const helper = new THREE.BoxHelper(groupRef.current, isPrimary ? 0xffa500 : 0x2ecc71)
+        helper.material.depthTest = false
+        helper.material.transparent = true
+        helper.material.opacity = 0.95
+        helper.renderOrder = 999
+        highlightRef.current = helper
+        scene.add(helper)
+        return () => {
+            scene.remove(helper)
+            helper.geometry?.dispose?.()
+            helper.material?.dispose?.()
+            highlightRef.current = null
+        }
+    }, [isPrimary, isVisible, scene, selected])
+
+    useFrame(() => {
+        if (highlightRef.current && groupRef.current) {
+            highlightRef.current.setFromObject(groupRef.current)
+        }
+    })
+
+    const gizmoActive = isPrimary && editMode === 'edit' && gizmoVisible && !isLocked
 
     // Attach TransformControls to the group
     useEffect(() => {
@@ -184,6 +213,8 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
 
     const t = entity.components?.transform || {}
 
+    if (!isVisible) return null
+
     return (
         <>
             <group
@@ -193,7 +224,7 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
                 scale={t.scale || [1, 1, 1]}
                 onClick={(e) => {
                     e.stopPropagation()
-                    const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey
+                    const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
                     if (additive) onToggleSelect?.(entity.id)
                     else onSelect?.(entity.id)
                 }}
@@ -206,7 +237,90 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
                 )}
             </group>
             {gizmoActive && (
-                <TransformControls ref={tcRef} mode={gizmoMode} />
+                <TransformControls
+                    ref={tcRef}
+                    mode={gizmoMode}
+                    showX={!gizmoAxis || gizmoAxis === 'x'}
+                    showY={!gizmoAxis || gizmoAxis === 'y'}
+                    showZ={!gizmoAxis || gizmoAxis === 'z'}
+                />
+            )}
+        </>
+    )
+}
+
+function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVisible, onPreview, onCommit, orbitRef }) {
+    const pivotRef = useRef()
+    const controlsRef = useRef()
+    const initialPivotRef = useRef(null)
+    const isDraggingRef = useRef(false)
+    const centroid = useMemo(() => getSelectionCentroid(entities), [entities])
+    const active = editMode === 'edit' && gizmoVisible && entities.length > 1
+
+    useEffect(() => {
+        const pivot = pivotRef.current
+        if (!pivot || isDraggingRef.current) return
+        pivot.position.set(...centroid)
+        pivot.rotation.set(0, 0, 0)
+        pivot.scale.set(1, 1, 1)
+    }, [centroid])
+
+    useEffect(() => {
+        const controls = controlsRef.current
+        const pivot = pivotRef.current
+        if (!controls || !pivot || !active) return
+        const orbitControls = orbitRef?.current
+        controls.attach(pivot)
+        controls.setSpace('world')
+
+        const pivotTransform = () => ({
+            position: pivot.position.toArray(),
+            rotation: [pivot.rotation.x, pivot.rotation.y, pivot.rotation.z],
+            scale: pivot.scale.toArray()
+        })
+        const preview = () => {
+            if (!initialPivotRef.current) return []
+            const updates = applyPivotTransform(entities, initialPivotRef.current, pivotTransform())
+            onPreview(Object.fromEntries(updates.map((entry) => [entry.id, entry.transform])))
+            return updates
+        }
+        const handleDraggingChanged = (event) => {
+            const dragging = Boolean(event.value)
+            isDraggingRef.current = dragging
+            if (orbitControls) orbitControls.enabled = !dragging
+            if (dragging) {
+                initialPivotRef.current = pivotTransform()
+            } else if (initialPivotRef.current) {
+                const updates = preview()
+                initialPivotRef.current = null
+                onPreview({})
+                onCommit(updates)
+            }
+        }
+        const handleObjectChange = () => {
+            if (isDraggingRef.current) preview()
+        }
+        controls.addEventListener('dragging-changed', handleDraggingChanged)
+        controls.addEventListener('objectChange', handleObjectChange)
+        return () => {
+            controls.removeEventListener('dragging-changed', handleDraggingChanged)
+            controls.removeEventListener('objectChange', handleObjectChange)
+            controls.detach()
+            if (orbitControls) orbitControls.enabled = true
+        }
+    }, [active, entities, onCommit, onPreview, orbitRef])
+
+    return (
+        <>
+            <group ref={pivotRef} />
+            {active && (
+                <TransformControls
+                    ref={controlsRef}
+                    mode={gizmoMode}
+                    showX={!gizmoAxis || gizmoAxis === 'x'}
+                    showY={!gizmoAxis || gizmoAxis === 'y'}
+                    showZ={!gizmoAxis || gizmoAxis === 'z'}
+                />
             )}
         </>
     )
@@ -321,6 +435,7 @@ function StudioSceneContent({
     onToggleSelectEntity,
     editMode,
     gizmoMode,
+    gizmoAxis = null,
     gizmoVisible = true,
     transformOp = null,
     onTransformCommit,
@@ -337,6 +452,13 @@ function StudioSceneContent({
     const selectedEntities = useMemo(
         () => (document.entities || []).filter((entity) => selectedIdSet.has(entity.id)),
         [document.entities, selectedIdSet]
+    )
+    const transformableSelectedEntities = useMemo(
+        () => selectedEntities.filter((entity) => (
+            entity.components?.runtime?.visible !== false
+            && entity.components?.runtime?.locked !== true
+        )),
+        [selectedEntities]
     )
 
     const handleModalCommit = (list) => {
@@ -388,7 +510,8 @@ function StudioSceneContent({
                             isPrimary={entity.id === selectedEntityId}
                             editMode={editMode}
                             gizmoMode={gizmoMode}
-                            gizmoVisible={gizmoVisibleEffective}
+                            gizmoAxis={gizmoAxis}
+                            gizmoVisible={gizmoVisibleEffective && transformableSelectedEntities.length === 1}
                             overrideTransform={previewById[entity.id] || null}
                             onSelect={onSelectEntity}
                             onToggleSelect={onToggleSelectEntity}
@@ -396,6 +519,16 @@ function StudioSceneContent({
                             orbitRef={controlsRef}
                         />
                     ))}
+                    <MultiSelectionGizmo
+                        entities={transformableSelectedEntities}
+                        editMode={editMode}
+                        gizmoMode={gizmoMode}
+                        gizmoAxis={gizmoAxis}
+                        gizmoVisible={gizmoVisibleEffective}
+                        onPreview={setPreviewById}
+                        onCommit={onTransformCommitMany}
+                        orbitRef={controlsRef}
+                    />
                 </Suspense>
             </group>
             {transformOp && selectedEntities.length > 0 && (
@@ -560,6 +693,7 @@ export default function StudioViewport({
     xrStore,
     editMode = 'navigate',
     gizmoMode = 'translate',
+    gizmoAxis = null,
     gizmoVisible = true,
     transformOp = null,
     setEditMode,
@@ -622,6 +756,7 @@ export default function StudioViewport({
                         onToggleSelectEntity={onToggleSelectEntity}
                         editMode={editMode}
                         gizmoMode={gizmoMode}
+                        gizmoAxis={gizmoAxis}
                         gizmoVisible={gizmoVisible}
                         transformOp={transformOp}
                         onTransformCommit={onTransformCommit}
