@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Box3, Vector3 } from 'three'
 import StudioInspector from './StudioInspector.jsx'
 import StudioViewportLayout from './StudioViewportLayout.jsx'
 import StudioFloatingPanel from './StudioFloatingPanel.jsx'
@@ -61,6 +62,7 @@ export default function StudioShell({
     onCreateFromAsset,
     onAssetFilesSelected,
     onDeleteSelected,
+    onDuplicateSelected,
     onSelectEntity,
     onInspectorChange,
     onWorldPatch,
@@ -160,12 +162,37 @@ export default function StudioShell({
                 e.preventDefault()
                 setUiHidden((v) => !v)
             }
-            if (e.key === 'e' || e.key === 'E') {
+            if (e.key === 'e' || e.key === 'E' || e.key === 'Tab') {
                 e.preventDefault()
                 setViewportEditMode((m) => (m === 'navigate' ? 'edit' : 'navigate'))
             }
             if (e.key === 'Escape' && quickInsert) {
                 setQuickInsert(null)
+            }
+            if ((e.key === 'Delete' || e.key === 'Backspace') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault()
+                onDeleteSelected?.()
+            }
+            if (e.shiftKey && (e.key === 'd' || e.key === 'D') && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault()
+                onDuplicateSelected?.()
+            }
+            if ((e.key === 'f' || e.key === 'F') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault()
+                const targets = selectedEntityIds.length ? selectedEntityIds : []
+                const ents = entities?.filter((en) => targets.includes(en.id)) || []
+                if (ents.length && controlsRef?.current?.fitToBox) {
+                    const box = new Box3()
+                    for (const en of ents) {
+                        const t = en.components?.transform || {}
+                        const pos = new Vector3(...(t.position || [0, 0, 0]))
+                        const scale = new Vector3(...(t.scale || [1, 1, 1]))
+                        const half = scale.clone().multiplyScalar(0.5)
+                        box.expandByPoint(pos.clone().sub(half))
+                        box.expandByPoint(pos.clone().add(half))
+                    }
+                    controlsRef.current.fitToBox(box, true)
+                }
             }
             // G/R/S: show the drag-handle gizmo in the matching mode.
             // X/Y/Z with a selection: arm the V1 modal pre-seeded with the current
@@ -180,15 +207,16 @@ export default function StudioShell({
                 if (modeForKey) {
                     e.preventDefault()
                     selectGizmoMode(modeForKey)
-                } else if (['x', 'y', 'z'].includes(e.key.toLowerCase()) && !transformOp) {
+                } else if (['x', 'y', 'z', 'a'].includes(e.key.toLowerCase()) && !transformOp) {
                     e.preventDefault()
                     e.stopImmediatePropagation()
-                    const axis = e.key.toLowerCase()
+                    const key = e.key.toLowerCase()
+                    const axis = key === 'a' ? 'all' : key
                     if (selectedEntityIds.length > 0 && onStartTransform) {
                         // Arm the V1 modal using the current gizmo mode + this axis
                         onStartTransform(viewportGizmoMode, axis)
-                    } else {
-                        // No selection: just constrain the drag-handle gizmo axis
+                    } else if (axis !== 'all') {
+                        // No selection: just constrain the drag-handle gizmo axis (not meaningful for 'all')
                         setViewportGizmoAxis((current) => current === axis ? null : axis)
                         setViewportGizmoVisible(true)
                     }
@@ -209,7 +237,7 @@ export default function StudioShell({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode])
+    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode, onDeleteSelected, onDuplicateSelected, entities, controlsRef])
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return

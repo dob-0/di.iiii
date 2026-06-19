@@ -761,6 +761,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onCreateFromAsset={(asset) => handleCreateEntity(detectEntityTypeFromFile(asset), asset)}
             onAssetFilesSelected={handleAssetFilesSelected}
             onDeleteSelected={handleDeleteSelected}
+            onDuplicateSelected={handleDuplicateSelected}
             onSelectEntity={(entityId) => dispatch({ type: 'select-entity', entityId })}
             onToggleSelectEntity={(entityId) => dispatch({ type: 'toggle-entity-selection', entityId })}
             onInspectorChange={handleInspectorChange}
