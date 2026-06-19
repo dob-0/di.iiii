@@ -219,6 +219,52 @@ body.is-landing .account-btn-wrapper {
     flex-direction: column;
     align-items: center;
     gap: 0;
+    opacity: 1;
+    transition: opacity 0.5s ease;
+}
+
+.lp-hero-inner--hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.lp-enter-exit {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 50;
+    appearance: none;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(0, 0, 0, 0.55);
+    color: var(--di-text);
+    font: inherit;
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
+    padding: 9px 16px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.lp-enter-exit:hover {
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+    background: var(--di-cyan-dim);
+}
+
+.lp-enter-hint {
+    position: fixed;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    margin: 0;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+    opacity: 0.6;
+    pointer-events: none;
 }
 
 .lp-eyebrow {

@@ -10,26 +10,25 @@ while typing in an input, textarea, or other editable field.
 Handled in [`src/studio/components/StudioEditor.jsx`](../src/studio/components/StudioEditor.jsx)
 and [`src/studio/components/StudioShell.jsx`](../src/studio/components/StudioShell.jsx).
 
-### Transform — Blender-style modal (in Edit mode, with a selection)
+### Transform — Blender-style modal (with a selection, any view mode)
 
-Press the key, then **move the mouse** — the selected object(s) follow. A readout in the
-top-left shows the live value, and a colored guide line appears when you constrain an axis.
+Press the key — the operator arms immediately, no mouse movement involved. A readout in
+the top-left shows the live value, and a colored guide line appears once you pick an axis.
+Works the same in Navigate or Edit mode; only the classic drag-handle gizmo cares which
+mode you're in.
 
 | Shortcut | Action |
 |----------|--------|
-| `G` | Grab / move — object follows the mouse immediately |
-| `R` | Rotate — **arms** the operator but does not yet track the mouse; press `X`/`Y`/`Z` to pick an axis and start tracking |
-| `S` | Scale — object follows the mouse immediately |
-| `X` / `Y` / `Z` | Constrain to that axis — **press again** for local, **again** to release. For `R` specifically, pressing one of these is also what starts mouse tracking |
-| `Shift` + `X`/`Y`/`Z` | Constrain to the plane perpendicular to that axis |
+| `G` | Move — arms the operator |
+| `R` | Rotate — arms the operator |
+| `S` | Scale — arms the operator |
+| `X` / `Y` / `Z` | Constrain to that axis — **press again** for local, **again** to release |
 | type a number | Enter an exact value (e.g. `G` `X` `2` = move 2 m on X); `-` and `.` work; `Backspace` edits |
-| hold `Shift` | Precision (slow) mode |
-| hold `Ctrl` | Snap to increments (1 m / 5° / 0.1) |
 | `G` / `R` / `S` (mid-op) | Switch transform type without leaving the operation |
-| Click / `Enter` / `Space` | Confirm the transform |
+| `Enter` / `Space` / click | Confirm the transform |
 | `Esc` / right-click | Cancel and restore |
 
-With nothing selected (or not in Edit mode) `G`/`R`/`S` just set the drag-handle gizmo mode.
+With nothing selected, `G`/`R`/`S` just set the drag-handle gizmo mode.
 
 | Shortcut | Action |
 |----------|--------|

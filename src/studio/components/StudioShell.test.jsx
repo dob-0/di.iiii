@@ -40,18 +40,40 @@ describe('StudioShell transform shortcuts', () => {
         ['g', 'translate'],
         ['r', 'rotate'],
         ['s', 'scale'],
-    ])('%s selects the same gizmo mode as its toolbar button', (key, mode) => {
+    ])('%s shows the drag-handle gizmo in the matching mode without arming the modal', (key, mode) => {
         const onStartTransform = vi.fn()
         renderShell({ selectedEntityIds: ['cube-1'], onStartTransform })
 
         fireEvent.keyDown(window, { key })
 
         expect(screen.getByTestId('gizmo-mode')).toHaveTextContent(mode)
+        // G/R/S only switch the gizmo mode — X/Y/Z arms the modal
         expect(onStartTransform).not.toHaveBeenCalled()
     })
 
-    it.each(['x', 'y', 'z'])('%s constrains the active gizmo and toggles back to all axes', (axis) => {
-        renderShell({ selectedEntityIds: ['cube-1'] })
+    it.each(['x', 'y', 'z'])('%s with a selection arms the modal with current gizmo mode + axis', (axis) => {
+        const onStartTransform = vi.fn()
+        renderShell({ selectedEntityIds: ['cube-1'], onStartTransform })
+
+        fireEvent.keyDown(window, { key: 'r' })        // set mode to rotate
+        fireEvent.keyDown(window, { key: axis })        // arm modal
+
+        expect(onStartTransform).toHaveBeenCalledWith('rotate', axis)
+    })
+
+    it('does not arm the modal when nothing is selected; constrains gizmo axis instead', () => {
+        const onStartTransform = vi.fn()
+        renderShell({ selectedEntityIds: [], onStartTransform })
+
+        fireEvent.keyDown(window, { key: 'g' })
+        fireEvent.keyDown(window, { key: 'x' })
+
+        expect(onStartTransform).not.toHaveBeenCalled()
+        expect(screen.getByTestId('gizmo-axis')).toHaveTextContent('x')
+    })
+
+    it.each(['x', 'y', 'z'])('%s without selection constrains the active gizmo and toggles back', (axis) => {
+        renderShell({ selectedEntityIds: [] })
 
         fireEvent.keyDown(window, { key: 'r' })
         fireEvent.keyDown(window, { key: axis })

@@ -19,7 +19,12 @@ vi.mock('../../project/services/projectsApi.js', () => ({
     deleteProject: (...args) => deleteProject(...args),
     listProjects: (...args) => listProjects(...args),
     updateProjectDocument: (...args) => updateProjectDocument(...args),
-    uploadProjectAsset: (...args) => uploadProjectAsset(...args)
+    uploadProjectAsset: (...args) => uploadProjectAsset(...args),
+    // GridFloorBackground (rendered by StudioHub) fetches its own live
+    // document independently of anything this suite asserts on.
+    buildProjectEventsUrl: () => '',
+    getProjectDocument: () => Promise.resolve({ document: {}, version: 0 }),
+    listProjectOps: () => Promise.resolve({ ops: [], latestVersion: 0 })
 }))
 
 vi.mock('../../services/serverSpaces.js', () => ({

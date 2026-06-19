@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Box, Button, Stack, Typography } from '@mui/material'
 import GridFloorBackground from '../components/GridFloorBackground.jsx'
 import './landing.css'
@@ -92,6 +92,8 @@ const CAPABILITIES = [
 ]
 
 export default function LandingPage() {
+    const [entered, setEntered] = useState(false)
+
     useEffect(() => {
         document.body.classList.add('is-landing')
         return () => document.body.classList.remove('is-landing')
@@ -101,21 +103,23 @@ export default function LandingPage() {
         <Box className="lp-root" data-page="landing">
 
             {/* ── NAV ──────────────────────────────────────────── */}
-            <nav className="lp-nav">
-                <a href="/" className="lp-nav-logo">di<span className="lp-dot">.</span>iiii</a>
-                <div className="lp-nav-links">
-                    <a href="/studio" className="lp-nav-link">Studio</a>
-                    <a href="/beta" className="lp-nav-link">Beta</a>
-                    <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
-                </div>
-                <a href="/studio" className="lp-nav-cta">Open Studio</a>
-            </nav>
+            {!entered && (
+                <nav className="lp-nav">
+                    <a href="/" className="lp-nav-logo">di<span className="lp-dot">.</span>iiii</a>
+                    <div className="lp-nav-links">
+                        <a href="/studio" className="lp-nav-link">Studio</a>
+                        <a href="/beta" className="lp-nav-link">Beta</a>
+                        <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
+                    </div>
+                    <a href="/studio" className="lp-nav-cta">Open Studio</a>
+                </nav>
+            )}
 
             {/* ── HERO ─────────────────────────────────────────── */}
             <Box className="lp-hero" component="section">
-                <GridFloorBackground aria-hidden="true" />
+                <GridFloorBackground aria-hidden="true" interactive={entered} />
 
-                <Stack className="lp-hero-inner" alignItems="center" spacing={0}>
+                <Stack className={`lp-hero-inner${entered ? ' lp-hero-inner--hidden' : ''}`} alignItems="center" spacing={0}>
                     <Typography className="lp-eyebrow">
                         Web XR &nbsp;·&nbsp; Node-based creation &nbsp;·&nbsp; Spatial
                     </Typography>
@@ -136,6 +140,9 @@ export default function LandingPage() {
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href="/beta">
                             Try Beta
                         </Button>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={() => setEntered(true)}>
+                            Enter Space
+                        </Button>
                     </Stack>
 
                     <Box component="a" className="lp-scroll-hint" href="#what" aria-label="Scroll to learn more">
@@ -144,8 +151,19 @@ export default function LandingPage() {
                         </svg>
                     </Box>
                 </Stack>
+
+                {entered && (
+                    <>
+                        <button type="button" className="lp-enter-exit" onClick={() => setEntered(false)}>
+                            ← Exit space
+                        </button>
+                        <p className="lp-enter-hint">Walk (W/S) · Turn (A/D or ←/→) · Drag to look</p>
+                    </>
+                )}
             </Box>
 
+            {!entered && (
+            <>
             {/* ── WHAT IS DI.I ─────────────────────────────────── */}
             <Box className="lp-section" component="section" id="what">
                 <Box className="lp-section-inner">
@@ -371,6 +389,8 @@ export default function LandingPage() {
                     <span className="lp-footer-note">Open source · Web XR · Yerevan</span>
                 </div>
             </footer>
+            </>
+            )}
 
         </Box>
     )

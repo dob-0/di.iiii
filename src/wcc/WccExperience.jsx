@@ -107,7 +107,7 @@ export default function WccExperience({ initialMode = 'landing' }) {
                     style={mode === 'entering' ? { opacity: 0 } : undefined}
                 >
                     <Suspense fallback={null}>
-                        <WccExhibition onExit={exitExhibition} lang={lang} onLangChange={setLang} />
+                        <WccExhibition onExit={exitExhibition} />
                     </Suspense>
                 </div>
             ) : null}

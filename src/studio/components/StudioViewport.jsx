@@ -28,11 +28,33 @@ function EntityContent({ entity, assetMap }) {
 
     switch (visualType) {
     case 'box':
-        return <BoxObject color={appearance.color} boxSize={entity.components?.primitive?.size} />
+        return (
+            <BoxObject
+                color={appearance.color}
+                boxSize={entity.components?.primitive?.size}
+                wireframe={Boolean(appearance.wireframe)}
+                opacity={appearance.opacity}
+            />
+        )
     case 'sphere':
-        return <SphereObject color={appearance.color} sphereRadius={entity.components?.primitive?.radius} />
+        return (
+            <SphereObject
+                color={appearance.color}
+                sphereRadius={entity.components?.primitive?.radius}
+                wireframe={Boolean(appearance.wireframe)}
+                opacity={appearance.opacity}
+            />
+        )
     case 'cone':
-        return <ConeObject color={appearance.color} coneRadius={entity.components?.primitive?.radius} coneHeight={entity.components?.primitive?.height} />
+        return (
+            <ConeObject
+                color={appearance.color}
+                coneRadius={entity.components?.primitive?.radius}
+                coneHeight={entity.components?.primitive?.height}
+                wireframe={Boolean(appearance.wireframe)}
+                opacity={appearance.opacity}
+            />
+        )
     case 'cylinder':
         return (
             <CylinderObject
@@ -40,6 +62,8 @@ function EntityContent({ entity, assetMap }) {
                 cylinderRadiusTop={entity.components?.primitive?.radiusTop}
                 cylinderRadiusBottom={entity.components?.primitive?.radiusBottom}
                 cylinderHeight={entity.components?.primitive?.height}
+                wireframe={Boolean(appearance.wireframe)}
+                opacity={appearance.opacity}
             />
         )
     case 'text':
@@ -438,7 +462,6 @@ function StudioSceneContent({
     gizmoAxis = null,
     gizmoVisible = true,
     transformOp = null,
-    transformStatus = null,
     onTransformCommit,
     onTransformCommitMany,
     onTransformCancel,
@@ -470,8 +493,8 @@ function StudioSceneContent({
         setPreviewById({})
         onTransformCancel?.()
     }
-    // Hide the drag-handle gizmo while an active modal transform is in progress.
-    const gizmoVisibleEffective = gizmoVisible && (!transformOp || !transformStatus?.active)
+    // Hide the drag-handle gizmo while the V1-parity modal transform is running.
+    const gizmoVisibleEffective = gizmoVisible && !transformOp
 
     return (
         <>
@@ -536,7 +559,6 @@ function StudioSceneContent({
                 <ModalTransform
                     op={transformOp}
                     selectedEntities={selectedEntities}
-                    primaryId={selectedEntityId}
                     controlsRef={controlsRef}
                     onPreview={setPreviewById}
                     onCommit={handleModalCommit}
@@ -760,7 +782,6 @@ export default function StudioViewport({
                         gizmoAxis={gizmoAxis}
                         gizmoVisible={gizmoVisible}
                         transformOp={transformOp}
-                        transformStatus={transformStatus}
                         onTransformCommit={onTransformCommit}
                         onTransformCommitMany={onTransformCommitMany}
                         onTransformCancel={onTransformCancel}
