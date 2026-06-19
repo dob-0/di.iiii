@@ -3,7 +3,12 @@ const { Strategy: GitHubStrategy } = require('passport-github2')
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20')
 const { upsertUser } = require('../userStore')
 
-const GUEST_SPACES = ['main']
+// Dev-only override: comma-separated space ids guests can use without signing in.
+// Defaults to ['main'] in any environment where it isn't set (staging/production
+// should never set this).
+const GUEST_SPACES = process.env.GUEST_SPACES
+  ? process.env.GUEST_SPACES.split(',').map((s) => s.trim()).filter(Boolean)
+  : ['main']
 
 const registerAuthRoutes = (router, {
   config,

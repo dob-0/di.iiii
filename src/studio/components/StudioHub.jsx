@@ -136,8 +136,6 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         <Box className="studio-shell-root studio-hub-root">
             <GridFloorBackground
                 opacity={0.25}
-                cellOpacity={0.04}
-                sectionOpacity={0.12}
                 showNodes={false}
                 overlayGradient="radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0,0,0,0.6) 100%), linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, transparent 30%, transparent 70%, rgba(0,0,0,0.4) 100%)"
             />

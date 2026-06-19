@@ -511,8 +511,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         })
     }, [applyLocalOps])
 
-    // Commit several entity transforms at once (modal multi-object move) as a single
-    // undo step.
+    // Commit several entity transforms at once as a single undo step.
+    // Does NOT clear transformOp -- the V1 model calls onCommit multiple times
+    // per session (once per mode-switch via commitIfMoved), so clearing here
+    // would prematurely unmount ModalTransform. Session ends via onCancel→handleTransformCancel.
     const handleTransformCommitMany = useCallback((list) => {
         const ops = (list || [])
             .filter((entry) => entry?.id && entry.transform)
@@ -521,11 +523,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 payload: { entityId: entry.id, component: 'transform', patch: entry.transform }
             }))
         if (ops.length) applyLocalOps(ops)
-        setTransformOp(null)
     }, [applyLocalOps])
 
-    const handleStartTransform = useCallback((mode) => {
-        setTransformOp({ mode, seq: Date.now() })
+    const handleStartTransform = useCallback((mode, axis = null) => {
+        setTransformOp({ mode, axis, seq: Date.now() })
     }, [])
 
     const handleTransformCancel = useCallback(() => {

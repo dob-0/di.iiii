@@ -1,48 +1,34 @@
 import { useEffect, useRef, useState } from 'react'
-import { useThree } from '@react-three/fiber'
 import { Line } from '@react-three/drei'
-import { Euler, Quaternion, Vector3 } from 'three'
+import { Vector3 } from 'three'
 
+const AXIS_INDEX = { x: 0, y: 1, z: 2 }
 const AXIS_VEC = {
     x: new Vector3(1, 0, 0),
     y: new Vector3(0, 1, 0),
-    z: new Vector3(0, 0, 1)
+    z: new Vector3(0, 0, 1),
 }
 const AXIS_COLOR = { x: '#ff5a6a', y: '#7dd35f', z: '#5a8bff' }
-const AXIS_LABEL = { x: 'X', y: 'Y', z: 'Z' }
 const LINE_LEN = 1000
-
-const fmt = (n) => {
-    const r = Math.round(n * 1000) / 1000
-    return Object.is(r, -0) ? '0' : String(r)
-}
-const parseNumeric = (str) => {
-    if (!str || str === '-' || str === '.' || str === '-.') return 0
-    const n = Number.parseFloat(str)
-    return Number.isNaN(n) ? 0 : n
-}
+const MODE_LABEL = { translate: 'GRAB', rotate: 'ROTATE', scale: 'SCALE' }
 
 /**
- * Blender-style modal transform. Mounted inside the Canvas while `op` is set.
- * Selecting G/R/S arms the operation immediately with no effect on the
- * selection; X/Y/Z constrain to a global axis (press again → local, again →
- * free); type a number for an exact value; Enter / Space confirm; Esc /
- * right-click cancel. There is no mouse-driven preview — the transform only
- * changes once a number is typed.
+ * V1-parity modal transform. G/R/S sets the mode, X/Y/Z locks the axis, then
+ * moving the mouse applies (movementX+movementY)*sensitivity to that axis on
+ * every selected entity independently (no shared pivot). Escape/Enter/Space
+ * confirms; whatever moved stays. Colored axis line + HUD text give feedback.
  */
-export default function ModalTransform({ op, selectedEntities, primaryId, controlsRef, onPreview, onCommit, onCancel, onStatus }) {
-    const { camera } = useThree()
+export default function ModalTransform({ op, selectedEntities, controlsRef, onPreview, onCommit, onCancel, onStatus }) {
     const sessionRef = useRef(null)
-    const [hud, setHud] = useState(null)
     const cbRef = useRef({})
     cbRef.current = { onPreview, onCommit, onCancel, onStatus }
+    const [hudLines, setHudLines] = useState([])
 
     useEffect(() => {
         if (!op || !selectedEntities?.length) return undefined
 
         const controls = controlsRef?.current
-        const cameraDir = camera.getWorldDirection(new Vector3())
-        const axisOut = cameraDir.clone().negate() // out of the screen, toward the viewer
+        if (controls) controls.enabled = false
 
         const entities = selectedEntities.map((entity) => {
             const t = entity.components?.transform || {}
@@ -53,209 +39,129 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
                 scale: [...(t.scale || [1, 1, 1])]
             }
         })
-        const primary = entities.find((e) => e.id === primaryId) || entities[0]
-        const primaryQuat = new Quaternion().setFromEuler(
-            new Euler(primary.rot[0], primary.rot[1], primary.rot[2], 'XYZ')
-        )
-        const pivot = entities
-            .reduce((acc, e) => acc.add(new Vector3(...e.pos)), new Vector3())
-            .divideScalar(entities.length)
 
-        const session = {
-            mode: op.mode,
-            axis: null,
-            space: 'global',
-            numeric: '',
-            pivot,
-            entities,
-            primaryQuat,
-            preview: null,
-            active: false
-        }
+        const n = entities.length
+        const pivot = entities.reduce(
+            (acc, e) => [acc[0] + e.pos[0] / n, acc[1] + e.pos[1] / n, acc[2] + e.pos[2] / n],
+            [0, 0, 0]
+        )
+
+        const session = { mode: op.mode, axis: op.axis || null, entities, moved: false }
         sessionRef.current = session
 
-        const axisUnit = (axis) => {
-            const base = AXIS_VEC[axis].clone()
-            if (session.space === 'local') base.applyQuaternion(primaryQuat).normalize()
-            return base
-        }
-
-        const compute = () => {
+        const buildPreviewMap = () => {
             const map = {}
-            const lines = []
+            for (const e of session.entities) {
+                map[e.id] = { position: e.pos, rotation: e.rot, scale: e.scale }
+            }
+            return map
+        }
 
-            const numericVal = parseNumeric(session.numeric)
-            let text = ''
-
-            const pushAxisLine = (axis) => {
-                const u = axisUnit(axis)
-                lines.push({
-                    axis,
+        const reportStatus = () => {
+            const axisLabel = session.axis ? ` · ${session.axis.toUpperCase()}` : ''
+            const hint = session.axis ? ' · move mouse · ENTER' : ' · pick X / Y / Z'
+            cbRef.current.onStatus?.({
+                text: `${MODE_LABEL[session.mode] || session.mode}${axisLabel}${hint}`
+            })
+            if (session.axis) {
+                const u = AXIS_VEC[session.axis]
+                setHudLines([{
+                    axis: session.axis,
                     points: [
-                        [pivot.x - u.x * LINE_LEN, pivot.y - u.y * LINE_LEN, pivot.z - u.z * LINE_LEN],
-                        [pivot.x + u.x * LINE_LEN, pivot.y + u.y * LINE_LEN, pivot.z + u.z * LINE_LEN]
+                        [pivot[0] - u.x * LINE_LEN, pivot[1] - u.y * LINE_LEN, pivot[2] - u.z * LINE_LEN],
+                        [pivot[0] + u.x * LINE_LEN, pivot[1] + u.y * LINE_LEN, pivot[2] + u.z * LINE_LEN],
                     ]
-                })
+                }])
+            } else {
+                setHudLines([])
             }
-            const spaceTag = session.space === 'local' ? ' (local)' : ''
-            const numTag = session.numeric !== '' ? `  ⌨ ${session.numeric}` : ''
-
-            if (session.mode === 'translate') {
-                const axis = session.axis || 'x'
-                const delta = axisUnit(axis).multiplyScalar(numericVal)
-                if (session.axis) pushAxisLine(axis)
-                for (const e of session.entities) {
-                    map[e.id] = {
-                        position: [e.pos[0] + delta.x, e.pos[1] + delta.y, e.pos[2] + delta.z],
-                        rotation: e.rot,
-                        scale: e.scale
-                    }
-                }
-                text = `Move ${session.axis ? AXIS_LABEL[axis] : ''}${spaceTag}: ${fmt(numericVal)}` + numTag
-            } else if (session.mode === 'rotate') {
-                const axisVec = session.axis ? axisUnit(session.axis) : axisOut
-                const angle = (numericVal * Math.PI) / 180
-                if (session.axis) pushAxisLine(session.axis)
-                const dq = new Quaternion().setFromAxisAngle(axisVec, angle)
-                for (const e of session.entities) {
-                    const startQ = new Quaternion().setFromEuler(new Euler(e.rot[0], e.rot[1], e.rot[2], 'XYZ'))
-                    const nextE = new Euler().setFromQuaternion(dq.clone().multiply(startQ), 'XYZ')
-                    const offset = new Vector3(...e.pos).sub(pivot).applyQuaternion(dq).add(pivot)
-                    map[e.id] = {
-                        position: [offset.x, offset.y, offset.z],
-                        rotation: [nextE.x, nextE.y, nextE.z],
-                        scale: e.scale
-                    }
-                }
-                const axisLabel = session.axis ? ` ${AXIS_LABEL[session.axis]}${spaceTag}` : ''
-                text = `Rotate${axisLabel}: ${fmt(numericVal)}°` + numTag
-            } else { // scale
-                const factor = session.numeric === '' ? 1 : numericVal
-                const axisActive = (ax) => (session.axis ? ax === session.axis : true)
-                const fx = axisActive('x') ? factor : 1
-                const fy = axisActive('y') ? factor : 1
-                const fz = axisActive('z') ? factor : 1
-                if (session.axis) pushAxisLine(session.axis)
-                for (const e of session.entities) {
-                    map[e.id] = {
-                        position: [
-                            pivot.x + (e.pos[0] - pivot.x) * fx,
-                            pivot.y + (e.pos[1] - pivot.y) * fy,
-                            pivot.z + (e.pos[2] - pivot.z) * fz
-                        ],
-                        rotation: e.rot,
-                        scale: [e.scale[0] * fx, e.scale[1] * fy, e.scale[2] * fz]
-                    }
-                }
-                const axisLabel = session.axis ? ` ${AXIS_LABEL[session.axis]}` : ''
-                text = `Scale${axisLabel}: ${fmt(factor)}` + numTag
-            }
-
-            return { map, hud: { text, lines, pivot: [pivot.x, pivot.y, pivot.z] } }
         }
 
-        const preview = () => {
-            if (!session.active) return
-            const result = compute()
-            session.preview = result.map
-            cbRef.current.onPreview?.(result.map)
-            cbRef.current.onStatus?.({ text: result.hud.text, active: true })
-            setHud(result.hud)
+        const commitIfMoved = () => {
+            if (!session.moved) return
+            cbRef.current.onCommit?.(
+                session.entities.map((e) => ({
+                    id: e.id,
+                    transform: { position: e.pos, rotation: e.rot, scale: e.scale }
+                }))
+            )
+            session.moved = false
         }
 
-        const activate = () => {
-            if (session.active) return
-            session.active = true
-            if (controls) controls.enabled = false
-            preview()
-        }
-
-        const finish = (commit) => {
+        const finish = () => {
+            commitIfMoved()
             if (controls) controls.enabled = true
-            const wasChanged = session.numeric !== ''
-            sessionRef.current = null
-            setHud(null)
+            setHudLines([])
             cbRef.current.onStatus?.(null)
-            if (commit && wasChanged && session.preview) {
-                cbRef.current.onCommit?.(
-                    Object.entries(session.preview).map(([id, transform]) => ({ id, transform }))
-                )
-            } else {
-                cbRef.current.onCancel?.()
-            }
+            sessionRef.current = null
+            cbRef.current.onCancel?.()
         }
 
-        const cycleAxis = (axis) => {
-            if (session.axis !== axis) {
-                session.axis = axis
-                session.space = 'global'
-            } else if (session.space === 'global') {
-                session.space = 'local'
-            } else {
-                session.axis = null
-                session.space = 'global'
+        const handlePointerMove = (event) => {
+            if (!session.axis) return
+            const axisIndex = AXIS_INDEX[session.axis]
+            const sensitivity = event.shiftKey ? 0.002 : 0.02
+            const delta = ((event.movementX || 0) + (event.movementY || 0)) * sensitivity
+            if (delta === 0) return
+            for (const e of session.entities) {
+                if (session.mode === 'translate') {
+                    e.pos[axisIndex] += delta
+                } else if (session.mode === 'scale') {
+                    e.scale[axisIndex] = Math.max(0.01, e.scale[axisIndex] + delta)
+                } else if (session.mode === 'rotate') {
+                    e.rot[axisIndex] += delta
+                }
             }
+            session.moved = true
+            cbRef.current.onPreview?.(buildPreviewMap())
         }
 
         const handleKeyDown = (event) => {
-            const key = event.key
-            const lower = key?.toLowerCase?.()
-
-            if (!session.active) activate()
-
+            const lower = event.key?.toLowerCase?.()
             if (lower === 'x' || lower === 'y' || lower === 'z') {
                 event.preventDefault(); event.stopImmediatePropagation()
-                cycleAxis(lower)
-                preview()
+                session.axis = session.axis === lower ? null : lower
+                reportStatus()
             } else if (lower === 'g' || lower === 'r' || lower === 's') {
                 event.preventDefault(); event.stopImmediatePropagation()
+                commitIfMoved()
                 session.mode = lower === 'g' ? 'translate' : lower === 'r' ? 'rotate' : 'scale'
-                session.numeric = ''
-                preview()
-            } else if (/^[0-9]$/.test(key) || key === '.' || key === '-') {
+                session.axis = null
+                reportStatus()
+            } else if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault(); event.stopImmediatePropagation()
-                session.numeric += key
-                preview()
-            } else if (key === 'Backspace') {
-                event.preventDefault(); event.stopImmediatePropagation()
-                session.numeric = session.numeric.slice(0, -1)
-                preview()
-            } else if (key === 'Enter' || key === ' ' || key === 'Spacebar') {
-                event.preventDefault(); event.stopImmediatePropagation()
-                finish(true)
-            } else if (key === 'Escape') {
-                event.preventDefault(); event.stopImmediatePropagation()
-                finish(false)
+                finish()
             }
         }
+
         const handlePointerDown = (event) => {
-            event.preventDefault(); event.stopImmediatePropagation()
-            finish(event.button !== 2)
-        }
-        const handleContextMenu = (event) => {
             event.preventDefault()
-            finish(false)
+            event.stopImmediatePropagation()
+            finish()
         }
 
-        activate()
-
+        window.addEventListener('pointermove', handlePointerMove)
         window.addEventListener('keydown', handleKeyDown, true)
         window.addEventListener('pointerdown', handlePointerDown, true)
-        window.addEventListener('contextmenu', handleContextMenu)
+        reportStatus()
+
         return () => {
+            window.removeEventListener('pointermove', handlePointerMove)
             window.removeEventListener('keydown', handleKeyDown, true)
             window.removeEventListener('pointerdown', handlePointerDown, true)
-            window.removeEventListener('contextmenu', handleContextMenu)
+            commitIfMoved()
             if (controls) controls.enabled = true
+            setHudLines([])
+            cbRef.current.onStatus?.(null)
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [op?.seq])
 
     return (
         <>
-            {hud?.lines?.length > 0 && (
+            {hudLines.length > 0 && (
                 <group renderOrder={999}>
-                    {hud.lines.map((line) => (
+                    {hudLines.map((line) => (
                         <Line
                             key={line.axis}
                             points={line.points}

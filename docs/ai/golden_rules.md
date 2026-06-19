@@ -280,6 +280,16 @@ r3f-perf, @pmndrs/*, @iwer/*, iwer
 
 ---
 
+### Workflow: ask one clarifying question before implementing UX behavior changes
+
+**Rule:** Before implementing any change to interactive behavior (hotkeys, gizmos, transform tools, mode switches), restate your understanding of the desired behavior in one sentence and ask the user to confirm. Do not start coding until the interpretation is locked. Credit-burning loops happen when the implementation is technically correct but wrong-shaped.
+
+**Why:** The G/R/S + gizmo rework burned multiple iterations because "activate the gizmo" was interpreted as "arm the modal" when the user meant "show the Three.js drag handles." A single clarifying question before coding would have avoided two full rewrites.
+
+**How:** One sentence restatement + one yes/no question. If there are two mutually exclusive interpretations, list both and ask which. Never list more than two options — pick the most likely one as the default.
+
+---
+
 ### Visual: landing page style is the locked default for new public surfaces
 
 **Rule:** Dark background, true 3D perspective cyan grid floor (Three.js, not CSS), oversized bold wordmark with one cyan accent character, mono uppercase eyebrow, one solid-cyan primary CTA + one quiet ghost CTA. Reuse the `--di-*` tokens in `src/styles/base.css` and the `HeroScene` Three.js pattern rather than re-deriving colors or approximating the grid in CSS.

@@ -167,28 +167,31 @@ export default function StudioShell({
             if (e.key === 'Escape' && quickInsert) {
                 setQuickInsert(null)
             }
-            // G/R/S: in edit mode with a selection, start the Blender-style modal grab
-            // (object follows the mouse immediately — see ModalTransform.jsx and
-            // docs/SHORTCUTS.md). Otherwise just switch which classic drag-handle
-            // gizmo is shown. T toggles gizmo visibility.
+            // G/R/S: show the drag-handle gizmo in the matching mode.
+            // X/Y/Z with a selection: arm the V1 modal pre-seeded with the current
+            // gizmo mode + chosen axis (mouse delta moves on that axis immediately).
+            // ModalTransform's capture listener owns X/Y/Z once a session is running.
+            // T toggles gizmo visibility.
             if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
                 const modeForKey = (e.key === 'g' || e.key === 'G') ? 'translate'
                     : (e.key === 'r' || e.key === 'R') ? 'rotate'
                     : (e.key === 's' || e.key === 'S') ? 'scale'
                     : null
-                const canModal = viewportEditMode === 'edit' && selectedEntityIds.length > 0
                 if (modeForKey) {
                     e.preventDefault()
                     selectGizmoMode(modeForKey)
-                    if (canModal && onStartTransform) {
-                        onStartTransform(modeForKey)
-                    }
-                } else if (['x', 'y', 'z'].includes(e.key.toLowerCase())) {
+                } else if (['x', 'y', 'z'].includes(e.key.toLowerCase()) && !transformOp) {
                     e.preventDefault()
                     e.stopImmediatePropagation()
                     const axis = e.key.toLowerCase()
-                    setViewportGizmoAxis((current) => current === axis ? null : axis)
-                    setViewportGizmoVisible(true)
+                    if (selectedEntityIds.length > 0 && onStartTransform) {
+                        // Arm the V1 modal using the current gizmo mode + this axis
+                        onStartTransform(viewportGizmoMode, axis)
+                    } else {
+                        // No selection: just constrain the drag-handle gizmo axis
+                        setViewportGizmoAxis((current) => current === axis ? null : axis)
+                        setViewportGizmoVisible(true)
+                    }
                 } else if (e.key === 't' || e.key === 'T') {
                     e.preventDefault()
                     setViewportGizmoVisible((v) => !v)
@@ -206,7 +209,7 @@ export default function StudioShell({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform])
+    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode])
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return
