@@ -702,7 +702,7 @@ const SHORTCUT_SECTIONS = [
         rows: [
             ['Shift+A', 'Tile panels'],
             ['Shift+R', 'Reset layout'],
-            ['?', 'Show this help'],
+            ['Shift+?', 'Show this help'],
         ]
     }
 ]
@@ -741,7 +741,7 @@ function HotkeyHelp({ onClose }) {
                     </div>
                 ))}
                 <div style={{ gridColumn: '1/-1', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 14, color: 'rgba(255,255,255,0.3)', fontSize: 11, textAlign: 'center' }}>
-                    Press <code style={{ color: 'rgba(79,214,255,0.6)', background: 'rgba(79,214,255,0.08)', borderRadius: 3, padding: '0 4px' }}>?</code> or <code style={{ color: 'rgba(79,214,255,0.6)', background: 'rgba(79,214,255,0.08)', borderRadius: 3, padding: '0 4px' }}>Esc</code> to close
+                    Press <code style={{ color: 'rgba(79,214,255,0.6)', background: 'rgba(79,214,255,0.08)', borderRadius: 3, padding: '0 4px' }}>Shift+?</code> or <code style={{ color: 'rgba(79,214,255,0.6)', background: 'rgba(79,214,255,0.08)', borderRadius: 3, padding: '0 4px' }}>Esc</code> to close
                 </div>
             </div>
         </div>
