@@ -84,6 +84,7 @@ export default function StudioShell({
     onTransformCommit,
     onToggleSelectEntity,
     transformOp = null,
+    onStartTransform,
     onTransformCommitMany,
     onTransformCancel,
 }) {
@@ -166,15 +167,23 @@ export default function StudioShell({
             if (e.key === 'Escape' && quickInsert) {
                 setQuickInsert(null)
             }
-            // Transform keys mirror the G/R/S toolbar buttons. T toggles gizmo visibility.
+            // G/R/S: in edit mode with a selection, start the Blender-style modal grab
+            // (object follows the mouse immediately — see ModalTransform.jsx and
+            // docs/SHORTCUTS.md). Otherwise just switch which classic drag-handle
+            // gizmo is shown. T toggles gizmo visibility.
             if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
                 const modeForKey = (e.key === 'g' || e.key === 'G') ? 'translate'
                     : (e.key === 'r' || e.key === 'R') ? 'rotate'
                     : (e.key === 's' || e.key === 'S') ? 'scale'
                     : null
+                const canModal = viewportEditMode === 'edit' && selectedEntityIds.length > 0
                 if (modeForKey) {
                     e.preventDefault()
-                    selectGizmoMode(modeForKey)
+                    if (canModal && onStartTransform) {
+                        onStartTransform(modeForKey)
+                    } else {
+                        selectGizmoMode(modeForKey)
+                    }
                 } else if (['x', 'y', 'z'].includes(e.key.toLowerCase())) {
                     e.preventDefault()
                     e.stopImmediatePropagation()
@@ -198,7 +207,7 @@ export default function StudioShell({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode])
+    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform])
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return
