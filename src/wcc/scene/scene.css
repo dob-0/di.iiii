@@ -1,0 +1,199 @@
+.wcc-scene {
+    position: fixed;
+    inset: 0;
+    background: #070506;
+    color: #ffffff;
+    font-family: "DM Sans", Helvetica, Arial, sans-serif;
+    overflow: hidden;
+}
+
+.wcc-scene__canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    touch-action: none;
+}
+
+.wcc-scene__chrome {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px clamp(18px, 4vw, 48px);
+    pointer-events: none;
+    z-index: 5;
+}
+
+.wcc-scene__chrome > * {
+    pointer-events: auto;
+}
+
+.wcc-scene__exit {
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: rgba(0, 0, 0, 0.35);
+    color: #ffffff;
+    font: inherit;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    padding: 9px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 220ms ease, border-color 220ms ease;
+    backdrop-filter: blur(6px);
+}
+
+.wcc-scene__exit:hover {
+    background: #d90000;
+    border-color: #d90000;
+}
+
+.wcc-scene__title {
+    font-size: 12px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    white-space: nowrap;
+}
+
+.wcc-scene__lang {
+    display: inline-flex;
+    gap: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    border-radius: 999px;
+    padding: 3px;
+    backdrop-filter: blur(6px);
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.wcc-scene__lang button {
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.65);
+    font: inherit;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    padding: 5px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 200ms ease, color 200ms ease;
+}
+
+.wcc-scene__lang button.is-active {
+    background: #ffffff;
+    color: #070506;
+}
+
+.wcc-scene__hint {
+    position: absolute;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.55;
+    pointer-events: none;
+    text-align: center;
+    animation: wcc-scene-hint 4.5s ease-in-out infinite;
+}
+
+@keyframes wcc-scene-hint {
+    0%, 100% { opacity: 0.25; }
+    50% { opacity: 0.6; }
+}
+
+.wcc-scene__panel {
+    position: absolute;
+    top: 50%;
+    right: clamp(16px, 4vw, 56px);
+    transform: translateY(-50%);
+    width: min(380px, calc(100vw - 36px));
+    max-height: 72vh;
+    overflow-y: auto;
+    padding: 28px 28px 30px;
+    background: rgba(10, 7, 8, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    backdrop-filter: blur(14px);
+    z-index: 6;
+    animation: wcc-panel-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes wcc-panel-in {
+    from { opacity: 0; transform: translateY(-50%) translateX(24px); }
+    to { opacity: 1; transform: translateY(-50%) translateX(0); }
+}
+
+.wcc-scene__panel-close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 24px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 200ms ease;
+}
+
+.wcc-scene__panel-close:hover {
+    color: #ffffff;
+}
+
+.wcc-scene__panel-artist {
+    margin: 0 0 6px;
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #d90000;
+}
+
+.wcc-scene__panel-title {
+    margin: 0 0 8px;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.15;
+}
+
+.wcc-scene__panel-medium {
+    margin: 0 0 16px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.55;
+}
+
+.wcc-scene__panel-concept {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+@media (max-width: 720px) {
+    .wcc-scene__title { display: none; }
+    .wcc-scene__panel {
+        top: auto;
+        bottom: 0;
+        right: 0;
+        left: 0;
+        transform: none;
+        width: 100%;
+        max-height: 56vh;
+        border-radius: 16px 16px 0 0;
+        animation: wcc-panel-in-mobile 460ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+    @keyframes wcc-panel-in-mobile {
+        from { opacity: 0; transform: translateY(40px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+}

@@ -1,5 +1,9 @@
 /* Studio Hub — minimalist, time-saving */
 
+.studio-hub-root {
+    background: transparent;
+}
+
 /* ─── TOP ROW ──────────────────────────────────────────────── */
 .sh-top-row {
     display: flex;

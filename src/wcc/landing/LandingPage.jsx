@@ -171,9 +171,17 @@ function BackgroundRippleField({ ripples }) {
     )
 }
 
-function EnterExhibitionButton({ className = '' }) {
+function EnterExhibitionButton({ className = '', onEnter = null }) {
+    const handleClick = (event) => {
+        if (onEnter) {
+            event.preventDefault()
+            onEnter(event)
+            return
+        }
+        handleAppLinkClick(event, '/wcc/scene')
+    }
     return (
-        <a className={`wcc-enter-button ${className}`} href="/wcc/scene" onClick={(event) => handleAppLinkClick(event, '/wcc/scene')}>
+        <a className={`wcc-enter-button ${className}`} href="/wcc/scene" onClick={handleClick}>
             Enter exhibition
         </a>
     )
@@ -187,7 +195,7 @@ function ScrollArrow({ onClick }) {
     )
 }
 
-function LandingHero() {
+function LandingHero({ onEnter = null }) {
     return (
         <section className="wcc-hero" aria-labelledby="wcc-title">
             <p className="wcc-hero__kicker">Creative Lab • Mentorship • Exhibition</p>
@@ -198,15 +206,20 @@ function LandingHero() {
             {landingContent.subtitle ? <p className="wcc-hero__subtitle">{landingContent.subtitle}</p> : null}
             <div className="wcc-hero__footer">
                 <span>Scroll to navigate</span>
-                <EnterExhibitionButton />
+                <EnterExhibitionButton onEnter={onEnter} />
             </div>
         </section>
     )
 }
 
-function NavigationPanel({ panel, index, active, onOpen }) {
+function NavigationPanel({ panel, index, active, onOpen, onEnter = null }) {
     const handleClick = (event) => {
         if (panel.href) {
+            if (onEnter) {
+                event.preventDefault()
+                onEnter(event)
+                return
+            }
             handleAppLinkClick(event, panel.href)
             return
         }
@@ -228,7 +241,7 @@ function NavigationPanel({ panel, index, active, onOpen }) {
     )
 }
 
-function HorizontalNavigation({ activeIndex, onActiveIndexChange, onOpen, scrollerRef }) {
+function HorizontalNavigation({ activeIndex, onActiveIndexChange, onOpen, onEnter = null, scrollerRef }) {
     const sectionRef = useRef(null)
     const trackRef = useRef(null)
 
@@ -272,6 +285,7 @@ function HorizontalNavigation({ activeIndex, onActiveIndexChange, onOpen, scroll
                         active={activeIndex === index}
                         index={index}
                         key={panel.id}
+                        onEnter={onEnter}
                         onOpen={onOpen}
                         panel={panel}
                     />
@@ -399,7 +413,7 @@ function SectionReveal({ sectionId, onClose }) {
     )
 }
 
-export default function LandingPage() {
+export default function LandingPage({ onEnterExhibition = null }) {
     const rootRef = useRef(null)
     const cursorRef = useRef(null)
     const particleLayerRef = useRef(null)
@@ -659,10 +673,11 @@ export default function LandingPage() {
             <div className="wcc-particle-layer" ref={particleLayerRef} aria-hidden="true" />
             <div className="wcc-cursor" ref={cursorRef} aria-hidden="true" />
             <ScrollArrow onClick={scrollLanding} />
-            <LandingHero />
+            <LandingHero onEnter={onEnterExhibition} />
             <HorizontalNavigation
                 activeIndex={activeIndex}
                 onActiveIndexChange={setActiveIndex}
+                onEnter={onEnterExhibition}
                 onOpen={openRouteSection}
                 scrollerRef={rootRef}
             />

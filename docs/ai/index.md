@@ -38,6 +38,7 @@ Every task has an owner. Route to the right role before starting work.
 ## Deep Reference Pages
 
 - [golden_rules.md](golden_rules.md) — hard-won solutions + agent behavior rules (read this early)
+- [design-baseline.md](design-baseline.md) — locked default visual style (landing page: colors, typography, cyan grid scene) for new public surfaces
 - [parallel-agents.md](parallel-agents.md) — running more than one agent on this repo at once
 - [architecture.md](architecture.md)
 - [workflows.md](workflows.md)

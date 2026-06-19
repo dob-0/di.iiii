@@ -118,11 +118,15 @@ export default {
         // Open the browser to a specific path if provided
         open: !('SANDBOX_URL' in process.env || 'CODESANDBOX_HOST' in process.env) ? resolveOpenPath() : false,
         port: 5173,
-        strictPort: false,
+        // A second dev stack must fail instead of drifting to 5174. Vite's HMR
+        // direct fallback still targets the configured port, which otherwise
+        // leaves the browser loading over 5174 while reconnecting to 5173.
+        strictPort: true,
         proxy: {
             '/serverXR': {
                 target: DEV_PROXY_API_TARGET,
-                changeOrigin: true
+                changeOrigin: true,
+                ws: true
             }
         }
     },

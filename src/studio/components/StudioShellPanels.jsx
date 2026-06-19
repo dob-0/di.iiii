@@ -178,7 +178,8 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
     )
 }
 
-export function StructurePanel({ entities = [], selectedEntityId, onSelectEntity }) {
+export function StructurePanel({ entities = [], selectedEntityId, selectedEntityIds = [], onSelectEntity, onToggleSelectEntity }) {
+    const selectedIds = new Set(selectedEntityIds)
     return (
         <div className="scc-section">
             <div className="scc-section-label">Entities ({entities.length})</div>
@@ -189,11 +190,21 @@ export function StructurePanel({ entities = [], selectedEntityId, onSelectEntity
                     {entities.map((entity) => (
                         <button
                             key={entity.id}
-                            className={`spa-item${entity.id === selectedEntityId ? ' active' : ''}`}
-                            onClick={() => onSelectEntity(entity.id)}
+                            className={`spa-item${selectedIds.has(entity.id) ? ' active' : ''}`}
+                            aria-pressed={selectedIds.has(entity.id)}
+                            onClick={(event) => {
+                                const additive = event.ctrlKey || event.metaKey || event.shiftKey
+                                if (additive) onToggleSelectEntity(entity.id)
+                                else onSelectEntity(entity.id)
+                            }}
                         >
                             <span className="spa-name">{entity.name || entity.id}</span>
-                            <span className="spa-type">{entity.type}</span>
+                            <span className="spa-type">
+                                {entity.type}
+                                {entity.components?.runtime?.visible === false ? ' · hidden' : ''}
+                                {entity.components?.runtime?.locked === true ? ' · locked' : ''}
+                                {entity.id === selectedEntityId && selectedIds.size > 1 ? ' · primary' : ''}
+                            </span>
                         </button>
                     ))}
                 </div>
@@ -750,6 +761,7 @@ export function PublishPanel({
     onClearLiveProject,
     onCopyShareLink,
     onExportProject,
+    exportStatus,
     onImportProjectFile,
     xrState,
     onEnterXr,
@@ -819,19 +831,37 @@ export function PublishPanel({
                 <Button variant="contained" startIcon={<ShareIcon />} onClick={onCopyShareLink}>
                     Copy share link
                 </Button>
-                <Button variant="outlined" startIcon={<RocketLaunchIcon />} onClick={onExportProject}>
-                    Export project
+                <Button
+                    variant="outlined"
+                    startIcon={<RocketLaunchIcon />}
+                    onClick={onExportProject}
+                    disabled={Boolean(exportStatus && exportStatus.phase !== 'error')}
+                >
+                    {exportStatus?.phase === 'downloading'
+                        ? `Exporting ${exportStatus.completed}/${exportStatus.total}`
+                        : exportStatus?.phase === 'packing'
+                            ? `Packing ${Math.round(exportStatus.percent || 0)}%`
+                            : 'Export project'}
                 </Button>
                 <Button component="label" variant="outlined">
                     Import project
                     <input
                         hidden
                         type="file"
-                        accept=".json,application/json"
+                        accept=".json,.zip,application/json,application/zip"
                         onChange={onImportProjectFile}
                     />
                 </Button>
             </Stack>
+            {exportStatus?.phase === 'error' ? (
+                <Typography variant="caption" color="error.main">
+                    Export failed: {exportStatus.message}
+                </Typography>
+            ) : exportStatus ? (
+                <Typography variant="caption" color="text.secondary">
+                    Keep this tab open while Studio bundles the project assets.
+                </Typography>
+            ) : null}
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
                 <Button
                     variant="outlined"

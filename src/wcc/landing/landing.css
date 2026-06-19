@@ -283,6 +283,56 @@
     transform: translateY(-1px);
 }
 
+.wcc-language-switch {
+    position: fixed;
+    top: clamp(18px, 3vw, 42px);
+    right: clamp(18px, 3vw, 42px);
+    z-index: 46;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--wcc-font-family);
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.wcc-language-switch > span {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.wcc-language-switch button {
+    min-height: 38px;
+    padding: 0 14px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 0;
+    color: #ffffff;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: uppercase;
+    transition:
+        color 220ms ease,
+        background-color 220ms ease,
+        border-color 220ms ease,
+        transform 220ms ease;
+}
+
+.wcc-language-switch button:hover,
+.wcc-language-switch button:focus-visible {
+    color: #050505;
+    background: #ffffff;
+    border-color: #ffffff;
+    transform: translateY(-2px);
+}
+
+.wcc-language-switch button:focus-visible {
+    outline: 3px solid #ffffff;
+    outline-offset: 4px;
+}
+
 .wcc-hero {
     position: relative;
     z-index: 3;

@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useMediaQuery, useTheme } from '@mui/material'
+import { Vector3 } from 'three'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
+import { createStudioProjectBundle, readStudioProjectBundle } from '../../project/transfer/studioProjectBundle.js'
 import { defaultWorldState, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import useXrAr from '../../hooks/useXrAr.js'
 import useSpaceAssets from '../../hooks/useSpaceAssets.js'
@@ -12,6 +14,7 @@ import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.j
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { useStudioLayoutPrefs } from '../hooks/useStudioLayoutPrefs.js'
+import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
@@ -27,7 +30,7 @@ const detectEntityTypeFromFile = (file) => {
 const getStarterPlacement = (count = 0) => [((count % 4) - 1.5) * 1.4, 0, Math.floor(count / 4) * -1.8]
 
 const buildDownload = (content, filename, type = 'application/json') => {
-    const blob = new Blob([content], { type })
+    const blob = content instanceof Blob ? content : new Blob([content], { type })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
@@ -76,6 +79,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     })
     const historyRef = useRef([])
     const redoRef = useRef([])
+    const clipboardRef = useRef(null)
     const documentRef = useRef(state.document)
     useEffect(() => { documentRef.current = state.document }, [state.document])
     const applyLocalOps = useCallback((ops, options) => {
@@ -98,6 +102,12 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const { assets: spaceAssets, refresh: refreshSpaceAssets } = useSpaceAssets(resolvedSpaceId)
     const entities = document.entities || []
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
+    const selectedEntityIds = state.selectedEntityIds || []
+    const selectedEntities = entities.filter((entity) => selectedEntityIds.includes(entity.id))
+    const [transformOp, setTransformOp] = useState(null)
+    const [exportStatus, setExportStatus] = useState(null)
+    const transformOpRef = useRef(null)
+    useEffect(() => { transformOpRef.current = transformOp }, [transformOp])
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
     const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'lg'))
@@ -220,45 +230,96 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     }
 
     const handleDeleteSelected = () => {
-        if (!selectedEntity) return
-        applyLocalOps({
-            type: 'deleteEntity',
-            payload: { entityId: selectedEntity.id }
-        }, { activityMessage: `Deleted ${selectedEntity.name}.`, activityLevel: 'warning' })
+        const targets = selectedEntities.length ? selectedEntities : (selectedEntity ? [selectedEntity] : [])
+        if (!targets.length) return
+        applyLocalOps(
+            targets.map((entity) => ({ type: 'deleteEntity', payload: { entityId: entity.id } })),
+            {
+                activityMessage: targets.length === 1
+                    ? `Deleted ${targets[0].name}.`
+                    : `Deleted ${targets.length} entities.`,
+                activityLevel: 'warning'
+            }
+        )
         dispatch({ type: 'select-entity', entityId: null })
     }
 
-    const handleDuplicateSelected = () => {
-        if (!selectedEntity) return
-        const sourcePosition = selectedEntity.components?.transform?.position || [0, 0, 0]
-        const entity = createEntityOfType(selectedEntity.type, {
-            name: `${selectedEntity.name} copy`,
+    // Build a new entity from any source (selected entity or clipboard), offset
+    // slightly on X/Z so the copy doesn't sit exactly on top of the original.
+    const cloneEntityFrom = (source) => {
+        const sourcePosition = source.components?.transform?.position || [0, 0, 0]
+        return createEntityOfType(source.type, {
+            name: `${source.name} copy`,
             components: {
-                ...structuredClone(selectedEntity.components),
+                ...structuredClone(source.components),
                 transform: {
-                    ...structuredClone(selectedEntity.components?.transform),
+                    ...structuredClone(source.components?.transform),
                     position: [sourcePosition[0] + 0.4, sourcePosition[1], sourcePosition[2] + 0.4]
                 }
             }
         })
+    }
+
+    const handleDuplicateSelected = () => {
+        const targets = selectedEntities.length ? selectedEntities : (selectedEntity ? [selectedEntity] : [])
+        if (!targets.length) return
+        const clones = targets.map(cloneEntityFrom)
+        applyLocalOps(
+            clones.map((entity) => ({ type: 'createEntity', payload: { entity } })),
+            {
+                activityMessage: clones.length === 1
+                    ? `Duplicated ${targets[0].name}.`
+                    : `Duplicated ${clones.length} entities.`
+            }
+        )
+        dispatch({ type: 'select-entities', entityIds: clones.map((entity) => entity.id) })
+    }
+
+    const handleCopySelected = () => {
+        if (!selectedEntity) return
+        clipboardRef.current = {
+            type: selectedEntity.type,
+            name: selectedEntity.name,
+            components: structuredClone(selectedEntity.components)
+        }
+    }
+
+    const handlePasteClipboard = () => {
+        const source = clipboardRef.current
+        if (!source) return
+        const entity = cloneEntityFrom(source)
         applyLocalOps({
             type: 'createEntity',
             payload: { entity }
-        }, { activityMessage: `Duplicated ${selectedEntity.name}.` })
+        }, { activityMessage: `Pasted ${source.name}.` })
         dispatch({ type: 'select-entity', entityId: entity.id })
     }
 
-    const handleFrameSelected = () => {
+    const handleCutSelected = () => {
         if (!selectedEntity) return
+        handleCopySelected()
+        handleDeleteSelected()
+    }
+
+    const handleFrameSelected = () => {
         const cc = controlsRef.current
         if (!cc) return
-        const [tx, ty, tz] = selectedEntity.components?.transform?.position || [0, 0, 0]
-        const offset = [
-            cc._camera.position.x - cc._target.x,
-            cc._camera.position.y - cc._target.y,
-            cc._camera.position.z - cc._target.z
-        ]
-        cc.setLookAt(tx + offset[0], ty + offset[1], tz + offset[2], tx, ty, tz, true)
+        const visibleEntities = entities.filter((entity) => entity.components?.runtime?.visible !== false)
+        const targets = selectedEntities.length ? selectedEntities.filter((entity) => entity.components?.runtime?.visible !== false) : visibleEntities
+        const sphere = getPointsBoundingSphere(
+            targets.map((entity) => entity.components?.transform?.position || [0, 0, 0]),
+            { minRadius: targets.length === 1 ? 0.75 : 1 }
+        )
+        const camera = cc.camera || cc._camera
+        if (!sphere || !camera) return
+        const previousTarget = cc._target || new Vector3()
+        const direction = camera.position.clone().sub(previousTarget)
+        if (direction.lengthSq() <= 1e-8) direction.set(0.8, 0.45, 1)
+        direction.normalize()
+        const halfFov = Math.max(0.01, (camera.fov || 50) * Math.PI / 360)
+        const distance = (sphere.radius * (targets.length === 1 ? 1.35 : 1.45)) / Math.sin(halfFov)
+        const position = sphere.center.clone().add(direction.multiplyScalar(distance))
+        cc.setLookAt(position.x, position.y, position.z, sphere.center.x, sphere.center.y, sphere.center.z, true)
     }
 
     useEffect(() => {
@@ -266,22 +327,65 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             const tag = event.target?.tagName?.toLowerCase?.()
             if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
 
-            // Blender-style duplicate
-            if (event.shiftKey && (event.key === 'd' || event.key === 'D')) {
+            // While a modal transform is running, the operator owns the keyboard
+            // (X/Y/Z constrain, Enter/Esc finish) — don't let these shortcuts fire.
+            if (transformOpRef.current) return
+
+            const meta = event.ctrlKey || event.metaKey
+            const key = event.key
+
+            // Select all (A) / deselect all (Alt+A) — Blender style
+            if (!meta && (key === 'a' || key === 'A')) {
+                event.preventDefault()
+                if (event.altKey) {
+                    dispatch({ type: 'select-entities', entityIds: [] })
+                } else {
+                    dispatch({
+                        type: 'select-entities',
+                        entityIds: entities
+                            .filter((entity) => entity.components?.runtime?.visible !== false && entity.components?.runtime?.locked !== true)
+                            .map((entity) => entity.id)
+                    })
+                }
+                return
+            }
+
+            // Clipboard — Copy (Ctrl/Cmd+C), Paste (Ctrl/Cmd+V), Cut (Ctrl/Cmd+X)
+            if (meta && (key === 'c' || key === 'C')) {
+                if (!selectedEntity) return
+                event.preventDefault()
+                handleCopySelected()
+                return
+            }
+            if (meta && (key === 'v' || key === 'V')) {
+                if (!clipboardRef.current) return
+                event.preventDefault()
+                handlePasteClipboard()
+                return
+            }
+            if (meta && (key === 'x' || key === 'X')) {
+                if (!selectedEntity) return
+                event.preventDefault()
+                handleCutSelected()
+                return
+            }
+
+            // Duplicate — Shift+D (Blender) or Ctrl/Cmd+D
+            if ((event.shiftKey || meta) && (key === 'd' || key === 'D')) {
                 if (!selectedEntity) return
                 event.preventDefault()
                 handleDuplicateSelected()
                 return
             }
-            // Blender-style delete
-            if (event.key === 'x' || event.key === 'X' || event.key === 'Delete' || event.key === 'Backspace') {
+            // Delete / Backspace. Bare X is reserved for gizmo axis constraint.
+            if (!meta && (key === 'Delete' || key === 'Backspace')) {
                 if (!selectedEntity) return
                 event.preventDefault()
                 handleDeleteSelected()
                 return
             }
-            // Blender-style frame selected (View > Frame Selected, default numpad ".")
-            if (event.key === '.') {
+            // Frame selected — F (Maya/Unity) or "." (Blender numpad). Both supported.
+            if (event.key === 'f' || event.key === 'F' || event.key === '.') {
                 if (!selectedEntity) return
                 event.preventDefault()
                 handleFrameSelected()
@@ -295,7 +399,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedEntity, dispatch])
+    }, [selectedEntity, selectedEntities, entities, dispatch])
 
     const handleWorldPatch = (patch) => {
         applyLocalOps({
@@ -356,6 +460,27 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             payload: { entityId, component: 'transform', patch: transform }
         })
     }, [applyLocalOps])
+
+    // Commit several entity transforms at once (modal multi-object move) as a single
+    // undo step.
+    const handleTransformCommitMany = useCallback((list) => {
+        const ops = (list || [])
+            .filter((entry) => entry?.id && entry.transform)
+            .map((entry) => ({
+                type: 'updateComponent',
+                payload: { entityId: entry.id, component: 'transform', patch: entry.transform }
+            }))
+        if (ops.length) applyLocalOps(ops)
+        setTransformOp(null)
+    }, [applyLocalOps])
+
+    const handleStartTransform = useCallback((mode) => {
+        setTransformOp({ mode, seq: Date.now() })
+    }, [])
+
+    const handleTransformCancel = useCallback(() => {
+        setTransformOp(null)
+    }, [])
 
     const handleCameraViewChange = (nextView) => {
         if (!nextView) return
@@ -465,7 +590,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         }
     }
 
-    const handleExportProject = () => {
+    const handleExportProject = async () => {
+        if (exportStatus && exportStatus.phase !== 'error') return
         const exportedAt = Date.now()
         const exportDocument = normalizeProjectDocument({
             ...document,
@@ -474,24 +600,41 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 lastExportAt: exportedAt
             }
         })
-        buildDownload(
-            JSON.stringify(exportDocument, null, 2),
-            `${document.projectMeta?.title || projectId}.studio.json`
-        )
-        handlePublishPatch({ lastExportAt: exportedAt })
-        dispatch({
-            type: 'append-activity',
-            level: 'info',
-            message: 'Exported the current project document.'
-        })
+        try {
+            setExportStatus({ phase: 'downloading', completed: 0, total: exportDocument.assets.length })
+            const bundle = await createStudioProjectBundle(exportDocument, { onProgress: setExportStatus })
+            buildDownload(bundle, `${document.projectMeta?.title || projectId}.studio.zip`, 'application/zip')
+            setExportStatus(null)
+            handlePublishPatch({ lastExportAt: exportedAt })
+            dispatch({
+                type: 'append-activity',
+                level: 'info',
+                message: `Exported project with ${exportDocument.assets.length} bundled assets.`
+            })
+        } catch (error) {
+            setExportStatus({ phase: 'error', message: error.message || 'unknown error' })
+            dispatch({
+                type: 'append-activity',
+                level: 'error',
+                message: `Could not export complete project: ${error.message || 'unknown error'}`
+            })
+        }
     }
 
     const handleImportProjectFile = async (event) => {
         const file = event.target.files?.[0]
         if (!file) return
         try {
-            const text = await file.text()
-            const imported = normalizeProjectDocument(JSON.parse(text))
+            const { document: importedDocument, assetFiles } = await readStudioProjectBundle(file)
+            const uploadedAssets = new Map()
+            for (const [assetId, assetFile] of assetFiles.entries()) {
+                const uploaded = await uploadProjectAsset(projectId, assetFile, { assetId, filename: assetFile.name })
+                uploadedAssets.set(assetId, uploaded)
+            }
+            const imported = normalizeProjectDocument({
+                ...importedDocument,
+                assets: importedDocument.assets.map((asset) => uploadedAssets.get(asset.id) || asset)
+            })
             await replaceDocument({
                 ...imported,
                 projectMeta: {
@@ -547,6 +690,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onDisplayNameChange={setDisplayName}
             selectedEntity={selectedEntity}
             selectedEntityId={state.selectedEntityId}
+            selectedEntityIds={selectedEntityIds}
             entities={entities}
             inspectorSections={inspectorSections}
             inspectorValues={inspectorValues}
@@ -566,6 +710,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onAssetFilesSelected={handleAssetFilesSelected}
             onDeleteSelected={handleDeleteSelected}
             onSelectEntity={(entityId) => dispatch({ type: 'select-entity', entityId })}
+            onToggleSelectEntity={(entityId) => dispatch({ type: 'toggle-entity-selection', entityId })}
             onInspectorChange={handleInspectorChange}
             onWorldPatch={handleWorldPatch}
             onRenderSettingsPatch={handleRenderSettingsPatch}
@@ -576,12 +721,17 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onCopyShareLink={handleCopyShareLink}
             onViewLive={handleViewLive}
             onExportProject={handleExportProject}
+            exportStatus={exportStatus}
             onImportProjectFile={handleImportProjectFile}
             onEnterXr={xr.handleEnterXrSession}
             onExitXr={xr.handleExitXrSession}
             onBackToHub={() => navigateToStudioPath(buildStudioHubPath(resolvedSpaceId))}
             onCameraViewChange={handleCameraViewChange}
             onTransformCommit={handleTransformCommit}
+            transformOp={transformOp}
+            onStartTransform={handleStartTransform}
+            onTransformCommitMany={handleTransformCommitMany}
+            onTransformCancel={handleTransformCancel}
             liveProjectState={{
                 spaceId: resolvedSpaceId,
                 spaceLabel: spaceMeta?.label || resolvedSpaceId,

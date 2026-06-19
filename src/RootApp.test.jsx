@@ -17,7 +17,7 @@ vi.mock('./hooks/useAuthSession.js', () => ({
 
 vi.mock('./services/serverSpaces.js', () => ({
     supportsServerSpaces: true,
-    getServerSpace: (spaceId) => Promise.resolve({ id: spaceId, isPublic: spaceId === 'wcc' })
+    getServerSpace: (spaceId) => Promise.resolve({ id: spaceId, isPublic: spaceId === 'pub' })
 }))
 
 vi.mock('./components/AuthGate.jsx', () => ({
@@ -64,6 +64,12 @@ vi.mock('./studio/StudioApp.jsx', () => ({
     }
 }))
 
+vi.mock('./wcc/WccExperience.jsx', () => ({
+    default: function MockWccExperience({ initialMode }) {
+        return <div>wcc-experience:{initialMode}</div>
+    }
+}))
+
 describe('RootApp', () => {
     afterEach(() => {
         window.history.pushState({}, '', '/')
@@ -81,6 +87,17 @@ describe('RootApp', () => {
         render(<RootApp />)
 
         expect(await screen.findByText('studio-app:project:gallery')).toBeInTheDocument()
+    })
+
+    it('routes /wcc and /wcc/scene to the WCC experience', async () => {
+        window.history.pushState({}, '', '/wcc')
+        const { unmount } = render(<RootApp />)
+        expect(await screen.findByText('wcc-experience:landing')).toBeInTheDocument()
+        unmount()
+
+        window.history.pushState({}, '', '/wcc/scene')
+        render(<RootApp />)
+        expect(await screen.findByText('wcc-experience:scene')).toBeInTheDocument()
     })
 
     it('keeps beta and legacy routes intact', async () => {
@@ -122,10 +139,10 @@ describe('RootApp public space gating', () => {
             logout: vi.fn(),
             refresh: vi.fn()
         })
-        window.history.pushState({}, '', '/wcc/scene')
+        window.history.pushState({}, '', '/pub')
         render(<RootApp />)
 
-        expect(await screen.findByText('space-surface-app:editor:wcc')).toBeInTheDocument()
+        expect(await screen.findByText('space-surface-app:editor:pub')).toBeInTheDocument()
         expect(screen.queryByText('Enter your access token to continue.')).not.toBeInTheDocument()
     })
 
