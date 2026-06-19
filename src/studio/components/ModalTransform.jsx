@@ -3,6 +3,7 @@ import { Line } from '@react-three/drei'
 import { Vector3 } from 'three'
 
 const AXIS_INDEX = { x: 0, y: 1, z: 2 }
+const ALL_INDICES = [0, 1, 2]
 const AXIS_VEC = {
     x: new Vector3(1, 0, 0),
     y: new Vector3(0, 1, 0),
@@ -58,12 +59,14 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
         }
 
         const reportStatus = () => {
-            const axisLabel = session.axis ? ` · ${session.axis.toUpperCase()}` : ''
-            const hint = session.axis ? ' · move mouse · ENTER' : ' · pick X / Y / Z'
+            const axisLabel = session.axis
+                ? ` · ${session.axis === 'all' ? 'ALL' : session.axis.toUpperCase()}`
+                : ''
+            const hint = session.axis ? ' · move mouse · ENTER' : ' · pick X / Y / Z / A'
             cbRef.current.onStatus?.({
                 text: `${MODE_LABEL[session.mode] || session.mode}${axisLabel}${hint}`
             })
-            if (session.axis) {
+            if (session.axis && session.axis !== 'all') {
                 const u = AXIS_VEC[session.axis]
                 setHudLines([{
                     axis: session.axis,
@@ -99,17 +102,19 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
 
         const handlePointerMove = (event) => {
             if (!session.axis) return
-            const axisIndex = AXIS_INDEX[session.axis]
+            const indices = session.axis === 'all' ? ALL_INDICES : [AXIS_INDEX[session.axis]]
             const sensitivity = event.shiftKey ? 0.002 : 0.02
             const delta = ((event.movementX || 0) + (event.movementY || 0)) * sensitivity
             if (delta === 0) return
             for (const e of session.entities) {
-                if (session.mode === 'translate') {
-                    e.pos[axisIndex] += delta
-                } else if (session.mode === 'scale') {
-                    e.scale[axisIndex] = Math.max(0.01, e.scale[axisIndex] + delta)
-                } else if (session.mode === 'rotate') {
-                    e.rot[axisIndex] += delta
+                for (const idx of indices) {
+                    if (session.mode === 'translate') {
+                        e.pos[idx] += delta
+                    } else if (session.mode === 'scale') {
+                        e.scale[idx] = Math.max(0.01, e.scale[idx] + delta)
+                    } else if (session.mode === 'rotate') {
+                        e.rot[idx] += delta
+                    }
                 }
             }
             session.moved = true
@@ -118,9 +123,10 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
 
         const handleKeyDown = (event) => {
             const lower = event.key?.toLowerCase?.()
-            if (lower === 'x' || lower === 'y' || lower === 'z') {
+            if (lower === 'x' || lower === 'y' || lower === 'z' || lower === 'a') {
                 event.preventDefault(); event.stopImmediatePropagation()
-                session.axis = session.axis === lower ? null : lower
+                const next = lower === 'a' ? 'all' : lower
+                session.axis = session.axis === next ? null : next
                 reportStatus()
             } else if (lower === 'g' || lower === 'r' || lower === 's') {
                 event.preventDefault(); event.stopImmediatePropagation()

@@ -589,11 +589,6 @@ const TOOLBAR_BTN = {
     whiteSpace: 'nowrap'
 }
 
-const TOOLBAR_BTN_ACTIVE = {
-    background: 'rgba(79,214,255,0.18)',
-    borderColor: '#4fd6ff',
-    color: '#4fd6ff'
-}
 
 function FullscreenButton() {
     const [isFs, setIsFs] = useState(Boolean(document.fullscreenElement))
@@ -661,11 +656,103 @@ function FullscreenButton() {
     )
 }
 
+const TOOLBAR_BTN_ACTIVE_STRONG = {
+    background: 'rgba(79,214,255,0.28)',
+    borderColor: '#4fd6ff',
+    color: '#4fd6ff',
+    boxShadow: '0 0 8px rgba(79,214,255,0.35)'
+}
+
+const SHORTCUT_SECTIONS = [
+    {
+        title: 'Transform',
+        rows: [
+            ['G', 'Translate (grab) mode'],
+            ['R', 'Rotate mode'],
+            ['S', 'Scale mode'],
+            ['G / R / S → X Y Z', 'Constrain to axis, then move mouse'],
+            ['G / R / S → A', 'All axes (uniform)'],
+            ['Click · Enter · Space', 'Confirm transform'],
+            ['Esc', 'Cancel transform'],
+        ]
+    },
+    {
+        title: 'Edit',
+        rows: [
+            ['Shift+D', 'Duplicate selected'],
+            ['Del / Backspace', 'Delete selected'],
+            ['F', 'Frame / focus on selection'],
+            ['Ctrl+Z', 'Undo'],
+            ['Ctrl+Shift+Z', 'Redo'],
+        ]
+    },
+    {
+        title: 'View',
+        rows: [
+            ['Tab / E', 'Toggle Navigate ↔ Edit mode'],
+            ['T', 'Toggle gizmo visibility'],
+            ['H', 'Hide / show UI'],
+            ['Scroll', 'Zoom'],
+            ['Middle drag', 'Orbit'],
+            ['Right drag', 'Pan'],
+        ]
+    },
+    {
+        title: 'UI',
+        rows: [
+            ['Shift+A', 'Tile panels'],
+            ['Shift+R', 'Reset layout'],
+            ['?', 'Show this help'],
+        ]
+    }
+]
+
+function HotkeyHelp({ onClose }) {
+    return (
+        <div
+            style={{
+                position: 'fixed', inset: 0, zIndex: 9999,
+                background: 'rgba(6,10,16,0.82)', backdropFilter: 'blur(6px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: 24
+            }}
+        >
+            <div
+                style={{
+                    background: 'rgba(14,20,30,0.97)', border: '1px solid rgba(79,214,255,0.25)',
+                    borderRadius: 12, padding: '28px 32px', maxWidth: 680, width: '100%',
+                    boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
+                    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px 40px'
+                }}
+            >
+                <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ color: '#4fd6ff', fontWeight: 700, fontSize: 14, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Keyboard Shortcuts</span>
+                    <button type="button" onClick={onClose} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 18, lineHeight: 1, padding: '0 4px' }}>×</button>
+                </div>
+                {SHORTCUT_SECTIONS.map((section) => (
+                    <div key={section.title}>
+                        <div style={{ color: 'rgba(79,214,255,0.7)', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 10 }}>{section.title}</div>
+                        {section.rows.map(([key, desc]) => (
+                            <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, marginBottom: 7 }}>
+                                <code style={{ color: '#4fd6ff', background: 'rgba(79,214,255,0.1)', border: '1px solid rgba(79,214,255,0.2)', borderRadius: 4, padding: '1px 6px', fontSize: 11, whiteSpace: 'nowrap', fontFamily: 'ui-monospace, monospace' }}>{key}</code>
+                                <span style={{ color: 'rgba(200,216,232,0.8)', fontSize: 12, textAlign: 'right' }}>{desc}</span>
+                            </div>
+                        ))}
+                    </div>
+                ))}
+                <div style={{ gridColumn: '1/-1', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 14, color: 'rgba(255,255,255,0.3)', fontSize: 11, textAlign: 'center' }}>
+                    Press <code style={{ color: 'rgba(79,214,255,0.6)', background: 'rgba(79,214,255,0.08)', borderRadius: 3, padding: '0 4px' }}>?</code> or <code style={{ color: 'rgba(79,214,255,0.6)', background: 'rgba(79,214,255,0.08)', borderRadius: 3, padding: '0 4px' }}>Esc</code> to close
+                </div>
+            </div>
+        </div>
+    )
+}
+
 function ViewportToolbar({ editMode, setEditMode, gizmoMode, setGizmoMode }) {
     const btn = (label, isActive, onClick) => (
         <button
             type="button"
-            style={isActive ? { ...TOOLBAR_BTN, ...TOOLBAR_BTN_ACTIVE } : TOOLBAR_BTN}
+            style={isActive ? { ...TOOLBAR_BTN, ...TOOLBAR_BTN_ACTIVE_STRONG } : TOOLBAR_BTN}
             onClick={onClick}
         >
             {label}
@@ -688,14 +775,10 @@ function ViewportToolbar({ editMode, setEditMode, gizmoMode, setGizmoMode }) {
         >
             {btn('Navigate', editMode === 'navigate', () => setEditMode('navigate'))}
             {btn('Edit', editMode === 'edit', () => setEditMode('edit'))}
-            {editMode === 'edit' && (
-                <>
-                    <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.15)', margin: '0 2px' }} />
-                    {btn('Move', gizmoMode === 'translate', () => setGizmoMode('translate'))}
-                    {btn('Rotate', gizmoMode === 'rotate', () => setGizmoMode('rotate'))}
-                    {btn('Scale', gizmoMode === 'scale', () => setGizmoMode('scale'))}
-                </>
-            )}
+            <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.15)', margin: '0 2px' }} />
+            {btn('Move', gizmoMode === 'translate', () => setGizmoMode('translate'))}
+            {btn('Rotate', gizmoMode === 'rotate', () => setGizmoMode('rotate'))}
+            {btn('Scale', gizmoMode === 'scale', () => setGizmoMode('scale'))}
         </div>
     )
 }
@@ -728,7 +811,20 @@ export default function StudioViewport({
 }) {
     const viewportRef = useRef(null)
     const [transformStatus, setTransformStatus] = useState(null)
+    const [showHelp, setShowHelp] = useState(false)
     const camera = cameraView || document.worldState?.savedView || {}
+
+    useEffect(() => {
+        const handler = (e) => {
+            if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+                const inInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable
+                if (!inInput) { e.preventDefault(); setShowHelp((v) => !v) }
+            }
+            if (e.key === 'Escape') setShowHelp(false)
+        }
+        window.addEventListener('keydown', handler)
+        return () => window.removeEventListener('keydown', handler)
+    }, [])
 
     const handlePointerMove = (event) => {
         const rect = viewportRef.current?.getBoundingClientRect?.()
@@ -805,6 +901,8 @@ export default function StudioViewport({
             )}
 
             <FullscreenButton />
+
+            {showHelp && <HotkeyHelp onClose={() => setShowHelp(false)} />}
 
             <div className="studio-cursor-layer">
                 {Object.values(cursors).map((cursor) => (
