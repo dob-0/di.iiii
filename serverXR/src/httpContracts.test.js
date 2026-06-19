@@ -506,6 +506,58 @@ describe('server write contracts', () => {
         expect(publicReadOutOfScopeToken.status).toBe(200)
     })
 
+    it('scopes the GET /api/spaces list to public spaces plus the caller\'s own scope', async () => {
+        const editorToken = 'list-scope-editor-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                EDITOR_API_TOKEN: editorToken,
+                EDITOR_ALLOWED_SPACES: 'role-space'
+            }
+        })
+
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ label: 'Role Space', slug: 'role-space' })
+        })
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ label: 'Public Space', slug: 'public-space' })
+        })
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ label: 'Hidden Space', slug: 'hidden-space' })
+        })
+        await fetch(`${server.baseUrl}/api/spaces/public-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ isPublic: true })
+        })
+
+        const unauthenticatedList = await fetch(`${server.baseUrl}/api/spaces`)
+        expect(unauthenticatedList.status).toBe(200)
+        const unauthenticatedIds = (await unauthenticatedList.json()).spaces.map((space) => space.id)
+        expect(unauthenticatedIds).toEqual(['public-space'])
+
+        const editorList = await fetch(`${server.baseUrl}/api/spaces`, {
+            headers: withAuth(editorToken)
+        })
+        expect(editorList.status).toBe(200)
+        const editorIds = (await editorList.json()).spaces.map((space) => space.id).sort()
+        expect(editorIds).toEqual(['public-space', 'role-space'])
+
+        const adminList = await fetch(`${server.baseUrl}/api/spaces`, {
+            headers: withAuth(server.apiToken)
+        })
+        expect(adminList.status).toBe(200)
+        const adminIds = (await adminList.json()).spaces.map((space) => space.id).sort()
+        expect(adminIds).toEqual(['hidden-space', 'main', 'public-space', 'role-space'])
+    })
+
     it('restricts /api/users to admins on every method, including GET', async () => {
         const editorToken = 'user-mgmt-editor-token'
         const server = await startServer({
