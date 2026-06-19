@@ -89,14 +89,14 @@ export const defaultGridAppearance = {
     fadeDistance: 42,
     fadeStrength: 0.35,
     offset: 0.015,
-    color: '#2b313d',
-    sectionColor: '#465063'
+    color: '#2a6e73',
+    sectionColor: '#4df9ff'
 }
 
 export const defaultScene = {
     version: SCENE_DATA_VERSION,
     objects: [],
-    backgroundColor: '#171a20',
+    backgroundColor: '#0a1118',
     gridSize: 20,
     isGridVisible: true,
     isGizmoVisible: true,
