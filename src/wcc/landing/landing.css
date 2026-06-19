@@ -88,10 +88,18 @@
     z-index: 4;
 }
 
-.wcc-circle {
+.wcc-circle-parallax {
     position: absolute;
     width: var(--circle-size, 10vw);
     aspect-ratio: 1;
+    will-change: transform;
+}
+
+.wcc-circle {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     padding: 0;
     border: 0;
     border-radius: 999px;
@@ -112,14 +120,14 @@
     outline-offset: 6px;
 }
 
-.wcc-circle.is-hero { --circle-size: min(42vw, 560px); top: 8vh; left: 42vw; }
-.wcc-circle.is-right { --circle-size: min(24vw, 340px); top: 28vh; right: -5vw; }
-.wcc-circle.is-top { --circle-size: 4.8vw; top: 10vh; left: 6.5vw; }
-.wcc-circle.is-small-a { --circle-size: 6.2vw; top: 21vh; right: 16vw; }
-.wcc-circle.is-small-b { --circle-size: 3.6vw; bottom: 12vh; left: 17vw; }
-.wcc-circle.is-small-c { --circle-size: 4.8vw; bottom: 13vh; left: 49vw; }
-.wcc-circle.is-bottom { --circle-size: 8vw; right: 15vw; bottom: -3vh; }
-.wcc-circle.is-dot { --circle-size: 1vw; right: 14vw; bottom: 14vh; }
+.wcc-circle-parallax.is-hero { --circle-size: min(42vw, 560px); top: 8vh; left: 42vw; }
+.wcc-circle-parallax.is-right { --circle-size: min(24vw, 340px); top: 28vh; right: -5vw; }
+.wcc-circle-parallax.is-top { --circle-size: 4.8vw; top: 10vh; left: 6.5vw; }
+.wcc-circle-parallax.is-small-a { --circle-size: 6.2vw; top: 21vh; right: 16vw; }
+.wcc-circle-parallax.is-small-b { --circle-size: 3.6vw; bottom: 12vh; left: 17vw; }
+.wcc-circle-parallax.is-small-c { --circle-size: 4.8vw; bottom: 13vh; left: 49vw; }
+.wcc-circle-parallax.is-bottom { --circle-size: 8vw; right: 15vw; bottom: -3vh; }
+.wcc-circle-parallax.is-dot { --circle-size: 1vw; right: 14vw; bottom: 14vh; }
 
 .wcc-ambient-dots span,
 .wcc-particle-layer span {
@@ -356,7 +364,7 @@
 
 .wcc-hero__kicker {
     margin: 0 0 22px;
-    color: rgba(255, 255, 255, 0.72);
+    color: rgba(255, 255, 255, 0.86);
     animation: wcc-text-float 4.8s ease-in-out infinite alternate;
 }
 
@@ -380,7 +388,7 @@
 .wcc-hero__subtitle {
     max-width: 720px;
     margin: 30px 0 0;
-    color: rgba(255, 255, 255, 0.78);
+    color: rgba(255, 255, 255, 0.9);
     font-size: clamp(1rem, 1.8vw, 1.42rem);
     line-height: 1.6;
 }
@@ -391,7 +399,7 @@
     justify-content: space-between;
     gap: 22px;
     margin-top: 72px;
-    color: rgba(255, 255, 255, 0.72);
+    color: rgba(255, 255, 255, 0.86);
 }
 
 .wcc-enter-button {
@@ -958,13 +966,13 @@
         line-height: 0.86;
     }
 
-    .wcc-circle.is-hero {
+    .wcc-circle-parallax.is-hero {
         --circle-size: 42vw;
         top: 12vh;
         left: 46vw;
     }
 
-    .wcc-circle.is-right {
+    .wcc-circle-parallax.is-right {
         --circle-size: 26vw;
         top: 36vh;
         right: -7vw;
@@ -1090,4 +1098,14 @@
         min-height: 240px;
     }
 
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wcc-landing,
+    .wcc-landing * {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
 }
