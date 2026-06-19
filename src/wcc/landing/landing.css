@@ -11,7 +11,6 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     scroll-behavior: smooth;
-    scroll-snap-type: y proximity;
     color: #ffffff;
     background: #d90000;
     font-family: var(--wcc-font-family);
@@ -346,7 +345,6 @@
     min-height: 100vh;
     align-content: end;
     padding: clamp(28px, 5vw, 72px);
-    scroll-snap-align: start;
 }
 
 .wcc-hero__kicker,
@@ -425,12 +423,16 @@
     transform: translateY(-3px);
 }
 
-.wcc-horizontal {
+.wcc-horizontal-wrapper {
     position: relative;
     z-index: 2;
-    min-height: 100vh;
+}
+
+.wcc-horizontal {
+    position: sticky;
+    top: 0;
+    height: 100vh;
     overflow: hidden;
-    scroll-snap-align: start;
 }
 
 .wcc-panel-track {
@@ -991,6 +993,9 @@
     }
 
     .wcc-horizontal {
+        position: relative;
+        top: auto;
+        height: auto;
         margin-top: -38vh;
         overflow: visible;
     }
@@ -1096,4 +1101,18 @@
         min-height: 240px;
     }
 
+}
+
+.wcc-landing.wcc-in-pin {
+    scroll-behavior: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wcc-landing,
+    .wcc-landing * {
+        animation-duration: 0.001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.001ms !important;
+        scroll-behavior: auto !important;
+    }
 }

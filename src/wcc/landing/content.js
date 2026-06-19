@@ -1,6 +1,6 @@
 export const landingContent = {
     title: 'WCC: Women Creating Change',
-    subtitle: '',
+    subtitle: 'WCC: Women Creating Change is a contemporary art initiative that empowers young individuals to explore identity, equality, and social change through art. Combining mentorship, dialogue, and creative practice, the project supports participants in transforming personal experiences into artworks presented through a virtual exhibition.',
     exhibitionHref: '/wcc/scene',
     artistWorks: [
         {
