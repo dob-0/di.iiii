@@ -256,56 +256,74 @@ function NavigationPanel({ panel, index, active, onOpen, onEnter = null }) {
 }
 
 function HorizontalNavigation({ activeIndex, onActiveIndexChange, onOpen, onEnter = null, scrollerRef }) {
+    const wrapperRef = useRef(null)
     const sectionRef = useRef(null)
     const trackRef = useRef(null)
 
     useLayoutEffect(() => {
+        const wrapper = wrapperRef.current
         const section = sectionRef.current
         const track = trackRef.current
-        if (!section || !track) return undefined
+        if (!wrapper || !section || !track) return undefined
 
         const ctx = gsap.context(() => {
             const mm = gsap.matchMedia()
             mm.add('(min-width: 801px)', () => {
+                const vw = () => scrollerRef.current?.clientWidth ?? window.innerWidth
+                const travel = () => Math.max(0, track.scrollWidth - vw())
+                const syncHeight = () => { wrapper.style.height = `calc(100vh + ${travel() * 2}px)` }
+                syncHeight()
+
                 gsap.to(track, {
-                    x: () => `-${Math.max(0, track.scrollWidth - window.innerWidth)}px`,
+                    x: () => `-${travel()}px`,
                     ease: 'none',
                     scrollTrigger: {
-                        trigger: section,
+                        trigger: wrapper,
                         scroller: scrollerRef.current,
                         start: 'top top',
-                        end: () => `+=${track.scrollWidth}`,
-                        pin: true,
-                        scrub: 0.65,
+                        end: () => `+=${travel() * 2}`,
+                        scrub: true,
+                        snap: {
+                            snapTo: 1 / (panels.length - 1),
+                            duration: { min: 0.2, max: 0.5 },
+                            delay: 0.2,
+                            ease: 'power2.inOut',
+                        },
                         invalidateOnRefresh: true,
+                        onRefresh: syncHeight,
+                        onEnter: () => scrollerRef.current?.classList.add('wcc-in-pin'),
+                        onLeaveBack: () => scrollerRef.current?.classList.remove('wcc-in-pin'),
+                        onLeave: () => scrollerRef.current?.classList.remove('wcc-in-pin'),
                         onUpdate: (self) => {
                             const next = Math.min(panels.length - 1, Math.round(self.progress * (panels.length - 1)))
                             onActiveIndexChange(next)
                         }
                     }
                 })
+                return () => { wrapper.style.height = '' }
             })
-            return () => mm.revert()
         }, section)
 
         return () => ctx.revert()
     }, [onActiveIndexChange, scrollerRef])
 
     return (
-        <section className="wcc-horizontal" ref={sectionRef} aria-label="Exhibition navigation">
-            <div className="wcc-panel-track" ref={trackRef}>
-                {panels.map((panel, index) => (
-                    <NavigationPanel
-                        active={activeIndex === index}
-                        index={index}
-                        key={panel.id}
-                        onEnter={onEnter}
-                        onOpen={onOpen}
-                        panel={panel}
-                    />
-                ))}
-            </div>
-        </section>
+        <div className="wcc-horizontal-wrapper" ref={wrapperRef}>
+            <section className="wcc-horizontal" ref={sectionRef} aria-label="Exhibition navigation">
+                <div className="wcc-panel-track" ref={trackRef}>
+                    {panels.map((panel, index) => (
+                        <NavigationPanel
+                            active={activeIndex === index}
+                            index={index}
+                            key={panel.id}
+                            onEnter={onEnter}
+                            onOpen={onOpen}
+                            panel={panel}
+                        />
+                    ))}
+                </div>
+            </section>
+        </div>
     )
 }
 
