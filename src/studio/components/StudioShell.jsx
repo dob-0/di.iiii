@@ -179,10 +179,9 @@ export default function StudioShell({
                 const canModal = viewportEditMode === 'edit' && selectedEntityIds.length > 0
                 if (modeForKey) {
                     e.preventDefault()
+                    selectGizmoMode(modeForKey)
                     if (canModal && onStartTransform) {
                         onStartTransform(modeForKey)
-                    } else {
-                        selectGizmoMode(modeForKey)
                     }
                 } else if (['x', 'y', 'z'].includes(e.key.toLowerCase())) {
                     e.preventDefault()

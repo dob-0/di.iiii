@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useThree } from '@react-three/fiber'
 import { Line } from '@react-three/drei'
 import { Euler, Plane, Quaternion, Raycaster, Vector3 } from 'three'
@@ -40,18 +41,48 @@ const parseNumeric = (str) => {
     return Number.isNaN(n) ? 0 : n
 }
 
+const VirtualCursor = ({ x, y }) => (
+    <div
+        style={{
+            position: 'fixed',
+            left: x,
+            top: y,
+            width: 15,
+            height: 20,
+            pointerEvents: 'none',
+            zIndex: 999999,
+            transform: 'translate(-2px, -2px)'
+        }}
+    >
+        <svg width="15" height="20" viewBox="0 0 15 20" fill="none">
+            <path
+                d="M1 1V17.5L5.5 13L9.5 21L12.5 19.5L8.5 11.5L14 11L1 1Z"
+                fill="white"
+                stroke="black"
+                strokeWidth="1.5"
+                strokeLinejoin="miter"
+            />
+        </svg>
+    </div>
+)
+
 /**
  * Blender-style modal transform. Mounted inside the Canvas while `op` is set.
- * G/R/S grab the selection (it follows the mouse); X/Y/Z constrain to a global
+ * G/R/S grab the selection and start tracking the mouse immediately (rotate
+ * defaults to free rotation around the view axis); X/Y/Z constrain to a global
  * axis (press again → local, again → free); Shift+axis constrains to a plane;
  * type a number for an exact value; Shift = precision, Ctrl = snap; click /
  * Enter / Space confirm; Esc / right-click cancel.
+ * Incorporates pointer lock and screen-edge cursor wrapping for infinite movement.
  */
 export default function ModalTransform({ op, selectedEntities, primaryId, controlsRef, onPreview, onCommit, onCancel, onStatus }) {
     const { camera, gl } = useThree()
     const pointerRef = useRef({ x: 0, y: 0, w: 1, h: 1 })
     const sessionRef = useRef(null)
     const [hud, setHud] = useState(null)
+    const [active, setActive] = useState(false)
+    const [pointerLocked, setPointerLocked] = useState(false)
+    const [virtualPos, setVirtualPos] = useState({ x: 0, y: 0 })
     const cbRef = useRef({})
     cbRef.current = { onPreview, onCommit, onCancel, onStatus }
 
@@ -104,17 +135,20 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
             numeric: '',
             shift: false,
             ctrl: false,
-            // Rotate waits for an axis before it starts tracking the mouse; move/scale
-            // begin immediately.
-            armed: op.mode !== 'rotate',
             startPointer: { ...pointerRef.current },
+            virtualPointer: { x: pointerRef.current.x, y: pointerRef.current.y },
             pivot,
             entities,
             primaryQuat,
             preview: null,
-            moved: false
+            moved: false,
+            active: false,
+            isPointerLocked: false
         }
         sessionRef.current = session
+        setActive(false)
+        setPointerLocked(false)
+        setVirtualPos({ x: pointerRef.current.x, y: pointerRef.current.y })
 
         const ndc = (p) => ({ x: (p.x / p.w) * 2 - 1, y: -((p.y / p.h) * 2 - 1) })
         const rayFor = (p) => {
@@ -135,14 +169,6 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
         const compute = (p) => {
             const map = {}
             const lines = []
-
-            // Rotate is armed but no axis chosen yet — hold still and prompt for an axis.
-            if (session.mode === 'rotate' && !session.armed) {
-                for (const e of session.entities) {
-                    map[e.id] = { position: e.pos, rotation: e.rot, scale: e.scale }
-                }
-                return { map, hud: { text: 'Rotate: press X / Y / Z to choose an axis', lines, pivot: [pivot.x, pivot.y, pivot.z] } }
-            }
 
             const numericActive = session.numeric !== ''
             const numericVal = parseNumeric(session.numeric)
@@ -291,20 +317,43 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
         }
 
         const preview = () => {
+            if (!session.active) return
             const result = compute(pointerRef.current)
             if (!result) return
             session.preview = result.map
             cbRef.current.onPreview?.(result.map)
-            cbRef.current.onStatus?.({ text: result.hud.text })
+            cbRef.current.onStatus?.({ text: result.hud.text, active: true })
             setHud(result.hud)
+        }
+
+        const activate = () => {
+            if (!session.active) {
+                session.active = true
+                setActive(true)
+                if (controls) controls.enabled = false
+                
+                // Request pointer lock for infinite movement
+                gl.domElement.requestPointerLock?.()
+                session.virtualPointer = {
+                    x: session.startPointer.x,
+                    y: session.startPointer.y
+                }
+                
+                preview()
+            }
         }
 
         const finish = (commit) => {
             if (controls) controls.enabled = true
-            const active = session.mode !== 'rotate' || session.armed
-            const wasMoved = active && (session.moved || session.numeric !== '')
+            
+            if (document.pointerLockElement === gl.domElement) {
+                document.exitPointerLock?.()
+            }
+            
+            const wasMoved = session.moved || session.numeric !== ''
             sessionRef.current = null
             setHud(null)
+            setPointerLocked(false)
             cbRef.current.onStatus?.(null)
             if (commit && wasMoved && session.preview) {
                 cbRef.current.onCommit?.(
@@ -340,10 +389,44 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
         }
 
         const handleMove = (event) => {
+            const rect = gl.domElement.getBoundingClientRect()
+            const currentX = event.clientX - rect.left
+            const currentY = event.clientY - rect.top
             session.shift = event.shiftKey
             session.ctrl = event.ctrlKey || event.metaKey
             session.moved = true
-            preview()
+
+            if (!session.active) {
+                const dist = Math.hypot(
+                    currentX - session.startPointer.x,
+                    currentY - session.startPointer.y
+                )
+                if (dist > 4) {
+                    activate()
+                }
+            } else if (document.pointerLockElement === gl.domElement) {
+                const width = rect.width || 1
+                const height = rect.height || 1
+
+                let vx = session.virtualPointer.x + event.movementX
+                let vy = session.virtualPointer.y + event.movementY
+
+                vx = (vx + width) % width
+                vy = (vy + height) % height
+
+                session.virtualPointer = { x: vx, y: vy }
+                pointerRef.current = { x: vx, y: vy, w: width, h: height }
+                setVirtualPos({ x: vx, y: vy })
+                preview()
+            } else {
+                pointerRef.current = {
+                    x: currentX,
+                    y: currentY,
+                    w: rect.width || 1,
+                    h: rect.height || 1
+                }
+                preview()
+            }
         }
         const handleKeyDown = (event) => {
             const key = event.key
@@ -351,27 +434,31 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
             session.shift = event.shiftKey
             session.ctrl = event.ctrlKey || event.metaKey
 
+            const isActivateKey =
+                ['x', 'y', 'z'].includes(lower) ||
+                /^[0-9]$/.test(key) || key === '.' || key === '-'
+
+            if (!session.active) {
+                if (isActivateKey) {
+                    activate()
+                } else {
+                    if (key === 'Escape') {
+                        finish(false)
+                        event.preventDefault(); event.stopImmediatePropagation()
+                    }
+                    return
+                }
+            }
+
             if (lower === 'x' || lower === 'y' || lower === 'z') {
                 event.preventDefault(); event.stopImmediatePropagation()
                 cycleAxis(lower, event.shiftKey)
-                // Rotate starts tracking the mouse only once an axis is chosen; re-base
-                // the pointer so the rotation begins from zero at that moment.
-                if (session.mode === 'rotate') {
-                    if (session.axis && !session.armed) {
-                        session.armed = true
-                        session.startPointer = { ...pointerRef.current }
-                    } else if (!session.axis) {
-                        session.armed = false
-                    }
-                }
                 preview()
             } else if (lower === 'g' || lower === 'r' || lower === 's') {
                 event.preventDefault(); event.stopImmediatePropagation()
                 session.mode = lower === 'g' ? 'translate' : lower === 'r' ? 'rotate' : 'scale'
                 session.numeric = ''
-                // Switching to rotate re-arms (wait for an axis); move/scale track at once.
-                session.armed = session.mode === 'rotate' ? !!session.axis : true
-                if (session.armed) session.startPointer = { ...pointerRef.current }
+                session.startPointer = { ...pointerRef.current }
                 preview()
             } else if (/^[0-9]$/.test(key) || key === '.' || key === '-') {
                 event.preventDefault(); event.stopImmediatePropagation()
@@ -394,50 +481,74 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
         const handleKeyUp = (event) => {
             session.shift = event.shiftKey
             session.ctrl = event.ctrlKey || event.metaKey
-            if (event.key === 'Shift' || event.key === 'Control' || event.key === 'Meta') preview()
+            if (session.active && (event.key === 'Shift' || event.key === 'Control' || event.key === 'Meta')) {
+                preview()
+            }
         }
         const handlePointerDown = (event) => {
+            if (!session.active) {
+                finish(false)
+                return
+            }
             event.preventDefault(); event.stopImmediatePropagation()
             finish(event.button !== 2)
         }
         const handleContextMenu = (event) => {
+            if (!session.active) return
             event.preventDefault()
             finish(false)
         }
 
-        if (controls) controls.enabled = false
-        preview()
+        const handlePointerLockChange = () => {
+            const isLocked = document.pointerLockElement === gl.domElement
+            if (sessionRef.current) {
+                sessionRef.current.isPointerLocked = isLocked
+            }
+            setPointerLocked(isLocked)
+            if (session.active && !isLocked) {
+                finish(false)
+            }
+        }
 
         window.addEventListener('pointermove', handleMove)
         window.addEventListener('keydown', handleKeyDown, true)
         window.addEventListener('keyup', handleKeyUp, true)
         window.addEventListener('pointerdown', handlePointerDown, true)
         window.addEventListener('contextmenu', handleContextMenu)
+        document.addEventListener('pointerlockchange', handlePointerLockChange)
         return () => {
             window.removeEventListener('pointermove', handleMove)
             window.removeEventListener('keydown', handleKeyDown, true)
             window.removeEventListener('keyup', handleKeyUp, true)
             window.removeEventListener('pointerdown', handlePointerDown, true)
             window.removeEventListener('contextmenu', handleContextMenu)
+            document.removeEventListener('pointerlockchange', handlePointerLockChange)
             if (controls) controls.enabled = true
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [op?.seq])
 
-    if (!hud?.lines?.length) return null
     return (
-        <group renderOrder={999}>
-            {hud.lines.map((line) => (
-                <Line
-                    key={line.axis}
-                    points={line.points}
-                    color={AXIS_COLOR[line.axis]}
-                    lineWidth={1.5}
-                    transparent
-                    opacity={0.9}
-                    depthTest={false}
-                />
-            ))}
-        </group>
+        <>
+            {hud?.lines?.length > 0 && (
+                <group renderOrder={999}>
+                    {hud.lines.map((line) => (
+                        <Line
+                            key={line.axis}
+                            points={line.points}
+                            color={AXIS_COLOR[line.axis]}
+                            lineWidth={1.5}
+                            transparent
+                            opacity={0.9}
+                            depthTest={false}
+                        />
+                    ))}
+                </group>
+            )}
+            {pointerLocked && createPortal(
+                <VirtualCursor x={virtualPos.x} y={virtualPos.y} />,
+                document.body
+            )}
+        </>
     )
 }

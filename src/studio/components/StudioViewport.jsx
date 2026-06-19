@@ -438,6 +438,7 @@ function StudioSceneContent({
     gizmoAxis = null,
     gizmoVisible = true,
     transformOp = null,
+    transformStatus = null,
     onTransformCommit,
     onTransformCommitMany,
     onTransformCancel,
@@ -469,8 +470,8 @@ function StudioSceneContent({
         setPreviewById({})
         onTransformCancel?.()
     }
-    // Hide the drag-handle gizmo while a modal transform is in progress.
-    const gizmoVisibleEffective = gizmoVisible && !transformOp
+    // Hide the drag-handle gizmo while an active modal transform is in progress.
+    const gizmoVisibleEffective = gizmoVisible && (!transformOp || !transformStatus?.active)
 
     return (
         <>
@@ -759,6 +760,7 @@ export default function StudioViewport({
                         gizmoAxis={gizmoAxis}
                         gizmoVisible={gizmoVisible}
                         transformOp={transformOp}
+                        transformStatus={transformStatus}
                         onTransformCommit={onTransformCommit}
                         onTransformCommitMany={onTransformCommitMany}
                         onTransformCancel={onTransformCancel}
