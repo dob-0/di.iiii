@@ -16,6 +16,8 @@ import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from
 import { useStudioLayoutPrefs } from '../hooks/useStudioLayoutPrefs.js'
 import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
+import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
+import { formatAssetSize, optimizeGlbAsset, shouldSuggestGlbOptimization } from '../utils/assetOptimization.js'
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
 
@@ -106,6 +108,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const selectedEntities = entities.filter((entity) => selectedEntityIds.includes(entity.id))
     const [transformOp, setTransformOp] = useState(null)
     const [exportStatus, setExportStatus] = useState(null)
+    const [assetOptimizationPrompt, setAssetOptimizationPrompt] = useState(null)
+    const assetOptimizationResolveRef = useRef(null)
     const transformOpRef = useRef(null)
     useEffect(() => { transformOpRef.current = transformOp }, [transformOp])
     const theme = useTheme()
@@ -140,6 +144,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             // ignore local storage errors
         }
     }, [displayName])
+
+    useEffect(() => () => {
+        assetOptimizationResolveRef.current?.(null)
+        assetOptimizationResolveRef.current = null
+    }, [])
 
     useEffect(() => {
         const handler = (event) => {
@@ -214,19 +223,60 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         dispatch({ type: 'select-entity', entityId: entity.id })
     }
 
+    const requestAssetUploadFile = (file) => {
+        if (!shouldSuggestGlbOptimization(file)) return Promise.resolve(file)
+        return new Promise((resolve) => {
+            assetOptimizationResolveRef.current = resolve
+            setAssetOptimizationPrompt({ file, status: 'choice', error: null })
+        })
+    }
+
+    const finishAssetOptimizationPrompt = (file) => {
+        const resolve = assetOptimizationResolveRef.current
+        assetOptimizationResolveRef.current = null
+        setAssetOptimizationPrompt(null)
+        resolve?.(file)
+    }
+
+    const handleOptimizeAsset = async () => {
+        const file = assetOptimizationPrompt?.file
+        if (!file) return
+        setAssetOptimizationPrompt((current) => ({ ...current, status: 'optimizing', error: null }))
+        try {
+            const optimized = await optimizeGlbAsset(file)
+            finishAssetOptimizationPrompt(optimized)
+        } catch (error) {
+            setAssetOptimizationPrompt((current) => ({
+                ...current,
+                status: 'error',
+                error: error instanceof Error ? error.message : 'Model optimization failed.'
+            }))
+        }
+    }
+
     const handleAssetFilesSelected = async (event) => {
         const files = Array.from(event.target.files || [])
         if (!files.length) return
-        for (const file of files) {
-            const asset = await uploadProjectAsset(projectId, file)
-            applyLocalOps({
-                type: 'upsertAsset',
-                payload: { asset }
-            }, { activityMessage: `Imported ${file.name}.` })
-            handleCreateEntity(detectEntityTypeFromFile(file), asset)
+        try {
+            for (const file of files) {
+                const uploadFile = await requestAssetUploadFile(file)
+                if (!uploadFile) continue
+                const asset = await uploadProjectAsset(projectId, uploadFile)
+                const wasOptimized = uploadFile !== file
+                const activityMessage = wasOptimized
+                    ? `Optimized ${file.name} from ${formatAssetSize(file.size)} to ${formatAssetSize(uploadFile.size)} and imported it.`
+                    : `Imported ${file.name}.`
+                applyLocalOps({
+                    type: 'upsertAsset',
+                    payload: { asset }
+                }, { activityMessage })
+                const entityAsset = wasOptimized ? { ...asset, name: file.name } : asset
+                handleCreateEntity(detectEntityTypeFromFile(file), entityAsset)
+            }
+        } finally {
+            event.target.value = ''
+            refreshSpaceAssets()
         }
-        event.target.value = ''
-        refreshSpaceAssets()
     }
 
     const handleDeleteSelected = () => {
@@ -682,7 +732,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     }
 
     return (
-        <StudioShell
+        <>
+            <StudioShell
             document={document}
             loading={state.loading}
             loadError={state.loadError}
@@ -741,6 +792,13 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             }}
             onSetLiveProject={handleSetLiveProject}
             onClearLiveProject={handleClearLiveProject}
-        />
+            />
+            <AssetOptimizationDialog
+                prompt={assetOptimizationPrompt}
+                onOptimize={handleOptimizeAsset}
+                onUploadOriginal={() => finishAssetOptimizationPrompt(assetOptimizationPrompt?.file || null)}
+                onCancel={() => finishAssetOptimizationPrompt(null)}
+            />
+        </>
     )
 }
