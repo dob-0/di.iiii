@@ -38,9 +38,20 @@ The full unattended loop, every task, no need to ask permission for any of these
 
 1. **Sync first** — `git fetch upstream && git merge --ff-only upstream/dev` before starting work, so the task is never built on a stale base
 2. **Work, then validate** — lint/build/test must pass before moving on
-3. **Commit and push to your own fork** — automatic once validated, no need to wait to be asked
+3. **Commit and push to a task branch on your own fork** — `feat/…`, `fix/…`, or `chore/…`, automatic once validated, no need to wait to be asked
 
 This is safe specifically because your push target is your own fork's branch, which can never affect `dob-0/di.iiii` directly: the `auto-pr.yml` workflow surfaces it as a PR, and a human reviews and merges from the upstream side. This default does **not** extend to pushing directly to `dob-0/di.iiii` (any branch, including `dev`) or to merging a PR — those stay explicit, human-requested actions.
+
+> **The one rule that makes auto-sync actually fire:** the work must be on a **task branch**, not the fork's `main` or `dev`. `auto-pr.yml` ignores `main` and `dev` (`branches-ignore`), so committing a fix to your fork's `main` leaves upstream completely unaware of it — no PR, no notification. If you already committed to `main`, branch from it (`git switch -c fix/<name>`) and push that branch so the PR opens. Pushing more commits to the same branch updates the open PR automatically.
+
+### Upstream (dob-side) agents: receiving fork work
+
+If you are working **in `dob-0/di.iiii` itself** (not a fork), this is how fork contributions arrive and stay in sync:
+
+1. Fork task-branch pushes auto-open PRs against `dev` (title = branch name, body links the commits). List them: `gh pr list --repo dob-0/di.iiii --base dev`.
+2. Review/test a PR locally with `gh pr checkout <number>`; run lint/build/test before merging.
+3. Merge accepted PRs into `dev`. Promote `dev -> main` only when explicitly asked (that path triggers a production deploy — see the Release Rule in `AGENTS.md`).
+4. Merging into `dev` is what keeps every fork current: each fork's next `git fetch upstream && git merge --ff-only upstream/dev` (step 1 of the fork loop above) picks the work up. Nothing else is needed to "push" updates back out to forks.
 
 ## Mode 1: Git Worktree (preferred for same-repo parallel work)
 

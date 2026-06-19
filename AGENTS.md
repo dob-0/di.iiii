@@ -193,6 +193,13 @@ npm run docs:ai:check
 - do not start routine feature work on `main`
 - use `main` directly only for emergency production hotfixes
 
+## Fork → Upstream Auto-Sync (how work reaches `dob-0/di.iiii`)
+
+- Fork-side work must land on a **task branch** (`feat/…`, `fix/…`, `chore/…`), never on the fork's `main` or `dev`.
+- Pushing that branch triggers `.github/workflows/auto-pr.yml`, which auto-opens/updates a PR against `dob-0/di.iiii`'s `dev`. **A push to the fork's `main`/`dev` does NOT notify upstream** — the work is invisible to dob until it rides a task-branch PR.
+- **Upstream (dob-side) agents:** incoming fork PRs target `dev`. Review with `gh pr checkout <n>`, validate (lint/build/test), then merge into `dev`; promote `dev -> main` only when explicitly asked. Merging keeps every fork in sync on its next `git fetch upstream && git merge --ff-only upstream/dev`.
+- Full contract and the parallel-work modes: [docs/ai/parallel-agents.md](docs/ai/parallel-agents.md).
+
 ## Read Next
 
 - root repo guide: [README.md](README.md)

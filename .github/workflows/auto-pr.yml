@@ -23,6 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Open PR against upstream dev if none exists
         env:
@@ -34,13 +36,21 @@ jobs:
           existing=$(gh pr list --repo dob-0/di.iiii --head "${OWNER}:${BRANCH}" --state open --json number --jq '.[0].number')
 
           if [ -n "$existing" ]; then
-            echo "PR #$existing already open for ${OWNER}:${BRANCH} — nothing to do."
+            echo "PR #$existing already open for ${OWNER}:${BRANCH} — branch push updates it automatically."
             exit 0
           fi
+
+          # Build a body listing the commits this branch adds on top of upstream dev.
+          git remote add upstream https://github.com/dob-0/di.iiii.git 2>/dev/null || true
+          git fetch --quiet --depth=100 upstream dev || true
+          COMMITS=$(git log --reverse --pretty='- %s' upstream/dev..HEAD 2>/dev/null | head -40)
+          [ -z "$COMMITS" ] && COMMITS="- (see the Files changed tab)"
+
+          BODY=$(printf 'Auto-opened from fork branch `%s`.\n\n**Commits**\n%s\n\n_Review: `gh pr checkout <n>`, run lint/build/test, then merge into `dev`. See docs/ai/parallel-agents.md._' "${BRANCH}" "${COMMITS}")
 
           gh pr create \
             --repo dob-0/di.iiii \
             --base dev \
             --head "${OWNER}:${BRANCH}" \
             --title "${BRANCH}" \
-            --body "Auto-opened from fork branch \`${BRANCH}\`. See commits for details."
+            --body "${BODY}"
