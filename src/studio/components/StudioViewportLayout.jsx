@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import StudioPresentationSurface from './StudioPresentationSurface.jsx'
 
 // All views use PerspectiveCamera. "Ortho" views fake it: large distance + small FOV ≈ parallel projection.
@@ -79,6 +79,13 @@ function AxisGizmo({ current, onSelect }) {
 function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
     const [viewKey, setViewKey] = useState('perspective')
     const controlsRef           = useRef(null)
+
+    // Register this pane's fitToBox into the shared imperative handle
+    useEffect(() => {
+        if (shared.fitToSelectionRef) {
+            shared.fitToSelectionRef.current = (box) => controlsRef.current?.fitToBox(box, true)
+        }
+    })
 
     const switchView = useCallback((key) => {
         if (key === viewKey) return

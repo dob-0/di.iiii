@@ -101,6 +101,7 @@ export default function StudioShell({
     const [positions, setPositions] = useState(DEFAULT_POSITIONS)
     const [layoutKey, setLayoutKey] = useState(0)
     const [snapEdges, setSnapEdges] = useState(false)
+    const fitToSelectionRef = useRef(null)
 
     const selectGizmoMode = useCallback((mode) => {
         setViewportGizmoMode(mode)
@@ -181,7 +182,7 @@ export default function StudioShell({
                 e.preventDefault()
                 const targets = selectedEntityIds.length ? selectedEntityIds : []
                 const ents = entities?.filter((en) => targets.includes(en.id)) || []
-                if (ents.length && controlsRef?.current?.fitToBox) {
+                if (ents.length && fitToSelectionRef.current) {
                     const box = new Box3()
                     for (const en of ents) {
                         const t = en.components?.transform || {}
@@ -191,7 +192,7 @@ export default function StudioShell({
                         box.expandByPoint(pos.clone().sub(half))
                         box.expandByPoint(pos.clone().add(half))
                     }
-                    controlsRef.current.fitToBox(box, true)
+                    fitToSelectionRef.current(box)
                 }
             }
             // G/R/S: show the drag-handle gizmo in the matching mode.
@@ -237,7 +238,7 @@ export default function StudioShell({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode, onDeleteSelected, onDuplicateSelected, entities, controlsRef])
+    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode, onDeleteSelected, onDuplicateSelected, entities])
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return
@@ -281,6 +282,7 @@ export default function StudioShell({
         onTransformCommit,
         onTransformCommitMany,
         onTransformCancel,
+        fitToSelectionRef,
     }
 
     return (

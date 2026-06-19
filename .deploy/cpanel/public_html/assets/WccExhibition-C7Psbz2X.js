@@ -1,1 +1,0 @@
-import{t as e}from"./react-vendor-C7w051Wz.js";import{t}from"./LiveProjectScene--Dy9PlhS.js";var n=e(),r=`wcc-landing`;function i({onExit:e}){return(0,n.jsx)(`div`,{className:`wcc-scene`,children:(0,n.jsx)(t,{projectId:r,interactive:!0,showChrome:!0,onExit:e,title:`WCC · Women Creating Change`})})}export{i as default};
