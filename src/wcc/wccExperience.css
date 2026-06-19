@@ -41,12 +41,13 @@
     border-color: #d90000;
 }
 
-/* Full-screen warp flash that hides the 2D -> 3D swap. */
+/* Full-screen warp flash that hides the 2D -> 3D swap. The gradient (a red
+   bloom resolving into the exhibition's own background colour) is supplied
+   inline so the dive lands seamlessly in whatever colour the room is. */
 .wcc-experience__warp {
     position: fixed;
     inset: 0;
     z-index: 20;
-    background: radial-gradient(circle at 50% 50%, #d90000 0%, #070506 55%, #000000 100%);
     pointer-events: none;
     opacity: 0;
 }

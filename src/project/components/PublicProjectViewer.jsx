@@ -47,13 +47,16 @@ const resolveViewerCamera = (document) => {
     return document.worldState?.savedView || null
 }
 
-export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '' }) {
+export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', initialCameraView = null }) {
     const [state, setState] = useState({
         status: 'loading',
         document: null,
         error: ''
     })
-    const [cameraView, setCameraView] = useState(null)
+    // Seed the camera so the first paint can frame a custom entry view. For
+    // 'scene' entryView this seed is preserved (the viewer only resets the
+    // camera for fixed-camera/code modes or when none is set yet).
+    const [cameraView, setCameraView] = useState(initialCameraView || null)
     const [viewMode, setViewMode] = useState(null)
     const controlsRef = useRef(null)
     const iframeRef = useRef(null)
