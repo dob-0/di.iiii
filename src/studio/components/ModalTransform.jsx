@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useThree } from '@react-three/fiber'
 import { Line } from '@react-three/drei'
 import { Euler, Plane, Quaternion, Raycaster, Vector3 } from 'three'
@@ -41,31 +40,6 @@ const parseNumeric = (str) => {
     return Number.isNaN(n) ? 0 : n
 }
 
-const VirtualCursor = ({ x, y }) => (
-    <div
-        style={{
-            position: 'fixed',
-            left: x,
-            top: y,
-            width: 15,
-            height: 20,
-            pointerEvents: 'none',
-            zIndex: 999999,
-            transform: 'translate(-2px, -2px)'
-        }}
-    >
-        <svg width="15" height="20" viewBox="0 0 15 20" fill="none">
-            <path
-                d="M1 1V17.5L5.5 13L9.5 21L12.5 19.5L8.5 11.5L14 11L1 1Z"
-                fill="white"
-                stroke="black"
-                strokeWidth="1.5"
-                strokeLinejoin="miter"
-            />
-        </svg>
-    </div>
-)
-
 /**
  * Blender-style modal transform. Mounted inside the Canvas while `op` is set.
  * G/R/S grab the selection and start tracking the mouse immediately (rotate
@@ -80,9 +54,6 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
     const pointerRef = useRef({ x: 0, y: 0, w: 1, h: 1 })
     const sessionRef = useRef(null)
     const [hud, setHud] = useState(null)
-    const [active, setActive] = useState(false)
-    const [pointerLocked, setPointerLocked] = useState(false)
-    const [virtualPos, setVirtualPos] = useState({ x: 0, y: 0 })
     const cbRef = useRef({})
     cbRef.current = { onPreview, onCommit, onCancel, onStatus }
 
@@ -146,9 +117,6 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
             isPointerLocked: false
         }
         sessionRef.current = session
-        setActive(false)
-        setPointerLocked(false)
-        setVirtualPos({ x: pointerRef.current.x, y: pointerRef.current.y })
 
         const ndc = (p) => ({ x: (p.x / p.w) * 2 - 1, y: -((p.y / p.h) * 2 - 1) })
         const rayFor = (p) => {
@@ -322,14 +290,18 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
             if (!result) return
             session.preview = result.map
             cbRef.current.onPreview?.(result.map)
-            cbRef.current.onStatus?.({ text: result.hud.text, active: true })
+            cbRef.current.onStatus?.({
+                text: result.hud.text,
+                active: true,
+                pointerLocked: session.isPointerLocked,
+                virtualPos: { x: session.virtualPointer.x, y: session.virtualPointer.y }
+            })
             setHud(result.hud)
         }
 
         const activate = () => {
             if (!session.active) {
                 session.active = true
-                setActive(true)
                 if (controls) controls.enabled = false
                 
                 // Request pointer lock for infinite movement
@@ -353,7 +325,6 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
             const wasMoved = session.moved || session.numeric !== ''
             sessionRef.current = null
             setHud(null)
-            setPointerLocked(false)
             cbRef.current.onStatus?.(null)
             if (commit && wasMoved && session.preview) {
                 cbRef.current.onCommit?.(
@@ -416,7 +387,6 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
 
                 session.virtualPointer = { x: vx, y: vy }
                 pointerRef.current = { x: vx, y: vy, w: width, h: height }
-                setVirtualPos({ x: vx, y: vy })
                 preview()
             } else {
                 pointerRef.current = {
@@ -504,9 +474,12 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
             if (sessionRef.current) {
                 sessionRef.current.isPointerLocked = isLocked
             }
-            setPointerLocked(isLocked)
-            if (session.active && !isLocked) {
-                finish(false)
+            if (session.active) {
+                if (!isLocked) {
+                    finish(false)
+                } else {
+                    preview()
+                }
             }
         }
 
@@ -544,10 +517,6 @@ export default function ModalTransform({ op, selectedEntities, primaryId, contro
                         />
                     ))}
                 </group>
-            )}
-            {pointerLocked && createPortal(
-                <VirtualCursor x={virtualPos.x} y={virtualPos.y} />,
-                document.body
             )}
         </>
     )

@@ -20,6 +20,31 @@ import { applyPivotTransform, getSelectionCentroid } from '../utils/multiTransfo
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
 
+const VirtualCursor = ({ x, y }) => (
+    <div
+        style={{
+            position: 'fixed',
+            left: x,
+            top: y,
+            width: 15,
+            height: 20,
+            pointerEvents: 'none',
+            zIndex: 999999,
+            transform: 'translate(-2px, -2px)'
+        }}
+    >
+        <svg width="15" height="20" viewBox="0 0 15 20" fill="none">
+            <path
+                d="M1 1V17.5L5.5 13L9.5 21L12.5 19.5L8.5 11.5L14 11L1 1Z"
+                fill="white"
+                stroke="black"
+                strokeWidth="1.5"
+                strokeLinejoin="miter"
+            />
+        </svg>
+    </div>
+)
+
 function EntityContent({ entity, assetMap }) {
     const appearance = entity.components?.appearance || {}
     const media = entity.components?.media || {}
@@ -781,6 +806,10 @@ export default function StudioViewport({
 
             {transformStatus && (
                 <div className="studio-transform-hud">{transformStatus.text}</div>
+            )}
+
+            {transformStatus?.pointerLocked && transformStatus?.virtualPos && (
+                <VirtualCursor x={transformStatus.virtualPos.x} y={transformStatus.virtualPos.y} />
             )}
 
             <FullscreenButton />
