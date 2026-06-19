@@ -38,8 +38,31 @@ const state = await page.evaluate(() => ({
 }))
 console.log('AFTER_ENTER', JSON.stringify(state))
 
-// 3. Direct deep-link load of /wcc/scene
-await page.goto(base + '/wcc/scene', { waitUntil: 'networkidle' }).catch((e) => errors.push('GOTO2: ' + e.message))
+// 2b. Browser BACK should return to the 2D landing
+await page.goBack().catch(() => {})
+await page.waitForTimeout(1500)
+const afterBack = await page.evaluate(() => ({
+    path: window.location.pathname,
+    landingMounted: !!document.querySelector('.wcc-landing'),
+    sceneMounted: !!document.querySelector('.wcc-experience__scene')
+}))
+console.log('AFTER_BACK', JSON.stringify(afterBack))
+
+// 2c. Re-enter a second time (re-entry must work)
+const enter2 = page.locator('.wcc-enter-button').first()
+if (await enter2.count()) {
+    await enter2.click()
+    await page.waitForTimeout(3500)
+}
+const reEnter = await page.evaluate(() => ({
+    path: window.location.pathname,
+    hasCanvas: !!document.querySelector('.wcc-experience__scene canvas')
+}))
+console.log('RE_ENTER', JSON.stringify(reEnter))
+
+// 3. Direct deep-link load of /wcc/scene (the viewer holds an SSE stream, so
+// 'networkidle' never settles — wait for DOM instead).
+await page.goto(base + '/wcc/scene', { waitUntil: 'domcontentloaded' }).catch((e) => errors.push('GOTO2: ' + e.message))
 await page.waitForTimeout(5000)
 await page.screenshot({ path: 'wcc-4-direct-scene.png' })
 const direct = await page.evaluate(() => ({
