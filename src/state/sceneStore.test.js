@@ -54,7 +54,7 @@ describe('defaultScene', () => {
         expect(defaultScene).toMatchObject({
             version: expect.any(Number),
             objects: expect.any(Array),
-            backgroundColor: '#171a20',
+            backgroundColor: '#0a1118',
             ambientLight: expect.any(Object),
             directionalLight: expect.any(Object),
             transformSnaps: expect.any(Object)
@@ -69,8 +69,8 @@ describe('defaultGridAppearance', () => {
             sectionThickness: 0.65,
             fadeDistance: 42,
             fadeStrength: 0.35,
-            color: '#2b313d',
-            sectionColor: '#465063'
+            color: '#2a6e73',
+            sectionColor: '#4df9ff'
         })
     })
 })
