@@ -3,14 +3,14 @@
 **Every AI reads this before anything else. ≤50 lines. Read in full.**
 Updated at the end of every session. Replace content — do not append.
 
-active_branch: dev (working directly on dev — SpaceHub, space creation, git-to-space deploy added)
+active_branch: dev
 
 ---
 
 ## Last commit
 
-`378cba5` — fix: control-cluster panel itself ignored the Snap-to-edge toggle
-(this session: installed two Claude Code plugins from `claude-plugins-official` — `frontend-design` (UI/UX aesthetic guidance) and `security-guidance` (auth/secrets review); skipped marketplace `code-review`/`pr-review-toolkit` to avoid clashing with this repo's own checked-in `/code-review`/`/review`/`/security-review` skills; recorded the choice in Claude Code memory (`project_plugins.md`) so future sessions install the same set; `enabledPlugins` added to `.claude/settings.json`. Other parallel-agent work landed on `dev` this session: edge-snap toggle test+fix, statusline tuning (`6cab50c`..`378cba5`).)
+`fbb7680` — fix(ollama): downsize local models to fit 8GB VRAM
+(this session: `feature/landing-pages` is now merged into `dev` (`0b397a0`) — public spaces, real per-space read access control, Studio nav fixes, and user-scoped sign-in are all live on `dev`, not pending anymore. Also landed: WCC landing page EN/ՀՅ language toggle that persists across the landing→exhibition transition (`573bad1`), and resized the local Ollama models (`fast`/`deep`/`coder`/`general`/`tiny`) to fit an 8 GB GPU (`fbb7680`).)
 Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production).
 
 ## What works
@@ -24,16 +24,17 @@ Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (product
 - Docker: `docker compose up --build -d` runs full stack locally on port 8080 (Podman-compatible)
 - Space sync: `npm run space:new/pull/push` CLI scripts + `SpaceSyncPanel` UI in BetaHub (↓ get latest / ↑ publish buttons)
 - n000 space: pulled locally to `spaces/n000/scene.json` and `serverXR/data/spaces/n000/`
-- Public spaces (new, on `feature/landing-pages`, uncommitted): any space can be marked `isPublic: true` (`PATCH /api/spaces/:id`) to skip the login gate for just that space. WCC's page is the existing Present → Code view (paste HTML/CSS/JS, can pull in three.js/gsap from a CDN) — no new schema/panel. Added one thing to the existing sandboxed-preview postMessage bridge: calling `window.diiEnterExhibition()` from inside the pasted page swaps it for the live 3D scene in place, no reload. A generic "Landing" schema/panel was tried and deliberately reverted as overkill for one page. See `docs/WCC_MERGE_PLAN.md`.
-- Real per-space read access control (new, on `feature/landing-pages`, uncommitted): `GET` reads of spaces/projects now actually enforce `isAuthScopeAllowedForSpace` (mirrors the write-side check that already existed), with an `isPublic` bypass. `AuthGate` now takes a `requiredSpaceId` prop and shows an "Access restricted" panel instead of silently rendering for an authenticated-but-out-of-scope session. `GUEST_SPACES = ['main']` guest auto-login still works exactly as before — it's just no longer accidentally readable everywhere.
-- Studio nav fixes (same branch): the control-cluster header was showing the *project* title labeled as "space name" — now shows the actual space label + project title. Added a "View live" button (opens the public `/<spaceId>` URL in a new tab, only when the project is live). `handleCopyShareLink`'s activity message now includes the actual URL. Studio Hub shows "Space: {label}" above the Projects heading so landing on bare `/studio` (which silently defaults to `main`) is no longer silent. All four manually verified live in a real browser (Playwright).
-- User-scoped sign-in (new, on `feature/landing-pages`, uncommitted): OAuth (`GitHub`/`Google`) sign-ins used to hardcode `spaces: null` (= unrestricted access to every space) on every login. New `users.spaces` column defaults new accounts to `[]` (no access). New admin-only `GET /api/users` / `PATCH /api/users/:id { spaces: [...] }` lets dob-0 grant a signed-in account access to a specific space — same outcome as the `AUTH_IDENTITIES` env-var route, usable for a real account instead of a shared token. See `docs/WCC_MERGE_PLAN.md`. Self-serve "create your own space" onboarding and automated space↔git-repo mirroring were both explicitly deferred — not needed yet.
+- Public spaces: any space can be marked `isPublic: true` (`PATCH /api/spaces/:id`) to skip the login gate for just that space. WCC's page is the existing Present → Code view (paste HTML/CSS/JS, can pull in three.js/gsap from a CDN) — no new schema/panel. Added one thing to the existing sandboxed-preview postMessage bridge: calling `window.diiEnterExhibition()` from inside the pasted page swaps it for the live 3D scene in place, no reload. A generic "Landing" schema/panel was tried and deliberately reverted as overkill for one page. See `docs/WCC_MERGE_PLAN.md`.
+- Real per-space read access control: `GET` reads of spaces/projects actually enforce `isAuthScopeAllowedForSpace` (mirrors the write-side check that already existed), with an `isPublic` bypass. `AuthGate` takes a `requiredSpaceId` prop and shows an "Access restricted" panel instead of silently rendering for an authenticated-but-out-of-scope session. `GUEST_SPACES = ['main']` guest auto-login still works exactly as before — it's just no longer accidentally readable everywhere.
+- Studio nav fixes: the control-cluster header was showing the *project* title labeled as "space name" — now shows the actual space label + project title. Added a "View live" button (opens the public `/<spaceId>` URL in a new tab, only when the project is live). `handleCopyShareLink`'s activity message now includes the actual URL. Studio Hub shows "Space: {label}" above the Projects heading so landing on bare `/studio` (which silently defaults to `main`) is no longer silent.
+- User-scoped sign-in: OAuth (`GitHub`/`Google`) sign-ins used to hardcode `spaces: null` (= unrestricted access to every space) on every login. `users.spaces` column defaults new accounts to `[]` (no access). Admin-only `GET /api/users` / `PATCH /api/users/:id { spaces: [...] }` lets dob-0 grant a signed-in account access to a specific space — same outcome as the `AUTH_IDENTITIES` env-var route, usable for a real account instead of a shared token. See `docs/WCC_MERGE_PLAN.md`. Self-serve "create your own space" onboarding and automated space↔git-repo mirroring were both explicitly deferred — not needed yet.
+- WCC landing page EN/ՀՅ language toggle: switch lives in `WccExperience`, passed down as a controlled prop to both `LandingPage` and `WccExhibition` so the chosen language persists across the landing→3D-scene transition instead of resetting.
 
 ## What is broken / open
 
-- `feature/landing-pages` branch is uncommitted local work — lint/build/full test suite/server-contracts all pass; the read-scope fix and Studio nav fixes were manually verified live (curl + Playwright browser). The new `/api/users` admin endpoints are covered by automated tests only (no real OAuth round-trip exercised — GitHub/Google aren't configured in this dev environment). Commit and do a manual Docker check before merging to `dev`.
 - Known follow-up (not blocking): `GET /api/spaces` (the full space list) still has no scope check — it only returns metadata (ids/labels/flags), not content, but it does reveal which spaces exist to anyone authenticated for any space.
-- `.claude/settings.json` has an uncommitted `enabledPlugins` change (frontend-design, security-guidance) on the main `dev` checkout — needs a commit/push.
+- The `/api/users` admin endpoints are covered by automated tests only — no real OAuth round-trip exercised (GitHub/Google aren't configured in this dev environment).
+- `scripts/ollama/Modelfile.dob-fast` / `Modelfile.dob-deep` are mid-iteration locally (base swapped to `qwen3:8b`, not yet committed) — check `git diff` before assuming the committed `qwen2.5-coder:7b` base is current.
 
 ## Space sync setup (per machine)
 

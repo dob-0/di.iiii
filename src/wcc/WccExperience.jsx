@@ -11,6 +11,7 @@ const LANDING_PATH = '/wcc'
 // mode: 'landing' (2D only) | 'entering' (transition running) | 'scene' (3D only)
 export default function WccExperience({ initialMode = 'landing' }) {
     const [mode, setMode] = useState(initialMode === 'scene' ? 'scene' : 'landing')
+    const [lang, setLang] = useState('en')
     const overlayRef = useRef(null)
     const sceneWrapRef = useRef(null)
     const timelineRef = useRef(null)
@@ -95,7 +96,7 @@ export default function WccExperience({ initialMode = 'landing' }) {
         <div className="wcc-experience">
             {showLanding ? (
                 <div className="wcc-experience__landing">
-                    <LandingPage onEnterExhibition={enterExhibition} />
+                    <LandingPage onEnterExhibition={enterExhibition} lang={lang} onLangChange={setLang} />
                 </div>
             ) : null}
 
@@ -106,7 +107,7 @@ export default function WccExperience({ initialMode = 'landing' }) {
                     style={mode === 'entering' ? { opacity: 0 } : undefined}
                 >
                     <Suspense fallback={null}>
-                        <WccExhibition onExit={exitExhibition} />
+                        <WccExhibition onExit={exitExhibition} lang={lang} onLangChange={setLang} />
                     </Suspense>
                 </div>
             ) : null}

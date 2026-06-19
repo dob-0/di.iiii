@@ -333,6 +333,12 @@
     outline-offset: 4px;
 }
 
+.wcc-language-switch button.is-active {
+    color: #050505;
+    background: #ffffff;
+    border-color: #ffffff;
+}
+
 .wcc-hero {
     position: relative;
     z-index: 3;

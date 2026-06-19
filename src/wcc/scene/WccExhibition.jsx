@@ -194,9 +194,11 @@ function ExhibitionScene({ focusIndex, onSelect }) {
     )
 }
 
-export default function WccExhibition({ onExit }) {
+export default function WccExhibition({ onExit, lang: controlledLang = null, onLangChange = null }) {
     const [focusIndex, setFocusIndex] = useState(null)
-    const [lang, setLang] = useState('en')
+    const [internalLang, setInternalLang] = useState('en')
+    const lang = controlledLang || internalLang
+    const setLang = onLangChange || setInternalLang
     const active = focusIndex === null ? null : artworks[focusIndex]
     const concept = active ? (lang === 'hy' && active.conceptHy ? active.conceptHy : active.concept) : ''
 

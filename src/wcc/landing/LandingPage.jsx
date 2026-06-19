@@ -187,6 +187,20 @@ function EnterExhibitionButton({ className = '', onEnter = null }) {
     )
 }
 
+function LanguageSwitch({ lang, onChange }) {
+    return (
+        <div className="wcc-language-switch" role="group" aria-label="Language">
+            <span>Language</span>
+            <button type="button" className={lang === 'en' ? 'is-active' : ''} onClick={() => onChange('en')}>
+                EN
+            </button>
+            <button type="button" className={lang === 'hy' ? 'is-active' : ''} onClick={() => onChange('hy')}>
+                ՀՅ
+            </button>
+        </div>
+    )
+}
+
 function ScrollArrow({ onClick }) {
     return (
         <button className="wcc-scroll-arrow" type="button" onClick={onClick} aria-label="Scroll to navigation">
@@ -413,7 +427,7 @@ function SectionReveal({ sectionId, onClose }) {
     )
 }
 
-export default function LandingPage({ onEnterExhibition = null }) {
+export default function LandingPage({ onEnterExhibition = null, lang: controlledLang = null, onLangChange = null }) {
     const rootRef = useRef(null)
     const cursorRef = useRef(null)
     const particleLayerRef = useRef(null)
@@ -421,6 +435,9 @@ export default function LandingPage({ onEnterExhibition = null }) {
     const [activeIndex, setActiveIndex] = useState(0)
     const [openSection, setOpenSection] = useState(() => getRouteSection())
     const [ripples, setRipples] = useState([])
+    const [internalLang, setInternalLang] = useState('en')
+    const lang = controlledLang || internalLang
+    const setLang = onLangChange || setInternalLang
 
     const openRouteSection = (sectionId) => {
         if (!routeSectionIds.has(sectionId)) return
@@ -442,6 +459,11 @@ export default function LandingPage({ onEnterExhibition = null }) {
     const scrollLanding = () => {
         const root = rootRef.current
         if (!root) return
+        // A scroll (smooth or native) is already in flight — recomputing the
+        // target off a mid-animation scrollTop restarts the browser's smooth
+        // scroll mid-flight, which fights the ScrollTrigger-pinned nav track
+        // and shows up as the panels glitching/jumping.
+        if (root.classList.contains('is-scrolling')) return
         const viewport = root.clientHeight || window.innerHeight
         const targets = [viewport, viewport * 2.08, root.scrollHeight - viewport]
             .filter((value, index, values) => value > root.scrollTop + 24 && values.indexOf(value) === index)
@@ -672,6 +694,7 @@ export default function LandingPage({ onEnterExhibition = null }) {
             </div>
             <div className="wcc-particle-layer" ref={particleLayerRef} aria-hidden="true" />
             <div className="wcc-cursor" ref={cursorRef} aria-hidden="true" />
+            <LanguageSwitch lang={lang} onChange={setLang} />
             <ScrollArrow onClick={scrollLanding} />
             <LandingHero onEnter={onEnterExhibition} />
             <HorizontalNavigation
