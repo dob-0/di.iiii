@@ -1,7 +1,9 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid } from '@react-three/drei'
+import { XR } from '@react-three/xr'
 import * as THREE from 'three'
+import { useXrAr } from '../hooks/useXrAr.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
     buildProjectEventsUrl,
@@ -553,6 +555,7 @@ export default function LiveProjectScene({
     title = ''
 }) {
     const doc = useLiveProjectDocument(projectId)
+    const xr = useXrAr()
     const [nearestLabel, setNearestLabel] = useState(null)
     const [isLocked, setIsLocked] = useState(false)
     const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
@@ -630,6 +633,7 @@ export default function LiveProjectScene({
                 gl={{ antialias: true }}
                 style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none' }}
             >
+                <XR store={xr.xrStore}>
                 <color attach="background" args={[backgroundColor]} />
                 <fog attach="fog" args={[backgroundColor, 8, 50]} />
                 <ambientLight color={ambient.color} intensity={ambient.intensity} />
@@ -655,6 +659,7 @@ export default function LiveProjectScene({
                 ) : (
                     <IdleOrbit center={center} />
                 )}
+                </XR>
             </Canvas>
 
             {showChrome && (
@@ -695,6 +700,28 @@ export default function LiveProjectScene({
                             onClick={() => setFlyMode((f) => !f)}
                         >
                             {flyMode ? 'Walk' : 'Fly'}
+                        </button>
+                    )}
+                    {(xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
+                        <div style={{ position: 'absolute', bottom: 40, right: 130, display: 'flex', gap: 8, zIndex: 11 }}>
+                            {xr.supportedXrModes.vr && (
+                                <button type="button" className="live-scene-exit" onClick={() => xr.handleEnterXrSession('vr')}>
+                                    Enter VR
+                                </button>
+                            )}
+                            {xr.supportedXrModes.ar && (
+                                <button type="button" className="live-scene-exit" onClick={() => xr.handleEnterXrSession('ar')}>
+                                    Enter AR
+                                </button>
+                            )}
+                        </div>
+                    )}
+                    {xr.isXrPresenting && (
+                        <button type="button" className="live-scene-exit"
+                            style={{ position: 'absolute', bottom: 40, right: 130, zIndex: 11 }}
+                            onClick={xr.handleExitXrSession}
+                        >
+                            Exit XR
                         </button>
                     )}
                 </>

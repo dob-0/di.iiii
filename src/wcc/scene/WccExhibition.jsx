@@ -1,7 +1,9 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, Text, Billboard } from '@react-three/drei'
+import { XR } from '@react-three/xr'
 import * as THREE from 'three'
+import { useXrAr } from '../../hooks/useXrAr.js'
 import { createProjectSyncService } from '../../project/services/projectSyncService.js'
 import {
     buildProjectEventsUrl,
@@ -39,7 +41,7 @@ const ARTIST_IDS = ARTISTS.map((a) => a.id)
 // ── Scene constants ───────────────────────────────────────────────────────────
 
 const RING_RADIUS        = 38
-const ZONE_LABEL_DIST    = 16
+const ZONE_LABEL_DIST    = 10
 const EYE_HEIGHT         = 1.6
 const WALK_MAX_SPEED     = 5.2
 const FLY_SPEED          = 4.5
@@ -279,17 +281,26 @@ function ZoneGroup({ artist, doc, center }) {
 
 // Shown at a zone's position while its project doc is still fetching.
 function ZonePlaceholder({ center }) {
-    const ringRef = useRef(null)
+    const ringRef  = useRef(null)
+    const dotRef   = useRef(null)
     useFrame((state) => {
-        if (!ringRef.current) return
         const t = state.clock.getElapsedTime()
-        ringRef.current.material.opacity = 0.08 + Math.sin(t * 1.4 + center.x) * 0.06
+        if (ringRef.current)  ringRef.current.material.opacity  = 0.28 + Math.sin(t * 1.6 + center.x) * 0.14
+        if (dotRef.current)   dotRef.current.material.opacity   = 0.55 + Math.sin(t * 2.2 + center.z) * 0.25
     })
     return (
-        <mesh ref={ringRef} position={[center.x, 0.02, center.z]} rotation={[-Math.PI / 2, 0, 0]}>
-            <ringGeometry args={[ZONE_LABEL_DIST - 1, ZONE_LABEL_DIST, 64]} />
-            <meshBasicMaterial color={0xd90000} transparent opacity={0.1} depthWrite={false} side={THREE.DoubleSide} />
-        </mesh>
+        <group>
+            {/* pulsing ring marking the zone boundary */}
+            <mesh ref={ringRef} position={[center.x, 0.02, center.z]} rotation={[-Math.PI / 2, 0, 0]}>
+                <ringGeometry args={[ZONE_LABEL_DIST - 0.6, ZONE_LABEL_DIST, 64]} />
+                <meshBasicMaterial color={0xd90000} transparent opacity={0.28} depthWrite={false} side={THREE.DoubleSide} />
+            </mesh>
+            {/* small pulsing dot at center so the zone is visible from far away */}
+            <mesh ref={dotRef} position={[center.x, 0.03, center.z]} rotation={[-Math.PI / 2, 0, 0]}>
+                <circleGeometry args={[0.6, 32]} />
+                <meshBasicMaterial color={0xd90000} transparent opacity={0.6} depthWrite={false} />
+            </mesh>
+        </group>
     )
 }
 
@@ -710,6 +721,7 @@ export default function WccExhibition({ onExit }) {
         return () => window.removeEventListener('keydown', onKey)
     }, [])
 
+    const xr = useXrAr()
     const loadedCount = Object.values(docs).filter(Boolean).length
     const allLoaded   = loadedCount === ARTISTS.length
 
@@ -722,6 +734,7 @@ export default function WccExhibition({ onExit }) {
                 gl={{ antialias: true }}
                 style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none' }}
             >
+                <XR store={xr.xrStore}>
                 <color attach="background" args={[DEFAULT_BG]} />
                 <fog attach="fog" args={[DEFAULT_BG, 10, 110]} />
                 <ambientLight ref={ambientRef} color={DEFAULT_AMBIENT.color} intensity={DEFAULT_AMBIENT.intensity} />
@@ -758,6 +771,7 @@ export default function WccExhibition({ onExit }) {
                         />
                     )
                 })}
+                </XR>
             </Canvas>
 
             {!allLoaded && (
@@ -797,6 +811,28 @@ export default function WccExhibition({ onExit }) {
             >
                 {flyMode ? 'Walk' : 'Fly'}
             </button>
+            {(xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
+                <div style={{ position: 'absolute', bottom: 40, right: 130, display: 'flex', gap: 8, zIndex: 11 }}>
+                    {xr.supportedXrModes.vr && (
+                        <button type="button" className="live-scene-exit" onClick={() => xr.handleEnterXrSession('vr')}>
+                            Enter VR
+                        </button>
+                    )}
+                    {xr.supportedXrModes.ar && (
+                        <button type="button" className="live-scene-exit" onClick={() => xr.handleEnterXrSession('ar')}>
+                            Enter AR
+                        </button>
+                    )}
+                </div>
+            )}
+            {xr.isXrPresenting && (
+                <button type="button" className="live-scene-exit"
+                    style={{ position: 'absolute', bottom: 40, right: 130, zIndex: 11 }}
+                    onClick={xr.handleExitXrSession}
+                >
+                    Exit XR
+                </button>
+            )}
         </div>
     )
 }
