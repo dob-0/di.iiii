@@ -197,20 +197,6 @@ function EnterExhibitionButton({ className = '', onEnter = null }) {
     )
 }
 
-function LanguageSwitch({ lang, onChange }) {
-    return (
-        <div className="wcc-language-switch" role="group" aria-label="Language">
-            <span>Language</span>
-            <button type="button" className={lang === 'en' ? 'is-active' : ''} onClick={() => onChange('en')}>
-                EN
-            </button>
-            <button type="button" className={lang === 'hy' ? 'is-active' : ''} onClick={() => onChange('hy')}>
-                ՀՅ
-            </button>
-        </div>
-    )
-}
-
 function ScrollArrow({ onClick }) {
     return (
         <button className="wcc-scroll-arrow" type="button" onClick={onClick} aria-label="Scroll to navigation">
@@ -758,7 +744,6 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
             </div>
             <div className="wcc-particle-layer" ref={particleLayerRef} aria-hidden="true" />
             <div className="wcc-cursor" ref={cursorRef} aria-hidden="true" />
-            <LanguageSwitch lang={lang} onChange={setLang} />
             <ScrollArrow onClick={scrollLanding} />
             <LandingHero onEnter={onEnterExhibition} lang={lang} />
             <button
