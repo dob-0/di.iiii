@@ -4,7 +4,7 @@ import useAuthSession from '../hooks/useAuthSession.js'
 import { getApiAuthProviders, getOAuthUrl, hasServerApi } from '../services/apiClient.js'
 import AccountButton from './AccountButton.jsx'
 
-export default function AuthGate({ children, requiredSpaceId = null }) {
+export default function AuthGate({ children, requiredSpaceId = null, showAccountButton = true }) {
     const authSession = useAuthSession()
     const { requireAuth, authenticated, loading, error, refresh, login } = authSession
     const [token, setToken] = useState('')
@@ -76,7 +76,7 @@ export default function AuthGate({ children, requiredSpaceId = null }) {
         return (
             <>
                 {children}
-                <AccountButton authState={authSession} onLogout={refresh} />
+                {showAccountButton && <AccountButton authState={authSession} onLogout={refresh} />}
             </>
         )
     }
