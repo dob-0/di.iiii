@@ -76,7 +76,10 @@ export const computeFramingCamera = (sphere, options = {}) => {
         : getFallbackDirection()
 
     const verticalHalfFov = THREE.MathUtils.degToRad(fov / 2)
-    const distance = radius / Math.sin(Math.max(0.01, verticalHalfFov))
+    const fitDistance = radius / Math.sin(Math.max(0.01, verticalHalfFov))
+    const distance = Number.isFinite(options.maxDistance)
+        ? Math.min(fitDistance, options.maxDistance)
+        : fitDistance
     const position = target.clone().add(direction.multiplyScalar(distance))
 
     return {
