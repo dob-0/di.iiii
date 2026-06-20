@@ -679,7 +679,11 @@ function useWccProjectDocuments(ids) {
                 if (cancelled) return
                 versionRefs.current[id] = Number(res?.version) || 0
                 setDoc(id, normalizeProjectDocument(res?.document || res || {}))
-            } catch { /* leave null */ }
+            } catch {
+                // Project unavailable (404, auth, network) — mark as empty so
+                // the progress bar advances and the placeholder ring is replaced.
+                if (!cancelled) setDoc(id, normalizeProjectDocument({}))
+            }
         }
 
         ensureGuestSession().then(() => {
