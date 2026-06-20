@@ -246,10 +246,45 @@ function HubMarker() {
     )
 }
 
+// ── Exhibition-only entity corrections ───────────────────────────────────────
+// Artists authored content in their own LiveProjectScene (unbounded, local
+// coords). The ring puts zones 38m out with a 10m radius. These overrides fix
+// placement without touching the artists' saved project data.
+
+const ZONE_OVERRIDES = {
+    // Meri has 3 copies of the same video placed ±14-16m apart — two land
+    // inside Mery's and Margarita's zones. Keep only the primary (no "copy").
+    'meri-andreasyan': {
+        filter: (e) => !e.name?.toLowerCase().includes('copy'),
+    },
+    // Arthur placed his video at y=7.1m in personal space; at eye height (1.8m)
+    // the large scale reads as intentional cinema instead of floating debris.
+    'arthur': {
+        transform: (e) => {
+            const tr = e.components?.transform || {}
+            const pos = tr.position || [0, 0, 0]
+            return { ...e, components: { ...e.components, transform: { ...tr, position: [pos[0], 1.8, pos[2]] } } }
+        },
+    },
+    // Ani's entities are scale=1. At 38m approach distance they're invisible.
+    'ani-khachatryan': {
+        transform: (e) => {
+            const tr = e.components?.transform || {}
+            return { ...e, components: { ...e.components, transform: { ...tr, scale: [2.5, 2.5, 2.5] } } }
+        },
+    },
+}
+
 // ── Per-zone group (memoises its entity + asset lists) ────────────────────────
 
 function ZoneGroup({ artist, doc, center }) {
-    const entities = useMemo(() => doc?.entities || [], [doc])
+    const overrides = ZONE_OVERRIDES[artist.id]
+    const entities = useMemo(() => {
+        let list = doc?.entities || []
+        if (overrides?.filter) list = list.filter(overrides.filter)
+        if (overrides?.transform) list = list.map(overrides.transform)
+        return list
+    }, [doc, overrides])
     const assetMap = useMemo(
         () => new Map((doc?.assets || []).map((a) => [a.id, a])),
         [doc],
