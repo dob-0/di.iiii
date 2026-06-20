@@ -19,14 +19,18 @@ import VideoObject from '../objectComponents/VideoObject.jsx'
 import ModelObject from '../objectComponents/ModelObject.jsx'
 import './liveProjectScene.css'
 
-const WALK_MAX_SPEED = 4.5
+const WALK_MAX_SPEED = 5.2
+const FLY_SPEED = 4.5
 const WALK_ACCEL = 14
 const WALK_FRICTION = 10
 const TURN_SPEED = 1.6
-const DRAG_LOOK_SENSITIVITY = 0.0035
+const POINTER_LOCK_SENSITIVITY = 0.0022
+const TOUCH_LOOK_SENSITIVITY = 0.0038
 const PITCH_LIMIT = 0.55
 const EYE_HEIGHT = 1.6
-const BOUNDS_MARGIN = 7
+const JOY_RADIUS = 45
+const BOUNDS_MARGIN = 22
+const BOUNDS_MIN_HALF = 18
 const PARTICLE_COUNT = 900
 const IDLE_ORBIT_RADIUS = 8
 const IDLE_ORBIT_HEIGHT = 3.5
@@ -215,24 +219,32 @@ function AmbientField({ center }) {
     )
 }
 
-// Free-roam walk: W/S forward-back, A/D or arrows turn, click-drag to look.
-function Walker({ playerRef, onNearestZone, entities, bounds }) {
+// Free-roam walk: WASD + arrows move/turn; desktop uses pointer lock for look;
+// mobile uses touch outside the joystick zone for look.
+function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVisRef, joyThumbRef, onLockChange, flyMode }) {
     const { camera, gl } = useThree()
     const keysRef = useRef(new Set())
     const speedRef = useRef(0)
     const bobPhaseRef = useRef(0)
-    const draggingRef = useRef(false)
+    const lockedRef = useRef(false)
+    const touchLookRef = useRef(null)
+    const touchMoveRef = useRef(null)
+    const joyBaseRef = useRef({ x: 0, y: 0 })
+    const onLockChangeRef = useRef(onLockChange)
+    onLockChangeRef.current = onLockChange
+    const flyRef = useRef(flyMode)
+    flyRef.current = flyMode
 
     useEffect(() => {
         const keys = keysRef.current
-        const moveKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright']
-        const onKeyDown = (event) => {
-            const key = event.key.toLowerCase()
+        const moveKeys = ['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' ', 'q', 'e', 'c']
+        const onKeyDown = (e) => {
+            const key = e.key.toLowerCase()
             if (!moveKeys.includes(key)) return
-            event.preventDefault()
+            if (key === ' ') e.preventDefault()
             keys.add(key)
         }
-        const onKeyUp = (event) => keys.delete(event.key.toLowerCase())
+        const onKeyUp = (e) => keys.delete(e.key.toLowerCase())
         window.addEventListener('keydown', onKeyDown)
         window.addEventListener('keyup', onKeyUp)
         return () => {
@@ -245,48 +257,138 @@ function Walker({ playerRef, onNearestZone, entities, bounds }) {
     useEffect(() => {
         const el = gl.domElement
         const player = playerRef.current
-        const onPointerDown = () => {
-            draggingRef.current = true
-            el.style.cursor = 'grabbing'
-        }
-        const onPointerUp = () => {
-            draggingRef.current = false
-            el.style.cursor = 'grab'
-        }
-        const onPointerMove = (event) => {
-            if (!draggingRef.current) return
-            player.yaw -= event.movementX * DRAG_LOOK_SENSITIVITY
-            player.pitch = THREE.MathUtils.clamp(
-                player.pitch - event.movementY * DRAG_LOOK_SENSITIVITY,
-                -PITCH_LIMIT,
-                PITCH_LIMIT
-            )
-        }
-        el.style.cursor = 'grab'
-        el.addEventListener('pointerdown', onPointerDown)
-        window.addEventListener('pointerup', onPointerUp)
-        window.addEventListener('pointermove', onPointerMove)
-        return () => {
-            el.style.cursor = ''
-            el.removeEventListener('pointerdown', onPointerDown)
-            window.removeEventListener('pointerup', onPointerUp)
-            window.removeEventListener('pointermove', onPointerMove)
-        }
-    }, [gl, playerRef])
+        const isTouch = window.matchMedia('(pointer: coarse)').matches
 
-    useFrame((state, delta) => {
+        if (!isTouch) {
+            // Desktop: pointer lock
+            const onLockChange = () => {
+                const locked = document.pointerLockElement === el
+                lockedRef.current = locked
+                el.style.cursor = locked ? 'none' : 'crosshair'
+                onLockChangeRef.current?.(locked)
+            }
+            const onPointerDown = () => {
+                if (!lockedRef.current) el.requestPointerLock()
+            }
+            const onMouseMove = (e) => {
+                if (!lockedRef.current) return
+                player.yaw -= e.movementX * POINTER_LOCK_SENSITIVITY
+                player.pitch = THREE.MathUtils.clamp(
+                    player.pitch - e.movementY * POINTER_LOCK_SENSITIVITY,
+                    -PITCH_LIMIT,
+                    PITCH_LIMIT
+                )
+            }
+            el.style.cursor = 'crosshair'
+            el.addEventListener('pointerdown', onPointerDown)
+            document.addEventListener('pointerlockchange', onLockChange)
+            document.addEventListener('mousemove', onMouseMove)
+            return () => {
+                if (document.pointerLockElement === el) document.exitPointerLock()
+                el.style.cursor = ''
+                el.removeEventListener('pointerdown', onPointerDown)
+                document.removeEventListener('pointerlockchange', onLockChange)
+                document.removeEventListener('mousemove', onMouseMove)
+            }
+        } else {
+            // Mobile: floating joystick on the left half (spawns at touch point,
+            // no fixed dead zone), right half is always look.
+            const showJoy = (x, y) => {
+                joyBaseRef.current = { x, y }
+                if (joyVisRef?.current) {
+                    joyVisRef.current.style.left = `${x - 45}px`
+                    joyVisRef.current.style.top = `${y - 45}px`
+                    joyVisRef.current.style.bottom = 'auto'
+                    joyVisRef.current.style.opacity = '1'
+                }
+                if (joyThumbRef?.current) joyThumbRef.current.style.transform = 'translate(0,0)'
+            }
+            const hideJoy = () => {
+                if (joyVisRef?.current) joyVisRef.current.style.opacity = '0'
+                if (joystickRef) { joystickRef.current.x = 0; joystickRef.current.y = 0 }
+            }
+            const updateJoy = (tx, ty) => {
+                const dx = tx - joyBaseRef.current.x
+                const dy = ty - joyBaseRef.current.y
+                const dist = Math.hypot(dx, dy)
+                const sc = Math.min(dist, JOY_RADIUS) / Math.max(dist, 0.001)
+                if (joyThumbRef?.current) joyThumbRef.current.style.transform = `translate(${dx * sc}px,${dy * sc}px)`
+                if (joystickRef) {
+                    joystickRef.current.x = (dx * sc) / JOY_RADIUS
+                    joystickRef.current.y = (dy * sc) / JOY_RADIUS
+                }
+            }
+            const onTouchStart = (e) => {
+                for (const t of e.changedTouches) {
+                    const isLeft = t.clientX < el.clientWidth / 2
+                    if (isLeft && !touchMoveRef.current) {
+                        touchMoveRef.current = { id: t.identifier }
+                        showJoy(t.clientX, t.clientY)
+                    } else if (!isLeft && !touchLookRef.current) {
+                        touchLookRef.current = { id: t.identifier, lastX: t.clientX, lastY: t.clientY }
+                    }
+                }
+            }
+            const onTouchMove = (e) => {
+                e.preventDefault()
+                for (const t of e.changedTouches) {
+                    if (touchMoveRef.current?.id === t.identifier) {
+                        updateJoy(t.clientX, t.clientY)
+                    } else if (touchLookRef.current?.id === t.identifier) {
+                        player.yaw -= (t.clientX - touchLookRef.current.lastX) * TOUCH_LOOK_SENSITIVITY
+                        player.pitch = THREE.MathUtils.clamp(
+                            player.pitch - (t.clientY - touchLookRef.current.lastY) * TOUCH_LOOK_SENSITIVITY,
+                            -PITCH_LIMIT,
+                            PITCH_LIMIT
+                        )
+                        touchLookRef.current.lastX = t.clientX
+                        touchLookRef.current.lastY = t.clientY
+                    }
+                }
+            }
+            const onTouchEnd = (e) => {
+                for (const t of e.changedTouches) {
+                    if (touchMoveRef.current?.id === t.identifier) { touchMoveRef.current = null; hideJoy() }
+                    else if (touchLookRef.current?.id === t.identifier) touchLookRef.current = null
+                }
+            }
+            el.addEventListener('touchstart', onTouchStart, { passive: false })
+            el.addEventListener('touchmove', onTouchMove, { passive: false })
+            el.addEventListener('touchend', onTouchEnd)
+            el.addEventListener('touchcancel', onTouchEnd)
+            return () => {
+                el.removeEventListener('touchstart', onTouchStart)
+                el.removeEventListener('touchmove', onTouchMove)
+                el.removeEventListener('touchend', onTouchEnd)
+                el.removeEventListener('touchcancel', onTouchEnd)
+            }
+        }
+    }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef])
+
+    useFrame((_, delta) => {
         const keys = keysRef.current
         const player = playerRef.current
+        const joy = joystickRef?.current || { x: 0, y: 0 }
+        const fly = flyRef.current
         if (player.pitch === undefined) player.pitch = 0
+        if (player.altY === undefined) player.altY = EYE_HEIGHT
 
         let turn = 0
         if (keys.has('a') || keys.has('arrowleft')) turn += 1
         if (keys.has('d') || keys.has('arrowright')) turn -= 1
+        turn -= joy.x
         player.yaw += turn * TURN_SPEED * delta
 
         let forward = 0
         if (keys.has('w') || keys.has('arrowup')) forward += 1
         if (keys.has('s') || keys.has('arrowdown')) forward -= 1
+        forward -= joy.y
+
+        let vert = 0
+        if (fly) {
+            if (keys.has(' ') || keys.has('q')) vert += 1
+            if (keys.has('e') || keys.has('c')) vert -= 1
+        }
 
         const targetSpeed = forward * WALK_MAX_SPEED
         const accel = forward !== 0 ? WALK_ACCEL : WALK_FRICTION
@@ -294,22 +396,32 @@ function Walker({ playerRef, onNearestZone, entities, bounds }) {
         if (Math.abs(speedRef.current) < 0.001) speedRef.current = 0
 
         if (speedRef.current !== 0) {
-            const nextX = player.x + Math.sin(player.yaw) * speedRef.current * delta
-            const nextZ = player.z + Math.cos(player.yaw) * speedRef.current * delta
+            const pitch = fly ? player.pitch : 0
+            const cosP = fly ? Math.cos(pitch) : 1
+            const sinP = fly ? Math.sin(pitch) : 0
+            const nextX = player.x + Math.sin(player.yaw) * speedRef.current * cosP * delta
+            const nextZ = player.z + Math.cos(player.yaw) * speedRef.current * cosP * delta
             player.x = THREE.MathUtils.clamp(nextX, bounds.minX, bounds.maxX)
             player.z = THREE.MathUtils.clamp(nextZ, bounds.minZ, bounds.maxZ)
-            bobPhaseRef.current += delta * Math.abs(speedRef.current) * 1.8
+            if (fly) player.altY = THREE.MathUtils.clamp(player.altY + speedRef.current * sinP * delta, -2, 60)
+            bobPhaseRef.current += delta * Math.abs(speedRef.current) * (fly ? 0 : 1.8)
+        }
+        if (fly && vert !== 0) {
+            player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, -2, 60)
+        }
+        if (!fly) {
+            player.altY = THREE.MathUtils.lerp(player.altY, EYE_HEIGHT, Math.min(1, delta * 3))
         }
 
-        const bobAmount = Math.sin(bobPhaseRef.current) * 0.05 * Math.min(1, Math.abs(speedRef.current) / WALK_MAX_SPEED)
+        const bobAmount = fly ? 0 : Math.sin(bobPhaseRef.current) * 0.05 * Math.min(1, Math.abs(speedRef.current) / WALK_MAX_SPEED)
         const lookDir = tmpVec.set(
             Math.sin(player.yaw) * Math.cos(player.pitch),
             Math.sin(player.pitch),
             Math.cos(player.yaw) * Math.cos(player.pitch)
         )
 
-        camera.position.set(player.x, EYE_HEIGHT + bobAmount, player.z)
-        tmpLook.set(player.x + lookDir.x, EYE_HEIGHT + bobAmount + lookDir.y, player.z + lookDir.z)
+        camera.position.set(player.x, player.altY + bobAmount, player.z)
+        tmpLook.set(player.x + lookDir.x, player.altY + bobAmount + lookDir.y, player.z + lookDir.z)
         camera.lookAt(tmpLook)
 
         if (onNearestZone && entities.length) {
@@ -330,6 +442,16 @@ function Walker({ playerRef, onNearestZone, entities, bounds }) {
     })
 
     return null
+}
+
+// Purely visual — Walker owns all touch handling so it can arbitrate
+// floating-joystick vs. look touches on the same canvas.
+function MobileJoystick({ outerRef, thumbRef }) {
+    return (
+        <div className="live-scene-joystick" ref={outerRef}>
+            <div className="live-scene-joystick-thumb" ref={thumbRef} />
+        </div>
+    )
 }
 
 // Decorative, click-through camera: slow orbit around the scene centroid.
@@ -432,7 +554,20 @@ export default function LiveProjectScene({
 }) {
     const doc = useLiveProjectDocument(projectId)
     const [nearestLabel, setNearestLabel] = useState(null)
-    const playerRef = useRef({ x: 0, z: 6, yaw: Math.PI, pitch: 0 })
+    const [isLocked, setIsLocked] = useState(false)
+    const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
+    const [flyMode, setFlyMode] = useState(false)
+    const joystickRef = useRef({ x: 0, y: 0 })
+    const joyVisRef = useRef(null)
+    const joyThumbRef = useRef(null)
+    const playerRef = useRef({ x: 0, z: 6, yaw: Math.PI, pitch: 0, altY: EYE_HEIGHT })
+
+    useEffect(() => {
+        if (!interactive) return undefined
+        const onKey = (e) => { if (e.key.toLowerCase() === 'f') setFlyMode((f) => !f) }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [interactive])
 
     const entities = useMemo(() => doc?.entities || [], [doc?.entities])
     const assetMap = useMemo(() => new Map((doc?.assets || []).map((asset) => [asset.id, asset])), [doc?.assets])
@@ -451,12 +586,9 @@ export default function LiveProjectScene({
 
     const bounds = useMemo(() => {
         if (!entities.length) {
-            return { minX: -10, maxX: 10, minZ: -10, maxZ: 10 }
+            return { minX: -BOUNDS_MIN_HALF, maxX: BOUNDS_MIN_HALF, minZ: -BOUNDS_MIN_HALF, maxZ: BOUNDS_MIN_HALF }
         }
-        let minX = Infinity
-        let maxX = -Infinity
-        let minZ = Infinity
-        let maxZ = -Infinity
+        let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity
         for (const entity of entities) {
             const pos = entity.components?.transform?.position
             if (!Array.isArray(pos)) continue
@@ -465,11 +597,13 @@ export default function LiveProjectScene({
             minZ = Math.min(minZ, pos[2])
             maxZ = Math.max(maxZ, pos[2])
         }
+        const cx = (minX + maxX) / 2
+        const cz = (minZ + maxZ) / 2
         return {
-            minX: minX - BOUNDS_MARGIN,
-            maxX: maxX + BOUNDS_MARGIN,
-            minZ: minZ - BOUNDS_MARGIN,
-            maxZ: maxZ + BOUNDS_MARGIN
+            minX: Math.min(minX - BOUNDS_MARGIN, cx - BOUNDS_MIN_HALF),
+            maxX: Math.max(maxX + BOUNDS_MARGIN, cx + BOUNDS_MIN_HALF),
+            minZ: Math.min(minZ - BOUNDS_MARGIN, cz - BOUNDS_MIN_HALF),
+            maxZ: Math.max(maxZ + BOUNDS_MARGIN, cz + BOUNDS_MIN_HALF)
         }
     }, [entities])
 
@@ -507,7 +641,17 @@ export default function LiveProjectScene({
                 ))}
                 {showEntities && gateEntity ? <GateGlow entity={gateEntity} /> : null}
                 {interactive ? (
-                    <Walker playerRef={playerRef} onNearestZone={setNearestLabel} entities={entities} bounds={bounds} />
+                    <Walker
+                        playerRef={playerRef}
+                        onNearestZone={setNearestLabel}
+                        entities={entities}
+                        bounds={bounds}
+                        joystickRef={joystickRef}
+                        joyVisRef={joyVisRef}
+                        joyThumbRef={joyThumbRef}
+                        onLockChange={setIsLocked}
+                        flyMode={flyMode}
+                    />
                 ) : (
                     <IdleOrbit center={center} />
                 )}
@@ -515,15 +659,44 @@ export default function LiveProjectScene({
 
             {showChrome && (
                 <>
+                    <div
+                        className="live-scene-loading"
+                        style={{ opacity: doc ? 0 : 1, pointerEvents: doc ? 'none' : 'all' }}
+                    >
+                        <div className="live-scene-loading-ring" />
+                    </div>
+
                     <header className="live-scene-chrome">
                         <button type="button" className="live-scene-exit" onClick={onExit}>
-                            ← Exit exhibition
+                            ← Exit
                         </button>
                         <span className="live-scene-title">
                             {title}{nearestLabel ? ` · ${nearestLabel}` : ''}
                         </span>
                     </header>
-                    <p className="live-scene-hint">Walk (W/S) · Turn (A/D or ←/→) · Drag to look</p>
+
+                    {interactive && !isMobile && !isLocked && (
+                        <p className="live-scene-hint live-scene-hint--lock">Click to explore</p>
+                    )}
+                    {interactive && !isMobile && isLocked && (
+                        <p className="live-scene-hint">
+                            WASD · move &nbsp;·&nbsp; Mouse · look &nbsp;·&nbsp; F · {flyMode ? 'walk' : 'fly'}
+                            {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
+                            &nbsp;·&nbsp; ESC · release
+                        </p>
+                    )}
+                    {interactive && isMobile && (
+                        <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />
+                    )}
+                    {interactive && (
+                        <button
+                            type="button"
+                            className={`live-scene-fly-btn${flyMode ? ' active' : ''}`}
+                            onClick={() => setFlyMode((f) => !f)}
+                        >
+                            {flyMode ? 'Walk' : 'Fly'}
+                        </button>
+                    )}
                 </>
             )}
         </>

@@ -287,13 +287,17 @@ export const normalizeEntity = (entity = {}) => {
             position: ensureVector(transformSource.position, defaultComponents.transform.position),
             rotation: ensureVector(transformSource.rotation, defaultComponents.transform.rotation),
             scale: ensureVector(transformSource.scale, defaultComponents.transform.scale)
-        },
-        appearance: {
+        }
+    }
+    if (defaultComponents.appearance) {
+        nextComponents.appearance = {
             ...defaultComponents.appearance,
             ...appearanceSource,
             color: ensureString(appearanceSource.color, defaultComponents.appearance.color),
             opacity: Math.min(1, Math.max(0, ensureNumber(appearanceSource.opacity, defaultComponents.appearance.opacity)))
         }
+    } else {
+        delete nextComponents.appearance
     }
     if (nextComponents.primitive?.size) {
         nextComponents.primitive.size = ensureVector(nextComponents.primitive.size, [1, 1, 1])
