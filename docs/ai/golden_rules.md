@@ -314,3 +314,24 @@ The fix here: `AuthGate` renders `<AccountButton>` as a sibling to its children.
 **Why:** Locked in 2026-06-19 as the reference look-and-feel after reviewing the staging landing page. Prevents future sessions from drifting to ad-hoc colors/effects on new public-facing screens.
 
 **Files:** [`docs/ai/design-baseline.md`](design-baseline.md) (full color/typography/scene spec), `src/landing/LandingPage.jsx`, `src/landing/landing.css`, `src/styles/base.css`
+
+---
+
+### UI: two surface families — never mix them
+
+**Rule:** Every visual element in the studio belongs to one of two families. Copy values from `docs/ai/ui-system.md`. Never derive a new rgba value — map to the nearest existing one.
+
+**Panel family** (floating panels, cluster, dialogs):
+- Background: `rgba(4, 6, 9, 0.92)` · Blur: `blur(16px)` · Radius: `6–7px` · Shadow: `0 12px 40px rgba(0,0,0,0.55)`
+
+**Viewport button family** (`?`, fullscreen, account, pane controls):
+- Background: `rgba(15, 23, 34, 0.55)` · Blur: `blur(6px)` · Radius: `6px` · Size: `30×30px`
+- Hover: bg `rgba(15,23,34,0.82)` · border `rgba(255,255,255,0.35)` · color `#fff`
+
+**Why:** Mixing the two families was the source of every "looks off" report in studio UI sessions. The panel family is opaque/anchored; the button family is translucent/embedded-in-scene. They serve different purposes and must not share values.
+
+**Viewport corner zones (locked):**
+- Top-right: gizmo only — `top: 10px; right: 10px` (pane-absolute)
+- Bottom-right stack (pane-absolute, `right: 14px`): account `bottom:86`, `?` `bottom:48`, fullscreen `bottom:14`
+
+**Files:** `docs/ai/ui-system.md`, `src/studio/styles/studio.css`, `src/components/AccountButton.jsx`, `src/studio/components/StudioViewport.jsx`
