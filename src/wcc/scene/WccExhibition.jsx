@@ -774,17 +774,20 @@ export default function WccExhibition({ onExit }) {
                 </XR>
             </Canvas>
 
-            {!allLoaded && (
+            <div style={{
+                position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+                zIndex: 20, pointerEvents: 'none',
+                opacity: allLoaded ? 0 : 1,
+                transition: 'opacity 0.8s ease',
+            }}>
                 <div style={{
-                    position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)',
-                    display: 'flex', alignItems: 'center', gap: 10, pointerEvents: 'none', zIndex: 8,
-                }}>
-                    <div className="live-scene-loading-ring" style={{ width: 18, height: 18, borderWidth: 1.5 }} />
-                    <span style={{ fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>
-                        {loadedCount} / {ARTISTS.length}
-                    </span>
-                </div>
-            )}
+                    height: '100%',
+                    width: `${(loadedCount / ARTISTS.length) * 100}%`,
+                    background: '#d90000',
+                    transition: 'width 0.4s ease',
+                    boxShadow: '0 0 6px rgba(217,0,0,0.8)',
+                }} />
+            </div>
 
             <header className="live-scene-chrome">
                 <button type="button" className="live-scene-exit" onClick={onExit}>← Exit</button>
