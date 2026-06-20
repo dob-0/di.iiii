@@ -292,16 +292,21 @@ const buildAuthState = ({
   spaces = undefined,
   session = null,
   reason = null
-} = {}) => ({
-  authenticated: Boolean(authenticated),
-  type: type || null,
-  role: normalizeAuthRole(role, null),
-  subject: subject || null,
-  label: label || null,
-  spaces: normalizeAuthScopeSpaces(spaces, null),
-  ...(session ? { session } : {}),
-  ...(reason ? { reason } : {})
-})
+} = {}) => {
+  const normalizedRole = normalizeAuthRole(role, null)
+  return {
+    authenticated: Boolean(authenticated),
+    type: type || null,
+    role: normalizedRole,
+    subject: subject || null,
+    label: label || null,
+    // Admins are unrestricted by space scope — matches role semantics everywhere
+    // else in the app (admin is a superset of editor/viewer, not a sibling scope).
+    spaces: normalizedRole === 'admin' ? null : normalizeAuthScopeSpaces(spaces, null),
+    ...(session ? { session } : {}),
+    ...(reason ? { reason } : {})
+  }
+}
 
 const readAuthToken = (req) => {
   const header = req.get('authorization')
