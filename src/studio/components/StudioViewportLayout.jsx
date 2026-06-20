@@ -146,7 +146,9 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     onCursorLeave={shared.onCursorLeave}
                     xrStore={shared.xrStore}
                     editMode={shared.editMode}
+                    setEditMode={shared.setEditMode}
                     gizmoMode={shared.gizmoMode}
+                    setGizmoMode={shared.setGizmoMode}
                     gizmoAxis={shared.gizmoAxis}
                     gizmoVisible={shared.gizmoVisible}
                     transformOp={shared.transformOp}

@@ -911,7 +911,7 @@ export default function StudioViewport({
                     title="Keyboard shortcuts (Shift+?)"
                     style={{
                         position: 'absolute',
-                        bottom: 50,
+                        bottom: 58,
                         right: 14,
                         zIndex: 10,
                         width: 30,

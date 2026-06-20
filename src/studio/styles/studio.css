@@ -1150,7 +1150,7 @@
 /* ── View label (bottom-left like Blender) ── */
 .svl-view-label {
     position: absolute;
-    bottom: 12px;
+    bottom: 54px;
     left: 14px;
     z-index: 10;
     font-size: 10px;
