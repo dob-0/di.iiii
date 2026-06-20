@@ -493,6 +493,14 @@ router.delete('/api/auth/session', (req, res) => {
   res.status(204).end()
 })
 
+// Dynamic, auth-scoped JSON — never let a CDN/edge cache (e.g. LiteSpeed LSCache on
+// cPanel) serve a stale or cross-user response for these. Asset/static routes set
+// their own explicit Cache-Control and are unaffected.
+router.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store')
+  next()
+})
+
 router.use((req, res, next) => {
   req.authState = getPublicAuthState(req)
   next()
