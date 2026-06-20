@@ -150,6 +150,26 @@ fi
 
 mkdir -p "${CPANEL_WEB_ROOT}" "${CPANEL_SERVERXR_ROOT}" "${CPANEL_SHARED_ROOT}" "${DATA_ROOT}" "${CHECKPOINT_DIR}" "${BACKUP_ROOT}"
 
+# Each run creates a fresh timestamped backup under BACKUP_DIR and nothing ever
+# removed old ones, so they accumulated unbounded (114 dirs / 23GB before this
+# was caught, exhausting the host's disk quota and silently breaking deploys
+# and asset uploads alike). Keep only the newest N per environment.
+KEEP_BACKUPS="${CPANEL_KEEP_BACKUPS:-5}"
+prune_old_backups() {
+  local keep="$1"
+  [[ -d "${BACKUP_DIR}" ]] || return 0
+  local old_dirs
+  old_dirs="$(find "${BACKUP_DIR}" -maxdepth 1 -mindepth 1 -type d -name "*-${DEPLOY_ENV}" | sort | head -n "-${keep}" 2>/dev/null || true)"
+  [[ -z "${old_dirs}" ]] && return 0
+  echo "[cpanel-prebuilt] Pruning old ${DEPLOY_ENV} backups beyond the newest ${keep}:"
+  while IFS= read -r dir; do
+    [[ -z "${dir}" ]] && continue
+    echo "  rm -rf ${dir}"
+    rm -rf "${dir}"
+  done <<< "${old_dirs}"
+}
+prune_old_backups "${KEEP_BACKUPS}"
+
 echo "[cpanel-prebuilt] Environment: ${DEPLOY_ENV}"
 echo "[cpanel-prebuilt] Branch: ${CURRENT_BRANCH}"
 echo "[cpanel-prebuilt] Repo: ${REPO_ROOT}"
