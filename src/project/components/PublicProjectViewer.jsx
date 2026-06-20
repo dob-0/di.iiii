@@ -45,13 +45,23 @@ const overlayCardStyle = {
 // away from it, but it strands a fresh public viewer with nothing in view.
 // Auto-frame from the actual entity positions instead of trusting it blindly,
 // unless the project owner explicitly locked a presentation camera.
+// Cap how far back the initial shot pulls: a scene can sprawl across a wide
+// area (e.g. a gallery of many small image planes), and fitting the *entire*
+// spread edge-to-edge shrinks individual content to unreadable specks. Start
+// at a normal walk-around distance instead and let free navigation (already
+// enabled outside fixed-camera mode) cover the rest.
+const AUTO_FRAME_MAX_DISTANCE = 25
+
 const computeAutoFrameCamera = (document) => {
     const points = (document.entities || [])
         .map((entity) => entity?.components?.transform?.position)
         .filter(Boolean)
     const sphere = getPointsBoundingSphere(points)
     if (!sphere) return null
-    return computeFramingCamera(sphere, { fov: document.worldState?.savedView?.fov })
+    return computeFramingCamera(sphere, {
+        fov: document.worldState?.savedView?.fov,
+        maxDistance: AUTO_FRAME_MAX_DISTANCE
+    })
 }
 
 const resolveViewerCamera = (document) => {
