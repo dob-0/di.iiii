@@ -32,7 +32,7 @@ const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
-const { listUsers, findUserById, setUserSpaces } = require('./userStore')
+const { listUsers, findUserById, setUserSpaces, setUserRole } = require('./userStore')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { createSpaceStore } = require('./spaceStore')
@@ -632,7 +632,8 @@ registerUserRoutes(router, {
   requireAdminAlways,
   listUsers,
   findUserById,
-  setUserSpaces
+  setUserSpaces,
+  setUserRole
 })
 
 registerSpaceRoutes(router, {

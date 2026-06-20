@@ -1,8 +1,11 @@
+const { AUTH_ROLE_LEVELS } = require('../authAccess')
+
 function registerUserRoutes(router, {
   requireAdminAlways,
   listUsers,
   findUserById,
-  setUserSpaces
+  setUserSpaces,
+  setUserRole
 }) {
   router.get('/api/users', requireAdminAlways, (req, res) => {
     const users = listUsers().map(({ id, provider, email, display_name, role, spaces, created_at, updated_at }) => ({
@@ -24,11 +27,20 @@ function registerUserRoutes(router, {
     if (!existing) {
       return res.status(404).json({ error: 'User not found.' })
     }
-    const { spaces } = req.body || {}
-    if (spaces !== null && !Array.isArray(spaces)) {
+    const { spaces, role } = req.body || {}
+    if (spaces !== undefined && spaces !== null && !Array.isArray(spaces)) {
       return res.status(400).json({ error: 'spaces must be an array of space ids, or null for unrestricted access.' })
     }
-    const updated = setUserSpaces(userId, spaces)
+    if (role !== undefined && !Object.prototype.hasOwnProperty.call(AUTH_ROLE_LEVELS, String(role || '').trim().toLowerCase())) {
+      return res.status(400).json({ error: `role must be one of: ${Object.keys(AUTH_ROLE_LEVELS).join(', ')}.` })
+    }
+    if (spaces !== undefined) {
+      setUserSpaces(userId, spaces)
+    }
+    if (role !== undefined) {
+      setUserRole(userId, role)
+    }
+    const updated = findUserById(userId)
     res.json({
       user: {
         id: updated.id,
