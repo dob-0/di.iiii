@@ -277,6 +277,22 @@ function ZoneGroup({ artist, doc, center }) {
     )
 }
 
+// Shown at a zone's position while its project doc is still fetching.
+function ZonePlaceholder({ center }) {
+    const ringRef = useRef(null)
+    useFrame((state) => {
+        if (!ringRef.current) return
+        const t = state.clock.getElapsedTime()
+        ringRef.current.material.opacity = 0.08 + Math.sin(t * 1.4 + center.x) * 0.06
+    })
+    return (
+        <mesh ref={ringRef} position={[center.x, 0.02, center.z]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[ZONE_LABEL_DIST - 1, ZONE_LABEL_DIST, 64]} />
+            <meshBasicMaterial color={0xd90000} transparent opacity={0.1} depthWrite={false} side={THREE.DoubleSide} />
+        </mesh>
+    )
+}
+
 // ── Atmosphere blender ────────────────────────────────────────────────────────
 // Reads each zone's worldState, blends via inverse-distance from the player,
 // and lerps the scene background + scene lights every frame.
@@ -732,7 +748,7 @@ export default function WccExhibition({ onExit }) {
                 />
                 {ARTISTS.map((artist, i) => {
                     const doc = docs[artist.id]
-                    if (!doc) return null
+                    if (!doc) return <ZonePlaceholder key={artist.id} center={ZONE_CENTERS_RING[i]} />
                     return (
                         <ZoneGroup
                             key={artist.id}
