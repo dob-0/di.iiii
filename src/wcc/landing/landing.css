@@ -1,4 +1,5 @@
 @import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,700;9..40,800;9..40,900;9..40,1000&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+Armenian:wght@400;700;900&display=swap");
 
 .wcc-landing {
     --wcc-font-family: "DM Sans", Helvetica, Arial, sans-serif;
@@ -240,6 +241,38 @@
     mix-blend-mode: difference;
 }
 
+.wcc-lang-toggle {
+    position: fixed;
+    right: clamp(18px, 3vw, 42px);
+    bottom: calc(clamp(18px, 3vw, 42px) + 64px);
+    z-index: 45;
+    display: grid;
+    width: 52px;
+    aspect-ratio: 1;
+    place-items: center;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.8);
+    background: transparent;
+    cursor: pointer;
+    font-family: var(--wcc-font-family);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    transition:
+        color 220ms ease,
+        background-color 220ms ease,
+        border-color 220ms ease;
+}
+
+.wcc-lang-toggle:hover,
+.wcc-lang-toggle:focus-visible {
+    color: #d90000;
+    background: #ffffff;
+    border-color: #ffffff;
+}
+
 .wcc-scroll-arrow {
     position: fixed;
     right: clamp(18px, 3vw, 42px);
@@ -369,7 +402,7 @@
     max-width: 1180px;
     margin: 0;
     color: #ffffff;
-    font-size: clamp(4rem, 11vw, 12rem);
+    font-size: clamp(3.8rem, 10.8vw, 11.8rem);
     font-weight: 950;
     letter-spacing: 0;
     line-height: 0.82;
@@ -388,6 +421,25 @@
     font-size: clamp(1rem, 1.8vw, 1.42rem);
     line-height: 1.6;
 }
+
+.wcc-hero__subtitle[lang="hy"] {
+    font-family: "Noto Sans Armenian", sans-serif;
+    font-size: clamp(0.875rem, 1.6vw, 1.32rem);
+}
+
+.wcc-nav-panel__title.is-hy {
+    font-family: "Noto Sans Armenian", sans-serif;
+    font-size: clamp(1.6rem, 3.2vw, 3rem);
+    font-weight: 900;
+    line-height: 1.1;
+    white-space: normal;
+    word-break: break-word;
+}
+
+.wcc-nav-panel__description.is-hy {
+    font-family: "Noto Sans Armenian", sans-serif;
+}
+
 
 .wcc-hero__footer {
     display: flex;
@@ -441,7 +493,7 @@
     min-height: 100vh;
     align-items: center;
     gap: clamp(18px, 3vw, 44px);
-    padding: 0 clamp(28px, 8vw, 120px);
+    padding: 0 clamp(28px, 5vw, 72px);
 }
 
 .wcc-nav-panel {
@@ -627,7 +679,9 @@
     animation:
         wcc-about-heading-dot-chaos-x 5.4s ease-in-out infinite alternate,
         wcc-about-heading-dot-chaos-y 7.2s ease-in-out infinite alternate;
-    font-size: clamp(5rem, 18vw, 18rem);
+    margin-bottom: clamp(48px, 7vw, 96px);
+    font-size: clamp(3.5rem, 8vw, 8.5rem);
+    white-space: nowrap;
 }
 
 @keyframes wcc-about-heading-dot-chaos-x {
@@ -799,15 +853,26 @@
 
 .wcc-text-columns--about {
     position: relative;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: clamp(20px, 3vw, 44px) clamp(32px, 5vw, 80px);
     max-width: 1120px;
 }
 
 .wcc-text-columns--about p {
+    position: relative;
+    z-index: 1;
     font-size: clamp(1rem, 1.35vw, 1.25rem);
-    line-height: 1.62;
+    line-height: 1.7;
+}
+
+.wcc-text-columns--about.is-hy p {
+    font-family: "Noto Sans Armenian", sans-serif;
 }
 
 .wcc-about-session {
+    grid-column: 1 / -1;
     position: relative;
     padding-left: 3.6rem;
 }
@@ -825,46 +890,70 @@
 }
 
 .wcc-about-running-dots {
+    grid-column: 1 / -1;
     position: absolute;
-    inset: -20px -16px;
+    inset: 0;
     overflow: hidden;
+    clip-path: inset(0);
+    z-index: 0;
     pointer-events: none;
 }
 
 .wcc-about-running-dots span {
     position: absolute;
-    width: var(--about-dot-size, 8px);
     aspect-ratio: 1;
     border-radius: 999px;
     background: #d90000;
-    opacity: 0.56;
-    animation: wcc-about-dot-run var(--about-dot-speed, 9s) linear infinite;
+    opacity: 0.72;
 }
 
-.wcc-about-running-dots span:nth-child(1) { --about-dot-size: 7px; --about-dot-speed: 7s; left: 6%; top: 8%; animation-delay: -1s; }
-.wcc-about-running-dots span:nth-child(2) { --about-dot-size: 12px; --about-dot-speed: 10s; left: 32%; top: 18%; animation-delay: -4s; }
-.wcc-about-running-dots span:nth-child(3) { --about-dot-size: 6px; --about-dot-speed: 8s; left: 82%; top: 12%; animation-delay: -2s; }
-.wcc-about-running-dots span:nth-child(4) { --about-dot-size: 10px; --about-dot-speed: 11s; left: 14%; top: 44%; animation-delay: -7s; }
-.wcc-about-running-dots span:nth-child(5) { --about-dot-size: 8px; --about-dot-speed: 9s; left: 58%; top: 52%; animation-delay: -5s; }
-.wcc-about-running-dots span:nth-child(6) { --about-dot-size: 14px; --about-dot-speed: 12s; left: 91%; top: 42%; animation-delay: -8s; }
-.wcc-about-running-dots span:nth-child(7) { --about-dot-size: 6px; --about-dot-speed: 7.5s; left: 44%; top: 78%; animation-delay: -3s; }
-.wcc-about-running-dots span:nth-child(8) { --about-dot-size: 11px; --about-dot-speed: 10.5s; left: 72%; top: 86%; animation-delay: -6s; }
+.wcc-about-running-dots span:nth-child(1) {
+    width: 52px;
+    top: 12%;
+    left: 18%;
+    animation: wcc-dot-chaos-a 6.4s ease-in-out infinite;
+}
 
-@keyframes wcc-about-dot-run {
-    0% {
-        transform: translate3d(-26px, 0, 0);
-    }
+.wcc-about-running-dots span:nth-child(2) {
+    width: 28px;
+    top: 58%;
+    left: 74%;
+    animation: wcc-dot-chaos-b 5.1s ease-in-out infinite;
+    animation-delay: -2.3s;
+}
 
-    50% {
-        transform: translate3d(26px, -18px, 0);
-    }
+@keyframes wcc-dot-chaos-a {
+    0%   { transform: translate(0, 0); }
+    8%   { transform: translate(180px, -60px); }
+    17%  { transform: translate(-90px, 140px); }
+    25%  { transform: translate(240px, 80px); }
+    33%  { transform: translate(-30px, -180px); }
+    42%  { transform: translate(320px, 40px); }
+    50%  { transform: translate(-160px, 200px); }
+    58%  { transform: translate(100px, -120px); }
+    67%  { transform: translate(-280px, 60px); }
+    75%  { transform: translate(200px, 160px); }
+    83%  { transform: translate(-120px, -80px); }
+    92%  { transform: translate(260px, -140px); }
+    100% { transform: translate(0, 0); }
+}
 
-    100% {
-        transform: translate3d(-26px, 0, 0);
-    }
+@keyframes wcc-dot-chaos-b {
+    0%   { transform: translate(0, 0); }
+    10%  { transform: translate(-200px, 80px); }
+    20%  { transform: translate(140px, -160px); }
+    30%  { transform: translate(-300px, -40px); }
+    40%  { transform: translate(80px, 180px); }
+    50%  { transform: translate(-180px, -120px); }
+    60%  { transform: translate(260px, 60px); }
+    70%  { transform: translate(-60px, 200px); }
+    80%  { transform: translate(320px, -80px); }
+    90%  { transform: translate(-240px, 100px); }
+    100% { transform: translate(0, 0); }
 }
 
 .wcc-about-highlight {
+    grid-column: 1 / -1;
     padding: clamp(18px, 3vw, 28px) clamp(18px, 3vw, 28px) clamp(18px, 3vw, 28px) 3.6rem;
     border: 0;
     border-top: 1px solid #d90000;
@@ -880,32 +969,9 @@
     margin: 8px 0;
 }
 
-.wcc-process-gallery__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    color: rgba(255, 255, 255, 0.64);
-    font-size: 0.72rem;
-    font-weight: 900;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-}
-
-.wcc-process-gallery__header button {
-    border: 0;
-    border-bottom: 1px solid #d90000;
-    color: #ffffff;
-    background: transparent;
-    cursor: pointer;
-    font: inherit;
-    letter-spacing: inherit;
-    text-transform: uppercase;
-}
-
 .wcc-process-gallery__grid {
-    column-count: 3;
-    column-gap: clamp(14px, 2vw, 24px);
+    column-count: 5;
+    column-gap: clamp(10px, 1.25vw, 16px);
 }
 
 .wcc-process-photo {
@@ -931,6 +997,21 @@
     transition: filter 700ms ease, opacity 700ms ease;
 }
 
+.wcc-process-photo.is-rotated-portrait {
+    position: relative;
+    aspect-ratio: 2 / 3;
+}
+
+.wcc-process-photo.is-rotated-portrait img {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 150%;
+    max-width: none;
+    transform: translate(-50%, -50%) rotate(-90deg) !important;
+    transform-origin: center;
+}
+
 .wcc-process-gallery.is-color .wcc-process-photo img,
 .wcc-process-photo:hover img,
 .wcc-process-photo:focus-visible img {
@@ -944,15 +1025,24 @@
 
     .wcc-scroll-arrow {
         right: 18px;
-        bottom: 18px;
+        top: 76px;
+        bottom: auto;
         width: 46px;
         font-size: 1.35rem;
     }
 
+    .wcc-lang-toggle {
+        top: 18px;
+        right: 18px;
+        bottom: auto;
+        width: 46px;
+    }
+
     .wcc-hero {
-        min-height: 78vh;
+        min-height: 100svh;
+        height: auto;
         align-content: start;
-        padding: clamp(150px, 26vh, 260px) 18px 80px;
+        padding: clamp(170px, 24svh, 220px) 18px 96px;
     }
 
     .wcc-hero__kicker {
@@ -961,9 +1051,19 @@
     }
 
     .wcc-hero h1 {
-        max-width: 96vw;
-        font-size: clamp(3rem, 15.4vw, 6.1rem);
-        line-height: 0.86;
+        max-width: calc(100vw - 36px);
+        font-size: clamp(3rem, 14.8vw, 5.4rem);
+        line-height: 0.88;
+    }
+
+    .wcc-hero__subtitle {
+        max-width: none;
+        font-size: calc(0.96rem + 0.5px);
+        line-height: 1.55;
+    }
+
+    .wcc-hero__subtitle[lang="hy"] {
+        font-size: calc(0.875rem + 0.5px);
     }
 
     .wcc-circle.is-hero {
@@ -989,14 +1089,15 @@
     .wcc-hero__footer {
         align-items: flex-start;
         flex-direction: column;
-        margin-top: 46px;
+        gap: 18px;
+        margin-top: 32px;
     }
 
     .wcc-horizontal {
         position: relative;
         top: auto;
         height: auto;
-        margin-top: -38vh;
+        margin-top: -220px;
         overflow: visible;
     }
 
@@ -1010,7 +1111,8 @@
 
     .wcc-nav-panel {
         width: 100%;
-        height: min(58vh, 460px);
+        height: auto;
+        min-height: 320px;
         opacity: 1;
     }
 
@@ -1030,6 +1132,26 @@
         height: calc(100vh - 62px);
     }
 
+    .wcc-reveal__chrome {
+        min-height: 64px;
+        padding: 0 20px;
+    }
+
+    .wcc-reveal__body {
+        padding: 28px 20px 56px;
+    }
+
+    .wcc-reveal__body--artist-works {
+        padding: 0;
+    }
+
+    .wcc-reveal__body--about-project h2 {
+        margin-bottom: 34px;
+        font-size: clamp(2.5rem, 11vw, 3.3rem);
+        line-height: 0.94;
+        white-space: normal;
+    }
+
     .wcc-text-columns--about {
         gap: 18px;
     }
@@ -1039,57 +1161,43 @@
         line-height: 1.55;
     }
 
-    .wcc-process-gallery__header {
-        align-items: flex-start;
-        flex-direction: column;
-    }
-
     .wcc-process-gallery__grid {
-        display: grid;
-        grid-auto-flow: dense;
-        grid-auto-rows: 118px;
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-        gap: 8px;
-        margin-inline: -20px;
-        overflow: visible;
-        padding: 0 20px 12px;
-        column-count: initial;
+        display: block;
+        margin: 0;
+        padding: 0 0 12px;
+        column-count: 2;
+        column-gap: 8px;
     }
 
     .wcc-process-photo {
         display: block;
-        grid-column: span 1;
-        grid-row: span 2;
-        margin: 0;
+        width: 100%;
+        margin: 0 0 8px;
+        break-inside: avoid;
     }
 
     .wcc-process-photo img {
         width: 100%;
-        height: 100%;
-        object-fit: cover;
+        height: auto;
+        object-fit: contain;
     }
 
-    .wcc-process-photo:nth-child(7n + 1) {
-        grid-column: span 2;
-        grid-row: span 3;
+    .wcc-process-photo.is-rotated-portrait {
+        width: 100%;
     }
 
-    .wcc-process-photo:nth-child(9n + 3) {
-        grid-column: span 1;
-        grid-row: span 3;
-    }
-
-    .wcc-process-photo:nth-child(11n + 5) {
-        grid-column: span 2;
-        grid-row: span 2;
+    .wcc-process-photo.is-rotated-portrait img {
+        width: 150%;
+        height: auto;
+        object-fit: contain;
     }
 
     .wcc-about-session {
-        padding-left: 2.8rem;
+        padding-left: 2.25rem;
     }
 
     .wcc-about-highlight {
-        padding-left: 2.8rem;
+        padding-left: 2.25rem;
     }
 
     .wcc-work-card {

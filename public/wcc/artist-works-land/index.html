@@ -11,16 +11,54 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Armenian:wght@400;500&amp;display=swap" rel="stylesheet">
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { background:#0a0a0a; }
+  html[lang="hy"] [data-page-title],
+  html[lang="hy"] [data-name],
+  html[lang="hy"] [data-row] p,
+  html[lang="hy"] [data-row] [data-head] span { font-family:"Noto Sans Armenian", sans-serif !important; }
+  @media (min-width: 769px) {
+    [data-page-title] { font-size: clamp(46px, calc(8vw - 2px), 126px) !important; }
+    [data-head] > div { padding-right: clamp(250px, 22vw, 300px); }
+    [data-name] { font-size: clamp(25px, calc(4.4vw - 5px), 43px) !important; }
+    [data-panel] > div {
+      gap: clamp(24px, 2.5vw, 44px) !important;
+      margin: 0 !important;
+      padding: 14px 0 36px 20px !important;
+    }
+    [data-panel] > div > div:first-child {
+      flex-basis: 52% !important;
+      max-width: 680px !important;
+    }
+    [data-panel] > div > div:last-child {
+      min-width: 0;
+      min-height: 0 !important;
+      padding: 12px !important;
+    }
+    [data-panel] p {
+      top: auto !important;
+      font-size: 15px !important;
+      line-height: 1.55 !important;
+      margin-bottom: 12px !important;
+    }
+    .yeva-artwork-gallery { overflow: hidden; }
+    .yeva-artwork-gallery img {
+      width: 160% !important;
+      max-width: none !important;
+      margin-inline: -30%;
+    }
+  }
   @media (max-width: 768px) {
+    html, body { overflow-x: hidden; }
+
     /* Outer container */
-    #aw-root { margin: 4px !important; padding: 16px 20px 36px !important; }
+    #aw-root { margin: 0 !important; padding: 16px 18px 36px !important; }
 
     /* "Artists Works." heading +2px */
     #aw-inner h1 {
-      font-size: clamp(21px, 6vw, 32px) !important;
+      font-size: clamp(36px, calc(6vw + 15px), 47px) !important;
       letter-spacing: -1px !important;
       line-height: 0.94 !important;
       margin: 8px 0 14px !important;
@@ -39,7 +77,7 @@
 
     /* Artwork title +4px */
     [data-name] {
-      font-size: clamp(17px, 4.2vw, 22px) !important;
+      font-size: clamp(24px, calc(4.2vw + 7px), 29px) !important;
       letter-spacing: -0.5px !important;
       line-height: 1.1 !important;
     }
@@ -49,13 +87,13 @@
 
     /* Medium label +2px */
     [data-name] + div span:first-child {
-      font-size: 13px !important;
+      font-size: 19px !important;
       margin-top: 0 !important;
     }
 
     /* Artist name +2px */
     [data-name] + div span:last-child {
-      font-size: 17px !important;
+      font-size: 21px !important;
       margin-top: 8px !important;
     }
 
@@ -63,7 +101,7 @@
     [data-plus] {
       width: 31px !important;
       height: 31px !important;
-      font-size: 20px !important;
+      font-size: 26px !important;
       flex-shrink: 0 !important;
     }
 
@@ -71,6 +109,8 @@
     [data-dot] { left: -14px !important; width: 7px !important; height: 7px !important; }
 
     /* Stack panel content vertically */
+    [data-panel] { transition: none !important; }
+
     [data-panel] > div {
       flex-direction: column !important;
       padding: 10px 0 22px !important;
@@ -97,7 +137,7 @@
 
     /* Images: small and consistent */
     [data-panel] img {
-      max-height: 130px !important;
+      max-height: 195px !important;
       width: 100% !important;
       height: auto !important;
       object-fit: contain !important;
@@ -105,11 +145,18 @@
 
     /* Panel body text +2px */
     [data-panel] p {
-      font-size: 15px !important;
+      font-size: 18px !important;
       line-height: 1.55 !important;
-      margin-bottom: 10px !important;
+      margin-bottom: 9px !important;
       width: auto !important;
       height: auto !important;
+    }
+
+    .yeva-artwork-gallery img { max-height: 280px !important; }
+
+    [data-row="8"] [data-panel] img {
+      margin-top: 14px !important;
+      margin-bottom: 14px !important;
     }
 
     /* Fix hardcoded widths */
@@ -119,8 +166,10 @@
     [data-panel] span[style*="text-align: right"] { text-align: left !important; font-size: 14px !important; }
     [data-panel] span[style*="font-size: 16px"] { font-size: 14px !important; }
 
-    /* Footer +2px */
-    #aw-inner > div:last-child { margin-top: 28px !important; font-size: 12px !important; }
+  }
+
+  @media (max-width: 340px) {
+    #aw-root { padding-inline: 14px !important; }
   }
 </style>
 </helmet>
@@ -128,7 +177,7 @@
   <canvas ref="{{ bgRef }}" style="position:absolute; inset:0; width:100%; height:100%; z-index:0; pointer-events:none; display:block;"></canvas>
   <div id="aw-inner" style="position:relative; z-index:1;">
 
-  <h1 style="font-weight:400; font-size:clamp(48px,8vw,128px); letter-spacing:-2.5px; line-height:0.96; margin:5vw 0 7vw; max-width:14ch;">Artists Works<span style="color: rgb(217, 0, 0); font-family: Roboto">.</span></h1>
+  <h1 data-page-title="" style="font-weight:400; font-size:clamp(48px,8vw,128px); letter-spacing:-2.5px; line-height:0.96; margin:5vw 0 7vw; max-width:14ch;">Artists Works<span style="color: rgb(217, 0, 0); font-family: Roboto">.</span></h1>
 
   <!-- ===== ROW 01 ===== -->
   <div data-row="0" style="border-top:2px dotted rgba(217,0,0,0.45);">
@@ -250,7 +299,7 @@
           <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">Naive portrays a child holding a heart like a lollipop. It symbolizes the openness, trust, and unconditional love that children naturally carry. At first, the heart is pure and offered freely to the world. Yet, like a lollipop held for too long, it slowly gathers dust, dirt, fingerprints, and invisible traces of every encounter. These layers become a metaphor for experiences, expectations, disappointments, and childhood wounds. Over time, the heart becomes fragile, worn, and difficult to hold in the same innocent way. To protect it from completely falling apart, the child eventually puts it away.</p>
           <p style="font-size: 18px; line-height: 1.6; color: #ffffff; margin-bottom: 16px; font-family: 'DM Sans', sans-serif">Faceless represents what comes after. The figure holds two smiling masks, each concealing a deeper emotional reality. It is a self-portrait shaped by the transition from childhood into adulthood. As the world asks for stability, composure, and acceptability, genuine emotions are gradually hidden behind carefully constructed expressions. The masks symbolize the roles we learn to perform in order to meet expectations, while the tears reveal the feelings that remain underneath.</p>
           <p style="font-size: 18px; line-height: 1.6; color: #ffffff; font-family: 'DM Sans', sans-serif">Together, the works describe a transformation: a child who once carried their heart openly eventually learns to protect it, replacing vulnerability with masks. The innocence is not lost, but hidden. What remains is the ongoing tension between who we truly are and who the world expects us to be.</p>
-        </div><div style="flex: 1; border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 18px; align-items: center; justify-content: center; background-color: #000000;">
+        </div><div class="yeva-artwork-gallery" style="flex: 1; border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 18px; align-items: center; justify-content: center; background-color: #000000;">
           <img src="assets/yeva-naive.png" style="width: 100%; object-fit: contain; border-radius: 14px;">
           <img src="assets/yeva-faceless.png" style="width: 100%; object-fit: contain; border-radius: 14px;">
         </div>
@@ -342,12 +391,138 @@
       </div></div>
   </div>
 
+  <!-- ===== ROW 10 ===== -->
+  <div data-row="9" data-place-after="3" style="border-top:2px dotted rgba(217,0,0,0.45);">
+    <div data-head="" style="position:relative; display:flex; align-items:center; gap:5vw; padding:38px 0; min-height:150px; cursor:pointer; transition:padding .4s ease;" style-hover="padding-left:22px;">
+      <div style="flex:1; min-width:0;">
+        <div data-name="" style="position:relative; font-size:clamp(30px,4.4vw,48px); font-weight:400; letter-spacing:-1.4px; line-height:1.04; color:#f2efe9; transition:color .35s ease;"><span data-dot="" style="position:absolute; left:-32px; top:0.6em; width:12px; height:12px; border-radius:50%; background:#D90000; opacity:0; transform:translateY(-50%) translateX(-8px); transition:opacity .35s ease, transform .35s ease;"></span>Borrowed Life</div>
+        <div style="font-size:15px; letter-spacing:1.8px; text-transform:uppercase; margin-top:6px;"><span style="color:#a5a1a1; text-transform:lowercase; font-family:'DM Sans', sans-serif; font-size:13px; display:block; margin-top:0;">Mixed media</span><span style="color:#fafafa; text-transform:capitalize; font-family:'DM Sans', sans-serif; font-size:23px; display:block; margin-top:14px;">Mery Petrosyan</span></div>
+      </div>
+      <img src="assets/mery-petrosyan-borrowed-life.png" style="position:absolute; right:96px; top:50%; transform:translateY(-50%) translateX(18px); width:240px; height:120px; object-fit:contain; border:2px solid #D90000; border-radius:0; opacity:0; transition:opacity .45s ease, transform .45s ease; pointer-events:none;" data-reveal="">
+      <span data-plus="" style="width:46px; height:46px; flex:none; border:1.5px solid #D90000; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#D90000; font-size:26px; font-weight:300; line-height:1; transition:transform .45s ease;">+</span>
+    </div>
+    <div data-panel="" style="max-height:0; overflow:hidden; transition:max-height .65s cubic-bezier(.5,0,.1,1);">
+      <div style="display:flex; gap:5vw; align-items:flex-start; padding:14px 0 56px 41px;">
+        <div style="flex:0 0 46%; max-width:580px;">
+          <p style="font-size:18px; line-height:1.6; color:#ffffff; margin-bottom:16px; font-family:'DM Sans', sans-serif;">Borrowed Life is a mixed-media work created from empty medication blister packs, real candy and rhinestones. Underneath its sugary surface lies a portrait of survival.</p>
+          <p style="font-size:18px; line-height:1.6; color:#ffffff; margin-bottom:16px; font-family:'DM Sans', sans-serif;">The blister packs once held medication prescribed to keep me alive during periods of severe suicidal ideation. The medication does not erase pain, but silences the part of my brain responsible for the urge. In that sense, the life I am living often feels borrowed—sustained by chemistry when my own mind struggles to sustain itself.</p>
+          <p style="font-size:18px; line-height:1.6; color:#ffffff; margin-bottom:16px; font-family:'DM Sans', sans-serif;">The candy serves as both comfort and camouflage. It hides the empty pill packs underneath while reflecting my tendency to reach for sweets during periods of emotional distress. The smiley heart-shaped candies carry words like “love,” “hug,” and “kiss”—things that can sometimes feel just as necessary as medication.</p>
+          <p style="font-size:18px; line-height:1.6; color:#ffffff; font-family:'DM Sans', sans-serif;">Under all the candy and glitter are empty pill packs. That’s really what this piece is about: covering something empty with things that are sweet, beautiful, comforting, or distracting, and hoping they’ll be enough.</p>
+        </div>
+        <div style="flex:1; border-radius:22px; padding:24px; display:flex; align-items:center; justify-content:center; min-height:320px; background-color:#000000;"><img src="assets/mery-petrosyan-borrowed-life.png" alt="Borrowed Life by Mery Petrosyan" style="max-width:100%; max-height:620px; object-fit:contain; border-radius:0;"></div>
+      </div>
+    </div>
   </div>
-  <div style="margin-top:80px; position:relative; z-index:1; display:flex; align-items:center; gap:14px; font-size:13px; letter-spacing:2.5px; text-transform:uppercase; color:#6b6b6b;"><span style="display:flex; align-items:center; gap:6px;"><span style="width:12px; height:12px; border-radius:50%; background:#D90000; display:block;"></span><span style="width:6px; height:6px; border-radius:50%; background:#3a3a3a; display:block;"></span><span style="width:9px; height:9px; border-radius:50%; background:#D90000; display:block;"></span></span>Click to open</div>
 
+  </div>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script>
+const artistWorksHy = {
+  '0': {
+    title: 'Ցիկլային Դատարկության Հայեցակարգը',
+    medium: 'Խառը տեխնիկայով անիմացիա',
+    artist: 'Արթուր Ջեյ Ռոբին Սերգո',
+    paragraphs: [
+      'Այս նախագիծը պատմում է մի աշխարհի մասին, որն ամբողջովին կործանվել է, որտեղ այլևս ոչինչ չի մնացել։ Այն տեղի է ունենում ժամանակի ավարտից հետո՝ մի տարածքում, որտեղ իրականության և երազի միջև սահմանն այլևս նշանակություն չունի։ Ամեն ինչ վերածվել է ավերակների, բոլորն անհետացել են, իսկ մարդկության պատմությունը ջնջվել է։',
+      'Իրականության և երազի սահմանագծին կանգնած գլխավոր կերպարը գոյություն ունի որպես կամուրջ բացարձակ ավարտի և նոր սկզբի միջև։ Նա գտնվում է հենց այն կետում, որտեղ անցյալը հանդիպում է ապագային։ Դառնալով այս դատարկ աշխարհի ուղեցույցը՝ նա քայլում է այդ բարակ սահմանով՝ նոր կայծ վառելու համար՝ կյանքի և գոյության կրակը։',
+      'Հենց այդ կրակից էլ սկսվում է պատմությունը։ Մթության մեջ առաջ շարժվելու փոխարեն՝ այդ կայծը ժամանակը վերածում է մի մեծ շրջանի և մեզ վերադարձնում սովորական առօրյա կյանք։ Պատմությունը վերսկսվում է պայծառ արևի և կապույտ երկնքի ներքո՝ այն ժամանակ, երբ աշխարհը դեռ ապահով էր թվում։'
+    ]
+  },
+  '1': {
+    title: 'Զիջել',
+    medium: 'Վիրտուալ ինստալացիա',
+    artist: 'Ջենի Գևորգյան',
+    paragraphs: [
+      'Զիջելը հոգեվարքային դրսևորում է, որը հաճախ մնում է անձնական դաշտում ու դրա հաշվին քիչ է քննարկվում։ Այս գործը դառնում է երկխոսության ու իմաստավորման պատճառ։ Այն, որ որպես վիզուալ վերցված է ճանապարհային համանուն նշան, թույլ է տալիս նաև անդրադառնալ զիջելու դոգմատիկ ասպեկտին։'
+    ]
+  },
+  '2': {
+    title: 'Դատարկության պատմագրություն',
+    medium: 'Տեքստիլ ինստալացիա, գորգի հանգույցներ մաղի վրա',
+    artist: 'Մարգարիտա Ղազարյան',
+    paragraphs: [
+      'Դիմանկարային գորգագործությունը, որն իր բուռն ծաղկումն ապրեց խորհրդային ժամանակաշրջանում՝ դառնալով տարածված երևույթ Խորհրդային Միության շատ երկրներում՝ այդ թվում և Հայաստանում, պատմականորեն եղել է հուշարձանային և գաղափարախոսական մեդիում։ Այստեղ հստակ գործել է պատրիարխալ կանոնը․ տղամարդիկ պատկերվել են որպես անհատականացված սուբյեկտներ՝ հերոսական համատեքստում՝ զորավարներ, առաջնորդներ, մշակութային գործիչներ, մինչդեռ կանայք կա՛մ զրկվել են անհատականությունից՝ վերածվելով ողբի ու կորուստի հավաքական ալեգորիաների, ինչպես «Մայր Հայաստանը», կա՛մ մնացել են պատմության ստվերում։',
+      'Ամենամեծ պարադոքսն այն է, որ տղամարդ-հերոսի այս պատկերները ամիսներ շարունակ սեփական ֆիզիկական ծանր աշխատանքով մեծամասամբ հյուսել են անանուն կանայք՝ իրենց կենսական էներգիայով հավերժացնելով միայն տղամարդկանց գերիշխանությունը։',
+      'Այս նախագծով ես՝ որպես կին արվեստագետ, կազմաքանդում եմ պատրիարխալ պատմագրության այս հիերարխիան։ Որպես աշխատանքի հենք ընտրված է կենցաղային, խոհանոցային մաղը։ Մաղն այստեղ ներկայացվում է որպես ժամանակի և գաղափարների զտիչ, որը դարեր շարունակ «մաղել»՝ դուրս է գցել կանանց անուններն ու պատմությունները։',
+      'Օգտագործելով գորգի իսկական, ավանդական տեխնիկան՝ ձեռագործ հանգույցները, մետաղական ցանցի վրա՝ ես վերցնում եմ հայտնի դիմանկարային գորգի կառուցվածքը՝ իր ֆոնով ու շրջանակով, սակայն հեռացնում եմ հենց «հերոսին»։ Տղամարդու պատկերի փոխարեն հանդիսատեսի առջև բացվում է դատարկություն՝ մաղի խիտ, սառը ցանցը։',
+      'Այս քայլով ես ոչ միայն չեղարկում եմ տղամարդու պատվանդանը, այլև յուրացնում և վերաիմաստավորում եմ ինքնին մաղի ֆունկցիան։ Կենցաղային այս առարկան, որն ավանդաբար խորհրդանշում է կնոջ փակվածությունը խոհանոցային պասիվության մեջ, իմ ձեռքերում դառնում է ակտիվ գործիք՝ ուղղված հենց իրեն այդ խորհրդանշական իմաստով օժտած պարտադրող համակարգի դեմ։',
+      'Ես այլևս այն անանուն կինը չեմ, ով լուռ վերարտադրում է տղամարդակենտրոն պատմությունը։ Ես այն արվեստագետն եմ, ով տիրապետում է տեքստիլ տարածությանը և ինքն է որոշում՝ ում թողնել պատմության մեջ, և ում դուրս մաղել։'
+    ]
+  },
+  '3': {
+    title: 'A578',
+    medium: '3D մոդելինգ',
+    artist: 'Ալլա Վիրաբյան',
+    paragraphs: [
+      'Այս աշխատանքը իմ ներաշխարհի քարտեզն է՝ կազմված ինքնությանս տարբեր շերտերից և անձնական խորհրդանիշներից։ Թափանցիկ ֆիգուրները ներկայացնում են կերպարներ, որոնք ուղեկցել են ինձ կյանքի տարբեր փուլերում, իսկ յուրաքանչյուր առարկա կապված է որոշակի հիշողությունների, հույզերի և փորձառությունների հետ։ Միասին դրանք կազմում են անձնական մի համակարգ, որի միջոցով ուսումնասիրում եմ ինքնության, կապի, պաշտպանության և ներքին հավասարակշռության թեմաները։',
+      'Իմ ներաշխարհի մասին խոսելը, առավել ևս այն բացելն ու ուրիշների հետ կիսելը, խորապես բարդ գործընթաց է։ Ես անընդհատ փոփոխվում եմ, սակայն իմ ներսում կան որոշ հիմնարար տարրեր, որոնք մնում են անփոփոխ և օգնում են ինձ վերադառնալ իմ իսկական կենտրոնին։',
+      'Այս աշխատանքը ամբողջությամբ կառուցված է հենց այդ մնայուն մասնիկների շուրջ։ Թափանցիկ ֆիգուրները ներկայացնում են իմ ինքնության տարբեր շերտերը՝ կերպարներ, որոնք ուղեկցել են ինձ կյանքի տարբեր փուլերում։ Կոմպոզիցիայի կենտրոնում գտնվում է այն կերպարը, որը մարմնավորում է իմ ինքնընկալումը։',
+      'Այստեղ յուրաքանչյուր օբյեկտ ինձ համար ունի խորապես անձնական նշանակություն։ Թելը խորհրդանշում է կապի, պաշտպանության և ապահովության իմ կարիքը, փշավոր գնդերը՝ առօրյայիս անբաժանելի հակասթրեսային առարկաները, իսկ հլուններով թելը ներկայացնում է ներքին հավասարակշռության և հանգստության որոնումը։',
+      'Կողքից այս կերպարները կարող են վերացական կամ նույնիսկ պատահական թվալ, սակայն դրանցից յուրաքանչյուրը սերտորեն կապված է իմ հիշողությունների, հույզերի և փորձառությունների հետ։ Միասին դրանք ձևավորում են իմ ներաշխարհի քարտեզը՝ փոքր, անձնական մի համակարգ, որին ես միշտ վերադառնում եմ՝ անկախ ժամանակից, վայրից կամ կյանքի այն փուլից, որտեղ գտնվում եմ։',
+      'Այս աշխատանքի միջոցով ես բացում եմ պատուհան դեպի իմ անձնական աշխարհը՝ կիսվելով այն խորհրդանիշներով, որոնք ձևավորել են ինչպես իմ ինքնությունը, այնպես էլ իմ գեղարվեստական լեզուն։'
+    ]
+  },
+  '4': {
+    title: 'Միամիտ և Անդեմ',
+    medium: '3D մոդելինգ',
+    artist: 'Եվա Աբգարյան',
+    paragraphs: [
+      'Այս երկու քանդակները ներկայացնում են նույն հուզական ճանապարհորդության տարբեր փուլերը։',
+      '«Միամիտ» աշխատանքը պատկերում է երեխայի, որը սիրտը ձեռքին պահում է ինչպես սառնաշաքար։ Այն խորհրդանշում է այն բացությունը, վստահությունն ու անվերապահ սերը, որոնք երեխաները բնականորեն կրում են իրենց մեջ։ Սկզբում սիրտը մաքուր է և ազատորեն ընծայվում է աշխարհին։ Սակայն, ինչպես երկար ժամանակ ձեռքում պահված սառնաշաքարը, այն աստիճանաբար հավաքում է փոշի, կեղտ, մատնահետքեր և յուրաքանչյուր հանդիպման անտեսանելի հետքերը։ Այդ շերտերը դառնում են փորձառությունների, սպասումների, հիասթափությունների և մանկության վերքերի փոխաբերությունը։ Ժամանակի ընթացքում սիրտը դառնում է խոցելի, մաշված և այլևս դժվար է այն կրել նույն անմեղությամբ։ Որպեսզի այն ամբողջովին չփշրվի, երեխան ի վերջո թաքցնում է այն։',
+      '«Անդեմ» աշխատանքը ներկայացնում է այն, ինչ գալիս է հետո։ Կերպարը ձեռքում պահում է երկու ժպտացող դիմակ, որոնցից յուրաքանչյուրը քողարկում է ավելի խորը հուզական իրականություն։ Այն ինքնապատկեր է, ձևավորված մանկությունից հասունություն անցնելու ընթացքում։ Երբ աշխարհը պահանջում է կայունություն, զսպվածություն և ընդունելիություն, իրական զգացմունքները աստիճանաբար թաքնվում են խնամքով կառուցված արտահայտությունների հետևում։ Դիմակները խորհրդանշում են այն դերերը, որոնք մենք սովորում ենք խաղալ՝ սպասումներին համապատասխանելու համար, իսկ արցունքները բացահայտում են այն զգացմունքները, որոնք շարունակում են մնալ դրանց տակ։',
+      'Միասին այս աշխատանքները ներկայացնում են կերպափոխման մի ընթացք․ երեխան, որը մի ժամանակ բաց ու անկեղծ էր կրում իր սիրտը, աստիճանաբար սովորում է պաշտպանել այն՝ խոցելիությունը փոխարինելով դիմակներով։ Նրա անմեղությունը չի կորչում, այլ պարզապես թաքնվում է։ Մնում է մշտական լարվածությունը այն բանի միջև, թե ովքեր ենք մենք իրականում, և թե ովքեր է աշխարհը ակնկալում, որ դառնանք։'
+    ]
+  },
+  '5': {
+    title: 'Ինչ էր կրում մայրս',
+    medium: 'Պոեզիա',
+    artist: 'Սանջեյ Ջ Չոդարի',
+    paragraphs: [
+      'Այս աշխատանքը ուսումնասիրում է այն անտեսանելի ժառանգությունը, որը փոխանցվում է կանանց սերնդեսերունդ՝ ոչ թե առարկաների կամ ավանդույթների, այլ վախի, լռության և գոյատևման ռազմավարությունների միջոցով։ Հիշողության և իրականության սահմանագծին կառուցված պատմությունը հետևում է մի կնոջ, ով վերադառնում է իր մանկության միջավայր, որտեղ անձնական հիշողությունները աստիճանաբար բացահայտում են դրանց հիմքում ընկած սոցիալական կառուցվածքները։',
+      'Աշխատանքի կենտրոնական գաղափարն այն է, որ վախը չի ծնվում մեկ դեպքից, մեկ մարդուց կամ մեկ վայրից։ Այն ձևավորվում է առօրյա և սովորական դարձած համակարգերի միջոցով, որոնք աննկատ սահմանում են, թե ով ունի հարմարավետության, ազատության և տեսանելի լինելու իրավունք։ Կրկնվող խորհրդանիշների՝ հովհարի, քողի, օձի, խոհանոցի և մանկական խաղալիքների միջոցով աշխատանքը ուսումնասիրում է, թե ինչպես են գենդերային դերերը արմատավորվում առօրյա կյանքում, և ինչպես են երեխաները սովորում այդ կանոնները դեռ շատ վաղ՝ նույնիսկ նախքան դրանք բառերով ձևակերպելը։',
+      'Մոր կերպարը դառնում է ժառանգված դիմացկունության խորհրդանիշ։ Նա միաժամանակ կրում է սեր և սահմանափակում, պաշտպանություն և ենթարկվածություն։ Երբ գլխավոր հերոսուհին սկսում է հասկանալ մոր փորձառությունը, նա գիտակցում է, որ իրեն փոխանցվել է ոչ թե թուլություն, այլ գոյատևման ձև մի համակարգում, որը կանանցից պահանջում է լռություն։',
+      'Շարժվելով երազի, հիշողության և իրականության միջև՝ աշխատանքը ցույց է տալիս, թե ինչպես անձնական տրավման կարող է հասարակական կառուցվածքները վերածել ներքին, հուզական լանդշաֆտների։ Վերջիվերջո, այն հարցադրում է, թե ինչպես է ժառանգված վախը ձևավորում ինքնությունը և արդյոք հնարավոր է խզել այն շրջափուլերը, որոնք շարունակվել են սերունդներ շարունակ։'
+    ]
+  },
+  '6': {
+    title: 'Կնիգ/մարդ',
+    medium: 'Թուղթ, մատիտ, թանաք',
+    artist: 'Նուշ Պետրոսյան',
+    paragraphs: [
+      'Ես միշտ ոգեշնչվում եմ շրջապատի կանանցով և հետաքրքրված եմ, թե ինչպես են մյուս կանայք ապրում իրենց յուրահատուկ կյանքով․ ինչպես են ընկալում իրենց սեփական մարմինը և ինչպես է կին լինելն ազդում նրանց առօրյա կյանքի վրա մի աշխարհում, որը նրանց հաշվի առնելով չի նախագծվել։'
+    ]
+  },
+  '7': {
+    title: 'Անվերնագիր',
+    medium: 'Թվային արտ',
+    artist: 'Անի Խաչատրյան',
+    paragraphs: [
+      'Մարդիկ տարբեր են լինում՝ ոչ միայն միմյանցից, այլ նաև իրենք իրենցից։ Մեր ներսում ապրում են տարբեր ստվերներ՝ թե՛ բարի, թե՛ մութ, թե՛ դեռ չբացահայտված։ Յուրաքանչյուր մարդ, երևույթ կամ իրադարձություն բացում է մեր հերթական «ես»-ը, ու երբեմն ամենադժվարը սեփական ներսի այդ բազմությանը դիմանալն է։',
+      'Քանի՞ «ես» ես արդեն ճանաչել քո ներսում։ Ո՞ր փուլում ես ինքնաբացահայտման։ Քանի՞ մարդ կա ներսումդ, ու քանիսին դեռ չես հանդիպել։ Հա՞շտ ես ներսիդ հետ, թե դեռ պայքարում ես ինքնությանդ տարբեր կողմերի դեմ։'
+    ]
+  },
+  '8': {
+    title: 'Հիշողության ճանապարհորդություն',
+    medium: 'Կադր առ կադր անիմացիա',
+    artist: 'Մերի Անդրեասյան',
+    paragraphs: [
+      'Անիմացիան ուսումնասիրում է կյանքի ճանապարհը՝ որպես հիշողության, նախնիների ժառանգության և մեր էության անտեսանելի շերտերի մեջ խորապես արմատավորված մի ընթացք։ «Եթե մոռանում ես քո նախնիներին, կորցնում ես քո ստվերը» գաղափարով ոգեշնչված՝ նախագիծն անդրադառնում է նրան, թե ինչպես է մեր ինքնությունը ձևավորվում մեզնից առաջ ապրածների ազդեցությամբ՝ ժառանգված պատմությունների, արխետիպերի և հիշողության միջոցով։'
+    ]
+  },
+  '9': {
+    title: 'Փոխառված կյանք',
+    medium: 'Խառը տեխնիկա',
+    artist: 'Մերի Պետրոսյան',
+    paragraphs: [
+      '«Փոխառված կյանքը» (Borrowed Life) խառը տեխնիկայով աշխատանք է, որը ստեղծվել է դատարկ դեղահաբերի բլիստերներից, իրական կոնֆետներից և քարիկներից։ Նրա քաղցր ու փայլուն մակերեսի տակ թաքնված է գոյատևման պատմություն։',
+      'Բլիստերները ժամանակին պարունակում էին դեղամիջոցներ, որոնք ինձ նշանակվել էին ինքնասպանության ծանր մտքերի ժամանակ ապրելու և շարունակելու համար։ Դեղամիջոցները չեն վերացնում ցավը, սակայն լռեցնում են ուղեղիս այն հատվածը, որը պատասխանատու է ինքնավնասման կամ կյանքից հրաժարվելու մղման համար։ Այդ իմաստով իմ ապրած կյանքը հաճախ թվում է փոխառված՝ պահպանված քիմիական միջամտության շնորհիվ այն ժամանակ, երբ սեփական միտքս դժվարանում է պահպանել այն։',
+      'Կոնֆետները այստեղ ծառայում են միաժամանակ որպես մխիթարություն և քողարկում։ Դրանք ծածկում են ներքևում գտնվող դատարկ բլիստերները՝ միաժամանակ անդրադառնալով այն սովորությանը, երբ հուզական ծանր շրջաններում դիմում եմ քաղցրավենիքին։ Սրտիկի տեսքով ժպտացող կոնֆետների վրա գրված են «սեր», «գրկախառնություն», «համբույր» բառերը՝ բաներ, որոնք երբեմն կարող են նույնքան անհրաժեշտ թվալ, որքան դեղամիջոցները։',
+      'Բոլոր այդ կոնֆետների և փայլի տակ իրականում դատարկ դեղահաբերի բլիստերներ են։ Հենց դրա մասին է այս աշխատանքը՝ դատարկությունը ծածկելու փորձի մասին՝ այն քաղցր, գեղեցիկ, մխիթարող կամ շեղող բաներով լցնելով և հուսալով, որ դրանք բավական կլինեն։'
+    ]
+  }
+};
+
 class Component extends DCLogic {
   renderVals() {
     return {
@@ -453,6 +628,30 @@ class Component extends DCLogic {
     const root = this.root;
     if (!root || this._wired) return;
     this._wired = true;
+    const lang = new URLSearchParams(window.location.search).get('lang');
+    if (lang === 'hy') {
+      document.documentElement.lang = 'hy';
+      const pageTitle = root.querySelector('[data-page-title]');
+      const pageTitleDot = pageTitle && pageTitle.querySelector('span');
+      if (pageTitle) pageTitle.replaceChildren(document.createTextNode('Արվեստագետների աշխատանքները'), pageTitleDot);
+      root.querySelectorAll('[data-row]').forEach((row) => {
+        const translation = artistWorksHy[row.getAttribute('data-row')];
+        if (!translation) return;
+        const name = row.querySelector('[data-name]');
+        const dot = name && name.querySelector('[data-dot]');
+        if (name) name.replaceChildren(dot, document.createTextNode(translation.title));
+        const metadata = name && name.nextElementSibling;
+        if (metadata && metadata.children[0]) metadata.children[0].textContent = translation.medium;
+        if (metadata && metadata.children[1]) metadata.children[1].textContent = translation.artist;
+        row.querySelectorAll('[data-panel] p').forEach((paragraph, index) => {
+          if (translation.paragraphs[index]) paragraph.textContent = translation.paragraphs[index];
+        });
+      });
+    }
+    root.querySelectorAll('[data-place-after]').forEach((row) => {
+      const target = root.querySelector(`[data-row="${row.getAttribute('data-place-after')}"]`);
+      if (target) target.after(row);
+    });
     root.querySelectorAll('[data-row]').forEach((row) => {
       const reveal = row.querySelector('[data-reveal]');
       const head = row.querySelector('[data-head]');
@@ -479,7 +678,14 @@ class Component extends DCLogic {
         });
         if (!isOpen) {
           row.setAttribute('data-open', '1');
-          if (panel) panel.style.maxHeight = '2600px';
+          if (panel) {
+            const fitPanel = () => { panel.style.maxHeight = `${panel.scrollHeight + 120}px`; };
+            fitPanel();
+            requestAnimationFrame(() => {
+              fitPanel();
+              requestAnimationFrame(() => row.scrollIntoView({ behavior: 'auto', block: 'start' }));
+            });
+          }
           if (plus) plus.style.transform = 'rotate(45deg)';
         }
       });
