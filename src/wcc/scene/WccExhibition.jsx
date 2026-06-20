@@ -202,7 +202,7 @@ function ZonePortal({ artist, center }) {
                 <meshBasicMaterial color={0xd90000} transparent opacity={0.3} depthWrite={false} />
             </mesh>
             <Billboard position={[0, 5.4, 0]}>
-                <Text fontSize={0.95} color="#ffffff" outlineWidth={0.02} outlineColor="#000000" anchorX="center" anchorY="middle">
+                <Text fontSize={0.7} maxWidth={8} color="#ffffff" outlineWidth={0.02} outlineColor="#000000" anchorX="center" anchorY="middle">
                     {artist.title}
                 </Text>
             </Billboard>
@@ -259,13 +259,28 @@ function ZoneGroup({ artist, doc, center }) {
         () => new Map((doc?.assets || []).map((a) => [a.id, a])),
         [doc],
     )
+    const groupRef = useRef(null)
+    const fadeRef  = useRef(0)
+    const fadeDone = useRef(false)
+
+    useFrame((_, delta) => {
+        if (fadeDone.current || !groupRef.current) return
+        fadeRef.current = Math.min(1, fadeRef.current + delta * 1.25)
+        const v = fadeRef.current
+        groupRef.current.traverse((obj) => {
+            if (obj.isMesh && obj.material) {
+                obj.material.transparent = true
+                obj.material.opacity = v
+            }
+        })
+        if (v >= 1) fadeDone.current = true
+    })
 
     return (
-        <group>
-            {/* Subtle floor ring so the visitor can orient within the space */}
+        <group ref={groupRef}>
             <mesh position={[center.x, 0.01, center.z]} rotation={[-Math.PI / 2, 0, 0]}>
                 <ringGeometry args={[ZONE_LABEL_DIST - 1, ZONE_LABEL_DIST, 64]} />
-                <meshBasicMaterial color={0x334455} transparent opacity={0.25} depthWrite={false} side={THREE.DoubleSide} />
+                <meshBasicMaterial color={0x334455} transparent opacity={0.15} depthWrite={false} side={THREE.DoubleSide} />
             </mesh>
             {entities.map((entity) => (
                 <AnimatedEntity
@@ -312,8 +327,8 @@ function ZonePlaceholder({ center }) {
 // strength; beyond it, the hub fades to a neutral default instead of averaging
 // all the zones together (which produced a washed-out, "abnormal" colour in
 // the middle of the ring where every zone is roughly equidistant).
-const ZONE_FULL_DIST  = 14
-const ZONE_FADE_DIST  = 26
+const ZONE_FULL_DIST  = 16
+const ZONE_FADE_DIST  = 32
 
 function AtmosphereBlender({ docs, artists, zoneCenters, playerRef, ambientRef, dirRef }) {
     const { scene } = useThree()
@@ -670,19 +685,22 @@ function useWccProjectDocuments(ids) {
         ensureGuestSession().then(() => {
             if (cancelled) return
             ids.forEach((id, i) => {
-                void load(id)
-                services[i].connect({
-                    eventsUrl: buildProjectEventsUrl(id),
-                    onProjectOp: ({ version, ops }) => {
-                        if (!docRefs.current[id]) { void load(id); return }
-                        applyOps(id, ops || [], Number(version))
-                    },
-                    onReady: async () => {
-                        const cu = await listProjectOps(id, versionRefs.current[id])
-                        applyOps(id, cu.ops || [], Number(cu.latestVersion))
-                    },
-                    onError: () => { if (!docRefs.current[id]) void load(id) },
-                })
+                setTimeout(() => {
+                    if (cancelled) return
+                    void load(id)
+                    services[i].connect({
+                        eventsUrl: buildProjectEventsUrl(id),
+                        onProjectOp: ({ version, ops }) => {
+                            if (!docRefs.current[id]) { void load(id); return }
+                            applyOps(id, ops || [], Number(version))
+                        },
+                        onReady: async () => {
+                            const cu = await listProjectOps(id, versionRefs.current[id])
+                            applyOps(id, cu.ops || [], Number(cu.latestVersion))
+                        },
+                        onError: () => { if (!docRefs.current[id]) void load(id) },
+                    })
+                }, i * 150)
             })
         })
 
