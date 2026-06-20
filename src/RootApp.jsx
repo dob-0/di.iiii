@@ -6,7 +6,7 @@ import AuthGate from './components/AuthGate.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
-import { STUDIO_PAGE_PROJECT, getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
+import { getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
 import { APP_PAGE_PREFERENCES, getAppLocationState } from './utils/spaceRouting.js'
 
 const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
@@ -50,7 +50,7 @@ function AppRouter() {
 
     if (isStudioLocation(studioState)) {
         return (
-            <ProtectedSurface requiredSpaceId={studioState.spaceId} showAccountButton={studioState.page !== STUDIO_PAGE_PROJECT}>
+            <ProtectedSurface requiredSpaceId={studioState.spaceId}>
                 <Suspense
                     fallback={
                         <RouteSurfaceFallback

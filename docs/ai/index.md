@@ -47,6 +47,7 @@ Every task has an owner. Route to the right role before starting work.
 - [deploy.md](deploy.md)
 - [agent-support-matrix.md](agent-support-matrix.md)
 - [private-overrides.md](private-overrides.md)
+- [v1-studio-feature-map.md](v1-studio-feature-map.md) — full V1 vs Studio feature audit; what to port, what to skip, schema notes for grouping/linking/expressions
 
 ## Scoped Guides
 
