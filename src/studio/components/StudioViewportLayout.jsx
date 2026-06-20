@@ -157,6 +157,7 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     controlsRef={controlsRef}
                     onRotateStart={onRotateStart}
                     showHelp={shared.showHelp}
+                    onShowHelp={shared.onShowHelp}
                     onCloseHelp={shared.onCloseHelp}
                 />
             </div>

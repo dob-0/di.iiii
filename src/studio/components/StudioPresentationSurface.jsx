@@ -50,6 +50,7 @@ export default function StudioPresentationSurface({
     onTransformCommitMany,
     onTransformCancel,
     showHelp = false,
+    onShowHelp,
     onCloseHelp,
 }) {
     const presentationState = document.presentationState || {}
@@ -150,6 +151,7 @@ export default function StudioPresentationSurface({
             onTransformCancel={onTransformCancel}
             enableNavigation={isFixedCamera ? false : undefined}
             showHelp={showHelp}
+            onShowHelp={onShowHelp}
             onCloseHelp={onCloseHelp}
         />
     )

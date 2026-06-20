@@ -292,6 +292,7 @@ export default function StudioShell({
         onTransformCancel,
         fitToSelectionRef,
         showHelp,
+        onShowHelp: () => setShowHelp(true),
         onCloseHelp: () => setShowHelp(false),
     }
 
