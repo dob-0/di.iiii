@@ -48,7 +48,9 @@ export default function StudioPresentationSurface({
     setGizmoMode,
     onTransformCommit,
     onTransformCommitMany,
-    onTransformCancel
+    onTransformCancel,
+    showHelp = false,
+    onCloseHelp,
 }) {
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
@@ -147,6 +149,8 @@ export default function StudioPresentationSurface({
             onTransformCommitMany={onTransformCommitMany}
             onTransformCancel={onTransformCancel}
             enableNavigation={isFixedCamera ? false : undefined}
+            showHelp={showHelp}
+            onCloseHelp={onCloseHelp}
         />
     )
 }

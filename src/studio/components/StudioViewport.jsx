@@ -807,24 +807,13 @@ export default function StudioViewport({
     onTransformCommit,
     onTransformCommitMany,
     onTransformCancel,
-    enableNavigation = true
+    enableNavigation = true,
+    showHelp = false,
+    onCloseHelp,
 }) {
     const viewportRef = useRef(null)
     const [transformStatus, setTransformStatus] = useState(null)
-    const [showHelp, setShowHelp] = useState(false)
     const camera = cameraView || document.worldState?.savedView || {}
-
-    useEffect(() => {
-        const handler = (e) => {
-            if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
-                const inInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable
-                if (!inInput) { e.preventDefault(); setShowHelp((v) => !v) }
-            }
-            if (e.key === 'Escape') setShowHelp(false)
-        }
-        window.addEventListener('keydown', handler)
-        return () => window.removeEventListener('keydown', handler)
-    }, [])
 
     const handlePointerMove = (event) => {
         const rect = viewportRef.current?.getBoundingClientRect?.()
@@ -902,7 +891,7 @@ export default function StudioViewport({
 
             <FullscreenButton />
 
-            {showHelp && <HotkeyHelp onClose={() => setShowHelp(false)} />}
+            {showHelp && <HotkeyHelp onClose={onCloseHelp} />}
 
             <div className="studio-cursor-layer">
                 {Object.values(cursors).map((cursor) => (

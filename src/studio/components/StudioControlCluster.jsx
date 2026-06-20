@@ -36,6 +36,7 @@ export default function StudioControlCluster({
     onStackLeft,
     onStackRight,
     onResetLayout,
+    onShowHelp,
 }) {
     const [collapsed, setCollapsed] = useState(false)
 
@@ -112,6 +113,7 @@ export default function StudioControlCluster({
                             <div className="scc-buttons">
                                 <button className="scc-btn" onClick={onFullscreen} title="Toggle fullscreen">⛶ Fullscreen</button>
                                 <button className="scc-btn" onClick={onHideUI} title="Hide UI (H)">Hide UI</button>
+                                <button className="scc-btn" onClick={onShowHelp} title="Keyboard shortcuts (Shift+?)">? Help</button>
                                 <button className="scc-btn" onClick={onBackToHub} title="Back to hub">← Hub</button>
                                 {canViewLive && (
                                     <button className="scc-btn" onClick={onViewLive} title="Open the public space URL in a new tab">↗ View live</button>

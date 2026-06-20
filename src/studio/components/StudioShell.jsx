@@ -102,6 +102,7 @@ export default function StudioShell({
     const [layoutKey, setLayoutKey] = useState(0)
     const [snapEdges, setSnapEdges] = useState(false)
     const fitToSelectionRef = useRef(null)
+    const [showHelp, setShowHelp] = useState(false)
 
     const selectGizmoMode = useCallback((mode) => {
         setViewportGizmoMode(mode)
@@ -169,6 +170,13 @@ export default function StudioShell({
             }
             if (e.key === 'Escape' && quickInsert) {
                 setQuickInsert(null)
+            }
+            if (e.key === 'Escape') {
+                setShowHelp(false)
+            }
+            if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault()
+                setShowHelp((v) => !v)
             }
             if ((e.key === 'Delete' || e.key === 'Backspace') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault()
@@ -283,6 +291,8 @@ export default function StudioShell({
         onTransformCommitMany,
         onTransformCancel,
         fitToSelectionRef,
+        showHelp,
+        onCloseHelp: () => setShowHelp(false),
     }
 
     return (
@@ -387,6 +397,7 @@ export default function StudioShell({
                         onStackLeft={stackLeft}
                         onStackRight={stackRight}
                         onResetLayout={resetLayout}
+                        onShowHelp={() => setShowHelp(true)}
                     />
                 </>
             )}
