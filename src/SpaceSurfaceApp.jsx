@@ -87,6 +87,10 @@ export default function SpaceSurfaceApp({ routeState }) {
         )
     }
 
+    if (shouldResolvePublishedSurface && (surfaceState.status === 'idle' || surfaceState.status === 'loading')) {
+        return null
+    }
+
     if (shouldResolvePublishedSurface && publishedProjectId) {
         return (
             <Suspense fallback={null}>

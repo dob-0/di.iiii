@@ -118,6 +118,8 @@ export const uploadProjectAsset = async (projectId, file, options = {}) => {
 
 export const buildProjectEventsUrl = (projectId) => `${apiBaseUrl}/api/projects/${projectId}/events`
 
+export const buildProjectAssetUrl = (projectId, assetId) => `${apiBaseUrl}/api/projects/${projectId}/assets/${assetId}`
+
 export const DEFAULT_BETA_SPACE_ID = DEFAULT_PROJECT_SPACE_ID
 export const listBetaProjects = listProjects
 export const createBetaProject = createProject

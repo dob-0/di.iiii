@@ -52,6 +52,7 @@ export default function StudioPresentationSurface({
     showHelp = false,
     onShowHelp,
     onCloseHelp,
+    overlays,
 }) {
     const presentationState = document.presentationState || {}
     const previewMode = presentationState.mode || 'scene'
@@ -153,6 +154,7 @@ export default function StudioPresentationSurface({
             showHelp={showHelp}
             onShowHelp={onShowHelp}
             onCloseHelp={onCloseHelp}
+            overlays={overlays}
         />
     )
 }
