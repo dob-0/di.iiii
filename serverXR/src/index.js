@@ -35,6 +35,8 @@ const { registerUserRoutes } = require('./routes/userRoutes')
 const { listUsers, findUserById, setUserSpaces, setUserRole } = require('./userStore')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
+const { registerConfigRoutes } = require('./routes/configRoutes')
+const configStore = require('./configStore')
 const { createSpaceStore } = require('./spaceStore')
 const { loadSharedModule } = require('./sharedRuntime')
 const {
@@ -171,6 +173,7 @@ const upload = multer({
 async function initStorage() {
   await Promise.all([ensureDir(SPACES_DIR), ensureDir(UPLOADS_DIR)])
   initDb(DB_PATH)
+  configStore.init(SPACES_DIR)
   await migrateFromFilesystem(SPACES_DIR)
 }
 
@@ -724,6 +727,11 @@ registerSyncRoutes(router, {
   readJson,
   writeJson,
   upsertSpaceMeta,
+})
+
+registerConfigRoutes(router, {
+  requireAdminAlways,
+  configStore
 })
 
 const mountTargets = new Set([config.mountPath])

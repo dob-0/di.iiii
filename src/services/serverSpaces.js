@@ -86,6 +86,16 @@ export const overwriteServerScene = async (spaceId, sceneData) => {
     })
 }
 
+export const getServerConfig = async () => {
+    const data = await apiFetch('/api/config')
+    return data.config || {}
+}
+
+export const patchServerConfig = async (updates = {}) => {
+    const data = await apiFetch('/api/config', { method: 'PATCH', body: updates })
+    return data.config || {}
+}
+
 export const listServerSpaceAssets = async (spaceId) => {
     const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/assets`)
     return data.assets || []

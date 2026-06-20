@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Box, Button, Stack, Typography } from '@mui/material'
 import GridFloorBackground from '../components/GridFloorBackground.jsx'
+import { getServerConfig } from '../services/serverSpaces.js'
 import './landing.css'
 
 const STEPS = [
@@ -93,10 +94,17 @@ const CAPABILITIES = [
 
 export default function LandingPage() {
     const [entered, setEntered] = useState(false)
+    const [enterHref, setEnterHref] = useState('/main')
 
     useEffect(() => {
         document.body.classList.add('is-landing')
         return () => document.body.classList.remove('is-landing')
+    }, [])
+
+    useEffect(() => {
+        getServerConfig()
+            .then(cfg => { if (cfg.defaultSpaceId) setEnterHref(`/${cfg.defaultSpaceId}`) })
+            .catch(() => {})
     }, [])
 
     return (
@@ -365,6 +373,9 @@ export default function LandingPage() {
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href="/beta">
                             Try Beta
+                        </Button>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={enterHref}>
+                            Enter Space
                         </Button>
                         <Button className="lp-btn-link" href="/serverXR/api/health">
                             Check backend status ↗
