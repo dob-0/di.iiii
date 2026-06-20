@@ -291,8 +291,18 @@ function SceneEntityNode({ entity, childMap, assetMap, selectedIdSet, selectedEn
                     else onSelectEntity?.(entity.id)
                 }}
             >
+                {/* Pivot dot — clickable hit target + visual marker for the group origin */}
+                <mesh>
+                    <sphereGeometry args={[0.06, 8, 8]} />
+                    <meshBasicMaterial
+                        color={selected ? '#4df9ff' : '#ffffff'}
+                        transparent
+                        opacity={selected ? 0.9 : 0.35}
+                    />
+                </mesh>
+                {editMode === 'edit' && <axesHelper args={[0.4]} />}
                 {selected && (
-                    <Html position={[0, 0, 0]} center>
+                    <Html position={[0, 0.25, 0]} center>
                         <span className="studio-selection-pill">{entity.name}</span>
                     </Html>
                 )}
