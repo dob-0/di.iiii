@@ -61,8 +61,8 @@ export default function AccountButton({ authState, onLogout }) {
                 onClick={handleOpen}
                 sx={{
                     position: 'fixed',
-                    top: '8px',
-                    right: '8px',
+                    bottom: '86px',
+                    right: '14px',
                     zIndex: 9999,
                     cursor: 'pointer'
                 }}
@@ -74,8 +74,8 @@ export default function AccountButton({ authState, onLogout }) {
                             variant="outlined"
                             sx={{
                                 minWidth: 0,
-                                width: 28,
-                                height: 28,
+                                width: 30,
+                                height: 30,
                                 borderRadius: '6px',
                                 fontSize: 12,
                                 fontWeight: 700,
@@ -98,8 +98,8 @@ export default function AccountButton({ authState, onLogout }) {
                     <Avatar
                         src={authState?.avatarUrl || undefined}
                         sx={{
-                            width: 28,
-                            height: 28,
+                            width: 30,
+                            height: 30,
                             fontSize: 11,
                             fontWeight: 700,
                             borderRadius: '6px',
