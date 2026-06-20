@@ -528,30 +528,10 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
                 y: 0,
                 opacity: 1,
                 scale: 1,
-                duration: 2.65,
+                duration: 1.4,
                 stagger: 0.11,
                 delay: 0.12,
-                ease: 'elastic.out(0.62, 0.32)'
-            })
-            gsap.to('.wcc-circle.is-hero', {
-                x: 34,
-                y: -46,
-                rotation: 8,
-                duration: 7,
-                delay: 2.6,
-                ease: 'sine.inOut',
-                repeat: -1,
-                yoyo: true
-            })
-            gsap.to('.wcc-circle.is-right', {
-                x: -42,
-                y: 36,
-                rotation: -10,
-                duration: 8.5,
-                delay: 2.8,
-                ease: 'sine.inOut',
-                repeat: -1,
-                yoyo: true
+                ease: 'back.out(1.2)'
             })
         }, root)
 

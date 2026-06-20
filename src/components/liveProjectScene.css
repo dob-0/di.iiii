@@ -51,15 +51,113 @@
     left: 50%;
     transform: translateX(-50%);
     margin: 0;
-    font-size: 12px;
-    letter-spacing: 0.12em;
+    font-size: 11px;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
-    opacity: 0.45;
+    opacity: 0.4;
     pointer-events: none;
     text-align: center;
     color: #ffffff;
+    white-space: nowrap;
+    transition: opacity 0.3s;
+}
+
+.live-scene-hint--lock {
+    opacity: 0.65;
+    font-size: 13px;
+    letter-spacing: 0.08em;
+    animation: hint-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes hint-pulse {
+    0%, 100% { opacity: 0.65; }
+    50% { opacity: 0.3; }
+}
+
+/* Loading overlay */
+.live-scene-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #080808;
+    z-index: 20;
+    transition: opacity 0.55s ease;
+}
+
+.live-scene-loading-ring {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid rgba(217, 0, 0, 0.18);
+    border-top-color: #d90000;
+    animation: ring-spin 0.75s linear infinite;
+}
+
+@keyframes ring-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Mobile joystick — floating: spawns wherever the left half of the screen is
+   touched (Walker positions it via inline style), so there's no fixed dead zone. */
+.live-scene-joystick {
+    position: absolute;
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 1.5px solid rgba(217, 0, 0, 0.45);
+    background: rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    z-index: 10;
+    pointer-events: none;
+    user-select: none;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+}
+
+.live-scene-joystick-thumb {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: rgba(217, 0, 0, 0.75);
+    pointer-events: none;
+    will-change: transform;
+}
+
+/* Fly mode toggle */
+.live-scene-fly-btn {
+    position: absolute;
+    bottom: 40px;
+    right: 40px;
+    padding: 9px 18px;
+    border: 1.5px solid rgba(217, 0, 0, 0.5);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.4);
+    color: rgba(255, 255, 255, 0.6);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    z-index: 11;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.live-scene-fly-btn.active {
+    color: #d90000;
+    border-color: #d90000;
 }
 
 @media (max-width: 720px) {
     .live-scene-title { display: none; }
+    .live-scene-hint { font-size: 10px; bottom: 140px; }
+    .live-scene-fly-btn { bottom: 140px; }
 }

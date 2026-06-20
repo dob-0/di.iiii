@@ -4,20 +4,42 @@ import LandingPage from './landing/LandingPage.jsx'
 import './wccExperience.css'
 
 const WccExhibition = lazy(() => import('./scene/WccExhibition.jsx'))
+const LiveProjectScene = lazy(() => import('../components/LiveProjectScene.jsx'))
 
 const SCENE_PATH = '/wcc/scene'
 const LANDING_PATH = '/wcc'
 
+// "Enter space" for one artist lands on their own actual Studio project
+// (via LiveProjectScene — the same viewer used everywhere else in the app).
+// "Enter Exhibition" with no specific artist renders the full ring of all 10.
+const ARTIST_TITLES = {
+    'alla-virabyan': 'Alla Virabyan',
+    'ani-khachatryan': 'Ani Khachatryan',
+    'arthur': 'Arthur Jay Robin Sergo',
+    'jeny-gevorgyan': 'Jeny Gevorgyan',
+    'margarita-ghazaryan': 'Margarita Ghazaryan',
+    'meri-andreasyan': 'Meri Andreasyan',
+    'mery-petrosyan': 'Mery Petrosyan',
+    'nush-petrosyan': 'Nush Petrosyan',
+    'sanjay-j-choudari': 'Sanjay J Choudari',
+    'yeva-abgaryan': 'Yeva Abgaryan',
+}
+
 // mode: 'landing' (2D only) | 'entering' (transition running) | 'scene' (3D only)
+
 export default function WccExperience({ initialMode = 'landing' }) {
     const [mode, setMode] = useState(initialMode === 'scene' ? 'scene' : 'landing')
     const [lang, setLang] = useState('en')
+    const [activeProjectId, setActiveProjectId] = useState(null)
     const overlayRef = useRef(null)
     const sceneWrapRef = useRef(null)
     const timelineRef = useRef(null)
 
-    const enterExhibition = useCallback(() => {
+    const enterExhibition = useCallback((projectId = null) => {
         if (mode !== 'landing') return
+        // Only accept plain string slugs — guard against being called as an onClick handler
+        const pid = typeof projectId === 'string' ? projectId : null
+        if (pid) setActiveProjectId(pid)
         setMode('entering')
         if (typeof window !== 'undefined' && window.location.pathname !== SCENE_PATH) {
             window.history.pushState({ wccScene: true }, '', SCENE_PATH)
@@ -25,6 +47,7 @@ export default function WccExperience({ initialMode = 'landing' }) {
     }, [mode])
 
     const exitExhibition = useCallback(() => {
+        setActiveProjectId(null)
         if (typeof window !== 'undefined' && window.history.state?.wccScene) {
             window.history.back()
             return
@@ -47,6 +70,17 @@ export default function WccExperience({ initialMode = 'landing' }) {
         window.addEventListener('popstate', onPopState)
         return () => window.removeEventListener('popstate', onPopState)
     }, [])
+
+    // Listen for artist-space entry requests from the artist-works iframe.
+    useEffect(() => {
+        const onMessage = (e) => {
+            if (e.data?.type !== 'dii-wcc-artist-enter') return
+            const pid = e.data?.projectId
+            if (pid) enterExhibition(pid)
+        }
+        window.addEventListener('message', onMessage)
+        return () => window.removeEventListener('message', onMessage)
+    }, [enterExhibition])
 
     // Run the dive transition once we enter "entering" mode.
     useEffect(() => {
@@ -71,16 +105,16 @@ export default function WccExperience({ initialMode = 'landing' }) {
             duration: 0.6,
             ease: 'power2.in'
         }, 0)
-        // Black warp flash to hide the swap.
+        // Black warp flash — starts immediately so there's no frozen gap after click.
         if (overlay) {
-            tl.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration: 0.5, ease: 'power2.in' }, 0.45)
+            tl.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration: 0.35, ease: 'power2.in' }, 0.1)
         }
         // Scene fades up underneath as the flash clears.
         if (sceneWrap) {
-            tl.fromTo(sceneWrap, { opacity: 0 }, { opacity: 1, duration: 0.9, ease: 'power2.out' }, 0.85)
+            tl.fromTo(sceneWrap, { opacity: 0 }, { opacity: 1, duration: 0.9, ease: 'power2.out' }, 0.65)
         }
         if (overlay) {
-            tl.to(overlay, { opacity: 0, duration: 0.9, ease: 'power2.out' }, 1.25)
+            tl.to(overlay, { opacity: 0, duration: 0.9, ease: 'power2.out' }, 1.05)
         }
 
         return () => {
@@ -107,7 +141,17 @@ export default function WccExperience({ initialMode = 'landing' }) {
                     style={mode === 'entering' ? { opacity: 0 } : undefined}
                 >
                     <Suspense fallback={null}>
-                        <WccExhibition onExit={exitExhibition} />
+                        {activeProjectId ? (
+                            <LiveProjectScene
+                                projectId={activeProjectId}
+                                interactive
+                                showChrome
+                                onExit={exitExhibition}
+                                title={ARTIST_TITLES[activeProjectId] || activeProjectId}
+                            />
+                        ) : (
+                            <WccExhibition onExit={exitExhibition} />
+                        )}
                     </Suspense>
                 </div>
             ) : null}
