@@ -694,7 +694,8 @@ export default function WccExhibition({ onExit }) {
         return () => window.removeEventListener('keydown', onKey)
     }, [])
 
-    const allLoaded = Object.values(docs).every(Boolean)
+    const loadedCount = Object.values(docs).filter(Boolean).length
+    const allLoaded   = loadedCount === ARTISTS.length
 
     return (
         <div className="wcc-scene">
@@ -743,12 +744,17 @@ export default function WccExhibition({ onExit }) {
                 })}
             </Canvas>
 
-            <div
-                className="live-scene-loading"
-                style={{ opacity: allLoaded ? 0 : 1, pointerEvents: allLoaded ? 'none' : 'all' }}
-            >
-                <div className="live-scene-loading-ring" />
-            </div>
+            {!allLoaded && (
+                <div style={{
+                    position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)',
+                    display: 'flex', alignItems: 'center', gap: 10, pointerEvents: 'none', zIndex: 8,
+                }}>
+                    <div className="live-scene-loading-ring" style={{ width: 18, height: 18, borderWidth: 1.5 }} />
+                    <span style={{ fontSize: 10, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>
+                        {loadedCount} / {ARTISTS.length}
+                    </span>
+                </div>
+            )}
 
             <header className="live-scene-chrome">
                 <button type="button" className="live-scene-exit" onClick={onExit}>← Exit</button>
