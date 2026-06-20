@@ -151,6 +151,9 @@ export default function LandingPage() {
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={enterHref}>
                             Enter Space
                         </Button>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href="/wcc">
+                            WCC Exhibition
+                        </Button>
                     </Stack>
 
                     <Box component="a" className="lp-scroll-hint" href="#what" aria-label="Scroll to learn more">
