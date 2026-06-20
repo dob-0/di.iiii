@@ -194,3 +194,62 @@
     font-size: 0.78rem;
     color: var(--di-text-muted, rgba(200,230,240,0.45));
 }
+
+.ssh-badge-main {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 2px;
+    background: rgba(255,200,80,0.14);
+    color: #ffc850;
+    border: 1px solid rgba(255,200,80,0.28);
+}
+
+/* ─── CARD ACTIONS ──────────────────────────────────────── */
+.ssh-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid var(--di-cyan-border, rgba(77,249,255,0.08));
+}
+
+.ssh-card-btn {
+    font-size: 0.7rem;
+    font-family: inherit;
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    background: transparent;
+    border: 1px solid rgba(200,230,240,0.15);
+    color: var(--di-text-muted, rgba(200,230,240,0.55));
+    padding: 3px 8px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: border-color 0.1s, color 0.1s, background 0.1s;
+    white-space: nowrap;
+}
+
+.ssh-card-btn:hover {
+    border-color: rgba(200,230,240,0.4);
+    color: var(--di-text, #e8f4f8);
+    background: rgba(200,230,240,0.06);
+}
+
+.ssh-card-btn--active {
+    border-color: rgba(83,215,155,0.35);
+    color: #53d79b;
+}
+
+.ssh-card-btn--active:hover {
+    background: rgba(83,215,155,0.08);
+    border-color: rgba(83,215,155,0.6);
+}
+
+.ssh-card-btn--danger:hover {
+    border-color: rgba(255,100,100,0.5);
+    color: #ff6b6b;
+    background: rgba(255,100,100,0.06);
+}
