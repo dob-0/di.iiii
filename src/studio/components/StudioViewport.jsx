@@ -16,6 +16,7 @@ import VideoObject from '../../objectComponents/VideoObject.jsx'
 import AudioObject from '../../objectComponents/AudioObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
 import { applyPivotTransform, getSelectionCentroid } from '../utils/multiTransform.js'
+import { buildProjectAssetUrl } from '../../project/services/projectsApi.js'
 
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
@@ -543,7 +544,16 @@ function StudioSceneContent({
     controlsRef
 }) {
     const isArMode = useXR((state) => state.mode === 'immersive-ar')
-    const assetMap = useMemo(() => new Map((document.assets || []).map((asset) => [asset.id, asset])), [document.assets])
+    const assetMap = useMemo(() => {
+        const projectId = document.projectMeta?.id
+        // Some imported projects never got a real asset URL written (legacy
+        // import gap) — fall back to the standard project asset endpoint
+        // instead of silently failing to render.
+        return new Map((document.assets || []).map((asset) => [
+            asset.id,
+            asset.url || !projectId ? asset : { ...asset, url: buildProjectAssetUrl(projectId, asset.id) }
+        ]))
+    }, [document.assets, document.projectMeta?.id])
     const childMap = useMemo(() => {
         const map = new Map()
         for (const entity of (document.entities || [])) {
