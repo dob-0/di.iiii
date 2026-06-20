@@ -4,13 +4,8 @@ import { Grid, Text, Billboard } from '@react-three/drei'
 import { XR } from '@react-three/xr'
 import * as THREE from 'three'
 import { useXrAr } from '../../hooks/useXrAr.js'
-import { createProjectSyncService } from '../../project/services/projectSyncService.js'
-import {
-    buildProjectEventsUrl,
-    getProjectDocument,
-    listProjectOps,
-} from '../../project/services/projectsApi.js'
-import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectSchema.js'
+import { getProjectDocument } from '../../project/services/projectsApi.js'
+import { normalizeProjectDocument } from '../../shared/projectSchema.js'
 import { getApiSession } from '../../services/apiClient.js'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
@@ -647,67 +642,41 @@ function MobileJoystick({ outerRef, thumbRef }) {
 }
 
 // ── Multi-project live-sync hook ──────────────────────────────────────────────
-// Opens one SSE connection per project (same pattern as useLiveProjectDocument
-// in LiveProjectScene, but managing N subscriptions in one hook).
+// HTTP-only: loads all 10 docs in parallel on mount, refreshes every 60 s.
+// SSE is intentionally omitted — the exhibition is read-only during the event,
+// and 10 persistent SSE connections compete with the 10 HTTP GETs for the
+// browser's 6-connection-per-origin limit, leaving 3–4 zones stuck forever.
 
 function useWccProjectDocuments(ids) {
     const [docs, setDocs] = useState(() => Object.fromEntries(ids.map((id) => [id, null])))
-    const docRefs     = useRef(Object.fromEntries(ids.map((id) => [id, null])))
-    const versionRefs = useRef(Object.fromEntries(ids.map((id) => [id, 0])))
+    const docRefs = useRef(Object.fromEntries(ids.map((id) => [id, null])))
 
     useEffect(() => {
         let cancelled = false
         docRefs.current = Object.fromEntries(ids.map((id) => [id, null]))
-        versionRefs.current = Object.fromEntries(ids.map((id) => [id, 0]))
         setDocs(Object.fromEntries(ids.map((id) => [id, null])))
-        const services = ids.map(() => createProjectSyncService())
 
         const setDoc = (id, doc) => {
             docRefs.current[id] = doc
             setDocs((prev) => ({ ...prev, [id]: doc }))
         }
-        const applyOps = (id, ops, version) => {
-            const cur = docRefs.current[id]
-            if (!cur) return
-            const next = applyProjectOps(cur, ops || [])
-            setDoc(id, next)
-            if (Number.isFinite(version)) versionRefs.current[id] = Number(version)
-        }
+
         const load = async (id) => {
             try {
                 const res = await getProjectDocument(id)
                 if (cancelled) return
-                versionRefs.current[id] = Number(res?.version) || 0
                 setDoc(id, normalizeProjectDocument(res?.document || res || {}))
-            } catch { /* leave null */ }
+            } catch {
+                if (!cancelled) setDoc(id, normalizeProjectDocument({}))
+            }
         }
 
-        ensureGuestSession().then(() => {
-            if (cancelled) return
-            ids.forEach((id, i) => {
-                setTimeout(() => {
-                    if (cancelled) return
-                    void load(id)
-                    services[i].connect({
-                        eventsUrl: buildProjectEventsUrl(id),
-                        onProjectOp: ({ version, ops }) => {
-                            if (!docRefs.current[id]) { void load(id); return }
-                            applyOps(id, ops || [], Number(version))
-                        },
-                        onReady: async () => {
-                            const cu = await listProjectOps(id, versionRefs.current[id])
-                            applyOps(id, cu.ops || [], Number(cu.latestVersion))
-                        },
-                        onError: () => { if (!docRefs.current[id]) void load(id) },
-                    })
-                }, i * 150)
-            })
-        })
+        const loadAll = () => { if (!cancelled) ids.forEach((id) => void load(id)) }
 
-        return () => {
-            cancelled = true
-            services.forEach((s) => s.disconnect())
-        }
+        ensureGuestSession().then(() => { if (!cancelled) loadAll() })
+
+        const interval = setInterval(loadAll, 60_000)
+        return () => { cancelled = true; clearInterval(interval) }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [ids.join(',')])
 

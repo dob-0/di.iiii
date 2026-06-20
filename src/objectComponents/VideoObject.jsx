@@ -29,13 +29,19 @@ function useVideoTextureSource(sourceUrl) {
             onBlockedChange: setPlaybackBlocked
         })
 
-        setTexture(tex)
+        // Only show the texture once the video has a decoded frame — avoids
+        // a solid black rectangle while the video source is still loading or
+        // when the URL is inaccessible (auth-gated, 404, etc.)
+        const onData = () => setTexture(tex)
+        video.addEventListener('loadeddata', onData, { once: true })
 
         return () => {
+            video.removeEventListener('loadeddata', onData)
             detachPlaybackRetry()
             video.pause()
             video.src = ''
             tex.dispose()
+            setTexture(null)
         }
     }, [sourceUrl])
 
