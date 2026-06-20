@@ -84,7 +84,7 @@ export default function VideoObject({ assetRef, data, opacity = 1, linkActive })
     return (
         <mesh position-y={0.01} rotation-x={-Math.PI / 2}>
             <planeGeometry args={size} />
-            <meshBasicMaterial map={texture} toneMapped={false} transparent opacity={opacity} />
+            <meshBasicMaterial map={texture} toneMapped={false} transparent opacity={opacity} side={THREE.DoubleSide} />
             {playbackBlocked && (
                 <Html position={[0, 0.08, 0]} center>
                     <span className="link-label">Click or press a key to start video</span>

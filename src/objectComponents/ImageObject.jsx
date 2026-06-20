@@ -75,7 +75,7 @@ export default function ImageObject({ assetRef, data, opacity = 1, linkActive })
     return (
         <mesh position-y={0.01} rotation-x={-Math.PI / 2}>
             <planeGeometry args={size} />
-            <meshBasicMaterial map={texture} transparent={true} toneMapped={false} opacity={opacity} />
+            <meshBasicMaterial map={texture} transparent={true} toneMapped={false} opacity={opacity} side={THREE.DoubleSide} />
             {linkActive && (
                 <Html position={[0, 0.05, 0]} center>
                     <span className="link-label">🔗</span>
