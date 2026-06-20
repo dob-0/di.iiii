@@ -68,4 +68,11 @@ const setUserSpaces = (id, spaces = []) => {
   return findUserById(id)
 }
 
-module.exports = { upsertUser, findUserById, listUsers, setUserSpaces }
+const setUserRole = (id, role) => {
+  const db = getDb()
+  const normalized = normalizeAuthRole(role, 'editor')
+  db.prepare('UPDATE users SET role = ?, updated_at = ? WHERE id = ?').run(normalized, Date.now(), id)
+  return findUserById(id)
+}
+
+module.exports = { upsertUser, findUserById, listUsers, setUserSpaces, setUserRole }
