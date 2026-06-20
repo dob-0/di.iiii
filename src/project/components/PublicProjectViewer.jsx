@@ -15,6 +15,7 @@ import {
     PREVIEW_HOST_MESSAGE_TYPE
 } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
+import { computeFramingCamera, getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 
 const overlayButtonStyle = {
     appearance: 'none',
@@ -39,12 +40,30 @@ const overlayCardStyle = {
     backdropFilter: 'blur(12px)'
 }
 
+// A scene's saved camera can go stale (e.g. left pointed off into empty
+// space mid-edit) — that's invisible to editors, who interactively orbit
+// away from it, but it strands a fresh public viewer with nothing in view.
+// Auto-frame from the actual entity positions instead of trusting it blindly,
+// unless the project owner explicitly locked a presentation camera.
+const computeAutoFrameCamera = (document) => {
+    const points = (document.entities || [])
+        .map((entity) => entity?.components?.transform?.position)
+        .filter(Boolean)
+    const sphere = getPointsBoundingSphere(points)
+    if (!sphere) return null
+    return computeFramingCamera(sphere, { fov: document.worldState?.savedView?.fov })
+}
+
 const resolveViewerCamera = (document) => {
     const entryView = document.presentationState?.entryView || 'scene'
-    if (entryView === 'fixed-camera') {
-        return document.presentationState?.fixedCamera || document.worldState?.savedView || null
+    const fixedCamera = document.presentationState?.fixedCamera
+    if (entryView === 'fixed-camera' && fixedCamera?.locked) {
+        return fixedCamera
     }
-    return document.worldState?.savedView || null
+    if (entryView === 'fixed-camera') {
+        return fixedCamera || document.worldState?.savedView || null
+    }
+    return computeAutoFrameCamera(document) || document.worldState?.savedView || null
 }
 
 export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', initialCameraView = null }) {

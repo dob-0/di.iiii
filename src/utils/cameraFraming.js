@@ -62,6 +62,30 @@ export const getPointsBoundingSphere = (points = [], options = {}) => {
     return buildSphereFromBox(box, options)
 }
 
+// Same framing math as frameSphereInControls but for callers with no live
+// CameraControls instance yet (e.g. computing an initial camera before mount).
+export const computeFramingCamera = (sphere, options = {}) => {
+    if (!sphere) return null
+
+    const fov = Number.isFinite(options.fov) ? options.fov : 50
+    const padding = Number.isFinite(options.padding) ? options.padding : DEFAULT_PADDING
+    const target = sphere.center.clone()
+    const radius = getSafeRadius(sphere.radius, options.minRadius) * padding
+    const direction = options.direction
+        ? new THREE.Vector3(...options.direction).normalize()
+        : getFallbackDirection()
+
+    const verticalHalfFov = THREE.MathUtils.degToRad(fov / 2)
+    const distance = radius / Math.sin(Math.max(0.01, verticalHalfFov))
+    const position = target.clone().add(direction.multiplyScalar(distance))
+
+    return {
+        position: position.toArray(),
+        target: target.toArray(),
+        fov
+    }
+}
+
 export const frameSphereInControls = (controls, sphere, options = {}) => {
     if (!controls?.object || !sphere) return null
 
