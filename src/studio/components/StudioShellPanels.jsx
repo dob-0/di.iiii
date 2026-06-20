@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import JSZip from 'jszip'
 import {
     Box,
@@ -73,7 +73,7 @@ export function PanelHeader({ title, onClose, action = null }) {
 }
 
 export function LibraryPanel({ onCreateEntity, onAssetFilesSelected, canDeleteSelection, onDeleteSelected }) {
-    const primitives = ['box', 'sphere', 'cone', 'cylinder', 'text']
+    const primitives = ['box', 'sphere', 'cone', 'cylinder', 'text', 'group']
     const lights = [
         { type: 'pointLight', label: 'Point' },
         { type: 'spotLight', label: 'Spot' },
@@ -178,34 +178,102 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
     )
 }
 
-export function StructurePanel({ entities = [], selectedEntityId, selectedEntityIds = [], onSelectEntity, onToggleSelectEntity }) {
+function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, onSelectEntity, onToggleSelectEntity }) {
+    const [expanded, setExpanded] = useState(true)
+    const isGroup = entity.type === 'group'
+    const children = childMap.get(entity.id) || []
+    const selected = selectedIds.has(entity.id)
+    return (
+        <>
+            <button
+                className={`spa-item${selected ? ' active' : ''}`}
+                aria-pressed={selected}
+                style={depth > 0 ? { paddingLeft: depth * 14 + 8 } : undefined}
+                onClick={(event) => {
+                    const additive = event.ctrlKey || event.metaKey || event.shiftKey
+                    if (additive) onToggleSelectEntity(entity.id)
+                    else onSelectEntity(entity.id)
+                }}
+            >
+                {isGroup && (
+                    <button
+                        type="button"
+                        className="spa-fold"
+                        onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v) }}
+                        aria-label={expanded ? 'Collapse group' : 'Expand group'}
+                    >
+                        {expanded ? '▾' : '▸'}
+                    </button>
+                )}
+                <span className="spa-name">{entity.name || entity.id}</span>
+                <span className="spa-type">
+                    {entity.type}
+                    {entity.components?.runtime?.visible === false ? ' · hidden' : ''}
+                    {entity.components?.runtime?.locked === true ? ' · locked' : ''}
+                    {entity.id === selectedEntityId && selectedIds.size > 1 ? ' · primary' : ''}
+                </span>
+            </button>
+            {isGroup && expanded && children.map((child) => (
+                <StructureRow
+                    key={child.id}
+                    entity={child}
+                    depth={depth + 1}
+                    childMap={childMap}
+                    selectedIds={selectedIds}
+                    selectedEntityId={selectedEntityId}
+                    onSelectEntity={onSelectEntity}
+                    onToggleSelectEntity={onToggleSelectEntity}
+                />
+            ))}
+        </>
+    )
+}
+
+export function StructurePanel({ entities = [], selectedEntityId, selectedEntityIds = [], onSelectEntity, onToggleSelectEntity, onGroupSelected, onUngroup }) {
     const selectedIds = new Set(selectedEntityIds)
+    const childMap = useMemo(() => {
+        const map = new Map()
+        for (const entity of entities) {
+            if (entity.parentId) {
+                if (!map.has(entity.parentId)) map.set(entity.parentId, [])
+                map.get(entity.parentId).push(entity)
+            }
+        }
+        return map
+    }, [entities])
+    const roots = useMemo(() => entities.filter((e) => !e.parentId), [entities])
+    const canGroup = selectedEntityIds.length > 1
+    const selectedEntity = entities.find((e) => e.id === selectedEntityId)
+    const canUngroup = selectedEntity?.type === 'group'
+
     return (
         <div className="scc-section">
-            <div className="scc-section-label">Entities ({entities.length})</div>
+            <div className="scc-section-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <span>Entities ({entities.length})</span>
+                <span style={{ display: 'flex', gap: 4 }}>
+                    {canGroup && onGroupSelected && (
+                        <button className="scc-btn scc-btn--xs" onClick={onGroupSelected} title="Group selected (Ctrl+G)">Group</button>
+                    )}
+                    {canUngroup && onUngroup && (
+                        <button className="scc-btn scc-btn--xs" onClick={onUngroup} title="Ungroup (Ctrl+Shift+G)">Ungroup</button>
+                    )}
+                </span>
+            </div>
             {entities.length === 0 ? (
                 <p className="sfp-empty">No entities yet.</p>
             ) : (
                 <div className="spa-list">
-                    {entities.map((entity) => (
-                        <button
+                    {roots.map((entity) => (
+                        <StructureRow
                             key={entity.id}
-                            className={`spa-item${selectedIds.has(entity.id) ? ' active' : ''}`}
-                            aria-pressed={selectedIds.has(entity.id)}
-                            onClick={(event) => {
-                                const additive = event.ctrlKey || event.metaKey || event.shiftKey
-                                if (additive) onToggleSelectEntity(entity.id)
-                                else onSelectEntity(entity.id)
-                            }}
-                        >
-                            <span className="spa-name">{entity.name || entity.id}</span>
-                            <span className="spa-type">
-                                {entity.type}
-                                {entity.components?.runtime?.visible === false ? ' · hidden' : ''}
-                                {entity.components?.runtime?.locked === true ? ' · locked' : ''}
-                                {entity.id === selectedEntityId && selectedIds.size > 1 ? ' · primary' : ''}
-                            </span>
-                        </button>
+                            entity={entity}
+                            depth={0}
+                            childMap={childMap}
+                            selectedIds={selectedIds}
+                            selectedEntityId={selectedEntityId}
+                            onSelectEntity={onSelectEntity}
+                            onToggleSelectEntity={onToggleSelectEntity}
+                        />
                     ))}
                 </div>
             )}

@@ -10,7 +10,12 @@ export const ENTITY_TYPES = [
     'image',
     'video',
     'audio',
-    'model'
+    'model',
+    'group',
+    'pointLight',
+    'spotLight',
+    'directionalLight',
+    'ambientLight'
 ]
 export const WINDOW_IDS = ['viewport', 'assets', 'inspector', 'outliner', 'activity', 'project']
 
@@ -216,6 +221,9 @@ export const buildDefaultComponentsForType = (type = 'box') => {
             base.appearance = { color: '#ffffff', opacity: 1 }
             base.light = { color: '#ffffff', intensity: 0.5 }
             break
+        case 'group':
+            delete base.appearance
+            break
         case 'box':
         default:
             base.primitive = { shape: 'box', size: [1, 1, 1] }
@@ -322,6 +330,7 @@ export const normalizeEntity = (entity = {}) => {
         id: ensureString(entity.id, generateId('entity')),
         type,
         name: ensureString(entity.name, `${type[0].toUpperCase()}${type.slice(1)} Entity`),
+        parentId: ensureString(entity.parentId, '') || null,
         components: nextComponents
     }
 }
@@ -648,7 +657,16 @@ export const applyProjectOps = (document, ops = []) => {
             }
             case 'deleteEntity': {
                 const entityId = ensureString(payload.entityId)
-                if (entityId) entities.delete(entityId)
+                if (!entityId) break
+                const toDelete = new Set()
+                const collect = (id) => {
+                    toDelete.add(id)
+                    for (const [, child] of entities) {
+                        if (child.parentId === id) collect(child.id)
+                    }
+                }
+                collect(entityId)
+                for (const id of toDelete) entities.delete(id)
                 break
             }
             case 'createNode': {

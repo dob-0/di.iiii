@@ -393,11 +393,16 @@
 }
 
 .spa-fold {
+    appearance: none;
+    background: none;
+    border: none;
     font-size: 10px;
     color: rgba(255, 255, 255, 0.4);
     flex-shrink: 0;
     margin-right: 2px;
     line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
 }
 
 .scc-presence {

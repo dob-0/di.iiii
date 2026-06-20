@@ -18,6 +18,7 @@ import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
 import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
 import { formatAssetSize, optimizeGlbAsset, shouldSuggestGlbOptimization } from '../utils/assetOptimization.js'
+import { getSelectionCentroid } from '../utils/multiTransform.js'
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
 
@@ -351,6 +352,67 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         handleDeleteSelected()
     }
 
+    const handleGroupSelected = () => {
+        const targets = selectedEntities.length > 1
+            ? selectedEntities
+            : (selectedEntity ? [selectedEntity] : [])
+        if (targets.length < 2) return
+        const centroid = getSelectionCentroid(targets)
+        const group = createEntityOfType('group', {
+            name: 'Group',
+            components: { transform: { position: centroid, rotation: [0, 0, 0], scale: [1, 1, 1] } }
+        })
+        const ops = [{ type: 'createEntity', payload: { entity: group } }]
+        for (const entity of targets) {
+            const wp = entity.components?.transform?.position || [0, 0, 0]
+            ops.push({
+                type: 'updateEntity',
+                payload: {
+                    entityId: entity.id,
+                    patch: {
+                        parentId: group.id,
+                        components: {
+                            transform: {
+                                ...entity.components?.transform,
+                                position: [wp[0] - centroid[0], wp[1] - centroid[1], wp[2] - centroid[2]]
+                            }
+                        }
+                    }
+                }
+            })
+        }
+        applyLocalOps(ops, { activityMessage: `Grouped ${targets.length} entities.` })
+        dispatch({ type: 'select-entity', entityId: group.id })
+    }
+
+    const handleUngroup = () => {
+        const target = selectedEntity
+        if (!target || target.type !== 'group') return
+        const gp = target.components?.transform?.position || [0, 0, 0]
+        const children = entities.filter((e) => e.parentId === target.id)
+        const ops = children.map((child) => {
+            const lp = child.components?.transform?.position || [0, 0, 0]
+            return {
+                type: 'updateEntity',
+                payload: {
+                    entityId: child.id,
+                    patch: {
+                        parentId: null,
+                        components: {
+                            transform: {
+                                ...child.components?.transform,
+                                position: [lp[0] + gp[0], lp[1] + gp[1], lp[2] + gp[2]]
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        ops.push({ type: 'deleteEntity', payload: { entityId: target.id } })
+        applyLocalOps(ops, { activityMessage: `Ungrouped ${target.name}.` })
+        dispatch({ type: 'select-entity', entityId: null })
+    }
+
     const handleFrameSelected = () => {
         const cc = controlsRef.current
         if (!cc) return
@@ -417,6 +479,18 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 if (!selectedEntity) return
                 event.preventDefault()
                 handleCutSelected()
+                return
+            }
+
+            // Group selected (Ctrl+G) / Ungroup (Ctrl+Shift+G)
+            if (meta && !event.shiftKey && (key === 'g' || key === 'G')) {
+                event.preventDefault()
+                handleGroupSelected()
+                return
+            }
+            if (meta && event.shiftKey && (key === 'g' || key === 'G')) {
+                event.preventDefault()
+                handleUngroup()
                 return
             }
 
@@ -761,6 +835,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onCreateFromAsset={(asset) => handleCreateEntity(detectEntityTypeFromFile(asset), asset)}
             onAssetFilesSelected={handleAssetFilesSelected}
             onDeleteSelected={handleDeleteSelected}
+            onGroupSelected={handleGroupSelected}
+            onUngroup={handleUngroup}
             onDuplicateSelected={handleDuplicateSelected}
             onSelectEntity={(entityId) => dispatch({ type: 'select-entity', entityId })}
             onToggleSelectEntity={(entityId) => dispatch({ type: 'toggle-entity-selection', entityId })}

@@ -64,6 +64,8 @@ export default function StudioShell({
     onCreateFromAsset,
     onAssetFilesSelected,
     onDeleteSelected,
+    onGroupSelected,
+    onUngroup,
     onDuplicateSelected,
     onSelectEntity,
     onInspectorChange,
@@ -353,6 +355,8 @@ export default function StudioShell({
                                 selectedEntityIds={selectedEntityIds}
                                 onSelectEntity={onSelectEntity}
                                 onToggleSelectEntity={onToggleSelectEntity}
+                                onGroupSelected={onGroupSelected}
+                                onUngroup={onUngroup}
                             />
                         </StudioFloatingPanel>
                     )}

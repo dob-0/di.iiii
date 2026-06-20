@@ -238,6 +238,12 @@ const DEFINITIONS = {
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 4, step: 0.05 }
             ]}
         ]
+    },
+    group: {
+        label: 'Group',
+        sections: [
+            { id: 'transform', label: 'Transform', fields: TRANSFORM_FIELDS }
+        ]
     }
 }
 
@@ -251,6 +257,7 @@ export const createEntityOfType = (type = 'box', overrides = {}) => {
         id: generateId('entity'),
         type,
         name: overrides.name || definition.label,
+        parentId: overrides.parentId || null,
         components: {
             ...buildDefaultComponentsForType(type),
             ...(overrides.components || {})
