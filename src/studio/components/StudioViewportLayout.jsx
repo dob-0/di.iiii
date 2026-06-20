@@ -156,6 +156,8 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     cameraView={cameraView}
                     controlsRef={controlsRef}
                     onRotateStart={onRotateStart}
+                    showHelp={shared.showHelp}
+                    onCloseHelp={shared.onCloseHelp}
                 />
             </div>
         </div>
