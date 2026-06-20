@@ -255,17 +255,6 @@
 }
 
 /* ─── PROJECT LINKER ────────────────────────────────────── */
-.ssh-space-project {
-    margin: 4px 0 0;
-    font-size: 0.72rem;
-    color: var(--di-text-muted, rgba(200,230,240,0.45));
-}
-
-.ssh-space-project code {
-    font-family: monospace;
-    color: rgba(77,249,255,0.6);
-}
-
 .ssh-project-linker {
     margin-top: 10px;
     padding: 10px;
@@ -292,29 +281,59 @@
 .ssh-linker-item {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    padding: 5px 8px;
-    font-size: 0.75rem;
-    font-family: inherit;
-    background: transparent;
+    gap: 4px;
     border: 1px solid rgba(200,230,240,0.1);
-    color: var(--di-text-muted, rgba(200,230,240,0.6));
-    cursor: pointer;
     border-radius: 2px;
-    text-align: left;
-    transition: border-color 0.1s, background 0.1s;
-}
-
-.ssh-linker-item:hover {
-    border-color: rgba(77,249,255,0.3);
-    background: rgba(77,249,255,0.05);
-    color: var(--di-text, #e8f4f8);
+    overflow: hidden;
 }
 
 .ssh-linker-item.is-linked {
     border-color: rgba(83,215,155,0.3);
+}
+
+.ssh-linker-select {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    padding: 5px 8px;
+    font-size: 0.75rem;
+    font-family: inherit;
+    background: transparent;
+    border: none;
+    color: var(--di-text-muted, rgba(200,230,240,0.6));
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.1s, color 0.1s;
+}
+
+.ssh-linker-select:hover {
+    background: rgba(77,249,255,0.05);
+    color: var(--di-text, #e8f4f8);
+}
+
+.is-linked .ssh-linker-select {
     color: #53d79b;
+}
+
+.ssh-linker-rename-btn {
+    flex-shrink: 0;
+    padding: 4px 7px;
+    font-size: 0.68rem;
+    font-family: inherit;
+    background: transparent;
+    border: none;
+    border-left: 1px solid rgba(200,230,240,0.1);
+    color: var(--di-text-muted, rgba(200,230,240,0.4));
+    cursor: pointer;
+    transition: color 0.1s, background 0.1s;
+}
+
+.ssh-linker-rename-btn:hover {
+    color: var(--di-text, #e8f4f8);
+    background: rgba(200,230,240,0.06);
 }
 
 .ssh-linker-label {
@@ -330,4 +349,41 @@
     text-transform: uppercase;
     color: #53d79b;
     flex-shrink: 0;
+}
+
+.ssh-linker-rename-form {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 1;
+    padding: 4px 6px;
+}
+
+.ssh-linker-rename-input {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.75rem;
+    font-family: inherit;
+    background: rgba(77,249,255,0.06);
+    border: 1px solid rgba(77,249,255,0.2);
+    color: var(--di-text, #e8f4f8);
+    padding: 3px 7px;
+    outline: none;
+}
+
+.ssh-linker-rename-input:focus {
+    border-color: rgba(77,249,255,0.5);
+}
+
+.ssh-linker-footer {
+    display: flex;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.ssh-space-project {
+    margin: 4px 0 0;
+    font-size: 0.75rem;
+    color: var(--di-cyan, #4fd6ff);
+    opacity: 0.7;
 }

@@ -9,7 +9,7 @@ import {
     getServerConfig,
     patchServerConfig
 } from '../../services/serverSpaces.js'
-import { listProjects } from '../../project/services/projectsApi.js'
+import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import '../styles/studio-space-hub.css'
 
@@ -20,7 +20,9 @@ export default function SpaceHub() {
     const [creatingTitle, setCreatingTitle] = useState(null)
     const [isBusy, setIsBusy] = useState(false)
     const [defaultSpaceId, setDefaultSpaceId] = useState(null)
-    // project linker state: { spaceId, projects, loading }
+    // projectId → title map for linked projects
+    const [projectTitles, setProjectTitles] = useState({})
+    // project linker state: { spaceId, projects, loading, renamingId, renameValue }
     const [linker, setLinker] = useState(null)
 
     const loadSpaces = useCallback(async () => {
@@ -30,6 +32,21 @@ export default function SpaceHub() {
             setSpaces(list)
             setDefaultSpaceId(cfg.defaultSpaceId || null)
             setStatus('')
+            // resolve titles for any linked projects
+            const ids = [...new Set(list.map(s => s.publishedProjectId).filter(Boolean))]
+            if (ids.length) {
+                const results = await Promise.allSettled(ids.map(id => getProject(id)))
+                const titles = {}
+                results.forEach((r, i) => {
+                    if (r.status === 'fulfilled') {
+                        const p = r.value?.project || r.value
+                        if (p?.id) titles[p.id] = p.title || p.id
+                    } else {
+                        titles[ids[i]] = ids[i]
+                    }
+                })
+                setProjectTitles(titles)
+            }
         } catch (e) {
             setStatus(e.message || 'error loading spaces')
         }
@@ -105,12 +122,18 @@ export default function SpaceHub() {
             setLinker(null)
             return
         }
-        setLinker({ spaceId: space.id, projects: [], loading: true })
+        setLinker({ spaceId: space.id, projects: [], loading: true, renamingId: null, renameValue: '' })
         try {
             const projects = await listProjects(space.id)
-            setLinker({ spaceId: space.id, projects, loading: false })
+            setLinker(prev => prev?.spaceId === space.id
+                ? { ...prev, projects, loading: false }
+                : prev
+            )
         } catch (err) {
-            setLinker({ spaceId: space.id, projects: [], loading: false, error: err.message })
+            setLinker(prev => prev?.spaceId === space.id
+                ? { ...prev, projects: [], loading: false, error: err.message }
+                : prev
+            )
         }
     }, [linker])
 
@@ -123,6 +146,29 @@ export default function SpaceHub() {
             alert(err.message || 'Could not link project.')
         }
     }, [loadSpaces])
+
+    const handleStartRenameProject = useCallback((project, e) => {
+        e.stopPropagation()
+        setLinker(prev => prev ? { ...prev, renamingId: project.id, renameValue: project.title || '' } : prev)
+    }, [])
+
+    const handleSubmitRenameProject = useCallback(async (projectId, e) => {
+        e?.preventDefault?.()
+        const newTitle = linker?.renameValue?.trim()
+        if (!newTitle) return
+        try {
+            await updateProject(projectId, { title: newTitle })
+            setLinker(prev => prev ? {
+                ...prev,
+                renamingId: null,
+                renameValue: '',
+                projects: prev.projects.map(p => p.id === projectId ? { ...p, title: newTitle } : p)
+            } : prev)
+            setProjectTitles(prev => ({ ...prev, [projectId]: newTitle }))
+        } catch (err) {
+            alert(err.message || 'Could not rename project.')
+        }
+    }, [linker])
 
     return (
         <Box className="studio-shell-root ssh-root">
@@ -178,6 +224,10 @@ export default function SpaceHub() {
                         {spaces.map((space) => {
                             const isMain = space.id === defaultSpaceId
                             const isLinking = linker?.spaceId === space.id
+                            const linkedTitle = space.publishedProjectId
+                                ? (projectTitles[space.publishedProjectId] || space.publishedProjectId)
+                                : null
+
                             return (
                                 <div
                                     key={space.id}
@@ -193,10 +243,8 @@ export default function SpaceHub() {
                                         {space.isPublic && <span className="ssh-badge-live">Live</span>}
                                     </div>
                                     <p className="ssh-space-label">{space.label || space.id}</p>
-                                    {space.publishedProjectId && (
-                                        <p className="ssh-space-project">
-                                            Project: <code>{space.publishedProjectId.slice(0, 8)}&hellip;</code>
-                                        </p>
+                                    {linkedTitle && (
+                                        <p className="ssh-space-project">Project: {linkedTitle}</p>
                                     )}
 
                                     {authenticated && (
@@ -235,38 +283,64 @@ export default function SpaceHub() {
                                             {linker.loading && <p className="ssh-linker-status">Loading projects...</p>}
                                             {linker.error && <p className="ssh-linker-status ssh-linker-error">{linker.error}</p>}
                                             {!linker.loading && !linker.error && linker.projects.length === 0 && (
-                                                <p className="ssh-linker-status">No projects in this space yet. Open it in Studio to create one.</p>
+                                                <p className="ssh-linker-status">No projects yet. Open this space in Studio to create one.</p>
                                             )}
                                             {!linker.loading && linker.projects.length > 0 && (
                                                 <div className="ssh-linker-list">
                                                     {linker.projects.map(p => (
-                                                        <button
-                                                            key={p.id}
-                                                            className={`ssh-linker-item${space.publishedProjectId === p.id ? ' is-linked' : ''}`}
-                                                            onClick={() => handleLinkProject(space.id, p.id)}
-                                                        >
-                                                            <span className="ssh-linker-label">{p.label || p.id.slice(0, 12)}</span>
-                                                            {space.publishedProjectId === p.id && <span className="ssh-linker-check">linked</span>}
-                                                        </button>
+                                                        <div key={p.id} className={`ssh-linker-item${space.publishedProjectId === p.id ? ' is-linked' : ''}`}>
+                                                            {linker.renamingId === p.id ? (
+                                                                <form
+                                                                    className="ssh-linker-rename-form"
+                                                                    onSubmit={e => { e.preventDefault(); handleSubmitRenameProject(p.id) }}
+                                                                    onClick={e => e.stopPropagation()}
+                                                                >
+                                                                    <input
+                                                                        className="ssh-linker-rename-input"
+                                                                        ref={el => el?.focus()}
+                                                                        value={linker.renameValue}
+                                                                        onChange={e => setLinker(prev => prev ? { ...prev, renameValue: e.target.value } : prev)}
+                                                                        onKeyDown={e => e.key === 'Escape' && setLinker(prev => prev ? { ...prev, renamingId: null } : prev)}
+                                                                    />
+                                                                    <button className="ssh-card-btn" type="submit">Save</button>
+                                                                    <button className="ssh-card-btn" type="button" onClick={() => setLinker(prev => prev ? { ...prev, renamingId: null } : prev)}>✕</button>
+                                                                </form>
+                                                            ) : (
+                                                                <>
+                                                                    <button
+                                                                        className="ssh-linker-select"
+                                                                        onClick={() => handleLinkProject(space.id, p.id)}
+                                                                        title="Use as published project"
+                                                                    >
+                                                                        <span className="ssh-linker-label">{p.title || 'Untitled'}</span>
+                                                                        {space.publishedProjectId === p.id && <span className="ssh-linker-check">linked</span>}
+                                                                    </button>
+                                                                    <button
+                                                                        className="ssh-linker-rename-btn"
+                                                                        onClick={e => handleStartRenameProject(p, e)}
+                                                                        title="Rename project"
+                                                                    >
+                                                                        Rename
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
                                                     ))}
                                                 </div>
                                             )}
-                                            {!linker.loading && space.publishedProjectId && (
-                                                <button
-                                                    className="ssh-card-btn ssh-card-btn--danger"
-                                                    style={{ marginTop: 6 }}
-                                                    onClick={() => handleLinkProject(space.id, null)}
-                                                >
-                                                    Unlink project
+                                            <div className="ssh-linker-footer">
+                                                {!linker.loading && space.publishedProjectId && (
+                                                    <button
+                                                        className="ssh-card-btn ssh-card-btn--danger"
+                                                        onClick={() => handleLinkProject(space.id, null)}
+                                                    >
+                                                        Unlink
+                                                    </button>
+                                                )}
+                                                <button className="ssh-card-btn" onClick={() => setLinker(null)}>
+                                                    Close
                                                 </button>
-                                            )}
-                                            <button
-                                                className="ssh-card-btn"
-                                                style={{ marginTop: 6 }}
-                                                onClick={() => setLinker(null)}
-                                            >
-                                                Cancel
-                                            </button>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
