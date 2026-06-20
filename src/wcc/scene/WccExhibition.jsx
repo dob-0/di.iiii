@@ -192,11 +192,7 @@ function ZonePortal({ artist, center }) {
                 <ringGeometry args={[2.4, 3, 48]} />
                 <meshBasicMaterial color={0xffffff} transparent opacity={0.22} depthWrite={false} side={THREE.DoubleSide} />
             </mesh>
-            <mesh position={[0, 4, 0]}>
-                <cylinderGeometry args={[0.03, 0.03, 8, 8]} />
-                <meshBasicMaterial color={0xffffff} transparent opacity={0.12} depthWrite={false} />
-            </mesh>
-            <Billboard position={[0, 5.4, 0]}>
+            <Billboard position={[0, 2.8, 0]}>
                 <Text fontSize={0.7} maxWidth={8} color="#ffffff" outlineWidth={0.02} outlineColor="#000000" anchorX="center" anchorY="middle">
                     {artist.title}
                 </Text>
@@ -264,6 +260,15 @@ const ZONE_OVERRIDES = {
             const tr = e.components?.transform || {}
             const pos = tr.position || [0, 0, 0]
             return { ...e, components: { ...e.components, transform: { ...tr, position: [pos[0], 1.8, pos[2]] } } }
+        },
+    },
+    // Jeny's GLBs sit 5m toward the hub (local x = -5) so they bleed into
+    // adjacent zones when viewed from the center. Shift them back into her zone.
+    'jeny-gevorgyan': {
+        transform: (e) => {
+            const tr = e.components?.transform || {}
+            const pos = tr.position || [0, 0, 0]
+            return { ...e, components: { ...e.components, transform: { ...tr, position: [pos[0] + 5, pos[1], pos[2]] } } }
         },
     },
     // Ani's entities are scale=1. At 38m approach distance they're invisible.
