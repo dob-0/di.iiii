@@ -38,7 +38,9 @@ Every task has an owner. Route to the right role before starting work.
 ## Deep Reference Pages
 
 - [golden_rules.md](golden_rules.md) — hard-won solutions + agent behavior rules (read this early)
-- [design-baseline.md](design-baseline.md) — locked default visual style (landing page: colors, typography, cyan grid scene) for new public surfaces
+- [elite-debug.md](elite-debug.md) — investigation epistemology: how to think when debugging, DRY at architecture level, model-first investigation
+- [ui-system.md](ui-system.md) — complete visual system: two surface families, all rgba values, radius scale, viewport corner layout, MUI override rules
+- [design-baseline.md](design-baseline.md) — landing page style reference (colors, typography, cyan grid scene); ui-system.md covers the editor
 - [parallel-agents.md](parallel-agents.md) — running more than one agent on this repo at once
 - [architecture.md](architecture.md)
 - [workflows.md](workflows.md)
@@ -46,6 +48,8 @@ Every task has an owner. Route to the right role before starting work.
 - [deploy.md](deploy.md)
 - [agent-support-matrix.md](agent-support-matrix.md)
 - [private-overrides.md](private-overrides.md)
+- [shortcuts.md](shortcuts.md) — canonical Studio keyboard shortcut reference; keep in sync with Shift+? overlay in StudioViewport.jsx
+- [v1-studio-feature-map.md](v1-studio-feature-map.md) — full V1 vs Studio feature audit; what to port, what to skip, schema notes for grouping/linking/expressions
 
 ## Scoped Guides
 

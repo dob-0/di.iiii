@@ -36,11 +36,25 @@ const BASE_SECTIONS = [
     { id: 'appearance', label: 'Appearance', fields: APPEARANCE_FIELDS }
 ]
 
+// Wireframe only makes visual sense on solid primitive geometry (box, sphere,
+// cone, cylinder) -- text/image/video/model entities don't expose it.
+const PRIMITIVE_SECTIONS = [
+    { id: 'transform', label: 'Transform', fields: TRANSFORM_FIELDS },
+    {
+        id: 'appearance',
+        label: 'Appearance',
+        fields: [
+            ...APPEARANCE_FIELDS,
+            { label: 'Wireframe', component: 'appearance', path: ['wireframe'], type: 'checkbox' }
+        ]
+    }
+]
+
 const DEFINITIONS = {
     box: {
         label: 'Box',
         sections: [
-            ...BASE_SECTIONS,
+            ...PRIMITIVE_SECTIONS,
             {
                 id: 'primitive',
                 label: 'Primitive',
@@ -55,7 +69,7 @@ const DEFINITIONS = {
     sphere: {
         label: 'Sphere',
         sections: [
-            ...BASE_SECTIONS,
+            ...PRIMITIVE_SECTIONS,
             {
                 id: 'primitive',
                 label: 'Primitive',
@@ -66,7 +80,7 @@ const DEFINITIONS = {
     cone: {
         label: 'Cone',
         sections: [
-            ...BASE_SECTIONS,
+            ...PRIMITIVE_SECTIONS,
             {
                 id: 'primitive',
                 label: 'Primitive',
@@ -80,7 +94,7 @@ const DEFINITIONS = {
     cylinder: {
         label: 'Cylinder',
         sections: [
-            ...BASE_SECTIONS,
+            ...PRIMITIVE_SECTIONS,
             {
                 id: 'primitive',
                 label: 'Primitive',
@@ -224,6 +238,12 @@ const DEFINITIONS = {
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 4, step: 0.05 }
             ]}
         ]
+    },
+    group: {
+        label: 'Group',
+        sections: [
+            { id: 'transform', label: 'Transform', fields: TRANSFORM_FIELDS }
+        ]
     }
 }
 
@@ -237,6 +257,7 @@ export const createEntityOfType = (type = 'box', overrides = {}) => {
         id: generateId('entity'),
         type,
         name: overrides.name || definition.label,
+        parentId: overrides.parentId || null,
         components: {
             ...buildDefaultComponentsForType(type),
             ...(overrides.components || {})

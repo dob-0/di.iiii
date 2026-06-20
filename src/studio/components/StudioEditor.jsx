@@ -16,6 +16,9 @@ import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from
 import { useStudioLayoutPrefs } from '../hooks/useStudioLayoutPrefs.js'
 import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
+import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
+import { formatAssetSize, optimizeGlbAsset, shouldSuggestGlbOptimization } from '../utils/assetOptimization.js'
+import { getSelectionCentroid } from '../utils/multiTransform.js'
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
 
@@ -106,6 +109,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const selectedEntities = entities.filter((entity) => selectedEntityIds.includes(entity.id))
     const [transformOp, setTransformOp] = useState(null)
     const [exportStatus, setExportStatus] = useState(null)
+    const [assetOptimizationPrompt, setAssetOptimizationPrompt] = useState(null)
+    const assetOptimizationResolveRef = useRef(null)
     const transformOpRef = useRef(null)
     useEffect(() => { transformOpRef.current = transformOp }, [transformOp])
     const theme = useTheme()
@@ -140,6 +145,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             // ignore local storage errors
         }
     }, [displayName])
+
+    useEffect(() => () => {
+        assetOptimizationResolveRef.current?.(null)
+        assetOptimizationResolveRef.current = null
+    }, [])
 
     useEffect(() => {
         const handler = (event) => {
@@ -214,19 +224,60 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         dispatch({ type: 'select-entity', entityId: entity.id })
     }
 
+    const requestAssetUploadFile = (file) => {
+        if (!shouldSuggestGlbOptimization(file)) return Promise.resolve(file)
+        return new Promise((resolve) => {
+            assetOptimizationResolveRef.current = resolve
+            setAssetOptimizationPrompt({ file, status: 'choice', error: null })
+        })
+    }
+
+    const finishAssetOptimizationPrompt = (file) => {
+        const resolve = assetOptimizationResolveRef.current
+        assetOptimizationResolveRef.current = null
+        setAssetOptimizationPrompt(null)
+        resolve?.(file)
+    }
+
+    const handleOptimizeAsset = async () => {
+        const file = assetOptimizationPrompt?.file
+        if (!file) return
+        setAssetOptimizationPrompt((current) => ({ ...current, status: 'optimizing', error: null }))
+        try {
+            const optimized = await optimizeGlbAsset(file)
+            finishAssetOptimizationPrompt(optimized)
+        } catch (error) {
+            setAssetOptimizationPrompt((current) => ({
+                ...current,
+                status: 'error',
+                error: error instanceof Error ? error.message : 'Model optimization failed.'
+            }))
+        }
+    }
+
     const handleAssetFilesSelected = async (event) => {
         const files = Array.from(event.target.files || [])
         if (!files.length) return
-        for (const file of files) {
-            const asset = await uploadProjectAsset(projectId, file)
-            applyLocalOps({
-                type: 'upsertAsset',
-                payload: { asset }
-            }, { activityMessage: `Imported ${file.name}.` })
-            handleCreateEntity(detectEntityTypeFromFile(file), asset)
+        try {
+            for (const file of files) {
+                const uploadFile = await requestAssetUploadFile(file)
+                if (!uploadFile) continue
+                const asset = await uploadProjectAsset(projectId, uploadFile)
+                const wasOptimized = uploadFile !== file
+                const activityMessage = wasOptimized
+                    ? `Optimized ${file.name} from ${formatAssetSize(file.size)} to ${formatAssetSize(uploadFile.size)} and imported it.`
+                    : `Imported ${file.name}.`
+                applyLocalOps({
+                    type: 'upsertAsset',
+                    payload: { asset }
+                }, { activityMessage })
+                const entityAsset = wasOptimized ? { ...asset, name: file.name } : asset
+                handleCreateEntity(detectEntityTypeFromFile(file), entityAsset)
+            }
+        } finally {
+            event.target.value = ''
+            refreshSpaceAssets()
         }
-        event.target.value = ''
-        refreshSpaceAssets()
     }
 
     const handleDeleteSelected = () => {
@@ -301,6 +352,67 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         handleDeleteSelected()
     }
 
+    const handleGroupSelected = () => {
+        const targets = selectedEntities.length > 1
+            ? selectedEntities
+            : (selectedEntity ? [selectedEntity] : [])
+        if (targets.length < 2) return
+        const centroid = getSelectionCentroid(targets)
+        const group = createEntityOfType('group', {
+            name: 'Group',
+            components: { transform: { position: centroid, rotation: [0, 0, 0], scale: [1, 1, 1] } }
+        })
+        const ops = [{ type: 'createEntity', payload: { entity: group } }]
+        for (const entity of targets) {
+            const wp = entity.components?.transform?.position || [0, 0, 0]
+            ops.push({
+                type: 'updateEntity',
+                payload: {
+                    entityId: entity.id,
+                    patch: {
+                        parentId: group.id,
+                        components: {
+                            transform: {
+                                ...entity.components?.transform,
+                                position: [wp[0] - centroid[0], wp[1] - centroid[1], wp[2] - centroid[2]]
+                            }
+                        }
+                    }
+                }
+            })
+        }
+        applyLocalOps(ops, { activityMessage: `Grouped ${targets.length} entities.` })
+        dispatch({ type: 'select-entity', entityId: group.id })
+    }
+
+    const handleUngroup = () => {
+        const target = selectedEntity
+        if (!target || target.type !== 'group') return
+        const gp = target.components?.transform?.position || [0, 0, 0]
+        const children = entities.filter((e) => e.parentId === target.id)
+        const ops = children.map((child) => {
+            const lp = child.components?.transform?.position || [0, 0, 0]
+            return {
+                type: 'updateEntity',
+                payload: {
+                    entityId: child.id,
+                    patch: {
+                        parentId: null,
+                        components: {
+                            transform: {
+                                ...child.components?.transform,
+                                position: [lp[0] + gp[0], lp[1] + gp[1], lp[2] + gp[2]]
+                            }
+                        }
+                    }
+                }
+            }
+        })
+        ops.push({ type: 'deleteEntity', payload: { entityId: target.id } })
+        applyLocalOps(ops, { activityMessage: `Ungrouped ${target.name}.` })
+        dispatch({ type: 'select-entity', entityId: null })
+    }
+
     const handleFrameSelected = () => {
         const cc = controlsRef.current
         if (!cc) return
@@ -367,6 +479,18 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 if (!selectedEntity) return
                 event.preventDefault()
                 handleCutSelected()
+                return
+            }
+
+            // Group selected (Ctrl+G) / Ungroup (Ctrl+Shift+G)
+            if (meta && !event.shiftKey && (key === 'g' || key === 'G')) {
+                event.preventDefault()
+                handleGroupSelected()
+                return
+            }
+            if (meta && event.shiftKey && (key === 'g' || key === 'G')) {
+                event.preventDefault()
+                handleUngroup()
                 return
             }
 
@@ -461,8 +585,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         })
     }, [applyLocalOps])
 
-    // Commit several entity transforms at once (modal multi-object move) as a single
-    // undo step.
+    // Commit several entity transforms at once as a single undo step.
+    // Does NOT clear transformOp -- the V1 model calls onCommit multiple times
+    // per session (once per mode-switch via commitIfMoved), so clearing here
+    // would prematurely unmount ModalTransform. Session ends via onCancel→handleTransformCancel.
     const handleTransformCommitMany = useCallback((list) => {
         const ops = (list || [])
             .filter((entry) => entry?.id && entry.transform)
@@ -471,11 +597,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 payload: { entityId: entry.id, component: 'transform', patch: entry.transform }
             }))
         if (ops.length) applyLocalOps(ops)
-        setTransformOp(null)
     }, [applyLocalOps])
 
-    const handleStartTransform = useCallback((mode) => {
-        setTransformOp({ mode, seq: Date.now() })
+    const handleStartTransform = useCallback((mode, axis = null) => {
+        setTransformOp({ mode, axis, seq: Date.now() })
     }, [])
 
     const handleTransformCancel = useCallback(() => {
@@ -682,7 +807,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     }
 
     return (
-        <StudioShell
+        <>
+            <StudioShell
             document={document}
             loading={state.loading}
             loadError={state.loadError}
@@ -709,6 +835,9 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onCreateFromAsset={(asset) => handleCreateEntity(detectEntityTypeFromFile(asset), asset)}
             onAssetFilesSelected={handleAssetFilesSelected}
             onDeleteSelected={handleDeleteSelected}
+            onGroupSelected={handleGroupSelected}
+            onUngroup={handleUngroup}
+            onDuplicateSelected={handleDuplicateSelected}
             onSelectEntity={(entityId) => dispatch({ type: 'select-entity', entityId })}
             onToggleSelectEntity={(entityId) => dispatch({ type: 'toggle-entity-selection', entityId })}
             onInspectorChange={handleInspectorChange}
@@ -741,6 +870,13 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             }}
             onSetLiveProject={handleSetLiveProject}
             onClearLiveProject={handleClearLiveProject}
-        />
+            />
+            <AssetOptimizationDialog
+                prompt={assetOptimizationPrompt}
+                onOptimize={handleOptimizeAsset}
+                onUploadOriginal={() => finishAssetOptimizationPrompt(assetOptimizationPrompt?.file || null)}
+                onCancel={() => finishAssetOptimizationPrompt(null)}
+            />
+        </>
     )
 }

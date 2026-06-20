@@ -61,8 +61,8 @@ export default function AccountButton({ authState, onLogout }) {
                 onClick={handleOpen}
                 sx={{
                     position: 'fixed',
-                    top: '8px',
-                    right: '8px',
+                    bottom: '86px',
+                    right: '14px',
                     zIndex: 9999,
                     cursor: 'pointer'
                 }}
@@ -74,17 +74,17 @@ export default function AccountButton({ authState, onLogout }) {
                             variant="outlined"
                             sx={{
                                 minWidth: 0,
-                                width: 28,
-                                height: 28,
-                                borderRadius: '50%',
+                                width: 30,
+                                height: 30,
+                                borderRadius: '6px',
                                 fontSize: 12,
                                 fontWeight: 700,
                                 p: 0,
-                                borderColor: 'var(--ui-border)',
-                                color: 'var(--ui-text-muted)',
-                                background: 'var(--ui-surface)',
-                                backdropFilter: 'blur(8px)',
-                                '&:hover': { borderColor: 'var(--ui-accent)', color: 'var(--ui-text-primary)' }
+                                borderColor: 'rgba(255,255,255,0.1)',
+                                color: 'rgba(255,255,255,0.55)',
+                                background: 'rgba(15,23,34,0.55)',
+                                backdropFilter: 'blur(6px)',
+                                '&:hover': { borderColor: 'rgba(255,255,255,0.35)', color: '#fff', background: 'rgba(15,23,34,0.82)' }
                             }}
                         >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -98,14 +98,17 @@ export default function AccountButton({ authState, onLogout }) {
                     <Avatar
                         src={authState?.avatarUrl || undefined}
                         sx={{
-                            width: 28,
-                            height: 28,
+                            width: 30,
+                            height: 30,
                             fontSize: 11,
                             fontWeight: 700,
-                            background: 'var(--ui-accent)',
-                            color: '#07111b',
-                            border: '1.5px solid var(--ui-border)',
-                            cursor: 'pointer'
+                            borderRadius: '6px',
+                            background: 'rgba(15,23,34,0.55)',
+                            color: 'rgba(255,255,255,0.75)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            backdropFilter: 'blur(6px)',
+                            cursor: 'pointer',
+                            '&:hover': { borderColor: 'rgba(255,255,255,0.35)', background: 'rgba(15,23,34,0.82)' }
                         }}
                     >
                         {initials}

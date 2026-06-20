@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Box3, Vector3 } from 'three'
 import StudioInspector from './StudioInspector.jsx'
 import StudioViewportLayout from './StudioViewportLayout.jsx'
 import StudioFloatingPanel from './StudioFloatingPanel.jsx'
@@ -20,16 +21,18 @@ import {
 const DEFAULT_POSITIONS = () => {
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1280
     const vh = typeof window !== 'undefined' ? window.innerHeight : 800
+    const midY = Math.round(vh * 0.48)
+    const rightX = Math.max(290, vw - 700)   // 20px left of cluster (cluster at vw-400, width≤280)
     return {
-        library:   { x: 16, y: 16 },
-        assets:    { x: 308, y: 16 },
-        files:     { x: Math.round(vw * 0.25), y: 16 },
-        inspector: { x: vw - 296, y: 16 },
-        structure: { x: 16, y: Math.round(vh * 0.45) },
-        present:   { x: Math.round(vw * 0.35), y: 16 },
-        publish:   { x: vw - 296, y: Math.round(vh * 0.45) },
-        activity:  { x: Math.round(vw * 0.35), y: Math.round(vh * 0.45) },
-        world:     { x: 308, y: Math.round(vh * 0.45) },
+        library:   { x: 16,                     y: 90 },
+        structure: { x: 16,                     y: midY },
+        assets:    { x: 290,                    y: 90 },
+        activity:  { x: 290,                    y: midY },
+        files:     { x: Math.round(vw * 0.3),   y: 90 },
+        present:   { x: Math.round(vw * 0.3),   y: midY },
+        publish:   { x: Math.round(vw * 0.55),  y: midY },
+        inspector: { x: rightX,                 y: 90 },
+        world:     { x: rightX,                 y: midY + 30 },
     }
 }
 
@@ -61,6 +64,9 @@ export default function StudioShell({
     onCreateFromAsset,
     onAssetFilesSelected,
     onDeleteSelected,
+    onGroupSelected,
+    onUngroup,
+    onDuplicateSelected,
     onSelectEntity,
     onInspectorChange,
     onWorldPatch,
@@ -99,6 +105,8 @@ export default function StudioShell({
     const [positions, setPositions] = useState(DEFAULT_POSITIONS)
     const [layoutKey, setLayoutKey] = useState(0)
     const [snapEdges, setSnapEdges] = useState(false)
+    const fitToSelectionRef = useRef(null)
+    const [showHelp, setShowHelp] = useState(false)
 
     const selectGizmoMode = useCallback((mode) => {
         setViewportGizmoMode(mode)
@@ -160,36 +168,71 @@ export default function StudioShell({
                 e.preventDefault()
                 setUiHidden((v) => !v)
             }
-            if (e.key === 'e' || e.key === 'E') {
+            if (e.key === 'e' || e.key === 'E' || e.key === 'Tab') {
                 e.preventDefault()
                 setViewportEditMode((m) => (m === 'navigate' ? 'edit' : 'navigate'))
             }
             if (e.key === 'Escape' && quickInsert) {
                 setQuickInsert(null)
             }
-            // G/R/S: in edit mode with a selection, start the Blender-style modal grab
-            // (object follows the mouse immediately — see ModalTransform.jsx and
-            // docs/SHORTCUTS.md). Otherwise just switch which classic drag-handle
-            // gizmo is shown. T toggles gizmo visibility.
+            if (e.key === 'Escape') {
+                setShowHelp(false)
+            }
+            if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault()
+                setShowHelp((v) => !v)
+            }
+            if ((e.key === 'Delete' || e.key === 'Backspace') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault()
+                onDeleteSelected?.()
+            }
+            if (e.shiftKey && (e.key === 'd' || e.key === 'D') && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault()
+                onDuplicateSelected?.()
+            }
+            if ((e.key === 'f' || e.key === 'F') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault()
+                const targets = selectedEntityIds.length ? selectedEntityIds : []
+                const ents = entities?.filter((en) => targets.includes(en.id)) || []
+                if (ents.length && fitToSelectionRef.current) {
+                    const box = new Box3()
+                    for (const en of ents) {
+                        const t = en.components?.transform || {}
+                        const pos = new Vector3(...(t.position || [0, 0, 0]))
+                        const scale = new Vector3(...(t.scale || [1, 1, 1]))
+                        const half = scale.clone().multiplyScalar(0.5)
+                        box.expandByPoint(pos.clone().sub(half))
+                        box.expandByPoint(pos.clone().add(half))
+                    }
+                    fitToSelectionRef.current(box)
+                }
+            }
+            // G/R/S: show the drag-handle gizmo in the matching mode.
+            // X/Y/Z with a selection: arm the V1 modal pre-seeded with the current
+            // gizmo mode + chosen axis (mouse delta moves on that axis immediately).
+            // ModalTransform's capture listener owns X/Y/Z once a session is running.
+            // T toggles gizmo visibility.
             if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
                 const modeForKey = (e.key === 'g' || e.key === 'G') ? 'translate'
                     : (e.key === 'r' || e.key === 'R') ? 'rotate'
                     : (e.key === 's' || e.key === 'S') ? 'scale'
                     : null
-                const canModal = viewportEditMode === 'edit' && selectedEntityIds.length > 0
                 if (modeForKey) {
                     e.preventDefault()
-                    if (canModal && onStartTransform) {
-                        onStartTransform(modeForKey)
-                    } else {
-                        selectGizmoMode(modeForKey)
-                    }
-                } else if (['x', 'y', 'z'].includes(e.key.toLowerCase())) {
+                    selectGizmoMode(modeForKey)
+                } else if (['x', 'y', 'z', 'a'].includes(e.key.toLowerCase()) && !transformOp) {
                     e.preventDefault()
                     e.stopImmediatePropagation()
-                    const axis = e.key.toLowerCase()
-                    setViewportGizmoAxis((current) => current === axis ? null : axis)
-                    setViewportGizmoVisible(true)
+                    const key = e.key.toLowerCase()
+                    const axis = key === 'a' ? 'all' : key
+                    if (selectedEntityIds.length > 0 && onStartTransform) {
+                        // Arm the V1 modal using the current gizmo mode + this axis
+                        onStartTransform(viewportGizmoMode, axis)
+                    } else if (axis !== 'all') {
+                        // No selection: just constrain the drag-handle gizmo axis (not meaningful for 'all')
+                        setViewportGizmoAxis((current) => current === axis ? null : axis)
+                        setViewportGizmoVisible(true)
+                    }
                 } else if (e.key === 't' || e.key === 'T') {
                     e.preventDefault()
                     setViewportGizmoVisible((v) => !v)
@@ -207,7 +250,7 @@ export default function StudioShell({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform])
+    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode, onDeleteSelected, onDuplicateSelected, entities])
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return
@@ -251,6 +294,10 @@ export default function StudioShell({
         onTransformCommit,
         onTransformCommitMany,
         onTransformCancel,
+        fitToSelectionRef,
+        showHelp,
+        onShowHelp: () => setShowHelp(true),
+        onCloseHelp: () => setShowHelp(false),
     }
 
     return (
@@ -308,6 +355,8 @@ export default function StudioShell({
                                 selectedEntityIds={selectedEntityIds}
                                 onSelectEntity={onSelectEntity}
                                 onToggleSelectEntity={onToggleSelectEntity}
+                                onGroupSelected={onGroupSelected}
+                                onUngroup={onUngroup}
                             />
                         </StudioFloatingPanel>
                     )}
@@ -355,6 +404,7 @@ export default function StudioShell({
                         onStackLeft={stackLeft}
                         onStackRight={stackRight}
                         onResetLayout={resetLayout}
+                        onShowHelp={() => setShowHelp(true)}
                     />
                 </>
             )}

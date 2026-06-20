@@ -1,6 +1,6 @@
 import React from 'react'
 
-export default function BoxObject({ color, boxSize = [1, 1, 1] }) {
+export default function BoxObject({ color, boxSize = [1, 1, 1], wireframe = false, opacity = 1 }) {
     const safeSize = Array.isArray(boxSize)
         ? boxSize.map((entry) => {
             const next = Math.abs(Number(entry))
@@ -12,7 +12,7 @@ export default function BoxObject({ color, boxSize = [1, 1, 1] }) {
     return (
         <mesh position-y={safeSize[1] / 2}>
             <boxGeometry args={safeSize} />
-            <meshStandardMaterial color={color} />
+            <meshStandardMaterial color={color} wireframe={wireframe} transparent={wireframe || opacity < 1} opacity={opacity} />
         </mesh>
     )
 }

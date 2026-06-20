@@ -280,6 +280,33 @@ r3f-perf, @pmndrs/*, @iwer/*, iwer
 
 ---
 
+### Workflow: ask one clarifying question before implementing UX behavior changes
+
+**Rule:** Before implementing any change to interactive behavior (hotkeys, gizmos, transform tools, mode switches), restate your understanding of the desired behavior in one sentence and ask the user to confirm. Do not start coding until the interpretation is locked. Credit-burning loops happen when the implementation is technically correct but wrong-shaped.
+
+**Why:** The G/R/S + gizmo rework burned multiple iterations because "activate the gizmo" was interpreted as "arm the modal" when the user meant "show the Three.js drag handles." A single clarifying question before coding would have avoided two full rewrites.
+
+**How:** One sentence restatement + one yes/no question. If there are two mutually exclusive interpretations, list both and ask which. Never list more than two options — pick the most likely one as the default.
+
+---
+
+### UI overlap: `position:fixed` at high z-index escapes every ancestor
+
+**Rule:** When a visual element appears on top of something it shouldn't, search for `position.*fixed` + `zIndex` above 1000 before touching any CSS on the element you can see. The culprit is almost never in the same component tree.
+
+**Why:** The axis gizmo (`z-index: 10`) was invisible under the `AccountButton` (`position: fixed; top: 8px; right: 8px; z-index: 9999`) for two full sessions. Every fix targeted the gizmo or the control cluster — neither was the problem. `position: fixed` is positioned relative to the viewport, ignores `overflow: hidden` on all ancestors, and creates a global overlay that can land on any component from a completely unrelated part of the tree.
+
+**How:** When the symptom is "element X appears under element Y":
+1. `grep -rn "zIndex.*[0-9]\{4\}\|z-index.*[0-9]\{4\}" src/` — list every high-z element
+2. Compare positions: is any high-z `position: fixed` element at the same screen coordinates as the conflict?
+3. Fix at the source of the overlay (hide it, reposition it, or reduce its z-index), not at the victim.
+
+The fix here: `AuthGate` renders `<AccountButton>` as a sibling to its children. The studio editor has its own navigation (← Hub). `AuthGate` now accepts `showAccountButton={false}` to suppress it in editor context.
+
+**Files:** `src/components/AccountButton.jsx`, `src/components/AuthGate.jsx`, `src/RootApp.jsx`
+
+---
+
 ### Visual: landing page style is the locked default for new public surfaces
 
 **Rule:** Dark background, true 3D perspective cyan grid floor (Three.js, not CSS), oversized bold wordmark with one cyan accent character, mono uppercase eyebrow, one solid-cyan primary CTA + one quiet ghost CTA. Reuse the `--di-*` tokens in `src/styles/base.css` and the `HeroScene` Three.js pattern rather than re-deriving colors or approximating the grid in CSS.
@@ -287,3 +314,38 @@ r3f-perf, @pmndrs/*, @iwer/*, iwer
 **Why:** Locked in 2026-06-19 as the reference look-and-feel after reviewing the staging landing page. Prevents future sessions from drifting to ad-hoc colors/effects on new public-facing screens.
 
 **Files:** [`docs/ai/design-baseline.md`](design-baseline.md) (full color/typography/scene spec), `src/landing/LandingPage.jsx`, `src/landing/landing.css`, `src/styles/base.css`
+
+---
+
+### Shortcuts: every new shortcut goes in two places
+
+**Rule:** When adding any new keyboard shortcut to Studio, update BOTH:
+1. `SHORTCUT_SECTIONS` in `src/studio/components/StudioViewport.jsx` — the Shift+? in-app overlay the user sees
+2. `docs/ai/shortcuts.md` — the persistent reference for agents and contributors
+
+If the doc doesn't exist yet, create it. Never add a shortcut to only one place.
+
+**Why:** The Shift+? overlay and the docs can drift apart silently — a shortcut gets added to code but never documented, or documented but never wired. This happened with Ctrl+G/Ctrl+Shift+G (group/ungroup) — the overlay was updated but the doc wasn't created yet. One rule, two targets, always both.
+
+**Files:** `src/studio/components/StudioViewport.jsx` (`SHORTCUT_SECTIONS`), `docs/ai/shortcuts.md`
+
+---
+
+### UI: two surface families — never mix them
+
+**Rule:** Every visual element in the studio belongs to one of two families. Copy values from `docs/ai/ui-system.md`. Never derive a new rgba value — map to the nearest existing one.
+
+**Panel family** (floating panels, cluster, dialogs):
+- Background: `rgba(4, 6, 9, 0.92)` · Blur: `blur(16px)` · Radius: `6–7px` · Shadow: `0 12px 40px rgba(0,0,0,0.55)`
+
+**Viewport button family** (`?`, fullscreen, account, pane controls):
+- Background: `rgba(15, 23, 34, 0.55)` · Blur: `blur(6px)` · Radius: `6px` · Size: `30×30px`
+- Hover: bg `rgba(15,23,34,0.82)` · border `rgba(255,255,255,0.35)` · color `#fff`
+
+**Why:** Mixing the two families was the source of every "looks off" report in studio UI sessions. The panel family is opaque/anchored; the button family is translucent/embedded-in-scene. They serve different purposes and must not share values.
+
+**Viewport corner zones (locked):**
+- Top-right: gizmo only — `top: 10px; right: 10px` (pane-absolute)
+- Bottom-right stack (pane-absolute, `right: 14px`): account `bottom:86`, `?` `bottom:48`, fullscreen `bottom:14`
+
+**Files:** `docs/ai/ui-system.md`, `src/studio/styles/studio.css`, `src/components/AccountButton.jsx`, `src/studio/components/StudioViewport.jsx`

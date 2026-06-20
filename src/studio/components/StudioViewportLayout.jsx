@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import StudioPresentationSurface from './StudioPresentationSurface.jsx'
 
 // All views use PerspectiveCamera. "Ortho" views fake it: large distance + small FOV ≈ parallel projection.
@@ -80,6 +80,13 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
     const [viewKey, setViewKey] = useState('perspective')
     const controlsRef           = useRef(null)
 
+    // Register this pane's fitToBox into the shared imperative handle
+    useEffect(() => {
+        if (shared.fitToSelectionRef) {
+            shared.fitToSelectionRef.current = (box) => controlsRef.current?.fitToBox(box, true)
+        }
+    })
+
     const switchView = useCallback((key) => {
         if (key === viewKey) return
         const to = VIEWS[key]
@@ -139,7 +146,9 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     onCursorLeave={shared.onCursorLeave}
                     xrStore={shared.xrStore}
                     editMode={shared.editMode}
+                    setEditMode={shared.setEditMode}
                     gizmoMode={shared.gizmoMode}
+                    setGizmoMode={shared.setGizmoMode}
                     gizmoAxis={shared.gizmoAxis}
                     gizmoVisible={shared.gizmoVisible}
                     transformOp={shared.transformOp}
@@ -149,6 +158,9 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                     cameraView={cameraView}
                     controlsRef={controlsRef}
                     onRotateStart={onRotateStart}
+                    showHelp={shared.showHelp}
+                    onShowHelp={shared.onShowHelp}
+                    onCloseHelp={shared.onCloseHelp}
                 />
             </div>
         </div>

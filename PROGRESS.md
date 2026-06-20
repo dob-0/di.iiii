@@ -5,6 +5,28 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-06-19 — Opt-in GLB optimization during Studio import
+
+**Who:** Codex
+
+### Done this session
+
+- Added a 10 MB threshold for recommending optimization of newly imported `.glb` models.
+- Added a Studio decision dialog with Optimize & upload, Upload original, and Cancel paths.
+- Added a lazy browser worker that resizes embedded textures to 2048px WebP, deduplicates/welds/prunes model data, and quantizes without geometry simplification.
+- Added a two-minute timeout and original-upload fallback when optimization fails.
+- Verified a real 14.4 MB WCC gate model optimized to 1.9 MB in 3.8 seconds (87% reduction) with no browser errors.
+
+### Validation
+
+- `npm run lint` — pass
+- `npm run build` — pass
+- `npm run test -- --run` — 316/321 passed in a three-way parallel run; five server tests timed out under contention
+- `npm run test:server-contracts` — pass, 20/20 when rerun serially
+- Browser dialog smoke — pass
+
+---
+
 ## 2026-06-19 — Portable Studio Export With Assets
 
 - Export now produces one `.studio.zip` containing `project.json` and every project asset binary under `assets/<asset-id>/`.

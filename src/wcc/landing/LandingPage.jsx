@@ -12,20 +12,29 @@ const panels = [
     {
         id: 'about-project',
         label: 'ABOUT WCC',
+        labelHy: 'WCC-Ի ՄԱՍԻՆ',
         description: 'Learn about WCC, mentorship, expert talks, and shared creative practice.',
-        action: 'Read about'
+        descriptionHy: 'Իմացեք WCC-ի, մենթորության, փորձագետների զրույցների և ստեղծագործական պրակտիկայի մասին։',
+        action: 'Read about',
+        actionHy: 'Կարդալ'
     },
     {
         id: 'artist-works',
         label: 'ARTIST WORKS',
+        labelHy: 'ԱՐՎԵՍՏԱԳԵՏՆԵՐԻ ԱՇԽԱՏԱՆՔՆԵՐԸ',
         description: 'Explore artworks created by participants.',
-        action: 'Open works'
+        descriptionHy: 'Ուսումնասիրեք մասնակիցների ստեղծած արվեստի գործերը։',
+        action: 'Open works',
+        actionHy: 'Բացել'
     },
     {
         id: 'exhibition',
         label: 'EXHIBITION',
+        labelHy: 'ՑՈՒՑԱՀԱՆԴԵՍ',
         description: 'Enter the WCC: Women Creating Change virtual exhibition space.',
+        descriptionHy: 'WCC վիրտուալ ցուցահանդեսի տարածք։',
         action: 'Enter space',
+        actionHy: 'Մուտք',
         href: '/wcc/scene'
     }
 ]
@@ -44,7 +53,8 @@ const circleItems = [
 const ambientDotItems = Array.from({ length: 26 }, (_, index) => index)
 const processImages = Array.from({ length: 30 }, (_, index) => ({
     src: `/wcc/process/process-${String(index + 1).padStart(2, '0')}.jpeg`,
-    alt: `WCC process documentation photo ${index + 1}`
+    alt: `WCC process documentation photo ${index + 1}`,
+    rotatePortrait: [0, 1, 4, 11].includes(index)
 }))
 const routeSectionIds = new Set(panels.filter((panel) => !panel.href).map((panel) => panel.id))
 
@@ -195,7 +205,8 @@ function ScrollArrow({ onClick }) {
     )
 }
 
-function LandingHero({ onEnter = null }) {
+function LandingHero({ onEnter = null, lang = 'en' }) {
+    const isHy = lang === 'hy'
     return (
         <section className="wcc-hero" aria-labelledby="wcc-title">
             <p className="wcc-hero__kicker">Creative Lab • Mentorship • Exhibition</p>
@@ -203,16 +214,19 @@ function LandingHero({ onEnter = null }) {
                 <span>WCC:</span>
                 <span>Women Creating Change</span>
             </h1>
-            {landingContent.subtitle ? <p className="wcc-hero__subtitle">{landingContent.subtitle}</p> : null}
+            {isHy
+                ? landingContent.subtitleHy && <p className="wcc-hero__subtitle" lang="hy">{landingContent.subtitleHy}</p>
+                : landingContent.subtitle && <p className="wcc-hero__subtitle">{landingContent.subtitle}</p>
+            }
             <div className="wcc-hero__footer">
-                <span>Scroll to navigate</span>
                 <EnterExhibitionButton onEnter={onEnter} />
             </div>
         </section>
     )
 }
 
-function NavigationPanel({ panel, index, active, onOpen, onEnter = null }) {
+function NavigationPanel({ panel, index, active, onOpen, onEnter = null, lang = 'en' }) {
+    const isHy = lang === 'hy'
     const handleClick = (event) => {
         if (panel.href) {
             if (onEnter) {
@@ -234,139 +248,180 @@ function NavigationPanel({ panel, index, active, onOpen, onEnter = null }) {
             style={{ '--panel-index': index }}
         >
             <span className="wcc-nav-panel__number">{String(index + 1).padStart(2, '0')}</span>
-            <span className="wcc-nav-panel__title">{panel.label}</span>
-            <span className="wcc-nav-panel__description">{panel.description}</span>
-            <span className="wcc-nav-panel__action">{panel.action}</span>
+            <span className={`wcc-nav-panel__title${isHy ? ' is-hy' : ''}`}>{isHy ? panel.labelHy : panel.label}</span>
+            <span className={`wcc-nav-panel__description${isHy ? ' is-hy' : ''}`}>{isHy ? panel.descriptionHy : panel.description}</span>
+            <span className="wcc-nav-panel__action">{isHy ? panel.actionHy : panel.action}</span>
         </button>
     )
 }
 
-function HorizontalNavigation({ activeIndex, onActiveIndexChange, onOpen, onEnter = null, scrollerRef }) {
+function HorizontalNavigation({ activeIndex, onActiveIndexChange, onOpen, onEnter = null, scrollerRef, lang = 'en' }) {
+    const wrapperRef = useRef(null)
     const sectionRef = useRef(null)
     const trackRef = useRef(null)
 
     useLayoutEffect(() => {
+        const wrapper = wrapperRef.current
         const section = sectionRef.current
         const track = trackRef.current
-        if (!section || !track) return undefined
+        if (!wrapper || !section || !track) return undefined
 
         const ctx = gsap.context(() => {
             const mm = gsap.matchMedia()
             mm.add('(min-width: 801px)', () => {
+                const vw = () => scrollerRef.current?.clientWidth ?? window.innerWidth
+                const travel = () => Math.max(0, track.scrollWidth - vw())
+                const syncHeight = () => { wrapper.style.height = `calc(100vh + ${travel() * 2}px)` }
+                syncHeight()
+
                 gsap.to(track, {
-                    x: () => `-${Math.max(0, track.scrollWidth - window.innerWidth)}px`,
+                    x: () => `-${travel()}px`,
                     ease: 'none',
                     scrollTrigger: {
-                        trigger: section,
+                        trigger: wrapper,
                         scroller: scrollerRef.current,
                         start: 'top top',
-                        end: () => `+=${track.scrollWidth}`,
-                        pin: true,
-                        scrub: 0.65,
+                        end: () => `+=${travel() * 2}`,
+                        scrub: true,
+                        snap: {
+                            snapTo: 1 / (panels.length - 1),
+                            duration: { min: 0.2, max: 0.5 },
+                            delay: 0.2,
+                            ease: 'power2.inOut',
+                        },
                         invalidateOnRefresh: true,
+                        onRefresh: syncHeight,
+                        onEnter: () => scrollerRef.current?.classList.add('wcc-in-pin'),
+                        onLeaveBack: () => scrollerRef.current?.classList.remove('wcc-in-pin'),
+                        onLeave: () => scrollerRef.current?.classList.remove('wcc-in-pin'),
                         onUpdate: (self) => {
                             const next = Math.min(panels.length - 1, Math.round(self.progress * (panels.length - 1)))
                             onActiveIndexChange(next)
                         }
                     }
                 })
+                return () => { wrapper.style.height = '' }
             })
-            return () => mm.revert()
         }, section)
 
         return () => ctx.revert()
     }, [onActiveIndexChange, scrollerRef])
 
     return (
-        <section className="wcc-horizontal" ref={sectionRef} aria-label="Exhibition navigation">
-            <div className="wcc-panel-track" ref={trackRef}>
-                {panels.map((panel, index) => (
-                    <NavigationPanel
-                        active={activeIndex === index}
-                        index={index}
-                        key={panel.id}
-                        onEnter={onEnter}
-                        onOpen={onOpen}
-                        panel={panel}
-                    />
-                ))}
-            </div>
-        </section>
+        <div className="wcc-horizontal-wrapper" ref={wrapperRef}>
+            <section className="wcc-horizontal" ref={sectionRef} aria-label="Exhibition navigation">
+                <div className="wcc-panel-track" ref={trackRef}>
+                    {panels.map((panel, index) => (
+                        <NavigationPanel
+                            active={activeIndex === index}
+                            index={index}
+                            key={panel.id}
+                            lang={lang}
+                            onEnter={onEnter}
+                            onOpen={onOpen}
+                            panel={panel}
+                        />
+                    ))}
+                </div>
+            </section>
+        </div>
     )
 }
 
-function ArtistWorks() {
+function ArtistWorks({ lang = 'en' }) {
     return (
         <div className="wcc-artist-works-embed">
             <iframe
                 title="WCC artist works"
-                src="/wcc/artist-works-land/index.html"
+                src={`/wcc/artist-works-land/index.html?lang=${lang}`}
                 sandbox="allow-scripts allow-same-origin"
             />
         </div>
     )
 }
 
-function AboutProject() {
+function AboutProject({ lang = 'en' }) {
     const [processColor, setProcessColor] = useState(false)
+    const isHy = lang === 'hy'
 
     return (
-        <div className="wcc-text-columns wcc-text-columns--about">
+        <div className={`wcc-text-columns wcc-text-columns--about${isHy ? ' is-hy' : ''}`}>
             <div className="wcc-about-running-dots" aria-hidden="true">
-                {Array.from({ length: 8 }, (_, index) => (
-                    <span key={index} />
-                ))}
+                <span />
+                <span />
             </div>
-            <p>
-                WCC: Women Creating Change was a contemporary art initiative designed to create a space for
-                learning, dialogue, and artistic production around themes of gender equality, representation,
-                self-expression, and social engagement.
-            </p>
-            <p>
-                The project began with a series of three expert talks that introduced participants to different
-                artistic practices and personal experiences related to the project&apos;s themes.
-            </p>
-            <p className="wcc-about-session" style={{ '--session-number': '"01"' }}>
-                The first session was led by Tatev Hovakimyan, who spoke about her experience as an artist, her
-                encounters with hate speech, and the ways in which she transforms personal emotions and experiences
-                into artistic expression.
-            </p>
-            <p className="wcc-about-session" style={{ '--session-number': '"02"' }}>
-                The second session featured Ani Khachikyan, who shared her experience of navigating hate speech and
-                personal triggers, maintaining a work-life balance, and using performance as a form of advocacy. The
-                discussion focused on how personal experiences influence artistic practice and how art can become a
-                tool for visibility and social engagement.
-            </p>
-            <p className="wcc-about-session" style={{ '--session-number': '"03"' }}>
-                The third session was conducted by Anika Krbetschek, a Berlin-based artist and curator who has also
-                worked extensively in Armenia. Drawing from her experience in different cultural contexts, she
-                reflected on the challenges and opportunities she encountered as a woman artist. She also shared
-                personal experiences from her early years, discussing the difficulties she faced and how these
-                experiences informed her professional and artistic development.
-            </p>
-            <p>
-                Following the expert talks, participants engaged in a mentorship program focused on storytelling,
-                concept development and writing, 3D modeling, and digital art practices. The mentorship phase
-                supported participants in developing their ideas, strengthening their creative and technical skills,
-                and translating personal experiences into artistic concepts. While some participants were taking their
-                first steps in the field of art, others already had an established creative background, creating a
-                diverse environment for exchange and peer learning.
-            </p>
-            <p>
-                As a result of the mentorship process, participants conceptualized and produced original artworks
-                informed by their personal perspectives and creative practices.
-            </p>
+            {isHy ? (
+                landingContent.aboutParagraphsHy.filter((p) => p.type !== 'highlight').map((para, index) => {
+                    if (para.type === 'session') {
+                        return (
+                            <p key={index} className="wcc-about-session" style={{ '--session-number': `"${para.session}"` }} lang="hy">
+                                {para.text}
+                            </p>
+                        )
+                    }
+                    return <p key={index} lang="hy">{para.text}</p>
+                })
+            ) : (
+                <>
+                    <p>
+                        WCC: Women Creating Change was a contemporary art initiative designed to create a space for
+                        learning, dialogue, and artistic production around themes of gender equality, representation,
+                        self-expression, and social engagement.
+                    </p>
+                    <p>
+                        The project began with a series of three expert talks that introduced participants to different
+                        artistic practices and personal experiences related to the project&apos;s themes.
+                    </p>
+                    <p className="wcc-about-session" style={{ '--session-number': '"01"' }}>
+                        The first session was led by Tatev Hovakimyan, who spoke about her experience as an artist, her
+                        encounters with hate speech, and the ways in which she transforms personal emotions and experiences
+                        into artistic expression.
+                    </p>
+                    <p className="wcc-about-session" style={{ '--session-number': '"02"' }}>
+                        The second session featured Ani Khachikyan, who shared her experience of navigating hate speech and
+                        personal triggers, maintaining a work-life balance, and using performance as a form of advocacy. The
+                        discussion focused on how personal experiences influence artistic practice and how art can become a
+                        tool for visibility and social engagement.
+                    </p>
+                    <p className="wcc-about-session" style={{ '--session-number': '"03"' }}>
+                        The third session was conducted by Anika Krbetschek, a Berlin-based artist and curator who has also
+                        worked extensively in Armenia. Drawing from her experience in different cultural contexts, she
+                        reflected on the challenges and opportunities she encountered as a woman artist. She also shared
+                        personal experiences from her early years, discussing the difficulties she faced and how these
+                        experiences informed her professional and artistic development.
+                    </p>
+                    <p>
+                        Following the expert talks, participants engaged in a mentorship program focused on storytelling,
+                        concept development and writing, 3D modeling, and digital art practices. The mentorship phase
+                        supported participants in developing their ideas, strengthening their creative and technical skills,
+                        and translating personal experiences into artistic concepts. While some participants were taking their
+                        first steps in the field of art, others already had an established creative background, creating a
+                        diverse environment for exchange and peer learning.
+                    </p>
+                    <p>
+                        As a result of the mentorship process, participants conceptualized and produced original artworks
+                        informed by their personal perspectives and creative practices.
+                    </p>
+                </>
+            )}
+            {isHy ? (
+                <p className="wcc-about-highlight" lang="hy">
+                    {landingContent.aboutParagraphsHy.find((p) => p.type === 'highlight')?.text}
+                </p>
+            ) : (
+                <p className="wcc-about-highlight">
+                    The final phase of the project focused on the digitization and presentation of the artworks. The
+                    project team chose to create a virtual exhibition in order to provide a safe and accessible environment
+                    for participants and audiences alike. Beyond serving as an exhibition format, the digital platform was
+                    envisioned as a valuable and long-term archive that preserves the artworks and makes them accessible
+                    beyond the duration of the project.
+                </p>
+            )}
             <div className={`wcc-process-gallery ${processColor ? 'is-color' : ''}`}>
-                <div className="wcc-process-gallery__header">
-                    <span>process documentation</span>
-                    <button type="button" onClick={() => setProcessColor(true)}>
-                        reveal color
-                    </button>
-                </div>
                 <div className="wcc-process-gallery__grid">
                     {processImages.map((image, index) => (
                         <button
-                            className="wcc-process-photo"
+                            className={`wcc-process-photo${image.rotatePortrait ? ' is-rotated-portrait' : ''}`}
                             key={image.src}
                             type="button"
                             onClick={() => setProcessColor(true)}
@@ -377,25 +432,18 @@ function AboutProject() {
                     ))}
                 </div>
             </div>
-            <p className="wcc-about-highlight">
-                The final phase of the project focused on the digitization and presentation of the artworks. The
-                project team chose to create a virtual exhibition in order to provide a safe and accessible environment
-                for participants and audiences alike. Beyond serving as an exhibition format, the digital platform was
-                envisioned as a valuable and long-term archive that preserves the artworks and makes them accessible
-                beyond the duration of the project.
-            </p>
         </div>
     )
 }
 
-function SectionReveal({ sectionId, onClose }) {
+function SectionReveal({ sectionId, onClose, lang = 'en' }) {
     const shellRef = useRef(null)
     if (!sectionId) return null
 
     const panel = panels.find((item) => item.id === sectionId)
     const contentById = {
-        'artist-works': <ArtistWorks />,
-        'about-project': <AboutProject />
+        'artist-works': <ArtistWorks lang={lang} />,
+        'about-project': <AboutProject lang={lang} />
     }
 
     return (
@@ -413,7 +461,7 @@ function SectionReveal({ sectionId, onClose }) {
     )
 }
 
-export default function LandingPage({ onEnterExhibition = null }) {
+export default function LandingPage({ onEnterExhibition = null, lang: controlledLang = null, onLangChange = null }) {
     const rootRef = useRef(null)
     const cursorRef = useRef(null)
     const particleLayerRef = useRef(null)
@@ -421,6 +469,9 @@ export default function LandingPage({ onEnterExhibition = null }) {
     const [activeIndex, setActiveIndex] = useState(0)
     const [openSection, setOpenSection] = useState(() => getRouteSection())
     const [ripples, setRipples] = useState([])
+    const [internalLang, setInternalLang] = useState('en')
+    const lang = controlledLang || internalLang
+    const setLang = onLangChange || setInternalLang
 
     const openRouteSection = (sectionId) => {
         if (!routeSectionIds.has(sectionId)) return
@@ -442,6 +493,11 @@ export default function LandingPage({ onEnterExhibition = null }) {
     const scrollLanding = () => {
         const root = rootRef.current
         if (!root) return
+        // A scroll (smooth or native) is already in flight — recomputing the
+        // target off a mid-animation scrollTop restarts the browser's smooth
+        // scroll mid-flight, which fights the ScrollTrigger-pinned nav track
+        // and shows up as the panels glitching/jumping.
+        if (root.classList.contains('is-scrolling')) return
         const viewport = root.clientHeight || window.innerHeight
         const targets = [viewport, viewport * 2.08, root.scrollHeight - viewport]
             .filter((value, index, values) => value > root.scrollTop + 24 && values.indexOf(value) === index)
@@ -553,8 +609,24 @@ export default function LandingPage({ onEnterExhibition = null }) {
             const yRatio = event.clientY / window.innerHeight - 0.5
             circleTweens.forEach(({ xTo, yTo }, index) => {
                 const depth = (index + 1) * 8
-                xTo(xRatio * depth)
-                yTo(yRatio * depth * -0.7)
+                const baseX = xRatio * depth
+                const baseY = yRatio * depth * -0.7
+                const el = circles[index]
+                const rect = el.getBoundingClientRect()
+                const cx = rect.left + rect.width * 0.5
+                const cy = rect.top + rect.height * 0.5
+                const dx = event.clientX - cx
+                const dy = event.clientY - cy
+                const dist = Math.sqrt(dx * dx + dy * dy)
+                const threshold = Math.max(rect.width, rect.height) * 0.85
+                if (dist < threshold && dist > 1) {
+                    const force = (1 - dist / threshold) * 90
+                    xTo(baseX - (dx / dist) * force)
+                    yTo(baseY - (dy / dist) * force)
+                } else {
+                    xTo(baseX)
+                    yTo(baseY)
+                }
             })
         }
         const onDown = (event) => {
@@ -673,15 +745,24 @@ export default function LandingPage({ onEnterExhibition = null }) {
             <div className="wcc-particle-layer" ref={particleLayerRef} aria-hidden="true" />
             <div className="wcc-cursor" ref={cursorRef} aria-hidden="true" />
             <ScrollArrow onClick={scrollLanding} />
-            <LandingHero onEnter={onEnterExhibition} />
+            <LandingHero onEnter={onEnterExhibition} lang={lang} />
+            <button
+                className="wcc-lang-toggle"
+                type="button"
+                onClick={() => setLang((l) => l === 'en' ? 'hy' : 'en')}
+                aria-label="Toggle language"
+            >
+                {lang === 'en' ? 'ՀՅ' : 'EN'}
+            </button>
             <HorizontalNavigation
                 activeIndex={activeIndex}
+                lang={lang}
                 onActiveIndexChange={setActiveIndex}
                 onEnter={onEnterExhibition}
                 onOpen={openRouteSection}
                 scrollerRef={rootRef}
             />
-            <SectionReveal sectionId={openSection} onClose={closeRouteSection} />
+            <SectionReveal sectionId={openSection} onClose={closeRouteSection} lang={lang} />
         </main>
     )
 }

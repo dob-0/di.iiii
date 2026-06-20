@@ -1,0 +1,65 @@
+.live-scene-chrome {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 22px clamp(18px, 4vw, 48px);
+    pointer-events: none;
+    z-index: 5;
+}
+
+.live-scene-chrome > * {
+    pointer-events: auto;
+}
+
+.live-scene-exit {
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    background: rgba(0, 0, 0, 0.35);
+    color: #ffffff;
+    font: inherit;
+    font-size: 13px;
+    letter-spacing: 0.04em;
+    padding: 9px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 220ms ease, border-color 220ms ease;
+    backdrop-filter: blur(6px);
+}
+
+.live-scene-exit:hover {
+    background: #d90000;
+    border-color: #d90000;
+}
+
+.live-scene-title {
+    font-size: 12px;
+    letter-spacing: 0.28em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    white-space: nowrap;
+    color: #ffffff;
+}
+
+.live-scene-hint {
+    position: absolute;
+    bottom: 26px;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.45;
+    pointer-events: none;
+    text-align: center;
+    color: #ffffff;
+}
+
+@media (max-width: 720px) {
+    .live-scene-title { display: none; }
+}

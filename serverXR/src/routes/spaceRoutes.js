@@ -8,14 +8,17 @@ function registerSpaceRoutes(router, {
   blankScene,
   broadcastLiveEvent,
   buildMeta,
+  config = {},
   deleteSpace,
   ensureSpaceScene,
   ensureSpaceWritable,
   findProjectById,
   findUserById = null,
   getLiveBucket,
+  getPublicAuthState = () => ({ spaces: null }),
   getSpacePaths,
   hydrateSceneAssetManifest,
+  isAuthScopeAllowedForSpace = () => true,
   isValidAssetId,
   loadSpaceMeta,
   listSpaces,
@@ -64,7 +67,14 @@ function registerSpaceRoutes(router, {
   router.get('/api/spaces', async (req, res, next) => {
     try {
       const spaces = await listSpaces()
-      res.json({ spaces })
+      if (!config.requireAuth) {
+        return res.json({ spaces })
+      }
+      const state = req.authState || getPublicAuthState(req)
+      const visible = spaces.filter((space) =>
+        space.isPublic || (state.authenticated && isAuthScopeAllowedForSpace(state.spaces, space.id))
+      )
+      res.json({ spaces: visible })
     } catch (error) {
       next(error)
     }
@@ -85,7 +95,7 @@ function registerSpaceRoutes(router, {
       await saveSpaceMeta(spaceId, meta)
       await ensureSpaceScene(spaceId)
 
-      const sessionUserId = req.session?.user?.id
+      const sessionUserId = req.authState?.type === 'session' ? req.authState.subject : null
       if (sessionUserId && findUserById && setUserSpaces) {
         try {
           const existing = findUserById(sessionUserId)

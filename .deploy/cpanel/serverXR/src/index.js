@@ -32,7 +32,7 @@ const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
-const { listUsers, findUserById, setUserSpaces } = require('./userStore')
+const { listUsers, findUserById, setUserSpaces, setUserRole } = require('./userStore')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { createSpaceStore } = require('./spaceStore')
@@ -493,6 +493,14 @@ router.delete('/api/auth/session', (req, res) => {
   res.status(204).end()
 })
 
+// Dynamic, auth-scoped JSON — never let a CDN/edge cache (e.g. LiteSpeed LSCache on
+// cPanel) serve a stale or cross-user response for these. Asset/static routes set
+// their own explicit Cache-Control and are unaffected.
+router.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store')
+  next()
+})
+
 router.use((req, res, next) => {
   req.authState = getPublicAuthState(req)
   next()
@@ -632,7 +640,8 @@ registerUserRoutes(router, {
   requireAdminAlways,
   listUsers,
   findUserById,
-  setUserSpaces
+  setUserSpaces,
+  setUserRole
 })
 
 registerSpaceRoutes(router, {
@@ -641,14 +650,17 @@ registerSpaceRoutes(router, {
   blankScene: BLANK_SCENE,
   broadcastLiveEvent,
   buildMeta,
+  config,
   deleteSpace,
   ensureSpaceScene,
   ensureSpaceWritable,
   findProjectById,
   findUserById,
   getLiveBucket,
+  getPublicAuthState,
   getSpacePaths,
   hydrateSceneAssetManifest,
+  isAuthScopeAllowedForSpace,
   isValidAssetId,
   loadSpaceMeta,
   listSpaces,

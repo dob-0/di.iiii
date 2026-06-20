@@ -14,8 +14,8 @@ const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 const WccExperience = lazy(() => import('./wcc/WccExperience.jsx'))
 
-function ProtectedSurface({ children, requiredSpaceId = null }) {
-    return <AuthGate requiredSpaceId={requiredSpaceId}>{children}</AuthGate>
+function ProtectedSurface({ children, requiredSpaceId = null, showAccountButton = true }) {
+    return <AuthGate requiredSpaceId={requiredSpaceId} showAccountButton={showAccountButton}>{children}</AuthGate>
 }
 
 function SpaceSurfaceRoute({ appState }) {
