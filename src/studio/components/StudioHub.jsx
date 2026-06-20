@@ -10,6 +10,7 @@ import {
     createProject,
     deleteProject,
     listProjects,
+    updateProject,
     updateProjectDocument,
     uploadProjectAsset
 } from '../../project/services/projectsApi.js'
@@ -43,6 +44,8 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [isBusy, setIsBusy] = useState(false)
     const [spaceLabel, setSpaceLabel] = useState(spaceId)
     const [creatingTitle, setCreatingTitle] = useState(null)
+    const [renamingId, setRenamingId] = useState(null)
+    const [renameValue, setRenameValue] = useState('')
 
     const mostRecentProject = useMemo(() => projects[0] || null, [projects])
 
@@ -111,6 +114,27 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         } finally {
             setIsBusy(false)
             event.target.value = ''
+        }
+    }
+
+    const startRename = (project, e) => {
+        e.stopPropagation()
+        setRenamingId(project.id)
+        setRenameValue(project.title || '')
+    }
+
+    const submitRename = async (projectId, e) => {
+        e?.preventDefault?.()
+        const next = renameValue.trim()
+        if (!next) return
+        try {
+            await updateProject(projectId, { title: next })
+            setProjects(prev => prev.map(p => p.id === projectId ? { ...p, title: next } : p))
+        } catch (err) {
+            setStatus(err.message || 'rename failed')
+        } finally {
+            setRenamingId(null)
+            setRenameValue('')
         }
     }
 
@@ -212,28 +236,67 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                 {/* Projects */}
                 {projects.length > 0 && (
                     <div className="sh-projects-grid">
-                        {projects.map((project) => (
-                            <div
-                                key={project.id}
-                                className="sh-project-card"
-                                onClick={() => openProject(project.id)}
-                                role="button"
-                                tabIndex={0}
-                                onKeyDown={e => e.key === 'Enter' && openProject(project.id)}
-                            >
-                                <p className="sh-project-title">{project.title}</p>
-                                <div className="sh-project-meta">
-                                    <span className="sh-meta-tag">{formatRelativeDate(project.updatedAt)}</span>
-                                    <span className="sh-meta-tag">{formatSource(project.source)}</span>
+                        {projects.map((project) => {
+                            const isRenaming = renamingId === project.id
+                            return (
+                                <div
+                                    key={project.id}
+                                    className="sh-project-card"
+                                    onClick={() => !isRenaming && openProject(project.id)}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={e => e.key === 'Enter' && !isRenaming && openProject(project.id)}
+                                >
+                                    {isRenaming ? (
+                                        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+                                        <form
+                                            className="sh-rename-form"
+                                            onSubmit={e => submitRename(project.id, e)}
+                                            onClick={e => e.stopPropagation()}
+                                        >
+                                            <input
+                                                className="sh-rename-input"
+                                                ref={el => el?.focus()}
+                                                value={renameValue}
+                                                onChange={e => setRenameValue(e.target.value)}
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Escape') { setRenamingId(null); setRenameValue('') }
+                                                }}
+                                            />
+                                            <button className="sh-rename-save" type="submit">Save</button>
+                                            <button className="sh-rename-cancel" type="button" onClick={() => { setRenamingId(null); setRenameValue('') }}>✕</button>
+                                        </form>
+                                    ) : (
+                                        <p
+                                            className="sh-project-title"
+                                            onDoubleClick={e => startRename(project, e)}
+                                            title="Double-click to rename"
+                                        >
+                                            {project.title}
+                                        </p>
+                                    )}
+                                    <div className="sh-project-meta">
+                                        <span className="sh-meta-tag">{formatRelativeDate(project.updatedAt)}</span>
+                                        <span className="sh-meta-tag">{formatSource(project.source)}</span>
+                                    </div>
+                                    {!isRenaming && (
+                                        <>
+                                            <button
+                                                className="sh-btn-rename"
+                                                onClick={e => startRename(project, e)}
+                                                title="Rename project"
+                                            >Rename</button>
+                                            <button
+                                                className="sh-btn-delete"
+                                                onClick={e => { e.stopPropagation(); handleDelete(project) }}
+                                                aria-label="Delete"
+                                                title="Delete project"
+                                            >✕</button>
+                                        </>
+                                    )}
                                 </div>
-                                <button
-                                    className="sh-btn-delete"
-                                    onClick={e => { e.stopPropagation(); handleDelete(project) }}
-                                    aria-label="Delete"
-                                    title="Delete project"
-                                >✕</button>
-                            </div>
-                        ))}
+                            )
+                        })}
                     </div>
                 )}
 
