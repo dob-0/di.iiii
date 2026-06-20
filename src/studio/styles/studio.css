@@ -1146,11 +1146,11 @@
     inset: 0;
 }
 
-/* ── Gizmo (top-right, below account button at top:8+28+8=44) ── */
+/* ── Gizmo (top-right like Blender) ── */
 .svl-gizmo-wrap {
     position: absolute;
-    top: 44px;
-    right: 8px;
+    top: 10px;
+    right: 10px;
     z-index: 10;
     opacity: 0.6;
     transition: opacity 0.15s;
