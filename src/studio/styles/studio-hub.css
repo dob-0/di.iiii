@@ -172,6 +172,63 @@
     padding: 1px 6px;
 }
 
+.sh-btn-rename {
+    position: absolute;
+    top: 10px;
+    right: 46px;
+    font-size: 0.7rem;
+    background: transparent;
+    color: var(--di-text-muted, rgba(200,230,240,0.5));
+    border: 1px solid rgba(200,230,240,0.15);
+    padding: 3px 7px;
+    cursor: pointer;
+    transition: color 0.1s, border-color 0.1s, opacity 0.15s;
+    border-radius: 0;
+    font-family: inherit;
+    opacity: 0;
+    line-height: 1;
+}
+
+.sh-project-card:hover .sh-btn-rename { opacity: 1; }
+.sh-btn-rename:hover { color: var(--di-text); border-color: rgba(200,230,240,0.4); }
+
+.sh-rename-form {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.sh-rename-input {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: inherit;
+    background: rgba(77,249,255,0.06);
+    border: 1px solid rgba(77,249,255,0.3);
+    color: var(--di-text);
+    padding: 4px 8px;
+    outline: none;
+}
+
+.sh-rename-input:focus { border-color: rgba(77,249,255,0.6); }
+
+.sh-rename-save,
+.sh-rename-cancel {
+    font-size: 0.7rem;
+    font-family: inherit;
+    background: transparent;
+    border: 1px solid rgba(200,230,240,0.2);
+    color: var(--di-text-muted);
+    padding: 3px 8px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.sh-rename-save:hover { color: var(--di-text); border-color: rgba(77,249,255,0.4); }
+.sh-rename-cancel:hover { color: #ff6b6b; border-color: rgba(255,100,100,0.4); }
+
 .sh-btn-delete {
     position: absolute;
     top: 10px;
