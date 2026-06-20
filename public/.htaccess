@@ -5,6 +5,9 @@ RewriteBase /
 RewriteCond %{REQUEST_URI} ^/serverXR(/|$)
 RewriteRule ^ - [L]
 
+# SPA routes that coincide with real directories must still load the app
+RewriteRule ^wcc/?$ /index.html [L]
+
 # Allow direct requests for real files/directories
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
