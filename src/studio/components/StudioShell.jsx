@@ -22,7 +22,7 @@ const DEFAULT_POSITIONS = () => {
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1280
     const vh = typeof window !== 'undefined' ? window.innerHeight : 800
     const midY = Math.round(vh * 0.48)
-    const rightX = Math.max(290, vw - 640)   // left of the cluster (cluster at vw-340)
+    const rightX = Math.max(290, vw - 700)   // 20px left of cluster (cluster at vw-400, width≤280)
     return {
         library:   { x: 16,                     y: 90 },
         structure: { x: 16,                     y: midY },
