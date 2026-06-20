@@ -148,7 +148,7 @@ export default function LandingPage() {
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href="/beta">
                             Try Beta
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={() => setEntered(true)}>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={enterHref}>
                             Enter Space
                         </Button>
                     </Stack>
