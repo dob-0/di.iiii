@@ -12,6 +12,7 @@ This is the role system for AI agents working in di.iiii. Every task has an owne
 | [UI/UX Engineer](ui-ux-engineer.md) | UX | All CSS, all visual layout, React render/JSX, visual identity | serverXR/, nodeRegistry, schema, nodeGraphRuntime |
 | [Node System Engineer](node-system-engineer.md) | NSE | nodeRegistry, ports, graph model, nodeGraphRuntime | CSS, layout, serverXR, Three.js rendering |
 | [3D/Viewport Engineer](viewport-3d-engineer.md) | VPE | Three.js scene, BetaViewport, objectComponents, XR | CSS layout, nodeRegistry logic, serverXR |
+| [XR Creator](xr-creator.md) | XRC | Immersive experience design, spatial UX, presence, locomotion, exhibition flow | serverXR, CSS, nodeRegistry, schema |
 | [Backend/API Engineer](backend-api-engineer.md) | BAE | serverXR/, SQLite, auth, API routes | src/ React components, CSS, shared schema |
 | [Schema/Protocol Engineer](schema-protocol-engineer.md) | SPE | shared/, src/shared/, op-log format, CRDT rules | Implementation files in serverXR or frontend |
 | [Infrastructure Engineer](infrastructure-engineer.md) | IE | Dockerfile, GitHub Actions, deploy/, scripts/ | Product source code, schema |
@@ -29,6 +30,7 @@ Read the task. Ask: what is the primary artifact being changed?
 CSS / layout / visual?             → UI/UX Engineer (UX)
 nodeRegistry / ports / graph model?→ Node System Engineer (NSE)
 Three.js / viewport / XR render?   → 3D/Viewport Engineer (VPE)
+XR experience / spatial UX / exhibition design? → XR Creator (XRC)
 serverXR / SQLite / auth / API?    → Backend/API Engineer (BAE)
 shared schema / op-log / CRDT?     → Schema/Protocol Engineer (SPE)
 Docker / GitHub Actions / deploy?  → Infrastructure Engineer (IE)
