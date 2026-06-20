@@ -21,16 +21,18 @@ import {
 const DEFAULT_POSITIONS = () => {
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1280
     const vh = typeof window !== 'undefined' ? window.innerHeight : 800
+    const midY = Math.round(vh * 0.48)
+    const rightX = Math.max(290, vw - 640)   // left of the cluster (cluster at vw-340)
     return {
-        library:   { x: 16, y: 16 },
-        assets:    { x: 308, y: 16 },
-        files:     { x: Math.round(vw * 0.25), y: 16 },
-        inspector: { x: vw - 296, y: 16 },
-        structure: { x: 16, y: Math.round(vh * 0.45) },
-        present:   { x: Math.round(vw * 0.35), y: 16 },
-        publish:   { x: vw - 296, y: Math.round(vh * 0.45) },
-        activity:  { x: Math.round(vw * 0.35), y: Math.round(vh * 0.45) },
-        world:     { x: 308, y: Math.round(vh * 0.45) },
+        library:   { x: 16,                     y: 90 },
+        structure: { x: 16,                     y: midY },
+        assets:    { x: 290,                    y: 90 },
+        activity:  { x: 290,                    y: midY },
+        files:     { x: Math.round(vw * 0.3),   y: 90 },
+        present:   { x: Math.round(vw * 0.3),   y: midY },
+        publish:   { x: Math.round(vw * 0.55),  y: midY },
+        inspector: { x: rightX,                 y: 90 },
+        world:     { x: rightX,                 y: midY + 30 },
     }
 }
 
@@ -283,9 +285,7 @@ export default function StudioShell({
         onCursorLeave: presence?.clearCursor,
         xrStore: xrState?.xrStore,
         editMode: viewportEditMode,
-        setEditMode: setViewportEditMode,
         gizmoMode: viewportGizmoMode,
-        setGizmoMode: selectGizmoMode,
         gizmoAxis: viewportGizmoAxis,
         gizmoVisible: viewportGizmoVisible,
         transformOp,
