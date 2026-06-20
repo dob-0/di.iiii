@@ -665,31 +665,43 @@ const TOOLBAR_BTN_ACTIVE_STRONG = {
 
 const SHORTCUT_SECTIONS = [
     {
+        title: 'Selection',
+        rows: [
+            ['Click', 'Select entity'],
+            ['Ctrl / Shift + Click', 'Multi-select'],
+            ['A', 'Select all'],
+            ['Alt+A', 'Deselect all'],
+            ['Esc', 'Deselect'],
+        ]
+    },
+    {
         title: 'Transform',
         rows: [
-            ['G', 'Translate (grab) mode'],
+            ['G', 'Move (grab) mode'],
             ['R', 'Rotate mode'],
             ['S', 'Scale mode'],
-            ['G / R / S → X Y Z', 'Constrain to axis, then move mouse'],
-            ['G / R / S → A', 'All axes (uniform)'],
-            ['Click · Enter · Space', 'Confirm transform'],
-            ['Esc', 'Cancel transform'],
+            ['→ X / Y / Z', 'Constrain axis + start drag'],
+            ['→ A', 'All axes (uniform)'],
+            ['Shift + drag', 'Fine / slow adjustment'],
+            ['Click · Enter · Space', 'Confirm'],
+            ['Esc', 'Cancel'],
         ]
     },
     {
         title: 'Edit',
         rows: [
-            ['Shift+D', 'Duplicate selected'],
+            ['Ctrl+C / X / V', 'Copy / Cut / Paste'],
+            ['Shift+D / Ctrl+D', 'Duplicate'],
             ['Del / Backspace', 'Delete selected'],
-            ['F', 'Frame / focus on selection'],
+            ['F', 'Frame selection'],
             ['Ctrl+Z', 'Undo'],
-            ['Ctrl+Shift+Z', 'Redo'],
+            ['Ctrl+Shift+Z / Ctrl+Y', 'Redo'],
         ]
     },
     {
         title: 'View',
         rows: [
-            ['Tab / E', 'Toggle Navigate ↔ Edit mode'],
+            ['Tab / E', 'Toggle Navigate ↔ Edit'],
             ['T', 'Toggle gizmo visibility'],
             ['H', 'Hide / show UI'],
             ['Scroll', 'Zoom'],
@@ -700,6 +712,7 @@ const SHORTCUT_SECTIONS = [
     {
         title: 'UI',
         rows: [
+            ['Double-click viewport', 'Quick insert'],
             ['Shift+A', 'Tile panels'],
             ['Shift+R', 'Reset layout'],
             ['Shift+?', 'Show this help'],
@@ -720,9 +733,9 @@ function HotkeyHelp({ onClose }) {
             <div
                 style={{
                     background: 'rgba(14,20,30,0.97)', border: '1px solid rgba(79,214,255,0.25)',
-                    borderRadius: 12, padding: '28px 32px', maxWidth: 680, width: '100%',
+                    borderRadius: 12, padding: '28px 32px', maxWidth: 860, width: '100%',
                     boxShadow: '0 24px 80px rgba(0,0,0,0.7)',
-                    display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px 40px'
+                    display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px 36px'
                 }}
             >
                 <div style={{ gridColumn: '1/-1', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
