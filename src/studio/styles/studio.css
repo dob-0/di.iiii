@@ -387,6 +387,19 @@
     font-weight: 600;
 }
 
+.scc-btn--xs {
+    padding: 2px 6px;
+    font-size: 10px;
+}
+
+.spa-fold {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.4);
+    flex-shrink: 0;
+    margin-right: 2px;
+    line-height: 1;
+}
+
 .scc-presence {
     display: flex;
     flex-wrap: wrap;
@@ -1128,11 +1141,11 @@
     inset: 0;
 }
 
-/* ── Gizmo (top-right) ── */
+/* ── Gizmo (top-right, below account button at top:8+28+8=44) ── */
 .svl-gizmo-wrap {
     position: absolute;
-    top: 10px;
-    right: 46px;
+    top: 44px;
+    right: 8px;
     z-index: 10;
     opacity: 0.6;
     transition: opacity 0.15s;

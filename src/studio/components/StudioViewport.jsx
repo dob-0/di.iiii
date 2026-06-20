@@ -273,6 +273,70 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
     )
 }
 
+function SceneEntityNode({ entity, childMap, assetMap, selectedIdSet, selectedEntityId, editMode, gizmoMode, gizmoAxis, gizmoVisible, overrideById, onSelectEntity, onToggleSelectEntity, onTransformCommit, orbitRef }) {
+    const t = entity.components?.transform || {}
+    if (entity.type === 'group') {
+        const children = childMap.get(entity.id) || []
+        const selected = selectedIdSet.has(entity.id)
+        return (
+            <group
+                position={t.position || [0, 0, 0]}
+                rotation={t.rotation || [0, 0, 0]}
+                scale={t.scale || [1, 1, 1]}
+                onClick={(e) => {
+                    if (e.delta > 2) return
+                    e.stopPropagation()
+                    const additive = e.nativeEvent?.ctrlKey || e.nativeEvent?.metaKey || e.nativeEvent?.shiftKey
+                    if (additive) onToggleSelectEntity?.(entity.id)
+                    else onSelectEntity?.(entity.id)
+                }}
+            >
+                {selected && (
+                    <Html position={[0, 0, 0]} center>
+                        <span className="studio-selection-pill">{entity.name}</span>
+                    </Html>
+                )}
+                {children.map((child) => (
+                    <SceneEntityNode
+                        key={child.id}
+                        entity={child}
+                        childMap={childMap}
+                        assetMap={assetMap}
+                        selectedIdSet={selectedIdSet}
+                        selectedEntityId={selectedEntityId}
+                        editMode={editMode}
+                        gizmoMode={gizmoMode}
+                        gizmoAxis={gizmoAxis}
+                        gizmoVisible={gizmoVisible}
+                        overrideById={overrideById}
+                        onSelectEntity={onSelectEntity}
+                        onToggleSelectEntity={onToggleSelectEntity}
+                        onTransformCommit={onTransformCommit}
+                        orbitRef={orbitRef}
+                    />
+                ))}
+            </group>
+        )
+    }
+    return (
+        <SelectableEntity
+            entity={entity}
+            assetMap={assetMap}
+            selected={selectedIdSet.has(entity.id)}
+            isPrimary={entity.id === selectedEntityId}
+            editMode={editMode}
+            gizmoMode={gizmoMode}
+            gizmoAxis={gizmoAxis}
+            gizmoVisible={gizmoVisible}
+            overrideTransform={overrideById[entity.id] || null}
+            onSelect={onSelectEntity}
+            onToggleSelect={onToggleSelectEntity}
+            onTransformCommit={onTransformCommit}
+            orbitRef={orbitRef}
+        />
+    )
+}
+
 function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVisible, onPreview, onCommit, orbitRef }) {
     const pivotRef = useRef()
     const controlsRef = useRef()
@@ -470,6 +534,17 @@ function StudioSceneContent({
 }) {
     const isArMode = useXR((state) => state.mode === 'immersive-ar')
     const assetMap = useMemo(() => new Map((document.assets || []).map((asset) => [asset.id, asset])), [document.assets])
+    const childMap = useMemo(() => {
+        const map = new Map()
+        for (const entity of (document.entities || [])) {
+            if (entity.parentId) {
+                if (!map.has(entity.parentId)) map.set(entity.parentId, [])
+                map.get(entity.parentId).push(entity)
+            }
+        }
+        return map
+    }, [document.entities])
+    const rootEntities = useMemo(() => (document.entities || []).filter((e) => !e.parentId), [document.entities])
     const [previewById, setPreviewById] = useState({})
 
     const selectedIdSet = useMemo(() => new Set(selectedEntityIds), [selectedEntityIds])
@@ -481,6 +556,7 @@ function StudioSceneContent({
         () => selectedEntities.filter((entity) => (
             entity.components?.runtime?.visible !== false
             && entity.components?.runtime?.locked !== true
+            && !entity.parentId
         )),
         [selectedEntities]
     )
@@ -525,20 +601,21 @@ function StudioSceneContent({
                     />
                 )}
                 <Suspense fallback={null}>
-                    {(document.entities || []).map((entity) => (
-                        <SelectableEntity
+                    {rootEntities.map((entity) => (
+                        <SceneEntityNode
                             key={entity.id}
                             entity={entity}
+                            childMap={childMap}
                             assetMap={assetMap}
-                            selected={selectedIdSet.has(entity.id)}
-                            isPrimary={entity.id === selectedEntityId}
+                            selectedIdSet={selectedIdSet}
+                            selectedEntityId={selectedEntityId}
                             editMode={editMode}
                             gizmoMode={gizmoMode}
                             gizmoAxis={gizmoAxis}
                             gizmoVisible={gizmoVisibleEffective && transformableSelectedEntities.length === 1}
-                            overrideTransform={previewById[entity.id] || null}
-                            onSelect={onSelectEntity}
-                            onToggleSelect={onToggleSelectEntity}
+                            overrideById={previewById}
+                            onSelectEntity={onSelectEntity}
+                            onToggleSelectEntity={onToggleSelectEntity}
                             onTransformCommit={onTransformCommit}
                             orbitRef={controlsRef}
                         />
@@ -693,6 +770,8 @@ const SHORTCUT_SECTIONS = [
             ['Ctrl+C / X / V', 'Copy / Cut / Paste'],
             ['Shift+D / Ctrl+D', 'Duplicate'],
             ['Del / Backspace', 'Delete selected'],
+            ['Ctrl+G', 'Group selection'],
+            ['Ctrl+Shift+G', 'Ungroup'],
             ['F', 'Frame selection'],
             ['Ctrl+Z', 'Undo'],
             ['Ctrl+Shift+Z / Ctrl+Y', 'Redo'],
@@ -911,7 +990,7 @@ export default function StudioViewport({
                     title="Keyboard shortcuts (Shift+?)"
                     style={{
                         position: 'absolute',
-                        bottom: 58,
+                        bottom: 48,
                         right: 14,
                         zIndex: 10,
                         width: 30,
