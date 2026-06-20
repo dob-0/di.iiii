@@ -823,6 +823,7 @@ export default function StudioViewport({
     enableNavigation = true,
     showHelp = false,
     onCloseHelp,
+    onShowHelp,
 }) {
     const viewportRef = useRef(null)
     const [transformStatus, setTransformStatus] = useState(null)
@@ -903,6 +904,47 @@ export default function StudioViewport({
             )}
 
             <FullscreenButton />
+            {onShowHelp && (
+                <button
+                    type="button"
+                    onClick={onShowHelp}
+                    title="Keyboard shortcuts (Shift+?)"
+                    style={{
+                        position: 'absolute',
+                        bottom: 50,
+                        right: 14,
+                        zIndex: 10,
+                        width: 30,
+                        height: 30,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: 'rgba(15,23,34,0.55)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: 6,
+                        color: 'rgba(255,255,255,0.55)',
+                        cursor: 'pointer',
+                        backdropFilter: 'blur(6px)',
+                        fontSize: 13,
+                        fontWeight: 700,
+                        padding: 0,
+                        transition: 'color 0.12s, border-color 0.12s, background 0.12s',
+                        pointerEvents: 'auto'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.color = '#4fd6ff'
+                        e.currentTarget.style.borderColor = 'rgba(79,214,255,0.4)'
+                        e.currentTarget.style.background = 'rgba(15,23,34,0.82)'
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.color = 'rgba(255,255,255,0.55)'
+                        e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                        e.currentTarget.style.background = 'rgba(15,23,34,0.55)'
+                    }}
+                >
+                    ?
+                </button>
+            )}
 
             {showHelp && <HotkeyHelp onClose={onCloseHelp} />}
 
