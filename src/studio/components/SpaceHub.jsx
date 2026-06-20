@@ -139,13 +139,20 @@ export default function SpaceHub() {
 
     const handleLinkProject = useCallback(async (spaceId, projectId) => {
         try {
-            await updateServerSpace(spaceId, { publishedProjectId: projectId || null })
+            const space = spaces.find(s => s.id === spaceId)
+            const patch = { publishedProjectId: projectId || null }
+            // linking a project implies the user wants it visible — flip isPublic too
+            // unless they've never been linked before but already toggled it off on purpose
+            if (projectId && space && !space.isPublic) {
+                patch.isPublic = true
+            }
+            await updateServerSpace(spaceId, patch)
             setLinker(null)
             await loadSpaces()
         } catch (err) {
             alert(err.message || 'Could not link project.')
         }
-    }, [loadSpaces])
+    }, [loadSpaces, spaces])
 
     const handleStartRenameProject = useCallback((project, e) => {
         e.stopPropagation()
@@ -245,6 +252,11 @@ export default function SpaceHub() {
                                     <p className="ssh-space-label">{space.label || space.id}</p>
                                     {linkedTitle && (
                                         <p className="ssh-space-project">Project: {linkedTitle}</p>
+                                    )}
+                                    {space.publishedProjectId && !space.isPublic && (
+                                        <p className="ssh-space-warning">
+                                            ⚠ Not public — visitors will see a login wall, not the project.
+                                        </p>
                                     )}
 
                                     {authenticated && (
