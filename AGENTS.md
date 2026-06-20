@@ -25,6 +25,7 @@ tests / lint / validation?          → docs/ai/roles/qa-test-engineer.md
 auth review / secrets / security?   → docs/ai/roles/security-auditor.md
 AGENTS.md / MANIFESTO / arch?       → docs/ai/roles/technical-architect.md
 docs / PROGRESS / golden rules?     → docs/ai/roles/documentation-engineer.md
+XR experience / spatial UX / presence / exhibition design? → docs/ai/roles/xr-creator.md
 ```
 
 Full company guide: [docs/ai/roles/README.md](docs/ai/roles/README.md).
