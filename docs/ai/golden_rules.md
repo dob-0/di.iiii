@@ -317,6 +317,20 @@ The fix here: `AuthGate` renders `<AccountButton>` as a sibling to its children.
 
 ---
 
+### Shortcuts: every new shortcut goes in two places
+
+**Rule:** When adding any new keyboard shortcut to Studio, update BOTH:
+1. `SHORTCUT_SECTIONS` in `src/studio/components/StudioViewport.jsx` — the Shift+? in-app overlay the user sees
+2. `docs/ai/shortcuts.md` — the persistent reference for agents and contributors
+
+If the doc doesn't exist yet, create it. Never add a shortcut to only one place.
+
+**Why:** The Shift+? overlay and the docs can drift apart silently — a shortcut gets added to code but never documented, or documented but never wired. This happened with Ctrl+G/Ctrl+Shift+G (group/ungroup) — the overlay was updated but the doc wasn't created yet. One rule, two targets, always both.
+
+**Files:** `src/studio/components/StudioViewport.jsx` (`SHORTCUT_SECTIONS`), `docs/ai/shortcuts.md`
+
+---
+
 ### UI: two surface families — never mix them
 
 **Rule:** Every visual element in the studio belongs to one of two families. Copy values from `docs/ai/ui-system.md`. Never derive a new rgba value — map to the nearest existing one.
