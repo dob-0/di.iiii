@@ -392,6 +392,21 @@
     gap: 22px;
     margin-top: 72px;
     color: rgba(255, 255, 255, 0.72);
+    position: sticky;
+    bottom: clamp(28px, 5vw, 72px);
+    z-index: 10;
+}
+
+/* Gradient mask so subtitle text fades cleanly into the sticky footer */
+.wcc-hero__footer::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: calc(-1 * clamp(28px, 5vw, 72px));
+    right: calc(-1 * clamp(28px, 5vw, 72px));
+    height: 96px;
+    background: linear-gradient(to bottom, transparent, #d90000);
+    pointer-events: none;
 }
 
 .wcc-enter-button {
@@ -1158,6 +1173,7 @@
 .wcc-landing.wcc-in-pin {
     scroll-behavior: auto;
 }
+
 
 @media (prefers-reduced-motion: reduce) {
     .wcc-landing,

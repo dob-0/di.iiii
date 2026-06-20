@@ -182,7 +182,7 @@ function ZonePortal({ artist, center }) {
         const ring = ringRef.current
         if (!ring) return
         const t = state.clock.getElapsedTime()
-        ring.material.opacity = 0.45 + Math.sin(t * 1.4 + pos.x) * 0.2
+        ring.material.opacity = 0.18 + Math.sin(t * 1.4 + pos.x) * 0.08
         ring.rotation.z = t * 0.12
     })
 
@@ -190,11 +190,11 @@ function ZonePortal({ artist, center }) {
         <group position={pos}>
             <mesh ref={ringRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.03, 0]}>
                 <ringGeometry args={[2.4, 3, 48]} />
-                <meshBasicMaterial color={0xd90000} transparent opacity={0.55} depthWrite={false} side={THREE.DoubleSide} />
+                <meshBasicMaterial color={0xffffff} transparent opacity={0.22} depthWrite={false} side={THREE.DoubleSide} />
             </mesh>
             <mesh position={[0, 4, 0]}>
-                <cylinderGeometry args={[0.04, 0.04, 8, 8]} />
-                <meshBasicMaterial color={0xd90000} transparent opacity={0.3} depthWrite={false} />
+                <cylinderGeometry args={[0.03, 0.03, 8, 8]} />
+                <meshBasicMaterial color={0xffffff} transparent opacity={0.12} depthWrite={false} />
             </mesh>
             <Billboard position={[0, 5.4, 0]}>
                 <Text fontSize={0.7} maxWidth={8} color="#ffffff" outlineWidth={0.02} outlineColor="#000000" anchorX="center" anchorY="middle">
@@ -225,7 +225,7 @@ function HubSpokes({ zoneCenters }) {
             <bufferGeometry>
                 <bufferAttribute attach="attributes-position" args={[positions, 3]} />
             </bufferGeometry>
-            <lineBasicMaterial color={0xd90000} transparent opacity={0.22} />
+            <lineBasicMaterial color={0xffffff} transparent opacity={0.1} />
         </lineSegments>
     )
 }
@@ -338,12 +338,12 @@ function ZonePlaceholder({ center }) {
             {/* pulsing ring marking the zone boundary */}
             <mesh ref={ringRef} position={[center.x, 0.02, center.z]} rotation={[-Math.PI / 2, 0, 0]}>
                 <ringGeometry args={[ZONE_LABEL_DIST - 0.6, ZONE_LABEL_DIST, 64]} />
-                <meshBasicMaterial color={0xd90000} transparent opacity={0.28} depthWrite={false} side={THREE.DoubleSide} />
+                <meshBasicMaterial color={0xffffff} transparent opacity={0.12} depthWrite={false} side={THREE.DoubleSide} />
             </mesh>
             {/* small pulsing dot at center so the zone is visible from far away */}
             <mesh ref={dotRef} position={[center.x, 0.03, center.z]} rotation={[-Math.PI / 2, 0, 0]}>
                 <circleGeometry args={[0.6, 32]} />
-                <meshBasicMaterial color={0xd90000} transparent opacity={0.6} depthWrite={false} />
+                <meshBasicMaterial color={0xffffff} transparent opacity={0.25} depthWrite={false} />
             </mesh>
         </group>
     )
