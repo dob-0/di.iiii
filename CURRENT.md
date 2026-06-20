@@ -9,8 +9,16 @@ active_branch: dev
 
 ## Last commit
 
-`aca22c7` — fix(serverXR): scope GET /api/spaces to public + caller's own spaces
-(this session: closed the last known follow-up from the landing-pages work — `GET /api/spaces` now filters out non-public, out-of-scope spaces instead of leaking every space's metadata to any caller. Merged PR #18 (asset-optimization + agent-config trims) except its `src/wcc/` refactor — that replaces the hand-coded `WccExhibition` scene with the shared `PublicProjectViewer` pipeline, which has no home yet for the EN/ՀՅ caption toggle (`573bad1`); left as a follow-up for whoever owns WCC to reconcile.)
+`adcfd7f` — fix: hide account button in studio editor to unblock axis gizmo + docs: elite-debug.md + z-index golden rule
+(recent commits: studio UI overlap fixes — bottom toolbar removed, panel defaults spread, cluster repositioned, account button hidden in editor to free gizmo area.)
+
+## Last session (2026-06-20)
+
+- Audited all v1 legacy group code: `useSelectionGroups`, `useSelectionGroupActions`, `OutlinerPanel` groups section, wiring through `useAppState`/`useAppEditorActions`/`useAppContextValues`/`EditorLayout`/`EditorLayoutContainer`.
+- V1 "group" was localStorage-only selection-recall (named bookmark of object IDs), not a scene hierarchy — `window.prompt()`/`alert()` dialogs, no schema representation.
+- Confirmed zero of this group logic exists in `src/studio/` — it was never ported.
+- Identified the schema already supports hierarchy: `parentId` on nodes + `deleteNode` cascade (line 694 `projectSchema.js`).
+- Decision pending: two concepts to bring into Studio — (1) structural `group` node via `parentId` + node registry entry; (2) named selection recall in workspaceState. Structural grouping is the higher-value path.
 Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production).
 
 ## What works

@@ -290,6 +290,23 @@ r3f-perf, @pmndrs/*, @iwer/*, iwer
 
 ---
 
+### UI overlap: `position:fixed` at high z-index escapes every ancestor
+
+**Rule:** When a visual element appears on top of something it shouldn't, search for `position.*fixed` + `zIndex` above 1000 before touching any CSS on the element you can see. The culprit is almost never in the same component tree.
+
+**Why:** The axis gizmo (`z-index: 10`) was invisible under the `AccountButton` (`position: fixed; top: 8px; right: 8px; z-index: 9999`) for two full sessions. Every fix targeted the gizmo or the control cluster — neither was the problem. `position: fixed` is positioned relative to the viewport, ignores `overflow: hidden` on all ancestors, and creates a global overlay that can land on any component from a completely unrelated part of the tree.
+
+**How:** When the symptom is "element X appears under element Y":
+1. `grep -rn "zIndex.*[0-9]\{4\}\|z-index.*[0-9]\{4\}" src/` — list every high-z element
+2. Compare positions: is any high-z `position: fixed` element at the same screen coordinates as the conflict?
+3. Fix at the source of the overlay (hide it, reposition it, or reduce its z-index), not at the victim.
+
+The fix here: `AuthGate` renders `<AccountButton>` as a sibling to its children. The studio editor has its own navigation (← Hub). `AuthGate` now accepts `showAccountButton={false}` to suppress it in editor context.
+
+**Files:** `src/components/AccountButton.jsx`, `src/components/AuthGate.jsx`, `src/RootApp.jsx`
+
+---
+
 ### Visual: landing page style is the locked default for new public surfaces
 
 **Rule:** Dark background, true 3D perspective cyan grid floor (Three.js, not CSS), oversized bold wordmark with one cyan accent character, mono uppercase eyebrow, one solid-cyan primary CTA + one quiet ghost CTA. Reuse the `--di-*` tokens in `src/styles/base.css` and the `HeroScene` Three.js pattern rather than re-deriving colors or approximating the grid in CSS.
