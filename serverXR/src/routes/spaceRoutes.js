@@ -95,7 +95,7 @@ function registerSpaceRoutes(router, {
       await saveSpaceMeta(spaceId, meta)
       await ensureSpaceScene(spaceId)
 
-      const sessionUserId = req.session?.user?.id
+      const sessionUserId = req.authState?.type === 'session' ? req.authState.subject : null
       if (sessionUserId && findUserById && setUserSpaces) {
         try {
           const existing = findUserById(sessionUserId)
