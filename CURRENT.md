@@ -9,16 +9,17 @@ active_branch: dev
 
 ## Last commit
 
-`adcfd7f` — fix: hide account button in studio editor to unblock axis gizmo + docs: elite-debug.md + z-index golden rule
-(recent commits: studio UI overlap fixes — bottom toolbar removed, panel defaults spread, cluster repositioned, account button hidden in editor to free gizmo area.)
+`a623e57` — fix(deploy): prune old deploy-backups automatically, keep newest 5
+(plus uncommitted working-tree changes from this session — see below)
 
-## Last session (2026-06-20)
+## Last session (2026-06-22)
 
-- Audited all v1 legacy group code: `useSelectionGroups`, `useSelectionGroupActions`, `OutlinerPanel` groups section, wiring through `useAppState`/`useAppEditorActions`/`useAppContextValues`/`EditorLayout`/`EditorLayoutContainer`.
-- V1 "group" was localStorage-only selection-recall (named bookmark of object IDs), not a scene hierarchy — `window.prompt()`/`alert()` dialogs, no schema representation.
-- Confirmed zero of this group logic exists in `src/studio/` — it was never ported.
-- Identified the schema already supports hierarchy: `parentId` on nodes + `deleteNode` cascade (line 694 `projectSchema.js`).
-- Decision pending: two concepts to bring into Studio — (1) structural `group` node via `parentId` + node registry entry; (2) named selection recall in workspaceState. Structural grouping is the higher-value path.
+- Full system audit of `dev`: all automated checks pass (lint/build/test/server-contracts/schema-sync/three-vendor/docs:ai:check), plus a live manual walkthrough and a real dry-run sync against staging. Full report: `docs/ai/audit-2026-06-22.md`. `scripts/e2e-smoke.mjs`'s 16 failures are script staleness (wrong fixture project ID, stale tab selectors) — not app bugs; script itself still needs fixing.
+- Found + fixed a real bug: landing page sections below the hero rendered with only their eyebrow label visible (title/body/cards invisible) because the fixed-position 3D background canvas (`GridFloorBackground`, z-index:0) painted over non-positioned static section content. Fixed via `position: relative; z-index: 1` on `.lp-section` (`src/landing/landing.css`). Row added to `docs/ai/known-fixes.md`.
+- Fixed landing page copy: removed incorrect "Hayfilm Studio" reference (not in the project's actual identity deck) from `src/landing/LandingPage.jsx`; now reads "Armenia · Web XR · thedi.studio".
+- **These changes are uncommitted on `dev`** as of this session — review and commit before continuing.
+- Prior session's group/hierarchy decision (structural `group` node via `parentId`) is unchanged/unstarted.
+
 Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production).
 
 ## What works
@@ -42,7 +43,7 @@ Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (product
 
 ## What is broken / open
 
-- The `/api/users` admin endpoints are covered by automated tests only — no real OAuth round-trip exercised (GitHub/Google aren't configured in this dev environment).
+- The `/api/users` admin endpoints are covered by automated tests only — no real OAuth round-trip has been confirmed end-to-end in this dev environment, even though GitHub/Google credentials ARE configured locally (`serverXR/.env.local`) and `/api/auth/providers` returns both `true`. A login was attempted 2026-06-22 but the verification method used couldn't confirm the resulting session — still open.
 - `scripts/ollama/Modelfile.dob-fast` / `Modelfile.dob-deep` are mid-iteration locally (base swapped to `qwen3:8b`, not yet committed) — check `git diff` before assuming the committed `qwen2.5-coder:7b` base is current.
 
 ## Space sync setup (per machine)
