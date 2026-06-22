@@ -504,6 +504,7 @@ function useLiveProjectDocument(projectId) {
 
     const reloadDocument = useCallback(async () => {
         const requestedProjectId = projectId
+        if (!requestedProjectId) return
         try {
             await ensureGuestSession()
             const response = await getProjectDocument(requestedProjectId)
@@ -518,6 +519,7 @@ function useLiveProjectDocument(projectId) {
     useEffect(() => { void reloadDocument() }, [reloadDocument])
 
     useEffect(() => {
+        if (!projectId) return undefined
         const syncService = syncServiceRef.current
         let cancelled = false
         ensureGuestSession().then(() => {
