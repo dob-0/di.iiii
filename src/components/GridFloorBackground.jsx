@@ -1,8 +1,12 @@
-import { Suspense } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import LiveProjectScene from './LiveProjectScene.jsx'
+import { getServerSpace } from '../services/serverSpaces.js'
 
-// "main"'s published project -- editable in Studio like any other space.
-const LANDING_PROJECT_ID = 'test-file-project'
+const BACKGROUND_SPACE_ID = 'main'
+// Used only until the live lookup below resolves, or if it fails / no project
+// is linked yet -- not the source of truth. The source of truth is whatever
+// project is linked to the "main" space via Studio Hub's "Change project".
+const FALLBACK_PROJECT_ID = 'test-file-project'
 
 export default function GridFloorBackground({
     opacity = 1,
@@ -12,6 +16,13 @@ export default function GridFloorBackground({
     className = ''
 }) {
     const isTestEnv = typeof window !== 'undefined' && !window.ResizeObserver
+    const [projectId, setProjectId] = useState(FALLBACK_PROJECT_ID)
+
+    useEffect(() => {
+        getServerSpace(BACKGROUND_SPACE_ID)
+            .then(space => { if (space?.publishedProjectId) setProjectId(space.publishedProjectId) })
+            .catch(() => {})
+    }, [])
 
     return (
         <div className={`grid-floor-background ${className}`} style={{
@@ -30,7 +41,7 @@ export default function GridFloorBackground({
                 }}>
                     <Suspense fallback={null}>
                         <LiveProjectScene
-                            projectId={LANDING_PROJECT_ID}
+                            projectId={projectId}
                             interactive={interactive}
                             showChrome={false}
                             showEntities={showNodes}

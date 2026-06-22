@@ -6,6 +6,7 @@ import * as THREE from 'three'
 import { useXrAr } from '../hooks/useXrAr.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
+    buildProjectAssetUrl,
     buildProjectEventsUrl,
     getProjectDocument,
     listProjectOps
@@ -478,6 +479,14 @@ function useLiveProjectDocument(projectId) {
     const documentRef = useRef(null)
     const versionRef = useRef(0)
     const syncServiceRef = useRef(createProjectSyncService())
+    // GridFloorBackground starts with a fallback projectId, then swaps to the
+    // space's real published project once that lookup resolves. If the
+    // fallback's own document fetch is still in flight and resolves *after*
+    // the swap, it would otherwise overwrite the correct doc with the wrong
+    // project's content. Track which projectId is current so a late response
+    // for an abandoned projectId is dropped instead of applied.
+    const activeProjectIdRef = useRef(projectId)
+    useEffect(() => { activeProjectIdRef.current = projectId }, [projectId])
 
     const applyIncomingDocument = useCallback((nextDoc) => {
         const normalized = normalizeProjectDocument(nextDoc || {})
@@ -494,13 +503,15 @@ function useLiveProjectDocument(projectId) {
     }, [])
 
     const reloadDocument = useCallback(async () => {
+        const requestedProjectId = projectId
         try {
             await ensureGuestSession()
-            const response = await getProjectDocument(projectId)
+            const response = await getProjectDocument(requestedProjectId)
+            if (activeProjectIdRef.current !== requestedProjectId) return
             versionRef.current = Number(response?.version) || 0
             applyIncomingDocument(response?.document || response || {})
         } catch {
-            documentRef.current = null
+            if (activeProjectIdRef.current === requestedProjectId) documentRef.current = null
         }
     }, [applyIncomingDocument, projectId])
 
@@ -573,7 +584,15 @@ export default function LiveProjectScene({
     }, [interactive])
 
     const entities = useMemo(() => doc?.entities || [], [doc?.entities])
-    const assetMap = useMemo(() => new Map((doc?.assets || []).map((asset) => [asset.id, asset])), [doc?.assets])
+    // Legacy-imported projects store assets with an empty `url` field (the
+    // registry that fills it in -- registerAssetSources -- only ever runs
+    // inside the Studio editor's useAssetRestore hook, never here). Fall back
+    // to the direct per-project asset endpoint so media actually streams for
+    // any public/live viewer (landing page, WCC, etc.), not just Studio.
+    const assetMap = useMemo(() => new Map((doc?.assets || []).map((asset) => [
+        asset.id,
+        asset.url ? asset : { ...asset, url: buildProjectAssetUrl(projectId, asset.id) }
+    ])), [doc?.assets, projectId])
     const gateEntity = useMemo(() => entities.find(isGateEntity) || null, [entities])
 
     const center = useMemo(() => {

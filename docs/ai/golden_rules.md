@@ -56,6 +56,20 @@ npm run test
 ```
 Never claim a task is done without these passing. The pre-session baseline is: 0 lint errors, 219 tests passing. If either degrades, fix it before stopping.
 
+### Coding is not done — test as a human would, in a real browser
+
+**Rule:** Writing the code and passing lint/build/unit tests is not "done." Before reporting a UI/data-flow fix complete, drive it in an actual browser the way a human user would (click the real button, wait for the real network round-trip, look at the real screenshot) and confirm the thing the user asked for actually happened on screen.
+
+**Why:** In this session, a "fix" (pointing the landing page at the actual published project) looked complete by every static check, but a live Playwright test showed zero asset requests firing — a second, pre-existing race condition (`useLiveProjectDocument` applying a stale, late-arriving response for an abandoned `projectId`) was silently eating the fix. It only surfaced because a real browser session was driven end-to-end and the resulting screenshot was inspected. Code-level reasoning alone said "this should work"; only a human-equivalent test caught that it didn't.
+
+**How:** Playwright + a real Chromium binary are already installed in this repo (`npx playwright install chromium`, already pulled — see `~/.cache/ms-playwright`). No need to "set up" or vendor anything extra. For any change that affects what a user sees or clicks:
+1. Start the dev stack (`npm run dev`), or confirm it's already running.
+2. Drive the actual flow with Playwright — navigate, click, type, wait on real timers (not zero-wait assertions) — exactly as a person would.
+3. Capture a screenshot and/or the network log and actually look at it. Don't infer success from "no errors thrown."
+4. Only then say the task is done.
+
+**Files:** `package.json` (`playwright` devDependency), `~/.cache/ms-playwright` (browser binaries, already present).
+
 ### Complete one task fully before starting the next
 Do not leave files in a half-edited state. Do not start a refactor mid-function. If context is running low, finish the current unit of work, update PROGRESS.md, and stop cleanly. An unfinished change is worse than no change.
 

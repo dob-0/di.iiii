@@ -12,11 +12,14 @@ active_branch: dev
 `a623e57` — fix(deploy): prune old deploy-backups automatically, keep newest 5
 (plus uncommitted working-tree changes from this session — see below)
 
-## Last session (2026-06-22)
+## Last session (2026-06-23)
 
-- Full system audit of `dev`: all automated checks pass (lint/build/test/server-contracts/schema-sync/three-vendor/docs:ai:check), plus a live manual walkthrough and a real dry-run sync against staging. Full report: `docs/ai/audit-2026-06-22.md`. `scripts/e2e-smoke.mjs`'s 16 failures are script staleness (wrong fixture project ID, stale tab selectors) — not app bugs; script itself still needs fixing.
-- Found + fixed a real bug: landing page sections below the hero rendered with only their eyebrow label visible (title/body/cards invisible) because the fixed-position 3D background canvas (`GridFloorBackground`, z-index:0) painted over non-positioned static section content. Fixed via `position: relative; z-index: 1` on `.lp-section` (`src/landing/landing.css`). Row added to `docs/ai/known-fixes.md`.
-- Fixed landing page copy: removed incorrect "Hayfilm Studio" reference (not in the project's actual identity deck) from `src/landing/LandingPage.jsx`; now reads "Armenia · Web XR · thedi.studio".
+- Restored the inline "Enter Space" walk/fly mode on the landing page (`src/landing/LandingPage.jsx`) — pressing it now fades the UI and lets you walk (WASD)/fly (F, then Space-Q up, C-E down) right there, instead of navigating away. This was the original behavior (`ee706c9`) until a later commit (`d9cdc0f`) replaced it with navigation; brought back per explicit request.
+- Found + fixed a real bug: the landing/Studio-Hub 3D background (`GridFloorBackground.jsx`) was hardcoded to a fixed `test-file-project` regardless of what's actually linked/published to the `main` space — editing the project Studio Hub shows as linked to `main` had zero visible effect. Now it looks up `main`'s real `publishedProjectId` at runtime and falls back to the old constant only if that lookup fails.
+- That fix surfaced a second, pre-existing bug: `useLiveProjectDocument` (in `LiveProjectScene.jsx`) had no guard against a stale project's document fetch resolving *after* a newer `projectId` had already taken over, silently overwriting the correct content with the wrong project's. Fixed by tracking the active `projectId` in a ref and dropping any late response that doesn't match it.
+- Also fixed: legacy-imported projects (`source: "legacy-import-studio"`) store assets with an empty `url` field; the registry that normally fills it in (`registerAssetSources`) only ever runs inside Studio's own editor hook, never in the public/live viewer path. `LiveProjectScene`'s `assetMap` now falls back to `buildProjectAssetUrl(projectId, assetId)` so media actually streams outside Studio too (landing page, WCC, etc.).
+- All three verified live via Playwright (real browser, real network trace, real screenshot) — see new golden rule below.
+- Added a golden rule (`docs/ai/golden_rules.md`): code passing lint/build/tests is not "done" for UI/data-flow changes — drive it in a real browser and look at the result before reporting success. Playwright + Chromium are already installed in this repo, nothing to vendor.
 - **These changes are uncommitted on `dev`** as of this session — review and commit before continuing.
 - Prior session's group/hierarchy decision (structural `group` node via `parentId`) is unchanged/unstarted.
 
