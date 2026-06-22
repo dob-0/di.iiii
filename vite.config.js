@@ -116,7 +116,8 @@ export default {
     {
         host: true, // Open to local network and display URL
         // Open the browser to a specific path if provided
-        open: !('SANDBOX_URL' in process.env || 'CODESANDBOX_HOST' in process.env) ? resolveOpenPath() : false,
+        // DEV_BROWSER=1 hands browser-opening to dev-stack.mjs (a wiped Chromium profile) instead.
+        open: (process.env.DEV_BROWSER || 'SANDBOX_URL' in process.env || 'CODESANDBOX_HOST' in process.env) ? false : resolveOpenPath(),
         port: 5173,
         // A second dev stack must fail instead of drifting to 5174. Vite's HMR
         // direct fallback still targets the configured port, which otherwise

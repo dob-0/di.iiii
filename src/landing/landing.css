@@ -144,8 +144,11 @@ body.is-landing .account-btn-wrapper {
 
 /* ─── SHARED SECTION LAYOUT ───────────────────────────────── */
 .lp-section {
+    position: relative;
+    z-index: 1;
     padding: 96px 24px;
     border-top: 1px solid var(--di-cyan-border);
+    background: var(--di-black);
 }
 
 .lp-section-inner {

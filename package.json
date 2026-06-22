@@ -9,6 +9,7 @@
   },
   "scripts": {
     "dev": "node scripts/dev-stack.mjs",
+    "dev:browser": "DEV_BROWSER=1 node scripts/dev-stack.mjs",
     "dev:client": "vite",
     "dev:server": "npm --prefix serverXR run dev",
     "build": "vite build",
