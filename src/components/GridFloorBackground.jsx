@@ -1,12 +1,8 @@
 import { Suspense, useEffect, useState } from 'react'
 import LiveProjectScene from './LiveProjectScene.jsx'
-import { getServerSpace } from '../services/serverSpaces.js'
+import { listServerSpaces } from '../services/serverSpaces.js'
 
-const BACKGROUND_SPACE_ID = 'main'
-// Used only until the live lookup below resolves, or if it fails / no project
-// is linked yet -- not the source of truth. The source of truth is whatever
-// project is linked to the "main" space via Studio Hub's "Change project".
-const FALLBACK_PROJECT_ID = 'test-file-project'
+const PREFERRED_SPACE_ID = 'main'
 
 export default function GridFloorBackground({
     opacity = 1,
@@ -16,11 +12,22 @@ export default function GridFloorBackground({
     className = ''
 }) {
     const isTestEnv = typeof window !== 'undefined' && !window.ResizeObserver
-    const [projectId, setProjectId] = useState(FALLBACK_PROJECT_ID)
+    // No project until we confirm one is actually public -- a direct
+    // getServerSpace('main') 401s for an anonymous visitor whenever "main"
+    // isn't marked public (true on production), and guessing a fallback
+    // project id that may not exist on this environment just trades that
+    // 401 for a 404. listServerSpaces() is already filtered server-side to
+    // public-only spaces for anonymous callers, so anything in it is safe.
+    const [projectId, setProjectId] = useState(null)
 
     useEffect(() => {
-        getServerSpace(BACKGROUND_SPACE_ID)
-            .then(space => { if (space?.publishedProjectId) setProjectId(space.publishedProjectId) })
+        listServerSpaces()
+            .then(spaces => {
+                const withProject = spaces.filter(s => s.publishedProjectId)
+                if (!withProject.length) return
+                const preferred = withProject.find(s => s.id === PREFERRED_SPACE_ID)
+                setProjectId((preferred || withProject[0]).publishedProjectId)
+            })
             .catch(() => {})
     }, [])
 

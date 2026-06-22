@@ -29,7 +29,9 @@ vi.mock('../../project/services/projectsApi.js', () => ({
 
 vi.mock('../../services/serverSpaces.js', () => ({
     getServerSpace: (...args) => getServerSpace(...args),
-    updateServerSpace: (...args) => updateServerSpace(...args)
+    updateServerSpace: (...args) => updateServerSpace(...args),
+    // GridFloorBackground (rendered by StudioHub) also calls this directly.
+    listServerSpaces: () => Promise.resolve([])
 }))
 
 vi.mock('../../project/import/importLegacyScene.js', () => ({
