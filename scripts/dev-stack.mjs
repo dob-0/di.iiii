@@ -90,6 +90,27 @@ const spawnProcess = (command, args, options = {}) => {
     })
 }
 
+console.log('\n[dev-stack] First time here? Run: cat CHEATSHEET.md\n')
+
+const CHROMIUM_PROFILE_DIR = path.join(
+    process.env.HOME || '',
+    '.var/app/org.chromium.Chromium/data/dev-profile'
+)
+
+const wipeAndLaunchBrowser = async (url) => {
+    const { rm } = await import('node:fs/promises')
+    await rm(CHROMIUM_PROFILE_DIR, { recursive: true, force: true }).catch(() => {})
+    try {
+        return spawn('flatpak', ['run', 'org.chromium.Chromium', `--user-data-dir=${CHROMIUM_PROFILE_DIR}`, url], {
+            detached: false,
+            stdio: 'ignore'
+        })
+    } catch {
+        console.log('[dev-stack] DEV_BROWSER requested but flatpak Chromium is not available — skipping.')
+        return null
+    }
+}
+
 const serverEnvFile = await parseEnvFile(path.join(serverRoot, '.env'))
 const defaultServerPort = Number(serverEnvFile.PORT || 4000)
 const defaultServerBasePath = normalizeBasePath(serverEnvFile.APP_BASE_PATH || '/serverXR')
@@ -101,11 +122,15 @@ const shouldAutoStartLocalServer = Boolean(parsedApiBase?.isLoopback && parsedAp
 
 let serverChild = null
 let clientChild = null
+let browserChild = null
 let isShuttingDown = false
 
 const shutdown = (exitCode = 0) => {
     if (isShuttingDown) return
     isShuttingDown = true
+    if (browserChild?.exitCode === null) {
+        browserChild.kill('SIGTERM')
+    }
     if (clientChild?.exitCode === null) {
         clientChild.kill('SIGTERM')
     }
@@ -176,9 +201,29 @@ clientChild = spawnProcess(npmCommand, ['run', 'dev:client'], {
     env: clientEnv
 })
 
+const clientPort = Number(process.env.VITE_PORT || 5173)
+const clientUrl = `http://localhost:${clientPort}/`
+
+if (process.env.DEV_BROWSER) {
+    waitForHealth(clientUrl, HEALTH_TIMEOUT_MS).then(async (ready) => {
+        if (isShuttingDown) return
+        if (!ready) {
+            console.log(`[dev-stack] DEV_BROWSER set but ${clientUrl} never became reachable — skipping browser launch.`)
+            return
+        }
+        console.log(`[dev-stack] DEV_BROWSER: wiping dev Chromium profile and opening ${clientUrl}`)
+        browserChild = await wipeAndLaunchBrowser(clientUrl)
+    })
+}
+
 clientChild.on('exit', (code, signal) => {
-    if (!isShuttingDown && serverChild?.exitCode === null) {
-        serverChild.kill('SIGTERM')
+    if (!isShuttingDown) {
+        if (serverChild?.exitCode === null) {
+            serverChild.kill('SIGTERM')
+        }
+        if (browserChild?.exitCode === null) {
+            browserChild.kill('SIGTERM')
+        }
     }
     if (signal) {
         process.exit(0)

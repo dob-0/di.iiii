@@ -385,7 +385,7 @@ export default function LandingPage() {
                         </Button>
                     </Stack>
                     <Typography className="lp-enter-note">
-                        Yerevan &nbsp;·&nbsp; Web XR &nbsp;·&nbsp; Hayfilm Studio
+                        Armenia &nbsp;·&nbsp; Web XR &nbsp;·&nbsp; thedi.studio
                     </Typography>
                 </Box>
             </Box>
@@ -400,7 +400,7 @@ export default function LandingPage() {
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
                         <a href="/serverXR/api/health" className="lp-footer-link">API</a>
                     </nav>
-                    <span className="lp-footer-note">Open source · Web XR · Yerevan</span>
+                    <span className="lp-footer-note">Open source · Web XR · thedi.studio</span>
                 </div>
             </footer>
             </>

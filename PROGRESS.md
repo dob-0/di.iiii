@@ -5,6 +5,29 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-06-22 — Full system audit + landing page fixes
+
+**Who:** Claude
+
+### Done this session
+
+- Ran a full audit of `dev` (lint, build, full vitest suite, server-contracts, schema-sync, three-vendor, docs:ai:check — all pass) plus a live manual walkthrough (Studio, WCC, asset upload, SpaceSyncPanel, live staging dry-run sync). Full findings in `docs/ai/audit-2026-06-22.md`. `scripts/e2e-smoke.mjs`'s 16 failures were root-caused to the script itself (stale `default-scene-test` fixture ID, stale Studio tab selectors, Beta's by-design empty-canvas-until-Node-0 behavior) — not app bugs; script still needs updating, not done this session.
+- **Real bug found + fixed:** landing page sections below the hero (`What is di.iiii?`, `How to use di.iiii`, `Made for everyone`, etc.) rendered with only their eyebrow label visible — body text/cards were invisible because `GridFloorBackground`'s `position: fixed; z-index: 0` canvas spans the whole scrollable page and paints over non-positioned static section content. Fixed by giving `.lp-section` `position: relative; z-index: 1; background: var(--di-black)`, matching the pattern already used on `.lp-hero-inner`. See `docs/ai/known-fixes.md`.
+- **Copy fix:** landing page credit lines referenced "Hayfilm Studio," which doesn't appear anywhere in the project's own identity deck (`docs/deck/di.ii XR studio_network.pdf` — real identity is "di.i — XR studio_network", site `thedi.studio`). Changed `src/landing/LandingPage.jsx`'s Ready-section line to "Armenia · Web XR · thedi.studio" and the footer note to "Open source · Web XR · thedi.studio".
+- OAuth round-trip remains unverified in this dev environment (still an open item from prior sessions — user completed a real login but the session check method used couldn't confirm it from this side).
+- Set up a personal (outside-repo) dev-browser launcher at `~/bin/di-dev-browser` — isolated flatpak Chromium profile for testing, `--wipe` flag to reset. Not part of the repo.
+
+### Validation
+
+- `npm run lint` — pass (0 errors, 6 pre-existing a11y warnings)
+- `npm run build` — pass
+- `npm run test -- --run` — 326/326 pass
+- `npm run test:server-contracts` — 21/21 pass
+- `npm run test:schema-sync` — 13/13 pass
+- Manual browser verification (Playwright) of the landing-page fix before/after, and of the copy change live on `localhost:5173`
+
+---
+
 ## 2026-06-19 — Opt-in GLB optimization during Studio import
 
 **Who:** Codex

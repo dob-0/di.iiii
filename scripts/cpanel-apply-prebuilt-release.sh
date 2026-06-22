@@ -154,7 +154,7 @@ mkdir -p "${CPANEL_WEB_ROOT}" "${CPANEL_SERVERXR_ROOT}" "${CPANEL_SHARED_ROOT}" 
 # removed old ones, so they accumulated unbounded (114 dirs / 23GB before this
 # was caught, exhausting the host's disk quota and silently breaking deploys
 # and asset uploads alike). Keep only the newest N per environment.
-KEEP_BACKUPS="${CPANEL_KEEP_BACKUPS:-5}"
+KEEP_BACKUPS="${CPANEL_KEEP_BACKUPS:-3}"
 prune_old_backups() {
   local keep="$1"
   [[ -d "${BACKUP_DIR}" ]] || return 0
