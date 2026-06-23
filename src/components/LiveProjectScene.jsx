@@ -231,6 +231,12 @@ function AmbientField({ center }) {
 // mobile uses touch outside the joystick zone for look.
 function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
     const { camera, gl } = useThree()
+    // During an XR session the camera pose is owned by the headset/phone and
+    // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
+    // write camera.position/lookAt then, or it yanks the camera back to the
+    // flat-screen player pose every frame -- fighting head-tracking and
+    // defeating XROrigin movement entirely.
+    const isPresenting = useXR((state) => state.session != null)
     const keysRef = useRef(new Set())
     const speedRef = useRef(0)
     const strafeSpeedRef = useRef(0)
@@ -381,6 +387,8 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
     }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef, isArActive, arTouchElRef])
 
     useFrame((_, delta) => {
+        // XrLocomotion owns movement + camera during a session.
+        if (isPresenting) return
         const keys = keysRef.current
         const player = playerRef.current
         const joy = joystickRef?.current || { x: 0, y: 0 }

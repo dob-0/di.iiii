@@ -481,6 +481,11 @@ function AmbientField({ fieldRadius = RING_RADIUS }) {
 
 function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, zoneCenters, artists, boundsHalf }) {
     const { camera, gl } = useThree()
+    // During an XR session the camera pose is owned by the headset/phone and
+    // locomotion runs through XROrigin (see XrLocomotion). Walker must NOT write
+    // camera.position/lookAt then, or it yanks the camera back to the flat-screen
+    // player pose every frame, fighting head-tracking and XROrigin movement.
+    const isPresenting = useXR((state) => state.session != null)
     const keysRef      = useRef(new Set())
     const speedRef     = useRef(0)
     const strafeSpeedRef = useRef(0)
@@ -612,6 +617,8 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
     }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef])
 
     useFrame((_, delta) => {
+        // XrLocomotion owns movement + camera during a session.
+        if (isPresenting) return
         const keys   = keysRef.current
         const player = playerRef.current
         const joy    = joystickRef?.current || { x: 0, y: 0 }
@@ -708,7 +715,7 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
 // pointer. Adds standard smooth thumbstick locomotion (left stick moves,
 // right stick turns) and keeps it in sync with playerRef so position
 // carries over correctly entering and leaving a session.
-function XrLocomotion({ playerRef }) {
+function XrLocomotion({ playerRef, joystickRef }) {
     const originRef = useRef(null)
     const isPresenting = useXR((state) => state.session != null)
     const wasPresentingRef = useRef(false)
@@ -719,7 +726,7 @@ function XrLocomotion({ playerRef }) {
         { type: 'smooth', speed: TURN_SPEED }
     )
 
-    useFrame(() => {
+    useFrame((_, delta) => {
         const origin = originRef.current
         if (!origin) return
         const player = playerRef.current
@@ -731,6 +738,18 @@ function XrLocomotion({ playerRef }) {
         wasPresentingRef.current = isPresenting
 
         if (isPresenting) {
+            // Handheld AR has no controllers, so useXRControllerLocomotion does
+            // nothing there. Drive the same XROrigin from the touch joystick:
+            // joy.x turns, joy.y moves forward along that virtual yaw (the phone
+            // IMU still controls look on top of this -- same as walk mode).
+            const joy = joystickRef?.current
+            if (joy && (Math.abs(joy.x) > 0.05 || Math.abs(joy.y) > 0.05)) {
+                origin.rotation.y -= joy.x * TURN_SPEED * delta
+                const fwd = -joy.y * WALK_MAX_SPEED * delta
+                origin.position.x += Math.sin(origin.rotation.y) * fwd
+                origin.position.z += Math.cos(origin.rotation.y) * fwd
+            }
+
             player.x = origin.position.x
             player.z = origin.position.z
             player.yaw = origin.rotation.y
@@ -912,7 +931,7 @@ export default function WccExhibition({ onExit }) {
                         />
                     )
                 })}
-                <XrLocomotion playerRef={playerRef} />
+                <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} />
                 </XR>
             </Canvas>
 
