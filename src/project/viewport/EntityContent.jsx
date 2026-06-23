@@ -8,6 +8,7 @@ import ImageObject from '../../objectComponents/ImageObject.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
 import AudioObject from '../../objectComponents/AudioObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
+import PortalObject from './PortalObject.jsx'
 
 // Canonical entity-type -> objectComponent mapping shared across editor surfaces.
 // This is the superset: it covers the nine authored primitives plus the four
@@ -148,6 +149,8 @@ export default function EntityContent({ entity, assetMap }) {
             </>
         )
     }
+    case 'portal':
+        return <PortalObject entity={entity} />
     default:
         return <BoxObject color={appearance.color} boxSize={[1, 1, 1]} />
     }

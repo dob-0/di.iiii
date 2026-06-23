@@ -12,6 +12,7 @@ export const ENTITY_TYPES = [
     'audio',
     'model',
     'group',
+    'portal',
     'pointLight',
     'spotLight',
     'directionalLight',
@@ -224,6 +225,12 @@ export const buildDefaultComponentsForType = (type = 'box') => {
         case 'group':
             delete base.appearance
             break
+        case 'portal':
+            // References another project to render inline (embed) or as a
+            // walk-in/click gateway to that space (portal). Keeps appearance
+            // for the gateway's tint.
+            base.reference = { spaceId: '', projectId: '', mode: 'portal', label: '' }
+            break
         case 'box':
         default:
             base.primitive = { shape: 'box', size: [1, 1, 1] }
@@ -321,6 +328,17 @@ export const normalizeEntity = (entity = {}) => {
         nextComponents.link = {
             enabled: ensureBoolean(sourceComponents.link?.enabled, defaultComponents.link?.enabled || false),
             href: ensureString(sourceComponents.link?.href, defaultComponents.link?.href || '')
+        }
+    }
+    if (sourceComponents.reference || defaultComponents.reference) {
+        const refSource = sourceComponents.reference || {}
+        const refDefault = defaultComponents.reference || {}
+        const refMode = ensureString(refSource.mode, refDefault.mode || 'portal')
+        nextComponents.reference = {
+            spaceId: ensureString(refSource.spaceId, refDefault.spaceId || ''),
+            projectId: ensureString(refSource.projectId, refDefault.projectId || ''),
+            mode: ['embed', 'portal'].includes(refMode) ? refMode : 'portal',
+            label: ensureString(refSource.label, refDefault.label || '')
         }
     }
     if (sourceComponents.runtime || defaultComponents.runtime) {

@@ -581,6 +581,19 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
             xTo: gsap.quickTo(circle, 'x', { duration: 0.9 + index * 0.03, ease: 'power3.out' }),
             yTo: gsap.quickTo(circle, 'y', { duration: 0.9 + index * 0.03, ease: 'power3.out' })
         }))
+        // The circles live in a position:fixed overlay, so their layout box only
+        // shifts on resize. Cache it (via offset* so the live parallax transform
+        // doesn't pollute the reading) instead of forcing a synchronous layout with
+        // getBoundingClientRect on every pointermove.
+        let circleBoxes = []
+        const measureCircles = () => {
+            circleBoxes = circles.map((el) => ({
+                cx: el.offsetLeft + el.offsetWidth * 0.5,
+                cy: el.offsetTop + el.offsetHeight * 0.5,
+                size: Math.max(el.offsetWidth, el.offsetHeight)
+            }))
+        }
+        measureCircles()
         const onMove = (event) => {
             if (rootRef.current?.classList.contains('is-scrolling')) return
             moveX(event.clientX)
@@ -591,14 +604,12 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
                 const depth = (index + 1) * 8
                 const baseX = xRatio * depth
                 const baseY = yRatio * depth * -0.7
-                const el = circles[index]
-                const rect = el.getBoundingClientRect()
-                const cx = rect.left + rect.width * 0.5
-                const cy = rect.top + rect.height * 0.5
-                const dx = event.clientX - cx
-                const dy = event.clientY - cy
+                const box = circleBoxes[index]
+                if (!box) return
+                const dx = event.clientX - box.cx
+                const dy = event.clientY - box.cy
                 const dist = Math.sqrt(dx * dx + dy * dy)
-                const threshold = Math.max(rect.width, rect.height) * 0.85
+                const threshold = box.size * 0.85
                 if (dist < threshold && dist > 1) {
                     const force = (1 - dist / threshold) * 90
                     xTo(baseX - (dx / dist) * force)
@@ -686,10 +697,12 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
         }
         window.addEventListener('pointermove', onMove)
         window.addEventListener('pointerdown', onDown)
+        window.addEventListener('resize', measureCircles)
         root?.addEventListener('scroll', onScroll, { passive: true })
         return () => {
             window.removeEventListener('pointermove', onMove)
             window.removeEventListener('pointerdown', onDown)
+            window.removeEventListener('resize', measureCircles)
             root?.removeEventListener('scroll', onScroll)
             window.clearTimeout(scrollStopTimerRef.current)
         }

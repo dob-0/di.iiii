@@ -73,7 +73,7 @@ export function PanelHeader({ title, onClose, action = null }) {
 }
 
 export function LibraryPanel({ onCreateEntity, onAssetFilesSelected, canDeleteSelection, onDeleteSelected }) {
-    const primitives = ['box', 'sphere', 'cone', 'cylinder', 'text', 'group']
+    const primitives = ['box', 'sphere', 'cone', 'cylinder', 'text', 'group', 'portal']
     const lights = [
         { type: 'pointLight', label: 'Point' },
         { type: 'spotLight', label: 'Spot' },

@@ -244,6 +244,25 @@ const DEFINITIONS = {
         sections: [
             { id: 'transform', label: 'Transform', fields: TRANSFORM_FIELDS }
         ]
+    },
+    portal: {
+        label: 'Portal',
+        sections: [
+            ...BASE_SECTIONS,
+            {
+                id: 'reference',
+                label: 'Reference',
+                fields: [
+                    { label: 'Mode', component: 'reference', path: ['mode'], type: 'select', options: [
+                        { value: 'portal', label: 'Portal (gateway)' },
+                        { value: 'embed', label: 'Embed (inline)' }
+                    ] },
+                    { label: 'Space ID', component: 'reference', path: ['spaceId'], type: 'text' },
+                    { label: 'Project ID', component: 'reference', path: ['projectId'], type: 'text' },
+                    { label: 'Label', component: 'reference', path: ['label'], type: 'text' }
+                ]
+            }
+        ]
     }
 }
 
