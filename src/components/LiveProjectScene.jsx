@@ -46,6 +46,7 @@ const IDLE_ORBIT_SPEED = 0.12
 
 const tmpVec = new THREE.Vector3()
 const tmpLook = new THREE.Vector3()
+const tmpDir = new THREE.Vector3()
 
 const isGateEntity = (entity) => /gate|threshold|entrance/i.test(entity?.name || '')
 const isGroundEntity = (entity) => /ground|floor/i.test(entity?.name || '')
@@ -523,9 +524,18 @@ function XrLocomotion({ playerRef, joystickRef }) {
             const joy = joystickRef?.current
             if (joy && (Math.abs(joy.x) > 0.05 || Math.abs(joy.y) > 0.05)) {
                 origin.rotation.y -= joy.x * TURN_SPEED * delta
+                // Move along the camera's real horizontal forward, not a yaw
+                // reconstruction: the XR camera looks down the rig's local -Z,
+                // the OPPOSITE of +(sin,cos), so deriving forward from
+                // origin.rotation.y inverted/mirrored the joystick.
                 const fwd = -joy.y * WALK_MAX_SPEED * delta
-                origin.position.x += Math.sin(origin.rotation.y) * fwd
-                origin.position.z += Math.cos(origin.rotation.y) * fwd
+                state.camera.getWorldDirection(tmpDir)
+                tmpDir.y = 0
+                if (tmpDir.lengthSq() > 1e-6) {
+                    tmpDir.normalize()
+                    origin.position.x += tmpDir.x * fwd
+                    origin.position.z += tmpDir.z * fwd
+                }
             }
 
             // Keep playerRef in sync so other logic (nearest-zone, bounds)

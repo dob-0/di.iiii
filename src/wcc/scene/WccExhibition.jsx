@@ -73,6 +73,7 @@ const ZONE_CENTERS_RING = ARTISTS.map((_, i) => {
 
 const tmpVec   = new THREE.Vector3()
 const tmpLook  = new THREE.Vector3()
+const tmpDir   = new THREE.Vector3()
 const tmpColor = new THREE.Color()
 const tmpColorB = new THREE.Color()
 const tmpColorC = new THREE.Color()
@@ -731,7 +732,7 @@ function XrLocomotion({ playerRef, joystickRef }) {
         { type: 'smooth', speed: TURN_SPEED }
     )
 
-    useFrame((_, delta) => {
+    useFrame((state, delta) => {
         const origin = originRef.current
         if (!origin) return
         const player = playerRef.current
@@ -745,14 +746,23 @@ function XrLocomotion({ playerRef, joystickRef }) {
         if (isPresenting) {
             // Handheld AR has no controllers, so useXRControllerLocomotion does
             // nothing there. Drive the same XROrigin from the touch joystick:
-            // joy.x turns, joy.y moves forward along that virtual yaw (the phone
-            // IMU still controls look on top of this -- same as walk mode).
+            // joy.x turns, joy.y walks toward where the phone is pointing.
             const joy = joystickRef?.current
             if (joy && (Math.abs(joy.x) > 0.05 || Math.abs(joy.y) > 0.05)) {
                 origin.rotation.y -= joy.x * TURN_SPEED * delta
-                const fwd = -joy.y * WALK_MAX_SPEED * delta
-                origin.position.x += Math.sin(origin.rotation.y) * fwd
-                origin.position.z += Math.cos(origin.rotation.y) * fwd
+                // Move along the camera's real horizontal forward, not a yaw
+                // reconstruction: the XR camera looks down the rig's local -Z,
+                // which is the OPPOSITE of +(sin,cos), so deriving forward from
+                // origin.rotation.y inverted/mirrored the joystick. getWorldDirection
+                // is correct regardless of rig/phone orientation.
+                const fwdAmt = -joy.y * WALK_MAX_SPEED * delta
+                state.camera.getWorldDirection(tmpDir)
+                tmpDir.y = 0
+                if (tmpDir.lengthSq() > 1e-6) {
+                    tmpDir.normalize()
+                    origin.position.x += tmpDir.x * fwdAmt
+                    origin.position.z += tmpDir.z * fwdAmt
+                }
             }
 
             player.x = origin.position.x
