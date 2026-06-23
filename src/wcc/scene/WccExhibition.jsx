@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, Text, Billboard } from '@react-three/drei'
 import { XR, XROrigin, useXR, useXRControllerLocomotion } from '@react-three/xr'
@@ -479,7 +480,7 @@ function AmbientField({ fieldRadius = RING_RADIUS }) {
 
 // ── Walker ────────────────────────────────────────────────────────────────────
 
-function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, zoneCenters, artists, boundsHalf }) {
+function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, zoneCenters, artists, boundsHalf, isArActive, arTouchElRef }) {
     const { camera, gl } = useThree()
     // During an XR session the camera pose is owned by the headset/phone and
     // locomotion runs through XROrigin (see XrLocomotion). Walker must NOT write
@@ -515,9 +516,13 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
     }, [])
 
     useEffect(() => {
-        const el     = gl.domElement
+        // During a handheld AR session, only the WebXR dom-overlay root (and its
+        // descendants) reliably receives input -- the page's own canvas does not.
+        // Attach touch handling to the dedicated overlay element instead when AR
+        // is active, mirroring LiveProjectScene.
+        const el     = (isArActive && arTouchElRef?.current) || gl.domElement
         const player = playerRef.current
-        const isTouch = window.matchMedia('(pointer: coarse)').matches
+        const isTouch = isArActive || window.matchMedia('(pointer: coarse)').matches
 
         if (!isTouch) {
             const onLockChange = () => {
@@ -614,7 +619,7 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
                 el.removeEventListener('touchcancel',te)
             }
         }
-    }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef])
+    }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef, isArActive, arTouchElRef])
 
     useFrame((_, delta) => {
         // XrLocomotion owns movement + camera during a session.
@@ -868,6 +873,7 @@ export default function WccExhibition({ onExit }) {
     // Fly mode's altitude keys (Space/Q up, C/E down) have no touch
     // equivalent -- without this, mobile fly has no way to ascend/descend at all.
     const vertTouchRef = useRef(0)
+    const arTouchElRef = useRef(null)
     const ambientRef  = useRef(null)
     const dirRef      = useRef(null)
 
@@ -880,8 +886,18 @@ export default function WccExhibition({ onExit }) {
     }, [])
 
     const xr = useXrAr()
+    const isArActive = xr.isArModeActive && xr.isXrPresenting
     const loadedCount = Object.values(docs).filter(Boolean).length
     const allLoaded   = loadedCount === ARTISTS.length
+
+    // The library only toggles display:block/none on the dom-overlay root -- it
+    // has no inherent size/position, so anything portaled into it (the touch
+    // surface, joystick, buttons) has no positioning context without this.
+    useEffect(() => {
+        const root = xr.domOverlayRoot
+        if (!root) return
+        Object.assign(root.style, { position: 'fixed', inset: '0', width: '100%', height: '100%' })
+    }, [xr.domOverlayRoot])
 
     return (
         <div className="wcc-scene">
@@ -918,6 +934,8 @@ export default function WccExhibition({ onExit }) {
                     zoneCenters={ZONE_CENTERS_RING}
                     artists={ARTISTS}
                     boundsHalf={BOUNDS_HALF}
+                    isArActive={isArActive}
+                    arTouchElRef={arTouchElRef}
                 />
                 {ARTISTS.map((artist, i) => {
                     const doc = docs[artist.id]
@@ -967,15 +985,45 @@ export default function WccExhibition({ onExit }) {
                     &nbsp;·&nbsp; ESC · release
                 </p>
             )}
-            {isMobile && <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />}
-            {isMobile && flyMode && <VerticalTouchControls vertTouchRef={vertTouchRef} />}
-            <button
-                type="button"
-                className={`live-scene-fly-btn${flyMode ? ' active' : ''}`}
-                onClick={() => setFlyMode((f) => !f)}
-            >
-                {flyMode ? 'Walk' : 'Fly'}
-            </button>
+            {(() => {
+                const controlsUI = (
+                    <>
+                        {isMobile && <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />}
+                        {isMobile && flyMode && <VerticalTouchControls vertTouchRef={vertTouchRef} />}
+                        <button
+                            type="button"
+                            className={`live-scene-fly-btn${flyMode ? ' active' : ''}`}
+                            onClick={() => setFlyMode((f) => !f)}
+                        >
+                            {flyMode ? 'Walk' : 'Fly'}
+                        </button>
+                        {xr.isXrPresenting && (
+                            <button type="button" className="live-scene-exit"
+                                style={{ position: 'absolute', bottom: 40, right: 130, zIndex: 11 }}
+                                onClick={xr.handleExitXrSession}
+                            >
+                                Exit XR
+                            </button>
+                        )}
+                    </>
+                )
+
+                // Normal page DOM isn't composited during a handheld AR session --
+                // only the WebXR dom-overlay root is. Portal the same controls (plus
+                // a full-viewport element for Walker to receive touches on) into it
+                // whenever AR is active, matching LiveProjectScene.
+                if (isArActive && xr.domOverlayRoot) {
+                    return createPortal(
+                        <>
+                            <div ref={arTouchElRef} className="live-scene-ar-touch-capture" />
+                            {controlsUI}
+                        </>,
+                        xr.domOverlayRoot
+                    )
+                }
+                return controlsUI
+            })()}
+
             {(xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
                 <div style={{ position: 'absolute', bottom: 40, right: 130, display: 'flex', gap: 8, zIndex: 11 }}>
                     {xr.supportedXrModes.vr && (
@@ -989,14 +1037,6 @@ export default function WccExhibition({ onExit }) {
                         </button>
                     )}
                 </div>
-            )}
-            {xr.isXrPresenting && (
-                <button type="button" className="live-scene-exit"
-                    style={{ position: 'absolute', bottom: 40, right: 130, zIndex: 11 }}
-                    onClick={xr.handleExitXrSession}
-                >
-                    Exit XR
-                </button>
             )}
         </div>
     )
