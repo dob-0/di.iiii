@@ -33,6 +33,13 @@ const ARTISTS = [
 ]
 const ARTIST_IDS = ARTISTS.map((a) => a.id)
 
+// The hub itself is now an editable Studio project ("main", same space as the
+// artists) instead of pure hand-coded geometry -- entities placed in it render
+// centered at the hub origin, same fade-in/asset pipeline as a zone.
+const MAIN_PROJECT_ID = 'main'
+const MAIN_DOC_IDS = [MAIN_PROJECT_ID]
+const HUB_CENTER = new THREE.Vector3(0, 0, 0)
+
 // ── Scene constants ───────────────────────────────────────────────────────────
 
 const RING_RADIUS        = 38
@@ -43,7 +50,7 @@ const FLY_SPEED          = 4.5
 const WALK_ACCEL         = 14
 const WALK_FRICTION      = 10
 const TURN_SPEED         = 1.6
-const PTR_SENSITIVITY    = 0.0022
+const PTR_SENSITIVITY    = 0.0055
 const TOUCH_SENSITIVITY  = 0.0038
 // Walking keeps a smaller cap (orientation against the horizon); flying has
 // none to stay oriented against, so it gets (almost) the full vertical range.
@@ -285,7 +292,7 @@ const ZONE_OVERRIDES = {
 
 // ── Per-zone group (memoises its entity + asset lists) ────────────────────────
 
-function ZoneGroup({ artist, doc, center }) {
+function ZoneGroup({ artist, doc, center, showRing = true }) {
     const overrides = ZONE_OVERRIDES[artist.id]
     const entities = useMemo(() => {
         let list = doc?.entities || []
@@ -316,10 +323,12 @@ function ZoneGroup({ artist, doc, center }) {
 
     return (
         <group ref={groupRef}>
-            <mesh position={[center.x, 0.01, center.z]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[ZONE_LABEL_DIST - 1, ZONE_LABEL_DIST, 64]} />
-                <meshBasicMaterial color={0x334455} transparent opacity={0.15} depthWrite={false} side={THREE.DoubleSide} />
-            </mesh>
+            {showRing ? (
+                <mesh position={[center.x, 0.01, center.z]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <ringGeometry args={[ZONE_LABEL_DIST - 1, ZONE_LABEL_DIST, 64]} />
+                    <meshBasicMaterial color={0x334455} transparent opacity={0.15} depthWrite={false} side={THREE.DoubleSide} />
+                </mesh>
+            ) : null}
             {entities.map((entity) => (
                 <AnimatedEntity
                     key={`${artist.id}:${entity.id}`}
@@ -828,6 +837,8 @@ export default function WccExhibition({ onExit }) {
     // routes to LiveProjectScene with their own project instead (see
     // WccExperience.jsx), so this component is exhibition-only.
     const docs          = useWccProjectDocuments(ARTIST_IDS)
+    const mainDocs      = useWccProjectDocuments(MAIN_DOC_IDS)
+    const mainDoc       = mainDocs[MAIN_PROJECT_ID]
     const [label, setLabel]     = useState(null)
     const [isLocked, setLocked] = useState(false)
     const [isMobile]  = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
@@ -869,6 +880,7 @@ export default function WccExhibition({ onExit }) {
                 <directionalLight ref={dirRef} color={DEFAULT_DIR.color} intensity={DEFAULT_DIR.intensity} position={DEFAULT_DIR.position} />
                 <Grid args={[240, 240]} cellColor="#2a3038" sectionColor="#3c4654" fadeDistance={70} infiniteGrid />
                 <HubMarker />
+                {mainDoc ? <ZoneGroup artist={{ id: MAIN_PROJECT_ID }} doc={mainDoc} center={HUB_CENTER} showRing={false} /> : null}
                 <HubSpokes zoneCenters={ZONE_CENTERS_RING} />
                 {ARTISTS.map((artist, i) => (
                     <ZonePortal key={artist.id} artist={artist} center={ZONE_CENTERS_RING[i]} />

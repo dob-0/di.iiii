@@ -99,6 +99,17 @@
     to { transform: rotate(360deg); }
 }
 
+/* Handheld AR's WebXR dom-overlay root composites *only* this element (and
+   its descendants) on top of the camera passthrough during a session --
+   it's the actual touch target Walker attaches to, invisible by design. */
+.live-scene-ar-touch-capture {
+    position: absolute;
+    inset: 0;
+    touch-action: none;
+    pointer-events: auto;
+    background: transparent;
+}
+
 /* Mobile joystick — floating: spawns wherever the left half of the screen is
    touched (Walker positions it via inline style), so there's no fixed dead zone. */
 .live-scene-joystick {

@@ -70,18 +70,35 @@ export function useXrAr({
     setCameraPosition,
     setCameraTarget
 } = {}) {
+    // Purely descriptive now (diagnostics snapshot below) -- actual feature
+    // negotiation is handled by the granular flags passed to createXRStore.
     const xrSessionInit = useMemo(() => ({
         requiredFeatures: ['local-floor'],
-        optionalFeatures: []
+        optionalFeatures: ['dom-overlay']
     }), [])
 
+    // `customSessionInit` used to fully override the library's feature
+    // negotiation (including its default `dom-overlay` request), so a
+    // handheld AR session had no way to host the on-screen joystick/buttons
+    // -- only content placed inside the WebXR-managed dom-overlay root is
+    // composited during an immersive session; nothing else in the page is.
+    // Request the exact same minimal feature set as before (`local-floor`
+    // only) via the granular flags instead, which leaves `domOverlay` at
+    // its library default (`true`) rather than silently dropping it.
     const xrStore = useMemo(() => createXRStore({
         offerSession: false,
         emulate: false,
         controller: { teleportPointer: true },
         hand: { teleportPointer: true },
-        customSessionInit: xrSessionInit
-    }), [xrSessionInit])
+        anchors: false,
+        handTracking: false,
+        layers: false,
+        meshDetection: false,
+        planeDetection: false,
+        hitTest: false,
+        bodyTracking: false,
+        domOverlay: true
+    }), [])
 
     const isMountedRef = useRef(true)
     const [isXrPresenting, setIsXrPresenting] = useState(false)
@@ -328,6 +345,12 @@ export function useXrAr({
     return {
         xrStore,
         xrSessionInit,
+        // Stable for the store's lifetime -- the only element a handheld AR
+        // session actually composites on top of the camera passthrough.
+        // Anything meant to be visible/touchable during an AR session (e.g.
+        // a touch joystick) must be portaled into this element, not just
+        // rendered normally in the page.
+        domOverlayRoot: xrStore.getState().domOverlayRoot,
         isXrPresenting,
         activeXrMode,
         isArModeActive,
