@@ -70,6 +70,16 @@ Never claim a task is done without these passing. The pre-session baseline is: 0
 
 **Files:** `package.json` (`playwright` devDependency), `~/.cache/ms-playwright` (browser binaries, already present).
 
+### When a feature lands on one surface, ask whether it should apply to all of them — past and future
+
+**Rule:** Before calling a UX/behavior change "done," check whether the same capability already exists (or should exist) on every other surface that serves the same purpose — including spaces/projects/content that already existed before this change, not just new ones going forward. If it doesn't apply everywhere, say so explicitly and let the user decide the scope, rather than silently leaving it inconsistent.
+
+**Why:** This session added walk/fly navigation to the landing page's decorative background and assumed it was a general capability. It wasn't — the actual public viewer every real space's URL uses (`PublicProjectViewer.jsx`, via `StudioViewport`) is a completely separate renderer with orbit-only navigation and no walk/fly at all. Every space created before or after this change would have been silently excluded if the user hadn't asked "will this apply everywhere?" The fix was a deliberate, scoped addition (a toggle alongside orbit, not a replacement) precisely because blindly applying a new behavior to every live space's public-facing viewer is a real-risk change that needs the user's explicit scope call, not an assumption.
+
+**How:** When you build something that feels like it should be a platform-wide capability, grep for every component that renders "the same kind of thing" (e.g. `LiveProjectScene` vs `PublicProjectViewer` vs `StudioViewport` — three different renderers for what a casual look might assume is one "viewer"). If they diverge, ask: does this change apply to (a) just the surface you touched, (b) all surfaces going forward, or (c) all surfaces including pre-existing content? Each answer has a different blast radius and risk level — confirm which one before writing code that assumes the answer.
+
+**Files:** `src/components/LiveProjectScene.jsx`, `src/project/components/PublicProjectViewer.jsx`, `src/wcc/WccExperience.jsx` — three independent renderers in this repo that look like they should be "the" viewer but aren't.
+
 ### Complete one task fully before starting the next
 Do not leave files in a half-edited state. Do not start a refactor mid-function. If context is running low, finish the current unit of work, update PROGRESS.md, and stop cleanly. An unfinished change is worse than no change.
 

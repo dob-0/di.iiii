@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import LiveProjectScene from '../../components/LiveProjectScene.jsx'
 import { createProjectSyncService } from '../services/projectSyncService.js'
 import {
     DEFAULT_PROJECT_SPACE_ID,
@@ -87,6 +88,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // camera for fixed-camera/code modes or when none is set yet).
     const [cameraView, setCameraView] = useState(initialCameraView || null)
     const [viewMode, setViewMode] = useState(null)
+    // 'scene' entry view only -- fixed-camera and code/iframe presentations
+    // are a deliberate per-project choice and stay exactly as authored.
+    const [navMode, setNavMode] = useState('orbit')
     const controlsRef = useRef(null)
     const iframeRef = useRef(null)
     const syncServiceRef = useRef(createProjectSyncService())
@@ -200,6 +204,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
 
     useEffect(() => {
         setViewMode(null)
+        setNavMode('orbit')
     }, [presentationState.entryView])
 
     useEffect(() => {
@@ -294,6 +299,14 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         </div>
                     </div>
                 )
+            ) : document && navMode === 'walk' ? (
+                <LiveProjectScene
+                    projectId={projectId}
+                    interactive
+                    showChrome
+                    title={viewerTitle}
+                    onExit={() => setNavMode('orbit')}
+                />
             ) : document ? (
                 <StudioViewport
                     document={document}
@@ -311,6 +324,16 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     }}
                     enableNavigation={entryView !== 'fixed-camera'}
                 />
+            ) : null}
+
+            {state.status === 'ready' && entryView === 'scene' && navMode === 'orbit' ? (
+                <button
+                    type="button"
+                    style={{ ...overlayButtonStyle, position: 'absolute', top: '1rem', right: '1rem', zIndex: 20 }}
+                    onClick={() => setNavMode('walk')}
+                >
+                    Walk / Fly
+                </button>
             ) : null}
 
             {state.status === 'loading' ? (

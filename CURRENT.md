@@ -9,15 +9,18 @@ active_branch: dev
 
 ## Last commit
 
-`b79e109` — fix(landing): avoid 401/404 noise from GridFloorBackground on envs with no public main space
+`223e7b1` — feat(walk/fly): strafe, wider look range, drone-style decoupled flight
 (plus uncommitted working-tree changes from this session — see below)
 
 ## Last session (2026-06-23)
 
-- Restored the inline "Enter Space" walk/fly mode on the landing page (`src/landing/LandingPage.jsx`) — pressing it now fades the UI and lets you walk/fly right there instead of navigating away (was replaced by navigation in `d9cdc0f`; brought back per request).
-- Fixed `GridFloorBackground.jsx` to follow whatever project is actually published to the `main` space instead of a hardcoded constant; fixed a resulting stale-fetch race in `useLiveProjectDocument` and a missing asset-URL fallback for legacy-imported projects (`LiveProjectScene.jsx`). Also hardened it to avoid 401/404 noise on envs (like production) where `main` isn't public.
-- Walk/fly controls overhauled in `LiveProjectScene.jsx`: A/D now strafe (only arrow keys/mouse/touch-drag turn); look-pitch range widened (walk ~83°, fly ~89°, set independently per mode); fly movement is now fully decoupled from look angle — forward/strafe always move on the horizontal plane like a drone, altitude only changes via Space/Q/C/E. (Previously, looking down while flying forward dove like a jet — replaced per explicit request for drone-style shots.)
-- All of the above verified live via Playwright (real browser walkthrough, numeric pitch/altitude checks via temporary debug hooks, not just screenshots) — see golden rule added this session in `docs/ai/golden_rules.md`: lint/build/tests passing isn't "done" for UI/data-flow changes.
+- Restored the inline "Enter Space" walk/fly mode on the landing page (`src/landing/LandingPage.jsx`) — pressing it fades the UI and lets you walk/fly right there instead of navigating away (was replaced by navigation in `d9cdc0f`; brought back per request).
+- Fixed `GridFloorBackground.jsx` to follow whatever project is actually published to the `main` space instead of a hardcoded constant; fixed a resulting stale-fetch race (`useLiveProjectDocument`) and a missing asset-URL fallback for legacy-imported projects in `LiveProjectScene.jsx`. Hardened against 401/404 noise on envs where `main` isn't public (production).
+- Walk/fly controls overhauled in `LiveProjectScene.jsx`: A/D strafe (only arrow keys/mouse/touch-drag turn); look-pitch range widened and set independently per mode (walk ~83°, fly ~89°); fly movement decoupled from look angle entirely — forward/strafe stay on the horizontal plane like a drone gimbal shot, altitude only changes via Space/Q/C/E (was jet-style pitch-coupled diving; replaced per request).
+- Fixed mobile: the Fly toggle and joystick were gated behind `showChrome`, which the landing page always sets `false` — there was no way to ever reach fly mode on a touchscreen (no F key). They now render whenever `interactive`, independent of `showChrome`; landing page hint text is now mobile-aware too.
+- Found a real scope gap: walk/fly only ever existed on the landing background + WCC. The actual public viewer every space's real URL uses (`PublicProjectViewer.jsx` → `StudioViewport`, orbit-only) had none. Added a "Walk / Fly" toggle there (scene entry-view only; fixed-camera/code modes untouched) so it's now available, by user choice, on every space — past and future — not just two special-cased surfaces.
+- Added two golden rules (`docs/ai/golden_rules.md`): (1) UI/data-flow fixes aren't "done" until verified in a real browser, not just lint/build/tests; (2) when a feature lands on one surface, check whether it should apply to every surface serving the same purpose — including pre-existing content — before calling it done.
+- Everything this session verified live via Playwright: real browser walkthroughs, numeric pitch/altitude checks via temporary debug hooks (not just screenshots), and a full toggle round-trip on a real public space (`/mytest`).
 - **These changes are uncommitted on `dev`** as of this session — review and commit before continuing.
 - Prior session's group/hierarchy decision (structural `group` node via `parentId`) is unchanged/unstarted.
 

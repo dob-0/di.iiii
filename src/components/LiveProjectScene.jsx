@@ -706,6 +706,24 @@ export default function LiveProjectScene({
                 </XR>
             </Canvas>
 
+            {/* Joystick and the Fly toggle are functional controls, not
+                branding chrome -- a touch device has no F key and no other
+                way to reach fly mode, so these render regardless of
+                showChrome. Callers that supply their own exit button/hint
+                (the landing page) still only get one of those, not two. */}
+            {interactive && isMobile && (
+                <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />
+            )}
+            {interactive && (
+                <button
+                    type="button"
+                    className={`live-scene-fly-btn${flyMode ? ' active' : ''}`}
+                    onClick={() => setFlyMode((f) => !f)}
+                >
+                    {flyMode ? 'Walk' : 'Fly'}
+                </button>
+            )}
+
             {showChrome && (
                 <>
                     <div
@@ -733,18 +751,6 @@ export default function LiveProjectScene({
                             {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
                             &nbsp;·&nbsp; ESC · release
                         </p>
-                    )}
-                    {interactive && isMobile && (
-                        <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />
-                    )}
-                    {interactive && (
-                        <button
-                            type="button"
-                            className={`live-scene-fly-btn${flyMode ? ' active' : ''}`}
-                            onClick={() => setFlyMode((f) => !f)}
-                        >
-                            {flyMode ? 'Walk' : 'Fly'}
-                        </button>
                     )}
                     {(xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
                         <div style={{ position: 'absolute', bottom: 40, right: 130, display: 'flex', gap: 8, zIndex: 11 }}>
