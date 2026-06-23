@@ -9,25 +9,20 @@ active_branch: dev
 
 ## Last commit
 
-`2bbf74f` — fix(walk/fly): add touch up/down controls -- mobile fly had no way to ascend
-(plus uncommitted working-tree changes from this session — see below)
+`b000166` — feat(xr): AR on every public space by default, modifiable per space
+**`dev` and `main` are in sync — this session shipped to production (di-studio.xyz).**
 
-## Last session (2026-06-23)
+## Last session (2026-06-24)
 
-- Restored the inline "Enter Space" walk/fly mode on the landing page (`src/landing/LandingPage.jsx`) — pressing it fades the UI and lets you walk/fly right there instead of navigating away (was replaced by navigation in `d9cdc0f`; brought back per request).
-- Fixed `GridFloorBackground.jsx` to follow whatever project is actually published to the `main` space instead of a hardcoded constant; fixed a resulting stale-fetch race (`useLiveProjectDocument`) and a missing asset-URL fallback for legacy-imported projects in `LiveProjectScene.jsx`. Hardened against 401/404 noise on envs where `main` isn't public (production).
-- Walk/fly controls overhauled in `LiveProjectScene.jsx`: A/D strafe (only arrow keys/mouse/touch-drag turn); look-pitch range widened and set independently per mode (walk ~83°, fly ~89°); fly movement decoupled from look angle entirely — forward/strafe stay on the horizontal plane like a drone gimbal shot, altitude only changes via Space/Q/C/E (was jet-style pitch-coupled diving; replaced per request).
-- Fixed mobile: the Fly toggle and joystick were gated behind `showChrome`, which the landing page always sets `false` — there was no way to ever reach fly mode on a touchscreen (no F key). They now render whenever `interactive`, independent of `showChrome`; landing page hint text is now mobile-aware too.
-- Found a real scope gap: walk/fly only ever existed on the landing background + WCC. The actual public viewer every space's real URL uses (`PublicProjectViewer.jsx` → `StudioViewport`, orbit-only) had none. Added a "Walk / Fly" toggle there (scene entry-view only; fixed-camera/code modes untouched) so it's now available, by user choice, on every space — past and future — not just two special-cased surfaces.
-- Found a second instance of the same gap: WCC's main exhibition hub/ring (`WccExhibition.jsx`) turned out to have its own hand-duplicated copy of the entire Walker/joystick/fly-button implementation — not the shared `LiveProjectScene` component — so none of the above control fixes reached it. Ported the same fixes (strafe, per-mode pitch range, drone-decoupled fly) directly into that copy. (Per-artist "Enter space" views already used the shared component and got the fixes automatically.)
-- Added two golden rules (`docs/ai/golden_rules.md`): (1) UI/data-flow fixes aren't "done" until verified in a real browser, not just lint/build/tests; (2) when a feature lands on one surface, check whether it should apply to every surface serving the same purpose — including pre-existing content — before calling it done.
-- **VR/AR had no movement at all** — no `<XROrigin>` was ever rendered inside `<XR>` in either `LiveProjectScene.jsx` or `WccExhibition.jsx`, so a headset session started at world (0,0,0) with nothing beyond the library's default teleport-pointer. Added `useXRControllerLocomotion` (standard smooth thumbstick locomotion) synced with the same `playerRef` desktop/touch uses. **Not verified on real hardware** — this dev environment has no headset and WebXR emulation is off; only confirmed it builds/lints/mounts without crashing. Needs a real-device check — flag anything off after testing on a headset.
-- Tuned mobile fly further: there was no touch equivalent for the Space/Q/C/E altitude keys at all — joystick only ever drove horizontal movement (doubly true after the drone-decoupling fix). Added two press-and-hold ▲/▼ buttons (shown only on mobile while flying, stacked above the Fly toggle), ported into both `LiveProjectScene.jsx` and `WccExhibition.jsx`.
-- Everything this session verified live via Playwright: real browser walkthroughs, numeric pitch/altitude checks via temporary debug hooks (not just screenshots), a full toggle round-trip on a real public space (`/mytest`), the same strafe/pitch checks repeated live on `/wcc`, and confirmed the new up/down buttons actually change altitude on both surfaces.
-- **These changes are uncommitted on `dev`** as of this session — review and commit before continuing.
+- Routed the public viewer's "Enter AR/VR" through walk mode (`LiveProjectScene`) instead of the locomotion-less `StudioViewport` XR session, and fixed mobile `100vh` overflow (→ `100dvh`) that pushed bottom controls off-screen (`PublicProjectViewer.jsx`, `wccExperience.css`). Verified on a real Android phone via Chrome CDP (adb).
+- AR walk joystick didn't show in `WccExhibition.jsx`: its hand-duplicated Walker rendered controls as normal page DOM, but a handheld AR session only composites the WebXR dom-overlay root — ported `LiveProjectScene`'s portal-into-`domOverlayRoot` + touch-capture fix into it.
+- AR joystick walked backward/mirrored: locomotion reconstructed forward from `originYaw` as `+(sin,cos)`, but the XR camera looks down the rig's `-Z` (opposite). Now drives movement from the camera's real horizontal forward (`getWorldDirection`). Both `XrLocomotion` copies.
+- Fly now works in XR: AR uses the ▲▼ touch buttons (`vertTouchRef` → `origin.y`); VR uses the right thumbstick Y (left stick walks, right-X turns) since the 2D Fly button isn't reachable in a headset. Altitude carries across the flat↔XR boundary. **VR path not verified on hardware** (no headset here).
+- AR is now offered up-front on every public space by default (device permitting). `publishState.xrDefaultMode` only *modifies* this: `vr` → VR, new `off` → hidden, legacy `none`/`ar` → AR (no data migration; all 20 stored projects were legacy `none`). Studio publish panel: AR (default) / VR / Off (`projectSchema` + `.cjs`, `PublicProjectViewer.jsx`, `StudioShellPanels.jsx`).
+- Repaired a stale `PreferencesPage.test.jsx` (broken by the earlier section-tabbed admin rewrite `f1e7f93`) that had been red on CI for 3 dev pushes, silently blocking the staging deploy — now navigates sections before asserting.
 - Prior session's group/hierarchy decision (structural `group` node via `parentId`) is unchanged/unstarted.
 
-Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production).
+Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production). Both currently at `b000166`.
 
 ## What works
 
@@ -50,6 +45,7 @@ Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (product
 
 ## What is broken / open
 
+- **VR fly is unverified on hardware** — AR walk/joystick/fly were confirmed on a real Android phone (CDP), but the VR path (right-thumbstick-Y altitude, smooth locomotion) has only been built/lint/mount-checked; no headset here. Test on a real device and flag anything off.
 - The `/api/users` admin endpoints are covered by automated tests only — no real OAuth round-trip has been confirmed end-to-end in this dev environment, even though GitHub/Google credentials ARE configured locally (`serverXR/.env.local`) and `/api/auth/providers` returns both `true`. A login was attempted 2026-06-22 but the verification method used couldn't confirm the resulting session — still open.
 - `scripts/ollama/Modelfile.dob-fast` / `Modelfile.dob-deep` are mid-iteration locally (base swapped to `qwen3:8b`, not yet committed) — check `git diff` before assuming the committed `qwen2.5-coder:7b` base is current.
 - **WCC hub project (`main`)** — created in the `wcc` space and wired into `WccExhibition.jsx` (`MAIN_PROJECT_ID`/`MAIN_DOC_IDS`/`ZoneGroup` at hub center). Currently has one placeholder cyan wireframe sphere. Needs real hub content/design. Edit via `/wcc/studio/projects/main`.
