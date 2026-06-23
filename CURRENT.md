@@ -9,17 +9,15 @@ active_branch: dev
 
 ## Last commit
 
-`a623e57` — fix(deploy): prune old deploy-backups automatically, keep newest 5
+`b79e109` — fix(landing): avoid 401/404 noise from GridFloorBackground on envs with no public main space
 (plus uncommitted working-tree changes from this session — see below)
 
 ## Last session (2026-06-23)
 
-- Restored the inline "Enter Space" walk/fly mode on the landing page (`src/landing/LandingPage.jsx`) — pressing it now fades the UI and lets you walk (WASD)/fly (F, then Space-Q up, C-E down) right there, instead of navigating away. This was the original behavior (`ee706c9`) until a later commit (`d9cdc0f`) replaced it with navigation; brought back per explicit request.
-- Found + fixed a real bug: the landing/Studio-Hub 3D background (`GridFloorBackground.jsx`) was hardcoded to a fixed `test-file-project` regardless of what's actually linked/published to the `main` space — editing the project Studio Hub shows as linked to `main` had zero visible effect. Now it looks up `main`'s real `publishedProjectId` at runtime and falls back to the old constant only if that lookup fails.
-- That fix surfaced a second, pre-existing bug: `useLiveProjectDocument` (in `LiveProjectScene.jsx`) had no guard against a stale project's document fetch resolving *after* a newer `projectId` had already taken over, silently overwriting the correct content with the wrong project's. Fixed by tracking the active `projectId` in a ref and dropping any late response that doesn't match it.
-- Also fixed: legacy-imported projects (`source: "legacy-import-studio"`) store assets with an empty `url` field; the registry that normally fills it in (`registerAssetSources`) only ever runs inside Studio's own editor hook, never in the public/live viewer path. `LiveProjectScene`'s `assetMap` now falls back to `buildProjectAssetUrl(projectId, assetId)` so media actually streams outside Studio too (landing page, WCC, etc.).
-- All three verified live via Playwright (real browser, real network trace, real screenshot) — see new golden rule below.
-- Added a golden rule (`docs/ai/golden_rules.md`): code passing lint/build/tests is not "done" for UI/data-flow changes — drive it in a real browser and look at the result before reporting success. Playwright + Chromium are already installed in this repo, nothing to vendor.
+- Restored the inline "Enter Space" walk/fly mode on the landing page (`src/landing/LandingPage.jsx`) — pressing it now fades the UI and lets you walk/fly right there instead of navigating away (was replaced by navigation in `d9cdc0f`; brought back per request).
+- Fixed `GridFloorBackground.jsx` to follow whatever project is actually published to the `main` space instead of a hardcoded constant; fixed a resulting stale-fetch race in `useLiveProjectDocument` and a missing asset-URL fallback for legacy-imported projects (`LiveProjectScene.jsx`). Also hardened it to avoid 401/404 noise on envs (like production) where `main` isn't public.
+- Walk/fly controls overhauled in `LiveProjectScene.jsx`: A/D now strafe (only arrow keys/mouse/touch-drag turn); look-pitch range widened (walk ~83°, fly ~89°, set independently per mode); fly movement is now fully decoupled from look angle — forward/strafe always move on the horizontal plane like a drone, altitude only changes via Space/Q/C/E. (Previously, looking down while flying forward dove like a jet — replaced per explicit request for drone-style shots.)
+- All of the above verified live via Playwright (real browser walkthrough, numeric pitch/altitude checks via temporary debug hooks, not just screenshots) — see golden rule added this session in `docs/ai/golden_rules.md`: lint/build/tests passing isn't "done" for UI/data-flow changes.
 - **These changes are uncommitted on `dev`** as of this session — review and commit before continuing.
 - Prior session's group/hierarchy decision (structural `group` node via `parentId`) is unchanged/unstarted.
 
