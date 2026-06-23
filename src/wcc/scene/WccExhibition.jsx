@@ -470,7 +470,7 @@ function AmbientField({ fieldRadius = RING_RADIUS }) {
 
 // ── Walker ────────────────────────────────────────────────────────────────────
 
-function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef, onLockChange, flyMode, zoneCenters, artists, boundsHalf }) {
+function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, zoneCenters, artists, boundsHalf }) {
     const { camera, gl } = useThree()
     const keysRef      = useRef(new Set())
     const speedRef     = useRef(0)
@@ -632,6 +632,7 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
         if (fly) {
             if (keys.has(' ') || keys.has('q')) vert += 1
             if (keys.has('e') || keys.has('c')) vert -= 1
+            vert += vertTouchRef?.current || 0
         }
 
         const targetSpeed = fwd * WALK_MAX_SPEED
@@ -703,6 +704,43 @@ function MobileJoystick({ outerRef, thumbRef }) {
     )
 }
 
+// Fly mode's altitude keys (Space/Q, C/E) have no touch equivalent --
+// press-and-hold buttons fill that gap. Pointer events (not click) so
+// altitude changes continuously while held, like the keyboard.
+function VerticalTouchControls({ vertTouchRef }) {
+    const setVert = (value) => (e) => {
+        e.preventDefault()
+        vertTouchRef.current = value
+    }
+    const clearVert = () => { vertTouchRef.current = 0 }
+    return (
+        <div className="live-scene-vert-controls">
+            <button
+                type="button"
+                className="live-scene-vert-btn"
+                onPointerDown={setVert(1)}
+                onPointerUp={clearVert}
+                onPointerLeave={clearVert}
+                onPointerCancel={clearVert}
+                aria-label="Ascend"
+            >
+                ▲
+            </button>
+            <button
+                type="button"
+                className="live-scene-vert-btn"
+                onPointerDown={setVert(-1)}
+                onPointerUp={clearVert}
+                onPointerLeave={clearVert}
+                onPointerCancel={clearVert}
+                aria-label="Descend"
+            >
+                ▼
+            </button>
+        </div>
+    )
+}
+
 // ── Multi-project live-sync hook ──────────────────────────────────────────────
 // HTTP-only: loads all 10 docs in parallel on mount, refreshes every 60 s.
 // SSE is intentionally omitted — the exhibition is read-only during the event,
@@ -759,6 +797,9 @@ export default function WccExhibition({ onExit }) {
     const joystickRef  = useRef({ x: 0, y: 0 })
     const joyVisRef    = useRef(null)
     const joyThumbRef  = useRef(null)
+    // Fly mode's altitude keys (Space/Q up, C/E down) have no touch
+    // equivalent -- without this, mobile fly has no way to ascend/descend at all.
+    const vertTouchRef = useRef(0)
     const ambientRef  = useRef(null)
     const dirRef      = useRef(null)
 
@@ -802,6 +843,7 @@ export default function WccExhibition({ onExit }) {
                     joystickRef={joystickRef}
                     joyVisRef={joyVisRef}
                     joyThumbRef={joyThumbRef}
+                    vertTouchRef={vertTouchRef}
                     onLockChange={setLocked}
                     flyMode={flyMode}
                     zoneCenters={ZONE_CENTERS_RING}
@@ -856,6 +898,7 @@ export default function WccExhibition({ onExit }) {
                 </p>
             )}
             {isMobile && <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />}
+            {isMobile && flyMode && <VerticalTouchControls vertTouchRef={vertTouchRef} />}
             <button
                 type="button"
                 className={`live-scene-fly-btn${flyMode ? ' active' : ''}`}

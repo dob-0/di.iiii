@@ -228,7 +228,7 @@ function AmbientField({ center }) {
 
 // Free-roam walk: WASD + arrows move/turn; desktop uses pointer lock for look;
 // mobile uses touch outside the joystick zone for look.
-function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVisRef, joyThumbRef, onLockChange, flyMode }) {
+function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode }) {
     const { camera, gl } = useThree()
     const keysRef = useRef(new Set())
     const speedRef = useRef(0)
@@ -405,6 +405,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
         if (fly) {
             if (keys.has(' ') || keys.has('q')) vert += 1
             if (keys.has('e') || keys.has('c')) vert -= 1
+            vert += vertTouchRef?.current || 0
         }
 
         const targetSpeed = forward * WALK_MAX_SPEED
@@ -476,6 +477,43 @@ function MobileJoystick({ outerRef, thumbRef }) {
     return (
         <div className="live-scene-joystick" ref={outerRef}>
             <div className="live-scene-joystick-thumb" ref={thumbRef} />
+        </div>
+    )
+}
+
+// Fly mode's altitude keys (Space/Q, C/E) have no touch equivalent --
+// press-and-hold buttons fill that gap. Pointer events (not click) so
+// altitude changes continuously while held, like the keyboard.
+function VerticalTouchControls({ vertTouchRef }) {
+    const setVert = (value) => (e) => {
+        e.preventDefault()
+        vertTouchRef.current = value
+    }
+    const clearVert = () => { vertTouchRef.current = 0 }
+    return (
+        <div className="live-scene-vert-controls">
+            <button
+                type="button"
+                className="live-scene-vert-btn"
+                onPointerDown={setVert(1)}
+                onPointerUp={clearVert}
+                onPointerLeave={clearVert}
+                onPointerCancel={clearVert}
+                aria-label="Ascend"
+            >
+                ▲
+            </button>
+            <button
+                type="button"
+                className="live-scene-vert-btn"
+                onPointerDown={setVert(-1)}
+                onPointerUp={clearVert}
+                onPointerLeave={clearVert}
+                onPointerCancel={clearVert}
+                aria-label="Descend"
+            >
+                ▼
+            </button>
         </div>
     )
 }
@@ -599,6 +637,9 @@ export default function LiveProjectScene({
     const joystickRef = useRef({ x: 0, y: 0 })
     const joyVisRef = useRef(null)
     const joyThumbRef = useRef(null)
+    // Fly mode's altitude keys (Space/Q up, C/E down) have no touch
+    // equivalent -- without this, mobile fly has no way to ascend/descend at all.
+    const vertTouchRef = useRef(0)
     const playerRef = useRef({ x: 0, z: 6, yaw: Math.PI, pitch: 0, altY: EYE_HEIGHT })
 
     useEffect(() => {
@@ -697,6 +738,7 @@ export default function LiveProjectScene({
                         joystickRef={joystickRef}
                         joyVisRef={joyVisRef}
                         joyThumbRef={joyThumbRef}
+                        vertTouchRef={vertTouchRef}
                         onLockChange={setIsLocked}
                         flyMode={flyMode}
                     />
@@ -713,6 +755,9 @@ export default function LiveProjectScene({
                 (the landing page) still only get one of those, not two. */}
             {interactive && isMobile && (
                 <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />
+            )}
+            {interactive && isMobile && flyMode && (
+                <VerticalTouchControls vertTouchRef={vertTouchRef} />
             )}
             {interactive && (
                 <button
