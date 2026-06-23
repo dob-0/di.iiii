@@ -355,45 +355,44 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 </div>
             ) : null}
 
-            {/* Orbit mode renders StudioViewport, whose <XR> session has no
-                XROrigin/locomotion -- entering AR/VR there leaves you frozen at
-                origin. Route immersive entry through walk mode instead, which
-                mounts LiveProjectScene (it owns the thumbstick/touch locomotion
-                + its own Enter AR/VR + Exit XR buttons). Hidden in walk mode to
-                avoid duplicating those buttons against the wrong xr store. */}
-            {state.status === 'ready' && navMode === 'orbit' && entryView === 'scene' && xrDefaultMode !== 'none' ? (
-                <div
-                    style={{
-                        position: 'absolute',
-                        right: '1rem',
-                        bottom: '1rem',
-                        display: 'flex',
-                        gap: '0.75rem',
-                        zIndex: 20
-                    }}
-                >
-                    {xrDefaultMode === 'vr' ? (
+            {/* AR is offered on every space by default (device permitting). The
+                project's `xrDefaultMode` only *modifies* this: 'vr' switches the
+                offer to VR, 'off' hides it; legacy 'none' and 'ar' both mean AR.
+                Only render when the device actually supports the chosen mode so
+                non-XR desktops aren't shown a dead button.
+
+                Orbit mode renders StudioViewport, whose <XR> session has no
+                XROrigin/locomotion -- entering there leaves you frozen at origin.
+                So this routes immersive entry through walk mode (LiveProjectScene),
+                which owns the locomotion + its own Enter AR/VR + Exit XR buttons.
+                Hidden in walk mode to avoid duplicating those buttons. */}
+            {(() => {
+                if (!(state.status === 'ready' && navMode === 'orbit' && entryView === 'scene')) return null
+                if (xrDefaultMode === 'off') return null
+                const wantsVr = xrDefaultMode === 'vr'
+                const supported = wantsVr ? xr.supportedXrModes.vr : xr.supportedXrModes.ar
+                if (!supported) return null
+                return (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            right: '1rem',
+                            bottom: '1rem',
+                            display: 'flex',
+                            gap: '0.75rem',
+                            zIndex: 20
+                        }}
+                    >
                         <button
                             type="button"
                             style={overlayButtonStyle}
                             onClick={() => setNavMode('walk')}
-                            disabled={!xr.supportedXrModes.vr}
                         >
-                            Enter VR
+                            {wantsVr ? 'Enter VR' : 'Enter AR'}
                         </button>
-                    ) : null}
-                    {xrDefaultMode === 'ar' ? (
-                        <button
-                            type="button"
-                            style={overlayButtonStyle}
-                            onClick={() => setNavMode('walk')}
-                            disabled={!xr.supportedXrModes.ar}
-                        >
-                            Enter AR
-                        </button>
-                    ) : null}
-                </div>
-            ) : null}
+                    </div>
+                )
+            })()}
         </main>
     )
 }
