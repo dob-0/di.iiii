@@ -6,6 +6,7 @@ import SphereObject from '../../objectComponents/SphereObject.jsx'
 import Text2DObject from '../../objectComponents/Text2DObject.jsx'
 import Text3DObject from '../../objectComponents/Text3DObject.jsx'
 import ImageObject from '../../objectComponents/ImageObject.jsx'
+import PortalObject from './PortalObject.jsx'
 
 // EntityContent is a pure mapping (no hooks), so we can call it directly and
 // inspect the React element it returns instead of rendering a WebGL canvas.
@@ -56,5 +57,12 @@ describe('EntityContent mapping', () => {
         const el = render({ type: 'totally-unknown', components: {} })
         expect(el.type).toBe(BoxObject)
         expect(el.props.boxSize).toEqual([1, 1, 1])
+    })
+
+    it('maps a portal entity to PortalObject, passing the entity through', () => {
+        const entity = { type: 'portal', components: { reference: { spaceId: 'wcc', projectId: 'arthur', mode: 'embed' } } }
+        const el = render(entity)
+        expect(el.type).toBe(PortalObject)
+        expect(el.props.entity).toBe(entity)
     })
 })
