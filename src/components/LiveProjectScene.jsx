@@ -491,7 +491,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
 // pointer. Adds standard smooth thumbstick locomotion (left stick moves,
 // right stick turns) and keeps it in sync with playerRef so position
 // carries over correctly entering and leaving a session.
-function XrLocomotion({ playerRef, joystickRef }) {
+function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
     const originRef = useRef(null)
     const isPresenting = useXR((state) => state.session != null)
     const wasPresentingRef = useRef(false)
@@ -508,9 +508,9 @@ function XrLocomotion({ playerRef, joystickRef }) {
         const player = playerRef.current
 
         if (isPresenting && !wasPresentingRef.current) {
-            // Just entered XR -- start from wherever the desktop/touch
-            // walker last was, instead of world origin.
-            origin.position.set(player.x, 0, player.z)
+            // Just entered XR -- start from wherever the desktop/touch walker last
+            // was, instead of world origin. origin.y carries altitude (0 == floor).
+            origin.position.set(player.x, Math.max(0, (player.altY ?? EYE_HEIGHT) - EYE_HEIGHT), player.z)
             origin.rotation.set(0, player.yaw, 0)
         }
         wasPresentingRef.current = isPresenting
@@ -538,12 +538,22 @@ function XrLocomotion({ playerRef, joystickRef }) {
                 }
             }
 
+            // Vertical (fly) -- the ▲▼ touch buttons set vertTouchRef. Horizontal
+            // locomotion above never touched origin.y, so flying did nothing in AR.
+            if (flyMode) {
+                const vert = vertTouchRef?.current || 0
+                origin.position.y = THREE.MathUtils.clamp(origin.position.y + vert * FLY_SPEED * delta, 0, 58)
+            } else {
+                origin.position.y = THREE.MathUtils.lerp(origin.position.y, 0, Math.min(1, delta * 3))
+            }
+
             // Keep playerRef in sync so other logic (nearest-zone, bounds)
             // tracks correctly during a session, and leaving XR resumes
             // from the same spot instead of snapping back.
             player.x = origin.position.x
             player.z = origin.position.z
             player.yaw = origin.rotation.y
+            player.altY = EYE_HEIGHT + origin.position.y
         }
     })
 
@@ -837,7 +847,7 @@ export default function LiveProjectScene({
                 ) : (
                     <IdleOrbit center={center} />
                 )}
-                {interactive && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} />}
+                {interactive && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />}
                 </XR>
             </Canvas>
 
