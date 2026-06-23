@@ -34,7 +34,7 @@ Short routing guide for AI agents working in `src/beta/`.
 - `npm run test`
 - `npm run build`
 - nearby tests:
-  - `src/beta/state/projectStore.test.js`
+  - `src/project/state/projectStore.test.js` (shared store; Beta consumes it directly)
   - `src/beta/utils/localWorkspaceStorage.test.js`
   - `src/beta/utils/windowLayout.test.js`
   - `src/beta/utils/betaRouting.test.js`

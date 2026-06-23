@@ -3,14 +3,8 @@ import { Canvas } from '@react-three/fiber'
 import { Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
-import ConeObject from '../../objectComponents/ConeObject.jsx'
-import CylinderObject from '../../objectComponents/CylinderObject.jsx'
-import Text2DObject from '../../objectComponents/Text2DObject.jsx'
-import Text3DObject from '../../objectComponents/Text3DObject.jsx'
-import ImageObject from '../../objectComponents/ImageObject.jsx'
-import VideoObject from '../../objectComponents/VideoObject.jsx'
-import AudioObject from '../../objectComponents/AudioObject.jsx'
-import ModelObject from '../../objectComponents/ModelObject.jsx'
+import EntityContent from '../../project/viewport/EntityContent.jsx'
+import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
 import { getBetaWorldBackgroundColor } from '../utils/viewportWorldState.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../utils/nodeGraphRuntime.js'
@@ -42,81 +36,7 @@ const asPositiveVec3 = (value, fallback = [1, 1, 1], min = 0.001, max = 100) => 
 
 function EntityVisual({ entity, assetMap, selected, onSelect }) {
     const transform = entity.components?.transform || {}
-    const appearance = entity.components?.appearance || {}
-    const media = entity.components?.media || {}
-    const asset = media.assetId ? assetMap.get(media.assetId) : null
-
-    let content = null
-    switch (entity.type) {
-        case 'box':
-            content = <BoxObject color={appearance.color} boxSize={entity.components?.primitive?.size} />
-            break
-        case 'sphere':
-            content = <SphereObject color={appearance.color} sphereRadius={entity.components?.primitive?.radius} />
-            break
-        case 'cone':
-            content = <ConeObject color={appearance.color} coneRadius={entity.components?.primitive?.radius} coneHeight={entity.components?.primitive?.height} />
-            break
-        case 'cylinder':
-            content = (
-                <CylinderObject
-                    color={appearance.color}
-                    cylinderRadiusTop={entity.components?.primitive?.radiusTop}
-                    cylinderRadiusBottom={entity.components?.primitive?.radiusBottom}
-                    cylinderHeight={entity.components?.primitive?.height}
-                />
-            )
-            break
-        case 'text':
-            content = entity.components?.text?.variant === '3d'
-                ? (
-                    <Text3DObject
-                        data={entity.components?.text?.value}
-                        color={appearance.color}
-                        fontFamily={entity.components?.text?.fontFamily}
-                        fontWeight={entity.components?.text?.fontWeight}
-                        fontStyle={entity.components?.text?.fontStyle}
-                        fontSize3D={entity.components?.text?.fontSize3D}
-                        depth3D={entity.components?.text?.depth3D}
-                    />
-                )
-                : (
-                    <Text2DObject
-                        data={entity.components?.text?.value}
-                        color={appearance.color}
-                        fontFamily={entity.components?.text?.fontFamily}
-                        fontWeight={entity.components?.text?.fontWeight}
-                        fontStyle={entity.components?.text?.fontStyle}
-                    />
-                )
-            break
-        case 'image':
-            content = <ImageObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
-            break
-        case 'video':
-            content = <VideoObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
-            break
-        case 'audio':
-            content = (
-                <AudioObject
-                    assetRef={asset || null}
-                    data={asset?.url || null}
-                    color={appearance.color}
-                    audioVolume={media.volume}
-                    audioDistance={media.distance}
-                    audioLoop={media.loop}
-                    audioAutoplay={media.autoplay}
-                    audioPaused={false}
-                />
-            )
-            break
-        case 'model':
-            content = <ModelObject assetRef={asset || null} data={asset?.url || null} modelColor={appearance.color} applyModelColor={false} opacity={appearance.opacity} />
-            break
-        default:
-            content = <BoxObject color={appearance.color} boxSize={[1, 1, 1]} />
-            break
-    }
+    const content = <EntityContent entity={entity} assetMap={assetMap} />
 
     return (
         <group
@@ -215,7 +135,10 @@ function SceneContent({
     onMoveNode,
     nodeScale = 1
 }) {
-    const assetMap = useMemo(() => new Map((document.assets || []).map((asset) => [asset.id, asset])), [document.assets])
+    // Keyed on assets + project id so the map only rebuilds when assets change,
+    // not on every document identity change from a sync tick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const assetMap = useMemo(() => buildAssetMap(document), [document.assets, document.projectMeta?.id])
     const graphContext = useMemo(() => createNodeGraphContext(document), [document])
     const renderableNodes = useMemo(
         () => (document.nodes || []).filter(isSpatialNode),
