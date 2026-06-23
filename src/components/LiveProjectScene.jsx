@@ -29,7 +29,11 @@ const WALK_FRICTION = 10
 const TURN_SPEED = 1.6
 const POINTER_LOCK_SENSITIVITY = 0.0022
 const TOUCH_LOOK_SENSITIVITY = 0.0038
-const PITCH_LIMIT = 0.55
+// Just shy of straight up/down (PI/2) to avoid the camera flipping at the pole.
+const WALK_PITCH_LIMIT = 1.45
+// Flying has no horizon to stay oriented against, so allow (almost) the full
+// vertical range -- straight up/down -- rather than walking's smaller cap.
+const FLY_PITCH_LIMIT = 1.55
 const EYE_HEIGHT = 1.6
 const JOY_RADIUS = 45
 const BOUNDS_MARGIN = 22
@@ -228,6 +232,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
     const { camera, gl } = useThree()
     const keysRef = useRef(new Set())
     const speedRef = useRef(0)
+    const strafeSpeedRef = useRef(0)
     const bobPhaseRef = useRef(0)
     const lockedRef = useRef(false)
     const touchLookRef = useRef(null)
@@ -275,11 +280,12 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             }
             const onMouseMove = (e) => {
                 if (!lockedRef.current) return
+                const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
                 player.yaw -= e.movementX * POINTER_LOCK_SENSITIVITY
                 player.pitch = THREE.MathUtils.clamp(
                     player.pitch - e.movementY * POINTER_LOCK_SENSITIVITY,
-                    -PITCH_LIMIT,
-                    PITCH_LIMIT
+                    -pitchLimit,
+                    pitchLimit
                 )
             }
             el.style.cursor = 'crosshair'
@@ -338,11 +344,12 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                     if (touchMoveRef.current?.id === t.identifier) {
                         updateJoy(t.clientX, t.clientY)
                     } else if (touchLookRef.current?.id === t.identifier) {
+                        const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
                         player.yaw -= (t.clientX - touchLookRef.current.lastX) * TOUCH_LOOK_SENSITIVITY
                         player.pitch = THREE.MathUtils.clamp(
                             player.pitch - (t.clientY - touchLookRef.current.lastY) * TOUCH_LOOK_SENSITIVITY,
-                            -PITCH_LIMIT,
-                            PITCH_LIMIT
+                            -pitchLimit,
+                            pitchLimit
                         )
                         touchLookRef.current.lastX = t.clientX
                         touchLookRef.current.lastY = t.clientY
@@ -376,9 +383,12 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
         if (player.pitch === undefined) player.pitch = 0
         if (player.altY === undefined) player.altY = EYE_HEIGHT
 
+        // Only arrow keys (and mouse/touch drag, and the mobile joystick's x
+        // axis) turn the camera -- A/D strafe sideways instead, matching the
+        // FPS convention most people expect rather than a tank-style turn.
         let turn = 0
-        if (keys.has('a') || keys.has('arrowleft')) turn += 1
-        if (keys.has('d') || keys.has('arrowright')) turn -= 1
+        if (keys.has('arrowleft')) turn += 1
+        if (keys.has('arrowright')) turn -= 1
         turn -= joy.x
         player.yaw += turn * TURN_SPEED * delta
 
@@ -386,6 +396,10 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
         if (keys.has('w') || keys.has('arrowup')) forward += 1
         if (keys.has('s') || keys.has('arrowdown')) forward -= 1
         forward -= joy.y
+
+        let strafe = 0
+        if (keys.has('d')) strafe += 1
+        if (keys.has('a')) strafe -= 1
 
         let vert = 0
         if (fly) {
@@ -398,16 +412,25 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
         speedRef.current += THREE.MathUtils.clamp(targetSpeed - speedRef.current, -accel * delta, accel * delta)
         if (Math.abs(speedRef.current) < 0.001) speedRef.current = 0
 
-        if (speedRef.current !== 0) {
-            const pitch = fly ? player.pitch : 0
-            const cosP = fly ? Math.cos(pitch) : 1
-            const sinP = fly ? Math.sin(pitch) : 0
-            const nextX = player.x + Math.sin(player.yaw) * speedRef.current * cosP * delta
-            const nextZ = player.z + Math.cos(player.yaw) * speedRef.current * cosP * delta
+        const targetStrafeSpeed = strafe * WALK_MAX_SPEED
+        const strafeAccel = strafe !== 0 ? WALK_ACCEL : WALK_FRICTION
+        strafeSpeedRef.current += THREE.MathUtils.clamp(targetStrafeSpeed - strafeSpeedRef.current, -strafeAccel * delta, strafeAccel * delta)
+        if (Math.abs(strafeSpeedRef.current) < 0.001) strafeSpeedRef.current = 0
+
+        if (speedRef.current !== 0 || strafeSpeedRef.current !== 0) {
+            // Forward/strafe always move on the horizontal plane, even while
+            // flying -- like a drone, not a jet. Looking down to film the
+            // ground below shouldn't also make you descend; altitude is only
+            // ever changed explicitly, via Space/Q (up) and C/E (down).
+            const forwardX = Math.sin(player.yaw) * speedRef.current
+            const forwardZ = Math.cos(player.yaw) * speedRef.current
+            const rightX = -Math.cos(player.yaw) * strafeSpeedRef.current
+            const rightZ = Math.sin(player.yaw) * strafeSpeedRef.current
+            const nextX = player.x + (forwardX + rightX) * delta
+            const nextZ = player.z + (forwardZ + rightZ) * delta
             player.x = THREE.MathUtils.clamp(nextX, bounds.minX, bounds.maxX)
             player.z = THREE.MathUtils.clamp(nextZ, bounds.minZ, bounds.maxZ)
-            if (fly) player.altY = THREE.MathUtils.clamp(player.altY + speedRef.current * sinP * delta, -2, 60)
-            bobPhaseRef.current += delta * Math.abs(speedRef.current) * (fly ? 0 : 1.8)
+            bobPhaseRef.current += delta * Math.hypot(speedRef.current, strafeSpeedRef.current) * (fly ? 0 : 1.8)
         }
         if (fly && vert !== 0) {
             player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, -2, 60)
@@ -416,7 +439,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             player.altY = THREE.MathUtils.lerp(player.altY, EYE_HEIGHT, Math.min(1, delta * 3))
         }
 
-        const bobAmount = fly ? 0 : Math.sin(bobPhaseRef.current) * 0.05 * Math.min(1, Math.abs(speedRef.current) / WALK_MAX_SPEED)
+        const bobAmount = fly ? 0 : Math.sin(bobPhaseRef.current) * 0.05 * Math.min(1, Math.hypot(speedRef.current, strafeSpeedRef.current) / WALK_MAX_SPEED)
         const lookDir = tmpVec.set(
             Math.sin(player.yaw) * Math.cos(player.pitch),
             Math.sin(player.pitch),
