@@ -2,7 +2,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, Text, Billboard } from '@react-three/drei'
-import { XR, XROrigin, useXR, useXRControllerLocomotion } from '@react-three/xr'
+import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState } from '@react-three/xr'
 import * as THREE from 'three'
 import { useXrAr } from '../../hooks/useXrAr.js'
 import { getProjectDocument } from '../../project/services/projectsApi.js'
@@ -724,6 +724,8 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
 function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
     const originRef = useRef(null)
     const isPresenting = useXR((state) => state.session != null)
+    const isVr = useXR((state) => state.mode === 'immersive-vr')
+    const rightController = useXRInputSourceState('controller', 'right')
     const wasPresentingRef = useRef(false)
 
     useXRControllerLocomotion(
@@ -767,11 +769,17 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
                 }
             }
 
-            // Vertical (fly) -- the ▲▼ touch buttons set vertTouchRef. Horizontal
-            // locomotion above never touched origin.y, so flying did nothing in AR.
-            if (flyMode) {
-                const vert = vertTouchRef?.current || 0
-                origin.position.y = THREE.MathUtils.clamp(origin.position.y + vert * FLY_SPEED * delta, 0, 58)
+            // Vertical (fly). AR has no controllers, so the ▲▼ touch buttons set
+            // vertTouchRef; VR has no reachable 2D Fly button, so the right
+            // thumbstick's Y axis always flies (left stick walks, right stick X
+            // turns -- Y is free). Horizontal locomotion never touched origin.y.
+            const touchVert = vertTouchRef?.current || 0
+            const stickY = rightController?.gamepad?.['xr-standard-thumbstick']?.yAxis ?? 0
+            const stickVert = Math.abs(stickY) > 0.15 ? -stickY : 0 // push up = ascend
+            if (isVr) {
+                origin.position.y = THREE.MathUtils.clamp(origin.position.y + (touchVert + stickVert) * FLY_SPEED * delta, 0, 58)
+            } else if (flyMode) {
+                origin.position.y = THREE.MathUtils.clamp(origin.position.y + touchVert * FLY_SPEED * delta, 0, 58)
             } else {
                 origin.position.y = THREE.MathUtils.lerp(origin.position.y, 0, Math.min(1, delta * 3))
             }
