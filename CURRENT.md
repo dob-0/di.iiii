@@ -9,7 +9,7 @@ active_branch: dev
 
 ## Last commit
 
-`e7ebbf2` — fix(wcc): port walk/fly control fixes into WccExhibition's duplicated Walker
+`2bbf74f` — fix(walk/fly): add touch up/down controls -- mobile fly had no way to ascend
 (plus uncommitted working-tree changes from this session — see below)
 
 ## Last session (2026-06-23)
@@ -21,6 +21,7 @@ active_branch: dev
 - Found a real scope gap: walk/fly only ever existed on the landing background + WCC. The actual public viewer every space's real URL uses (`PublicProjectViewer.jsx` → `StudioViewport`, orbit-only) had none. Added a "Walk / Fly" toggle there (scene entry-view only; fixed-camera/code modes untouched) so it's now available, by user choice, on every space — past and future — not just two special-cased surfaces.
 - Found a second instance of the same gap: WCC's main exhibition hub/ring (`WccExhibition.jsx`) turned out to have its own hand-duplicated copy of the entire Walker/joystick/fly-button implementation — not the shared `LiveProjectScene` component — so none of the above control fixes reached it. Ported the same fixes (strafe, per-mode pitch range, drone-decoupled fly) directly into that copy. (Per-artist "Enter space" views already used the shared component and got the fixes automatically.)
 - Added two golden rules (`docs/ai/golden_rules.md`): (1) UI/data-flow fixes aren't "done" until verified in a real browser, not just lint/build/tests; (2) when a feature lands on one surface, check whether it should apply to every surface serving the same purpose — including pre-existing content — before calling it done.
+- **VR/AR had no movement at all** — no `<XROrigin>` was ever rendered inside `<XR>` in either `LiveProjectScene.jsx` or `WccExhibition.jsx`, so a headset session started at world (0,0,0) with nothing beyond the library's default teleport-pointer. Added `useXRControllerLocomotion` (standard smooth thumbstick locomotion) synced with the same `playerRef` desktop/touch uses. **Not verified on real hardware** — this dev environment has no headset and WebXR emulation is off; only confirmed it builds/lints/mounts without crashing. Needs a real-device check — flag anything off after testing on a headset.
 - Tuned mobile fly further: there was no touch equivalent for the Space/Q/C/E altitude keys at all — joystick only ever drove horizontal movement (doubly true after the drone-decoupling fix). Added two press-and-hold ▲/▼ buttons (shown only on mobile while flying, stacked above the Fly toggle), ported into both `LiveProjectScene.jsx` and `WccExhibition.jsx`.
 - Everything this session verified live via Playwright: real browser walkthroughs, numeric pitch/altitude checks via temporary debug hooks (not just screenshots), a full toggle round-trip on a real public space (`/mytest`), the same strafe/pitch checks repeated live on `/wcc`, and confirmed the new up/down buttons actually change altitude on both surfaces.
 - **These changes are uncommitted on `dev`** as of this session — review and commit before continuing.

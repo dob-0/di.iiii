@@ -1,7 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid } from '@react-three/drei'
-import { XR } from '@react-three/xr'
+import { XR, XROrigin, useXR, useXRControllerLocomotion } from '@react-three/xr'
 import * as THREE from 'three'
 import { useXrAr } from '../hooks/useXrAr.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
@@ -471,6 +471,49 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
     return null
 }
 
+// No XROrigin was ever rendered inside <XR>, so a VR/AR session started at
+// world (0,0,0) with no connection to the desktop/touch Walker's position,
+// and no locomotion existed beyond @react-three/xr's default teleport
+// pointer. Adds standard smooth thumbstick locomotion (left stick moves,
+// right stick turns) and keeps it in sync with playerRef so position
+// carries over correctly entering and leaving a session.
+function XrLocomotion({ playerRef }) {
+    const originRef = useRef(null)
+    const isPresenting = useXR((state) => state.session != null)
+    const wasPresentingRef = useRef(false)
+
+    useXRControllerLocomotion(
+        originRef,
+        { speed: WALK_MAX_SPEED },
+        { type: 'smooth', speed: TURN_SPEED }
+    )
+
+    useFrame(() => {
+        const origin = originRef.current
+        if (!origin) return
+        const player = playerRef.current
+
+        if (isPresenting && !wasPresentingRef.current) {
+            // Just entered XR -- start from wherever the desktop/touch
+            // walker last was, instead of world origin.
+            origin.position.set(player.x, 0, player.z)
+            origin.rotation.set(0, player.yaw, 0)
+        }
+        wasPresentingRef.current = isPresenting
+
+        if (isPresenting) {
+            // Keep playerRef in sync so other logic (nearest-zone, bounds)
+            // tracks correctly during a session, and leaving XR resumes
+            // from the same spot instead of snapping back.
+            player.x = origin.position.x
+            player.z = origin.position.z
+            player.yaw = origin.rotation.y
+        }
+    })
+
+    return <XROrigin ref={originRef} />
+}
+
 // Purely visual — Walker owns all touch handling so it can arbitrate
 // floating-joystick vs. look touches on the same canvas.
 function MobileJoystick({ outerRef, thumbRef }) {
@@ -745,6 +788,7 @@ export default function LiveProjectScene({
                 ) : (
                     <IdleOrbit center={center} />
                 )}
+                {interactive && <XrLocomotion playerRef={playerRef} />}
                 </XR>
             </Canvas>
 
