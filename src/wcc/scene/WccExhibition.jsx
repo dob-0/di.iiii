@@ -1,7 +1,8 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, Text, Billboard } from '@react-three/drei'
-import { XR } from '@react-three/xr'
+import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState } from '@react-three/xr'
 import * as THREE from 'three'
 import { useXrAr } from '../../hooks/useXrAr.js'
 import { getProjectDocument } from '../../project/services/projectsApi.js'
@@ -33,6 +34,13 @@ const ARTISTS = [
 ]
 const ARTIST_IDS = ARTISTS.map((a) => a.id)
 
+// The hub itself is now an editable Studio project ("main", same space as the
+// artists) instead of pure hand-coded geometry -- entities placed in it render
+// centered at the hub origin, same fade-in/asset pipeline as a zone.
+const MAIN_PROJECT_ID = 'main'
+const MAIN_DOC_IDS = [MAIN_PROJECT_ID]
+const HUB_CENTER = new THREE.Vector3(0, 0, 0)
+
 // ── Scene constants ───────────────────────────────────────────────────────────
 
 const RING_RADIUS        = 38
@@ -43,9 +51,12 @@ const FLY_SPEED          = 4.5
 const WALK_ACCEL         = 14
 const WALK_FRICTION      = 10
 const TURN_SPEED         = 1.6
-const PTR_SENSITIVITY    = 0.0022
+const PTR_SENSITIVITY    = 0.0055
 const TOUCH_SENSITIVITY  = 0.0038
-const PITCH_LIMIT        = 0.55
+// Walking keeps a smaller cap (orientation against the horizon); flying has
+// none to stay oriented against, so it gets (almost) the full vertical range.
+const WALK_PITCH_LIMIT   = 1.45
+const FLY_PITCH_LIMIT    = 1.55
 const JOY_RADIUS         = 45   // floating joystick thumb travel radius (px)
 const PARTICLE_COUNT     = 1400
 const BOUNDS_HALF        = RING_RADIUS + 50  // walk bounds; fly uses 400
@@ -62,6 +73,7 @@ const ZONE_CENTERS_RING = ARTISTS.map((_, i) => {
 
 const tmpVec   = new THREE.Vector3()
 const tmpLook  = new THREE.Vector3()
+const tmpDir   = new THREE.Vector3()
 const tmpColor = new THREE.Color()
 const tmpColorB = new THREE.Color()
 const tmpColorC = new THREE.Color()
@@ -282,7 +294,7 @@ const ZONE_OVERRIDES = {
 
 // ── Per-zone group (memoises its entity + asset lists) ────────────────────────
 
-function ZoneGroup({ artist, doc, center }) {
+function ZoneGroup({ artist, doc, center, showRing = true }) {
     const overrides = ZONE_OVERRIDES[artist.id]
     const entities = useMemo(() => {
         let list = doc?.entities || []
@@ -313,10 +325,12 @@ function ZoneGroup({ artist, doc, center }) {
 
     return (
         <group ref={groupRef}>
-            <mesh position={[center.x, 0.01, center.z]} rotation={[-Math.PI / 2, 0, 0]}>
-                <ringGeometry args={[ZONE_LABEL_DIST - 1, ZONE_LABEL_DIST, 64]} />
-                <meshBasicMaterial color={0x334455} transparent opacity={0.15} depthWrite={false} side={THREE.DoubleSide} />
-            </mesh>
+            {showRing ? (
+                <mesh position={[center.x, 0.01, center.z]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <ringGeometry args={[ZONE_LABEL_DIST - 1, ZONE_LABEL_DIST, 64]} />
+                    <meshBasicMaterial color={0x334455} transparent opacity={0.15} depthWrite={false} side={THREE.DoubleSide} />
+                </mesh>
+            ) : null}
             {entities.map((entity) => (
                 <AnimatedEntity
                     key={`${artist.id}:${entity.id}`}
@@ -467,10 +481,16 @@ function AmbientField({ fieldRadius = RING_RADIUS }) {
 
 // ── Walker ────────────────────────────────────────────────────────────────────
 
-function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef, onLockChange, flyMode, zoneCenters, artists, boundsHalf }) {
+function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, zoneCenters, artists, boundsHalf, isArActive, arTouchElRef }) {
     const { camera, gl } = useThree()
+    // During an XR session the camera pose is owned by the headset/phone and
+    // locomotion runs through XROrigin (see XrLocomotion). Walker must NOT write
+    // camera.position/lookAt then, or it yanks the camera back to the flat-screen
+    // player pose every frame, fighting head-tracking and XROrigin movement.
+    const isPresenting = useXR((state) => state.session != null)
     const keysRef      = useRef(new Set())
     const speedRef     = useRef(0)
+    const strafeSpeedRef = useRef(0)
     const bobRef       = useRef(0)
     const lockedRef    = useRef(false)
     const touchLookRef = useRef(null)
@@ -497,9 +517,13 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
     }, [])
 
     useEffect(() => {
-        const el     = gl.domElement
+        // During a handheld AR session, only the WebXR dom-overlay root (and its
+        // descendants) reliably receives input -- the page's own canvas does not.
+        // Attach touch handling to the dedicated overlay element instead when AR
+        // is active, mirroring LiveProjectScene.
+        const el     = (isArActive && arTouchElRef?.current) || gl.domElement
         const player = playerRef.current
-        const isTouch = window.matchMedia('(pointer: coarse)').matches
+        const isTouch = isArActive || window.matchMedia('(pointer: coarse)').matches
 
         if (!isTouch) {
             const onLockChange = () => {
@@ -511,8 +535,9 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
             const onDown  = () => { if (!lockedRef.current) el.requestPointerLock() }
             const onMove  = (e) => {
                 if (!lockedRef.current) return
+                const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
                 player.yaw -= e.movementX * PTR_SENSITIVITY
-                player.pitch = THREE.MathUtils.clamp(player.pitch - e.movementY * PTR_SENSITIVITY, -PITCH_LIMIT, PITCH_LIMIT)
+                player.pitch = THREE.MathUtils.clamp(player.pitch - e.movementY * PTR_SENSITIVITY, -pitchLimit, pitchLimit)
             }
             el.style.cursor = 'crosshair'
             el.addEventListener('pointerdown', onDown)
@@ -570,8 +595,9 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
                     if (touchMoveRef.current?.id === t.identifier) {
                         updateJoy(t.clientX, t.clientY)
                     } else if (touchLookRef.current?.id === t.identifier) {
+                        const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
                         player.yaw -= (t.clientX - touchLookRef.current.lastX) * TOUCH_SENSITIVITY
-                        player.pitch = THREE.MathUtils.clamp(player.pitch - (t.clientY - touchLookRef.current.lastY) * TOUCH_SENSITIVITY, -PITCH_LIMIT, PITCH_LIMIT)
+                        player.pitch = THREE.MathUtils.clamp(player.pitch - (t.clientY - touchLookRef.current.lastY) * TOUCH_SENSITIVITY, -pitchLimit, pitchLimit)
                         touchLookRef.current.lastX = t.clientX
                         touchLookRef.current.lastY = t.clientY
                     }
@@ -594,9 +620,11 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
                 el.removeEventListener('touchcancel',te)
             }
         }
-    }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef])
+    }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef, isArActive, arTouchElRef])
 
     useFrame((_, delta) => {
+        // XrLocomotion owns movement + camera during a session.
+        if (isPresenting) return
         const keys   = keysRef.current
         const player = playerRef.current
         const joy    = joystickRef?.current || { x: 0, y: 0 }
@@ -604,9 +632,12 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
         if (player.pitch === undefined) player.pitch = 0
         if (player.altY === undefined) player.altY = EYE_HEIGHT
 
+        // Only arrow keys (and mouse/touch drag, and the joystick's x axis)
+        // turn the camera -- A/D strafe sideways instead, matching the FPS
+        // convention most people expect rather than a tank-style turn.
         let turn = 0
-        if (keys.has('a') || keys.has('arrowleft'))  turn += 1
-        if (keys.has('d') || keys.has('arrowright')) turn -= 1
+        if (keys.has('arrowleft'))  turn += 1
+        if (keys.has('arrowright')) turn -= 1
         turn -= joy.x
         player.yaw += turn * TURN_SPEED * delta
 
@@ -615,10 +646,15 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
         if (keys.has('s') || keys.has('arrowdown')) fwd -= 1
         fwd -= joy.y
 
+        let strafe = 0
+        if (keys.has('d')) strafe += 1
+        if (keys.has('a')) strafe -= 1
+
         let vert = 0
         if (fly) {
             if (keys.has(' ') || keys.has('q')) vert += 1
             if (keys.has('e') || keys.has('c')) vert -= 1
+            vert += vertTouchRef?.current || 0
         }
 
         const targetSpeed = fwd * WALK_MAX_SPEED
@@ -626,16 +662,25 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
         speedRef.current += THREE.MathUtils.clamp(targetSpeed - speedRef.current, -accel * delta, accel * delta)
         if (Math.abs(speedRef.current) < 0.001) speedRef.current = 0
 
+        const targetStrafeSpeed = strafe * WALK_MAX_SPEED
+        const strafeAccel = strafe !== 0 ? WALK_ACCEL : WALK_FRICTION
+        strafeSpeedRef.current += THREE.MathUtils.clamp(targetStrafeSpeed - strafeSpeedRef.current, -strafeAccel * delta, strafeAccel * delta)
+        if (Math.abs(strafeSpeedRef.current) < 0.001) strafeSpeedRef.current = 0
+
         const bound = fly ? 400 : (boundsHalf ?? BOUNDS_HALF)
 
-        if (speedRef.current !== 0) {
-            const pitch = fly ? player.pitch : 0
-            const cosP  = fly ? Math.cos(pitch) : 1
-            const sinP  = fly ? Math.sin(pitch) : 0
-            player.x = THREE.MathUtils.clamp(player.x + Math.sin(player.yaw) * speedRef.current * cosP * delta, -bound, bound)
-            player.z = THREE.MathUtils.clamp(player.z + Math.cos(player.yaw) * speedRef.current * cosP * delta, -bound, bound)
-            if (fly) player.altY = THREE.MathUtils.clamp(player.altY + speedRef.current * sinP * delta, -2, 60)
-            bobRef.current += delta * Math.abs(speedRef.current) * (fly ? 0 : 1.8)
+        if (speedRef.current !== 0 || strafeSpeedRef.current !== 0) {
+            // Forward/strafe always move on the horizontal plane, even while
+            // flying -- like a drone, not a jet. Looking down to film the
+            // ground below shouldn't also make you descend; altitude only
+            // ever changes explicitly, via Space/Q (up) and C/E (down).
+            const forwardX = Math.sin(player.yaw) * speedRef.current
+            const forwardZ = Math.cos(player.yaw) * speedRef.current
+            const rightX = -Math.cos(player.yaw) * strafeSpeedRef.current
+            const rightZ = Math.sin(player.yaw) * strafeSpeedRef.current
+            player.x = THREE.MathUtils.clamp(player.x + (forwardX + rightX) * delta, -bound, bound)
+            player.z = THREE.MathUtils.clamp(player.z + (forwardZ + rightZ) * delta, -bound, bound)
+            bobRef.current += delta * Math.hypot(speedRef.current, strafeSpeedRef.current) * (fly ? 0 : 1.8)
         }
         if (fly && vert !== 0) {
             player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, -2, 60)
@@ -644,7 +689,7 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
             player.altY = THREE.MathUtils.lerp(player.altY, EYE_HEIGHT, Math.min(1, delta * 3))
         }
 
-        const bob     = fly ? 0 : Math.sin(bobRef.current) * 0.05 * Math.min(1, Math.abs(speedRef.current) / WALK_MAX_SPEED)
+        const bob     = fly ? 0 : Math.sin(bobRef.current) * 0.05 * Math.min(1, Math.hypot(speedRef.current, strafeSpeedRef.current) / WALK_MAX_SPEED)
         const lookDir = tmpVec.set(
             Math.sin(player.yaw) * Math.cos(player.pitch),
             Math.sin(player.pitch),
@@ -670,6 +715,85 @@ function Walker({ playerRef, onNearestZone, joystickRef, joyVisRef, joyThumbRef,
     return null
 }
 
+// No XROrigin was ever rendered inside <XR>, so a VR/AR session started at
+// world (0,0,0) with no connection to the desktop/touch Walker's position,
+// and no locomotion existed beyond @react-three/xr's default teleport
+// pointer. Adds standard smooth thumbstick locomotion (left stick moves,
+// right stick turns) and keeps it in sync with playerRef so position
+// carries over correctly entering and leaving a session.
+function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
+    const originRef = useRef(null)
+    const isPresenting = useXR((state) => state.session != null)
+    const isVr = useXR((state) => state.mode === 'immersive-vr')
+    const rightController = useXRInputSourceState('controller', 'right')
+    const wasPresentingRef = useRef(false)
+
+    useXRControllerLocomotion(
+        originRef,
+        { speed: WALK_MAX_SPEED },
+        { type: 'smooth', speed: TURN_SPEED }
+    )
+
+    useFrame((state, delta) => {
+        const origin = originRef.current
+        if (!origin) return
+        const player = playerRef.current
+
+        if (isPresenting && !wasPresentingRef.current) {
+            // Carry altitude across the flat <-> AR boundary (origin.y is the
+            // rig's height above the real floor; 0 == standing on it).
+            origin.position.set(player.x, Math.max(0, (player.altY ?? EYE_HEIGHT) - EYE_HEIGHT), player.z)
+            origin.rotation.set(0, player.yaw, 0)
+        }
+        wasPresentingRef.current = isPresenting
+
+        if (isPresenting) {
+            // Handheld AR has no controllers, so useXRControllerLocomotion does
+            // nothing there. Drive the same XROrigin from the touch joystick:
+            // joy.x turns, joy.y walks toward where the phone is pointing.
+            const joy = joystickRef?.current
+            if (joy && (Math.abs(joy.x) > 0.05 || Math.abs(joy.y) > 0.05)) {
+                origin.rotation.y -= joy.x * TURN_SPEED * delta
+                // Move along the camera's real horizontal forward, not a yaw
+                // reconstruction: the XR camera looks down the rig's local -Z,
+                // which is the OPPOSITE of +(sin,cos), so deriving forward from
+                // origin.rotation.y inverted/mirrored the joystick. getWorldDirection
+                // is correct regardless of rig/phone orientation.
+                const fwdAmt = -joy.y * WALK_MAX_SPEED * delta
+                state.camera.getWorldDirection(tmpDir)
+                tmpDir.y = 0
+                if (tmpDir.lengthSq() > 1e-6) {
+                    tmpDir.normalize()
+                    origin.position.x += tmpDir.x * fwdAmt
+                    origin.position.z += tmpDir.z * fwdAmt
+                }
+            }
+
+            // Vertical (fly). AR has no controllers, so the ▲▼ touch buttons set
+            // vertTouchRef; VR has no reachable 2D Fly button, so the right
+            // thumbstick's Y axis always flies (left stick walks, right stick X
+            // turns -- Y is free). Horizontal locomotion never touched origin.y.
+            const touchVert = vertTouchRef?.current || 0
+            const stickY = rightController?.gamepad?.['xr-standard-thumbstick']?.yAxis ?? 0
+            const stickVert = Math.abs(stickY) > 0.15 ? -stickY : 0 // push up = ascend
+            if (isVr) {
+                origin.position.y = THREE.MathUtils.clamp(origin.position.y + (touchVert + stickVert) * FLY_SPEED * delta, 0, 58)
+            } else if (flyMode) {
+                origin.position.y = THREE.MathUtils.clamp(origin.position.y + touchVert * FLY_SPEED * delta, 0, 58)
+            } else {
+                origin.position.y = THREE.MathUtils.lerp(origin.position.y, 0, Math.min(1, delta * 3))
+            }
+
+            player.x = origin.position.x
+            player.z = origin.position.z
+            player.yaw = origin.rotation.y
+            player.altY = EYE_HEIGHT + origin.position.y
+        }
+    })
+
+    return <XROrigin ref={originRef} />
+}
+
 // ── Mobile joystick (purely visual — Walker owns all touch handling so it can
 // arbitrate floating-joystick vs. look touches on the same canvas) ───────────
 
@@ -677,6 +801,43 @@ function MobileJoystick({ outerRef, thumbRef }) {
     return (
         <div className="live-scene-joystick" ref={outerRef}>
             <div className="live-scene-joystick-thumb" ref={thumbRef} />
+        </div>
+    )
+}
+
+// Fly mode's altitude keys (Space/Q, C/E) have no touch equivalent --
+// press-and-hold buttons fill that gap. Pointer events (not click) so
+// altitude changes continuously while held, like the keyboard.
+function VerticalTouchControls({ vertTouchRef }) {
+    const setVert = (value) => (e) => {
+        e.preventDefault()
+        vertTouchRef.current = value
+    }
+    const clearVert = () => { vertTouchRef.current = 0 }
+    return (
+        <div className="live-scene-vert-controls">
+            <button
+                type="button"
+                className="live-scene-vert-btn"
+                onPointerDown={setVert(1)}
+                onPointerUp={clearVert}
+                onPointerLeave={clearVert}
+                onPointerCancel={clearVert}
+                aria-label="Ascend"
+            >
+                ▲
+            </button>
+            <button
+                type="button"
+                className="live-scene-vert-btn"
+                onPointerDown={setVert(-1)}
+                onPointerUp={clearVert}
+                onPointerLeave={clearVert}
+                onPointerCancel={clearVert}
+                aria-label="Descend"
+            >
+                ▼
+            </button>
         </div>
     )
 }
@@ -730,6 +891,8 @@ export default function WccExhibition({ onExit }) {
     // routes to LiveProjectScene with their own project instead (see
     // WccExperience.jsx), so this component is exhibition-only.
     const docs          = useWccProjectDocuments(ARTIST_IDS)
+    const mainDocs      = useWccProjectDocuments(MAIN_DOC_IDS)
+    const mainDoc       = mainDocs[MAIN_PROJECT_ID]
     const [label, setLabel]     = useState(null)
     const [isLocked, setLocked] = useState(false)
     const [isMobile]  = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
@@ -737,6 +900,10 @@ export default function WccExhibition({ onExit }) {
     const joystickRef  = useRef({ x: 0, y: 0 })
     const joyVisRef    = useRef(null)
     const joyThumbRef  = useRef(null)
+    // Fly mode's altitude keys (Space/Q up, C/E down) have no touch
+    // equivalent -- without this, mobile fly has no way to ascend/descend at all.
+    const vertTouchRef = useRef(0)
+    const arTouchElRef = useRef(null)
     const ambientRef  = useRef(null)
     const dirRef      = useRef(null)
 
@@ -749,8 +916,18 @@ export default function WccExhibition({ onExit }) {
     }, [])
 
     const xr = useXrAr()
+    const isArActive = xr.isArModeActive && xr.isXrPresenting
     const loadedCount = Object.values(docs).filter(Boolean).length
     const allLoaded   = loadedCount === ARTISTS.length
+
+    // The library only toggles display:block/none on the dom-overlay root -- it
+    // has no inherent size/position, so anything portaled into it (the touch
+    // surface, joystick, buttons) has no positioning context without this.
+    useEffect(() => {
+        const root = xr.domOverlayRoot
+        if (!root) return
+        Object.assign(root.style, { position: 'fixed', inset: '0', width: '100%', height: '100%' })
+    }, [xr.domOverlayRoot])
 
     return (
         <div className="wcc-scene">
@@ -768,6 +945,7 @@ export default function WccExhibition({ onExit }) {
                 <directionalLight ref={dirRef} color={DEFAULT_DIR.color} intensity={DEFAULT_DIR.intensity} position={DEFAULT_DIR.position} />
                 <Grid args={[240, 240]} cellColor="#2a3038" sectionColor="#3c4654" fadeDistance={70} infiniteGrid />
                 <HubMarker />
+                {mainDoc ? <ZoneGroup artist={{ id: MAIN_PROJECT_ID }} doc={mainDoc} center={HUB_CENTER} showRing={false} /> : null}
                 <HubSpokes zoneCenters={ZONE_CENTERS_RING} />
                 {ARTISTS.map((artist, i) => (
                     <ZonePortal key={artist.id} artist={artist} center={ZONE_CENTERS_RING[i]} />
@@ -780,11 +958,14 @@ export default function WccExhibition({ onExit }) {
                     joystickRef={joystickRef}
                     joyVisRef={joyVisRef}
                     joyThumbRef={joyThumbRef}
+                    vertTouchRef={vertTouchRef}
                     onLockChange={setLocked}
                     flyMode={flyMode}
                     zoneCenters={ZONE_CENTERS_RING}
                     artists={ARTISTS}
                     boundsHalf={BOUNDS_HALF}
+                    isArActive={isArActive}
+                    arTouchElRef={arTouchElRef}
                 />
                 {ARTISTS.map((artist, i) => {
                     const doc = docs[artist.id]
@@ -798,6 +979,7 @@ export default function WccExhibition({ onExit }) {
                         />
                     )
                 })}
+                <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />
                 </XR>
             </Canvas>
 
@@ -833,14 +1015,45 @@ export default function WccExhibition({ onExit }) {
                     &nbsp;·&nbsp; ESC · release
                 </p>
             )}
-            {isMobile && <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />}
-            <button
-                type="button"
-                className={`live-scene-fly-btn${flyMode ? ' active' : ''}`}
-                onClick={() => setFlyMode((f) => !f)}
-            >
-                {flyMode ? 'Walk' : 'Fly'}
-            </button>
+            {(() => {
+                const controlsUI = (
+                    <>
+                        {isMobile && <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />}
+                        {isMobile && flyMode && <VerticalTouchControls vertTouchRef={vertTouchRef} />}
+                        <button
+                            type="button"
+                            className={`live-scene-fly-btn${flyMode ? ' active' : ''}`}
+                            onClick={() => setFlyMode((f) => !f)}
+                        >
+                            {flyMode ? 'Walk' : 'Fly'}
+                        </button>
+                        {xr.isXrPresenting && (
+                            <button type="button" className="live-scene-exit"
+                                style={{ position: 'absolute', bottom: 40, right: 130, zIndex: 11 }}
+                                onClick={xr.handleExitXrSession}
+                            >
+                                Exit XR
+                            </button>
+                        )}
+                    </>
+                )
+
+                // Normal page DOM isn't composited during a handheld AR session --
+                // only the WebXR dom-overlay root is. Portal the same controls (plus
+                // a full-viewport element for Walker to receive touches on) into it
+                // whenever AR is active, matching LiveProjectScene.
+                if (isArActive && xr.domOverlayRoot) {
+                    return createPortal(
+                        <>
+                            <div ref={arTouchElRef} className="live-scene-ar-touch-capture" />
+                            {controlsUI}
+                        </>,
+                        xr.domOverlayRoot
+                    )
+                }
+                return controlsUI
+            })()}
+
             {(xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
                 <div style={{ position: 'absolute', bottom: 40, right: 130, display: 'flex', gap: 8, zIndex: 11 }}>
                     {xr.supportedXrModes.vr && (
@@ -854,14 +1067,6 @@ export default function WccExhibition({ onExit }) {
                         </button>
                     )}
                 </div>
-            )}
-            {xr.isXrPresenting && (
-                <button type="button" className="live-scene-exit"
-                    style={{ position: 'absolute', bottom: 40, right: 130, zIndex: 11 }}
-                    onClick={xr.handleExitXrSession}
-                >
-                    Exit XR
-                </button>
             )}
         </div>
     )

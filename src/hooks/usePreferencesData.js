@@ -325,7 +325,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
 
     const architectureNodes = [
         {
-            id: 'editor', x: 12, y: 18, kicker: 'surface', label: 'Editor',
+            id: 'editor', col: 1, row: 1, kicker: 'surface', label: 'Editor',
             status: ui?.interactionMode === 'edit' ? 'edit' : 'nav',
             detail: ui?.isUiVisible ? 'UI visible on canvas' : 'UI hidden',
             meta: `${ui?.layoutMode || 'floating'} / ${ui?.layoutSide || 'right'}`,
@@ -340,7 +340,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
             actions: [{ key: 'open-editor', label: 'Open Editor', onClick: () => onNavigateToEditor?.(sync?.spaceId) }]
         },
         {
-            id: 'space', x: 12, y: 60, kicker: 'space',
+            id: 'space', col: 1, row: 2, kicker: 'space',
             label: currentSpace?.label || sync?.spaceId || 'main',
             status: sync?.isReadOnly ? 'locked' : 'open',
             detail: sync?.supportsServerSpaces ? 'server-backed space' : 'local-only space',
@@ -356,7 +356,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
             actions: [{ key: 'copy-link', label: 'Copy Link', onClick: () => actions?.handleCopySpaceLink?.(sync?.spaceId) }]
         },
         {
-            id: 'scene', x: 38, y: 38, kicker: 'world', label: 'Scene Graph',
+            id: 'scene', col: 2, row: 1, kicker: 'world', label: 'Scene Graph',
             status: `${visibleObjectCount}/${objects?.length || 0}`,
             detail: selectedCount ? `${selectedCount} selected` : 'no active selection',
             meta: `bg ${sceneSettings?.backgroundColor || '#000000'}`,
@@ -371,7 +371,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
             ]
         },
         {
-            id: 'selected', x: 38, y: 80, kicker: 'inspect',
+            id: 'selected', col: 2, row: 2, kicker: 'inspect',
             label: selectedObject ? getObjectDisplayLabel(selectedObject) : 'Selected Object',
             status: selectedObject ? selectedObject.type || 'object' : 'idle',
             detail: selectedObject ? formatVector(selectedObject.position, 2) : 'nothing selected',
@@ -395,7 +395,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
                 : []
         },
         {
-            id: 'sync', x: 66, y: 18, kicker: 'realtime', label: 'Sync Fabric',
+            id: 'sync', col: 3, row: 1, kicker: 'realtime', label: 'Sync Fabric',
             status: sync?.isLiveSyncEnabled ? 'live' : 'presence',
             detail: sync?.sceneStreamState || 'idle',
             meta: sync?.isSocketConnected ? 'socket connected' : 'socket offline',
@@ -409,7 +409,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
             ]
         },
         {
-            id: 'runtime', x: 66, y: 60, kicker: 'logs', label: 'Runtime',
+            id: 'runtime', col: 3, row: 2, kicker: 'logs', label: 'Runtime',
             status: `${entries.length}`,
             detail: entries[entries.length - 1]?.message || 'no console events yet',
             meta: entries[entries.length - 1]?.level?.toUpperCase?.() || 'quiet',
@@ -424,7 +424,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
             actions: [{ key: 'copy-runtime', label: 'Copy Log', onClick: copyRuntimeLog }]
         },
         {
-            id: 'backend', x: 90, y: 38, kicker: 'server', label: 'Backend',
+            id: 'backend', col: 4, row: 1, kicker: 'server', label: 'Backend',
             status: sync?.canPublishToServer ? 'publish' : 'local',
             detail: sync?.serverSyncInfo?.label || 'server idle',
             meta: sync?.supportsServerSpaces ? 'serverXR attached' : 'server features unavailable',
@@ -442,7 +442,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
             ]
         },
         {
-            id: 'xr', x: 90, y: 80, kicker: 'xr', label: 'XR Runtime',
+            id: 'xr', col: 4, row: 2, kicker: 'xr', label: 'XR Runtime',
             status: xrSnapshot?.support?.ar || xrSnapshot?.support?.vr ? 'ready' : 'standby',
             detail: xrSnapshot?.lastStartError?.message || 'diagnostics available',
             meta: `${xrSnapshot?.support?.ar ? 'AR' : 'no AR'} / ${xrSnapshot?.support?.vr ? 'VR' : 'no VR'}`,

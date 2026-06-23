@@ -99,6 +99,17 @@
     to { transform: rotate(360deg); }
 }
 
+/* Handheld AR's WebXR dom-overlay root composites *only* this element (and
+   its descendants) on top of the camera passthrough during a session --
+   it's the actual touch target Walker attaches to, invisible by design. */
+.live-scene-ar-touch-capture {
+    position: absolute;
+    inset: 0;
+    touch-action: none;
+    pointer-events: auto;
+    background: transparent;
+}
+
 /* Mobile joystick — floating: spawns wherever the left half of the screen is
    touched (Walker positions it via inline style), so there's no fixed dead zone. */
 .live-scene-joystick {
@@ -156,8 +167,42 @@
     border-color: #d90000;
 }
 
+/* Fly mode altitude buttons (mobile only -- Space/Q/C/E have no touch
+   equivalent). Stacked above the Fly toggle so neither overlaps. */
+.live-scene-vert-controls {
+    position: absolute;
+    bottom: 100px;
+    right: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    z-index: 11;
+}
+
+.live-scene-vert-btn {
+    width: 44px;
+    height: 44px;
+    border: 1.5px solid rgba(217, 0, 0, 0.5);
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.4);
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 16px;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+}
+
+.live-scene-vert-btn:active {
+    color: #d90000;
+    border-color: #d90000;
+    background: rgba(217, 0, 0, 0.15);
+}
+
 @media (max-width: 720px) {
     .live-scene-title { display: none; }
     .live-scene-hint { font-size: 10px; bottom: 140px; }
     .live-scene-fly-btn { bottom: 140px; }
+    .live-scene-vert-controls { bottom: 200px; }
 }

@@ -93,6 +93,7 @@ const CAPABILITIES = [
 
 export default function LandingPage() {
     const [entered, setEntered] = useState(false)
+    const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
 
     useEffect(() => {
         document.body.classList.add('is-landing')
@@ -160,7 +161,11 @@ export default function LandingPage() {
                         <button type="button" className="lp-enter-exit" onClick={() => setEntered(false)}>
                             ← Exit space
                         </button>
-                        <p className="lp-enter-hint">Walk (WASD) · Drag to look · F to fly (Space/Q up · C/E down)</p>
+                        <p className="lp-enter-hint">
+                            {isMobile
+                                ? 'Joystick to move · Drag to look · Fly button to switch modes'
+                                : 'Walk (WASD) · Drag to look · F to fly (Space/Q up · C/E down)'}
+                        </p>
                     </>
                 )}
             </Box>

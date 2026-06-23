@@ -2,6 +2,10 @@
     position: relative;
     width: 100%;
     height: 100vh;
+    /* dvh = visible viewport (excludes the mobile address bar). Plain 100vh is
+       the *large* viewport, so on mobile it runs ~72px taller than the screen
+       and pushes bottom-anchored controls (Enter AR/VR) below the fold. */
+    height: 100dvh;
     background: #070506;
 }
 

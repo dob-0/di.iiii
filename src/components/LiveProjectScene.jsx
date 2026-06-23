@@ -1,7 +1,8 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid } from '@react-three/drei'
-import { XR } from '@react-three/xr'
+import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState } from '@react-three/xr'
 import * as THREE from 'three'
 import { useXrAr } from '../hooks/useXrAr.js'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
@@ -27,8 +28,8 @@ const FLY_SPEED = 4.5
 const WALK_ACCEL = 14
 const WALK_FRICTION = 10
 const TURN_SPEED = 1.6
-const POINTER_LOCK_SENSITIVITY = 0.0022
-const TOUCH_LOOK_SENSITIVITY = 0.0038
+const POINTER_LOCK_SENSITIVITY = 0.0055
+const TOUCH_LOOK_SENSITIVITY = 0.005
 // Just shy of straight up/down (PI/2) to avoid the camera flipping at the pole.
 const WALK_PITCH_LIMIT = 1.45
 // Flying has no horizon to stay oriented against, so allow (almost) the full
@@ -45,6 +46,7 @@ const IDLE_ORBIT_SPEED = 0.12
 
 const tmpVec = new THREE.Vector3()
 const tmpLook = new THREE.Vector3()
+const tmpDir = new THREE.Vector3()
 
 const isGateEntity = (entity) => /gate|threshold|entrance/i.test(entity?.name || '')
 const isGroundEntity = (entity) => /ground|floor/i.test(entity?.name || '')
@@ -228,8 +230,14 @@ function AmbientField({ center }) {
 
 // Free-roam walk: WASD + arrows move/turn; desktop uses pointer lock for look;
 // mobile uses touch outside the joystick zone for look.
-function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVisRef, joyThumbRef, onLockChange, flyMode }) {
+function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVisRef, joyThumbRef, vertTouchRef, onLockChange, flyMode, isArActive, arTouchElRef }) {
     const { camera, gl } = useThree()
+    // During an XR session the camera pose is owned by the headset/phone and
+    // locomotion is driven through XROrigin (see XrLocomotion). Walker must NOT
+    // write camera.position/lookAt then, or it yanks the camera back to the
+    // flat-screen player pose every frame -- fighting head-tracking and
+    // defeating XROrigin movement entirely.
+    const isPresenting = useXR((state) => state.session != null)
     const keysRef = useRef(new Set())
     const speedRef = useRef(0)
     const strafeSpeedRef = useRef(0)
@@ -263,9 +271,13 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
     }, [])
 
     useEffect(() => {
-        const el = gl.domElement
+        // During a handheld AR session, only the WebXR dom-overlay root (and
+        // its descendants) reliably receives input -- the page's own canvas
+        // does not. Attach the same touch handling to the dedicated overlay
+        // element instead whenever AR is active.
+        const el = (isArActive && arTouchElRef?.current) || gl.domElement
         const player = playerRef.current
-        const isTouch = window.matchMedia('(pointer: coarse)').matches
+        const isTouch = isArActive || window.matchMedia('(pointer: coarse)').matches
 
         if (!isTouch) {
             // Desktop: pointer lock
@@ -373,9 +385,11 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 el.removeEventListener('touchcancel', onTouchEnd)
             }
         }
-    }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef])
+    }, [gl, playerRef, joystickRef, joyVisRef, joyThumbRef, isArActive, arTouchElRef])
 
     useFrame((_, delta) => {
+        // XrLocomotion owns movement + camera during a session.
+        if (isPresenting) return
         const keys = keysRef.current
         const player = playerRef.current
         const joy = joystickRef?.current || { x: 0, y: 0 }
@@ -405,6 +419,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
         if (fly) {
             if (keys.has(' ') || keys.has('q')) vert += 1
             if (keys.has('e') || keys.has('c')) vert -= 1
+            vert += vertTouchRef?.current || 0
         }
 
         const targetSpeed = forward * WALK_MAX_SPEED
@@ -470,12 +485,132 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
     return null
 }
 
+// No XROrigin was ever rendered inside <XR>, so a VR/AR session started at
+// world (0,0,0) with no connection to the desktop/touch Walker's position,
+// and no locomotion existed beyond @react-three/xr's default teleport
+// pointer. Adds standard smooth thumbstick locomotion (left stick moves,
+// right stick turns) and keeps it in sync with playerRef so position
+// carries over correctly entering and leaving a session.
+function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
+    const originRef = useRef(null)
+    const isPresenting = useXR((state) => state.session != null)
+    const isVr = useXR((state) => state.mode === 'immersive-vr')
+    const rightController = useXRInputSourceState('controller', 'right')
+    const wasPresentingRef = useRef(false)
+
+    useXRControllerLocomotion(
+        originRef,
+        { speed: WALK_MAX_SPEED },
+        { type: 'smooth', speed: TURN_SPEED }
+    )
+
+    useFrame((state, delta) => {
+        const origin = originRef.current
+        if (!origin) return
+        const player = playerRef.current
+
+        if (isPresenting && !wasPresentingRef.current) {
+            // Just entered XR -- start from wherever the desktop/touch walker last
+            // was, instead of world origin. origin.y carries altitude (0 == floor).
+            origin.position.set(player.x, Math.max(0, (player.altY ?? EYE_HEIGHT) - EYE_HEIGHT), player.z)
+            origin.rotation.set(0, player.yaw, 0)
+        }
+        wasPresentingRef.current = isPresenting
+
+        if (isPresenting) {
+            // Joystick mirrors walk-mode convention: joy.x turns (rotates
+            // XROrigin yaw), joy.y moves forward along that virtual yaw.
+            // The phone IMU still controls the look direction on top of
+            // this, so the user can look around freely while the virtual
+            // compass turns with the joystick -- same muscle memory as walk.
+            const joy = joystickRef?.current
+            if (joy && (Math.abs(joy.x) > 0.05 || Math.abs(joy.y) > 0.05)) {
+                origin.rotation.y -= joy.x * TURN_SPEED * delta
+                // Move along the camera's real horizontal forward, not a yaw
+                // reconstruction: the XR camera looks down the rig's local -Z,
+                // the OPPOSITE of +(sin,cos), so deriving forward from
+                // origin.rotation.y inverted/mirrored the joystick.
+                const fwd = -joy.y * WALK_MAX_SPEED * delta
+                state.camera.getWorldDirection(tmpDir)
+                tmpDir.y = 0
+                if (tmpDir.lengthSq() > 1e-6) {
+                    tmpDir.normalize()
+                    origin.position.x += tmpDir.x * fwd
+                    origin.position.z += tmpDir.z * fwd
+                }
+            }
+
+            // Vertical (fly). AR has no controllers, so the ▲▼ touch buttons set
+            // vertTouchRef; VR has no reachable 2D Fly button, so the right
+            // thumbstick's Y axis always flies (left stick walks, right stick X
+            // turns -- Y is free). Horizontal locomotion never touched origin.y.
+            const touchVert = vertTouchRef?.current || 0
+            const stickY = rightController?.gamepad?.['xr-standard-thumbstick']?.yAxis ?? 0
+            const stickVert = Math.abs(stickY) > 0.15 ? -stickY : 0 // push up = ascend
+            if (isVr) {
+                origin.position.y = THREE.MathUtils.clamp(origin.position.y + (touchVert + stickVert) * FLY_SPEED * delta, 0, 58)
+            } else if (flyMode) {
+                origin.position.y = THREE.MathUtils.clamp(origin.position.y + touchVert * FLY_SPEED * delta, 0, 58)
+            } else {
+                origin.position.y = THREE.MathUtils.lerp(origin.position.y, 0, Math.min(1, delta * 3))
+            }
+
+            // Keep playerRef in sync so other logic (nearest-zone, bounds)
+            // tracks correctly during a session, and leaving XR resumes
+            // from the same spot instead of snapping back.
+            player.x = origin.position.x
+            player.z = origin.position.z
+            player.yaw = origin.rotation.y
+            player.altY = EYE_HEIGHT + origin.position.y
+        }
+    })
+
+    return <XROrigin ref={originRef} />
+}
+
 // Purely visual — Walker owns all touch handling so it can arbitrate
 // floating-joystick vs. look touches on the same canvas.
 function MobileJoystick({ outerRef, thumbRef }) {
     return (
         <div className="live-scene-joystick" ref={outerRef}>
             <div className="live-scene-joystick-thumb" ref={thumbRef} />
+        </div>
+    )
+}
+
+// Fly mode's altitude keys (Space/Q, C/E) have no touch equivalent --
+// press-and-hold buttons fill that gap. Pointer events (not click) so
+// altitude changes continuously while held, like the keyboard.
+function VerticalTouchControls({ vertTouchRef }) {
+    const setVert = (value) => (e) => {
+        e.preventDefault()
+        vertTouchRef.current = value
+    }
+    const clearVert = () => { vertTouchRef.current = 0 }
+    return (
+        <div className="live-scene-vert-controls">
+            <button
+                type="button"
+                className="live-scene-vert-btn"
+                onPointerDown={setVert(1)}
+                onPointerUp={clearVert}
+                onPointerLeave={clearVert}
+                onPointerCancel={clearVert}
+                aria-label="Ascend"
+            >
+                ▲
+            </button>
+            <button
+                type="button"
+                className="live-scene-vert-btn"
+                onPointerDown={setVert(-1)}
+                onPointerUp={clearVert}
+                onPointerLeave={clearVert}
+                onPointerCancel={clearVert}
+                aria-label="Descend"
+            >
+                ▼
+            </button>
         </div>
     )
 }
@@ -599,7 +734,21 @@ export default function LiveProjectScene({
     const joystickRef = useRef({ x: 0, y: 0 })
     const joyVisRef = useRef(null)
     const joyThumbRef = useRef(null)
+    // Fly mode's altitude keys (Space/Q up, C/E down) have no touch
+    // equivalent -- without this, mobile fly has no way to ascend/descend at all.
+    const vertTouchRef = useRef(0)
+    const arTouchElRef = useRef(null)
+    const isArActive = xr.isArModeActive && xr.isXrPresenting
     const playerRef = useRef({ x: 0, z: 6, yaw: Math.PI, pitch: 0, altY: EYE_HEIGHT })
+
+    // The library only toggles display:block/none on this element -- it has
+    // no inherent size/position, so anything portaled into it (the touch
+    // surface, joystick, buttons) has no positioning context without this.
+    useEffect(() => {
+        const root = xr.domOverlayRoot
+        if (!root) return
+        Object.assign(root.style, { position: 'fixed', inset: '0', width: '100%', height: '100%' })
+    }, [xr.domOverlayRoot])
 
     useEffect(() => {
         if (!interactive) return undefined
@@ -697,14 +846,90 @@ export default function LiveProjectScene({
                         joystickRef={joystickRef}
                         joyVisRef={joyVisRef}
                         joyThumbRef={joyThumbRef}
+                        vertTouchRef={vertTouchRef}
                         onLockChange={setIsLocked}
                         flyMode={flyMode}
+                        isArActive={isArActive}
+                        arTouchElRef={arTouchElRef}
                     />
                 ) : (
                     <IdleOrbit center={center} />
                 )}
+                {interactive && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />}
                 </XR>
             </Canvas>
+
+            {/* Joystick and the Fly toggle are functional controls, not
+                branding chrome -- a touch device has no F key and no other
+                way to reach fly mode, so these render regardless of
+                showChrome. Callers that supply their own exit button/hint
+                (the landing page) still only get one of those, not two. */}
+            {(() => {
+                const controlsUI = (
+                    <>
+                        {interactive && isMobile && (
+                            <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />
+                        )}
+                        {interactive && isMobile && flyMode && (
+                            <VerticalTouchControls vertTouchRef={vertTouchRef} />
+                        )}
+                        {interactive && (
+                            <button
+                                type="button"
+                                className={`live-scene-fly-btn${flyMode ? ' active' : ''}`}
+                                onClick={() => setFlyMode((f) => !f)}
+                            >
+                                {flyMode ? 'Walk' : 'Fly'}
+                            </button>
+                        )}
+                        {xr.isXrPresenting && (
+                            <button type="button" className="live-scene-exit"
+                                style={{ position: 'absolute', bottom: 40, right: 130, zIndex: 11 }}
+                                onClick={xr.handleExitXrSession}
+                            >
+                                Exit XR
+                            </button>
+                        )}
+                    </>
+                )
+
+                // Normal page DOM (this component's own render output) isn't
+                // composited during a handheld AR session -- only the
+                // WebXR-managed dom-overlay root is. Portal the same controls
+                // (plus a full-viewport element for Walker to actually
+                // receive touches on) into it whenever AR is active.
+                if (isArActive && xr.domOverlayRoot) {
+                    return createPortal(
+                        <>
+                            <div ref={arTouchElRef} className="live-scene-ar-touch-capture" />
+                            {controlsUI}
+                        </>,
+                        xr.domOverlayRoot
+                    )
+                }
+                return controlsUI
+            })()}
+
+            {/* Enter AR/VR are functional controls too -- a caller that hides
+                chrome (the landing page) still needs a way to actually start
+                a session, not just walk/fly on the flat screen. Still gated
+                on `interactive` -- a purely decorative background (e.g.
+                Studio Hub's) has no Walker/locomotion wired up to make a
+                session usable. */}
+            {interactive && (xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
+                <div style={{ position: 'absolute', bottom: 40, right: 130, display: 'flex', gap: 8, zIndex: 11 }}>
+                    {xr.supportedXrModes.vr && (
+                        <button type="button" className="live-scene-exit" onClick={() => xr.handleEnterXrSession('vr')}>
+                            Enter VR
+                        </button>
+                    )}
+                    {xr.supportedXrModes.ar && (
+                        <button type="button" className="live-scene-exit" onClick={() => xr.handleEnterXrSession('ar')}>
+                            Enter AR
+                        </button>
+                    )}
+                </div>
+            )}
 
             {showChrome && (
                 <>
@@ -733,40 +958,6 @@ export default function LiveProjectScene({
                             {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
                             &nbsp;·&nbsp; ESC · release
                         </p>
-                    )}
-                    {interactive && isMobile && (
-                        <MobileJoystick outerRef={joyVisRef} thumbRef={joyThumbRef} />
-                    )}
-                    {interactive && (
-                        <button
-                            type="button"
-                            className={`live-scene-fly-btn${flyMode ? ' active' : ''}`}
-                            onClick={() => setFlyMode((f) => !f)}
-                        >
-                            {flyMode ? 'Walk' : 'Fly'}
-                        </button>
-                    )}
-                    {(xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
-                        <div style={{ position: 'absolute', bottom: 40, right: 130, display: 'flex', gap: 8, zIndex: 11 }}>
-                            {xr.supportedXrModes.vr && (
-                                <button type="button" className="live-scene-exit" onClick={() => xr.handleEnterXrSession('vr')}>
-                                    Enter VR
-                                </button>
-                            )}
-                            {xr.supportedXrModes.ar && (
-                                <button type="button" className="live-scene-exit" onClick={() => xr.handleEnterXrSession('ar')}>
-                                    Enter AR
-                                </button>
-                            )}
-                        </div>
-                    )}
-                    {xr.isXrPresenting && (
-                        <button type="button" className="live-scene-exit"
-                            style={{ position: 'absolute', bottom: 40, right: 130, zIndex: 11 }}
-                            onClick={xr.handleExitXrSession}
-                        >
-                            Exit XR
-                        </button>
                     )}
                 </>
             )}

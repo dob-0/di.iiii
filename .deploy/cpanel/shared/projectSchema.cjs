@@ -414,7 +414,7 @@ const normalizePublishState = (publish = {}) => {
     ...cloneValue(defaultPublishState),
     ...cloneValue(source),
     shareEnabled: ensureBoolean(source.shareEnabled, defaultPublishState.shareEnabled),
-    xrDefaultMode: ['none', 'vr', 'ar'].includes(xrDefaultMode) ? xrDefaultMode : defaultPublishState.xrDefaultMode,
+    xrDefaultMode: ['none', 'vr', 'ar', 'off'].includes(xrDefaultMode) ? xrDefaultMode : defaultPublishState.xrDefaultMode,
     lastExportAt: Math.max(0, ensureNumber(source.lastExportAt, defaultPublishState.lastExportAt))
   }
 }

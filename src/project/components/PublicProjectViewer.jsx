@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import LiveProjectScene from '../../components/LiveProjectScene.jsx'
 import { createProjectSyncService } from '../services/projectSyncService.js'
 import {
     DEFAULT_PROJECT_SPACE_ID,
@@ -87,6 +88,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // camera for fixed-camera/code modes or when none is set yet).
     const [cameraView, setCameraView] = useState(initialCameraView || null)
     const [viewMode, setViewMode] = useState(null)
+    // 'scene' entry view only -- fixed-camera and code/iframe presentations
+    // are a deliberate per-project choice and stay exactly as authored.
+    const [navMode, setNavMode] = useState('orbit')
     const controlsRef = useRef(null)
     const iframeRef = useRef(null)
     const syncServiceRef = useRef(createProjectSyncService())
@@ -200,6 +204,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
 
     useEffect(() => {
         setViewMode(null)
+        setNavMode('orbit')
     }, [presentationState.entryView])
 
     useEffect(() => {
@@ -252,8 +257,11 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         <main
             style={{
                 width: '100%',
-                height: '100vh',
-                minHeight: '100vh',
+                // dvh = visible viewport (excludes mobile address bar). 100vh is
+                // the large viewport, ~72px taller than the screen on mobile, which
+                // pushes the bottom-anchored Walk/Fly + Enter AR controls off-screen.
+                height: '100dvh',
+                minHeight: '100dvh',
                 position: 'relative',
                 background: '#05070a',
                 overflow: 'hidden'
@@ -270,7 +278,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         style={{
                             border: 0,
                             width: '100%',
-                            height: '100vh',
+                            height: '100dvh',
                             background: '#05070a'
                         }}
                     />
@@ -283,17 +291,25 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         style={{
                             border: 0,
                             width: '100%',
-                            height: '100vh',
+                            height: '100dvh',
                             background: '#05070a'
                         }}
                     />
                 ) : (
-                    <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '2rem' }}>
+                    <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: '2rem' }}>
                         <div style={overlayCardStyle}>
                             <strong>Code view is empty.</strong>
                         </div>
                     </div>
                 )
+            ) : document && navMode === 'walk' ? (
+                <LiveProjectScene
+                    projectId={projectId}
+                    interactive
+                    showChrome
+                    title={viewerTitle}
+                    onExit={() => setNavMode('orbit')}
+                />
             ) : document ? (
                 <StudioViewport
                     document={document}
@@ -313,6 +329,16 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 />
             ) : null}
 
+            {state.status === 'ready' && entryView === 'scene' && navMode === 'orbit' ? (
+                <button
+                    type="button"
+                    style={{ ...overlayButtonStyle, position: 'absolute', top: '1rem', right: '1rem', zIndex: 20 }}
+                    onClick={() => setNavMode('walk')}
+                >
+                    Walk / Fly
+                </button>
+            ) : null}
+
             {state.status === 'loading' ? (
                 <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '2rem' }}>
                     <div style={overlayCardStyle}>
@@ -329,48 +355,44 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 </div>
             ) : null}
 
-            {state.status === 'ready' && xrDefaultMode !== 'none' ? (
-                <div
-                    style={{
-                        position: 'absolute',
-                        right: '1rem',
-                        bottom: '1rem',
-                        display: 'flex',
-                        gap: '0.75rem',
-                        zIndex: 20
-                    }}
-                >
-                    {xrDefaultMode === 'vr' ? (
+            {/* AR is offered on every space by default (device permitting). The
+                project's `xrDefaultMode` only *modifies* this: 'vr' switches the
+                offer to VR, 'off' hides it; legacy 'none' and 'ar' both mean AR.
+                Only render when the device actually supports the chosen mode so
+                non-XR desktops aren't shown a dead button.
+
+                Orbit mode renders StudioViewport, whose <XR> session has no
+                XROrigin/locomotion -- entering there leaves you frozen at origin.
+                So this routes immersive entry through walk mode (LiveProjectScene),
+                which owns the locomotion + its own Enter AR/VR + Exit XR buttons.
+                Hidden in walk mode to avoid duplicating those buttons. */}
+            {(() => {
+                if (!(state.status === 'ready' && navMode === 'orbit' && entryView === 'scene')) return null
+                if (xrDefaultMode === 'off') return null
+                const wantsVr = xrDefaultMode === 'vr'
+                const supported = wantsVr ? xr.supportedXrModes.vr : xr.supportedXrModes.ar
+                if (!supported) return null
+                return (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            right: '1rem',
+                            bottom: '1rem',
+                            display: 'flex',
+                            gap: '0.75rem',
+                            zIndex: 20
+                        }}
+                    >
                         <button
                             type="button"
                             style={overlayButtonStyle}
-                            onClick={() => xr.handleEnterXrSession('vr')}
-                            disabled={!xr.supportedXrModes.vr || xr.isXrPresenting}
+                            onClick={() => setNavMode('walk')}
                         >
-                            Enter VR
+                            {wantsVr ? 'Enter VR' : 'Enter AR'}
                         </button>
-                    ) : null}
-                    {xrDefaultMode === 'ar' ? (
-                        <button
-                            type="button"
-                            style={overlayButtonStyle}
-                            onClick={() => xr.handleEnterXrSession('ar')}
-                            disabled={!xr.supportedXrModes.ar || xr.isXrPresenting}
-                        >
-                            Enter AR
-                        </button>
-                    ) : null}
-                    {xr.isXrPresenting ? (
-                        <button
-                            type="button"
-                            style={overlayButtonStyle}
-                            onClick={xr.handleExitXrSession}
-                        >
-                            Exit XR
-                        </button>
-                    ) : null}
-                </div>
-            ) : null}
+                    </div>
+                )
+            })()}
         </main>
     )
 }

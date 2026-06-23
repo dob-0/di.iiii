@@ -1,3 +1,4 @@
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { buildBetaHubPath } from '../../beta/utils/betaRouting.js'
 import { buildStudioHubPath } from '../../studio/utils/studioRouting.js'
 import { buildAppSpacePath, buildPreferencesPath } from '../../utils/spaceRouting.js'
@@ -103,7 +104,7 @@ export const buildScenePreviewDots = (objects = [], selectedIds = []) => {
             color: getTypeColor(obj.type),
             left: 7 + (((match?.x || 0) - minX) / spanX) * 86,
             top: 10 + (((match?.z || 0) - minZ) / spanZ) * 78,
-            showLabel: isSelected || index < 3,
+            showLabel: isSelected,
             title: `${getObjectDisplayLabel(obj)} • ${obj?.type || 'object'} • ${formatVector(obj?.position, 2)}`
         }
     })
@@ -115,6 +116,28 @@ export const getActionButtonClassName = (button = {}) => {
     if (button.variant === 'success') classNames.push('success-button')
     if (button.variant === 'warning') classNames.push('warning-button')
     return classNames.join(' ')
+}
+
+export function SectionNav({ sections = [], activeKey, onSelect }) {
+    return (
+        <nav className="preferences-nav" aria-label="Admin sections">
+            {sections.map((section) => (
+                <button
+                    key={section.key}
+                    type="button"
+                    className={`preferences-nav-item ${activeKey === section.key ? 'is-active' : ''}`}
+                    onClick={() => onSelect?.(section.key)}
+                    aria-current={activeKey === section.key ? 'page' : undefined}
+                >
+                    <span className="preferences-nav-glyph" aria-hidden="true">{section.glyph}</span>
+                    <span className="preferences-nav-label">{section.label}</span>
+                    {section.badge != null && section.badge !== '' ? (
+                        <span className="preferences-nav-badge">{section.badge}</span>
+                    ) : null}
+                </button>
+            ))}
+        </nav>
+    )
 }
 
 export function ModuleSection({ title, subtitle, className = '', actions = null, children }) {
@@ -340,7 +363,62 @@ export function ScenePreviewMap({ dots = [], backgroundColor, onSelectObject }) 
     )
 }
 
+export function ArchitectureLegend() {
+    return (
+        <div className="preferences-architecture-legend">
+            <span className="preferences-badge">scene graph</span>
+            <span className="preferences-badge success">live</span>
+            <span className="preferences-badge warning">attention</span>
+        </div>
+    )
+}
+
+// Nodes sit at deterministic CSS-grid coordinates (node.col/node.row), never absolute
+// percentages, so card size changes can't push neighbors into overlap. Link lines are
+// measured from real DOM rects (not hardcoded coordinates) so they track the grid exactly.
 export function ArchitectureCanvas({ nodes = [], links = [], selectedNodeId, onSelectNode }) {
+    const containerRef = useRef(null)
+    const nodeRefs = useRef({})
+    const [linePoints, setLinePoints] = useState([])
+
+    const recomputeLines = () => {
+        const container = containerRef.current
+        if (!container) return
+        const containerRect = container.getBoundingClientRect()
+        const next = links
+            .map((link) => {
+                const fromEl = nodeRefs.current[link.from?.id]
+                const toEl = nodeRefs.current[link.to?.id]
+                if (!fromEl || !toEl) return null
+                const fromRect = fromEl.getBoundingClientRect()
+                const toRect = toEl.getBoundingClientRect()
+                return {
+                    key: link.key,
+                    tone: link.tone,
+                    x1: fromRect.left + fromRect.width / 2 - containerRect.left,
+                    y1: fromRect.top + fromRect.height / 2 - containerRect.top,
+                    x2: toRect.left + toRect.width / 2 - containerRect.left,
+                    y2: toRect.top + toRect.height / 2 - containerRect.top
+                }
+            })
+            .filter(Boolean)
+        setLinePoints(next)
+    }
+
+    useLayoutEffect(() => {
+        recomputeLines()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [nodes, links])
+
+    useEffect(() => {
+        const container = containerRef.current
+        if (!container || typeof ResizeObserver === 'undefined') return undefined
+        const observer = new ResizeObserver(() => recomputeLines())
+        observer.observe(container)
+        return () => observer.disconnect()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
+
     if (!nodes.length) {
         return (
             <div className="preferences-architecture-canvas">
@@ -352,56 +430,42 @@ export function ArchitectureCanvas({ nodes = [], links = [], selectedNodeId, onS
     }
 
     return (
-        <div className="preferences-architecture-canvas">
-            <svg
-                className="preferences-architecture-lines"
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-                aria-hidden="true"
-            >
-                {links.map((link) => (
+        <div className="preferences-architecture-canvas" ref={containerRef}>
+            <svg className="preferences-architecture-lines" aria-hidden="true">
+                {linePoints.map((line) => (
                     <line
-                        key={link.key}
-                        x1={link.from.x}
-                        y1={link.from.y}
-                        x2={link.to.x}
-                        y2={link.to.y}
-                        className={`preferences-architecture-line ${link.tone ? `tone-${link.tone}` : ''}`}
+                        key={line.key}
+                        x1={line.x1}
+                        y1={line.y1}
+                        x2={line.x2}
+                        y2={line.y2}
+                        className={`preferences-architecture-line ${line.tone ? `tone-${line.tone}` : ''}`}
                     />
                 ))}
             </svg>
 
-            <div className="preferences-architecture-legend">
-                <span className="preferences-badge">scene graph</span>
-                <span className="preferences-badge success">live</span>
-                <span className="preferences-badge warning">attention</span>
-            </div>
-
-            {nodes.map((node) => (
-                <button
-                    key={node.id}
-                    type="button"
-                    className={[
-                        'preferences-architecture-node',
-                        `tone-${node.tone || 'default'}`,
-                        selectedNodeId === node.id ? 'is-selected' : ''
-                    ].join(' ')}
-                    style={{
-                        left: `${node.x}%`,
-                        top: `${node.y}%`
-                    }}
-                    onClick={() => onSelectNode?.(node.id)}
-                    title={node.tooltip || node.detail}
-                >
-                    <div className="preferences-architecture-node-head">
+            <div className="preferences-architecture-grid">
+                {nodes.map((node) => (
+                    <button
+                        key={node.id}
+                        ref={(el) => { nodeRefs.current[node.id] = el }}
+                        type="button"
+                        className={[
+                            'preferences-architecture-node',
+                            `tone-${node.tone || 'default'}`,
+                            selectedNodeId === node.id ? 'is-selected' : ''
+                        ].join(' ')}
+                        style={{ gridColumn: node.col, gridRow: node.row }}
+                        onClick={() => onSelectNode?.(node.id)}
+                        title={node.tooltip || node.detail}
+                    >
+                        <span className="preferences-architecture-node-dot" aria-hidden="true" />
                         <span className="preferences-architecture-node-kicker">{node.kicker}</span>
-                        <span className="preferences-architecture-node-status">{node.status}</span>
-                    </div>
-                    <strong className="preferences-architecture-node-title">{node.label}</strong>
-                    <span className="preferences-architecture-node-detail">{node.detail}</span>
-                    <span className="preferences-architecture-node-meta mono">{node.meta}</span>
-                </button>
-            ))}
+                        <strong className="preferences-architecture-node-title">{node.label}</strong>
+                        <span className="preferences-architecture-node-status mono">{node.status}</span>
+                    </button>
+                ))}
+            </div>
         </div>
     )
 }

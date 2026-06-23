@@ -887,12 +887,14 @@ export function PublishPanel({
                 <InputLabel>XR default</InputLabel>
                 <Select
                     label="XR default"
-                    value={publishState.xrDefaultMode || 'none'}
+                    // AR is the default everywhere; legacy 'none' is treated as AR
+                    // (it was only ever the old default, never a deliberate "off").
+                    value={publishState.xrDefaultMode === 'vr' ? 'vr' : publishState.xrDefaultMode === 'off' ? 'off' : 'ar'}
                     onChange={(event) => onPublishPatch({ xrDefaultMode: event.target.value })}
                 >
-                    <MenuItem value="none">No XR default</MenuItem>
+                    <MenuItem value="ar">AR (default)</MenuItem>
                     <MenuItem value="vr">VR</MenuItem>
-                    <MenuItem value="ar">AR</MenuItem>
+                    <MenuItem value="off">Off</MenuItem>
                 </Select>
             </FormControl>
             <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
