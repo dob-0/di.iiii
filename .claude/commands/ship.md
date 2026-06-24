@@ -12,6 +12,7 @@ description: Stage all changes, commit with a good message, and push to origin
 
 ## Task
 
+0. **Gate** — run the `/check` gate first (lint + build + tests + diff review). If the verdict is `GATE: NO-GO`, stop immediately: report the blockers and do **not** stage, commit, or push. Continue only on `GATE: GO`. The user may override with an explicit "ship anyway".
 1. Stage all relevant changes (`git add`)
 2. Write a concise commit message (what changed and why, not what files)
 3. Commit and push to origin

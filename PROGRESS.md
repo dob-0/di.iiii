@@ -5,6 +5,48 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-06-24 — Portal object, landing CTAs, placement UX, paired audit
+
+**Who:** Claude (multiple agents, parallel)
+
+### Done this session
+
+- **Portal object** (`d82f718`, `b859236`, `e2a3172`): a Studio entity that references another project — embed it inline or act as a gateway. Added `portal` as a 14th entity type in the shared `src/project/viewport/EntityContent.jsx` + `PortalObject.jsx`, with tests asserting `EntityContent` dispatches portal entities correctly. Same commit line also added view-centred placement, double-click-to-place, and portal name pickers.
+- **WCC landing button + perf** (`d82f718` swept the wcc/landing edits, `09f5e05` for main landing): "Enter exhibition" restyled to solid red (`#d90000`) + white border; main di.iiii landing's "WCC Exhibition" CTA made red to match (`landing-cta-wcc`). Perf: ambient dots moved off layout-thrashing `margin` keyframes to compositor `transform` via `@property --dot-x/--dot-y`; pointer-parallax caches circle layout boxes instead of `getBoundingClientRect` per move. ~61fps desktop; remaining throttled cost is the always-on WebGL particle veil.
+- **Paired deep audit** (`docs/ai/audit-2026-06-24-as-built.md` + `-as-documented.md`): same project audited two ways — as the code exactly is (all 7 gates green, 334 tests, 44 endpoints, ~57k LOC) and as the docs portray it. Surfaced that the *memory layer* drifts, not the code: PROGRESS was ~3 sessions behind, the manifesto's asset-ID seed was silently done, and the viewport Tier-1 plan had landed without being marked. Those drift items fixed alongside this entry.
+
+### Validation
+
+- `npm run lint` — pass (0 errors, 6 pre-existing a11y warnings)
+- `npm run build` — pass (0 circular-dep warnings)
+- `npm run test -- --run` — 334/334
+- `npm run test:server-contracts` — 21/21 · `npm run test:schema-sync` — 13/13 · `check:three-vendor` — pass
+
+### Open
+
+- `dev` ahead of `main` — portal + landing live on staging, **not yet in production**.
+- OAuth round-trip still unverified end-to-end. WCC hub `main` project still a placeholder sphere. Viewport extraction Tier 2/3 still open.
+
+---
+
+## 2026-06-23 — Walk/fly + XR locomotion, viewport de-dup, admin rewrite
+
+**Who:** Claude (+ Codex)
+
+### Done this session
+
+- **Walk/fly locomotion overhaul** (`223e7b1`, `bac2e05`, `2bbf74f`, `e7ebbf2`): strafe, wider look range, drone-style decoupled flight, mobile fly support with touch up/down ascend controls, and a Walk/Fly toggle on every public space. Ported the fixes into `WccExhibition`'s duplicated `Walker`.
+- **XR locomotion from scratch** (`8206780`, `e85469a`, `d6e8b6e`, `66d42f6`, `450cffc`, `5fbdd15`, `03c9b10`, `b000166`): no VR/AR movement existed before. Added AR joystick (joy.x turns, joy.y walks forward off the real camera forward), VR thumbstick locomotion + fly via right-stick Y, AR dom-overlay portal so the joystick composites in handheld AR, and AR-on-every-public-space by default (`xrDefaultMode` modifies it). Stopped the `Walker` from clobbering the camera during XR sessions.
+- **Shared viewport extraction Tier 1** (`b860aba`, `448b193`): extracted `EntityContent` + `buildAssetMap` into `src/project/viewport/`, collapsing the 4× duplicated entity→object switch into one canonical renderer; added the fork-map + extraction-plan docs.
+- **Admin UI rewrite** (`f1e7f93`, `d82f6f5`): section-based admin layout replacing the single-scroll mega page; repaired the stale `PreferencesPage` assertions it broke.
+- **Landing + deploy fixes** (`2e50438`, `f295bd5`, `b79e109`, `5b77069`, plus dev-tooling `c8ff430`/`22b8150`): fixed the fixed-3D-background hiding section content, restored inline fly/walk + main-space sync, silenced 401/404 noise on envs without a public `main`, and added cron-independent deploy-backup pruning.
+
+### Validation
+
+- All work validated per-commit with lint/build/test; the 2026-06-22 audit (run just before) confirmed the suite green going into this session.
+
+---
+
 ## 2026-06-22 — Full system audit + landing page fixes
 
 **Who:** Claude
