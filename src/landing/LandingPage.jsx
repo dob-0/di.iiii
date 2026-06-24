@@ -144,7 +144,7 @@ export default function LandingPage() {
                         <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={() => setEntered(true)}>
                             Enter Space
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href="/wcc">
+                        <Button className="landing-cta-ghost landing-cta-wcc" variant="outlined" size="large" href="/wcc">
                             WCC Exhibition
                         </Button>
                     </Stack>
