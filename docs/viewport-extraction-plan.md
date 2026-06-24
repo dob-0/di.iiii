@@ -2,6 +2,12 @@
 
 > Pure-code scoping of the shared viewport layer. Read after `studio-beta-fork-map.md`.
 
+> **Status (2026-06-24): Tier 1 LANDED.** `src/project/viewport/EntityContent.jsx` +
+> `buildAssetMap.js` (+ `EntityContent.test.jsx`) exist and are the canonical leaf renderer for
+> Studio and Beta; the entity→object switch is no longer duplicated 4×, and `portal` was added as
+> a 14th case. **Tier 2** (`CursorOverlay` + `useViewportCursorPresence`) and **Tier 3**
+> (`SceneEnvironment`) are still open — those files do not exist yet.
+
 ## Correction to the earlier framing
 
 "Extract the viewport **shell**" is too broad. After reading both viewports in full, the outer shell (`<div class="*-viewport-shell">` → `<Canvas>` → controls) is **genuinely forked and should stay forked** — Beta uses `OrbitControls` + node-graph placement; Studio uses `CameraControls` + `TransformControls` + XR + `ModalTransform`. Forcing those together would couple two real control schemes.

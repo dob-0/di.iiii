@@ -9,27 +9,27 @@ active_branch: dev
 
 ## Last commit
 
-`b000166` — feat(xr): AR on every public space by default, modifiable per space
-**`dev` and `main` are in sync — this session shipped to production (di-studio.xyz).**
+`ca1e92c` — docs: reconcile memory layer with reality + paired deep audit (+ recap on top)
+**`origin/main` at `e2a3172` — shipped to staging AND production (di-studio.xyz), all CI green. `dev` is ahead with the audit/docs work, now pushed to `origin/dev`. Local `main` is stale at `3d9bf89` — `git fetch` / fast-forward to clear.**
 
 ## Last session (2026-06-24)
 
-- Routed the public viewer's "Enter AR/VR" through walk mode (`LiveProjectScene`) instead of the locomotion-less `StudioViewport` XR session, and fixed mobile `100vh` overflow (→ `100dvh`) that pushed bottom controls off-screen (`PublicProjectViewer.jsx`, `wccExperience.css`). Verified on a real Android phone via Chrome CDP (adb).
-- AR walk joystick didn't show in `WccExhibition.jsx`: its hand-duplicated Walker rendered controls as normal page DOM, but a handheld AR session only composites the WebXR dom-overlay root — ported `LiveProjectScene`'s portal-into-`domOverlayRoot` + touch-capture fix into it.
-- AR joystick walked backward/mirrored: locomotion reconstructed forward from `originYaw` as `+(sin,cos)`, but the XR camera looks down the rig's `-Z` (opposite). Now drives movement from the camera's real horizontal forward (`getWorldDirection`). Both `XrLocomotion` copies.
-- Fly now works in XR: AR uses the ▲▼ touch buttons (`vertTouchRef` → `origin.y`); VR uses the right thumbstick Y (left stick walks, right-X turns) since the 2D Fly button isn't reachable in a headset. Altitude carries across the flat↔XR boundary. **VR path not verified on hardware** (no headset here).
-- AR is now offered up-front on every public space by default (device permitting). `publishState.xrDefaultMode` only *modifies* this: `vr` → VR, new `off` → hidden, legacy `none`/`ar` → AR (no data migration; all 20 stored projects were legacy `none`). Studio publish panel: AR (default) / VR / Off (`projectSchema` + `.cjs`, `PublicProjectViewer.jsx`, `StudioShellPanels.jsx`).
-- Repaired a stale `PreferencesPage.test.jsx` (broken by the earlier section-tabbed admin rewrite `f1e7f93`) that had been red on CI for 3 dev pushes, silently blocking the staging deploy — now navigates sections before asserting.
-- Prior session's group/hierarchy decision (structural `group` node via `parentId`) is unchanged/unstarted.
+- WCC landing "Enter exhibition" + main di.iiii "WCC Exhibition" CTAs restyled to solid red (`#d90000`, white border, hover-invert) — `src/wcc/landing/landing.css`, `src/landing/landing.css`+`LandingPage.jsx` (`landing-cta-wcc`).
+- WCC landing perf: ambient-dots keyframes off layout-thrashing `margin` → compositor `transform` via `@property --dot-x/--dot-y`; pointer-parallax caches circle `offset*` boxes instead of per-move `getBoundingClientRect`.
+- Studio object creation: new entities spawn at the orbit target (centre of view), not world origin (`getViewPlacement`); double-click viewport raycasts to the ground plane and quick-inserts there (`computeGroundPoint` in `StudioShell`).
+- Portal Reference inspector: Space + Project are now name dropdowns (spaces by label; projects fetched per chosen space, by title) instead of raw-id text — `entityRegistry` field types `space`/`project`, `StudioInspector.ProjectSelectField`.
+- Portal embed verified end-to-end: throwaway `embed-portal-test-world` (main space) with embed + gateway portals renders inline (Playwright); portal object itself landed via parallel agent (`d82f718`, `b859236`). Group/hierarchy (`group` via `parentId`) still unstarted.
+- Paired deep audit + memory-layer reconciliation (`ca1e92c`, unpushed): `docs/ai/audit-2026-06-24-as-built.md` (empirical — 7 gates green, 334 tests, 44 endpoints, ~57k LOC) + `-as-documented.md` (claimed); fixed the drift it found (MANIFESTO asset-ID seed → shipped, viewport plan Tier 1 → landed, PROGRESS backfilled 06-23/06-24).
 
-Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production). Both currently at `b000166`.
+Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production). Both at `e2a3172`, in sync.
 
 ## What works
 
 - Beta editor: graph-first layout, node palette (all nodes, scrollable), undo/redo, outliner
 - Beta topbar: hidden until Node 0 is placed (Node 0 is the seed that awakens the UI)
 - World node (`universe.world`): panel window with embedded 3D scene, fullscreen mode, overlay mode (3D behind graph)
-- Studio editor: project hub, 3D scene, inspector, assets, spaces, undo/redo (Ctrl+Z/Y)
+- Studio editor: project hub, 3D scene, inspector, assets, spaces, undo/redo (Ctrl+Z/Y), view-centred + double-click placement
+- Portal object: a Studio entity that references another project (embed inline or act as a gateway); `portal` is the 14th type in the shared `EntityContent` renderer
 - Studio asset import: GLBs at least 10 MB offer opt-in browser optimization before upload (2048px WebP textures + conservative model cleanup; originals remain optional)
 - Auth: session-cookie login, role-based access, 8 s timeout; GitHub/Google OAuth sign-in live and configured on both staging and production (separate OAuth apps per env, client secrets set as cPanel Node env vars, not in repo)
 - Deploy: push `dev` → staging.di-studio.xyz, push `main` → di-studio.xyz (via `publish-cpanel-prebuilt-v2.yml`)
@@ -45,6 +45,9 @@ Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (product
 
 ## What is broken / open
 
+- Local `main` is stale at `3d9bf89` (origin is `e2a3172`) — `git fetch` / fast-forward to clear. Throwaway `embed-portal-test-world` left in the local `main`-space DB — delete from Studio Hub if it's noise.
+- **Audit follow-ups deferred this session** (none done, user's call): fix stale `scripts/e2e-smoke.mjs` (16 false-negative failures); add `test:server-contracts` + `test:schema-sync` to CI (schema-drift prod-503 guard); prune 5 parked branches (`chore/fork-sync-contract`, `feat/asset-optimization-and-agent-efficiency`, `feat/studio-workflows`, `feature/landing-pages`, `self-host`).
+- WCC landing perf headroom: the always-on WebGL particle veil (700 pts) is the remaining throttled-fps cost — gate on mobile / `prefers-reduced-motion` if more is needed. No white-background button context exists in the WCC flow (it's red→black only), so the "visible on white" ask was covered by the solid red fill.
 - **VR fly is unverified on hardware** — AR walk/joystick/fly were confirmed on a real Android phone (CDP), but the VR path (right-thumbstick-Y altitude, smooth locomotion) has only been built/lint/mount-checked; no headset here. Test on a real device and flag anything off.
 - The `/api/users` admin endpoints are covered by automated tests only — no real OAuth round-trip has been confirmed end-to-end in this dev environment, even though GitHub/Google credentials ARE configured locally (`serverXR/.env.local`) and `/api/auth/providers` returns both `true`. A login was attempted 2026-06-22 but the verification method used couldn't confirm the resulting session — still open.
 - `scripts/ollama/Modelfile.dob-fast` / `Modelfile.dob-deep` are mid-iteration locally (base swapped to `qwen3:8b`, not yet committed) — check `git diff` before assuming the committed `qwen2.5-coder:7b` base is current.
