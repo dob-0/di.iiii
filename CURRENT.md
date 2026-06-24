@@ -9,18 +9,19 @@ active_branch: dev
 
 ## Last commit
 
-`e2a3172` — feat(studio): view-centred placement, double-click-to-place, portal name pickers
-**`dev` is ahead of `main` (portal object, placement UX, landing work) — NOT yet shipped to prod.**
+`ca1e92c` — docs: reconcile memory layer with reality + paired deep audit (+ recap on top)
+**`origin/main` at `e2a3172` — shipped to staging AND production (di-studio.xyz), all CI green. `dev` is ahead with the audit/docs work, now pushed to `origin/dev`. Local `main` is stale at `3d9bf89` — `git fetch` / fast-forward to clear.**
 
 ## Last session (2026-06-24)
 
-- WCC landing "Enter exhibition" button restyled to solid red (`#d90000`) fill + 2px white border + shadow, hover inverts to white/red (`src/wcc/landing/landing.css`). Committed in `d82f718` (swept in with a parallel agent's portal work).
-- Main di.iiii landing "WCC Exhibition" CTA made red to match via new `landing-cta-wcc` class (`src/landing/LandingPage.jsx` + `landing.css`) — **still uncommitted** in the working tree.
-- WCC landing perf: ambient-dots keyframes moved off layout-thrashing `margin` to compositor `transform` via `@property --dot-x/--dot-y`; pointer-parallax now caches circle layout boxes (`offset*`) instead of `getBoundingClientRect` per pointermove. ~61fps desktop; under 6× CPU throttle the remaining limiter is the always-on WebGL particle veil (700 pts).
-- Portal Object landed via parallel agent: Studio node to reference another project, inline-embed or gateway (`d82f718`, `b859236`). A second agent is mid-edit on `src/studio/Studio{Editor,QuickInsert,Shell}.jsx` (uncommitted — not mine, leave alone).
-- Prior group/hierarchy decision (structural `group` node via `parentId`) still unstarted.
+- WCC landing "Enter exhibition" + main di.iiii "WCC Exhibition" CTAs restyled to solid red (`#d90000`, white border, hover-invert) — `src/wcc/landing/landing.css`, `src/landing/landing.css`+`LandingPage.jsx` (`landing-cta-wcc`).
+- WCC landing perf: ambient-dots keyframes off layout-thrashing `margin` → compositor `transform` via `@property --dot-x/--dot-y`; pointer-parallax caches circle `offset*` boxes instead of per-move `getBoundingClientRect`.
+- Studio object creation: new entities spawn at the orbit target (centre of view), not world origin (`getViewPlacement`); double-click viewport raycasts to the ground plane and quick-inserts there (`computeGroundPoint` in `StudioShell`).
+- Portal Reference inspector: Space + Project are now name dropdowns (spaces by label; projects fetched per chosen space, by title) instead of raw-id text — `entityRegistry` field types `space`/`project`, `StudioInspector.ProjectSelectField`.
+- Portal embed verified end-to-end: throwaway `embed-portal-test-world` (main space) with embed + gateway portals renders inline (Playwright); portal object itself landed via parallel agent (`d82f718`, `b859236`). Group/hierarchy (`group` via `parentId`) still unstarted.
+- Paired deep audit + memory-layer reconciliation (`ca1e92c`, unpushed): `docs/ai/audit-2026-06-24-as-built.md` (empirical — 7 gates green, 334 tests, 44 endpoints, ~57k LOC) + `-as-documented.md` (claimed); fixed the drift it found (MANIFESTO asset-ID seed → shipped, viewport plan Tier 1 → landed, PROGRESS backfilled 06-23/06-24).
 
-Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production). `dev` ahead of `main`.
+Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production). Both at `e2a3172`, in sync.
 
 ## What works
 
@@ -44,7 +45,8 @@ Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (product
 
 ## What is broken / open
 
-- **Uncommitted in tree** — `src/landing/` (my red WCC CTA) + `src/studio/Studio{Editor,QuickInsert,Shell}.jsx` (parallel agent mid-edit, NOT mine). Don't blanket-commit; stage `src/landing/` only.
+- Local `main` is stale at `3d9bf89` (origin is `e2a3172`) — `git fetch` / fast-forward to clear. Throwaway `embed-portal-test-world` left in the local `main`-space DB — delete from Studio Hub if it's noise.
+- **Audit follow-ups deferred this session** (none done, user's call): fix stale `scripts/e2e-smoke.mjs` (16 false-negative failures); add `test:server-contracts` + `test:schema-sync` to CI (schema-drift prod-503 guard); prune 5 parked branches (`chore/fork-sync-contract`, `feat/asset-optimization-and-agent-efficiency`, `feat/studio-workflows`, `feature/landing-pages`, `self-host`).
 - WCC landing perf headroom: the always-on WebGL particle veil (700 pts) is the remaining throttled-fps cost — gate on mobile / `prefers-reduced-motion` if more is needed. No white-background button context exists in the WCC flow (it's red→black only), so the "visible on white" ask was covered by the solid red fill.
 - **VR fly is unverified on hardware** — AR walk/joystick/fly were confirmed on a real Android phone (CDP), but the VR path (right-thumbstick-Y altitude, smooth locomotion) has only been built/lint/mount-checked; no headset here. Test on a real device and flag anything off.
 - The `/api/users` admin endpoints are covered by automated tests only — no real OAuth round-trip has been confirmed end-to-end in this dev environment, even though GitHub/Google credentials ARE configured locally (`serverXR/.env.local`) and `/api/auth/providers` returns both `true`. A login was attempted 2026-06-22 but the verification method used couldn't confirm the resulting session — still open.
