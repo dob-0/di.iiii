@@ -12,7 +12,7 @@ const ENTITY_TYPES = [
     { key: 'ambientLight', label: '☀ Ambient' },
 ]
 
-export default function StudioQuickInsert({ position, onClose, onCreateEntity, onCreateFromAsset, assets = [] }) {
+export default function StudioQuickInsert({ position, worldPos = null, onClose, onCreateEntity, onCreateFromAsset, assets = [] }) {
     useEffect(() => {
         const handler = (e) => { if (e.key === 'Escape') onClose() }
         window.addEventListener('keydown', handler)
@@ -35,7 +35,7 @@ export default function StudioQuickInsert({ position, onClose, onCreateEntity, o
                         <button
                             key={key}
                             className="sqi-btn"
-                            onClick={() => { onCreateEntity(key); onClose() }}
+                            onClick={() => { onCreateEntity(key, null, worldPos); onClose() }}
                         >
                             {label}
                         </button>
@@ -54,7 +54,7 @@ export default function StudioQuickInsert({ position, onClose, onCreateEntity, o
                                         className="sqi-btn sqi-btn--asset"
                                         title={name}
                                         onClick={() => {
-                                            onCreateFromAsset?.(asset)
+                                            onCreateFromAsset?.(asset, worldPos)
                                             onClose()
                                         }}
                                     >

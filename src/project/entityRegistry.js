@@ -257,8 +257,8 @@ const DEFINITIONS = {
                         { value: 'portal', label: 'Portal (gateway)' },
                         { value: 'embed', label: 'Embed (inline)' }
                     ] },
-                    { label: 'Space ID', component: 'reference', path: ['spaceId'], type: 'text' },
-                    { label: 'Project ID', component: 'reference', path: ['projectId'], type: 'text' },
+                    { label: 'Space', component: 'reference', path: ['spaceId'], type: 'space' },
+                    { label: 'Project', component: 'reference', path: ['projectId'], type: 'project' },
                     { label: 'Label', component: 'reference', path: ['label'], type: 'text' }
                 ]
             }
