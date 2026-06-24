@@ -9,19 +9,17 @@ active_branch: dev
 
 ## Last commit
 
-`ca1e92c` — docs: reconcile memory layer with reality + paired deep audit (+ recap on top)
-**`origin/main` at `e2a3172` — shipped to staging AND production (di-studio.xyz), all CI green. `dev` is ahead with the audit/docs work, now pushed to `origin/dev`. Local `main` is stale at `3d9bf89` — `git fetch` / fast-forward to clear.**
+`46a0fd5` — ci: add /check pre-ship gate and wire /ship to it
+**`dev` is ahead of `main` and pushed to `origin/dev` → staging. `origin/main` at `e2a3172` (production di-studio.xyz). Local `main` still stale at `3d9bf89` — `git fetch` / fast-forward to clear.**
 
 ## Last session (2026-06-24)
 
-- WCC landing "Enter exhibition" + main di.iiii "WCC Exhibition" CTAs restyled to solid red (`#d90000`, white border, hover-invert) — `src/wcc/landing/landing.css`, `src/landing/landing.css`+`LandingPage.jsx` (`landing-cta-wcc`).
-- WCC landing perf: ambient-dots keyframes off layout-thrashing `margin` → compositor `transform` via `@property --dot-x/--dot-y`; pointer-parallax caches circle `offset*` boxes instead of per-move `getBoundingClientRect`.
-- Studio object creation: new entities spawn at the orbit target (centre of view), not world origin (`getViewPlacement`); double-click viewport raycasts to the ground plane and quick-inserts there (`computeGroundPoint` in `StudioShell`).
-- Portal Reference inspector: Space + Project are now name dropdowns (spaces by label; projects fetched per chosen space, by title) instead of raw-id text — `entityRegistry` field types `space`/`project`, `StudioInspector.ProjectSelectField`.
-- Portal embed verified end-to-end: throwaway `embed-portal-test-world` (main space) with embed + gateway portals renders inline (Playwright); portal object itself landed via parallel agent (`d82f718`, `b859236`). Group/hierarchy (`group` via `parentId`) still unstarted.
-- Paired deep audit + memory-layer reconciliation (`ca1e92c`, unpushed): `docs/ai/audit-2026-06-24-as-built.md` (empirical — 7 gates green, 334 tests, 44 endpoints, ~57k LOC) + `-as-documented.md` (claimed); fixed the drift it found (MANIFESTO asset-ID seed → shipped, viewport plan Tier 1 → landed, PROGRESS backfilled 06-23/06-24).
+- New `/check` slash command (`.claude/commands/check.md`): runs the AGENTS.md validation suite (lint → conditional build → tests, with area-scoped `test:server-contracts` / `test:schema-sync` / `docs:ai:check`) + a correctness-only diff review, ending in `GATE: GO` / `GATE: NO-GO`. Build is skipped for docs/CSS-only diffs.
+- Gated `/ship` on it (`.claude/commands/ship.md`): step 0 runs `/check` and refuses to stage/commit/push on `NO-GO` (override with explicit "ship anyway").
+- Gate self-test green (lint 0 errors, 334 tests pass) and shipped to `origin/dev` (`46a0fd5`).
+- Out-of-repo, same session: rebuilt the global Claude statusline (`~/.claude/statusline.sh`) to show ccusage rolling-block cost + time-left, minimal no-emoji ANSI style. Not part of di.iiii.
 
-Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production). Both at `e2a3172`, in sync.
+Branch focus: `dev` → staging.di-studio.xyz (ahead), `main` → di-studio.xyz (production) at `e2a3172`.
 
 ## What works
 
