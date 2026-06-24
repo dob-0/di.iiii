@@ -1,5 +1,51 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { cloneValue } from '../../shared/projectSchema.js'
+import { listProjects } from '../../project/services/projectsApi.js'
+
+// Portal "Project" picker: fetches the chosen space's projects so you select by
+// title instead of typing a raw id. Falls back to a free-text input when no
+// space is chosen yet or the list can't load (so an id is still settable).
+function ProjectSelectField({ label, spaceId, value, onChange }) {
+    const [projects, setProjects] = useState(null)
+    useEffect(() => {
+        if (!spaceId) { setProjects(null); return undefined }
+        let alive = true
+        setProjects(null)
+        listProjects(spaceId)
+            .then((res) => { if (alive) setProjects(Array.isArray(res) ? res : (res?.projects || [])) })
+            .catch(() => { if (alive) setProjects([]) })
+        return () => { alive = false }
+    }, [spaceId])
+
+    if (!spaceId || projects === null) {
+        return (
+            <div className="insp-field">
+                <label className="insp-label">{label}</label>
+                <input
+                    className="insp-input"
+                    type="text"
+                    value={value || ''}
+                    placeholder={spaceId ? 'Loading…' : 'Pick a space first'}
+                    onChange={(e) => onChange(e.target.value || null)}
+                />
+            </div>
+        )
+    }
+    return (
+        <div className="insp-field">
+            <label className="insp-label">{label}</label>
+            <select className="insp-select" value={value || ''} onChange={(e) => onChange(e.target.value || null)}>
+                <option value="">— none —</option>
+                {projects.map((p) => (
+                    <option key={p.id} value={p.id}>{p.title || p.id}</option>
+                ))}
+                {value && !projects.some((p) => p.id === value) ? (
+                    <option value={value}>{value} (not in space)</option>
+                ) : null}
+            </select>
+        </div>
+    )
+}
 
 const setNestedValue = (value, path, nextValue) => {
     const draft = cloneValue(value)
@@ -147,7 +193,7 @@ function InspSlider({ field, value, onChange }) {
 
 const isBoundedNumber = (field) => field.type === 'number' && Number.isFinite(field.min) && Number.isFinite(field.max)
 
-function InspField({ field, value, assetOptions = [], onChange }) {
+function InspField({ field, value, assetOptions = [], spaceOptions = [], siblingSpaceId = null, onChange }) {
     if (field.type === 'checkbox') {
         return (
             <label className="insp-toggle">
@@ -176,6 +222,29 @@ function InspField({ field, value, assetOptions = [], onChange }) {
                     onChange={(e) => onChange(e.target.value)}
                 />
             </div>
+        )
+    }
+
+    if (field.type === 'space') {
+        return (
+            <div className="insp-field">
+                <label className="insp-label">{field.label}</label>
+                <select className="insp-select" value={value || ''} onChange={(e) => onChange(e.target.value || null)}>
+                    <option value="">— none —</option>
+                    {spaceOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                    {value && !spaceOptions.some((opt) => opt.value === value) ? (
+                        <option value={value}>{value}</option>
+                    ) : null}
+                </select>
+            </div>
+        )
+    }
+
+    if (field.type === 'project') {
+        return (
+            <ProjectSelectField label={field.label} spaceId={siblingSpaceId} value={value} onChange={onChange} />
         )
     }
 
@@ -232,8 +301,9 @@ function InspField({ field, value, assetOptions = [], onChange }) {
     )
 }
 
-function InspSection({ section, sectionValue, assetOptions, onSectionChange }) {
+function InspSection({ section, sectionValue, assetOptions, spaceOptions, onSectionChange }) {
     const [open, setOpen] = useState(true)
+    const siblingSpaceId = readNestedValue(sectionValue, ['spaceId']) || null
     return (
         <div className="insp-section">
             <button className="insp-section-btn" onClick={() => setOpen((v) => !v)}>
@@ -267,6 +337,8 @@ function InspSection({ section, sectionValue, assetOptions, onSectionChange }) {
                             field={group.field}
                             value={readNestedValue(sectionValue, group.field.path)}
                             assetOptions={assetOptions}
+                            spaceOptions={spaceOptions}
+                            siblingSpaceId={siblingSpaceId}
                             onChange={(nextValue) => {
                                 const next = setNestedValue(sectionValue, group.field.path, nextValue)
                                 onSectionChange?.(group.field.component || section.id, next)
@@ -284,6 +356,7 @@ export default function StudioInspector({
     subtitle = '',
     sections = [],
     assetOptions = [],
+    spaceOptions = [],
     values = {},
     onSectionChange,
     footer = null,
@@ -312,6 +385,7 @@ export default function StudioInspector({
                         section={section}
                         sectionValue={sectionValue}
                         assetOptions={assetOptions}
+                        spaceOptions={spaceOptions}
                         onSectionChange={onSectionChange}
                     />
                 )
