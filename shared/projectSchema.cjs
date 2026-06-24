@@ -14,7 +14,8 @@ const ENTITY_TYPES = new Set([
   'image',
   'video',
   'audio',
-  'model'
+  'model',
+  'portal'
 ])
 
 const WINDOW_IDS = ['viewport', 'assets', 'inspector', 'outliner', 'activity', 'project']
@@ -189,6 +190,9 @@ const buildDefaultComponentsForType = (type = 'box') => {
     case 'model':
       base.media = { assetId: null, autoplay: false, loop: false, muted: false }
       break
+    case 'portal':
+      base.reference = { spaceId: '', projectId: '', mode: 'portal', label: '' }
+      break
     case 'box':
     default:
       base.primitive = { shape: 'box', size: [1, 1, 1] }
@@ -285,6 +289,17 @@ const normalizeEntity = (entity = {}) => {
     nextComponents.link = {
       enabled: ensureBoolean(sourceComponents.link?.enabled, defaultComponents.link?.enabled || false),
       href: ensureString(sourceComponents.link?.href, defaultComponents.link?.href || '')
+    }
+  }
+  if (sourceComponents.reference || defaultComponents.reference) {
+    const refSource = sourceComponents.reference || {}
+    const refDefault = defaultComponents.reference || {}
+    const refMode = ensureString(refSource.mode, refDefault.mode || 'portal')
+    nextComponents.reference = {
+      spaceId: ensureString(refSource.spaceId, refDefault.spaceId || ''),
+      projectId: ensureString(refSource.projectId, refDefault.projectId || ''),
+      mode: ['embed', 'portal'].includes(refMode) ? refMode : 'portal',
+      label: ensureString(refSource.label, refDefault.label || '')
     }
   }
   if (sourceComponents.runtime || defaultComponents.runtime) {

@@ -63,6 +63,19 @@
     box-shadow: none !important;
 }
 
+.landing-cta-wcc {
+    color: #fff !important;
+    background: #d90000 !important;
+    border: 2px solid #fff !important;
+    font-weight: 700 !important;
+}
+
+.landing-cta-wcc:hover {
+    color: #d90000 !important;
+    background: #fff !important;
+    border-color: #fff !important;
+}
+
 .lp-btn-link {
     color: var(--di-text-muted) !important;
     font-size: 0.82rem !important;

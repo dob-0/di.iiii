@@ -21,6 +21,7 @@ import CylinderObject from '../objectComponents/CylinderObject.jsx'
 import ImageObject from '../objectComponents/ImageObject.jsx'
 import VideoObject from '../objectComponents/VideoObject.jsx'
 import ModelObject from '../objectComponents/ModelObject.jsx'
+import PortalObject from '../project/viewport/PortalObject.jsx'
 import './liveProjectScene.css'
 
 const WALK_MAX_SPEED = 5.2
@@ -113,6 +114,8 @@ function EntityVisual({ entity, assetMap }) {
         return <VideoObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
     case 'model':
         return <ModelObject assetRef={asset || null} data={asset?.url || null} modelColor={appearance.color} applyModelColor={false} opacity={appearance.opacity} />
+    case 'portal':
+        return <PortalObject entity={entity} />
     default:
         return null
     }

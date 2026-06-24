@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Box3, Vector3 } from 'three'
+import { Box3, Plane, Raycaster, Vector2, Vector3 } from 'three'
 import StudioInspector from './StudioInspector.jsx'
 import StudioViewportLayout from './StudioViewportLayout.jsx'
 import StudioFloatingPanel from './StudioFloatingPanel.jsx'
@@ -17,6 +17,27 @@ import {
     PublishPanel,
     StructurePanel,
 } from './StudioShellPanels.jsx'
+
+// Raycast a viewport double-click into the scene's ground plane (y=0) so a
+// quick-inserted entity lands where the cursor pointed, not at a fixed default.
+// Returns null when the camera/canvas isn't resolvable or the ray misses the
+// plane (e.g. looking up at the horizon) — callers fall back to view placement.
+const GROUND_PLANE = new Plane(new Vector3(0, 1, 0), 0)
+const groundRaycaster = new Raycaster()
+const computeGroundPoint = (event, controlsRef) => {
+    const camera = controlsRef?.current?.camera
+    const canvas = event.target?.closest?.('.studio-viewport-shell')?.querySelector('canvas')
+    if (!camera || !canvas) return null
+    const rect = canvas.getBoundingClientRect()
+    if (!rect.width || !rect.height) return null
+    const ndc = new Vector2(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1
+    )
+    groundRaycaster.setFromCamera(ndc, camera)
+    const hit = new Vector3()
+    return groundRaycaster.ray.intersectPlane(GROUND_PLANE, hit) ? [hit.x, 0, hit.z] : null
+}
 
 const DEFAULT_POSITIONS = () => {
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1280
@@ -49,6 +70,7 @@ export default function StudioShell({
     inspectorSections,
     inspectorValues,
     assetOptions,
+    spaceOptions = [],
     spaceAssets = [],
     presence,
     syncState,
@@ -254,8 +276,8 @@ export default function StudioShell({
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return
-        setQuickInsert({ x: e.clientX, y: e.clientY })
-    }, [])
+        setQuickInsert({ x: e.clientX, y: e.clientY, worldPos: computeGroundPoint(e, controlsRef) })
+    }, [controlsRef])
 
     const handleFullscreen = useCallback(() => {
         const doc = window.document
@@ -342,6 +364,7 @@ export default function StudioShell({
                                 sections={inspectorSections}
                                 values={inspectorValues}
                                 assetOptions={assetOptions}
+                                spaceOptions={spaceOptions}
                                 onSectionChange={onInspectorChange}
                                 footer={inspectorFooter}
                             />
@@ -418,6 +441,7 @@ export default function StudioShell({
             {quickInsert && (
                 <StudioQuickInsert
                     position={quickInsert}
+                    worldPos={quickInsert.worldPos}
                     onClose={() => setQuickInsert(null)}
                     onCreateEntity={onCreateEntity}
                     onCreateFromAsset={onCreateFromAsset}

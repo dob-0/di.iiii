@@ -10,7 +10,7 @@ import { createStudioProjectBundle, readStudioProjectBundle } from '../../projec
 import { defaultWorldState, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import useXrAr from '../../hooks/useXrAr.js'
 import useSpaceAssets from '../../hooks/useSpaceAssets.js'
-import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
+import { getServerSpace, listServerSpaces, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { useStudioLayoutPrefs } from '../hooks/useStudioLayoutPrefs.js'
@@ -31,6 +31,18 @@ const detectEntityTypeFromFile = (file) => {
 }
 
 const getStarterPlacement = (count = 0) => [((count % 4) - 1.5) * 1.4, 0, Math.floor(count / 4) * -1.8]
+
+// New objects should appear where the user is looking, not march out from world
+// origin. Drop them at the orbit target (centre of the current view) with a small
+// per-count ring offset so repeated inserts don't perfectly overlap.
+const getViewPlacement = (controlsRef, count = 0) => {
+    const target = controlsRef?.current?.getTarget?.(new Vector3())
+    if (!target) return getStarterPlacement(count)
+    const ring = count % 6
+    const angle = ring * (Math.PI / 3)
+    const spread = ring === 0 ? 0 : 0.75
+    return [target.x + Math.cos(angle) * spread, Math.max(0, target.y), target.z + Math.sin(angle) * spread]
+}
 
 const buildDownload = (content, filename, type = 'application/json') => {
     const blob = content instanceof Blob ? content : new Blob([content], { type })
@@ -124,6 +136,17 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     })
     const controlsRef = useRef(null)
     const [spaceMeta, setSpaceMeta] = useState(null)
+    // Spaces list powers the portal entity's Space dropdown (pick by name instead
+    // of typing a raw id). Projects for the chosen space are fetched on demand
+    // inside the inspector field itself.
+    const [spaceOptions, setSpaceOptions] = useState([])
+    useEffect(() => {
+        let alive = true
+        listServerSpaces()
+            .then((spaces) => { if (alive) setSpaceOptions(spaces.map((s) => ({ value: s.id, label: s.label || s.id }))) })
+            .catch(() => {})
+        return () => { alive = false }
+    }, [])
     const [isUpdatingLiveProject, setIsUpdatingLiveProject] = useState(false)
     const [cameraView, setCameraView] = useState(() => ({
         position: document.worldState?.savedView?.position || defaultWorldState.savedView.position,
@@ -200,12 +223,12 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         setCameraTarget: (target) => setCameraView((current) => ({ ...current, target }))
     })
 
-    const handleCreateEntity = (type, asset = null) => {
+    const handleCreateEntity = (type, asset = null, position = null) => {
         const entity = createEntityOfType(type, {
             name: asset?.name ? asset.name.replace(/\.[^.]+$/, '') : undefined,
             components: {
                 transform: {
-                    position: getStarterPlacement(entities.length)
+                    position: position || getViewPlacement(controlsRef, entities.length)
                 },
                 ...(asset ? {
                     media: {
@@ -821,6 +844,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             inspectorSections={inspectorSections}
             inspectorValues={inspectorValues}
             assetOptions={document.assets || []}
+            spaceOptions={spaceOptions}
             spaceAssets={spaceAssets}
             presence={presence}
             syncState={syncState}
@@ -832,7 +856,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             controlsRef={controlsRef}
             xrState={{ ...xr, xrStore: xr.xrStore }}
             onCreateEntity={handleCreateEntity}
-            onCreateFromAsset={(asset) => handleCreateEntity(detectEntityTypeFromFile(asset), asset)}
+            onCreateFromAsset={(asset, position = null) => handleCreateEntity(detectEntityTypeFromFile(asset), asset, position)}
             onAssetFilesSelected={handleAssetFilesSelected}
             onDeleteSelected={handleDeleteSelected}
             onGroupSelected={handleGroupSelected}

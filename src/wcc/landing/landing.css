@@ -129,9 +129,24 @@
     will-change: transform, opacity;
 }
 
+@property --dot-x {
+    syntax: "<length>";
+    inherits: false;
+    initial-value: 0px;
+}
+
+@property --dot-y {
+    syntax: "<length>";
+    inherits: false;
+    initial-value: 0px;
+}
+
 .wcc-ambient-dots span {
     width: var(--dot-size, 10px);
     opacity: 0.92;
+    /* Transform is compositor-friendly; the old margin-based keyframes forced a
+       full layout reflow every frame across all 26 dots (the idle-scroll lag). */
+    transform: translate3d(var(--dot-x, 0px), var(--dot-y, 0px), 0);
     animation:
         wcc-dot-chaos-x var(--dot-speed-x, 7s) ease-in-out infinite alternate,
         wcc-dot-chaos-y var(--dot-speed-y, 9s) ease-in-out infinite alternate;
@@ -182,17 +197,17 @@
 .wcc-ambient-dots span:nth-child(26) { left: 10%; top: 93%; --dot-size: 38px; --dot-speed-x: 7.4s; --dot-speed-y: 5.3s; --dot-delay: -6s; }
 
 @keyframes wcc-dot-chaos-x {
-    0% { margin-left: -32px; }
-    35% { margin-left: 58px; }
-    67% { margin-left: -84px; }
-    100% { margin-left: 108px; }
+    0% { --dot-x: -32px; }
+    35% { --dot-x: 58px; }
+    67% { --dot-x: -84px; }
+    100% { --dot-x: 108px; }
 }
 
 @keyframes wcc-dot-chaos-y {
-    0% { margin-top: -46px; }
-    42% { margin-top: 112px; }
-    71% { margin-top: -78px; }
-    100% { margin-top: 68px; }
+    0% { --dot-y: -46px; }
+    42% { --dot-y: 112px; }
+    71% { --dot-y: -78px; }
+    100% { --dot-y: 68px; }
 }
 
 @keyframes wcc-text-float {
@@ -408,22 +423,24 @@
     justify-content: center;
     min-height: 46px;
     padding: 0 18px;
-    border: 1px solid rgba(248, 245, 239, 0.3);
+    border: 2px solid #ffffff;
     border-radius: 0;
     color: #ffffff;
-    background: transparent;
+    background: #d90000;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.32);
     font-size: 0.75rem;
     font-weight: 900;
     letter-spacing: 0.16em;
     text-decoration: none;
     text-transform: uppercase;
-    transition: background-color 240ms ease, color 240ms ease, transform 240ms ease;
+    transition: background-color 240ms ease, color 240ms ease, border-color 240ms ease, transform 240ms ease;
 }
 
 .wcc-enter-button:hover,
 .wcc-enter-button:focus-visible {
-    color: #050505;
+    color: #d90000;
     background: #ffffff;
+    border-color: #ffffff;
     transform: translateY(-3px);
 }
 

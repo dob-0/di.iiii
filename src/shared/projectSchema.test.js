@@ -24,6 +24,29 @@ describe('projectSchema', () => {
         expect(document.windowLayout.windows.assets.visible).toBe(false)
     })
 
+    it('normalizes a portal entity with a project reference and clamps an invalid mode', () => {
+        const document = normalizeProjectDocument({
+            entities: [
+                {
+                    type: 'portal',
+                    components: { reference: { spaceId: 'wcc', projectId: 'arthur', mode: 'embed', label: 'Arthur' } }
+                },
+                {
+                    type: 'portal',
+                    components: { reference: { spaceId: 'main', projectId: 'x', mode: 'teleport' } }
+                }
+            ]
+        })
+
+        expect(document.entities[0].type).toBe('portal')
+        expect(document.entities[0].components.reference).toEqual({
+            spaceId: 'wcc', projectId: 'arthur', mode: 'embed', label: 'Arthur'
+        })
+        // unknown mode falls back to 'portal'
+        expect(document.entities[1].components.reference.mode).toBe('portal')
+        expect(document.entities[1].components.reference.label).toBe('')
+    })
+
     it('migrates v3 old-shape nodes and edges into v4 new-shape', () => {
         const document = normalizeProjectDocument({
             version: 3,
