@@ -115,6 +115,7 @@ const releaseInfo = loadReleaseInfo(config.directories.root)
 const {
   appendOpsHistory,
   buildMeta,
+  countSpacesOwnedBy,
   deleteSpace,
   ensureDefaultSpace,
   ensureSpaceScene,
@@ -467,6 +468,12 @@ router.get('/api/auth/session', async (req, res, next) => {
       })
     }
 
+    const spaceLimit = config.freeSpaceLimit
+    const exempt = Boolean(state.isUnrestricted) || state.role === 'admin'
+    const ownerId = state.type === 'session' ? state.subject : null
+    const ownedSpaceCount = ownerId ? countSpacesOwnedBy(ownerId) : 0
+    const canCreateSpace = !config.requireAuth || exempt || (Boolean(ownerId) && ownedSpaceCount < spaceLimit)
+
     res.json({
       requireAuth: config.requireAuth,
       authenticated: Boolean(state.authenticated),
@@ -476,7 +483,10 @@ router.get('/api/auth/session', async (req, res, next) => {
       label: state.label || null,
       spaces: state.spaces,
       isUnrestricted: Boolean(state.isUnrestricted),
-      expiresAt: state.session?.expiresAt || null
+      expiresAt: state.session?.expiresAt || null,
+      spaceLimit,
+      ownedSpaceCount,
+      canCreateSpace
     })
   } catch (error) {
     next(error)
@@ -692,6 +702,8 @@ registerSpaceRoutes(router, {
   broadcastLiveEvent,
   buildMeta,
   config,
+  countSpacesOwnedBy,
+  spaceLimit: config.freeSpaceLimit,
   deleteSpace,
   ensureSpaceScene,
   ensureSpaceWritable,

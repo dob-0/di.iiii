@@ -214,6 +214,7 @@ const config = {
     dbPath
   },
   defaultTtlMs: Number(process.env.SPACE_TTL_MS || 1000 * 60 * 60 * 24 * 30),
+  freeSpaceLimit: Number(process.env.FREE_SPACE_LIMIT) || 3,
   liveSync: {
     url: (process.env.LIVE_API_URL || 'https://di-studio.xyz/serverXR').replace(/\/+$/, ''),
     token: (process.env.LIVE_API_TOKEN || '').trim()

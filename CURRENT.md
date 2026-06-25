@@ -9,16 +9,15 @@ active_branch: dev
 
 ## Last commit
 
-`c6f64ee` — refactor(admin-ui): rebuild access/guest management on canonical /admin surface
+`9aac69b` — chore(ci/smoke): explicit contract+schema CI guards; fix e2e-smoke false negatives
 **`dev` pushed to `origin/dev` → staging. `origin/main` at `e2a3172` (production di-studio.xyz). Local `main` still stale at `3d9bf89` — `git fetch` / fast-forward to clear.**
 
-## Last session (2026-06-25)
+## Last session (2026-06-26)
 
-- Login/space/access cleanup, backend-first (`2b7a217`): decoupled publish from visibility (linking a project no longer auto-flips `isPublic`); consolidated all space scope checks behind one `canAccessSpace()` in `authAccess.js` (HTTP + sockets); explicit `users.is_unrestricted` access model (guarded migration backfills legacy `spaces:"null"` rows, no cookie bump / no forced re-login); space `kind` (`normal|global|sandbox`) + settable `config.globalSpaceId` + guest provisioning (shared global space OR per-guest `sandbox-…`); reaper never deletes a `global` space.
-- Two DB migrations (`v2_user_is_unrestricted`, `v3_space_kind_global`) dry-run-verified safe + idempotent on copies of `serverXR/data/di.db`; they auto-apply on server boot.
-- First admin UI attempt was bespoke `ssh-*` and looked wrong; **reverted** it and rebuilt as `AdminAccessSection` on the canonical `/admin` Ops Graph page (`c6f64ee`), composed only from `preferences-*` components — zero new CSS. SpaceHub returned to its original design.
-- New rule in memory: **admin/management UIs reuse the `preferences-*` design system** (`PreferencesShared.jsx`); never invent parallel styling.
-- Validation green throughout: lint 0 errors, build ✓, 340 tests, server-contracts 21; live-verified guest modes + admin UI (desktop + mobile) against throwaway data copies.
+- `/admin` Ops Graph visual cleanup (CSS-only, canonical `preferences-*`): fixed the serif fallback (`.preferences-page` had no `font-family` → set Inter stack), de-monospaced metric values, rebuilt Activity Signals as stacked label/value, removed the sticky overlapping topbar, added a ▾/▸ header collapse toggle, compacted the header (single-line metric cards, dropped the description).
+- **Unified manager** — new `AdminManageSection` (`/admin` → **Manage**, now the default tab): one directory tree `Spaces → projects` (lazy-loaded) with a context detail pane for inline space/project CRUD, publish, guest-entry (global) + default-space toggles, and per-account access/role. Absorbs and **deletes** the old `AdminAccessSection` (Access tab). Reuses existing services + `preferences-*`; `SpaceHub`/`StudioHub` stay as the creative entry.
+- **3 free spaces per account** — new `spaces.owner_user_id` column (idempotent migration, existing rows NULL = uncounted) + `countSpacesOwnedBy`. `POST /api/spaces` enforces a quota (`config.freeSpaceLimit`, default 3, env `FREE_SPACE_LIMIT`): signed-in only, admins/unrestricted exempt, guests blocked, only when `requireAuth`. `/api/auth/session` now returns `spaceLimit`/`ownedSpaceCount`/`canCreateSpace`; SpaceHub gates the create button and shows usage.
+- Validation: lint 0 errors, build ✓, server-contracts 21, **344** tests (added `AdminManageSection.test.jsx`, `spaceStore.ownership.test.js`); migration dry-run safe + idempotent on a copy of `serverXR/data/di.db`.
 
 Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production) at `e2a3172`.
 
@@ -44,6 +43,7 @@ Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (product
 
 ## What is broken / open
 
+- **`/admin` Ops Graph UI tweaks are uncommitted** (`preferences.css` + `PreferencesPage.jsx`) — build ✓ each round, but `lint`/`test` not run and not committed; commit or run full validation when ready.
 - **Access/guest work needs human testing on staging** — admin UI lives at `/admin` → **Access** tab (admin-only; sign in as dob-0 to see People & Access). Guest global/sandbox modes set via that tab's `Set global` buttons. Not yet clicked-through by a human on staging.
 - Local `main` is stale at `3d9bf89` (origin is `e2a3172`) — `git fetch` / fast-forward to clear. Throwaway `embed-portal-test-world` left in the local `main`-space DB — delete from Studio Hub if it's noise.
 - **Audit follow-ups deferred this session** (none done, user's call): fix stale `scripts/e2e-smoke.mjs` (16 false-negative failures); add `test:server-contracts` + `test:schema-sync` to CI (schema-drift prod-503 guard); prune 5 parked branches (`chore/fork-sync-contract`, `feat/asset-optimization-and-agent-efficiency`, `feat/studio-workflows`, `feature/landing-pages`, `self-host`).

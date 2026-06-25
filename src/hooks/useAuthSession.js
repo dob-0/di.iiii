@@ -9,7 +9,10 @@ const DEFAULT_STATE = {
     subject: null,
     label: null,
     spaces: null,
-    expiresAt: null
+    expiresAt: null,
+    spaceLimit: null,
+    ownedSpaceCount: 0,
+    canCreateSpace: false
 }
 
 export default function useAuthSession() {

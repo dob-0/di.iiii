@@ -9,6 +9,8 @@ function registerSpaceRoutes(router, {
   broadcastLiveEvent,
   buildMeta,
   config = {},
+  countSpacesOwnedBy = null,
+  spaceLimit = 3,
   deleteSpace,
   ensureSpaceScene,
   ensureSpaceWritable,
@@ -91,11 +93,31 @@ function registerSpaceRoutes(router, {
       if (await spaceExists(spaceId)) {
         return res.status(409).json({ error: 'Space already exists.' })
       }
-      const meta = buildMeta(spaceId, { label, permanent, allowEdits })
+
+      const state = req.authState || {}
+      const sessionUserId = state.type === 'session' ? state.subject : null
+      // Admins / unrestricted accounts create freely; the free-tier quota only
+      // applies when auth is on and the creator is a regular signed-in account.
+      const exempt = state.isUnrestricted || state.role === 'admin'
+      if (config.requireAuth && !exempt) {
+        if (!sessionUserId) {
+          return res.status(403).json({ error: 'Sign in with an account to create a space.', code: 'auth_required' })
+        }
+        const owned = countSpacesOwnedBy ? countSpacesOwnedBy(sessionUserId) : 0
+        if (owned >= spaceLimit) {
+          return res.status(403).json({
+            error: `You've reached your free limit of ${spaceLimit} spaces. Delete one to make room.`,
+            code: 'space_limit',
+            limit: spaceLimit,
+            owned
+          })
+        }
+      }
+
+      const meta = buildMeta(spaceId, { label, permanent, allowEdits, ownerUserId: sessionUserId })
       await saveSpaceMeta(spaceId, meta)
       await ensureSpaceScene(spaceId)
 
-      const sessionUserId = req.authState?.type === 'session' ? req.authState.subject : null
       if (sessionUserId && findUserById && setUserSpaces) {
         try {
           const existing = findUserById(sessionUserId)
