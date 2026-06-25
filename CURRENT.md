@@ -9,17 +9,18 @@ active_branch: dev
 
 ## Last commit
 
-`46a0fd5` — ci: add /check pre-ship gate and wire /ship to it
-**`dev` is ahead of `main` and pushed to `origin/dev` → staging. `origin/main` at `e2a3172` (production di-studio.xyz). Local `main` still stale at `3d9bf89` — `git fetch` / fast-forward to clear.**
+`c6f64ee` — refactor(admin-ui): rebuild access/guest management on canonical /admin surface
+**`dev` pushed to `origin/dev` → staging. `origin/main` at `e2a3172` (production di-studio.xyz). Local `main` still stale at `3d9bf89` — `git fetch` / fast-forward to clear.**
 
-## Last session (2026-06-24)
+## Last session (2026-06-25)
 
-- New `/check` slash command (`.claude/commands/check.md`): runs the AGENTS.md validation suite (lint → conditional build → tests, with area-scoped `test:server-contracts` / `test:schema-sync` / `docs:ai:check`) + a correctness-only diff review, ending in `GATE: GO` / `GATE: NO-GO`. Build is skipped for docs/CSS-only diffs.
-- Gated `/ship` on it (`.claude/commands/ship.md`): step 0 runs `/check` and refuses to stage/commit/push on `NO-GO` (override with explicit "ship anyway").
-- Gate self-test green (lint 0 errors, 334 tests pass) and shipped to `origin/dev` (`46a0fd5`).
-- Out-of-repo, same session: rebuilt the global Claude statusline (`~/.claude/statusline.sh`) to show ccusage rolling-block cost + time-left, minimal no-emoji ANSI style. Not part of di.iiii.
+- Login/space/access cleanup, backend-first (`2b7a217`): decoupled publish from visibility (linking a project no longer auto-flips `isPublic`); consolidated all space scope checks behind one `canAccessSpace()` in `authAccess.js` (HTTP + sockets); explicit `users.is_unrestricted` access model (guarded migration backfills legacy `spaces:"null"` rows, no cookie bump / no forced re-login); space `kind` (`normal|global|sandbox`) + settable `config.globalSpaceId` + guest provisioning (shared global space OR per-guest `sandbox-…`); reaper never deletes a `global` space.
+- Two DB migrations (`v2_user_is_unrestricted`, `v3_space_kind_global`) dry-run-verified safe + idempotent on copies of `serverXR/data/di.db`; they auto-apply on server boot.
+- First admin UI attempt was bespoke `ssh-*` and looked wrong; **reverted** it and rebuilt as `AdminAccessSection` on the canonical `/admin` Ops Graph page (`c6f64ee`), composed only from `preferences-*` components — zero new CSS. SpaceHub returned to its original design.
+- New rule in memory: **admin/management UIs reuse the `preferences-*` design system** (`PreferencesShared.jsx`); never invent parallel styling.
+- Validation green throughout: lint 0 errors, build ✓, 340 tests, server-contracts 21; live-verified guest modes + admin UI (desktop + mobile) against throwaway data copies.
 
-Branch focus: `dev` → staging.di-studio.xyz (ahead), `main` → di-studio.xyz (production) at `e2a3172`.
+Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production) at `e2a3172`.
 
 ## What works
 
@@ -43,6 +44,7 @@ Branch focus: `dev` → staging.di-studio.xyz (ahead), `main` → di-studio.xyz 
 
 ## What is broken / open
 
+- **Access/guest work needs human testing on staging** — admin UI lives at `/admin` → **Access** tab (admin-only; sign in as dob-0 to see People & Access). Guest global/sandbox modes set via that tab's `Set global` buttons. Not yet clicked-through by a human on staging.
 - Local `main` is stale at `3d9bf89` (origin is `e2a3172`) — `git fetch` / fast-forward to clear. Throwaway `embed-portal-test-world` left in the local `main`-space DB — delete from Studio Hub if it's noise.
 - **Audit follow-ups deferred this session** (none done, user's call): fix stale `scripts/e2e-smoke.mjs` (16 false-negative failures); add `test:server-contracts` + `test:schema-sync` to CI (schema-drift prod-503 guard); prune 5 parked branches (`chore/fork-sync-contract`, `feat/asset-optimization-and-agent-efficiency`, `feat/studio-workflows`, `feature/landing-pages`, `self-host`).
 - WCC landing perf headroom: the always-on WebGL particle veil (700 pts) is the remaining throttled-fps cost — gate on mobile / `prefers-reduced-motion` if more is needed. No white-background button context exists in the WCC flow (it's red→black only), so the "visible on white" ask was covered by the solid red fill.
