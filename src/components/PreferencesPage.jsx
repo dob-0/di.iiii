@@ -16,12 +16,14 @@ import {
     StatusItemCard,
     getActionButtonClassName
 } from './preferences/PreferencesShared.jsx'
+import AdminAccessSection from './preferences/AdminAccessSection.jsx'
 
 const SECTIONS = [
     { key: 'overview', label: 'Overview', glyph: '◆' },
     { key: 'topology', label: 'Topology', glyph: '◇' },
     { key: 'objects', label: 'Objects', glyph: '▦' },
     { key: 'session', label: 'Session', glyph: '◎' },
+    { key: 'access', label: 'Access', glyph: '⊞' },
     { key: 'console', label: 'Console', glyph: '▤' },
     { key: 'controls', label: 'Controls', glyph: '▣' },
     { key: 'system', label: 'System', glyph: '▥' }
@@ -380,6 +382,8 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                             </ModuleSection>
                         </>
                     )}
+
+                    {activeSection === 'access' && <AdminAccessSection />}
 
                     {activeSection === 'console' && (
                         <ModuleSection
