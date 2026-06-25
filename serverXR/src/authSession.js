@@ -35,7 +35,8 @@ const createAuthSessionValue = ({
     ...(normalizedSession.subject ? { subject: String(normalizedSession.subject).trim() } : {}),
     ...(normalizedSession.label ? { label: String(normalizedSession.label).trim() } : {}),
     ...(normalizedSession.role ? { role: String(normalizedSession.role).trim().toLowerCase() } : {}),
-    ...(Array.isArray(normalizedSession.spaces) ? { spaces: normalizedSession.spaces } : {})
+    ...(Array.isArray(normalizedSession.spaces) ? { spaces: normalizedSession.spaces } : {}),
+    ...(normalizedSession.isUnrestricted ? { isUnrestricted: true } : {})
   })).toString('base64url')
   return {
     value: `${payload}.${signPayload(payload, secret)}`,

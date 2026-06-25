@@ -10,6 +10,7 @@ const crypto = require('node:crypto')
 const { initDb } = require('./db')
 const { migrateFromFilesystem } = require('./migrate')
 const {
+  canAccessSpace,
   formatAuthScopeLabel,
   formatAuthRoleLabel,
   hasRequiredAuthRole,
@@ -32,7 +33,7 @@ const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
-const { listUsers, findUserById, setUserSpaces, setUserRole } = require('./userStore')
+const { listUsers, findUserById, setUserSpaces, setUserUnrestricted, setUserRole } = require('./userStore')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
@@ -293,6 +294,7 @@ const buildAuthState = ({
   subject = null,
   label = null,
   spaces = undefined,
+  isUnrestricted = false,
   session = null,
   reason = null
 } = {}) => {
@@ -306,6 +308,7 @@ const buildAuthState = ({
     // Admins are unrestricted by space scope — matches role semantics everywhere
     // else in the app (admin is a superset of editor/viewer, not a sibling scope).
     spaces: normalizedRole === 'admin' ? null : normalizeAuthScopeSpaces(spaces, null),
+    isUnrestricted: normalizedRole === 'admin' ? true : Boolean(isUnrestricted),
     ...(session ? { session } : {}),
     ...(reason ? { reason } : {})
   }
@@ -345,6 +348,7 @@ const readAuthSession = (req) => {
       subject: result.session?.subject,
       label: result.session?.label,
       spaces: result.session?.spaces,
+      isUnrestricted: result.session?.isUnrestricted,
       session: result.session
     }),
     session: result.session
@@ -365,7 +369,8 @@ const getAuthState = (req) => {
       role: identity.role,
       subject: identity.subject,
       label: identity.label,
-      spaces: identity.spaces
+      spaces: identity.spaces,
+      isUnrestricted: identity.isUnrestricted
     })
   }
   return sessionState
@@ -403,8 +408,28 @@ const clearAuthSessionCookie = (res) => {
 
 const GUEST_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30
 
-const issueGuestSession = (res) => {
+// Decide what a brand-new guest can touch:
+//  - a configured globalSpaceId (default: GUEST_SPACES[0], usually 'main') →
+//    everyone shares that one editable 'global' space;
+//  - globalSpaceId explicitly cleared (null) → each guest gets a private
+//    'sandbox' space provisioned on demand.
+const resolveGuestSpaces = async (guestId) => {
+  const cfg = await configStore.read()
+  const globalSpaceId = Object.prototype.hasOwnProperty.call(cfg, 'globalSpaceId')
+    ? cfg.globalSpaceId
+    : (GUEST_SPACES[0] || null)
+  if (globalSpaceId) {
+    return [normalizeSpaceId(globalSpaceId) || globalSpaceId]
+  }
+  const sandboxId = normalizeSpaceId(`sandbox-${guestId.replace(/[^a-z0-9]+/gi, '').slice(0, 16)}`)
+  await ensureSpaceScene(sandboxId)
+  await upsertSpaceMeta(sandboxId, { label: 'Guest Sandbox', kind: 'sandbox', allowEdits: true, permanent: false })
+  return [sandboxId]
+}
+
+const issueGuestSession = async (res) => {
   const guestId = `guest:${crypto.randomUUID()}`
+  const spaces = await resolveGuestSpaces(guestId)
   const result = createAuthSessionValue({
     secret: config.auth.sessionSecret,
     ttlMs: GUEST_SESSION_TTL_MS,
@@ -412,11 +437,11 @@ const issueGuestSession = (res) => {
       subject: guestId,
       label: 'Guest',
       role: 'editor',
-      spaces: GUEST_SPACES
+      spaces
     }
   })
   setAuthSessionCookie(res, result.value)
-  return { guestId, expiresAt: result.expiresAt }
+  return { guestId, expiresAt: result.expiresAt, spaces }
 }
 
 registerAuthRoutes(router, {
@@ -425,32 +450,37 @@ registerAuthRoutes(router, {
   setAuthSessionCookie
 })
 
-router.get('/api/auth/session', (req, res) => {
-  let state = req.authState || getPublicAuthState(req)
+router.get('/api/auth/session', async (req, res, next) => {
+  try {
+    let state = req.authState || getPublicAuthState(req)
 
-  if (!state.authenticated && config.requireAuth && config.auth.sessionSecret) {
-    const { guestId, expiresAt } = issueGuestSession(res)
-    state = buildAuthState({
-      authenticated: true,
-      type: 'guest',
-      role: 'editor',
-      subject: guestId,
-      label: 'Guest',
-      spaces: GUEST_SPACES,
-      session: { expiresAt }
+    if (!state.authenticated && config.requireAuth && config.auth.sessionSecret) {
+      const { guestId, expiresAt, spaces } = await issueGuestSession(res)
+      state = buildAuthState({
+        authenticated: true,
+        type: 'guest',
+        role: 'editor',
+        subject: guestId,
+        label: 'Guest',
+        spaces,
+        session: { expiresAt }
+      })
+    }
+
+    res.json({
+      requireAuth: config.requireAuth,
+      authenticated: Boolean(state.authenticated),
+      type: state.type || null,
+      role: state.role || null,
+      subject: state.subject || null,
+      label: state.label || null,
+      spaces: state.spaces,
+      isUnrestricted: Boolean(state.isUnrestricted),
+      expiresAt: state.session?.expiresAt || null
     })
+  } catch (error) {
+    next(error)
   }
-
-  res.json({
-    requireAuth: config.requireAuth,
-    authenticated: Boolean(state.authenticated),
-    type: state.type || null,
-    role: state.role || null,
-    subject: state.subject || null,
-    label: state.label || null,
-    spaces: state.spaces,
-    expiresAt: state.session?.expiresAt || null
-  })
 })
 
 router.post('/api/auth/session', (req, res) => {
@@ -480,7 +510,8 @@ router.post('/api/auth/session', (req, res) => {
       subject: identity.subject,
       label: identity.label,
       role: identity.role,
-      spaces: identity.spaces
+      spaces: identity.spaces,
+      isUnrestricted: identity.isUnrestricted
     }
   })
   setAuthSessionCookie(res, session.value)
@@ -492,6 +523,7 @@ router.post('/api/auth/session', (req, res) => {
     subject: identity.subject,
     label: identity.label,
     spaces: identity.spaces,
+    isUnrestricted: Boolean(identity.isUnrestricted),
     expiresAt: session.expiresAt
   })
 })
@@ -545,7 +577,7 @@ const requireWriteRole = (requiredRole = 'editor') => (req, res, next) => {
   }
   if (hasRequiredAuthRole(state.role, resolvedRole)) {
     const requiredSpaceId = req.requiredSpaceId || null
-    if (!isAuthScopeAllowedForSpace(state.spaces, requiredSpaceId)) {
+    if (!canAccessSpace(state, requiredSpaceId)) {
       return sendScopeError(res, 403, {
         requiredSpaceId,
         allowedSpaces: state.spaces
@@ -590,7 +622,7 @@ const requireReadRole = (requiredRole = 'viewer') => async (req, res, next) => {
   if (!hasRequiredAuthRole(state.role, requiredRole)) {
     return sendRoleError(res, 403, requiredRole, state.role)
   }
-  if (!isAuthScopeAllowedForSpace(state.spaces, spaceId)) {
+  if (!canAccessSpace(state, spaceId)) {
     return sendScopeError(res, 403, {
       requiredSpaceId: spaceId,
       allowedSpaces: state.spaces
@@ -649,6 +681,7 @@ registerUserRoutes(router, {
   listUsers,
   findUserById,
   setUserSpaces,
+  setUserUnrestricted,
   setUserRole
 })
 
@@ -668,6 +701,7 @@ registerSpaceRoutes(router, {
   getPublicAuthState,
   getSpacePaths,
   hydrateSceneAssetManifest,
+  canAccessSpace,
   isAuthScopeAllowedForSpace,
   isValidAssetId,
   loadSpaceMeta,

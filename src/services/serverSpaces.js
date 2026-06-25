@@ -31,6 +31,7 @@ export const updateServerSpace = async (spaceId, updates = {}) => {
             permanent: updates.isPermanent,
             allowEdits: updates.allowEdits,
             isPublic: updates.isPublic,
+            kind: updates.kind,
             publishedProjectId: updates.publishedProjectId
         }
     })

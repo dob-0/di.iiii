@@ -1,8 +1,14 @@
 function registerConfigRoutes(router, { requireAdminAlways, configStore }) {
+  const serializeConfig = (cfg) => ({
+    defaultSpaceId: cfg.defaultSpaceId || null,
+    // null = no global space → each guest gets a private sandbox.
+    // A space id = guests share that one editable 'global' space.
+    globalSpaceId: cfg.globalSpaceId === undefined ? null : (cfg.globalSpaceId || null)
+  })
+
   router.get('/api/config', async (req, res, next) => {
     try {
-      const cfg = await configStore.read()
-      res.json({ config: { defaultSpaceId: cfg.defaultSpaceId || null } })
+      res.json({ config: serializeConfig(await configStore.read()) })
     } catch (error) {
       next(error)
     }
@@ -10,13 +16,16 @@ function registerConfigRoutes(router, { requireAdminAlways, configStore }) {
 
   router.patch('/api/config', requireAdminAlways, async (req, res, next) => {
     try {
-      const { defaultSpaceId } = req.body || {}
+      const { defaultSpaceId, globalSpaceId } = req.body || {}
       const updates = {}
       if (defaultSpaceId !== undefined) {
         updates.defaultSpaceId = defaultSpaceId || null
       }
+      if (globalSpaceId !== undefined) {
+        updates.globalSpaceId = globalSpaceId || null
+      }
       const updated = await configStore.patch(updates)
-      res.json({ config: { defaultSpaceId: updated.defaultSpaceId || null } })
+      res.json({ config: serializeConfig(updated) })
     } catch (error) {
       next(error)
     }

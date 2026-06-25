@@ -18,7 +18,7 @@ function registerSpaceRoutes(router, {
   getPublicAuthState = () => ({ spaces: null }),
   getSpacePaths,
   hydrateSceneAssetManifest,
-  isAuthScopeAllowedForSpace = () => true,
+  canAccessSpace = () => true,
   isValidAssetId,
   loadSpaceMeta,
   listSpaces,
@@ -72,7 +72,7 @@ function registerSpaceRoutes(router, {
       }
       const state = req.authState || getPublicAuthState(req)
       const visible = spaces.filter((space) =>
-        space.isPublic || (state.authenticated && isAuthScopeAllowedForSpace(state.spaces, space.id))
+        space.isPublic || (state.authenticated && canAccessSpace(state, space.id))
       )
       res.json({ spaces: visible })
     } catch (error) {
@@ -132,7 +132,10 @@ function registerSpaceRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const { label, permanent, allowEdits, isPublic, publishedProjectId } = req.body || {}
+      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId } = req.body || {}
+      if (kind !== undefined && !['normal', 'global', 'sandbox'].includes(kind)) {
+        return res.status(400).json({ error: 'kind must be one of: normal, global, sandbox.' })
+      }
       let nextPublishedProjectId
       if (publishedProjectId !== undefined) {
         if (publishedProjectId === null || publishedProjectId === '') {
@@ -153,6 +156,7 @@ function registerSpaceRoutes(router, {
         ...(permanent !== undefined ? { permanent } : {}),
         ...(allowEdits !== undefined ? { allowEdits } : {}),
         ...(isPublic !== undefined ? { isPublic: Boolean(isPublic) } : {}),
+        ...(kind !== undefined ? { kind } : {}),
         ...(publishedProjectId !== undefined ? { publishedProjectId: nextPublishedProjectId } : {})
       })
       res.json({ space: meta })

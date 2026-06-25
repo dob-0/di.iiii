@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { upsertUser, findUserById, listUsers, setUserSpaces } = require('./userStore.js')
+const { upsertUser, findUserById, listUsers, setUserSpaces, setUserUnrestricted } = require('./userStore.js')
 const { initDb, closeDb } = require('./db.js')
 
 beforeEach(() => {
@@ -44,13 +44,27 @@ describe('userStore', () => {
         expect(found.spaces).toEqual(['wcc', 'gallery'])
     })
 
-    it('setUserSpaces accepts null for unrestricted access', () => {
+    it('defaults a brand-new user to restricted (not unrestricted)', () => {
         const user = upsertUser({ provider: 'github', providerId: '6', email: 'f@example.com', displayName: 'F' })
-        const updated = setUserSpaces(user.id, null)
-        expect(updated.spaces).toBeNull()
+        expect(user.isUnrestricted).toBe(false)
+    })
 
-        const found = findUserById(user.id)
-        expect(found.spaces).toBeNull()
+    it('setUserSpaces coerces null to deny-all (unrestricted is now an explicit flag)', () => {
+        const user = upsertUser({ provider: 'github', providerId: '6b', email: 'f2@example.com', displayName: 'F2' })
+        const updated = setUserSpaces(user.id, null)
+        expect(updated.spaces).toEqual([])
+        expect(updated.isUnrestricted).toBe(false)
+    })
+
+    it('setUserUnrestricted toggles the explicit flag without touching spaces', () => {
+        const user = upsertUser({ provider: 'github', providerId: '6c', email: 'f3@example.com', displayName: 'F3' })
+        setUserSpaces(user.id, ['gallery'])
+        const granted = setUserUnrestricted(user.id, true)
+        expect(granted.isUnrestricted).toBe(true)
+        expect(granted.spaces).toEqual(['gallery'])
+
+        const revoked = setUserUnrestricted(user.id, false)
+        expect(revoked.isUnrestricted).toBe(false)
     })
 
     it('treats a pre-existing row with no spaces column value as deny-all, not unrestricted', () => {

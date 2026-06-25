@@ -10,8 +10,11 @@ import {
     patchServerConfig
 } from '../../services/serverSpaces.js'
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
+import { listUsers, updateUser } from '../../services/usersApi.js'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import '../styles/studio-space-hub.css'
+
+const ROLE_OPTIONS = ['viewer', 'editor', 'admin']
 
 export default function SpaceHub() {
     const { authenticated, login } = useAuthSession()
@@ -20,10 +23,13 @@ export default function SpaceHub() {
     const [creatingTitle, setCreatingTitle] = useState(null)
     const [isBusy, setIsBusy] = useState(false)
     const [defaultSpaceId, setDefaultSpaceId] = useState(null)
+    const [globalSpaceId, setGlobalSpaceId] = useState(null)
     // projectId → title map for linked projects
     const [projectTitles, setProjectTitles] = useState({})
     // project linker state: { spaceId, projects, loading, renamingId, renameValue }
     const [linker, setLinker] = useState(null)
+    // user access management (admin only; null until loaded, [] if forbidden)
+    const [users, setUsers] = useState(null)
 
     const loadSpaces = useCallback(async () => {
         setStatus('loading...')
@@ -31,6 +37,7 @@ export default function SpaceHub() {
             const [list, cfg] = await Promise.all([listServerSpaces(), getServerConfig()])
             setSpaces(list)
             setDefaultSpaceId(cfg.defaultSpaceId || null)
+            setGlobalSpaceId(cfg.globalSpaceId || null)
             setStatus('')
             // resolve titles for any linked projects
             const ids = [...new Set(list.map(s => s.publishedProjectId).filter(Boolean))]
@@ -116,6 +123,47 @@ export default function SpaceHub() {
         }
     }, [])
 
+    // Toggle the shared global guest space. Setting one makes guests share it
+    // (kind='global'); clearing it puts guests into per-guest sandboxes.
+    const handleToggleGlobal = useCallback(async (space, e) => {
+        e.stopPropagation()
+        const makeGlobal = globalSpaceId !== space.id
+        try {
+            await patchServerConfig({ globalSpaceId: makeGlobal ? space.id : null })
+            await updateServerSpace(space.id, { kind: makeGlobal ? 'global' : 'normal' })
+            setGlobalSpaceId(makeGlobal ? space.id : null)
+            await loadSpaces()
+        } catch (err) {
+            alert(err.message || 'Could not update the global space.')
+        }
+    }, [globalSpaceId, loadSpaces])
+
+    const loadUsers = useCallback(async () => {
+        try {
+            setUsers(await listUsers())
+        } catch {
+            setUsers([]) // not an admin (or auth disabled) — hide the panel
+        }
+    }, [])
+
+    useEffect(() => { if (authenticated) loadUsers() }, [authenticated, loadUsers])
+
+    const patchUser = useCallback(async (userId, patch) => {
+        try {
+            const updated = await updateUser(userId, patch)
+            setUsers(prev => prev ? prev.map(u => u.id === userId ? { ...u, ...updated } : u) : prev)
+        } catch (err) {
+            alert(err.message || 'Could not update user.')
+        }
+    }, [])
+
+    const toggleUserSpace = useCallback((user, spaceId) => {
+        const next = user.spaces?.includes(spaceId)
+            ? user.spaces.filter(s => s !== spaceId)
+            : [...(user.spaces || []), spaceId]
+        patchUser(user.id, { spaces: next })
+    }, [patchUser])
+
     const handleOpenLinker = useCallback(async (space, e) => {
         e.stopPropagation()
         if (linker?.spaceId === space.id) {
@@ -139,20 +187,16 @@ export default function SpaceHub() {
 
     const handleLinkProject = useCallback(async (spaceId, projectId) => {
         try {
-            const space = spaces.find(s => s.id === spaceId)
-            const patch = { publishedProjectId: projectId || null }
-            // linking a project implies the user wants it visible — flip isPublic too
-            // unless they've never been linked before but already toggled it off on purpose
-            if (projectId && space && !space.isPublic) {
-                patch.isPublic = true
-            }
-            await updateServerSpace(spaceId, patch)
+            // Linking only sets the live project. Visibility (isPublic) stays an
+            // independent, explicit choice via the existing Public/Private toggle —
+            // linking no longer silently flips a space public.
+            await updateServerSpace(spaceId, { publishedProjectId: projectId || null })
             setLinker(null)
             await loadSpaces()
         } catch (err) {
             alert(err.message || 'Could not link project.')
         }
-    }, [loadSpaces, spaces])
+    }, [loadSpaces])
 
     const handleStartRenameProject = useCallback((project, e) => {
         e.stopPropagation()
@@ -230,6 +274,7 @@ export default function SpaceHub() {
                     <div className="ssh-spaces-grid">
                         {spaces.map((space) => {
                             const isMain = space.id === defaultSpaceId
+                            const isGlobal = globalSpaceId === space.id
                             const isLinking = linker?.spaceId === space.id
                             const linkedTitle = space.publishedProjectId
                                 ? (projectTitles[space.publishedProjectId] || space.publishedProjectId)
@@ -247,6 +292,8 @@ export default function SpaceHub() {
                                     <div className="ssh-card-header">
                                         <span className="ssh-space-id">{space.id}</span>
                                         {isMain && <span className="ssh-badge-main">Main</span>}
+                                        {isGlobal && <span className="ssh-badge-global">Global</span>}
+                                        {space.kind === 'sandbox' && <span className="ssh-badge-sandbox">Sandbox</span>}
                                         {space.isPublic && <span className="ssh-badge-live">Live</span>}
                                     </div>
                                     <p className="ssh-space-label">{space.label || space.id}</p>
@@ -281,6 +328,13 @@ export default function SpaceHub() {
                                                     Set main
                                                 </button>
                                             )}
+                                            <button
+                                                className={`ssh-card-btn${isGlobal ? ' ssh-card-btn--active' : ''}`}
+                                                onClick={e => handleToggleGlobal(space, e)}
+                                                title="Shared editable space for guests"
+                                            >
+                                                {isGlobal ? 'Global' : 'Set global'}
+                                            </button>
                                             <button
                                                 className="ssh-card-btn ssh-card-btn--danger"
                                                 onClick={e => handleDelete(space, e)}
@@ -359,6 +413,53 @@ export default function SpaceHub() {
                                 </div>
                             )
                         })}
+                    </div>
+                )}
+
+                {Array.isArray(users) && users.length > 0 && (
+                    <div className="ssh-users-section">
+                        <h2 className="ssh-title ssh-users-title">People &amp; access</h2>
+                        <div className="ssh-spaces-grid">
+                            {users.map((u) => (
+                                <div key={u.id} className="ssh-space-card ssh-user-card">
+                                    <div className="ssh-card-header">
+                                        <span className="ssh-space-label">{u.displayName || u.email || u.id}</span>
+                                        {u.isUnrestricted && <span className="ssh-badge-global">All spaces</span>}
+                                    </div>
+                                    {u.email && <p className="ssh-space-id">{u.email}</p>}
+                                    <div className="ssh-card-actions">
+                                        <select
+                                            className="ssh-user-select"
+                                            value={ROLE_OPTIONS.includes(u.role) ? u.role : 'viewer'}
+                                            onChange={(e) => patchUser(u.id, { role: e.target.value })}
+                                        >
+                                            {ROLE_OPTIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                                        </select>
+                                        <button
+                                            className={`ssh-card-btn${u.isUnrestricted ? ' ssh-card-btn--active' : ''}`}
+                                            onClick={() => patchUser(u.id, { isUnrestricted: !u.isUnrestricted })}
+                                            title="Access to every space"
+                                        >
+                                            {u.isUnrestricted ? 'All spaces ✓' : 'Grant all'}
+                                        </button>
+                                    </div>
+                                    {!u.isUnrestricted && (
+                                        <div className="ssh-user-spaces">
+                                            {spaces.map((s) => (
+                                                <button
+                                                    key={s.id}
+                                                    className={`ssh-card-btn${u.spaces?.includes(s.id) ? ' ssh-card-btn--active' : ''}`}
+                                                    onClick={() => toggleUserSpace(u, s.id)}
+                                                    title={`Toggle access to ${s.id}`}
+                                                >
+                                                    {s.id}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </Container>

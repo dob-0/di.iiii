@@ -104,6 +104,24 @@ function ensureColumn(db, table, column, definition) {
   db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`)
 }
 
+// Replace the legacy "spaces = JSON 'null' means unrestricted" convention with
+// an explicit is_unrestricted flag. Runs once (guarded by the migrations table).
+function backfillUserUnrestricted(db) {
+  const KEY = 'v2_user_is_unrestricted'
+  if (db.prepare('SELECT 1 FROM migrations WHERE key = ?').get(KEY)) return
+  db.prepare("UPDATE users SET is_unrestricted = 1, spaces = '[]' WHERE spaces = 'null'").run()
+  db.prepare('INSERT OR REPLACE INTO migrations (key, completed_at) VALUES (?, ?)').run(KEY, Date.now())
+}
+
+// Mark the default landing space as the shared 'global' editable space so the
+// guest model has a sane default. Runs once (guarded by the migrations table).
+function backfillGlobalSpace(db) {
+  const KEY = 'v3_space_kind_global'
+  if (db.prepare('SELECT 1 FROM migrations WHERE key = ?').get(KEY)) return
+  db.prepare("UPDATE spaces SET kind = 'global' WHERE id = 'main'").run()
+  db.prepare('INSERT OR REPLACE INTO migrations (key, completed_at) VALUES (?, ?)').run(KEY, Date.now())
+}
+
 function initDb(dbPath) {
   if (_db) {
     try { _db.close() } catch {}
@@ -115,7 +133,11 @@ function initDb(dbPath) {
   db.pragma('foreign_keys = ON')
   db.exec(SCHEMA)
   ensureColumn(db, 'spaces', 'is_public', 'INTEGER NOT NULL DEFAULT 0')
+  ensureColumn(db, 'spaces', 'kind', "TEXT NOT NULL DEFAULT 'normal'")
   ensureColumn(db, 'users', 'spaces', 'TEXT')
+  ensureColumn(db, 'users', 'is_unrestricted', 'INTEGER NOT NULL DEFAULT 0')
+  backfillUserUnrestricted(db)
+  backfillGlobalSpace(db)
   _db = db
   return _db
 }

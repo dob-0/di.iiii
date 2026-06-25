@@ -207,6 +207,63 @@
     border: 1px solid rgba(255,200,80,0.28);
 }
 
+.ssh-badge-global,
+.ssh-badge-sandbox {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 1px 6px;
+    border-radius: 2px;
+}
+
+.ssh-badge-global {
+    background: rgba(120,150,255,0.14);
+    color: #8aa0ff;
+    border: 1px solid rgba(120,150,255,0.28);
+}
+
+.ssh-badge-sandbox {
+    background: rgba(200,230,240,0.1);
+    color: var(--di-text-muted, rgba(200,230,240,0.55));
+    border: 1px solid rgba(200,230,240,0.2);
+}
+
+/* ─── PEOPLE & ACCESS ───────────────────────────────────── */
+.ssh-users-section {
+    margin-top: 40px;
+    padding-top: 24px;
+    border-top: 1px solid var(--di-cyan-border, rgba(77,249,255,0.12));
+}
+
+.ssh-users-title {
+    margin-bottom: 16px;
+}
+
+.ssh-user-card {
+    cursor: default;
+}
+
+.ssh-user-select {
+    font-size: 0.7rem;
+    font-family: inherit;
+    background: rgba(77,249,255,0.06);
+    border: 1px solid rgba(200,230,240,0.15);
+    color: var(--di-text, #e8f4f8);
+    padding: 3px 8px;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.ssh-user-spaces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--di-cyan-border, rgba(77,249,255,0.08));
+}
+
 /* ─── CARD ACTIONS ──────────────────────────────────────── */
 .ssh-card-actions {
     display: flex;

@@ -2,22 +2,22 @@ const crypto = require('node:crypto')
 const { getDb } = require('./db')
 const { normalizeAuthRole } = require('./authAccess')
 
-// SQL NULL (column never written, e.g. pre-existing rows from before this
-// column existed) means "never granted anything" -> deny-all ([]).
-// The JSON string "null" (explicitly stored) means "unrestricted", same
-// null-means-allow-all convention used everywhere else in authAccess.js.
+// `spaces` is always an array of granted space ids (or empty = deny-all).
+// "Unrestricted" (access to every space) is now the explicit is_unrestricted
+// flag, not a magic null — see backfillUserUnrestricted in db.js.
 const parseSpaces = (value) => {
   if (value === null || value === undefined) return []
   try {
     const parsed = JSON.parse(value)
-    if (parsed === null) return null
     return Array.isArray(parsed) ? parsed : []
   } catch {
     return []
   }
 }
 
-const rowToUser = (row) => row ? { ...row, spaces: parseSpaces(row.spaces) } : null
+const rowToUser = (row) => row
+  ? { ...row, spaces: parseSpaces(row.spaces), isUnrestricted: Boolean(row.is_unrestricted) }
+  : null
 
 const upsertUser = ({ provider, providerId, email, displayName, avatarUrl, role = 'editor' }) => {
   const db = getDb()
@@ -59,12 +59,16 @@ const listUsers = () => {
 
 const setUserSpaces = (id, spaces = []) => {
   const db = getDb()
-  const normalized = spaces === null
-    ? null
-    : Array.isArray(spaces)
-      ? Array.from(new Set(spaces.map((s) => String(s || '').trim()).filter(Boolean)))
-      : []
+  const normalized = Array.isArray(spaces)
+    ? Array.from(new Set(spaces.map((s) => String(s || '').trim()).filter(Boolean)))
+    : []
   db.prepare('UPDATE users SET spaces = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(normalized), Date.now(), id)
+  return findUserById(id)
+}
+
+const setUserUnrestricted = (id, unrestricted) => {
+  const db = getDb()
+  db.prepare('UPDATE users SET is_unrestricted = ?, updated_at = ? WHERE id = ?').run(unrestricted ? 1 : 0, Date.now(), id)
   return findUserById(id)
 }
 
@@ -75,4 +79,4 @@ const setUserRole = (id, role) => {
   return findUserById(id)
 }
 
-module.exports = { upsertUser, findUserById, listUsers, setUserSpaces, setUserRole }
+module.exports = { upsertUser, findUserById, listUsers, setUserSpaces, setUserUnrestricted, setUserRole }

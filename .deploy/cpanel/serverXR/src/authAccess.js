@@ -75,6 +75,15 @@ const isAuthScopeAllowedForSpace = (spaces, spaceId) => {
   return normalizedSpaces.includes(normalizedSpaceId)
 }
 
+// Single source of truth for "can this auth state touch this space", used by
+// both the HTTP middleware (index.js) and the realtime socket handlers. Takes
+// the whole auth-state object so scope logic lives in one place.
+const canAccessSpace = (authState, spaceId) => {
+  if (authState && authState.isUnrestricted) return true
+  const spaces = authState ? authState.spaces : null
+  return isAuthScopeAllowedForSpace(spaces, spaceId)
+}
+
 const formatAuthScopeLabel = (spaces) => {
   const normalizedSpaces = normalizeAuthScopeSpaces(spaces, null)
   if (normalizedSpaces === null) return 'all spaces'
@@ -85,6 +94,7 @@ const formatAuthScopeLabel = (spaces) => {
 module.exports = {
   AUTH_ROLE_LEVELS,
   DEFAULT_AUTH_ROLE,
+  canAccessSpace,
   formatAuthScopeLabel,
   formatAuthRoleLabel,
   getAuthRoleLevel,
