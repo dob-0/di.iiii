@@ -39,5 +39,15 @@ jobs:
       - name: Run tests
         run: npm run test
 
+      # Explicit guards: these suites are already covered by `npm run test`
+      # (the root vitest config globs serverXR/src/**). Re-running them as named
+      # steps keeps the schema-drift / prod-503 contract guard visible in CI logs
+      # and resilient to a future change to the vitest include glob.
+      - name: Server contract tests
+        run: npm run test:server-contracts
+
+      - name: Schema-sync tests
+        run: npm run test:schema-sync
+
       - name: Check AI docs
         run: npm run docs:ai:check
