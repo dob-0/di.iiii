@@ -134,6 +134,7 @@ function initDb(dbPath) {
   db.exec(SCHEMA)
   ensureColumn(db, 'spaces', 'is_public', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'spaces', 'kind', "TEXT NOT NULL DEFAULT 'normal'")
+  ensureColumn(db, 'spaces', 'owner_user_id', 'TEXT')
   ensureColumn(db, 'users', 'spaces', 'TEXT')
   ensureColumn(db, 'users', 'is_unrestricted', 'INTEGER NOT NULL DEFAULT 0')
   backfillUserUnrestricted(db)

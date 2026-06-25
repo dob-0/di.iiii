@@ -14,7 +14,7 @@ import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting
 import '../styles/studio-space-hub.css'
 
 export default function SpaceHub() {
-    const { authenticated, login } = useAuthSession()
+    const { authenticated, login, canCreateSpace, ownedSpaceCount, spaceLimit } = useAuthSession()
     const [spaces, setSpaces] = useState([])
     const [status, setStatus] = useState('loading...')
     const [creatingTitle, setCreatingTitle] = useState(null)
@@ -184,13 +184,22 @@ export default function SpaceHub() {
                     <div className="ssh-actions">
                         {authenticated ? (
                             creatingTitle === null ? (
-                                <button
-                                    className="ssh-btn-create"
-                                    onClick={() => setCreatingTitle('')}
-                                    disabled={isBusy}
-                                >
-                                    + Create
-                                </button>
+                                canCreateSpace ? (
+                                    <button
+                                        className="ssh-btn-create"
+                                        onClick={() => setCreatingTitle('')}
+                                        disabled={isBusy}
+                                    >
+                                        + Create
+                                        {Number.isFinite(spaceLimit) && (
+                                            <span className="ssh-quota"> · {ownedSpaceCount}/{spaceLimit}</span>
+                                        )}
+                                    </button>
+                                ) : (
+                                    <span className="ssh-quota-full" title="Delete a space to make room">
+                                        Space limit reached ({ownedSpaceCount}/{spaceLimit})
+                                    </span>
+                                )
                             ) : (
                                 <form
                                     className="ssh-new-form"
