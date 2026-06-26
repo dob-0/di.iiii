@@ -1,5 +1,8 @@
 import { useCallback } from 'react'
 import { createSceneArchive, loadSceneArchive } from '../services/sceneArchive.js'
+import { getAssetSourceUrls } from '../services/assetSources.js'
+import { apiBaseUrl } from '../services/apiClient.js'
+import { normalizeSpaceId } from '../utils/spaceNames.js'
 import { clearAllAssets } from '../storage/assetStore.js'
 import { defaultScene, SCENE_DATA_VERSION, normalizeObjects } from '../state/sceneStore.js'
 import { mergeAssetsManifest } from '../utils/assetManifest.js'
@@ -74,11 +77,26 @@ export function useSceneArchiveIO({
         delete exportSceneData.assetsBaseUrl
 
         try {
+            const missingAssets = []
+            const spaceSlug = normalizeSpaceId(spaceId)
+            const spaceAssetUrl = (assetId) =>
+                spaceSlug && assetId ? `${apiBaseUrl || ''}/api/spaces/${spaceSlug}/assets/${assetId}` : null
             const archiveBlob = await createSceneArchive(exportSceneData, {
                 getAssetBlob,
-                getAssetSourceUrl
+                getAssetSourceUrl,
+                // Try every registered candidate plus the space asset route, so
+                // media stored only under the space (not the project) is included.
+                getAssetSourceUrls: (assetId) => {
+                    const urls = getAssetSourceUrls(assetId)
+                    const spaceUrl = spaceAssetUrl(assetId)
+                    return spaceUrl ? [...urls, spaceUrl] : urls
+                },
+                onMissingAsset: (meta) => missingAssets.push(meta?.name || meta?.id || 'unknown asset')
             })
             downloadBlob(archiveBlob, buildProjectPackageName())
+            if (missingAssets.length) {
+                alert(`Project exported, but ${missingAssets.length} asset(s) couldn't be found and were left out:\n\n${missingAssets.join('\n')}`)
+            }
         } catch {
             alert('Error: Could not create project package.')
         }
@@ -92,6 +110,7 @@ export function useSceneArchiveIO({
         persistSceneDataWithStatus,
         resetRemoteAssets,
         setRemoteSceneVersion,
+        spaceId,
         updateSceneSignature
     ])
 

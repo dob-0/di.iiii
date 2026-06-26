@@ -1,0 +1,17 @@
+{
+  "env": "local",
+  "deleteSpaces": ["mytest", "space"],
+  "deleteProjects": [
+    { "space": "main", "id": "embed-portal-test-world" },
+    { "space": "main", "id": "guest-test" },
+    { "space": "main", "id": "project-jun-17" },
+    { "space": "main", "id": "project-jun-18" },
+    { "space": "main", "id": "snap-test-disposable" },
+    { "space": "main", "id": "spaceeeee" },
+    { "space": "main", "id": "test" },
+    { "space": "main", "id": "test-file-project" },
+    { "space": "main", "id": "verify-group-test" },
+    { "space": "n000", "id": "tessssst" }
+  ],
+  "pruneOrphanDirs": ["br-id-ge", "br-id-ge-3", "gallery", "hub", "platfor-recordar", "platform-recordar", "public"]
+}
