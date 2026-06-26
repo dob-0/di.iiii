@@ -6,7 +6,9 @@ import { chromium } from 'playwright'
 
 const BASE = 'http://localhost:5173'
 const SPACE_ID = 'main'
-const PROJECT_ID = 'default-scene-test'
+// Discovered at runtime from the API — hardcoding a project id produced ~16
+// false-negative failures whenever that project wasn't present in the dev DB.
+let PROJECT_ID = process.env.SMOKE_PROJECT_ID || null
 const RESULTS = []
 
 function pass(name) { RESULTS.push({ status: '✅ PASS', name }) }
@@ -60,6 +62,16 @@ async function run() {
         skip('All app surfaces', 'Auth required — no token provided')
     } else {
 
+        // Discover a real project id from the API so editor checks target
+        // something that actually exists (avoids cascading false negatives).
+        if (!PROJECT_ID) {
+            try {
+                const r = await page.request.get(`${BASE}/serverXR/api/spaces/${SPACE_ID}/projects`)
+                const j = await r.json().catch(() => ({}))
+                PROJECT_ID = j?.projects?.[0]?.id || null
+            } catch { /* leave null — editor checks will skip below */ }
+        }
+
         // ── 2. Studio Hub ─────────────────────────────────────────────────
         await check('Studio Hub: loads at /main/studio', async () => {
             await goto(page, `${BASE}/${SPACE_ID}/studio`)
@@ -74,6 +86,10 @@ async function run() {
             if (!text.match(/project|hub|space|create/i))
                 throw new Error('No recognisable Studio Hub content')
         })
+
+        if (!PROJECT_ID) {
+          skip('Studio + Beta editor surfaces', `No project found in space "${SPACE_ID}" — set SMOKE_PROJECT_ID to test the editors`)
+        } else {
 
         // ── 3. Studio project editor ──────────────────────────────────────
         await check('Studio Editor: opens project page', async () => {
@@ -216,6 +232,8 @@ async function run() {
             await page.waitForTimeout(800)
             if (page.url() === 'about:blank') throw new Error('Ended at about:blank')
         })
+
+        } // end if (PROJECT_ID)
     }
 
     // ── 7. Backend API ────────────────────────────────────────────────────

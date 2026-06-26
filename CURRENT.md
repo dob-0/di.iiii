@@ -9,17 +9,17 @@ active_branch: dev
 
 ## Last commit
 
-`46a0fd5` — ci: add /check pre-ship gate and wire /ship to it
-**`dev` is ahead of `main` and pushed to `origin/dev` → staging. `origin/main` at `e2a3172` (production di-studio.xyz). Local `main` still stale at `3d9bf89` — `git fetch` / fast-forward to clear.**
+`9aac69b` — chore(ci/smoke): explicit contract+schema CI guards; fix e2e-smoke false negatives
+**`dev` pushed to `origin/dev` → staging. `origin/main` at `e2a3172` (production di-studio.xyz). Local `main` still stale at `3d9bf89` — `git fetch` / fast-forward to clear.**
 
-## Last session (2026-06-24)
+## Last session (2026-06-26)
 
-- New `/check` slash command (`.claude/commands/check.md`): runs the AGENTS.md validation suite (lint → conditional build → tests, with area-scoped `test:server-contracts` / `test:schema-sync` / `docs:ai:check`) + a correctness-only diff review, ending in `GATE: GO` / `GATE: NO-GO`. Build is skipped for docs/CSS-only diffs.
-- Gated `/ship` on it (`.claude/commands/ship.md`): step 0 runs `/check` and refuses to stage/commit/push on `NO-GO` (override with explicit "ship anyway").
-- Gate self-test green (lint 0 errors, 334 tests pass) and shipped to `origin/dev` (`46a0fd5`).
-- Out-of-repo, same session: rebuilt the global Claude statusline (`~/.claude/statusline.sh`) to show ccusage rolling-block cost + time-left, minimal no-emoji ANSI style. Not part of di.iiii.
+- `/admin` Ops Graph visual cleanup (CSS-only, canonical `preferences-*`): fixed the serif fallback (`.preferences-page` had no `font-family` → set Inter stack), de-monospaced metric values, rebuilt Activity Signals as stacked label/value, removed the sticky overlapping topbar, added a ▾/▸ header collapse toggle, compacted the header (single-line metric cards, dropped the description).
+- **Unified manager** — new `AdminManageSection` (`/admin` → **Manage**, now the default tab): one directory tree `Spaces → projects` (lazy-loaded) with a context detail pane for inline space/project CRUD, publish, guest-entry (global) + default-space toggles, and per-account access/role. Absorbs and **deletes** the old `AdminAccessSection` (Access tab). Reuses existing services + `preferences-*`; `SpaceHub`/`StudioHub` stay as the creative entry.
+- **3 free spaces per account** — new `spaces.owner_user_id` column (idempotent migration, existing rows NULL = uncounted) + `countSpacesOwnedBy`. `POST /api/spaces` enforces a quota (`config.freeSpaceLimit`, default 3, env `FREE_SPACE_LIMIT`): signed-in only, admins/unrestricted exempt, guests blocked, only when `requireAuth`. `/api/auth/session` now returns `spaceLimit`/`ownedSpaceCount`/`canCreateSpace`; SpaceHub gates the create button and shows usage.
+- Validation: lint 0 errors, build ✓, server-contracts 21, **344** tests (added `AdminManageSection.test.jsx`, `spaceStore.ownership.test.js`); migration dry-run safe + idempotent on a copy of `serverXR/data/di.db`.
 
-Branch focus: `dev` → staging.di-studio.xyz (ahead), `main` → di-studio.xyz (production) at `e2a3172`.
+Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production) at `e2a3172`.
 
 ## What works
 
@@ -43,6 +43,8 @@ Branch focus: `dev` → staging.di-studio.xyz (ahead), `main` → di-studio.xyz 
 
 ## What is broken / open
 
+- **`/admin` Ops Graph UI tweaks are uncommitted** (`preferences.css` + `PreferencesPage.jsx`) — build ✓ each round, but `lint`/`test` not run and not committed; commit or run full validation when ready.
+- **Access/guest work needs human testing on staging** — admin UI lives at `/admin` → **Access** tab (admin-only; sign in as dob-0 to see People & Access). Guest global/sandbox modes set via that tab's `Set global` buttons. Not yet clicked-through by a human on staging.
 - Local `main` is stale at `3d9bf89` (origin is `e2a3172`) — `git fetch` / fast-forward to clear. Throwaway `embed-portal-test-world` left in the local `main`-space DB — delete from Studio Hub if it's noise.
 - **Audit follow-ups deferred this session** (none done, user's call): fix stale `scripts/e2e-smoke.mjs` (16 false-negative failures); add `test:server-contracts` + `test:schema-sync` to CI (schema-drift prod-503 guard); prune 5 parked branches (`chore/fork-sync-contract`, `feat/asset-optimization-and-agent-efficiency`, `feat/studio-workflows`, `feature/landing-pages`, `self-host`).
 - WCC landing perf headroom: the always-on WebGL particle veil (700 pts) is the remaining throttled-fps cost — gate on mobile / `prefers-reduced-motion` if more is needed. No white-background button context exists in the WCC flow (it's red→black only), so the "visible on white" ask was covered by the solid red fill.

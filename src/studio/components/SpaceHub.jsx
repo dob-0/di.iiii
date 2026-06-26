@@ -14,7 +14,7 @@ import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting
 import '../styles/studio-space-hub.css'
 
 export default function SpaceHub() {
-    const { authenticated, login } = useAuthSession()
+    const { authenticated, login, canCreateSpace, ownedSpaceCount, spaceLimit } = useAuthSession()
     const [spaces, setSpaces] = useState([])
     const [status, setStatus] = useState('loading...')
     const [creatingTitle, setCreatingTitle] = useState(null)
@@ -139,20 +139,16 @@ export default function SpaceHub() {
 
     const handleLinkProject = useCallback(async (spaceId, projectId) => {
         try {
-            const space = spaces.find(s => s.id === spaceId)
-            const patch = { publishedProjectId: projectId || null }
-            // linking a project implies the user wants it visible — flip isPublic too
-            // unless they've never been linked before but already toggled it off on purpose
-            if (projectId && space && !space.isPublic) {
-                patch.isPublic = true
-            }
-            await updateServerSpace(spaceId, patch)
+            // Linking only sets the live project. Visibility (isPublic) stays an
+            // independent, explicit choice via the existing Public/Private toggle —
+            // linking no longer silently flips a space public.
+            await updateServerSpace(spaceId, { publishedProjectId: projectId || null })
             setLinker(null)
             await loadSpaces()
         } catch (err) {
             alert(err.message || 'Could not link project.')
         }
-    }, [loadSpaces, spaces])
+    }, [loadSpaces])
 
     const handleStartRenameProject = useCallback((project, e) => {
         e.stopPropagation()
@@ -188,13 +184,22 @@ export default function SpaceHub() {
                     <div className="ssh-actions">
                         {authenticated ? (
                             creatingTitle === null ? (
-                                <button
-                                    className="ssh-btn-create"
-                                    onClick={() => setCreatingTitle('')}
-                                    disabled={isBusy}
-                                >
-                                    + Create
-                                </button>
+                                canCreateSpace ? (
+                                    <button
+                                        className="ssh-btn-create"
+                                        onClick={() => setCreatingTitle('')}
+                                        disabled={isBusy}
+                                    >
+                                        + Create
+                                        {Number.isFinite(spaceLimit) && (
+                                            <span className="ssh-quota"> · {ownedSpaceCount}/{spaceLimit}</span>
+                                        )}
+                                    </button>
+                                ) : (
+                                    <span className="ssh-quota-full" title="Delete a space to make room">
+                                        Space limit reached ({ownedSpaceCount}/{spaceLimit})
+                                    </span>
+                                )
                             ) : (
                                 <form
                                     className="ssh-new-form"

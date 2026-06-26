@@ -16,8 +16,10 @@ import {
     StatusItemCard,
     getActionButtonClassName
 } from './preferences/PreferencesShared.jsx'
+import AdminManageSection from './preferences/AdminManageSection.jsx'
 
 const SECTIONS = [
+    { key: 'manage', label: 'Manage', glyph: '▸' },
     { key: 'overview', label: 'Overview', glyph: '◆' },
     { key: 'topology', label: 'Topology', glyph: '◇' },
     { key: 'objects', label: 'Objects', glyph: '▦' },
@@ -46,7 +48,8 @@ function ManagementButton({ button }) {
 }
 
 export default function PreferencesPage({ onNavigateToEditor }) {
-    const [activeSection, setActiveSection] = useState('overview')
+    const [activeSection, setActiveSection] = useState('manage')
+    const [headerCollapsed, setHeaderCollapsed] = useState(false)
     const {
         sync,
         xr,
@@ -109,17 +112,22 @@ export default function PreferencesPage({ onNavigateToEditor }) {
 
     return (
         <div className="preferences-page">
-            <header className="preferences-topbar">
+            <header className={`preferences-topbar${headerCollapsed ? ' is-collapsed' : ''}`}>
                 <div className="preferences-topbar-main">
                     <div className="preferences-eyebrow">Admin Management</div>
                     <div className="preferences-topbar-title-row">
                         <h1>Ops Graph</h1>
                         <span className="preferences-inline-chip">{sync?.spaceId || 'main'}</span>
+                        <button
+                            type="button"
+                            className="preferences-collapse-toggle"
+                            aria-expanded={!headerCollapsed}
+                            title={headerCollapsed ? 'Expand header' : 'Collapse header'}
+                            onClick={() => setHeaderCollapsed((v) => !v)}
+                        >
+                            {headerCollapsed ? '▸' : '▾'}
+                        </button>
                     </div>
-                    <p>
-                        Architecture-first admin surface for scene layout, live sync, panels,
-                        presence, publishing, and runtime debugging.
-                    </p>
                 </div>
 
                 <div className="preferences-topbar-metrics">
@@ -380,6 +388,8 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                             </ModuleSection>
                         </>
                     )}
+
+                    {activeSection === 'manage' && <AdminManageSection />}
 
                     {activeSection === 'console' && (
                         <ModuleSection

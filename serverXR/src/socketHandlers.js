@@ -1,7 +1,7 @@
 const { Server } = require('socket.io')
 const {
+  canAccessSpace,
   hasRequiredAuthRole,
-  isAuthScopeAllowedForSpace,
   normalizeAuthRole,
   normalizeAuthScopeSpaces
 } = require('./authAccess')
@@ -113,7 +113,7 @@ function initializeSocket(httpServer, config) {
 
   const ensureSpaceAccess = async (spaceId, socket) => {
     const authState = socket.data?.authState || {}
-    if (!isAuthScopeAllowedForSpace(authState.spaces, spaceId)) {
+    if (!canAccessSpace(authState, spaceId)) {
       socket.emit('space-forbidden', {
         spaceId,
         message: 'Space access denied.'
@@ -157,7 +157,7 @@ function initializeSocket(httpServer, config) {
       const project = await config.resolveProjectContext(projectId)
       if (project) {
         const authState = socket.data?.authState || {}
-        if (!isAuthScopeAllowedForSpace(authState.spaces, project.spaceId)) {
+        if (!canAccessSpace(authState, project.spaceId)) {
           socket.emit('project-forbidden', {
             projectId,
             spaceId: project.spaceId,
@@ -242,7 +242,7 @@ function initializeSocket(httpServer, config) {
     socket.on('join-space', (data) => {
       const { spaceId, userId, userName } = data
       if (!spaceId) return
-      if (!isAuthScopeAllowedForSpace(socket.data?.authState?.spaces, spaceId)) {
+      if (!canAccessSpace(socket.data?.authState, spaceId)) {
         socket.emit('space-forbidden', {
           spaceId,
           message: 'Space access denied.'
@@ -361,7 +361,7 @@ function initializeSocket(httpServer, config) {
     socket.on('user-cursor', (data) => {
       const { spaceId, cursor } = data
       if (!spaceId) return
-      if (!isAuthScopeAllowedForSpace(socket.data?.authState?.spaces, spaceId)) return
+      if (!canAccessSpace(socket.data?.authState, spaceId)) return
 
       socket.to(`space-${spaceId}`).emit('user-cursor', {
         userId: socket.id,
@@ -383,7 +383,7 @@ function initializeSocket(httpServer, config) {
         }
         socket.data.projectSpaces.set(project.projectId || projectId, projectSpaceId)
       }
-      if (!isAuthScopeAllowedForSpace(socket.data?.authState?.spaces, projectSpaceId)) return
+      if (!canAccessSpace(socket.data?.authState, projectSpaceId)) return
 
       socket.to(`project-${projectId}`).emit('project-cursor', {
         userId: userId || socket.id,
@@ -398,7 +398,7 @@ function initializeSocket(httpServer, config) {
     socket.on('selection-changed', (data) => {
       const { spaceId, selectedObjects } = data
       if (!spaceId) return
-      if (!isAuthScopeAllowedForSpace(socket.data?.authState?.spaces, spaceId)) return
+      if (!canAccessSpace(socket.data?.authState, spaceId)) return
 
       socket.to(`space-${spaceId}`).emit('selection-changed', {
         userId: socket.id,
