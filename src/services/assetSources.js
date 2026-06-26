@@ -191,6 +191,16 @@ export function getAssetSourceUrl(id) {
     return candidates[0] || null
 }
 
+// All registered source candidates for an asset, not just the first. Callers
+// that need to actually fetch the bytes (e.g. project export) should try every
+// candidate — the first may be a project-scoped URL that 404s for media stored
+// only under the space asset route.
+export function getAssetSourceUrls(id) {
+    if (!id) return []
+    const candidates = assetSourceMap.get(id)
+    return Array.isArray(candidates) ? candidates.filter(Boolean) : []
+}
+
 export function clearAssetSources() {
     assetSourceMap.clear()
     streamRequestMap.clear()

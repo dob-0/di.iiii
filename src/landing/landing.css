@@ -210,6 +210,24 @@ body.is-landing .account-btn-wrapper {
     background: #000;
 }
 
+/* Light scrim behind the hero text (~a quarter of the wiki's darkness) so the
+   wordmark/subtitle/buttons read over the bright 3D, while the edges stay vivid.
+   Sits above the fixed GL background (z 0) and below the hero content (z 2). */
+.lp-hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.06) 0%,
+        rgba(0, 0, 0, 0.34) 42%,
+        rgba(0, 0, 0, 0.34) 90%,
+        rgba(0, 0, 0, 0.06) 100%
+    );
+}
+
 .lp-hero-canvas {
     position: absolute;
     inset: 0;
@@ -668,6 +686,20 @@ body.is-landing .account-btn-wrapper {
 
 .lp-feature-card:hover {
     background: rgba(77, 249, 255, 0.04);
+}
+
+.lp-wiki-card {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+}
+
+.lp-wiki-card-more {
+    display: block;
+    margin-top: 12px;
+    color: var(--di-cyan);
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
 }
 
 .lp-feature-icon {

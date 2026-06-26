@@ -1,0 +1,7 @@
+{
+  "env": "prod",
+  "deleteSpaces": ["alllchks", "amk", "loca", "spacce", "tesdddddddddd"],
+  "deleteProjects": [
+    { "space": "main", "id": "test" }
+  ]
+}

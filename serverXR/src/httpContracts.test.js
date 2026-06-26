@@ -337,6 +337,9 @@ describe('server write contracts', () => {
             allowedSpaces: ['role-space']
         })
 
+        // Space creation is open to signed-in accounts (governed by the free-tier
+        // quota), but an API-token identity is not a session account, so it is
+        // still blocked — now with an account-required error rather than admin-role.
         const deniedCreate = await fetch(`${server.baseUrl}/api/spaces`, {
             method: 'POST',
             headers: {
@@ -347,9 +350,7 @@ describe('server write contracts', () => {
         })
         expect(deniedCreate.status).toBe(403)
         await expect(deniedCreate.json()).resolves.toMatchObject({
-            error: 'Admin role required.',
-            requiredRole: 'admin',
-            currentRole: 'editor'
+            code: 'auth_required'
         })
 
         const editorLogin = await fetch(`${server.baseUrl}/api/auth/session`, {
@@ -445,6 +446,57 @@ describe('server write contracts', () => {
         })
         expect(adminDelete.status).toBe(200)
         await expect(adminDelete.json()).resolves.toMatchObject({ ok: true })
+    })
+
+    it('lets a signed-in account create spaces up to the free limit, then blocks more', async () => {
+        const editorToken = 'quota-editor-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                EDITOR_API_TOKEN: editorToken,
+                EDITOR_ALLOWED_SPACES: 'seed-space',
+                FREE_SPACE_LIMIT: '2'
+            }
+        })
+
+        // An API-token identity is not a signed-in account — blocked.
+        const tokenCreate = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(editorToken) },
+            body: JSON.stringify({ label: 'Token Space', slug: 'token-space' })
+        })
+        expect(tokenCreate.status).toBe(403)
+        await expect(tokenCreate.json()).resolves.toMatchObject({ code: 'auth_required' })
+
+        // Log the editor into a session, then create within the quota.
+        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: editorToken })
+        })
+        expect(login.status).toBe(200)
+        const cookie = (login.headers.get('set-cookie') || '').split(';')[0]
+
+        const create = (slug) => fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ label: slug, slug })
+        })
+
+        expect((await create('quota-one')).status).toBe(201)
+        expect((await create('quota-two')).status).toBe(201)
+
+        const third = await create('quota-three')
+        expect(third.status).toBe(403)
+        await expect(third.json()).resolves.toMatchObject({ code: 'space_limit', limit: 2, owned: 2 })
+
+        const status = await fetch(`${server.baseUrl}/api/auth/session`, { headers: { Cookie: cookie } })
+        await expect(status.json()).resolves.toMatchObject({
+            spaceLimit: 2,
+            ownedSpaceCount: 2,
+            canCreateSpace: false
+        })
     })
 
     it('enforces the same space scope on reads as on writes, except for isPublic spaces', async () => {

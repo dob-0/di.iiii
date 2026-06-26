@@ -11,11 +11,11 @@ function registerSpaceRoutes(router, {
   config = {},
   countSpacesOwnedBy = null,
   spaceLimit = 3,
+  grantSpaceToSessionUser = null,
   deleteSpace,
   ensureSpaceScene,
   ensureSpaceWritable,
   findProjectById,
-  findUserById = null,
   getLiveBucket,
   getPublicAuthState = () => ({ spaces: null }),
   getSpacePaths,
@@ -33,7 +33,6 @@ function registerSpaceRoutes(router, {
   readOpsHistory,
   saveSpaceMeta,
   serveAsset,
-  setUserSpaces = null,
   spacesDir,
   spaceExists,
   upsertSpaceMeta,
@@ -118,13 +117,8 @@ function registerSpaceRoutes(router, {
       await saveSpaceMeta(spaceId, meta)
       await ensureSpaceScene(spaceId)
 
-      if (sessionUserId && findUserById && setUserSpaces) {
-        try {
-          const existing = findUserById(sessionUserId)
-          if (Array.isArray(existing?.spaces)) {
-            setUserSpaces(sessionUserId, [...existing.spaces, spaceId])
-          }
-        } catch { /* non-fatal */ }
+      if (sessionUserId && grantSpaceToSessionUser) {
+        grantSpaceToSessionUser(req, res, sessionUserId, spaceId)
       }
 
       res.status(201).json({ space: meta })

@@ -22,34 +22,50 @@ export const collectSceneAssetRefs = (objects = []) => {
     return refs
 }
 
-export const resolveAssetEntries = async (objects, { getAssetBlob, getAssetSourceUrl } = {}) => {
+export const resolveAssetEntries = async (
+    objects,
+    { getAssetBlob, getAssetSourceUrl, getAssetSourceUrls, onMissingAsset } = {}
+) => {
     const entries = []
     const assetRefs = collectSceneAssetRefs(objects || [])
     for (const [assetId, meta] of assetRefs.entries()) {
+        let resolved = false
         try {
-            const sourceUrl = getAssetSourceUrl?.(assetId) || null
+            const primaryUrl = getAssetSourceUrl?.(assetId) || null
             const blob = await getAssetBlob?.(assetId)
             if (blob) {
-                entries.push({ meta, blob, source: 'local', sourceUrl })
+                entries.push({ meta, blob, source: 'local', sourceUrl: primaryUrl })
                 continue
             }
-            if (sourceUrl) {
-                const response = await fetch(sourceUrl)
-                if (!response.ok) {
-                    continue
+            // Try every known source: the primary URL plus any additional
+            // candidates (e.g. the space asset route, which holds media the
+            // project route 404s on). First one that responds wins.
+            const urls = []
+            if (primaryUrl) urls.push(primaryUrl)
+            for (const url of getAssetSourceUrls?.(assetId, meta) || []) {
+                if (url && !urls.includes(url)) urls.push(url)
+            }
+            for (const url of urls) {
+                try {
+                    const response = await fetch(url)
+                    if (!response.ok) continue
+                    entries.push({ meta, blob: await response.blob(), source: 'remote', sourceUrl: url })
+                    resolved = true
+                    break
+                } catch {
+                    // try the next candidate
                 }
-                const remoteBlob = await response.blob()
-                entries.push({ meta, blob: remoteBlob, source: 'remote', sourceUrl })
             }
         } catch {
-            // ignore
+            // fall through to the missing-asset report below
         }
+        if (!resolved) onMissingAsset?.(meta || { id: assetId })
     }
     return entries
 }
 
-export const createSceneArchive = async (sceneData, { getAssetBlob, getAssetSourceUrl } = {}) => {
-    const entries = await resolveAssetEntries(sceneData.objects || [], { getAssetBlob, getAssetSourceUrl })
+export const createSceneArchive = async (sceneData, { getAssetBlob, getAssetSourceUrl, getAssetSourceUrls, onMissingAsset } = {}) => {
+    const entries = await resolveAssetEntries(sceneData.objects || [], { getAssetBlob, getAssetSourceUrl, getAssetSourceUrls, onMissingAsset })
 
     const zip = new JSZip()
     const assetsManifest = []

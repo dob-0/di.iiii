@@ -1,0 +1,152 @@
+// Single source of truth for the in-app Wiki / Help (/wiki) and the landing teaser.
+//
+// RULE: when you ship a user-facing feature or change user-visible behavior, add or
+// update the matching article here and bump its `updated`. Surface headline items in
+// WIKI_HIGHLIGHTS so the landing page stays current. (See AGENTS.md / golden_rules.)
+//
+// Article shape: { id, category, title, summary, body, tags, updated }
+//   body: array of blocks — a string is a paragraph; { list: [...] } is a bullet list.
+
+export const WIKI_CATEGORIES = [
+    'Getting started',
+    'Spaces & access',
+    'Editing',
+    'For developers'
+]
+
+export const WIKI_ARTICLES = [
+    {
+        id: 'spaces-and-projects',
+        category: 'Getting started',
+        title: 'Spaces & projects',
+        summary: 'How the platform is organized: a space is a workspace that holds projects, assets, and its own access.',
+        body: [
+            'A space is a self-contained workspace. Each space holds its own projects, uploaded assets, collaborators, and access rules.',
+            'A project is a single scene/document inside a space. A space can hold many projects, and one of them can be marked as the space’s published (live) project.',
+            'URLs mirror this structure:',
+            { list: [
+                '/<space>/studio — the project hub for a space',
+                '/<space>/studio/projects/<id> — the editor for one project',
+                '/<space> — the public viewer for a space’s published project'
+            ] }
+        ],
+        tags: ['spaces', 'projects', 'basics'],
+        updated: '2026-06-26'
+    },
+    {
+        id: 'guest-and-sandbox-modes',
+        category: 'Spaces & access',
+        title: 'Guest & sandbox modes',
+        summary: 'What signed-out visitors get: a shared global space, or a private sandbox each.',
+        body: [
+            'Visitors who are not signed in still get a working session so they can explore without an account.',
+            'There are two guest modes, chosen by the admin in the /admin → Manage console:',
+            { list: [
+                'Shared global space — every guest lands in the same editable space (good for an open jam or demo).',
+                'Private sandbox — each guest gets their own throwaway sandbox space, isolated from others.'
+            ] },
+            'Guests cannot create their own named spaces — that requires a signed-in account.'
+        ],
+        tags: ['guest', 'sandbox', 'access'],
+        updated: '2026-06-26'
+    },
+    {
+        id: 'free-spaces',
+        category: 'Spaces & access',
+        title: '3 free spaces per account',
+        summary: 'Every signed-in account can create up to 3 spaces for free.',
+        body: [
+            'Sign in with GitHub or Google and you can create up to 3 of your own spaces at no cost.',
+            'The limit counts only spaces you created (own). Spaces an admin shares with you do not count against your 3.',
+            'When you reach the limit the create button shows “Space limit reached” — delete a space you no longer need to make room.',
+            'Admins and unrestricted accounts are exempt and can create unlimited spaces.'
+        ],
+        tags: ['spaces', 'quota', 'account'],
+        updated: '2026-06-26'
+    },
+    {
+        id: 'publishing',
+        category: 'Spaces & access',
+        title: 'Publishing & public spaces',
+        summary: 'Make a project live and decide who can see it.',
+        body: [
+            'Each space has a public URL at /<space>. Set a space’s published project, then mark the space Public to let anyone view it without signing in.',
+            'Publishing (which project is live) and visibility (Public/Private) are independent choices — linking a project does not automatically make the space public.',
+            'A published-but-private space shows a login wall to visitors instead of the scene.'
+        ],
+        tags: ['publish', 'public', 'sharing'],
+        updated: '2026-06-26'
+    },
+    {
+        id: 'studio-basics',
+        category: 'Editing',
+        title: 'Studio editor basics',
+        summary: 'Add objects, arrange them, and tune the scene.',
+        body: [
+            'Open the Studio, pick or create a project, and start building.',
+            { list: [
+                'Add 3D shapes, text, images, and 3D models from the Library panel.',
+                'Drag to position; use the Inspector on the right to change colors, lighting, camera, and background.',
+                'Undo / redo with Ctrl+Z / Ctrl+Y.'
+            ] }
+        ],
+        tags: ['studio', 'editor', 'basics'],
+        updated: '2026-06-26'
+    },
+    {
+        id: 'admin-manage',
+        category: 'Spaces & access',
+        title: 'Admin / Manage console',
+        summary: 'The /admin Manage tab is one directory tree for spaces, projects, and access.',
+        body: [
+            'Admins manage everything from /admin → Manage: a directory tree of spaces, each expanding to its projects.',
+            { list: [
+                'Create / rename / delete spaces and projects inline.',
+                'Toggle Public / Permanent / Locked, set the published project, and choose the default space.',
+                'Set the guest entry (shared global space) and grant per-account access and roles (viewer / editor / admin).'
+            ] }
+        ],
+        tags: ['admin', 'manage', 'access'],
+        updated: '2026-06-26'
+    },
+    {
+        id: 'keyboard-shortcuts',
+        category: 'Editing',
+        title: 'Keyboard shortcuts',
+        summary: 'Move around and control the UI faster.',
+        body: [
+            { list: [
+                'H — toggle the UI',
+                'F — frame the scene',
+                'Z — undo the last action',
+                'WASD — walk when inside a space; drag to look',
+                'F — fly mode (Space / Q up, C / E down)'
+            ] }
+        ],
+        tags: ['shortcuts', 'controls'],
+        updated: '2026-06-26'
+    },
+    {
+        id: 'api-and-agents',
+        category: 'For developers',
+        title: 'API & agents',
+        summary: 'Read and drive scenes over the serverXR REST API.',
+        body: [
+            'di.iiii exposes a structured REST API under /serverXR/api/ for developers and AI agents.',
+            { list: [
+                'GET /serverXR/api/health — backend health',
+                'GET /serverXR/api/auth/session — session + space quota state',
+                'GET /serverXR/api/spaces — spaces visible to you',
+                'GET /serverXR/api/spaces/:id/projects — projects in a space'
+            ] },
+            'Realtime updates are delivered over WebSocket (socket.io) and SSE.'
+        ],
+        tags: ['api', 'developers', 'agents'],
+        updated: '2026-06-26'
+    }
+]
+
+// Headline subset surfaced on the landing page.
+export const WIKI_HIGHLIGHTS = ['guest-and-sandbox-modes', 'free-spaces', 'publishing', 'admin-manage']
+    .map((id) => WIKI_ARTICLES.find((article) => article.id === id))
+    .filter(Boolean)
