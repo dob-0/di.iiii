@@ -7,12 +7,13 @@ import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
 import { getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
-import { APP_PAGE_PREFERENCES, getAppLocationState } from './utils/spaceRouting.js'
+import { APP_PAGE_PREFERENCES, APP_PAGE_WIKI, getAppLocationState } from './utils/spaceRouting.js'
 
 const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 const WccExperience = lazy(() => import('./wcc/WccExperience.jsx'))
+const WikiPage = lazy(() => import('./wiki/WikiPage.jsx'))
 
 function ProtectedSurface({ children, requiredSpaceId = null, showAccountButton = true }) {
     return <AuthGate requiredSpaceId={requiredSpaceId} showAccountButton={showAccountButton}>{children}</AuthGate>
@@ -82,7 +83,17 @@ function AppRouter() {
         )
     }
 
-    const isRootLanding = !appState.spaceId && appState.page !== APP_PAGE_PREFERENCES
+    if (appState.page === APP_PAGE_WIKI) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <WikiPage />
+            </Suspense>
+        )
+    }
+
+    const isRootLanding = !appState.spaceId
+        && appState.page !== APP_PAGE_PREFERENCES
+        && appState.page !== APP_PAGE_WIKI
 
     if (isRootLanding) {
         return (

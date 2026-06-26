@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, Typography } from '@mui/material'
 import GridFloorBackground from '../components/GridFloorBackground.jsx'
+import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
+import { buildWikiPath } from '../utils/spaceRouting.js'
 import './landing.css'
 
 const STEPS = [
@@ -67,7 +69,9 @@ const FEATURES = [
     { icon: '⬡', title: 'WebXR ready', desc: 'Enter VR or AR from any supported browser — no app install.' },
     { icon: '◫', title: 'Asset pipeline', desc: 'Upload images, 3D models, audio. Optimized and served automatically.' },
     { icon: '◳', title: 'Spaces system', desc: 'Multiple isolated workspaces. Share by link. Lock editing or leave open.' },
-    { icon: '◐', title: 'Publish anywhere', desc: 'Each space has a public URL. Export JSON. Embed or link directly.' }
+    { icon: '◐', title: 'Publish anywhere', desc: 'Each space has a public URL. Export JSON. Embed or link directly.' },
+    { icon: '◍', title: 'Guest & sandbox modes', desc: 'Visitors explore without an account — a shared global space, or a private sandbox each.' },
+    { icon: '✦', title: '3 free spaces', desc: 'Sign in and create up to three of your own spaces for free. Admins are unlimited.' }
 ]
 
 const ROUTES = [
@@ -94,11 +98,29 @@ const CAPABILITIES = [
 export default function LandingPage() {
     const [entered, setEntered] = useState(false)
     const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
+    const heroRef = useRef(null)
+    // The decorative WebGL background is fixed and full-screen; once the hero
+    // scrolls out of view it's hidden behind opaque sections anyway. Stop
+    // compositing/rendering it then so it doesn't stutter page scroll.
+    const [heroInView, setHeroInView] = useState(true)
 
     useEffect(() => {
         document.body.classList.add('is-landing')
         return () => document.body.classList.remove('is-landing')
     }, [])
+
+    useEffect(() => {
+        const node = heroRef.current
+        if (!node || typeof IntersectionObserver === 'undefined') return undefined
+        const observer = new IntersectionObserver(
+            ([entry]) => setHeroInView(entry.isIntersecting),
+            { rootMargin: '0px' }
+        )
+        observer.observe(node)
+        return () => observer.disconnect()
+    }, [])
+
+    const showBackground = entered || heroInView
 
     return (
         <Box className="lp-root" data-page="landing">
@@ -110,6 +132,7 @@ export default function LandingPage() {
                     <div className="lp-nav-links">
                         <a href="/studio" className="lp-nav-link">Studio</a>
                         <a href="/beta" className="lp-nav-link">Beta</a>
+                        <a href={buildWikiPath()} className="lp-nav-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
                     </div>
                     <a href="/studio" className="lp-nav-cta">Open Studio</a>
@@ -117,8 +140,10 @@ export default function LandingPage() {
             )}
 
             {/* ── HERO ─────────────────────────────────────────── */}
-            <Box className="lp-hero" component="section">
-                <GridFloorBackground aria-hidden="true" interactive={entered} />
+            <Box className="lp-hero" component="section" ref={heroRef}>
+                <Box className="lp-hero-bg" sx={{ display: showBackground ? 'block' : 'none' }}>
+                    <GridFloorBackground aria-hidden="true" interactive={entered} />
+                </Box>
 
                 <Stack className={`lp-hero-inner${entered ? ' lp-hero-inner--hidden' : ''}`} alignItems="center" spacing={0}>
                     <Typography className="lp-eyebrow">
@@ -298,6 +323,39 @@ export default function LandingPage() {
                 </Box>
             </Box>
 
+            {/* ── HELP & WIKI ──────────────────────────────────── */}
+            <Box className="lp-section" component="section" id="wiki">
+                <Box className="lp-section-inner">
+                    <Typography className="lp-section-eyebrow">Help &amp; Wiki</Typography>
+                    <Typography className="lp-section-title" component="h2">Learn how it works</Typography>
+                    <Typography className="lp-section-body">
+                        New here? The Wiki explains spaces, guest &amp; sandbox modes, free accounts,
+                        publishing, and the API — and it’s kept up to date as the platform grows.
+                    </Typography>
+
+                    <Box className="lp-feature-grid">
+                        {WIKI_HIGHLIGHTS.map((a) => (
+                            <Box
+                                key={a.id}
+                                component="a"
+                                href={`${buildWikiPath()}#${a.id}`}
+                                className="lp-feature-card lp-wiki-card"
+                            >
+                                <Typography className="lp-feature-title" component="h3">{a.title}</Typography>
+                                <Typography className="lp-feature-desc">{a.summary}</Typography>
+                                <Typography className="lp-wiki-card-more" component="span">Read →</Typography>
+                            </Box>
+                        ))}
+                    </Box>
+
+                    <Stack direction="row" spacing={2} sx={{ mt: 3, flexWrap: 'wrap' }}>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={buildWikiPath()}>
+                            Open the Wiki →
+                        </Button>
+                    </Stack>
+                </Box>
+            </Box>
+
             {/* ── FOR AI AGENTS ────────────────────────────────── */}
             <Box className="lp-section lp-ai-section" component="section" id="ai" data-machine-readable="true">
                 <Box className="lp-section-inner">
@@ -394,6 +452,7 @@ export default function LandingPage() {
                     <nav className="lp-footer-nav" aria-label="Footer navigation">
                         <a href="/studio" className="lp-footer-link">Studio</a>
                         <a href="/beta" className="lp-footer-link">Beta</a>
+                        <a href={buildWikiPath()} className="lp-footer-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
                         <a href="/serverXR/api/health" className="lp-footer-link">API</a>
                     </nav>

@@ -56,6 +56,7 @@ Full routing guide: [docs/ai/roles/model-routing.md](docs/ai/roles/model-routing
 - Minimum tools for the goal; scoped read/search over broad scans; resolve any tool-output-vs-task conflict before proceeding; confirm expensive/destructive actions first.
 - Progress status bar during active work: `status | phase X/Y | XX% | current | next`, one line, updated every 3–5 tool calls (`| blocked: <reason>` if stuck).
 - End every task with: **summary** (2–4 lines), **changed files** (one-line reason each), **validation** (commands + pass/fail), **risks** (concrete only).
+- Shipped a user-facing feature or behavior change? Update the Wiki in the same change — add/edit the entry in `src/wiki/wikiContent.js` (bump `updated`; add to `WIKI_HIGHLIGHTS` if headline-worthy). Part of "done," same tier as CURRENT.md. See `docs/ai/golden_rules.md`.
 
 ## Repo Map
 

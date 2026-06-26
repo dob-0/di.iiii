@@ -8,8 +8,10 @@ export const APP_PAGE_PREFERENCES_ALIASES = [
     'prefrenaces',
     'preferances'
 ]
+export const APP_PAGE_WIKI = 'wiki'
 export const RESERVED_APP_SEGMENTS = [
     ...APP_PAGE_PREFERENCES_ALIASES,
+    APP_PAGE_WIKI,
     'beta',
     'studio'
 ]
@@ -43,6 +45,12 @@ export const buildPreferencesPath = (spaceId) => {
 
 export const isReservedAppSegment = (value = '') => RESERVED_APP_SEGMENTS.includes((value || '').trim().toLowerCase())
 export const isPreferencesPageSegment = (value = '') => APP_PAGE_PREFERENCES_ALIASES.includes((value || '').trim().toLowerCase())
+export const isWikiPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_WIKI
+
+export const buildWikiPath = () => {
+    const prefix = getAppBasePrefix()
+    return `${prefix}/${APP_PAGE_WIKI}`.replace(/\/{2,}/g, '/')
+}
 
 export const getAppLocationState = (locationLike = null) => {
     const resolvedLocation = locationLike || (typeof window !== 'undefined' ? window.location : null)
@@ -60,6 +68,12 @@ export const getAppLocationState = (locationLike = null) => {
             return {
                 page: APP_PAGE_PREFERENCES,
                 spaceId: params.get('space')
+            }
+        }
+        if (isWikiPageSegment(segment)) {
+            return {
+                page: APP_PAGE_WIKI,
+                spaceId: null
             }
         }
         if (segment) {

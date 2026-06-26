@@ -407,6 +407,35 @@ const clearAuthSessionCookie = (res) => {
   }))
 }
 
+// When a signed-in account creates a space, grant their account access to it and
+// refresh the session cookie so the new space is in scope immediately (no
+// re-login). No-op for non-DB identities (API tokens) and unrestricted users.
+const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
+  if (!userId || !spaceId) return
+  let user = null
+  try { user = findUserById(userId) } catch { return }
+  if (!user || !Array.isArray(user.spaces) || user.spaces.includes(spaceId)) return
+  const nextSpaces = [...user.spaces, spaceId]
+  try { setUserSpaces(userId, nextSpaces) } catch { return }
+  if (req.authState?.type === 'session' && config.auth.sessionSecret) {
+    try {
+      const session = createAuthSessionValue({
+        secret: config.auth.sessionSecret,
+        ttlMs: config.authSession.ttlMs,
+        session: {
+          subject: userId,
+          label: req.authState.label,
+          role: user.role,
+          spaces: nextSpaces,
+          isUnrestricted: Boolean(user.isUnrestricted)
+        }
+      })
+      setAuthSessionCookie(res, session.value)
+      req.authState = { ...req.authState, spaces: nextSpaces }
+    } catch { /* non-fatal — DB grant still applied */ }
+  }
+}
+
 const GUEST_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30
 
 // Decide what a brand-new guest can touch:
@@ -641,13 +670,9 @@ const requireReadRole = (requiredRole = 'viewer') => async (req, res, next) => {
   return next()
 }
 
-router.use('/api/spaces', (req, res, next) => {
-  if (req.method === 'POST' && (req.path === '/' || req.path === '')) {
-    req.requiredWriteRole = 'admin'
-  }
-  next()
-})
-
+// Creating a space (POST /api/spaces) is open to any signed-in account; the
+// route handler enforces the free-tier quota (and blocks guests/tokens). Space
+// *management* (PATCH/DELETE below) stays admin-only.
 router.use('/api/spaces/:spaceId', (req, res, next) => {
   req.requiredSpaceId = normalizeSpaceId(req.params.spaceId) || null
   if (['PATCH', 'DELETE'].includes(req.method) && (req.path === '/' || req.path === '')) {
@@ -704,6 +729,7 @@ registerSpaceRoutes(router, {
   config,
   countSpacesOwnedBy,
   spaceLimit: config.freeSpaceLimit,
+  grantSpaceToSessionUser,
   deleteSpace,
   ensureSpaceScene,
   ensureSpaceWritable,
