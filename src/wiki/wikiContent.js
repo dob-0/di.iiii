@@ -146,7 +146,10 @@ export const WIKI_ARTICLES = [
     }
 ]
 
-// Headline subset surfaced on the landing page.
-export const WIKI_HIGHLIGHTS = ['guest-and-sandbox-modes', 'free-spaces', 'publishing', 'admin-manage']
+// Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
+// fails CI if any id does not resolve to an article (otherwise it silently vanishes).
+export const WIKI_HIGHLIGHT_IDS = ['guest-and-sandbox-modes', 'free-spaces', 'publishing', 'admin-manage']
+
+export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))
     .filter(Boolean)

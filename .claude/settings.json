@@ -119,6 +119,16 @@
             "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -q \"AGENTS.md\" || exit 0; RESULT=$(npm run docs:ai:sync --silent 2>&1 && npm run docs:ai:check --silent 2>&1); CODE=$?; [[ $CODE -eq 0 ]] && printf \"  ● docs:ai:sync ran after AGENTS.md edit\\n\" && exit 0; printf \"  ✗ docs:ai:sync failed:\\n%s\\n  → Run npm run docs:ai:sync manually\\n\" \"$RESULT\"; exit 2'",
             "statusMessage": "Syncing AI docs...",
             "asyncRewake": true
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -q \"src/wiki/wikiContent.js\" || exit 0; RESULT=$(npm run docs:wiki:check --silent 2>&1); CODE=$?; [[ $CODE -eq 0 ]] && printf \"  ● docs:wiki:check passed after wikiContent.js edit\\n\" && exit 0; printf \"  ✗ docs:wiki:check failed:\\n%s\\n\" \"$RESULT\"; exit 2'",
+            "statusMessage": "Checking wiki...",
+            "asyncRewake": true
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=\"${CLAUDE_TOOL_INPUT_FILE_PATH:-}\"; [[ -z \"$FILE\" ]] && exit 0; echo \"$FILE\" | grep -q \"src/wiki/\" && exit 0; echo \"$FILE\" | grep -qE \"src/(studio|beta|landing|project|wcc)/.*\\.(js|jsx)$|serverXR/src/.*routes.*\\.js$\" || exit 0; printf \"\\n  ● User-facing surface edited: %s\\n    If this changed how visitors use the platform → update src/wiki/wikiContent.js\\n    (the /wiki help + landing teaser) and bump that article\\x27s updated date.\\n\\n\" \"$FILE\"; exit 0'"
           }
         ]
       }
