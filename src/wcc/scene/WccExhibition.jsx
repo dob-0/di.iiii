@@ -270,14 +270,14 @@ function HubTitle() {
     // depthTest off + a high renderOrder keep the title legible over the translucent
     // spire from every angle (otherwise the cone slices through the letters).
     return (
-        <Billboard position={[0, 5.0, 0]}>
-            <Text renderOrder={20} material-depthTest={false} material-depthWrite={false} fontSize={0.6} maxWidth={13} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.018} outlineColor="#04181c" position={[0, 0.5, 0]}>
+        <Billboard position={[0, 8.4, 0]}>
+            <Text renderOrder={20} material-depthTest={false} material-depthWrite={false} fontSize={0.46} maxWidth={11} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.014} outlineColor="#04181c" position={[0, 0.42, 0]}>
                 WOMEN CREATING CHANGE
             </Text>
-            <Text renderOrder={20} material-depthTest={false} material-depthWrite={false} fontSize={0.32} maxWidth={13} color="#cdf3f6" anchorX="center" anchorY="middle" outlineWidth={0.008} outlineColor="#04181c" position={[0, -0.12, 0]}>
+            <Text renderOrder={20} material-depthTest={false} material-depthWrite={false} fontSize={0.26} maxWidth={11} color="#cdf3f6" anchorX="center" anchorY="middle" outlineWidth={0.007} outlineColor="#04181c" position={[0, -0.08, 0]}>
                 Կանայք, որ փոփոխություն են ստեղծում
             </Text>
-            <Text renderOrder={20} material-depthTest={false} material-depthWrite={false} fontSize={0.2} maxWidth={13} color="#7fb9bd" anchorX="center" anchorY="middle" position={[0, -0.56, 0]}>
+            <Text renderOrder={20} material-depthTest={false} material-depthWrite={false} fontSize={0.17} maxWidth={11} color="#7fb9bd" anchorX="center" anchorY="middle" position={[0, -0.44, 0]}>
                 a contemporary art exhibition
             </Text>
         </Billboard>
@@ -939,7 +939,7 @@ export default function WccExhibition({ onExit }) {
 
     // Spawn a few metres out from the central beacon, looking +Z straight at it,
     // so arrival frames the title monument (and never spawns inside the spire).
-    const playerRef = useRef({ x: 0, z: -8, yaw: 0, pitch: 0.04, altY: EYE_HEIGHT })
+    const playerRef = useRef({ x: 0, z: 0, yaw: 0, pitch: 1.3, altY: EYE_HEIGHT })
 
     useEffect(() => {
         const onKey = (e) => { if (e.key.toLowerCase() === 'f') setFlyMode((f) => !f) }
