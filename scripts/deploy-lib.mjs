@@ -1,26 +1,27 @@
+// Plans how to promote the integration source branch (dev) onto main for a production deploy.
 export const getProductionPromotionPlan = ({
     mainCommit,
-    stagingCommit,
-    mainInStaging,
-    stagingInMain
+    sourceCommit,
+    mainInSource,
+    sourceInMain
 }) => {
-    if (!mainCommit || !stagingCommit) {
-        throw new Error('Production promotion planning requires both main and staging commits.')
+    if (!mainCommit || !sourceCommit) {
+        throw new Error('Production promotion planning requires both main and source commits.')
     }
 
-    if (mainCommit === stagingCommit) {
+    if (mainCommit === sourceCommit) {
         return {
             type: 'noop'
         }
     }
 
-    if (mainInStaging) {
+    if (mainInSource) {
         return {
             type: 'fast-forward'
         }
     }
 
-    if (stagingInMain) {
+    if (sourceInMain) {
         return {
             type: 'abort-main-ahead'
         }
