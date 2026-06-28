@@ -3,7 +3,9 @@ import gsap from 'gsap'
 import LandingPage from './landing/LandingPage.jsx'
 import './wccExperience.css'
 
-const WccExhibition = lazy(() => import('./scene/WccExhibition.jsx'))
+// The full exhibition now renders through the shared LiveProjectScene (same engine
+// as every other space viewer); the composition lives in the `main` project as
+// portal-embeds of each artist project. The old bespoke WccExhibition is retired.
 const LiveProjectScene = lazy(() => import('../components/LiveProjectScene.jsx'))
 
 const SCENE_PATH = '/wcc/scene'
@@ -141,17 +143,13 @@ export default function WccExperience({ initialMode = 'landing' }) {
                     style={mode === 'entering' ? { opacity: 0 } : undefined}
                 >
                     <Suspense fallback={null}>
-                        {activeProjectId ? (
-                            <LiveProjectScene
-                                projectId={activeProjectId}
-                                interactive
-                                showChrome
-                                onExit={exitExhibition}
-                                title={ARTIST_TITLES[activeProjectId] || activeProjectId}
-                            />
-                        ) : (
-                            <WccExhibition onExit={exitExhibition} />
-                        )}
+                        <LiveProjectScene
+                            projectId={activeProjectId || 'main'}
+                            interactive
+                            showChrome
+                            onExit={exitExhibition}
+                            title={activeProjectId ? (ARTIST_TITLES[activeProjectId] || activeProjectId) : 'WCC · Women Creating Change'}
+                        />
                     </Suspense>
                 </div>
             ) : null}
