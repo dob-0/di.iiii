@@ -78,6 +78,9 @@ const defaultWindowLayout = {
 
 const defaultWorldState = {
   backgroundColor: '#0a1118',
+  atmosphereBlend: false,
+  hubDecor: false,
+  spawn: null,
   gridVisible: true,
   gridSize: 24,
   gridCellSize: 0.75,
@@ -176,7 +179,7 @@ const buildDefaultComponentsForType = (type = 'box') => {
       base.primitive = { shape: 'cylinder', radiusTop: 0.45, radiusBottom: 0.45, height: 1.2 }
       break
     case 'text':
-      base.text = { value: 'New Text', variant: '2d', fontFamily: 'Inter, sans-serif', fontWeight: '600', fontStyle: 'normal', fontSize3D: 0.45, depth3D: 0.08 }
+      base.text = { value: 'New Text', variant: '2d', billboard: false, fontFamily: 'Inter, sans-serif', fontWeight: '600', fontStyle: 'normal', fontSize3D: 0.45, depth3D: 0.08 }
       break
     case 'image':
       base.media = { assetId: null, fit: 'contain', autoplay: false, loop: false, muted: true }
@@ -275,7 +278,8 @@ const normalizeEntity = (entity = {}) => {
       ...defaultComponents.text,
       ...nextComponents.text,
       value: typeof nextComponents.text.value === 'string' ? nextComponents.text.value : defaultComponents.text.value,
-      variant: ensureString(nextComponents.text.variant, defaultComponents.text.variant || '2d')
+      variant: ensureString(nextComponents.text.variant, defaultComponents.text.variant || '2d'),
+      billboard: ensureBoolean(nextComponents.text.billboard, defaultComponents.text?.billboard ?? false)
     }
   }
   if (nextComponents.media) {
@@ -308,6 +312,14 @@ const normalizeEntity = (entity = {}) => {
       locked: ensureBoolean(sourceComponents.runtime?.locked, defaultComponents.runtime?.locked ?? false)
     }
   }
+  if (sourceComponents.animation) {
+    const animMode = ensureString(sourceComponents.animation.mode, 'static')
+    nextComponents.animation = {
+      mode: ['static', 'bob', 'spin', 'float', 'sway', 'orbit'].includes(animMode) ? animMode : 'static',
+      speed: ensureNumber(sourceComponents.animation.speed, 1),
+      amplitude: ensureNumber(sourceComponents.animation.amplitude, 1)
+    }
+  }
 
   return {
     id: ensureString(entity.id, generateId('entity')),
@@ -323,6 +335,15 @@ const normalizeWorldState = (world = {}) => {
     ...cloneValue(defaultWorldState),
     ...cloneValue(source),
     backgroundColor: ensureString(source.backgroundColor, defaultWorldState.backgroundColor),
+    atmosphereBlend: ensureBoolean(source.atmosphereBlend, defaultWorldState.atmosphereBlend),
+    hubDecor: ensureBoolean(source.hubDecor, defaultWorldState.hubDecor),
+    spawn: source.spawn && typeof source.spawn === 'object' ? {
+      x: ensureNumber(source.spawn.x, 0),
+      z: ensureNumber(source.spawn.z, 0),
+      yaw: ensureNumber(source.spawn.yaw, 0),
+      pitch: ensureNumber(source.spawn.pitch, 0),
+      altY: ensureNumber(source.spawn.altY, 1.6)
+    } : null,
     gridVisible: ensureBoolean(source.gridVisible, defaultWorldState.gridVisible),
     gridSize: Math.max(1, ensureNumber(source.gridSize, defaultWorldState.gridSize)),
     gridCellSize: Math.max(0.05, ensureNumber(source.gridCellSize, defaultWorldState.gridCellSize)),

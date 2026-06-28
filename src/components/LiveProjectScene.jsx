@@ -1,7 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Grid } from '@react-three/drei'
+import { Grid, Text, Billboard } from '@react-three/drei'
 import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState } from '@react-three/xr'
 import * as THREE from 'three'
 import { useXrAr } from '../hooks/useXrAr.js'
@@ -21,7 +21,10 @@ import CylinderObject from '../objectComponents/CylinderObject.jsx'
 import ImageObject from '../objectComponents/ImageObject.jsx'
 import VideoObject from '../objectComponents/VideoObject.jsx'
 import ModelObject from '../objectComponents/ModelObject.jsx'
+import Text2DObject from '../objectComponents/Text2DObject.jsx'
+import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject from '../project/viewport/PortalObject.jsx'
+import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
 import './liveProjectScene.css'
 
 const WALK_MAX_SPEED = 5.2
@@ -50,8 +53,11 @@ const tmpLook = new THREE.Vector3()
 const tmpDir = new THREE.Vector3()
 
 const isGateEntity = (entity) => /gate|threshold|entrance/i.test(entity?.name || '')
-const isGroundEntity = (entity) => /ground|floor/i.test(entity?.name || '')
-const isFlyEntity = (entity) => /\bfly\b/i.test(entity?.name || '')
+
+// Billboard titles are fixed world-size, so they overflow a narrow portrait phone.
+// Scale them down on a coarse-pointer (touch) viewport so they fit.
+const COARSE_POINTER = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
+const BILLBOARD_TEXT_SCALE = COARSE_POINTER ? 0.45 : 1
 
 // Same fix as GridFloorBackground: any page that renders a live scene
 // without going through AuthGate has no session cookie yet on first paint.
@@ -116,6 +122,51 @@ function EntityVisual({ entity, assetMap }) {
         return <ModelObject assetRef={asset || null} data={asset?.url || null} modelColor={appearance.color} applyModelColor={false} opacity={appearance.opacity} />
     case 'portal':
         return <PortalObject entity={entity} />
+    case 'text': {
+        const tc = entity.components?.text || {}
+        const value = (tc.value || '').replace(/\\n/g, '\n')
+        if (tc.billboard) {
+            // Billboarded title/caption: always faces the viewer, drawn over geometry.
+            // `lines` lets one billboard stack several per-line-styled rows (so a title
+            // keeps its size/colour hierarchy and stays readable even viewed end-on).
+            const lines = Array.isArray(tc.lines) && tc.lines.length
+                ? tc.lines
+                : [{ value, fontSize: tc.fontSize3D || 0.5, color: appearance.color || '#ffffff' }]
+            const gaps = lines.map((ln) => (ln.fontSize || 0.4) * 1.45)
+            const totalH = gaps.reduce((a, b) => a + b, 0)
+            let cursor = totalH / 2
+            return (
+                <Billboard scale={BILLBOARD_TEXT_SCALE}>
+                    {lines.map((ln, i) => {
+                        const y = cursor - gaps[i] / 2
+                        cursor -= gaps[i]
+                        return (
+                            <Text
+                                key={i}
+                                position={[0, y, 0]}
+                                fontSize={ln.fontSize || 0.4}
+                                maxWidth={tc.maxWidth || 16}
+                                color={ln.color || '#ffffff'}
+                                anchorX="center"
+                                anchorY="middle"
+                                outlineWidth={(ln.fontSize || 0.4) > 0.4 ? 0.014 : 0.006}
+                                outlineColor="#04070c"
+                                renderOrder={20}
+                                material-depthTest={false}
+                                material-depthWrite={false}
+                            >
+                                {(ln.value || '').replace(/\\n/g, '\n')}
+                            </Text>
+                        )
+                    })}
+                </Billboard>
+            )
+        }
+        if (tc.variant === '3d') {
+            return <Text3DObject data={value} color={appearance.color || '#ffffff'} fontSize3D={tc.fontSize3D} depth3D={tc.depth3D} />
+        }
+        return <Text2DObject data={value} color={appearance.color || '#ffffff'} fontFamily={tc.fontFamily} fontWeight={tc.fontWeight} fontStyle={tc.fontStyle} />
+    }
     default:
         return null
     }
@@ -136,38 +187,13 @@ function AnimatedEntity({ entity, assetMap }) {
         return (hash / 1000) * Math.PI * 2
     }, [entity.id])
 
-    const isGate = isGateEntity(entity)
-    const isGround = isGroundEntity(entity)
-    const isFly = isFlyEntity(entity)
+    const anim = useMemo(() => resolveAnimation(entity), [entity])
 
     useFrame((state) => {
         const group = groupRef.current
         if (!group) return
         const t = state.clock.getElapsedTime() + seed
-
-        if (isGround || isGate) {
-            group.position.set(...basePos)
-            group.rotation.set(...baseRot)
-            return
-        }
-
-        if (isFly) {
-            const radius = 1.6
-            group.position.set(
-                basePos[0] + Math.cos(t * 0.6) * radius,
-                basePos[1] + Math.sin(t * 1.3) * 0.5,
-                basePos[2] + Math.sin(t * 0.6) * radius
-            )
-            group.rotation.set(baseRot[0], t * 0.6, baseRot[2])
-            return
-        }
-
-        group.position.set(basePos[0], basePos[1] + Math.sin(t * 0.7) * 0.12, basePos[2])
-        // Flat image/video planes go edge-on (and look broken) mid-spin --
-        // sway them gently instead; only freestanding models get a full turntable spin.
-        const isFlat = entity.type === 'image' || entity.type === 'video'
-        const yaw = isFlat ? baseRot[1] + Math.sin(t * 0.4) * 0.08 : baseRot[1] + t * 0.12
-        group.rotation.set(baseRot[0], yaw, baseRot[2])
+        applyAnimation(group, anim, basePos, baseRot, t)
     })
 
     return (
@@ -469,9 +495,13 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
         camera.lookAt(tmpLook)
 
         if (onNearestZone && entities.length) {
+            // In a composed exhibition the "zones" are the portal embeds; fall back to
+            // all entities for plain single-project scenes.
+            const portals = entities.filter((e) => e.type === 'portal')
+            const pool = portals.length ? portals : entities
             let nearest = null
             let nearestDist = Infinity
-            for (const entity of entities) {
+            for (const entity of pool) {
                 const pos = entity.components?.transform?.position
                 if (!pos) continue
                 const dist = (pos[0] - player.x) ** 2 + (pos[2] - player.z) ** 2
@@ -480,8 +510,10 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                     nearest = entity
                 }
             }
-            const zoneMatch = nearest?.name?.match(/Zone\s*\d+/i)
-            onNearestZone(nearestDist < 64 ? (zoneMatch?.[0] || nearest?.name || null) : null)
+            const label = nearest?.components?.reference?.label
+                || nearest?.name?.match(/Zone\s*\d+/i)?.[0]
+                || nearest?.name || null
+            onNearestZone(nearestDist < (portals.length ? 900 : 64) ? label : null)
         }
     })
 
@@ -584,6 +616,33 @@ function MobileJoystick({ outerRef, thumbRef }) {
 // Fly mode's altitude keys (Space/Q, C/E) have no touch equivalent --
 // press-and-hold buttons fill that gap. Pointer events (not click) so
 // altitude changes continuously while held, like the keyboard.
+// Animated first-visit movement cue: a ghost joystick demo on mobile (the real
+// joystick is invisible until touched), pulsing WASD keys on desktop.
+function MoveHintVisual({ isMobile }) {
+    if (isMobile) {
+        return (
+            <div className="ls-move-hint">
+                <div className="ls-ghost-joy"><div className="ls-ghost-thumb" /></div>
+                <span className="ls-hint-label ls-hint-label--joy">drag · move</span>
+                <div className="ls-ghost-swipe" />
+                <span className="ls-hint-label ls-hint-label--look">swipe · look</span>
+            </div>
+        )
+    }
+    return (
+        <div className="ls-move-hint">
+            <div className="ls-keys">
+                <div className="ls-keys-row"><span className="ls-key ls-key--w">W</span></div>
+                <div className="ls-keys-row">
+                    <span className="ls-key ls-key--a">A</span>
+                    <span className="ls-key ls-key--s">S</span>
+                    <span className="ls-key ls-key--d">D</span>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 function VerticalTouchControls({ vertTouchRef }) {
     const setVert = (value) => (e) => {
         e.preventDefault()
@@ -720,6 +779,73 @@ function useLiveProjectDocument(projectId) {
  * controls whether the exit button / title / hint overlay render (callers
  * that provide their own chrome, like the landing page, pass `false`).
  */
+// Color transitions: when worldState.atmosphereBlend is on, the background + fog
+// drift toward the distance-weighted colors of nearby zones (each portal's
+// authored colour) as you walk — ported from the old bespoke exhibition, now a
+// data toggle that works for any project.
+const _atmAcc = new THREE.Color()
+const _atmTarget = new THREE.Color()
+function AtmosphereBlender({ zones, playerRef, baseBg }) {
+    const { scene } = useThree()
+    const base = useMemo(() => new THREE.Color(baseBg), [baseBg])
+    const current = useRef(new THREE.Color(baseBg))
+    useFrame(() => {
+        const p = playerRef.current
+        if (!p || !zones.length) return
+        let tot = 0
+        for (const z of zones) { const dx = z.x - p.x, dz = z.z - p.z; z._w = 1 / (dx * dx + dz * dz + 400); tot += z._w }
+        let r = 0, g = 0, b = 0, nd2 = Infinity
+        for (const z of zones) {
+            const k = z._w / tot
+            _atmAcc.set(z.color); r += _atmAcc.r * k; g += _atmAcc.g * k; b += _atmAcc.b * k
+            const dx = z.x - p.x, dz = z.z - p.z; const d2 = dx * dx + dz * dz; if (d2 < nd2) nd2 = d2
+        }
+        const nd = Math.sqrt(nd2)
+        const strength = THREE.MathUtils.clamp(1 - (nd - 8) / (40 - 8), 0, 1)
+        _atmAcc.setRGB(r, g, b)
+        _atmTarget.copy(base).lerp(_atmAcc, strength)
+        current.current.lerp(_atmTarget, 0.04)
+        if (scene.background?.isColor) scene.background.copy(current.current)
+        if (scene.fog) scene.fog.color.copy(current.current)
+    })
+    return null
+}
+
+// Wayfinding floor decor for a composed hub (opt-in via worldState.hubDecor):
+// a pulsing centre ring, faint spokes out to each zone, and a glow ring under
+// each zone — ported from the old bespoke exhibition.
+function HubDecor({ zones }) {
+    const centerRef = useRef(null)
+    useFrame((state) => {
+        if (centerRef.current) centerRef.current.material.opacity = 0.3 + Math.sin(state.clock.getElapsedTime() * 0.9) * 0.08
+    })
+    const spokes = useMemo(() => {
+        const a = new Float32Array(zones.length * 6)
+        zones.forEach((z, i) => { a[i * 6 + 1] = 0.02; a[i * 6 + 3] = z.x; a[i * 6 + 4] = 0.02; a[i * 6 + 5] = z.z })
+        return a
+    }, [zones])
+    return (
+        <>
+            <mesh ref={centerRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+                <ringGeometry args={[3.6, 4.2, 64]} />
+                <meshBasicMaterial color={0xffffff} transparent opacity={0.3} depthWrite={false} side={THREE.DoubleSide} />
+            </mesh>
+            <lineSegments key={zones.length}>
+                <bufferGeometry>
+                    <bufferAttribute attach="attributes-position" args={[spokes, 3]} />
+                </bufferGeometry>
+                <lineBasicMaterial color={0xffffff} transparent opacity={0.1} />
+            </lineSegments>
+            {zones.map((z, i) => (
+                <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[z.x, 0.03, z.z]}>
+                    <ringGeometry args={[2.4, 3, 48]} />
+                    <meshBasicMaterial color={0xffffff} transparent opacity={0.16} depthWrite={false} side={THREE.DoubleSide} />
+                </mesh>
+            ))}
+        </>
+    )
+}
+
 export default function LiveProjectScene({
     projectId,
     interactive = true,
@@ -733,6 +859,20 @@ export default function LiveProjectScene({
     const [nearestLabel, setNearestLabel] = useState(null)
     const [isLocked, setIsLocked] = useState(false)
     const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
+    // First-visit movement hint: fades on a timer, but dismiss immediately on the
+    // first interaction so the ghost-joystick demo never overlaps the real joystick.
+    const [showMoveHint, setShowMoveHint] = useState(true)
+    useEffect(() => {
+        const t = setTimeout(() => setShowMoveHint(false), 12000)
+        const dismiss = () => setShowMoveHint(false)
+        window.addEventListener('pointerdown', dismiss, { once: true })
+        window.addEventListener('touchstart', dismiss, { once: true })
+        return () => {
+            clearTimeout(t)
+            window.removeEventListener('pointerdown', dismiss)
+            window.removeEventListener('touchstart', dismiss)
+        }
+    }, [])
     const [flyMode, setFlyMode] = useState(false)
     const joystickRef = useRef({ x: 0, y: 0 })
     const joyVisRef = useRef(null)
@@ -743,6 +883,19 @@ export default function LiveProjectScene({
     const arTouchElRef = useRef(null)
     const isArActive = xr.isArModeActive && xr.isXrPresenting
     const playerRef = useRef({ x: 0, z: 6, yaw: Math.PI, pitch: 0, altY: EYE_HEIGHT })
+
+    // Data-driven arrival: a project can author worldState.spawn to place/aim the
+    // visitor on entry (otherwise the default above). Applied once per project load.
+    const spawnAppliedRef = useRef(null)
+    useEffect(() => {
+        const s = doc?.worldState?.spawn
+        if (!s || spawnAppliedRef.current === projectId) return
+        spawnAppliedRef.current = projectId
+        playerRef.current = {
+            x: s.x ?? 0, z: s.z ?? 0, yaw: s.yaw ?? 0,
+            pitch: s.pitch ?? 0, altY: s.altY ?? EYE_HEIGHT
+        }
+    }, [doc, projectId])
 
     // The library only toggles display:block/none on this element -- it has
     // no inherent size/position, so anything portaled into it (the touch
@@ -819,6 +972,13 @@ export default function LiveProjectScene({
     const ambient = worldState.ambientLight || { color: '#ffffff', intensity: 0.85 }
     const directional = worldState.directionalLight || { color: '#fff7ea', intensity: 1.15, position: [8, 12, 4] }
     const backgroundColor = worldState.backgroundColor || '#0a1118'
+    // Zone tint sources for atmosphere blend: each portal's position + authored colour.
+    const atmosphereZones = useMemo(() => entities
+        .filter((e) => e.type === 'portal')
+        .map((e) => {
+            const pos = e.components?.transform?.position || [0, 0, 0]
+            return { x: pos[0], z: pos[2], color: e.components?.appearance?.color || backgroundColor }
+        }), [entities, backgroundColor])
 
     return (
         <>
@@ -832,6 +992,12 @@ export default function LiveProjectScene({
                 <XR store={xr.xrStore}>
                 <color attach="background" args={[backgroundColor]} />
                 <fog attach="fog" args={[backgroundColor, 8, 50]} />
+                {interactive && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
+                    <AtmosphereBlender zones={atmosphereZones} playerRef={playerRef} baseBg={backgroundColor} />
+                ) : null}
+                {worldState.hubDecor && atmosphereZones.length > 0 ? (
+                    <HubDecor zones={atmosphereZones} />
+                ) : null}
                 <ambientLight color={ambient.color} intensity={ambient.intensity} />
                 <directionalLight color={directional.color} intensity={directional.intensity} position={directional.position} />
                 <Grid args={[80, 80]} cellColor="#2a3038" sectionColor="#3c4654" fadeDistance={40} infiniteGrid />
@@ -953,7 +1119,9 @@ export default function LiveProjectScene({
                     </header>
 
                     {interactive && !isMobile && !isLocked && (
-                        <p className="live-scene-hint live-scene-hint--lock">Click to explore</p>
+                        <p className="live-scene-hint live-scene-hint--lock">
+                            Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; F · fly
+                        </p>
                     )}
                     {interactive && !isMobile && isLocked && (
                         <p className="live-scene-hint">
@@ -961,6 +1129,9 @@ export default function LiveProjectScene({
                             {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
                             &nbsp;·&nbsp; ESC · release
                         </p>
+                    )}
+                    {interactive && showMoveHint && (isMobile || !isLocked) && (
+                        <MoveHintVisual isMobile={isMobile} />
                     )}
                 </>
             )}
