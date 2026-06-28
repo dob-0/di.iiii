@@ -304,7 +304,20 @@ function HorizontalNavigation({ activeIndex, onActiveIndexChange, onOpen, onEnte
             })
         }, section)
 
-        return () => ctx.revert()
+        // The pin measures track width (incl. the huge ARTIST WORKS heading) once at
+        // layout time — before webfonts/late layout settle. If travel() is stale the
+        // pinned section's scroll distance is wrong and you intermittently can't scroll
+        // past it. Refresh once measurements are final so the dead zone can't happen.
+        const refresh = () => ScrollTrigger.refresh()
+        const raf = window.requestAnimationFrame(refresh)
+        window.addEventListener('load', refresh)
+        if (document.fonts?.ready) document.fonts.ready.then(refresh).catch(() => {})
+
+        return () => {
+            window.cancelAnimationFrame(raf)
+            window.removeEventListener('load', refresh)
+            ctx.revert()
+        }
     }, [onActiveIndexChange, scrollerRef])
 
     return (
