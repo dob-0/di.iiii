@@ -445,7 +445,37 @@ function AboutProject({ lang = 'en' }) {
                     ))}
                 </div>
             </div>
+            <SupportedBy lang={lang} inAbout />
         </div>
+    )
+}
+
+const supportedByLogos = [
+    { src: '/wcc/logos/kanach-resource-center.png', alt: 'Կանանց Ռեսուրսային Կենտրոն' },
+    { src: '/wcc/logos/wcc.svg', alt: 'WCC' },
+    { src: '/wcc/logos/pink-armenia.png', alt: 'Pink Armenia' }
+]
+
+function SupportedBy({ lang = 'en', inAbout = false }) {
+    const isHy = lang === 'hy'
+    const Tag = inAbout ? 'div' : 'footer'
+    return (
+        <Tag className={`wcc-supported-by${inAbout ? ' wcc-supported-by--about' : ''}`} aria-label={isHy ? 'Աջակցություն' : 'Support'}>
+            <p className="wcc-supported-by__label">
+                {isHy ? 'նախագիծը աջակցվում է Շվեդիայի կողմից' : 'the project is supported by Sweden'}
+            </p>
+            <div className="wcc-supported-by__logos">
+                {supportedByLogos.map((logo, i) => (
+                    <img
+                        key={logo.src}
+                        src={logo.src}
+                        alt={logo.alt}
+                        className="wcc-supported-by__logo"
+                        style={inAbout && i === supportedByLogos.length - 1 ? { marginLeft: '-8px' } : undefined}
+                    />
+                ))}
+            </div>
+        </Tag>
     )
 }
 
