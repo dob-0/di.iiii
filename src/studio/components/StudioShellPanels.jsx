@@ -1,5 +1,14 @@
 import { useMemo, useRef, useState } from 'react'
 import JSZip from 'jszip'
+
+// Asset URLs come in two shapes: space assets already include the /serverXR mount,
+// project assets are mount-relative. Resolve without double-prefixing (the cause of
+// the blank "/serverXR/serverXR/..." thumbnails).
+const assetSrc = (url) => {
+    if (!url) return ''
+    if (/^(https?:|\/serverXR\/)/.test(url)) return url
+    return `/serverXR${url.startsWith('/') ? '' : '/'}${url}`
+}
 import {
     Box,
     Button,
@@ -121,7 +130,7 @@ export function LibraryPanel({ onCreateEntity, onAssetFilesSelected, canDeleteSe
 export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelected, onCreateFromAsset }) {
     const [copied, setCopied] = useState(null)
     const copyUrl = (asset) => {
-        navigator.clipboard.writeText(`/serverXR${asset.url}`).catch(() => {})
+        navigator.clipboard.writeText(assetSrc(asset.url)).catch(() => {})
         setCopied(asset.id)
         setTimeout(() => setCopied(null), 1500)
     }
@@ -141,7 +150,7 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
                             <div key={asset.id} className="spa-item spa-item--space">
                                 {asset.mimeType?.startsWith('image/') && (
                                     <img
-                                        src={`/serverXR${asset.url}`}
+                                        src={assetSrc(asset.url)}
                                         alt=""
                                         className="spa-thumb"
                                     />
@@ -651,7 +660,7 @@ export function FilesPanel({
     }
 
     const copyAssetUrl = (asset) => {
-        navigator.clipboard.writeText(`/serverXR${asset.url}`).catch(() => {})
+        navigator.clipboard.writeText(assetSrc(asset.url)).catch(() => {})
         setCopied(asset.id)
         setTimeout(() => setCopied(null), 1500)
     }
@@ -761,7 +770,7 @@ export function FilesPanel({
                                     title={`${asset.name}\nClick to copy URL`}
                                     sx={{ p: 0.5, cursor: 'pointer', overflow: 'hidden', '&:hover': { borderColor: 'primary.light' } }}>
                                     {asset.mimeType?.startsWith('image/') ? (
-                                        <Box component="img" src={`/serverXR${asset.url}`} alt=""
+                                        <Box component="img" src={assetSrc(asset.url)} alt=""
                                             sx={{ width: '100%', height: 48, objectFit: 'cover', display: 'block', mb: 0.25 }} />
                                     ) : (
                                         <Box sx={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', fontSize: '0.65rem' }}>
