@@ -927,6 +927,13 @@ export default function WccExhibition({ onExit }) {
     const [isLocked, setLocked] = useState(false)
     const [isMobile]  = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
     const [flyMode, setFlyMode] = useState(false)
+    // First-visit movement hint (esp. mobile, where the joystick is invisible until
+    // you touch). Fades on its own so it never clutters once you're moving.
+    const [showMoveHint, setShowMoveHint] = useState(true)
+    useEffect(() => {
+        const t = setTimeout(() => setShowMoveHint(false), 12000)
+        return () => clearTimeout(t)
+    }, [])
     const joystickRef  = useRef({ x: 0, y: 0 })
     const joyVisRef    = useRef(null)
     const joyThumbRef  = useRef(null)
@@ -937,8 +944,8 @@ export default function WccExhibition({ onExit }) {
     const ambientRef  = useRef(null)
     const dirRef      = useRef(null)
 
-    // Spawn a few metres out from the central beacon, looking +Z straight at it,
-    // so arrival frames the title monument (and never spawns inside the spire).
+    // Spawn at the exhibition centre, gaze tilted up so arrival reads the title
+    // overhead; lower your gaze / look around to explore the artist zones.
     const playerRef = useRef({ x: 0, z: 0, yaw: 0, pitch: 1.3, altY: EYE_HEIGHT })
 
     useEffect(() => {
@@ -1039,13 +1046,20 @@ export default function WccExhibition({ onExit }) {
             </header>
 
             {!isMobile && !isLocked && (
-                <p className="live-scene-hint live-scene-hint--lock">Click to explore</p>
+                <p className="live-scene-hint live-scene-hint--lock">
+                    Click to explore &nbsp;·&nbsp; WASD · walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; F · fly
+                </p>
             )}
             {!isMobile && isLocked && (
                 <p className="live-scene-hint">
                     WASD · move &nbsp;·&nbsp; Mouse · look &nbsp;·&nbsp; F · {flyMode ? 'walk' : 'fly'}
                     {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
                     &nbsp;·&nbsp; ESC · release
+                </p>
+            )}
+            {isMobile && showMoveHint && (
+                <p className="live-scene-hint live-scene-hint--lock" style={{ bottom: 196 }}>
+                    Drag left · move &nbsp;·&nbsp; drag · look &nbsp;·&nbsp; tap {flyMode ? 'Walk' : 'Fly'}
                 </p>
             )}
             {(() => {
