@@ -140,6 +140,7 @@ const DEFINITIONS = {
                 fields: [
                     { label: 'Content', component: 'text', path: ['value'], type: 'textarea' },
                     { label: 'Variant', component: 'text', path: ['variant'], type: 'select', options: [{ value: '2d', label: '2D' }, { value: '3d', label: '3D' }] },
+                    { label: 'Billboard (face camera)', component: 'text', path: ['billboard'], type: 'checkbox' },
                     { label: 'Font Family', component: 'text', path: ['fontFamily'], type: 'text' },
                     { label: 'Weight', component: 'text', path: ['fontWeight'], type: 'text' },
                     { label: 'Size 3D', component: 'text', path: ['fontSize3D'], type: 'number', min: 0.05, step: 0.05 },

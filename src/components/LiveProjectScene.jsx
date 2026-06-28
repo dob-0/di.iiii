@@ -1,7 +1,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { Grid } from '@react-three/drei'
+import { Grid, Text, Billboard } from '@react-three/drei'
 import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState } from '@react-three/xr'
 import * as THREE from 'three'
 import { useXrAr } from '../hooks/useXrAr.js'
@@ -21,6 +21,8 @@ import CylinderObject from '../objectComponents/CylinderObject.jsx'
 import ImageObject from '../objectComponents/ImageObject.jsx'
 import VideoObject from '../objectComponents/VideoObject.jsx'
 import ModelObject from '../objectComponents/ModelObject.jsx'
+import Text2DObject from '../objectComponents/Text2DObject.jsx'
+import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject from '../project/viewport/PortalObject.jsx'
 import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
 import './liveProjectScene.css'
@@ -115,6 +117,35 @@ function EntityVisual({ entity, assetMap }) {
         return <ModelObject assetRef={asset || null} data={asset?.url || null} modelColor={appearance.color} applyModelColor={false} opacity={appearance.opacity} />
     case 'portal':
         return <PortalObject entity={entity} />
+    case 'text': {
+        const tc = entity.components?.text || {}
+        const value = (tc.value || '').replace(/\\n/g, '\n')
+        if (tc.billboard) {
+            // Billboarded title/caption: always faces the viewer, drawn over geometry.
+            return (
+                <Billboard>
+                    <Text
+                        fontSize={tc.fontSize3D || 0.5}
+                        maxWidth={tc.maxWidth || 12}
+                        color={appearance.color || '#ffffff'}
+                        anchorX="center"
+                        anchorY="middle"
+                        outlineWidth={0.012}
+                        outlineColor="#04070c"
+                        renderOrder={20}
+                        material-depthTest={false}
+                        material-depthWrite={false}
+                    >
+                        {value}
+                    </Text>
+                </Billboard>
+            )
+        }
+        if (tc.variant === '3d') {
+            return <Text3DObject data={value} color={appearance.color || '#ffffff'} fontSize3D={tc.fontSize3D} depth3D={tc.depth3D} />
+        }
+        return <Text2DObject data={value} color={appearance.color || '#ffffff'} fontFamily={tc.fontFamily} fontWeight={tc.fontWeight} fontStyle={tc.fontStyle} />
+    }
     default:
         return null
     }

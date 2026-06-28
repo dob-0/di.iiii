@@ -193,7 +193,7 @@ export const buildDefaultComponentsForType = (type = 'box') => {
             base.primitive = { shape: 'cylinder', radiusTop: 0.45, radiusBottom: 0.45, height: 1.2 }
             break
         case 'text':
-            base.text = { value: 'New Text', variant: '2d', fontFamily: 'Inter, sans-serif', fontWeight: '600', fontStyle: 'normal', fontSize3D: 0.45, depth3D: 0.08 }
+            base.text = { value: 'New Text', variant: '2d', billboard: false, fontFamily: 'Inter, sans-serif', fontWeight: '600', fontStyle: 'normal', fontSize3D: 0.45, depth3D: 0.08 }
             break
         case 'image':
             base.media = { assetId: null, fit: 'contain', autoplay: false, loop: false, muted: true }
@@ -316,7 +316,8 @@ export const normalizeEntity = (entity = {}) => {
             ...defaultComponents.text,
             ...nextComponents.text,
             value: typeof nextComponents.text.value === 'string' ? nextComponents.text.value : defaultComponents.text.value,
-            variant: ensureString(nextComponents.text.variant, defaultComponents.text.variant || '2d')
+            variant: ensureString(nextComponents.text.variant, defaultComponents.text.variant || '2d'),
+            billboard: ensureBoolean(nextComponents.text.billboard, defaultComponents.text?.billboard ?? false)
         }
     }
     if (nextComponents.media) {
