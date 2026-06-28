@@ -292,8 +292,23 @@ const CC_ACTION = { NONE: 0, ROTATE: 1, TRUCK: 2, SCREEN_PAN: 4, OFFSET: 8, DOLL
 
 function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true }) {
     const isXrPresenting = useXR((state) => state.session != null)
+    const { gl } = useThree()
 
     const targetFovRef = useRef(cameraView?.fov || 50)
+
+    // On trackpads, browsers synthesize ctrlKey=true for pinch (zoom intent) and
+    // ctrlKey=false for two-finger scroll (pan intent). Switch wheel action per-event
+    // so pinch→dolly and scroll→truck, rather than always dollying.
+    useEffect(() => {
+        const canvas = gl.domElement
+        const handleWheel = (e) => {
+            const cc = controlsRef.current
+            if (!cc) return
+            cc.mouseButtons.wheel = e.ctrlKey ? CC_ACTION.DOLLY : CC_ACTION.TRUCK
+        }
+        canvas.addEventListener('wheel', handleWheel, { capture: true, passive: true })
+        return () => canvas.removeEventListener('wheel', handleWheel, { capture: true })
+    }, [controlsRef, gl])
 
     // Set initial position+target once the controls mount
     useEffect(() => {
