@@ -484,6 +484,33 @@ router.get('/api/auth/session', async (req, res, next) => {
   try {
     let state = req.authState || getPublicAuthState(req)
 
+    // Re-sync role/spaces from DB so admin patches take effect without re-login
+    if (state.authenticated && state.type === 'session' && state.subject && config.auth.sessionSecret) {
+      try {
+        const dbUser = findUserById(state.subject)
+        if (dbUser) {
+          const dbRole = normalizeAuthRole(dbUser.role, null) || state.role
+          const dbSpaces = Array.isArray(dbUser.spaces) ? dbUser.spaces : []
+          const dbUnrestricted = Boolean(dbUser.isUnrestricted)
+          const sortedDb = [...dbSpaces].sort().join(',')
+          const sortedCookie = [...(state.spaces || [])].sort().join(',')
+          if (dbRole !== state.role || sortedDb !== sortedCookie || dbUnrestricted !== Boolean(state.isUnrestricted)) {
+            const fresh = createAuthSessionValue({
+              secret: config.auth.sessionSecret,
+              ttlMs: config.authSession.ttlMs,
+              session: { subject: state.subject, label: state.label, role: dbRole, spaces: dbSpaces, isUnrestricted: dbUnrestricted }
+            })
+            setAuthSessionCookie(res, fresh.value)
+            state = buildAuthState({
+              authenticated: true, type: 'session', role: dbRole,
+              subject: state.subject, label: state.label, spaces: dbSpaces,
+              isUnrestricted: dbUnrestricted, session: { expiresAt: fresh.expiresAt }
+            })
+          }
+        }
+      } catch { /* non-fatal — keep cookie state */ }
+    }
+
     if (!state.authenticated && config.requireAuth && config.auth.sessionSecret) {
       const { guestId, expiresAt, spaces } = await issueGuestSession(res)
       state = buildAuthState({
