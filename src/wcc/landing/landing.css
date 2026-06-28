@@ -646,6 +646,7 @@
     -webkit-background-clip: text;
     background-clip: text;
     animation:
+        wcc-text-fade-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both,
         wcc-about-heading-dot-chaos-x 5.4s ease-in-out infinite alternate,
         wcc-about-heading-dot-chaos-y 7.2s ease-in-out infinite alternate;
     margin-bottom: clamp(48px, 7vw, 96px);
@@ -1191,6 +1192,82 @@
     }
     .wcc-hero__footer {
         margin-top: 28px;
+    }
+}
+
+@keyframes wcc-text-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(22px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.wcc-reveal__body--about-project .wcc-text-columns p {
+    animation: wcc-text-fade-up 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: 0.08s;
+}
+.wcc-reveal__body--about-project .wcc-text-columns p:nth-of-type(2)  { animation-delay: 0.16s; }
+.wcc-reveal__body--about-project .wcc-text-columns p:nth-of-type(3)  { animation-delay: 0.24s; }
+.wcc-reveal__body--about-project .wcc-text-columns p:nth-of-type(4)  { animation-delay: 0.32s; }
+.wcc-reveal__body--about-project .wcc-text-columns p:nth-of-type(5)  { animation-delay: 0.40s; }
+.wcc-reveal__body--about-project .wcc-text-columns p:nth-of-type(6)  { animation-delay: 0.48s; }
+.wcc-reveal__body--about-project .wcc-text-columns p:nth-of-type(7)  { animation-delay: 0.56s; }
+.wcc-reveal__body--about-project .wcc-text-columns p:nth-of-type(8)  { animation-delay: 0.64s; }
+
+.wcc-supported-by {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    padding: clamp(32px, 5vw, 56px) clamp(28px, 6vw, 80px);
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.wcc-supported-by__label {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.48);
+    font-size: 0.68rem;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: none;
+}
+
+.wcc-supported-by__logos {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: clamp(16px, 3vw, 36px);
+}
+
+.wcc-supported-by__logo {
+    height: 40px;
+    width: auto;
+    max-width: 160px;
+    object-fit: contain;
+    opacity: 0.9;
+    transition: opacity 240ms ease;
+}
+
+.wcc-supported-by__logo:hover {
+    opacity: 1;
+}
+
+.wcc-supported-by--about {
+    margin-top: clamp(40px, 6vw, 72px);
+    padding-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+@media (max-width: 600px) {
+    .wcc-supported-by__logo {
+        height: 30px;
     }
 }
 

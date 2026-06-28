@@ -304,7 +304,20 @@ function HorizontalNavigation({ activeIndex, onActiveIndexChange, onOpen, onEnte
             })
         }, section)
 
-        return () => ctx.revert()
+        // The pin measures track width (incl. the huge ARTIST WORKS heading) once at
+        // layout time — before webfonts/late layout settle. If travel() is stale the
+        // pinned section's scroll distance is wrong and you intermittently can't scroll
+        // past it. Refresh once measurements are final so the dead zone can't happen.
+        const refresh = () => ScrollTrigger.refresh()
+        const raf = window.requestAnimationFrame(refresh)
+        window.addEventListener('load', refresh)
+        if (document.fonts?.ready) document.fonts.ready.then(refresh).catch(() => {})
+
+        return () => {
+            window.cancelAnimationFrame(raf)
+            window.removeEventListener('load', refresh)
+            ctx.revert()
+        }
     }, [onActiveIndexChange, scrollerRef])
 
     return (
@@ -432,7 +445,37 @@ function AboutProject({ lang = 'en' }) {
                     ))}
                 </div>
             </div>
+            <SupportedBy lang={lang} inAbout />
         </div>
+    )
+}
+
+const supportedByLogos = [
+    { src: '/wcc/logos/kanach-resource-center.png', alt: 'Կանանց Ռեսուրսային Կենտրոն' },
+    { src: '/wcc/logos/wcc.svg', alt: 'WCC' },
+    { src: '/wcc/logos/pink-armenia.png', alt: 'Pink Armenia' }
+]
+
+function SupportedBy({ lang = 'en', inAbout = false }) {
+    const isHy = lang === 'hy'
+    const Tag = inAbout ? 'div' : 'footer'
+    return (
+        <Tag className={`wcc-supported-by${inAbout ? ' wcc-supported-by--about' : ''}`} aria-label={isHy ? 'Աջակցություն' : 'Support'}>
+            <p className="wcc-supported-by__label">
+                {isHy ? 'նախագիծը աջակցվում է Շվեդիայի կողմից' : 'the project is supported by Sweden'}
+            </p>
+            <div className="wcc-supported-by__logos">
+                {supportedByLogos.map((logo, i) => (
+                    <img
+                        key={logo.src}
+                        src={logo.src}
+                        alt={logo.alt}
+                        className="wcc-supported-by__logo"
+                        style={inAbout && i === supportedByLogos.length - 1 ? { marginLeft: '-8px' } : undefined}
+                    />
+                ))}
+            </div>
+        </Tag>
     )
 }
 
