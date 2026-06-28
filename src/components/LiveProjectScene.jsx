@@ -1122,11 +1122,6 @@ export default function LiveProjectScene({
                             &nbsp;·&nbsp; ESC · release
                         </p>
                     )}
-                    {interactive && isMobile && showMoveHint && (
-                        <p className="live-scene-hint live-scene-hint--lock" style={{ bottom: 196 }}>
-                            Drag left · move &nbsp;·&nbsp; drag · look &nbsp;·&nbsp; tap {flyMode ? 'Walk' : 'Fly'}
-                        </p>
-                    )}
                     {interactive && showMoveHint && (isMobile || !isLocked) && (
                         <MoveHintVisual isMobile={isMobile} />
                     )}
