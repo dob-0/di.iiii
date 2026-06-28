@@ -611,6 +611,33 @@ function MobileJoystick({ outerRef, thumbRef }) {
 // Fly mode's altitude keys (Space/Q, C/E) have no touch equivalent --
 // press-and-hold buttons fill that gap. Pointer events (not click) so
 // altitude changes continuously while held, like the keyboard.
+// Animated first-visit movement cue: a ghost joystick demo on mobile (the real
+// joystick is invisible until touched), pulsing WASD keys on desktop.
+function MoveHintVisual({ isMobile }) {
+    if (isMobile) {
+        return (
+            <div className="ls-move-hint">
+                <div className="ls-ghost-joy"><div className="ls-ghost-thumb" /></div>
+                <span className="ls-hint-label ls-hint-label--joy">drag · move</span>
+                <div className="ls-ghost-swipe" />
+                <span className="ls-hint-label ls-hint-label--look">swipe · look</span>
+            </div>
+        )
+    }
+    return (
+        <div className="ls-move-hint">
+            <div className="ls-keys">
+                <div className="ls-keys-row"><span className="ls-key ls-key--w">W</span></div>
+                <div className="ls-keys-row">
+                    <span className="ls-key ls-key--a">A</span>
+                    <span className="ls-key ls-key--s">S</span>
+                    <span className="ls-key ls-key--d">D</span>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 function VerticalTouchControls({ vertTouchRef }) {
     const setVert = (value) => (e) => {
         e.preventDefault()
@@ -827,6 +854,12 @@ export default function LiveProjectScene({
     const [nearestLabel, setNearestLabel] = useState(null)
     const [isLocked, setIsLocked] = useState(false)
     const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
+    // First-visit movement hint (fades on its own so it never clutters).
+    const [showMoveHint, setShowMoveHint] = useState(true)
+    useEffect(() => {
+        const t = setTimeout(() => setShowMoveHint(false), 12000)
+        return () => clearTimeout(t)
+    }, [])
     const [flyMode, setFlyMode] = useState(false)
     const joystickRef = useRef({ x: 0, y: 0 })
     const joyVisRef = useRef(null)
@@ -1073,7 +1106,9 @@ export default function LiveProjectScene({
                     </header>
 
                     {interactive && !isMobile && !isLocked && (
-                        <p className="live-scene-hint live-scene-hint--lock">Click to explore</p>
+                        <p className="live-scene-hint live-scene-hint--lock">
+                            Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; F · fly
+                        </p>
                     )}
                     {interactive && !isMobile && isLocked && (
                         <p className="live-scene-hint">
@@ -1081,6 +1116,14 @@ export default function LiveProjectScene({
                             {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
                             &nbsp;·&nbsp; ESC · release
                         </p>
+                    )}
+                    {interactive && isMobile && showMoveHint && (
+                        <p className="live-scene-hint live-scene-hint--lock" style={{ bottom: 196 }}>
+                            Drag left · move &nbsp;·&nbsp; drag · look &nbsp;·&nbsp; tap {flyMode ? 'Walk' : 'Fly'}
+                        </p>
+                    )}
+                    {interactive && showMoveHint && (isMobile || !isLocked) && (
+                        <MoveHintVisual isMobile={isMobile} />
                     )}
                 </>
             )}
