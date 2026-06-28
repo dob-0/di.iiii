@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-06-28T20:18:41.841Z",
-  "releaseId": "cpanel-20260628-201841",
+  "generatedAt": "2026-06-28T20:29:04.146Z",
+  "releaseId": "cpanel-20260628-202904",
   "deployEnv": "staging",
   "sourceRef": "dev",
-  "gitCommit": "be8784083b678d324c1aa537e5f577fd457df9e6",
+  "gitCommit": "a79c689cdc213d147cc5237316bd43892b2dff6f",
   "deploymentMode": "cpanel-nodejs-app",
   "frontendApiBaseUrl": "/serverXR",
   "git": {
     "branch": "dev",
-    "commit": "be8784083b678d324c1aa537e5f577fd457df9e6"
+    "commit": "a79c689cdc213d147cc5237316bd43892b2dff6f"
   },
   "paths": {
     "publicHtml": "public_html",

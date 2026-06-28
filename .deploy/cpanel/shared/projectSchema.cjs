@@ -79,6 +79,7 @@ const defaultWindowLayout = {
 const defaultWorldState = {
   backgroundColor: '#0a1118',
   atmosphereBlend: false,
+  spawn: null,
   gridVisible: true,
   gridSize: 24,
   gridCellSize: 0.75,
@@ -333,6 +334,13 @@ const normalizeWorldState = (world = {}) => {
     ...cloneValue(source),
     backgroundColor: ensureString(source.backgroundColor, defaultWorldState.backgroundColor),
     atmosphereBlend: ensureBoolean(source.atmosphereBlend, defaultWorldState.atmosphereBlend),
+    spawn: source.spawn && typeof source.spawn === 'object' ? {
+      x: ensureNumber(source.spawn.x, 0),
+      z: ensureNumber(source.spawn.z, 0),
+      yaw: ensureNumber(source.spawn.yaw, 0),
+      pitch: ensureNumber(source.spawn.pitch, 0),
+      altY: ensureNumber(source.spawn.altY, 1.6)
+    } : null,
     gridVisible: ensureBoolean(source.gridVisible, defaultWorldState.gridVisible),
     gridSize: Math.max(1, ensureNumber(source.gridSize, defaultWorldState.gridSize)),
     gridCellSize: Math.max(0.05, ensureNumber(source.gridCellSize, defaultWorldState.gridCellSize)),
