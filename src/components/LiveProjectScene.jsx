@@ -122,22 +122,38 @@ function EntityVisual({ entity, assetMap }) {
         const value = (tc.value || '').replace(/\\n/g, '\n')
         if (tc.billboard) {
             // Billboarded title/caption: always faces the viewer, drawn over geometry.
+            // `lines` lets one billboard stack several per-line-styled rows (so a title
+            // keeps its size/colour hierarchy and stays readable even viewed end-on).
+            const lines = Array.isArray(tc.lines) && tc.lines.length
+                ? tc.lines
+                : [{ value, fontSize: tc.fontSize3D || 0.5, color: appearance.color || '#ffffff' }]
+            const gaps = lines.map((ln) => (ln.fontSize || 0.4) * 1.45)
+            const totalH = gaps.reduce((a, b) => a + b, 0)
+            let cursor = totalH / 2
             return (
                 <Billboard>
-                    <Text
-                        fontSize={tc.fontSize3D || 0.5}
-                        maxWidth={tc.maxWidth || 12}
-                        color={appearance.color || '#ffffff'}
-                        anchorX="center"
-                        anchorY="middle"
-                        outlineWidth={0.012}
-                        outlineColor="#04070c"
-                        renderOrder={20}
-                        material-depthTest={false}
-                        material-depthWrite={false}
-                    >
-                        {value}
-                    </Text>
+                    {lines.map((ln, i) => {
+                        const y = cursor - gaps[i] / 2
+                        cursor -= gaps[i]
+                        return (
+                            <Text
+                                key={i}
+                                position={[0, y, 0]}
+                                fontSize={ln.fontSize || 0.4}
+                                maxWidth={tc.maxWidth || 16}
+                                color={ln.color || '#ffffff'}
+                                anchorX="center"
+                                anchorY="middle"
+                                outlineWidth={(ln.fontSize || 0.4) > 0.4 ? 0.014 : 0.006}
+                                outlineColor="#04070c"
+                                renderOrder={20}
+                                material-depthTest={false}
+                                material-depthWrite={false}
+                            >
+                                {(ln.value || '').replace(/\\n/g, '\n')}
+                            </Text>
+                        )
+                    })}
                 </Billboard>
             )
         }
