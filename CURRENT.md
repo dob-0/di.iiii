@@ -9,19 +9,17 @@ active_branch: dev
 
 ## Last commit
 
-`99562a6` — refactor(deploy): promote production from origin/dev, not origin/staging
-**`dev` pushed to `origin/dev` → staging (verified live, all green). `origin/main` at `a26d805` (production di-studio.xyz); `dev` is 2 tooling commits ahead. Local `main` = `a26d805` (in sync).**
+`8cc0b2a` — feat(project): portal-embed floating label
+**`origin/main` = `38bfe46` (production di-studio.xyz): WCC **beacon hub** (bespoke `WccExhibition` renderer) is LIVE on prod. `dev` (staging) is well ahead with the **exhibition→LiveProjectScene convergence** (NOT on prod yet — promote only after parity approved).**
 
-## Last session (2026-06-28)
+## Last session (2026-06-29)
 
-- **Doc-sync system** (`ef67c79`, `docs/ops/doc-sync-system.md`): consistency gate so user-facing doc surfaces can't drift, modeled on `docs:ai:check`. New `npm run docs:wiki:check` (pure `scripts/wiki-sync-lib.mjs` + `scripts/check-wiki-sync.mjs`, 8 tests) wired into CI + the Validation block.
-- Fixed a latent bug: `WIKI_HIGHLIGHTS` used `.filter(Boolean)`, so a typo'd landing-highlight id silently vanished — now `WIKI_HIGHLIGHT_IDS` is checked and a bad id fails CI.
-- Tier-2 Claude hooks in `.claude/settings.json`: run `docs:wiki:check` on `wikiContent.js` edits; remind to update the wiki when a user-facing surface (`src/{studio,beta,landing,project,wcc}`, serverXR routes) changes. (Tier 3 cloud agent documented, deliberately not built.)
-- **Deploy refactor** (`99562a6`): production promotion now sources `origin/dev` (not vestigial `origin/staging`); staging handler drops the redundant double-push. Tested via `deploy production --dry-run`.
-- Staging verified live: `/wiki` 200, spaces list filtered to public-only when logged out, `wcc` (public) 200, `n000` (restricted) 401, OAuth providers both `true`. Access/guest + OAuth round-trip confirmed passing by human earlier.
-- Validation: lint 0 errors, build ✓, `docs:wiki:check` ✓, deploy-lib 4/4, CI green on both pushes.
+- **Prod**: shipped the WCC beacon hub + bilingual title + center look-up + animated control hints to production (commits up to `38bfe46`), via the **bespoke `WccExhibition`** renderer. (Earlier in session: doc-sync gate, deploy refactor — already on prod.)
+- **Architecture convergence (staging only):** retired the bespoke ring renderer; `/wcc/scene` now renders via the shared **`LiveProjectScene`**, driven by the `main` project which **composes each artist project as a `portal` embed** (`WccExperience.jsx`). Layout/objects/world are now authored data tunable in Studio. Master `main` doc = 9 beacon + 10 zone portals; regen via `scratchpad/gen-master.mjs` → push with `scratchpad/push-hub.mjs`.
+- **"Everything in Studio" phases (staging):** (1) per-object **animation** = `components.animation {mode,speed,amplitude}` (schema + CJS mirror + entityRegistry "Animation" section; `src/project/viewport/entityAnimation.js` shared by LiveProjectScene + portal embeds; legacy fallback preserves old look). (2) **color transitions** = `worldState.atmosphereBlend` toggle (World panel) — bg/fog blend toward nearby portals' colours. (3) per-zone **portal labels** render. AmbientField particles already existed in LiveProjectScene.
+- Validation each step: lint 0 errors, `test:schema-sync` ✓ (mirror lockstep), build ✓, tests green.
 
-Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production) at `a26d805`.
+Branch focus: `dev` → staging (convergence WIP), `main` → di-studio.xyz at `38bfe46` (beacon hub, bespoke renderer).
 
 ## What works
 
@@ -45,7 +43,7 @@ Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (product
 
 ## What is broken / open
 
-- **WCC hub project (`main`)** — created in the `wcc` space and wired into `WccExhibition.jsx` (`MAIN_PROJECT_ID`/`MAIN_DOC_IDS`/`ZoneGroup` at hub center). Currently one placeholder cyan wireframe sphere. Needs real hub content/design. Edit via `/wcc/studio/projects/main`.
+- **WCC convergence — staging only, NOT promoted to prod.** Remaining before it can replace the prod beacon hub: (a) **spawn** is LiveProjectScene's default (z6, facing centre, level) — old center-look-up lived in retired `WccExhibition`; make it `worldState.spawn` data-driven (user undecided: center-look-up vs beacon-in-view). (b) chrome nearest-label shows "Orbit Accent 2" — Walker nearest-zone should consider only `portal` entities. (c) zone positions/facing are rough placeholders — meant for human tuning in `/wcc/studio/projects/main`. (d) retired `src/wcc/scene/WccExhibition.jsx` still in tree (no longer imported) — delete after parity confirmed.
 - **VR fly unverified on hardware** — AR walk/joystick/fly confirmed on a real Android phone (CDP); the VR path (right-thumbstick-Y altitude, smooth locomotion) is only build/lint/mount-checked. No headset here — deferred (user's call).
 - WCC landing perf headroom: the always-on WebGL particle veil (700 pts) is the remaining throttled-fps cost — gate on mobile / `prefers-reduced-motion` if more is needed.
 - `origin/self-host` — intentionally **kept**: 1 unmerged commit (`b9baa30`) that strips contributor/auto-PR machinery for a clean self-host build. Not stale; do not prune.
