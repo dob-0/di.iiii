@@ -308,6 +308,14 @@ const normalizeEntity = (entity = {}) => {
       locked: ensureBoolean(sourceComponents.runtime?.locked, defaultComponents.runtime?.locked ?? false)
     }
   }
+  if (sourceComponents.animation) {
+    const animMode = ensureString(sourceComponents.animation.mode, 'static')
+    nextComponents.animation = {
+      mode: ['static', 'bob', 'spin', 'float', 'sway', 'orbit'].includes(animMode) ? animMode : 'static',
+      speed: ensureNumber(sourceComponents.animation.speed, 1),
+      amplitude: ensureNumber(sourceComponents.animation.amplitude, 1)
+    }
+  }
 
   return {
     id: ensureString(entity.id, generateId('entity')),

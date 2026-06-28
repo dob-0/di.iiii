@@ -31,9 +31,32 @@ const APPEARANCE_FIELDS = [
     { label: 'Opacity', component: 'appearance', path: ['opacity'], type: 'number', min: 0, max: 1, step: 0.05 }
 ]
 
+// Per-object idle motion, authored here so animation is tunable in Studio
+// instead of hardcoded in a renderer. The live viewer reads components.animation.
+const ANIMATION_SECTION = {
+    id: 'animation',
+    label: 'Animation',
+    fields: [
+        {
+            label: 'Motion', component: 'animation', path: ['mode'], type: 'select',
+            options: [
+                { value: 'static', label: 'Static' },
+                { value: 'bob', label: 'Bob' },
+                { value: 'spin', label: 'Spin' },
+                { value: 'float', label: 'Float (bob + spin)' },
+                { value: 'sway', label: 'Sway' },
+                { value: 'orbit', label: 'Orbit' }
+            ]
+        },
+        { label: 'Speed', component: 'animation', path: ['speed'], type: 'number', min: 0, step: 0.1 },
+        { label: 'Amplitude', component: 'animation', path: ['amplitude'], type: 'number', min: 0, step: 0.1 }
+    ]
+}
+
 const BASE_SECTIONS = [
     { id: 'transform', label: 'Transform', fields: TRANSFORM_FIELDS },
-    { id: 'appearance', label: 'Appearance', fields: APPEARANCE_FIELDS }
+    { id: 'appearance', label: 'Appearance', fields: APPEARANCE_FIELDS },
+    ANIMATION_SECTION
 ]
 
 // Wireframe only makes visual sense on solid primitive geometry (box, sphere,
@@ -47,7 +70,8 @@ const PRIMITIVE_SECTIONS = [
             ...APPEARANCE_FIELDS,
             { label: 'Wireframe', component: 'appearance', path: ['wireframe'], type: 'checkbox' }
         ]
-    }
+    },
+    ANIMATION_SECTION
 ]
 
 const DEFINITIONS = {

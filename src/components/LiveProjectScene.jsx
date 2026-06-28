@@ -22,6 +22,7 @@ import ImageObject from '../objectComponents/ImageObject.jsx'
 import VideoObject from '../objectComponents/VideoObject.jsx'
 import ModelObject from '../objectComponents/ModelObject.jsx'
 import PortalObject from '../project/viewport/PortalObject.jsx'
+import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
 import './liveProjectScene.css'
 
 const WALK_MAX_SPEED = 5.2
@@ -50,8 +51,6 @@ const tmpLook = new THREE.Vector3()
 const tmpDir = new THREE.Vector3()
 
 const isGateEntity = (entity) => /gate|threshold|entrance/i.test(entity?.name || '')
-const isGroundEntity = (entity) => /ground|floor/i.test(entity?.name || '')
-const isFlyEntity = (entity) => /\bfly\b/i.test(entity?.name || '')
 
 // Same fix as GridFloorBackground: any page that renders a live scene
 // without going through AuthGate has no session cookie yet on first paint.
@@ -136,38 +135,13 @@ function AnimatedEntity({ entity, assetMap }) {
         return (hash / 1000) * Math.PI * 2
     }, [entity.id])
 
-    const isGate = isGateEntity(entity)
-    const isGround = isGroundEntity(entity)
-    const isFly = isFlyEntity(entity)
+    const anim = useMemo(() => resolveAnimation(entity), [entity])
 
     useFrame((state) => {
         const group = groupRef.current
         if (!group) return
         const t = state.clock.getElapsedTime() + seed
-
-        if (isGround || isGate) {
-            group.position.set(...basePos)
-            group.rotation.set(...baseRot)
-            return
-        }
-
-        if (isFly) {
-            const radius = 1.6
-            group.position.set(
-                basePos[0] + Math.cos(t * 0.6) * radius,
-                basePos[1] + Math.sin(t * 1.3) * 0.5,
-                basePos[2] + Math.sin(t * 0.6) * radius
-            )
-            group.rotation.set(baseRot[0], t * 0.6, baseRot[2])
-            return
-        }
-
-        group.position.set(basePos[0], basePos[1] + Math.sin(t * 0.7) * 0.12, basePos[2])
-        // Flat image/video planes go edge-on (and look broken) mid-spin --
-        // sway them gently instead; only freestanding models get a full turntable spin.
-        const isFlat = entity.type === 'image' || entity.type === 'video'
-        const yaw = isFlat ? baseRot[1] + Math.sin(t * 0.4) * 0.08 : baseRot[1] + t * 0.12
-        group.rotation.set(baseRot[0], yaw, baseRot[2])
+        applyAnimation(group, anim, basePos, baseRot, t)
     })
 
     return (

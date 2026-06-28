@@ -1,9 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useFrame } from '@react-three/fiber'
 import { Billboard, Text } from '@react-three/drei'
 import EntityContent from './EntityContent.jsx'
 import { buildAssetMap } from './buildAssetMap.js'
 import { getProjectDocument } from '../services/projectsApi.js'
 import { normalizeProjectDocument } from '../../shared/projectSchema.js'
+import { resolveAnimation, applyAnimation } from './entityAnimation.js'
 
 const MAX_EMBED_DEPTH = 3
 
@@ -15,15 +17,27 @@ const EmbedChainContext = createContext([])
 // children. Mirrors the minimal transform/parenting the host surfaces apply, so
 // an embedded scene looks the same inline as it does standalone.
 function EmbeddedEntity({ entity, childMap, assetMap }) {
-    if (entity.components?.runtime?.visible === false) return null
+    const groupRef = useRef(null)
     const t = entity.components?.transform || {}
+    const basePos = t.position || [0, 0, 0]
+    const baseRot = t.rotation || [0, 0, 0]
+    const baseScale = t.scale || [1, 1, 1]
     const children = childMap.get(entity.id) || []
+    const anim = useMemo(() => resolveAnimation(entity), [entity])
+    const seed = useMemo(() => {
+        let h = 0
+        for (let i = 0; i < (entity.id || '').length; i += 1) h = (h * 31 + entity.id.charCodeAt(i)) % 1000
+        return (h / 1000) * Math.PI * 2
+    }, [entity.id])
+
+    useFrame((state) => {
+        if (!groupRef.current) return
+        applyAnimation(groupRef.current, anim, basePos, baseRot, state.clock.getElapsedTime() + seed)
+    })
+
+    if (entity.components?.runtime?.visible === false) return null
     return (
-        <group
-            position={t.position || [0, 0, 0]}
-            rotation={t.rotation || [0, 0, 0]}
-            scale={t.scale || [1, 1, 1]}
-        >
+        <group ref={groupRef} position={basePos} rotation={baseRot} scale={baseScale}>
             <EntityContent entity={entity} assetMap={assetMap} />
             {children.map((child) => (
                 <EmbeddedEntity key={child.id} entity={child} childMap={childMap} assetMap={assetMap} />
