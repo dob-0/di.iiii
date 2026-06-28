@@ -9,8 +9,8 @@ active_branch: dev
 
 ## Last commit
 
-`a1634e9` — fix(wcc/live-scene): beacon-in-view arrival + dismiss hint on first touch
-**PROMOTED: `origin/main` = `a1634e9` — the FULL converged WCC exhibition (LiveProjectScene + portal composition + animation/atmosphere/hubDecor/title/spawn/hints) is LIVE on production di-studio.xyz, verified. Prod `main` project doc copied from staging (20 entities, 10 zone portals, beacon-in-view spawn). `dev` == `main`. (Note: `main` was found at `e771d38` pre-promote — possibly another session advanced it; fast-forward was clean.)**
+`0a7fb46` — fix(studio): resolve asset thumbnail/URL without double /serverXR prefix
+**`origin/main` == `origin/dev` == `0a7fb46`, LIVE + verified on production di-studio.xyz. The FULL converged WCC exhibition AND the asset-URL bug fixes are on prod. Working tree clean, CI green.**
 
 ## Last session (2026-06-29)
 
@@ -19,9 +19,12 @@ active_branch: dev
 - **"Everything in Studio" — all shared, all Studio-tunable, all on staging:** per-object **animation** (`components.animation {mode,speed,amplitude}`, entityRegistry "Animation" section, shared `src/project/viewport/entityAnimation.js`, legacy fallback = old look) · **color transitions** (`worldState.atmosphereBlend`) · **floor decor** (`worldState.hubDecor` = centre ring + spokes + zone rings) · **billboard text** (`components.text.billboard` + `text.lines` for per-line styled titles) · **data-driven spawn** (`worldState.spawn`) · zone-aware nearest-label · per-zone portal **labels** · **animated movement hints** (WASD keys / ghost joystick, ported into LiveProjectScene). AmbientField particles already existed.
 - Master `main` doc (regen `scratchpad/gen-master.mjs` → `scratchpad/push-hub.mjs`): beacon + bilingual title (lines) + 10 zone portals at ring **R=58** (spread to fix overlaps), each portal colour = artist bg (atmosphere), spawn = centre look-up.
 - **Rule added** (`docs/ai/golden_rules.md`): new space capability → shared layer (projectSchema + CJS mirror + LiveProjectScene + entityRegistry/World panel), never per-space.
-- Each step validated: lint 0 errors, `test:schema-sync` ✓, build ✓, tests green.
+- **Whole convergence PROMOTED to production** + verified (beacon-in-view spawn, not center-look-up — a pure look-up hid the walkable space).
+- **Migrated `main-dii-project` staging→prod** (85 entities + 79 assets incl. the one that broke export; helpers `scratchpad/migrate-project.mjs`, `copy-staging-to-prod.mjs`); user published it live.
+- **Fixed the asset-URL bug family** (root cause = imported assets store empty manifest `url`): export falls back to the asset endpoint; serverXR fills empty project-asset urls on document read; client `assetSrc()` stops double-prefixing `/serverXR` (the blank space-file thumbnails) — all live on prod.
+- Synced both project docs (`main`, `main-dii-project`) staging→prod at session end.
 
-Branch focus: `dev` → staging (full converged exhibition), `main` → di-studio.xyz at `38bfe46` (beacon hub, bespoke renderer — pending promote).
+Branch focus: `dev` == `main` == `0a7fb46`, fully live on di-studio.xyz.
 
 ## What works
 
