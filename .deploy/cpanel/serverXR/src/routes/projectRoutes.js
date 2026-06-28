@@ -137,6 +137,16 @@ function registerProjectRoutes(router, {
         return res.status(404).json({ error: 'Project not found.' })
       }
       const document = await readProjectDocument(spacesDir, project.spaceId, project.projectId)
+      // Imported assets store an empty manifest `url`; fill it with the asset
+      // endpoint so the bytes are reachable everywhere (thumbnails, copy-URL,
+      // export, viewer) instead of resolving to a broken "/serverXR" path.
+      if (Array.isArray(document?.assets)) {
+        for (const asset of document.assets) {
+          if (asset && asset.id && !asset.url) {
+            asset.url = `/api/projects/${project.projectId}/assets/${asset.id}`
+          }
+        }
+      }
       res.json({
         document,
         version: Number(project.meta?.documentVersion) || 0,

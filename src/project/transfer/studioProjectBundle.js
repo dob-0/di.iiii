@@ -1,6 +1,7 @@
 import JSZip from 'jszip'
 import { normalizeProjectDocument } from '../../shared/projectSchema.js'
 import { getAssetUrlCandidates } from '../../services/assetSources.js'
+import { apiBaseUrl } from '../../services/apiClient.js'
 
 const PROJECT_ENTRY = 'project.json'
 const BUNDLE_FORMAT = 'dii-studio-project'
@@ -25,8 +26,16 @@ const safeSegment = (value, fallback) => {
     return normalized || fallback
 }
 
-const fetchAssetBlob = async (asset) => {
+const fetchAssetBlob = async (asset, projectId) => {
     const candidates = getAssetUrlCandidates(asset)
+    // Imported assets have an empty manifest `url`, so the candidates above can be
+    // empty even though the bytes are served by the project asset endpoint. Add it
+    // as a fallback so export works for imported media (the old "no downloadable
+    // source" failure).
+    if (projectId && asset?.id) {
+        const endpoint = `${apiBaseUrl}/api/projects/${projectId}/assets/${asset.id}`
+        if (!candidates.includes(endpoint)) candidates.push(endpoint)
+    }
     let lastError = null
     for (const url of candidates) {
         try {
@@ -47,6 +56,7 @@ export async function createStudioProjectBundle(sourceDocument, options = {}) {
     const loadAsset = options.loadAsset || fetchAssetBlob
     const onProgress = options.onProgress || (() => {})
     const document = normalizeProjectDocument(sourceDocument)
+    const projectId = document.projectMeta?.id || sourceDocument?.projectMeta?.id || ''
     const zip = new JSZip()
     const assets = document.assets || []
     const results = new Array(assets.length)
@@ -59,7 +69,7 @@ export async function createStudioProjectBundle(sourceDocument, options = {}) {
             const index = nextIndex
             nextIndex += 1
             const asset = assets[index]
-            const blob = await loadAsset(asset)
+            const blob = await loadAsset(asset, projectId)
             results[index] = { asset, blob }
             completed += 1
             onProgress({ phase: 'downloading', completed, total: assets.length, asset })
