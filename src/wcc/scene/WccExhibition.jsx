@@ -15,6 +15,8 @@ import CylinderObject from '../../objectComponents/CylinderObject.jsx'
 import ImageObject from '../../objectComponents/ImageObject.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
+import Text2DObject from '../../objectComponents/Text2DObject.jsx'
+import Text3DObject from '../../objectComponents/Text3DObject.jsx'
 import '../../components/liveProjectScene.css'
 import './scene.css'
 
@@ -117,6 +119,14 @@ function EntityVisual({ entity, assetMap }) {
         return <VideoObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
     case 'model':
         return <ModelObject assetRef={asset || null} data={asset?.url || null} modelColor={appearance.color} applyModelColor={false} opacity={appearance.opacity} />
+    case 'text': {
+        const text = entity.components?.text || {}
+        const value = text.value || ''
+        if (text.variant === '3d') {
+            return <Text3DObject data={value} color={appearance.color || '#ffffff'} fontSize3D={text.fontSize3D} depth3D={text.depth3D} />
+        }
+        return <Text2DObject data={value} color={appearance.color || '#ffffff'} fontFamily={text.fontFamily || 'Inter, sans-serif'} fontWeight={text.fontWeight || '600'} fontStyle={text.fontStyle || 'normal'} />
+    }
     default:
         return null
     }
@@ -251,6 +261,26 @@ function HubMarker() {
             <ringGeometry args={[3.6, 4.2, 64]} />
             <meshBasicMaterial color={0xffffff} transparent opacity={0.3} depthWrite={false} side={THREE.DoubleSide} />
         </mesh>
+    )
+}
+
+// Bilingual title crowning the central beacon. Billboarded so it stays readable
+// from anywhere on the ring and in VR; floats above the spire tip.
+function HubTitle() {
+    // depthTest off + a high renderOrder keep the title legible over the translucent
+    // spire from every angle (otherwise the cone slices through the letters).
+    return (
+        <Billboard position={[0, 6.7, 0]}>
+            <Text renderOrder={20} material-depthTest={false} material-depthWrite={false} fontSize={0.6} maxWidth={13} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.018} outlineColor="#04181c" position={[0, 0.5, 0]}>
+                WOMEN CREATING CHANGE
+            </Text>
+            <Text renderOrder={20} material-depthTest={false} material-depthWrite={false} fontSize={0.32} maxWidth={13} color="#cdf3f6" anchorX="center" anchorY="middle" outlineWidth={0.008} outlineColor="#04181c" position={[0, -0.12, 0]}>
+                Կանայք, որ փոփոխություն են ստեղծում
+            </Text>
+            <Text renderOrder={20} material-depthTest={false} material-depthWrite={false} fontSize={0.2} maxWidth={13} color="#7fb9bd" anchorX="center" anchorY="middle" position={[0, -0.56, 0]}>
+                a contemporary art exhibition
+            </Text>
+        </Billboard>
     )
 }
 
@@ -907,7 +937,9 @@ export default function WccExhibition({ onExit }) {
     const ambientRef  = useRef(null)
     const dirRef      = useRef(null)
 
-    const playerRef = useRef({ x: 0, z: 0, yaw: 0, pitch: 0, altY: EYE_HEIGHT })
+    // Spawn a few metres out from the central beacon, looking +Z straight at it,
+    // so arrival frames the title monument (and never spawns inside the spire).
+    const playerRef = useRef({ x: 0, z: -9, yaw: 0, pitch: 0.14, altY: EYE_HEIGHT })
 
     useEffect(() => {
         const onKey = (e) => { if (e.key.toLowerCase() === 'f') setFlyMode((f) => !f) }
@@ -945,6 +977,7 @@ export default function WccExhibition({ onExit }) {
                 <directionalLight ref={dirRef} color={DEFAULT_DIR.color} intensity={DEFAULT_DIR.intensity} position={DEFAULT_DIR.position} />
                 <Grid args={[240, 240]} cellColor="#2a3038" sectionColor="#3c4654" fadeDistance={70} infiniteGrid />
                 <HubMarker />
+                <HubTitle />
                 {mainDoc ? <ZoneGroup artist={{ id: MAIN_PROJECT_ID }} doc={mainDoc} center={HUB_CENTER} showRing={false} /> : null}
                 <HubSpokes zoneCenters={ZONE_CENTERS_RING} />
                 {ARTISTS.map((artist, i) => (
