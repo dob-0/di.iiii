@@ -443,9 +443,13 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
         camera.lookAt(tmpLook)
 
         if (onNearestZone && entities.length) {
+            // In a composed exhibition the "zones" are the portal embeds; fall back to
+            // all entities for plain single-project scenes.
+            const portals = entities.filter((e) => e.type === 'portal')
+            const pool = portals.length ? portals : entities
             let nearest = null
             let nearestDist = Infinity
-            for (const entity of entities) {
+            for (const entity of pool) {
                 const pos = entity.components?.transform?.position
                 if (!pos) continue
                 const dist = (pos[0] - player.x) ** 2 + (pos[2] - player.z) ** 2
@@ -454,8 +458,10 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                     nearest = entity
                 }
             }
-            const zoneMatch = nearest?.name?.match(/Zone\s*\d+/i)
-            onNearestZone(nearestDist < 64 ? (zoneMatch?.[0] || nearest?.name || null) : null)
+            const label = nearest?.components?.reference?.label
+                || nearest?.name?.match(/Zone\s*\d+/i)?.[0]
+                || nearest?.name || null
+            onNearestZone(nearestDist < (portals.length ? 900 : 64) ? label : null)
         }
     })
 
@@ -749,6 +755,19 @@ export default function LiveProjectScene({
     const arTouchElRef = useRef(null)
     const isArActive = xr.isArModeActive && xr.isXrPresenting
     const playerRef = useRef({ x: 0, z: 6, yaw: Math.PI, pitch: 0, altY: EYE_HEIGHT })
+
+    // Data-driven arrival: a project can author worldState.spawn to place/aim the
+    // visitor on entry (otherwise the default above). Applied once per project load.
+    const spawnAppliedRef = useRef(null)
+    useEffect(() => {
+        const s = doc?.worldState?.spawn
+        if (!s || spawnAppliedRef.current === projectId) return
+        spawnAppliedRef.current = projectId
+        playerRef.current = {
+            x: s.x ?? 0, z: s.z ?? 0, yaw: s.yaw ?? 0,
+            pitch: s.pitch ?? 0, altY: s.altY ?? EYE_HEIGHT
+        }
+    }, [doc, projectId])
 
     // The library only toggles display:block/none on this element -- it has
     // no inherent size/position, so anything portaled into it (the touch
