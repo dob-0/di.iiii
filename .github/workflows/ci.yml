@@ -51,3 +51,6 @@ jobs:
 
       - name: Check AI docs
         run: npm run docs:ai:check
+
+      - name: Check wiki / user-facing docs
+        run: npm run docs:wiki:check

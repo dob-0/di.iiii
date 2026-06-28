@@ -15,6 +15,7 @@
     "build": "vite build",
     "docs:ai:sync": "node scripts/sync-agent-docs.mjs",
     "docs:ai:check": "node scripts/check-agent-docs.mjs",
+    "docs:wiki:check": "node scripts/check-wiki-sync.mjs",
     "deploy": "node scripts/deploy.mjs",
     "deploy:status": "node scripts/deploy.mjs status",
     "deploy:dev": "node scripts/deploy.mjs dev",
