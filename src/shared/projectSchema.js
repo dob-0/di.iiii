@@ -93,6 +93,7 @@ export const defaultWindowLayout = {
 
 export const defaultWorldState = {
     backgroundColor: '#0a1118',
+    atmosphereBlend: false,
     gridVisible: true,
     gridSize: 24,
     gridCellSize: 0.75,
@@ -371,6 +372,7 @@ const normalizeWorldState = (world = {}) => {
         ...cloneValue(defaultWorldState),
         ...cloneValue(source),
         backgroundColor: ensureString(source.backgroundColor, defaultWorldState.backgroundColor),
+        atmosphereBlend: ensureBoolean(source.atmosphereBlend, defaultWorldState.atmosphereBlend),
         gridVisible: ensureBoolean(source.gridVisible, defaultWorldState.gridVisible),
         gridSize: Math.max(1, ensureNumber(source.gridSize, defaultWorldState.gridSize)),
         gridCellSize: Math.max(0.05, ensureNumber(source.gridCellSize, defaultWorldState.gridCellSize)),

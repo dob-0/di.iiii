@@ -694,6 +694,38 @@ function useLiveProjectDocument(projectId) {
  * controls whether the exit button / title / hint overlay render (callers
  * that provide their own chrome, like the landing page, pass `false`).
  */
+// Color transitions: when worldState.atmosphereBlend is on, the background + fog
+// drift toward the distance-weighted colors of nearby zones (each portal's
+// authored colour) as you walk — ported from the old bespoke exhibition, now a
+// data toggle that works for any project.
+const _atmAcc = new THREE.Color()
+const _atmTarget = new THREE.Color()
+function AtmosphereBlender({ zones, playerRef, baseBg }) {
+    const { scene } = useThree()
+    const base = useMemo(() => new THREE.Color(baseBg), [baseBg])
+    const current = useRef(new THREE.Color(baseBg))
+    useFrame(() => {
+        const p = playerRef.current
+        if (!p || !zones.length) return
+        let tot = 0
+        for (const z of zones) { const dx = z.x - p.x, dz = z.z - p.z; z._w = 1 / (dx * dx + dz * dz + 400); tot += z._w }
+        let r = 0, g = 0, b = 0, nd2 = Infinity
+        for (const z of zones) {
+            const k = z._w / tot
+            _atmAcc.set(z.color); r += _atmAcc.r * k; g += _atmAcc.g * k; b += _atmAcc.b * k
+            const dx = z.x - p.x, dz = z.z - p.z; const d2 = dx * dx + dz * dz; if (d2 < nd2) nd2 = d2
+        }
+        const nd = Math.sqrt(nd2)
+        const strength = THREE.MathUtils.clamp(1 - (nd - 8) / (40 - 8), 0, 1)
+        _atmAcc.setRGB(r, g, b)
+        _atmTarget.copy(base).lerp(_atmAcc, strength)
+        current.current.lerp(_atmTarget, 0.04)
+        if (scene.background?.isColor) scene.background.copy(current.current)
+        if (scene.fog) scene.fog.color.copy(current.current)
+    })
+    return null
+}
+
 export default function LiveProjectScene({
     projectId,
     interactive = true,
@@ -793,6 +825,13 @@ export default function LiveProjectScene({
     const ambient = worldState.ambientLight || { color: '#ffffff', intensity: 0.85 }
     const directional = worldState.directionalLight || { color: '#fff7ea', intensity: 1.15, position: [8, 12, 4] }
     const backgroundColor = worldState.backgroundColor || '#0a1118'
+    // Zone tint sources for atmosphere blend: each portal's position + authored colour.
+    const atmosphereZones = useMemo(() => entities
+        .filter((e) => e.type === 'portal')
+        .map((e) => {
+            const pos = e.components?.transform?.position || [0, 0, 0]
+            return { x: pos[0], z: pos[2], color: e.components?.appearance?.color || backgroundColor }
+        }), [entities, backgroundColor])
 
     return (
         <>
@@ -806,6 +845,9 @@ export default function LiveProjectScene({
                 <XR store={xr.xrStore}>
                 <color attach="background" args={[backgroundColor]} />
                 <fog attach="fog" args={[backgroundColor, 8, 50]} />
+                {interactive && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
+                    <AtmosphereBlender zones={atmosphereZones} playerRef={playerRef} baseBg={backgroundColor} />
+                ) : null}
                 <ambientLight color={ambient.color} intensity={ambient.intensity} />
                 <directionalLight color={directional.color} intensity={directional.intensity} position={directional.position} />
                 <Grid args={[80, 80]} cellColor="#2a3038" sectionColor="#3c4654" fadeDistance={40} infiniteGrid />
