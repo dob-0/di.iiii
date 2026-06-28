@@ -9,17 +9,19 @@ active_branch: dev
 
 ## Last commit
 
-`9aac69b` — chore(ci/smoke): explicit contract+schema CI guards; fix e2e-smoke false negatives
-**`dev` pushed to `origin/dev` → staging. `origin/main` at `e2a3172` (production di-studio.xyz). Local `main` still stale at `3d9bf89` — `git fetch` / fast-forward to clear.**
+`99562a6` — refactor(deploy): promote production from origin/dev, not origin/staging
+**`dev` pushed to `origin/dev` → staging (verified live, all green). `origin/main` at `a26d805` (production di-studio.xyz); `dev` is 2 tooling commits ahead. Local `main` = `a26d805` (in sync).**
 
-## Last session (2026-06-26)
+## Last session (2026-06-28)
 
-- `/admin` Ops Graph visual cleanup (CSS-only, canonical `preferences-*`): fixed the serif fallback (`.preferences-page` had no `font-family` → set Inter stack), de-monospaced metric values, rebuilt Activity Signals as stacked label/value, removed the sticky overlapping topbar, added a ▾/▸ header collapse toggle, compacted the header (single-line metric cards, dropped the description).
-- **Unified manager** — new `AdminManageSection` (`/admin` → **Manage**, now the default tab): one directory tree `Spaces → projects` (lazy-loaded) with a context detail pane for inline space/project CRUD, publish, guest-entry (global) + default-space toggles, and per-account access/role. Absorbs and **deletes** the old `AdminAccessSection` (Access tab). Reuses existing services + `preferences-*`; `SpaceHub`/`StudioHub` stay as the creative entry.
-- **3 free spaces per account** — new `spaces.owner_user_id` column (idempotent migration, existing rows NULL = uncounted) + `countSpacesOwnedBy`. `POST /api/spaces` enforces a quota (`config.freeSpaceLimit`, default 3, env `FREE_SPACE_LIMIT`): signed-in only, admins/unrestricted exempt, guests blocked, only when `requireAuth`. `/api/auth/session` now returns `spaceLimit`/`ownedSpaceCount`/`canCreateSpace`; SpaceHub gates the create button and shows usage.
-- Validation: lint 0 errors, build ✓, server-contracts 21, **344** tests (added `AdminManageSection.test.jsx`, `spaceStore.ownership.test.js`); migration dry-run safe + idempotent on a copy of `serverXR/data/di.db`.
+- **Doc-sync system** (`ef67c79`, `docs/ops/doc-sync-system.md`): consistency gate so user-facing doc surfaces can't drift, modeled on `docs:ai:check`. New `npm run docs:wiki:check` (pure `scripts/wiki-sync-lib.mjs` + `scripts/check-wiki-sync.mjs`, 8 tests) wired into CI + the Validation block.
+- Fixed a latent bug: `WIKI_HIGHLIGHTS` used `.filter(Boolean)`, so a typo'd landing-highlight id silently vanished — now `WIKI_HIGHLIGHT_IDS` is checked and a bad id fails CI.
+- Tier-2 Claude hooks in `.claude/settings.json`: run `docs:wiki:check` on `wikiContent.js` edits; remind to update the wiki when a user-facing surface (`src/{studio,beta,landing,project,wcc}`, serverXR routes) changes. (Tier 3 cloud agent documented, deliberately not built.)
+- **Deploy refactor** (`99562a6`): production promotion now sources `origin/dev` (not vestigial `origin/staging`); staging handler drops the redundant double-push. Tested via `deploy production --dry-run`.
+- Staging verified live: `/wiki` 200, spaces list filtered to public-only when logged out, `wcc` (public) 200, `n000` (restricted) 401, OAuth providers both `true`. Access/guest + OAuth round-trip confirmed passing by human earlier.
+- Validation: lint 0 errors, build ✓, `docs:wiki:check` ✓, deploy-lib 4/4, CI green on both pushes.
 
-Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production) at `e2a3172`.
+Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (production) at `a26d805`.
 
 ## What works
 
@@ -43,15 +45,12 @@ Branch focus: `dev` → staging.di-studio.xyz, `main` → di-studio.xyz (product
 
 ## What is broken / open
 
-- **`/admin` Ops Graph UI tweaks are uncommitted** (`preferences.css` + `PreferencesPage.jsx`) — build ✓ each round, but `lint`/`test` not run and not committed; commit or run full validation when ready.
-- **Access/guest work needs human testing on staging** — admin UI lives at `/admin` → **Access** tab (admin-only; sign in as dob-0 to see People & Access). Guest global/sandbox modes set via that tab's `Set global` buttons. Not yet clicked-through by a human on staging.
-- Local `main` is stale at `3d9bf89` (origin is `e2a3172`) — `git fetch` / fast-forward to clear. Throwaway `embed-portal-test-world` left in the local `main`-space DB — delete from Studio Hub if it's noise.
-- **Audit follow-ups deferred this session** (none done, user's call): fix stale `scripts/e2e-smoke.mjs` (16 false-negative failures); add `test:server-contracts` + `test:schema-sync` to CI (schema-drift prod-503 guard); prune 5 parked branches (`chore/fork-sync-contract`, `feat/asset-optimization-and-agent-efficiency`, `feat/studio-workflows`, `feature/landing-pages`, `self-host`).
-- WCC landing perf headroom: the always-on WebGL particle veil (700 pts) is the remaining throttled-fps cost — gate on mobile / `prefers-reduced-motion` if more is needed. No white-background button context exists in the WCC flow (it's red→black only), so the "visible on white" ask was covered by the solid red fill.
-- **VR fly is unverified on hardware** — AR walk/joystick/fly were confirmed on a real Android phone (CDP), but the VR path (right-thumbstick-Y altitude, smooth locomotion) has only been built/lint/mount-checked; no headset here. Test on a real device and flag anything off.
-- The `/api/users` admin endpoints are covered by automated tests only — no real OAuth round-trip has been confirmed end-to-end in this dev environment, even though GitHub/Google credentials ARE configured locally (`serverXR/.env.local`) and `/api/auth/providers` returns both `true`. A login was attempted 2026-06-22 but the verification method used couldn't confirm the resulting session — still open.
-- `scripts/ollama/Modelfile.dob-fast` / `Modelfile.dob-deep` are mid-iteration locally (base swapped to `qwen3:8b`, not yet committed) — check `git diff` before assuming the committed `qwen2.5-coder:7b` base is current.
-- **WCC hub project (`main`)** — created in the `wcc` space and wired into `WccExhibition.jsx` (`MAIN_PROJECT_ID`/`MAIN_DOC_IDS`/`ZoneGroup` at hub center). Currently has one placeholder cyan wireframe sphere. Needs real hub content/design. Edit via `/wcc/studio/projects/main`.
+- **WCC hub project (`main`)** — created in the `wcc` space and wired into `WccExhibition.jsx` (`MAIN_PROJECT_ID`/`MAIN_DOC_IDS`/`ZoneGroup` at hub center). Currently one placeholder cyan wireframe sphere. Needs real hub content/design. Edit via `/wcc/studio/projects/main`.
+- **VR fly unverified on hardware** — AR walk/joystick/fly confirmed on a real Android phone (CDP); the VR path (right-thumbstick-Y altitude, smooth locomotion) is only build/lint/mount-checked. No headset here — deferred (user's call).
+- WCC landing perf headroom: the always-on WebGL particle veil (700 pts) is the remaining throttled-fps cost — gate on mobile / `prefers-reduced-motion` if more is needed.
+- `origin/self-host` — intentionally **kept**: 1 unmerged commit (`b9baa30`) that strips contributor/auto-PR machinery for a clean self-host build. Not stale; do not prune.
+- `scripts/ollama/Modelfile.dob-fast` / `dob-deep` may be mid-iteration locally (base → `qwen3:8b`) — `git diff` before assuming the committed `qwen2.5-coder:7b` base is current.
+- Minor: throwaway `embed-portal-test-world` may linger in the local `main`-space DB — delete from Studio Hub if it's noise.
 
 ## Space sync setup (per machine)
 
