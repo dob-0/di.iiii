@@ -117,7 +117,18 @@ export default function PortalObject({ entity }) {
     const mode = reference.mode === 'embed' ? 'embed' : 'portal'
 
     if (mode === 'embed') {
-        return <EmbeddedScene projectId={reference.projectId} />
+        return (
+            <>
+                <EmbeddedScene projectId={reference.projectId} />
+                {reference.label ? (
+                    <Billboard position={[0, 3.4, 0]}>
+                        <Text fontSize={0.7} maxWidth={9} color="#ffffff" outlineWidth={0.02} outlineColor="#000000" anchorX="center" anchorY="middle">
+                            {reference.label}
+                        </Text>
+                    </Billboard>
+                ) : null}
+            </>
+        )
     }
     return (
         <PortalGateway
