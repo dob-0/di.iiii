@@ -435,6 +435,7 @@ export function ProjectPanel({
             <CollapsibleSection title="World">
                 <ColorField label="Background" value={world.backgroundColor} onChange={(v) => onWorldPatch({ backgroundColor: v })} />
                 <ToggleField label="Atmosphere blend" checked={world.atmosphereBlend === true} onChange={(v) => onWorldPatch({ atmosphereBlend: v })} />
+                <ToggleField label="Hub decor (rings + spokes)" checked={world.hubDecor === true} onChange={(v) => onWorldPatch({ hubDecor: v })} />
                 <ToggleField label="Grid visible" checked={world.gridVisible !== false} onChange={(v) => onWorldPatch({ gridVisible: v })} />
                 <NumberField label="Grid Size" value={world.gridSize} min={1} step={1} onChange={(v) => onWorldPatch({ gridSize: v })} />
                 <NumberField label="Cell Size" value={world.gridCellSize} min={0.05} step={0.05} onChange={(v) => onWorldPatch({ gridCellSize: v })} />

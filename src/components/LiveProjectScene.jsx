@@ -779,6 +779,41 @@ function AtmosphereBlender({ zones, playerRef, baseBg }) {
     return null
 }
 
+// Wayfinding floor decor for a composed hub (opt-in via worldState.hubDecor):
+// a pulsing centre ring, faint spokes out to each zone, and a glow ring under
+// each zone — ported from the old bespoke exhibition.
+function HubDecor({ zones }) {
+    const centerRef = useRef(null)
+    useFrame((state) => {
+        if (centerRef.current) centerRef.current.material.opacity = 0.3 + Math.sin(state.clock.getElapsedTime() * 0.9) * 0.08
+    })
+    const spokes = useMemo(() => {
+        const a = new Float32Array(zones.length * 6)
+        zones.forEach((z, i) => { a[i * 6 + 1] = 0.02; a[i * 6 + 3] = z.x; a[i * 6 + 4] = 0.02; a[i * 6 + 5] = z.z })
+        return a
+    }, [zones])
+    return (
+        <>
+            <mesh ref={centerRef} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+                <ringGeometry args={[3.6, 4.2, 64]} />
+                <meshBasicMaterial color={0xffffff} transparent opacity={0.3} depthWrite={false} side={THREE.DoubleSide} />
+            </mesh>
+            <lineSegments key={zones.length}>
+                <bufferGeometry>
+                    <bufferAttribute attach="attributes-position" args={[spokes, 3]} />
+                </bufferGeometry>
+                <lineBasicMaterial color={0xffffff} transparent opacity={0.1} />
+            </lineSegments>
+            {zones.map((z, i) => (
+                <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[z.x, 0.03, z.z]}>
+                    <ringGeometry args={[2.4, 3, 48]} />
+                    <meshBasicMaterial color={0xffffff} transparent opacity={0.16} depthWrite={false} side={THREE.DoubleSide} />
+                </mesh>
+            ))}
+        </>
+    )
+}
+
 export default function LiveProjectScene({
     projectId,
     interactive = true,
@@ -913,6 +948,9 @@ export default function LiveProjectScene({
                 <fog attach="fog" args={[backgroundColor, 8, 50]} />
                 {interactive && worldState.atmosphereBlend && atmosphereZones.length > 0 ? (
                     <AtmosphereBlender zones={atmosphereZones} playerRef={playerRef} baseBg={backgroundColor} />
+                ) : null}
+                {worldState.hubDecor && atmosphereZones.length > 0 ? (
+                    <HubDecor zones={atmosphereZones} />
                 ) : null}
                 <ambientLight color={ambient.color} intensity={ambient.intensity} />
                 <directionalLight color={directional.color} intensity={directional.intensity} position={directional.position} />

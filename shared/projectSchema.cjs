@@ -79,6 +79,7 @@ const defaultWindowLayout = {
 const defaultWorldState = {
   backgroundColor: '#0a1118',
   atmosphereBlend: false,
+  hubDecor: false,
   spawn: null,
   gridVisible: true,
   gridSize: 24,
@@ -335,6 +336,7 @@ const normalizeWorldState = (world = {}) => {
     ...cloneValue(source),
     backgroundColor: ensureString(source.backgroundColor, defaultWorldState.backgroundColor),
     atmosphereBlend: ensureBoolean(source.atmosphereBlend, defaultWorldState.atmosphereBlend),
+    hubDecor: ensureBoolean(source.hubDecor, defaultWorldState.hubDecor),
     spawn: source.spawn && typeof source.spawn === 'object' ? {
       x: ensureNumber(source.spawn.x, 0),
       z: ensureNumber(source.spawn.z, 0),
