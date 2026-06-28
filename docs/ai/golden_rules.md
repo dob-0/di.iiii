@@ -383,3 +383,21 @@ If the doc doesn't exist yet, create it. Never add a shortcut to only one place.
 - Bottom-right stack (pane-absolute, `right: 14px`): account `bottom:86`, `?` `bottom:48`, fullscreen `bottom:14`
 
 **Files:** `docs/ai/ui-system.md`, `src/studio/styles/studio.css`, `src/components/AccountButton.jsx`, `src/studio/components/StudioViewport.jsx`
+
+---
+
+### New space/project capability → build it in the shared layer, never per-space
+
+**Rule:** Any new "thing a space can do" — a new object property, world setting, animation, render behavior, arrival/camera option — must be added to the **shared layer** so *every* space inherits it automatically. The shared layer is:
+
+1. `src/shared/projectSchema.js` **and** its CJS mirror `shared/projectSchema.cjs` (keep in lockstep — `npm run test:schema-sync` guards it; a drift = 503 on deploy)
+2. `src/components/LiveProjectScene.jsx` — the one engine that renders the public/live view for **all** spaces (`/<space>`, `PublicProjectViewer`, the WCC exhibition)
+3. `src/project/entityRegistry.js` (object inspector fields) and/or `StudioShellPanels.jsx` World panel — so it's authorable in Studio for any project
+
+Do **not** implement a capability inside a bespoke per-space renderer/component. That siloes it to one space and it silently won't exist anywhere else.
+
+**Why:** The WCC exhibition was a 1150-line bespoke renderer that reimplemented walk/animation/atmosphere with a hardcoded layout — so none of it was reusable and the space wasn't tunable in Studio. Converging it onto `LiveProjectScene` + portal-composition made animation, `worldState.atmosphereBlend`/`hubDecor`/`spawn`, and `text.billboard` available to **every** space at once, authored as data. New features go in the shared layer for the same reason: one implementation, every space, tunable in Studio. (Matches MANIFESTO: prefer shared project logic over one-off editor paths.)
+
+**Checklist for a new capability:** schema field (both files) → renders in `LiveProjectScene` → inspector/World-panel control → `test:schema-sync` + `lint` + `build` green → it now works in every space.
+
+**Files:** `src/shared/projectSchema.js`, `shared/projectSchema.cjs`, `src/components/LiveProjectScene.jsx`, `src/project/entityRegistry.js`, `src/studio/components/StudioShellPanels.jsx`
