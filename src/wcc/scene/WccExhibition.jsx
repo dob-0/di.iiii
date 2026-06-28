@@ -270,7 +270,7 @@ function HubTitle() {
     // depthTest off + a high renderOrder keep the title legible over the translucent
     // spire from every angle (otherwise the cone slices through the letters).
     return (
-        <Billboard position={[0, 6.7, 0]}>
+        <Billboard position={[0, 5.0, 0]}>
             <Text renderOrder={20} material-depthTest={false} material-depthWrite={false} fontSize={0.6} maxWidth={13} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.018} outlineColor="#04181c" position={[0, 0.5, 0]}>
                 WOMEN CREATING CHANGE
             </Text>
@@ -939,7 +939,7 @@ export default function WccExhibition({ onExit }) {
 
     // Spawn a few metres out from the central beacon, looking +Z straight at it,
     // so arrival frames the title monument (and never spawns inside the spire).
-    const playerRef = useRef({ x: 0, z: -9, yaw: 0, pitch: 0.14, altY: EYE_HEIGHT })
+    const playerRef = useRef({ x: 0, z: -8, yaw: 0, pitch: 0.04, altY: EYE_HEIGHT })
 
     useEffect(() => {
         const onKey = (e) => { if (e.key.toLowerCase() === 'f') setFlyMode((f) => !f) }
