@@ -54,6 +54,11 @@ const tmpDir = new THREE.Vector3()
 
 const isGateEntity = (entity) => /gate|threshold|entrance/i.test(entity?.name || '')
 
+// Billboard titles are fixed world-size, so they overflow a narrow portrait phone.
+// Scale them down on a coarse-pointer (touch) viewport so they fit.
+const COARSE_POINTER = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
+const BILLBOARD_TEXT_SCALE = COARSE_POINTER ? 0.45 : 1
+
 // Same fix as GridFloorBackground: any page that renders a live scene
 // without going through AuthGate has no session cookie yet on first paint.
 let guestSessionPromise = null
@@ -131,7 +136,7 @@ function EntityVisual({ entity, assetMap }) {
             const totalH = gaps.reduce((a, b) => a + b, 0)
             let cursor = totalH / 2
             return (
-                <Billboard>
+                <Billboard scale={BILLBOARD_TEXT_SCALE}>
                     {lines.map((ln, i) => {
                         const y = cursor - gaps[i] / 2
                         cursor -= gaps[i]
