@@ -15,6 +15,8 @@ import CylinderObject from '../../objectComponents/CylinderObject.jsx'
 import ImageObject from '../../objectComponents/ImageObject.jsx'
 import VideoObject from '../../objectComponents/VideoObject.jsx'
 import ModelObject from '../../objectComponents/ModelObject.jsx'
+import Text2DObject from '../../objectComponents/Text2DObject.jsx'
+import Text3DObject from '../../objectComponents/Text3DObject.jsx'
 import '../../components/liveProjectScene.css'
 import './scene.css'
 
@@ -117,6 +119,14 @@ function EntityVisual({ entity, assetMap }) {
         return <VideoObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
     case 'model':
         return <ModelObject assetRef={asset || null} data={asset?.url || null} modelColor={appearance.color} applyModelColor={false} opacity={appearance.opacity} />
+    case 'text': {
+        const text = entity.components?.text || {}
+        const value = text.value || ''
+        if (text.variant === '3d') {
+            return <Text3DObject data={value} color={appearance.color || '#ffffff'} fontSize3D={text.fontSize3D} depth3D={text.depth3D} />
+        }
+        return <Text2DObject data={value} color={appearance.color || '#ffffff'} fontFamily={text.fontFamily || 'Inter, sans-serif'} fontWeight={text.fontWeight || '600'} fontStyle={text.fontStyle || 'normal'} />
+    }
     default:
         return null
     }
@@ -251,6 +261,30 @@ function HubMarker() {
             <ringGeometry args={[3.6, 4.2, 64]} />
             <meshBasicMaterial color={0xffffff} transparent opacity={0.3} depthWrite={false} side={THREE.DoubleSide} />
         </mesh>
+    )
+}
+
+// Bilingual title crowning the central beacon. Billboarded so it stays readable
+// from anywhere on the ring and in VR; floats above the spire tip.
+function HubTitle({ compact = false }) {
+    // depthTest off + a high renderOrder keep the title legible over the translucent
+    // spire from every angle (otherwise the cone slices through the letters).
+    // On a narrow portrait phone the fixed-world-size title overflows, so scale the
+    // whole crown down (keeps the layout, just smaller) when compact.
+    return (
+        <Billboard position={[0, 8.4, 0]}>
+            <group scale={compact ? 0.62 : 1}>
+                <Text renderOrder={20} material-depthTest={false} material-depthWrite={false} fontSize={0.46} maxWidth={11} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.014} outlineColor="#04181c" position={[0, 0.42, 0]}>
+                    WOMEN CREATING CHANGE
+                </Text>
+                <Text renderOrder={20} material-depthTest={false} material-depthWrite={false} fontSize={0.26} maxWidth={11} color="#cdf3f6" anchorX="center" anchorY="middle" outlineWidth={0.007} outlineColor="#04181c" position={[0, -0.08, 0]}>
+                    Կանայք, որ փոփոխություն են ստեղծում
+                </Text>
+                <Text renderOrder={20} material-depthTest={false} material-depthWrite={false} fontSize={0.17} maxWidth={11} color="#7fb9bd" anchorX="center" anchorY="middle" position={[0, -0.44, 0]}>
+                    a contemporary art exhibition
+                </Text>
+            </group>
+        </Billboard>
     )
 }
 
@@ -805,6 +839,34 @@ function MobileJoystick({ outerRef, thumbRef }) {
     )
 }
 
+// Animated first-visit movement cue: a ghost joystick demo on mobile (the real
+// joystick is invisible until touched), pulsing WASD keys on desktop.
+function MoveHintVisual({ isMobile, leaving }) {
+    const cls = `wcc-move-hint${leaving ? ' is-leaving' : ''}`
+    if (isMobile) {
+        return (
+            <div className={cls}>
+                <div className="wcc-ghost-joy"><div className="wcc-ghost-thumb" /></div>
+                <span className="wcc-hint-label wcc-hint-label--joy">drag · move</span>
+                <div className="wcc-ghost-swipe" />
+                <span className="wcc-hint-label wcc-hint-label--look">swipe · look</span>
+            </div>
+        )
+    }
+    return (
+        <div className={cls}>
+            <div className="wcc-keys">
+                <div className="wcc-keys-row"><span className="wcc-key wcc-key--w">W</span></div>
+                <div className="wcc-keys-row">
+                    <span className="wcc-key wcc-key--a">A</span>
+                    <span className="wcc-key wcc-key--s">S</span>
+                    <span className="wcc-key wcc-key--d">D</span>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 // Fly mode's altitude keys (Space/Q, C/E) have no touch equivalent --
 // press-and-hold buttons fill that gap. Pointer events (not click) so
 // altitude changes continuously while held, like the keyboard.
@@ -897,6 +959,13 @@ export default function WccExhibition({ onExit }) {
     const [isLocked, setLocked] = useState(false)
     const [isMobile]  = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
     const [flyMode, setFlyMode] = useState(false)
+    // First-visit movement hint (esp. mobile, where the joystick is invisible until
+    // you touch). Fades on its own so it never clutters once you're moving.
+    const [showMoveHint, setShowMoveHint] = useState(true)
+    useEffect(() => {
+        const t = setTimeout(() => setShowMoveHint(false), 12000)
+        return () => clearTimeout(t)
+    }, [])
     const joystickRef  = useRef({ x: 0, y: 0 })
     const joyVisRef    = useRef(null)
     const joyThumbRef  = useRef(null)
@@ -907,7 +976,9 @@ export default function WccExhibition({ onExit }) {
     const ambientRef  = useRef(null)
     const dirRef      = useRef(null)
 
-    const playerRef = useRef({ x: 0, z: 0, yaw: 0, pitch: 0, altY: EYE_HEIGHT })
+    // Spawn at the exhibition centre, gaze tilted up so arrival reads the title
+    // overhead; lower your gaze / look around to explore the artist zones.
+    const playerRef = useRef({ x: 0, z: 0, yaw: 0, pitch: 1.3, altY: EYE_HEIGHT })
 
     useEffect(() => {
         const onKey = (e) => { if (e.key.toLowerCase() === 'f') setFlyMode((f) => !f) }
@@ -945,6 +1016,7 @@ export default function WccExhibition({ onExit }) {
                 <directionalLight ref={dirRef} color={DEFAULT_DIR.color} intensity={DEFAULT_DIR.intensity} position={DEFAULT_DIR.position} />
                 <Grid args={[240, 240]} cellColor="#2a3038" sectionColor="#3c4654" fadeDistance={70} infiniteGrid />
                 <HubMarker />
+                <HubTitle compact={isMobile} />
                 {mainDoc ? <ZoneGroup artist={{ id: MAIN_PROJECT_ID }} doc={mainDoc} center={HUB_CENTER} showRing={false} /> : null}
                 <HubSpokes zoneCenters={ZONE_CENTERS_RING} />
                 {ARTISTS.map((artist, i) => (
@@ -1006,7 +1078,9 @@ export default function WccExhibition({ onExit }) {
             </header>
 
             {!isMobile && !isLocked && (
-                <p className="live-scene-hint live-scene-hint--lock">Click to explore</p>
+                <p className="live-scene-hint live-scene-hint--lock">
+                    Click to explore &nbsp;·&nbsp; walk &nbsp;·&nbsp; mouse · look &nbsp;·&nbsp; F · fly
+                </p>
             )}
             {!isMobile && isLocked && (
                 <p className="live-scene-hint">
@@ -1014,6 +1088,9 @@ export default function WccExhibition({ onExit }) {
                     {flyMode ? <>&nbsp;·&nbsp; Space/Q · up &nbsp;·&nbsp; C/E · down</> : null}
                     &nbsp;·&nbsp; ESC · release
                 </p>
+            )}
+            {showMoveHint && (isMobile || !isLocked) && (
+                <MoveHintVisual isMobile={isMobile} />
             )}
             {(() => {
                 const controlsUI = (
