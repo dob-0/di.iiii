@@ -9,17 +9,19 @@ active_branch: dev
 
 ## Last commit
 
-`8cc0b2a` — feat(project): portal-embed floating label
-**`origin/main` = `38bfe46` (production di-studio.xyz): WCC **beacon hub** (bespoke `WccExhibition` renderer) is LIVE on prod. `dev` (staging) is well ahead with the **exhibition→LiveProjectScene convergence** (NOT on prod yet — promote only after parity approved).**
+`34ce512` — docs(golden-rules): new space capabilities go in the shared layer
+**`origin/main` = `38bfe46` (production di-studio.xyz): WCC **beacon hub** (bespoke `WccExhibition` renderer) still LIVE on prod. `dev`/staging has the FULL **exhibition→LiveProjectScene convergence**, feature-complete + look-parity (NOT on prod — promote when human approves staging).**
 
 ## Last session (2026-06-29)
 
 - **Prod**: shipped the WCC beacon hub + bilingual title + center look-up + animated control hints to production (commits up to `38bfe46`), via the **bespoke `WccExhibition`** renderer. (Earlier in session: doc-sync gate, deploy refactor — already on prod.)
 - **Architecture convergence (staging only):** retired the bespoke ring renderer; `/wcc/scene` now renders via the shared **`LiveProjectScene`**, driven by the `main` project which **composes each artist project as a `portal` embed** (`WccExperience.jsx`). Layout/objects/world are now authored data tunable in Studio. Master `main` doc = 9 beacon + 10 zone portals; regen via `scratchpad/gen-master.mjs` → push with `scratchpad/push-hub.mjs`.
-- **"Everything in Studio" phases (staging):** (1) per-object **animation** = `components.animation {mode,speed,amplitude}` (schema + CJS mirror + entityRegistry "Animation" section; `src/project/viewport/entityAnimation.js` shared by LiveProjectScene + portal embeds; legacy fallback preserves old look). (2) **color transitions** = `worldState.atmosphereBlend` toggle (World panel) — bg/fog blend toward nearby portals' colours. (3) per-zone **portal labels** render. AmbientField particles already existed in LiveProjectScene.
-- Validation each step: lint 0 errors, `test:schema-sync` ✓ (mirror lockstep), build ✓, tests green.
+- **"Everything in Studio" — all shared, all Studio-tunable, all on staging:** per-object **animation** (`components.animation {mode,speed,amplitude}`, entityRegistry "Animation" section, shared `src/project/viewport/entityAnimation.js`, legacy fallback = old look) · **color transitions** (`worldState.atmosphereBlend`) · **floor decor** (`worldState.hubDecor` = centre ring + spokes + zone rings) · **billboard text** (`components.text.billboard` + `text.lines` for per-line styled titles) · **data-driven spawn** (`worldState.spawn`) · zone-aware nearest-label · per-zone portal **labels** · **animated movement hints** (WASD keys / ghost joystick, ported into LiveProjectScene). AmbientField particles already existed.
+- Master `main` doc (regen `scratchpad/gen-master.mjs` → `scratchpad/push-hub.mjs`): beacon + bilingual title (lines) + 10 zone portals at ring **R=58** (spread to fix overlaps), each portal colour = artist bg (atmosphere), spawn = centre look-up.
+- **Rule added** (`docs/ai/golden_rules.md`): new space capability → shared layer (projectSchema + CJS mirror + LiveProjectScene + entityRegistry/World panel), never per-space.
+- Each step validated: lint 0 errors, `test:schema-sync` ✓, build ✓, tests green.
 
-Branch focus: `dev` → staging (convergence WIP), `main` → di-studio.xyz at `38bfe46` (beacon hub, bespoke renderer).
+Branch focus: `dev` → staging (full converged exhibition), `main` → di-studio.xyz at `38bfe46` (beacon hub, bespoke renderer — pending promote).
 
 ## What works
 
@@ -43,7 +45,7 @@ Branch focus: `dev` → staging (convergence WIP), `main` → di-studio.xyz at `
 
 ## What is broken / open
 
-- **WCC convergence — staging only, NOT promoted to prod.** Remaining before it can replace the prod beacon hub: (a) **spawn** is LiveProjectScene's default (z6, facing centre, level) — old center-look-up lived in retired `WccExhibition`; make it `worldState.spawn` data-driven (user undecided: center-look-up vs beacon-in-view). (b) chrome nearest-label shows "Orbit Accent 2" — Walker nearest-zone should consider only `portal` entities. (c) zone positions/facing are rough placeholders — meant for human tuning in `/wcc/studio/projects/main`. (d) retired `src/wcc/scene/WccExhibition.jsx` still in tree (no longer imported) — delete after parity confirmed.
+- **WCC convergence — feature-complete on staging, NOT promoted to prod.** Promote `dev`→`main` when human approves staging.di-studio.xyz/wcc/scene. Then: (a) **user is hand-tuning zone positions/facing** in `/wcc/studio/projects/main` (R=58 even ring is a placeholder). (b) in-world title may **overflow on narrow phones** — no per-device scaling on the data version yet (add if it bites). (c) retired `src/wcc/scene/WccExhibition.jsx` still in tree (no longer imported) — delete after promote.
 - **VR fly unverified on hardware** — AR walk/joystick/fly confirmed on a real Android phone (CDP); the VR path (right-thumbstick-Y altitude, smooth locomotion) is only build/lint/mount-checked. No headset here — deferred (user's call).
 - WCC landing perf headroom: the always-on WebGL particle veil (700 pts) is the remaining throttled-fps cost — gate on mobile / `prefers-reduced-motion` if more is needed.
 - `origin/self-host` — intentionally **kept**: 1 unmerged commit (`b9baa30`) that strips contributor/auto-PR machinery for a clean self-host build. Not stale; do not prune.
