@@ -859,11 +859,19 @@ export default function LiveProjectScene({
     const [nearestLabel, setNearestLabel] = useState(null)
     const [isLocked, setIsLocked] = useState(false)
     const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
-    // First-visit movement hint (fades on its own so it never clutters).
+    // First-visit movement hint: fades on a timer, but dismiss immediately on the
+    // first interaction so the ghost-joystick demo never overlaps the real joystick.
     const [showMoveHint, setShowMoveHint] = useState(true)
     useEffect(() => {
         const t = setTimeout(() => setShowMoveHint(false), 12000)
-        return () => clearTimeout(t)
+        const dismiss = () => setShowMoveHint(false)
+        window.addEventListener('pointerdown', dismiss, { once: true })
+        window.addEventListener('touchstart', dismiss, { once: true })
+        return () => {
+            clearTimeout(t)
+            window.removeEventListener('pointerdown', dismiss)
+            window.removeEventListener('touchstart', dismiss)
+        }
     }, [])
     const [flyMode, setFlyMode] = useState(false)
     const joystickRef = useRef({ x: 0, y: 0 })
