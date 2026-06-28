@@ -208,6 +208,8 @@ flowchart LR
 By task:
 
 - AI knowledge base: [docs/ai/index.md](docs/ai/index.md)
+- user-facing help (in-app `/wiki` + landing teaser, single source of truth): [src/wiki/wikiContent.js](src/wiki/wikiContent.js)
+- documentation sync system (how the surfaces stay in lockstep): [docs/ops/doc-sync-system.md](docs/ops/doc-sync-system.md)
 - new contributor setup: [ONBOARDING.md](ONBOARDING.md)
 - running multiple agents/contributors at once: [docs/ai/parallel-agents.md](docs/ai/parallel-agents.md)
 - shared project logic: [src/project/AGENTS.md](src/project/AGENTS.md)

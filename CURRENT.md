@@ -78,5 +78,5 @@ gh run list --workflow publish-cpanel-prebuilt-v2.yml                 # monitor
 ## Validation
 
 ```bash
-npm run lint && npm run build && npm run test -- --run && npm run test:server-contracts
+npm run lint && npm run build && npm run test -- --run && npm run test:server-contracts && npm run docs:wiki:check
 ```
