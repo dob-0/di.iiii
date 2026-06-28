@@ -9,8 +9,8 @@ active_branch: dev
 
 ## Last commit
 
-`34ce512` — docs(golden-rules): new space capabilities go in the shared layer
-**`origin/main` = `38bfe46` (production di-studio.xyz): WCC **beacon hub** (bespoke `WccExhibition` renderer) still LIVE on prod. `dev`/staging has the FULL **exhibition→LiveProjectScene convergence**, feature-complete + look-parity (NOT on prod — promote when human approves staging).**
+`a1634e9` — fix(wcc/live-scene): beacon-in-view arrival + dismiss hint on first touch
+**PROMOTED: `origin/main` = `a1634e9` — the FULL converged WCC exhibition (LiveProjectScene + portal composition + animation/atmosphere/hubDecor/title/spawn/hints) is LIVE on production di-studio.xyz, verified. Prod `main` project doc copied from staging (20 entities, 10 zone portals, beacon-in-view spawn). `dev` == `main`. (Note: `main` was found at `e771d38` pre-promote — possibly another session advanced it; fast-forward was clean.)**
 
 ## Last session (2026-06-29)
 
@@ -45,7 +45,7 @@ Branch focus: `dev` → staging (full converged exhibition), `main` → di-studi
 
 ## What is broken / open
 
-- **WCC convergence — feature-complete on staging, NOT promoted to prod.** Promote `dev`→`main` when human approves staging.di-studio.xyz/wcc/scene. Then: (a) **user is hand-tuning zone positions/facing** in `/wcc/studio/projects/main` (R=58 even ring is a placeholder). (b) in-world title may **overflow on narrow phones** — no per-device scaling on the data version yet (add if it bites). (c) retired `src/wcc/scene/WccExhibition.jsx` still in tree (no longer imported) — delete after promote.
+- **WCC convergence — DONE + live on prod.** Mobile title fit + hint/joystick overlap fixed; retired `WccExhibition.jsx`/`scene.css` deleted. Remaining = pure curation: **user hand-tunes zone positions/facing** in `/wcc/studio/projects/main` (R=58 even ring is a placeholder; edits there persist on staging — re-copy staging→prod via `scratchpad/copy-staging-to-prod.mjs` when ready, or just edit prod's `main` directly).
 - **VR fly unverified on hardware** — AR walk/joystick/fly confirmed on a real Android phone (CDP); the VR path (right-thumbstick-Y altitude, smooth locomotion) is only build/lint/mount-checked. No headset here — deferred (user's call).
 - WCC landing perf headroom: the always-on WebGL particle veil (700 pts) is the remaining throttled-fps cost — gate on mobile / `prefers-reduced-motion` if more is needed.
 - `origin/self-host` — intentionally **kept**: 1 unmerged commit (`b9baa30`) that strips contributor/auto-PR machinery for a clean self-host build. Not stale; do not prune.
