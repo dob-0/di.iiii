@@ -533,6 +533,10 @@
     letter-spacing: 0;
     line-height: 0.9;
     text-transform: uppercase;
+    /* Decorative circles bleed through the translucent panels; a soft shadow keeps
+       the title + copy legible over light bleed-through (esp. on mobile) without
+       changing the art direction. */
+    text-shadow: 0 1px 16px rgba(0, 0, 0, 0.5);
 }
 
 .wcc-nav-panel__description {
@@ -543,6 +547,7 @@
     color: rgba(248, 245, 239, 0.76);
     font-size: clamp(1rem, 1.35vw, 1.2rem);
     line-height: 1.55;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
     opacity: 0;
     transform: translateY(18px);
     transition: opacity 320ms ease, transform 320ms ease;
@@ -562,6 +567,7 @@
     margin-top: 34px;
     padding-bottom: 6px;
     border-bottom: 1px solid currentColor;
+    text-shadow: 0 1px 12px rgba(0, 0, 0, 0.6);
 }
 
 .wcc-reveal {
