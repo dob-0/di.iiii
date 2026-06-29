@@ -471,8 +471,11 @@
 .wcc-nav-panel {
     position: relative;
     display: grid;
-    width: min(68vw, 620px);
-    height: min(72vh, 620px);
+    width: min(68vw, 760px);
+    /* Cards are vertically centred in the 100vh track; a 620px cap left a large
+       empty band above/below them on tall viewports. Scale with the viewport
+       (cap raised) so they fill the space and the dead gap shrinks. */
+    height: min(82vh, 820px);
     align-content: end;
     overflow: hidden;
     padding: clamp(24px, 4vw, 54px);
