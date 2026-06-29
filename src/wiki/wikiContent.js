@@ -143,12 +143,29 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['api', 'developers', 'agents'],
         updated: '2026-06-26'
+    },
+    {
+        id: 'github-sync',
+        category: 'For developers',
+        title: 'GitHub sync',
+        summary: 'Connect a space to a GitHub repo — pushes auto-update the live space.',
+        body: [
+            'A space can be linked to a GitHub repo so every push updates the live space automatically, through the di.iiii GitHub App.',
+            { list: [
+                'Install the di.iiii GitHub App on your repo (one time).',
+                'In /admin → Manage → pick a space → GitHub sync, enter owner / repo / project and Connect.',
+                'Edit your repo’s entry file (e.g. index.html) and push — the space re-syncs in seconds.',
+                'Sync is one-way (repo → space); Disconnect anytime.'
+            ] }
+        ],
+        tags: ['github', 'sync', 'developers', 'deploy'],
+        updated: '2026-06-30'
     }
 ]
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['guest-and-sandbox-modes', 'free-spaces', 'publishing', 'admin-manage']
+export const WIKI_HIGHLIGHT_IDS = ['guest-and-sandbox-modes', 'free-spaces', 'publishing', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))
