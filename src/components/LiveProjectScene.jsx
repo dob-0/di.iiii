@@ -32,7 +32,7 @@ const FLY_SPEED = 4.5
 const WALK_ACCEL = 14
 const WALK_FRICTION = 10
 const TURN_SPEED = 1.6
-const POINTER_LOCK_SENSITIVITY = 0.0055
+const POINTER_LOCK_SENSITIVITY = 0.018
 const TOUCH_LOOK_SENSITIVITY = 0.005
 const TRACKPAD_LOOK_SENSITIVITY = 0.004
 // Just shy of straight up/down (PI/2) to avoid the camera flipping at the pole.
