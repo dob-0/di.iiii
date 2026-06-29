@@ -343,7 +343,10 @@
    margin overrides are declared later (after .wcc-hero__footer) to win the cascade. */
 @media (min-width: 801px) and (max-height: 1100px) {
     .wcc-hero {
-        align-content: start;
+        /* Centre the hero content so it sits in the middle of the viewport instead
+           of top-packing and leaving a dead gap before the nav panels — while
+           keeping the ENTER EXHIBITION button in view (space-between pushed it off). */
+        align-content: center;
     }
 }
 
