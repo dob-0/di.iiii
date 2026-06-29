@@ -34,6 +34,9 @@ const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { listUsers, findUserById, setUserSpaces, setUserUnrestricted, setUserRole } = require('./userStore')
+const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
+const githubApp = require('./githubApp')
+const spaceLinkStore = require('./spaceLinkStore')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
@@ -278,7 +281,7 @@ app.use(cors({
   preflightContinue: false,
   optionsSuccessStatus: 204
 }))
-app.use(express.json({ limit: '10mb' }))
+app.use(express.json({ limit: '10mb', verify: (req, _res, buf) => { req.rawBody = buf } }))
 app.use(morgan('tiny'))
 app.use((req, res, next) => {
   pushEvent('request', { method: req.method, url: req.url })
@@ -373,6 +376,21 @@ const getAuthState = (req) => {
       spaces: identity.spaces,
       isUnrestricted: identity.isUnrestricted
     })
+  }
+  // Dynamic source of scoped editor identities: per-space sync keys (DB-backed).
+  // Only consulted on a static-table miss, and only for the dii_sync_ prefix.
+  if (token && token.startsWith(syncKeyPrefix)) {
+    const sk = resolveSyncKey(token)
+    if (sk) {
+      return buildAuthState({
+        authenticated: true,
+        type: 'sync-key',
+        role: 'editor',
+        subject: `sync-key:${sk.keyId}`,
+        label: sk.label || 'Sync Key',
+        spaces: [sk.spaceId]
+      })
+    }
   }
   return sessionState
 }
@@ -697,6 +715,72 @@ const requireReadRole = (requiredRole = 'viewer') => async (req, res, next) => {
   return next()
 }
 
+// ── One-click GitHub sync: webhook receiver (signature-authed, pre-gate) ──────
+const internalApiBase = () => `http://127.0.0.1:${config.port}${config.basePath || ''}`
+const internalHeaders = () => ({ 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${config.apiToken}` })
+
+// Pull the linked repo's entry file via the GitHub App installation token and
+// write it into the space using the server's OWN tested document API (admin).
+async function syncLinkedSpace(link) {
+  let token = null
+  let installationId = link.installationId
+  if (installationId) { try { token = await githubApp.installationToken(installationId) } catch {} }
+  if (!token) {
+    const got = await githubApp.getInstallationForRepo(link.owner, link.repo)
+    if (got) { token = got.token; installationId = got.installationId }
+  }
+  if (!token) throw new Error(`No GitHub App installation can access ${link.owner}/${link.repo}`)
+  const ref = link.ref || await githubApp.repoDefaultBranch(token, link.owner, link.repo)
+  const html = await githubApp.fetchRepoFile(token, link.owner, link.repo, ref, link.entry)
+  const codeFiles = [{ name: 'index.html', content: html }]
+  const base = internalApiBase()
+  const docUrl = `${base}/api/projects/${link.projectId}/document`
+  const cur = await fetch(docUrl, { headers: internalHeaders() }).then((r) => r.json()).catch(() => ({}))
+  const doc = cur.document || {}
+  const put = await fetch(docUrl, {
+    method: 'PUT', headers: internalHeaders(),
+    body: JSON.stringify({
+      ...doc,
+      presentationState: { ...(doc.presentationState || {}), mode: 'code', entryView: 'code', codeFiles },
+      publishState: { ...(doc.publishState || {}), shareEnabled: true }
+    })
+  })
+  if (!put.ok) throw new Error(`internal document PUT failed (${put.status})`)
+  await fetch(`${base}/api/spaces/${link.spaceId}`, {
+    method: 'PATCH', headers: internalHeaders(),
+    body: JSON.stringify({ publishedProjectId: link.projectId })
+  }).catch(() => {})
+  return { ref, bytes: html.length }
+}
+
+router.post('/api/github/webhook', async (req, res) => {
+  try {
+    if (!githubApp.verifyWebhookSignature(req.rawBody, req.get('x-hub-signature-256'))) {
+      return res.status(401).json({ error: 'Invalid signature.' })
+    }
+    const event = req.get('x-github-event')
+    if (event === 'ping') return res.json({ ok: true, pong: true })
+    if (event !== 'push') return res.json({ ok: true, ignored: event })
+    const full = req.body?.repository?.full_name || ''
+    const [owner, repo] = full.split('/')
+    const after = req.body?.after || null
+    const links = owner && repo ? spaceLinkStore.getLinksByRepo(owner, repo) : []
+    if (!links.length) return res.json({ ok: true, linked: false, repo: full })
+    const synced = []
+    for (const link of links) {
+      try {
+        const r = await syncLinkedSpace(link)
+        if (after) spaceLinkStore.setLastSyncSha(link.spaceId, after)
+        synced.push({ space: link.spaceId, ok: true, ...r })
+      } catch (e) { synced.push({ space: link.spaceId, ok: false, error: e.message }) }
+    }
+    res.json({ ok: true, repo: full, synced })
+  } catch (error) {
+    console.error('[github-webhook]', error?.message || error)
+    res.status(500).json({ error: 'Webhook processing failed.' })
+  }
+})
+
 // Creating a space (POST /api/spaces) is open to any signed-in account; the
 // route handler enforces the free-tier quota (and blocks guests/tokens). Space
 // *management* (PATCH/DELETE below) stays admin-only.
@@ -788,6 +872,93 @@ registerSpaceRoutes(router, {
   upload,
   writeJson,
   writeOpsHistory
+})
+
+// Space sync keys — mint/list/revoke. Management is restricted to the space
+// OWNER (via session) or an ADMIN; editor/viewer/sync-key identities are
+// rejected so a leaked sync key can never mint more keys (no escalation).
+const requireSpaceOwnerOrAdmin = async (req, res) => {
+  const raw = req.params.spaceId
+  const spaceId = normalizeSpaceId(raw) || raw
+  const meta = await loadSpaceMeta(spaceId)
+  if (!meta) { res.status(404).json({ error: 'Space not found.' }); return null }
+  const state = req.authState || {}
+  const isAdmin = state.role === 'admin'
+  const isOwnerSession = state.type === 'session' && meta.ownerUserId && meta.ownerUserId === state.subject
+  if (!isAdmin && !isOwnerSession) {
+    res.status(403).json({ error: 'Only the space owner can manage sync keys.' })
+    return null
+  }
+  return { spaceId, meta, state }
+}
+
+router.post('/api/spaces/:spaceId/sync-keys', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    const label = String(req.body?.label || 'github-actions').slice(0, 80)
+    const ttlMs = 365 * 24 * 60 * 60 * 1000 // default: 1 year
+    const ownerUserId = ctx.state.type === 'session' ? ctx.state.subject : (ctx.meta.ownerUserId || null)
+    const { token, key } = mintSyncKey({ spaceId: ctx.spaceId, ownerUserId, label, ttlMs })
+    res.status(201).json({
+      ok: true,
+      token,
+      key,
+      note: 'Copy this token now — it is shown only once. Add it as the DI_SPACE_TOKEN secret in your GitHub repo.'
+    })
+  } catch (error) { next(error) }
+})
+
+router.get('/api/spaces/:spaceId/sync-keys', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    res.json({ keys: listSyncKeys(ctx.spaceId) })
+  } catch (error) { next(error) }
+})
+
+router.delete('/api/spaces/:spaceId/sync-keys/:id', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    if (!revokeSyncKey(ctx.spaceId, req.params.id)) {
+      return res.status(404).json({ error: 'Key not found.' })
+    }
+    res.json({ ok: true, revoked: req.params.id })
+  } catch (error) { next(error) }
+})
+
+// GitHub link — connect a space to a repo (owner/admin only). On connect we
+// resolve the App installation, store the binding, and run an initial sync.
+router.post('/api/spaces/:spaceId/github-link', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    const { owner, repo, ref = null, projectId, entry = 'index.html' } = req.body || {}
+    if (!owner || !repo || !projectId) return res.status(400).json({ error: 'owner, repo, projectId are required.' })
+    let installationId = null
+    try { installationId = (await githubApp.getInstallationForRepo(owner, repo))?.installationId || null } catch {}
+    const link = spaceLinkStore.upsertLink({ spaceId: ctx.spaceId, owner, repo, ref, projectId, entry, installationId })
+    let initialSync = null
+    try { initialSync = await syncLinkedSpace(link) } catch (e) { initialSync = { error: e.message } }
+    res.status(201).json({ ok: true, link, initialSync })
+  } catch (error) { next(error) }
+})
+
+router.get('/api/spaces/:spaceId/github-link', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    res.json({ link: spaceLinkStore.getLinkBySpace(ctx.spaceId) })
+  } catch (error) { next(error) }
+})
+
+router.delete('/api/spaces/:spaceId/github-link', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    res.json({ ok: true, removed: spaceLinkStore.removeLink(ctx.spaceId) })
+  } catch (error) { next(error) }
 })
 
 registerProjectRoutes(router, {

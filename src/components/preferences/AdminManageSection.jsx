@@ -6,7 +6,10 @@ import {
     updateServerSpace,
     deleteServerSpace,
     getServerConfig,
-    patchServerConfig
+    patchServerConfig,
+    getSpaceGithubLink,
+    connectSpaceGithub,
+    disconnectSpaceGithub
 } from '../../services/serverSpaces.js'
 import {
     listProjects,
@@ -501,6 +504,8 @@ function SpaceDetail({
                 </form>
             </ModuleSection>
 
+            <GithubSyncSection space={space} projects={projects} />
+
             <ModuleSection title="Who can access" subtitle="Per-account grant for this space">
                 {users === null && <div className="preferences-empty">Loading accounts…</div>}
                 {Array.isArray(users) && users.length === 0 && (
@@ -532,6 +537,88 @@ function SpaceDetail({
                 </div>
             </ModuleSection>
         </>
+    )
+}
+
+// Connect a space to a GitHub repo. Pushes to the repo auto-sync the space via
+// the di.iiii GitHub App (serverXR /api/github/webhook). One link per space.
+function GithubSyncSection({ space, projects }) {
+    const [link, setLink] = useState(undefined) // undefined=loading · null=none · object=linked
+    const [form, setForm] = useState({ owner: '', repo: '', projectId: '', entry: 'index.html' })
+    const [busy, setBusy] = useState(false)
+    const [error, setError] = useState('')
+    const [result, setResult] = useState(null)
+
+    useEffect(() => {
+        let active = true
+        setLink(undefined); setError(''); setResult(null)
+        getSpaceGithubLink(space.id)
+            .then((l) => { if (active) setLink(l) })
+            .catch((e) => { if (active) { setLink(null); setError(e.message || '') } })
+        return () => { active = false }
+    }, [space.id])
+
+    useEffect(() => {
+        setForm((f) => f.projectId ? f : { ...f, projectId: space.publishedProjectId || projects[0]?.id || '' })
+    }, [space.publishedProjectId, projects])
+
+    const connect = async () => {
+        if (!form.owner.trim() || !form.repo.trim() || !form.projectId) { setError('Owner, repo and project are required.'); return }
+        setBusy(true); setError(''); setResult(null)
+        try {
+            const res = await connectSpaceGithub(space.id, {
+                owner: form.owner.trim(), repo: form.repo.trim(),
+                projectId: form.projectId, entry: form.entry.trim() || 'index.html'
+            })
+            setLink(res.link); setResult(res.initialSync)
+        } catch (e) { setError(e.message || 'Could not connect.') } finally { setBusy(false) }
+    }
+
+    const disconnect = async () => {
+        if (!window.confirm('Disconnect this space from GitHub? It will stop auto-syncing.')) return
+        setBusy(true); setError('')
+        try { await disconnectSpaceGithub(space.id); setLink(null); setResult(null) }
+        catch (e) { setError(e.message || 'Could not disconnect.') } finally { setBusy(false) }
+    }
+
+    return (
+        <ModuleSection title="GitHub sync" subtitle="Connect a repo — pushes auto-update this space">
+            {link === undefined && <div className="preferences-empty">Loading…</div>}
+
+            {link && (
+                <>
+                    <InfoPair label="Repository" value={`${link.owner}/${link.repo}`} mono />
+                    <InfoPair label="Project" value={link.projectId} mono />
+                    <InfoPair label="Branch" value={link.ref || 'default'} />
+                    <InfoPair label="App install" value={link.installationId ? `#${link.installationId}` : 'not found — install the di.iiii GitHub App on this repo'} />
+                    <InfoPair label="Last push synced" value={link.lastSyncSha ? link.lastSyncSha.slice(0, 10) : 'on connect'} />
+                    <div className="preferences-command-grid">
+                        <button type="button" className="toggle-button active success-button" disabled>Connected ✓</button>
+                        <button type="button" className="toggle-button warning" onClick={disconnect} disabled={busy}>Disconnect</button>
+                    </div>
+                </>
+            )}
+
+            {link === null && (
+                <form className="preferences-inline-form" onSubmit={(e) => { e.preventDefault(); connect() }}>
+                    <input className="preferences-input" placeholder="owner (e.g. dob-0)" value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} />
+                    <input className="preferences-input" placeholder="repo (e.g. br_id_ge)" value={form.repo} onChange={(e) => setForm({ ...form, repo: e.target.value })} />
+                    <select className="preferences-input" value={form.projectId} onChange={(e) => setForm({ ...form, projectId: e.target.value })}>
+                        <option value="">project…</option>
+                        {projects.map((p) => <option key={p.id} value={p.id}>{p.title || p.id}</option>)}
+                    </select>
+                    <input className="preferences-input" placeholder="entry (index.html)" value={form.entry} onChange={(e) => setForm({ ...form, entry: e.target.value })} />
+                    <button type="submit" className="toggle-button" disabled={busy}>{busy ? 'Connecting…' : 'Connect repo'}</button>
+                </form>
+            )}
+
+            {result && (
+                <div className="preferences-empty">
+                    {result.error ? `Connected, but first sync failed: ${result.error}` : `Synced ${result.bytes} bytes from ${result.ref}.`}
+                </div>
+            )}
+            {error && <div className="preferences-empty">{error}</div>}
+        </ModuleSection>
     )
 }
 
