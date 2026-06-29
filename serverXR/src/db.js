@@ -60,6 +60,33 @@ const SCHEMA = `
   );
   CREATE UNIQUE INDEX IF NOT EXISTS idx_users_provider ON users(provider, provider_id);
 
+  CREATE TABLE IF NOT EXISTS space_sync_keys (
+    id TEXT PRIMARY KEY,
+    space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    owner_user_id TEXT,
+    secret_hash TEXT NOT NULL,
+    label TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    last_used_at INTEGER,
+    expires_at INTEGER,
+    revoked INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_sync_keys_space ON space_sync_keys(space_id);
+
+  CREATE TABLE IF NOT EXISTS space_links (
+    space_id TEXT PRIMARY KEY REFERENCES spaces(id) ON DELETE CASCADE,
+    owner TEXT NOT NULL,
+    repo TEXT NOT NULL,
+    ref TEXT,
+    project_id TEXT NOT NULL,
+    entry TEXT NOT NULL DEFAULT 'index.html',
+    installation_id INTEGER,
+    last_sync_sha TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_space_links_repo ON space_links(owner, repo);
+
   CREATE TABLE IF NOT EXISTS migrations (
     key TEXT PRIMARY KEY,
     completed_at INTEGER NOT NULL
