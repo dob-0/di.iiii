@@ -401,3 +401,22 @@ Do **not** implement a capability inside a bespoke per-space renderer/component.
 **Checklist for a new capability:** schema field (both files) → renders in `LiveProjectScene` → inspector/World-panel control → `test:schema-sync` + `lint` + `build` green → it now works in every space.
 
 **Files:** `src/shared/projectSchema.js`, `shared/projectSchema.cjs`, `src/components/LiveProjectScene.jsx`, `src/project/entityRegistry.js`, `src/studio/components/StudioShellPanels.jsx`
+
+---
+
+### Every UI change is tested in Playwright across the window/device matrix before "done"
+
+**Rule:** Any user-facing UI or layout change must be verified with **real human-behavior Playwright interaction** (scroll, click, drag — not just a static screenshot) across the standard matrix of window shapes AND mobile/tablet devices before it's considered done. Run:
+
+```
+node scripts/responsive-check.mjs <url> --scroll
+# or: npm run check:responsive -- <url> --scroll
+```
+
+It loads the URL at desktop aspect ratios (16:9, 16:10, 4:3, 1:1, ultrawide, small-laptop) and real device descriptors (iPhone 13/SE, Pixel 5, iPad, iPad Mini landscape, Galaxy Tab), drives human-like scroll, captures a screenshot per viewport, and fails on any console/page error. Review the screenshots, not just the pass/fail.
+
+**Why:** A WCC-landing scroll bug shipped because it only reproduced in the **production build** (not the dev server, which masks effect-timing via StrictMode remount) — the horizontal ScrollTrigger bound to `window` instead of the custom scroller and the panel track froze. It looked fine in a single dev-server screenshot. Driving real scroll in a built page across viewports is the only way to catch behavior + responsive bugs: production-build-only timing issues, aspect-ratio math (travel/overflow), and the mobile `(min-width: 801px)` breakpoint switching layouts. Static screenshots and dev-server checks are not sufficient.
+
+**Also:** when a bug "works locally but not on staging", test the **production build** (`npm run build && npx vite preview`) — the dev server is not representative.
+
+**Files:** `scripts/responsive-check.mjs`, `package.json` (`check:responsive`)
