@@ -34,6 +34,7 @@ const WALK_FRICTION = 10
 const TURN_SPEED = 1.6
 const POINTER_LOCK_SENSITIVITY = 0.0055
 const TOUCH_LOOK_SENSITIVITY = 0.005
+const TRACKPAD_LOOK_SENSITIVITY = 0.004
 // Just shy of straight up/down (PI/2) to avoid the camera flipping at the pole.
 const WALK_PITCH_LIMIT = 1.45
 // Flying has no horizon to stay oriented against, so allow (almost) the full
@@ -329,14 +330,28 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                     pitchLimit
                 )
             }
+            // Trackpad two-finger swipe: look around without needing pointer lock.
+            // ctrlKey=true is a pinch gesture — ignore it (let the page zoom).
+            const onWheel = (e) => {
+                if (e.ctrlKey) return
+                const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
+                player.yaw -= e.deltaX * TRACKPAD_LOOK_SENSITIVITY
+                player.pitch = THREE.MathUtils.clamp(
+                    player.pitch - e.deltaY * TRACKPAD_LOOK_SENSITIVITY,
+                    -pitchLimit,
+                    pitchLimit
+                )
+            }
             el.style.cursor = 'crosshair'
             el.addEventListener('pointerdown', onPointerDown)
+            el.addEventListener('wheel', onWheel, { passive: true })
             document.addEventListener('pointerlockchange', onLockChange)
             document.addEventListener('mousemove', onMouseMove)
             return () => {
                 if (document.pointerLockElement === el) document.exitPointerLock()
                 el.style.cursor = ''
                 el.removeEventListener('pointerdown', onPointerDown)
+                el.removeEventListener('wheel', onWheel)
                 document.removeEventListener('pointerlockchange', onLockChange)
                 document.removeEventListener('mousemove', onMouseMove)
             }
