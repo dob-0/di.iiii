@@ -259,12 +259,23 @@ function HorizontalNavigation({ activeIndex, onActiveIndexChange, onOpen, onEnte
     const wrapperRef = useRef(null)
     const sectionRef = useRef(null)
     const trackRef = useRef(null)
+    // Re-run the setup once the custom scroller ref is actually attached (it can be
+    // null on the first pass under a lazy/Suspense boundary in the prod build).
+    const [scrollerReady, setScrollerReady] = useState(false)
+    useEffect(() => {
+        if (scrollerRef.current) setScrollerReady(true)
+    }, [scrollerRef])
 
     useLayoutEffect(() => {
         const wrapper = wrapperRef.current
         const section = sectionRef.current
         const track = trackRef.current
-        if (!wrapper || !section || !track) return undefined
+        // The page scrolls inside a custom scroller (.wcc-landing). If its ref isn't
+        // attached yet when this runs, ScrollTrigger silently falls back to `window`
+        // — which never scrolls here, so the horizontal track stays frozen (the prod
+        // build hit this; dev's StrictMode remount masked it). Bail until it exists.
+        const scroller = scrollerRef.current
+        if (!wrapper || !section || !track || !scroller) return undefined
 
         const ctx = gsap.context(() => {
             const mm = gsap.matchMedia()
@@ -318,7 +329,7 @@ function HorizontalNavigation({ activeIndex, onActiveIndexChange, onOpen, onEnte
             window.removeEventListener('load', refresh)
             ctx.revert()
         }
-    }, [onActiveIndexChange, scrollerRef])
+    }, [onActiveIndexChange, scrollerRef, scrollerReady])
 
     return (
         <div className="wcc-horizontal-wrapper" ref={wrapperRef}>
