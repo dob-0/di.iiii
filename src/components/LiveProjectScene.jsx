@@ -331,9 +331,13 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 )
             }
             // Trackpad two-finger swipe: look around without needing pointer lock.
-            // ctrlKey=true is a pinch gesture — ignore it (let the page zoom).
+            // ctrlKey=true is a pinch gesture — ignore it. Guard against mouse scroll
+            // wheels which send large line-mode or pixel-mode deltas: only apply
+            // rotation when the event looks like a trackpad (pixel-mode, small delta).
             const onWheel = (e) => {
                 if (e.ctrlKey) return
+                if (e.deltaMode !== 0) return // line/page mode = mouse wheel, skip
+                if (Math.abs(e.deltaX) + Math.abs(e.deltaY) > 60) return // large delta = mouse wheel, skip
                 const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
                 player.yaw -= e.deltaX * TRACKPAD_LOOK_SENSITIVITY
                 player.pitch = THREE.MathUtils.clamp(
@@ -342,15 +346,22 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                     pitchLimit
                 )
             }
+            const onPointerDownWithLock = () => {
+                if (lockedRef.current) return
+                const req = el.requestPointerLock()
+                if (req && typeof req.catch === 'function') {
+                    req.catch(() => { /* pointer lock denied — cursor stays as crosshair */ })
+                }
+            }
             el.style.cursor = 'crosshair'
-            el.addEventListener('pointerdown', onPointerDown)
+            el.addEventListener('pointerdown', onPointerDownWithLock)
             el.addEventListener('wheel', onWheel, { passive: true })
             document.addEventListener('pointerlockchange', onLockChange)
             document.addEventListener('mousemove', onMouseMove)
             return () => {
                 if (document.pointerLockElement === el) document.exitPointerLock()
                 el.style.cursor = ''
-                el.removeEventListener('pointerdown', onPointerDown)
+                el.removeEventListener('pointerdown', onPointerDownWithLock)
                 el.removeEventListener('wheel', onWheel)
                 document.removeEventListener('pointerlockchange', onLockChange)
                 document.removeEventListener('mousemove', onMouseMove)
