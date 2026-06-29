@@ -297,14 +297,14 @@ function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, e
     const targetFovRef = useRef(cameraView?.fov || 50)
 
     // On trackpads, browsers synthesize ctrlKey=true for pinch (zoom intent) and
-    // ctrlKey=false for two-finger scroll (pan intent). Switch wheel action per-event
-    // so pinch→dolly and scroll→truck, rather than always dollying.
+    // ctrlKey=false for two-finger swipe. Swipe maps to ROTATE so the viewport
+    // feels like FPS mouse-look; pinch maps to DOLLY (zoom).
     useEffect(() => {
         const canvas = gl.domElement
         const handleWheel = (e) => {
             const cc = controlsRef.current
             if (!cc) return
-            cc.mouseButtons.wheel = e.ctrlKey ? CC_ACTION.DOLLY : CC_ACTION.TRUCK
+            cc.mouseButtons.wheel = e.ctrlKey ? CC_ACTION.DOLLY : CC_ACTION.ROTATE
         }
         canvas.addEventListener('wheel', handleWheel, { capture: true, passive: true })
         return () => canvas.removeEventListener('wheel', handleWheel, { capture: true })
