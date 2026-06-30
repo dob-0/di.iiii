@@ -543,7 +543,7 @@ function SpaceDetail({
 // Connect a space to a GitHub repo. Pushes to the repo auto-sync the space via
 // the di.iiii GitHub App (serverXR /api/github/webhook). One link per space.
 function GithubSyncSection({ space, projects }) {
-    const [link, setLink] = useState(undefined) // undefined=loading · null=none · object=linked
+    const [link, setLink] = useState(undefined) // undefined=loading · null=none · 'denied' · object=linked
     const [form, setForm] = useState({ owner: '', repo: '', projectId: '', entry: 'index.html' })
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
@@ -554,7 +554,7 @@ function GithubSyncSection({ space, projects }) {
         setLink(undefined); setError(''); setResult(null)
         getSpaceGithubLink(space.id)
             .then((l) => { if (active) setLink(l) })
-            .catch((e) => { if (active) { setLink(null); setError(e.message || '') } })
+            .catch((e) => { if (active) { setLink('denied'); setError(e.message || '') } })
         return () => { active = false }
     }, [space.id])
 
@@ -585,7 +585,11 @@ function GithubSyncSection({ space, projects }) {
         <ModuleSection title="GitHub sync" subtitle="Connect a repo — pushes auto-update this space">
             {link === undefined && <div className="preferences-empty">Loading…</div>}
 
-            {link && (
+            {link === 'denied' && (
+                <div className="preferences-empty">Sign in as the space owner or an admin to manage GitHub sync.</div>
+            )}
+
+            {link && link !== 'denied' && (
                 <>
                     <InfoPair label="Repository" value={`${link.owner}/${link.repo}`} mono />
                     <InfoPair label="Project" value={link.projectId} mono />
@@ -617,7 +621,7 @@ function GithubSyncSection({ space, projects }) {
                     {result.error ? `Connected, but first sync failed: ${result.error}` : `Synced ${result.bytes} bytes from ${result.ref}.`}
                 </div>
             )}
-            {error && <div className="preferences-empty">{error}</div>}
+            {error && link !== 'denied' && <div className="preferences-empty">{error}</div>}
         </ModuleSection>
     )
 }
