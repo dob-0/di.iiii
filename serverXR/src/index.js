@@ -37,6 +37,7 @@ const { listUsers, findUserById, setUserSpaces, setUserUnrestricted, setUserRole
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
 const githubApp = require('./githubApp')
 const spaceLinkStore = require('./spaceLinkStore')
+const { httpRequest } = require('./httpClient')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
@@ -735,9 +736,9 @@ async function syncLinkedSpace(link) {
   const codeFiles = [{ name: 'index.html', content: html }]
   const base = internalApiBase()
   const docUrl = `${base}/api/projects/${link.projectId}/document`
-  const cur = await fetch(docUrl, { headers: internalHeaders() }).then((r) => r.json()).catch(() => ({}))
+  const cur = await httpRequest(docUrl, { headers: internalHeaders() }).then((r) => r.json()).catch(() => ({}))
   const doc = cur.document || {}
-  const put = await fetch(docUrl, {
+  const put = await httpRequest(docUrl, {
     method: 'PUT', headers: internalHeaders(),
     body: JSON.stringify({
       ...doc,
@@ -746,7 +747,7 @@ async function syncLinkedSpace(link) {
     })
   })
   if (!put.ok) throw new Error(`internal document PUT failed (${put.status})`)
-  await fetch(`${base}/api/spaces/${link.spaceId}`, {
+  await httpRequest(`${base}/api/spaces/${link.spaceId}`, {
     method: 'PATCH', headers: internalHeaders(),
     body: JSON.stringify({ publishedProjectId: link.projectId })
   }).catch(() => {})

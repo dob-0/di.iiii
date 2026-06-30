@@ -5,6 +5,7 @@
 // GITHUB_APP_WEBHOOK_SECRET. No external dependencies.
 
 const crypto = require('node:crypto')
+const { httpRequest } = require('./httpClient')
 
 const GH = 'https://api.github.com'
 const b64url = (buf) => Buffer.from(buf).toString('base64url')
@@ -41,11 +42,9 @@ const ghFetch = async (url, { token, method = 'GET', body } = {}) => {
   const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'di.iiii-space-sync' }
   if (token) headers.Authorization = `Bearer ${token}`
   if (body) headers['Content-Type'] = 'application/json'
-  const r = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined })
-  const text = await r.text()
-  let json
-  try { json = JSON.parse(text) } catch { json = text }
-  if (!r.ok) throw new Error(`GitHub ${r.status} ${url}: ${typeof json === 'string' ? json.slice(0, 160) : (json.message || '')}`)
+  const r = await httpRequest(url, { method, headers, body: body ? JSON.stringify(body) : null })
+  const json = r.json()
+  if (!r.ok) throw new Error(`GitHub ${r.status} ${url}: ${json.message || r.text.slice(0, 160)}`)
   return json
 }
 
