@@ -38,7 +38,7 @@ active_branch: dev
 
 ## What is broken / open
 
-- **GitHub-sync caveat**: App webhook only reaches **prod** (`di-studio.xyz`); staging can't receive real pushes (use Disconnect/Connect to force a sync there). Sync currently pulls only the `entry` file (`index.html`); repo `assets:` in `di-space.json` are not yet fetched by the App path — the token-driven CI path (`br_id_ge/.github/workflows/sync-space.yml` via `scripts/sync-space.mjs`) covers `references/**` assets but needs repo secret `DI_SPACE_TOKEN` (a space-scoped editor sync-key); **not yet set → that workflow currently red-X's on push.**
+- **GitHub-sync caveat**: App webhook only reaches **prod** (`di-studio.xyz`); staging can't receive real pushes (use Disconnect/Connect to force a sync there). Sync currently pulls only the `entry` file (`index.html`); repo `assets:` in `di-space.json` are not yet fetched by the App path — the token-driven CI path (`br_id_ge/.github/workflows/sync-space.yml` via `scripts/sync-space.mjs`) covers `references/**` assets via repo secret `DI_SPACE_TOKEN` (a `br_id_ge`-scoped sync-key, minted 2026-07-01, 1y TTL) — workflow is green.
 - **Zone positions not synced staging↔prod**: entity positions in WCC exhibition live in the DB. Edits in Studio on staging must be manually pushed via `node scratchpad/copy-staging-to-prod.mjs`.
 - **VR fly unverified on hardware** — AR confirmed on Android; VR path (right-thumbstick-Y) only build-checked.
 - WCC landing perf: always-on WebGL particle veil (700 pts) — gate on mobile/`prefers-reduced-motion` if needed.
