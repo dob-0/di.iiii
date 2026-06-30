@@ -10,9 +10,16 @@ const GH = 'https://api.github.com'
 const b64url = (buf) => Buffer.from(buf).toString('base64url')
 
 const getPrivateKey = () => {
+  // Prefer a .pem file path (most reliable on cPanel — no fragile long base64 line).
+  const keyPath = process.env.GITHUB_APP_PRIVATE_KEY_PATH
+  if (keyPath) {
+    try { return require('node:fs').readFileSync(keyPath, 'utf8') } catch { return '' }
+  }
   const b64 = process.env.GITHUB_APP_PRIVATE_KEY_B64
   if (b64) return Buffer.from(b64, 'base64').toString('utf8')
-  return process.env.GITHUB_APP_PRIVATE_KEY || ''
+  // Support a raw PEM in env with literal \n escapes (common in CI secrets).
+  const raw = process.env.GITHUB_APP_PRIVATE_KEY || ''
+  return raw.includes('\\n') ? raw.replace(/\\n/g, '\n') : raw
 }
 
 const isConfigured = () => Boolean(process.env.GITHUB_APP_ID && getPrivateKey())
