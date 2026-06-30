@@ -9,17 +9,17 @@ active_branch: dev
 
 ## Last commit
 
-`2890c61` — fix(wcc): increase mouse look sensitivity to 0.018
-**`origin/main` == `origin/dev` == `2890c61`, LIVE on di-studio.xyz. Working tree has uncommitted `src/wcc/landing/landing.css` changes (minor, pre-existing).**
+`1b6567f` — feat(deploy): bake GitHub-sync env vars into generated server .env
+**On `dev` AND `main` (promoted → prod, live on di-studio.xyz). GitHub→space sync fully live + proven end-to-end on prod with a real push.**
 
-## Last session (2026-06-29)
+## Last session (2026-07-01)
 
-- **Auth patch-refresh bug fixed**: `GET /api/auth/session` now re-syncs role/spaces/isUnrestricted from DB when cookie is stale — admin patches take effect on next page load, no re-login needed (`serverXR/src/index.js`).
-- **Emilya access**: granted admin role + space access via Ops Graph → Manage → People. She must sign out and back in once (before the session-refresh fix was deployed).
-- **Studio viewport trackpad**: two-finger swipe = rotate (FPS look-around), pinch = zoom. Implemented via per-event `mouseButtons.wheel` switch in `StudioOrbit` (`StudioViewport.jsx`).
-- **WCC exhibition mouse**: pointer lock look-around was broken because our wheel handler was rotating on regular mouse scroll (deltaY ~100 × sensitivity = 23°/tick). Fixed: wheel-to-rotate only fires for trackpad-like events (pixel-mode AND delta < 60). Added `.catch()` to `requestPointerLock()` so silent failures don't leave the user stuck.
-- **WCC exhibition trackpad**: two-finger swipe look-around added to `Walker` (`LiveProjectScene.jsx`), guarded to skip mouse scroll wheel events.
-- **Mouse sensitivity tuned**: `POINTER_LOCK_SENSITIVITY` 0.0055 → 0.018 (pointer lock bypasses OS acceleration so raw values feel slow; user confirmed 0.018 is good).
+- **One-click "GitHub → space" sync is LIVE ON PROD** (di-studio.xyz) and proven end-to-end: a real `git push` to `dob-0/br_id_ge` fired the App webhook → space auto-synced → new landing live, zero manual steps.
+- **New backend**: `githubApp.js` (App JWT→install token, webhook HMAC, via `node:https`), `spaceLinkStore.js` + `space_links` table, `syncKeyStore.js` + `space_sync_keys` (scoped per-space editor tokens), webhook receiver `POST /serverXR/api/github/webhook`, link routes `/api/spaces/:id/github-link`, `httpClient.js`. Specs in `docs/architecture/SPEC_*`.
+- **New UI**: GitHub sync panel in `/admin → Manage → space` (`AdminManageSection.jsx`), wiki article `github-sync`.
+- **GitHub App**: ID `4178187`, install `143408136` on `dob-0/br_id_ge`. Env vars (`GITHUB_APP_ID`, `GITHUB_APP_PRIVATE_KEY_PATH` → `~/dii-space-sync.*.pem`, `GITHUB_APP_WEBHOOK_SECRET`, `SELF_API_URL`) are now **durable**: baked into `.env.generated` from `~/.config/dii/<env>.deploy.env` via `write-server-env.mjs` allowlist — survive every deploy. **STILL TODO: rotate the App private key + webhook secret — both passed through chat.**
+- **cPanel gotchas (all in known-fixes)**: (1) deploy git-cleans app dir → `.pem` lives in `~/`; (2) `fetch`/undici WASM-OOMs under LVE → `node:https`; (3) Passenger doesn't bind `config.port` → `SELF_API_URL` points sync at the public origin; (4) apply step overwrites `.env` → vars must come from the deploy config, not manual edits.
+- **br_id_ge landing**: recreated as Armenian-ritual v.0000 (WebGL/Three.js, `index.html` 28KB) and pushed to `dob-0/br_id_ge` main (`f7a0bb0`) — now the pilot for the sync.
 
 ## What works
 
@@ -34,9 +34,12 @@ active_branch: dev
 - Docker: `docker compose up --build -d` runs full stack locally on port 8080
 - WCC exhibition: LiveProjectScene renderer, WASD + mouse/trackpad FPS controls, portal embeds, atmosphere blend, hub decor, animated entities, billboard text
 - Space sync: `npm run space:new/pull/push` + SpaceSyncPanel UI
+- **GitHub → space sync (LIVE, prod)**: link a space to a GitHub repo in `/admin → Manage → space → GitHub sync`; `git push` auto-updates the space via the `dii-space-sync` App webhook. Scoped sync-keys (`syncKeyStore`) allow CI/token-driven pushes to a single space.
 
 ## What is broken / open
 
+- **SECURITY TODO — rotate GitHub App secrets**: the App private key (`~/dii-space-sync.2026-06-29.private-key.pem`) AND webhook secret both passed through chat. Regenerate the key in the App settings (delete old, replace the `.pem` in prod+staging `~/` and the `_PATH` env), reset the webhook secret (update `GITHUB_APP_WEBHOOK_SECRET` in both `~/.config/dii/*.deploy.env`), redeploy.
+- **GitHub-sync caveat**: App webhook only reaches **prod** (`di-studio.xyz`); staging can't receive real pushes (use Disconnect/Connect to force a sync there). Sync currently pulls only the `entry` file (`index.html`); repo `assets:` in `di-space.json` are not yet fetched by the App path.
 - **Zone positions not synced staging↔prod**: entity positions in WCC exhibition live in the DB. Edits in Studio on staging must be manually pushed via `node scratchpad/copy-staging-to-prod.mjs`.
 - **VR fly unverified on hardware** — AR confirmed on Android; VR path (right-thumbstick-Y) only build-checked.
 - WCC landing perf: always-on WebGL particle veil (700 pts) — gate on mobile/`prefers-reduced-motion` if needed.
