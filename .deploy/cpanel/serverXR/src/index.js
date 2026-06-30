@@ -717,7 +717,11 @@ const requireReadRole = (requiredRole = 'viewer') => async (req, res, next) => {
 }
 
 // ── One-click GitHub sync: webhook receiver (signature-authed, pre-gate) ──────
-const internalApiBase = () => `http://127.0.0.1:${config.port}${config.basePath || ''}`
+// Default loopback works on a normal TCP listen; under Passenger (cPanel) the app
+// is fronted by a Unix socket and nothing binds config.port, so SELF_API_URL must
+// point at the server's own public origin (e.g. https://di-studio.xyz/serverXR).
+const internalApiBase = () =>
+  process.env.SELF_API_URL?.replace(/\/$/, '') || `http://127.0.0.1:${config.port}${config.basePath || ''}`
 const internalHeaders = () => ({ 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${config.apiToken}` })
 
 // Pull the linked repo's entry file via the GitHub App installation token and
