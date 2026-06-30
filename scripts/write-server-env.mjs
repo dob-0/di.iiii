@@ -55,7 +55,14 @@ const optionalValues = {
     SHARED_ROOT: process.env.SHARED_ROOT || '',
     SPACE_TTL_MS: process.env.SPACE_TTL_MS || '',
     SPACES_DIR: process.env.SPACES_DIR || '',
-    UPLOADS_DIR: process.env.UPLOADS_DIR || ''
+    UPLOADS_DIR: process.env.UPLOADS_DIR || '',
+    // One-click GitHub space-sync (dii-space-sync App). Sourced from the
+    // per-env deploy config so they survive the .env regeneration on deploy.
+    SELF_API_URL: process.env.SELF_API_URL || '',
+    GITHUB_APP_ID: process.env.GITHUB_APP_ID || '',
+    GITHUB_APP_PRIVATE_KEY_PATH: process.env.GITHUB_APP_PRIVATE_KEY_PATH || '',
+    GITHUB_APP_PRIVATE_KEY_B64: process.env.GITHUB_APP_PRIVATE_KEY_B64 || '',
+    GITHUB_APP_WEBHOOK_SECRET: process.env.GITHUB_APP_WEBHOOK_SECRET || ''
 }
 
 const envLines = [
