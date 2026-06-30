@@ -35,6 +35,7 @@
         "space:pull:assets": "node scripts/space-pull.mjs --assets",
         "space:push": "node scripts/space-push.mjs",
         "space:code-push": "node scripts/space-code-push.mjs",
+        "space:sync": "node scripts/space-sync.mjs",
         "preview": "vite preview",
         "lint": "eslint src --ext .js,.jsx",
         "test": "vitest run",

@@ -87,6 +87,22 @@ export const overwriteServerScene = async (spaceId, sceneData) => {
     })
 }
 
+export const getSpaceGithubLink = async (spaceId) => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/github-link`)
+    return data.link || null
+}
+
+export const connectSpaceGithub = async (spaceId, { owner, repo, projectId, ref, entry } = {}) => {
+    return apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/github-link`, {
+        method: 'POST',
+        body: { owner, repo, projectId, ref, entry }
+    })
+}
+
+export const disconnectSpaceGithub = async (spaceId) => {
+    await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/github-link`, { method: 'DELETE' })
+}
+
 export const getServerConfig = async () => {
     const data = await apiFetch('/api/config')
     return data.config || {}

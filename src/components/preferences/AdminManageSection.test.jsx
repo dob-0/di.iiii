@@ -8,7 +8,10 @@ vi.mock('../../services/serverSpaces.js', () => ({
     updateServerSpace: vi.fn(),
     deleteServerSpace: vi.fn(),
     getServerConfig: vi.fn(),
-    patchServerConfig: vi.fn()
+    patchServerConfig: vi.fn(),
+    getSpaceGithubLink: vi.fn(() => Promise.resolve(null)),
+    connectSpaceGithub: vi.fn(() => Promise.resolve({ link: null, initialSync: null })),
+    disconnectSpaceGithub: vi.fn(() => Promise.resolve())
 }))
 vi.mock('../../project/services/projectsApi.js', () => ({
     listProjects: vi.fn(),

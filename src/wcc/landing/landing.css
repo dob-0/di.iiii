@@ -343,7 +343,10 @@
    margin overrides are declared later (after .wcc-hero__footer) to win the cascade. */
 @media (min-width: 801px) and (max-height: 1100px) {
     .wcc-hero {
-        align-content: start;
+        /* Centre the hero content so it sits in the middle of the viewport instead
+           of top-packing and leaving a dead gap before the nav panels — while
+           keeping the ENTER EXHIBITION button in view (space-between pushed it off). */
+        align-content: center;
     }
 }
 
@@ -468,8 +471,12 @@
 .wcc-nav-panel {
     position: relative;
     display: grid;
-    width: min(68vw, 620px);
-    height: min(72vh, 620px);
+    width: min(70vw, 840px);
+    /* Cards are vertically centred in the 100vh track; a small fixed cap left a
+       large empty band above/below them on tall viewports (the "dead gap"). Let
+       the height track the viewport (88vh, high cap) so the band stays small at
+       all heights. See docs/ai/wcc-landing-audit.md for the full analysis. */
+    height: min(88vh, 1040px);
     align-content: end;
     overflow: hidden;
     padding: clamp(24px, 4vw, 54px);
