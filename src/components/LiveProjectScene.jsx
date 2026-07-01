@@ -554,16 +554,31 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
 // carries over correctly entering and leaving a session.
 function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
     const originRef = useRef(null)
+    const hintGroupRef = useRef(null)
     const isPresenting = useXR((state) => state.session != null)
     const isVr = useXR((state) => state.mode === 'immersive-vr')
     const rightController = useXRInputSourceState('controller', 'right')
     const wasPresentingRef = useRef(false)
+    // VR has no reachable DOM (no dom-overlay like AR gets) -- the only way to
+    // tell a headset user "right stick flies" is to float it in the world.
+    // Dismiss on a timer or the first real stick input, whichever comes first.
+    const [showVrHint, setShowVrHint] = useState(false)
 
     useXRControllerLocomotion(
         originRef,
         { speed: WALK_MAX_SPEED },
         { type: 'smooth', speed: TURN_SPEED }
     )
+
+    useEffect(() => {
+        if (!isPresenting || !isVr) {
+            setShowVrHint(false)
+            return undefined
+        }
+        setShowVrHint(true)
+        const timer = setTimeout(() => setShowVrHint(false), 14000)
+        return () => clearTimeout(timer)
+    }, [isPresenting, isVr])
 
     useFrame((state, delta) => {
         const origin = originRef.current
@@ -623,10 +638,46 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
             player.z = origin.position.z
             player.yaw = origin.rotation.y
             player.altY = EYE_HEIGHT + origin.position.y
+
+            if (showVrHint && (Math.abs(stickY) > 0.15 || (joy && (Math.abs(joy.x) > 0.05 || Math.abs(joy.y) > 0.05)))) {
+                setShowVrHint(false)
+            }
+        }
+
+        if (showVrHint && hintGroupRef.current) {
+            // Float in front of wherever the headset is actually looking, not
+            // the rig's yaw -- a HUD-style hint has to track head look, not body turn.
+            state.camera.getWorldDirection(tmpDir)
+            hintGroupRef.current.position.copy(state.camera.position).addScaledVector(tmpDir, 1.3)
+            hintGroupRef.current.position.y -= 0.18
+            hintGroupRef.current.quaternion.copy(state.camera.quaternion)
         }
     })
 
-    return <XROrigin ref={originRef} />
+    return (
+        <>
+            <XROrigin ref={originRef} />
+            {showVrHint && (
+                <group ref={hintGroupRef}>
+                    <Text
+                        fontSize={0.055}
+                        maxWidth={1.1}
+                        lineHeight={1.4}
+                        color="#ffffff"
+                        anchorX="center"
+                        anchorY="middle"
+                        outlineWidth={0.004}
+                        outlineColor="#04070c"
+                        renderOrder={30}
+                        material-depthTest={false}
+                        material-depthWrite={false}
+                    >
+                        {'Left stick · walk\nRight stick · turn (X) / fly up-down (Y)'}
+                    </Text>
+                </group>
+            )}
+        </>
+    )
 }
 
 // Purely visual — Walker owns all touch handling so it can arbitrate
@@ -1112,16 +1163,26 @@ export default function LiveProjectScene({
                 Studio Hub's) has no Walker/locomotion wired up to make a
                 session usable. */}
             {interactive && (xr.supportedXrModes.vr || xr.supportedXrModes.ar) && !xr.isXrPresenting && (
-                <div style={{ position: 'absolute', bottom: 40, right: 130, display: 'flex', gap: 8, zIndex: 11 }}>
+                <div style={{ position: 'absolute', bottom: 40, right: 130, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, zIndex: 11 }}>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        {xr.supportedXrModes.vr && (
+                            <button type="button" className="live-scene-exit" onClick={() => xr.handleEnterXrSession('vr')}>
+                                Enter VR
+                            </button>
+                        )}
+                        {xr.supportedXrModes.ar && (
+                            <button type="button" className="live-scene-exit" onClick={() => xr.handleEnterXrSession('ar')}>
+                                Enter AR
+                            </button>
+                        )}
+                    </div>
+                    {/* Read this before the headset goes on -- once inside VR there's
+                        no DOM overlay to explain it (that's what the floating in-world
+                        hint in XrLocomotion is for; this is the discoverable version). */}
                     {xr.supportedXrModes.vr && (
-                        <button type="button" className="live-scene-exit" onClick={() => xr.handleEnterXrSession('vr')}>
-                            Enter VR
-                        </button>
-                    )}
-                    {xr.supportedXrModes.ar && (
-                        <button type="button" className="live-scene-exit" onClick={() => xr.handleEnterXrSession('ar')}>
-                            Enter AR
-                        </button>
+                        <p className="live-scene-hint live-scene-hint--vr">
+                            In VR: left stick walks · right stick turns / flies (push up-down)
+                        </p>
                     )}
                 </div>
             )}

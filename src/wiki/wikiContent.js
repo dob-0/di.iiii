@@ -120,11 +120,12 @@ export const WIKI_ARTICLES = [
                 'F — frame the scene',
                 'Z — undo the last action',
                 'WASD — walk when inside a space; drag to look',
-                'F — fly mode (Space / Q up, C / E down)'
+                'F — fly mode (Space / Q up, C / E down)',
+                'VR controllers — left stick walks, right stick turns and flies (push the stick up/down); a hint appears in-headset the first time you enter'
             ] }
         ],
-        tags: ['shortcuts', 'controls'],
-        updated: '2026-06-26'
+        tags: ['shortcuts', 'controls', 'vr'],
+        updated: '2026-07-02'
     },
     {
         id: 'api-and-agents',

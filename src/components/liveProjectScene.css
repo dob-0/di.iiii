@@ -69,6 +69,22 @@
     animation: hint-pulse 2.2s ease-in-out infinite;
 }
 
+.live-scene-hint--vr {
+    position: static;
+    max-width: 220px;
+    padding: 6px 10px;
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    text-align: right;
+    opacity: 0.8;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 10px;
+    backdrop-filter: blur(6px);
+    white-space: normal;
+}
+
 @keyframes hint-pulse {
     0%, 100% { opacity: 0.65; }
     50% { opacity: 0.3; }
