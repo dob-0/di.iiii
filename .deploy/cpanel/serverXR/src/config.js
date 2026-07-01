@@ -219,6 +219,11 @@ const config = {
     url: (process.env.LIVE_API_URL || 'https://di-studio.xyz/serverXR').replace(/\/+$/, ''),
     token: (process.env.LIVE_API_TOKEN || '').trim()
   },
+  googleDrive: {
+    // Optional. Unlocks folder import + real metadata; keyless single-file import
+    // works without it.
+    apiKey: (process.env.GOOGLE_API_KEY || '').trim()
+  },
   oauth: {
     callbackBase: oauthCallbackBase,
     frontendUrl: oauthFrontendUrl,

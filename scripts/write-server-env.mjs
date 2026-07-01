@@ -62,7 +62,18 @@ const optionalValues = {
     GITHUB_APP_ID: process.env.GITHUB_APP_ID || '',
     GITHUB_APP_PRIVATE_KEY_PATH: process.env.GITHUB_APP_PRIVATE_KEY_PATH || '',
     GITHUB_APP_PRIVATE_KEY_B64: process.env.GITHUB_APP_PRIVATE_KEY_B64 || '',
-    GITHUB_APP_WEBHOOK_SECRET: process.env.GITHUB_APP_WEBHOOK_SECRET || ''
+    GITHUB_APP_WEBHOOK_SECRET: process.env.GITHUB_APP_WEBHOOK_SECRET || '',
+    // Optional Google Drive asset import (folder listing + metadata). Keyless
+    // single-file import works without it.
+    GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || '',
+    // OAuth (login + "Connect your Drive"). Emitted only when set in the deploy
+    // config, so they survive the .env regeneration on deploy.
+    OAUTH_CALLBACK_BASE_URL: process.env.OAUTH_CALLBACK_BASE_URL || '',
+    OAUTH_FRONTEND_URL: process.env.OAUTH_FRONTEND_URL || '',
+    GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || '',
+    GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || '',
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
+    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || ''
 }
 
 const envLines = [

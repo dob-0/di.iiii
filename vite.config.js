@@ -64,13 +64,14 @@ const stubXrEmulatorPlugin = () => ({
 })
 
 // Resolve a path to auto-open in the browser.
-// Set VITE_OPEN_SPACE (e.g. "main" or your space slug) or VITE_OPEN_PATH (e.g. "/my-space").
+// Opt in with VITE_OPEN_SPACE (e.g. "main" or your space slug) or VITE_OPEN_PATH (e.g. "/my-space").
+// Without either set, `npm run dev` stays headless — use `npm run dev:browser` to launch one.
 const resolveOpenPath = () => {
     const space = process.env.VITE_OPEN_SPACE?.trim()
     const path = process.env.VITE_OPEN_PATH?.trim()
     if (path) return path.startsWith('/') ? path : `/${path}`
     if (space) return `/${space}`
-    return '/'
+    return null
 }
 
 export default {
@@ -115,9 +116,10 @@ export default {
     server:
     {
         host: true, // Open to local network and display URL
-        // Open the browser to a specific path if provided
-        // DEV_BROWSER=1 hands browser-opening to dev-stack.mjs (a wiped Chromium profile) instead.
-        open: (process.env.DEV_BROWSER || 'SANDBOX_URL' in process.env || 'CODESANDBOX_HOST' in process.env) ? false : resolveOpenPath(),
+        // Headless by default (`npm run dev`). DEV_BROWSER=1 hands browser-opening to
+        // dev-stack.mjs (a wiped Chromium profile) instead; VITE_OPEN_SPACE/VITE_OPEN_PATH
+        // opt in to Vite's own auto-open for a plain `npm run dev`.
+        open: (process.env.DEV_BROWSER || 'SANDBOX_URL' in process.env || 'CODESANDBOX_HOST' in process.env) ? false : (resolveOpenPath() ?? false),
         port: 5173,
         // A second dev stack must fail instead of drifting to 5174. Vite's HMR
         // direct fallback still targets the configured port, which otherwise

@@ -43,6 +43,9 @@ import {
     normalizeFileName,
     SUPPORTED_EXTENSIONS
 } from '../../utils/codeFilesBundle.js'
+import { useDriveImport } from '../../hooks/useDriveImport.js'
+import { listCommonsAssets } from '../../services/serverSpaces.js'
+import { formatAssetSize } from '../utils/assetOptimization.js'
 
 const formatTimestamp = (value) => {
     if (!value) return 'Not yet'
@@ -127,7 +130,216 @@ export function LibraryPanel({ onCreateEntity, onAssetFilesSelected, canDeleteSe
     )
 }
 
-export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelected, onCreateFromAsset }) {
+function DriveImportSection({ onDriveImportUrl, onDriveImportSelection }) {
+    const drive = useDriveImport({
+        importByUrl: onDriveImportUrl,
+        importBySelection: onDriveImportSelection,
+    })
+    return (
+        <div className="scc-section">
+            <button className={`scc-btn spa-btn-wide${drive.open ? ' active' : ''}`} onClick={drive.toggleOpen}>
+                Google Drive
+            </button>
+            {drive.open && (
+                <div className="spa-actions" style={{ marginTop: 4 }}>
+                    {drive.status?.available && (
+                        drive.status.connected ? (
+                            <>
+                                <div className="scc-section-label">
+                                    Connected{drive.status.email ? ` · ${drive.status.email}` : ''}
+                                </div>
+                                <button className="scc-btn spa-btn-wide" onClick={drive.disconnect}>
+                                    Disconnect
+                                </button>
+                            </>
+                        ) : (
+                            <button className="scc-btn spa-btn-wide" onClick={drive.connect}>
+                                Connect Google Drive
+                            </button>
+                        )
+                    )}
+                    {drive.status?.connected && (
+                        <>
+                            <div className="spa-drive-row">
+                                <input
+                                    type="text"
+                                    className="insp-input"
+                                    placeholder="Search your Drive"
+                                    value={drive.search}
+                                    onChange={(e) => drive.setSearch(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') drive.runSearch() }}
+                                    disabled={drive.listing}
+                                />
+                                <button className="scc-btn" onClick={drive.runSearch} disabled={drive.listing}>
+                                    {drive.listing ? '…' : 'Search'}
+                                </button>
+                            </div>
+                            {drive.files.length > 0 && (
+                                <div className="spa-list">
+                                    {drive.files.map((f) => (
+                                        <label key={f.id} className={`spa-item${drive.selected.has(f.id) ? ' active' : ''}`}>
+                                            <input
+                                                type="checkbox"
+                                                checked={drive.selected.has(f.id)}
+                                                onChange={() => drive.toggleSelect(f.id)}
+                                            />
+                                            <span className="spa-name" title={f.name}>{f.name}</span>
+                                            <span className="spa-type">{formatAssetSize(Number(f.size) || 0)}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                            <button
+                                className="scc-btn spa-btn-wide"
+                                onClick={drive.importSelected}
+                                disabled={drive.busy || drive.selected.size === 0}
+                            >
+                                {drive.busy ? 'Importing…' : `Import selected (${drive.selected.size})`}
+                            </button>
+                        </>
+                    )}
+                    <div className="spa-drive-row">
+                        <input
+                            type="text"
+                            className="insp-input"
+                            placeholder="…or paste a public Drive link"
+                            value={drive.url}
+                            onChange={(e) => drive.setUrl(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') drive.importUrl() }}
+                            disabled={drive.busy}
+                        />
+                        <button className="scc-btn" onClick={drive.importUrl} disabled={drive.busy || !drive.url.trim()}>
+                            {drive.busy ? '…' : 'Import'}
+                        </button>
+                    </div>
+                    {drive.notice && (
+                        <div className={`spa-drive-notice ${drive.notice.kind === 'error' ? 'is-error' : 'is-ok'}`}>
+                            {drive.notice.text}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    )
+}
+
+// Browse the public asset commons and pull assets into this space. Same
+// section shape as DriveImportSection: a toggle button, then search + pick.
+function CommonsSection({ onCommonsImport }) {
+    const [open, setOpen] = useState(false)
+    const [search, setSearch] = useState('')
+    const [items, setItems] = useState(null) // null = not fetched yet
+    const [selected, setSelected] = useState(() => new Set())
+    const [busy, setBusy] = useState(false)
+    const [listing, setListing] = useState(false)
+    const [notice, setNotice] = useState(null)
+
+    const runSearch = async (q = search) => {
+        setListing(true)
+        setNotice(null)
+        try {
+            setItems(await listCommonsAssets({ q: q.trim() }))
+        } catch (error) {
+            setNotice({ kind: 'error', text: error?.message || 'Could not load the commons.' })
+        } finally {
+            setListing(false)
+        }
+    }
+
+    const toggleOpen = () => {
+        const next = !open
+        setOpen(next)
+        setNotice(null)
+        if (next && items === null) runSearch('')
+    }
+
+    const toggleSelect = (id) => {
+        setSelected((prev) => {
+            const next = new Set(prev)
+            if (next.has(id)) next.delete(id)
+            else next.add(id)
+            return next
+        })
+    }
+
+    const importSelected = async () => {
+        const ids = [...selected]
+        if (!ids.length || busy) return
+        setBusy(true)
+        setNotice(null)
+        try {
+            const result = await onCommonsImport?.(ids)
+            const count = result?.entries?.length || 0
+            const failed = result?.failed?.length || 0
+            setNotice(count
+                ? { kind: 'ok', text: `Imported ${count} asset${count === 1 ? '' : 's'}${failed ? ` · ${failed} skipped` : ''}.` }
+                : { kind: 'error', text: 'Nothing was imported.' })
+            if (count) setSelected(new Set())
+        } catch (error) {
+            setNotice({ kind: 'error', text: error?.message || 'Import failed.' })
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    return (
+        <div className="scc-section">
+            <button className={`scc-btn spa-btn-wide${open ? ' active' : ''}`} onClick={toggleOpen}>
+                Commons
+            </button>
+            {open && (
+                <div className="spa-actions" style={{ marginTop: 4 }}>
+                    <div className="spa-drive-row">
+                        <input
+                            type="text"
+                            className="insp-input"
+                            placeholder="Search public assets"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') runSearch() }}
+                            disabled={listing}
+                        />
+                        <button className="scc-btn" onClick={() => runSearch()} disabled={listing}>
+                            {listing ? '…' : 'Search'}
+                        </button>
+                    </div>
+                    {Array.isArray(items) && items.length === 0 && (
+                        <p className="sfp-empty">Nothing shared yet — mark a space file Public to start the commons.</p>
+                    )}
+                    {Array.isArray(items) && items.length > 0 && (
+                        <div className="spa-list">
+                            {items.map((item) => (
+                                <label key={item.id} className={`spa-item${selected.has(item.id) ? ' active' : ''}`}>
+                                    <input
+                                        type="checkbox"
+                                        checked={selected.has(item.id)}
+                                        onChange={() => toggleSelect(item.id)}
+                                    />
+                                    <span className="spa-name" title={item.sharedByLabel ? `${item.name} · by ${item.sharedByLabel}` : item.name}>{item.name}</span>
+                                    <span className="spa-type">{formatAssetSize(item.size)}</span>
+                                </label>
+                            ))}
+                        </div>
+                    )}
+                    <button
+                        className="scc-btn spa-btn-wide"
+                        onClick={importSelected}
+                        disabled={busy || selected.size === 0}
+                    >
+                        {busy ? 'Importing…' : `Import selected (${selected.size})`}
+                    </button>
+                    {notice && (
+                        <div className={`spa-drive-notice ${notice.kind === 'error' ? 'is-error' : 'is-ok'}`}>
+                            {notice.text}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    )
+}
+
+export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelected, onCreateFromAsset, onDriveImportUrl, onDriveImportSelection, onToggleAssetShared, onCommonsImport }) {
     const [copied, setCopied] = useState(null)
     const copyUrl = (asset) => {
         navigator.clipboard.writeText(assetSrc(asset.url)).catch(() => {})
@@ -142,6 +354,12 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
                     <input type="file" multiple onChange={onAssetFilesSelected} style={{ display: 'none' }} />
                 </label>
             </div>
+            {Boolean(onDriveImportUrl) && (
+                <DriveImportSection onDriveImportUrl={onDriveImportUrl} onDriveImportSelection={onDriveImportSelection} />
+            )}
+            {Boolean(onCommonsImport) && (
+                <CommonsSection onCommonsImport={onCommonsImport} />
+            )}
             {spaceAssets.length > 0 && (
                 <div className="scc-section">
                     <div className="scc-section-label">Space files ({spaceAssets.length})</div>
@@ -156,6 +374,15 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
                                     />
                                 )}
                                 <span className="spa-name" title={asset.name}>{asset.name}</span>
+                                {onToggleAssetShared && (
+                                    <button
+                                        className="spa-copy-btn"
+                                        onClick={() => onToggleAssetShared(asset, !asset.shared)}
+                                        title={asset.shared ? 'Public in the commons — click to unshare' : 'Share to the public commons'}
+                                    >
+                                        {asset.shared ? 'Public' : 'Share'}
+                                    </button>
+                                )}
                                 <button
                                     className="spa-copy-btn"
                                     onClick={() => copyUrl(asset)}

@@ -32,6 +32,7 @@ const { loadReleaseInfo } = require('./releaseInfo')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
+const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { listUsers, findUserById, setUserSpaces, setUserUnrestricted, setUserRole } = require('./userStore')
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
@@ -826,6 +827,8 @@ registerStatusRoutes(router, {
   releaseInfo,
   startedAt
 })
+
+registerIntegrationRoutes(router)
 
 registerUserRoutes(router, {
   requireAdminAlways,

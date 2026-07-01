@@ -87,11 +87,12 @@ export const WIKI_ARTICLES = [
             { list: [
                 'Add 3D shapes, text, images, and 3D models from the Library panel.',
                 'Drag to position; use the Inspector on the right to change colors, lighting, camera, and background.',
-                'Undo / redo with Ctrl+Z / Ctrl+Y.'
+                'Undo / redo with Ctrl+Z / Ctrl+Y.',
+                'Your panel layout is remembered — open panels and their positions restore next visit; use Arrange → Reset to go back to the default layout.'
             ] }
         ],
         tags: ['studio', 'editor', 'basics'],
-        updated: '2026-06-26'
+        updated: '2026-07-02'
     },
     {
         id: 'admin-manage',
@@ -120,11 +121,12 @@ export const WIKI_ARTICLES = [
                 'F — frame the scene',
                 'Z — undo the last action',
                 'WASD — walk when inside a space; drag to look',
-                'F — fly mode (Space / Q up, C / E down)'
+                'F — fly mode (Space / Q up, C / E down)',
+                'VR controllers — left stick walks, right stick turns and flies (push the stick up/down); a hint appears in-headset the first time you enter'
             ] }
         ],
-        tags: ['shortcuts', 'controls'],
-        updated: '2026-06-26'
+        tags: ['shortcuts', 'controls', 'vr'],
+        updated: '2026-07-02'
     },
     {
         id: 'api-and-agents',
@@ -160,6 +162,40 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['github', 'sync', 'developers', 'deploy'],
         updated: '2026-06-30'
+    },
+    {
+        id: 'google-drive-import',
+        category: 'Editing',
+        title: 'Import from Google Drive',
+        summary: 'Connect your Drive to browse your own files, or paste a public share link.',
+        body: [
+            'In the Studio editor open the Assets panel and click Google Drive (the classic editor has the same button in Project Assets). Two ways to bring files in:',
+            { list: [
+                'Connect your Drive: sign in with Google once, then search your own Drive and import selected files — each person connects their own account, and files import into the current space.',
+                'Public link: paste an “Anyone with the link” file URL — no login needed. A shared folder imports every file inside (needs GOOGLE_API_KEY on the server).',
+                'Native Google Docs/Sheets/Slides come in as PDF/CSV; other files keep their original bytes.',
+                'Imported files land in the space asset store exactly like uploads, so they work everywhere.',
+                'Disconnect anytime — it removes your stored Drive access from the server.'
+            ] }
+        ],
+        tags: ['assets', 'google', 'drive', 'import', 'studio'],
+        updated: '2026-07-02'
+    },
+    {
+        id: 'asset-commons',
+        category: 'Editing',
+        title: 'The asset commons',
+        summary: 'Share an asset publicly once — anyone can find it and reuse it in their own space.',
+        body: [
+            'The commons is the shared, public asset library across all of di.iiii. In the Studio editor open the Assets panel:',
+            { list: [
+                'Share: next to any space file, click Share — it becomes a public asset anyone can discover. Click Public to take it back down.',
+                'Reuse: click Commons, search what others have shared, select, and Import — the assets are copied into your space instantly (they are content-addressed, so nothing re-uploads).',
+                'Shared assets keep their sharer label, and the bytes stay in the origin space — the commons is an index, not a second copy.'
+            ] }
+        ],
+        tags: ['assets', 'commons', 'share', 'public', 'studio'],
+        updated: '2026-07-02'
     }
 ]
 

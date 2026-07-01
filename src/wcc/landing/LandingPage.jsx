@@ -3,6 +3,7 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import * as THREE from 'three'
 import { appNavigate } from '../../utils/appNavigate.js'
+import { useViewportMode } from '../../hooks/useViewportMode.js'
 import { landingContent } from './content.js'
 import './landing.css'
 
@@ -85,6 +86,8 @@ const handleAppLinkClick = (event, href) => {
 
 function WebglVeil() {
     const mountRef = useRef(null)
+    const { viewportMode, prefersReducedMotion } = useViewportMode()
+    const skip = viewportMode === 'mobile' || prefersReducedMotion
 
     useEffect(() => {
         const mount = mountRef.current
@@ -157,7 +160,9 @@ function WebglVeil() {
             renderer.dispose()
             renderer.domElement.remove()
         }
-    }, [])
+    }, [skip])
+
+    if (skip) return null
 
     return <div className="wcc-webgl" ref={mountRef} aria-hidden="true" />
 }
@@ -259,6 +264,7 @@ function HorizontalNavigation({ activeIndex, onActiveIndexChange, onOpen, onEnte
     const wrapperRef = useRef(null)
     const sectionRef = useRef(null)
     const trackRef = useRef(null)
+    const { prefersReducedMotion } = useViewportMode()
     // Re-run the setup once the custom scroller ref is actually attached (it can be
     // null on the first pass under a lazy/Suspense boundary in the prod build).
     const [scrollerReady, setScrollerReady] = useState(false)
@@ -294,7 +300,10 @@ function HorizontalNavigation({ activeIndex, onActiveIndexChange, onOpen, onEnte
                         start: 'top top',
                         end: () => `+=${travel() * 2}`,
                         scrub: true,
-                        snap: {
+                        // scrub tracks the user's own scroll 1:1, so it stays on even under
+                        // reduced-motion; snap adds its own eased auto-scroll on top of that,
+                        // which is the part reduced-motion users are asking to avoid.
+                        snap: prefersReducedMotion ? false : {
                             snapTo: 1 / (panels.length - 1),
                             duration: { min: 0.2, max: 0.5 },
                             delay: 0.2,
@@ -329,7 +338,7 @@ function HorizontalNavigation({ activeIndex, onActiveIndexChange, onOpen, onEnte
             window.removeEventListener('load', refresh)
             ctx.revert()
         }
-    }, [onActiveIndexChange, scrollerRef, scrollerReady])
+    }, [onActiveIndexChange, scrollerRef, scrollerReady, prefersReducedMotion])
 
     return (
         <div className="wcc-horizontal-wrapper" ref={wrapperRef}>
@@ -526,6 +535,7 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
     const [internalLang, setInternalLang] = useState('en')
     const lang = controlledLang || internalLang
     const setLang = onLangChange || setInternalLang
+    const { prefersReducedMotion } = useViewportMode()
 
     const openRouteSection = (sectionId) => {
         if (!routeSectionIds.has(sectionId)) return
@@ -564,7 +574,7 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
 
     useLayoutEffect(() => {
         const root = rootRef.current
-        if (!root) return undefined
+        if (!root || prefersReducedMotion) return undefined
 
         const ctx = gsap.context(() => {
             gsap.from('.wcc-hero__kicker, .wcc-hero h1 span, .wcc-hero__subtitle, .wcc-hero__footer', {
@@ -590,7 +600,7 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
         }, root)
 
         return () => ctx.revert()
-    }, [])
+    }, [prefersReducedMotion])
 
     useEffect(() => {
         const syncSectionFromHistory = () => {
@@ -601,7 +611,7 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
     }, [])
 
     useLayoutEffect(() => {
-        if (!openSection) return undefined
+        if (!openSection || prefersReducedMotion) return undefined
         const ctx = gsap.context(() => {
             gsap.fromTo('.wcc-reveal', {
                 clipPath: 'inset(0 0 100% 0)',
@@ -622,7 +632,7 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
             })
         })
         return () => ctx.revert()
-    }, [openSection])
+    }, [openSection, prefersReducedMotion])
 
     useEffect(() => {
         const cursor = cursorRef.current
@@ -649,6 +659,7 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
         }
         measureCircles()
         const onMove = (event) => {
+            if (prefersReducedMotion) return
             if (rootRef.current?.classList.contains('is-scrolling')) return
             moveX(event.clientX)
             moveY(event.clientY)
@@ -699,8 +710,9 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
                     })
             }
             if (!dot) return
-            gsap.fromTo(dot, { scale: 0.92 }, { scale: 1.18, duration: 0.42, yoyo: true, repeat: 1, ease: 'power3.out' })
             rootRef.current?.classList.toggle('is-black-bg')
+            if (prefersReducedMotion) return
+            gsap.fromTo(dot, { scale: 0.92 }, { scale: 1.18, duration: 0.42, yoyo: true, repeat: 1, ease: 'power3.out' })
 
             const layer = particleLayerRef.current
             if (!layer) return
@@ -760,7 +772,7 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
             root?.removeEventListener('scroll', onScroll)
             window.clearTimeout(scrollStopTimerRef.current)
         }
-    }, [])
+    }, [prefersReducedMotion])
 
     useEffect(() => {
         if (!ripples.length) return undefined

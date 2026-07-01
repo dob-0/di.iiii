@@ -87,6 +87,31 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_space_links_repo ON space_links(owner, repo);
 
+  CREATE TABLE IF NOT EXISTS user_drive_tokens (
+    user_id TEXT PRIMARY KEY,
+    provider TEXT NOT NULL DEFAULT 'google',
+    email TEXT,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT,
+    scope TEXT,
+    expires_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS public_assets (
+    asset_id TEXT PRIMARY KEY,
+    space_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    mime_type TEXT,
+    size INTEGER,
+    license TEXT,
+    shared_by TEXT,
+    shared_by_label TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_public_assets_name ON public_assets(name);
+
   CREATE TABLE IF NOT EXISTS migrations (
     key TEXT PRIMARY KEY,
     completed_at INTEGER NOT NULL

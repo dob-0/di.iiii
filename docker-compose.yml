@@ -40,6 +40,13 @@ services:
 
       # CORS — leave empty when client and server share the same nginx origin
       CORS_ORIGINS: ${CORS_ORIGINS:-}
+
+      # Google Drive import (all optional): API key unlocks public-folder
+      # import; client id/secret + callback base enable per-user Drive connect.
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      OAUTH_CALLBACK_BASE_URL: ${OAUTH_CALLBACK_BASE_URL:-}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:4000/serverXR/api/health"]

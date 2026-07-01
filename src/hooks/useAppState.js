@@ -463,7 +463,9 @@ export function useAppState() {
         handleBatchMediaOptimization,
         handleAssetFilesUpload,
         handleManualMediaOptimization,
-        uploadAssetToServer
+        uploadAssetToServer,
+        importAssetsFromDrive,
+        importDriveFilesFromAccount
     } = useAppAssetPipelineState({
         controlsRef,
         guardEditAction,
@@ -702,6 +704,8 @@ export function useAppState() {
             handleKeepCurrentWorld,
             handleClear,
             handleAssetFilesUpload,
+            importAssetsFromDrive,
+            importDriveFilesFromAccount,
             handleUndo,
             handleRedo,
             selectObject,

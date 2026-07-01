@@ -3,12 +3,16 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 let globalZIndex = 1000
 
 export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
-    const { baseZ = 100, snapEdges = false } = options
+    const { baseZ = 100, snapEdges = false, onMoved } = options
     const panelRef = useRef(null)
     const dragStateRef = useRef(null)
     const [offset, setOffset] = useState(initialPosition)
     const [isDragging, setIsDragging] = useState(false)
     const [zIndex, setZIndex] = useState(baseZ)
+    const offsetRef = useRef(offset)
+    useEffect(() => { offsetRef.current = offset }, [offset])
+    const onMovedRef = useRef(onMoved)
+    useEffect(() => { onMovedRef.current = onMoved }, [onMoved])
 
     useEffect(() => {
         const el = panelRef.current
@@ -55,8 +59,10 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
     }, [clampToViewport])
 
     const endDrag = useCallback(() => {
+        const wasDragging = dragStateRef.current !== null
         dragStateRef.current = null
         setIsDragging(false)
+        if (wasDragging) onMovedRef.current?.(offsetRef.current)
     }, [])
 
     const bringToFront = useCallback(() => {

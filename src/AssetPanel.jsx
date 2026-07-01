@@ -2,6 +2,7 @@ import React, { useContext, useMemo, useRef, useState } from 'react'
 import { SceneContext, ActionsContext, SyncContext } from './contexts/AppContexts.js'
 import { deleteAsset, getAssetBlob } from './storage/assetStore.js'
 import { streamRemoteAsset } from './services/assetSources.js'
+import { useDriveImport } from './hooks/useDriveImport.js'
 import { usePanelDrag } from './hooks/usePanelDrag.js'
 import { usePanelResize } from './hooks/usePanelResize.js'
 
@@ -48,6 +49,8 @@ export default function AssetPanel({ onClose, surfaceMode = 'floating' }) {
     const {
         selectObject,
         handleAssetFilesUpload,
+        importAssetsFromDrive,
+        importDriveFilesFromAccount,
         requestManualMediaOptimization,
         requestBatchMediaOptimization
     } = useContext(ActionsContext)
@@ -63,6 +66,10 @@ export default function AssetPanel({ onClose, surfaceMode = 'floating' }) {
     const [isRunningBatchOptimize, setIsRunningBatchOptimize] = useState(false)
     const [isRemovingUnused, setIsRemovingUnused] = useState(false)
     const [expandedAssetKey, setExpandedAssetKey] = useState(null)
+    const drive = useDriveImport({
+        importByUrl: importAssetsFromDrive,
+        importBySelection: importDriveFilesFromAccount,
+    })
     const dragState = usePanelDrag({ x: 16, y: 460 }, { baseZ: 100 })
     const resizeState = usePanelResize(380, {
         min: 320,
@@ -391,6 +398,13 @@ export default function AssetPanel({ onClose, surfaceMode = 'floating' }) {
                     </button>
                     <button
                         type="button"
+                        className={`asset-action-button ${drive.open ? 'primary' : ''}`.trim()}
+                        onClick={drive.toggleOpen}
+                    >
+                        Google Drive
+                    </button>
+                    <button
+                        type="button"
                         className="asset-action-button warning"
                         onClick={handleRemoveUnusedEntries}
                         disabled={unusedEntryCount === 0 || isRemovingUnused}
@@ -398,6 +412,106 @@ export default function AssetPanel({ onClose, surfaceMode = 'floating' }) {
                         {isRemovingUnused ? 'Cleaning...' : `Clean Up (${unusedEntryCount})`}
                     </button>
                 </div>
+
+                {drive.open && (
+                    <div className="asset-drive-panel">
+                        {/* Connect-your-Drive row (per account) */}
+                        {drive.status?.available && (
+                            drive.status.connected ? (
+                                <div className="asset-drive-account">
+                                    <span className="asset-drive-account-label">
+                                        Drive connected{drive.status.email ? ` · ${drive.status.email}` : ''}
+                                    </span>
+                                    <button type="button" className="asset-action-button" onClick={drive.disconnect}>
+                                        Disconnect
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="asset-drive-account">
+                                    <span className="asset-drive-account-label">Connect your Google Drive to browse and import your own files.</span>
+                                    <button type="button" className="asset-action-button primary" onClick={drive.connect}>
+                                        Connect Google Drive
+                                    </button>
+                                </div>
+                            )
+                        )}
+
+                        {/* File picker — only when a Drive is connected */}
+                        {drive.status?.connected && (
+                            <>
+                                <div className="asset-drive-import">
+                                    <input
+                                        type="text"
+                                        className="asset-drive-input"
+                                        placeholder="Search your Drive by name"
+                                        value={drive.search}
+                                        onChange={(e) => drive.setSearch(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') drive.runSearch() }}
+                                        disabled={drive.listing}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="asset-action-button"
+                                        onClick={drive.runSearch}
+                                        disabled={drive.listing}
+                                    >
+                                        {drive.listing ? 'Searching...' : 'Search'}
+                                    </button>
+                                </div>
+                                {drive.files.length > 0 && (
+                                    <div className="asset-drive-list">
+                                        {drive.files.map((f) => (
+                                            <label key={f.id} className="asset-drive-file">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={drive.selected.has(f.id)}
+                                                    onChange={() => drive.toggleSelect(f.id)}
+                                                />
+                                                <span className="asset-drive-file-name">{f.name}</span>
+                                                <span className="asset-drive-file-size">{formatBytes(Number(f.size) || 0)}</span>
+                                            </label>
+                                        ))}
+                                    </div>
+                                )}
+                                <button
+                                    type="button"
+                                    className="asset-action-button primary"
+                                    onClick={drive.importSelected}
+                                    disabled={drive.busy || drive.selected.size === 0}
+                                >
+                                    {drive.busy ? 'Importing...' : `Import selected (${drive.selected.size})`}
+                                </button>
+                            </>
+                        )}
+
+                        {/* Public share-link import — always available, no login */}
+                        <div className="asset-drive-import">
+                            <input
+                                type="text"
+                                className="asset-drive-input"
+                                placeholder="…or paste a public Drive file/folder link"
+                                value={drive.url}
+                                onChange={(e) => drive.setUrl(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') drive.importUrl() }}
+                                disabled={drive.busy}
+                            />
+                            <button
+                                type="button"
+                                className="asset-action-button"
+                                onClick={drive.importUrl}
+                                disabled={drive.busy || !drive.url.trim()}
+                            >
+                                {drive.busy ? 'Importing...' : 'Import'}
+                            </button>
+                        </div>
+
+                        {drive.notice && (
+                            <div className={`asset-drive-notice ${drive.notice.kind === 'error' ? 'is-error' : 'is-ok'}`}>
+                                {drive.notice.text}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 <div className="asset-workspace-summary">
                     <span>Drag and drop files anywhere into the editor, or import them here.</span>
