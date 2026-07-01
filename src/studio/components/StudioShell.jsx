@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Box3, Plane, Raycaster, Vector2, Vector3 } from 'three'
 import StudioInspector from './StudioInspector.jsx'
 import StudioViewportLayout from './StudioViewportLayout.jsx'
@@ -6,6 +6,7 @@ import StudioFloatingPanel from './StudioFloatingPanel.jsx'
 import StudioControlCluster from './StudioControlCluster.jsx'
 import StudioQuickInsert from './StudioQuickInsert.jsx'
 import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
+import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import {
     ActivityPanel,
@@ -85,6 +86,10 @@ export default function StudioShell({
     onCreateEntity,
     onCreateFromAsset,
     onAssetFilesSelected,
+    onDriveImportUrl,
+    onDriveImportSelection,
+    onToggleAssetShared,
+    onCommonsImport,
     onDeleteSelected,
     onGroupSelected,
     onUngroup,
@@ -116,7 +121,8 @@ export default function StudioShell({
     onTransformCommitMany,
     onTransformCancel,
 }) {
-    const { open, toggle, isOpen } = useStudioPanelState()
+    const persistedWorkspace = useMemo(() => loadStudioWorkspace(), [])
+    const { open, toggle, isOpen } = useStudioPanelState(persistedWorkspace?.open)
     const { layout: vpLayout, split: vpSplit, close: vpClose, setRatio: vpSetRatio } = useViewportLayout()
     const [uiHidden, setUiHidden] = useState(false)
     const [viewportEditMode, setViewportEditMode] = useState('navigate')
@@ -124,9 +130,20 @@ export default function StudioShell({
     const [viewportGizmoAxis, setViewportGizmoAxis] = useState(null)
     const [viewportGizmoVisible, setViewportGizmoVisible] = useState(true)
     const [quickInsert, setQuickInsert] = useState(null)
-    const [positions, setPositions] = useState(DEFAULT_POSITIONS)
+    const [positions, setPositions] = useState(() => ({ ...DEFAULT_POSITIONS(), ...(persistedWorkspace?.positions || {}) }))
     const [layoutKey, setLayoutKey] = useState(0)
-    const [snapEdges, setSnapEdges] = useState(false)
+    const [snapEdges, setSnapEdges] = useState(persistedWorkspace?.snapEdges ?? false)
+
+    // Remember the workspace across sessions — open panels, dragged positions,
+    // snap preference. Arrange actions (tile/stack/reset) flow through the same
+    // positions state, so they persist too.
+    useEffect(() => {
+        saveStudioWorkspace({ open, positions, snapEdges })
+    }, [open, positions, snapEdges])
+
+    const recordPanelPosition = useCallback((id) => (pos) => {
+        setPositions((prev) => ({ ...prev, [id]: pos }))
+    }, [])
     const fitToSelectionRef = useRef(null)
     const [showHelp, setShowHelp] = useState(false)
 
@@ -342,22 +359,22 @@ export default function StudioShell({
             {!uiHidden && (
                 <>
                     {isOpen('library') && (
-                        <StudioFloatingPanel key={`library-${layoutKey}`} title="Library" onClose={() => toggle('library')} initialPosition={positions.library} initialWidth={260} snapEdges={snapEdges}>
+                        <StudioFloatingPanel key={`library-${layoutKey}`} title="Library" onClose={() => toggle('library')} initialPosition={positions.library} onPositionChange={recordPanelPosition('library')} initialWidth={260} snapEdges={snapEdges}>
                             <LibraryPanel onCreateEntity={onCreateEntity} onAssetFilesSelected={onAssetFilesSelected} canDeleteSelection={Boolean(selectedEntity)} onDeleteSelected={onDeleteSelected} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('assets') && (
-                        <StudioFloatingPanel key={`assets-${layoutKey}`} title="Assets" onClose={() => toggle('assets')} initialPosition={positions.assets} initialWidth={260} snapEdges={snapEdges}>
-                            <AssetsPanel assets={assetOptions} spaceAssets={spaceAssets} onAssetFilesSelected={onAssetFilesSelected} onCreateFromAsset={onCreateFromAsset} />
+                        <StudioFloatingPanel key={`assets-${layoutKey}`} title="Assets" onClose={() => toggle('assets')} initialPosition={positions.assets} onPositionChange={recordPanelPosition('assets')} initialWidth={260} snapEdges={snapEdges}>
+                            <AssetsPanel assets={assetOptions} spaceAssets={spaceAssets} onAssetFilesSelected={onAssetFilesSelected} onCreateFromAsset={onCreateFromAsset} onDriveImportUrl={onDriveImportUrl} onDriveImportSelection={onDriveImportSelection} onToggleAssetShared={onToggleAssetShared} onCommonsImport={onCommonsImport} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('files') && (
-                        <StudioFloatingPanel key={`files-${layoutKey}`} title="Files" onClose={() => toggle('files')} initialPosition={positions.files} initialWidth={480} minWidth={320} maxWidth={800} snapEdges={snapEdges}>
+                        <StudioFloatingPanel key={`files-${layoutKey}`} title="Files" onClose={() => toggle('files')} initialPosition={positions.files} onPositionChange={recordPanelPosition('files')} initialWidth={480} minWidth={320} maxWidth={800} snapEdges={snapEdges}>
                             <FilesPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} spaceAssets={spaceAssets} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('inspector') && (
-                        <StudioFloatingPanel key={`inspector-${layoutKey}`} title="Inspector" onClose={() => toggle('inspector')} initialPosition={positions.inspector} initialWidth={280} snapEdges={snapEdges}>
+                        <StudioFloatingPanel key={`inspector-${layoutKey}`} title="Inspector" onClose={() => toggle('inspector')} initialPosition={positions.inspector} onPositionChange={recordPanelPosition('inspector')} initialWidth={280} snapEdges={snapEdges}>
                             <StudioInspector
                                 title={selectedEntityIds.length > 1 ? `${selectedEntityIds.length} selected` : (selectedEntity ? selectedEntity.name : 'World')}
                                 subtitle={selectedEntityIds.length > 1 ? `Primary: ${selectedEntity?.name || selectedEntityId}` : (selectedEntity ? selectedEntity.type : 'Project defaults')}
@@ -371,7 +388,7 @@ export default function StudioShell({
                         </StudioFloatingPanel>
                     )}
                     {isOpen('structure') && (
-                        <StudioFloatingPanel key={`structure-${layoutKey}`} title="Structure" onClose={() => toggle('structure')} initialPosition={positions.structure} initialWidth={240} snapEdges={snapEdges}>
+                        <StudioFloatingPanel key={`structure-${layoutKey}`} title="Structure" onClose={() => toggle('structure')} initialPosition={positions.structure} onPositionChange={recordPanelPosition('structure')} initialWidth={240} snapEdges={snapEdges}>
                             <StructurePanel
                                 entities={entities}
                                 selectedEntityId={selectedEntityId}
@@ -384,22 +401,22 @@ export default function StudioShell({
                         </StudioFloatingPanel>
                     )}
                     {isOpen('present') && (
-                        <StudioFloatingPanel key={`present-${layoutKey}`} title="Present" onClose={() => toggle('present')} initialPosition={positions.present} initialWidth={360} minWidth={300} maxWidth={700} snapEdges={snapEdges}>
+                        <StudioFloatingPanel key={`present-${layoutKey}`} title="Present" onClose={() => toggle('present')} initialPosition={positions.present} onPositionChange={recordPanelPosition('present')} initialWidth={360} minWidth={300} maxWidth={700} snapEdges={snapEdges}>
                             <PresentPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} onSaveCurrentCamera={onSaveCurrentCamera} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('publish') && (
-                        <StudioFloatingPanel key={`publish-${layoutKey}`} title="Publish" onClose={() => toggle('publish')} initialPosition={positions.publish} initialWidth={360} minWidth={300} snapEdges={snapEdges}>
+                        <StudioFloatingPanel key={`publish-${layoutKey}`} title="Publish" onClose={() => toggle('publish')} initialPosition={positions.publish} onPositionChange={recordPanelPosition('publish')} initialWidth={360} minWidth={300} snapEdges={snapEdges}>
                             <PublishPanel document={document} publishState={document?.publishState} liveProjectState={liveProjectState} onPublishPatch={onPublishPatch} onSetLiveProject={onSetLiveProject} onClearLiveProject={onClearLiveProject} onCopyShareLink={onCopyShareLink} onExportProject={onExportProject} exportStatus={exportStatus} onImportProjectFile={onImportProjectFile} xrState={xrState} onEnterXr={onEnterXr} onExitXr={onExitXr} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('activity') && (
-                        <StudioFloatingPanel key={`activity-${layoutKey}`} title="Activity" onClose={() => toggle('activity')} initialPosition={positions.activity} initialWidth={260} snapEdges={snapEdges}>
+                        <StudioFloatingPanel key={`activity-${layoutKey}`} title="Activity" onClose={() => toggle('activity')} initialPosition={positions.activity} onPositionChange={recordPanelPosition('activity')} initialWidth={260} snapEdges={snapEdges}>
                             <ActivityPanel activity={syncState?.activity} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('world') && (
-                        <StudioFloatingPanel key={`world-${layoutKey}`} title="World" onClose={() => toggle('world')} initialPosition={positions.world} initialWidth={280} snapEdges={snapEdges}>
+                        <StudioFloatingPanel key={`world-${layoutKey}`} title="World" onClose={() => toggle('world')} initialPosition={positions.world} onPositionChange={recordPanelPosition('world')} initialWidth={280} snapEdges={snapEdges}>
                             <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} />
                         </StudioFloatingPanel>
                     )}

@@ -10,7 +10,7 @@ import { createStudioProjectBundle, readStudioProjectBundle } from '../../projec
 import { defaultWorldState, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import useXrAr from '../../hooks/useXrAr.js'
 import useSpaceAssets from '../../hooks/useSpaceAssets.js'
-import { getServerSpace, listServerSpaces, updateServerSpace } from '../../services/serverSpaces.js'
+import { getServerSpace, importCommonsAssets, importDriveAssets, importDriveSelection, listServerSpaces, setAssetShared, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { useStudioLayoutPrefs } from '../hooks/useStudioLayoutPrefs.js'
@@ -115,6 +115,27 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const document = state.document
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     const { assets: spaceAssets, refresh: refreshSpaceAssets } = useSpaceAssets(resolvedSpaceId)
+    // useDriveImport counts result.entries, the routes answer with .assets
+    const asImportResult = (data) => ({ entries: data?.assets || [], failed: data?.failed || [] })
+    const handleDriveImportUrl = useCallback(async (url) => {
+        const result = asImportResult(await importDriveAssets(resolvedSpaceId, url))
+        refreshSpaceAssets()
+        return result
+    }, [resolvedSpaceId, refreshSpaceAssets])
+    const handleDriveImportSelection = useCallback(async (fileIds) => {
+        const result = asImportResult(await importDriveSelection(resolvedSpaceId, fileIds))
+        refreshSpaceAssets()
+        return result
+    }, [resolvedSpaceId, refreshSpaceAssets])
+    const handleToggleAssetShared = useCallback(async (asset, shared) => {
+        await setAssetShared(resolvedSpaceId, asset.id, shared)
+        refreshSpaceAssets()
+    }, [resolvedSpaceId, refreshSpaceAssets])
+    const handleCommonsImport = useCallback(async (assetIds) => {
+        const result = asImportResult(await importCommonsAssets(resolvedSpaceId, assetIds))
+        refreshSpaceAssets()
+        return result
+    }, [resolvedSpaceId, refreshSpaceAssets])
     const entities = document.entities || []
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
     const selectedEntityIds = state.selectedEntityIds || []
@@ -858,6 +879,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onCreateEntity={handleCreateEntity}
             onCreateFromAsset={(asset, position = null) => handleCreateEntity(detectEntityTypeFromFile(asset), asset, position)}
             onAssetFilesSelected={handleAssetFilesSelected}
+            onDriveImportUrl={handleDriveImportUrl}
+            onDriveImportSelection={handleDriveImportSelection}
+            onToggleAssetShared={handleToggleAssetShared}
+            onCommonsImport={handleCommonsImport}
             onDeleteSelected={handleDeleteSelected}
             onGroupSelected={handleGroupSelected}
             onUngroup={handleUngroup}

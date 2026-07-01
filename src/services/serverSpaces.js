@@ -1,4 +1,4 @@
-import { apiFetch, hasServerApi } from './apiClient.js'
+import { apiFetch, hasServerApi, apiBaseUrl } from './apiClient.js'
 import { normalizeSpaceId } from '../utils/spaceNames.js'
 
 export const supportsServerSpaces = hasServerApi
@@ -135,4 +135,69 @@ export const uploadServerAsset = async (spaceId, file, options = {}) => {
         body: formData
     })
     return data
+}
+
+export const importDriveAssets = async (spaceId, url) => {
+    if (!spaceId) throw new Error('space id required')
+    if (!url) throw new Error('drive url required')
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/assets/import-drive`, {
+        method: 'POST',
+        body: { url }
+    })
+    return data
+}
+
+// Asset commons — publicly shared assets, reusable across all spaces ---------
+
+export const setAssetShared = async (spaceId, assetId, shared, license = '') => {
+    if (!spaceId) throw new Error('space id required')
+    if (!assetId) throw new Error('asset id required')
+    return apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/assets/${assetId}/share`, {
+        method: 'POST',
+        body: { public: Boolean(shared), license }
+    })
+}
+
+export const listCommonsAssets = async ({ q = '' } = {}) => {
+    const suffix = q ? `?q=${encodeURIComponent(q)}` : ''
+    const data = await apiFetch(`/api/commons/assets${suffix}`)
+    return data.assets || []
+}
+
+export const importCommonsAssets = async (spaceId, assetIds) => {
+    if (!spaceId) throw new Error('space id required')
+    const ids = Array.isArray(assetIds) ? assetIds.filter(Boolean) : []
+    if (!ids.length) throw new Error('select at least one asset')
+    return apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/assets/import-commons`, {
+        method: 'POST',
+        body: { assetIds: ids }
+    })
+}
+
+// "Connect your Drive" (per-user OAuth) --------------------------------------
+
+export const getDriveConnectUrl = () => `${apiBaseUrl}/api/integrations/google-drive/connect`
+
+export const getDriveStatus = async () =>
+    apiFetch('/api/integrations/google-drive/status')
+
+export const listDriveFiles = async ({ q = '', folderId = '' } = {}) => {
+    const params = new URLSearchParams()
+    if (q) params.set('q', q)
+    if (folderId) params.set('folderId', folderId)
+    const suffix = params.toString() ? `?${params.toString()}` : ''
+    return apiFetch(`/api/integrations/google-drive/files${suffix}`)
+}
+
+export const disconnectDrive = async () =>
+    apiFetch('/api/integrations/google-drive/disconnect', { method: 'POST' })
+
+export const importDriveSelection = async (spaceId, fileIds) => {
+    if (!spaceId) throw new Error('space id required')
+    const ids = Array.isArray(fileIds) ? fileIds.filter(Boolean) : []
+    if (!ids.length) throw new Error('select at least one file')
+    return apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/assets/import-drive-account`, {
+        method: 'POST',
+        body: { fileIds: ids }
+    })
 }

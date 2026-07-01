@@ -1,6 +1,9 @@
 const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
+const googleDrive = require('../googleDrive')
+const driveAccount = require('../googleDriveAccount')
+const commonsStore = require('../commonsStore')
 
 function registerSpaceRoutes(router, {
   appendOpsHistory,
@@ -391,6 +394,143 @@ function registerSpaceRoutes(router, {
     }
   })
 
+  // Import assets straight from a Google Drive share link into a space. A single
+  // shared file needs no server secrets; a shared folder (or richer metadata)
+  // needs GOOGLE_API_KEY. Imported bytes land in the same per-space asset store
+  // as uploads, so the rest of the pipeline treats them identically.
+  router.post('/api/spaces/:spaceId/assets/import-drive', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      const url = String(req.body?.url || '').trim()
+      if (!url) return res.status(400).json({ error: 'Missing Drive url.' })
+      if (!googleDrive.parseDriveUrl(url)) {
+        return res.status(400).json({ error: 'Not a recognizable Google Drive link.' })
+      }
+      await ensureSpaceWritable(spaceId)
+
+      const apiKey = config.googleDrive?.apiKey || ''
+      // A caller with a connected Drive can resolve folders and richer metadata
+      // through their own OAuth token, so folder links work without a server
+      // API key. Best-effort: an unconnected/expired account just falls back
+      // to keyless behavior.
+      let accessToken = ''
+      const userId = req.authState?.subject
+      if (userId) {
+        try {
+          const auth = await driveAccount.getValidAccessToken(userId)
+          accessToken = auth?.accessToken || ''
+        } catch { /* fall back to keyless */ }
+      }
+      const maxBytes = config.maxUploadBytes
+      let items
+      try {
+        items = await googleDrive.resolveItems(url, { apiKey, accessToken })
+      } catch (err) {
+        return res.status(400).json({ error: err.message || 'Could not resolve Drive link.' })
+      }
+      if (!items.length) return res.status(400).json({ error: 'Nothing importable at that link.' })
+      if (items.length > 50) items = items.slice(0, 50)
+
+      const { assetsDir } = getSpacePaths(spaceId)
+      await fsp.mkdir(assetsDir, { recursive: true })
+
+      const imported = []
+      const failed = []
+      for (const item of items) {
+        try {
+          const file = await googleDrive.downloadFile(item, { apiKey, accessToken, maxBytes })
+          const assetId = crypto.createHash('sha256').update(file.buffer).digest('hex')
+          const finalPath = path.join(assetsDir, assetId)
+          const metaPath = path.join(assetsDir, `${assetId}.json`)
+          await fsp.writeFile(finalPath, file.buffer)
+          const meta = {
+            id: assetId,
+            name: file.name || assetId,
+            mimeType: file.mimeType || 'application/octet-stream',
+            size: file.buffer.length,
+            createdAt: Date.now(),
+            source: 'google-drive'
+          }
+          await writeJson(metaPath, meta)
+          imported.push({ ...meta, assetId, url: `${req.baseUrl || ''}/api/spaces/${spaceId}/assets/${assetId}` })
+        } catch (err) {
+          failed.push({ id: item.id, error: err.message || 'download failed' })
+        }
+      }
+
+      if (!imported.length) {
+        return res.status(400).json({ error: failed[0]?.error || 'Import failed.', failed })
+      }
+      await upsertSpaceMeta(spaceId, { touch: true })
+      res.json({ ok: true, assets: imported, failed })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // Import from the caller's *own* connected Drive (private files). Accepts a
+  // list of Drive file ids (from the picker) and/or a share url. Uses the user's
+  // OAuth token, so it reaches files that aren't publicly shared.
+  router.post('/api/spaces/:spaceId/assets/import-drive-account', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      const userId = req.authState?.subject
+      if (!userId) return res.status(401).json({ error: 'Sign in first.' })
+      const auth = await driveAccount.getValidAccessToken(userId)
+      if (!auth) return res.status(403).json({ error: 'Drive not connected.' })
+      await ensureSpaceWritable(spaceId)
+
+      const accessToken = auth.accessToken
+      const maxBytes = config.maxUploadBytes
+      let items = []
+      const fileIds = Array.isArray(req.body?.fileIds) ? req.body.fileIds.filter(Boolean).slice(0, 50) : []
+      const url = String(req.body?.url || '').trim()
+      try {
+        if (url) {
+          items = await googleDrive.resolveItems(url, { accessToken })
+        } else if (fileIds.length) {
+          items = await Promise.all(fileIds.map((id) => googleDrive.getFileMeta(String(id), { accessToken })))
+        }
+      } catch (err) {
+        return res.status(400).json({ error: err.message || 'Could not resolve Drive selection.' })
+      }
+      if (!items.length) return res.status(400).json({ error: 'Select at least one file to import.' })
+
+      const { assetsDir } = getSpacePaths(spaceId)
+      await fsp.mkdir(assetsDir, { recursive: true })
+
+      const imported = []
+      const failed = []
+      for (const item of items) {
+        try {
+          const file = await googleDrive.downloadFile(item, { accessToken, maxBytes })
+          const assetId = crypto.createHash('sha256').update(file.buffer).digest('hex')
+          await fsp.writeFile(path.join(assetsDir, assetId), file.buffer)
+          const meta = {
+            id: assetId,
+            name: file.name || assetId,
+            mimeType: file.mimeType || 'application/octet-stream',
+            size: file.buffer.length,
+            createdAt: Date.now(),
+            source: 'google-drive'
+          }
+          await writeJson(path.join(assetsDir, `${assetId}.json`), meta)
+          imported.push({ ...meta, assetId, url: `${req.baseUrl || ''}/api/spaces/${spaceId}/assets/${assetId}` })
+        } catch (err) {
+          failed.push({ id: item.id, error: err.message || 'download failed' })
+        }
+      }
+
+      if (!imported.length) return res.status(400).json({ error: failed[0]?.error || 'Import failed.', failed })
+      await upsertSpaceMeta(spaceId, { touch: true })
+      res.json({ ok: true, assets: imported, failed })
+    } catch (error) {
+      next(error)
+    }
+  })
+
   router.get('/api/spaces/:spaceId/assets', async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -412,8 +552,134 @@ function registerSpaceRoutes(router, {
       )
         .filter(Boolean)
         .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
-      res.json({ assets })
+      const sharedIds = commonsStore.getSharedIdSet(assets.map(a => a.id))
+      res.json({ assets: assets.map(a => ({ ...a, shared: sharedIds.has(a.id) })) })
     } catch (error) { next(error) }
+  })
+
+  // Toggle an asset in/out of the public commons. Sharing requires write access
+  // to the owning space; the commons row references this space as the origin,
+  // so the bytes stay where they are and get served through the commons route.
+  router.post('/api/spaces/:spaceId/assets/:assetId/share', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      const assetId = req.params.assetId
+      if (!spaceId || !isValidAssetId(assetId)) {
+        return res.status(400).json({ error: 'Invalid request.' })
+      }
+      await ensureSpaceWritable(spaceId)
+
+      const makePublic = req.body?.public !== false
+      if (!makePublic) {
+        const row = commonsStore.getAsset(assetId)
+        if (row && row.spaceId !== spaceId) {
+          return res.status(403).json({ error: 'Asset was shared from another space.' })
+        }
+        commonsStore.unshareAsset(assetId)
+        return res.json({ ok: true, shared: false })
+      }
+
+      const { assetsDir } = getSpacePaths(spaceId)
+      let meta
+      try {
+        meta = JSON.parse(await fsp.readFile(path.join(assetsDir, `${assetId}.json`), 'utf-8'))
+      } catch {
+        return res.status(404).json({ error: 'Asset not found in this space.' })
+      }
+      const license = String(req.body?.license || '').trim().slice(0, 120) || null
+      const entry = commonsStore.shareAsset({
+        assetId,
+        spaceId,
+        name: meta.name || assetId,
+        mimeType: meta.mimeType || '',
+        size: meta.size || 0,
+        license,
+        sharedBy: req.authState?.subject || null,
+        sharedByLabel: req.authState?.label || null
+      })
+      res.json({ ok: true, shared: true, asset: entry })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // Browse the commons — public read, it is the point.
+  router.get('/api/commons/assets', async (req, res, next) => {
+    try {
+      const q = String(req.query?.q || '').trim().slice(0, 120)
+      const items = commonsStore.listAssets({ q, limit: req.query?.limit })
+      const base = `${req.baseUrl || ''}/api/commons/assets`
+      res.json({ assets: items.map(item => ({ ...item, id: item.assetId, url: `${base}/${item.assetId}` })) })
+    } catch (error) { next(error) }
+  })
+
+  router.get('/api/commons/assets/:assetId', async (req, res, next) => {
+    try {
+      const assetId = req.params.assetId
+      if (!isValidAssetId(assetId)) return res.status(400).json({ error: 'Invalid request.' })
+      const row = commonsStore.getAsset(assetId)
+      if (!row) return res.status(404).json({ error: 'Not a public asset.' })
+      await serveAsset(row.spaceId, assetId, res)
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        return res.status(404).json({ error: 'Asset not found.' })
+      }
+      next(error)
+    }
+  })
+
+  // Copy commons assets into a space. Assets are content-addressed, so an
+  // import is a local file copy under the same hash id — no re-upload, and
+  // importing the same asset twice is a no-op.
+  router.post('/api/spaces/:spaceId/assets/import-commons', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      const assetIds = (Array.isArray(req.body?.assetIds) ? req.body.assetIds : [])
+        .filter((id) => isValidAssetId(id))
+        .slice(0, 50)
+      if (!assetIds.length) return res.status(400).json({ error: 'Select at least one asset.' })
+      await ensureSpaceWritable(spaceId)
+
+      const { assetsDir } = getSpacePaths(spaceId)
+      await fsp.mkdir(assetsDir, { recursive: true })
+      const assetBaseUrl = `${req.baseUrl || ''}/api/spaces/${spaceId}/assets`
+
+      const imported = []
+      const failed = []
+      for (const assetId of assetIds) {
+        try {
+          const row = commonsStore.getAsset(assetId)
+          if (!row) throw new Error('Not a public asset.')
+          const sourcePath = path.join(getSpacePaths(row.spaceId).assetsDir, assetId)
+          const finalPath = path.join(assetsDir, assetId)
+          const metaPath = path.join(assetsDir, `${assetId}.json`)
+          await fsp.copyFile(sourcePath, finalPath)
+          const meta = {
+            id: assetId,
+            name: row.name || assetId,
+            mimeType: row.mimeType || 'application/octet-stream',
+            size: row.size || 0,
+            createdAt: Date.now(),
+            source: 'commons',
+            license: row.license || undefined,
+            sharedByLabel: row.sharedByLabel || undefined
+          }
+          await writeJson(metaPath, meta)
+          imported.push({ ...meta, assetId, url: `${assetBaseUrl}/${assetId}` })
+        } catch (err) {
+          failed.push({ id: assetId, error: err.code === 'ENOENT' ? 'Source asset is gone.' : (err.message || 'import failed') })
+        }
+      }
+
+      if (!imported.length) {
+        return res.status(400).json({ error: failed[0]?.error || 'Import failed.', failed })
+      }
+      await upsertSpaceMeta(spaceId, { touch: true })
+      res.json({ ok: true, assets: imported, failed })
+    } catch (error) {
+      next(error)
+    }
   })
 
   router.get('/api/spaces/:spaceId/assets/:assetId', async (req, res, next) => {

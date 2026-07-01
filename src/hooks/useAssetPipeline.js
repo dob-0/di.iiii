@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { saveAssetFromFile } from '../storage/assetStore.js'
 import { MODEL_FORMATS, detectModelFormatFromFile, stripExtension } from '../utils/modelFormats.js'
-import { uploadServerAsset } from '../services/serverSpaces.js'
+import { uploadServerAsset, importDriveAssets, importDriveSelection } from '../services/serverSpaces.js'
 
 export function useAssetPipeline({
     controlsRef,
@@ -373,6 +373,57 @@ export function useAssetPipeline({
         }
     }, [canUploadServerAssets, spaceId, serverAssetBaseUrl, upsertRemoteAssetEntry])
 
+    const absorbImportedAssets = useCallback((response) => {
+        const assets = Array.isArray(response?.assets) ? response.assets : []
+        const resolvedBase = serverAssetBaseUrl ? serverAssetBaseUrl.replace(/\/+$/, '') : ''
+        const entries = assets.map((asset) => {
+            const id = asset.assetId || asset.id
+            const responseUrl = asset.url || ''
+            const responseIsAbsolute = /^https?:\/\//i.test(responseUrl)
+            const resolvedUrl = responseIsAbsolute
+                ? responseUrl
+                : (resolvedBase ? `${resolvedBase}/${id}` : responseUrl)
+            const entry = {
+                id,
+                name: asset.name || id,
+                mimeType: asset.mimeType || 'application/octet-stream',
+                size: asset.size ?? 0,
+                url: resolvedUrl
+            }
+            upsertRemoteAssetEntry?.(entry, serverAssetBaseUrl)
+            return entry
+        })
+        return { entries, failed: response?.failed || [] }
+    }, [serverAssetBaseUrl, upsertRemoteAssetEntry])
+
+    const importAssetsFromDrive = useCallback(async (url) => {
+        if (!canUploadServerAssets || !spaceId) {
+            throw new Error('Connect to a space to import from Drive.')
+        }
+        const trimmed = String(url || '').trim()
+        if (!trimmed) throw new Error('Paste a Google Drive link first.')
+        setServerAssetSyncPending(prev => prev + 1)
+        try {
+            return absorbImportedAssets(await importDriveAssets(spaceId, trimmed))
+        } finally {
+            setServerAssetSyncPending(prev => Math.max(0, prev - 1))
+        }
+    }, [canUploadServerAssets, spaceId, absorbImportedAssets])
+
+    const importDriveFilesFromAccount = useCallback(async (fileIds) => {
+        if (!canUploadServerAssets || !spaceId) {
+            throw new Error('Connect to a space to import from Drive.')
+        }
+        const ids = Array.isArray(fileIds) ? fileIds.filter(Boolean) : []
+        if (!ids.length) throw new Error('Select at least one file.')
+        setServerAssetSyncPending(prev => prev + 1)
+        try {
+            return absorbImportedAssets(await importDriveSelection(spaceId, ids))
+        } finally {
+            setServerAssetSyncPending(prev => Math.max(0, prev - 1))
+        }
+    }, [canUploadServerAssets, spaceId, absorbImportedAssets])
+
     const ingestAssetFile = useCallback(async (file) => {
         if (!file) return null
         if (canUploadServerAssets) {
@@ -597,7 +648,9 @@ export function useAssetPipeline({
         handleBatchMediaOptimization,
         handleManualMediaOptimization,
         handleAssetFilesUpload,
-        uploadAssetToServer
+        uploadAssetToServer,
+        importAssetsFromDrive,
+        importDriveFilesFromAccount
     }
 }
 

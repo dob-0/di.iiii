@@ -622,7 +622,10 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
             // turns -- Y is free). Horizontal locomotion never touched origin.y.
             const touchVert = vertTouchRef?.current || 0
             const stickY = rightController?.gamepad?.['xr-standard-thumbstick']?.yAxis ?? 0
-            const stickVert = Math.abs(stickY) > 0.15 ? -stickY : 0 // push up = ascend
+            // Verified on Quest hardware: the xr-standard-thumbstick yAxis reads
+            // positive when pushed up, so no negation here (the initial assumption,
+            // "push up = negative axis" like a typical gamepad, was inverted in practice).
+            const stickVert = Math.abs(stickY) > 0.15 ? stickY : 0 // push up = ascend
             if (isVr) {
                 origin.position.y = THREE.MathUtils.clamp(origin.position.y + (touchVert + stickVert) * FLY_SPEED * delta, 0, 58)
             } else if (flyMode) {

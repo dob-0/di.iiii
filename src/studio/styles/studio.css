@@ -610,6 +610,29 @@
     background: rgba(77, 249, 255, 0.15);
 }
 
+.spa-drive-row {
+    display: flex;
+    gap: 4px;
+}
+
+.spa-drive-row .insp-input {
+    flex: 1;
+    min-width: 0;
+}
+
+.spa-drive-notice {
+    font-size: 11px;
+    padding: 4px 0 0;
+}
+
+.spa-drive-notice.is-ok {
+    color: var(--di-cyan);
+}
+
+.spa-drive-notice.is-error {
+    color: #ff7a7a;
+}
+
 .spa-activity {
     display: flex;
     flex-direction: column;

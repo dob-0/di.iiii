@@ -2,8 +2,8 @@ import { useCallback, useState } from 'react'
 
 const DEFAULT_OPEN = ['library', 'inspector']
 
-export function useStudioPanelState() {
-    const [open, setOpen] = useState(() => new Set(DEFAULT_OPEN))
+export function useStudioPanelState(initialOpen = null) {
+    const [open, setOpen] = useState(() => new Set(initialOpen || DEFAULT_OPEN))
 
     const toggle = useCallback((id) => {
         setOpen((prev) => {
