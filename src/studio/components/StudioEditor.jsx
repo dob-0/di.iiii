@@ -18,6 +18,7 @@ import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
 import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
 import { formatAssetSize, optimizeGlbAsset, shouldSuggestGlbOptimization } from '../utils/assetOptimization.js'
+import { canPlaceInScene, isPdfAsset, pdfToImageFiles } from '../utils/assetFormats.js'
 import { getSelectionCentroid } from '../utils/multiTransform.js'
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
@@ -268,6 +269,46 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         dispatch({ type: 'select-entity', entityId: entity.id })
     }
 
+    // PDFs can't render in the scene directly — rasterize the pages to PNG
+    // project assets and place each page as an image entity.
+    const importPdfAsImagePages = async (file) => {
+        const pageFiles = await pdfToImageFiles(file)
+        for (const pageFile of pageFiles) {
+            const asset = await uploadProjectAsset(projectId, pageFile)
+            applyLocalOps({
+                type: 'upsertAsset',
+                payload: { asset }
+            }, { activityMessage: `Imported ${pageFile.name} (PDF page).` })
+            handleCreateEntity('image', asset)
+        }
+        return pageFiles.length
+    }
+
+    // Space/commons assets live outside the project document; adopt them into
+    // document.assets first, or buildAssetMap can't resolve the entity's
+    // media.assetId and the created entity renders invisible.
+    const handleCreateFromAsset = async (asset, position = null) => {
+        if (isPdfAsset(asset)) {
+            try {
+                const res = await fetch(asset.url, { credentials: 'include' })
+                if (!res.ok) throw new Error(`fetch failed (${res.status})`)
+                const blob = await res.blob()
+                await importPdfAsImagePages(new File([blob], asset.name || 'document.pdf', { type: 'application/pdf' }))
+            } catch (error) {
+                applyLocalOps([], { activityMessage: `Could not import ${asset?.name || 'PDF'}: ${error.message}`, activityLevel: 'error' })
+            }
+            return
+        }
+        if (!canPlaceInScene(asset)) return
+        if (asset?.id && !(document.assets || []).some((a) => a.id === asset.id)) {
+            applyLocalOps({
+                type: 'upsertAsset',
+                payload: { asset }
+            }, { activityMessage: `Added ${asset.name || 'asset'} to project assets.` })
+        }
+        handleCreateEntity(detectEntityTypeFromFile(asset), asset, position)
+    }
+
     const requestAssetUploadFile = (file) => {
         if (!shouldSuggestGlbOptimization(file)) return Promise.resolve(file)
         return new Promise((resolve) => {
@@ -304,6 +345,10 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         if (!files.length) return
         try {
             for (const file of files) {
+                if (isPdfAsset(file)) {
+                    await importPdfAsImagePages(file)
+                    continue
+                }
                 const uploadFile = await requestAssetUploadFile(file)
                 if (!uploadFile) continue
                 const asset = await uploadProjectAsset(projectId, uploadFile)
@@ -877,7 +922,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             controlsRef={controlsRef}
             xrState={{ ...xr, xrStore: xr.xrStore }}
             onCreateEntity={handleCreateEntity}
-            onCreateFromAsset={(asset, position = null) => handleCreateEntity(detectEntityTypeFromFile(asset), asset, position)}
+            onCreateFromAsset={handleCreateFromAsset}
             onAssetFilesSelected={handleAssetFilesSelected}
             onDriveImportUrl={handleDriveImportUrl}
             onDriveImportSelection={handleDriveImportSelection}

@@ -107,7 +107,7 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
             >
                 <EntityContent entity={entity} assetMap={assetMap} />
                 {selected && (
-                    <Html position={[0, 1.8, 0]} center>
+                    <Html position={[0, 1.8, 0]} center zIndexRange={[900, 0]}>
                         <span className="studio-selection-pill">{entity.name}</span>
                     </Html>
                 )}
@@ -154,7 +154,7 @@ function SceneEntityNode({ entity, childMap, assetMap, selectedIdSet, selectedEn
                 </mesh>
                 {editMode === 'edit' && <axesHelper args={[0.4]} />}
                 {selected && (
-                    <Html position={[0, 0.25, 0]} center>
+                    <Html position={[0, 0.25, 0]} center zIndexRange={[900, 0]}>
                         <span className="studio-selection-pill">{entity.name}</span>
                     </Html>
                 )}

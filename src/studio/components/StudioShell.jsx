@@ -7,13 +7,12 @@ import StudioControlCluster from './StudioControlCluster.jsx'
 import StudioQuickInsert from './StudioQuickInsert.jsx'
 import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
+import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import {
-    ActivityPanel,
     AssetsPanel,
     FilesPanel,
     LibraryPanel,
-    PresentPanel,
     ProjectPanel,
     PublishPanel,
     StructurePanel,
@@ -46,17 +45,21 @@ const DEFAULT_POSITIONS = () => {
     const midY = Math.round(vh * 0.48)
     const rightX = Math.max(290, vw - 700)   // 20px left of cluster (cluster at vw-400, width≤280)
     return {
-        library:   { x: 16,                     y: 90 },
-        structure: { x: 16,                     y: midY },
-        assets:    { x: 290,                    y: 90 },
-        activity:  { x: 290,                    y: midY },
-        files:     { x: Math.round(vw * 0.3),   y: 90 },
-        present:   { x: Math.round(vw * 0.3),   y: midY },
-        publish:   { x: Math.round(vw * 0.55),  y: midY },
-        inspector: { x: rightX,                 y: 90 },
-        world:     { x: rightX,                 y: midY + 30 },
+        create:  { x: 16,                    y: 90 },
+        scene:   { x: rightX,                y: 90 },
+        world:   { x: rightX,                y: midY + 30 },
+        publish: { x: Math.round(vw * 0.55), y: midY },
+        files:   { x: Math.round(vw * 0.3),  y: 90 },
     }
 }
+
+// Pre-consolidation ids from persisted workspaces map onto the five windows.
+const PANEL_ID_MIGRATION = {
+    library: 'create', assets: 'create',
+    structure: 'scene', inspector: 'scene',
+    activity: 'publish', present: 'publish',
+}
+const migratePanelIds = (ids) => (Array.isArray(ids) ? ids.map((id) => PANEL_ID_MIGRATION[id] || id) : ids)
 
 export default function StudioShell({
     document,
@@ -122,7 +125,7 @@ export default function StudioShell({
     onTransformCancel,
 }) {
     const persistedWorkspace = useMemo(() => loadStudioWorkspace(), [])
-    const { open, toggle, isOpen } = useStudioPanelState(persistedWorkspace?.open)
+    const { open, toggle, isOpen } = useStudioPanelState(migratePanelIds(persistedWorkspace?.open))
     const { layout: vpLayout, split: vpSplit, close: vpClose, setRatio: vpSetRatio } = useViewportLayout()
     const [uiHidden, setUiHidden] = useState(false)
     const [viewportEditMode, setViewportEditMode] = useState('navigate')
@@ -144,6 +147,30 @@ export default function StudioShell({
     const recordPanelPosition = useCallback((id) => (pos) => {
         setPositions((prev) => ({ ...prev, [id]: pos }))
     }, [])
+
+    const openRefForPlacement = useRef(open)
+    useEffect(() => { openRefForPlacement.current = open }, [open])
+
+    // Opening a panel on top of an already-open one buries it; cascade the
+    // newcomer to a free spot instead. Dragged spots and arrange actions are
+    // untouched — this only affects the moment a panel opens.
+    const handleTogglePanel = useCallback((id) => {
+        if (!openRefForPlacement.current.has(id)) {
+            setPositions((prev) => {
+                const occupied = [...openRefForPlacement.current].map((key) => prev[key]).filter(Boolean)
+                const collides = (p) => occupied.some((o) => Math.abs(o.x - p.x) < 24 && Math.abs(o.y - p.y) < 24)
+                let pos = prev[id] || DEFAULT_POSITIONS()[id] || { x: 16, y: 90 }
+                let guard = 0
+                while (collides(pos) && guard < 30) {
+                    pos = { x: pos.x + 28, y: pos.y + 28 }
+                    guard += 1
+                }
+                if (pos === prev[id]) return prev
+                return { ...prev, [id]: pos }
+            })
+        }
+        toggle(id)
+    }, [toggle])
     const fitToSelectionRef = useRef(null)
     const [showHelp, setShowHelp] = useState(false)
 
@@ -358,37 +385,14 @@ export default function StudioShell({
 
             {!uiHidden && (
                 <>
-                    {isOpen('library') && (
-                        <StudioFloatingPanel key={`library-${layoutKey}`} title="Library" onClose={() => toggle('library')} initialPosition={positions.library} onPositionChange={recordPanelPosition('library')} initialWidth={260} snapEdges={snapEdges}>
-                            <LibraryPanel onCreateEntity={onCreateEntity} onAssetFilesSelected={onAssetFilesSelected} canDeleteSelection={Boolean(selectedEntity)} onDeleteSelected={onDeleteSelected} />
-                        </StudioFloatingPanel>
-                    )}
-                    {isOpen('assets') && (
-                        <StudioFloatingPanel key={`assets-${layoutKey}`} title="Assets" onClose={() => toggle('assets')} initialPosition={positions.assets} onPositionChange={recordPanelPosition('assets')} initialWidth={260} snapEdges={snapEdges}>
+                    {isOpen('create') && (
+                        <StudioFloatingPanel key={`create-${layoutKey}`} title="Create" onClose={() => toggle('create')} initialPosition={positions.create} onPositionChange={recordPanelPosition('create')} initialWidth={280} snapEdges={snapEdges}>
+                            <LibraryPanel onCreateEntity={onCreateEntity} />
                             <AssetsPanel assets={assetOptions} spaceAssets={spaceAssets} onAssetFilesSelected={onAssetFilesSelected} onCreateFromAsset={onCreateFromAsset} onDriveImportUrl={onDriveImportUrl} onDriveImportSelection={onDriveImportSelection} onToggleAssetShared={onToggleAssetShared} onCommonsImport={onCommonsImport} />
                         </StudioFloatingPanel>
                     )}
-                    {isOpen('files') && (
-                        <StudioFloatingPanel key={`files-${layoutKey}`} title="Files" onClose={() => toggle('files')} initialPosition={positions.files} onPositionChange={recordPanelPosition('files')} initialWidth={480} minWidth={320} maxWidth={800} snapEdges={snapEdges}>
-                            <FilesPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} spaceAssets={spaceAssets} />
-                        </StudioFloatingPanel>
-                    )}
-                    {isOpen('inspector') && (
-                        <StudioFloatingPanel key={`inspector-${layoutKey}`} title="Inspector" onClose={() => toggle('inspector')} initialPosition={positions.inspector} onPositionChange={recordPanelPosition('inspector')} initialWidth={280} snapEdges={snapEdges}>
-                            <StudioInspector
-                                title={selectedEntityIds.length > 1 ? `${selectedEntityIds.length} selected` : (selectedEntity ? selectedEntity.name : 'World')}
-                                subtitle={selectedEntityIds.length > 1 ? `Primary: ${selectedEntity?.name || selectedEntityId}` : (selectedEntity ? selectedEntity.type : 'Project defaults')}
-                                sections={inspectorSections}
-                                values={inspectorValues}
-                                assetOptions={assetOptions}
-                                spaceOptions={spaceOptions}
-                                onSectionChange={onInspectorChange}
-                                footer={inspectorFooter}
-                            />
-                        </StudioFloatingPanel>
-                    )}
-                    {isOpen('structure') && (
-                        <StudioFloatingPanel key={`structure-${layoutKey}`} title="Structure" onClose={() => toggle('structure')} initialPosition={positions.structure} onPositionChange={recordPanelPosition('structure')} initialWidth={240} snapEdges={snapEdges}>
+                    {isOpen('scene') && (
+                        <StudioFloatingPanel key={`scene-${layoutKey}`} title="Scene" onClose={() => toggle('scene')} initialPosition={positions.scene} onPositionChange={recordPanelPosition('scene')} initialWidth={300} snapEdges={snapEdges}>
                             <StructurePanel
                                 entities={entities}
                                 selectedEntityId={selectedEntityId}
@@ -398,21 +402,30 @@ export default function StudioShell({
                                 onGroupSelected={onGroupSelected}
                                 onUngroup={onUngroup}
                             />
+                            {(selectedEntity || selectedEntityIds.length > 0) ? (
+                                <StudioInspector
+                                    title={selectedEntityIds.length > 1 ? `${selectedEntityIds.length} selected` : (selectedEntity ? selectedEntity.name : 'World')}
+                                    subtitle={selectedEntityIds.length > 1 ? `Primary: ${selectedEntity?.name || selectedEntityId}` : (selectedEntity ? selectedEntity.type : 'Project defaults')}
+                                    sections={inspectorSections}
+                                    values={inspectorValues}
+                                    assetOptions={assetOptions}
+                                    spaceOptions={spaceOptions}
+                                    onSectionChange={onInspectorChange}
+                                    footer={inspectorFooter}
+                                />
+                            ) : (
+                                <p className="sfp-empty">Select an entity above or in the viewport to edit it.</p>
+                            )}
                         </StudioFloatingPanel>
                     )}
-                    {isOpen('present') && (
-                        <StudioFloatingPanel key={`present-${layoutKey}`} title="Present" onClose={() => toggle('present')} initialPosition={positions.present} onPositionChange={recordPanelPosition('present')} initialWidth={360} minWidth={300} maxWidth={700} snapEdges={snapEdges}>
-                            <PresentPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} onSaveCurrentCamera={onSaveCurrentCamera} />
+                    {isOpen('files') && (
+                        <StudioFloatingPanel key={`files-${layoutKey}`} title="Code" onClose={() => toggle('files')} initialPosition={positions.files} onPositionChange={recordPanelPosition('files')} initialWidth={480} minWidth={320} maxWidth={800} snapEdges={snapEdges}>
+                            <FilesPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} spaceAssets={spaceAssets} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('publish') && (
-                        <StudioFloatingPanel key={`publish-${layoutKey}`} title="Publish" onClose={() => toggle('publish')} initialPosition={positions.publish} onPositionChange={recordPanelPosition('publish')} initialWidth={360} minWidth={300} snapEdges={snapEdges}>
-                            <PublishPanel document={document} publishState={document?.publishState} liveProjectState={liveProjectState} onPublishPatch={onPublishPatch} onSetLiveProject={onSetLiveProject} onClearLiveProject={onClearLiveProject} onCopyShareLink={onCopyShareLink} onExportProject={onExportProject} exportStatus={exportStatus} onImportProjectFile={onImportProjectFile} xrState={xrState} onEnterXr={onEnterXr} onExitXr={onExitXr} />
-                        </StudioFloatingPanel>
-                    )}
-                    {isOpen('activity') && (
-                        <StudioFloatingPanel key={`activity-${layoutKey}`} title="Activity" onClose={() => toggle('activity')} initialPosition={positions.activity} onPositionChange={recordPanelPosition('activity')} initialWidth={260} snapEdges={snapEdges}>
-                            <ActivityPanel activity={syncState?.activity} />
+                        <StudioFloatingPanel key={`publish-${layoutKey}`} title="Share" onClose={() => toggle('publish')} initialPosition={positions.publish} onPositionChange={recordPanelPosition('publish')} initialWidth={360} minWidth={300} snapEdges={snapEdges}>
+                            <PublishPanel document={document} publishState={document?.publishState} liveProjectState={liveProjectState} onPublishPatch={onPublishPatch} onSetLiveProject={onSetLiveProject} onClearLiveProject={onClearLiveProject} onCopyShareLink={onCopyShareLink} onExportProject={onExportProject} exportStatus={exportStatus} onImportProjectFile={onImportProjectFile} xrState={xrState} presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} onSaveCurrentCamera={onSaveCurrentCamera} activity={syncState?.activity} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('world') && (
@@ -431,7 +444,7 @@ export default function StudioShell({
                         gizmoMode={viewportGizmoMode}
                         onSetGizmoMode={selectGizmoMode}
                         openPanels={open}
-                        onTogglePanel={toggle}
+                        onTogglePanel={handleTogglePanel}
                         onFullscreen={handleFullscreen}
                         onHideUI={() => setUiHidden(true)}
                         onBackToHub={onBackToHub}
@@ -462,7 +475,8 @@ export default function StudioShell({
                     onClose={() => setQuickInsert(null)}
                     onCreateEntity={onCreateEntity}
                     onCreateFromAsset={onCreateFromAsset}
-                    assets={document?.assets || []}
+                    assets={(spaceAssets.length ? spaceAssets : (document?.assets || [])).filter(canPlaceInScene)}
+                    onOpenCreate={() => { if (!isOpen('create')) handleTogglePanel('create') }}
                 />
             )}
         </div>

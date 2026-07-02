@@ -34,8 +34,6 @@ import AddIcon from '@mui/icons-material/Add'
 import CloseIcon from '@mui/icons-material/Close'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
 import ShareIcon from '@mui/icons-material/Share'
-import SmartphoneIcon from '@mui/icons-material/Smartphone'
-import ViewInArIcon from '@mui/icons-material/ViewInAr'
 import { presentationStarterTemplates } from '../../utils/presentationTemplates.js'
 import { defaultRenderSettings, defaultWorldState } from '../../shared/projectSchema.js'
 import {
@@ -46,6 +44,8 @@ import {
 import { useDriveImport } from '../../hooks/useDriveImport.js'
 import { listCommonsAssets } from '../../services/serverSpaces.js'
 import { formatAssetSize } from '../utils/assetOptimization.js'
+import { ASSET_FORMAT_HINT, canPlaceInScene } from '../utils/assetFormats.js'
+import { LIGHTS, PRIMITIVES } from '../utils/entityPalette.js'
 
 const formatTimestamp = (value) => {
     if (!value) return 'Not yet'
@@ -84,22 +84,15 @@ export function PanelHeader({ title, onClose, action = null }) {
     )
 }
 
-export function LibraryPanel({ onCreateEntity, onAssetFilesSelected, canDeleteSelection, onDeleteSelected }) {
-    const primitives = ['box', 'sphere', 'cone', 'cylinder', 'text', 'group', 'portal']
-    const lights = [
-        { type: 'pointLight', label: 'Point' },
-        { type: 'spotLight', label: 'Spot' },
-        { type: 'directionalLight', label: 'Directional' },
-        { type: 'ambientLight', label: 'Ambient' },
-    ]
+export function LibraryPanel({ onCreateEntity }) {
     return (
         <>
             <div className="scc-section">
                 <div className="scc-section-label">Primitives</div>
                 <div className="scc-buttons">
-                    {primitives.map((type) => (
-                        <button key={type} className="scc-btn" onClick={() => onCreateEntity(type)}>
-                            {type}
+                    {PRIMITIVES.map(({ key, label }) => (
+                        <button key={key} className="scc-btn" onClick={() => onCreateEntity(key)}>
+                            {label}
                         </button>
                     ))}
                 </div>
@@ -107,23 +100,11 @@ export function LibraryPanel({ onCreateEntity, onAssetFilesSelected, canDeleteSe
             <div className="scc-section">
                 <div className="scc-section-label">Lights</div>
                 <div className="scc-buttons">
-                    {lights.map(({ type, label }) => (
-                        <button key={type} className="scc-btn" onClick={() => onCreateEntity(type)}>
+                    {LIGHTS.map(({ key, label }) => (
+                        <button key={key} className="scc-btn" onClick={() => onCreateEntity(key)}>
                             {label}
                         </button>
                     ))}
-                </div>
-            </div>
-            <div className="scc-section">
-                <div className="scc-section-label">Actions</div>
-                <div className="spa-actions">
-                    <label className="scc-btn spa-btn-wide" style={{ cursor: 'pointer' }}>
-                        ↑ Import assets
-                        <input type="file" multiple onChange={onAssetFilesSelected} style={{ display: 'none' }} />
-                    </label>
-                    <button className="scc-btn spa-btn-wide" disabled={!canDeleteSelection} onClick={onDeleteSelected}>
-                        × Delete selected
-                    </button>
                 </div>
             </div>
         </>
@@ -136,87 +117,92 @@ function DriveImportSection({ onDriveImportUrl, onDriveImportSelection }) {
         importBySelection: onDriveImportSelection,
     })
     return (
-        <div className="scc-section">
-            <button className={`scc-btn spa-btn-wide${drive.open ? ' active' : ''}`} onClick={drive.toggleOpen}>
-                Google Drive
+        <div className="insp-section">
+            <button className="insp-section-btn" onClick={drive.toggleOpen}>
+                <span className="scc-section-label">Google Drive</span>
+                <span className="insp-arrow">{drive.open ? '▾' : '▸'}</span>
             </button>
             {drive.open && (
-                <div className="spa-actions" style={{ marginTop: 4 }}>
-                    {drive.status?.available && (
-                        drive.status.connected ? (
+                <div className="insp-section-body">
+                    <div className="spa-actions">
+                        {drive.status?.available && (
+                            drive.status.connected ? (
+                                <div className="spa-drive-status">
+                                    <span className="spa-drive-status-label" title={drive.status.email || ''}>
+                                        Connected{drive.status.email ? ` · ${drive.status.email}` : ''}
+                                    </span>
+                                    <button className="spa-copy-btn" onClick={drive.disconnect}>
+                                        Disconnect
+                                    </button>
+                                </div>
+                            ) : (
+                                <button className="scc-btn spa-btn-wide" onClick={drive.connect}>
+                                    Connect Google Drive
+                                </button>
+                            )
+                        )}
+                        {drive.status?.connected && (
                             <>
-                                <div className="scc-section-label">
-                                    Connected{drive.status.email ? ` · ${drive.status.email}` : ''}
+                                <div className="spa-drive-row">
+                                    <input
+                                        type="text"
+                                        className="insp-input"
+                                        placeholder="Search your Drive"
+                                        value={drive.search}
+                                        onChange={(e) => drive.setSearch(e.target.value)}
+                                        onKeyDown={(e) => { if (e.key === 'Enter') drive.runSearch() }}
+                                        disabled={drive.listing}
+                                    />
+                                    <button className="scc-btn" onClick={drive.runSearch} disabled={drive.listing}>
+                                        {drive.listing ? '…' : 'Search'}
+                                    </button>
                                 </div>
-                                <button className="scc-btn spa-btn-wide" onClick={drive.disconnect}>
-                                    Disconnect
-                                </button>
+                                {drive.files.length > 0 && (
+                                    <>
+                                        <div className="spa-list">
+                                            {drive.files.map((f) => (
+                                                <label key={f.id} className={`spa-item${drive.selected.has(f.id) ? ' active' : ''}`}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={drive.selected.has(f.id)}
+                                                        onChange={() => drive.toggleSelect(f.id)}
+                                                    />
+                                                    <span className="spa-name" title={f.name}>{f.name}</span>
+                                                    <span className="spa-type">{formatAssetSize(Number(f.size) || 0)}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        <button
+                                            className="scc-btn spa-btn-wide"
+                                            onClick={drive.importSelected}
+                                            disabled={drive.busy || drive.selected.size === 0}
+                                        >
+                                            {drive.busy ? 'Importing…' : `Import selected (${drive.selected.size})`}
+                                        </button>
+                                    </>
+                                )}
                             </>
-                        ) : (
-                            <button className="scc-btn spa-btn-wide" onClick={drive.connect}>
-                                Connect Google Drive
+                        )}
+                        <div className="spa-drive-row">
+                            <input
+                                type="text"
+                                className="insp-input"
+                                placeholder={drive.status?.connected ? '…or paste a Drive link' : 'Paste a public Drive link'}
+                                value={drive.url}
+                                onChange={(e) => drive.setUrl(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') drive.importUrl() }}
+                                disabled={drive.busy}
+                            />
+                            <button className="scc-btn" onClick={drive.importUrl} disabled={drive.busy || !drive.url.trim()}>
+                                {drive.busy ? '…' : 'Import'}
                             </button>
-                        )
-                    )}
-                    {drive.status?.connected && (
-                        <>
-                            <div className="spa-drive-row">
-                                <input
-                                    type="text"
-                                    className="insp-input"
-                                    placeholder="Search your Drive"
-                                    value={drive.search}
-                                    onChange={(e) => drive.setSearch(e.target.value)}
-                                    onKeyDown={(e) => { if (e.key === 'Enter') drive.runSearch() }}
-                                    disabled={drive.listing}
-                                />
-                                <button className="scc-btn" onClick={drive.runSearch} disabled={drive.listing}>
-                                    {drive.listing ? '…' : 'Search'}
-                                </button>
-                            </div>
-                            {drive.files.length > 0 && (
-                                <div className="spa-list">
-                                    {drive.files.map((f) => (
-                                        <label key={f.id} className={`spa-item${drive.selected.has(f.id) ? ' active' : ''}`}>
-                                            <input
-                                                type="checkbox"
-                                                checked={drive.selected.has(f.id)}
-                                                onChange={() => drive.toggleSelect(f.id)}
-                                            />
-                                            <span className="spa-name" title={f.name}>{f.name}</span>
-                                            <span className="spa-type">{formatAssetSize(Number(f.size) || 0)}</span>
-                                        </label>
-                                    ))}
-                                </div>
-                            )}
-                            <button
-                                className="scc-btn spa-btn-wide"
-                                onClick={drive.importSelected}
-                                disabled={drive.busy || drive.selected.size === 0}
-                            >
-                                {drive.busy ? 'Importing…' : `Import selected (${drive.selected.size})`}
-                            </button>
-                        </>
-                    )}
-                    <div className="spa-drive-row">
-                        <input
-                            type="text"
-                            className="insp-input"
-                            placeholder="…or paste a public Drive link"
-                            value={drive.url}
-                            onChange={(e) => drive.setUrl(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') drive.importUrl() }}
-                            disabled={drive.busy}
-                        />
-                        <button className="scc-btn" onClick={drive.importUrl} disabled={drive.busy || !drive.url.trim()}>
-                            {drive.busy ? '…' : 'Import'}
-                        </button>
-                    </div>
-                    {drive.notice && (
-                        <div className={`spa-drive-notice ${drive.notice.kind === 'error' ? 'is-error' : 'is-ok'}`}>
-                            {drive.notice.text}
                         </div>
-                    )}
+                        {drive.notice && (
+                            <div className={`spa-drive-notice ${drive.notice.kind === 'error' ? 'is-error' : 'is-ok'}`}>
+                                {drive.notice.text}
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>
@@ -283,56 +269,61 @@ function CommonsSection({ onCommonsImport }) {
     }
 
     return (
-        <div className="scc-section">
-            <button className={`scc-btn spa-btn-wide${open ? ' active' : ''}`} onClick={toggleOpen}>
-                Commons
+        <div className="insp-section">
+            <button className="insp-section-btn" onClick={toggleOpen}>
+                <span className="scc-section-label">Commons</span>
+                <span className="insp-arrow">{open ? '▾' : '▸'}</span>
             </button>
             {open && (
-                <div className="spa-actions" style={{ marginTop: 4 }}>
-                    <div className="spa-drive-row">
-                        <input
-                            type="text"
-                            className="insp-input"
-                            placeholder="Search public assets"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === 'Enter') runSearch() }}
-                            disabled={listing}
-                        />
-                        <button className="scc-btn" onClick={() => runSearch()} disabled={listing}>
-                            {listing ? '…' : 'Search'}
-                        </button>
+                <div className="insp-section-body">
+                    <div className="spa-actions">
+                        <div className="spa-drive-row">
+                            <input
+                                type="text"
+                                className="insp-input"
+                                placeholder="Search public assets"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') runSearch() }}
+                                disabled={listing}
+                            />
+                            <button className="scc-btn" onClick={() => runSearch()} disabled={listing}>
+                                {listing ? '…' : 'Search'}
+                            </button>
+                        </div>
+                        {Array.isArray(items) && items.length === 0 && (
+                            <p className="sfp-empty">Nothing shared yet — mark a space file Public to start the commons.</p>
+                        )}
+                        {Array.isArray(items) && items.length > 0 && (
+                            <>
+                                <div className="spa-list">
+                                    {items.map((item) => (
+                                        <label key={item.id} className={`spa-item${selected.has(item.id) ? ' active' : ''}`}>
+                                            <input
+                                                type="checkbox"
+                                                checked={selected.has(item.id)}
+                                                onChange={() => toggleSelect(item.id)}
+                                            />
+                                            <span className="spa-name" title={item.sharedByLabel ? `${item.name} · by ${item.sharedByLabel}` : item.name}>{item.name}</span>
+                                            <span className="spa-type">{formatAssetSize(item.size)}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                                <button
+                                    className="scc-btn spa-btn-wide"
+                                    onClick={importSelected}
+                                    disabled={busy || selected.size === 0}
+                                >
+                                    {busy ? 'Importing…' : `Import selected (${selected.size})`}
+                                </button>
+                            </>
+                        )}
+                        {notice && (
+                            <div className={`spa-drive-notice ${notice.kind === 'error' ? 'is-error' : 'is-ok'}`}>
+                                {notice.text}
+                            </div>
+                        )}
                     </div>
-                    {Array.isArray(items) && items.length === 0 && (
-                        <p className="sfp-empty">Nothing shared yet — mark a space file Public to start the commons.</p>
-                    )}
-                    {Array.isArray(items) && items.length > 0 && (
-                        <div className="spa-list">
-                            {items.map((item) => (
-                                <label key={item.id} className={`spa-item${selected.has(item.id) ? ' active' : ''}`}>
-                                    <input
-                                        type="checkbox"
-                                        checked={selected.has(item.id)}
-                                        onChange={() => toggleSelect(item.id)}
-                                    />
-                                    <span className="spa-name" title={item.sharedByLabel ? `${item.name} · by ${item.sharedByLabel}` : item.name}>{item.name}</span>
-                                    <span className="spa-type">{formatAssetSize(item.size)}</span>
-                                </label>
-                            ))}
-                        </div>
-                    )}
-                    <button
-                        className="scc-btn spa-btn-wide"
-                        onClick={importSelected}
-                        disabled={busy || selected.size === 0}
-                    >
-                        {busy ? 'Importing…' : `Import selected (${selected.size})`}
-                    </button>
-                    {notice && (
-                        <div className={`spa-drive-notice ${notice.kind === 'error' ? 'is-error' : 'is-ok'}`}>
-                            {notice.text}
-                        </div>
-                    )}
                 </div>
             )}
         </div>
@@ -353,6 +344,7 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
                     ↑ Import assets
                     <input type="file" multiple onChange={onAssetFilesSelected} style={{ display: 'none' }} />
                 </label>
+                <p className="sfp-empty" title={ASSET_FORMAT_HINT}>{ASSET_FORMAT_HINT}</p>
             </div>
             {Boolean(onDriveImportUrl) && (
                 <DriveImportSection onDriveImportUrl={onDriveImportUrl} onDriveImportSelection={onDriveImportSelection} />
@@ -361,8 +353,7 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
                 <CommonsSection onCommonsImport={onCommonsImport} />
             )}
             {spaceAssets.length > 0 && (
-                <div className="scc-section">
-                    <div className="scc-section-label">Space files ({spaceAssets.length})</div>
+                <CollapsibleSection title={`Space files (${spaceAssets.length})`}>
                     <div className="spa-list">
                         {spaceAssets.map((asset) => (
                             <div key={asset.id} className="spa-item spa-item--space">
@@ -374,6 +365,18 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
                                     />
                                 )}
                                 <span className="spa-name" title={asset.name}>{asset.name}</span>
+                                {onCreateFromAsset && (
+                                    <button
+                                        className="spa-copy-btn"
+                                        onClick={() => onCreateFromAsset(asset)}
+                                        disabled={!canPlaceInScene(asset)}
+                                        title={canPlaceInScene(asset)
+                                            ? 'Add to the scene'
+                                            : 'This file type can’t be placed in the scene — reference it by URL instead'}
+                                    >
+                                        + Add
+                                    </button>
+                                )}
                                 {onToggleAssetShared && (
                                     <button
                                         className="spa-copy-btn"
@@ -393,10 +396,9 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
                             </div>
                         ))}
                     </div>
-                </div>
+                </CollapsibleSection>
             )}
-            <div className="scc-section">
-                <div className="scc-section-label">Scene assets ({assets.length})</div>
+            <CollapsibleSection title={`Scene assets (${assets.length})`}>
                 {assets.length === 0 ? (
                     <p className="sfp-empty">No assets yet.</p>
                 ) : (
@@ -409,7 +411,7 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
                         ))}
                     </div>
                 )}
-            </div>
+            </CollapsibleSection>
         </>
     )
 }
@@ -1022,42 +1024,6 @@ export function FilesPanel({
     )
 }
 
-export function PresentPanel({
-    presentationState,
-    onPresentationPatch,
-    onSaveCurrentCamera,
-}) {
-    return (
-        <Stack spacing={2} sx={{ p: 2 }}>
-            <FormControl fullWidth size="small">
-                <InputLabel>Studio preview</InputLabel>
-                <Select
-                    label="Studio preview"
-                    value={presentationState.mode || 'scene'}
-                    onChange={(event) => onPresentationPatch({ mode: event.target.value })}
-                >
-                    <MenuItem value="scene">3D scene</MenuItem>
-                    <MenuItem value="code">Code view</MenuItem>
-                </Select>
-            </FormControl>
-            <FormControl fullWidth size="small">
-                <InputLabel>Public entry view</InputLabel>
-                <Select
-                    label="Public entry view"
-                    value={presentationState.entryView || 'scene'}
-                    onChange={(event) => onPresentationPatch({ entryView: event.target.value })}
-                >
-                    <MenuItem value="scene">3D scene</MenuItem>
-                    <MenuItem value="code">Code view</MenuItem>
-                </Select>
-            </FormControl>
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
-                <Button variant="outlined" onClick={onSaveCurrentCamera}>Save current view</Button>
-            </Stack>
-        </Stack>
-    )
-}
-
 export function PublishPanel({
     document,
     publishState,
@@ -1070,9 +1036,12 @@ export function PublishPanel({
     exportStatus,
     onImportProjectFile,
     xrState,
-    onEnterXr,
-    onExitXr
+    presentationState,
+    onPresentationPatch,
+    onSaveCurrentCamera,
+    activity
 }) {
+    const [activityOpen, setActivityOpen] = useState(false)
     return (
         <Stack spacing={2} sx={{ p: 2 }}>
             <FormControlLabel
@@ -1119,6 +1088,36 @@ export function PublishPanel({
                             Enable sharing before setting this project live for the public space route.
                         </Typography>
                     ) : null}
+                </Stack>
+            </Card>
+            <Card variant="outlined" sx={{ p: 1.5 }}>
+                <Stack spacing={1.5}>
+                    <Typography variant="subtitle2">Presentation</Typography>
+                    <FormControl fullWidth size="small">
+                        <InputLabel>Studio preview</InputLabel>
+                        <Select
+                            label="Studio preview"
+                            value={presentationState?.mode || 'scene'}
+                            onChange={(event) => onPresentationPatch?.({ mode: event.target.value })}
+                        >
+                            <MenuItem value="scene">3D scene</MenuItem>
+                            <MenuItem value="code">Code view</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <FormControl fullWidth size="small">
+                        <InputLabel>Public entry view</InputLabel>
+                        <Select
+                            label="Public entry view"
+                            value={presentationState?.entryView || 'scene'}
+                            onChange={(event) => onPresentationPatch?.({ entryView: event.target.value })}
+                        >
+                            <MenuItem value="scene">3D scene</MenuItem>
+                            <MenuItem value="code">Code view</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
+                        <Button variant="outlined" onClick={onSaveCurrentCamera}>Save current view</Button>
+                    </Stack>
                 </Stack>
             </Card>
             <FormControl fullWidth size="small">
@@ -1170,37 +1169,25 @@ export function PublishPanel({
                     Keep this tab open while Studio bundles the project assets.
                 </Typography>
             ) : null}
-            <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
-                <Button
-                    variant="outlined"
-                    startIcon={<ViewInArIcon />}
-                    onClick={() => onEnterXr('vr')}
-                    disabled={!xrState.supportedXrModes.vr || xrState.isXrPresenting}
-                >
-                    Enter VR
-                </Button>
-                <Button
-                    variant="outlined"
-                    startIcon={<SmartphoneIcon />}
-                    onClick={() => onEnterXr('ar')}
-                    disabled={!xrState.supportedXrModes.ar || xrState.isXrPresenting}
-                >
-                    Enter AR
-                </Button>
-                <Button
-                    variant="text"
-                    onClick={onExitXr}
-                    disabled={!xrState.isXrPresenting}
-                >
-                    Exit XR
-                </Button>
-            </Stack>
             <Typography variant="body2" color="text.secondary">
-                XR support: VR {xrState.supportedXrModes.vr ? 'available' : 'unavailable'} • AR {xrState.supportedXrModes.ar ? 'available' : 'unavailable'}
+                XR support: VR {xrState.supportedXrModes.vr ? 'available' : 'unavailable'} • AR {xrState.supportedXrModes.ar ? 'available' : 'unavailable'} — enter from the XR section of the control cluster.
             </Typography>
             <Typography variant="body2" color="text.secondary">
                 Last export: {formatTimestamp(document.publishState?.lastExportAt)}
             </Typography>
+            <Card variant="outlined" sx={{ p: 1.5 }}>
+                <Stack spacing={1}>
+                    <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => setActivityOpen((v) => !v)}
+                        sx={{ alignSelf: 'flex-start', p: 0, minWidth: 0 }}
+                    >
+                        Activity {activityOpen ? '▾' : '▸'}
+                    </Button>
+                    {activityOpen && <ActivityPanel activity={activity} />}
+                </Stack>
+            </Card>
         </Stack>
     )
 }

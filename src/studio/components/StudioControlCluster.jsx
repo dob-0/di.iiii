@@ -1,16 +1,14 @@
 import { useState } from 'react'
 import { usePanelDrag } from '../../hooks/usePanelDrag.js'
 
+// Five windows, one per job: add things, edit the scene, configure the world,
+// ship it, write code.
 const PANEL_BUTTONS = [
-    { key: 'library', label: 'Library' },
-    { key: 'assets', label: 'Assets' },
-    { key: 'files', label: 'Files' },
-    { key: 'inspector', label: 'Inspector' },
-    { key: 'structure', label: 'Structure' },
-    { key: 'present', label: 'Present' },
-    { key: 'publish', label: 'Publish' },
-    { key: 'activity', label: 'Activity' },
+    { key: 'create', label: 'Create' },
+    { key: 'scene', label: 'Scene' },
     { key: 'world', label: 'World' },
+    { key: 'publish', label: 'Share' },
+    { key: 'files', label: 'Code' },
 ]
 
 export default function StudioControlCluster({
@@ -94,7 +92,7 @@ export default function StudioControlCluster({
                         </div>
 
                         <div className="scc-section">
-                            <div className="scc-section-label">Panels</div>
+                            <div className="scc-section-label">Windows</div>
                             <div className="scc-buttons">
                                 {PANEL_BUTTONS.map(({ key, label }) => (
                                     <button

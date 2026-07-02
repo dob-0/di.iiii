@@ -500,6 +500,13 @@
     font-family: var(--di-mono);
 }
 
+.sqi-btn--more {
+    width: 100%;
+    margin-top: 8px;
+    justify-content: center;
+    color: var(--di-text-muted);
+}
+
 /* ─── Panel content shared elements ──────────────── */
 
 .sfp-empty {
@@ -610,6 +617,11 @@
     background: rgba(77, 249, 255, 0.15);
 }
 
+.spa-copy-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
 .spa-drive-row {
     display: flex;
     gap: 4px;
@@ -617,6 +629,23 @@
 
 .spa-drive-row .insp-input {
     flex: 1;
+    min-width: 0;
+}
+
+.spa-drive-status {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+}
+
+.spa-drive-status-label {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.55);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     min-width: 0;
 }
 

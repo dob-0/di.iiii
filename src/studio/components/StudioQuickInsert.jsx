@@ -1,18 +1,10 @@
 import { useEffect } from 'react'
+import { LIGHTS, PRIMITIVES } from '../utils/entityPalette.js'
 
-const ENTITY_TYPES = [
-    { key: 'box', label: '◻ Box' },
-    { key: 'sphere', label: '○ Sphere' },
-    { key: 'cone', label: '△ Cone' },
-    { key: 'cylinder', label: '⬡ Cylinder' },
-    { key: 'text', label: 'T Text' },
-    { key: 'pointLight', label: '· Point Light' },
-    { key: 'spotLight', label: '▽ Spot Light' },
-    { key: 'directionalLight', label: '↘ Dir. Light' },
-    { key: 'ambientLight', label: '☀ Ambient' },
-]
-
-export default function StudioQuickInsert({ position, worldPos = null, onClose, onCreateEntity, onCreateFromAsset, assets = [] }) {
+// Double-click popup: the fast subset of the Create window. Same palette, same
+// create pipeline (onCreateFromAsset adopts space assets / converts PDFs), plus
+// a jump to the full Create window for Drive/Commons.
+export default function StudioQuickInsert({ position, worldPos = null, onClose, onCreateEntity, onCreateFromAsset, assets = [], onOpenCreate }) {
     useEffect(() => {
         const handler = (e) => { if (e.key === 'Escape') onClose() }
         window.addEventListener('keydown', handler)
@@ -31,20 +23,20 @@ export default function StudioQuickInsert({ position, worldPos = null, onClose, 
             <div className="sqi-popup" style={{ left, top }} onClick={(e) => e.stopPropagation()} role="none">
                 <div className="sqi-section-label">Add entity</div>
                 <div className="sqi-grid">
-                    {ENTITY_TYPES.map(({ key, label }) => (
+                    {[...PRIMITIVES, ...LIGHTS].map(({ key, label, icon }) => (
                         <button
                             key={key}
                             className="sqi-btn"
                             onClick={() => { onCreateEntity(key, null, worldPos); onClose() }}
                         >
-                            {label}
+                            {icon} {label}
                         </button>
                     ))}
                 </div>
 
                 {topAssets.length > 0 && (
                     <>
-                        <div className="sqi-section-label sqi-section-label--gap">From space assets</div>
+                        <div className="sqi-section-label sqi-section-label--gap">From your files</div>
                         <div className="sqi-grid sqi-grid--assets">
                             {topAssets.map((asset) => {
                                 const name = (asset.name || asset.url || '').split('/').pop()
@@ -64,6 +56,15 @@ export default function StudioQuickInsert({ position, worldPos = null, onClose, 
                             })}
                         </div>
                     </>
+                )}
+
+                {onOpenCreate && (
+                    <button
+                        className="sqi-btn sqi-btn--more"
+                        onClick={() => { onOpenCreate(); onClose() }}
+                    >
+                        More — imports, Drive, Commons ▸
+                    </button>
                 )}
             </div>
         </div>

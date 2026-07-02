@@ -85,8 +85,9 @@ export const WIKI_ARTICLES = [
         body: [
             'Open the Studio, pick or create a project, and start building.',
             { list: [
-                'Add 3D shapes, text, images, and 3D models from the Library panel.',
-                'Drag to position; use the Inspector on the right to change colors, lighting, camera, and background.',
+                'Five windows, one per job: Create (shapes, lights, imports, Google Drive, Commons), Scene (entity tree + selected-entity editing), World (scene-wide settings), Share (publish, presentation, export, activity), Code (HTML/CSS/JS files).',
+                'Any space file — uploaded, from Google Drive, or from the Commons — has a + Add button that places it into the scene. PDFs import as image pages.',
+                'Drag to position; edit the selected entity in the Scene window — world defaults live in the World window.',
                 'Undo / redo with Ctrl+Z / Ctrl+Y.',
                 'Your panel layout is remembered — open panels and their positions restore next visit; use Arrange → Reset to go back to the default layout.'
             ] }
@@ -190,7 +191,7 @@ export const WIKI_ARTICLES = [
             'The commons is the shared, public asset library across all of di.iiii. In the Studio editor open the Assets panel:',
             { list: [
                 'Share: next to any space file, click Share — it becomes a public asset anyone can discover. Click Public to take it back down.',
-                'Reuse: click Commons, search what others have shared, select, and Import — the assets are copied into your space instantly (they are content-addressed, so nothing re-uploads).',
+                'Reuse: click Commons, search what others have shared, select, and Import — the assets are copied into your space instantly (they are content-addressed, so nothing re-uploads). Then hit + Add on the space file to place it in your scene.',
                 'Shared assets keep their sharer label, and the bytes stay in the origin space — the commons is an index, not a second copy.'
             ] }
         ],

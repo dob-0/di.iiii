@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 
-const DEFAULT_OPEN = ['library', 'inspector']
+const DEFAULT_OPEN = ['create', 'scene']
 
 export function useStudioPanelState(initialOpen = null) {
     const [open, setOpen] = useState(() => new Set(initialOpen || DEFAULT_OPEN))

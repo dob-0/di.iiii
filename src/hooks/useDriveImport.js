@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getDriveStatus, listDriveFiles, disconnectDrive, getDriveConnectUrl } from '../services/serverSpaces.js'
 
 // Google Drive import state machine, shared by every editor surface (classic
@@ -73,11 +73,11 @@ export function useDriveImport({ importByUrl, importBySelection } = {}) {
         setNotice({ kind: 'ok', text: 'Disconnected.' })
     }
 
-    const runSearch = async () => {
+    const runSearch = async (q = search) => {
         setListing(true)
         setNotice(null)
         try {
-            const { files: found } = await listDriveFiles({ q: search.trim() })
+            const { files: found } = await listDriveFiles({ q: String(q).trim() })
             setFiles(Array.isArray(found) ? found : [])
         } catch (error) {
             setNotice({ kind: 'error', text: error?.message || 'Could not list your Drive.' })
@@ -85,6 +85,18 @@ export function useDriveImport({ importByUrl, importBySelection } = {}) {
             setListing(false)
         }
     }
+
+    // Opening the section with a connected Drive lists recent files right away
+    // (empty query = most recently modified), so there's something to browse
+    // before the user types a search.
+    const autoListedRef = useRef(false)
+    useEffect(() => {
+        if (open && status?.connected && !autoListedRef.current) {
+            autoListedRef.current = true
+            runSearch('')
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [open, status?.connected])
 
     const toggleSelect = (id) => {
         setSelected((prev) => {

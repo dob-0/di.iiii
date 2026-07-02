@@ -420,3 +420,13 @@ It loads the URL at desktop aspect ratios (16:9, 16:10, 4:3, 1:1, ultrawide, sma
 **Also:** when a bug "works locally but not on staging", test the **production build** (`npm run build && npx vite preview`) — the dev server is not representative.
 
 **Files:** `scripts/responsive-check.mjs`, `package.json` (`check:responsive`)
+
+---
+
+### Studio has exactly five windows — new features land inside them, never beside them
+
+**Rule:** The Studio floating-shell taxonomy is fixed: **Create** (primitives, lights, file import, Google Drive, Commons, space files, scene assets), **Scene** (entity tree + selected-entity inspector), **World** (scene-wide settings), **Share** (publish, presentation, export, activity), **Code** (code files). A new capability goes into the matching window as a `CollapsibleSection` (collapsed by default if it's a secondary flow) using the existing `scc-*`/`spa-*`/`insp-*` vocabulary. Do not add a sixth window, a new toggle in the control cluster, or a parallel style. Panel ids are persisted in localStorage (`studioWorkspaceStorage.js`); if you ever rename/merge ids, extend `PANEL_ID_MIGRATION` in `StudioShell.jsx`.
+
+**Why:** Studio grew to 9 floating windows (Library, Assets, Files, Inspector, Structure, Present, Publish, Activity, World) and became unmanageable — thin panels (Present = 2 dropdowns), duplicated actions (Import in two panels, XR entry in two places, world defaults editable in two panels), and a dead-end asset flow. The 2026-07-02 consolidation (user-approved) collapsed them to five task-shaped windows; every merge was sections-inside-a-window, not new chrome. Keep it that way: more windows = more management burden, which is exactly what users complained about.
+
+**Files:** `src/studio/components/StudioShell.jsx`, `StudioControlCluster.jsx` (`PANEL_BUTTONS`), `StudioShellPanels.jsx`, `src/studio/hooks/useStudioPanelState.js`
