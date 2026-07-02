@@ -9,7 +9,9 @@ import {
     patchServerConfig,
     getSpaceGithubLink,
     connectSpaceGithub,
-    disconnectSpaceGithub
+    disconnectSpaceGithub,
+    listCommonsAssets,
+    removeCommonsAsset
 } from '../../services/serverSpaces.js'
 import {
     listProjects,
@@ -372,6 +374,8 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
                 <div className="preferences-empty">Pick a space on the left to manage its projects and access.</div>
             </ModuleSection>
 
+            <CommonsModerationSection />
+
             <ModuleSection title="People" subtitle="Account roles and overall reach">
                 {users === null && <div className="preferences-empty">Loading accounts…</div>}
                 {Array.isArray(users) && users.length === 0 && (
@@ -537,6 +541,90 @@ function SpaceDetail({
                 </div>
             </ModuleSection>
         </>
+    )
+}
+
+// Moderate the asset commons: everything users shared publicly, in one list.
+// Remove pulls the entry out of the commons; the origin space keeps its bytes.
+function CommonsModerationSection() {
+    const [items, setItems] = useState(null) // null = loading
+    const [query, setQuery] = useState('')
+    const [error, setError] = useState('')
+    const [busyId, setBusyId] = useState(null)
+
+    const load = useCallback(async (q = '') => {
+        try {
+            setItems(await listCommonsAssets({ q }))
+            setError('')
+        } catch (e) {
+            setItems([])
+            setError(e.message || 'Failed to load the commons.')
+        }
+    }, [])
+
+    useEffect(() => { load() }, [load])
+
+    const remove = async (asset) => {
+        if (!window.confirm(`Remove "${asset.name || asset.id}" from the public commons?`)) return
+        setBusyId(asset.id); setError('')
+        try {
+            await removeCommonsAsset(asset.id)
+            setItems((prev) => prev ? prev.filter((a) => a.id !== asset.id) : prev)
+        } catch (e) {
+            setError(e.message || 'Could not remove (admin sign-in required).')
+        } finally {
+            setBusyId(null)
+        }
+    }
+
+    const formatBytes = (n) => {
+        if (!n) return ''
+        if (n < 1024) return `${n} B`
+        if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`
+        return `${(n / (1024 * 1024)).toFixed(1)} MB`
+    }
+
+    return (
+        <ModuleSection title="Asset commons" subtitle={items === null ? 'Loading…' : `${items.length} publicly shared asset${items.length === 1 ? '' : 's'}`}>
+            <form className="preferences-inline-form" onSubmit={(e) => { e.preventDefault(); load(query.trim()) }}>
+                <input
+                    className="preferences-input"
+                    placeholder="Search shared assets"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                />
+                <button type="submit" className="toggle-button">Search</button>
+            </form>
+            <div className="preferences-space-list">
+                {Array.isArray(items) && items.map((asset) => (
+                    <div key={asset.id} className="preferences-space-row">
+                        <div className="preferences-space-top">
+                            <span className="preferences-link-label">{asset.name || asset.id}</span>
+                            <div className="preferences-space-flags">
+                                {asset.license && <span className="preferences-badge">{asset.license}</span>}
+                                <a className="preferences-inline-action" href={asset.url} target="_blank" rel="noreferrer">View</a>
+                                <button
+                                    type="button"
+                                    className="preferences-inline-action warning"
+                                    onClick={() => remove(asset)}
+                                    disabled={busyId === asset.id}
+                                >
+                                    {busyId === asset.id ? 'Removing…' : 'Remove'}
+                                </button>
+                            </div>
+                        </div>
+                        <div className="preferences-space-meta mono">
+                            {[asset.spaceId, asset.sharedByLabel, asset.mimeType, formatBytes(asset.size), asset.createdAt ? new Date(asset.createdAt).toLocaleDateString() : '']
+                                .filter(Boolean).join(' · ')}
+                        </div>
+                    </div>
+                ))}
+                {Array.isArray(items) && items.length === 0 && !error && (
+                    <div className="preferences-space-row"><div className="preferences-empty">Nothing shared publicly yet.</div></div>
+                )}
+            </div>
+            {error && <div className="preferences-empty">{error}</div>}
+        </ModuleSection>
     )
 }
 

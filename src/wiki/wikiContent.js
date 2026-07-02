@@ -192,7 +192,8 @@ export const WIKI_ARTICLES = [
             { list: [
                 'Share: next to any space file, click Share — it becomes a public asset anyone can discover. Click Public to take it back down.',
                 'Reuse: click Commons, search what others have shared, select, and Import — the assets are copied into your space instantly (they are content-addressed, so nothing re-uploads). Then hit + Add on the space file to place it in your scene.',
-                'Shared assets keep their sharer label, and the bytes stay in the origin space — the commons is an index, not a second copy.'
+                'Shared assets keep their sharer label, and the bytes stay in the origin space — the commons is an index, not a second copy.',
+                'Moderation: admins see the full commons in Ops Graph → Manage (Asset commons section) and can remove any entry; the origin space keeps its file.'
             ] }
         ],
         tags: ['assets', 'commons', 'share', 'public', 'studio'],

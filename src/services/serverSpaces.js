@@ -164,6 +164,12 @@ export const listCommonsAssets = async ({ q = '' } = {}) => {
     return data.assets || []
 }
 
+// Admin moderation — remove any commons entry regardless of origin space.
+export const removeCommonsAsset = async (assetId) => {
+    if (!assetId) throw new Error('asset id required')
+    return apiFetch(`/api/commons/assets/${assetId}`, { method: 'DELETE' })
+}
+
 export const importCommonsAssets = async (spaceId, assetIds) => {
     if (!spaceId) throw new Error('space id required')
     const ids = Array.isArray(assetIds) ? assetIds.filter(Boolean) : []

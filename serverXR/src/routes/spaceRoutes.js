@@ -628,6 +628,16 @@ function registerSpaceRoutes(router, {
     }
   })
 
+  // Moderation: admins can pull any entry out of the commons regardless of
+  // which space it was shared from (the owner path stays the share toggle).
+  router.delete('/api/commons/assets/:assetId', requireAdminWrite, async (req, res, next) => {
+    try {
+      const assetId = req.params.assetId
+      if (!isValidAssetId(assetId)) return res.status(400).json({ error: 'Invalid request.' })
+      res.json({ ok: true, removed: commonsStore.unshareAsset(assetId) })
+    } catch (error) { next(error) }
+  })
+
   // Copy commons assets into a space. Assets are content-addressed, so an
   // import is a local file copy under the same hash id — no re-upload, and
   // importing the same asset twice is a no-op.
