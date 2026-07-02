@@ -9,8 +9,8 @@ active_branch: dev
 
 ## Last commit
 
-`c158e20`..HEAD — five-window Studio on prod; commons moderation + guest-share gate + **unified content model (Phase 1)** on `dev`/staging.
-**Prod (main) is at the five-window consolidation. dev adds: admin commons moderation, share-requires-account, and the unified Files library — promote when verified on staging.**
+`e58a533` — feat(studio): unified content model (Phase 1)
+**On `main`/prod (deploy green, smoke 9/9). Prod now runs: five-window Studio, unified Files library + asset delete, code↔files bridge, commons moderation, guest-share gate.**
 
 ## Last session (2026-07-02)
 
