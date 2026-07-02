@@ -9,14 +9,14 @@ active_branch: dev
 
 ## Last commit
 
-`3bbf00a` — feat(assets): Google Drive import (public link + per-user Drive connect)
-**Pushed to `dev` (= staging deploy). Includes Drive + asset commons + Studio workspace persistence + podman compose env passthrough. NOT on `main`/prod yet.**
+`c158e20` — feat(studio): consolidate shell to five windows (Create/Scene/World/Share/Code)
+**Pushed to `dev` AND merged to `main` — staging + prod both deployed (workflows green, smoke checks pass). Prod now runs Drive import, asset commons, and the five-window Studio.**
 
 ## Last session (2026-07-02)
 
 - **Google Drive import shipped to `dev`**: shared `src/hooks/useDriveImport.js` (classic + Studio); fixed double-JSON bodies in `serverSpaces.js` (broke ALL public-link imports); public-link route also uses the caller's Drive token (`spaceRoutes.js`) — folders work per-user without `GOOGLE_API_KEY`; Drive section auto-lists recent files on open. Verified live end-to-end (connect → folder import) on the local stack.
 - **Asset commons shipped to `dev`**: `public_assets` + `commonsStore.js` (5✓); share/unshare, `GET /api/commons/assets[?q=]`, public streaming, `import-commons` (content-hash copy); Share toggle + Commons browse in the Create window. Verified via curl.
-- **Studio five-window consolidation (UNCOMMITTED)**: 9 windows → **Create / Scene / World / Share / Code**; persisted ids migrate via `PANEL_ID_MIGRATION` (StudioShell.jsx); golden rule added (five windows are fixed — new features land inside them). Fixed silent invisible-entity bug (space/commons assets now upserted into `document.assets` — `handleCreateFromAsset`); **+ Add** on space files; panels cascade instead of overlapping; selection pill z-capped; format registry + gated + Add (`src/studio/utils/assetFormats.js`); **PDF import** rasterizes pages to image entities (new dep `pdfjs-dist`, lazy); double-click Quick Insert now shares one palette with Create (`entityPalette.js`) + "More ▸" opens Create. Playwright-verified; wiki updated.
+- **Studio five-window consolidation (`c158e20`, on prod)**: 9 windows → **Create / Scene / World / Share / Code**; persisted ids migrate via `PANEL_ID_MIGRATION` (StudioShell.jsx); golden rule added (five windows are fixed — new features land inside them). Fixed silent invisible-entity bug (space/commons assets now upserted into `document.assets` — `handleCreateFromAsset`); **+ Add** on space files; panels cascade instead of overlapping; selection pill z-capped; format registry + gated + Add (`src/studio/utils/assetFormats.js`); **PDF import** rasterizes pages to image entities (new dep `pdfjs-dist`, lazy); double-click Quick Insert now shares one palette with Create (`entityPalette.js`) + "More ▸" opens Create. Playwright-verified; wiki updated.
 - **Local podman test stack**: full stack on 8080 (`podman compose up --build -d`; docker-compose v5 provider at `~/.docker/cli-plugins/`, rootless `podman.socket`). Google console: localhost redirect URI + test user registered; Drive connect works locally.
 - Earlier in session (committed): WCC reduced-motion `db76d23`, dev-browser fix `6898772`, VR-fly hints `bfb0da3`.
 
@@ -33,7 +33,6 @@ active_branch: dev
 
 ## What is broken / open
 
-- **Commit the five-window Studio batch** (14 modified + 2 new files + scratchpad) before further staging pushes.
 - **Drive on staging/prod needs Google console work**: staging/prod redirect URIs on the OAuth client; consent screen is in Testing mode (test users only) — publish + verification before public launch. Doc: `docs/ops/GOOGLE_DRIVE_INTEGRATION.md`.
 - GitHub-sync: App webhook reaches prod only; App path pulls entry file only (CI path covers assets via `DI_SPACE_TOKEN`).
 - Zone positions not synced staging↔prod (manual `scratchpad/copy-staging-to-prod.mjs`).
