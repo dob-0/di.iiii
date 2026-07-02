@@ -116,6 +116,28 @@ describe('projectSchema', () => {
         expect(afterDelete.nodes).toHaveLength(0)
     })
 
+    it('applies upsertAsset / deleteAsset ops', () => {
+        const base = normalizeProjectDocument({})
+        const afterUpsert = applyProjectOps(base, [
+            {
+                type: 'upsertAsset',
+                payload: { asset: { id: 'asset-1', name: 'tree.glb', url: '/api/projects/p/assets/asset-1', mimeType: 'model/gltf-binary' } }
+            }
+        ])
+        expect(afterUpsert.assets).toHaveLength(1)
+        expect(afterUpsert.assets[0].name).toBe('tree.glb')
+
+        const afterDelete = applyProjectOps(afterUpsert, [
+            { type: 'deleteAsset', payload: { assetId: 'asset-1' } }
+        ])
+        expect(afterDelete.assets).toHaveLength(0)
+
+        const afterNoopDelete = applyProjectOps(afterUpsert, [
+            { type: 'deleteAsset', payload: { assetId: 'missing' } }
+        ])
+        expect(afterNoopDelete.assets).toHaveLength(1)
+    })
+
     it('applies createEdge / deleteEdge ops and cascades edge deletion on deleteNode', () => {
         const base = applyProjectOps(normalizeProjectDocument({}), [
             { type: 'createNode', payload: { node: { id: 'color-1', typeId: 'value.color', values: { value: '#ff0000' } } } },

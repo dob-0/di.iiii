@@ -164,6 +164,15 @@ export const listCommonsAssets = async ({ q = '' } = {}) => {
     return data.assets || []
 }
 
+// Delete a space file. Server answers 409 { usedBy } while entities still
+// reference it; pass force after the user confirms.
+export const deleteServerAsset = async (spaceId, assetId, { force = false } = {}) => {
+    if (!spaceId) throw new Error('space id required')
+    if (!assetId) throw new Error('asset id required')
+    const suffix = force ? '?force=1' : ''
+    return apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/assets/${assetId}${suffix}`, { method: 'DELETE' })
+}
+
 // Admin moderation — remove any commons entry regardless of origin space.
 export const removeCommonsAsset = async (assetId) => {
     if (!assetId) throw new Error('asset id required')

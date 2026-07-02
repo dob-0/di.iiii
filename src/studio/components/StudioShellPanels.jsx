@@ -56,12 +56,6 @@ const formatTimestamp = (value) => {
     }
 }
 
-const assetTypeLabel = (mimeType = '') => {
-    const topLevel = mimeType.split('/')[0]
-    if (!topLevel) return 'asset'
-    return topLevel
-}
-
 export function PanelHeader({ title, onClose, action = null }) {
     return (
         <Stack
@@ -330,7 +324,12 @@ function CommonsSection({ onCommonsImport }) {
     )
 }
 
-export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelected, onCreateFromAsset, onDriveImportUrl, onDriveImportSelection, onToggleAssetShared, onCommonsImport }) {
+const residencyLabel = (item) => {
+    if (item.inProject && item.inSpace) return 'project · space'
+    return item.inProject ? 'project' : 'space'
+}
+
+export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateFromAsset, onDriveImportUrl, onDriveImportSelection, onToggleAssetShared, onCommonsImport, onDeleteLibraryItem }) {
     const [copied, setCopied] = useState(null)
     const [shareNotice, setShareNotice] = useState('')
     const copyUrl = (asset) => {
@@ -350,7 +349,7 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
         <>
             <div className="scc-section">
                 <label className="scc-btn spa-btn-wide" style={{ cursor: 'pointer' }}>
-                    ↑ Import assets
+                    ↑ Import files
                     <input type="file" multiple onChange={onAssetFilesSelected} style={{ display: 'none' }} />
                 </label>
                 <p className="sfp-empty" title={ASSET_FORMAT_HINT}>{ASSET_FORMAT_HINT}</p>
@@ -361,66 +360,72 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
             {Boolean(onCommonsImport) && (
                 <CommonsSection onCommonsImport={onCommonsImport} />
             )}
-            {spaceAssets.length > 0 && (
-                <CollapsibleSection title={`Space files (${spaceAssets.length})`}>
-                    {shareNotice && <p className="spa-drive-notice is-error">{shareNotice}</p>}
+            <CollapsibleSection title={`Files (${libraryItems.length})`}>
+                {shareNotice && <p className="spa-drive-notice is-error">{shareNotice}</p>}
+                {libraryItems.length === 0 ? (
+                    <p className="sfp-empty">No files yet — import above, or pull from Drive or the Commons.</p>
+                ) : (
                     <div className="spa-list">
-                        {spaceAssets.map((asset) => (
-                            <div key={asset.id} className="spa-item spa-item--space">
-                                {asset.mimeType?.startsWith('image/') && (
+                        {libraryItems.map((item) => (
+                            <div key={item.id} className="spa-item spa-item--space">
+                                {item.mimeType?.startsWith('image/') && (
                                     <img
-                                        src={assetSrc(asset.url)}
+                                        src={assetSrc(item.url)}
                                         alt=""
                                         className="spa-thumb"
                                     />
                                 )}
-                                <span className="spa-name" title={asset.name}>{asset.name}</span>
+                                <span className="spa-name" title={`${item.name} — ${residencyLabel(item)}`}>
+                                    {item.name}
+                                    <span className="spa-badges">
+                                        {item.usedByCount > 0 && <span className="spa-badge">in scene ×{item.usedByCount}</span>}
+                                        {item.shared && <span className="spa-badge spa-badge--public">public</span>}
+                                    </span>
+                                </span>
                                 {onCreateFromAsset && (
                                     <button
                                         className="spa-copy-btn"
-                                        onClick={() => onCreateFromAsset(asset)}
-                                        disabled={!canPlaceInScene(asset)}
-                                        title={canPlaceInScene(asset)
+                                        onClick={() => onCreateFromAsset(item)}
+                                        disabled={!canPlaceInScene(item)}
+                                        title={canPlaceInScene(item)
                                             ? 'Add to the scene'
                                             : 'This file type can’t be placed in the scene — reference it by URL instead'}
                                     >
                                         + Add
                                     </button>
                                 )}
-                                {onToggleAssetShared && (
+                                {onToggleAssetShared && item.inSpace && (
                                     <button
                                         className="spa-copy-btn"
-                                        onClick={() => toggleShare(asset)}
-                                        title={asset.shared ? 'Public in the commons — click to unshare' : 'Share to the public commons'}
+                                        onClick={() => toggleShare(item)}
+                                        title={item.shared ? 'Public in the commons — click to unshare' : 'Share to the public commons'}
                                     >
-                                        {asset.shared ? 'Public' : 'Share'}
+                                        {item.shared ? 'Public' : 'Share'}
                                     </button>
                                 )}
                                 <button
                                     className="spa-copy-btn"
-                                    onClick={() => copyUrl(asset)}
+                                    onClick={() => copyUrl(item)}
                                     title="Copy URL"
                                 >
-                                    {copied === asset.id ? '✓' : 'URL'}
+                                    {copied === item.id ? '✓' : 'URL'}
                                 </button>
+                                {onDeleteLibraryItem && (
+                                    <button
+                                        className="spa-copy-btn spa-copy-btn--danger"
+                                        onClick={() => onDeleteLibraryItem(item)}
+                                        title="Delete this file"
+                                    >
+                                        ×
+                                    </button>
+                                )}
                             </div>
                         ))}
                     </div>
-                </CollapsibleSection>
-            )}
-            <CollapsibleSection title={`Scene assets (${assets.length})`}>
-                {assets.length === 0 ? (
-                    <p className="sfp-empty">No assets yet.</p>
-                ) : (
-                    <div className="spa-list">
-                        {assets.map((asset) => (
-                            <button key={asset.id} className="spa-item" onClick={() => onCreateFromAsset?.(asset)}>
-                                <span className="spa-name">{asset.name}</span>
-                                <span className="spa-type">{assetTypeLabel(asset.mimeType)}</span>
-                            </button>
-                        ))}
-                    </div>
                 )}
+                <p className="sfp-empty">
+                    <a href="/wiki#studio-content-model" target="_blank" rel="noreferrer">How content flows →</a>
+                </p>
             </CollapsibleSection>
         </>
     )
@@ -785,16 +790,20 @@ export function ActivityPanel({ activity = [] }) {
 export function FilesPanel({
     presentationState,
     onPresentationPatch,
-    spaceAssets = []
+    libraryItems = []
 }) {
     const singleFileInputRef = useRef(null)
     const zipInputRef = useRef(null)
     const folderInputRef = useRef(null)
+    const editorInputRef = useRef(null)
     const [activeFileName, setActiveFileName] = useState('index.html')
     const [showAddFile, setShowAddFile] = useState(false)
     const [newFileName, setNewFileName] = useState('')
-    const [copied, setCopied] = useState(null)
-    const [assetsOpen, setAssetsOpen] = useState(true)
+    const [renameValue, setRenameValue] = useState(null) // null = not renaming
+    const [insertAssetId, setInsertAssetId] = useState('')
+    const [insertNotice, setInsertNotice] = useState('')
+    const [embedOpen, setEmbedOpen] = useState(false)
+    const [urlDraft, setUrlDraft] = useState(presentationState?.codeUrl || '')
 
     const files = presentationState?.codeFiles || []
     const hasLegacyHtml = Boolean(presentationState?.codeHtml && files.length === 0)
@@ -898,14 +907,71 @@ export function FilesPanel({
         window.setTimeout(() => URL.revokeObjectURL(url), 1_000)
     }
 
-    const copyAssetUrl = (asset) => {
-        navigator.clipboard.writeText(assetSrc(asset.url)).catch(() => {})
-        setCopied(asset.id)
-        setTimeout(() => setCopied(null), 1500)
+    // Rename a code file and rewrite href/src references to it in the html
+    // files (best-effort — same string-match approach bundleCodeFiles uses).
+    const renameActiveFile = () => {
+        const oldName = activeFile?.name
+        const name = normalizeFileName((renameValue || '').trim())
+        setRenameValue(null)
+        if (!oldName || !name || name === oldName || files.find((f) => f.name === name)) return
+        const escaped = oldName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        const pattern = new RegExp(`(["'])${escaped}\\1`, 'g')
+        setFiles(files.map((f) => {
+            const renamed = f.name === oldName ? { ...f, name } : f
+            if (/\.html?$/i.test(renamed.name)) {
+                return { ...renamed, content: (renamed.content || '').replace(pattern, `$1${name}$1`) }
+            }
+            return renamed
+        }))
+        setActiveFileName(name)
     }
+
+    // Write the asset's URL at the cursor of the active file; fall back to the
+    // clipboard when there's no editable target.
+    const insertAssetUrl = () => {
+        const item = libraryItems.find((a) => a.id === insertAssetId)
+        if (!item) return
+        const url = assetSrc(item.url)
+        const input = editorInputRef.current
+        if (activeFile && input && typeof input.selectionStart === 'number') {
+            const start = input.selectionStart
+            const end = input.selectionEnd ?? start
+            const content = activeFile.content || ''
+            updateActiveContent(content.slice(0, start) + url + content.slice(end))
+            requestAnimationFrame(() => {
+                input.focus()
+                const pos = start + url.length
+                input.setSelectionRange(pos, pos)
+            })
+            setInsertNotice('')
+        } else {
+            navigator.clipboard.writeText(url).catch(() => {})
+            setInsertNotice('URL copied — no open file to insert into.')
+        }
+    }
+
+    const previewMode = presentationState?.mode || 'scene'
 
     return (
         <Stack spacing={0} sx={{ p: 0, height: '100%' }}>
+            {/* ── viewport preview toggle: the switch lives with the code ── */}
+            <Stack direction="row" spacing={0.5} sx={{ px: 1, py: 0.75, borderBottom: 1, borderColor: 'divider', alignItems: 'center' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>Viewport shows</Typography>
+                <Button
+                    size="small"
+                    variant={previewMode === 'scene' ? 'contained' : 'outlined'}
+                    onClick={() => onPresentationPatch?.({ mode: 'scene' })}
+                >
+                    3D scene
+                </Button>
+                <Button
+                    size="small"
+                    variant={previewMode === 'code' ? 'contained' : 'outlined'}
+                    onClick={() => onPresentationPatch?.({ mode: 'code' })}
+                >
+                    Code view
+                </Button>
+            </Stack>
             {/* ── file tabs ── */}
             {files.length > 0 ? (
                 <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
@@ -955,7 +1021,9 @@ export function FilesPanel({
                             onClick={() => { onPresentationPatch({ codeFiles: [{ name: 'index.html', content: presentationState.codeHtml }], codeHtml: '' }); setActiveFileName('index.html') }}
                         >Convert legacy HTML → index.html</Button>
                     )}
-                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>No code files yet</Typography>
+                    <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                        No code files yet — start from a template, or read <a href="/wiki#studio-content-model" target="_blank" rel="noreferrer" style={{ color: 'inherit' }}>how content flows →</a>
+                    </Typography>
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 1, mb: 1.5 }}>
                         {presentationStarterTemplates.map((template) => (
                             <Paper key={template.id} variant="outlined" onClick={() => applyTemplate(template)}
@@ -983,10 +1051,23 @@ export function FilesPanel({
                         minRows={14}
                         value={activeFile.content}
                         onChange={(e) => updateActiveContent(e.target.value)}
+                        inputRef={editorInputRef}
                         inputProps={{ style: { fontFamily: 'monospace', fontSize: '0.76rem', lineHeight: 1.5 } }}
                         sx={{ '& .MuiInputBase-root': { p: 1 } }}
                     />
+                    {renameValue !== null && (
+                        <Stack direction="row" spacing={1} sx={{ mt: 0.75 }}>
+                            <TextField
+                                inputRef={(el) => el?.focus()} size="small" placeholder={activeFile.name}
+                                value={renameValue} onChange={(e) => setRenameValue(e.target.value)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') renameActiveFile(); if (e.key === 'Escape') setRenameValue(null) }}
+                                sx={{ flex: 1 }}
+                            />
+                            <Button size="small" variant="contained" onClick={renameActiveFile} disabled={!renameValue.trim()}>Rename</Button>
+                        </Stack>
+                    )}
                     <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap sx={{ mt: 0.75, mb: 1 }}>
+                        <Button size="small" variant="outlined" onClick={() => setRenameValue(activeFile.name)}>Rename</Button>
                         <Button size="small" variant="outlined" onClick={() => singleFileInputRef.current?.click()}>↑ Import</Button>
                         <Button size="small" variant="outlined" onClick={() => zipInputRef.current?.click()}>↑ .zip</Button>
                         <Button size="small" variant="outlined" onClick={() => folderInputRef.current?.click()}>↑ folder</Button>
@@ -995,37 +1076,60 @@ export function FilesPanel({
                 </Box>
             )}
 
-            {/* ── space assets ── */}
-            {spaceAssets.length > 0 && (
+            {/* ── code ↔ files bridge: drop any library file's URL into the code ── */}
+            {libraryItems.length > 0 && (
                 <Box sx={{ borderTop: 1, borderColor: 'divider', px: 1.5, py: 1 }}>
-                    <Button size="small" variant="text" onClick={() => setAssetsOpen((v) => !v)}
-                        sx={{ fontSize: '0.7rem', color: 'text.secondary', p: 0, mb: 0.5 }}>
-                        {assetsOpen ? '▾' : '▸'} Space assets ({spaceAssets.length})
-                    </Button>
-                    {assetsOpen && (
-                        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 0.75 }}>
-                            {spaceAssets.map((asset) => (
-                                <Paper key={asset.id} variant="outlined" onClick={() => copyAssetUrl(asset)}
-                                    title={`${asset.name}\nClick to copy URL`}
-                                    sx={{ p: 0.5, cursor: 'pointer', overflow: 'hidden', '&:hover': { borderColor: 'primary.light' } }}>
-                                    {asset.mimeType?.startsWith('image/') ? (
-                                        <Box component="img" src={assetSrc(asset.url)} alt=""
-                                            sx={{ width: '100%', height: 48, objectFit: 'cover', display: 'block', mb: 0.25 }} />
-                                    ) : (
-                                        <Box sx={{ height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', fontSize: '0.65rem' }}>
-                                            {(asset.mimeType || '').split('/')[0] || 'file'}
-                                        </Box>
-                                    )}
-                                    <Typography variant="caption" noWrap display="block"
-                                        sx={{ fontSize: '0.6rem', color: copied === asset.id ? 'success.main' : 'text.secondary' }}>
-                                        {copied === asset.id ? 'copied!' : asset.name}
-                                    </Typography>
-                                </Paper>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                        <TextField
+                            select size="small" label="Project file" value={insertAssetId}
+                            onChange={(e) => setInsertAssetId(e.target.value)}
+                            sx={{ flex: 1, minWidth: 0 }}
+                        >
+                            {libraryItems.map((item) => (
+                                <MenuItem key={item.id} value={item.id}>{item.name}</MenuItem>
                             ))}
-                        </Box>
+                        </TextField>
+                        <Button size="small" variant="outlined" onClick={insertAssetUrl} disabled={!insertAssetId}>
+                            Insert URL
+                        </Button>
+                    </Stack>
+                    {insertNotice && (
+                        <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>{insertNotice}</Typography>
                     )}
                 </Box>
             )}
+
+            {/* ── embed an external site instead of local files ── */}
+            <Box sx={{ borderTop: 1, borderColor: 'divider', px: 1.5, py: 1 }}>
+                <Button size="small" variant="text" onClick={() => setEmbedOpen((v) => !v)}
+                    sx={{ fontSize: '0.7rem', color: 'text.secondary', p: 0, mb: 0.5 }}>
+                    {embedOpen ? '▾' : '▸'} Embed external URL{presentationState?.codeSourceType === 'url' ? ' (active)' : ''}
+                </Button>
+                {embedOpen && (
+                    <Stack spacing={1}>
+                        <Stack direction="row" spacing={1}>
+                            <TextField
+                                size="small" placeholder="https://example.com" value={urlDraft}
+                                onChange={(e) => setUrlDraft(e.target.value)}
+                                sx={{ flex: 1 }}
+                            />
+                            <Button
+                                size="small" variant="outlined"
+                                onClick={() => onPresentationPatch?.({ codeUrl: urlDraft.trim(), codeSourceType: 'url' })}
+                                disabled={!urlDraft.trim()}
+                            >
+                                Use URL
+                            </Button>
+                        </Stack>
+                        {presentationState?.codeSourceType === 'url' && (
+                            <Button size="small" variant="text" sx={{ alignSelf: 'flex-start', p: 0 }}
+                                onClick={() => onPresentationPatch?.({ codeSourceType: 'html' })}>
+                                Back to code files
+                            </Button>
+                        )}
+                    </Stack>
+                )}
+            </Box>
 
             <input ref={singleFileInputRef} type="file" accept={SUPPORTED_EXTENSIONS.map((e) => `.${e}`).join(',')} aria-label="Import single file" style={{ display: 'none' }} onChange={handleImportSingle} />
             <input ref={zipInputRef} type="file" accept=".zip,application/zip" aria-label="Import zip" style={{ display: 'none' }} onChange={handleImportZip} />
@@ -1103,17 +1207,9 @@ export function PublishPanel({
             <Card variant="outlined" sx={{ p: 1.5 }}>
                 <Stack spacing={1.5}>
                     <Typography variant="subtitle2">Presentation</Typography>
-                    <FormControl fullWidth size="small">
-                        <InputLabel>Studio preview</InputLabel>
-                        <Select
-                            label="Studio preview"
-                            value={presentationState?.mode || 'scene'}
-                            onChange={(event) => onPresentationPatch?.({ mode: event.target.value })}
-                        >
-                            <MenuItem value="scene">3D scene</MenuItem>
-                            <MenuItem value="code">Code view</MenuItem>
-                        </Select>
-                    </FormControl>
+                    <Typography variant="caption" color="text.secondary">
+                        The session preview toggle (3D scene ↔ Code view) lives in the Code window.
+                    </Typography>
                     <FormControl fullWidth size="small">
                         <InputLabel>Public entry view</InputLabel>
                         <Select

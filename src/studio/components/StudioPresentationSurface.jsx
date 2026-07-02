@@ -76,7 +76,7 @@ export default function StudioPresentationSurface({
                 return (
                     <div style={overlayCardStyle}>
                         <div style={overlayInnerStyle}>
-                            <strong>No URL set.</strong> Add a public link in the Present panel.
+                            <strong>No URL set.</strong> Add a public link in the Code window (Embed external URL).
                         </div>
                     </div>
                 )
@@ -103,7 +103,7 @@ export default function StudioPresentationSurface({
             return (
                 <div style={overlayCardStyle}>
                     <div style={overlayInnerStyle}>
-                        <strong>Code preview is empty.</strong> Open the Files panel to add code.
+                        <strong>Code preview is empty.</strong> Open the Code window to add files.
                     </div>
                 </div>
             )

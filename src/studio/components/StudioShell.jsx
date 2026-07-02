@@ -75,7 +75,8 @@ export default function StudioShell({
     inspectorValues,
     assetOptions,
     spaceOptions = [],
-    spaceAssets = [],
+    libraryItems = [],
+    onDeleteLibraryItem,
     presence,
     syncState,
     // layout / updateLayout accepted but not used — new shell manages its own panel state
@@ -388,7 +389,7 @@ export default function StudioShell({
                     {isOpen('create') && (
                         <StudioFloatingPanel key={`create-${layoutKey}`} title="Create" onClose={() => toggle('create')} initialPosition={positions.create} onPositionChange={recordPanelPosition('create')} initialWidth={280} snapEdges={snapEdges}>
                             <LibraryPanel onCreateEntity={onCreateEntity} />
-                            <AssetsPanel assets={assetOptions} spaceAssets={spaceAssets} onAssetFilesSelected={onAssetFilesSelected} onCreateFromAsset={onCreateFromAsset} onDriveImportUrl={onDriveImportUrl} onDriveImportSelection={onDriveImportSelection} onToggleAssetShared={onToggleAssetShared} onCommonsImport={onCommonsImport} />
+                            <AssetsPanel libraryItems={libraryItems} onAssetFilesSelected={onAssetFilesSelected} onCreateFromAsset={onCreateFromAsset} onDriveImportUrl={onDriveImportUrl} onDriveImportSelection={onDriveImportSelection} onToggleAssetShared={onToggleAssetShared} onCommonsImport={onCommonsImport} onDeleteLibraryItem={onDeleteLibraryItem} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('scene') && (
@@ -420,7 +421,7 @@ export default function StudioShell({
                     )}
                     {isOpen('files') && (
                         <StudioFloatingPanel key={`files-${layoutKey}`} title="Code" onClose={() => toggle('files')} initialPosition={positions.files} onPositionChange={recordPanelPosition('files')} initialWidth={480} minWidth={320} maxWidth={800} snapEdges={snapEdges}>
-                            <FilesPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} spaceAssets={spaceAssets} />
+                            <FilesPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} libraryItems={libraryItems} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('publish') && (
@@ -475,7 +476,7 @@ export default function StudioShell({
                     onClose={() => setQuickInsert(null)}
                     onCreateEntity={onCreateEntity}
                     onCreateFromAsset={onCreateFromAsset}
-                    assets={(spaceAssets.length ? spaceAssets : (document?.assets || [])).filter(canPlaceInScene)}
+                    assets={libraryItems.filter(canPlaceInScene)}
                     onOpenCreate={() => { if (!isOpen('create')) handleTogglePanel('create') }}
                 />
             )}

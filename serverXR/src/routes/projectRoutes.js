@@ -358,6 +358,33 @@ function registerProjectRoutes(router, {
     }
   })
 
+  router.delete('/api/projects/:projectId/assets/:assetId', async (req, res, next) => {
+    try {
+      const project = await resolveProjectContext(req.params.projectId)
+      const assetId = req.params.assetId
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found.' })
+      }
+      if (!isValidAssetId(assetId)) {
+        return res.status(400).json({ error: 'Invalid asset id.' })
+      }
+      await ensureSpaceWritable(project.spaceId)
+      const { assetsDir } = getProjectPaths(spacesDir, project.spaceId, project.projectId)
+      const filePath = path.join(assetsDir, assetId)
+      try {
+        await fsp.access(filePath)
+      } catch {
+        return res.status(404).json({ error: 'Asset not found.' })
+      }
+      await fsp.rm(filePath, { force: true })
+      await fsp.rm(path.join(assetsDir, `${assetId}.json`), { force: true })
+      await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, { touch: true })
+      res.json({ ok: true })
+    } catch (error) {
+      next(error)
+    }
+  })
+
   router.get('/api/projects/:projectId/events', async (req, res, next) => {
     try {
       const entry = await getProjectLiveBucket(req.params.projectId)

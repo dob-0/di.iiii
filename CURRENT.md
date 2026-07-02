@@ -9,20 +9,22 @@ active_branch: dev
 
 ## Last commit
 
-`c158e20` — feat(studio): consolidate shell to five windows (Create/Scene/World/Share/Code)
-**Pushed to `dev` AND merged to `main` — staging + prod both deployed (workflows green, smoke checks pass). Prod now runs Drive import, asset commons, and the five-window Studio.**
+`c158e20`..HEAD — five-window Studio on prod; commons moderation + guest-share gate + **unified content model (Phase 1)** on `dev`/staging.
+**Prod (main) is at the five-window consolidation. dev adds: admin commons moderation, share-requires-account, and the unified Files library — promote when verified on staging.**
 
 ## Last session (2026-07-02)
 
-- **Google Drive import shipped to `dev`**: shared `src/hooks/useDriveImport.js` (classic + Studio); fixed double-JSON bodies in `serverSpaces.js` (broke ALL public-link imports); public-link route also uses the caller's Drive token (`spaceRoutes.js`) — folders work per-user without `GOOGLE_API_KEY`; Drive section auto-lists recent files on open. Verified live end-to-end (connect → folder import) on the local stack.
-- **Asset commons shipped to `dev`**: `public_assets` + `commonsStore.js` (5✓); share/unshare, `GET /api/commons/assets[?q=]`, public streaming, `import-commons` (content-hash copy); Share toggle + Commons browse in the Create window. Verified via curl.
+- **Unified content model Phase 1 (dev)**: one `Files (N)` library in Create (project+space assets merged by content-hash id; residency text, `in scene ×N` + `public` badges; +Add/Share/URL/delete row); asset DELETE routes (project + space, space delete has 409 usedBy scan + `?force=1` + commons unshare on origin); previously-dead `deleteAsset` op wired + tested; Code window owns the 3D↔code viewport toggle (moved from Share), gets a "Project file → Insert URL at cursor" bridge, file rename with href/src rewrite, and an Embed-external-URL section (`codeSourceType:'url'` now reachable); QuickInsert hidden-project-assets bug fixed. Roadmap: `docs/roadmaps/STUDIO_CONTENT_MODEL_UX.md`; wiki article `studio-content-model` linked from Create+Code. 387+23 tests, Playwright-verified.
+- **Commons moderation (dev)**: admin "Asset commons" section in Ops Graph → Manage (search/View/Remove; `DELETE /api/commons/assets/:id` admin-gated). **Guest-share gate (dev)**: publishing to the commons requires a signed-in session; share errors surface in the Create window.
+- **Google console done by user**: staging+prod redirect URIs added, consent screen published; Drive connect verified working on staging.
+
+- **Google Drive import + asset commons (on prod)**: shared `useDriveImport.js`; public-link route uses the caller's Drive token (folders work per-user without `GOOGLE_API_KEY`); `public_assets`/`commonsStore.js` share/browse/stream/import (content-hash copy). Verified live.
 - **Studio five-window consolidation (`c158e20`, on prod)**: 9 windows → **Create / Scene / World / Share / Code**; persisted ids migrate via `PANEL_ID_MIGRATION` (StudioShell.jsx); golden rule added (five windows are fixed — new features land inside them). Fixed silent invisible-entity bug (space/commons assets now upserted into `document.assets` — `handleCreateFromAsset`); **+ Add** on space files; panels cascade instead of overlapping; selection pill z-capped; format registry + gated + Add (`src/studio/utils/assetFormats.js`); **PDF import** rasterizes pages to image entities (new dep `pdfjs-dist`, lazy); double-click Quick Insert now shares one palette with Create (`entityPalette.js`) + "More ▸" opens Create. Playwright-verified; wiki updated.
-- **Local podman test stack**: full stack on 8080 (`podman compose up --build -d`; docker-compose v5 provider at `~/.docker/cli-plugins/`, rootless `podman.socket`). Google console: localhost redirect URI + test user registered; Drive connect works locally.
-- Earlier in session (committed): WCC reduced-motion `db76d23`, dev-browser fix `6898772`, VR-fly hints `bfb0da3`.
+- Local podman test stack: full stack on 8080 (`podman compose up --build -d`; docker-compose v5 provider at `~/.docker/cli-plugins/`, rootless `podman.socket`).
 
 ## What works
 
-- Studio editor (five windows): Create (primitives/lights/import/Drive/Commons/files), Scene (tree+inspector), World, Share (publish+presentation+activity), Code; double-click quick insert; undo/redo; workspace layout persists
+- Studio editor (five windows): Create (primitives/lights + unified Files library: import/Drive/Commons, badges, delete), Scene (tree+inspector), World, Share (publish+activity), Code (files + viewport toggle + URL bridge/embed); quick insert; undo/redo; layout persists
 - Beta editor: graph-first layout, node palette, undo/redo, outliner
 - WCC exhibition: LiveProjectScene renderer, WASD + mouse/trackpad controls, portals, atmosphere, billboard text; viewport: left-drag rotate, right-drag pan, scroll zoom
 - Auth: session-cookie login, roles (guest/viewer/editor/admin), GitHub/Google OAuth, session auto-refresh

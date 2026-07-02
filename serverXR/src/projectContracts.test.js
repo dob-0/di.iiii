@@ -240,6 +240,16 @@ describe('project contracts', () => {
         const assetResponse = await fetch(new URL(uploaded.asset.url, server.baseUrl))
         expect(assetResponse.status).toBe(200)
         expect(await assetResponse.text()).toBe('beta-asset')
+
+        const deleteResponse = await fetch(new URL(uploaded.asset.url, server.baseUrl), { method: 'DELETE' })
+        expect(deleteResponse.status).toBe(200)
+        expect((await deleteResponse.json()).ok).toBe(true)
+
+        const goneResponse = await fetch(new URL(uploaded.asset.url, server.baseUrl))
+        expect(goneResponse.status).toBe(404)
+
+        const repeatDelete = await fetch(new URL(uploaded.asset.url, server.baseUrl), { method: 'DELETE' })
+        expect(repeatDelete.status).toBe(404)
     })
 
     it('recovers a corrupted project document by trimming trailing garbage', async () => {

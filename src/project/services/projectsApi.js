@@ -116,6 +116,9 @@ export const uploadProjectAsset = async (projectId, file, options = {}) => {
     return data.asset
 }
 
+export const deleteProjectAsset = async (projectId, assetId) =>
+    apiFetch(`/api/projects/${projectId}/assets/${assetId}`, { method: 'DELETE' })
+
 export const buildProjectEventsUrl = (projectId) => `${apiBaseUrl}/api/projects/${projectId}/events`
 
 export const buildProjectAssetUrl = (projectId, assetId) => `${apiBaseUrl}/api/projects/${projectId}/assets/${assetId}`

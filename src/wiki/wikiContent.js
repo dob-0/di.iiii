@@ -85,14 +85,32 @@ export const WIKI_ARTICLES = [
         body: [
             'Open the Studio, pick or create a project, and start building.',
             { list: [
-                'Five windows, one per job: Create (shapes, lights, imports, Google Drive, Commons), Scene (entity tree + selected-entity editing), World (scene-wide settings), Share (publish, presentation, export, activity), Code (HTML/CSS/JS files).',
-                'Any space file — uploaded, from Google Drive, or from the Commons — has a + Add button that places it into the scene. PDFs import as image pages.',
+                'Five windows, one per job: Create (shapes, lights, and one Files library — imports, Google Drive, Commons), Scene (entity tree + selected-entity editing), World (scene-wide settings), Share (publish, export, activity), Code (HTML/CSS/JS files + the 3D↔code viewport toggle).',
+                'Every file — uploaded, from Google Drive, or from the Commons — sits in the Create window’s Files list with + Add to place it in the scene, badges for scene usage and public sharing, and × to delete. PDFs import as image pages.',
                 'Drag to position; edit the selected entity in the Scene window — world defaults live in the World window.',
                 'Undo / redo with Ctrl+Z / Ctrl+Y.',
                 'Your panel layout is remembered — open panels and their positions restore next visit; use Arrange → Reset to go back to the default layout.'
             ] }
         ],
         tags: ['studio', 'editor', 'basics'],
+        updated: '2026-07-02'
+    },
+    {
+        id: 'studio-content-model',
+        category: 'Editing',
+        title: 'How content flows',
+        summary: 'One library of files feeds entities in the scene and the code view — the Studio mental model.',
+        body: [
+            'Everything you manage in Studio is one of three things: files (imported bytes), entities (objects placed in the 3D scene), and code (HTML/CSS/JS rendered in the Code view).',
+            { list: [
+                'Files: the Create window lists every file in one place — uploads, Google Drive imports, and Commons pulls. Each row shows where it lives (project / space), an “in scene ×N” badge when entities use it, and “public” when it is shared to the commons.',
+                '+ Add places a file into the scene as an entity. Deleting a file warns you when entities still use it — in this project or in other projects of the space.',
+                'Code: the Code window edits HTML/CSS/JS files stored inside the project. The toggle at its top switches the viewport between the 3D scene and the code view, and the “Project file” picker inserts any file’s URL straight into your code.',
+                'Instead of local files, the Code window can embed an external site (Embed external URL).',
+                'Share controls what visitors see: the public entry view (3D scene or code) and the live route are set in the Share window.'
+            ] }
+        ],
+        tags: ['studio', 'files', 'assets', 'code', 'content'],
         updated: '2026-07-02'
     },
     {
@@ -170,7 +188,7 @@ export const WIKI_ARTICLES = [
         title: 'Import from Google Drive',
         summary: 'Connect your Drive to browse your own files, or paste a public share link.',
         body: [
-            'In the Studio editor open the Assets panel and click Google Drive (the classic editor has the same button in Project Assets). Two ways to bring files in:',
+            'In the Studio editor open the Create window and click Google Drive (the classic editor has the same button in Project Assets). Two ways to bring files in:',
             { list: [
                 'Connect your Drive: sign in with Google once, then search your own Drive and import selected files — each person connects their own account, and files import into the current space.',
                 'Public link: paste an “Anyone with the link” file URL — no login needed. A shared folder imports every file inside (needs GOOGLE_API_KEY on the server).',
@@ -188,10 +206,10 @@ export const WIKI_ARTICLES = [
         title: 'The asset commons',
         summary: 'Share an asset publicly once — anyone can find it and reuse it in their own space.',
         body: [
-            'The commons is the shared, public asset library across all of di.iiii. In the Studio editor open the Assets panel:',
+            'The commons is the shared, public asset library across all of di.iiii. In the Studio editor open the Create window:',
             { list: [
-                'Share: next to any space file, click Share — it becomes a public asset anyone can discover. Click Public to take it back down. Sharing needs a signed-in account; guests can browse and import from the commons but not publish to it.',
-                'Reuse: click Commons, search what others have shared, select, and Import — the assets are copied into your space instantly (they are content-addressed, so nothing re-uploads). Then hit + Add on the space file to place it in your scene.',
+                'Share: next to any file in the Files list, click Share — it becomes a public asset anyone can discover. Click Public to take it back down. Sharing needs a signed-in account; guests can browse and import from the commons but not publish to it.',
+                'Reuse: click Commons, search what others have shared, select, and Import — the assets are copied into your space instantly (they are content-addressed, so nothing re-uploads). Then hit + Add on the file to place it in your scene.',
                 'Shared assets keep their sharer label, and the bytes stay in the origin space — the commons is an index, not a second copy.',
                 'Moderation: admins see the full commons in Ops Graph → Manage (Asset commons section) and can remove any entry; the origin space keeps its file.'
             ] }

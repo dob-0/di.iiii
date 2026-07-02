@@ -622,6 +622,39 @@
     cursor: default;
 }
 
+.spa-copy-btn--danger {
+    background: rgba(255, 107, 107, 0.08);
+    border-color: rgba(255, 107, 107, 0.25);
+    color: #ff8f8f;
+}
+
+.spa-copy-btn--danger:hover {
+    background: rgba(255, 107, 107, 0.16);
+}
+
+.spa-badges {
+    display: flex;
+    gap: 4px;
+    margin-top: 2px;
+}
+
+.spa-badge {
+    font-size: 9px;
+    line-height: 1.4;
+    padding: 0 5px;
+    border-radius: 3px;
+    background: rgba(77, 249, 255, 0.08);
+    border: 1px solid rgba(77, 249, 255, 0.2);
+    color: var(--di-cyan);
+    white-space: nowrap;
+}
+
+.spa-badge--public {
+    background: rgba(112, 255, 158, 0.08);
+    border-color: rgba(112, 255, 158, 0.25);
+    color: #70ff9e;
+}
+
 .spa-drive-row {
     display: flex;
     gap: 4px;

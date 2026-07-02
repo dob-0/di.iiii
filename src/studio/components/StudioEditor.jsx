@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMediaQuery, useTheme } from '@mui/material'
 import { Vector3 } from 'three'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
-import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
+import { DEFAULT_PROJECT_SPACE_ID, deleteProjectAsset, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { createStudioProjectBundle, readStudioProjectBundle } from '../../project/transfer/studioProjectBundle.js'
 import { defaultWorldState, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import useXrAr from '../../hooks/useXrAr.js'
 import useSpaceAssets from '../../hooks/useSpaceAssets.js'
-import { getServerSpace, importCommonsAssets, importDriveAssets, importDriveSelection, listServerSpaces, setAssetShared, updateServerSpace } from '../../services/serverSpaces.js'
+import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAssets, importDriveSelection, listServerSpaces, setAssetShared, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { useStudioLayoutPrefs } from '../hooks/useStudioLayoutPrefs.js'
@@ -140,6 +140,30 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const entities = document.entities || []
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
     const selectedEntityIds = state.selectedEntityIds || []
+
+    // One library view over both stores. Asset ids are content-hashed, so a
+    // file adopted from the space shares its id with the project copy —
+    // merge on id and track residency instead of showing two lists.
+    const libraryItems = useMemo(() => {
+        const usedCount = new Map()
+        for (const entity of document.entities || []) {
+            const id = entity?.components?.media?.assetId
+            if (id) usedCount.set(id, (usedCount.get(id) || 0) + 1)
+        }
+        const items = new Map()
+        for (const asset of document.assets || []) {
+            items.set(asset.id, { ...asset, inProject: true, inSpace: false, shared: false })
+        }
+        for (const asset of spaceAssets) {
+            const existing = items.get(asset.id)
+            if (existing) {
+                items.set(asset.id, { ...existing, inSpace: true, shared: Boolean(asset.shared), size: existing.size || asset.size })
+            } else {
+                items.set(asset.id, { ...asset, inProject: false, inSpace: true, shared: Boolean(asset.shared) })
+            }
+        }
+        return [...items.values()].map((item) => ({ ...item, usedByCount: usedCount.get(item.id) || 0 }))
+    }, [document.assets, document.entities, spaceAssets])
     const selectedEntities = entities.filter((entity) => selectedEntityIds.includes(entity.id))
     const [transformOp, setTransformOp] = useState(null)
     const [exportStatus, setExportStatus] = useState(null)
@@ -307,6 +331,47 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             }, { activityMessage: `Added ${asset.name || 'asset'} to project assets.` })
         }
         handleCreateEntity(detectEntityTypeFromFile(asset), asset, position)
+    }
+
+    const handleDeleteLibraryItem = async (item) => {
+        const scopeNote = item.inProject && item.inSpace
+            ? 'It will be removed from this project and from the space files.'
+            : item.inSpace ? 'It will be removed from the space files.' : 'It will be removed from this project.'
+        const usedNote = item.usedByCount
+            ? ` ${item.usedByCount} entit${item.usedByCount === 1 ? 'y uses' : 'ies use'} it in this scene and will lose their file.`
+            : ''
+        if (!window.confirm(`Delete "${item.name || item.id}"? ${scopeNote}${usedNote}`)) return
+        try {
+            if (item.inProject) {
+                applyLocalOps({
+                    type: 'deleteAsset',
+                    payload: { assetId: item.id }
+                }, { activityMessage: `Deleted ${item.name || 'asset'} from project assets.` })
+                await deleteProjectAsset(projectId, item.id).catch((error) => {
+                    if (error?.status !== 404) throw error
+                })
+            }
+            if (item.inSpace) {
+                try {
+                    await deleteServerAsset(resolvedSpaceId, item.id)
+                } catch (error) {
+                    if (error?.status !== 409 || !Array.isArray(error?.data?.usedBy)) throw error
+                    // The scan may still see this project's just-removed reference;
+                    // only re-confirm when OTHER projects use the file.
+                    const others = error.data.usedBy.filter((u) => u.projectId !== projectId)
+                    if (others.length) {
+                        const where = others.map((u) => `${u.title} (${u.entities.length})`).join(', ')
+                        if (!window.confirm(`Other projects in this space still use this file: ${where}. Delete anyway?`)) return
+                    }
+                    await deleteServerAsset(resolvedSpaceId, item.id, { force: true })
+                }
+                applyLocalOps([], { activityMessage: `Deleted ${item.name || 'asset'} from space files.` })
+            }
+        } catch (error) {
+            applyLocalOps([], { activityMessage: `Could not delete ${item.name || 'asset'}: ${error.message}`, activityLevel: 'error' })
+        } finally {
+            refreshSpaceAssets()
+        }
     }
 
     const requestAssetUploadFile = (file) => {
@@ -911,7 +976,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             inspectorValues={inspectorValues}
             assetOptions={document.assets || []}
             spaceOptions={spaceOptions}
-            spaceAssets={spaceAssets}
+            libraryItems={libraryItems}
+            onDeleteLibraryItem={handleDeleteLibraryItem}
             presence={presence}
             syncState={syncState}
             layout={layout}

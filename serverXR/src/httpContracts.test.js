@@ -995,7 +995,87 @@ describe('server write contracts', () => {
         })
         expect(assetResponse.status).toBe(403)
 
+        const deleteResponse = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/4c122913-7872-42b3-8b04-9f73942022fd`, {
+            method: 'DELETE',
+            headers: withAuth(server.apiToken)
+        })
+        expect(deleteResponse.status).toBe(403)
+
         const uploads = await readdir(path.join(server.dataRoot, 'uploads'))
         expect(uploads).toEqual([])
+    })
+
+    it('deletes space assets with used-by protection, force override, and commons unshare', async () => {
+        const server = await startServer()
+        const spaceId = 'del-space'
+        const createRes = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ slug: spaceId, label: 'Delete Space', permanent: true })
+        })
+        expect(createRes.status).toBe(201)
+
+        const formData = new FormData()
+        formData.append('asset', new Blob(['space-bytes'], { type: 'text/plain' }), 'space.txt')
+        const uploadRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets`, {
+            method: 'POST',
+            headers: withAuth(server.apiToken),
+            body: formData
+        })
+        expect(uploadRes.status).toBe(200)
+        const { assetId } = await uploadRes.json()
+
+        const shareRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${assetId}/share`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ public: true })
+        })
+        expect(shareRes.status).toBe(200)
+
+        const projectRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ title: 'Uses Asset', slug: 'uses-asset' })
+        })
+        expect(projectRes.status).toBe(201)
+        const docRes = await fetch(`${server.baseUrl}/api/projects/uses-asset/document`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({
+                entities: [{
+                    id: 'e1',
+                    type: 'image',
+                    name: 'Poster',
+                    components: { media: { assetId } }
+                }]
+            })
+        })
+        expect(docRes.status).toBe(200)
+
+        const blockedRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${assetId}`, {
+            method: 'DELETE',
+            headers: withAuth(server.apiToken)
+        })
+        expect(blockedRes.status).toBe(409)
+        const blocked = await blockedRes.json()
+        expect(blocked.code).toBe('asset_in_use')
+        expect(blocked.usedBy[0].projectId).toBe('uses-asset')
+        expect(blocked.usedBy[0].entities).toContain('Poster')
+
+        const forcedRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${assetId}?force=1`, {
+            method: 'DELETE',
+            headers: withAuth(server.apiToken)
+        })
+        expect(forcedRes.status).toBe(200)
+
+        const goneRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${assetId}`, {
+            headers: withAuth(server.apiToken)
+        })
+        expect(goneRes.status).toBe(404)
+
+        const commonsRes = await fetch(`${server.baseUrl}/api/commons/assets`)
+        expect(commonsRes.status).toBe(200)
+        const commons = await commonsRes.json()
+        expect(commons.assets.some((a) => a.id === assetId)).toBe(false)
     })
 })

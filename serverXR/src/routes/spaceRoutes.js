@@ -27,10 +27,12 @@ function registerSpaceRoutes(router, {
   isValidAssetId,
   loadSpaceMeta,
   listSpaces,
+  listProjectsInSpace = null,
   maxOpHistory,
   normalizeIncomingOps,
   normalizeProjectId,
   normalizeSpaceId,
+  readProjectDocument = null,
   requireAdminWrite = (req, res, next) => next(),
   readJson,
   readOpsHistory,
@@ -710,6 +712,56 @@ function registerSpaceRoutes(router, {
       if (error.code === 'ENOENT') {
         return res.status(404).json({ error: 'Asset not found.' })
       }
+      next(error)
+    }
+  })
+
+  // Delete a space file. Refuses with 409 + usedBy while any project document
+  // in the space still references the asset (override with ?force=1). Commons
+  // entries serve bytes from the origin space, so drop the entry first.
+  router.delete('/api/spaces/:spaceId/assets/:assetId', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      const assetId = req.params.assetId
+      if (!spaceId || !isValidAssetId(assetId)) {
+        return res.status(400).json({ error: 'Invalid request.' })
+      }
+      await ensureSpaceWritable(spaceId)
+      const { assetsDir } = getSpacePaths(spaceId)
+      const filePath = path.join(assetsDir, assetId)
+      try {
+        await fsp.access(filePath)
+      } catch {
+        return res.status(404).json({ error: 'Asset not found.' })
+      }
+
+      const force = req.query?.force === '1' || req.query?.force === 'true'
+      if (!force && listProjectsInSpace && readProjectDocument) {
+        const usedBy = []
+        for (const project of await listProjectsInSpace(spacesDir, spaceId)) {
+          const doc = await readProjectDocument(spacesDir, spaceId, project.id).catch(() => null)
+          const entities = (doc?.entities || []).filter((e) => e?.components?.media?.assetId === assetId)
+          if (entities.length) {
+            usedBy.push({
+              projectId: project.id,
+              title: project.title || project.id,
+              entities: entities.map((e) => e.name || e.id)
+            })
+          }
+        }
+        if (usedBy.length) {
+          return res.status(409).json({ error: 'Asset is used by entities in this space.', code: 'asset_in_use', usedBy })
+        }
+      }
+
+      const commonsRow = commonsStore.getAsset(assetId)
+      if (commonsRow && commonsRow.spaceId === spaceId) {
+        commonsStore.unshareAsset(assetId)
+      }
+      await fsp.rm(filePath, { force: true })
+      await fsp.rm(path.join(assetsDir, `${assetId}.json`), { force: true })
+      res.json({ ok: true })
+    } catch (error) {
       next(error)
     }
   })
