@@ -332,10 +332,19 @@ function CommonsSection({ onCommonsImport }) {
 
 export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelected, onCreateFromAsset, onDriveImportUrl, onDriveImportSelection, onToggleAssetShared, onCommonsImport }) {
     const [copied, setCopied] = useState(null)
+    const [shareNotice, setShareNotice] = useState('')
     const copyUrl = (asset) => {
         navigator.clipboard.writeText(assetSrc(asset.url)).catch(() => {})
         setCopied(asset.id)
         setTimeout(() => setCopied(null), 1500)
+    }
+    const toggleShare = async (asset) => {
+        setShareNotice('')
+        try {
+            await onToggleAssetShared(asset, !asset.shared)
+        } catch (e) {
+            setShareNotice(e.message || 'Could not update sharing.')
+        }
     }
     return (
         <>
@@ -354,6 +363,7 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
             )}
             {spaceAssets.length > 0 && (
                 <CollapsibleSection title={`Space files (${spaceAssets.length})`}>
+                    {shareNotice && <p className="spa-drive-notice is-error">{shareNotice}</p>}
                     <div className="spa-list">
                         {spaceAssets.map((asset) => (
                             <div key={asset.id} className="spa-item spa-item--space">
@@ -380,7 +390,7 @@ export function AssetsPanel({ assets = [], spaceAssets = [], onAssetFilesSelecte
                                 {onToggleAssetShared && (
                                     <button
                                         className="spa-copy-btn"
-                                        onClick={() => onToggleAssetShared(asset, !asset.shared)}
+                                        onClick={() => toggleShare(asset)}
                                         title={asset.shared ? 'Public in the commons — click to unshare' : 'Share to the public commons'}
                                     >
                                         {asset.shared ? 'Public' : 'Share'}

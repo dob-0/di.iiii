@@ -579,6 +579,12 @@ function registerSpaceRoutes(router, {
         return res.json({ ok: true, shared: false })
       }
 
+      // Publishing to the commons needs an accountable identity — anonymous
+      // guest sessions can edit their sandbox but not the public index.
+      if (config.requireAuth && req.authState?.type !== 'session') {
+        return res.status(403).json({ error: 'Sign in with an account to share assets publicly.', code: 'auth_required' })
+      }
+
       const { assetsDir } = getSpacePaths(spaceId)
       let meta
       try {
