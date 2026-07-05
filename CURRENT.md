@@ -9,25 +9,22 @@ active_branch: dev
 
 ## Last commit
 
-`3e3e7db` — ci(input-contracts): plain vite + tail syntax (CI green)
-**Prod (`main`) still at `e58a533`: five-window Studio, unified Files library + asset delete, code↔files bridge, commons moderation, guest-share gate.**
+`a160bc4` — feat(github-sync): manifest-aware App webhook sync (staging, deploy chain green)
+**Prod (`main`) still at `e58a533` code-wise + promoted hub layout: five-window Studio, unified Files library, commons moderation, guest-share gate.**
 
 ## Last session (2026-07-05)
 
-- **Exhibition walker input fixes (dev/staging, `bc0bb6b`)**: scroll never pitches anymore — deltaY dollies forward/back ("scroll = zoom", all wheel types incl. hi-res pixel-mode that used to tilt the camera into the floor), deltaX still turns; drag-to-look fallback when pointer lock is denied (Wayland / Chrome post-Esc cooldown — was silently dead). Root cause: June-29 session's device-guessing wheel heuristic + swallowed lock rejection, tuned only on a trackpad.
-- **Input-device contract check**: `npm run check:input` (`scripts/input-check.mjs`) — 13 contracts asserted on real walker state via dev-only `window.__diiWalkerRef`; runs in CI on every push/PR (`input-contracts` job seeds a blank wcc/main via `scripts/seed-input-check.mjs` with `ADMIN_API_TOKEN`; use `npx vite`, NOT `npm run dev` — that launcher spawns its own serverXR). Golden rule added: input handling never guesses the device class.
-- **WCC staging→prod promotion tool**: `npm run wcc:promote` (see below). Hub zone layout promoted to prod — all 11 wcc projects verified identical staging↔prod, prod smoke 9/9.
-- **Mistake-proofing shipped**: deploys gated on `browser-checks.yml` (reusable: input contracts + responsive sweep) for staging AND prod; auto post-deploy smoke job (polls release.gitCommit, then smoke-check) — first gated chain verified green end-to-end. Pay-once rule in AGENTS/operating contract (bug fix = fix + known-fixes entry + regression guard, same change). `scripts/pre-push-gate.sh` written+tested; **hook wiring in `.claude/settings.json` pending user approval** (blocked as self-modification).
+- **Walker input fixes (staging, `bc0bb6b`)**: scroll = dolly ("zoom"), never pitches (hi-res wheels used to tilt the camera into the floor); drag-to-look fallback when pointer lock is denied (mouse look was silently dead on Wayland/post-Esc). Root cause: June-29 device-guessing wheel heuristic tuned only on a trackpad.
+- **Mistake-proofing infrastructure**: `npm run check:input` (13 input-device contracts on real walker state via dev-only `window.__diiWalkerRef`); reusable `browser-checks.yml` (contracts + responsive sweep) gates **both** staging and prod deploys; auto post-deploy `smoke` job polls `release.gitCommit` then runs smoke-check — full chain verified green. In `browser-checks`, use `npx vite`, NOT `npm run dev` (that launcher spawns its own serverXR and races the seeded one).
+- **Pre-push gate hook live** (`.claude/settings.json` + `scripts/pre-push-gate.sh`): lint + schema-sync + wiki check before any session `git push`, exit-2 blocks; `DI_SKIP_PUSH_GATE=1` bypass. Loads from the NEXT session.
+- **Pay-once rule codified** (AGENTS + operating contract): a bug fix ships with a known-fixes entry AND a regression guard in the same change. Golden rule added: input handling never guesses the device class.
+- **Zone sync solved**: `npm run wcc:promote` (staging→prod document+asset promotion); hub layout promoted, all 11 wcc projects verified identical, prod smoke 9/9.
+- **GitHub-sync gap closed (`a160bc4`)**: App webhook path now reads `di-space.json` — include globs → code files, asset globs → referenced-binary upload with URL rewrite (same contract as CI path, pure logic in `spaceSyncPlan.js` + 8 tests; >30MB assets skipped under LVE limits).
 
-## Earlier (2026-07-02)
+## Earlier (2026-07-02, all on prod)
 
-- **Unified content model Phase 1 (dev)**: one `Files (N)` library in Create (project+space assets merged by content-hash id; residency text, `in scene ×N` + `public` badges; +Add/Share/URL/delete row); asset DELETE routes (project + space, space delete has 409 usedBy scan + `?force=1` + commons unshare on origin); previously-dead `deleteAsset` op wired + tested; Code window owns the 3D↔code viewport toggle (moved from Share), gets a "Project file → Insert URL at cursor" bridge, file rename with href/src rewrite, and an Embed-external-URL section (`codeSourceType:'url'` now reachable); QuickInsert hidden-project-assets bug fixed. Roadmap: `docs/roadmaps/STUDIO_CONTENT_MODEL_UX.md`; wiki article `studio-content-model` linked from Create+Code. 387+23 tests, Playwright-verified.
-- **Commons moderation (dev)**: admin "Asset commons" section in Ops Graph → Manage (search/View/Remove; `DELETE /api/commons/assets/:id` admin-gated). **Guest-share gate (dev)**: publishing to the commons requires a signed-in session; share errors surface in the Create window.
-- **Google console done by user**: staging+prod redirect URIs added, consent screen published; Drive connect verified working on staging.
-
-- **Google Drive import + asset commons (on prod)**: shared `useDriveImport.js`; public-link route uses the caller's Drive token (folders work per-user without `GOOGLE_API_KEY`); `public_assets`/`commonsStore.js` share/browse/stream/import (content-hash copy). Verified live.
-- **Studio five-window consolidation (`c158e20`, on prod)**: 9 windows → **Create / Scene / World / Share / Code**; persisted ids migrate via `PANEL_ID_MIGRATION` (StudioShell.jsx); golden rule added (five windows are fixed — new features land inside them). Fixed silent invisible-entity bug (space/commons assets now upserted into `document.assets` — `handleCreateFromAsset`); **+ Add** on space files; panels cascade instead of overlapping; selection pill z-capped; format registry + gated + Add (`src/studio/utils/assetFormats.js`); **PDF import** rasterizes pages to image entities (new dep `pdfjs-dist`, lazy); double-click Quick Insert now shares one palette with Create (`entityPalette.js`) + "More ▸" opens Create. Playwright-verified; wiki updated.
-- Local podman test stack: full stack on 8080 (`podman compose up --build -d`; docker-compose v5 provider at `~/.docker/cli-plugins/`, rootless `podman.socket`).
+- **Unified content model Phase 1**: one `Files (N)` library in Create (merged project+space assets, badges, delete with 409 usedBy scan); Code window owns viewport toggle + file→URL bridge + embed-URL. Roadmap: `docs/roadmaps/STUDIO_CONTENT_MODEL_UX.md`.
+- **Commons moderation** (Ops Graph → Manage) + guest-share gate; **Drive import** (public link + per-user OAuth connect, verified on staging); **five-window Studio** (`PANEL_ID_MIGRATION` migrates persisted ids); local podman stack on 8080.
 
 ## What works
 
@@ -37,7 +34,7 @@ active_branch: dev
 - Auth: session-cookie login, roles (guest/viewer/editor/admin), GitHub/Google OAuth, session auto-refresh
 - Admin UI: Ops Graph → Manage — spaces/projects/people/roles + GitHub sync per space
 - GitHub → space sync LIVE on prod (App webhook + scoped sync-keys; rotation runbook in docs/ops)
-- Deploy: push `dev` → staging, push `main` → prod (`publish-cpanel-prebuilt-v2.yml`); local: podman/docker compose on 8080
+- Deploy: push `dev` → staging, push `main` → prod (`publish-cpanel-prebuilt-v2.yml`) — gated on `browser-checks.yml` (input contracts + responsive sweep), auto post-deploy smoke; local: podman/docker compose on 8080
 - Space sync: `npm run space:new/pull/push` + SpaceSyncPanel
 - WCC staging→prod promotion: `npm run wcc:promote [-- --project <id>] [-- --dry-run]` (`scripts/promote-wcc-projects.mjs`) — pulls a project's document + referenced assets from staging and pushes to prod; replaces the old one-off scratch script
 
