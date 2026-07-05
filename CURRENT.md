@@ -16,7 +16,8 @@ active_branch: dev
 
 - **Exhibition walker input fixes (dev/staging, `bc0bb6b`)**: scroll never pitches anymore — deltaY dollies forward/back ("scroll = zoom", all wheel types incl. hi-res pixel-mode that used to tilt the camera into the floor), deltaX still turns; drag-to-look fallback when pointer lock is denied (Wayland / Chrome post-Esc cooldown — was silently dead). Root cause: June-29 session's device-guessing wheel heuristic + swallowed lock rejection, tuned only on a trackpad.
 - **Input-device contract check**: `npm run check:input` (`scripts/input-check.mjs`) — 13 contracts asserted on real walker state via dev-only `window.__diiWalkerRef`; runs in CI on every push/PR (`input-contracts` job seeds a blank wcc/main via `scripts/seed-input-check.mjs` with `ADMIN_API_TOKEN`; use `npx vite`, NOT `npm run dev` — that launcher spawns its own serverXR). Golden rule added: input handling never guesses the device class.
-- **WCC staging→prod promotion tool**: `npm run wcc:promote` (see below). **PENDING: user to run `npm run wcc:promote -- --project main`** — staging's reworked hub zone layout is approved but not yet pushed to prod (only the hub differs; artist projects verified identical).
+- **WCC staging→prod promotion tool**: `npm run wcc:promote` (see below). Hub zone layout promoted to prod — all 11 wcc projects verified identical staging↔prod, prod smoke 9/9.
+- **Mistake-proofing shipped**: deploys gated on `browser-checks.yml` (reusable: input contracts + responsive sweep) for staging AND prod; auto post-deploy smoke job (polls release.gitCommit, then smoke-check) — first gated chain verified green end-to-end. Pay-once rule in AGENTS/operating contract (bug fix = fix + known-fixes entry + regression guard, same change). `scripts/pre-push-gate.sh` written+tested; **hook wiring in `.claude/settings.json` pending user approval** (blocked as self-modification).
 
 ## Earlier (2026-07-02)
 
