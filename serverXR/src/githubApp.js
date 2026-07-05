@@ -72,14 +72,25 @@ const getInstallationForRepo = async (owner, repo) => {
 const repoDefaultBranch = async (token, owner, repo) =>
   (await ghFetch(`${GH}/repos/${owner}/${repo}`, { token })).default_branch || 'main'
 
-// Fetch a single text file from a repo via an installation token. Falls back to
-// the blob API for files too large for the contents endpoint.
-const fetchRepoFile = async (token, owner, repo, ref, filePath) => {
+// Fetch a single file from a repo via an installation token, binary-safe.
+// Falls back to the blob API for files too large for the contents endpoint
+// (contents caps at 1 MB; blobs go to 100 MB).
+const fetchRepoFileBuffer = async (token, owner, repo, ref, filePath) => {
   const enc = encodeURIComponent(filePath).replace(/%2F/g, '/')
   const meta = await ghFetch(`${GH}/repos/${owner}/${repo}/contents/${enc}?ref=${ref}`, { token })
-  if (meta.content && meta.encoding === 'base64') return Buffer.from(meta.content, 'base64').toString('utf8')
+  if (meta.content && meta.encoding === 'base64') return Buffer.from(meta.content, 'base64')
   const blob = await ghFetch(`${GH}/repos/${owner}/${repo}/git/blobs/${meta.sha}`, { token })
-  return Buffer.from(blob.content, 'base64').toString('utf8')
+  return Buffer.from(blob.content, 'base64')
+}
+
+const fetchRepoFile = async (token, owner, repo, ref, filePath) =>
+  (await fetchRepoFileBuffer(token, owner, repo, ref, filePath)).toString('utf8')
+
+// Full recursive file list of the repo at ref (blob paths only). `truncated`
+// is only hit on repos far larger than any linked space repo should be.
+const repoTree = async (token, owner, repo, ref) => {
+  const t = await ghFetch(`${GH}/repos/${owner}/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`, { token })
+  return (t.tree || []).filter((e) => e.type === 'blob').map((e) => e.path)
 }
 
 // HMAC-SHA256 verification of the X-Hub-Signature-256 header. Constant-time.
@@ -94,5 +105,5 @@ const verifyWebhookSignature = (rawBody, signatureHeader, secret = process.env.G
 module.exports = {
   isConfigured, appJwt, getAppInfo, listInstallations,
   installationToken, getInstallationForRepo, repoDefaultBranch,
-  fetchRepoFile, verifyWebhookSignature
+  fetchRepoFile, fetchRepoFileBuffer, repoTree, verifyWebhookSignature
 }

@@ -44,7 +44,7 @@ active_branch: dev
 ## What is broken / open
 
 - **Drive on prod**: redirect URIs + consent screen publish done, verified working on staging — still needs verifying live on prod, and Google's OAuth verification (sensitive scope, needed past ~100 users) is a manual submission only the user can make. Doc: `docs/ops/GOOGLE_DRIVE_INTEGRATION.md`.
-- GitHub-sync: App webhook reaches prod only; App path pulls entry file only (CI path covers assets via `DI_SPACE_TOKEN`).
+- GitHub-sync: App webhook reaches prod only (one webhook URL per GitHub App — staging syncs via the CI path). Webhook path is now manifest-aware (di-space.json: include globs + referenced-asset upload with URL rewrite), same contract as the CI path — **not yet exercised against a real repo push**; verify on the next br_id_ge push.
 - VR fly unverified on hardware; `origin/self-host` intentionally 1 commit ahead (`b9baa30`).
 
 ## Known fixes

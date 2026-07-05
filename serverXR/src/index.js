@@ -37,6 +37,7 @@ const { registerUserRoutes } = require('./routes/userRoutes')
 const { listUsers, findUserById, setUserSpaces, setUserUnrestricted, setUserRole } = require('./userStore')
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
 const githubApp = require('./githubApp')
+const spaceSyncPlan = require('./spaceSyncPlan')
 const spaceLinkStore = require('./spaceLinkStore')
 const { httpRequest } = require('./httpClient')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
@@ -725,8 +726,39 @@ const internalApiBase = () =>
   process.env.SELF_API_URL?.replace(/\/$/, '') || `http://127.0.0.1:${config.port}${config.basePath || ''}`
 const internalHeaders = () => ({ 'Content-Type': 'application/json', Accept: 'application/json', Authorization: `Bearer ${config.apiToken}` })
 
-// Pull the linked repo's entry file via the GitHub App installation token and
-// write it into the space using the server's OWN tested document API (admin).
+// Upload one binary into a project through the server's own multipart asset
+// route (the route computes the content-hash id and returns the public URL).
+async function uploadSyncedAsset(base, projectId, rel, buf) {
+  const boundary = 'dii-sync-' + crypto.randomBytes(8).toString('hex')
+  const filename = path.basename(rel).replace(/"/g, '')
+  const head = Buffer.from(
+    `--${boundary}\r\nContent-Disposition: form-data; name="asset"; filename="${filename}"\r\n` +
+    `Content-Type: ${spaceSyncPlan.mimeFor(rel)}\r\n\r\n`
+  )
+  const body = Buffer.concat([head, buf, Buffer.from(`\r\n--${boundary}--\r\n`)])
+  const r = await httpRequest(`${base}/api/projects/${projectId}/assets`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${config.apiToken}`,
+      'Content-Type': `multipart/form-data; boundary=${boundary}`,
+      'Content-Length': body.length
+    },
+    body,
+    timeoutMs: 120000
+  })
+  if (!r.ok) throw new Error(`asset upload failed (${r.status}) for ${rel}`)
+  return r.json().asset
+}
+
+// Assets bigger than this are skipped (and reported) rather than buffered
+// through base64 + multipart under cPanel/LVE memory limits.
+const MAX_SYNC_ASSET_BYTES = 30 * 1024 * 1024
+
+// Pull the linked repo into the space via the GitHub App installation token,
+// writing through the server's OWN tested document/asset APIs (admin). With a
+// di-space.json manifest in the repo this matches the CI push path: include
+// globs become extra code files, asset globs upload referenced binaries and
+// rewrite their URLs in the entry HTML. Without a manifest: entry file only.
 async function syncLinkedSpace(link) {
   let token = null
   let installationId = link.installationId
@@ -737,9 +769,37 @@ async function syncLinkedSpace(link) {
   }
   if (!token) throw new Error(`No GitHub App installation can access ${link.owner}/${link.repo}`)
   const ref = link.ref || await githubApp.repoDefaultBranch(token, link.owner, link.repo)
-  const html = await githubApp.fetchRepoFile(token, link.owner, link.repo, ref, link.entry)
-  const codeFiles = [{ name: 'index.html', content: html }]
+  let entryHtml = await githubApp.fetchRepoFile(token, link.owner, link.repo, ref, link.entry)
   const base = internalApiBase()
+  const codeFiles = [{ name: 'index.html', content: entryHtml }]
+  let assetsUploaded = 0
+  const skipped = []
+
+  let manifest = null
+  try {
+    manifest = JSON.parse(await githubApp.fetchRepoFile(token, link.owner, link.repo, ref, 'di-space.json'))
+  } catch { /* no manifest — entry-only sync */ }
+
+  if (manifest && (manifest.include?.length || manifest.assets?.length)) {
+    const repoPaths = await githubApp.repoTree(token, link.owner, link.repo, ref)
+    const entryPath = String(link.entry).replace(/^\.?\//, '')
+    const { codePaths, assetPaths } = spaceSyncPlan.planSync({ manifest, repoPaths, entryPath, entryHtml })
+    for (const rel of assetPaths) {
+      const buf = await githubApp.fetchRepoFileBuffer(token, link.owner, link.repo, ref, rel)
+      if (buf.length > MAX_SYNC_ASSET_BYTES) { skipped.push(rel); continue }
+      const asset = await uploadSyncedAsset(base, link.projectId, rel, buf)
+      entryHtml = spaceSyncPlan.rewriteAssetUrl(entryHtml, rel, asset.url)
+      assetsUploaded++
+    }
+    codeFiles[0].content = entryHtml
+    for (const rel of codePaths) {
+      codeFiles.push({
+        name: path.basename(rel),
+        content: await githubApp.fetchRepoFile(token, link.owner, link.repo, ref, rel)
+      })
+    }
+  }
+
   const docUrl = `${base}/api/projects/${link.projectId}/document`
   const cur = await httpRequest(docUrl, { headers: internalHeaders() }).then((r) => r.json()).catch(() => ({}))
   const doc = cur.document || {}
@@ -756,7 +816,13 @@ async function syncLinkedSpace(link) {
     method: 'PATCH', headers: internalHeaders(),
     body: JSON.stringify({ publishedProjectId: link.projectId })
   }).catch(() => {})
-  return { ref, bytes: html.length }
+  return {
+    ref,
+    bytes: entryHtml.length,
+    codeFiles: codeFiles.length,
+    assets: assetsUploaded,
+    ...(skipped.length ? { skippedOversize: skipped } : {})
+  }
 }
 
 router.post('/api/github/webhook', async (req, res) => {

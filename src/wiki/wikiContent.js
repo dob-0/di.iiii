@@ -176,11 +176,12 @@ export const WIKI_ARTICLES = [
                 'Install the di.iiii GitHub App on your repo (one time).',
                 'In /admin → Manage → pick a space → GitHub sync, enter owner / repo / project and Connect.',
                 'Edit your repo’s entry file (e.g. index.html) and push — the space re-syncs in seconds.',
+                'Add a di-space.json manifest to the repo and pushes sync the whole space: "include" globs bring extra code files (css/js/…), "assets" globs upload the media your entry references (videos, images, models) with their URLs rewritten automatically. Without a manifest, only the entry file syncs.',
                 'Sync is one-way (repo → space); Disconnect anytime.'
             ] }
         ],
         tags: ['github', 'sync', 'developers', 'deploy'],
-        updated: '2026-06-30'
+        updated: '2026-07-05'
     },
     {
         id: 'google-drive-import',
