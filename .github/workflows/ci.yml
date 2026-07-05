@@ -90,10 +90,16 @@ jobs:
           mkdir -p /tmp/input-check-data
           (cd serverXR && DATA_ROOT=/tmp/input-check-data ADMIN_API_TOKEN=ci-seed node src/index.js > /tmp/serverxr.log 2>&1 &)
           npm run dev -- --port 5173 > /tmp/vite.log 2>&1 &
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:4000/serverXR/api/health > /dev/null && curl -sf http://localhost:5173 > /dev/null && break
+          ok=""
+          for i in $(seq 1 120); do
+            if curl -sf http://localhost:4000/serverXR/api/health > /dev/null && curl -sf http://localhost:5173 > /dev/null; then ok=1; break; fi
             sleep 1
           done
+          if [ -z "$ok" ]; then
+            echo "::error::server or frontend never came up"
+            tail -30 /tmp/serverxr.log /tmp/vite.log
+            exit 1
+          fi
           node scripts/seed-input-check.mjs --token ci-seed
           npm run check:input
 
