@@ -25,6 +25,7 @@ import Text2DObject from '../objectComponents/Text2DObject.jsx'
 import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject from '../project/viewport/PortalObject.jsx'
 import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
+import { flyVertFromStick } from './xrFlyControl.js'
 import './liveProjectScene.css'
 
 const WALK_MAX_SPEED = 5.2
@@ -646,10 +647,9 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
             // turns -- Y is free). Horizontal locomotion never touched origin.y.
             const touchVert = vertTouchRef?.current || 0
             const stickY = rightController?.gamepad?.['xr-standard-thumbstick']?.yAxis ?? 0
-            // Verified on Quest hardware: the xr-standard-thumbstick yAxis reads
-            // positive when pushed up, so no negation here (the initial assumption,
-            // "push up = negative axis" like a typical gamepad, was inverted in practice).
-            const stickVert = Math.abs(stickY) > 0.15 ? stickY : 0 // push up = ascend
+            // Sign convention lives in xrFlyControl.js (user-verified on real
+            // hardware 2026-07-05): push up = ascend. Don't inline or "fix" it.
+            const stickVert = flyVertFromStick(stickY)
             if (isVr) {
                 origin.position.y = THREE.MathUtils.clamp(origin.position.y + (touchVert + stickVert) * FLY_SPEED * delta, 0, 58)
             } else if (flyMode) {
