@@ -89,7 +89,9 @@ jobs:
         run: |
           mkdir -p /tmp/input-check-data
           (cd serverXR && DATA_ROOT=/tmp/input-check-data ADMIN_API_TOKEN=ci-seed node src/index.js > /tmp/serverxr.log 2>&1 &)
-          npm run dev -- --port 5173 > /tmp/vite.log 2>&1 &
+          # plain vite, NOT `npm run dev` — that's the dev-stack launcher, which
+          # would spawn a second serverXR and race the seeded one for port 4000
+          npx vite --port 5173 > /tmp/vite.log 2>&1 &
           ok=""
           for i in $(seq 1 120); do
             if curl -sf http://localhost:4000/serverXR/api/health > /dev/null && curl -sf http://localhost:5173 > /dev/null; then ok=1; break; fi
@@ -97,7 +99,7 @@ jobs:
           done
           if [ -z "$ok" ]; then
             echo "::error::server or frontend never came up"
-            tail -30 /tmp/serverxr.log /tmp/vite.log
+            tail -n 30 /tmp/serverxr.log /tmp/vite.log
             exit 1
           fi
           node scripts/seed-input-check.mjs --token ci-seed
@@ -105,4 +107,4 @@ jobs:
 
       - name: Server log on failure
         if: failure()
-        run: tail -50 /tmp/serverxr.log /tmp/vite.log || true
+        run: tail -n 50 /tmp/serverxr.log /tmp/vite.log || true
