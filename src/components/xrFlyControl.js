@@ -13,13 +13,13 @@ export const MOVE_STICK_DEADZONE = 0.1
 export const flyVertFromStick = (yAxis, deadzone = FLY_STICK_DEADZONE) =>
     Math.abs(yAxis) > deadzone ? -yAxis : 0
 
-// Left-stick translation mapping, same hardware convention (Gamepad API):
-// push up = negative yAxis = move forward (+), push right = positive xAxis =
-// strafe right (+). The library's useXRControllerLocomotion translation
-// mirrored strafe on real hardware (verified 2026-07-05: push left slid
-// right), so translation is ours: these axes drive movement along the
-// camera's horizontal forward and its cross-product right vector.
+// Left-stick translation mapping. REAL-HARDWARE TRUTH (headset, 2026-07-05,
+// two rounds): push up = negative yAxis = forward (+); and BOTH the library's
+// translation and a `strafe: xAxis` mapping slid the wrong way — on this
+// device push left must map to negative strafe via `-xAxis`. Forward here is
+// +toward view, strafe +to the right of view (right = forward × up). Do not
+// change these signs without re-testing on a physical headset.
 export const moveFromStick = (xAxis, yAxis, deadzone = MOVE_STICK_DEADZONE) =>
     (Math.abs(xAxis) > deadzone || Math.abs(yAxis) > deadzone)
-        ? { forward: -yAxis || 0, strafe: xAxis }
+        ? { forward: -yAxis || 0, strafe: -xAxis || 0 }
         : { forward: 0, strafe: 0 }

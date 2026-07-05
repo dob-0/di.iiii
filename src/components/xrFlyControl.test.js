@@ -28,16 +28,20 @@ describe('moveFromStick', () => {
         expect(moveFromStick(0, -1)).toEqual({ forward: 1, strafe: 0 })
     })
 
-    it('push left (negative xAxis) strafes left (-)', () => {
-        expect(moveFromStick(-1, 0)).toEqual({ forward: 0, strafe: -1 })
+    // Hardware truth (headset, 2026-07-05): `strafe: xAxis` slid the wrong
+    // way on-device, so the mapping negates xAxis — empirical, not the
+    // Gamepad-spec assumption. On this hardware pushing left reads as
+    // POSITIVE xAxis. Re-test on a physical headset before "fixing" signs.
+    it('push left (positive xAxis on-device) strafes left (-)', () => {
+        expect(moveFromStick(1, 0)).toEqual({ forward: 0, strafe: -1 })
     })
 
-    it('push right (positive xAxis) strafes right (+)', () => {
-        expect(moveFromStick(1, 0)).toEqual({ forward: 0, strafe: 1 })
+    it('push right (negative xAxis on-device) strafes right (+)', () => {
+        expect(moveFromStick(-1, 0)).toEqual({ forward: 0, strafe: 1 })
     })
 
     it('ignores drift inside the deadzone, passes a live axis through whole', () => {
         expect(moveFromStick(MOVE_STICK_DEADZONE, MOVE_STICK_DEADZONE)).toEqual({ forward: 0, strafe: 0 })
-        expect(moveFromStick(0.05, -0.8)).toEqual({ forward: 0.8, strafe: 0.05 })
+        expect(moveFromStick(0.05, -0.8)).toEqual({ forward: 0.8, strafe: -0.05 })
     })
 })

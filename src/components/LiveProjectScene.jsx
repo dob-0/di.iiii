@@ -721,7 +721,10 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
                         material-depthTest={false}
                         material-depthWrite={false}
                     >
-                        {'Left stick · walk\nRight stick · turn (X) / fly up-down (Y)'}
+                        {/* "· 3" is a temporary build marker for on-headset
+                            verification of the strafe fix — remove once the
+                            left stick is confirmed correct on hardware. */}
+                        {'Left stick · walk\nRight stick · turn (X) / fly up-down (Y) · 3'}
                     </Text>
                 </group>
             )}
