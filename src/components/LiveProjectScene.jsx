@@ -987,6 +987,10 @@ export default function LiveProjectScene({
     const arTouchElRef = useRef(null)
     const isArActive = xr.isArModeActive && xr.isXrPresenting
     const playerRef = useRef({ x: 0, z: 6, yaw: Math.PI, pitch: 0, altY: EYE_HEIGHT })
+    // Dev-only observability hook for scripts/input-check.mjs: input-contract
+    // probes assert on real walker state instead of guessing from screenshots.
+    // The ref (not the object) — worldState.spawn replaces playerRef.current.
+    if (import.meta.env.DEV && typeof window !== 'undefined') window.__diiWalkerRef = playerRef
 
     // Data-driven arrival: a project can author worldState.spawn to place/aim the
     // visitor on entry (otherwise the default above). Applied once per project load.
