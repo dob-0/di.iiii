@@ -25,7 +25,7 @@ import Text2DObject from '../objectComponents/Text2DObject.jsx'
 import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject from '../project/viewport/PortalObject.jsx'
 import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
-import { flyVertFromStick } from './xrFlyControl.js'
+import { flyVertFromStick, moveFromStick } from './xrFlyControl.js'
 import './liveProjectScene.css'
 
 const WALK_MAX_SPEED = 5.2
@@ -589,11 +589,15 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
     // Dismiss on a timer or the first real stick input, whichever comes first.
     const [showVrHint, setShowVrHint] = useState(false)
 
+    // Right-stick smooth turning stays with the library; left-stick
+    // translation is ours (see moveFromStick in xrFlyControl.js — the
+    // library's strafe axis mirrored on real hardware).
     useXRControllerLocomotion(
         originRef,
-        { speed: WALK_MAX_SPEED },
+        false,
         { type: 'smooth', speed: TURN_SPEED }
     )
+    const leftController = useXRInputSourceState('controller', 'left')
 
     useEffect(() => {
         if (!isPresenting || !isVr) {
@@ -619,6 +623,24 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
         wasPresentingRef.current = isPresenting
 
         if (isPresenting) {
+            // VR left-stick translation: move along the camera's horizontal
+            // forward; strafe along its cross-product right (right = forward
+            // × up = (-fz, 0, fx)). Deriving right from the hardware-verified
+            // forward is pure geometry — it cannot mirror the way the
+            // library's quaternion-rotated vector did.
+            const lStick = leftController?.gamepad?.['xr-standard-thumbstick']
+            const { forward: lFwd, strafe: lStrafe } = moveFromStick(lStick?.xAxis ?? 0, lStick?.yAxis ?? 0)
+            if (lFwd !== 0 || lStrafe !== 0) {
+                state.camera.getWorldDirection(tmpDir)
+                tmpDir.y = 0
+                if (tmpDir.lengthSq() > 1e-6) {
+                    tmpDir.normalize()
+                    const step = WALK_MAX_SPEED * delta
+                    origin.position.x += (tmpDir.x * lFwd + -tmpDir.z * lStrafe) * step
+                    origin.position.z += (tmpDir.z * lFwd + tmpDir.x * lStrafe) * step
+                }
+            }
+
             // Joystick mirrors walk-mode convention: joy.x turns (rotates
             // XROrigin yaw), joy.y moves forward along that virtual yaw.
             // The phone IMU still controls the look direction on top of
@@ -666,7 +688,7 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
             player.yaw = origin.rotation.y
             player.altY = EYE_HEIGHT + origin.position.y
 
-            if (showVrHint && (Math.abs(stickY) > 0.15 || (joy && (Math.abs(joy.x) > 0.05 || Math.abs(joy.y) > 0.05)))) {
+            if (showVrHint && (Math.abs(stickY) > 0.15 || lFwd !== 0 || lStrafe !== 0 || (joy && (Math.abs(joy.x) > 0.05 || Math.abs(joy.y) > 0.05)))) {
                 setShowVrHint(false)
             }
         }
