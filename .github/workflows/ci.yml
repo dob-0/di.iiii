@@ -54,3 +54,49 @@ jobs:
 
       - name: Check wiki / user-facing docs
         run: npm run docs:wiki:check
+
+  # Behavioral browser checks — the layer unit tests can't cover. Currently:
+  # input-device contracts for the exhibition walker (wheel never pitches,
+  # drag-look works when pointer lock is denied, …). Runs against a seeded
+  # throwaway server + the vite dev server (the walker probe hook is DEV-only).
+  input-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: |
+          if [ -f serverXR/package-lock.json ]; then
+            npm --prefix serverXR ci
+          else
+            npm --prefix serverXR install
+          fi
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start server + frontend, seed, run input contracts
+        run: |
+          mkdir -p /tmp/input-check-data
+          (cd serverXR && DATA_ROOT=/tmp/input-check-data ADMIN_API_TOKEN=ci-seed node src/index.js > /tmp/serverxr.log 2>&1 &)
+          npm run dev -- --port 5173 > /tmp/vite.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:4000/serverXR/api/health > /dev/null && curl -sf http://localhost:5173 > /dev/null && break
+            sleep 1
+          done
+          node scripts/seed-input-check.mjs --token ci-seed
+          npm run check:input
+
+      - name: Server log on failure
+        if: failure()
+        run: tail -50 /tmp/serverxr.log /tmp/vite.log || true
