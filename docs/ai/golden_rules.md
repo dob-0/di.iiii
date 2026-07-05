@@ -430,3 +430,14 @@ It loads the URL at desktop aspect ratios (16:9, 16:10, 4:3, 1:1, ultrawide, sma
 **Why:** Studio grew to 9 floating windows (Library, Assets, Files, Inspector, Structure, Present, Publish, Activity, World) and became unmanageable — thin panels (Present = 2 dropdowns), duplicated actions (Import in two panels, XR entry in two places, world defaults editable in two panels), and a dead-end asset flow. The 2026-07-02 consolidation (user-approved) collapsed them to five task-shaped windows; every merge was sections-inside-a-window, not new chrome. Keep it that way: more windows = more management burden, which is exactly what users complained about.
 
 **Files:** `src/studio/components/StudioShell.jsx`, `StudioControlCluster.jsx` (`PANEL_BUTTONS`), `StudioShellPanels.jsx`, `src/studio/hooks/useStudioPanelState.js`
+
+---
+
+### Input handling never guesses the device — design it to be safe for all of them
+
+**Rule:** Browsers do not reveal which physical device produced an event; any heuristic that infers "trackpad vs mouse wheel" (or similar) from delta sizes/modes is a guess that only holds on the machine it was tuned on. When behavior would depend on the device class, remove the ambiguity instead: pick a semantic that is harmless on **every** device (e.g. wheel deltaY = dolly, never pitch). Two hard sub-rules: (1) never swallow a denied capability request (pointer lock, fullscreen, permissions) without a working fallback — silencing the console error is not handling the failure; (2) when verifying input code, fire the inputs the code is supposed to **exclude** (line-mode wheel, pixel-mode large/small deltas, ctrlKey pinch, denied pointer lock via a rejecting stub), not just the intended gesture. Sensitivity constants tuned "by feel" on one machine are a smell — flag them in the commit message.
+
+**Why:** The June-29 controls session shipped three artefacts at once: a ≤60px "trackpad" guard that hi-res mouse wheels pass (scroll pitched the camera into the floor), a pointer-lock rejection caught-and-ignored (mouse look silently dead on Wayland/after-Esc, WASD still working — "can move but can't look"), and a 3× sensitivity bump tuned on the author's trackpad. Each patch narrowed the previous heuristic instead of asking the design question ("should scroll ever touch pitch?"). The responsive-check golden rule didn't catch it because its matrix is viewports, not input devices. Fixed in bc0bb6b by removing the ambiguity: scroll = dolly for every wheel type, drag-look fallback when lock is denied.
+
+**Files:** `src/components/LiveProjectScene.jsx` (Walker), `scratchpad/probe-walker2.mjs` pattern for input-class probes
+
