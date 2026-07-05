@@ -58,6 +58,7 @@ Strict execution rules:
 - if requested scope is broad, propose a narrowed scope first and wait for confirmation
 - report only task-relevant findings; defer optional ideas unless asked
 - always end with: changed files, validations run, unresolved risks
+- a bug fix is not "done" as the fix alone — the same change must carry (a) a `docs/ai/known-fixes.md` entry and (b) a regression guard (unit test, or an executable contract like `check:input` when the bug class needs a browser). One escape per bug class, ever; prose alone does not count as a guard
 
 ## MCP / Tool-Usage Guardrails
 
