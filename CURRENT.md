@@ -9,10 +9,16 @@ active_branch: dev
 
 ## Last commit
 
-`e58a533` — feat(studio): unified content model (Phase 1)
-**On `main`/prod (deploy green, smoke 9/9). Prod now runs: five-window Studio, unified Files library + asset delete, code↔files bridge, commons moderation, guest-share gate.**
+`3e3e7db` — ci(input-contracts): plain vite + tail syntax (CI green)
+**Prod (`main`) still at `e58a533`: five-window Studio, unified Files library + asset delete, code↔files bridge, commons moderation, guest-share gate.**
 
-## Last session (2026-07-02)
+## Last session (2026-07-05)
+
+- **Exhibition walker input fixes (dev/staging, `bc0bb6b`)**: scroll never pitches anymore — deltaY dollies forward/back ("scroll = zoom", all wheel types incl. hi-res pixel-mode that used to tilt the camera into the floor), deltaX still turns; drag-to-look fallback when pointer lock is denied (Wayland / Chrome post-Esc cooldown — was silently dead). Root cause: June-29 session's device-guessing wheel heuristic + swallowed lock rejection, tuned only on a trackpad.
+- **Input-device contract check**: `npm run check:input` (`scripts/input-check.mjs`) — 13 contracts asserted on real walker state via dev-only `window.__diiWalkerRef`; runs in CI on every push/PR (`input-contracts` job seeds a blank wcc/main via `scripts/seed-input-check.mjs` with `ADMIN_API_TOKEN`; use `npx vite`, NOT `npm run dev` — that launcher spawns its own serverXR). Golden rule added: input handling never guesses the device class.
+- **WCC staging→prod promotion tool**: `npm run wcc:promote` (see below). **PENDING: user to run `npm run wcc:promote -- --project main`** — staging's reworked hub zone layout is approved but not yet pushed to prod (only the hub differs; artist projects verified identical).
+
+## Earlier (2026-07-02)
 
 - **Unified content model Phase 1 (dev)**: one `Files (N)` library in Create (project+space assets merged by content-hash id; residency text, `in scene ×N` + `public` badges; +Add/Share/URL/delete row); asset DELETE routes (project + space, space delete has 409 usedBy scan + `?force=1` + commons unshare on origin); previously-dead `deleteAsset` op wired + tested; Code window owns the 3D↔code viewport toggle (moved from Share), gets a "Project file → Insert URL at cursor" bridge, file rename with href/src rewrite, and an Embed-external-URL section (`codeSourceType:'url'` now reachable); QuickInsert hidden-project-assets bug fixed. Roadmap: `docs/roadmaps/STUDIO_CONTENT_MODEL_UX.md`; wiki article `studio-content-model` linked from Create+Code. 387+23 tests, Playwright-verified.
 - **Commons moderation (dev)**: admin "Asset commons" section in Ops Graph → Manage (search/View/Remove; `DELETE /api/commons/assets/:id` admin-gated). **Guest-share gate (dev)**: publishing to the commons requires a signed-in session; share errors surface in the Create window.
