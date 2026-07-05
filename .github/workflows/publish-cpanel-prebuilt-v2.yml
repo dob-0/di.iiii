@@ -20,13 +20,23 @@ permissions:
   contents: write
 
 jobs:
+  # Deploys wait for the behavioral browser checks (input-device contracts,
+  # responsive sweep) — the suite unit tests can't cover. A red check means
+  # nothing reaches staging or production.
+  checks:
+    uses: ./.github/workflows/browser-checks.yml
+
   publish:
+    needs: checks
     runs-on: ubuntu-latest
     environment: ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'production' || 'staging' }}
     env:
       SOURCE_REF:    ${{ inputs.source_ref != '' && inputs.source_ref || github.ref_name }}
       DEPLOY_ENV:    ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'production' || 'staging' }}
       TARGET_BRANCH: ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'cpanel-production' || 'cpanel-staging' }}
+    outputs:
+      published: ${{ steps.publish.outputs.published }}
+      source_sha: ${{ steps.publish.outputs.source_sha }}
 
     steps:
       - uses: actions/checkout@v4
@@ -61,10 +71,12 @@ jobs:
         run: node scripts/stage-cpanel-nodeapp-release.mjs
 
       - name: Publish to ${{ env.TARGET_BRANCH }}
+        id: publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          echo "source_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
           CONTENT_DIR="$(mktemp -d)"
           BRANCH_DIR="$(mktemp -d)"
 
@@ -102,7 +114,43 @@ jobs:
           git add -f .deploy .cpanel.yml .cpanel-source-ref .cpanel-deploy-env
           if git diff --cached --quiet; then
             echo "No changes to publish."
+            echo "published=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "Publish ${DEPLOY_ENV} cPanel prebuilt from ${SOURCE_REF}"
             git push origin "HEAD:${TARGET_BRANCH}"
+            echo "published=true" >> "$GITHUB_OUTPUT"
           fi
+
+  # After a real publish, wait for cPanel to pull the release (health endpoint
+  # reports release.gitCommit) and smoke-check the live origin. A broken deploy
+  # turns the run red instead of waiting for a person to notice.
+  smoke:
+    needs: publish
+    if: needs.publish.outputs.published == 'true'
+    runs-on: ubuntu-latest
+    env:
+      BASE_URL: ${{ (github.ref_name == 'main' || inputs.deploy_env == 'production') && 'https://di-studio.xyz' || 'https://staging.di-studio.xyz' }}
+      EXPECTED_SHA: ${{ needs.publish.outputs.source_sha }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Wait for the release to go live (10 min max)
+        run: |
+          echo "waiting for ${BASE_URL} to report ${EXPECTED_SHA}"
+          for i in $(seq 1 60); do
+            live=$(curl -sf --max-time 10 "${BASE_URL}/serverXR/api/health" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{console.log(JSON.parse(d).release.gitCommit||"")}catch{console.log("")}})' || true)
+            if [ "$live" = "$EXPECTED_SHA" ]; then
+              echo "release is live"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::deploy never went live with ${EXPECTED_SHA} (last seen: ${live:-none})"
+          exit 1
+
+      - name: Smoke check
+        run: node scripts/smoke-check-cpanel.mjs --base-url "${BASE_URL}"

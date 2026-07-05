@@ -1,0 +1,76 @@
+name: Browser Checks
+
+# Reusable behavioral checks — the layer unit tests can't cover. Called by
+# ci.yml (every push/PR) and by the publish workflow (deploys wait on it).
+# Runs against a seeded throwaway server + the vite dev server (the walker
+# probe hook is DEV-only):
+#   - input-device contracts for the exhibition walker (npm run check:input)
+#   - responsive/console-error sweep of the public landing (check:responsive)
+
+on:
+  workflow_call:
+
+jobs:
+  browser-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install server dependencies
+        run: |
+          if [ -f serverXR/package-lock.json ]; then
+            npm --prefix serverXR ci
+          else
+            npm --prefix serverXR install
+          fi
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Start seeded server + frontend
+        run: |
+          mkdir -p /tmp/input-check-data
+          (cd serverXR && DATA_ROOT=/tmp/input-check-data ADMIN_API_TOKEN=ci-seed node src/index.js > /tmp/serverxr.log 2>&1 &)
+          # plain vite, NOT `npm run dev` — that's the dev-stack launcher, which
+          # would spawn a second serverXR and race the seeded one for port 4000
+          npx vite --port 5173 > /tmp/vite.log 2>&1 &
+          ok=""
+          for i in $(seq 1 120); do
+            if curl -sf http://localhost:4000/serverXR/api/health > /dev/null && curl -sf http://localhost:5173 > /dev/null; then ok=1; break; fi
+            sleep 1
+          done
+          if [ -z "$ok" ]; then
+            echo "::error::server or frontend never came up"
+            tail -n 30 /tmp/serverxr.log /tmp/vite.log
+            exit 1
+          fi
+          node scripts/seed-input-check.mjs --token ci-seed
+
+      - name: Input-device contracts
+        run: npm run check:input
+
+      - name: Responsive sweep (public landing)
+        run: node scripts/responsive-check.mjs http://localhost:5173/wcc --scroll --out /tmp/responsive
+
+      - name: Upload responsive screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: responsive-screenshots
+          path: /tmp/responsive
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Server log on failure
+        if: failure()
+        run: tail -n 50 /tmp/serverxr.log /tmp/vite.log || true
