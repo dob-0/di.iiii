@@ -36,6 +36,7 @@
         "space:push": "node scripts/space-push.mjs",
         "space:code-push": "node scripts/space-code-push.mjs",
         "space:sync": "node scripts/space-sync.mjs",
+        "wcc:promote": "node scripts/promote-wcc-projects.mjs",
         "preview": "vite preview",
         "lint": "eslint src --ext .js,.jsx",
         "test": "vitest run",

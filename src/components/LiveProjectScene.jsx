@@ -35,6 +35,12 @@ const TURN_SPEED = 1.6
 const POINTER_LOCK_SENSITIVITY = 0.018
 const TOUCH_LOOK_SENSITIVITY = 0.005
 const TRACKPAD_LOOK_SENSITIVITY = 0.004
+// Drag distances run much larger than pointer-lock flicks, so drag-look gets
+// its own, gentler tuning.
+const DRAG_LOOK_SENSITIVITY = 0.006
+// Metres of forward motion per scroll pixel: one classic wheel notch (~48px
+// after line-mode normalisation) steps half a metre.
+const WHEEL_DOLLY_SPEED = 0.01
 // Just shy of straight up/down (PI/2) to avoid the camera flipping at the pole.
 const WALK_PITCH_LIMIT = 1.45
 // Flying has no horizon to stay oriented against, so allow (almost) the full
@@ -273,6 +279,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
     const strafeSpeedRef = useRef(0)
     const bobPhaseRef = useRef(0)
     const lockedRef = useRef(false)
+    const wheelDollyRef = useRef(0)
     const touchLookRef = useRef(null)
     const touchMoveRef = useRef(null)
     const joyBaseRef = useRef({ x: 0, y: 0 })
@@ -317,45 +324,53 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 el.style.cursor = locked ? 'none' : 'crosshair'
                 onLockChangeRef.current?.(locked)
             }
-            const onPointerDown = () => {
-                if (!lockedRef.current) el.requestPointerLock()
-            }
+            // Pointer lock can be denied outright (Wayland browsers, iframe
+            // policies, Chrome's cooldown after an Esc release) — dragging on
+            // the canvas must keep working as a look control in that case.
+            let draggingCanvas = false
             const onMouseMove = (e) => {
-                if (!lockedRef.current) return
                 const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
-                player.yaw -= e.movementX * POINTER_LOCK_SENSITIVITY
-                player.pitch = THREE.MathUtils.clamp(
-                    player.pitch - e.movementY * POINTER_LOCK_SENSITIVITY,
-                    -pitchLimit,
-                    pitchLimit
-                )
+                if (lockedRef.current) {
+                    player.yaw -= e.movementX * POINTER_LOCK_SENSITIVITY
+                    player.pitch = THREE.MathUtils.clamp(
+                        player.pitch - e.movementY * POINTER_LOCK_SENSITIVITY,
+                        -pitchLimit,
+                        pitchLimit
+                    )
+                } else if (draggingCanvas && e.buttons === 1) {
+                    player.yaw -= e.movementX * DRAG_LOOK_SENSITIVITY
+                    player.pitch = THREE.MathUtils.clamp(
+                        player.pitch - e.movementY * DRAG_LOOK_SENSITIVITY,
+                        -pitchLimit,
+                        pitchLimit
+                    )
+                }
             }
-            // Trackpad two-finger swipe: look around without needing pointer lock.
-            // ctrlKey=true is a pinch gesture — ignore it. Guard against mouse scroll
-            // wheels which send large line-mode or pixel-mode deltas: only apply
-            // rotation when the event looks like a trackpad (pixel-mode, small delta).
+            // Scroll never pitches the camera: pixel-mode deltas from high-res
+            // mouse wheels are indistinguishable from trackpad swipes and were
+            // tilting the view into the floor. Instead deltaY dollies forward/
+            // back ("scroll = zoom" toward what you face, consumed in useFrame
+            // through the same bounds clamp) and deltaX still turns, so the
+            // trackpad horizontal look-around survives. ctrlKey = pinch zoom.
             const onWheel = (e) => {
                 if (e.ctrlKey) return
-                if (e.deltaMode !== 0) return // line/page mode = mouse wheel, skip
-                if (Math.abs(e.deltaX) + Math.abs(e.deltaY) > 60) return // large delta = mouse wheel, skip
-                const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
-                player.yaw -= e.deltaX * TRACKPAD_LOOK_SENSITIVITY
-                player.pitch = THREE.MathUtils.clamp(
-                    player.pitch - e.deltaY * TRACKPAD_LOOK_SENSITIVITY,
-                    -pitchLimit,
-                    pitchLimit
-                )
+                const scale = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 100 : 1
+                player.yaw -= e.deltaX * scale * TRACKPAD_LOOK_SENSITIVITY
+                wheelDollyRef.current -= e.deltaY * scale * WHEEL_DOLLY_SPEED
             }
             const onPointerDownWithLock = () => {
+                draggingCanvas = true
                 if (lockedRef.current) return
                 const req = el.requestPointerLock()
                 if (req && typeof req.catch === 'function') {
-                    req.catch(() => { /* pointer lock denied — cursor stays as crosshair */ })
+                    req.catch(() => { /* denied — drag-look fallback takes over */ })
                 }
             }
+            const onPointerUp = () => { draggingCanvas = false }
             el.style.cursor = 'crosshair'
             el.addEventListener('pointerdown', onPointerDownWithLock)
             el.addEventListener('wheel', onWheel, { passive: true })
+            document.addEventListener('pointerup', onPointerUp)
             document.addEventListener('pointerlockchange', onLockChange)
             document.addEventListener('mousemove', onMouseMove)
             return () => {
@@ -363,6 +378,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 el.style.cursor = ''
                 el.removeEventListener('pointerdown', onPointerDownWithLock)
                 el.removeEventListener('wheel', onWheel)
+                document.removeEventListener('pointerup', onPointerUp)
                 document.removeEventListener('pointerlockchange', onLockChange)
                 document.removeEventListener('mousemove', onMouseMove)
             }
@@ -501,6 +517,14 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             player.x = THREE.MathUtils.clamp(nextX, bounds.minX, bounds.maxX)
             player.z = THREE.MathUtils.clamp(nextZ, bounds.minZ, bounds.maxZ)
             bobPhaseRef.current += delta * Math.hypot(speedRef.current, strafeSpeedRef.current) * (fly ? 0 : 1.8)
+        }
+        // Scroll dolly steps along the horizontal facing direction, like
+        // forward/back movement — never along pitch, so it can't change altitude.
+        if (wheelDollyRef.current !== 0) {
+            const dolly = wheelDollyRef.current
+            wheelDollyRef.current = 0
+            player.x = THREE.MathUtils.clamp(player.x + Math.sin(player.yaw) * dolly, bounds.minX, bounds.maxX)
+            player.z = THREE.MathUtils.clamp(player.z + Math.cos(player.yaw) * dolly, bounds.minZ, bounds.maxZ)
         }
         if (fly && vert !== 0) {
             player.altY = THREE.MathUtils.clamp(player.altY + vert * FLY_SPEED * delta, -2, 60)

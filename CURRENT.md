@@ -32,14 +32,13 @@ active_branch: dev
 - GitHub → space sync LIVE on prod (App webhook + scoped sync-keys; rotation runbook in docs/ops)
 - Deploy: push `dev` → staging, push `main` → prod (`publish-cpanel-prebuilt-v2.yml`); local: podman/docker compose on 8080
 - Space sync: `npm run space:new/pull/push` + SpaceSyncPanel
+- WCC staging→prod promotion: `npm run wcc:promote [-- --project <id>] [-- --dry-run]` (`scripts/promote-wcc-projects.mjs`) — pulls a project's document + referenced assets from staging and pushes to prod; replaces the old one-off scratch script
 
 ## What is broken / open
 
-- **Drive on staging/prod needs Google console work**: staging/prod redirect URIs on the OAuth client; consent screen is in Testing mode (test users only) — publish + verification before public launch. Doc: `docs/ops/GOOGLE_DRIVE_INTEGRATION.md`.
+- **Drive on prod**: redirect URIs + consent screen publish done, verified working on staging — still needs verifying live on prod, and Google's OAuth verification (sensitive scope, needed past ~100 users) is a manual submission only the user can make. Doc: `docs/ops/GOOGLE_DRIVE_INTEGRATION.md`.
 - GitHub-sync: App webhook reaches prod only; App path pulls entry file only (CI path covers assets via `DI_SPACE_TOKEN`).
-- Zone positions not synced staging↔prod (manual `scratchpad/copy-staging-to-prod.mjs`).
 - VR fly unverified on hardware; `origin/self-host` intentionally 1 commit ahead (`b9baa30`).
-- Commons follow-ups: admin moderation view; guest-share policy decision.
 
 ## Known fixes
 
