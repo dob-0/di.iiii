@@ -77,6 +77,17 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/pre-push-gate.sh",
+            "statusMessage": "Pre-push gate (lint + schema-sync + wiki)...",
+            "timeout": 180
+          }
+        ]
+      },
+      {
         "matcher": "Edit|Write",
         "hooks": [
           {
