@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { flyVertFromStick, moveFromStick, FLY_STICK_DEADZONE, MOVE_STICK_DEADZONE } from './xrFlyControl.js'
+import { flyVertFromStick, moveFromStick, xrTurnSpeed, FLY_STICK_DEADZONE, MOVE_STICK_DEADZONE } from './xrFlyControl.js'
 
 // These tests encode a REAL-HARDWARE verification (headset, 2026-07-05):
 // the xr-standard-thumbstick yAxis is NEGATIVE when pushed up. If a change
@@ -28,20 +28,33 @@ describe('moveFromStick', () => {
         expect(moveFromStick(0, -1)).toEqual({ forward: 1, strafe: 0 })
     })
 
-    // Hardware truth (headset, 2026-07-05): `strafe: xAxis` slid the wrong
-    // way on-device, so the mapping negates xAxis — empirical, not the
-    // Gamepad-spec assumption. On this hardware pushing left reads as
-    // POSITIVE xAxis. Re-test on a physical headset before "fixing" signs.
-    it('push left (positive xAxis on-device) strafes left (-)', () => {
-        expect(moveFromStick(1, 0)).toEqual({ forward: 0, strafe: -1 })
+    // Hardware truth (headset, 2026-07-06): the 2026-07-05 session's claim
+    // that push-left reads as POSITIVE xAxis on-device was never actually
+    // re-verified and was backwards on real hardware — confirmed the strafe
+    // came out mirrored (push left moved right). This device follows the
+    // standard Gamepad-API convention (push left = negative xAxis). Re-test
+    // on a physical headset before "fixing" this sign again.
+    it('push left (negative xAxis, standard convention) strafes left (-)', () => {
+        expect(moveFromStick(-1, 0)).toEqual({ forward: 0, strafe: -1 })
     })
 
-    it('push right (negative xAxis on-device) strafes right (+)', () => {
-        expect(moveFromStick(-1, 0)).toEqual({ forward: 0, strafe: 1 })
+    it('push right (positive xAxis, standard convention) strafes right (+)', () => {
+        expect(moveFromStick(1, 0)).toEqual({ forward: 0, strafe: 1 })
     })
 
     it('ignores drift inside the deadzone, passes a live axis through whole', () => {
         expect(moveFromStick(MOVE_STICK_DEADZONE, MOVE_STICK_DEADZONE)).toEqual({ forward: 0, strafe: 0 })
-        expect(moveFromStick(0.05, -0.8)).toEqual({ forward: 0.8, strafe: -0.05 })
+        expect(moveFromStick(0.05, -0.8)).toEqual({ forward: 0.8, strafe: 0.05 })
+    })
+})
+
+// REAL-HARDWARE TRUTH (headset, 2026-07-06): the library's own right-stick
+// smooth-turn logic turned the view backwards (push left turned right) on
+// this device. Negating the speed passed to it flips the turn direction.
+// Do not change without re-testing on a physical headset.
+describe('xrTurnSpeed', () => {
+    it('inverts the base turn speed to counter the library\'s backwards turn direction', () => {
+        expect(xrTurnSpeed(1.6)).toBe(-1.6)
+        expect(xrTurnSpeed(-1.6)).toBe(1.6)
     })
 })

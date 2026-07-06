@@ -25,7 +25,7 @@ import Text2DObject from '../objectComponents/Text2DObject.jsx'
 import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject from '../project/viewport/PortalObject.jsx'
 import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
-import { flyVertFromStick, moveFromStick } from './xrFlyControl.js'
+import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
 import './liveProjectScene.css'
 
 const WALK_MAX_SPEED = 5.2
@@ -595,7 +595,7 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
     useXRControllerLocomotion(
         originRef,
         false,
-        { type: 'smooth', speed: TURN_SPEED }
+        { type: 'smooth', speed: xrTurnSpeed(TURN_SPEED) }
     )
     const leftController = useXRInputSourceState('controller', 'left')
 
@@ -721,10 +721,10 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
                         material-depthTest={false}
                         material-depthWrite={false}
                     >
-                        {/* "· 3" is a temporary build marker for on-headset
-                            verification of the strafe fix — remove once the
-                            left stick is confirmed correct on hardware. */}
-                        {'Left stick · walk\nRight stick · turn (X) / fly up-down (Y) · 3'}
+                        {/* "· 4" is a temporary build marker for on-headset
+                            verification of the strafe + turn fix — remove
+                            once both are confirmed correct on hardware. */}
+                        {'Left stick · walk\nRight stick · turn (X) / fly up-down (Y) · 4'}
                     </Text>
                 </group>
             )}
