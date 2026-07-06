@@ -1,21 +1,23 @@
 import { describe, expect, it } from 'vitest'
 import { flyVertFromStick, moveFromStick, xrTurnSpeed, FLY_STICK_DEADZONE, MOVE_STICK_DEADZONE } from './xrFlyControl.js'
 
-// These tests encode a REAL-HARDWARE verification (headset, 2026-07-07):
-// the 2026-07-05 claim (yAxis negative when pushed up) was re-tested live
-// and found backwards — push up descended. xr-standard-thumbstick yAxis is
-// POSITIVE when pushed up on this device. If a change makes these fail, the
-// fix is wrong unless it was re-tested on a headset — this sign has already
-// been flipped multiple times on assumption/false "verified" claims.
+// These tests encode a REAL-HARDWARE verification (headset, 2026-07-05,
+// confirmed independently 3 times since): the xr-standard-thumbstick yAxis
+// is NEGATIVE when pushed up. A 2026-07-06 report claiming this had flipped
+// arrived in the same round as an impossible report (both turn signs AND
+// both fly signs called "still wrong"), immediately after a debug-only
+// commit with zero functional change -- treated as an unreliable test round
+// and reverted. If a change makes these fail, the fix is wrong unless it
+// was re-tested deliberately on a headset.
 describe('flyVertFromStick', () => {
-    it('push up (positive yAxis) ascends (positive vert)', () => {
-        expect(flyVertFromStick(1)).toBe(1)
-        expect(flyVertFromStick(0.5)).toBe(0.5)
+    it('push up (negative yAxis) ascends (positive vert)', () => {
+        expect(flyVertFromStick(-1)).toBe(1)
+        expect(flyVertFromStick(-0.5)).toBe(0.5)
     })
 
-    it('push down (negative yAxis) descends (negative vert)', () => {
-        expect(flyVertFromStick(-1)).toBe(-1)
-        expect(flyVertFromStick(-0.5)).toBe(-0.5)
+    it('push down (positive yAxis) descends (negative vert)', () => {
+        expect(flyVertFromStick(1)).toBe(-1)
+        expect(flyVertFromStick(0.5)).toBe(-0.5)
     })
 
     it('ignores drift inside the deadzone', () => {
@@ -50,16 +52,16 @@ describe('moveFromStick', () => {
     })
 })
 
-// REAL-HARDWARE TRUTH (headset, 2026-07-07): the 2026-07-06 negation
-// (guessing the library's default turn direction was backwards) was
-// re-tested live and reported still wrong either way — this axis has NOT
-// been conclusively resolved by description alone (a live raw-axis readout
-// was added in LiveProjectScene.jsx to get an objective reading next time).
-// Currently reverted to the library's own unmodified direction. Do not
-// change without re-testing on a physical headset.
+// REAL-HARDWARE TRUTH (headset, 2026-07-06): the library's own right-stick
+// smooth-turn logic turned the view backwards (push left turned right,
+// the original VR report). Negating the speed passed to it flips the turn
+// direction -- geometrically verified. A follow-up "still wrong" report
+// arrived bundled with an impossible one (see flyVertFromStick above) and
+// was treated as an unreliable test round rather than re-flipped again.
+// Do not change without a fresh, deliberate re-test on a physical headset.
 describe('xrTurnSpeed', () => {
-    it('currently passes the base turn speed through unchanged (library default)', () => {
-        expect(xrTurnSpeed(1.6)).toBe(1.6)
-        expect(xrTurnSpeed(-1.6)).toBe(-1.6)
+    it('inverts the base turn speed to counter the library\'s backwards turn direction', () => {
+        expect(xrTurnSpeed(1.6)).toBe(-1.6)
+        expect(xrTurnSpeed(-1.6)).toBe(1.6)
     })
 })

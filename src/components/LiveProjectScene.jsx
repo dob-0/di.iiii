@@ -580,11 +580,6 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
 function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
     const originRef = useRef(null)
     const hintGroupRef = useRef(null)
-    // TEMPORARY diagnostic readout of the raw right-stick axis values, to
-    // settle a left/right sign report by an exact number instead of a
-    // description. Remove once the turn direction is confirmed correct.
-    const debugGroupRef = useRef(null)
-    const debugTextRef = useRef(null)
     const isPresenting = useXR((state) => state.session != null)
     const isVr = useXR((state) => state.mode === 'immersive-vr')
     const rightController = useXRInputSourceState('controller', 'right')
@@ -678,11 +673,6 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
             // hardware 2026-07-05): push up = ascend. Don't inline or "fix" it.
             const stickVert = flyVertFromStick(stickY)
 
-            // TEMPORARY: raw axis readout, see debugGroupRef declaration above.
-            if (debugTextRef.current) {
-                const rStick = rightController?.gamepad?.['xr-standard-thumbstick']
-                debugTextRef.current.text = `R.x=${(rStick?.xAxis ?? 0).toFixed(2)} R.y=${(rStick?.yAxis ?? 0).toFixed(2)}`
-            }
             if (isVr) {
                 origin.position.y = THREE.MathUtils.clamp(origin.position.y + (touchVert + stickVert) * FLY_SPEED * delta, 0, 58)
             } else if (flyMode) {
@@ -712,15 +702,6 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
             hintGroupRef.current.position.y -= 0.18
             hintGroupRef.current.quaternion.copy(state.camera.quaternion)
         }
-
-        // TEMPORARY: always-on (not dismissible) so it's there for the whole
-        // session, see debugGroupRef declaration above.
-        if (isPresenting && isVr && debugGroupRef.current) {
-            state.camera.getWorldDirection(tmpDir)
-            debugGroupRef.current.position.copy(state.camera.position).addScaledVector(tmpDir, 1.2)
-            debugGroupRef.current.position.y += 0.15
-            debugGroupRef.current.quaternion.copy(state.camera.quaternion)
-        }
     })
 
     return (
@@ -741,29 +722,10 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
                         material-depthTest={false}
                         material-depthWrite={false}
                     >
-                        {/* "· 5" is a temporary build marker for on-headset
+                        {/* "· 6" is a temporary build marker for on-headset
                             verification of the fly + turn fix — remove
                             once both are confirmed correct on hardware. */}
-                        {'Left stick · walk\nRight stick · turn (X) / fly up-down (Y) · 5'}
-                    </Text>
-                </group>
-            )}
-            {isPresenting && isVr && (
-                <group ref={debugGroupRef}>
-                    {/* TEMPORARY diagnostic text, see debugGroupRef declaration above. */}
-                    <Text
-                        ref={debugTextRef}
-                        fontSize={0.045}
-                        color="#ffe066"
-                        anchorX="center"
-                        anchorY="middle"
-                        outlineWidth={0.004}
-                        outlineColor="#04070c"
-                        renderOrder={30}
-                        material-depthTest={false}
-                        material-depthWrite={false}
-                    >
-                        {''}
+                        {'Left stick · walk\nRight stick · turn (X) / fly up-down (Y) · 6'}
                     </Text>
                 </group>
             )}
