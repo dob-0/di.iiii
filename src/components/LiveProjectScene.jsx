@@ -663,10 +663,13 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
                 }
             }
 
-            // Vertical (fly). AR has no controllers, so the ▲▼ touch buttons set
-            // vertTouchRef; VR has no reachable 2D Fly button, so the right
-            // thumbstick's Y axis always flies (left stick walks, right stick X
-            // turns -- Y is free). Horizontal locomotion never touched origin.y.
+            // Vertical (fly). Handheld AR usually has no controllers, so the
+            // ▲▼ touch buttons set vertTouchRef; VR has no reachable 2D Fly
+            // button, so the right thumbstick's Y axis always flies (left
+            // stick walks, right stick X turns -- Y is free). A controller
+            // connected during an AR/passthrough session (e.g. a headset in
+            // mixed-reality mode) gets the same stick-fly as VR whenever
+            // flyMode is on. Horizontal locomotion never touched origin.y.
             const touchVert = vertTouchRef?.current || 0
             const stickY = rightController?.gamepad?.['xr-standard-thumbstick']?.yAxis ?? 0
             // Sign convention lives in xrFlyControl.js (user-verified on real
@@ -676,7 +679,7 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
             if (isVr) {
                 origin.position.y = THREE.MathUtils.clamp(origin.position.y + (touchVert + stickVert) * FLY_SPEED * delta, 0, 58)
             } else if (flyMode) {
-                origin.position.y = THREE.MathUtils.clamp(origin.position.y + touchVert * FLY_SPEED * delta, 0, 58)
+                origin.position.y = THREE.MathUtils.clamp(origin.position.y + (touchVert + stickVert) * FLY_SPEED * delta, 0, 58)
             } else {
                 origin.position.y = THREE.MathUtils.lerp(origin.position.y, 0, Math.min(1, delta * 3))
             }
@@ -722,10 +725,7 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
                         material-depthTest={false}
                         material-depthWrite={false}
                     >
-                        {/* "· 6" is a temporary build marker for on-headset
-                            verification of the fly + turn fix — remove
-                            once both are confirmed correct on hardware. */}
-                        {'Left stick · walk\nRight stick · turn (X) / fly up-down (Y) · 6'}
+                        {'Left stick · walk\nRight stick · turn (X) / fly up-down (Y)'}
                     </Text>
                 </group>
             )}
