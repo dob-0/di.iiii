@@ -9,34 +9,29 @@ active_branch: dev
 
 ## Last commit
 
-`60ac33f` — **live on prod** (`dev` == `main`, prod smoke 9/9 confirmed 2026-07-07 evening).
-Everything from the 07-07 audit is shipped: all findings fixed, full dead-code sweep (incl.
-medium-confidence items, user-approved), doc-rot CI guards armed, model pin removed.
+`07084e2` — **live on prod** (`dev` == `main`, prod smoke 9/9, 2026-07-08 morning).
 
-## Last session (2026-07-07, part 3 — full audit, then fixed everything it found)
+## Last session (2026-07-08 — GitHub sync proven end-to-end, promoted to prod)
 
-Full audit report artifact: <https://claude.ai/code/artifact/210249cb-5815-4db6-8acb-b0edf5b0fd85>.
-Findings tracker: **[docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)** — every High,
-Medium, and Low item is now ☑ with a regression guard; only medium-confidence dead-code items
-remain (listed there, deferred deliberately).
+Walked the new no-code connect flow live on staging (install → dropdown self-populates →
+one-pick connect → initial sync, verified with `br_id_ge`). Promoted `dev`→`main`. On prod,
+private test repo `dob-0/di-sync-webhook-test` connected to space `webhook-test`, then a
+real `git push` (`17e88729f8`) hit `/api/github/webhook` and auto-synced the space with no
+admin touch — **closes the long-open "webhook never exercised" item.**
 
-Highlights, in commit order:
+## Session before (2026-07-07, part 4 — no-code GitHub sync UI)
 
-- **P0** (`e65bf16`,`e02a1d2`): gizmo mojibake, Shift+D double-duplicate, 7 a11y warnings →
-  0-warning baseline; audit findings transcribed; stale AI-layer baselines/CI claims corrected.
-- **P1 security** (`1561fc3`): rate limiting (guest/login/OAuth/sync-key/uploads), session-secret
-  fallback warning, WCC postMessage origin check, Drive escaping, syncRoutes off global fetch +
-  a contract test banning global fetch across serverXR.
-- **P2 reliability** (`f0e5410`): Studio camera-controls ref rewired (save-view, frame-selected,
-  click placement, XR restore, saved-view-on-load all un-broken), socket reconnect, V1-scene
-  asset delete guard, image-load placeholder, portal via appNavigate.
-- **Schema drift — the big catch** (`8b639f4`): made schema-sync a real ESM↔CJS equivalence test;
-  it immediately exposed that the server's CJS mirror was **silently turning lights/groups into
-  boxes and stripping `parentId`**. Mirror synced; drift now fails the pre-push gate.
-- **Lows** (`3f16755`): export credentials scoped to first-party URLs, capture-rule/data-cleanup
-  sharp edges, keyboard-shortcuts wiki refreshed.
-- **Dead code** (`e397e16`): ~1,500 verified-dead lines removed (runtimeSchema, desktop shells,
-  OpCreateDialog, resolvePortValue, projectStore vestiges, orphaned WCC CSS, useStudioLayoutPrefs).
+`14b971b` + `07084e2`: admin GitHub-sync went no-code — install-app button (server resolves
+app slug via App JWT), repo dropdown with quiet polling, one-pick connect with pre-selected
+project; manual entry behind "advanced" (auto-shown when App env absent, e.g. self-host).
+Contract + component tests added, wiki article rewritten.
+
+## Earlier (2026-07-07, part 3 — full audit, everything fixed)
+
+Tracker: **[docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)** — every High/Medium/Low
+☑ with a regression guard (P0 UX, P1 security/rate-limiting, P2 camera-controls rewire, the
+ESM↔CJS schema-drift catch, ~1,500 dead lines removed). Report artifact:
+<https://claude.ai/code/artifact/210249cb-5815-4db6-8acb-b0edf5b0fd85>.
 
 ## What works
 
@@ -53,7 +48,12 @@ Highlights, in commit order:
   userinfo), app runs In-production/unverified (warning screen + lifetime 100-connect cap —
   1-2 used). Full Google verification deliberately deferred; preferred long-term fix is
   migrating to the `drive.file` scope + Google Picker (no cap, no warning, no verification).
-- GitHub-sync App webhook not yet exercised against a real repo push.
+- Webhook-test artifacts await a keep-or-delete call: private repo `dob-0/di-sync-webhook-test`
+  + prod space `webhook-test` (candidate permanent canary for the secret-rotation runbook).
+- `serverXR/.env.local` holds a stale (pre-rotation) GitHub App key — local sync dev is broken
+  until `GITHUB_APP_PRIVATE_KEY_B64` is copied from a host's `~/.config/dii/*.deploy.env`.
+- If the `br_id_ge` repo is ever App-connected on prod, disable its `sync-space.yml` CI sync
+  first — otherwise every push double-syncs the space.
 - `origin/self-host` intentionally 1 commit ahead (`b9baa30`).
 - Next strategic work (per audit P4): op-log undo → content-addressed assets → self-host story.
 
