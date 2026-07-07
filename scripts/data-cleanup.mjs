@@ -41,6 +41,23 @@ if (!tgt || !tgt.base || !tgt.token) { console.error(`Bad/unknown env "${plan.en
 const mode = apply ? 'APPLY' : 'DRY-RUN';
 console.log(`\n[${mode}] env=${plan.env} base=${tgt.base}\n`);
 
+// A copy-pasted plan with "env": "prod" must not delete production data on
+// momentum — applying against prod requires typing the confirmation phrase.
+if (apply && plan.env === 'prod') {
+  const spaceCount = Array.isArray(plan.spaces) ? plan.spaces.length : 0;
+  const { createInterface } = await import('node:readline/promises');
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await rl.question(
+    `\n  !! You are about to DELETE ${spaceCount} space(s) on PRODUCTION (${tgt.base}).\n` +
+    `  Type "delete on prod" to continue: `
+  );
+  rl.close();
+  if (answer.trim() !== 'delete on prod') {
+    console.error('Aborted — confirmation phrase not entered.');
+    process.exit(1);
+  }
+}
+
 async function del(path) {
   if (!apply) { console.log(`  would DELETE ${path}`); return { ok: true }; }
   const res = await fetch(tgt.base.replace(/\/$/, '') + path, {

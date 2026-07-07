@@ -26,6 +26,20 @@ const safeSegment = (value, fallback) => {
     return normalized || fallback
 }
 
+// The session cookie only travels to our own API/origin — legacy-imported
+// assets can carry arbitrary external URLs, and a credentialed request to a
+// third party would confirm an authenticated session exists there.
+export const isFirstPartyAssetUrl = (url) => {
+    try {
+        const resolved = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost')
+        if (typeof window !== 'undefined' && resolved.origin === window.location.origin) return true
+        const apiOrigin = new URL(apiBaseUrl, typeof window !== 'undefined' ? window.location.origin : 'http://localhost').origin
+        return resolved.origin === apiOrigin
+    } catch {
+        return false
+    }
+}
+
 const fetchAssetBlob = async (asset, projectId) => {
     const candidates = getAssetUrlCandidates(asset)
     // Imported assets have an empty manifest `url`, so the candidates above can be
@@ -39,7 +53,8 @@ const fetchAssetBlob = async (asset, projectId) => {
     let lastError = null
     for (const url of candidates) {
         try {
-            const response = await fetch(url, { credentials: 'include', cache: 'no-store' })
+            const credentials = isFirstPartyAssetUrl(url) ? 'include' : 'omit'
+            const response = await fetch(url, { credentials, cache: 'no-store' })
             if (!response.ok) {
                 lastError = new Error(`${response.status} ${response.statusText}`.trim())
                 continue

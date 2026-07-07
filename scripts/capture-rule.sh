@@ -40,27 +40,20 @@ if [[ -z "$TITLE" ]]; then
   exit 1
 fi
 
-# Build the markdown entry
-ENTRY="\n---\n\n### ${TITLE}\n"
-if [[ -n "$RULE" ]]; then
-  ENTRY+="\n**Rule:** ${RULE}\n"
-else
-  ENTRY+="\n**Rule:** TODO\n"
-fi
-if [[ -n "$WHY" ]]; then
-  ENTRY+="\n**Why:** ${WHY}\n"
-else
-  ENTRY+="\n**Why:** TODO\n"
-fi
+# Build the markdown entry with real newlines — printf "%b" would interpret
+# backslash escapes inside user-supplied text (e.g. a pasted Windows path).
+NL=$'\n'
+ENTRY="${NL}---${NL}${NL}### ${TITLE}${NL}"
+ENTRY+="${NL}**Rule:** ${RULE:-TODO}${NL}"
+ENTRY+="${NL}**Why:** ${WHY:-TODO}${NL}"
 if [[ -n "$HOW" ]]; then
-  ENTRY+="\n**How:** ${HOW}\n"
+  ENTRY+="${NL}**How:** ${HOW}${NL}"
 fi
 if [[ -n "$FILES" ]]; then
-  ENTRY+="\n**Files:** \`${FILES}\`\n"
+  ENTRY+="${NL}**Files:** \`${FILES}\`${NL}"
 fi
 
-# Find the insertion point: before the last --- or at end of file
-printf "%b" "$ENTRY" >> "$RULES_FILE"
+printf "%s" "$ENTRY" >> "$RULES_FILE"
 
 echo ""
 echo "  ✓ Rule captured: \"${TITLE}\""

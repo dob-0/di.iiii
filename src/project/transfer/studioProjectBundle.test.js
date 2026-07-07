@@ -55,3 +55,20 @@ describe('Studio project bundles', () => {
         expect(imported.assetFiles.size).toBe(0)
     })
 })
+
+// Regression guard: export once sent credentials:'include' to EVERY resolved
+// asset URL — a legacy-imported external URL received a credentialed request,
+// confirming an authenticated session to a third party.
+describe('isFirstPartyAssetUrl', () => {
+    it('accepts same-origin and API-base URLs', async () => {
+        const { isFirstPartyAssetUrl } = await import('./studioProjectBundle.js')
+        expect(isFirstPartyAssetUrl('/api/assets/asset-1')).toBe(true)
+        expect(isFirstPartyAssetUrl(`${window.location.origin}/serverXR/api/x`)).toBe(true)
+    })
+
+    it('rejects third-party URLs', async () => {
+        const { isFirstPartyAssetUrl } = await import('./studioProjectBundle.js')
+        expect(isFirstPartyAssetUrl('https://evil.example/asset.png')).toBe(false)
+        expect(isFirstPartyAssetUrl('//evil.example/asset.png')).toBe(false)
+    })
+})
