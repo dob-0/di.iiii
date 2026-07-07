@@ -26,34 +26,13 @@ import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject from '../project/viewport/PortalObject.jsx'
 import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
 import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
+import {
+    WALK_MAX_SPEED, FLY_SPEED, WALK_ACCEL, WALK_FRICTION, TURN_SPEED, EYE_HEIGHT,
+    POINTER_LOCK_SENSITIVITY, DRAG_LOOK_SENSITIVITY, TOUCH_LOOK_SENSITIVITY, TRACKPAD_LOOK_SENSITIVITY,
+    WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF
+} from './walkModeConfig.js'
 import './liveProjectScene.css'
 
-const WALK_MAX_SPEED = 5.2
-const FLY_SPEED = 4.5
-const WALK_ACCEL = 14
-const WALK_FRICTION = 10
-const TURN_SPEED = 1.6
-const POINTER_LOCK_SENSITIVITY = 0.018
-const TOUCH_LOOK_SENSITIVITY = 0.005
-const TRACKPAD_LOOK_SENSITIVITY = 0.004
-// Was deliberately 3x gentler than pointer-lock on the theory that drag
-// distances run larger — that made the fallback (the only look control on
-// Wayland/browsers that silently deny pointer lock) feel unresponsive for a
-// normal-sized drag. User-tested down from matching pointer-lock exactly,
-// through 0.75x and 0.5x (still too sensitive each time), to 0.35x.
-const DRAG_LOOK_SENSITIVITY = POINTER_LOCK_SENSITIVITY * 0.35
-// Metres of forward motion per scroll pixel: one classic wheel notch (~48px
-// after line-mode normalisation) steps half a metre.
-const WHEEL_DOLLY_SPEED = 0.01
-// Just shy of straight up/down (PI/2) to avoid the camera flipping at the pole.
-const WALK_PITCH_LIMIT = 1.45
-// Flying has no horizon to stay oriented against, so allow (almost) the full
-// vertical range -- straight up/down -- rather than walking's smaller cap.
-const FLY_PITCH_LIMIT = 1.55
-const EYE_HEIGHT = 1.6
-const JOY_RADIUS = 45
-const BOUNDS_MARGIN = 22
-const BOUNDS_MIN_HALF = 18
 const PARTICLE_COUNT = 900
 const IDLE_ORBIT_RADIUS = 8
 const IDLE_ORBIT_HEIGHT = 3.5

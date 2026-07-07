@@ -9,16 +9,17 @@ active_branch: dev
 
 ## Last commit
 
-`ea14581` — fix(wcc): tune drag-look sensitivity down to 0.35x pointer-lock
-**Confirmed live on staging** through `fd6c646`; `ea14581` and the Studio wheel-zoom fix below are pushed but not yet re-verified live.
+`b706282` — fix(studio): mouse wheel zooms instead of rotating the viewport
+**Confirmed live on both staging and prod** (`di-studio.xyz`, verified via `/api/health` gitCommit).
+`dev` and `main` are in sync.
 
-**Uncommitted on top:** Studio viewport wheel-zoom fix (see below) — verified locally (lint, build, full suite 412/412), not yet pushed.
+**Uncommitted on top:** walk-mode config extraction (see below) — verified locally (lint, build,
+412/412 tests, 15/15 `check:input`), not yet pushed.
 
 ## Last session (2026-07-07, part 2)
 
 Ran a 6-way parallel full-codebase audit (project core, Studio/Beta, shared components,
-XR/WCC/landing, serverXR, scripts/schema) and fixed the 4 critical findings (`03adf90`, live on
-staging, verified via `/api/health` gitCommit + `/api/events` gating):
+XR/WCC/landing, serverXR, scripts/schema) and fixed the 4 critical findings (`03adf90`):
 
 - **`wcc` space bypassed the login gate** every other space goes through (`RootApp.jsx`) — added
   `WccSurfaceRoute`, same `isPublic` check as every other space.
@@ -29,26 +30,30 @@ staging, verified via `/api/health` gitCommit + `/api/events` gating):
 - **Undo/redo in Studio + Beta bypassed the sync engine** — now routes through `replaceDocument`
   (network-backed) for project-backed workspaces.
 
-Then: user reported mouse-look "not working" on `/wcc/scene` on staging. Investigated live with
-Playwright (headless *and* headed against this machine's real Wayland session) — pointer lock and
-drag-look both worked in every automated test. Root cause found by inspection: `DRAG_LOOK_SENSITIVITY`
-was deliberately 3x gentler than `POINTER_LOCK_SENSITIVITY` on an untested theory, making the
-Wayland/Linux fallback path feel unresponsive. User-tested through several values (1x → 0.75x →
-0.5x → **0.35x** final) live against localhost, each pushed to `dev`/staging in turn.
+Then two more, found from live user testing on staging:
 
-User then flagged a second, unrelated bug: **Studio's mouse wheel rotated the camera instead of
-zooming it.** `StudioViewport.jsx`'s `StudioOrbit` set `wheel: ctrlKey ? DOLLY : ROTATE` to give
-trackpad swipe a "look around" feel — but a plain mouse wheel is *also* `ctrlKey: false`,
-indistinguishable from a trackpad swipe on that signal, so every normal mouse scroll rotated
-instead of zoomed. Same "guess the device" anti-pattern the golden rules already flagged once for
-the WCC Walker. Fixed by removing the guess entirely — wheel always dollies now. **Not yet pushed.**
+- **WCC drag-look "not working"** — root cause was `DRAG_LOOK_SENSITIVITY` deliberately tuned 3x
+  gentler than `POINTER_LOCK_SENSITIVITY` (untested theory), making the Wayland/Linux fallback path
+  feel unresponsive. User-tuned live through 1x → 0.75x → 0.5x → **0.35x** final (`ea14581`).
+- **Studio mouse wheel rotated instead of zoomed** — `StudioOrbit` guessed trackpad-vs-mouse from
+  `ctrlKey` (same anti-pattern golden rules already flagged for the WCC Walker); every plain mouse
+  wheel is also `ctrlKey:false`, so it always rotated. Fixed: wheel always dollies (`b706282`).
 
-All 5 fixes have `known-fixes.md` rows.
+All 5 fixes merged `dev`→`main`, confirmed live on **prod** via `/api/health` gitCommit.
+
+Then: user asked to "sync mouse and global things... in walk mode" — extracted all walk-mode
+tuning constants (look sensitivity per input method, walk/fly speed, pitch limits, joystick/bounds)
+out of `LiveProjectScene.jsx`'s inline consts into a new `src/components/walkModeConfig.js`, with
+`DRAG_LOOK_SENSITIVITY` now defined as a ratio of `POINTER_LOCK_SENSITIVITY` instead of an
+independent magic number. Pure refactor, no behavior change — verified via `check:input` (15/15,
+one unrelated timing flake on first run, clean on retry) and the full suite. **Not yet pushed.**
+
+All fixes have `known-fixes.md` rows.
 
 ## Earlier (prod, 07-07 part 1)
 
 VR/AR controller locomotion fixed (strafe/turn/fly signs, AR passthrough fly extension) and a
-doc-load-error/retry hardening for `LiveProjectScene.jsx` — both confirmed live on prod at `ed79b06`.
+doc-load-error/retry hardening for `LiveProjectScene.jsx` — both confirmed live on prod.
 
 ## What works
 
@@ -59,10 +64,9 @@ doc-load-error/retry hardening for `LiveProjectScene.jsx` — both confirmed liv
 
 ## What is broken / open
 
-- **Studio wheel-zoom fix is uncommitted** — commit + push to `dev`, then verify on staging.
-- **`ea14581` (audit fixes + drag-look tuning) is live on staging but not yet promoted to `main`/prod.**
+- **Walk-mode config extraction is uncommitted** — commit + push to `dev`, verify, then promote.
 - Remaining audit findings not yet fixed (7 High, 7 Medium, 6 Low + ~14 dead-code items) — see the
-  audit artifact from this session, not yet transcribed into known-fixes.md. Worth a follow-up pass.
+  audit artifact from the 2026-07-07 session, not yet transcribed into known-fixes.md.
 - Drive on prod: staging verified; prod live-check + Google OAuth sensitive-scope verification
   (manual, user-only) still pending.
 - GitHub-sync App webhook not yet exercised against a real repo push.
