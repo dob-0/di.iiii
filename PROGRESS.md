@@ -5,6 +5,52 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-07-07 — Full audit (app + AI layer), then closed every finding it raised
+
+**Who:** Claude (single agent; built on the morning's 6-way parallel audit)
+
+### Done this session
+
+- **Full audit** of the codebase, the AI instruction layer (~110 files — first time audited), CI,
+  and the competitive landscape. Report artifact:
+  <https://claude.ai/code/artifact/210249cb-5815-4db6-8acb-b0edf5b0fd85>. All findings transcribed
+  into `docs/ai/audit-2026-07-07.md` (the durable tracker) and then **fixed in the same session**:
+- **P0** (`e65bf16`, `e02a1d2`): gizmo icon mojibake, Shift+D double-duplicate, 7 a11y lint
+  warnings (0-warning baseline restored); stale agent baselines/CHEATSHEET CI claims corrected;
+  stale merged worktrees removed.
+- **P1 security** (`1561fc3`): zero-dep rate limiting on guest-session issuance/login/OAuth/
+  sync-key-mint/uploads; AUTH_SESSION_SECRET fallback warning; WCC postMessage origin check;
+  Drive folderId escaping; syncRoutes off global fetch + contract test banning global fetch in
+  serverXR forever.
+- **P2 reliability** (`f0e5410`): Studio camera-controls ref rewired via pane registration —
+  un-broke save-view, frame-selected, double-click placement, XR restore, saved-view-on-load;
+  socket reconnects after unexpected disconnects; V1-scene asset delete guard; image-load
+  placeholder; portal navigation via appNavigate.
+- **Schema-mirror drift — the session's biggest catch** (`8b639f4`): rewrote schema-sync as a real
+  ESM↔CJS equivalence test; it instantly exposed that the server's hand-mirrored CJS was
+  **coercing all light/group entities to boxes and stripping `parentId`** on every server-side
+  normalization. Mirror synced; the drift class now fails the pre-push gate with a real diff.
+- **Lows** (`3f16755`) + **dead-code sweep** (`e397e16`): export credentials scoped to
+  first-party URLs; capture-rule/data-cleanup sharp edges; wiki shortcuts refreshed; ~1,500
+  verified-dead lines deleted (runtimeSchema, desktop shells, OpCreateDialog, resolvePortValue,
+  projectStore vestiges, orphaned WCC CSS, useStudioLayoutPrefs).
+
+### Validation
+
+- `npm run lint` — 0 errors, **0 warnings** · `npm run build` — pass
+- `npm run test -- --run` — 423/423 · server-contracts 29/29 · schema-sync 16/16 (now a real
+  equivalence check) · `docs:ai:check` + `docs:wiki:check` — pass · `npm audit` — 0 vulns
+- Staging smoke 9/9 after every push; prod smoke 9/9 after the P0 promotion.
+
+### Open
+
+- Promote the P1/P2/schema/Low/sweep commits `dev` → `main` (P0 already live on prod).
+- Drive prod live-check + Google OAuth sensitive-scope verification (manual, user-only).
+- GitHub-sync App webhook untested against a real repo push.
+- Medium-confidence dead code deferred (V1 layoutMode plumbing, e2e-smoke.mjs — see tracker).
+
+---
+
 ## 2026-06-24 — Portal object, landing CTAs, placement UX, paired audit
 
 **Who:** Claude (multiple agents, parallel)
