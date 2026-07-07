@@ -13,25 +13,19 @@ active_branch: dev
 
 ## Last session (2026-07-08 — GitHub sync proven end-to-end, promoted to prod)
 
-Walked the new no-code connect flow live on staging (install → dropdown self-populates →
-one-pick connect → initial sync, verified with `br_id_ge`). Promoted `dev`→`main`. On prod,
-private test repo `dob-0/di-sync-webhook-test` connected to space `webhook-test`, then a
-real `git push` (`17e88729f8`) hit `/api/github/webhook` and auto-synced the space with no
-admin touch — **closes the long-open "webhook never exercised" item.**
+- Validated the no-code connect flow live on staging (install → dropdown self-populates →
+  one-pick connect → initial sync), using `br_id_ge`.
+- Promoted `dev`→`main` (deploy green, prod smoke 9/9) — no-code GitHub sync UI now on prod.
+- Proved the webhook for real: push `17e88729f8` to private `dob-0/di-sync-webhook-test`
+  auto-synced prod space `webhook-test` with zero admin interaction — last audit box closed.
+- Found `serverXR/.env.local` holds a stale pre-rotation App key (see open items).
 
-## Session before (2026-07-07, part 4 — no-code GitHub sync UI)
+## Earlier
 
-`14b971b` + `07084e2`: admin GitHub-sync went no-code — install-app button (server resolves
-app slug via App JWT), repo dropdown with quiet polling, one-pick connect with pre-selected
-project; manual entry behind "advanced" (auto-shown when App env absent, e.g. self-host).
-Contract + component tests added, wiki article rewritten.
-
-## Earlier (2026-07-07, part 3 — full audit, everything fixed)
-
-Tracker: **[docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)** — every High/Medium/Low
-☑ with a regression guard (P0 UX, P1 security/rate-limiting, P2 camera-controls rewire, the
-ESM↔CJS schema-drift catch, ~1,500 dead lines removed). Report artifact:
-<https://claude.ai/code/artifact/210249cb-5815-4db6-8acb-b0edf5b0fd85>.
+- 2026-07-07 p4: no-code GitHub sync UI built (`14b971b`,`07084e2`) — install button, repo
+  dropdown, one-pick connect; manual entry behind "advanced"; tests + wiki updated.
+- 2026-07-07 p3: full audit, every finding fixed with regression guards —
+  [docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md).
 
 ## What works
 
