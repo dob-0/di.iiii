@@ -9,8 +9,8 @@ active_branch: dev
 
 ## Last commit
 
-`0559427` — chore: gitignore scratchpad/ (dev + main, fast-forward merge)
-**Pushed to `dev` (staging, confirmed live) and merged to `main` → production deploy triggered this session; confirm `di-studio.xyz` picked it up next session if not already.**
+`1fcb6d6` — fix(wcc): surface project-document load failures (dev, staging — not yet promoted to main/prod)
+**Prod is at `0559427` (VR/AR fixes + gitignore, confirmed live). This newest commit (doc-load error/retry) is dev-only as of session end — promote to main when ready.**
 
 ## Last session (2026-07-07)
 
