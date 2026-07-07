@@ -35,7 +35,13 @@ vi.mock('../../utils/spaceRouting.js', () => ({
 }))
 
 import AdminManageSection from './AdminManageSection.jsx'
-import { listServerSpaces, getServerConfig } from '../../services/serverSpaces.js'
+import {
+    listServerSpaces,
+    getServerConfig,
+    getGithubAppInfo,
+    listGithubRepos,
+    connectSpaceGithub
+} from '../../services/serverSpaces.js'
 import { listProjects } from '../../project/services/projectsApi.js'
 import { listUsers } from '../../services/usersApi.js'
 
@@ -57,6 +63,30 @@ describe('AdminManageSection', () => {
         expect(screen.getByText('Demo')).toBeTruthy()
         // root overview is shown by default with the create-space affordance
         expect(screen.getByRole('button', { name: 'Create space' })).toBeTruthy()
+    })
+
+    // Regression guard: the no-code GitHub flow is one pick — selecting a repo
+    // from the dropdown connects immediately (project pre-selected), no extra
+    // Connect click.
+    it('connects a repo on dropdown pick with no separate Connect click', async () => {
+        getGithubAppInfo.mockResolvedValue({ configured: true, name: 'di.iiii', installUrl: 'https://github.com/apps/dii/installations/new' })
+        listGithubRepos.mockResolvedValue({ configured: true, repos: [{ owner: 'dob-0', repo: 'br_id_ge', fullName: 'dob-0/br_id_ge', private: false }] })
+        connectSpaceGithub.mockResolvedValue({ link: { owner: 'dob-0', repo: 'br_id_ge', projectId: 'p1' }, initialSync: { bytes: 42, ref: 'main' } })
+
+        render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+
+        // the repo picker is the combobox whose first option invites a pick
+        await screen.findAllByRole('combobox')
+        const repoPicker = (await screen.findAllByRole('combobox')).find((el) =>
+            el.querySelector('option')?.textContent.includes('Pick a repository'))
+        expect(repoPicker).toBeTruthy()
+        fireEvent.change(repoPicker, { target: { value: 'dob-0/br_id_ge' } })
+
+        await waitFor(() => expect(connectSpaceGithub).toHaveBeenCalledWith('demo', expect.objectContaining({
+            owner: 'dob-0', repo: 'br_id_ge', projectId: 'p1'
+        })))
+        expect(await screen.findByText('dob-0/br_id_ge')).toBeTruthy()
     })
 
     it('lazy-loads a space\'s projects when selected', async () => {

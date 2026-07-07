@@ -642,6 +642,7 @@ function GithubSyncSection({ space, projects }) {
     const [repos, setRepos] = useState(null)       // null=loading · []=none reachable
     const [reposBusy, setReposBusy] = useState(false)
     const [manual, setManual] = useState(false)
+    const [awaitingInstall, setAwaitingInstall] = useState(false)
 
     useEffect(() => {
         let active = true
@@ -676,12 +677,33 @@ function GithubSyncSection({ space, projects }) {
         setForm((f) => f.projectId ? f : { ...f, projectId: space.publishedProjectId || projects[0]?.id || '' })
     }, [space.publishedProjectId, projects])
 
-    const connect = async () => {
-        if (!form.owner.trim() || !form.repo.trim() || !form.projectId) { setError('Pick a repository and a project first.'); return }
+    // After the user opens GitHub's install page there's no callback into this
+    // tab — poll quietly until the new repo shows up, then stop. No refresh
+    // button to press.
+    useEffect(() => {
+        if (!awaitingInstall || link !== null) return undefined
+        const startCount = Array.isArray(repos) ? repos.length : 0
+        const timer = window.setInterval(async () => {
+            try {
+                const data = await listGithubRepos({ refresh: true })
+                const next = Array.isArray(data.repos) ? data.repos : []
+                setRepos(next)
+                if (next.length > startCount) setAwaitingInstall(false)
+            } catch { /* keep polling */ }
+        }, 6000)
+        const stop = window.setTimeout(() => setAwaitingInstall(false), 3 * 60_000)
+        return () => { window.clearInterval(timer); window.clearTimeout(stop) }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [awaitingInstall, link])
+
+    const connect = async (overrides = {}) => {
+        const owner = (overrides.owner ?? form.owner).trim()
+        const repo = (overrides.repo ?? form.repo).trim()
+        if (!owner || !repo || !form.projectId) { setError('Pick a repository and a project first.'); return }
         setBusy(true); setError(''); setResult(null)
         try {
             const res = await connectSpaceGithub(space.id, {
-                owner: form.owner.trim(), repo: form.repo.trim(),
+                owner, repo,
                 projectId: form.projectId, entry: form.entry.trim() || 'index.html'
             })
             setLink(res.link); setResult(res.initialSync)
@@ -719,53 +741,60 @@ function GithubSyncSection({ space, projects }) {
 
             {link === null && (
                 <>
+                    {!manual && Array.isArray(repos) && repos.length > 0 && (
+                        <select
+                            className="preferences-input"
+                            value=""
+                            disabled={busy}
+                            onChange={(e) => {
+                                if (!e.target.value) return
+                                const [owner = '', repo = ''] = e.target.value.split('/')
+                                setForm({ ...form, owner, repo })
+                                connect({ owner, repo })
+                            }}
+                        >
+                            <option value="">{busy ? 'Connecting…' : 'Pick a repository to connect…'}</option>
+                            {repos.map((r) => (
+                                <option key={r.fullName} value={r.fullName}>{r.fullName}{r.private ? ' · private' : ''}</option>
+                            ))}
+                        </select>
+                    )}
                     {appInfo?.configured && appInfo.installUrl && (
                         <div className="preferences-command-grid">
-                            <a className="toggle-button" href={appInfo.installUrl} target="_blank" rel="noreferrer">
-                                1 · Install {appInfo.name || 'the di.iiii app'} on your repo ↗
-                            </a>
-                            <button type="button" className="toggle-button" onClick={() => loadRepos({ refresh: true })} disabled={reposBusy}>
-                                {reposBusy ? 'Checking…' : '↻ I installed it — refresh'}
-                            </button>
-                        </div>
-                    )}
-                    <form className="preferences-inline-form" onSubmit={(e) => { e.preventDefault(); connect() }}>
-                        {!manual && Array.isArray(repos) && repos.length > 0 ? (
-                            <select
-                                className="preferences-input"
-                                value={form.owner && form.repo ? `${form.owner}/${form.repo}` : ''}
-                                onChange={(e) => {
-                                    const [owner = '', repo = ''] = e.target.value.split('/')
-                                    setForm({ ...form, owner, repo })
-                                }}
+                            <a
+                                className="toggle-button"
+                                href={appInfo.installUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                onClick={() => setAwaitingInstall(true)}
                             >
-                                <option value="">2 · pick a repository…</option>
-                                {repos.map((r) => (
-                                    <option key={r.fullName} value={r.fullName}>{r.fullName}{r.private ? ' · private' : ''}</option>
-                                ))}
-                            </select>
-                        ) : (
-                            <>
-                                <input className="preferences-input" placeholder="owner (e.g. dob-0)" value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} />
-                                <input className="preferences-input" placeholder="repo (e.g. br_id_ge)" value={form.repo} onChange={(e) => setForm({ ...form, repo: e.target.value })} />
-                            </>
-                        )}
-                        <select className="preferences-input" value={form.projectId} onChange={(e) => setForm({ ...form, projectId: e.target.value })}>
-                            <option value="">3 · project…</option>
-                            {projects.map((p) => <option key={p.id} value={p.id}>{p.title || p.id}</option>)}
-                        </select>
-                        <input className="preferences-input" placeholder="entry (index.html)" value={form.entry} onChange={(e) => setForm({ ...form, entry: e.target.value })} />
-                        <button type="submit" className="toggle-button" disabled={busy}>{busy ? 'Connecting…' : 'Connect'}</button>
-                    </form>
-                    {Array.isArray(repos) && repos.length > 0 && (
-                        <button type="button" className="preferences-inline-action" onClick={() => setManual((v) => !v)}>
-                            {manual ? 'pick from installed repos instead' : 'type owner/repo manually instead'}
-                        </button>
-                    )}
-                    {Array.isArray(repos) && repos.length === 0 && appInfo?.configured && (
-                        <div className="preferences-empty">
-                            No repositories reachable yet — install the app on a repo (step 1), then refresh.
+                                {Array.isArray(repos) && repos.length > 0 ? '+ Add another repo on GitHub ↗' : 'Connect a repo — opens GitHub ↗'}
+                            </a>
                         </div>
+                    )}
+                    {awaitingInstall && (
+                        <div className="preferences-empty">Waiting for GitHub… finish choosing repos in the other tab; new ones appear here automatically.</div>
+                    )}
+                    {!awaitingInstall && Array.isArray(repos) && repos.length === 0 && appInfo?.configured && !reposBusy && (
+                        <div className="preferences-empty">No repositories connected yet — the GitHub button above takes ~20 seconds.</div>
+                    )}
+                    {projects.length > 1 && (
+                        <select className="preferences-input" value={form.projectId} onChange={(e) => setForm({ ...form, projectId: e.target.value })}>
+                            {projects.map((p) => <option key={p.id} value={p.id}>{`syncs into: ${p.title || p.id}`}</option>)}
+                        </select>
+                    )}
+                    {(manual || appInfo?.configured === false) && (
+                        <form className="preferences-inline-form" onSubmit={(e) => { e.preventDefault(); connect() }}>
+                            <input className="preferences-input" placeholder="owner (e.g. dob-0)" value={form.owner} onChange={(e) => setForm({ ...form, owner: e.target.value })} />
+                            <input className="preferences-input" placeholder="repo (e.g. br_id_ge)" value={form.repo} onChange={(e) => setForm({ ...form, repo: e.target.value })} />
+                            <input className="preferences-input" placeholder="entry (index.html)" value={form.entry} onChange={(e) => setForm({ ...form, entry: e.target.value })} />
+                            <button type="submit" className="toggle-button" disabled={busy}>{busy ? 'Connecting…' : 'Connect'}</button>
+                        </form>
+                    )}
+                    {appInfo?.configured && (
+                        <button type="button" className="preferences-inline-action" onClick={() => setManual((v) => !v)}>
+                            {manual ? 'hide manual entry' : 'advanced: type owner/repo + entry file'}
+                        </button>
                     )}
                 </>
             )}
