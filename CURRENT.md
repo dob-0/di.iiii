@@ -42,8 +42,8 @@ active_branch: dev
   userinfo), app runs In-production/unverified (warning screen + lifetime 100-connect cap —
   1-2 used). Full Google verification deliberately deferred; preferred long-term fix is
   migrating to the `drive.file` scope + Google Picker (no cap, no warning, no verification).
-- Webhook-test artifacts await a keep-or-delete call: private repo `dob-0/di-sync-webhook-test`
-  + prod space `webhook-test` (candidate permanent canary for the secret-rotation runbook).
+- Webhook canary (permanent, user-approved): private repo `dob-0/di-sync-webhook-test` →
+  prod space `webhook-test`; verification target of the secret-rotation runbook. Don't delete.
 - `serverXR/.env.local` holds a stale (pre-rotation) GitHub App key — local sync dev is broken
   until `GITHUB_APP_PRIVATE_KEY_B64` is copied from a host's `~/.config/dii/*.deploy.env`.
 - If the `br_id_ge` repo is ever App-connected on prod, disable its `sync-space.yml` CI sync

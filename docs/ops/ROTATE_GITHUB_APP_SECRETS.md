@@ -57,10 +57,14 @@ gh workflow run publish-cpanel-prebuilt-v2.yml -f deploy_env=staging
 gh run list --workflow publish-cpanel-prebuilt-v2.yml
 ```
 
-### 5. Verify
-Real `git push` to `dob-0/br_id_ge` → prod space auto-syncs. A stale webhook
+### 5. Verify — canary
+Push a commit to **`dob-0/di-sync-webhook-test`** (private canary repo, linked to prod
+space `webhook-test` since 2026-07-08) → the space auto-syncs and "Last push synced"
+in `/admin → Manage → webhook-test → GitHub sync` shows the new SHA. A stale webhook
 secret logs an HMAC signature mismatch and 401s the webhook; a bad key fails App
 JWT auth (no installation token). Both surface in the serverXR logs.
+
+Do **not** verify via `br_id_ge` — its `sync-space.yml` CI sync would race the webhook.
 
 > Webhook only reaches **prod** (`di-studio.xyz`). On staging, force a sync with
 > Disconnect/Connect in `/admin → Manage → space → GitHub sync`.
