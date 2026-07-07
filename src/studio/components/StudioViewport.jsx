@@ -292,23 +292,16 @@ const CC_ACTION = { NONE: 0, ROTATE: 1, TRUCK: 2, SCREEN_PAN: 4, OFFSET: 8, DOLL
 
 function StudioOrbit({ controlsRef, cameraView, onCameraChange, onRotateStart, enabled = true }) {
     const isXrPresenting = useXR((state) => state.session != null)
-    const { gl } = useThree()
 
     const targetFovRef = useRef(cameraView?.fov || 50)
 
-    // On trackpads, browsers synthesize ctrlKey=true for pinch (zoom intent) and
-    // ctrlKey=false for two-finger swipe. Swipe maps to ROTATE so the viewport
-    // feels like FPS mouse-look; pinch maps to DOLLY (zoom).
-    useEffect(() => {
-        const canvas = gl.domElement
-        const handleWheel = (e) => {
-            const cc = controlsRef.current
-            if (!cc) return
-            cc.mouseButtons.wheel = e.ctrlKey ? CC_ACTION.DOLLY : CC_ACTION.ROTATE
-        }
-        canvas.addEventListener('wheel', handleWheel, { capture: true, passive: true })
-        return () => canvas.removeEventListener('wheel', handleWheel, { capture: true })
-    }, [controlsRef, gl])
+    // Wheel always dollies (zooms) — never rotates. A plain mouse wheel and a
+    // trackpad two-finger swipe both arrive as wheel events with ctrlKey:false,
+    // so there is no reliable way to tell them apart (see golden rule "Input
+    // handling never guesses the device"); a prior version routed non-ctrl
+    // wheel to ROTATE for trackpad swipe-to-look, which broke normal mouse
+    // wheel zoom for everyone. `mouseButtons.wheel` is already DOLLY by
+    // default below; ctrlKey (trackpad pinch) also dollies, redundantly.
 
     // Set initial position+target once the controls mount
     useEffect(() => {

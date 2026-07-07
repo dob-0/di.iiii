@@ -9,16 +9,16 @@ active_branch: dev
 
 ## Last commit
 
-`03adf90` — fix: close 4 critical findings from full-codebase audit
-**Confirmed live on staging** (`staging.di-studio.xyz`, verified via `/api/health` gitCommit + `/api/events` gating). Not yet promoted to `main`/prod.
+`ea14581` — fix(wcc): tune drag-look sensitivity down to 0.35x pointer-lock
+**Confirmed live on staging** through `fd6c646`; `ea14581` and the Studio wheel-zoom fix below are pushed but not yet re-verified live.
 
-**Uncommitted on top:** a 5th fix (drag-look sensitivity, see below) — verified locally (15/15 `check:input`, 412/412 tests), not yet pushed.
+**Uncommitted on top:** Studio viewport wheel-zoom fix (see below) — verified locally (lint, build, full suite 412/412), not yet pushed.
 
 ## Last session (2026-07-07, part 2)
 
 Ran a 6-way parallel full-codebase audit (project core, Studio/Beta, shared components,
-XR/WCC/landing, serverXR, scripts/schema) and fixed the 4 critical findings (all in `03adf90`,
-live on staging):
+XR/WCC/landing, serverXR, scripts/schema) and fixed the 4 critical findings (`03adf90`, live on
+staging, verified via `/api/health` gitCommit + `/api/events` gating):
 
 - **`wcc` space bypassed the login gate** every other space goes through (`RootApp.jsx`) — added
   `WccSurfaceRoute`, same `isPublic` check as every other space.
@@ -29,14 +29,21 @@ live on staging):
 - **Undo/redo in Studio + Beta bypassed the sync engine** — now routes through `replaceDocument`
   (network-backed) for project-backed workspaces.
 
-Then the user manually checked `/wcc/scene` on staging and reported mouse-look "not working."
-Investigated live with Playwright (headless *and* headed against this machine's real Wayland
-session) — pointer lock engaged fine and the camera rotated correctly in every test. Root cause
-found by inspection, not repro: **`DRAG_LOOK_SENSITIVITY` (the fallback path used exactly when
-pointer lock is denied — the Wayland/Linux population most likely to report this) was deliberately
-tuned 3x gentler than `POINTER_LOCK_SENSITIVITY`**, on an untested "drag distances run larger"
-theory — for a normal human drag gesture it just reads as unresponsive. Unified both constants.
-Row added to `docs/ai/known-fixes.md`. **Not yet committed.**
+Then: user reported mouse-look "not working" on `/wcc/scene` on staging. Investigated live with
+Playwright (headless *and* headed against this machine's real Wayland session) — pointer lock and
+drag-look both worked in every automated test. Root cause found by inspection: `DRAG_LOOK_SENSITIVITY`
+was deliberately 3x gentler than `POINTER_LOCK_SENSITIVITY` on an untested theory, making the
+Wayland/Linux fallback path feel unresponsive. User-tested through several values (1x → 0.75x →
+0.5x → **0.35x** final) live against localhost, each pushed to `dev`/staging in turn.
+
+User then flagged a second, unrelated bug: **Studio's mouse wheel rotated the camera instead of
+zooming it.** `StudioViewport.jsx`'s `StudioOrbit` set `wheel: ctrlKey ? DOLLY : ROTATE` to give
+trackpad swipe a "look around" feel — but a plain mouse wheel is *also* `ctrlKey: false`,
+indistinguishable from a trackpad swipe on that signal, so every normal mouse scroll rotated
+instead of zoomed. Same "guess the device" anti-pattern the golden rules already flagged once for
+the WCC Walker. Fixed by removing the guess entirely — wheel always dollies now. **Not yet pushed.**
+
+All 5 fixes have `known-fixes.md` rows.
 
 ## Earlier (prod, 07-07 part 1)
 
@@ -52,8 +59,8 @@ doc-load-error/retry hardening for `LiveProjectScene.jsx` — both confirmed liv
 
 ## What is broken / open
 
-- **Drag-look sensitivity fix is uncommitted** — commit + push to `dev`, then re-verify on staging.
-- **`03adf90` (the 4 audit fixes) is live on staging but not yet promoted to `main`/prod.**
+- **Studio wheel-zoom fix is uncommitted** — commit + push to `dev`, then verify on staging.
+- **`ea14581` (audit fixes + drag-look tuning) is live on staging but not yet promoted to `main`/prod.**
 - Remaining audit findings not yet fixed (7 High, 7 Medium, 6 Low + ~14 dead-code items) — see the
   audit artifact from this session, not yet transcribed into known-fixes.md. Worth a follow-up pass.
 - Drive on prod: staging verified; prod live-check + Google OAuth sensitive-scope verification
