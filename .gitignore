@@ -34,6 +34,7 @@ CLAUDE.local.md
 *.scene.zip
 docs/checkpoints/
 .cpanel.yml
+scratchpad/
 
 # Server data
 serverXR/data/
