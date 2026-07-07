@@ -31,9 +31,6 @@ vi.mock('../../services/serverSpaces.js', () => ({
     setAssetShared: () => Promise.resolve(),
     updateServerSpace: () => Promise.resolve()
 }))
-vi.mock('../hooks/useStudioLayoutPrefs.js', () => ({
-    useStudioLayoutPrefs: () => ({ layout: {}, updateLayout: vi.fn() })
-}))
 // StudioShell renders the whole editor UI; stub it with a single button that
 // exercises the one path this test cares about (creating an entity, which
 // seeds undo history) so undo/redo can be exercised without the real shell.

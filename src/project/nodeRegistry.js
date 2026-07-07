@@ -1069,18 +1069,6 @@ export const listNodeTypes = ({ category = 'all', query = '', runtime = 'any' } 
 // Resolve the effective value of an input port on a node, following edges.
 // nodes is a map { [id]: nodeInstance }. edges is an array of edge objects.
 // Returns the connected output value if wired, otherwise the node's local value or port default.
-export const resolvePortValue = (node, portId, edges = [], nodes = {}) => {
-    const edge = edges.find(e => e.toNodeId === node.id && e.toPort === portId)
-    if (edge) {
-        const source = nodes[edge.fromNodeId]
-        if (source) return source.values?.[edge.fromPort]
-    }
-    const type = getNodeType(node.typeId)
-    if (node.values?.[portId] !== undefined) return node.values[portId]
-    const portDef = (type?.inputs || []).find(p => p.id === portId)
-    return portDef?.default
-}
-
 // Get all input port definitions for a node, merging type-level and instance-level (null node) ports.
 export const getNodeInputs = (node) => {
     const type = getNodeType(node?.typeId)

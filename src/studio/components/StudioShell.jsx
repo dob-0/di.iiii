@@ -79,9 +79,6 @@ export default function StudioShell({
     onDeleteLibraryItem,
     presence,
     syncState,
-    // layout / updateLayout accepted but not used — new shell manages its own panel state
-    layout,
-    updateLayout,
     isDesktop,
     isMobile,
     cameraView,

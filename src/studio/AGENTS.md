@@ -63,7 +63,7 @@ Scrollbars are themed globally in `src/styles/base.css` (`*::-webkit-scrollbar*`
 - nearby tests:
   - `src/studio/components/StudioHub.test.jsx`
   - `src/studio/components/StudioPresentationSurface.test.jsx`
-  - `src/studio/hooks/useStudioLayoutPrefs.test.js`
+  - `src/studio/components/StudioViewportLayout.test.jsx`
   - `src/studio/utils/studioRouting.test.js`
 
 ## One-Line Summary

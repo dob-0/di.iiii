@@ -13,7 +13,6 @@ import useSpaceAssets from '../../hooks/useSpaceAssets.js'
 import { deleteServerAsset, getServerSpace, importCommonsAssets, importDriveAssets, importDriveSelection, listServerSpaces, setAssetShared, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { buildStudioHubPath, buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
-import { useStudioLayoutPrefs } from '../hooks/useStudioLayoutPrefs.js'
 import { getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import StudioShell from './StudioShell.jsx'
 import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
@@ -174,12 +173,6 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const theme = useTheme()
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
     const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'lg'))
-    const profile = isMobile ? 'mobile' : (isTablet ? 'tablet' : 'desktop')
-    const { layout, updateLayout } = useStudioLayoutPrefs({
-        projectId,
-        profile,
-        legacyWindowLayout: document.windowLayout
-    })
     // The real camera-controls instance lives inside the active viewport pane
     // (StudioViewportLayout registers it into paneControlsRef). controlsRef is
     // a live proxy so every editor read resolves to the actual controls at call
@@ -999,8 +992,6 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onDeleteLibraryItem={handleDeleteLibraryItem}
             presence={presence}
             syncState={syncState}
-            layout={layout}
-            updateLayout={updateLayout}
             isDesktop={!isMobile && !isTablet}
             isMobile={isMobile}
             cameraView={cameraView}

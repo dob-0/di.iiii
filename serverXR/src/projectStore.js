@@ -12,7 +12,6 @@ const PROJECTS_DIRNAME = 'projects'
 const PROJECT_META_FILE = 'project.json'
 const PROJECT_DOCUMENT_FILE = 'document.json'
 const PROJECT_OPS_FILE = 'ops.json'
-const PROJECT_INDEX_FILE = 'project-index.json'
 
 const PROJECT_ID_REGEX = /^[a-z0-9-]{3,64}$/
 const ASSET_ID_REGEX = /^[a-f0-9-]{8,64}$/i
@@ -29,7 +28,6 @@ const normalizeProjectId = (value) => {
   return (slug && PROJECT_ID_REGEX.test(slug)) ? slug : null
 }
 
-const isValidProjectId = (value = '') => PROJECT_ID_REGEX.test(String(value).trim())
 const isValidAssetId = (value = '') => ASSET_ID_REGEX.test(String(value).trim())
 
 const rowToMeta = (row) => !row ? null : ({
@@ -58,7 +56,6 @@ const buildProjectMeta = (spaceId, projectId, overrides = {}) => {
 }
 
 const getSpaceProjectsDir = (spacesDir, spaceId) => path.join(spacesDir, spaceId, PROJECTS_DIRNAME)
-const getProjectIndexPath = (spacesDir) => path.join(spacesDir, PROJECT_INDEX_FILE)
 
 const getProjectPaths = (spacesDir, spaceId, projectId) => {
   const projectsDir = getSpaceProjectsDir(spacesDir, spaceId)
@@ -99,26 +96,12 @@ const s = () => {
   return _s
 }
 
-// readProjectIndex and writeProjectIndex kept for backward-compat with callers
+// kept: projectStore.test.js exercises the projectId→spaceId map contract
 const readProjectIndex = async (spacesDir) =>
   Object.fromEntries(s().selectAllIndex.all().map(r => [r.id, r.space_id]))
 
-const writeProjectIndex = async (spacesDir, index = {}) => {}
-
 const loadProjectMeta = async (spacesDir, spaceId, projectId) =>
   rowToMeta(s().selectBySpace.get(projectId, spaceId))
-
-const saveProjectMeta = async (spacesDir, spaceId, projectId, meta) => {
-  s().upsert.run(
-    projectId, spaceId,
-    meta.title ?? 'Untitled Project',
-    meta.documentVersion ?? 0,
-    meta.source ?? 'project',
-    meta.createdAt ?? Date.now(),
-    meta.updatedAt ?? Date.now(),
-    meta.lastTouchedAt ?? Date.now()
-  )
-}
 
 const upsertProjectMeta = async (spacesDir, spaceId, projectId, updates = {}) => {
   const db = getDb()
@@ -267,7 +250,6 @@ module.exports = {
   PROJECT_META_FILE,
   PROJECT_DOCUMENT_FILE,
   PROJECT_OPS_FILE,
-  PROJECT_INDEX_FILE,
   PROJECTS_DIRNAME,
   buildProjectAssetMeta,
   buildProjectMeta,
@@ -275,9 +257,7 @@ module.exports = {
   ensureProject,
   findProjectById,
   getProjectPaths,
-  getProjectIndexPath,
   isValidAssetId,
-  isValidProjectId,
   listProjectsInSpace,
   loadProjectMeta,
   normalizeProjectId,
@@ -286,12 +266,9 @@ module.exports = {
   readProjectDocument,
   readProjectOps,
   removeProjectIndexEntriesForSpace,
-  saveProjectMeta,
-  setProjectIndexEntry: async () => {},
   upsertProjectMeta,
   appendProjectOps,
   writeJson,
-  writeProjectIndex,
   writeProjectDocument,
   writeProjectOps
 }

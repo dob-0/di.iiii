@@ -8,7 +8,6 @@ import {
     arePortsCompatible,
     getNodeInputs,
     getNodeOutputs,
-    resolvePortValue,
 } from './nodeRegistry.js'
 
 describe('PORT_TYPES', () => {
@@ -208,28 +207,6 @@ describe('arePortsCompatible', () => {
     it('incompatible types return false', () => {
         expect(arePortsCompatible('number', 'geometry')).toBe(false)
         expect(arePortsCompatible('string', 'texture')).toBe(false)
-    })
-})
-
-describe('resolvePortValue', () => {
-    it('returns the node local value when no edge', () => {
-        const node = createNode('geom.cube', { values: { color: '#ff0000' } })
-        expect(resolvePortValue(node, 'color', [], {})).toBe('#ff0000')
-    })
-
-    it('returns port default when no local value and no edge', () => {
-        const node = createNode('geom.cube')
-        node.values = {}
-        expect(resolvePortValue(node, 'color', [], {})).toBe('#5fa8ff')
-    })
-
-    it('follows an edge to the source node value', () => {
-        const colorNode = createNode('value.color', { id: 'color-1', values: { value: '#00ff00', out: '#00ff00' } })
-        const cubeNode  = createNode('geom.cube',   { id: 'cube-1'  })
-        const edge = createEdge('color-1', 'out', 'cube-1', 'color')
-
-        const resolved = resolvePortValue(cubeNode, 'color', [edge], { 'color-1': colorNode })
-        expect(resolved).toBe('#00ff00')
     })
 })
 
