@@ -9,11 +9,18 @@ active_branch: dev
 
 ## Last commit
 
-(being committed this session — P0 fixes from the 2026-07-07 full audit; see below)
-Before that: `55b9634` (Scene-panel entity-list cap) — committed AND pushed to `origin/dev`.
-`main`/prod is behind `dev` by `2ef0884` + `55b9634` + this session; promotion planned this session.
+P0 fixes (`e65bf16` + `e02a1d2`) are **live on prod** (dev→staging→main promoted, smoke 9/9 on
+both). P1 security + P2 reliability batch is being committed/pushed now — see below.
 
-## Last session (2026-07-07, part 3 — full audit + P0 fixes)
+## Last session (2026-07-07, part 3 — full audit + P0/P1/P2 fixes)
+
+**P1 security (serverXR):** rate limiting on guest-sessions/login/OAuth/sync-key/uploads
+(`rateLimit.js`); startup warning on `AUTH_SESSION_SECRET`→token fallback; WCC postMessage
+origin check; Drive `folderId` escaping; syncRoutes off global fetch + a contract test banning
+global fetch repo-server-wide. **P2 reliability:** Studio camera-controls ref rewired (fixes
+save-view, frame-selected, click placement, XR restore, saved-view-on-load); socket reconnect
+after unexpected disconnects; V1-scene asset delete guard; image-load placeholder; portal via
+`appNavigate`. All with regression guards; suite 430/430, contracts 29/29.
 
 Ran a second full audit (app + **AI layer** + infra + landscape comparison). Report artifact:
 <https://claude.ai/code/artifact/210249cb-5815-4db6-8acb-b0edf5b0fd85>. Key outputs:
@@ -40,9 +47,10 @@ Ran a second full audit (app + **AI layer** + infra + landscape comparison). Rep
 
 ## What is broken / open
 
-- **[docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)** — 5 High, 7 Medium, 5 Low still
-  open (camera-controls ref, syncRoutes fetch OOM class, schema-sync real comparison, rate
-  limiting, socket reconnect, …) + dead-code sweep. Work plan order is at the bottom of that file.
+- **[docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)** — after this session's P1+P2
+  batch, still open: 2 High (admin-mode 403 contract test; generated CJS schema mirror),
+  3 Low (export credentials, capture-rule/data-cleanup sharp edges, wiki freshness) + dead-code
+  sweep (~1,800 lines). Everything else in the tracker is checked off with guards.
 - Drive on prod: staging verified; prod live-check + Google OAuth sensitive-scope verification
   (manual, user-only) still pending.
 - GitHub-sync App webhook not yet exercised against a real repo push.
