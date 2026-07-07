@@ -9,44 +9,32 @@ active_branch: dev
 
 ## Last commit
 
-`b706282` — fix(studio): mouse wheel zooms instead of rotating the viewport
-**Confirmed live on both staging and prod** (`di-studio.xyz`, verified via `/api/health` gitCommit).
-`dev` and `main` are in sync.
+`2ef0884` — refactor(wcc): extract walk-mode tuning into one shared config file
+**Live on staging** (`ea14581`+`b706282` confirmed on staging/prod earlier; `2ef0884` pushed after, not yet re-verified live). `main`/prod is one commit behind at `b706282`.
 
-**Uncommitted on top:** walk-mode config extraction (see below) — verified locally (lint, build,
-412/412 tests, 15/15 `check:input`), not yet pushed.
+**Uncommitted on top:** Studio Scene-panel entity-list height cap (see below) — verified locally (lint, build, 412/412 tests), not yet pushed.
 
 ## Last session (2026-07-07, part 2)
 
-Ran a 6-way parallel full-codebase audit (project core, Studio/Beta, shared components,
-XR/WCC/landing, serverXR, scripts/schema) and fixed the 4 critical findings (`03adf90`):
+Ran a 6-way parallel full-codebase audit and fixed the 4 critical findings (`03adf90`): `wcc`
+space auth-gate bypass, unauthenticated `/api/events`, silent data loss on failed doc writes, and
+Studio/Beta undo-redo bypassing the sync engine. All merged to `main`, confirmed live on prod.
 
-- **`wcc` space bypassed the login gate** every other space goes through (`RootApp.jsx`) — added
-  `WccSurfaceRoute`, same `isPublic` check as every other space.
-- **`/api/events` leaked recent request URLs + error text** with zero auth, in any config — now
-  gated behind admin auth when `REQUIRE_AUTH` is on. `/api/health` deliberately stays public.
-- **Silent data loss**: a failed document-op write was dropped with no retry — now requeues, sets a
-  visible `pendingSyncError` (red dot in Studio's control cluster), retries after 4s.
-- **Undo/redo in Studio + Beta bypassed the sync engine** — now routes through `replaceDocument`
-  (network-backed) for project-backed workspaces.
+Then, from live user testing on staging:
 
-Then two more, found from live user testing on staging:
-
-- **WCC drag-look "not working"** — root cause was `DRAG_LOOK_SENSITIVITY` deliberately tuned 3x
-  gentler than `POINTER_LOCK_SENSITIVITY` (untested theory), making the Wayland/Linux fallback path
-  feel unresponsive. User-tuned live through 1x → 0.75x → 0.5x → **0.35x** final (`ea14581`).
-- **Studio mouse wheel rotated instead of zoomed** — `StudioOrbit` guessed trackpad-vs-mouse from
-  `ctrlKey` (same anti-pattern golden rules already flagged for the WCC Walker); every plain mouse
-  wheel is also `ctrlKey:false`, so it always rotated. Fixed: wheel always dollies (`b706282`).
-
-All 5 fixes merged `dev`→`main`, confirmed live on **prod** via `/api/health` gitCommit.
-
-Then: user asked to "sync mouse and global things... in walk mode" — extracted all walk-mode
-tuning constants (look sensitivity per input method, walk/fly speed, pitch limits, joystick/bounds)
-out of `LiveProjectScene.jsx`'s inline consts into a new `src/components/walkModeConfig.js`, with
-`DRAG_LOOK_SENSITIVITY` now defined as a ratio of `POINTER_LOCK_SENSITIVITY` instead of an
-independent magic number. Pure refactor, no behavior change — verified via `check:input` (15/15,
-one unrelated timing flake on first run, clean on retry) and the full suite. **Not yet pushed.**
+- **WCC drag-look "not working"** → `DRAG_LOOK_SENSITIVITY` tuned live to **0.35x**
+  `POINTER_LOCK_SENSITIVITY` (`ea14581`).
+- **Studio mouse wheel rotated instead of zoomed** → `StudioOrbit` was guessing trackpad-vs-mouse
+  from `ctrlKey` (golden-rule violation); wheel always dollies now (`b706282`).
+- Merged to `main`, confirmed live on prod.
+- **Walk-mode tuning extracted** into `src/components/walkModeConfig.js` (one file for look
+  sensitivity/speed/pitch-limits/bounds instead of scattered inline consts) — pure refactor
+  (`2ef0884`), pushed to `dev`, not yet promoted.
+- **Studio Scene panel: Transform kept sliding down as scene grew** — the entity list (`.spa-list`)
+  had no height cap and shared one scroll region with the Transform inspector below it. Capped to
+  `220px` with its own scroll (`src/studio/styles/studio.css`) — Transform's position no longer
+  depends on entity count. Same fix applies to 3 other `.spa-list` usages (Drive/Commons pickers,
+  Files library) that had the identical latent issue. **Not yet pushed.**
 
 All fixes have `known-fixes.md` rows.
 
@@ -64,7 +52,8 @@ doc-load-error/retry hardening for `LiveProjectScene.jsx` — both confirmed liv
 
 ## What is broken / open
 
-- **Walk-mode config extraction is uncommitted** — commit + push to `dev`, verify, then promote.
+- **Scene-panel entity-list cap is uncommitted** — commit + push to `dev`, verify, then promote.
+- `2ef0884` (walk-mode config refactor) is on `dev`/staging but not yet promoted to `main`/prod.
 - Remaining audit findings not yet fixed (7 High, 7 Medium, 6 Low + ~14 dead-code items) — see the
   audit artifact from the 2026-07-07 session, not yet transcribed into known-fixes.md.
 - Drive on prod: staging verified; prod live-check + Google OAuth sensitive-scope verification
