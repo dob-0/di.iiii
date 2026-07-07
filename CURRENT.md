@@ -9,34 +9,34 @@ active_branch: dev
 
 ## Last commit
 
-`4f20373` — docs(current): confirm prod live at ed79b06
-**Uncommitted on top: 4 critical fixes from a full-codebase audit (see below) — not yet deployed.**
+`03adf90` — fix: close 4 critical findings from full-codebase audit
+**Confirmed live on staging** (`staging.di-studio.xyz`, verified via `/api/health` gitCommit + `/api/events` gating). Not yet promoted to `main`/prod.
+
+**Uncommitted on top:** a 5th fix (drag-look sensitivity, see below) — verified locally (15/15 `check:input`, 412/412 tests), not yet pushed.
 
 ## Last session (2026-07-07, part 2)
 
 Ran a 6-way parallel full-codebase audit (project core, Studio/Beta, shared components,
-XR/WCC/landing, serverXR, scripts/schema) and fixed the 4 critical findings:
+XR/WCC/landing, serverXR, scripts/schema) and fixed the 4 critical findings (all in `03adf90`,
+live on staging):
 
-- **`wcc` space bypassed the login gate every other space goes through** (`RootApp.jsx`) — was
-  hardcoded to render `WccExperience` directly, skipping `useSpacePublicFlag`/`AuthGate`. Added
-  `WccSurfaceRoute`, same `isPublic` check as every other space. Tests: `RootApp.test.jsx`.
-- **`/api/events` leaked recent request URLs + error text with zero auth**, in any config (no
-  `requiredSpaceId` on that route, so the global auth middleware never ran). Now checks
-  `req.authState`, returns `{ events: [] }` to non-admins when `REQUIRE_AUTH` is on. `/api/health`
-  stays deliberately public (deploy pipeline/smoke checks poll it unauthenticated). Tests:
-  `httpContracts.test.js`.
-- **Silent data loss**: a failed document-op write (network blip, 5xx, expired auth) was dropped
-  with no retry — UI kept showing it as saved, vanished on next reload. `flushQueue` now requeues
-  on non-409 failure, sets a `pendingSyncError` (visible as a red dot in Studio's control cluster),
-  retries after 4s. Tests: `useProjectDocumentSync.test.jsx`.
-- **Undo/redo in Studio + Beta bypassed the sync engine** — local-only `replace-document` dispatch,
-  never persisted/broadcast, silently desynced `versionRef` from the server. Now routes through
-  `replaceDocument` (network-backed) for project-backed workspaces; Beta's local-only Blank
-  Workspace keeps the direct dispatch (no server to desync from). Tests: new `StudioEditor.test.jsx`,
-  extended `BetaEditor.test.jsx`.
+- **`wcc` space bypassed the login gate** every other space goes through (`RootApp.jsx`) — added
+  `WccSurfaceRoute`, same `isPublic` check as every other space.
+- **`/api/events` leaked recent request URLs + error text** with zero auth, in any config — now
+  gated behind admin auth when `REQUIRE_AUTH` is on. `/api/health` deliberately stays public.
+- **Silent data loss**: a failed document-op write was dropped with no retry — now requeues, sets a
+  visible `pendingSyncError` (red dot in Studio's control cluster), retries after 4s.
+- **Undo/redo in Studio + Beta bypassed the sync engine** — now routes through `replaceDocument`
+  (network-backed) for project-backed workspaces.
 
-All 4 rows added to `docs/ai/known-fixes.md`. Full suite: 412/412 tests, lint clean, build clean.
-**Not yet committed or deployed** — dev/main both still at `4f20373`/`ed79b06`.
+Then the user manually checked `/wcc/scene` on staging and reported mouse-look "not working."
+Investigated live with Playwright (headless *and* headed against this machine's real Wayland
+session) — pointer lock engaged fine and the camera rotated correctly in every test. Root cause
+found by inspection, not repro: **`DRAG_LOOK_SENSITIVITY` (the fallback path used exactly when
+pointer lock is denied — the Wayland/Linux population most likely to report this) was deliberately
+tuned 3x gentler than `POINTER_LOCK_SENSITIVITY`**, on an untested "drag distances run larger"
+theory — for a normal human drag gesture it just reads as unresponsive. Unified both constants.
+Row added to `docs/ai/known-fixes.md`. **Not yet committed.**
 
 ## Earlier (prod, 07-07 part 1)
 
@@ -52,8 +52,8 @@ doc-load-error/retry hardening for `LiveProjectScene.jsx` — both confirmed liv
 
 ## What is broken / open
 
-- **The 4 audit fixes above are uncommitted** — need a commit + `dev` push + staging verification
-  before promoting to `main`.
+- **Drag-look sensitivity fix is uncommitted** — commit + push to `dev`, then re-verify on staging.
+- **`03adf90` (the 4 audit fixes) is live on staging but not yet promoted to `main`/prod.**
 - Remaining audit findings not yet fixed (7 High, 7 Medium, 6 Low + ~14 dead-code items) — see the
   audit artifact from this session, not yet transcribed into known-fixes.md. Worth a follow-up pass.
 - Drive on prod: staging verified; prod live-check + Google OAuth sensitive-scope verification
