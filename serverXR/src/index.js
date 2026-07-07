@@ -40,6 +40,7 @@ const githubApp = require('./githubApp')
 const spaceSyncPlan = require('./spaceSyncPlan')
 const spaceLinkStore = require('./spaceLinkStore')
 const { httpRequest } = require('./httpClient')
+const { createRateLimiter } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
@@ -121,6 +122,7 @@ const releaseInfo = loadReleaseInfo(config.directories.root)
 const {
   appendOpsHistory,
   buildMeta,
+  collectSceneAssetRefs,
   countSpacesOwnedBy,
   deleteSpace,
   ensureDefaultSpace,
@@ -495,6 +497,18 @@ const issueGuestSession = async (res) => {
   return { guestId, expiresAt: result.expiresAt, spaces }
 }
 
+// Request-time throttles for the endpoints that do real work (or take real
+// secrets) for unauthenticated callers. Everything else stays unthrottled.
+// Guest cap must absorb a whole exhibition venue behind one NAT (and CI's
+// Playwright contexts) — it bounds abuse, it must never lock out a gallery.
+const guestSessionLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, name: 'new guest sessions' })
+const authAttemptLimiter = createRateLimiter({ windowMs: 60_000, max: 10, name: 'auth attempts' })
+const syncKeyMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'sync-key mints' })
+const uploadLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, name: 'uploads' })
+
+// Covers the OAuth start + callback routes registered by registerAuthRoutes below.
+router.use(['/api/auth/github', '/api/auth/google'], authAttemptLimiter)
+
 registerAuthRoutes(router, {
   config,
   createAuthSessionValue,
@@ -533,6 +547,11 @@ router.get('/api/auth/session', async (req, res, next) => {
     }
 
     if (!state.authenticated && config.requireAuth && config.auth.sessionSecret) {
+      // Issuing a guest session provisions a sandbox space (FS + DB writes) —
+      // gate NEW issuance per address; established sessions are never throttled.
+      let allowed = false
+      guestSessionLimiter(req, res, () => { allowed = true })
+      if (!allowed) return
       const { guestId, expiresAt, spaces } = await issueGuestSession(res)
       state = buildAuthState({
         authenticated: true,
@@ -570,7 +589,7 @@ router.get('/api/auth/session', async (req, res, next) => {
   }
 })
 
-router.post('/api/auth/session', (req, res) => {
+router.post('/api/auth/session', authAttemptLimiter, (req, res) => {
   if (!config.requireAuth) {
     clearAuthSessionCookie(res)
     res.json({
@@ -905,12 +924,17 @@ registerUserRoutes(router, {
   setUserRole
 })
 
+// Throttle asset uploads only (POST); asset reads on the same path stay free.
+router.use('/api/spaces/:spaceId/assets', (req, res, next) =>
+  req.method === 'POST' ? uploadLimiter(req, res, next) : next())
+
 registerSpaceRoutes(router, {
   appendOpsHistory,
   applySceneOps,
   blankScene: BLANK_SCENE,
   broadcastLiveEvent,
   buildMeta,
+  collectSceneAssetRefs,
   config,
   countSpacesOwnedBy,
   spaceLimit: config.freeSpaceLimit,
@@ -968,7 +992,7 @@ const requireSpaceOwnerOrAdmin = async (req, res) => {
   return { spaceId, meta, state }
 }
 
-router.post('/api/spaces/:spaceId/sync-keys', async (req, res, next) => {
+router.post('/api/spaces/:spaceId/sync-keys', syncKeyMintLimiter, async (req, res, next) => {
   try {
     const ctx = await requireSpaceOwnerOrAdmin(req, res)
     if (!ctx) return

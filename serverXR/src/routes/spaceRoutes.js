@@ -11,6 +11,7 @@ function registerSpaceRoutes(router, {
   blankScene,
   broadcastLiveEvent,
   buildMeta,
+  collectSceneAssetRefs = null,
   config = {},
   countSpacesOwnedBy = null,
   spaceLimit = 3,
@@ -736,16 +737,35 @@ function registerSpaceRoutes(router, {
       }
 
       const force = req.query?.force === '1' || req.query?.force === 'true'
-      if (!force && listProjectsInSpace && readProjectDocument) {
+      if (!force) {
         const usedBy = []
-        for (const project of await listProjectsInSpace(spacesDir, spaceId)) {
-          const doc = await readProjectDocument(spacesDir, spaceId, project.id).catch(() => null)
-          const entities = (doc?.entities || []).filter((e) => e?.components?.media?.assetId === assetId)
-          if (entities.length) {
+        if (listProjectsInSpace && readProjectDocument) {
+          for (const project of await listProjectsInSpace(spacesDir, spaceId)) {
+            const doc = await readProjectDocument(spacesDir, spaceId, project.id).catch(() => null)
+            const entities = (doc?.entities || []).filter((e) => e?.components?.media?.assetId === assetId)
+            if (entities.length) {
+              usedBy.push({
+                projectId: project.id,
+                title: project.title || project.id,
+                entities: entities.map((e) => e.name || e.id)
+              })
+            }
+          }
+        }
+        // Legacy V1 scenes reference assets directly on their objects, not via
+        // project documents — without this pass, deleting an asset used only by
+        // scene.json succeeded silently and broke the scene's rendering.
+        if (collectSceneAssetRefs) {
+          const { scenePath } = getSpacePaths(spaceId)
+          const scene = await readJson(scenePath, null)
+          const objects = Array.isArray(scene?.objects) ? scene.objects : []
+          const referencing = objects.filter((obj) =>
+            collectSceneAssetRefs([obj]).some((asset) => asset.id === assetId))
+          if (referencing.length) {
             usedBy.push({
-              projectId: project.id,
-              title: project.title || project.id,
-              entities: entities.map((e) => e.name || e.id)
+              projectId: null,
+              title: 'Space scene (V1)',
+              entities: referencing.map((obj) => obj.name || obj.id || obj.type || 'object')
             })
           }
         }

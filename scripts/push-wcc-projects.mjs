@@ -10,7 +10,9 @@
  *   node scripts/push-wcc-projects.mjs [options]
  *
  * Options:
- *   --to     <url>    Live server API base (default: $LIVE_API_URL or https://di-studio.xyz/serverXR)
+ *   --to     <url>    Server API base (default: $LIVE_API_URL, else STAGING —
+ *                     https://staging.di-studio.xyz/serverXR. Production pushes
+ *                     must be explicit: --to https://di-studio.xyz/serverXR)
  *   --token  <token>  Bearer token (default: $LIVE_API_TOKEN)
  *   --space  <id>     Space ID (default: wcc)
  *   --project <id>    Only push this one project
@@ -25,7 +27,9 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
+// Staging is the deliberate default — pushing to production requires an
+// explicit --to or LIVE_API_URL. (An unused production default here once made
+// the docstring promise the opposite of what the script did.)
 const DEFAULT_STAGING_URL = 'https://staging.di-studio.xyz/serverXR'
 
 // ── CLI args ──────────────────────────────────────────────────────────────────

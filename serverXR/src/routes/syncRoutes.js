@@ -1,5 +1,6 @@
 const path = require('node:path')
 const fsp = require('node:fs/promises')
+const { httpRequest } = require('../httpClient')
 
 function registerSyncRoutes(router, {
   config,
@@ -11,12 +12,13 @@ function registerSyncRoutes(router, {
   const { liveSync, directories } = config
   const repoRoot = path.resolve(directories.root, '..')
 
+  // httpRequest (node:https), never global fetch — undici's WASM HTTP parser
+  // OOMs under cPanel/LVE limits (same fix as the GitHub-sync path).
   const liveFetch = async (urlPath, opts = {}) => {
     const url = `${liveSync.url}${urlPath}`
     const headers = { Accept: 'application/json', ...opts.headers }
     if (liveSync.token) headers['Authorization'] = `Bearer ${liveSync.token}`
-    const response = await fetch(url, { ...opts, headers, signal: opts.signal ?? AbortSignal.timeout(8000) })
-    return response
+    return httpRequest(url, { method: opts.method || 'GET', headers, body: opts.body ?? null, timeoutMs: 8000 })
   }
 
   // GET /api/sync/spaces/:spaceId/status
@@ -43,7 +45,7 @@ function registerSyncRoutes(router, {
         try {
           const response = await liveFetch(`/api/spaces/${spaceId}/scene`)
           if (response.ok) {
-            const { scene, version } = await response.json()
+            const { scene, version } = response.json()
             live = {
               objects: scene?.objects?.length ?? 0,
               assets: scene?.assets?.length ?? 0,
@@ -74,10 +76,10 @@ function registerSyncRoutes(router, {
 
       const response = await liveFetch(`/api/spaces/${spaceId}/scene`)
       if (!response.ok) {
-        const text = await response.text().catch(() => '')
+        const text = response.text || ''
         return res.status(502).json({ error: `Live server returned ${response.status}: ${text.slice(0, 120)}` })
       }
-      const { scene } = await response.json()
+      const { scene } = response.json()
       if (!scene || typeof scene !== 'object') {
         return res.status(502).json({ error: 'Live server returned an unexpected scene format.' })
       }
@@ -127,7 +129,7 @@ function registerSyncRoutes(router, {
       })
 
       if (!response.ok) {
-        const text = await response.text().catch(() => '')
+        const text = response.text || ''
         return res.status(502).json({ error: `Live server returned ${response.status}: ${text.slice(0, 120)}` })
       }
 

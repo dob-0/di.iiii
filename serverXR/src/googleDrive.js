@@ -118,7 +118,7 @@ async function getFileMeta(id, auth = {}) {
 // by name. Requires an API key or an OAuth token.
 async function listFiles({ folderId, query, auth = {}, pageSize = 100 } = {}) {
   const clauses = ['trashed = false']
-  if (folderId) clauses.push(`'${folderId}' in parents`)
+  if (folderId) clauses.push(`'${String(folderId).replace(/'/g, "\\'")}' in parents`)
   if (query) clauses.push(`name contains '${String(query).replace(/'/g, "\\'")}'`)
   const q = encodeURIComponent(clauses.join(' and '))
   const fields = encodeURIComponent('files(id,name,mimeType,size,modifiedTime),nextPageToken')

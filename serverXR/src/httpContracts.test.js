@@ -1040,6 +1040,102 @@ describe('server write contracts', () => {
         expect(uploads).toEqual([])
     })
 
+    it('throttles repeated login attempts with 429 + Retry-After', async () => {
+        const server = await startServer({ nodeEnv: 'production', requireAuth: true })
+
+        let sawTooMany = null
+        for (let i = 0; i < 11; i++) {
+            const attempt = await fetch(`${server.baseUrl}/api/auth/session`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: `wrong-token-${i}` })
+            })
+            if (attempt.status === 429) {
+                sawTooMany = attempt
+                break
+            }
+            expect(attempt.status).toBe(401)
+        }
+
+        expect(sawTooMany).not.toBeNull()
+        expect(Number(sawTooMany.headers.get('retry-after'))).toBeGreaterThan(0)
+    })
+
+    // undici (global fetch) instantiates a WASM HTTP parser that OOMs under
+    // cPanel/LVE memory limits — every outbound HTTP call in serverXR must go
+    // through httpClient.js (node:http/https). This bug class shipped twice
+    // (GitHub sync, then syncRoutes); this contract keeps it at zero.
+    it('serverXR source never calls global fetch', async () => {
+        const offenders = []
+        const scan = async (dir) => {
+            for (const entry of await readdir(dir, { withFileTypes: true })) {
+                const fullPath = path.join(dir, entry.name)
+                if (entry.isDirectory()) { await scan(fullPath); continue }
+                if (!entry.name.endsWith('.js') || entry.name.endsWith('.test.js')) continue
+                if (entry.name === 'httpClient.js') continue
+                const source = fs.readFileSync(fullPath, 'utf8')
+                for (const [index, line] of source.split('\n').entries()) {
+                    const code = line.replace(/\/\/.*$/, '')
+                    if (/(^|[^.\w])fetch\s*\(/.test(code)) {
+                        offenders.push(`${path.relative(SERVER_ROOT, fullPath)}:${index + 1}`)
+                    }
+                }
+            }
+        }
+        await scan(path.join(SERVER_ROOT, 'src'))
+        expect(offenders).toEqual([])
+    })
+
+    // Regression guard: the used-by check once scanned only project documents —
+    // an asset referenced solely by the space's legacy V1 scene.json could be
+    // deleted silently, breaking the scene's rendering.
+    it('refuses to delete an asset referenced only by the V1 scene, unless forced', async () => {
+        const server = await startServer()
+        const spaceId = 'v1-del-space'
+        const createRes = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ slug: spaceId, label: 'V1 Delete Space', permanent: true })
+        })
+        expect(createRes.status).toBe(201)
+
+        const formData = new FormData()
+        formData.append('asset', new Blob(['v1-bytes'], { type: 'text/plain' }), 'v1.txt')
+        const uploadRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets`, {
+            method: 'POST',
+            headers: withAuth(server.apiToken),
+            body: formData
+        })
+        expect(uploadRes.status).toBe(200)
+        const { assetId } = await uploadRes.json()
+
+        const sceneRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/scene`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({
+                version: 1,
+                objects: [{ id: 'obj-1', type: 'image', name: 'Legacy Poster', assetRef: { id: assetId } }]
+            })
+        })
+        expect(sceneRes.status).toBe(200)
+
+        const blockedRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${assetId}`, {
+            method: 'DELETE',
+            headers: withAuth(server.apiToken)
+        })
+        expect(blockedRes.status).toBe(409)
+        const blocked = await blockedRes.json()
+        expect(blocked.code).toBe('asset_in_use')
+        expect(blocked.usedBy[0].title).toBe('Space scene (V1)')
+        expect(blocked.usedBy[0].entities).toContain('Legacy Poster')
+
+        const forcedRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${assetId}?force=1`, {
+            method: 'DELETE',
+            headers: withAuth(server.apiToken)
+        })
+        expect(forcedRes.status).toBe(200)
+    })
+
     it('deletes space assets with used-by protection, force override, and commons unshare', async () => {
         const server = await startServer()
         const spaceId = 'del-space'

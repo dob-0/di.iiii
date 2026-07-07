@@ -183,6 +183,14 @@ if (requireAuth && !authSessionSecret) {
   throw new Error('AUTH_SESSION_SECRET or an auth token is required when REQUIRE_AUTH is enabled.')
 }
 
+if (requireAuth && !process.env.AUTH_SESSION_SECRET && authSessionSecret) {
+  console.warn(
+    '[serverXR] AUTH_SESSION_SECRET is not set — falling back to an API bearer token as the ' +
+    'session-cookie signing key. Anyone holding that token can forge session cookies for any ' +
+    'role. Set a dedicated AUTH_SESSION_SECRET in the server env.'
+  )
+}
+
 const oauthCallbackBase = (process.env.OAUTH_CALLBACK_BASE_URL || '').replace(/\/+$/, '')
 const oauthFrontendUrl = (process.env.OAUTH_FRONTEND_URL || '/').replace(/\/+$/, '') || '/'
 
