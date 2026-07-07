@@ -1136,7 +1136,39 @@ describe('server write contracts', () => {
         expect(forcedRes.status).toBe(200)
     })
 
+    it('gates GitHub App discovery behind sign-in and reports unconfigured cleanly', async () => {
+        // Blank the App vars explicitly — dotenv won't override set env vars, so
+        // this wins over any developer serverXR/.env.local on the machine.
+        const server = await startServer({
+            nodeEnv: 'production',
+            requireAuth: true,
+            extraEnv: { GITHUB_APP_ID: '', GITHUB_APP_PRIVATE_KEY: '', GITHUB_APP_PRIVATE_KEY_B64: '', GITHUB_APP_PRIVATE_KEY_PATH: '' }
+        })
+
+        const anonApp = await fetch(`${server.baseUrl}/api/github/app`)
+        expect(anonApp.status).toBe(403)
+        const anonRepos = await fetch(`${server.baseUrl}/api/github/repos`)
+        expect(anonRepos.status).toBe(403)
+
+        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: server.apiToken })
+        })
+        const cookie = (login.headers.get('set-cookie') || '').split(';')[0]
+
+        // No GITHUB_APP_ID in the test env — endpoints must degrade, not 500.
+        const appRes = await fetch(`${server.baseUrl}/api/github/app`, { headers: { Cookie: cookie } })
+        expect(appRes.status).toBe(200)
+        await expect(appRes.json()).resolves.toMatchObject({ configured: false })
+
+        const reposRes = await fetch(`${server.baseUrl}/api/github/repos`, { headers: { Cookie: cookie } })
+        expect(reposRes.status).toBe(200)
+        await expect(reposRes.json()).resolves.toMatchObject({ configured: false, repos: [] })
+    })
+
     it('deletes space assets with used-by protection, force override, and commons unshare', async () => {
+
         const server = await startServer()
         const spaceId = 'del-space'
         const createRes = await fetch(`${server.baseUrl}/api/spaces`, {

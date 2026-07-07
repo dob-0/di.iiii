@@ -103,6 +103,11 @@ export const disconnectSpaceGithub = async (spaceId) => {
     await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/github-link`, { method: 'DELETE' })
 }
 
+export const getGithubAppInfo = async () => apiFetch('/api/github/app')
+
+export const listGithubRepos = async ({ refresh = false } = {}) =>
+    apiFetch(`/api/github/repos${refresh ? '?refresh=1' : ''}`)
+
 export const getServerConfig = async () => {
     const data = await apiFetch('/api/config')
     return data.config || {}

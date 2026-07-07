@@ -1028,6 +1028,46 @@ router.delete('/api/spaces/:spaceId/sync-keys/:id', async (req, res, next) => {
   } catch (error) { next(error) }
 })
 
+// GitHub App discovery for the no-code connect flow: signed-in users get the
+// App's install URL and the repos the App can already reach, so linking a
+// space is "install → pick from dropdown", never typed owner/repo.
+const requireSignedInUser = (req, res) => {
+  const state = req.authState || {}
+  if (!config.requireAuth) return true
+  if (state.authenticated && (state.type === 'session' || state.role === 'admin')) return true
+  res.status(403).json({ error: 'Sign in to manage GitHub sync.' })
+  return false
+}
+
+router.get('/api/github/app', async (req, res) => {
+  if (!requireSignedInUser(req, res)) return
+  if (!githubApp.isConfigured()) return res.json({ configured: false })
+  try {
+    const info = await githubApp.appInfo()
+    res.json({ configured: true, name: info.name, installUrl: `https://github.com/apps/${info.slug}/installations/new` })
+  } catch (error) {
+    res.json({ configured: true, name: null, installUrl: null, error: error.message })
+  }
+})
+
+// Repos here are those the *App* was installed on (by any collaborator), not
+// the caller's private GitHub account — visible to every signed-in user by
+// design, same audience that can see linked spaces in admin.
+let _repoCache = { at: 0, repos: null }
+router.get('/api/github/repos', async (req, res, next) => {
+  if (!requireSignedInUser(req, res)) return
+  if (!githubApp.isConfigured()) return res.json({ configured: false, repos: [] })
+  try {
+    const fresh = req.query?.refresh === '1'
+    if (!fresh && _repoCache.repos && Date.now() - _repoCache.at < 60_000) {
+      return res.json({ configured: true, repos: _repoCache.repos, cached: true })
+    }
+    const repos = await githubApp.listAccessibleRepos()
+    _repoCache = { at: Date.now(), repos }
+    res.json({ configured: true, repos })
+  } catch (error) { next(error) }
+})
+
 // GitHub link — connect a space to a repo (owner/admin only). On connect we
 // resolve the App installation, store the binding, and run an initial sync.
 router.post('/api/spaces/:spaceId/github-link', async (req, res, next) => {

@@ -11,7 +11,9 @@ vi.mock('../../services/serverSpaces.js', () => ({
     patchServerConfig: vi.fn(),
     getSpaceGithubLink: vi.fn(() => Promise.resolve(null)),
     connectSpaceGithub: vi.fn(() => Promise.resolve({ link: null, initialSync: null })),
-    disconnectSpaceGithub: vi.fn(() => Promise.resolve())
+    disconnectSpaceGithub: vi.fn(() => Promise.resolve()),
+    getGithubAppInfo: vi.fn(() => Promise.resolve({ configured: false })),
+    listGithubRepos: vi.fn(() => Promise.resolve({ configured: false, repos: [] }))
 }))
 vi.mock('../../project/services/projectsApi.js', () => ({
     listProjects: vi.fn(),

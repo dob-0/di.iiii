@@ -48,7 +48,40 @@ const ghFetch = async (url, { token, method = 'GET', body } = {}) => {
   return json
 }
 
+// App metadata (slug/html_url never change after creation — cache for the
+// process lifetime). Powers the in-admin "Install the app" button.
+let _appInfo = null
+const appInfo = async () => {
+  if (_appInfo) return _appInfo
+  const info = await ghFetch(`${GH}/app`, { token: appJwt() })
+  _appInfo = { slug: info.slug, name: info.name, htmlUrl: info.html_url }
+  return _appInfo
+}
+
 const listInstallations = () => ghFetch(`${GH}/app/installations`, { token: appJwt() })
+
+// Every repo the App can reach, across all installations — feeds the admin
+// repo picker so linking a space is a dropdown, not typed owner/repo.
+const listAccessibleRepos = async () => {
+  const installs = await listInstallations()
+  const repos = []
+  for (const inst of Array.isArray(installs) ? installs : []) {
+    try {
+      const token = await installationToken(inst.id)
+      const { repositories = [] } = await ghFetch(`${GH}/installation/repositories?per_page=100`, { token })
+      for (const repo of repositories) {
+        repos.push({
+          owner: repo.owner?.login || String(repo.full_name).split('/')[0],
+          repo: repo.name,
+          fullName: repo.full_name,
+          private: Boolean(repo.private),
+          installationId: inst.id
+        })
+      }
+    } catch { /* skip installations we can't enumerate */ }
+  }
+  return repos.sort((a, b) => a.fullName.localeCompare(b.fullName))
+}
 const installationToken = async (installationId) =>
   (await ghFetch(`${GH}/app/installations/${installationId}/access_tokens`, { token: appJwt(), method: 'POST' })).token
 
@@ -102,7 +135,7 @@ const verifyWebhookSignature = (rawBody, signatureHeader, secret = process.env.G
 }
 
 module.exports = {
-  isConfigured, appJwt, listInstallations,
+  isConfigured, appJwt, appInfo, listInstallations, listAccessibleRepos,
   installationToken, getInstallationForRepo, repoDefaultBranch,
   fetchRepoFile, fetchRepoFileBuffer, repoTree, verifyWebhookSignature
 }

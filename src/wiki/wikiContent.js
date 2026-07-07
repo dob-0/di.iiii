@@ -174,17 +174,17 @@ export const WIKI_ARTICLES = [
         title: 'GitHub sync',
         summary: 'Connect a space to a GitHub repo — pushes auto-update the live space.',
         body: [
-            'A space can be linked to a GitHub repo so every push updates the live space automatically, through the di.iiii GitHub App.',
+            'A space can be linked to a GitHub repo so every push updates the live space automatically, through the di.iiii GitHub App. No command line needed — everything happens in /admin.',
             { list: [
-                'Install the di.iiii GitHub App on your repo (one time).',
-                'In /admin → Manage → pick a space → GitHub sync, enter owner / repo / project and Connect.',
+                'In /admin → Manage → pick a space → GitHub sync, click "Install the di.iiii app on your repo" — GitHub asks which repos to allow (one time).',
+                'Back in admin, hit refresh and pick your repository from the dropdown, choose the project, Connect.',
                 'Edit your repo’s entry file (e.g. index.html) and push — the space re-syncs in seconds.',
-                'Add a di-space.json manifest to the repo and pushes sync the whole space: "include" globs bring extra code files (css/js/…), "assets" globs upload the media your entry references (videos, images, models) with their URLs rewritten automatically. Without a manifest, only the entry file syncs.',
+                'Advanced: add a di-space.json manifest to the repo and pushes sync the whole space: "include" globs bring extra code files (css/js/…), "assets" globs upload the media your entry references (videos, images, models) with their URLs rewritten automatically. Without a manifest, only the entry file syncs.',
                 'Sync is one-way (repo → space); Disconnect anytime.'
             ] }
         ],
         tags: ['github', 'sync', 'developers', 'deploy'],
-        updated: '2026-07-05'
+        updated: '2026-07-07'
     },
     {
         id: 'google-drive-import',
