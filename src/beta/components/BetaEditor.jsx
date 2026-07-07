@@ -128,7 +128,7 @@ export default function BetaEditor({
         clientIdPrefix: 'beta-client',
         opIdPrefix: 'beta-op'
     })
-    const { applyLocalOps: _applyLocalOps } = projectSync
+    const { applyLocalOps: _applyLocalOps, replaceDocument } = projectSync
     const presence = useProjectPresence({
         projectId,
         displayName,
@@ -779,21 +779,41 @@ export default function BetaEditor({
             const isRedo = (event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))
             if (!isUndo && !isRedo) return
             event.preventDefault()
+            // Project-backed workspaces must route undo/redo through
+            // replaceDocument (the same network-backed path as every other
+            // document write) — a local-only dispatch never persists or
+            // broadcasts to collaborators, and silently desyncs the sync
+            // engine's version tracking from the server (see
+            // docs/ai/known-fixes.md). The local-only Blank Workspace has no
+            // server to desync from, so it keeps the direct dispatch; a
+            // separate effect persists `document` to localStorage on change.
             if (isUndo && historyRef.current.length > 0) {
                 redoRef.current = [...redoRef.current.slice(-49), documentRef.current]
                 const prev = historyRef.current.at(-1)
                 historyRef.current = historyRef.current.slice(0, -1)
-                dispatch({ type: 'replace-document', document: prev, version: state.version })
+                if (isLocalWorkspace) {
+                    dispatch({ type: 'replace-document', document: prev, version: state.version })
+                } else {
+                    replaceDocument(prev, { activityMessage: 'Undo.' }).catch((error) => {
+                        dispatch({ type: 'append-activity', level: 'error', message: `Undo failed to save: ${error.message || 'unknown error'}` })
+                    })
+                }
             } else if (isRedo && redoRef.current.length > 0) {
                 historyRef.current = [...historyRef.current.slice(-49), documentRef.current]
                 const next = redoRef.current.at(-1)
                 redoRef.current = redoRef.current.slice(0, -1)
-                dispatch({ type: 'replace-document', document: next, version: state.version })
+                if (isLocalWorkspace) {
+                    dispatch({ type: 'replace-document', document: next, version: state.version })
+                } else {
+                    replaceDocument(next, { activityMessage: 'Redo.' }).catch((error) => {
+                        dispatch({ type: 'append-activity', level: 'error', message: `Redo failed to save: ${error.message || 'unknown error'}` })
+                    })
+                }
             }
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [dispatch, handleNavigateToScope, navStack.length, state.version])
+    }, [dispatch, handleNavigateToScope, navStack.length, state.version, isLocalWorkspace, replaceDocument])
 
     const handleMoveWorldNode = (nodeId, nextPosition) => {
         applyLocalOps({

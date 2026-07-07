@@ -678,6 +678,41 @@ describe('server write contracts', () => {
         expect(response.status).toBe(200)
     })
 
+    it('hides recent-events detail from unauthenticated callers when auth is required', async () => {
+        const server = await startServer({ requireAuth: true })
+
+        const response = await fetch(`${server.baseUrl}/api/events`)
+
+        expect(response.status).toBe(200)
+        await expect(response.json()).resolves.toEqual({ events: [] })
+    })
+
+    it('returns full recent-events detail for an admin-authenticated caller', async () => {
+        const server = await startServer({ requireAuth: true })
+
+        // Generate at least one request for /api/events to report back.
+        await fetch(`${server.baseUrl}/api/health`)
+
+        const response = await fetch(`${server.baseUrl}/api/events`, {
+            headers: withAuth(server.apiToken)
+        })
+
+        expect(response.status).toBe(200)
+        const body = await response.json()
+        expect(Array.isArray(body.events)).toBe(true)
+        expect(body.events.length).toBeGreaterThan(0)
+    })
+
+    it('still returns full recent-events detail unauthenticated when REQUIRE_AUTH is unset', async () => {
+        const server = await startServer({ nodeEnv: 'test' })
+
+        const response = await fetch(`${server.baseUrl}/api/events`)
+
+        expect(response.status).toBe(200)
+        const body = await response.json()
+        expect(Array.isArray(body.events)).toBe(true)
+    })
+
     it('reports release metadata from the runtime manifest', async () => {
         const releaseManifest = {
             deployEnv: 'staging',

@@ -97,4 +97,61 @@ describe('useProjectDocumentSync', () => {
         expect(result.current.store.state.document.presentationState.mode).toBe('code')
         expect(result.current.store.state.document.presentationState.codeHtml).toContain('Live Studio Preview')
     })
+
+    it('retries a failed op batch instead of dropping it, and surfaces a visible error until it clears', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'studio-project', title: 'Studio Project' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        let attempt = 0
+        submitProjectOpsMock.mockImplementation(async (_projectId, _baseVersion, ops) => {
+            attempt += 1
+            if (attempt === 1) {
+                const error = new Error('Network error')
+                error.status = 500
+                throw error
+            }
+            return { newVersion: 2, ops }
+        })
+
+        const { result } = renderHook(() => {
+            const store = useProjectStore()
+            const sync = useProjectDocumentSync({ projectId: 'studio-project', store })
+            return { store, sync }
+        })
+
+        await waitFor(() => {
+            expect(result.current.store.state.document.projectMeta.id).toBe('studio-project')
+        })
+
+        act(() => {
+            result.current.sync.applyLocalOps({
+                type: 'setPresentationState',
+                payload: { patch: { mode: 'code', codeHtml: '<main>Retry me</main>' } }
+            })
+        })
+
+        // First attempt failed: the optimistic edit must still be present
+        // (never silently dropped), and a visible error must be set.
+        await waitFor(() => {
+            expect(result.current.store.state.pendingSyncError).toBeTruthy()
+        })
+        expect(result.current.store.state.document.presentationState.codeHtml).toContain('Retry me')
+        expect(result.current.store.state.version).toBe(1)
+
+        // Automatic retry (SYNC_RETRY_DELAY_MS) succeeds: version advances and
+        // the error clears, with no user action required.
+        await waitFor(() => {
+            expect(result.current.store.state.version).toBe(2)
+        }, { timeout: 8000 })
+        expect(submitProjectOpsMock).toHaveBeenCalledTimes(2)
+        expect(result.current.store.state.pendingSyncError).toBeNull()
+        expect(result.current.store.state.document.presentationState.codeHtml).toContain('Retry me')
+    }, 10000)
 })

@@ -10,6 +10,9 @@ import {
 import { generateId } from '../../shared/projectSchema.js'
 
 const MAX_SEEN_OPS = 2000
+// A failed op batch is retried automatically after this delay rather than
+// hot-looping against a persistent failure (e.g. the backend being down).
+const SYNC_RETRY_DELAY_MS = 4000
 
 export function useProjectDocumentSync({
     projectId,
@@ -23,6 +26,7 @@ export function useProjectDocumentSync({
     const versionRef = useRef(0)
     const pendingQueueRef = useRef([])
     const isFlushingRef = useRef(false)
+    const retryTimerRef = useRef(null)
     const localClientIdRef = useRef(generateId(clientIdPrefix))
     const seenOpIdsRef = useRef(new Set())
     const seenOpOrderRef = useRef([])
@@ -75,6 +79,10 @@ export function useProjectDocumentSync({
         versionRef.current = Number(state?.version) || 0
     }, [state?.version])
 
+    useEffect(() => () => {
+        clearTimeout(retryTimerRef.current)
+    }, [projectId])
+
     const applyRemoteOps = useCallback((ops = [], version = null) => {
         const unseen = ops.filter((op) => {
             const opId = typeof op?.opId === 'string' ? op.opId : ''
@@ -115,6 +123,7 @@ export function useProjectDocumentSync({
                         type: 'set-version',
                         version: versionRef.current
                     })
+                    dispatch?.({ type: 'pending-sync-error', error: null })
                 } catch (error) {
                     if (error?.status === 409) {
                         const latestVersion = Number(error?.data?.latestVersion)
@@ -131,7 +140,21 @@ export function useProjectDocumentSync({
                         pendingQueueRef.current.unshift(...batch)
                         continue
                     }
+                    // Never drop an edit: a network blip, 5xx, or expired auth
+                    // must not silently discard ops the UI has already applied
+                    // optimistically (see docs/ai/known-fixes.md). Put the batch
+                    // back, surface a visible error, and retry after a delay
+                    // instead of hot-looping against a persistent failure.
+                    pendingQueueRef.current.unshift(...batch)
                     pushActivity(`Project sync failed: ${error.message || 'unknown error'}`, 'error')
+                    dispatch?.({
+                        type: 'pending-sync-error',
+                        error: error.message || 'Project sync failed.'
+                    })
+                    clearTimeout(retryTimerRef.current)
+                    retryTimerRef.current = setTimeout(() => {
+                        void flushQueue()
+                    }, SYNC_RETRY_DELAY_MS)
                     break
                 }
             }
@@ -211,8 +234,9 @@ export function useProjectDocumentSync({
     const syncState = useMemo(() => ({
         presenceState: state?.presenceState || 'disconnected',
         sceneStreamState: state?.sceneStreamState || 'idle',
-        sceneStreamError: state?.sceneStreamError || null
-    }), [state?.presenceState, state?.sceneStreamError, state?.sceneStreamState])
+        sceneStreamError: state?.sceneStreamError || null,
+        pendingSyncError: state?.pendingSyncError || null
+    }), [state?.presenceState, state?.sceneStreamError, state?.sceneStreamState, state?.pendingSyncError])
 
     return {
         applyLocalOps,

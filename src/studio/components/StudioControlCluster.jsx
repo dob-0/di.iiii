@@ -54,7 +54,10 @@ export default function StudioControlCluster({
                         {spaceName || 'Studio'}{projectName ? ` · ${projectName}` : ''}
                     </span>
                     {syncState && (
-                        <span className={`scc-sync-dot scc-sync-dot--${syncState.sceneStreamState || 'idle'}`} title={syncState.sceneStreamState} />
+                        <span
+                            className={`scc-sync-dot scc-sync-dot--${syncState.pendingSyncError ? 'error' : (syncState.sceneStreamState || 'idle')}`}
+                            title={syncState.pendingSyncError ? `Sync failed, retrying — ${syncState.pendingSyncError}` : syncState.sceneStreamState}
+                        />
                     )}
                     <button className="scc-collapse-btn" onClick={() => setCollapsed(c => !c)} title={collapsed ? 'Expand' : 'Collapse'}>
                         {collapsed ? '▸' : '▾'}

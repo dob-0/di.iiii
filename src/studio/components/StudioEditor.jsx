@@ -221,6 +221,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     }, [])
 
     useEffect(() => {
+        // Undo/redo must go through replaceDocument (the same network-backed
+        // path as every other document write) — a local-only dispatch here
+        // never persists or broadcasts to collaborators, and leaves the sync
+        // engine's version tracking silently pointing at a document the
+        // server never saw (see docs/ai/known-fixes.md).
         const handler = (event) => {
             const tag = event.target?.tagName?.toLowerCase?.()
             if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
@@ -232,17 +237,21 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 redoRef.current = [...redoRef.current.slice(-49), documentRef.current]
                 const prev = historyRef.current.at(-1)
                 historyRef.current = historyRef.current.slice(0, -1)
-                dispatch({ type: 'replace-document', document: prev, version: state.version })
+                replaceDocument(prev, { activityMessage: 'Undo.' }).catch((error) => {
+                    dispatch({ type: 'append-activity', level: 'error', message: `Undo failed to save: ${error.message || 'unknown error'}` })
+                })
             } else if (isRedo && redoRef.current.length > 0) {
                 historyRef.current = [...historyRef.current.slice(-49), documentRef.current]
                 const next = redoRef.current.at(-1)
                 redoRef.current = redoRef.current.slice(0, -1)
-                dispatch({ type: 'replace-document', document: next, version: state.version })
+                replaceDocument(next, { activityMessage: 'Redo.' }).catch((error) => {
+                    dispatch({ type: 'append-activity', level: 'error', message: `Redo failed to save: ${error.message || 'unknown error'}` })
+                })
             }
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [dispatch, state.version])
+    }, [dispatch, replaceDocument])
 
     useEffect(() => {
         let cancelled = false
@@ -957,7 +966,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const syncState = {
         activity: state.activity,
         sceneStreamState: state.sceneStreamState,
-        sceneStreamError: state.sceneStreamError
+        sceneStreamError: state.sceneStreamError,
+        pendingSyncError: state.pendingSyncError
     }
 
     return (

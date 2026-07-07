@@ -38,6 +38,28 @@ function SpaceSurfaceRoute({ appState }) {
     )
 }
 
+// wcc is a real space like any other — route it through the same
+// server-verified isPublic check instead of assuming it's always public.
+function WccSurfaceRoute({ mode }) {
+    const { isPublic, loading } = useSpacePublicFlag('wcc')
+
+    if (loading) {
+        return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+
+    const content = (
+        <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+            <WccExperience initialMode={mode} />
+        </Suspense>
+    )
+
+    if (isPublic) {
+        return content
+    }
+
+    return <ProtectedSurface requiredSpaceId="wcc">{content}</ProtectedSurface>
+}
+
 function AppRouter() {
     const rrNavigate = useNavigate()
     useEffect(() => {
@@ -108,11 +130,7 @@ function AppRouter() {
         && appState.page !== APP_PAGE_PREFERENCES
         && (pathSegments.length === 1 || (pathSegments.length === 2 && pathSegments[1] === 'scene'))
     if (isWccSurface) {
-        return (
-            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
-                <WccExperience initialMode={pathSegments[1] === 'scene' ? 'scene' : 'landing'} />
-            </Suspense>
-        )
+        return <WccSurfaceRoute mode={pathSegments[1] === 'scene' ? 'scene' : 'landing'} />
     }
 
     return <SpaceSurfaceRoute appState={appState} />

@@ -4,9 +4,12 @@ import TextPanelWindow from './TextPanelWindow.jsx'
 
 // Mock 3D deps before importing BetaEditor to avoid ResizeObserver errors in jsdom
 vi.mock('./BetaViewport.jsx', () => ({ default: () => <div data-testid="mock-viewport" /> }))
-vi.mock('./BetaGraphSurface.jsx', () => ({ default: () => <div data-testid="mock-graph" /> }))
+vi.mock('./BetaGraphSurface.jsx', () => ({
+    default: (props) => <div data-testid="mock-graph" onDoubleClick={() => props.onDoubleClick?.({})} />
+}))
+const mockReplaceDocument = vi.fn(() => Promise.resolve())
 vi.mock('../../project/hooks/useProjectDocumentSync.js', () => ({
-    useProjectDocumentSync: () => ({ applyLocalOps: vi.fn() })
+    useProjectDocumentSync: () => ({ applyLocalOps: vi.fn(), replaceDocument: mockReplaceDocument })
 }))
 vi.mock('../../project/hooks/useProjectPresence.js', () => ({
     useProjectPresence: () => ({ users: [], cursors: [], emitCursor: vi.fn(), clearCursor: vi.fn() })
@@ -103,6 +106,18 @@ describe('BetaEditor undo/redo', () => {
         expect(() => {
             fireEvent.keyDown(input, { key: 'z', ctrlKey: true })
         }).not.toThrow()
+    })
+
+    it('routes undo through replaceDocument for a project-backed workspace instead of a local-only dispatch', () => {
+        mockReplaceDocument.mockClear()
+        render(<BetaEditor projectId="proj-1" />)
+
+        // Seed history by creating Node 0 (double-click on the empty graph surface).
+        fireEvent.doubleClick(screen.getByTestId('mock-graph'))
+
+        fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+
+        expect(mockReplaceDocument).toHaveBeenCalledTimes(1)
     })
 })
 

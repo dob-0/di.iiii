@@ -15,9 +15,14 @@ vi.mock('./hooks/useAuthSession.js', () => ({
     default: () => mockUseAuthSession()
 }))
 
+const mockSpacePublicOverrides = {}
+
 vi.mock('./services/serverSpaces.js', () => ({
     supportsServerSpaces: true,
-    getServerSpace: (spaceId) => Promise.resolve({ id: spaceId, isPublic: spaceId === 'pub' })
+    getServerSpace: (spaceId) => Promise.resolve({
+        id: spaceId,
+        isPublic: spaceId === 'pub' || Boolean(mockSpacePublicOverrides[spaceId])
+    })
 }))
 
 vi.mock('./components/AuthGate.jsx', () => ({
@@ -128,6 +133,40 @@ describe('RootApp public space gating', () => {
             logout: vi.fn(),
             refresh: vi.fn()
         })
+        delete mockSpacePublicOverrides.wcc
+    })
+
+    it('gates /wcc behind login when the wcc space is not marked public, like any other space', async () => {
+        mockUseAuthSession.mockReturnValue({
+            requireAuth: true,
+            authenticated: false,
+            loading: false,
+            login: vi.fn(),
+            logout: vi.fn(),
+            refresh: vi.fn()
+        })
+        window.history.pushState({}, '', '/wcc')
+        render(<RootApp />)
+
+        expect(await screen.findByText('Enter your access token to continue.')).toBeInTheDocument()
+        expect(screen.queryByText('wcc-experience:landing')).not.toBeInTheDocument()
+    })
+
+    it('lets an unauthenticated visitor into /wcc once the space is marked public', async () => {
+        mockSpacePublicOverrides.wcc = true
+        mockUseAuthSession.mockReturnValue({
+            requireAuth: true,
+            authenticated: false,
+            loading: false,
+            login: vi.fn(),
+            logout: vi.fn(),
+            refresh: vi.fn()
+        })
+        window.history.pushState({}, '', '/wcc')
+        render(<RootApp />)
+
+        expect(await screen.findByText('wcc-experience:landing')).toBeInTheDocument()
+        expect(screen.queryByText('Enter your access token to continue.')).not.toBeInTheDocument()
     })
 
     it('bypasses the login gate for a space marked isPublic', async () => {
