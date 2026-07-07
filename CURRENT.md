@@ -9,8 +9,9 @@ active_branch: dev
 
 ## Last commit
 
-`dev` @ dead-code sweep (`e397e16`) + this recap. **Being promoted to `main`/prod at session
-end** — if you're reading this on `main`, everything below is live; verify with the smoke check.
+`60ac33f` — **live on prod** (`dev` == `main`, prod smoke 9/9 confirmed 2026-07-07 evening).
+Everything from the 07-07 audit is shipped: all findings fixed, full dead-code sweep (incl.
+medium-confidence items, user-approved), doc-rot CI guards armed, model pin removed.
 
 ## Last session (2026-07-07, part 3 — full audit, then fixed everything it found)
 
