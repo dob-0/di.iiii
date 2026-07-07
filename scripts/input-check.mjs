@@ -15,6 +15,11 @@
  *   4. ctrlKey wheel (pinch zoom) is ignored entirely.
  *   5. Mouse look works with pointer lock engaged.
  *   6. Drag-look works when pointer lock is denied (Wayland / post-Esc cooldown).
+ *   7. A failed project-document fetch shows a visible error + Retry instead
+ *      of silently blocking mouse/wheel input forever behind the loading
+ *      overlay (that combination reads exactly like "I can move but can't
+ *      look" — see docs/ai/known-fixes.md), and an automatic retry recovers
+ *      once the fetch succeeds again.
  *
  * Usage: node scripts/input-check.mjs [url]   (default http://localhost:5173/wcc/scene)
  * Requires the dev server (probe hook is DEV-only).
@@ -115,6 +120,29 @@ for (const [label, props] of [
     await page.mouse.move(cx - 150, cy - 150, { steps: 8 }); await settle()
     const a2 = await state()
     check('unlocked move without button: does not look', a2.yaw === b2.yaw && a2.pitch === b2.pitch)
+}
+
+// -- failed document load: visible error + Retry, not a silent stuck overlay --
+{
+    const errPage = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    let failCount = 0
+    await errPage.route('**/serverXR/api/projects/**', async (route) => {
+        if (route.request().method() === 'GET' && failCount < 2) {
+            failCount++
+            return route.fulfill({ status: 502, body: 'Bad Gateway' })
+        }
+        return route.continue()
+    })
+    await errPage.goto(URL, { waitUntil: 'domcontentloaded' })
+    await errPage.waitForSelector('canvas', { timeout: 20000 })
+    await errPage.waitForTimeout(1500)
+    const errorShown = await errPage.evaluate(() => !!document.querySelector('.live-scene-loading-error'))
+    check('failed document load: shows visible error (not a silent stuck overlay)', errorShown)
+    await errPage.waitForTimeout(4500) // auto-retry fires after 3s
+    const recovered = await errPage.evaluate(() => !document.querySelector('.live-scene-loading-error'))
+    const finalOpacity = await errPage.evaluate(() => getComputedStyle(document.querySelector('.live-scene-loading')).opacity)
+    check('auto-retry recovers once the fetch succeeds', recovered && finalOpacity === '0', `opacity=${finalOpacity}`)
+    await errPage.close()
 }
 
 await browser.close()

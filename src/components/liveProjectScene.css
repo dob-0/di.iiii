@@ -115,6 +115,16 @@
     to { transform: rotate(360deg); }
 }
 
+.live-scene-loading-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    color: #e8e8e8;
+    font-size: 14px;
+    text-align: center;
+}
+
 /* Handheld AR's WebXR dom-overlay root composites *only* this element (and
    its descendants) on top of the camera passthrough during a session --
    it's the actual touch target Walker attaches to, invisible by design. */

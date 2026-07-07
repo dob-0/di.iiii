@@ -826,6 +826,12 @@ function IdleOrbit({ center }) {
 
 function useLiveProjectDocument(projectId) {
     const [doc, setDoc] = useState(null)
+    // A failed fetch used to be caught silently, leaving `doc` null forever --
+    // the loading overlay (opaque, pointer-events: all while !doc) would then
+    // block all mouse/wheel input indefinitely with no visible error and no
+    // way to recover, while WASD (which doesn't depend on `doc`) kept working.
+    // That combination reads exactly like "I can move but I can't look".
+    const [loadError, setLoadError] = useState(false)
     const documentRef = useRef(null)
     const versionRef = useRef(0)
     const syncServiceRef = useRef(createProjectSyncService())
@@ -842,6 +848,7 @@ function useLiveProjectDocument(projectId) {
         const normalized = normalizeProjectDocument(nextDoc || {})
         documentRef.current = normalized
         setDoc(normalized)
+        setLoadError(false)
     }, [])
 
     const applyIncomingOps = useCallback((ops = [], version = null) => {
@@ -862,9 +869,20 @@ function useLiveProjectDocument(projectId) {
             versionRef.current = Number(response?.version) || 0
             applyIncomingDocument(response?.document || response || {})
         } catch {
-            if (activeProjectIdRef.current === requestedProjectId) documentRef.current = null
+            if (activeProjectIdRef.current === requestedProjectId) {
+                documentRef.current = null
+                setLoadError(true)
+            }
         }
     }, [applyIncomingDocument, projectId])
+
+    // One automatic retry for transient blips (network hiccup, backend
+    // restart) before asking the user to click Retry themselves.
+    useEffect(() => {
+        if (!loadError) return undefined
+        const timer = setTimeout(() => { void reloadDocument() }, 3000)
+        return () => clearTimeout(timer)
+    }, [loadError, reloadDocument])
 
     useEffect(() => { void reloadDocument() }, [reloadDocument])
 
@@ -898,7 +916,7 @@ function useLiveProjectDocument(projectId) {
         }
     }, [applyIncomingOps, projectId, reloadDocument])
 
-    return doc
+    return { doc, loadError, retryDocument: reloadDocument }
 }
 
 /**
@@ -984,7 +1002,7 @@ export default function LiveProjectScene({
     onExit = null,
     title = ''
 }) {
-    const doc = useLiveProjectDocument(projectId)
+    const { doc, loadError, retryDocument } = useLiveProjectDocument(projectId)
     const xr = useXrAr()
     const [nearestLabel, setNearestLabel] = useState(null)
     const [isLocked, setIsLocked] = useState(false)
@@ -1250,7 +1268,16 @@ export default function LiveProjectScene({
                         className="live-scene-loading"
                         style={{ opacity: doc ? 0 : 1, pointerEvents: doc ? 'none' : 'all' }}
                     >
-                        <div className="live-scene-loading-ring" />
+                        {loadError ? (
+                            <div className="live-scene-loading-error">
+                                <p>Couldn&apos;t load this space.</p>
+                                <button type="button" className="live-scene-exit" onClick={retryDocument}>
+                                    Retry
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="live-scene-loading-ring" />
+                        )}
                     </div>
 
                     <header className="live-scene-chrome">
