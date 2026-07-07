@@ -28,6 +28,8 @@ dev-stack.log
 .codex
 open_call/
 scene examples/
+.playwright-mcp/
+/*.png
 CLAUDE.local.md
 **/CLAUDE.local.md
 *.dii-project.zip
