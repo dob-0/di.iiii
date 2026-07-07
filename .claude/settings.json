@@ -1,6 +1,5 @@
 {
   "enabledMcpjsonServers": ["context7", "playwright"],
-  "model": "sonnet",
   "permissions": {
     "allow": [
       "Bash(bash scripts/ollama-task.sh *)",

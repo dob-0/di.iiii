@@ -37,9 +37,6 @@ export default function EditorLayoutContainer({
         setMenu,
         isAdminMode,
         isUiVisible,
-        layoutMode,
-        toggleLayoutMode,
-        layoutSide,
         isWorldPanelVisible,
         isViewPanelVisible,
         isMediaPanelVisible,
@@ -395,9 +392,6 @@ export default function EditorLayoutContainer({
             isUiVisible={isUiVisible}
             viewportMode={viewportMode}
             isPhoneCompact={isPhoneCompact}
-            layoutMode={layoutMode}
-            toggleLayoutMode={toggleLayoutMode}
-            layoutSide={layoutSide}
             isWorldPanelVisible={isWorldPanelVisible}
             isViewPanelVisible={isViewPanelVisible}
             isMediaPanelVisible={isMediaPanelVisible}

@@ -7,6 +7,7 @@
 // is handled by the Claude hooks in .claude/settings.json, not here.
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 import { collectWikiSyncErrors } from './wiki-sync-lib.mjs'
@@ -29,6 +30,37 @@ const readFileSafe = async (relativePath) => {
     } catch {
         return null
     }
+}
+
+// Freshness: if user-facing surfaces changed well after the newest wiki
+// `updated:` date, the "ship the feature, update the wiki in the same change"
+// rule was skipped. Uses git commit dates, so it runs where history exists
+// (local + pre-push gate) and skips silently in shallow CI checkouts.
+const FRESHNESS_GRACE_DAYS = 7
+const USER_FACING_PATHS = ['src/studio', 'src/wcc', 'src/landing', 'src/project', 'src/beta', 'serverXR/src/routes']
+
+const collectFreshnessErrors = (articles) => {
+    let lastCode
+    try {
+        const out = execFileSync('git', ['log', '-1', '--format=%cs', '--', ...USER_FACING_PATHS], { cwd: repoRoot, encoding: 'utf8' }).trim()
+        if (!out) return []
+        lastCode = new Date(out)
+        // Shallow clones truncate history; a lone grafted commit makes the date unreliable.
+        const depth = execFileSync('git', ['rev-list', '--count', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' }).trim()
+        if (Number(depth) < 10) return []
+    } catch {
+        return []
+    }
+    const lastWiki = articles
+        .map((article) => new Date(article.updated || 0))
+        .reduce((max, date) => (date > max ? date : max), new Date(0))
+    const gapDays = Math.floor((lastCode - lastWiki) / 86_400_000)
+    if (gapDays > FRESHNESS_GRACE_DAYS) {
+        return [
+            `wiki freshness: user-facing code last changed ${lastCode.toISOString().slice(0, 10)} but the newest wiki article is dated ${lastWiki.toISOString().slice(0, 10)} (${gapDays} days behind, grace ${FRESHNESS_GRACE_DAYS}). Update the relevant src/wiki/wikiContent.js article (bump its updated date) or confirm nothing visitor-facing changed.`
+        ]
+    }
+    return []
 }
 
 const main = async () => {
@@ -55,6 +87,8 @@ const main = async () => {
             }
         }
     }
+
+    errors.push(...collectFreshnessErrors(WIKI_ARTICLES))
 
     if (errors.length) {
         console.error('Wiki / user-facing doc checks failed:')

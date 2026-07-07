@@ -28,9 +28,3 @@ export function saveStudioWorkspace({ open, positions, snapEdges }) {
         }))
     } catch { /* storage full or unavailable — layout just won't persist */ }
 }
-
-export function clearStudioWorkspace() {
-    try {
-        window.localStorage.removeItem(STORAGE_KEY)
-    } catch { /* ignore */ }
-}

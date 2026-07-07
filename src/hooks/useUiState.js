@@ -4,8 +4,6 @@ const UI_DEFAULT_STORAGE_KEY = 'ui-default-visible'
 const UI_VISIBLE_STORAGE_PREFIX = 'ui-visible'
 const SELECTION_LOCK_STORAGE_PREFIX = 'selection-lock'
 const INTERACTION_MODE_STORAGE_PREFIX = 'interaction-mode'
-const LAYOUT_MODE_STORAGE_KEY = 'layout-mode'
-const LAYOUT_SIDE_STORAGE_KEY = 'layout-side'
 
 const readUiDefaultVisible = () => {
     if (typeof window === 'undefined') return false
@@ -73,52 +71,6 @@ export function useUiState({
         }
     })
     const [isAdminMode, setIsAdminMode] = useState(false)
-    const [layoutMode, setLayoutMode] = useState(() => {
-        if (typeof window === 'undefined') return 'floating'
-        try {
-            const stored = window.localStorage.getItem(LAYOUT_MODE_STORAGE_KEY)
-            return stored === 'split' ? 'split' : 'floating'
-        } catch {
-            return 'floating'
-        }
-    })
-
-    const [layoutSide, setLayoutSide] = useState(() => {
-        if (typeof window === 'undefined') return 'right'
-        try {
-            const stored = window.localStorage.getItem(LAYOUT_SIDE_STORAGE_KEY)
-            return ['left', 'right', 'top', 'bottom'].includes(stored) ? stored : 'right'
-        } catch {
-            return 'right'
-        }
-    })
-
-    const toggleLayoutMode = useCallback(() => {
-        setLayoutMode(prev => {
-            const next = prev === 'floating' ? 'split' : 'floating'
-            try {
-                window.localStorage.setItem(LAYOUT_MODE_STORAGE_KEY, next)
-            } catch {
-                // ignore
-            }
-            return next
-        })
-    }, [])
-
-    const cycleLayoutSide = useCallback(() => {
-        setLayoutSide(prev => {
-            const sides = ['right', 'left', 'bottom', 'top']
-            const currentIndex = sides.indexOf(prev)
-            const next = sides[(currentIndex + 1) % sides.length]
-            try {
-                window.localStorage.setItem(LAYOUT_SIDE_STORAGE_KEY, next)
-            } catch {
-                // ignore
-            }
-            return next
-        })
-    }, [])
-
     const uiVisibilityQuery = typeof window !== 'undefined'
         ? new URLSearchParams(window.location.search).get('ui')
         : null
@@ -274,10 +226,6 @@ export function useUiState({
         setIsSelectionLocked,
         isAdminMode,
         setIsAdminMode,
-        layoutMode,
-        toggleLayoutMode,
-        layoutSide,
-        cycleLayoutSide
     }), [
         menu,
         gizmoMode,
@@ -303,9 +251,5 @@ export function useUiState({
         toggleInteractionMode,
         isSelectionLocked,
         isAdminMode,
-        layoutMode,
-        toggleLayoutMode,
-        layoutSide,
-        cycleLayoutSide
     ])
 }

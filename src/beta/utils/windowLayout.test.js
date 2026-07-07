@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
     clampWindowFrame,
-    getWorkspaceAdjustmentOps,
     getWorkspaceTopInset
 } from './windowLayout.js'
 
@@ -74,20 +73,5 @@ describe('windowLayout', () => {
             width: 360,
             height: 240
         }))
-    })
-
-    it('builds adjustment ops only for overlapping visible windows', () => {
-        expect(getWorkspaceAdjustmentOps([
-            { id: 'viewport', visible: true, y: 24 },
-            { id: 'assets', visible: true, y: 180 },
-            { id: 'project', visible: false, y: 24 }
-        ], 160)).toEqual([
-            {
-                windowId: 'viewport',
-                patch: {
-                    y: 160
-                }
-            }
-        ])
     })
 })

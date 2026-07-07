@@ -36,8 +36,8 @@ shared/                           ← SPE territory
 
 ```bash
 npm run lint          # 0 errors, 0 warnings
-npm run test          # 67 test files, 221 tests — all pass
-npm run test:server-contracts   # 2 files, 16 tests — all pass
+npm run test          # full suite — all pass (never pin the count; it grows weekly)
+npm run test:server-contracts   # API contracts — all pass
 ```
 
 If a change degrades either count, the task is not done. Fix it before stopping.
@@ -112,8 +112,8 @@ Beta layout tests verify:
 ## Done Criteria for Any QA Task
 
 - `npm run lint` — 0 errors, 0 warnings
-- `npm run test` — all 221 tests pass, no new skipped tests
-- `npm run test:server-contracts` — all 16 tests pass
+- `npm run test` — all pass, no new skipped tests, count never decreases
+- `npm run test:server-contracts` — all pass, count never decreases
 - Test coverage for any new behavior (at minimum: happy path + one edge case)
 - No mocked database in server contract tests
 

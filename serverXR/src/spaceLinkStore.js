@@ -35,13 +35,10 @@ const getLinkBySpace = (spaceId) =>
 const getLinksByRepo = (owner, repo) =>
   getDb().prepare('SELECT * FROM space_links WHERE lower(owner) = lower(?) AND lower(repo) = lower(?)').all(owner, repo).map(toPublic)
 
-const listLinks = () =>
-  getDb().prepare('SELECT * FROM space_links ORDER BY updated_at DESC').all().map(toPublic)
-
 const removeLink = (spaceId) =>
   getDb().prepare('DELETE FROM space_links WHERE space_id = ?').run(spaceId).changes > 0
 
 const setLastSyncSha = (spaceId, sha) =>
   getDb().prepare('UPDATE space_links SET last_sync_sha = ?, updated_at = ? WHERE space_id = ?').run(sha, Date.now(), spaceId)
 
-module.exports = { upsertLink, getLinkBySpace, getLinksByRepo, listLinks, removeLink, setLastSyncSha }
+module.exports = { upsertLink, getLinkBySpace, getLinksByRepo, removeLink, setLastSyncSha }

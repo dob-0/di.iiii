@@ -151,10 +151,6 @@ export function useAppState() {
         toggleInteractionMode,
         isAdminMode,
         setIsAdminMode,
-        layoutMode,
-        toggleLayoutMode,
-        layoutSide,
-        cycleLayoutSide,
         isPointerDragging
     } = uiState
     const xrContextValue = useXrAr({
@@ -623,10 +619,6 @@ export function useAppState() {
         setIsSelectionLocked,
         uiDefaultVisible,
         toggleUiDefaultVisible,
-        layoutMode,
-        toggleLayoutMode,
-        layoutSide,
-        cycleLayoutSide,
         presentationMode
     })
 

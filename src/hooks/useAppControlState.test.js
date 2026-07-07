@@ -85,10 +85,6 @@ function createProps(overrides = {}) {
         setIsSelectionLocked: vi.fn(),
         uiDefaultVisible: true,
         toggleUiDefaultVisible: vi.fn(),
-        layoutMode: 'dock',
-        toggleLayoutMode: vi.fn(),
-        layoutSide: 'right',
-        cycleLayoutSide: vi.fn(),
         presentationMode: 'scene',
         ...overrides
     }

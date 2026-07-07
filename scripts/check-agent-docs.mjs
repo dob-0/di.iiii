@@ -94,6 +94,43 @@ const aiDocFilesForSafetyScan = [
   ])
 ]
 
+// Live AI-instruction files rot when they pin facts that scripts can derive —
+// the 2026-07-07 audit found every hand-written test count and "not in CI"
+// claim stale. Flag the known rot patterns; write invariants ("all pass; count
+// never decreases") instead of numbers.
+const rotScanFiles = [
+  'AGENTS.md',
+  'CHEATSHEET.md',
+  'AI_WORKFLOW.md',
+  'ONBOARDING.md',
+  ...canonicalScopeFiles,
+  '.claude/agents',
+  '.claude/commands',
+  'docs/ai/roles'
+]
+
+const rotPatterns = [
+  { re: /\b\d+\s+tests?\b/g, why: 'hardcoded test count (write "all pass; count never decreases" instead)' },
+  { re: /\b\d+\s+test files\b/g, why: 'hardcoded test-file count' },
+  { re: /not in CI/gi, why: 'stale CI claim (ci.yml runs the full suite incl. contracts + schema-sync)' }
+]
+
+const collectRotScanTargets = async () => {
+  const targets = []
+  for (const entry of rotScanFiles) {
+    if (!await exists(entry)) continue
+    const stats = await fs.stat(toAbsolute(entry))
+    if (stats.isDirectory()) {
+      for (const name of await fs.readdir(toAbsolute(entry))) {
+        if (name.endsWith('.md')) targets.push(path.posix.join(entry, name))
+      }
+    } else {
+      targets.push(entry)
+    }
+  }
+  return targets
+}
+
 const ensureContains = (content, needle, filePath, errors) => {
   if (!content.includes(needle)) {
     errors.push(`${filePath} is missing required reference: ${needle}`)
@@ -186,6 +223,18 @@ const main = async () => {
         errors.push(`Duplicate skill name found: ${frontmatter.name}`)
       }
       seenSkillNames.add(frontmatter.name)
+    }
+  }
+
+  for (const relativePath of await collectRotScanTargets()) {
+    const content = await readFile(relativePath)
+    for (const line of content.split('\n')) {
+      for (const { re, why } of rotPatterns) {
+        re.lastIndex = 0
+        if (re.test(line)) {
+          errors.push(`${relativePath}: "${line.trim().slice(0, 80)}" — ${why}`)
+        }
+      }
     }
   }
 

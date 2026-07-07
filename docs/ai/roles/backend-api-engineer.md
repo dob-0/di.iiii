@@ -135,7 +135,7 @@ Role model: `viewer` | `editor` | `admin`. Role is stored in the session, not in
 
 ## Done Criteria for Any Backend Task
 
-- `npm run test:server-contracts` passes (2 files, 16 tests)
+- `npm run test:server-contracts` passes (all tests; count never decreases)
 - `npm run lint` passes
 - No empty catch blocks — all errors logged with context
 - No secrets in any file that gets deployed to the frontend

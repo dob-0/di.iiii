@@ -45,13 +45,3 @@ export function clampWindowFrame(frame = {}, bounds = {}) {
     }
 }
 
-export function getWorkspaceAdjustmentOps(windows = [], minTop = DEFAULT_BETA_WORKSPACE_TOP) {
-    return windows
-        .filter((windowState) => windowState?.visible && Number(windowState.y) < minTop)
-        .map((windowState) => ({
-            windowId: windowState.id,
-            patch: {
-                y: minTop
-            }
-        }))
-}

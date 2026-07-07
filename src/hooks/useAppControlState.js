@@ -62,10 +62,6 @@ export function useAppControlState({
     setIsSelectionLocked,
     uiDefaultVisible,
     toggleUiDefaultVisible,
-    layoutMode,
-    toggleLayoutMode,
-    layoutSide,
-    cycleLayoutSide,
     presentationMode
 } = {}) {
     const spaceLabelButton = useSpaceLabel({
@@ -162,10 +158,6 @@ export function useAppControlState({
             setIsSelectionLocked,
             uiDefaultVisible,
             toggleUiDefaultVisible,
-            layoutMode,
-            toggleLayoutMode,
-            layoutSide,
-            cycleLayoutSide,
             presentationMode,
             setPresentationMode,
             handleEnterXrFocus,

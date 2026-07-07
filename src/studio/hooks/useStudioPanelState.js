@@ -14,20 +14,7 @@ export function useStudioPanelState(initialOpen = null) {
         })
     }, [])
 
-    const show = useCallback((id) => {
-        setOpen((prev) => (prev.has(id) ? prev : new Set([...prev, id])))
-    }, [])
-
-    const hide = useCallback((id) => {
-        setOpen((prev) => {
-            if (!prev.has(id)) return prev
-            const next = new Set(prev)
-            next.delete(id)
-            return next
-        })
-    }, [])
-
     const isOpen = useCallback((id) => open.has(id), [open])
 
-    return { open, toggle, show, hide, isOpen }
+    return { open, toggle, isOpen }
 }

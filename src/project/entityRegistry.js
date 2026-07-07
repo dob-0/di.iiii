@@ -291,9 +291,8 @@ const DEFINITIONS = {
     }
 }
 
-export const ENTITY_DEFINITIONS = DEFINITIONS
 
-export const getEntityDefinition = (type = 'box') => DEFINITIONS[type] || DEFINITIONS.box
+const getEntityDefinition = (type = 'box') => DEFINITIONS[type] || DEFINITIONS.box
 
 export const createEntityOfType = (type = 'box', overrides = {}) => {
     const definition = getEntityDefinition(type)

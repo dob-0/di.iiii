@@ -48,7 +48,6 @@ const ghFetch = async (url, { token, method = 'GET', body } = {}) => {
   return json
 }
 
-const getAppInfo = () => ghFetch(`${GH}/app`, { token: appJwt() })
 const listInstallations = () => ghFetch(`${GH}/app/installations`, { token: appJwt() })
 const installationToken = async (installationId) =>
   (await ghFetch(`${GH}/app/installations/${installationId}/access_tokens`, { token: appJwt(), method: 'POST' })).token
@@ -103,7 +102,7 @@ const verifyWebhookSignature = (rawBody, signatureHeader, secret = process.env.G
 }
 
 module.exports = {
-  isConfigured, appJwt, getAppInfo, listInstallations,
+  isConfigured, appJwt, listInstallations,
   installationToken, getInstallationForRepo, repoDefaultBranch,
   fetchRepoFile, fetchRepoFileBuffer, repoTree, verifyWebhookSignature
 }

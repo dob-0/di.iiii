@@ -6,14 +6,22 @@ Burn the cheapest model that can do the job correctly. Use the most expensive on
 
 ## Tier Table
 
+The models below must match what `scripts/ollama-task.sh` actually invokes — this table drifted
+once (promised a 30B tier that no script ran).
+
 | Tier | Model | Cost | Use When |
 |------|-------|------|----------|
-| 0 — Local | Ollama `dob-fast` / `qwen3.5` | **Free** | Read-only analysis, docs, PROGRESS.md, golden rules, Q&A |
-| 0 — Local | Ollama `qwen2.5-coder:1.5b` | **Free** | Grep assistance, test stub generation, symbol search |
-| 0 — Local | Ollama `qwen3-coder:30b` / `dob-deep` | **Free** | Complex code explanation, architecture Q&A, refactor plans (no file edits) |
+| 0 — Local | Ollama `fast` → dob-fast (qwen3:8b) | **Free** | Read-only analysis, docs, PROGRESS.md, golden rules, Q&A |
+| 0 — Local | Ollama `tiny` → qwen2.5-coder:1.5b | **Free** | Grep assistance, test stub generation, symbol search |
+| 0 — Local | Ollama `deep` → dob-deep (qwen3:8b) / `coder` → qwen2.5-coder:7b | **Free** | Code explanation, architecture Q&A, refactor plans (no file edits) |
 | 1 — Cheap | Claude Haiku | Low | Simple single-file edits, small test additions, obvious lint fixes |
 | 2 — Medium | Claude Sonnet | Medium | Feature work, multi-file bugs, UI layout changes, node registry changes |
-| 3 — Expensive | Claude Opus / Gemini Pro | High | Only: architecture decisions, non-negotiable reviews, security audits, cross-system refactors |
+| 3 — Expensive | Claude Opus / Fable | High | Only: architecture decisions, non-negotiable reviews, security audits, cross-system refactors, full audits |
+
+The main Claude Code session is **not pinned** in `.claude/settings.json` — it uses whatever the
+user set as their default (`/model`). Per-task tiering happens through the subagents in
+`.claude/agents/` (ux/qa → haiku, backend/viewport/nodes → sonnet, schema/security → opus) and
+this table.
 
 ---
 

@@ -67,8 +67,3 @@ export function getAvailableScales() {
 /**
  * Resolve density class from a scale value
  */
-export function getDensityFromScale(scale) {
-    if (scale <= 0.875) return 'compact'
-    if (scale >= 1.25) return 'large'
-    return 'normal'
-}

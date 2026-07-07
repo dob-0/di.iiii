@@ -205,7 +205,7 @@ export function usePreferencesData({ onNavigateToEditor }) {
         .slice(0, 14)
 
     const signalNodes = [
-        { key: 'ui', label: 'UI', value: ui?.isUiVisible ? 'Visible' : 'Hidden', detail: `${ui?.layoutMode || 'floating'} / ${ui?.layoutSide || 'right'}`, tone: ui?.isUiVisible ? 'accent' : 'muted' },
+        { key: 'ui', label: 'UI', value: ui?.isUiVisible ? 'Visible' : 'Hidden', detail: 'floating panels', tone: ui?.isUiVisible ? 'accent' : 'muted' },
         { key: 'selection', label: 'Selection', value: selectedCount ? `${selectedCount}` : 'Idle', detail: ui?.isSelectionLocked ? 'locked' : 'movable', tone: selectedCount ? 'success' : 'muted' },
         { key: 'socket', label: 'Socket', value: sync?.isSocketConnected ? 'Live' : 'Down', detail: sync?.effectiveDisplayName || 'anonymous', tone: sync?.isSocketConnected ? 'success' : 'warning' },
         {
@@ -258,8 +258,6 @@ export function usePreferencesData({ onNavigateToEditor }) {
             interactionMode: ui?.interactionMode,
             isSelectionLocked: ui?.isSelectionLocked,
             isAdminMode: ui?.isAdminMode,
-            layoutMode: ui?.layoutMode,
-            layoutSide: ui?.layoutSide,
             panels: panelButtons.map((button) => ({
                 key: button.key,
                 label: button.label,
@@ -328,13 +326,12 @@ export function usePreferencesData({ onNavigateToEditor }) {
             id: 'editor', col: 1, row: 1, kicker: 'surface', label: 'Editor',
             status: ui?.interactionMode === 'edit' ? 'edit' : 'nav',
             detail: ui?.isUiVisible ? 'UI visible on canvas' : 'UI hidden',
-            meta: `${ui?.layoutMode || 'floating'} / ${ui?.layoutSide || 'right'}`,
+            meta: 'floating panels',
             tone: ui?.isUiVisible ? 'accent' : 'muted',
             tooltip: 'Editor shell, camera mode, and layout controls.',
             facts: [
                 { label: 'UI', value: ui?.isUiVisible ? 'Visible' : 'Hidden' },
                 { label: 'Mode', value: ui?.interactionMode === 'edit' ? 'Edit' : 'Navigate' },
-                { label: 'Layout', value: `${ui?.layoutMode || 'floating'} / ${ui?.layoutSide || 'right'}` },
                 { label: 'Selection', value: ui?.isSelectionLocked ? 'Locked' : 'Free' }
             ],
             actions: [{ key: 'open-editor', label: 'Open Editor', onClick: () => onNavigateToEditor?.(sync?.spaceId) }]

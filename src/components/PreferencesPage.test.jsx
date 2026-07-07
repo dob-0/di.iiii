@@ -94,8 +94,6 @@ function renderPreferencesPage() {
                     interactionMode: 'edit',
                     isSelectionLocked: false,
                     isAdminMode: true,
-                    layoutMode: 'dock',
-                    layoutSide: 'right',
                     isViewPanelVisible: true,
                     setIsViewPanelVisible: vi.fn(),
                     isWorldPanelVisible: false,
