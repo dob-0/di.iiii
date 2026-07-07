@@ -47,10 +47,10 @@ Ran a second full audit (app + **AI layer** + infra + landscape comparison). Rep
 
 ## What is broken / open
 
-- **[docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)** — after this session's P1+P2
-  batch, still open: 2 High (admin-mode 403 contract test; generated CJS schema mirror),
-  3 Low (export credentials, capture-rule/data-cleanup sharp edges, wiki freshness) + dead-code
-  sweep (~1,800 lines). Everything else in the tracker is checked off with guards.
+- **[docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)** — ALL High/Medium items are now
+  closed with guards (incl. the schema-mirror drift: CJS was silently turning lights/groups into
+  boxes server-side — real equivalence test added). Still open: 3 Low (export credentials,
+  capture-rule/data-cleanup sharp edges, wiki freshness) + dead-code sweep (~1,800 lines).
 - Drive on prod: staging verified; prod live-check + Google OAuth sensitive-scope verification
   (manual, user-only) still pending.
 - GitHub-sync App webhook not yet exercised against a real repo push.

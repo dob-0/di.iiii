@@ -15,7 +15,12 @@ const ENTITY_TYPES = new Set([
   'video',
   'audio',
   'model',
-  'portal'
+  'group',
+  'portal',
+  'pointLight',
+  'spotLight',
+  'directionalLight',
+  'ambientLight'
 ])
 
 const WINDOW_IDS = ['viewport', 'assets', 'inspector', 'outliner', 'activity', 'project']
@@ -68,7 +73,7 @@ const defaultWindowLayout = {
   activeWindowId: 'viewport',
   windows: {
     viewport: { id: 'viewport', title: 'Viewport', visible: true, minimized: false, pinned: true, x: 24, y: 176, width: 860, height: 580, zIndex: 3 },
-    assets: { id: 'assets', title: 'Assets', visible: true, minimized: false, pinned: false, x: 910, y: 176, width: 360, height: 360, zIndex: 4 },
+    assets: { id: 'assets', title: 'Assets', visible: false, minimized: false, pinned: false, x: 910, y: 176, width: 360, height: 360, zIndex: 4 },
     inspector: { id: 'inspector', title: 'Inspector', visible: true, minimized: false, pinned: false, x: 910, y: 552, width: 360, height: 420, zIndex: 5 },
     outliner: { id: 'outliner', title: 'Outliner', visible: false, minimized: false, pinned: false, x: 24, y: 620, width: 280, height: 260, zIndex: 2 },
     activity: { id: 'activity', title: 'Activity', visible: false, minimized: false, pinned: false, x: 320, y: 620, width: 340, height: 260, zIndex: 1 },
@@ -193,6 +198,26 @@ const buildDefaultComponentsForType = (type = 'box') => {
     case 'model':
       base.media = { assetId: null, autoplay: false, loop: false, muted: false }
       break
+    case 'pointLight':
+      base.appearance = { color: '#ffffff', opacity: 1 }
+      base.light = { color: '#ffffff', intensity: 1, distance: 10, decay: 2 }
+      break
+    case 'spotLight':
+      base.appearance = { color: '#ffffff', opacity: 1 }
+      base.light = { color: '#ffffff', intensity: 2, distance: 20, angle: 0.52, penumbra: 0.2, decay: 2 }
+      break
+    case 'directionalLight':
+      base.appearance = { color: '#ffffff', opacity: 1 }
+      base.light = { color: '#fff7ea', intensity: 1.5 }
+      break
+    case 'ambientLight':
+      base.transform = { position: [0, 0, 0], rotation: [0, 0, 0], scale: [1, 1, 1] }
+      base.appearance = { color: '#ffffff', opacity: 1 }
+      base.light = { color: '#ffffff', intensity: 0.5 }
+      break
+    case 'group':
+      delete base.appearance
+      break
     case 'portal':
       base.reference = { spaceId: '', projectId: '', mode: 'portal', label: '' }
       break
@@ -262,13 +287,17 @@ const normalizeEntity = (entity = {}) => {
       position: ensureVector(transformSource.position, defaultComponents.transform.position),
       rotation: ensureVector(transformSource.rotation, defaultComponents.transform.rotation),
       scale: ensureVector(transformSource.scale, defaultComponents.transform.scale)
-    },
-    appearance: {
+    }
+  }
+  if (defaultComponents.appearance) {
+    nextComponents.appearance = {
       ...defaultComponents.appearance,
       ...appearanceSource,
       color: ensureString(appearanceSource.color, defaultComponents.appearance.color),
       opacity: Math.min(1, Math.max(0, ensureNumber(appearanceSource.opacity, defaultComponents.appearance.opacity)))
     }
+  } else {
+    delete nextComponents.appearance
   }
   if (nextComponents.primitive?.size) {
     nextComponents.primitive.size = ensureVector(nextComponents.primitive.size, [1, 1, 1])
@@ -325,6 +354,7 @@ const normalizeEntity = (entity = {}) => {
     id: ensureString(entity.id, generateId('entity')),
     type,
     name: ensureString(entity.name, `${type[0].toUpperCase()}${type.slice(1)} Entity`),
+    parentId: ensureString(entity.parentId, '') || null,
     components: nextComponents
   }
 }
@@ -516,7 +546,8 @@ const normalizeProjectNode = (node = {}) => {
     graphX,
     graphY,
     runtimeId: source.runtimeId ?? null,
-    assetRef
+    assetRef,
+    parentId: ensureString(source.parentId, '') || null
   }
 }
 

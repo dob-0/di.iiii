@@ -161,3 +161,83 @@ describe('mergePatch', () => {
     expect(result.items).toEqual([4, 5])
   })
 })
+
+// --- ESM ↔ CJS equivalence (the actual drift check) ---
+// Before this section, the suite only checked the CJS mirror against hardcoded
+// invariants — an ESM edit that skipped the hand-mirror still passed the
+// pre-push gate while client and server normalized documents differently.
+// (The old "cannot import the ESM" comment was stale: nodeRegistry has no
+// browser globals and the suite runs under jsdom.)
+
+describe('ESM/CJS mirror equivalence', () => {
+  const loadEsm = () => import('../../src/shared/projectSchema.js')
+
+  it('exports the same schema constants', async () => {
+    const esm = await loadEsm()
+    expect(schema.PROJECT_DOCUMENT_VERSION).toBe(esm.PROJECT_DOCUMENT_VERSION)
+    expect([...schema.ENTITY_TYPES].sort()).toEqual([...esm.ENTITY_TYPES].sort())
+    expect([...schema.WINDOW_IDS].sort()).toEqual([...esm.WINDOW_IDS].sort())
+  })
+
+  const FIXTURES = [
+    {},
+    { nodes: [{ id: 'a', typeId: 'universe.world', label: 'w', values: {} }] },
+    {
+      entities: [
+        { id: 'e1', type: 'box', components: { transform: { position: [1, 2, 3] } } },
+        { id: 'e2', type: 'video', components: { media: { assetId: 'abc', volume: 2 } } },
+        { id: 'bad-entity', type: 'not-a-real-type' }
+      ],
+      worldState: { backgroundColor: '#123456' },
+      assets: [{ id: 'abc', name: 'clip.mp4' }]
+    },
+    {
+      version: 1,
+      nodes: [
+        { id: 'n1', typeId: 'some.type', values: { x: 1 } },
+        { id: 'n1', typeId: 'some.type', values: { x: 2 } }
+      ],
+      edges: [{ id: 'edge1', fromNodeId: 'n1', fromPort: 'out', toNodeId: 'ghost', toPort: 'in' }]
+    }
+  ]
+
+  // Fresh documents stamp projectMeta with Date.now(); zero the wall-clock
+  // fields so the comparison is about shape, not the millisecond it ran.
+  const stripClock = (doc) => {
+    const next = schema.cloneValue(doc)
+    if (next.projectMeta) {
+      next.projectMeta.createdAt = 0
+      next.projectMeta.updatedAt = 0
+    }
+    for (const asset of next.assets || []) {
+      asset.createdAt = 0
+      asset.updatedAt = 0
+    }
+    return next
+  }
+
+  it('normalizes representative documents identically', async () => {
+    const esm = await loadEsm()
+    for (const fixture of FIXTURES) {
+      const fromCjs = schema.normalizeProjectDocument(schema.cloneValue(fixture))
+      const fromEsm = esm.normalizeProjectDocument(esm.cloneValue(fixture))
+      expect(stripClock(fromCjs)).toEqual(stripClock(fromEsm))
+    }
+  })
+
+  it('applies representative op batches identically', async () => {
+    const esm = await loadEsm()
+    const ops = [
+      { type: 'createEntity', payload: { entity: { id: 'e9', type: 'box', components: {} } } },
+      { type: 'updateEntity', payload: { entityId: 'e9', patch: { components: { transform: { position: [4, 5, 6] } } } } },
+      { type: 'setWorldState', payload: { patch: { backgroundColor: '#0f0f0f' } } },
+      { type: 'createNode', payload: { node: { id: 'n5', typeId: 'some.type', label: 'N', values: {} } } },
+      { type: 'deleteNode', payload: { nodeId: 'n5' } }
+    ]
+    for (const fixture of FIXTURES) {
+      const fromCjs = schema.applyProjectOps(schema.cloneValue(fixture), ops)
+      const fromEsm = esm.applyProjectOps(esm.cloneValue(fixture), ops)
+      expect(stripClock(fromCjs)).toEqual(stripClock(fromEsm))
+    }
+  })
+})
