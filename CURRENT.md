@@ -48,8 +48,11 @@ Highlights, in commit order:
 
 ## What is broken / open
 
-- Drive on prod: staging verified; prod live-check + Google OAuth sensitive-scope verification
-  (manual, user-only) still pending.
+- Drive on prod: **verified live 2026-07-07** (user connected + browsed real Drive files on
+  di-studio.xyz). Google console configured: scopes registered (drive.readonly restricted +
+  userinfo), app runs In-production/unverified (warning screen + lifetime 100-connect cap —
+  1-2 used). Full Google verification deliberately deferred; preferred long-term fix is
+  migrating to the `drive.file` scope + Google Picker (no cap, no warning, no verification).
 - GitHub-sync App webhook not yet exercised against a real repo push.
 - `origin/self-host` intentionally 1 commit ahead (`b9baa30`).
 - Next strategic work (per audit P4): op-log undo → content-addressed assets → self-host story.
