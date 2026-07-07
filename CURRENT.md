@@ -9,8 +9,8 @@ active_branch: dev
 
 ## Last commit
 
-`1fcb6d6` — fix(wcc): surface project-document load failures (dev, staging — not yet promoted to main/prod)
-**Prod is at `0559427` (VR/AR fixes + gitignore, confirmed live). This newest commit (doc-load error/retry) is dev-only as of session end — promote to main when ready.**
+`ed79b06` — docs(current): session recap (dev + main, fast-forward merge)
+**Pushed to `dev` (staging, confirmed live) and merged to `main` → production, confirmed live on `di-studio.xyz`.**
 
 ## Last session (2026-07-07)
 
