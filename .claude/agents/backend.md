@@ -24,7 +24,7 @@ You are the Backend/API Engineer (BAE) for di.iiii. Read your role card first: `
 
 ## Done criteria
 
-- `npm run test:server-contracts` passes (2 files, 16 tests)
+- `npm run test:server-contracts` passes (all tests; count never decreases)
 - `npm run lint` passes
 - No secrets in any file deployed to frontend
 - New ops are append-only

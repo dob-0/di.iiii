@@ -13,10 +13,11 @@ You are the QA/Test Engineer (QA) for di.iiii. Read your role card first: `docs/
 
 **Never mock the SQLite database** in server contract tests — this was a deliberate decision after a mock/prod divergence caused a broken migration to pass. Real DB only.
 
-**Baseline that must never regress:**
+**Baseline that must never regress** (invariants, not counts — hardcoded counts in this file
+went stale twice; the suite grows every week):
 - `npm run lint` — 0 errors, 0 warnings
-- `npm run test` — 67 test files, 221 tests, all pass
-- `npm run test:server-contracts` — 2 files, 16 tests, all pass
+- `npm run test` — all pass; the test count never decreases across a change
+- `npm run test:server-contracts` — all pass; same rule
 
 **Test standards:**
 - Test behavior, not implementation — assert what the user sees

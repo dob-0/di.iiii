@@ -19,8 +19,8 @@ npm run dev:browser                  # same, but also opens a fresh wiped Chromi
 npm run lint                         # eslint src/
 npm run build                        # vite production build
 npm run test -- --run                # full vitest suite
-npm run test:server-contracts        # API contract tests (not in CI — run manually)
-npm run test:schema-sync             # guards shared/*.cjs vs src/shared/*.js drift (not in CI)
+npm run test:server-contracts        # API contract tests (also run as a named CI step)
+npm run test:schema-sync             # guards shared/*.cjs vs src/shared/*.js drift (also in CI + pre-push gate)
 npm run space:pull -- <spaceId>      # pull a space from the live server (local-write only, safe)
 npm run space:push -- <spaceId> --dry-run   # ALWAYS dry-run first; real push writes to production
 ```
