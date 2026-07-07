@@ -37,10 +37,11 @@ const POINTER_LOCK_SENSITIVITY = 0.018
 const TOUCH_LOOK_SENSITIVITY = 0.005
 const TRACKPAD_LOOK_SENSITIVITY = 0.004
 // Was deliberately 3x gentler than pointer-lock on the theory that drag
-// distances run larger — in practice this made the fallback (the only look
-// control on Wayland/browsers that silently deny pointer lock) feel
-// unresponsive for a normal-sized drag. Matches pointer-lock sensitivity now.
-const DRAG_LOOK_SENSITIVITY = POINTER_LOCK_SENSITIVITY
+// distances run larger — that made the fallback (the only look control on
+// Wayland/browsers that silently deny pointer lock) feel unresponsive for a
+// normal-sized drag. User-tested down from matching pointer-lock exactly,
+// through 0.75x and 0.5x (still too sensitive each time), to 0.35x.
+const DRAG_LOOK_SENSITIVITY = POINTER_LOCK_SENSITIVITY * 0.35
 // Metres of forward motion per scroll pixel: one classic wheel notch (~48px
 // after line-mode normalisation) steps half a metre.
 const WHEEL_DOLLY_SPEED = 0.01
