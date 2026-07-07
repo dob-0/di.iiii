@@ -80,10 +80,13 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
     const [viewKey, setViewKey] = useState('perspective')
     const controlsRef           = useRef(null)
 
-    // Register this pane's fitToBox into the shared imperative handle
+    // Register this pane's camera-controls ref into the shared handle — the
+    // editor's controlsRef proxy resolves through it (save view, frame
+    // selected, click placement, XR restore all read the live instance here).
+    // With split panes, the most recently rendered pane wins.
     useEffect(() => {
-        if (shared.fitToSelectionRef) {
-            shared.fitToSelectionRef.current = (box) => controlsRef.current?.fitToBox(box, true)
+        if (shared.paneControlsRef) {
+            shared.paneControlsRef.current = controlsRef
         }
     })
 
@@ -106,11 +109,19 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
     }, [viewKey])
 
     const view = VIEWS[viewKey]
-    const cameraView = useMemo(() => ({
-        position: view.position,
-        target:   view.target,
-        fov:      view.fov,
-    }), [viewKey]) // eslint-disable-line react-hooks/exhaustive-deps
+    // The perspective view opens on the project's saved view when one exists
+    // (StudioOrbit applies cameraView once on mount); the preset is the
+    // fallback. Ortho presets always use their fixed placements.
+    const cameraView = useMemo(() => {
+        if (viewKey === 'perspective' && shared.initialCameraView?.position) {
+            return { fov: view.fov, ...shared.initialCameraView }
+        }
+        return {
+            position: view.position,
+            target:   view.target,
+            fov:      view.fov,
+        }
+    }, [viewKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
     return (
         <div className="svl-pane">

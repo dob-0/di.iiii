@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Box3, Plane, Raycaster, Vector2, Vector3 } from 'three'
+import { Plane, Raycaster, Vector2, Vector3 } from 'three'
 import StudioInspector from './StudioInspector.jsx'
 import StudioViewportLayout from './StudioViewportLayout.jsx'
 import StudioFloatingPanel from './StudioFloatingPanel.jsx'
@@ -86,6 +86,7 @@ export default function StudioShell({
     isMobile,
     cameraView,
     controlsRef,
+    paneControlsRef,
     xrState,
     onCreateEntity,
     onCreateFromAsset,
@@ -172,7 +173,6 @@ export default function StudioShell({
         }
         toggle(id)
     }, [toggle])
-    const fitToSelectionRef = useRef(null)
     const [showHelp, setShowHelp] = useState(false)
 
     const selectGizmoMode = useCallback((mode) => {
@@ -249,26 +249,9 @@ export default function StudioShell({
                 e.preventDefault()
                 setShowHelp((v) => !v)
             }
-            // Delete/Backspace and Shift+D are owned by StudioEditor's keydown
-            // handler (which also guards selection and modal transforms) —
-            // binding them here too fired the same handler twice per keypress.
-            if ((e.key === 'f' || e.key === 'F') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
-                e.preventDefault()
-                const targets = selectedEntityIds.length ? selectedEntityIds : []
-                const ents = entities?.filter((en) => targets.includes(en.id)) || []
-                if (ents.length && fitToSelectionRef.current) {
-                    const box = new Box3()
-                    for (const en of ents) {
-                        const t = en.components?.transform || {}
-                        const pos = new Vector3(...(t.position || [0, 0, 0]))
-                        const scale = new Vector3(...(t.scale || [1, 1, 1]))
-                        const half = scale.clone().multiplyScalar(0.5)
-                        box.expandByPoint(pos.clone().sub(half))
-                        box.expandByPoint(pos.clone().add(half))
-                    }
-                    fitToSelectionRef.current(box)
-                }
-            }
+            // Delete/Backspace, Shift+D, and F/"." (frame selected) are owned by
+            // StudioEditor's keydown handler (which also guards selection and
+            // modal transforms) — binding them here too fired twice per keypress.
             // G/R/S: show the drag-handle gizmo in the matching mode.
             // X/Y/Z with a selection: arm the V1 modal pre-seeded with the current
             // gizmo mode + chosen axis (mouse delta moves on that axis immediately).
@@ -356,7 +339,8 @@ export default function StudioShell({
         onTransformCommit,
         onTransformCommitMany,
         onTransformCancel,
-        fitToSelectionRef,
+        paneControlsRef,
+        initialCameraView: cameraView,
         showHelp,
         onShowHelp: () => setShowHelp(true),
         onCloseHelp: () => setShowHelp(false),

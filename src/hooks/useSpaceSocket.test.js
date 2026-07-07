@@ -1,5 +1,26 @@
-import { describe, expect, it } from 'vitest'
-import { getSocketConfigForRuntime } from './useSpaceSocket.js'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { renderHook, act } from '@testing-library/react'
+import { getSocketConfigForRuntime, useSpaceSocket } from './useSpaceSocket.js'
+import { io } from 'socket.io-client'
+
+vi.mock('socket.io-client', () => ({ io: vi.fn() }))
+vi.mock('../services/apiClient.js', async (importOriginal) => ({
+    ...(await importOriginal()),
+    clearServerUnavailable: vi.fn(),
+    getServerUnavailableRetryDelay: () => 1000,
+    isServerTemporarilyUnavailable: () => false,
+    markServerUnavailable: vi.fn()
+}))
+
+const makeFakeSocket = () => {
+    const handlers = {}
+    return {
+        handlers,
+        on: vi.fn((event, handler) => { handlers[event] = handler }),
+        emit: vi.fn(),
+        disconnect: vi.fn(function () { handlers.disconnect?.('io client disconnect') })
+    }
+}
 
 describe('getSocketConfigForRuntime', () => {
     it('builds the root socket path for root API bases', () => {
@@ -58,5 +79,36 @@ describe('getSocketConfigForRuntime', () => {
             path: '/serverXR/socket.io',
             auth: undefined
         })
+    })
+})
+
+describe('useSpaceSocket reconnection', () => {
+    afterEach(() => {
+        vi.useRealTimers()
+        io.mockReset()
+    })
+
+    // Regression guard: the socket is created with reconnection:false and retry
+    // was only wired to connect_error — a plain mid-session disconnect (server
+    // restart, transport drop) left presence dead until the component remounted.
+    it('reconnects after an unexpected disconnect, but not after its own cleanup', () => {
+        vi.useFakeTimers()
+        const sockets = []
+        io.mockImplementation(() => {
+            const socket = makeFakeSocket()
+            sockets.push(socket)
+            return socket
+        })
+
+        const { unmount } = renderHook(() => useSpaceSocket('space-1', 'user-1', 'User One'))
+        expect(io).toHaveBeenCalledTimes(1)
+
+        act(() => { sockets[0].handlers.disconnect('transport close') })
+        act(() => { vi.advanceTimersByTime(2500) })
+        expect(io).toHaveBeenCalledTimes(2)
+
+        unmount()
+        act(() => { vi.advanceTimersByTime(10000) })
+        expect(io).toHaveBeenCalledTimes(2)
     })
 })

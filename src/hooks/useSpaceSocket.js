@@ -170,8 +170,15 @@ export function useSpaceSocket(spaceId, userId, userName) {
       socket.emit('join-space', { spaceId: normalizedSpaceId, userId, userName })
     })
 
-    socket.on('disconnect', () => {
+    socket.on('disconnect', (reason) => {
       setIsConnected(false)
+      // Our own cleanup/unmount disconnects with this reason — don't fight it.
+      // Anything else (server restart, transport drop) takes the same retry
+      // path as a failed initial connect; without this, presence/cursor sync
+      // stayed dead until the component remounted.
+      if (reason === 'io client disconnect') return
+      setUsersInSpace([])
+      scheduleRetry(2000)
     })
 
     socket.on('connect_error', (error) => {

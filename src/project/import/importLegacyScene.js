@@ -103,6 +103,9 @@ const mapLegacyObjectToEntity = (object, warnings = []) => {
                         assetId: coerceAssetId(object.assetRef?.id || object.asset?.id),
                         autoplay: object.audioAutoplay ?? object.videoAutoplay ?? object.autoplay ?? (object.type !== 'image'),
                         loop: object.audioLoop ?? object.videoLoop ?? true,
+                        // Deliberate: browser autoplay policy blocks unmuted
+                        // autoplaying video, and legacy videos default autoplay
+                        // on — authored mute state is intentionally not carried.
                         muted: object.type === 'video' ? true : false,
                         volume: object.audioVolume ?? 0.8,
                         distance: object.audioDistance ?? 8

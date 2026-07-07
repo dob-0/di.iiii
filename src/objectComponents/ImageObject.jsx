@@ -9,6 +9,7 @@ export default function ImageObject({ assetRef, data, opacity = 1, linkActive })
     const sourceUrl = (isImageType ? assetUrl : null) || data || null
     const textureRef = useRef(null)
     const [texture, setTexture] = useState(null)
+    const [loadFailed, setLoadFailed] = useState(false)
     const [size, setSize] = useState([1, 1])
 
     useEffect(() => {
@@ -20,6 +21,7 @@ export default function ImageObject({ assetRef, data, opacity = 1, linkActive })
         let isCancelled = false
         const loader = new THREE.TextureLoader()
         loader.setCrossOrigin('anonymous')
+        setLoadFailed(false)
 
         loader.load(
             resolvedSrc,
@@ -47,10 +49,10 @@ export default function ImageObject({ assetRef, data, opacity = 1, linkActive })
                 }
             },
             undefined,
-            (error) => {
-                if (!isCancelled) {
-                    // ignore
-                }
+            () => {
+                // A broken/403'd asset used to render nothing forever with no
+                // trace — show a dim placeholder tile instead of vanishing.
+                if (!isCancelled) setLoadFailed(true)
             }
         )
 
@@ -69,7 +71,13 @@ export default function ImageObject({ assetRef, data, opacity = 1, linkActive })
     }, [])
 
     if (!texture) {
-        return null
+        if (!loadFailed) return null
+        return (
+            <mesh position-y={0.01} rotation-x={-Math.PI / 2}>
+                <planeGeometry args={[3, 3]} />
+                <meshBasicMaterial color="#12292b" transparent={true} opacity={0.55} side={THREE.DoubleSide} />
+            </mesh>
+        )
     }
 
     return (

@@ -180,7 +180,16 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         profile,
         legacyWindowLayout: document.windowLayout
     })
-    const controlsRef = useRef(null)
+    // The real camera-controls instance lives inside the active viewport pane
+    // (StudioViewportLayout registers it into paneControlsRef). controlsRef is
+    // a live proxy so every editor read resolves to the actual controls at call
+    // time — a plain useRef here was never attached to anything and silently
+    // broke save-view, frame-selected, click placement, XR restore, and
+    // saved-view-on-load.
+    const paneControlsRef = useRef(null)
+    const controlsRef = useMemo(() => ({
+        get current() { return paneControlsRef.current?.current ?? null }
+    }), [])
     const [spaceMeta, setSpaceMeta] = useState(null)
     // Spaces list powers the portal entity's Space dropdown (pick by name instead
     // of typing a raw id). Projects for the chosen space are fetched on demand
@@ -996,6 +1005,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             isMobile={isMobile}
             cameraView={cameraView}
             controlsRef={controlsRef}
+            paneControlsRef={paneControlsRef}
             xrState={{ ...xr, xrStore: xr.xrStore }}
             onCreateEntity={handleCreateEntity}
             onCreateFromAsset={handleCreateFromAsset}

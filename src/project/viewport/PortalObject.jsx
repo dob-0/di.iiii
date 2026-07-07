@@ -6,6 +6,7 @@ import { buildAssetMap } from './buildAssetMap.js'
 import { getProjectDocument } from '../services/projectsApi.js'
 import { normalizeProjectDocument } from '../../shared/projectSchema.js'
 import { resolveAnimation, applyAnimation } from './entityAnimation.js'
+import { appNavigate } from '../../utils/appNavigate.js'
 
 const MAX_EMBED_DEPTH = 3
 
@@ -93,7 +94,9 @@ function PortalGateway({ spaceId, label, color = '#4df9ff' }) {
     const inEditor = typeof window !== 'undefined' && window.location.pathname.includes('/studio')
     const enter = (event) => {
         event.stopPropagation()
-        if (spaceId) window.location.assign(`/${spaceId}`)
+        // appNavigate keeps this an SPA route change (back/forward stay sane);
+        // window.location.assign here forced a full app reload per portal jump.
+        if (spaceId) appNavigate(`/${spaceId}`)
     }
     return (
         <group>

@@ -1,6 +1,7 @@
 import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import LandingPage from './landing/LandingPage.jsx'
+import { readArtistEnterMessage } from './artistEnterMessage.js'
 import './wccExperience.css'
 
 // The full exhibition now renders through the shared LiveProjectScene (same engine
@@ -76,8 +77,7 @@ export default function WccExperience({ initialMode = 'landing' }) {
     // Listen for artist-space entry requests from the artist-works iframe.
     useEffect(() => {
         const onMessage = (e) => {
-            if (e.data?.type !== 'dii-wcc-artist-enter') return
-            const pid = e.data?.projectId
+            const pid = readArtistEnterMessage(e, window.location.origin)
             if (pid) enterExhibition(pid)
         }
         window.addEventListener('message', onMessage)
