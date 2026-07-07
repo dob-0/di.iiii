@@ -265,7 +265,7 @@ export default function SpaceHub() {
                                     )}
 
                                     {authenticated && (
-                                        <div className="ssh-card-actions" onClick={e => e.stopPropagation()}>
+                                        <div className="ssh-card-actions" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                                             <button className="ssh-card-btn" onClick={e => handleRename(space, e)}>
                                                 Rename
                                             </button>
@@ -296,7 +296,7 @@ export default function SpaceHub() {
                                     )}
 
                                     {isLinking && (
-                                        <div className="ssh-project-linker" onClick={e => e.stopPropagation()}>
+                                        <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                                             {linker.loading && <p className="ssh-linker-status">Loading projects...</p>}
                                             {linker.error && <p className="ssh-linker-status ssh-linker-error">{linker.error}</p>}
                                             {!linker.loading && !linker.error && linker.projects.length === 0 && (
@@ -312,6 +312,7 @@ export default function SpaceHub() {
                                                                     className="ssh-linker-rename-form"
                                                                     onSubmit={e => { e.preventDefault(); handleSubmitRenameProject(p.id) }}
                                                                     onClick={e => e.stopPropagation()}
+                                                                    onKeyDown={e => e.stopPropagation()}
                                                                 >
                                                                     <input
                                                                         className="ssh-linker-rename-input"

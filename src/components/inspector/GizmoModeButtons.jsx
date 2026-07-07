@@ -1,8 +1,8 @@
 export default function GizmoModeButtons({ gizmoMode, setGizmoMode }) {
     const gizmoModeOptions = [
-        { key: 'translate', label: 'Move', hint: 'G', icon: 'âœ¢' },
-        { key: 'rotate', label: 'Rotate', hint: 'R', icon: 'âŸ³' },
-        { key: 'scale', label: 'Scale', hint: 'S', icon: 'â‡²' }
+        { key: 'translate', label: 'Move', hint: 'G', icon: '✢' },
+        { key: 'rotate', label: 'Rotate', hint: 'R', icon: '⟳' },
+        { key: 'scale', label: 'Scale', hint: 'S', icon: '⇲' }
     ]
 
     return (

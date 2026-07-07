@@ -5,7 +5,7 @@ import TextPanelWindow from './TextPanelWindow.jsx'
 // Mock 3D deps before importing BetaEditor to avoid ResizeObserver errors in jsdom
 vi.mock('./BetaViewport.jsx', () => ({ default: () => <div data-testid="mock-viewport" /> }))
 vi.mock('./BetaGraphSurface.jsx', () => ({
-    default: (props) => <div data-testid="mock-graph" onDoubleClick={() => props.onDoubleClick?.({})} />
+    default: (props) => <div data-testid="mock-graph" role="presentation" onDoubleClick={() => props.onDoubleClick?.({})} />
 }))
 const mockReplaceDocument = vi.fn(() => Promise.resolve())
 vi.mock('../../project/hooks/useProjectDocumentSync.js', () => ({

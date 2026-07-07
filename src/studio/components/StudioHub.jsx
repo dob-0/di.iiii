@@ -253,6 +253,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                             className="sh-rename-form"
                                             onSubmit={e => submitRename(project.id, e)}
                                             onClick={e => e.stopPropagation()}
+                                            onKeyDown={e => e.stopPropagation()}
                                         >
                                             <input
                                                 className="sh-rename-input"

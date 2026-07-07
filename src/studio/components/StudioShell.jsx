@@ -249,14 +249,9 @@ export default function StudioShell({
                 e.preventDefault()
                 setShowHelp((v) => !v)
             }
-            if ((e.key === 'Delete' || e.key === 'Backspace') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
-                e.preventDefault()
-                onDeleteSelected?.()
-            }
-            if (e.shiftKey && (e.key === 'd' || e.key === 'D') && !e.ctrlKey && !e.metaKey) {
-                e.preventDefault()
-                onDuplicateSelected?.()
-            }
+            // Delete/Backspace and Shift+D are owned by StudioEditor's keydown
+            // handler (which also guards selection and modal transforms) —
+            // binding them here too fired the same handler twice per keypress.
             if ((e.key === 'f' || e.key === 'F') && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
                 e.preventDefault()
                 const targets = selectedEntityIds.length ? selectedEntityIds : []
@@ -317,7 +312,7 @@ export default function StudioShell({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode, onDeleteSelected, onDuplicateSelected, entities])
+    }, [quickInsert, tileLayout, resetLayout, selectGizmoMode, viewportEditMode, selectedEntityIds, onStartTransform, transformOp, viewportGizmoMode, entities])
 
     const handleViewportDoubleClick = useCallback((e) => {
         if (e.target.closest('.sfp-shell, .scc-wrap, button, input, textarea, [role="button"]')) return

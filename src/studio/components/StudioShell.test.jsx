@@ -83,6 +83,24 @@ describe('StudioShell transform shortcuts', () => {
         expect(screen.getByTestId('gizmo-axis')).toHaveTextContent('all')
     })
 
+    // Regression guard: Shift+D and Delete/Backspace are owned by StudioEditor's
+    // keydown handler alone. When StudioShell also bound them, one keypress fired
+    // the same duplicate/delete handler twice (two overlapping clones per Shift+D).
+    it.each([
+        ['Shift+D', { key: 'd', shiftKey: true }],
+        ['Delete', { key: 'Delete' }],
+        ['Backspace', { key: 'Backspace' }],
+    ])('%s does not fire duplicate/delete from the shell (StudioEditor owns those keys)', (_label, event) => {
+        const onDuplicateSelected = vi.fn()
+        const onDeleteSelected = vi.fn()
+        renderShell({ selectedEntityIds: ['cube-1'], onDuplicateSelected, onDeleteSelected })
+
+        fireEvent.keyDown(window, event)
+
+        expect(onDuplicateSelected).not.toHaveBeenCalled()
+        expect(onDeleteSelected).not.toHaveBeenCalled()
+    })
+
     it('clears the axis constraint when a different gizmo mode is selected', () => {
         renderShell({ selectedEntityIds: ['cube-1'] })
 
