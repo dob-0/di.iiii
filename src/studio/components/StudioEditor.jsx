@@ -20,6 +20,7 @@ import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
 import { formatAssetSize, optimizeGlbAsset, shouldSuggestGlbOptimization } from '../utils/assetOptimization.js'
 import { canPlaceInScene, isPdfAsset, pdfToImageFiles } from '../utils/assetFormats.js'
 import { getSelectionCentroid } from '../utils/multiTransform.js'
+import { cloneSubtree, collectSubtree, topLevelTargets } from '../utils/entityClipboard.js'
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
 
@@ -446,59 +447,80 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
 
     // Build a new entity from any source (selected entity or clipboard), offset
     // slightly on X/Z so the copy doesn't sit exactly on top of the original.
-    const cloneEntityFrom = (source) => {
-        const sourcePosition = source.components?.transform?.position || [0, 0, 0]
-        return createEntityOfType(source.type, {
-            name: `${source.name} copy`,
-            components: {
-                ...structuredClone(source.components),
-                transform: {
-                    ...structuredClone(source.components?.transform),
-                    position: [sourcePosition[0] + 0.4, sourcePosition[1], sourcePosition[2] + 0.4]
-                }
-            }
-        })
-    }
-
     const handleDuplicateSelected = () => {
-        const targets = selectedEntities.length ? selectedEntities : (selectedEntity ? [selectedEntity] : [])
+        const targets = topLevelTargets(entities, selectedEntities.length ? selectedEntities : (selectedEntity ? [selectedEntity] : []))
         if (!targets.length) return
-        const clones = targets.map(cloneEntityFrom)
+        const cloneGroups = targets.map((target) => cloneSubtree(collectSubtree(entities, target.id)))
+        const clones = cloneGroups.flat()
         applyLocalOps(
             clones.map((entity) => ({ type: 'createEntity', payload: { entity } })),
             {
-                activityMessage: clones.length === 1
+                activityMessage: targets.length === 1
                     ? `Duplicated ${targets[0].name}.`
-                    : `Duplicated ${clones.length} entities.`
+                    : `Duplicated ${targets.length} entities.`
             }
         )
-        dispatch({ type: 'select-entities', entityIds: clones.map((entity) => entity.id) })
+        dispatch({ type: 'select-entities', entityIds: cloneGroups.map((group) => group[0].id) })
     }
 
     const handleCopySelected = () => {
-        if (!selectedEntity) return
+        const targets = topLevelTargets(entities, selectedEntities.length ? selectedEntities : (selectedEntity ? [selectedEntity] : []))
+        if (!targets.length) return
         clipboardRef.current = {
-            type: selectedEntity.type,
-            name: selectedEntity.name,
-            components: structuredClone(selectedEntity.components)
+            subtrees: targets.map((target) => structuredClone(collectSubtree(entities, target.id)))
         }
     }
 
     const handlePasteClipboard = () => {
         const source = clipboardRef.current
-        if (!source) return
-        const entity = cloneEntityFrom(source)
-        applyLocalOps({
-            type: 'createEntity',
-            payload: { entity }
-        }, { activityMessage: `Pasted ${source.name}.` })
-        dispatch({ type: 'select-entity', entityId: entity.id })
+        if (!source?.subtrees?.length) return
+        const cloneGroups = source.subtrees.map((subtree) => cloneSubtree(subtree))
+        const clones = cloneGroups.flat()
+        applyLocalOps(
+            clones.map((entity) => ({ type: 'createEntity', payload: { entity } })),
+            {
+                activityMessage: cloneGroups.length === 1
+                    ? `Pasted ${source.subtrees[0][0].name}.`
+                    : `Pasted ${cloneGroups.length} entities.`
+            }
+        )
+        dispatch({ type: 'select-entities', entityIds: cloneGroups.map((group) => group[0].id) })
     }
 
     const handleCutSelected = () => {
-        if (!selectedEntity) return
+        if (!selectedEntity && !selectedEntities.length) return
         handleCopySelected()
         handleDeleteSelected()
+    }
+
+    const handleRenameEntity = (entityId, name) => {
+        const trimmed = String(name || '').trim()
+        const entity = entities.find((e) => e.id === entityId)
+        if (!entity || !trimmed || trimmed === entity.name) return
+        applyLocalOps({
+            type: 'updateEntity',
+            payload: { entityId, patch: { name: trimmed } }
+        }, { activityMessage: `Renamed ${entity.name} to ${trimmed}.` })
+    }
+
+    const handleToggleEntityVisible = (entityId) => {
+        const entity = entities.find((e) => e.id === entityId)
+        if (!entity) return
+        const nextVisible = entity.components?.runtime?.visible === false
+        applyLocalOps({
+            type: 'updateComponent',
+            payload: { entityId, component: 'runtime', patch: { visible: nextVisible } }
+        }, { activityMessage: `${nextVisible ? 'Showed' : 'Hid'} ${entity.name}.` })
+    }
+
+    const handleToggleEntityLocked = (entityId) => {
+        const entity = entities.find((e) => e.id === entityId)
+        if (!entity) return
+        const nextLocked = entity.components?.runtime?.locked !== true
+        applyLocalOps({
+            type: 'updateComponent',
+            payload: { entityId, component: 'runtime', patch: { locked: nextLocked } }
+        }, { activityMessage: `${nextLocked ? 'Locked' : 'Unlocked'} ${entity.name}.` })
     }
 
     const handleGroupSelected = () => {
@@ -613,7 +635,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
 
             // Clipboard — Copy (Ctrl/Cmd+C), Paste (Ctrl/Cmd+V), Cut (Ctrl/Cmd+X)
             if (meta && (key === 'c' || key === 'C')) {
-                if (!selectedEntity) return
+                if (!selectedEntity && !selectedEntities.length) return
                 event.preventDefault()
                 handleCopySelected()
                 return
@@ -625,7 +647,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 return
             }
             if (meta && (key === 'x' || key === 'X')) {
-                if (!selectedEntity) return
+                if (!selectedEntity && !selectedEntities.length) return
                 event.preventDefault()
                 handleCutSelected()
                 return
@@ -994,6 +1016,9 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onDeleteSelected={handleDeleteSelected}
             onGroupSelected={handleGroupSelected}
             onUngroup={handleUngroup}
+            onRenameEntity={handleRenameEntity}
+            onToggleEntityVisible={handleToggleEntityVisible}
+            onToggleEntityLocked={handleToggleEntityLocked}
             onDuplicateSelected={handleDuplicateSelected}
             onSelectEntity={(entityId) => dispatch({ type: 'select-entity', entityId })}
             onToggleSelectEntity={(entityId) => dispatch({ type: 'toggle-entity-selection', entityId })}

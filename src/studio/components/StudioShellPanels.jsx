@@ -431,41 +431,99 @@ export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateF
     )
 }
 
-function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, onSelectEntity, onToggleSelectEntity }) {
+function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, onSelectEntity, onToggleSelectEntity, onRenameEntity, onToggleEntityVisible, onToggleEntityLocked }) {
     const [expanded, setExpanded] = useState(true)
+    const [renaming, setRenaming] = useState(false)
+    const [nameDraft, setNameDraft] = useState('')
     const isGroup = entity.type === 'group'
     const children = childMap.get(entity.id) || []
     const selected = selectedIds.has(entity.id)
+    const hidden = entity.components?.runtime?.visible === false
+    const locked = entity.components?.runtime?.locked === true
+
+    const startRename = () => {
+        if (!onRenameEntity) return
+        setNameDraft(entity.name || entity.id)
+        setRenaming(true)
+    }
+    const commitRename = () => {
+        setRenaming(false)
+        onRenameEntity?.(entity.id, nameDraft)
+    }
+
     return (
         <>
-            <button
-                className={`spa-item${selected ? ' active' : ''}`}
-                aria-pressed={selected}
-                style={depth > 0 ? { paddingLeft: depth * 14 + 8 } : undefined}
-                onClick={(event) => {
-                    const additive = event.ctrlKey || event.metaKey || event.shiftKey
-                    if (additive) onToggleSelectEntity(entity.id)
-                    else onSelectEntity(entity.id)
-                }}
-            >
-                {isGroup && (
-                    <button
-                        type="button"
-                        className="spa-fold"
-                        onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v) }}
-                        aria-label={expanded ? 'Collapse group' : 'Expand group'}
-                    >
-                        {expanded ? '▾' : '▸'}
-                    </button>
-                )}
-                <span className="spa-name">{entity.name || entity.id}</span>
-                <span className="spa-type">
-                    {entity.type}
-                    {entity.components?.runtime?.visible === false ? ' · hidden' : ''}
-                    {entity.components?.runtime?.locked === true ? ' · locked' : ''}
-                    {entity.id === selectedEntityId && selectedIds.size > 1 ? ' · primary' : ''}
-                </span>
-            </button>
+            {renaming ? (
+                <div className="spa-item active" style={depth > 0 ? { paddingLeft: depth * 14 + 8 } : undefined}>
+                    <input
+                        className="insp-input"
+                        value={nameDraft}
+                        ref={(el) => el?.focus()}
+                        aria-label="Entity name"
+                        onChange={(e) => setNameDraft(e.target.value)}
+                        onBlur={commitRename}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitRename()
+                            if (e.key === 'Escape') setRenaming(false)
+                        }}
+                    />
+                </div>
+            ) : (
+                <button
+                    className={`spa-item${selected ? ' active' : ''}`}
+                    aria-pressed={selected}
+                    style={depth > 0 ? { paddingLeft: depth * 14 + 8 } : undefined}
+                    onClick={(event) => {
+                        const additive = event.ctrlKey || event.metaKey || event.shiftKey
+                        if (additive) onToggleSelectEntity(entity.id)
+                        else onSelectEntity(entity.id)
+                    }}
+                    onDoubleClick={startRename}
+                    title="Double-click to rename"
+                >
+                    {isGroup && (
+                        <button
+                            type="button"
+                            className="spa-fold"
+                            onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v) }}
+                            aria-label={expanded ? 'Collapse group' : 'Expand group'}
+                        >
+                            {expanded ? '▾' : '▸'}
+                        </button>
+                    )}
+                    <span className="spa-name" style={hidden ? { opacity: 0.5 } : undefined}>{entity.name || entity.id}</span>
+                    <span className="spa-type">
+                        {entity.type}
+                        {entity.id === selectedEntityId && selectedIds.size > 1 ? ' · primary' : ''}
+                    </span>
+                    {onToggleEntityVisible && (
+                        <button
+                            type="button"
+                            className="spa-fold"
+                            aria-label={hidden ? 'Show' : 'Hide'}
+                            aria-pressed={hidden}
+                            title={hidden ? 'Show in scene' : 'Hide from scene'}
+                            style={hidden ? undefined : { opacity: 0.55 }}
+                            onClick={(e) => { e.stopPropagation(); onToggleEntityVisible(entity.id) }}
+                        >
+                            {hidden ? '○' : '●'}
+                        </button>
+                    )}
+                    {onToggleEntityLocked && (
+                        <button
+                            type="button"
+                            className="spa-fold"
+                            aria-label={locked ? 'Unlock' : 'Lock'}
+                            aria-pressed={locked}
+                            title={locked ? 'Unlock (allow moving)' : 'Lock (prevent moving)'}
+                            style={locked ? undefined : { opacity: 0.55 }}
+                            onClick={(e) => { e.stopPropagation(); onToggleEntityLocked(entity.id) }}
+                        >
+                            {locked ? '■' : '□'}
+                        </button>
+                    )}
+                </button>
+            )}
             {isGroup && expanded && children.map((child) => (
                 <StructureRow
                     key={child.id}
@@ -476,13 +534,16 @@ function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, 
                     selectedEntityId={selectedEntityId}
                     onSelectEntity={onSelectEntity}
                     onToggleSelectEntity={onToggleSelectEntity}
+                    onRenameEntity={onRenameEntity}
+                    onToggleEntityVisible={onToggleEntityVisible}
+                    onToggleEntityLocked={onToggleEntityLocked}
                 />
             ))}
         </>
     )
 }
 
-export function StructurePanel({ entities = [], selectedEntityId, selectedEntityIds = [], onSelectEntity, onToggleSelectEntity, onGroupSelected, onUngroup }) {
+export function StructurePanel({ entities = [], selectedEntityId, selectedEntityIds = [], onSelectEntity, onToggleSelectEntity, onGroupSelected, onUngroup, onRenameEntity, onToggleEntityVisible, onToggleEntityLocked }) {
     const selectedIds = new Set(selectedEntityIds)
     const childMap = useMemo(() => {
         const map = new Map()
@@ -526,6 +587,9 @@ export function StructurePanel({ entities = [], selectedEntityId, selectedEntity
                             selectedEntityId={selectedEntityId}
                             onSelectEntity={onSelectEntity}
                             onToggleSelectEntity={onToggleSelectEntity}
+                            onRenameEntity={onRenameEntity}
+                            onToggleEntityVisible={onToggleEntityVisible}
+                            onToggleEntityLocked={onToggleEntityLocked}
                         />
                     ))}
                 </div>

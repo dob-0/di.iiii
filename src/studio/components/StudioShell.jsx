@@ -96,6 +96,9 @@ export default function StudioShell({
     onDeleteSelected,
     onGroupSelected,
     onUngroup,
+    onRenameEntity,
+    onToggleEntityVisible,
+    onToggleEntityLocked,
     onDuplicateSelected,
     onSelectEntity,
     onInspectorChange,
@@ -381,6 +384,9 @@ export default function StudioShell({
                                 onToggleSelectEntity={onToggleSelectEntity}
                                 onGroupSelected={onGroupSelected}
                                 onUngroup={onUngroup}
+                                onRenameEntity={onRenameEntity}
+                                onToggleEntityVisible={onToggleEntityVisible}
+                                onToggleEntityLocked={onToggleEntityLocked}
                             />
                             {(selectedEntity || selectedEntityIds.length > 0) ? (
                                 <StudioInspector
