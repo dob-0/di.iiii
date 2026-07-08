@@ -9,7 +9,7 @@ active_branch: dev
 
 ## Last commit
 
-`c21da60` — on **staging**. `main` is ~14 commits behind; prod still at `07084e2`.
+`e9a86d9` — on **staging** (open-call applications + preview anchor fix). `main` further behind; prod still at `07084e2`.
 
 ## Latest session (2026-07-09 — media + object styles, four clean commits)
 
