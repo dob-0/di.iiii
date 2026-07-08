@@ -99,6 +99,8 @@ export default function StudioShell({
     onRenameEntity,
     onToggleEntityVisible,
     onToggleEntityLocked,
+    onReparentEntity,
+    onViewportDropFiles,
     onDuplicateSelected,
     onSelectEntity,
     onInspectorChange,
@@ -305,6 +307,30 @@ export default function StudioShell({
         setQuickInsert({ x: e.clientX, y: e.clientY, worldPos: computeGroundPoint(e, controlsRef) })
     }, [controlsRef])
 
+    // Drop targets: OS files and Files-list items land in the scene at the
+    // ground point under the cursor (same raycast as double-click Quick Insert).
+    const handleViewportDragOver = useCallback((e) => {
+        if (!e.target.closest?.('.studio-viewport-shell')) return
+        const types = e.dataTransfer?.types || []
+        if (types.includes('Files') || types.includes('application/x-dii-asset')) e.preventDefault()
+    }, [])
+
+    const handleViewportDrop = useCallback((e) => {
+        if (!e.target.closest?.('.studio-viewport-shell')) return
+        const worldPos = computeGroundPoint(e, controlsRef)
+        const files = Array.from(e.dataTransfer?.files || [])
+        if (files.length) {
+            e.preventDefault()
+            onViewportDropFiles?.(files, worldPos)
+            return
+        }
+        const assetId = e.dataTransfer?.getData('application/x-dii-asset')
+        if (!assetId) return
+        e.preventDefault()
+        const item = libraryItems.find((a) => a.id === assetId)
+        if (item && canPlaceInScene(item)) onCreateFromAsset?.(item, worldPos)
+    }, [controlsRef, libraryItems, onCreateFromAsset, onViewportDropFiles])
+
     const handleFullscreen = useCallback(() => {
         const doc = window.document
         if (!doc.fullscreenElement) {
@@ -350,7 +376,7 @@ export default function StudioShell({
     }
 
     return (
-        <div className="sfp-root" onDoubleClick={handleViewportDoubleClick} role="application" aria-label="3D viewport">
+        <div className="sfp-root" onDoubleClick={handleViewportDoubleClick} onDragOver={handleViewportDragOver} onDrop={handleViewportDrop} role="application" aria-label="3D viewport">
             <StudioViewportLayout
                 layout={vpLayout}
                 onSplit={vpSplit}
@@ -387,6 +413,7 @@ export default function StudioShell({
                                 onRenameEntity={onRenameEntity}
                                 onToggleEntityVisible={onToggleEntityVisible}
                                 onToggleEntityLocked={onToggleEntityLocked}
+                                onReparentEntity={onReparentEntity}
                             />
                             {(selectedEntity || selectedEntityIds.length > 0) ? (
                                 <StudioInspector

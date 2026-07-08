@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { cloneSubtree, collectSubtree, topLevelTargets } from './entityClipboard.js'
+import { buildReparentPatch, cloneSubtree, collectSubtree, topLevelTargets } from './entityClipboard.js'
 
 const entities = [
     { id: 'g1', type: 'group', name: 'Group', parentId: null, components: { transform: { position: [1, 0, 1], rotation: [0, 0, 0], scale: [1, 1, 1] } } },
@@ -44,5 +44,29 @@ describe('entityClipboard', () => {
         const [group, box] = cloneSubtree(collectSubtree(entities, 'g1'))
         expect(group.components.transform.position).toEqual([1.4, 0, 1.4])
         expect(box.components.transform.position).toEqual([0.5, 0, 0])
+    })
+})
+
+describe('buildReparentPatch', () => {
+    it('nesting into a group keeps the world position (translation convention)', () => {
+        const patch = buildReparentPatch(entities, 'lone', 'g1')
+        expect(patch.parentId).toBe('g1')
+        expect(patch.components.transform.position).toEqual([4, 0, 4])
+    })
+
+    it('moving to the root folds ancestor translations back in', () => {
+        const patch = buildReparentPatch(entities, 's1', null)
+        expect(patch.parentId).toBe(null)
+        // s1 [0,0.5,0] + g2 [0,1,0] + g1 [1,0,1]
+        expect(patch.components.transform.position).toEqual([1, 1.5, 1])
+    })
+
+    it('refuses cycles, self, non-group parents, and no-op moves', () => {
+        expect(buildReparentPatch(entities, 'g1', 'g2')).toBe(null)
+        expect(buildReparentPatch(entities, 'g1', 'g1')).toBe(null)
+        expect(buildReparentPatch(entities, 'lone', 'b1')).toBe(null)
+        expect(buildReparentPatch(entities, 'b1', 'g1')).toBe(null)
+        expect(buildReparentPatch(entities, 'lone', null)).toBe(null)
+        expect(buildReparentPatch(entities, 'missing', 'g1')).toBe(null)
     })
 })

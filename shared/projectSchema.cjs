@@ -227,6 +227,19 @@ const buildDefaultComponentsForType = (type = 'box') => {
       break
   }
 
+  // Solid primitives carry PBR surface options; the neutral values match
+  // bare meshStandardMaterial so pre-existing documents look identical.
+  if (['box', 'sphere', 'cone', 'cylinder'].includes(type)) {
+    base.appearance = {
+      ...base.appearance,
+      textureAssetId: null,
+      roughness: 1,
+      metalness: 0,
+      emissive: '#000000',
+      emissiveIntensity: 1
+    }
+  }
+
   return base
 }
 

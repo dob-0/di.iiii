@@ -37,6 +37,51 @@ export const topLevelTargets = (entities, targets) => {
     })
 }
 
+// World translation of an entity = its position plus every ancestor's, the
+// same translation-only convention Group/Ungroup use (parent rotation/scale
+// are not folded in anywhere in the editor).
+const worldTranslation = (byId, entity) => {
+    const pos = [...(entity.components?.transform?.position || [0, 0, 0])]
+    let parent = byId.get(entity.parentId)
+    while (parent) {
+        const pp = parent.components?.transform?.position || [0, 0, 0]
+        pos[0] += pp[0]
+        pos[1] += pp[1]
+        pos[2] += pp[2]
+        parent = byId.get(parent.parentId)
+    }
+    return pos
+}
+
+// updateEntity patch that moves an entity under a new parent (or to root when
+// newParentId is null) while keeping its world position. Returns null when the
+// move is a no-op or illegal: unknown ids, non-group parent, or a cycle (the
+// new parent sits inside the entity's own subtree).
+export const buildReparentPatch = (entities, entityId, newParentId) => {
+    const byId = new Map(entities.map((e) => [e.id, e]))
+    const entity = byId.get(entityId)
+    if (!entity || entityId === newParentId) return null
+    if ((entity.parentId || null) === (newParentId || null)) return null
+    const parent = newParentId ? byId.get(newParentId) : null
+    if (newParentId && (!parent || parent.type !== 'group')) return null
+    let cursor = parent
+    while (cursor) {
+        if (cursor.id === entityId) return null
+        cursor = byId.get(cursor.parentId)
+    }
+    const world = worldTranslation(byId, entity)
+    const base = parent ? worldTranslation(byId, parent) : [0, 0, 0]
+    return {
+        parentId: newParentId || null,
+        components: {
+            transform: {
+                ...entity.components?.transform,
+                position: [world[0] - base[0], world[1] - base[1], world[2] - base[2]]
+            }
+        }
+    }
+}
+
 // Fresh ids for every clone, parentIds remapped onto the cloned parents; the
 // root is nudged +0.4 x/z (children keep their parent-relative transforms).
 export const cloneSubtree = (subtree) => {

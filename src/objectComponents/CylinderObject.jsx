@@ -1,4 +1,5 @@
 import React from 'react'
+import PrimitiveMaterial from './PrimitiveMaterial.jsx'
 
 export default function CylinderObject({
     color,
@@ -6,12 +7,13 @@ export default function CylinderObject({
     cylinderRadiusBottom = 0.5,
     cylinderHeight = 1.5,
     wireframe = false,
-    opacity = 1
+    opacity = 1,
+    material = {}
 }) {
     return (
         <mesh position-y={cylinderHeight / 2}>
             <cylinderGeometry args={[cylinderRadiusTop, cylinderRadiusBottom, cylinderHeight, 32]} />
-            <meshStandardMaterial color={color} wireframe={wireframe} transparent={wireframe || opacity < 1} opacity={opacity} />
+            <PrimitiveMaterial color={color} wireframe={wireframe} opacity={opacity} {...material} />
         </mesh>
     )
 }

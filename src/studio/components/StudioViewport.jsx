@@ -12,6 +12,23 @@ import { applyPivotTransform, getSelectionCentroid } from '../utils/multiTransfo
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
 
+// Holding Ctrl/Cmd while dragging a gizmo snaps it: 0.5 world units, 15°,
+// 0.1 scale steps — same increments as the modal G/R/S operators.
+const GIZMO_SNAP = { translation: 0.5, rotation: Math.PI / 12, scale: 0.1 }
+function useSnapModifier() {
+    const [snapping, setSnapping] = useState(false)
+    useEffect(() => {
+        const update = (e) => setSnapping(e.ctrlKey || e.metaKey)
+        window.addEventListener('keydown', update)
+        window.addEventListener('keyup', update)
+        return () => {
+            window.removeEventListener('keydown', update)
+            window.removeEventListener('keyup', update)
+        }
+    }, [])
+    return snapping
+}
+
 function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
     const groupRef = useRef()
     const tcRef = useRef()
@@ -55,6 +72,7 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
     })
 
     const gizmoActive = isPrimary && editMode === 'edit' && gizmoVisible && !isLocked
+    const snapping = useSnapModifier()
 
     // Attach TransformControls to the group
     useEffect(() => {
@@ -119,6 +137,9 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
                     showX={!gizmoAxis || gizmoAxis === 'x'}
                     showY={!gizmoAxis || gizmoAxis === 'y'}
                     showZ={!gizmoAxis || gizmoAxis === 'z'}
+                    translationSnap={snapping ? GIZMO_SNAP.translation : null}
+                    rotationSnap={snapping ? GIZMO_SNAP.rotation : null}
+                    scaleSnap={snapping ? GIZMO_SNAP.scale : null}
                 />
             )}
         </>
@@ -206,6 +227,7 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
     const isDraggingRef = useRef(false)
     const centroid = useMemo(() => getSelectionCentroid(entities), [entities])
     const active = editMode === 'edit' && gizmoVisible && entities.length > 1
+    const snapping = useSnapModifier()
 
     useEffect(() => {
         const pivot = pivotRef.current
@@ -270,6 +292,9 @@ function MultiSelectionGizmo({ entities, editMode, gizmoMode, gizmoAxis, gizmoVi
                     showX={!gizmoAxis || gizmoAxis === 'x'}
                     showY={!gizmoAxis || gizmoAxis === 'y'}
                     showZ={!gizmoAxis || gizmoAxis === 'z'}
+                    translationSnap={snapping ? GIZMO_SNAP.translation : null}
+                    rotationSnap={snapping ? GIZMO_SNAP.rotation : null}
+                    scaleSnap={snapping ? GIZMO_SNAP.scale : null}
                 />
             )}
         </>

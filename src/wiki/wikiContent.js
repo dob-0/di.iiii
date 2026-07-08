@@ -92,6 +92,10 @@ export const WIKI_ARTICLES = [
                 'Drag to position; edit the selected entity in the Scene window — world defaults live in the World window.',
                 'In the Scene tree: double-click any entity to rename it, and use the per-row circle (show/hide) and square (lock/unlock) toggles — hidden entities disappear from the scene, locked ones can be selected but not moved.',
                 'Duplicate (Ctrl+D / Shift+D) and copy/paste (Ctrl+C / Ctrl+V) carry whole hierarchies — duplicating a group brings all of its children along, and copy works on multi-selections.',
+                'Drag a Scene-tree row onto a group to nest it (world position is kept), onto another entity to make them siblings, or onto empty list space to move it back to the root.',
+                'Drop files straight onto the viewport — from your computer or from the Create window’s Files list — and they land in the scene at the point under your cursor.',
+                'Hold Ctrl while dragging a gizmo or during G/R/S to snap: 0.5-unit moves, 15° rotations, 0.1 scale steps. Rotating or scaling a multi-selection with G/R/S now turns the whole arrangement around its shared center.',
+                'Solid primitives (box, sphere, cone, cylinder) take materials: pick any imported image as a Texture, and tune Roughness, Metalness, and Emissive glow in the Appearance section.',
                 'Undo / redo with Ctrl+Z / Ctrl+Y — undo reverts only your own last change (a slider drag or a typing burst counts as one step), so working alongside collaborators is safe: their edits are never rolled back by your undo.',
                 'History (Scene window, collapsed at the bottom): a Photoshop-style list of your session’s steps — click any step to jump back or forward to it, or “Session start” to rewind everything. Jumping is just batched undo/redo, so it is equally collaborator-safe.',
                 'Your panel layout is remembered — open panels and their positions restore next visit; use Arrange → Reset to go back to the default layout.'

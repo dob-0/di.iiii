@@ -20,7 +20,7 @@ import AssetOptimizationDialog from './AssetOptimizationDialog.jsx'
 import { formatAssetSize, optimizeGlbAsset, shouldSuggestGlbOptimization } from '../utils/assetOptimization.js'
 import { canPlaceInScene, isPdfAsset, pdfToImageFiles } from '../utils/assetFormats.js'
 import { getSelectionCentroid } from '../utils/multiTransform.js'
-import { cloneSubtree, collectSubtree, topLevelTargets } from '../utils/entityClipboard.js'
+import { buildReparentPatch, cloneSubtree, collectSubtree, topLevelTargets } from '../utils/entityClipboard.js'
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
 
@@ -401,8 +401,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         }
     }
 
-    const handleAssetFilesSelected = async (event) => {
-        const files = Array.from(event.target.files || [])
+    const importAssetFiles = async (files, position = null) => {
         if (!files.length) return
         try {
             for (const file of files) {
@@ -422,11 +421,19 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                     payload: { asset }
                 }, { activityMessage })
                 const entityAsset = wasOptimized ? { ...asset, name: file.name } : asset
-                handleCreateEntity(detectEntityTypeFromFile(file), entityAsset)
+                handleCreateEntity(detectEntityTypeFromFile(file), entityAsset, position)
             }
         } finally {
-            event.target.value = ''
             refreshSpaceAssets()
+        }
+    }
+
+    const handleAssetFilesSelected = async (event) => {
+        const files = Array.from(event.target.files || [])
+        try {
+            await importAssetFiles(files)
+        } finally {
+            event.target.value = ''
         }
     }
 
@@ -582,6 +589,18 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         ops.push({ type: 'deleteEntity', payload: { entityId: target.id } })
         applyLocalOps(ops, { activityMessage: `Ungrouped ${target.name}.` })
         dispatch({ type: 'select-entity', entityId: null })
+    }
+
+    const handleReparentEntity = (entityId, newParentId) => {
+        const patch = buildReparentPatch(entities, entityId, newParentId)
+        if (!patch) return
+        const entity = entities.find((e) => e.id === entityId)
+        const parent = newParentId ? entities.find((e) => e.id === newParentId) : null
+        applyLocalOps({
+            type: 'updateEntity',
+            payload: { entityId, patch }
+        }, { activityMessage: parent ? `Moved ${entity.name} into ${parent.name}.` : `Moved ${entity.name} to the root.` })
+        dispatch({ type: 'select-entity', entityId })
     }
 
     const handleFrameSelected = () => {
@@ -1019,6 +1038,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             onRenameEntity={handleRenameEntity}
             onToggleEntityVisible={handleToggleEntityVisible}
             onToggleEntityLocked={handleToggleEntityLocked}
+            onReparentEntity={handleReparentEntity}
+            onViewportDropFiles={importAssetFiles}
             onDuplicateSelected={handleDuplicateSelected}
             onSelectEntity={(entityId) => dispatch({ type: 'select-entity', entityId })}
             onToggleSelectEntity={(entityId) => dispatch({ type: 'toggle-entity-selection', entityId })}

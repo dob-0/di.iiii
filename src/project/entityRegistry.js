@@ -68,7 +68,12 @@ const PRIMITIVE_SECTIONS = [
         label: 'Appearance',
         fields: [
             ...APPEARANCE_FIELDS,
-            { label: 'Wireframe', component: 'appearance', path: ['wireframe'], type: 'checkbox' }
+            { label: 'Wireframe', component: 'appearance', path: ['wireframe'], type: 'checkbox' },
+            { label: 'Texture', component: 'appearance', path: ['textureAssetId'], type: 'asset' },
+            { label: 'Roughness', component: 'appearance', path: ['roughness'], type: 'number', min: 0, max: 1, step: 0.05 },
+            { label: 'Metalness', component: 'appearance', path: ['metalness'], type: 'number', min: 0, max: 1, step: 0.05 },
+            { label: 'Emissive', component: 'appearance', path: ['emissive'], type: 'color' },
+            { label: 'Emissive Intensity', component: 'appearance', path: ['emissiveIntensity'], type: 'number', min: 0, max: 10, step: 0.1 }
         ]
     },
     ANIMATION_SECTION
@@ -143,6 +148,7 @@ const DEFINITIONS = {
                     { label: 'Billboard (face camera)', component: 'text', path: ['billboard'], type: 'checkbox' },
                     { label: 'Font Family', component: 'text', path: ['fontFamily'], type: 'text' },
                     { label: 'Weight', component: 'text', path: ['fontWeight'], type: 'text' },
+                    { label: 'Style', component: 'text', path: ['fontStyle'], type: 'select', options: [{ value: 'normal', label: 'Normal' }, { value: 'italic', label: 'Italic' }] },
                     { label: 'Size 3D', component: 'text', path: ['fontSize3D'], type: 'number', min: 0.05, step: 0.05 },
                     { label: 'Depth 3D', component: 'text', path: ['depth3D'], type: 'number', min: 0, step: 0.01 }
                 ]

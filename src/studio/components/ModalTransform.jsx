@@ -12,6 +12,11 @@ const AXIS_VEC = {
 const AXIS_COLOR = { x: '#ff5a6a', y: '#7dd35f', z: '#5a8bff' }
 const LINE_LEN = 1000
 const MODE_LABEL = { translate: 'GRAB', rotate: 'ROTATE', scale: 'SCALE' }
+// Ctrl-held snap increments (Blender-style): world units / radians (15°) /
+// scale-factor steps. Snapping rounds the accumulated total, so tapping Ctrl
+// mid-drag snaps the current result instead of just future movement.
+const SNAP_STEP = { translate: 0.5, rotate: Math.PI / 12, scale: 0.1 }
+const snapTo = (value, step) => Math.round(value / step) * step
 
 /**
  * V1-parity modal transform. G/R/S sets the mode, X/Y/Z locks the axis, then
@@ -35,6 +40,11 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             const t = entity.components?.transform || {}
             return {
                 id: entity.id,
+                base: {
+                    pos: [...(t.position || [0, 0, 0])],
+                    rot: [...(t.rotation || [0, 0, 0])],
+                    scale: [...(t.scale || [1, 1, 1])]
+                },
                 pos: [...(t.position || [0, 0, 0])],
                 rot: [...(t.rotation || [0, 0, 0])],
                 scale: [...(t.scale || [1, 1, 1])]
@@ -42,13 +52,24 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
         })
 
         const n = entities.length
-        const pivot = entities.reduce(
+        const computePivot = () => entities.reduce(
             (acc, e) => [acc[0] + e.pos[0] / n, acc[1] + e.pos[1] / n, acc[2] + e.pos[2] / n],
             [0, 0, 0]
         )
+        let pivot = computePivot()
 
-        const session = { mode: op.mode, axis: op.axis || null, entities, moved: false }
+        const session = { mode: op.mode, axis: op.axis || null, entities, moved: false, total: 0 }
         sessionRef.current = session
+
+        // Fold the current values into the base so a mode/axis switch continues
+        // from where the drag left off instead of re-deriving from the start.
+        const rebase = () => {
+            for (const e of session.entities) {
+                e.base = { pos: [...e.pos], rot: [...e.rot], scale: [...e.scale] }
+            }
+            pivot = computePivot()
+            session.total = 0
+        }
 
         const buildPreviewMap = () => {
             const map = {}
@@ -62,7 +83,7 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             const axisLabel = session.axis
                 ? ` · ${session.axis === 'all' ? 'ALL' : session.axis.toUpperCase()}`
                 : ''
-            const hint = session.axis ? ' · move mouse · ENTER' : ' · pick X / Y / Z / A'
+            const hint = session.axis ? ' · move mouse · CTRL snap · ENTER' : ' · pick X / Y / Z / A'
             cbRef.current.onStatus?.({
                 text: `${MODE_LABEL[session.mode] || session.mode}${axisLabel}${hint}`
             })
@@ -100,23 +121,47 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             cbRef.current.onCancel?.()
         }
 
-        const handlePointerMove = (event) => {
-            if (!session.axis) return
+        // Recompute every entity from base + the accumulated total. Rotate and
+        // scale act around the shared pivot (selection centroid), so a
+        // multi-selection turns/grows as one rigid arrangement; a single
+        // entity's own position IS the pivot, so it just spins/scales in place.
+        const applyTotal = (total) => {
             const indices = session.axis === 'all' ? ALL_INDICES : [AXIS_INDEX[session.axis]]
-            const sensitivity = event.shiftKey ? 0.002 : 0.02
-            const delta = ((event.movementX || 0) + (event.movementY || 0)) * sensitivity
-            if (delta === 0) return
             for (const e of session.entities) {
-                for (const idx of indices) {
-                    if (session.mode === 'translate') {
-                        e.pos[idx] += delta
-                    } else if (session.mode === 'scale') {
-                        e.scale[idx] = Math.max(0.01, e.scale[idx] + delta)
-                    } else if (session.mode === 'rotate') {
-                        e.rot[idx] += delta
+                if (session.mode === 'translate') {
+                    for (const idx of indices) e.pos[idx] = e.base.pos[idx] + total
+                } else if (session.mode === 'scale') {
+                    const factor = Math.max(0.01, 1 + total)
+                    for (const idx of indices) {
+                        e.scale[idx] = Math.max(0.01, e.base.scale[idx] * factor)
+                        e.pos[idx] = pivot[idx] + (e.base.pos[idx] - pivot[idx]) * factor
+                    }
+                } else if (session.mode === 'rotate') {
+                    for (const idx of indices) e.rot[idx] = e.base.rot[idx] + total
+                    // Orbit positions around the pivot only for a single locked
+                    // axis — 'all' has no meaningful orbit axis.
+                    if (session.axis !== 'all' && n > 1) {
+                        const v = new Vector3(
+                            e.base.pos[0] - pivot[0],
+                            e.base.pos[1] - pivot[1],
+                            e.base.pos[2] - pivot[2]
+                        ).applyAxisAngle(AXIS_VEC[session.axis], total)
+                        e.pos = [pivot[0] + v.x, pivot[1] + v.y, pivot[2] + v.z]
                     }
                 }
             }
+        }
+
+        const handlePointerMove = (event) => {
+            if (!session.axis) return
+            const sensitivity = event.shiftKey ? 0.002 : 0.02
+            const delta = ((event.movementX || 0) + (event.movementY || 0)) * sensitivity
+            if (delta === 0) return
+            session.total += delta
+            const effective = event.ctrlKey || event.metaKey
+                ? snapTo(session.total, SNAP_STEP[session.mode])
+                : session.total
+            applyTotal(effective)
             session.moved = true
             cbRef.current.onPreview?.(buildPreviewMap())
         }
@@ -127,12 +172,14 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
                 event.preventDefault(); event.stopImmediatePropagation()
                 const next = lower === 'a' ? 'all' : lower
                 session.axis = session.axis === next ? null : next
+                rebase()
                 reportStatus()
             } else if (lower === 'g' || lower === 'r' || lower === 's') {
                 event.preventDefault(); event.stopImmediatePropagation()
                 commitIfMoved()
                 session.mode = lower === 'g' ? 'translate' : lower === 'r' ? 'rotate' : 'scale'
                 session.axis = null
+                rebase()
                 reportStatus()
             } else if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault(); event.stopImmediatePropagation()

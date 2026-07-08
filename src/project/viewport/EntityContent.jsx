@@ -19,6 +19,15 @@ export default function EntityContent({ entity, assetMap }) {
     const appearance = entity.components?.appearance || {}
     const media = entity.components?.media || {}
     const asset = media.assetId ? assetMap?.get(media.assetId) : null
+    // PBR surface options on the solid primitives; absent fields fall back to
+    // plain meshStandardMaterial defaults inside PrimitiveMaterial.
+    const material = {
+        textureAsset: appearance.textureAssetId ? assetMap?.get(appearance.textureAssetId) || null : null,
+        roughness: appearance.roughness,
+        metalness: appearance.metalness,
+        emissive: appearance.emissive,
+        emissiveIntensity: appearance.emissiveIntensity
+    }
 
     switch (entity.type) {
     case 'box':
@@ -28,6 +37,7 @@ export default function EntityContent({ entity, assetMap }) {
                 boxSize={entity.components?.primitive?.size}
                 wireframe={Boolean(appearance.wireframe)}
                 opacity={appearance.opacity}
+                material={material}
             />
         )
     case 'sphere':
@@ -37,6 +47,7 @@ export default function EntityContent({ entity, assetMap }) {
                 sphereRadius={entity.components?.primitive?.radius}
                 wireframe={Boolean(appearance.wireframe)}
                 opacity={appearance.opacity}
+                material={material}
             />
         )
     case 'cone':
@@ -47,6 +58,7 @@ export default function EntityContent({ entity, assetMap }) {
                 coneHeight={entity.components?.primitive?.height}
                 wireframe={Boolean(appearance.wireframe)}
                 opacity={appearance.opacity}
+                material={material}
             />
         )
     case 'cylinder':
@@ -58,6 +70,7 @@ export default function EntityContent({ entity, assetMap }) {
                 cylinderHeight={entity.components?.primitive?.height}
                 wireframe={Boolean(appearance.wireframe)}
                 opacity={appearance.opacity}
+                material={material}
             />
         )
     case 'text':

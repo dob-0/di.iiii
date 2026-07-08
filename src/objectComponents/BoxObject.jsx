@@ -1,6 +1,7 @@
 import React from 'react'
+import PrimitiveMaterial from './PrimitiveMaterial.jsx'
 
-export default function BoxObject({ color, boxSize = [1, 1, 1], wireframe = false, opacity = 1 }) {
+export default function BoxObject({ color, boxSize = [1, 1, 1], wireframe = false, opacity = 1, material = {} }) {
     const safeSize = Array.isArray(boxSize)
         ? boxSize.map((entry) => {
             const next = Math.abs(Number(entry))
@@ -12,7 +13,7 @@ export default function BoxObject({ color, boxSize = [1, 1, 1], wireframe = fals
     return (
         <mesh position-y={safeSize[1] / 2}>
             <boxGeometry args={safeSize} />
-            <meshStandardMaterial color={color} wireframe={wireframe} transparent={wireframe || opacity < 1} opacity={opacity} />
+            <PrimitiveMaterial color={color} wireframe={wireframe} opacity={opacity} {...material} />
         </mesh>
     )
 }

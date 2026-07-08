@@ -367,7 +367,18 @@ export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateF
                 ) : (
                     <div className="spa-list">
                         {libraryItems.map((item) => (
-                            <div key={item.id} className="spa-item spa-item--space">
+                            // drag is a pointer-only shortcut for the accessible "+ Add" button below
+                            // eslint-disable-next-line jsx-a11y/no-static-element-interactions
+                            <div
+                                key={item.id}
+                                className="spa-item spa-item--space"
+                                draggable={canPlaceInScene(item)}
+                                onDragStart={(e) => {
+                                    e.dataTransfer.setData('application/x-dii-asset', item.id)
+                                    e.dataTransfer.effectAllowed = 'copy'
+                                }}
+                                title={canPlaceInScene(item) ? 'Drag into the viewport to place it' : undefined}
+                            >
                                 {item.mimeType?.startsWith('image/') && (
                                     <img
                                         src={assetSrc(item.url)}
@@ -431,10 +442,11 @@ export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateF
     )
 }
 
-function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, onSelectEntity, onToggleSelectEntity, onRenameEntity, onToggleEntityVisible, onToggleEntityLocked }) {
+function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, onSelectEntity, onToggleSelectEntity, onRenameEntity, onToggleEntityVisible, onToggleEntityLocked, onReparentEntity }) {
     const [expanded, setExpanded] = useState(true)
     const [renaming, setRenaming] = useState(false)
     const [nameDraft, setNameDraft] = useState('')
+    const [dropTarget, setDropTarget] = useState(false)
     const isGroup = entity.type === 'group'
     const children = childMap.get(entity.id) || []
     const selected = selectedIds.has(entity.id)
@@ -472,14 +484,37 @@ function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, 
                 <button
                     className={`spa-item${selected ? ' active' : ''}`}
                     aria-pressed={selected}
-                    style={depth > 0 ? { paddingLeft: depth * 14 + 8 } : undefined}
+                    style={{
+                        ...(depth > 0 ? { paddingLeft: depth * 14 + 8 } : {}),
+                        ...(dropTarget ? { outline: '1px dashed currentColor', outlineOffset: -1 } : {})
+                    }}
                     onClick={(event) => {
                         const additive = event.ctrlKey || event.metaKey || event.shiftKey
                         if (additive) onToggleSelectEntity(entity.id)
                         else onSelectEntity(entity.id)
                     }}
                     onDoubleClick={startRename}
-                    title="Double-click to rename"
+                    title={isGroup ? 'Double-click to rename · drop entities here to nest them' : 'Double-click to rename · drag onto a group to nest'}
+                    draggable={Boolean(onReparentEntity)}
+                    onDragStart={(e) => {
+                        e.dataTransfer.setData('application/x-dii-entity', entity.id)
+                        e.dataTransfer.effectAllowed = 'move'
+                    }}
+                    onDragOver={onReparentEntity ? (e) => {
+                        if (!e.dataTransfer.types.includes('application/x-dii-entity')) return
+                        e.preventDefault()
+                        e.stopPropagation()
+                        if (isGroup) setDropTarget(true)
+                    } : undefined}
+                    onDragLeave={isGroup ? () => setDropTarget(false) : undefined}
+                    onDrop={onReparentEntity ? (e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setDropTarget(false)
+                        const draggedId = e.dataTransfer.getData('application/x-dii-entity')
+                        // onto a group = nest inside it; onto any other row = become its sibling
+                        if (draggedId) onReparentEntity(draggedId, isGroup ? entity.id : (entity.parentId || null))
+                    } : undefined}
                 >
                     {isGroup && (
                         <button
@@ -537,13 +572,14 @@ function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, 
                     onRenameEntity={onRenameEntity}
                     onToggleEntityVisible={onToggleEntityVisible}
                     onToggleEntityLocked={onToggleEntityLocked}
+                    onReparentEntity={onReparentEntity}
                 />
             ))}
         </>
     )
 }
 
-export function StructurePanel({ entities = [], selectedEntityId, selectedEntityIds = [], onSelectEntity, onToggleSelectEntity, onGroupSelected, onUngroup, onRenameEntity, onToggleEntityVisible, onToggleEntityLocked }) {
+export function StructurePanel({ entities = [], selectedEntityId, selectedEntityIds = [], onSelectEntity, onToggleSelectEntity, onGroupSelected, onUngroup, onRenameEntity, onToggleEntityVisible, onToggleEntityLocked, onReparentEntity }) {
     const selectedIds = new Set(selectedEntityIds)
     const childMap = useMemo(() => {
         const map = new Map()
@@ -576,7 +612,18 @@ export function StructurePanel({ entities = [], selectedEntityId, selectedEntity
             {entities.length === 0 ? (
                 <p className="sfp-empty">No entities yet.</p>
             ) : (
-                <div className="spa-list">
+                // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- drop-to-root target; rows stay native buttons
+                <div
+                    className="spa-list"
+                    onDragOver={onReparentEntity ? (e) => {
+                        if (e.dataTransfer.types.includes('application/x-dii-entity')) e.preventDefault()
+                    } : undefined}
+                    onDrop={onReparentEntity ? (e) => {
+                        e.preventDefault()
+                        const draggedId = e.dataTransfer.getData('application/x-dii-entity')
+                        if (draggedId) onReparentEntity(draggedId, null)
+                    } : undefined}
+                >
                     {roots.map((entity) => (
                         <StructureRow
                             key={entity.id}
@@ -590,6 +637,7 @@ export function StructurePanel({ entities = [], selectedEntityId, selectedEntity
                             onRenameEntity={onRenameEntity}
                             onToggleEntityVisible={onToggleEntityVisible}
                             onToggleEntityLocked={onToggleEntityLocked}
+                            onReparentEntity={onReparentEntity}
                         />
                     ))}
                 </div>
