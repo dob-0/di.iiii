@@ -254,7 +254,18 @@ function EntityVisual({ entity, assetMap }) {
             )
         }
         if (tc.variant === '3d') {
-            return <Text3DObject data={value} color={appearance.color || '#ffffff'} fontSize3D={tc.fontSize3D} depth3D={tc.depth3D} />
+            return (
+                <Text3DObject
+                    data={value}
+                    color={appearance.color || '#ffffff'}
+                    fontSize3D={tc.fontSize3D}
+                    depth3D={tc.depth3D}
+                    font3D={tc.font3D}
+                    bevelEnabled3D={tc.bevelEnabled3D !== false}
+                    bevelThickness3D={tc.bevelThickness3D}
+                    bevelSize3D={tc.bevelSize3D}
+                />
+            )
         }
         return <Text2DObject data={value} color={appearance.color || '#ffffff'} fontFamily={tc.fontFamily} fontWeight={tc.fontWeight} fontStyle={tc.fontStyle} align={tc.align} />
     }

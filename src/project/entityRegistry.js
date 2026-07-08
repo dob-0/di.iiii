@@ -213,12 +213,33 @@ const DEFINITIONS = {
                     { label: 'Content', component: 'text', path: ['value'], type: 'textarea' },
                     { label: 'Variant', component: 'text', path: ['variant'], type: 'select', options: [{ value: '2d', label: '2D' }, { value: '3d', label: '3D' }] },
                     { label: 'Billboard (face camera)', component: 'text', path: ['billboard'], type: 'checkbox' },
-                    { label: 'Font Family', component: 'text', path: ['fontFamily'], type: 'text' },
-                    { label: 'Weight', component: 'text', path: ['fontWeight'], type: 'text' },
+                    { label: 'Font (2D)', component: 'text', path: ['fontFamily'], type: 'select', options: [
+                        { value: 'Inter, sans-serif', label: 'Inter (sans)' },
+                        { value: 'Georgia, serif', label: 'Georgia (serif)' },
+                        { value: '"Times New Roman", Times, serif', label: 'Times (serif)' },
+                        { value: '"Courier New", Courier, monospace', label: 'Courier (mono)' },
+                        { value: 'Impact, "Arial Black", sans-serif', label: 'Impact (display)' },
+                        { value: 'cursive', label: 'Cursive' }
+                    ] },
+                    { label: 'Weight', component: 'text', path: ['fontWeight'], type: 'select', options: [
+                        { value: '400', label: 'Regular' },
+                        { value: '500', label: 'Medium' },
+                        { value: '600', label: 'Semibold' },
+                        { value: '700', label: 'Bold' }
+                    ] },
                     { label: 'Style', component: 'text', path: ['fontStyle'], type: 'select', options: [{ value: 'normal', label: 'Normal' }, { value: 'italic', label: 'Italic' }] },
                     { label: 'Align (2D)', component: 'text', path: ['align'], type: 'select', options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }, { value: 'right', label: 'Right' }] },
+                    { label: 'Font (3D)', component: 'text', path: ['font3D'], type: 'select', options: [
+                        { value: 'helvetiker_regular', label: 'Helvetiker' },
+                        { value: 'helvetiker_bold', label: 'Helvetiker Bold' },
+                        { value: 'optimer_regular', label: 'Optimer' },
+                        { value: 'gentilis_regular', label: 'Gentilis' }
+                    ] },
                     { label: 'Size 3D', component: 'text', path: ['fontSize3D'], type: 'number', min: 0.05, step: 0.05 },
-                    { label: 'Depth 3D', component: 'text', path: ['depth3D'], type: 'number', min: 0, step: 0.01 }
+                    { label: 'Depth 3D', component: 'text', path: ['depth3D'], type: 'number', min: 0, step: 0.01 },
+                    { label: 'Bevel (3D)', component: 'text', path: ['bevelEnabled3D'], type: 'checkbox' },
+                    { label: 'Bevel Thickness', component: 'text', path: ['bevelThickness3D'], type: 'number', min: 0, max: 0.1, step: 0.005 },
+                    { label: 'Bevel Size', component: 'text', path: ['bevelSize3D'], type: 'number', min: 0, max: 0.05, step: 0.005 }
                 ]
             }
         ]

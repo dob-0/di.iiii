@@ -127,11 +127,12 @@ export default function EntityContent({ entity, assetMap }) {
                 <Text3DObject
                     data={entity.components?.text?.value}
                     color={appearance.color}
-                    fontFamily={entity.components?.text?.fontFamily}
-                    fontWeight={entity.components?.text?.fontWeight}
-                    fontStyle={entity.components?.text?.fontStyle}
                     fontSize3D={entity.components?.text?.fontSize3D}
                     depth3D={entity.components?.text?.depth3D}
+                    font3D={entity.components?.text?.font3D}
+                    bevelEnabled3D={entity.components?.text?.bevelEnabled3D !== false}
+                    bevelThickness3D={entity.components?.text?.bevelThickness3D}
+                    bevelSize3D={entity.components?.text?.bevelSize3D}
                 />
             )
             : (

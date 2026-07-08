@@ -210,7 +210,7 @@ export const buildDefaultComponentsForType = (type = 'box') => {
             base.primitive = { shape: 'ring', innerRadius: 0.4, outerRadius: 0.8 }
             break
         case 'text':
-            base.text = { value: 'New Text', variant: '2d', billboard: false, fontFamily: 'Inter, sans-serif', fontWeight: '600', fontStyle: 'normal', align: 'left', fontSize3D: 0.45, depth3D: 0.08 }
+            base.text = { value: 'New Text', variant: '2d', billboard: false, fontFamily: 'Inter, sans-serif', fontWeight: '600', fontStyle: 'normal', align: 'left', fontSize3D: 0.45, depth3D: 0.08, font3D: 'helvetiker_regular', bevelEnabled3D: true, bevelThickness3D: 0.02, bevelSize3D: 0.01 }
             break
         case 'image':
             base.media = { assetId: null, fit: 'contain', autoplay: false, loop: false, muted: true }
