@@ -12,6 +12,7 @@ import { APP_PAGE_PREFERENCES, APP_PAGE_WIKI, getAppLocationState } from './util
 const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
+const TaronSite = lazy(() => import('./taron/TaronSite.jsx'))
 const WccExperience = lazy(() => import('./wcc/WccExperience.jsx'))
 const WikiPage = lazy(() => import('./wiki/WikiPage.jsx'))
 
@@ -131,6 +132,17 @@ function AppRouter() {
         && (pathSegments.length === 1 || (pathSegments.length === 2 && pathSegments[1] === 'scene'))
     if (isWccSurface) {
         return <WccSurfaceRoute mode={pathSegments[1] === 'scene' ? 'scene' : 'landing'} />
+    }
+
+    const isTaronSurface = appState.spaceId === 'taron-grigoryan'
+        && appState.page !== APP_PAGE_PREFERENCES
+        && pathSegments.length === 1
+    if (isTaronSurface) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <TaronSite />
+            </Suspense>
+        )
     }
 
     return <SpaceSurfaceRoute appState={appState} />

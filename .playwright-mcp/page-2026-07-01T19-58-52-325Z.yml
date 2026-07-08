@@ -1,0 +1,384 @@
+- generic [ref=e2]:
+  - button "Menu" [ref=e3] [cursor=pointer]:
+    - generic [ref=e4]: Menu
+  - main [ref=e5]:
+    - link "More" [ref=e6] [cursor=pointer]:
+      - /url: "#about"
+      - generic [ref=e7]: More
+    - generic [ref=e8]:
+      - heading "The studio of Sergey Lisovskiy" [level=1]:
+        - text: The studio of Sergey
+        - text: Lisovskiy
+      - list:
+        - listitem: Web
+        - listitem: Design
+        - listitem: Development
+        - listitem: Identity
+        - listitem: Creative
+        - listitem: Campaign
+        - listitem: Collaboration
+        - listitem: Innovation
+        - listitem: Impact
+      - button "Spin the floppy" [ref=e10]:
+        - img [ref=e12]
+        - generic [ref=e209]:
+          - img [ref=e210]
+          - img [ref=e239]
+    - separator [ref=e244]
+    - generic [ref=e245]:
+      - heading "About" [level=2] [ref=e246]:
+        - generic [ref=e247]: About
+      - paragraph [ref=e248]:
+        - generic [ref=e249]:
+          - text: Crafting unique
+          - text: experiences with the
+          - text: power of identity
+          - text: and tech
+    - generic [ref=e250]:
+      - link "Watch face" [ref=e251] [cursor=pointer]:
+        - /url: https://dribbble.com/shots/22334909-Digital-watch-concept
+      - link "SORA" [ref=e252] [cursor=pointer]:
+        - /url: /works/sora
+      - link "Style reptile plugin" [ref=e253] [cursor=pointer]:
+        - /url: /works/style-reptile
+        - img "Style reptile plugin"
+      - link "S&PLB" [ref=e254] [cursor=pointer]:
+        - /url: /works/splb
+        - img "S&PLB"
+      - link "Instagram summit 2022" [ref=e255] [cursor=pointer]:
+        - /url: /works/igsummit2022
+        - img "Instagram summit 2022"
+      - link "Auto.ru exam" [ref=e256] [cursor=pointer]:
+        - /url: /works/autoru-exam
+        - img "Auto.ru exam"
+      - link "Fraud Intelligence Limited" [ref=e257] [cursor=pointer]:
+        - /url: /works/fil
+        - img "Fraud Intelligence Limited"
+      - link "Pattern brutalist" [ref=e258] [cursor=pointer]:
+        - /url: https://patternbrutal.ist
+        - img "Pattern brutalist"
+      - link "Availability post" [ref=e259] [cursor=pointer]:
+        - /url: https://www.instagram.com/p/CvS_4dAAkJh/
+        - img "Availability post"
+      - link "SORA Card" [ref=e260] [cursor=pointer]:
+        - /url: /works/soracard
+        - img "SORA Card"
+      - link "what.am" [ref=e261] [cursor=pointer]:
+        - /url: https://what.am/
+        - img "what.am"
+      - link "9point8.agency" [ref=e262] [cursor=pointer]:
+        - /url: /works/9point8agency
+        - img "9point8.agency"
+      - link "getatopic.com" [ref=e263] [cursor=pointer]:
+        - /url: https://getatopic.com
+        - img "getatopic.com"
+      - link "Beads font" [ref=e264] [cursor=pointer]:
+        - /url: https://dribbble.com/shots/9268736-Beads-Font-Experiment
+        - img "Beads font"
+      - link "patternbrutal.ist" [ref=e265] [cursor=pointer]:
+        - /url: https://patternbrutal.ist
+        - img "patternbrutal.ist"
+      - link "Watch face" [ref=e266] [cursor=pointer]:
+        - /url: https://www.instagram.com/p/Cw2uKCkLBQl/
+      - link "manychat.com" [ref=e267] [cursor=pointer]:
+        - /url: /works/manychat
+        - img "manychat.com"
+      - link "burn.manychat.team" [ref=e268] [cursor=pointer]:
+        - /url: /works/burn
+        - img "burn.manychat.team"
+      - link "Recycling guide" [ref=e269] [cursor=pointer]:
+        - /url: /works/waste
+        - img "Recycling guide"
+      - link "Manymoji" [ref=e270] [cursor=pointer]:
+        - /url: /works/manymoji
+        - img "Manymoji"
+      - link "Acron" [ref=e271] [cursor=pointer]:
+        - /url: /works/acron
+        - img "Acron"
+      - link "Kerama marazzi" [ref=e272] [cursor=pointer]:
+        - /url: /works/kerama-marazzi
+        - img "Kerama marazzi"
+      - link "S&PLB" [ref=e273] [cursor=pointer]:
+        - /url: /works/splb
+        - img "S&PLB"
+      - link "S7 neo" [ref=e274] [cursor=pointer]:
+        - /url: /works/s7neo
+        - img "S7 neo"
+      - link "S7 inspired by" [ref=e275] [cursor=pointer]:
+        - /url: /works/s7you
+        - img "S7 inspired by"
+    - separator [ref=e276]
+    - generic [ref=e277]:
+      - generic [ref=e278]:
+        - heading "Clients" [level=2] [ref=e279]:
+          - generic [ref=e280]: Clients
+        - list [ref=e281]:
+          - listitem [ref=e282]:
+            - generic [ref=e283]: Canon
+          - listitem [ref=e284]:
+            - generic [ref=e285]: Kia
+          - listitem [ref=e286]:
+            - generic [ref=e287]: Base Design
+          - listitem [ref=e288]:
+            - generic [ref=e289]: Manychat *
+          - listitem [ref=e290]:
+            - generic [ref=e291]: Soramitsu *
+          - listitem [ref=e292]:
+            - generic [ref=e293]: Hyperinteractive
+          - listitem [ref=e294]:
+            - generic [ref=e295]: CreativePeople *
+          - listitem [ref=e296]:
+            - generic [ref=e297]: ONY
+          - listitem [ref=e298]:
+            - generic [ref=e299]: Yandex
+          - listitem [ref=e300]:
+            - generic [ref=e301]: S7 Airlines
+          - listitem [ref=e302]:
+            - generic [ref=e303]: Megafon
+          - listitem [ref=e304]:
+            - generic [ref=e305]: Kerama Marazzi
+          - listitem [ref=e306]
+          - listitem [ref=e307]:
+            - generic [ref=e308]: "* (on-site)"
+      - generic [ref=e309]:
+        - heading "Fields" [level=2] [ref=e310]:
+          - generic [ref=e311]: Fields
+        - list [ref=e312]:
+          - listitem [ref=e313]:
+            - generic [ref=e314]: Digital design
+          - listitem [ref=e315]:
+            - generic [ref=e316]: Interaction
+          - listitem [ref=e317]:
+            - generic [ref=e318]: Web production
+          - listitem [ref=e319]:
+            - generic [ref=e320]: Frontend
+          - listitem [ref=e321]
+          - listitem [ref=e323]:
+            - generic [ref=e324]: Concepting
+          - listitem [ref=e325]:
+            - generic [ref=e326]: Brand identity
+          - listitem [ref=e327]:
+            - generic [ref=e328]: Visual systems
+          - listitem [ref=e329]:
+            - generic [ref=e330]: Creative direction
+          - listitem [ref=e331]
+          - listitem [ref=e332]:
+            - generic [ref=e333]: Campaigns
+          - listitem [ref=e334]:
+            - generic [ref=e335]: Communications
+          - listitem [ref=e336]:
+            - generic [ref=e337]: Graphic design
+          - listitem [ref=e338]:
+            - generic [ref=e339]: Motion
+      - generic [ref=e340]:
+        - heading "Values" [level=2] [ref=e341]:
+          - generic [ref=e342]: Values
+        - list [ref=e343]:
+          - listitem [ref=e344]:
+            - generic [ref=e345]: Collaboration
+          - listitem [ref=e346]:
+            - generic [ref=e347]: Creativity
+          - listitem [ref=e348]:
+            - generic [ref=e349]: Partnership
+          - listitem [ref=e350]:
+            - generic [ref=e351]: Innovation
+          - listitem [ref=e352]:
+            - generic [ref=e353]: Transparency
+          - listitem [ref=e354]:
+            - generic [ref=e355]: Quality
+          - listitem [ref=e356]:
+            - generic [ref=e357]: Simplicity
+          - listitem [ref=e358]:
+            - generic [ref=e359]: Authenticity
+          - listitem [ref=e360]:
+            - generic [ref=e361]: Purpose
+          - listitem [ref=e362]:
+            - generic [ref=e363]: Trust
+    - separator [ref=e364]
+    - generic [ref=e365]:
+      - heading "All projects" [level=2] [ref=e366]:
+        - generic [ref=e367]: All projects
+      - generic [ref=e369]:
+        - link "Music Videos I Like 2026" [ref=e370] [cursor=pointer]:
+          - /url: /works/music-videos
+          - generic [ref=e371]: Music Videos I Like
+          - generic [ref=e372]: "2026"
+        - link "Wendy Andrade 2025" [ref=e373] [cursor=pointer]:
+          - /url: /works/wendy-andrade
+          - generic [ref=e374]: Wendy Andrade
+          - generic [ref=e375]: "2025"
+        - link "Manychat careers 2025" [ref=e376] [cursor=pointer]:
+          - /url: /works/manychat-careers
+          - generic [ref=e377]: Manychat careers
+          - generic [ref=e378]: "2025"
+        - link "Polkaswap 2024" [ref=e379] [cursor=pointer]:
+          - /url: /works/polkaswap
+          - generic [ref=e380]: Polkaswap
+          - generic [ref=e381]: "2024"
+        - link "Fearless wallet 2024" [ref=e382] [cursor=pointer]:
+          - /url: /works/fearless
+          - generic [ref=e383]: Fearless wallet
+          - generic [ref=e384]: "2024"
+        - link "Polecat Agency 2024" [ref=e385] [cursor=pointer]:
+          - /url: /works/polecat
+          - generic [ref=e386]: Polecat Agency
+          - generic [ref=e387]: "2024"
+        - link "Elena Borisova 2024" [ref=e388] [cursor=pointer]:
+          - /url: /works/elenaborisova
+          - generic [ref=e389]: Elena Borisova
+          - generic [ref=e390]: "2024"
+        - link "SORA Card 2024" [ref=e391] [cursor=pointer]:
+          - /url: /works/soracard
+          - generic [ref=e392]: SORA Card
+          - generic [ref=e393]: "2024"
+        - link "Style Reptile Figma plugin 2023" [ref=e394] [cursor=pointer]:
+          - /url: /works/style-reptile
+          - generic [ref=e395]: Style Reptile Figma plugin
+          - generic [ref=e396]: "2023"
+        - link "Fraud Intelligence Limited 2023" [ref=e397] [cursor=pointer]:
+          - /url: /works/fil
+          - generic [ref=e398]: Fraud Intelligence Limited
+          - generic [ref=e399]: "2023"
+        - link "SORA 2023" [ref=e400] [cursor=pointer]:
+          - /url: /works/sora
+          - generic [ref=e401]: SORA
+          - generic [ref=e402]: "2023"
+        - link "Sekelyk & Partners Law Bureau 2023" [ref=e403] [cursor=pointer]:
+          - /url: /works/splb
+          - generic [ref=e404]: Sekelyk & Partners Law Bureau
+          - generic [ref=e405]: "2023"
+        - link "Manychat websites 2023" [ref=e406] [cursor=pointer]:
+          - /url: /works/manychat
+          - generic [ref=e407]: Manychat websites
+          - generic [ref=e408]: "2023"
+        - link "Personal page 2023" [ref=e409] [cursor=pointer]:
+          - /url: /works/freelance
+          - generic [ref=e410]: Personal page
+          - generic [ref=e411]: "2023"
+        - link "Instagram summit 2022 2022" [ref=e412] [cursor=pointer]:
+          - /url: /works/igsummit2022
+          - generic [ref=e413]: Instagram summit 2022
+          - generic [ref=e414]: "2022"
+        - link "Recycling guide 2021" [ref=e415] [cursor=pointer]:
+          - /url: /works/waste
+          - generic [ref=e416]: Recycling guide
+          - generic [ref=e417]: "2021"
+        - link "Get a topic 2021" [ref=e418] [cursor=pointer]:
+          - /url: /works/getatopic
+          - generic [ref=e419]: Get a topic
+          - generic [ref=e420]: "2021"
+        - link "Burn the tickets game 2021" [ref=e421] [cursor=pointer]:
+          - /url: /works/burn
+          - generic [ref=e422]: Burn the tickets game
+          - generic [ref=e423]: "2021"
+        - link "Big traffic rules exam 2021" [ref=e424] [cursor=pointer]:
+          - /url: /works/autoru-exam
+          - generic [ref=e425]: Big traffic rules exam
+          - generic [ref=e426]: "2021"
+        - link "9.8 agency 2021" [ref=e427] [cursor=pointer]:
+          - /url: /works/9point8agency
+          - generic [ref=e428]: 9.8 agency
+          - generic [ref=e429]: "2021"
+        - link "Ovvverrrflowww Figma plugin 2020" [ref=e430] [cursor=pointer]:
+          - /url: /works/ovvverrrflowww
+          - generic [ref=e431]: Ovvverrrflowww Figma plugin
+          - generic [ref=e432]: "2020"
+        - link "20 stories of 2020 Yandex Taxi 2020" [ref=e433] [cursor=pointer]:
+          - /url: /works/yandex2020
+          - generic [ref=e434]: 20 stories of 2020 Yandex Taxi
+          - generic [ref=e435]: "2020"
+        - link "Manymoji 2020" [ref=e436] [cursor=pointer]:
+          - /url: /works/manymoji
+          - generic [ref=e437]: Manymoji
+          - generic [ref=e438]: "2020"
+        - link "Manychat contributor 2020" [ref=e439] [cursor=pointer]:
+          - /url: /works/manychat-contributor
+          - generic [ref=e440]: Manychat contributor
+          - generic [ref=e441]: "2020"
+        - link "Manychat banners 2020" [ref=e442] [cursor=pointer]:
+          - /url: /works/bnrz
+          - generic [ref=e443]: Manychat banners
+          - generic [ref=e444]: "2020"
+        - link "Pro 4.0 2019" [ref=e445] [cursor=pointer]:
+          - /url: /works/pro40
+          - generic [ref=e446]: Pro 4.0
+          - generic [ref=e447]: "2019"
+        - link "NWPC 2019" [ref=e448] [cursor=pointer]:
+          - /url: /works/nwpc
+          - generic [ref=e449]: NWPC
+          - generic [ref=e450]: "2019"
+        - link "Norkpalm 2019" [ref=e451] [cursor=pointer]:
+          - /url: /works/norkpalm
+          - generic [ref=e452]: Norkpalm
+          - generic [ref=e453]: "2019"
+        - link "Megafon big data 2019" [ref=e454] [cursor=pointer]:
+          - /url: /works/megafon
+          - generic [ref=e455]: Megafon big data
+          - generic [ref=e456]: "2019"
+        - link "Kerama Marazzi 2019" [ref=e457] [cursor=pointer]:
+          - /url: /works/kerama-marazzi
+          - generic [ref=e458]: Kerama Marazzi
+          - generic [ref=e459]: "2019"
+        - link "S7 presents A320neo 2018" [ref=e460] [cursor=pointer]:
+          - /url: /works/s7neo
+          - generic [ref=e461]: S7 presents A320neo
+          - generic [ref=e462]: "2018"
+        - link "Mercury tower 2018" [ref=e463] [cursor=pointer]:
+          - /url: /works/mercury
+          - generic [ref=e464]: Mercury tower
+          - generic [ref=e465]: "2018"
+        - link "Akron 2018" [ref=e466] [cursor=pointer]:
+          - /url: /works/akron
+          - generic [ref=e467]: Akron
+          - generic [ref=e468]: "2018"
+        - link "Acron 2018" [ref=e469] [cursor=pointer]:
+          - /url: /works/acron
+          - generic [ref=e470]: Acron
+          - generic [ref=e471]: "2018"
+        - link "S7 inspired by you 2017" [ref=e472] [cursor=pointer]:
+          - /url: /works/s7you
+          - generic [ref=e473]: S7 inspired by you
+          - generic [ref=e474]: "2017"
+        - link "Progroup 2017" [ref=e475] [cursor=pointer]:
+          - /url: /works/progroup
+          - generic [ref=e476]: Progroup
+          - generic [ref=e477]: "2017"
+        - link "OKO 2017" [ref=e478] [cursor=pointer]:
+          - /url: /works/oko
+          - generic [ref=e479]: OKO
+          - generic [ref=e480]: "2017"
+        - link "Legis 2016" [ref=e481] [cursor=pointer]:
+          - /url: /works/legis
+          - generic [ref=e482]: Legis
+          - generic [ref=e483]: "2016"
+        - link "Kia happiness 2015" [ref=e484] [cursor=pointer]:
+          - /url: /works/kia
+          - generic [ref=e485]: Kia happiness
+          - generic [ref=e486]: "2015"
+        - link "Otkritie 2014" [ref=e487] [cursor=pointer]:
+          - /url: /works/otkritie
+          - generic [ref=e488]: Otkritie
+          - generic [ref=e489]: "2014"
+        - link "Marussia motors 2014" [ref=e490] [cursor=pointer]:
+          - /url: /works/marussia
+          - generic [ref=e491]: Marussia motors
+          - generic [ref=e492]: "2014"
+    - generic [ref=e493]:
+      - list [ref=e494]:
+        - listitem [ref=e495]:
+          - link "GitHub" [ref=e496] [cursor=pointer]:
+            - /url: https://github.com/lsvs
+            - generic [ref=e497]: GitHub
+        - listitem [ref=e498]:
+          - link "Linkedin" [ref=e499] [cursor=pointer]:
+            - /url: https://linkedin.com/in/lsvs/
+            - generic [ref=e500]: Linkedin
+        - listitem [ref=e501]:
+          - link "Email" [ref=e502] [cursor=pointer]:
+            - /url: mailto:yo@lisovskiy.work
+            - generic [ref=e503]: Email
+        - listitem [ref=e504]:
+          - link "Instagram" [ref=e505] [cursor=pointer]:
+            - /url: https://www.instagram.com/lisovskiy.work
+            - generic [ref=e506]: Instagram
+      - generic [ref=e508]: Peace ✌︎

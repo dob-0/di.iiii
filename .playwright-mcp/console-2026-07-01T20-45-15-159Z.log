@@ -1,0 +1,191 @@
+[      84ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:17232
+[     111ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5199/@vite/client:524
+[     111ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5199/@vite/client:524
+[  197365ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:17232
+[  197388ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5199/@vite/client:524
+[  197388ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5199/@vite/client:524
+[  859936ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5199/services/runtimeConsole.js:47
+[  860818ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:17232
+[  860936ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5199/@vite/client:524
+[  860937ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5199/@vite/client:524
+[  861036ms] [LOG] [vite] server connection lost. Polling for restart... @ http://localhost:5199/services/runtimeConsole.js:47
+[  862471ms] [INFO] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold @ http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:17232
+[  862505ms] [WARNING] ⚠️ React Router Future Flag Warning: React Router will begin wrapping state updates in `React.startTransition` in v7. You can use the `v7_startTransition` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_starttransition. @ http://localhost:5199/@vite/client:524
+[  862506ms] [WARNING] ⚠️ React Router Future Flag Warning: Relative route resolution within Splat routes is changing in v7. You can use the `v7_relativeSplatPath` future flag to opt-in early. For more information, see https://reactrouter.com/v6/upgrading/future#v7_relativesplatpath. @ http://localhost:5199/@vite/client:524
+[ 1043022ms] ReferenceError: shattering is not defined
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939758113:528:4)
+    at renderWithHooks (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:9632:19)
+    at mountIndeterminateComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12362:12)
+    at beginWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:13089:41)
+    at HTMLUnknownElement.callCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3142:11)
+    at Object.invokeGuardedCallbackDev (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3162:14)
+    at invokeGuardedCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3201:32)
+    at beginWork$1 (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15990:5)
+    at performUnitOfWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15568:12)
+    at workLoopSync (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15517:36)
+[ 1043034ms] ReferenceError: shattering is not defined
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939758113:528:4)
+    at renderWithHooks (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:9632:19)
+    at mountIndeterminateComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12362:12)
+    at beginWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:13089:41)
+    at HTMLUnknownElement.callCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3142:11)
+    at Object.invokeGuardedCallbackDev (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3162:14)
+    at invokeGuardedCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3201:32)
+    at beginWork$1 (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15990:5)
+    at performUnitOfWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15568:12)
+    at workLoopSync (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15517:36)
+[ 1043032ms] [ERROR] The above error occurred in the <TaronSite> component:
+
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939758113:157:18)
+    at Suspense
+    at AppRouter (http://localhost:5199/RootApp.jsx:78:21)
+    at Router (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-router-dom.js?v=4485383f:3720:18)
+    at BrowserRouter (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-router-dom.js?v=4485383f:4395:8)
+    at RootApp
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://localhost:5199/@vite/client:524
+[ 1043046ms] ReferenceError: shattering is not defined
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939758113:528:4)
+    at renderWithHooks (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:9632:19)
+    at mountIndeterminateComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12362:12)
+    at beginWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:13089:41)
+    at beginWork$1 (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15982:12)
+    at performUnitOfWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15568:12)
+    at workLoopSync (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15517:36)
+    at renderRootSync (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15500:6)
+    at recoverFromConcurrentError (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15193:21)
+    at performSyncWorkOnRoot (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15304:19)
+[ 1045387ms] ReferenceError: shattering is not defined
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939760282:527:4)
+    at renderWithHooks (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:9632:19)
+    at updateFunctionComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12122:19)
+    at mountLazyComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12309:14)
+    at beginWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:13092:13)
+    at HTMLUnknownElement.callCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3142:11)
+    at Object.invokeGuardedCallbackDev (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3162:14)
+    at invokeGuardedCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3201:32)
+    at beginWork$1 (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15990:5)
+    at performUnitOfWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15568:12)
+[ 1045387ms] ReferenceError: shattering is not defined
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939760282:527:4)
+    at renderWithHooks (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:9632:19)
+    at updateFunctionComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12122:19)
+    at mountLazyComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12309:14)
+    at beginWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:13092:13)
+    at HTMLUnknownElement.callCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3142:11)
+    at Object.invokeGuardedCallbackDev (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3162:14)
+    at invokeGuardedCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3201:32)
+    at beginWork$1 (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15990:5)
+    at performUnitOfWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15568:12)
+[ 1045354ms] [ERROR] The above error occurred in the <TaronSite> component:
+
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939760282:157:18)
+    at Suspense
+    at AppRouter (http://localhost:5199/RootApp.jsx:78:21)
+    at Router (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-router-dom.js?v=4485383f:3720:18)
+    at BrowserRouter (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-router-dom.js?v=4485383f:4395:8)
+    at RootApp
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://localhost:5199/@vite/client:524
+[ 1045387ms] ReferenceError: shattering is not defined
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939760282:527:4)
+    at renderWithHooks (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:9632:19)
+    at updateFunctionComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12122:19)
+    at mountLazyComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12309:14)
+    at beginWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:13092:13)
+    at beginWork$1 (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15982:12)
+    at performUnitOfWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15568:12)
+    at workLoopSync (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15517:36)
+    at renderRootSync (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15500:6)
+    at recoverFromConcurrentError (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15193:21)
+[ 1047374ms] ReferenceError: shattering is not defined
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939762438:526:4)
+    at renderWithHooks (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:9632:19)
+    at updateFunctionComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12122:19)
+    at mountLazyComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12309:14)
+    at beginWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:13092:13)
+    at HTMLUnknownElement.callCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3142:11)
+    at Object.invokeGuardedCallbackDev (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3162:14)
+    at invokeGuardedCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3201:32)
+    at beginWork$1 (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15990:5)
+    at performUnitOfWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15568:12)
+[ 1047384ms] ReferenceError: shattering is not defined
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939762438:526:4)
+    at renderWithHooks (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:9632:19)
+    at updateFunctionComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12122:19)
+    at mountLazyComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12309:14)
+    at beginWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:13092:13)
+    at HTMLUnknownElement.callCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3142:11)
+    at Object.invokeGuardedCallbackDev (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3162:14)
+    at invokeGuardedCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3201:32)
+    at beginWork$1 (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15990:5)
+    at performUnitOfWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15568:12)
+[ 1047368ms] [ERROR] The above error occurred in the <TaronSite> component:
+
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939762438:157:18)
+    at Suspense
+    at AppRouter (http://localhost:5199/RootApp.jsx:78:21)
+    at Router (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-router-dom.js?v=4485383f:3720:18)
+    at BrowserRouter (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-router-dom.js?v=4485383f:4395:8)
+    at RootApp
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://localhost:5199/@vite/client:524
+[ 1047385ms] ReferenceError: shattering is not defined
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939762438:526:4)
+    at renderWithHooks (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:9632:19)
+    at updateFunctionComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12122:19)
+    at mountLazyComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12309:14)
+    at beginWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:13092:13)
+    at beginWork$1 (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15982:12)
+    at performUnitOfWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15568:12)
+    at workLoopSync (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15517:36)
+    at renderRootSync (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15500:6)
+    at recoverFromConcurrentError (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15193:21)
+[ 1050191ms] ReferenceError: shattering is not defined
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939765241:524:4)
+    at renderWithHooks (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:9632:19)
+    at updateFunctionComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12122:19)
+    at mountLazyComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12309:14)
+    at beginWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:13092:13)
+    at HTMLUnknownElement.callCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3142:11)
+    at Object.invokeGuardedCallbackDev (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3162:14)
+    at invokeGuardedCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3201:32)
+    at beginWork$1 (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15990:5)
+    at performUnitOfWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15568:12)
+[ 1050200ms] ReferenceError: shattering is not defined
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939765241:524:4)
+    at renderWithHooks (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:9632:19)
+    at updateFunctionComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12122:19)
+    at mountLazyComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12309:14)
+    at beginWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:13092:13)
+    at HTMLUnknownElement.callCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3142:11)
+    at Object.invokeGuardedCallbackDev (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3162:14)
+    at invokeGuardedCallback (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:3201:32)
+    at beginWork$1 (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15990:5)
+    at performUnitOfWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15568:12)
+[ 1050189ms] [ERROR] The above error occurred in the <TaronSite> component:
+
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939765241:157:18)
+    at Suspense
+    at AppRouter (http://localhost:5199/RootApp.jsx:78:21)
+    at Router (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-router-dom.js?v=4485383f:3720:18)
+    at BrowserRouter (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-router-dom.js?v=4485383f:4395:8)
+    at RootApp
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries. @ http://localhost:5199/@vite/client:524
+[ 1050200ms] ReferenceError: shattering is not defined
+    at TaronSite (http://localhost:5199/taron/TaronSite.jsx?t=1782939765241:524:4)
+    at renderWithHooks (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:9632:19)
+    at updateFunctionComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12122:19)
+    at mountLazyComponent (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:12309:14)
+    at beginWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:13092:13)
+    at beginWork$1 (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15982:12)
+    at performUnitOfWork (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15568:12)
+    at workLoopSync (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15517:36)
+    at renderRootSync (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15500:6)
+    at recoverFromConcurrentError (http://localhost:5199/@fs/C:/Users/emily/OneDrive/Desktop/di.iiii/node_modules/.vite/deps/react-dom-DGgUwHlg.js?v=4485383f:15193:21)
+[ 2346430ms] [WARNING] Canvas2D: Multiple readback operations using getImageData are faster with the willReadFrequently attribute set to true. See: https://html.spec.whatwg.org/multipage/canvas.html#concept-canvas-will-read-frequently @ http://localhost:5199/taron/TaronSite.jsx?t=1782939767097:198

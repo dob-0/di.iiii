@@ -255,6 +255,22 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['open call', 'applications', 'admin', 'forms'],
         updated: '2026-07-09'
+    },
+    {
+        id: 'artist-pages',
+        category: 'Spaces & access',
+        title: 'Artist pages',
+        summary: 'Bespoke public artist sites served from the platform, like /wcc and /taron-grigoryan.',
+        body: [
+            'Besides published 3D spaces, the platform can serve bespoke public landing pages for artists and projects at their own URL — no sign-in required.',
+            { list: [
+                '/wcc — WCC: Women Creating Change (landing + virtual exhibition)',
+                '/taron-grigoryan — Taron Grigoryan, visual artist (photography portfolio; the landing spells his name out of his own photos — click it)'
+            ] },
+            'Each page is content-driven: its copy and image list live in a content.js file in the repo, so updating the site is a data edit, not a redesign.'
+        ],
+        tags: ['artists', 'landing', 'public'],
+        updated: '2026-07-02'
     }
 ]
 

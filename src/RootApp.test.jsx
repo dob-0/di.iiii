@@ -75,6 +75,12 @@ vi.mock('./wcc/WccExperience.jsx', () => ({
     }
 }))
 
+vi.mock('./taron/TaronSite.jsx', () => ({
+    default: function MockTaronSite() {
+        return <div>taron-site</div>
+    }
+}))
+
 describe('RootApp', () => {
     afterEach(() => {
         window.history.pushState({}, '', '/')
@@ -103,6 +109,12 @@ describe('RootApp', () => {
         window.history.pushState({}, '', '/wcc/scene')
         render(<RootApp />)
         expect(await screen.findByText('wcc-experience:scene')).toBeInTheDocument()
+    })
+
+    it('routes /taron-grigoryan to the artist site', async () => {
+        window.history.pushState({}, '', '/taron-grigoryan')
+        render(<RootApp />)
+        expect(await screen.findByText('taron-site')).toBeInTheDocument()
     })
 
     it('keeps beta and legacy routes intact', async () => {
