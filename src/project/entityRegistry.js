@@ -31,6 +31,16 @@ const APPEARANCE_FIELDS = [
     { label: 'Opacity', component: 'appearance', path: ['opacity'], type: 'number', min: 0, max: 1, step: 0.05 }
 ]
 
+// One-click material looks for the solid primitives. `patch` receives the
+// current appearance so a preset can derive from it (Glow keeps the entity's
+// own color as the emissive tint).
+export const MATERIAL_PRESETS = [
+    { label: 'Matte', patch: () => ({ roughness: 0.9, metalness: 0, opacity: 1, emissive: '#000000', emissiveIntensity: 1 }) },
+    { label: 'Metal', patch: () => ({ roughness: 0.25, metalness: 1, opacity: 1, emissive: '#000000', emissiveIntensity: 1 }) },
+    { label: 'Glass', patch: () => ({ roughness: 0.05, metalness: 0, opacity: 0.35, emissive: '#000000', emissiveIntensity: 1 }) },
+    { label: 'Glow', patch: (appearance) => ({ roughness: 0.6, metalness: 0, opacity: 1, emissive: appearance?.color || '#ffffff', emissiveIntensity: 2.5 }) }
+]
+
 // Per-object idle motion, authored here so animation is tunable in Studio
 // instead of hardcoded in a renderer. The live viewer reads components.animation.
 const ANIMATION_SECTION = {
@@ -69,6 +79,7 @@ const PRIMITIVE_SECTIONS = [
         fields: [
             ...APPEARANCE_FIELDS,
             { label: 'Wireframe', component: 'appearance', path: ['wireframe'], type: 'checkbox' },
+            { label: 'Preset', component: 'appearance', type: 'presets', options: MATERIAL_PRESETS },
             { label: 'Texture', component: 'appearance', path: ['textureAssetId'], type: 'asset', accept: 'image/' },
             { label: 'Roughness', component: 'appearance', path: ['roughness'], type: 'number', min: 0, max: 1, step: 0.05 },
             { label: 'Metalness', component: 'appearance', path: ['metalness'], type: 'number', min: 0, max: 1, step: 0.05 },

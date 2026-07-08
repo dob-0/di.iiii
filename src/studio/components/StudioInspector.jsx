@@ -334,6 +334,24 @@ function InspSection({ section, sectionValue, assetOptions, spaceOptions, onSect
                                 ))}
                             </div>
                         </div>
+                    ) : group.field.type === 'presets' ? (
+                        <div className="insp-field" key={`${section.id}-${group.field.label}`}>
+                            <label className="insp-label">{group.field.label}</label>
+                            <div className="scc-buttons">
+                                {(group.field.options || []).map((preset) => (
+                                    <button
+                                        key={preset.label}
+                                        className="scc-btn scc-btn--xs"
+                                        onClick={() => onSectionChange?.(
+                                            group.field.component || section.id,
+                                            { ...sectionValue, ...preset.patch(sectionValue) }
+                                        )}
+                                    >
+                                        {preset.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     ) : (
                         <InspField
                             key={`${section.id}-${group.field.label}`}

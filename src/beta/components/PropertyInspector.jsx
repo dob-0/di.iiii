@@ -82,6 +82,10 @@ function PropertyField({ field, value, onChange, assetOptions = [] }) {
             </div>
         )
     }
+    if (field.type === 'presets') {
+        // Studio-only quick-look buttons; Beta's inspector has no multi-key patch path
+        return null
+    }
     if (field.type === 'connection') {
         return (
             <span style={{ opacity: 0.6, fontSize: '0.8em' }}>
