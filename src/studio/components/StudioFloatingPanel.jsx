@@ -7,22 +7,35 @@ export default function StudioFloatingPanel({
     onClose,
     initialPosition = { x: 16, y: 16 },
     initialWidth = 280,
+    initialHeight = null,
+    initialCollapsed = false,
     minWidth = 180,
     maxWidth = 640,
     minHeight = 80,
     maxHeight = 900,
     snapEdges = false,
     onPositionChange,
+    onSizeChange,
+    onCollapsedChange,
     children
 }) {
-    const [collapsed, setCollapsed] = useState(false)
+    const [collapsed, setCollapsed] = useState(initialCollapsed)
     const { panelRef, dragProps, dragStyle, panelPointerProps } = usePanelDrag(initialPosition, { snapEdges, onMoved: onPositionChange })
     const { width, height, resizerProps } = usePanelResize(initialWidth, {
         min: minWidth,
         max: maxWidth,
         minHeight,
-        maxHeight
+        maxHeight,
+        initialHeight,
+        onResized: onSizeChange
     })
+
+    const toggleCollapsed = () => {
+        setCollapsed((v) => {
+            onCollapsedChange?.(!v)
+            return !v
+        })
+    }
 
     return (
         <div
@@ -35,7 +48,7 @@ export default function StudioFloatingPanel({
                 <span className="sfp-title">{title}</span>
                 <button
                     className="scc-collapse-btn"
-                    onClick={() => setCollapsed((v) => !v)}
+                    onClick={toggleCollapsed}
                     title={collapsed ? 'Expand' : 'Collapse'}
                 >
                     {collapsed ? '▸' : '▾'}

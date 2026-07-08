@@ -110,4 +110,33 @@ describe('usePanelDrag', () => {
         expect(setPointerCapture).not.toHaveBeenCalled()
         expect(result.current.isDragging).toBe(false)
     })
+
+    it('pulls a stranded panel back into view when the browser window shrinks', () => {
+        const onMoved = vi.fn()
+        const { result } = renderHook(() => usePanelDrag({ x: 700, y: 600 }, { onMoved }))
+        attachPanelRef(result, rect)
+
+        act(() => {
+            window.innerWidth = 500
+            window.innerHeight = 400
+            window.dispatchEvent(new Event('resize'))
+        })
+
+        // clamped to 500-200-8 = 292 / 400-100-8 = 292
+        expect(result.current.dragStyle.transform).toBe('translate(292px, 292px)')
+        expect(onMoved).toHaveBeenCalledWith({ x: 292, y: 292 })
+    })
+
+    it('window resize leaves an in-view panel untouched', () => {
+        const onMoved = vi.fn()
+        const { result } = renderHook(() => usePanelDrag({ x: 50, y: 50 }, { onMoved }))
+        attachPanelRef(result, rect)
+
+        act(() => {
+            window.dispatchEvent(new Event('resize'))
+        })
+
+        expect(result.current.dragStyle.transform).toBe('translate(50px, 50px)')
+        expect(onMoved).not.toHaveBeenCalled()
+    })
 })

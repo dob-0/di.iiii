@@ -84,6 +84,21 @@ export function usePanelDrag(initialPosition = { x: 0, y: 0 }, options = {}) {
         setIsDragging(true)
     }, [bringToFront, offset])
 
+    // A browser-window shrink can strand a panel outside the viewport where
+    // no drag handle is reachable — pull it back in whenever the window resizes.
+    useEffect(() => {
+        const handleWindowResize = () => {
+            setOffset((prev) => {
+                const next = clampToViewport(prev.x, prev.y)
+                if (next.x === prev.x && next.y === prev.y) return prev
+                onMovedRef.current?.(next)
+                return next
+            })
+        }
+        window.addEventListener('resize', handleWindowResize)
+        return () => window.removeEventListener('resize', handleWindowResize)
+    }, [clampToViewport])
+
     useEffect(() => {
         if (!isDragging) return
         const handleUp = () => endDrag()

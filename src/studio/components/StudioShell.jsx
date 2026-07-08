@@ -141,19 +141,48 @@ export default function StudioShell({
     const [viewportGizmoVisible, setViewportGizmoVisible] = useState(true)
     const [quickInsert, setQuickInsert] = useState(null)
     const [positions, setPositions] = useState(() => ({ ...DEFAULT_POSITIONS(), ...(persistedWorkspace?.positions || {}) }))
+    const [panelSizes, setPanelSizes] = useState(() => ({ ...(persistedWorkspace?.sizes || {}) }))
+    const [collapsedPanels, setCollapsedPanels] = useState(() => new Set(persistedWorkspace?.collapsed || []))
     const [layoutKey, setLayoutKey] = useState(0)
     const [snapEdges, setSnapEdges] = useState(persistedWorkspace?.snapEdges ?? false)
 
     // Remember the workspace across sessions — open panels, dragged positions,
-    // snap preference. Arrange actions (tile/stack/reset) flow through the same
-    // positions state, so they persist too.
+    // resized dimensions, collapsed headers, snap preference. Arrange actions
+    // (tile/stack/reset) flow through the same state, so they persist too.
     useEffect(() => {
-        saveStudioWorkspace({ open, positions, snapEdges })
-    }, [open, positions, snapEdges])
+        saveStudioWorkspace({ open, positions, sizes: panelSizes, collapsed: collapsedPanels, snapEdges })
+    }, [open, positions, panelSizes, collapsedPanels, snapEdges])
 
     const recordPanelPosition = useCallback((id) => (pos) => {
         setPositions((prev) => ({ ...prev, [id]: pos }))
     }, [])
+
+    const recordPanelSize = useCallback((id) => (size) => {
+        setPanelSizes((prev) => ({ ...prev, [id]: size }))
+    }, [])
+
+    const recordPanelCollapsed = useCallback((id) => (isCollapsed) => {
+        setCollapsedPanels((prev) => {
+            const next = new Set(prev)
+            if (isCollapsed) next.add(id)
+            else next.delete(id)
+            return next
+        })
+    }, [])
+
+    // Everything a panel needs to restore and persist its own chrome. A saved
+    // width wins over the call site's default; when none is saved the key is
+    // omitted so the site-specific initialWidth stays in effect.
+    const panelChrome = useCallback((id) => ({
+        initialPosition: positions[id],
+        ...(panelSizes[id]?.width ? { initialWidth: panelSizes[id].width } : {}),
+        initialHeight: panelSizes[id]?.height ?? null,
+        initialCollapsed: collapsedPanels.has(id),
+        onPositionChange: recordPanelPosition(id),
+        onSizeChange: recordPanelSize(id),
+        onCollapsedChange: recordPanelCollapsed(id),
+        snapEdges
+    }), [positions, panelSizes, collapsedPanels, snapEdges, recordPanelPosition, recordPanelSize, recordPanelCollapsed])
 
     const openRefForPlacement = useRef(open)
     useEffect(() => { openRefForPlacement.current = open }, [open])
@@ -191,6 +220,8 @@ export default function StudioShell({
 
     const resetLayout = useCallback(() => {
         setPositions(DEFAULT_POSITIONS())
+        setPanelSizes({})
+        setCollapsedPanels(new Set())
         setLayoutKey((k) => k + 1)
     }, [])
 
@@ -395,13 +426,13 @@ export default function StudioShell({
             {!uiHidden && (
                 <>
                     {isOpen('create') && (
-                        <StudioFloatingPanel key={`create-${layoutKey}`} title="Create" onClose={() => toggle('create')} initialPosition={positions.create} onPositionChange={recordPanelPosition('create')} initialWidth={280} snapEdges={snapEdges}>
+                        <StudioFloatingPanel key={`create-${layoutKey}`} title="Create" onClose={() => toggle('create')} initialWidth={280} {...panelChrome('create')}>
                             <LibraryPanel onCreateEntity={onCreateEntity} />
                             <AssetsPanel libraryItems={libraryItems} onAssetFilesSelected={onAssetFilesSelected} onCreateFromAsset={onCreateFromAsset} onDriveImportUrl={onDriveImportUrl} onDriveImportSelection={onDriveImportSelection} onToggleAssetShared={onToggleAssetShared} onCommonsImport={onCommonsImport} onDeleteLibraryItem={onDeleteLibraryItem} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('scene') && (
-                        <StudioFloatingPanel key={`scene-${layoutKey}`} title="Scene" onClose={() => toggle('scene')} initialPosition={positions.scene} onPositionChange={recordPanelPosition('scene')} initialWidth={300} snapEdges={snapEdges}>
+                        <StudioFloatingPanel key={`scene-${layoutKey}`} title="Scene" onClose={() => toggle('scene')} initialWidth={300} {...panelChrome('scene')}>
                             <StructurePanel
                                 entities={entities}
                                 selectedEntityId={selectedEntityId}
@@ -435,17 +466,17 @@ export default function StudioShell({
                         </StudioFloatingPanel>
                     )}
                     {isOpen('files') && (
-                        <StudioFloatingPanel key={`files-${layoutKey}`} title="Code" onClose={() => toggle('files')} initialPosition={positions.files} onPositionChange={recordPanelPosition('files')} initialWidth={480} minWidth={320} maxWidth={800} snapEdges={snapEdges}>
+                        <StudioFloatingPanel key={`files-${layoutKey}`} title="Code" onClose={() => toggle('files')} initialWidth={480} minWidth={320} maxWidth={800} {...panelChrome('files')}>
                             <FilesPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} libraryItems={libraryItems} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('publish') && (
-                        <StudioFloatingPanel key={`publish-${layoutKey}`} title="Share" onClose={() => toggle('publish')} initialPosition={positions.publish} onPositionChange={recordPanelPosition('publish')} initialWidth={360} minWidth={300} snapEdges={snapEdges}>
+                        <StudioFloatingPanel key={`publish-${layoutKey}`} title="Share" onClose={() => toggle('publish')} initialWidth={360} minWidth={300} {...panelChrome('publish')}>
                             <PublishPanel document={document} publishState={document?.publishState} liveProjectState={liveProjectState} onPublishPatch={onPublishPatch} onSetLiveProject={onSetLiveProject} onClearLiveProject={onClearLiveProject} onCopyShareLink={onCopyShareLink} onExportProject={onExportProject} exportStatus={exportStatus} onImportProjectFile={onImportProjectFile} xrState={xrState} presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} onSaveCurrentCamera={onSaveCurrentCamera} activity={syncState?.activity} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('world') && (
-                        <StudioFloatingPanel key={`world-${layoutKey}`} title="World" onClose={() => toggle('world')} initialPosition={positions.world} onPositionChange={recordPanelPosition('world')} initialWidth={280} snapEdges={snapEdges}>
+                        <StudioFloatingPanel key={`world-${layoutKey}`} title="World" onClose={() => toggle('world')} initialWidth={280} {...panelChrome('world')}>
                             <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} />
                         </StudioFloatingPanel>
                     )}

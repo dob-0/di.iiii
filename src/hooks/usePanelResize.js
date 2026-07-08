@@ -6,7 +6,8 @@ export function usePanelResize(initialWidth = 260, options = {}) {
         max = 520,
         minHeight = 200,
         maxHeight = 800,
-        initialHeight = null
+        initialHeight = null,
+        onResized = null
     } = options
 
     const [width, setWidth] = useState(initialWidth)
@@ -14,6 +15,10 @@ export function usePanelResize(initialWidth = 260, options = {}) {
     const resizeStateRef = useRef(null)
     const [isResizing, setIsResizing] = useState(false)
     const lastInitialHeightRef = useRef(initialHeight)
+    const onResizedRef = useRef(onResized)
+    useEffect(() => { onResizedRef.current = onResized }, [onResized])
+    const sizeRef = useRef({ width, height })
+    useEffect(() => { sizeRef.current = { width, height } }, [width, height])
 
     const clamp = (value, minValue, maxValue) => Math.max(minValue, Math.min(maxValue, value))
 
@@ -30,8 +35,10 @@ export function usePanelResize(initialWidth = 260, options = {}) {
     }, [max, min, maxHeight, minHeight])
 
     const endResize = useCallback(() => {
+        const wasResizing = resizeStateRef.current !== null
         resizeStateRef.current = null
         setIsResizing(false)
+        if (wasResizing) onResizedRef.current?.(sizeRef.current)
     }, [])
 
     const handlePointerDown = useCallback((event) => {
@@ -53,6 +60,7 @@ export function usePanelResize(initialWidth = 260, options = {}) {
     const handleResetHeight = useCallback(() => {
         // reset back to the initial height (or auto if null)
         setHeight(lastInitialHeightRef.current)
+        onResizedRef.current?.({ width: sizeRef.current.width, height: lastInitialHeightRef.current })
     }, [])
 
     useEffect(() => {
