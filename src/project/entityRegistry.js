@@ -135,6 +135,62 @@ const DEFINITIONS = {
             }
         ]
     },
+    plane: {
+        label: 'Plane',
+        sections: [
+            ...PRIMITIVE_SECTIONS,
+            {
+                id: 'primitive',
+                label: 'Primitive',
+                fields: [
+                    { label: 'Width', component: 'primitive', path: ['width'], type: 'number', min: 0.05, step: 0.1 },
+                    { label: 'Depth', component: 'primitive', path: ['depth'], type: 'number', min: 0.05, step: 0.1 }
+                ]
+            }
+        ]
+    },
+    torus: {
+        label: 'Torus',
+        sections: [
+            ...PRIMITIVE_SECTIONS,
+            {
+                id: 'primitive',
+                label: 'Primitive',
+                fields: [
+                    { label: 'Radius', component: 'primitive', path: ['radius'], type: 'number', min: 0.05, step: 0.05 },
+                    { label: 'Tube', component: 'primitive', path: ['tube'], type: 'number', min: 0.01, step: 0.01 }
+                ]
+            }
+        ]
+    },
+    capsule: {
+        label: 'Capsule',
+        sections: [
+            ...PRIMITIVE_SECTIONS,
+            {
+                id: 'primitive',
+                label: 'Primitive',
+                fields: [
+                    { label: 'Radius', component: 'primitive', path: ['radius'], type: 'number', min: 0.05, step: 0.05 },
+                    { label: 'Height', component: 'primitive', path: ['height'], type: 'number', min: 0.05, step: 0.05 }
+                ]
+            }
+        ]
+    },
+    ring: {
+        label: 'Ring',
+        sections: [
+            ...PRIMITIVE_SECTIONS,
+            {
+                id: 'primitive',
+                label: 'Primitive',
+                fields: [
+                    { label: 'Inner Radius', component: 'primitive', path: ['innerRadius'], type: 'number', min: 0.01, step: 0.05 },
+                    { label: 'Outer Radius', component: 'primitive', path: ['outerRadius'], type: 'number', min: 0.05, step: 0.05 }
+                ]
+            }
+        ]
+    },
     text: {
         label: 'Text',
         sections: [

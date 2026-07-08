@@ -7,7 +7,7 @@ import { useAssetUrl } from '../hooks/useAssetUrl.js'
 // metalness 0, no emission) so documents authored before these appearance
 // fields existed render exactly as they always did. `color` keeps acting as
 // a tint when a texture is set — pick white to show the image unmodified.
-export default function PrimitiveMaterial({ color, wireframe = false, opacity = 1, textureAsset = null, roughness, metalness, emissive, emissiveIntensity }) {
+export default function PrimitiveMaterial({ color, wireframe = false, opacity = 1, textureAsset = null, roughness, metalness, emissive, emissiveIntensity, side }) {
     const assetUrl = useAssetUrl(textureAsset, { preferRemoteSource: true })
     const sourceUrl = textureAsset ? (assetUrl || textureAsset.url || null) : null
     const [map, setMap] = useState(null)
@@ -56,6 +56,7 @@ export default function PrimitiveMaterial({ color, wireframe = false, opacity = 
             metalness={Number.isFinite(metalness) ? Math.min(1, Math.max(0, metalness)) : 0}
             emissive={emissive || '#000000'}
             emissiveIntensity={Number.isFinite(emissiveIntensity) ? Math.max(0, emissiveIntensity) : 1}
+            {...(side !== undefined ? { side } : {})}
         />
     )
 }

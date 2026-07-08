@@ -6,6 +6,10 @@ export const ENTITY_TYPES = [
     'sphere',
     'cone',
     'cylinder',
+    'plane',
+    'torus',
+    'capsule',
+    'ring',
     'text',
     'image',
     'video',
@@ -193,6 +197,18 @@ export const buildDefaultComponentsForType = (type = 'box') => {
         case 'cylinder':
             base.primitive = { shape: 'cylinder', radiusTop: 0.45, radiusBottom: 0.45, height: 1.2 }
             break
+        case 'plane':
+            base.primitive = { shape: 'plane', width: 2, depth: 2 }
+            break
+        case 'torus':
+            base.primitive = { shape: 'torus', radius: 0.5, tube: 0.18 }
+            break
+        case 'capsule':
+            base.primitive = { shape: 'capsule', radius: 0.35, height: 0.8 }
+            break
+        case 'ring':
+            base.primitive = { shape: 'ring', innerRadius: 0.4, outerRadius: 0.8 }
+            break
         case 'text':
             base.text = { value: 'New Text', variant: '2d', billboard: false, fontFamily: 'Inter, sans-serif', fontWeight: '600', fontStyle: 'normal', align: 'left', fontSize3D: 0.45, depth3D: 0.08 }
             break
@@ -242,7 +258,7 @@ export const buildDefaultComponentsForType = (type = 'box') => {
 
     // Solid primitives carry PBR surface options; the neutral values match
     // bare meshStandardMaterial so pre-existing documents look identical.
-    if (['box', 'sphere', 'cone', 'cylinder'].includes(type)) {
+    if (['box', 'sphere', 'cone', 'cylinder', 'plane', 'torus', 'capsule', 'ring'].includes(type)) {
         base.appearance = {
             ...base.appearance,
             textureAssetId: null,

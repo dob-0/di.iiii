@@ -15,6 +15,10 @@ import {
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
 import { getApiSession } from '../services/apiClient.js'
 import BoxObject from '../objectComponents/BoxObject.jsx'
+import PlaneObject from '../objectComponents/PlaneObject.jsx'
+import TorusObject from '../objectComponents/TorusObject.jsx'
+import CapsuleObject from '../objectComponents/CapsuleObject.jsx'
+import RingObject from '../objectComponents/RingObject.jsx'
 import SphereObject from '../objectComponents/SphereObject.jsx'
 import ConeObject from '../objectComponents/ConeObject.jsx'
 import CylinderObject from '../objectComponents/CylinderObject.jsx'
@@ -111,6 +115,50 @@ function EntityVisual({ entity, assetMap }) {
                 cylinderRadiusTop={entity.components?.primitive?.radiusTop}
                 cylinderRadiusBottom={entity.components?.primitive?.radiusBottom}
                 cylinderHeight={entity.components?.primitive?.height}
+                wireframe={Boolean(appearance.wireframe)}
+                opacity={appearance.opacity}
+                material={material}
+            />
+        )
+    case 'plane':
+        return (
+            <PlaneObject
+                color={appearance.color}
+                planeWidth={entity.components?.primitive?.width}
+                planeDepth={entity.components?.primitive?.depth}
+                wireframe={Boolean(appearance.wireframe)}
+                opacity={appearance.opacity}
+                material={material}
+            />
+        )
+    case 'torus':
+        return (
+            <TorusObject
+                color={appearance.color}
+                torusRadius={entity.components?.primitive?.radius}
+                torusTube={entity.components?.primitive?.tube}
+                wireframe={Boolean(appearance.wireframe)}
+                opacity={appearance.opacity}
+                material={material}
+            />
+        )
+    case 'capsule':
+        return (
+            <CapsuleObject
+                color={appearance.color}
+                capsuleRadius={entity.components?.primitive?.radius}
+                capsuleHeight={entity.components?.primitive?.height}
+                wireframe={Boolean(appearance.wireframe)}
+                opacity={appearance.opacity}
+                material={material}
+            />
+        )
+    case 'ring':
+        return (
+            <RingObject
+                color={appearance.color}
+                ringInnerRadius={entity.components?.primitive?.innerRadius}
+                ringOuterRadius={entity.components?.primitive?.outerRadius}
                 wireframe={Boolean(appearance.wireframe)}
                 opacity={appearance.opacity}
                 material={material}
