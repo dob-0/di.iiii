@@ -13,11 +13,13 @@ import {
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { appNavigate } from '../../utils/appNavigate.js'
+import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import '../styles/studio-space-hub.css'
 
 export default function SpaceHub() {
-    const { authenticated, type, role, canCreateSpace, ownedSpaceCount, spaceLimit } = useAuthSession()
+    const { authenticated, type, role, canCreateSpace, ownedSpaceCount, spaceLimit, spaces: sessionScopes } = useAuthSession()
     const [spaces, setSpaces] = useState([])
     const [status, setStatus] = useState('loading...')
     const [creatingTitle, setCreatingTitle] = useState(null)
@@ -68,6 +70,20 @@ export default function SpaceHub() {
 
     const openSpace = (spaceId) =>
         navigateToStudioPath(buildStudioHubPath(spaceId))
+
+    // A card opens the editor only when the session can actually work there
+    // (owner/admin, or scoped in — e.g. guests jamming in main). Public spaces
+    // you can't enter go straight to their live view instead of a login wall.
+    const canEnter = (space) => canManage(space)
+        || (Array.isArray(sessionScopes) && sessionScopes.includes(space.id))
+
+    const openCard = (space) => {
+        if (!canEnter(space) && space.isPublic) {
+            appNavigate(buildAppSpacePath(space.id))
+            return
+        }
+        openSpace(space.id)
+    }
 
     const submitCreate = async (title) => {
         const name = title.trim()
@@ -315,16 +331,16 @@ export default function SpaceHub() {
                                 <div
                                     key={space.id}
                                     className="ssh-space-card"
-                                    onClick={() => openSpace(space.id)}
+                                    onClick={() => openCard(space)}
                                     role="button"
                                     tabIndex={0}
-                                    onKeyDown={e => e.key === 'Enter' && openSpace(space.id)}
+                                    onKeyDown={e => e.key === 'Enter' && openCard(space)}
                                 >
                                     <div className="ssh-card-header">
                                         <span className="ssh-space-id">{space.id}</span>
                                         {isMain && <span className="ssh-badge-main">Main</span>}
                                         {space.isPublic && <span className="ssh-badge-live">Live</span>}
-                                        {space.isPublic && !canManage(space) && <span className="ssh-badge-viewonly">Not yours</span>}
+                                        {space.isPublic && !canEnter(space) && <span className="ssh-badge-viewonly">View live</span>}
                                     </div>
                                     <p className="ssh-space-label">{space.label || space.id}</p>
                                     {linkedTitle && (

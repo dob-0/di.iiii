@@ -46,6 +46,12 @@ vi.mock('../utils/studioRouting.js', () => ({
     navigateToStudioPath: vi.fn()
 }))
 
+const mockAppNavigate = vi.fn()
+
+vi.mock('../../utils/appNavigate.js', () => ({
+    appNavigate: (...args) => mockAppNavigate(...args)
+}))
+
 const cardActionsFor = (spaceId) => {
     const card = screen.getByText(spaceId).closest('.ssh-space-card')
     return [...card.querySelectorAll('.ssh-card-btn')].map((btn) => btn.textContent)
@@ -57,6 +63,7 @@ describe('SpaceHub', () => {
         getServerConfig.mockReset()
         getServerConfig.mockResolvedValue({})
         getApiAuthProviders.mockReset()
+        mockAppNavigate.mockReset()
         authState = {
             authenticated: true,
             type: 'session',
@@ -83,7 +90,27 @@ describe('SpaceHub', () => {
         expect(cardActionsFor('mine')).not.toContain('Set main')
         // Someone else's public space: no management, only the live-link Copy.
         expect(cardActionsFor('theirs')).toEqual(['Copy'])
-        expect(screen.getByText('Not yours')).toBeTruthy()
+        expect(screen.getByText('View live')).toBeTruthy()
+    })
+
+    it('clicking a public space you cannot enter goes to its live view, scoped spaces open the editor', async () => {
+        const { navigateToStudioPath } = await import('../utils/studioRouting.js')
+        authState = { ...authState, type: 'guest', canCreateSpace: false, spaces: ['main'] }
+        listServerSpaces.mockResolvedValue([
+            { id: 'main', label: 'Main Space', isOwner: false, isPublic: true },
+            { id: 'beyond-form', label: 'Beyond Form', isOwner: false, isPublic: true }
+        ])
+
+        render(<SpaceHub />)
+
+        // Guest is scoped into main (open jam) — the card still opens the editor.
+        fireEvent.click(await screen.findByText('Main Space'))
+        expect(navigateToStudioPath).toHaveBeenCalledWith('/main/studio')
+        expect(mockAppNavigate).not.toHaveBeenCalled()
+
+        // A public space outside the session scope goes straight to the live view.
+        fireEvent.click(screen.getByText('Beyond Form'))
+        expect(mockAppNavigate).toHaveBeenCalledWith('/beyond-form')
     })
 
     it('shows the live public link with a copy action on public spaces', async () => {
