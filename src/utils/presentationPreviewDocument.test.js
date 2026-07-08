@@ -24,6 +24,14 @@ describe('presentationPreviewDocument', () => {
         expect(result).toContain(PREVIEW_HOST_MESSAGE_TYPE)
     })
 
+    it('intercepts fragment-anchor clicks so the sandboxed iframe never navigates to the shell URL', () => {
+        const result = buildPresentationPreviewDocument('<main><a href="#theme">Theme</a><section id="theme"></section></main>')
+
+        expect(result).toContain('a[href^="#"]')
+        expect(result).toContain('preventDefault')
+        expect(result).toContain('scrollIntoView')
+    })
+
     it('maps known issue codes to concise host messages', () => {
         expect(getPreviewIssueMessage(PREVIEW_ISSUE_CODES.storageUnavailable)).toContain('Storage unavailable')
         expect(getPreviewIssueMessage(PREVIEW_ISSUE_CODES.sandboxApiDenied)).toContain('sandboxed browser API')

@@ -102,6 +102,19 @@ const PREVIEW_BOOTSTRAP_SCRIPT = `(() => {
     installStorageShim('localStorage');
     installStorageShim('sessionStorage');
 
+    // srcdoc documents inherit the parent shell's base URL, so a plain
+    // href="#id" click would navigate this sandboxed iframe to the shell URL
+    // (which cannot boot with an opaque origin) instead of scrolling.
+    document.addEventListener('click', (event) => {
+        const anchor = event.target?.closest?.('a[href^="#"]');
+        if (!anchor) return;
+        const href = anchor.getAttribute('href') || '';
+        event.preventDefault();
+        if (href.length < 2) return;
+        const target = document.getElementById(href.slice(1));
+        target?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, true);
+
     window.addEventListener('error', (event) => {
         const code = getIssueCode(event?.error?.message || event?.message || '');
         if (!code) return;
