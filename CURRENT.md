@@ -9,47 +9,44 @@ active_branch: dev
 
 ## Last commit
 
-`07084e2` — **live on prod** (`dev` == `main`, prod smoke 9/9, 2026-07-08 morning).
+`47da80a` — on **staging** (smoke 9/9, 2026-07-08 afternoon). `main` is 4 commits behind; prod still at `07084e2`.
 
-## Last session (2026-07-08 — GitHub sync proven end-to-end, promoted to prod)
+## Last session (2026-07-08 pm — public-route UX, shipped to staging)
 
-- Validated the no-code connect flow live on staging (install → dropdown self-populates →
-  one-pick connect → initial sync), using `br_id_ge`.
-- Promoted `dev`→`main` (deploy green, prod smoke 9/9) — no-code GitHub sync UI now on prod.
-- Proved the webhook for real: push `17e88729f8` to private `dob-0/di-sync-webhook-test`
-  auto-synced prod space `webhook-test` with zero admin interaction — last audit box closed.
-- Found `serverXR/.env.local` holds a stale pre-rotation App key (see open items).
+- Spaces panel (editor): live badge + live URL, View Live / Copy Live Link, owner-only
+  Make Public/Private; non-owned spaces show only View/Copy (`isPublic`/`isOwner` now
+  survive the local/remote merge in `useSpacesController`).
+- `/studio` hub cards: live link with one-click Copy; "Not yours" badge on public spaces
+  you can't manage. Wiki publishing article updated.
+- Tree held a parallel session's uncommitted work (op-log undo `useOpHistory`, GitHub
+  sync + OAuth sign-in ported into the hub, guest-sandbox default, serverXR auth/route
+  updates, drag-ghost fix); user chose to ship it combined in `47da80a` — suite was
+  green on the whole tree (lint 0, 454 tests, build, wiki check).
 
 ## Earlier
 
-- 2026-07-07 p4: no-code GitHub sync UI built (`14b971b`,`07084e2`) — install button, repo
-  dropdown, one-pick connect; manual entry behind "advanced"; tests + wiki updated.
-- 2026-07-07 p3: full audit, every finding fixed with regression guards —
-  [docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md).
+- 2026-07-08 am: GitHub sync proven end-to-end (webhook auto-sync on prod), `dev`→`main`
+  promoted; 2026-07-07: no-code GitHub sync UI + full audit fixed
+  ([docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)).
 
 ## What works
 
 - Studio editor (five windows), Beta (node-first), WCC exhibition, orbit viewport, public viewer
 - Auth (session-cookie, roles, OAuth) with rate limiting; Admin Ops Graph; GitHub→space sync
-- VR/AR controller locomotion confirmed on real headset (prod)
+- Public-route self-serve (live links, visibility toggles) in both Studio surfaces — staging
 - Deploy: push `dev`→staging, `main`→prod, gated on `browser-checks.yml`
-- Suite green: lint 0/0 · 423 tests · 29 contracts · 16 schema-sync (real equivalence) · 0 vulns
 
 ## What is broken / open
 
-- Drive on prod: **verified live 2026-07-07** (user connected + browsed real Drive files on
-  di-studio.xyz). Google console configured: scopes registered (drive.readonly restricted +
-  userinfo), app runs In-production/unverified (warning screen + lifetime 100-connect cap —
-  1-2 used). Full Google verification deliberately deferred; preferred long-term fix is
-  migrating to the `drive.file` scope + Google Picker (no cap, no warning, no verification).
-- Webhook canary (permanent, user-approved): private repo `dob-0/di-sync-webhook-test` →
-  prod space `webhook-test`; verification target of the secret-rotation runbook. Don't delete.
-- `serverXR/.env.local` holds a stale (pre-rotation) GitHub App key — local sync dev is broken
-  until `GITHUB_APP_PRIVATE_KEY_B64` is copied from a host's `~/.config/dii/*.deploy.env`.
-- If the `br_id_ge` repo is ever App-connected on prod, disable its `sync-space.yml` CI sync
-  first — otherwise every push double-syncs the space.
+- **Before promoting `dev`→`main`:** manually pass staging auth flows (guest sandbox entry,
+  OAuth sign-in from the hub) — serverXR auth changes from the parallel session are unreviewed.
+- `fix/native-drag-ghost` branch duplicates work now on `dev` — delete after confirming.
+- Drive on prod verified live; full Google verification deferred (preferred fix: `drive.file`
+  scope + Picker). Webhook canary `dob-0/di-sync-webhook-test`→`webhook-test` is permanent.
+- `serverXR/.env.local` has a stale GitHub App key — copy `GITHUB_APP_PRIVATE_KEY_B64` from a
+  host's `~/.config/dii/*.deploy.env`. If `br_id_ge` gets App-connected, disable its CI sync.
 - `origin/self-host` intentionally 1 commit ahead (`b9baa30`).
-- Next strategic work (per audit P4): op-log undo → content-addressed assets → self-host story.
+- Next strategic work: op-log undo **landed** (unverified in UI) → content-addressed assets → self-host.
 
 ## Known fixes
 
