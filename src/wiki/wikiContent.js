@@ -74,10 +74,11 @@ export const WIKI_ARTICLES = [
             'Public spaces show their live link right on the card (and in the editor’s Spaces panel) with one-click Copy — that link is what visitors open. Public spaces you don’t own are marked “Not yours” and offer only View/Copy, so you always know which spaces are yours to manage.',
             'The editor’s Spaces panel has the same self-serve Make Public / Make Private toggle as the Spaces page.',
             'Publishing (which project is live) and visibility (Public/Private) are independent choices — linking a project does not automatically make the space public.',
-            'A published-but-private space shows a login wall to visitors instead of the scene.'
+            'A published-but-private space shows a login wall to visitors instead of the scene.',
+            'Opening an editor URL (like /<space>/studio) with an account that isn’t scoped to that space no longer dead-ends: if the space is public you are taken to its live view; only private spaces show the access-restricted screen.'
         ],
         tags: ['publish', 'public', 'sharing', 'owner', 'live link'],
-        updated: '2026-07-08'
+        updated: '2026-07-09'
     },
     {
         id: 'studio-basics',

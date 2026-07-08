@@ -1,7 +1,10 @@
 import { Box, Button, CircularProgress, Divider, Stack, TextField, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import useAuthSession from '../hooks/useAuthSession.js'
+import useSpacePublicFlag from '../hooks/useSpacePublicFlag.js'
 import { getApiAuthProviders, getOAuthUrl, hasServerApi } from '../services/apiClient.js'
+import { appNavigate } from '../utils/appNavigate.js'
+import { buildAppSpacePath } from '../utils/spaceRouting.js'
 import AccountButton from './AccountButton.jsx'
 
 export default function AuthGate({ children, requiredSpaceId = null, showAccountButton = true }) {
@@ -12,9 +15,26 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
     const [loginError, setLoginError] = useState(null)
     const [providers, setProviders] = useState({ github: false, google: false })
 
+    // Out-of-scope sessions get sent to the space's public live view instead of
+    // a dead end — but only when the space is actually public (flag fails closed).
+    const sessionSpaces = authSession.spaces
+    const outOfScope = Boolean(
+        requiredSpaceId
+        && authenticated
+        && Array.isArray(sessionSpaces)
+        && !sessionSpaces.includes(requiredSpaceId)
+    )
+    const { isPublic: liveIsPublic, loading: liveLoading } = useSpacePublicFlag(outOfScope ? requiredSpaceId : null)
+
     useEffect(() => {
         getApiAuthProviders().then(setProviders).catch(() => {})
     }, [])
+
+    useEffect(() => {
+        if (outOfScope && liveIsPublic) {
+            appNavigate(buildAppSpacePath(requiredSpaceId), { replace: true })
+        }
+    }, [outOfScope, liveIsPublic, requiredSpaceId])
 
     if (loading) {
         return (
@@ -58,6 +78,13 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
         const { spaces } = authSession
         const inScope = !requiredSpaceId || !Array.isArray(spaces) || spaces.includes(requiredSpaceId)
         if (!inScope) {
+            if (liveLoading || liveIsPublic) {
+                return (
+                    <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <CircularProgress size={28} sx={{ color: 'var(--ui-accent)' }} />
+                    </Box>
+                )
+            }
             return (
                 <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
                     <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
