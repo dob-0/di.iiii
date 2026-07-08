@@ -13,24 +13,19 @@ active_branch: dev
 
 ## Latest session (2026-07-09 — media + object styles, four clean commits)
 
-- `3864976` video sound (Muted/Volume/Loop live everywhere; unmute on first gesture)
-  + public-viewer parity: LiveProjectScene had dropped audio/lights/groups/hidden and
-  all new props — fixed + `rendererParity.test.js` tripwire (known-fixes row).
-- `d4c0e6c` four new primitives (plane/torus/capsule/ring), full pipeline both surfaces.
-- `3689ccc` material presets (Matte/Metal/Glass/Glow — Glow tints from entity color).
-- `c21da60` text styles: six 2D font stacks + named weights; 3D typeface select + bevels.
-- Local-dev gotcha: serverXR holds `shared/projectSchema.cjs` in memory — restart the
-  backend after any CJS mirror change or new entity types normalize to boxes.
+- `3864976` video sound + public-viewer parity (LiveProjectScene had dropped
+  audio/lights/groups/hidden + new props — fixed, `rendererParity.test.js` tripwire).
+- `d4c0e6c` plane/torus/capsule/ring · `3689ccc` material presets (Matte/Metal/Glass/
+  Glow) · `c21da60` text styles (six 2D font stacks, 3D typefaces + bevels).
+- Local-dev gotcha: restart serverXR after any `projectSchema.cjs` change — the old
+  schema stays in memory and new entity types normalize to boxes.
 
 ## Earlier
 
-- 2026-07-08 eve: creation-process gap list, all 9 shipped + verified via Playwright
-  E2Es — History panel (click-to-jump on op-log undo), tree rename/eye/lock/drag-reparent,
-  hierarchy-aware duplicate/clipboard, viewport file drop, Ctrl snap + shared pivot +
-  typed G/R/S values, primitive materials. Staging smoke 9/9.
-- 2026-07-08 am: GitHub sync proven end-to-end (webhook auto-sync on prod), `dev`→`main`
-  promoted; 2026-07-07: no-code GitHub sync UI + full audit fixed
-  ([docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)).
+- 2026-07-08: creation-process gap list all 9 shipped + E2E-verified (History panel,
+  tree rename/eye/lock/drag-reparent, hierarchy clipboard, viewport drop, snap/pivot/
+  typed G/R/S, primitive materials); GitHub sync proven end-to-end, `dev`→`main`;
+  2026-07-07 full audit ([docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)).
 
 ## What works
 
