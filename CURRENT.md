@@ -23,8 +23,10 @@ active_branch: dev
   modal G/R/S; modal rotate/scale of multi-selection orbits shared centroid.
 - Primitive materials: texture (any image asset), roughness/metalness/emissive —
   `PrimitiveMaterial.jsx`, neutral defaults in BOTH schema mirrors (schema-sync 18/18).
-- All verified live via Playwright E2Es against the local stack (undo 7/7, history 8/8,
-  rename/toggles/dup 7/7, reparent/drop/materials 6/6).
+- Follow-up pass: typed exact values in G/R/S (45 = 45°), 2D text Align, image-only
+  Texture picker (`cf63230`). Modal snap + shared pivot + typed input machine-verified.
+- All verified live via Playwright E2Es (undo 7/7, history 8/8, rename/toggles/dup 7/7,
+  reparent/drop/materials 6/6, modal snap/pivot 5/5, typed 45° exact); staging smoke 9/9.
 
 ## Earlier
 
@@ -41,8 +43,10 @@ active_branch: dev
 
 ## What is broken / open
 
-- **Before promoting `dev`→`main`:** manually pass staging auth flows (guest sandbox entry,
-  OAuth sign-in from the hub) — serverXR auth changes from the parallel session are unreviewed.
+- **Before promoting `dev`→`main`:** one manual OAuth sign-in click-through on staging.
+  Guest flow already verified programmatically (2026-07-08 eve): guest session/quota/OAuth
+  providers correct; guests share `main` because staging admin config sets
+  `globalSpaceId: "main"` (intentional open-jam mode — clear it in /admin for sandboxes).
 - `fix/native-drag-ghost` branch duplicates work now on `dev` — delete after confirming.
 - Drive on prod verified live; full Google verification deferred (preferred fix: `drive.file`
   scope + Picker). Webhook canary `dob-0/di-sync-webhook-test`→`webhook-test` is permanent.
