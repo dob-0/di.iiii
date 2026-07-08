@@ -94,7 +94,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         opIdPrefix: 'studio-op'
     })
     const clipboardRef = useRef(null)
-    const { applyLocalOps, undo, redo } = useOpHistory({
+    const { applyLocalOps, undo, redo, history, jumpTo } = useOpHistory({
         projectId,
         document: state.document,
         applyLocalOps: _applyLocalOps
@@ -962,6 +962,8 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             document={document}
             loading={state.loading}
             loadError={state.loadError}
+            editHistory={history()}
+            onHistoryJump={jumpTo}
             displayName={displayName}
             onDisplayNameChange={setDisplayName}
             selectedEntity={selectedEntity}

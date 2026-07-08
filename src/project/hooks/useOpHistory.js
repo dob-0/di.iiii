@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { applyProjectOps, cloneValue, invertProjectOps } from '../../shared/projectSchema.js'
 
 const HISTORY_LIMIT = 50
@@ -27,6 +27,56 @@ const entrySignature = (ops) => {
 
 const stripOp = (op) => ({ type: op.type, payload: cloneValue(op.payload || {}) })
 
+const SETTINGS_OP_LABELS = {
+    setWorldState: 'World settings',
+    setRenderSettings: 'Render settings',
+    setXrState: 'XR settings',
+    setPresentationState: 'Presentation settings',
+    setPublishState: 'Publish settings',
+    setWindowState: 'Window layout',
+    setWorkspaceState: 'Workspace',
+    setProjectMeta: 'Project settings',
+    replaceDocument: 'Replace document'
+}
+
+const entityName = (doc, entityId) => {
+    const entity = (doc?.entities || []).find((e) => e.id === entityId)
+    return entity?.name || entity?.type || 'entity'
+}
+
+const describeOp = (doc, op) => {
+    const payload = op?.payload || {}
+    switch (op?.type) {
+        case 'createEntity': return `Create ${payload.entity?.type || 'entity'}`
+        case 'updateEntity': return `Edit ${entityName(doc, payload.entityId)}`
+        case 'updateComponent': {
+            const name = entityName(doc, payload.entityId)
+            return payload.component === 'transform' ? `Transform ${name}` : `Edit ${name} ${payload.component || 'component'}`
+        }
+        case 'deleteEntity': return `Delete ${entityName(doc, payload.entityId)}`
+        case 'createNode': return `Create ${payload.node?.typeId || 'node'} node`
+        case 'updateNode': return 'Edit node'
+        case 'deleteNode': return 'Delete node'
+        case 'createEdge': return 'Connect nodes'
+        case 'updateEdge': return 'Edit connection'
+        case 'deleteEdge': return 'Disconnect nodes'
+        case 'upsertAsset': return `Update asset ${payload.asset?.name || ''}`.trim()
+        case 'deleteAsset': return 'Delete asset'
+        default: return SETTINGS_OP_LABELS[op?.type] || 'Edit'
+    }
+}
+
+// Human label for a history step, resolved against the document the batch
+// applied to (so "Delete box-3" can still name the entity it removed).
+export const describeOps = (doc, ops = []) => {
+    const first = ops[0]
+    if (!first) return 'Edit'
+    const label = describeOp(doc, first)
+    return ops.length > 1 ? `${label} (+${ops.length - 1})` : label
+}
+
+let nextEntryId = 1
+
 /**
  * Op-log undo/redo shared by the editor lanes. Every local op batch is
  * inverted against the document it applies to (invertProjectOps) and kept as
@@ -39,6 +89,9 @@ export function useOpHistory({ projectId, document, applyLocalOps, ignoreTypes =
     const undoStackRef = useRef([])
     const redoStackRef = useRef([])
     const ignoreTypesRef = useRef(new Set(ignoreTypes))
+    // Stack mutations live in refs; this lets panels observe them (history()).
+    const [, setHistoryVersion] = useState(0)
+    const bumpHistory = useCallback(() => setHistoryVersion((v) => v + 1), [])
     // Tracks the document the *next* local batch will mutate. Re-synced from
     // the store on every render; advanced inline so that several ops applied
     // within one render tick invert against the right intermediate state.
@@ -48,7 +101,8 @@ export function useOpHistory({ projectId, document, applyLocalOps, ignoreTypes =
     useEffect(() => {
         undoStackRef.current = []
         redoStackRef.current = []
-    }, [projectId])
+        bumpHistory()
+    }, [projectId, bumpHistory])
 
     const applyLocalOpsWithHistory = useCallback((ops, options = {}) => {
         const opsArray = (Array.isArray(ops) ? ops : [ops]).filter(Boolean)
@@ -67,40 +121,65 @@ export function useOpHistory({ projectId, document, applyLocalOps, ignoreTypes =
                 } else {
                     undoStackRef.current = [
                         ...undoStackRef.current.slice(-(HISTORY_LIMIT - 1)),
-                        { undoOps, redoOps: opsArray.map(stripOp), at: now, sig }
+                        { id: nextEntryId++, label: describeOps(base, opsArray), undoOps, redoOps: opsArray.map(stripOp), at: now, sig }
                     ]
                 }
                 redoStackRef.current = []
+                bumpHistory()
             }
         }
         return applyLocalOps(opsArray, options)
-    }, [applyLocalOps])
+    }, [applyLocalOps, bumpHistory])
 
-    const replay = useCallback((entry, opsKey, activityMessage) => {
-        trackedDocRef.current = applyProjectOps(trackedDocRef.current, entry[opsKey])
-        applyLocalOps(entry[opsKey].map(stripOp), { activityMessage })
-    }, [applyLocalOps])
+    const replayOps = useCallback((ops, activityMessage) => {
+        trackedDocRef.current = applyProjectOps(trackedDocRef.current, ops)
+        applyLocalOps(ops.map(stripOp), { activityMessage })
+        bumpHistory()
+    }, [applyLocalOps, bumpHistory])
 
-    const undo = useCallback(() => {
-        const entry = undoStackRef.current.at(-1)
-        if (!entry) return false
-        undoStackRef.current = undoStackRef.current.slice(0, -1)
-        redoStackRef.current = [...redoStackRef.current.slice(-(HISTORY_LIMIT - 1)), entry]
-        replay(entry, 'undoOps', 'Undo.')
-        return true
-    }, [replay])
+    // Photoshop-style linear jump: make exactly the first `target` steps
+    // applied. Entries between the cursor and the target replay as ONE op
+    // batch (single network write, single activity line).
+    const jumpTo = useCallback((target) => {
+        const undoCount = undoStackRef.current.length
+        const total = undoCount + redoStackRef.current.length
+        const goal = Math.max(0, Math.min(total, Math.trunc(target)))
+        if (goal < undoCount) {
+            const moving = undoStackRef.current.slice(goal)
+            undoStackRef.current = undoStackRef.current.slice(0, goal)
+            const newestFirst = [...moving].reverse()
+            // redo stack keeps the next redo (oldest undone step) last
+            redoStackRef.current = [...redoStackRef.current, ...newestFirst].slice(-HISTORY_LIMIT)
+            replayOps(newestFirst.flatMap((entry) => entry.undoOps), moving.length > 1 ? `Undo ${moving.length} steps.` : 'Undo.')
+            return true
+        }
+        if (goal > undoCount) {
+            const take = goal - undoCount
+            // redo stack is undo-order (nearest step last); reverse to timeline order
+            const nearestFirst = redoStackRef.current.slice(-take).reverse()
+            redoStackRef.current = redoStackRef.current.slice(0, -take)
+            undoStackRef.current = [...undoStackRef.current, ...nearestFirst].slice(-HISTORY_LIMIT)
+            replayOps(nearestFirst.flatMap((entry) => entry.redoOps), take > 1 ? `Redo ${take} steps.` : 'Redo.')
+            return true
+        }
+        return false
+    }, [replayOps])
 
-    const redo = useCallback(() => {
-        const entry = redoStackRef.current.at(-1)
-        if (!entry) return false
-        redoStackRef.current = redoStackRef.current.slice(0, -1)
-        undoStackRef.current = [...undoStackRef.current.slice(-(HISTORY_LIMIT - 1)), entry]
-        replay(entry, 'redoOps', 'Redo.')
-        return true
-    }, [replay])
+    const undo = useCallback(() => jumpTo(undoStackRef.current.length - 1), [jumpTo])
+    const redo = useCallback(() => jumpTo(undoStackRef.current.length + 1), [jumpTo])
 
     const canUndo = useCallback(() => undoStackRef.current.length > 0, [])
     const canRedo = useCallback(() => redoStackRef.current.length > 0, [])
 
-    return { applyLocalOps: applyLocalOpsWithHistory, undo, redo, canUndo, canRedo }
+    // Snapshot for a history panel: steps in timeline order (applied first,
+    // then undone), cursor = number of currently applied steps.
+    const history = useCallback(() => ({
+        steps: [
+            ...undoStackRef.current.map(({ id, label, at }) => ({ id, label, at, applied: true })),
+            ...[...redoStackRef.current].reverse().map(({ id, label, at }) => ({ id, label, at, applied: false }))
+        ],
+        cursor: undoStackRef.current.length
+    }), [])
+
+    return { applyLocalOps: applyLocalOpsWithHistory, undo, redo, canUndo, canRedo, history, jumpTo }
 }

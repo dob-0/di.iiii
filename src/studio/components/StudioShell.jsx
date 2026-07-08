@@ -12,6 +12,7 @@ import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import {
     AssetsPanel,
     FilesPanel,
+    HistoryPanel,
     LibraryPanel,
     ProjectPanel,
     PublishPanel,
@@ -122,6 +123,8 @@ export default function StudioShell({
     onStartTransform,
     onTransformCommitMany,
     onTransformCancel,
+    editHistory = null,
+    onHistoryJump,
 }) {
     const persistedWorkspace = useMemo(() => loadStudioWorkspace(), [])
     const { open, toggle, isOpen } = useStudioPanelState(migratePanelIds(persistedWorkspace?.open))
@@ -392,6 +395,9 @@ export default function StudioShell({
                                 />
                             ) : (
                                 <p className="sfp-empty">Select an entity above or in the viewport to edit it.</p>
+                            )}
+                            {editHistory && (
+                                <HistoryPanel steps={editHistory.steps} cursor={editHistory.cursor} onJumpTo={onHistoryJump} />
                             )}
                         </StudioFloatingPanel>
                     )}

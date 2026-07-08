@@ -91,6 +91,70 @@ describe('useOpHistory', () => {
         expect(result.current.canRedo()).toBe(false)
     })
 
+    it('history() exposes labeled steps in timeline order with a cursor', () => {
+        const { result } = setup()
+        act(() => {
+            result.current.applyLocalOps({ type: 'createEntity', payload: { entity: { id: 'box-3', type: 'box' } } })
+            vi.advanceTimersByTime(1000)
+            result.current.applyLocalOps(moveOp('box-1', [1, 0, 0]))
+        })
+        act(() => { result.current.undo() })
+
+        const { steps, cursor } = result.current.history()
+        expect(steps.map((s) => s.label)).toEqual(['Create box', 'Transform Box Entity'])
+        expect(steps.map((s) => s.applied)).toEqual([true, false])
+        expect(cursor).toBe(1)
+    })
+
+    it('jumpTo replays several backward steps as one batch, newest inverse first', () => {
+        const { result } = setup()
+        act(() => {
+            result.current.applyLocalOps(moveOp('box-1', [1, 0, 0]))
+            vi.advanceTimersByTime(1000)
+            result.current.applyLocalOps(moveOp('box-2', [6, 0, 0]))
+            vi.advanceTimersByTime(1000)
+            result.current.applyLocalOps(moveOp('box-1', [2, 0, 0]))
+        })
+        const batchesBefore = applied.length
+        act(() => { result.current.jumpTo(0) })
+
+        expect(applied.length).toBe(batchesBefore + 1)
+        expect(applied.at(-1)).toEqual([
+            moveOp('box-1', [1, 0, 0]),
+            moveOp('box-2', [5, 0, 0]),
+            moveOp('box-1', [0, 0, 0])
+        ])
+        expect(result.current.history().cursor).toBe(0)
+    })
+
+    it('jumpTo forward redoes in timeline order and a new edit drops the rest', () => {
+        const { result } = setup()
+        act(() => {
+            result.current.applyLocalOps(moveOp('box-1', [1, 0, 0]))
+            vi.advanceTimersByTime(1000)
+            result.current.applyLocalOps(moveOp('box-2', [6, 0, 0]))
+            vi.advanceTimersByTime(1000)
+            result.current.applyLocalOps(moveOp('box-1', [2, 0, 0]))
+        })
+        act(() => { result.current.jumpTo(0) })
+        act(() => { result.current.jumpTo(2) })
+
+        expect(applied.at(-1)).toEqual([
+            moveOp('box-1', [1, 0, 0]),
+            moveOp('box-2', [6, 0, 0])
+        ])
+        expect(result.current.history().cursor).toBe(2)
+
+        act(() => {
+            vi.advanceTimersByTime(1000)
+            result.current.applyLocalOps(moveOp('box-2', [9, 0, 0]))
+        })
+        const { steps, cursor } = result.current.history()
+        expect(steps).toHaveLength(3)
+        expect(cursor).toBe(3)
+        expect(steps.every((s) => s.applied)).toBe(true)
+    })
+
     it('ignoreTypes batches still apply but never enter history', () => {
         const { result } = setup({ ignoreTypes: ['setWorkspaceState'] })
         act(() => {
