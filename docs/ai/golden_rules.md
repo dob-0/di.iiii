@@ -70,6 +70,16 @@ Never claim a task is done without these passing. The pre-session baseline is: 0
 
 **Files:** `package.json` (`playwright` devDependency), `~/.cache/ms-playwright` (browser binaries, already present).
 
+### Checking things as a human is allowed and expected — any environment, any engine
+
+**Rule:** Agents are explicitly authorized to verify like a human user — launch real browsers, click, scroll, fill forms, screenshot, read the console — not only against local dev, but against staging and production URLs and sibling-project deployments (br_id_ge, beyond_form, …). When a user reports browser-specific breakage, reproduce it in a clean engine before touching code.
+
+**Why:** 2026-07-09, beyond_form staging: the user hit CORS errors that blanked the page, but code review and `curl` headers showed nothing wrong. Driving the live URL in clean Chromium *and* a freshly installed Playwright Firefox proved the deployment healthy in both engines, isolating the cause to the reporting browser's profile/extensions — no code change needed, no wild goose chase. The verdict was only reachable by testing exactly like a human visitor instead of reasoning from code.
+
+**How:** Chromium already lives in `~/.cache/ms-playwright`; other engines are one command away (`npx playwright install firefox`). For one-off scripts outside di.iiii, import from `di.iiii/node_modules/playwright/index.mjs`. Reproduce-first triage: clean engine passes → suspect the reporter's profile/extensions and say so with evidence; clean engine fails → real bug, bisect from there.
+
+**Files:** `~/.cache/ms-playwright`, `node_modules/playwright` (di.iiii).
+
 ### When a feature lands on one surface, ask whether it should apply to all of them — past and future
 
 **Rule:** Before calling a UX/behavior change "done," check whether the same capability already exists (or should exist) on every other surface that serves the same purpose — including spaces/projects/content that already existed before this change, not just new ones going forward. If it doesn't apply everywhere, say so explicitly and let the user decide the scope, rather than silently leaving it inconsistent.
