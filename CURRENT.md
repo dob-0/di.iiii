@@ -9,19 +9,22 @@ active_branch: dev
 
 ## Last commit
 
-`47da80a` — on **staging** (smoke 9/9, 2026-07-08 afternoon). `main` is 4 commits behind; prod still at `07084e2`.
+`9187dc6` — on **staging**. `main` is now 8+ commits behind; prod still at `07084e2`.
 
-## Last session (2026-07-08 pm — public-route UX, shipped to staging)
+## Last session (2026-07-08 eve — Studio creation-process gap list, all 9 shipped)
 
-- Spaces panel (editor): live badge + live URL, View Live / Copy Live Link, owner-only
-  Make Public/Private; non-owned spaces show only View/Copy (`isPublic`/`isOwner` now
-  survive the local/remote merge in `useSpacesController`).
-- `/studio` hub cards: live link with one-click Copy; "Not yours" badge on public spaces
-  you can't manage. Wiki publishing article updated.
-- Tree held a parallel session's uncommitted work (op-log undo `useOpHistory`, GitHub
-  sync + OAuth sign-in ported into the hub, guest-sandbox default, serverXR auth/route
-  updates, drag-ghost fix); user chose to ship it combined in `47da80a` — suite was
-  green on the whole tree (lint 0, 454 tests, build, wiki check).
+- History panel (Photoshop-style, Scene window) on the op-log undo stack: labeled
+  steps, click-to-jump (one batched ops write), `useOpHistory.history()/jumpTo()`.
+- Scene tree: double-click rename, eye/lock toggles (runtime flags finally writable),
+  drag rows to re-parent (into group / sibling / root; world pos kept).
+- Duplicate/copy/paste/cut are hierarchy-aware (`entityClipboard.js`) — group-duplicate
+  child-drop bug fixed (known-fixes row + guards). Copy takes multi-selections.
+- Viewport file drop (OS + Files list) at cursor ground point; Ctrl snap on gizmo and
+  modal G/R/S; modal rotate/scale of multi-selection orbits shared centroid.
+- Primitive materials: texture (any image asset), roughness/metalness/emissive —
+  `PrimitiveMaterial.jsx`, neutral defaults in BOTH schema mirrors (schema-sync 18/18).
+- All verified live via Playwright E2Es against the local stack (undo 7/7, history 8/8,
+  rename/toggles/dup 7/7, reparent/drop/materials 6/6).
 
 ## Earlier
 
