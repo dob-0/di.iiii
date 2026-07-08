@@ -194,7 +194,7 @@ export const buildDefaultComponentsForType = (type = 'box') => {
             base.primitive = { shape: 'cylinder', radiusTop: 0.45, radiusBottom: 0.45, height: 1.2 }
             break
         case 'text':
-            base.text = { value: 'New Text', variant: '2d', billboard: false, fontFamily: 'Inter, sans-serif', fontWeight: '600', fontStyle: 'normal', fontSize3D: 0.45, depth3D: 0.08 }
+            base.text = { value: 'New Text', variant: '2d', billboard: false, fontFamily: 'Inter, sans-serif', fontWeight: '600', fontStyle: 'normal', align: 'left', fontSize3D: 0.45, depth3D: 0.08 }
             break
         case 'image':
             base.media = { assetId: null, fit: 'contain', autoplay: false, loop: false, muted: true }

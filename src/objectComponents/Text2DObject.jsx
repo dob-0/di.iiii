@@ -4,7 +4,7 @@ import * as THREE from 'three'
 const PADDING = 20
 const BASE_FONT_SIZE = 64
 
-function createTextTexture({ text, color, fontFamily, fontWeight, fontStyle }) {
+function createTextTexture({ text, color, fontFamily, fontWeight, fontStyle, align = 'left' }) {
     const canvas = document.createElement('canvas')
     const context = canvas.getContext('2d')
     if (!context) return null
@@ -36,7 +36,11 @@ function createTextTexture({ text, color, fontFamily, fontWeight, fontStyle }) {
     context.textBaseline = 'top'
     context.fillStyle = color
     lines.forEach((line, index) => {
-        context.fillText(line, PADDING, PADDING + index * lineHeight)
+        const lineWidth = context.measureText(line || '').width
+        const x = align === 'center' ? PADDING + (textWidth - lineWidth) / 2
+            : align === 'right' ? PADDING + (textWidth - lineWidth)
+            : PADDING
+        context.fillText(line, x, PADDING + index * lineHeight)
     })
 
     const texture = new THREE.CanvasTexture(canvas)
@@ -51,17 +55,18 @@ function createTextTexture({ text, color, fontFamily, fontWeight, fontStyle }) {
     }
 }
 
-export default function Text2DObject({ data, color, fontFamily, fontWeight, fontStyle }) {
+export default function Text2DObject({ data, color, fontFamily, fontWeight, fontStyle, align }) {
     const textTexture = useMemo(() => {
         const result = createTextTexture({
             text: (data || '').replace(/\\n/g, '\n'),
             color,
             fontFamily,
             fontWeight,
-            fontStyle
+            fontStyle,
+            align
         })
         return result
-    }, [data, color, fontFamily, fontWeight, fontStyle])
+    }, [data, color, fontFamily, fontWeight, fontStyle, align])
 
     useEffect(() => {
         return () => {

@@ -93,6 +93,7 @@ export default function EntityContent({ entity, assetMap }) {
                     fontFamily={entity.components?.text?.fontFamily}
                     fontWeight={entity.components?.text?.fontWeight}
                     fontStyle={entity.components?.text?.fontStyle}
+                    align={entity.components?.text?.align}
                 />
             )
     case 'image':

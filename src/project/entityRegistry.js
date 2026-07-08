@@ -69,7 +69,7 @@ const PRIMITIVE_SECTIONS = [
         fields: [
             ...APPEARANCE_FIELDS,
             { label: 'Wireframe', component: 'appearance', path: ['wireframe'], type: 'checkbox' },
-            { label: 'Texture', component: 'appearance', path: ['textureAssetId'], type: 'asset' },
+            { label: 'Texture', component: 'appearance', path: ['textureAssetId'], type: 'asset', accept: 'image/' },
             { label: 'Roughness', component: 'appearance', path: ['roughness'], type: 'number', min: 0, max: 1, step: 0.05 },
             { label: 'Metalness', component: 'appearance', path: ['metalness'], type: 'number', min: 0, max: 1, step: 0.05 },
             { label: 'Emissive', component: 'appearance', path: ['emissive'], type: 'color' },
@@ -149,6 +149,7 @@ const DEFINITIONS = {
                     { label: 'Font Family', component: 'text', path: ['fontFamily'], type: 'text' },
                     { label: 'Weight', component: 'text', path: ['fontWeight'], type: 'text' },
                     { label: 'Style', component: 'text', path: ['fontStyle'], type: 'select', options: [{ value: 'normal', label: 'Normal' }, { value: 'italic', label: 'Italic' }] },
+                    { label: 'Align (2D)', component: 'text', path: ['align'], type: 'select', options: [{ value: 'left', label: 'Left' }, { value: 'center', label: 'Center' }, { value: 'right', label: 'Right' }] },
                     { label: 'Size 3D', component: 'text', path: ['fontSize3D'], type: 'number', min: 0.05, step: 0.05 },
                     { label: 'Depth 3D', component: 'text', path: ['depth3D'], type: 'number', min: 0, step: 0.01 }
                 ]

@@ -249,8 +249,11 @@ function InspField({ field, value, assetOptions = [], spaceOptions = [], sibling
     }
 
     if (field.type === 'select' || field.type === 'asset') {
+        const assetPool = field.accept
+            ? assetOptions.filter((a) => (a.mimeType || '').startsWith(field.accept))
+            : assetOptions
         const options = field.type === 'asset'
-            ? [{ value: '', label: 'Unassigned' }, ...assetOptions.map((a) => ({ value: a.id, label: a.name }))]
+            ? [{ value: '', label: 'Unassigned' }, ...assetPool.map((a) => ({ value: a.id, label: a.name }))]
             : (field.options || [])
         return (
             <div className="insp-field">

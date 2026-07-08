@@ -58,7 +58,7 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
         )
         let pivot = computePivot()
 
-        const session = { mode: op.mode, axis: op.axis || null, entities, moved: false, total: 0 }
+        const session = { mode: op.mode, axis: op.axis || null, entities, moved: false, total: 0, numeric: '' }
         sessionRef.current = session
 
         // Fold the current values into the base so a mode/axis switch continues
@@ -69,6 +69,7 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             }
             pivot = computePivot()
             session.total = 0
+            session.numeric = ''
         }
 
         const buildPreviewMap = () => {
@@ -83,9 +84,12 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             const axisLabel = session.axis
                 ? ` · ${session.axis === 'all' ? 'ALL' : session.axis.toUpperCase()}`
                 : ''
-            const hint = session.axis ? ' · move mouse · CTRL snap · ENTER' : ' · pick X / Y / Z / A'
+            const typed = session.numeric
+                ? ` · ${session.numeric}${session.mode === 'rotate' ? '°' : session.mode === 'scale' ? '×' : ''}`
+                : ''
+            const hint = session.axis ? ' · move mouse or type a value · CTRL snap · ENTER' : ' · pick X / Y / Z / A'
             cbRef.current.onStatus?.({
-                text: `${MODE_LABEL[session.mode] || session.mode}${axisLabel}${hint}`
+                text: `${MODE_LABEL[session.mode] || session.mode}${axisLabel}${typed}${typed ? ' · ENTER' : hint}`
             })
             if (session.axis && session.axis !== 'all') {
                 const u = AXIS_VEC[session.axis]
@@ -152,8 +156,27 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             }
         }
 
+        // Typed exact values (Blender-style): degrees for rotate, a scale
+        // factor for scale, world units for translate. Mouse movement resumes
+        // control and discards the typed string.
+        const applyNumericIfAny = () => {
+            const value = parseFloat(session.numeric)
+            if (!Number.isFinite(value)) return
+            const total = session.mode === 'rotate'
+                ? value * Math.PI / 180
+                : session.mode === 'scale' ? value - 1 : value
+            session.total = total
+            applyTotal(total)
+            session.moved = true
+            cbRef.current.onPreview?.(buildPreviewMap())
+        }
+
         const handlePointerMove = (event) => {
             if (!session.axis) return
+            if (session.numeric) {
+                session.numeric = ''
+                reportStatus()
+            }
             const sensitivity = event.shiftKey ? 0.002 : 0.02
             const delta = ((event.movementX || 0) + (event.movementY || 0)) * sensitivity
             if (delta === 0) return
@@ -180,6 +203,13 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
                 session.mode = lower === 'g' ? 'translate' : lower === 'r' ? 'rotate' : 'scale'
                 session.axis = null
                 rebase()
+                reportStatus()
+            } else if (session.axis && (/^[0-9.-]$/.test(event.key) || event.key === 'Backspace')) {
+                event.preventDefault(); event.stopImmediatePropagation()
+                session.numeric = event.key === 'Backspace'
+                    ? session.numeric.slice(0, -1)
+                    : `${session.numeric}${event.key}`
+                applyNumericIfAny()
                 reportStatus()
             } else if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault(); event.stopImmediatePropagation()
