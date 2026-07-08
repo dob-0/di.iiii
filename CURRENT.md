@@ -46,7 +46,9 @@ active_branch: dev
 - `serverXR/.env.local` has a stale GitHub App key — copy `GITHUB_APP_PRIVATE_KEY_B64` from a
   host's `~/.config/dii/*.deploy.env`. If `br_id_ge` gets App-connected, disable its CI sync.
 - `origin/self-host` intentionally 1 commit ahead (`b9baa30`).
-- Next strategic work: op-log undo **landed** (unverified in UI) → content-addressed assets → self-host.
+- Next strategic work: op-log undo **landed + verified live** (two-client Playwright E2E
+  2026-07-08: undo reverts only own ops, redo incl. Ctrl+Shift+Z, zero document PUTs)
+  → content-addressed assets → self-host.
 
 ## Known fixes
 
