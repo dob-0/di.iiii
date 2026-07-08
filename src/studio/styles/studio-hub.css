@@ -252,3 +252,25 @@
     color: rgba(255, 109, 96, 1);
     border-color: rgba(255, 109, 96, 0.6);
 }
+
+/* ─── EMPTY STATE ───────────────────────────────────────────── */
+.sh-empty-state {
+    text-align: center;
+    padding: 56px 16px;
+    border: 1px dashed rgba(200, 230, 240, 0.15);
+    border-radius: 2px;
+}
+
+.sh-empty-title {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    color: var(--di-text, rgba(230, 245, 250, 0.9));
+}
+
+.sh-empty-hint {
+    margin: 0 auto 20px;
+    max-width: 380px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    color: var(--di-text-muted, rgba(200, 230, 240, 0.45));
+}

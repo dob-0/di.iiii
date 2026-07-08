@@ -2,6 +2,7 @@ const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const googleDrive = require('../googleDrive')
+const { isGuestSubject } = require('../authAccess')
 const driveAccount = require('../googleDriveAccount')
 const commonsStore = require('../commonsStore')
 
@@ -35,6 +36,7 @@ function registerSpaceRoutes(router, {
   normalizeSpaceId,
   readProjectDocument = null,
   requireAdminWrite = (req, res, next) => next(),
+  requireSpaceOwnerOrAdminWrite = (req, res, next) => next(),
   readJson,
   readOpsHistory,
   saveSpaceMeta,
@@ -71,17 +73,26 @@ function registerSpaceRoutes(router, {
     }
   }
 
+  // isOwner is computed per requester so clients can gate management UI
+  // without comparing raw ownerUserId themselves. With auth disabled the
+  // whole surface is open, so everything reports owned.
+  const withIsOwner = (state, space) => ({
+    ...space,
+    isOwner: !config.requireAuth ||
+      (state?.type === 'session' && Boolean(space?.ownerUserId) && space.ownerUserId === state.subject)
+  })
+
   router.get('/api/spaces', async (req, res, next) => {
     try {
       const spaces = await listSpaces()
-      if (!config.requireAuth) {
-        return res.json({ spaces })
-      }
       const state = req.authState || getPublicAuthState(req)
+      if (!config.requireAuth) {
+        return res.json({ spaces: spaces.map((space) => withIsOwner(state, space)) })
+      }
       const visible = spaces.filter((space) =>
         space.isPublic || (state.authenticated && canAccessSpace(state, space.id))
       )
-      res.json({ spaces: visible })
+      res.json({ spaces: visible.map((space) => withIsOwner(state, space)) })
     } catch (error) {
       next(error)
     }
@@ -100,7 +111,9 @@ function registerSpaceRoutes(router, {
       }
 
       const state = req.authState || {}
-      const sessionUserId = state.type === 'session' ? state.subject : null
+      // Returning guests carry session cookies with a guest: subject — they
+      // are not owning accounts and cannot create named spaces.
+      const sessionUserId = state.type === 'session' && !isGuestSubject(state.subject) ? state.subject : null
       // Admins / unrestricted accounts create freely; the free-tier quota only
       // applies when auth is on and the creator is a regular signed-in account.
       const exempt = state.isUnrestricted || state.role === 'admin'
@@ -141,13 +154,13 @@ function registerSpaceRoutes(router, {
       if (!meta) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      res.json({ space: meta })
+      res.json({ space: withIsOwner(req.authState || getPublicAuthState(req), meta) })
     } catch (error) {
       next(error)
     }
   })
 
-  router.patch('/api/spaces/:spaceId', requireAdminWrite, async (req, res, next) => {
+  router.patch('/api/spaces/:spaceId', requireSpaceOwnerOrAdminWrite, async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
       if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
@@ -157,6 +170,12 @@ function registerSpaceRoutes(router, {
       const { label, permanent, allowEdits, isPublic, kind, publishedProjectId } = req.body || {}
       if (kind !== undefined && !['normal', 'global', 'sandbox'].includes(kind)) {
         return res.status(400).json({ error: 'kind must be one of: normal, global, sandbox.' })
+      }
+      // Owners self-serve label/visibility/publish target; kind and permanent
+      // change platform behavior (guest entry, retention) and stay admin-only.
+      const isAdminCaller = !config.requireAuth || (req.authState?.role === 'admin')
+      if (!isAdminCaller && (kind !== undefined || permanent !== undefined)) {
+        return res.status(403).json({ error: 'Only an admin can change kind or permanent.' })
       }
       let nextPublishedProjectId
       if (publishedProjectId !== undefined) {
@@ -187,12 +206,19 @@ function registerSpaceRoutes(router, {
     }
   })
 
-  router.delete('/api/spaces/:spaceId', requireAdminWrite, async (req, res, next) => {
+  router.delete('/api/spaces/:spaceId', requireSpaceOwnerOrAdminWrite, async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
       if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
+      }
+      // The shared guest-entry space must survive its owner; admins only.
+      if (config.requireAuth && req.authState?.role !== 'admin') {
+        const meta = req.spaceMeta || await loadSpaceMeta(spaceId)
+        if (meta?.kind === 'global') {
+          return res.status(403).json({ error: 'Only an admin can delete the shared global space.' })
+        }
       }
       if (typeof onDeleteSpace === 'function') {
         await onDeleteSpace(spaceId)

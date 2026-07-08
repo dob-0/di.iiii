@@ -3,8 +3,10 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import RootApp from './RootApp.jsx'
 import { ensureRuntimeConsole } from './services/runtimeConsole.js'
+import { suppressNativeDrag } from './utils/suppressNativeDrag.js'
 
 ensureRuntimeConsole()
+suppressNativeDrag()
 
 ReactDOM.createRoot(document.querySelector('#root')).render(
     <React.StrictMode>

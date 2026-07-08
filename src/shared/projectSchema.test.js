@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
     PROJECT_DOCUMENT_VERSION,
     applyProjectOps,
+    cloneValue,
+    invertProjectOps,
     normalizeProjectDocument
 } from './projectSchema.js'
 
@@ -181,5 +183,144 @@ describe('projectSchema', () => {
         ])
         expect(afterSingleton.nodes).toHaveLength(1)
         expect(afterSingleton.nodes[0].id).toBe('light-a')
+    })
+})
+
+describe('invertProjectOps', () => {
+    // Undo restores content, not array position: re-created items append at
+    // the end of the reducer's Maps, so collections compare sorted by id.
+    const comparable = (doc) => {
+        const next = cloneValue(doc)
+        if (next.projectMeta) {
+            next.projectMeta.createdAt = 0
+            next.projectMeta.updatedAt = 0
+        }
+        for (const asset of next.assets || []) {
+            asset.createdAt = 0
+            asset.updatedAt = 0
+        }
+        const byId = (a, b) => String(a.id).localeCompare(String(b.id))
+        next.entities = [...(next.entities || [])].sort(byId)
+        next.nodes = [...(next.nodes || [])].sort(byId)
+        next.edges = [...(next.edges || [])].sort(byId)
+        next.assets = [...(next.assets || [])].sort(byId)
+        return next
+    }
+
+    const baseDoc = () => normalizeProjectDocument({
+        entities: [
+            { id: 'group-1', type: 'group', components: { transform: { position: [0, 0, 0] } } },
+            { id: 'child-1', type: 'box', parentId: 'group-1', components: { transform: { position: [1, 1, 1] } } },
+            { id: 'box-2', type: 'box', components: { transform: { position: [2, 0, 0] } } }
+        ],
+        nodes: [
+            { id: 'n1', typeId: 'geom.cube', label: 'A', values: { x: 1 } },
+            { id: 'n2', typeId: 'geom.cube', label: 'B', values: {} }
+        ],
+        edges: [{ id: 'edge-1', fromNodeId: 'n1', fromPort: 'out', toNodeId: 'n2', toPort: 'in' }],
+        assets: [{ id: 'asset-1', name: 'tex.png' }],
+        workspaceState: { selectedNodeId: 'n1' }
+    })
+
+    const expectRoundTrip = (base, ops) => {
+        const forward = applyProjectOps(base, ops)
+        const inverse = invertProjectOps(base, ops)
+        const restored = applyProjectOps(forward, inverse)
+        expect(comparable(restored)).toEqual(comparable(applyProjectOps(base, [])))
+        return { forward, inverse, restored }
+    }
+
+    it('round-trips every patch-style op family', () => {
+        const base = baseDoc()
+        const batches = [
+            [{ type: 'updateComponent', payload: { entityId: 'box-2', component: 'transform', patch: { position: [9, 9, 9] } } }],
+            [{ type: 'updateEntity', payload: { entityId: 'box-2', patch: { components: { transform: { position: [4, 4, 4] } } } } }],
+            [{ type: 'updateNode', payload: { nodeId: 'n1', patch: { graphX: 55, values: { x: 42 } } } }],
+            [{ type: 'updateEdge', payload: { edgeId: 'edge-1', patch: { toPort: 'other' } } }],
+            [{ type: 'setWorldState', payload: { patch: { backgroundColor: '#ff0000' } } }],
+            [{ type: 'setRenderSettings', payload: { patch: {} } }],
+            [{ type: 'setWindowState', payload: { windowId: 'assets', patch: { visible: true } } }],
+            [{ type: 'setProjectMeta', payload: { patch: { title: 'Renamed' } } }]
+        ]
+        for (const ops of batches) expectRoundTrip(base, ops)
+    })
+
+    it('inverts createEntity to a delete and deleteEntity to a full subtree restore', () => {
+        const base = baseDoc()
+
+        const created = expectRoundTrip(base, [{
+            type: 'createEntity',
+            payload: { entity: { id: 'new-1', type: 'box', components: {} } }
+        }])
+        expect(created.inverse).toEqual([{ type: 'deleteEntity', payload: { entityId: 'new-1' } }])
+
+        const { forward, restored } = expectRoundTrip(base, [{ type: 'deleteEntity', payload: { entityId: 'group-1' } }])
+        expect(forward.entities.map((entity) => entity.id)).toEqual(['box-2'])
+        expect(restored.entities.map((entity) => entity.id).sort()).toEqual(['box-2', 'child-1', 'group-1'])
+        expect(restored.entities.find((entity) => entity.id === 'child-1').parentId).toBe('group-1')
+    })
+
+    it('inverts deleteNode to node + dropped edges + selection restore', () => {
+        const base = baseDoc()
+        const { forward, restored } = expectRoundTrip(base, [{ type: 'deleteNode', payload: { nodeId: 'n1' } }])
+        expect(forward.nodes.map((node) => node.id)).toEqual(['n2'])
+        expect(forward.edges).toHaveLength(0)
+        expect(forward.workspaceState.selectedNodeId).toBe(null)
+        expect(restored.nodes.map((node) => node.id).sort()).toEqual(['n1', 'n2'])
+        expect(restored.edges.map((edge) => edge.id)).toEqual(['edge-1'])
+        expect(restored.workspaceState.selectedNodeId).toBe('n1')
+    })
+
+    it('round-trips asset upsert/delete and edge create/delete', () => {
+        const base = baseDoc()
+        expectRoundTrip(base, [{ type: 'upsertAsset', payload: { asset: { id: 'asset-2', name: 'new.png' } } }])
+        expectRoundTrip(base, [{ type: 'upsertAsset', payload: { asset: { id: 'asset-1', name: 'renamed.png' } } }])
+        expectRoundTrip(base, [{ type: 'deleteAsset', payload: { assetId: 'asset-1' } }])
+        expectRoundTrip(base, [{ type: 'deleteEdge', payload: { edgeId: 'edge-1' } }])
+    })
+
+    it('round-trips a mixed batch by reversing per-op inverse groups', () => {
+        const base = baseDoc()
+        const { inverse } = expectRoundTrip(base, [
+            { type: 'createEntity', payload: { entity: { id: 'new-1', type: 'box', components: {} } } },
+            { type: 'updateComponent', payload: { entityId: 'new-1', component: 'transform', patch: { position: [3, 3, 3] } } },
+            { type: 'deleteEntity', payload: { entityId: 'box-2' } }
+        ])
+        expect(inverse.map((op) => op.type)).toEqual(['createEntity', 'updateComponent', 'deleteEntity'])
+        expect(inverse[0].payload.entity.id).toBe('box-2')
+        expect(inverse[2].payload.entityId).toBe('new-1')
+    })
+
+    it('undo never reverts a collaborator edit that landed in between', () => {
+        const base = baseDoc()
+        const myOps = [{ type: 'updateComponent', payload: { entityId: 'box-2', component: 'transform', patch: { position: [9, 9, 9] } } }]
+        const inverse = invertProjectOps(base, myOps)
+        const afterMine = applyProjectOps(base, myOps)
+        const afterRemote = applyProjectOps(afterMine, [{
+            type: 'createEntity',
+            payload: { entity: { id: 'remote-1', type: 'sphere', components: {} } }
+        }])
+        const afterUndo = applyProjectOps(afterRemote, inverse)
+        expect(afterUndo.entities.find((entity) => entity.id === 'remote-1')).toBeDefined()
+        expect(afterUndo.entities.find((entity) => entity.id === 'box-2').components.transform.position).toEqual([2, 0, 0])
+    })
+
+    it('emits plain { type, payload } ops so re-application gets fresh opIds', () => {
+        const base = baseDoc()
+        const inverse = invertProjectOps(base, [
+            { opId: 'op-1', clientId: 'c-1', type: 'deleteEntity', payload: { entityId: 'group-1' } }
+        ])
+        expect(inverse.length).toBeGreaterThan(0)
+        for (const op of inverse) {
+            expect(Object.keys(op).sort()).toEqual(['payload', 'type'])
+        }
+    })
+
+    it('inverts ops that would no-op to an empty list', () => {
+        const base = baseDoc()
+        expect(invertProjectOps(base, [{ type: 'updateEntity', payload: { entityId: 'ghost', patch: { name: 'x' } } }])).toEqual([])
+        expect(invertProjectOps(base, [{ type: 'deleteEntity', payload: { entityId: 'ghost' } }])).toEqual([])
+        expect(invertProjectOps(base, [{ type: 'setWorldState', payload: { patch: {} } }])).toEqual([])
+        expect(invertProjectOps(base, [{ type: 'createEntity', payload: { entity: { type: 'box' } } }])).toEqual([])
     })
 })

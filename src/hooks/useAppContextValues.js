@@ -102,6 +102,7 @@ export function useAppContextValues({
     handleRenameSpace,
     handleToggleSpacePermanent,
     handleToggleSpaceEditLock,
+    handleToggleSpacePublic,
     handleReloadFromServer,
     handlePublishToServer,
     socketEmit,
@@ -326,6 +327,7 @@ export function useAppContextValues({
             handleRenameSpace,
             handleToggleSpacePermanent,
             handleToggleSpaceEditLock,
+            handleToggleSpacePublic,
             handleReloadFromServer,
             handlePublishToServer,
             socketEmit
@@ -370,6 +372,7 @@ export function useAppContextValues({
             handleRenameSpace,
             handleToggleSpacePermanent,
             handleToggleSpaceEditLock,
+            handleToggleSpacePublic,
             handleReloadFromServer,
             handlePublishToServer,
             guardEditAction,

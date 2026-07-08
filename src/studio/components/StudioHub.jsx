@@ -233,6 +233,20 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     </p>
                 )}
 
+                {/* Empty state — first visit to a fresh space */}
+                {projects.length === 0 && !status && creatingTitle === null && (
+                    <div className="sh-empty-state">
+                        <p className="sh-empty-title">No projects yet</p>
+                        <p className="sh-empty-hint">
+                            A project is one scene you can build and publish.
+                            Create your first one — you can rename or delete it anytime.
+                        </p>
+                        <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
+                            + Create your first project
+                        </button>
+                    </div>
+                )}
+
                 {/* Projects */}
                 {projects.length > 0 && (
                     <div className="sh-projects-grid">

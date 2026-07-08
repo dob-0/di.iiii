@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { usePanelDrag } from './hooks/usePanelDrag.js'
 import { usePanelResize } from './hooks/usePanelResize.js'
+import { getSpaceShareUrl } from './storage/spaceStore.js'
 
 const formatRelativeTime = (timestamp) => {
     if (!timestamp) return 'never'
@@ -27,6 +28,7 @@ export default function SpacesPanel({
     onDeleteSpace,
     onRenameSpace,
     onTogglePermanent,
+    onTogglePublic,
     newSpaceName,
     onSpaceNameChange,
     openAfterCreateTarget = 'public',
@@ -146,54 +148,78 @@ export default function SpacesPanel({
                 <div className="space-list">
                     {spaces.length === 0 ? (
                         <p className="panel-subtext">No shared spaces yet.</p>
-                    ) : spaces.map(space => (
-                        <div
-                            key={space.id}
-                            className={[
-                                'space-row',
-                                space.id === currentSpaceId ? 'current-space' : ''
-                            ].filter(Boolean).join(' ')}
-                        >
-                            <div className="space-row-header">
-                                <span className="space-row-name">{getSpaceLabel(space)}</span>
-                                <span className={[
-                                    'space-row-badge',
-                                    space.isPermanent ? 'badge-permanent' : 'badge-temp'
-                                ].join(' ')}>
-                                    {space.isPermanent ? 'Permanent' : 'Temporary'}
-                                </span>
+                    ) : spaces.map(space => {
+                        const isLive = Boolean(space.isPublic)
+                        const isOwned = space.isOwner !== false
+                        return (
+                            <div
+                                key={space.id}
+                                className={[
+                                    'space-row',
+                                    space.id === currentSpaceId ? 'current-space' : ''
+                                ].filter(Boolean).join(' ')}
+                            >
+                                <div className="space-row-header">
+                                    <span className="space-row-name">{getSpaceLabel(space)}</span>
+                                    <span className="space-row-badges">
+                                        {isLive && (
+                                            <span className="space-row-badge badge-live">live</span>
+                                        )}
+                                        <span className={[
+                                            'space-row-badge',
+                                            space.isPermanent ? 'badge-permanent' : 'badge-temp'
+                                        ].join(' ')}>
+                                            {space.isPermanent ? 'Permanent' : 'Temporary'}
+                                        </span>
+                                    </span>
+                                </div>
+                                <div className="space-row-meta">
+                                    <span>ID: {space.id}</span>
+                                    <span>Updated {formatRelativeTime(space.lastActive)}</span>
+                                </div>
+                                {isLive && (
+                                    <div className="space-row-live-link">{getSpaceShareUrl(space.id)}</div>
+                                )}
+                                <div className="space-row-actions">
+                                    <button type="button" onClick={() => onOpenSpace?.(space.id)}>
+                                        {isLive ? 'View Live' : 'Open'}
+                                    </button>
+                                    <button type="button" onClick={() => handleCopy(space.id)}>
+                                        {copiedId === space.id ? 'Copied!' : (isLive ? 'Copy Live Link' : 'Copy Link')}
+                                    </button>
+                                    {isOwned && (
+                                        <>
+                                            <button type="button" onClick={() => onRenameSpace?.(space.id)}>
+                                                Rename
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => onTogglePermanent?.(space.id, !space.isPermanent)}
+                                            >
+                                                {space.isPermanent ? 'Make Temp' : 'Keep Forever'}
+                                            </button>
+                                            {onTogglePublic && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => onTogglePublic(space.id, !isLive)}
+                                                >
+                                                    {isLive ? 'Make Private' : 'Make Public'}
+                                                </button>
+                                            )}
+                                            <button
+                                                type="button"
+                                                className="danger"
+                                                onClick={() => onDeleteSpace?.(space.id)}
+                                                disabled={space.id === currentSpaceId}
+                                            >
+                                                Delete
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
                             </div>
-                            <div className="space-row-meta">
-                                <span>ID: {space.id}</span>
-                                <span>Updated {formatRelativeTime(space.lastActive)}</span>
-                            </div>
-                            <div className="space-row-actions">
-                                <button type="button" onClick={() => onOpenSpace?.(space.id)}>
-                                    Open
-                                </button>
-                                <button type="button" onClick={() => handleCopy(space.id)}>
-                                    {copiedId === space.id ? 'Copied!' : 'Copy Link'}
-                                </button>
-                                <button type="button" onClick={() => onRenameSpace?.(space.id)}>
-                                    Rename
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onTogglePermanent?.(space.id, !space.isPermanent)}
-                                >
-                                    {space.isPermanent ? 'Make Temp' : 'Keep Forever'}
-                                </button>
-                                <button
-                                    type="button"
-                                    className="danger"
-                                    onClick={() => onDeleteSpace?.(space.id)}
-                                    disabled={space.id === currentSpaceId}
-                                >
-                                    Delete
-                                </button>
-                            </div>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
                 {selectionGroups.length > 0 && (
                     <>

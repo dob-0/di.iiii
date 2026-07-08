@@ -3,6 +3,7 @@ import { useMediaQuery, useTheme } from '@mui/material'
 import { Vector3 } from 'three'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
+import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { DEFAULT_PROJECT_SPACE_ID, deleteProjectAsset, uploadProjectAsset } from '../../project/services/projectsApi.js'
@@ -92,16 +93,12 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
         clientIdPrefix: 'studio-client',
         opIdPrefix: 'studio-op'
     })
-    const historyRef = useRef([])
-    const redoRef = useRef([])
     const clipboardRef = useRef(null)
-    const documentRef = useRef(state.document)
-    useEffect(() => { documentRef.current = state.document }, [state.document])
-    const applyLocalOps = useCallback((ops, options) => {
-        historyRef.current = [...historyRef.current.slice(-49), documentRef.current]
-        redoRef.current = []
-        return _applyLocalOps(ops, options)
-    }, [_applyLocalOps])
+    const { applyLocalOps, undo, redo } = useOpHistory({
+        projectId,
+        document: state.document,
+        applyLocalOps: _applyLocalOps
+    })
     const presence = useProjectPresence({
         projectId,
         displayName,
@@ -223,11 +220,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     }, [])
 
     useEffect(() => {
-        // Undo/redo must go through replaceDocument (the same network-backed
-        // path as every other document write) — a local-only dispatch here
-        // never persists or broadcasts to collaborators, and leaves the sync
-        // engine's version tracking silently pointing at a document the
-        // server never saw (see docs/ai/known-fixes.md).
+        // Undo/redo replays inverse ops through applyLocalOps — the same
+        // network-backed path as every other document write. A local-only
+        // dispatch here never persists or broadcasts to collaborators, and a
+        // whole-document replace would revert their concurrent edits too
+        // (see docs/ai/known-fixes.md).
         const handler = (event) => {
             const tag = event.target?.tagName?.toLowerCase?.()
             if (tag === 'input' || tag === 'textarea' || event.target?.isContentEditable) return
@@ -235,25 +232,12 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             const isRedo = (event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))
             if (!isUndo && !isRedo) return
             event.preventDefault()
-            if (isUndo && historyRef.current.length > 0) {
-                redoRef.current = [...redoRef.current.slice(-49), documentRef.current]
-                const prev = historyRef.current.at(-1)
-                historyRef.current = historyRef.current.slice(0, -1)
-                replaceDocument(prev, { activityMessage: 'Undo.' }).catch((error) => {
-                    dispatch({ type: 'append-activity', level: 'error', message: `Undo failed to save: ${error.message || 'unknown error'}` })
-                })
-            } else if (isRedo && redoRef.current.length > 0) {
-                historyRef.current = [...historyRef.current.slice(-49), documentRef.current]
-                const next = redoRef.current.at(-1)
-                redoRef.current = redoRef.current.slice(0, -1)
-                replaceDocument(next, { activityMessage: 'Redo.' }).catch((error) => {
-                    dispatch({ type: 'append-activity', level: 'error', message: `Redo failed to save: ${error.message || 'unknown error'}` })
-                })
-            }
+            if (isUndo) undo()
+            else redo()
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [dispatch, replaceDocument])
+    }, [undo, redo])
 
     useEffect(() => {
         let cancelled = false

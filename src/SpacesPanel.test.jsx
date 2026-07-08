@@ -96,4 +96,129 @@ describe('SpacesPanel', () => {
 
         expect(handleRenameSpace).toHaveBeenCalledWith('gallery')
     })
+
+    it('shows the live link and public toggle for a public owned space', () => {
+        const handleTogglePublic = vi.fn()
+
+        render(
+            <SpacesPanel
+                spaces={[{
+                    id: 'gallery',
+                    label: 'Gallery',
+                    isPermanent: true,
+                    isPublic: true,
+                    isOwner: true,
+                    lastActive: Date.now()
+                }]}
+                currentSpaceId="main"
+                newSpaceName=""
+                onSpaceNameChange={vi.fn()}
+                openAfterCreateTarget="public"
+                onOpenAfterCreateTargetChange={vi.fn()}
+                canCreateSpace
+                ttlHours={24}
+                isCreatingSpace={false}
+                onCreateSpace={vi.fn()}
+                onCreatePermanentSpace={vi.fn()}
+                onOpenSpace={vi.fn()}
+                onCopyLink={vi.fn()}
+                onDeleteSpace={vi.fn()}
+                onRenameSpace={vi.fn()}
+                onTogglePermanent={vi.fn()}
+                onTogglePublic={handleTogglePublic}
+                onClose={vi.fn()}
+                surfaceMode="sheet"
+            />
+        )
+
+        expect(screen.getByText('live')).toBeInTheDocument()
+        expect(screen.getByText(/\/gallery$/)).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'View Live' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Copy Live Link' })).toBeInTheDocument()
+
+        fireEvent.click(screen.getByRole('button', { name: 'Make Private' }))
+
+        expect(handleTogglePublic).toHaveBeenCalledWith('gallery', false)
+    })
+
+    it('offers a make-public toggle on a private owned space', () => {
+        const handleTogglePublic = vi.fn()
+
+        render(
+            <SpacesPanel
+                spaces={[{
+                    id: 'gallery',
+                    label: 'Gallery',
+                    isPermanent: true,
+                    isPublic: false,
+                    isOwner: true,
+                    lastActive: Date.now()
+                }]}
+                currentSpaceId="main"
+                newSpaceName=""
+                onSpaceNameChange={vi.fn()}
+                openAfterCreateTarget="public"
+                onOpenAfterCreateTargetChange={vi.fn()}
+                canCreateSpace
+                ttlHours={24}
+                isCreatingSpace={false}
+                onCreateSpace={vi.fn()}
+                onCreatePermanentSpace={vi.fn()}
+                onOpenSpace={vi.fn()}
+                onCopyLink={vi.fn()}
+                onDeleteSpace={vi.fn()}
+                onRenameSpace={vi.fn()}
+                onTogglePermanent={vi.fn()}
+                onTogglePublic={handleTogglePublic}
+                onClose={vi.fn()}
+                surfaceMode="sheet"
+            />
+        )
+
+        expect(screen.queryByText('live')).not.toBeInTheDocument()
+
+        fireEvent.click(screen.getByRole('button', { name: 'Make Public' }))
+
+        expect(handleTogglePublic).toHaveBeenCalledWith('gallery', true)
+    })
+
+    it('hides owner-only actions on spaces the user does not own', () => {
+        render(
+            <SpacesPanel
+                spaces={[{
+                    id: 'showroom',
+                    label: 'Showroom',
+                    isPermanent: true,
+                    isPublic: true,
+                    isOwner: false,
+                    lastActive: Date.now()
+                }]}
+                currentSpaceId="main"
+                newSpaceName=""
+                onSpaceNameChange={vi.fn()}
+                openAfterCreateTarget="public"
+                onOpenAfterCreateTargetChange={vi.fn()}
+                canCreateSpace
+                ttlHours={24}
+                isCreatingSpace={false}
+                onCreateSpace={vi.fn()}
+                onCreatePermanentSpace={vi.fn()}
+                onOpenSpace={vi.fn()}
+                onCopyLink={vi.fn()}
+                onDeleteSpace={vi.fn()}
+                onRenameSpace={vi.fn()}
+                onTogglePermanent={vi.fn()}
+                onTogglePublic={vi.fn()}
+                onClose={vi.fn()}
+                surfaceMode="sheet"
+            />
+        )
+
+        expect(screen.getByRole('button', { name: 'View Live' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Copy Live Link' })).toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Rename' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Make Temp' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Make Private' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument()
+    })
 })

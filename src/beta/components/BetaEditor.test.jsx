@@ -7,9 +7,10 @@ vi.mock('./BetaViewport.jsx', () => ({ default: () => <div data-testid="mock-vie
 vi.mock('./BetaGraphSurface.jsx', () => ({
     default: (props) => <div data-testid="mock-graph" role="presentation" onDoubleClick={() => props.onDoubleClick?.({})} />
 }))
+const mockApplyLocalOps = vi.fn()
 const mockReplaceDocument = vi.fn(() => Promise.resolve())
 vi.mock('../../project/hooks/useProjectDocumentSync.js', () => ({
-    useProjectDocumentSync: () => ({ applyLocalOps: vi.fn(), replaceDocument: mockReplaceDocument })
+    useProjectDocumentSync: () => ({ applyLocalOps: mockApplyLocalOps, replaceDocument: mockReplaceDocument })
 }))
 vi.mock('../../project/hooks/useProjectPresence.js', () => ({
     useProjectPresence: () => ({ users: [], cursors: [], emitCursor: vi.fn(), clearCursor: vi.fn() })
@@ -108,16 +109,23 @@ describe('BetaEditor undo/redo', () => {
         }).not.toThrow()
     })
 
-    it('routes undo through replaceDocument for a project-backed workspace instead of a local-only dispatch', () => {
+    it('undo replays inverse ops through the ops path — never replaceDocument, never a local-only dispatch', () => {
+        mockApplyLocalOps.mockClear()
         mockReplaceDocument.mockClear()
         render(<BetaEditor projectId="proj-1" />)
 
         // Seed history by creating Node 0 (double-click on the empty graph surface).
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
+        const batches = () => mockApplyLocalOps.mock.calls
+            .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
+        const createdNode = batches().flat().find((op) => op.type === 'createNode')
+        expect(createdNode).toBeDefined()
 
         fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
 
-        expect(mockReplaceDocument).toHaveBeenCalledTimes(1)
+        const undoBatch = batches().at(-1)
+        expect(undoBatch.some((op) => op.type === 'deleteNode' && op.payload.nodeId === createdNode.payload.node.id)).toBe(true)
+        expect(mockReplaceDocument).not.toHaveBeenCalled()
     })
 })
 

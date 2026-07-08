@@ -699,7 +699,16 @@ const applyProjectOps = (document, ops = []) => {
       }
       case 'deleteEntity': {
         const entityId = ensureString(payload.entityId)
-        if (entityId) entities.delete(entityId)
+        if (!entityId) break
+        const toDelete = new Set()
+        const collect = (id) => {
+          toDelete.add(id)
+          for (const [, child] of entities) {
+            if (child.parentId === id) collect(child.id)
+          }
+        }
+        collect(entityId)
+        for (const id of toDelete) entities.delete(id)
         break
       }
       case 'createNode': {
@@ -860,6 +869,211 @@ const applyProjectOps = (document, ops = []) => {
   return normalizeProjectDocument(nextDocument)
 }
 
+const isPlainObject = (value) => Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+
+// mergePatch never removes keys, so the inverse restores values: a key the
+// patch introduced comes back as null and normalization supplies defaults.
+const invertMergePatch = (target, patch) => {
+  if (!isPlainObject(patch)) return cloneValue(target)
+  const base = isPlainObject(target) ? target : {}
+  const inverse = {}
+  Object.entries(patch).forEach(([key, value]) => {
+    if (isPlainObject(value) && isPlainObject(base[key])) {
+      inverse[key] = invertMergePatch(base[key], value)
+    } else {
+      inverse[key] = key in base ? cloneValue(base[key]) : null
+    }
+  })
+  return inverse
+}
+
+const hasPatchKeys = (patch) => isPlainObject(patch) && Object.keys(patch).length > 0
+
+// Inverse of one op against the (normalized) document it is about to mutate.
+// Guards mirror this runtime's applyProjectOps: ops that would no-op there
+// invert to []. Creates whose payload lacks an id invert to [] — apply would
+// generate a random id the inverse could never reference.
+const invertSingleOp = (document, op) => {
+  const payload = op?.payload || {}
+  const entities = new Map(document.entities.map((entity) => [entity.id, entity]))
+  const assets = new Map(document.assets.map((asset) => [asset.id, asset]))
+  const nodes = new Map(document.nodes.map((node) => [node.id, node]))
+  const edges = new Map(document.edges.map((edge) => [edge.id, edge]))
+  const patchInverse = (type, target, extra = {}) => {
+    if (!hasPatchKeys(payload.patch)) return []
+    return [{ type, payload: { ...extra, patch: invertMergePatch(target, payload.patch) } }]
+  }
+  switch (op?.type) {
+    case 'createEntity': {
+      if (!payload.entity || !ensureString(payload.entity.id)) break
+      const entityId = normalizeEntity(payload.entity).id
+      const prev = entities.get(entityId)
+      if (prev) return [{ type: 'createEntity', payload: { entity: cloneValue(prev) } }]
+      return [{ type: 'deleteEntity', payload: { entityId } }]
+    }
+    case 'updateEntity': {
+      const entityId = ensureString(payload.entityId)
+      if (!entityId || !entities.has(entityId) || !hasPatchKeys(payload.patch)) break
+      return [{ type: 'updateEntity', payload: { entityId, patch: invertMergePatch(entities.get(entityId), payload.patch) } }]
+    }
+    case 'updateComponent': {
+      const entityId = ensureString(payload.entityId)
+      const component = ensureString(payload.component)
+      if (!entityId || !component || !entities.has(entityId) || !hasPatchKeys(payload.patch)) break
+      const target = entities.get(entityId).components?.[component]
+      return [{
+        type: 'updateComponent',
+        payload: { entityId, component, patch: invertMergePatch(isPlainObject(target) ? target : {}, payload.patch) }
+      }]
+    }
+    case 'deleteEntity': {
+      const entityId = ensureString(payload.entityId)
+      if (!entityId) break
+      const restored = []
+      const seen = new Set()
+      const collect = (id) => {
+        if (seen.has(id)) return
+        seen.add(id)
+        if (entities.has(id)) restored.push(entities.get(id))
+        for (const [, child] of entities) {
+          if (child.parentId === id) collect(child.id)
+        }
+      }
+      collect(entityId)
+      return restored.map((entity) => ({ type: 'createEntity', payload: { entity: cloneValue(entity) } }))
+    }
+    case 'createNode': {
+      if (!payload.node || !ensureString(payload.node.id)) break
+      const node = normalizeProjectNode(payload.node)
+      if (!node) break
+      if (SINGLETON_TYPE_IDS.has(node.typeId)
+        && Array.from(nodes.values()).some((existing) => existing.typeId === node.typeId)) break
+      // create-over-existing replaces; recreating the prior node would trip
+      // the singleton guard against the replacement, so it stays untracked
+      // (no UI path produces it)
+      if (nodes.has(node.id)) break
+      return [{ type: 'deleteNode', payload: { nodeId: node.id } }]
+    }
+    case 'updateNode': {
+      const nodeId = ensureString(payload.nodeId)
+      if (!nodeId || !nodes.has(nodeId)) break
+      const existing = nodes.get(nodeId)
+      const patch = payload.patch || {}
+      const inversePatch = {
+        ...(patch.label !== undefined ? { label: existing.label } : {}),
+        ...(patch.graphX !== undefined ? { graphX: existing.graphX } : {}),
+        ...(patch.graphY !== undefined ? { graphY: existing.graphY } : {}),
+        ...(patch.runtimeId !== undefined ? { runtimeId: existing.runtimeId ?? null } : {}),
+        ...(patch.assetRef !== undefined ? { assetRef: existing.assetRef ?? null } : {}),
+        ...(isPlainObject(patch.values) ? {
+          values: Object.fromEntries(Object.keys(patch.values).map((key) => [
+            key,
+            key in (existing.values || {}) ? cloneValue(existing.values[key]) : null
+          ]))
+        } : {})
+      }
+      if (!Object.keys(inversePatch).length) break
+      return [{ type: 'updateNode', payload: { nodeId, patch: inversePatch } }]
+    }
+    case 'deleteNode': {
+      const nodeId = ensureString(payload.nodeId)
+      if (!nodeId) break
+      const toDelete = new Set()
+      const collect = (id) => {
+        if (toDelete.has(id)) return
+        toDelete.add(id)
+        for (const [, child] of nodes) {
+          if (child.parentId === id) collect(child.id)
+        }
+      }
+      collect(nodeId)
+      const restoredNodes = Array.from(toDelete).filter((id) => nodes.has(id)).map((id) => nodes.get(id))
+      const restoredEdges = Array.from(edges.values())
+        .filter((edge) => toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId))
+      if (!restoredNodes.length && !restoredEdges.length) break
+      const inverse = [
+        ...restoredNodes.map((node) => ({ type: 'createNode', payload: { node: cloneValue(node) } })),
+        ...restoredEdges.map((edge) => ({ type: 'createEdge', payload: { edge: cloneValue(edge) } }))
+      ]
+      if (toDelete.has(document.workspaceState?.selectedNodeId)) {
+        inverse.push({ type: 'setWorkspaceState', payload: { patch: { selectedNodeId: document.workspaceState.selectedNodeId } } })
+      }
+      return inverse
+    }
+    case 'createEdge': {
+      if (!payload.edge || !ensureString(payload.edge.id)) break
+      const edge = normalizeProjectEdge(payload.edge)
+      if (!edge || !nodes.has(edge.fromNodeId) || !nodes.has(edge.toNodeId)) break
+      const prev = edges.get(edge.id)
+      if (prev) return [{ type: 'createEdge', payload: { edge: cloneValue(prev) } }]
+      return [{ type: 'deleteEdge', payload: { edgeId: edge.id } }]
+    }
+    case 'updateEdge': {
+      const edgeId = ensureString(payload.edgeId)
+      if (!edgeId || !edges.has(edgeId) || !hasPatchKeys(payload.patch)) break
+      return [{ type: 'updateEdge', payload: { edgeId, patch: invertMergePatch(edges.get(edgeId), payload.patch) } }]
+    }
+    case 'deleteEdge': {
+      const edgeId = ensureString(payload.edgeId)
+      if (!edgeId || !edges.has(edgeId)) break
+      return [{ type: 'createEdge', payload: { edge: cloneValue(edges.get(edgeId)) } }]
+    }
+    case 'setWorldState': return patchInverse('setWorldState', document.worldState)
+    case 'setRenderSettings': return patchInverse('setRenderSettings', document.renderSettings)
+    case 'setXrState': return patchInverse('setXrState', document.xrState)
+    case 'setPresentationState': return patchInverse('setPresentationState', document.presentationState)
+    case 'setPublishState': return patchInverse('setPublishState', document.publishState)
+    case 'setWindowState': {
+      const windowId = ensureString(payload.windowId)
+      const windows = document.windowLayout?.windows || {}
+      if (!windowId || !windows[windowId]) break
+      const inverse = patchInverse('setWindowState', windows[windowId], { windowId })
+      const prevActive = document.windowLayout.activeWindowId
+      if (payload.focus && prevActive && prevActive !== windowId && windows[prevActive]) {
+        inverse.push({ type: 'setWindowState', payload: { windowId: prevActive, patch: {}, focus: true } })
+      }
+      return inverse
+    }
+    case 'setWorkspaceState': return patchInverse('setWorkspaceState', document.workspaceState)
+    case 'setProjectMeta': return patchInverse('setProjectMeta', document.projectMeta)
+    case 'upsertAsset': {
+      if (!payload.asset || !ensureString(payload.asset.id)) break
+      const assetId = normalizeAsset(payload.asset).id
+      const prev = assets.get(assetId)
+      if (prev) return [{ type: 'upsertAsset', payload: { asset: cloneValue(prev) } }]
+      return [{ type: 'deleteAsset', payload: { assetId } }]
+    }
+    case 'deleteAsset': {
+      const assetId = ensureString(payload.assetId)
+      if (!assetId || !assets.has(assetId)) break
+      return [{ type: 'upsertAsset', payload: { asset: cloneValue(assets.get(assetId)) } }]
+    }
+    case 'replaceDocument': {
+      if (!payload.document || typeof payload.document !== 'object') break
+      return [{ type: 'replaceDocument', payload: { document: cloneValue(document) } }]
+    }
+    default:
+      break
+  }
+  return []
+}
+
+// Inverse of an op batch against the document it was applied to. Per-op
+// inverse groups keep their internal order (nodes before their edges) while
+// the groups themselves reverse, so applying the result after the forward
+// batch restores the document (modulo projectMeta.updatedAt and keys the
+// batch introduced, which come back as null).
+const invertProjectOps = (document, ops = []) => {
+  let sim = normalizeProjectDocument(document)
+  const groups = []
+  ops.forEach((op) => {
+    const inverse = invertSingleOp(sim, op)
+    if (inverse.length) groups.push(inverse)
+    sim = applyProjectOps(sim, [op])
+  })
+  return groups.reverse().flat()
+}
+
 module.exports = {
   PROJECT_DOCUMENT_VERSION,
   ENTITY_TYPES: Array.from(ENTITY_TYPES),
@@ -885,5 +1099,6 @@ module.exports = {
   normalizeProjectEdge,
   normalizeProjectMeta,
   normalizeWindowLayout,
-  applyProjectOps
+  applyProjectOps,
+  invertProjectOps
 }

@@ -15,6 +15,7 @@ const {
   formatAuthRoleLabel,
   hasRequiredAuthRole,
   isAuthScopeAllowedForSpace,
+  isGuestSubject,
   normalizeAuthRole,
   normalizeAuthScopeSpaces
 } = require('./authAccess')
@@ -462,15 +463,16 @@ const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
 const GUEST_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30
 
 // Decide what a brand-new guest can touch:
-//  - a configured globalSpaceId (default: GUEST_SPACES[0], usually 'main') →
-//    everyone shares that one editable 'global' space;
-//  - globalSpaceId explicitly cleared (null) → each guest gets a private
-//    'sandbox' space provisioned on demand.
+//  - default → each guest gets a private 'sandbox' space provisioned on demand;
+//  - admin sets a globalSpaceId in config (guest entry) → everyone shares that
+//    one editable 'global' space instead (open jam / exhibition mode);
+//  - GUEST_SPACES env (dev-only override) forces a shared space when the
+//    config is silent.
 const resolveGuestSpaces = async (guestId) => {
   const cfg = await configStore.read()
   const globalSpaceId = Object.prototype.hasOwnProperty.call(cfg, 'globalSpaceId')
     ? cfg.globalSpaceId
-    : (GUEST_SPACES[0] || null)
+    : (process.env.GUEST_SPACES ? (GUEST_SPACES[0] || null) : null)
   if (globalSpaceId) {
     return [normalizeSpaceId(globalSpaceId) || globalSpaceId]
   }
@@ -566,14 +568,18 @@ router.get('/api/auth/session', async (req, res, next) => {
 
     const spaceLimit = config.freeSpaceLimit
     const exempt = Boolean(state.isUnrestricted) || state.role === 'admin'
-    const ownerId = state.type === 'session' ? state.subject : null
+    // A returning guest carries a normal session cookie; the guest: subject
+    // prefix keeps it from counting as an owning account (create/quota) and
+    // keeps the reported type honest for the client's guest indicator.
+    const isGuest = state.type === 'guest' || (state.type === 'session' && isGuestSubject(state.subject))
+    const ownerId = state.type === 'session' && !isGuest ? state.subject : null
     const ownedSpaceCount = ownerId ? countSpacesOwnedBy(ownerId) : 0
     const canCreateSpace = !config.requireAuth || exempt || (Boolean(ownerId) && ownedSpaceCount < spaceLimit)
 
     res.json({
       requireAuth: config.requireAuth,
       authenticated: Boolean(state.authenticated),
-      type: state.type || null,
+      type: isGuest ? 'guest' : (state.type || null),
       role: state.role || null,
       subject: state.subject || null,
       label: state.label || null,
@@ -695,6 +701,33 @@ const requireWriteRole = (requiredRole = 'editor') => (req, res, next) => {
 }
 
 const requireAdminWrite = requireWriteRole('admin')
+
+// Owner self-service: the signed-in account that created a space manages it
+// (rename, visibility, publish target, delete); admins manage everything.
+// Guests/tokens/sync-keys never qualify — only real session identities.
+const isSpaceOwnerOrAdminState = (state, meta) => {
+  if (!state) return false
+  if (state.role === 'admin') return true
+  return state.type === 'session' && Boolean(meta?.ownerUserId) && meta.ownerUserId === state.subject
+}
+
+// Route-level gate for space management writes. Sits on top of
+// requireWriteRole('editor'), which already enforced auth + space scope.
+const requireSpaceOwnerOrAdminWrite = async (req, res, next) => {
+  if (!config.requireAuth) return next()
+  try {
+    const spaceId = normalizeSpaceId(req.params.spaceId) || req.params.spaceId
+    const meta = await loadSpaceMeta(spaceId)
+    if (!meta) return res.status(404).json({ error: 'Space not found.' })
+    if (!isSpaceOwnerOrAdminState(req.authState || {}, meta)) {
+      return res.status(403).json({ error: 'Only the space owner or an admin can manage this space.' })
+    }
+    req.spaceMeta = meta
+    return next()
+  } catch (error) {
+    return next(error)
+  }
+}
 
 // Unlike requireWriteRole, this applies to every method including GET/HEAD —
 // for admin-only resources (like user management) that have no public read path.
@@ -874,12 +907,10 @@ router.post('/api/github/webhook', async (req, res) => {
 
 // Creating a space (POST /api/spaces) is open to any signed-in account; the
 // route handler enforces the free-tier quota (and blocks guests/tokens). Space
-// *management* (PATCH/DELETE below) stays admin-only.
+// *management* (PATCH/DELETE below) is owner-or-admin, enforced by
+// requireSpaceOwnerOrAdminWrite on the routes themselves.
 router.use('/api/spaces/:spaceId', (req, res, next) => {
   req.requiredSpaceId = normalizeSpaceId(req.params.spaceId) || null
-  if (['PATCH', 'DELETE'].includes(req.method) && (req.path === '/' || req.path === '')) {
-    req.requiredWriteRole = 'admin'
-  }
   next()
 })
 
@@ -888,7 +919,12 @@ router.use('/api/projects/:projectId', async (req, res, next) => {
     const project = await resolveProjectContext(req.params.projectId)
     req.requiredSpaceId = project?.spaceId || null
     if (req.method === 'DELETE' && (req.path === '/' || req.path === '')) {
-      req.requiredWriteRole = 'admin'
+      // Deleting a project is owner-or-admin, like managing its space: keep
+      // the admin requirement unless the caller owns the parent space.
+      const meta = project?.spaceId ? await loadSpaceMeta(project.spaceId) : null
+      if (!isSpaceOwnerOrAdminState(req.authState || {}, meta)) {
+        req.requiredWriteRole = 'admin'
+      }
     }
     next()
   } catch (error) {
@@ -960,6 +996,7 @@ registerSpaceRoutes(router, {
   normalizeSpaceId,
   readProjectDocument,
   requireAdminWrite,
+  requireSpaceOwnerOrAdminWrite,
   onDeleteSpace: async (spaceId) => removeProjectIndexEntriesForSpace(SPACES_DIR, spaceId),
   readJson,
   readOpsHistory,
@@ -983,9 +1020,7 @@ const requireSpaceOwnerOrAdmin = async (req, res) => {
   const meta = await loadSpaceMeta(spaceId)
   if (!meta) { res.status(404).json({ error: 'Space not found.' }); return null }
   const state = req.authState || {}
-  const isAdmin = state.role === 'admin'
-  const isOwnerSession = state.type === 'session' && meta.ownerUserId && meta.ownerUserId === state.subject
-  if (!isAdmin && !isOwnerSession) {
+  if (!isSpaceOwnerOrAdminState(state, meta)) {
     res.status(403).json({ error: 'Only the space owner can manage sync keys.' })
     return null
   }

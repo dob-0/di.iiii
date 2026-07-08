@@ -55,6 +55,8 @@ export function useSpacesController({
                 lastActive,
                 isPermanent: typeof space.permanent === 'boolean' ? space.permanent : Boolean(existing.isPermanent),
                 allowEdits: typeof space.allowEdits === 'boolean' ? space.allowEdits : (existing.allowEdits !== false),
+                isPublic: typeof space.isPublic === 'boolean' ? space.isPublic : Boolean(existing.isPublic),
+                isOwner: typeof space.isOwner === 'boolean' ? space.isOwner : (existing.isOwner !== false),
                 publishedProjectId: typeof space.publishedProjectId === 'string' && space.publishedProjectId.trim()
                     ? space.publishedProjectId.trim()
                     : (existing.publishedProjectId || null)
@@ -244,6 +246,7 @@ export function useSpacesController({
         handleRenameSpace,
         handleToggleSpacePermanent,
         handleToggleSpaceEditLock,
+        handleToggleSpacePublic,
         handleQuickSpaceCreate
     } = useSpaceActions({
         spaceId,
@@ -277,6 +280,7 @@ export function useSpacesController({
         handleRenameSpace,
         handleToggleSpacePermanent,
         handleToggleSpaceEditLock,
+        handleToggleSpacePublic,
         handleQuickSpaceCreate
     }
 }

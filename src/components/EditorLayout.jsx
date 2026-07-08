@@ -51,6 +51,7 @@ export function EditorLayout({
     handleDeleteSpace,
     handleRenameSpace,
     handleToggleSpacePermanent,
+    handleToggleSpacePublic,
     newSpaceName,
     setNewSpaceName,
     openAfterCreateTarget,
@@ -142,6 +143,7 @@ export function EditorLayout({
                     onDeleteSpace={handleDeleteSpace}
                     onRenameSpace={handleRenameSpace}
                     onTogglePermanent={handleToggleSpacePermanent}
+                    onTogglePublic={handleToggleSpacePublic}
                     newSpaceName={newSpaceName}
                     onSpaceNameChange={setNewSpaceName}
                     openAfterCreateTarget={openAfterCreateTarget}

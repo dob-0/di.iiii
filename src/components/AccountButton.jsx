@@ -136,8 +136,11 @@ export default function AccountButton({ authState, onLogout }) {
                 <Stack spacing={0}>
                     {isGuest ? (
                         <Box sx={{ px: 2, py: 1.5 }}>
+                            <Typography variant="body2" sx={{ color: 'var(--ui-text-primary)', fontWeight: 600 }}>
+                                Guest session
+                            </Typography>
                             <Typography variant="caption" sx={{ color: 'var(--ui-text-muted)', display: 'block', mb: 1.5 }}>
-                                Save your work and access your spaces
+                                Temporary — sign in to save your work and keep your spaces
                             </Typography>
                             {hasOAuth ? (
                                 <Stack spacing={1}>

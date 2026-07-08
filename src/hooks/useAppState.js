@@ -244,6 +244,7 @@ export function useAppState() {
         handleRenameSpace,
         handleToggleSpacePermanent,
         handleToggleSpaceEditLock,
+        handleToggleSpacePublic,
         handleQuickSpaceCreate
     } = useSpacesController({
         spaceId,
@@ -725,6 +726,7 @@ export function useAppState() {
             handleRenameSpace,
             handleToggleSpacePermanent,
             handleToggleSpaceEditLock,
+            handleToggleSpacePublic,
             handleReloadFromServer,
             handlePublishToServer,
             socketEmit,

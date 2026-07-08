@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Box, Container } from '@mui/material'
 import useAuthSession from '../../hooks/useAuthSession.js'
+import { getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
 import {
     listServerSpaces,
     createServerSpace,
@@ -10,11 +11,13 @@ import {
     patchServerConfig
 } from '../../services/serverSpaces.js'
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
+import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import '../styles/studio-space-hub.css'
 
 export default function SpaceHub() {
-    const { authenticated, login, canCreateSpace, ownedSpaceCount, spaceLimit } = useAuthSession()
+    const { authenticated, type, role, canCreateSpace, ownedSpaceCount, spaceLimit } = useAuthSession()
     const [spaces, setSpaces] = useState([])
     const [status, setStatus] = useState('loading...')
     const [creatingTitle, setCreatingTitle] = useState(null)
@@ -24,6 +27,15 @@ export default function SpaceHub() {
     const [projectTitles, setProjectTitles] = useState({})
     // project linker state: { spaceId, projects, loading, renamingId, renameValue }
     const [linker, setLinker] = useState(null)
+    // GitHub sync panel state: { spaceId, projects, loading }
+    const [github, setGithub] = useState(null)
+    const [providers, setProviders] = useState(null) // null until sign-in requested
+    const [copiedLiveId, setCopiedLiveId] = useState(null)
+
+    const isGuest = type === 'guest'
+    const isAccount = authenticated && !isGuest
+    const isAdmin = role === 'admin'
+    const canManage = (space) => space.isOwner || isAdmin
 
     const loadSpaces = useCallback(async () => {
         setStatus('loading...')
@@ -96,6 +108,18 @@ export default function SpaceHub() {
         }
     }, [loadSpaces])
 
+    const handleCopyLiveLink = useCallback(async (space, e) => {
+        e.stopPropagation()
+        const url = getSpaceShareUrl(space.id)
+        try {
+            await navigator.clipboard.writeText(url)
+            setCopiedLiveId(space.id)
+            setTimeout(() => setCopiedLiveId(null), 2000)
+        } catch {
+            window.prompt('Copy live link', url)
+        }
+    }, [])
+
     const handleTogglePublic = useCallback(async (space, e) => {
         e.stopPropagation()
         try {
@@ -136,6 +160,33 @@ export default function SpaceHub() {
             )
         }
     }, [linker])
+
+    const handleOpenGithub = useCallback(async (space, e) => {
+        e.stopPropagation()
+        if (github?.spaceId === space.id) {
+            setGithub(null)
+            return
+        }
+        setGithub({ spaceId: space.id, projects: [], loading: true })
+        try {
+            const projects = await listProjects(space.id)
+            setGithub(prev => prev?.spaceId === space.id ? { spaceId: space.id, projects, loading: false } : prev)
+        } catch {
+            setGithub(prev => prev?.spaceId === space.id ? { spaceId: space.id, projects: [], loading: false } : prev)
+        }
+    }, [github])
+
+    const handleSignIn = useCallback(async () => {
+        if (providers) {
+            setProviders(null)
+            return
+        }
+        try {
+            setProviders(await getApiAuthProviders())
+        } catch {
+            setProviders({ github: false, google: false })
+        }
+    }, [providers])
 
     const handleLinkProject = useCallback(async (spaceId, projectId) => {
         try {
@@ -182,7 +233,7 @@ export default function SpaceHub() {
                         <h1 className="ssh-title">Spaces</h1>
                     </div>
                     <div className="ssh-actions">
-                        {authenticated ? (
+                        {isAccount ? (
                             creatingTitle === null ? (
                                 canCreateSpace ? (
                                     <button
@@ -217,13 +268,33 @@ export default function SpaceHub() {
                                     <button className="ssh-btn-cancel" type="button" onClick={() => setCreatingTitle(null)}>✕</button>
                                 </form>
                             )
-                        ) : (
-                            <button className="ssh-btn-signin" onClick={login}>
+                        ) : providers === null ? (
+                            <button className="ssh-btn-signin" onClick={handleSignIn}>
                                 Sign in to create
                             </button>
+                        ) : (
+                            <div className="ssh-actions">
+                                {providers.github && (
+                                    <a className="ssh-btn-signin" href={getOAuthUrl('github')}>Continue with GitHub</a>
+                                )}
+                                {providers.google && (
+                                    <a className="ssh-btn-signin" href={getOAuthUrl('google')}>Continue with Google</a>
+                                )}
+                                {!providers.github && !providers.google && (
+                                    <span className="ssh-quota-full">No sign-in providers configured.</span>
+                                )}
+                            </div>
                         )}
                     </div>
                 </div>
+
+                {isGuest && (
+                    <p className="ssh-guest-banner">
+                        {spaces.some(s => s.kind === 'sandbox')
+                            ? 'Guest session — you\'re working in a private temporary sandbox. Sign in to create spaces that are yours and stay.'
+                            : 'Guest session — you\'re in a shared space. Sign in to create your own spaces.'}
+                    </p>
+                )}
 
                 {status && (
                     <p className={`ssh-status${status.includes('error') ? ' ssh-status-error' : ''}`}>
@@ -253,6 +324,7 @@ export default function SpaceHub() {
                                         <span className="ssh-space-id">{space.id}</span>
                                         {isMain && <span className="ssh-badge-main">Main</span>}
                                         {space.isPublic && <span className="ssh-badge-live">Live</span>}
+                                        {space.isPublic && !canManage(space) && <span className="ssh-badge-viewonly">Not yours</span>}
                                     </div>
                                     <p className="ssh-space-label">{space.label || space.id}</p>
                                     {linkedTitle && (
@@ -263,8 +335,23 @@ export default function SpaceHub() {
                                             ⚠ Not public — visitors will see a login wall, not the project.
                                         </p>
                                     )}
+                                    {space.isPublic && (
+                                        <div className="ssh-live-link" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                                            <a
+                                                className="ssh-live-url"
+                                                href={getSpaceShareUrl(space.id)}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                            >
+                                                {getSpaceShareUrl(space.id)}
+                                            </a>
+                                            <button className="ssh-card-btn" onClick={e => handleCopyLiveLink(space, e)}>
+                                                {copiedLiveId === space.id ? 'Copied' : 'Copy'}
+                                            </button>
+                                        </div>
+                                    )}
 
-                                    {authenticated && (
+                                    {canManage(space) && (
                                         <div className="ssh-card-actions" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                                             <button className="ssh-card-btn" onClick={e => handleRename(space, e)}>
                                                 Rename
@@ -281,7 +368,13 @@ export default function SpaceHub() {
                                             >
                                                 {space.publishedProjectId ? 'Change project' : 'Link project'}
                                             </button>
-                                            {!isMain && (
+                                            <button
+                                                className={`ssh-card-btn${github?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                                onClick={e => handleOpenGithub(space, e)}
+                                            >
+                                                GitHub sync
+                                            </button>
+                                            {isAdmin && !isMain && (
                                                 <button className="ssh-card-btn" onClick={e => handleSetMain(space, e)}>
                                                     Set main
                                                 </button>
@@ -292,6 +385,14 @@ export default function SpaceHub() {
                                             >
                                                 Delete
                                             </button>
+                                        </div>
+                                    )}
+
+                                    {github?.spaceId === space.id && (
+                                        <div className="ssh-github-panel" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                                            {github.loading
+                                                ? <p className="ssh-linker-status">Loading…</p>
+                                                : <GithubSyncSection space={space} projects={github.projects} />}
                                         </div>
                                     )}
 

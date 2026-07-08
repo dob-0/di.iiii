@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import { usePreferencesData } from '../hooks/usePreferencesData.js'
+import useAuthSession from '../hooks/useAuthSession.js'
+import { hasServerApi } from '../services/apiClient.js'
+import { buildStudioHubPath, navigateToStudioPath } from '../studio/utils/studioRouting.js'
 import {
     ArchitectureCanvas,
     ArchitectureLegend,
@@ -100,8 +103,37 @@ export default function PreferencesPage({ onNavigateToEditor }) {
         formatJson
     } = usePreferencesData({ onNavigateToEditor })
 
+    const auth = useAuthSession()
+
     const quickActions = managementButtons.filter((button) => QUICK_ACTION_KEYS.includes(button.key))
     const recentLogEntries = runtimePreviewEntries.slice(0, 5)
+
+    // The server already rejects non-admin API calls; this keeps non-admins
+    // from landing on a console where every panel errors. Your own spaces are
+    // managed from /studio instead.
+    if (hasServerApi && auth.requireAuth && !auth.loading && auth.role !== 'admin') {
+        return (
+            <div className="preferences-page">
+                <div className="preferences-gate">
+                    <ModuleSection title="Admin console" subtitle="Admins only">
+                        <div className="preferences-empty">
+                            This page is for platform admins. Your spaces — create, rename,
+                            publish, GitHub sync — live in the Studio hub.
+                        </div>
+                        <div className="preferences-command-grid">
+                            <button
+                                type="button"
+                                className="toggle-button"
+                                onClick={() => navigateToStudioPath(buildStudioHubPath())}
+                            >
+                                Go to my spaces
+                            </button>
+                        </div>
+                    </ModuleSection>
+                </div>
+            </div>
+        )
+    }
 
     const sections = SECTIONS.map((section) => {
         if (section.key === 'objects') return { ...section, badge: objects?.length || 0 }

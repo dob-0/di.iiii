@@ -37,18 +37,17 @@ export const WIKI_ARTICLES = [
         id: 'guest-and-sandbox-modes',
         category: 'Spaces & access',
         title: 'Guest & sandbox modes',
-        summary: 'What signed-out visitors get: a shared global space, or a private sandbox each.',
+        summary: 'Signed-out visitors get a private sandbox each by default; admins can switch to one shared space.',
         body: [
             'Visitors who are not signed in still get a working session so they can explore without an account.',
-            'There are two guest modes, chosen by the admin in the /admin → Manage console:',
             { list: [
-                'Shared global space — every guest lands in the same editable space (good for an open jam or demo).',
-                'Private sandbox — each guest gets their own throwaway sandbox space, isolated from others.'
+                'Private sandbox (default) — each guest gets their own throwaway sandbox space, isolated from everyone else. A banner on the Spaces page marks the session as temporary.',
+                'Shared global space — an admin can set a guest entry space in /admin → Manage; then every guest lands in that one editable space (good for an open jam or exhibition).'
             ] },
-            'Guests cannot create their own named spaces — that requires a signed-in account.'
+            'Guests cannot create their own named spaces — sign in with GitHub or Google to get spaces that are yours and stay.'
         ],
         tags: ['guest', 'sandbox', 'access'],
-        updated: '2026-06-26'
+        updated: '2026-07-08'
     },
     {
         id: 'free-spaces',
@@ -68,14 +67,17 @@ export const WIKI_ARTICLES = [
         id: 'publishing',
         category: 'Spaces & access',
         title: 'Publishing & public spaces',
-        summary: 'Make a project live and decide who can see it.',
+        summary: 'Make a project live and decide who can see it — right from your Spaces page.',
         body: [
             'Each space has a public URL at /<space>. Set a space’s published project, then mark the space Public to let anyone view it without signing in.',
+            'If you own the space you do all of this yourself on the Spaces page (/studio): Rename, Public/Private, Link project, GitHub sync, and Delete sit on each of your space cards. No admin needed.',
+            'Public spaces show their live link right on the card (and in the editor’s Spaces panel) with one-click Copy — that link is what visitors open. Public spaces you don’t own are marked “Not yours” and offer only View/Copy, so you always know which spaces are yours to manage.',
+            'The editor’s Spaces panel has the same self-serve Make Public / Make Private toggle as the Spaces page.',
             'Publishing (which project is live) and visibility (Public/Private) are independent choices — linking a project does not automatically make the space public.',
             'A published-but-private space shows a login wall to visitors instead of the scene.'
         ],
-        tags: ['publish', 'public', 'sharing'],
-        updated: '2026-06-26'
+        tags: ['publish', 'public', 'sharing', 'owner', 'live link'],
+        updated: '2026-07-08'
     },
     {
         id: 'studio-basics',
@@ -88,12 +90,12 @@ export const WIKI_ARTICLES = [
                 'Five windows, one per job: Create (shapes, lights, and one Files library — imports, Google Drive, Commons), Scene (entity tree + selected-entity editing), World (scene-wide settings), Share (publish, export, activity), Code (HTML/CSS/JS files + the 3D↔code viewport toggle).',
                 'Every file — uploaded, from Google Drive, or from the Commons — sits in the Create window’s Files list with + Add to place it in the scene, badges for scene usage and public sharing, and × to delete. PDFs import as image pages.',
                 'Drag to position; edit the selected entity in the Scene window — world defaults live in the World window.',
-                'Undo / redo with Ctrl+Z / Ctrl+Y.',
+                'Undo / redo with Ctrl+Z / Ctrl+Y — undo reverts only your own last change (a slider drag or a typing burst counts as one step), so working alongside collaborators is safe: their edits are never rolled back by your undo.',
                 'Your panel layout is remembered — open panels and their positions restore next visit; use Arrange → Reset to go back to the default layout.'
             ] }
         ],
         tags: ['studio', 'editor', 'basics'],
-        updated: '2026-07-02'
+        updated: '2026-07-08'
     },
     {
         id: 'studio-content-model',
@@ -117,8 +119,9 @@ export const WIKI_ARTICLES = [
         id: 'admin-manage',
         category: 'Spaces & access',
         title: 'Admin / Manage console',
-        summary: 'The /admin Manage tab is one directory tree for spaces, projects, and access.',
+        summary: 'The /admin console is admins-only; your own spaces are managed from /studio.',
         body: [
+            '/admin is the platform console, visible to admin accounts only — everyone else is pointed back to their Spaces page. Owners never need it: your own spaces are fully self-service on /studio.',
             'Admins manage everything from /admin → Manage: a directory tree of spaces, each expanding to its projects.',
             { list: [
                 'Create / rename / delete spaces and projects inline.',
@@ -127,7 +130,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['admin', 'manage', 'access'],
-        updated: '2026-06-26'
+        updated: '2026-07-08'
     },
     {
         id: 'keyboard-shortcuts',
@@ -138,7 +141,7 @@ export const WIKI_ARTICLES = [
             { list: [
                 'H — toggle the UI',
                 'F or . — frame the selection (Studio)',
-                'Ctrl+Z — undo · Ctrl+Y or Ctrl+Shift+Z — redo',
+                'Ctrl+Z — undo · Ctrl+Y or Ctrl+Shift+Z — redo (granular: reverts only your own last change, collaborator-safe)',
                 'Shift+D or Ctrl+D — duplicate · Delete/Backspace — remove',
                 'G / R / S — move, rotate, scale gizmo; X / Y / Z constrain the axis',
                 'Mouse wheel — zoom (always; it never rotates the view)',
@@ -148,7 +151,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['shortcuts', 'controls', 'vr'],
-        updated: '2026-07-07'
+        updated: '2026-07-08'
     },
     {
         id: 'api-and-agents',
@@ -174,17 +177,17 @@ export const WIKI_ARTICLES = [
         title: 'GitHub sync',
         summary: 'Connect a space to a GitHub repo — pushes auto-update the live space.',
         body: [
-            'A space can be linked to a GitHub repo so every push updates the live space automatically, through the di.iiii GitHub App. No command line needed — everything happens in /admin.',
+            'A space can be linked to a GitHub repo so every push updates the live space automatically, through the di.iiii GitHub App. No command line needed — space owners connect from the Spaces page (/studio → GitHub sync on your space card); admins have the same panel in /admin → Manage.',
             { list: [
-                'In /admin → Manage → pick a space → GitHub sync, click "Install the di.iiii app on your repo" — GitHub asks which repos to allow (one time).',
-                'Back in admin, hit refresh and pick your repository from the dropdown, choose the project, Connect.',
+                'Open GitHub sync on your space card, click the connect button — GitHub asks which repos to allow (one time).',
+                'Back in di.iiii the repo list fills in by itself — pick your repository from the dropdown and it connects immediately.',
                 'Edit your repo’s entry file (e.g. index.html) and push — the space re-syncs in seconds.',
                 'Advanced: add a di-space.json manifest to the repo and pushes sync the whole space: "include" globs bring extra code files (css/js/…), "assets" globs upload the media your entry references (videos, images, models) with their URLs rewritten automatically. Without a manifest, only the entry file syncs.',
                 'Sync is one-way (repo → space); Disconnect anytime.'
             ] }
         ],
         tags: ['github', 'sync', 'developers', 'deploy'],
-        updated: '2026-07-07'
+        updated: '2026-07-08'
     },
     {
         id: 'google-drive-import',

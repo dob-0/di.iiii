@@ -93,4 +93,12 @@ textarea,
     user-select: text;
 }
 
+/* links/images are natively draggable and spawn a snapshot ghost mid-drag;
+   suppressNativeDrag() covers Firefox, this covers WebKit/Blink without JS */
+img,
+a
+{
+    -webkit-user-drag: none;
+}
+
 

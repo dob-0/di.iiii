@@ -240,4 +240,49 @@ describe('ESM/CJS mirror equivalence', () => {
       expect(stripClock(fromCjs)).toEqual(stripClock(fromEsm))
     }
   })
+
+  it('cascades deleteEntity to children identically (regression: CJS deleted only the parent)', async () => {
+    const esm = await loadEsm()
+    const fixture = {
+      entities: [
+        { id: 'parent', type: 'group', components: {} },
+        { id: 'kid', type: 'box', parentId: 'parent', components: {} },
+        { id: 'grandkid', type: 'box', parentId: 'kid', components: {} },
+        { id: 'bystander', type: 'box', components: {} }
+      ]
+    }
+    const ops = [{ type: 'deleteEntity', payload: { entityId: 'parent' } }]
+    const fromCjs = schema.applyProjectOps(schema.cloneValue(fixture), ops)
+    const fromEsm = esm.applyProjectOps(esm.cloneValue(fixture), ops)
+    expect(fromCjs.entities.map((e) => e.id)).toEqual(['bystander'])
+    expect(stripClock(fromCjs)).toEqual(stripClock(fromEsm))
+  })
+
+  it('inverts representative op batches identically', async () => {
+    const esm = await loadEsm()
+    // No createNode here: ESM validates typeIds against the node registry and
+    // CJS deliberately does not, so unknown-type creates would diverge.
+    const ops = [
+      { type: 'createEntity', payload: { entity: { id: 'e9', type: 'box', components: {} } } },
+      { type: 'updateEntity', payload: { entityId: 'e2', patch: { components: { media: { volume: 5 } } } } },
+      { type: 'deleteEntity', payload: { entityId: 'e1' } },
+      { type: 'setWorldState', payload: { patch: { backgroundColor: '#0f0f0f' } } },
+      { type: 'deleteNode', payload: { nodeId: 'n1' } },
+      { type: 'deleteAsset', payload: { assetId: 'abc' } }
+    ]
+    const stripDeep = (value) => {
+      if (Array.isArray(value)) return value.map(stripDeep)
+      if (value && typeof value === 'object') {
+        return Object.fromEntries(Object.entries(value).map(([key, nested]) => (
+          [key, key === 'createdAt' || key === 'updatedAt' ? 0 : stripDeep(nested)]
+        )))
+      }
+      return value
+    }
+    for (const fixture of FIXTURES) {
+      const fromCjs = schema.invertProjectOps(schema.cloneValue(fixture), ops)
+      const fromEsm = esm.invertProjectOps(esm.cloneValue(fixture), ops)
+      expect(stripDeep(fromCjs)).toEqual(stripDeep(fromEsm))
+    }
+  })
 })

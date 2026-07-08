@@ -81,6 +81,29 @@ export function useSpaceActions({
         await refreshSpaces()
     }, [isOfflineMode, refreshSpaces, supportsServerSpaces, updateServerSpace])
 
+    // Public visibility lives only on the server (no local-store equivalent),
+    // so this action requires a reachable server instead of degrading locally.
+    const handleToggleSpacePublic = useCallback(async (spaceIdentifier, nextValue) => {
+        if (!supportsServerSpaces || isOfflineMode || typeof updateServerSpace !== 'function') {
+            alert('Publishing needs the server. Reconnect and try again.')
+            return
+        }
+        try {
+            await updateServerSpace(spaceIdentifier, { isPublic: nextValue })
+        } catch (error) {
+            const status = typeof error?.status === 'number' ? error.status : null
+            if (status === 403) {
+                alert('Only the space owner can change its visibility.')
+            } else if (status) {
+                alert('Could not update the space visibility. Please try again.')
+            } else {
+                alert('Server is unavailable. Visibility unchanged.')
+            }
+            return
+        }
+        await refreshSpaces()
+    }, [isOfflineMode, refreshSpaces, supportsServerSpaces, updateServerSpace])
+
     const handleRenameSpace = useCallback(async (spaceIdentifier) => {
         if (!spaceIdentifier) return
         const currentSpace = spaces.find((space) => space.id === spaceIdentifier)
@@ -139,6 +162,7 @@ export function useSpaceActions({
         handleRenameSpace,
         handleToggleSpacePermanent,
         handleToggleSpaceEditLock,
+        handleToggleSpacePublic,
         handleQuickSpaceCreate
     }
 }

@@ -1270,3 +1270,10 @@
 
     .preferences-object-badges { justify-content: flex-start; }
 }
+
+/* Non-admin landing on /admin — a single centered card instead of the console. */
+.preferences-gate {
+    max-width: 480px;
+    margin: 15vh auto 0;
+    padding: 0 16px;
+}

@@ -100,7 +100,8 @@ export default function EditorLayoutContainer({
         handleCopySpaceLink,
         handleDeleteSpace,
         handleRenameSpace,
-        handleToggleSpacePermanent
+        handleToggleSpacePermanent,
+        handleToggleSpacePublic
     } = useContext(ActionsContext)
     const { fileInputRef } = useContext(RefsContext)
 
@@ -416,6 +417,7 @@ export default function EditorLayoutContainer({
             handleDeleteSpace={handleDeleteSpace}
             handleRenameSpace={handleRenameSpace}
             handleToggleSpacePermanent={handleToggleSpacePermanent}
+            handleToggleSpacePublic={handleToggleSpacePublic}
             newSpaceName={newSpaceName}
             setNewSpaceName={setNewSpaceName}
             openAfterCreateTarget={openAfterCreateTarget}

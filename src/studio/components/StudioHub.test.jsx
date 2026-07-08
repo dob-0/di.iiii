@@ -84,6 +84,16 @@ describe('StudioHub', () => {
         })
     })
 
+    it('shows a create-first-project empty state when the space has no projects', async () => {
+        listProjects.mockResolvedValue([])
+
+        render(<StudioHub spaceId="gallery" />)
+
+        expect(await screen.findByText('No projects yet')).toBeTruthy()
+        fireEvent.click(screen.getByRole('button', { name: '+ Create your first project' }))
+        expect(screen.getByPlaceholderText('Project name')).toBeTruthy()
+    })
+
     it('creates imported Studio projects with the Studio import source', async () => {
         listProjects.mockResolvedValue([])
         createProject.mockResolvedValue({

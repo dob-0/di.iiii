@@ -84,6 +84,11 @@ const canAccessSpace = (authState, spaceId) => {
   return isAuthScopeAllowedForSpace(spaces, spaceId)
 }
 
+// Guest identities live in session cookies like real accounts; the 'guest:'
+// subject prefix is the single convention that tells them apart (the client's
+// AccountButton relies on it too). Guests never count as owning accounts.
+const isGuestSubject = (value) => String(value || '').startsWith('guest:')
+
 const formatAuthScopeLabel = (spaces) => {
   const normalizedSpaces = normalizeAuthScopeSpaces(spaces, null)
   if (normalizedSpaces === null) return 'all spaces'
@@ -100,6 +105,7 @@ module.exports = {
   getAuthRoleLevel,
   hasRequiredAuthRole,
   isAuthScopeAllowedForSpace,
+  isGuestSubject,
   normalizeAuthRole,
   normalizeAuthScopeSpaceId,
   normalizeAuthScopeSpaces

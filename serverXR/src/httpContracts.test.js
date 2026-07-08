@@ -375,11 +375,11 @@ describe('server write contracts', () => {
             },
             body: JSON.stringify({ publishedProjectId: 'editor-project' })
         })
+        // In scope, but not the owner (the space was created by the admin API
+        // token, so it has no ownerUserId) — space management is owner-or-admin.
         expect(deniedPublish.status).toBe(403)
         await expect(deniedPublish.json()).resolves.toMatchObject({
-            error: 'Admin role required.',
-            requiredRole: 'admin',
-            currentRole: 'editor'
+            error: 'Only the space owner or an admin can manage this space.'
         })
 
         const deniedDelete = await fetch(`${server.baseUrl}/api/projects/editor-project`, {
@@ -435,9 +435,7 @@ describe('server write contracts', () => {
         })
         expect(mixedSessionAndAdminTokenWrite.status).toBe(403)
         await expect(mixedSessionAndAdminTokenWrite.json()).resolves.toMatchObject({
-            error: 'Admin role required.',
-            requiredRole: 'admin',
-            currentRole: 'editor'
+            error: 'Only the space owner or an admin can manage this space.'
         })
 
         const adminDelete = await fetch(`${server.baseUrl}/api/projects/editor-project`, {
@@ -496,6 +494,152 @@ describe('server write contracts', () => {
             spaceLimit: 2,
             ownedSpaceCount: 2,
             canCreateSpace: false
+        })
+    })
+
+    it('lets a space owner self-manage their space, but keeps admin-only fields and others\' spaces off-limits', async () => {
+        const editorToken = 'owner-editor-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                EDITOR_API_TOKEN: editorToken,
+                // Token-login sessions are not DB users, so the on-create scope
+                // grant can't reach them — pre-scope the owned space instead.
+                EDITOR_ALLOWED_SPACES: 'admin-space,owned-space'
+            }
+        })
+
+        // Space created by the admin API token — no ownerUserId.
+        const adminSpace = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ label: 'Admin Space', slug: 'admin-space' })
+        })
+        expect(adminSpace.status).toBe(201)
+
+        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: editorToken })
+        })
+        expect(login.status).toBe(200)
+        const cookie = (login.headers.get('set-cookie') || '').split(';')[0]
+
+        // The session account creates a space and becomes its owner.
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ label: 'Mine', slug: 'owned-space' })
+        })
+        expect(created.status).toBe(201)
+
+        // GET /api/spaces reports isOwner per requester.
+        const listed = await fetch(`${server.baseUrl}/api/spaces`, { headers: { Cookie: cookie } })
+        const { spaces } = await listed.json()
+        const bySlug = Object.fromEntries(spaces.map(space => [space.id, space.isOwner]))
+        expect(bySlug['owned-space']).toBe(true)
+        expect(bySlug['admin-space']).toBe(false)
+
+        // Owner self-service: rename, visibility, publish target.
+        const ownerProject = await createServerProject(server, 'owned-space', { title: 'Own Project', slug: 'own-project' })
+        const patched = await fetch(`${server.baseUrl}/api/spaces/owned-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ label: 'Renamed Mine', isPublic: true, publishedProjectId: ownerProject.id })
+        })
+        expect(patched.status).toBe(200)
+        await expect(patched.json()).resolves.toMatchObject({
+            space: { label: 'Renamed Mine', isPublic: true, publishedProjectId: ownerProject.id }
+        })
+
+        // kind/permanent change platform behavior — admin-only even for the owner.
+        const deniedKind = await fetch(`${server.baseUrl}/api/spaces/owned-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ permanent: true })
+        })
+        expect(deniedKind.status).toBe(403)
+        await expect(deniedKind.json()).resolves.toMatchObject({
+            error: 'Only an admin can change kind or permanent.'
+        })
+
+        // Someone else's space stays off-limits even in scope.
+        const deniedOther = await fetch(`${server.baseUrl}/api/spaces/admin-space`, {
+            method: 'DELETE',
+            headers: { Cookie: cookie }
+        })
+        expect(deniedOther.status).toBe(403)
+        await expect(deniedOther.json()).resolves.toMatchObject({
+            error: 'Only the space owner or an admin can manage this space.'
+        })
+
+        // Owner deletes their own project, then their own space.
+        const deletedProject = await fetch(`${server.baseUrl}/api/projects/${ownerProject.id}`, {
+            method: 'DELETE',
+            headers: { Cookie: cookie }
+        })
+        expect(deletedProject.status).toBe(200)
+
+        const deletedSpace = await fetch(`${server.baseUrl}/api/spaces/owned-space`, {
+            method: 'DELETE',
+            headers: { Cookie: cookie }
+        })
+        expect(deletedSpace.status).toBe(200)
+        await expect(deletedSpace.json()).resolves.toMatchObject({ ok: true })
+    })
+
+    it('gives each guest a private sandbox by default, shared global space only when configured', async () => {
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                GUEST_SPACES: ''
+            }
+        })
+
+        // Fresh anonymous visitor → guest session scoped to a private sandbox.
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        expect(guest.status).toBe(200)
+        const guestState = await guest.json()
+        expect(guestState).toMatchObject({ authenticated: true, type: 'guest', role: 'editor' })
+        expect(guestState.spaces).toHaveLength(1)
+        expect(guestState.spaces[0]).toMatch(/^sandbox-/)
+        const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
+
+        // Two guests never share a sandbox.
+        const secondGuest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const secondState = await secondGuest.json()
+        expect(secondState.spaces[0]).toMatch(/^sandbox-/)
+        expect(secondState.spaces[0]).not.toBe(guestState.spaces[0])
+
+        // Guests cannot create named spaces.
+        const guestCreate = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: guestCookie },
+            body: JSON.stringify({ label: 'Guest Space', slug: 'guest-space' })
+        })
+        expect(guestCreate.status).toBe(403)
+        await expect(guestCreate.json()).resolves.toMatchObject({ code: 'auth_required' })
+
+        // Admin flips the guest entry to a shared global space → new guests land there.
+        const sharedSpace = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ label: 'Shared Main', slug: 'shared-main' })
+        })
+        expect(sharedSpace.status).toBe(201)
+        const configPatch = await fetch(`${server.baseUrl}/api/config`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ globalSpaceId: 'shared-main' })
+        })
+        expect(configPatch.status).toBe(200)
+
+        const sharedGuest = await fetch(`${server.baseUrl}/api/auth/session`)
+        await expect(sharedGuest.json()).resolves.toMatchObject({
+            type: 'guest',
+            spaces: ['shared-main']
         })
     })
 
