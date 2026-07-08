@@ -164,7 +164,7 @@ const DEFINITIONS = {
                 id: 'media',
                 label: 'Media',
                 fields: [
-                    { label: 'Asset', component: 'media', path: ['assetId'], type: 'asset' },
+                    { label: 'Asset', component: 'media', path: ['assetId'], type: 'asset', accept: 'image/' },
                     { label: 'Fit', component: 'media', path: ['fit'], type: 'select', options: [{ value: 'contain', label: 'Contain' }, { value: 'cover', label: 'Cover' }] }
                 ]
             }
@@ -178,10 +178,11 @@ const DEFINITIONS = {
                 id: 'media',
                 label: 'Media',
                 fields: [
-                    { label: 'Asset', component: 'media', path: ['assetId'], type: 'asset' },
+                    { label: 'Asset', component: 'media', path: ['assetId'], type: 'asset', accept: 'video/' },
                     { label: 'Autoplay', component: 'media', path: ['autoplay'], type: 'checkbox' },
                     { label: 'Loop', component: 'media', path: ['loop'], type: 'checkbox' },
-                    { label: 'Muted', component: 'media', path: ['muted'], type: 'checkbox' }
+                    { label: 'Muted', component: 'media', path: ['muted'], type: 'checkbox' },
+                    { label: 'Volume', component: 'media', path: ['volume'], type: 'number', min: 0, max: 1, step: 0.05 }
                 ]
             }
         ]
@@ -194,7 +195,7 @@ const DEFINITIONS = {
                 id: 'media',
                 label: 'Media',
                 fields: [
-                    { label: 'Asset', component: 'media', path: ['assetId'], type: 'asset' },
+                    { label: 'Asset', component: 'media', path: ['assetId'], type: 'asset', accept: 'audio/' },
                     { label: 'Autoplay', component: 'media', path: ['autoplay'], type: 'checkbox' },
                     { label: 'Loop', component: 'media', path: ['loop'], type: 'checkbox' },
                     { label: 'Volume', component: 'media', path: ['volume'], type: 'number', min: 0, max: 1, step: 0.05 },

@@ -99,7 +99,16 @@ export default function EntityContent({ entity, assetMap }) {
     case 'image':
         return <ImageObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
     case 'video':
-        return <VideoObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
+        return (
+            <VideoObject
+                assetRef={asset || null}
+                data={asset?.url || null}
+                opacity={appearance.opacity}
+                muted={media.muted !== false}
+                volume={media.volume}
+                loop={media.loop !== false}
+            />
+        )
     case 'audio':
         return (
             <AudioObject
@@ -165,6 +174,10 @@ export default function EntityContent({ entity, assetMap }) {
     }
     case 'portal':
         return <PortalObject entity={entity} />
+    case 'group':
+        // pure transform node — children render via the caller's hierarchy walk
+        // (without this, embedded groups fell to default and drew a phantom box)
+        return null
     default:
         return <BoxObject color={appearance.color} boxSize={[1, 1, 1]} />
     }

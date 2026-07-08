@@ -21,6 +21,7 @@ import CylinderObject from '../objectComponents/CylinderObject.jsx'
 import ImageObject from '../objectComponents/ImageObject.jsx'
 import VideoObject from '../objectComponents/VideoObject.jsx'
 import ModelObject from '../objectComponents/ModelObject.jsx'
+import AudioObject from '../objectComponents/AudioObject.jsx'
 import Text2DObject from '../objectComponents/Text2DObject.jsx'
 import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject from '../project/viewport/PortalObject.jsx'
@@ -63,6 +64,13 @@ function EntityVisual({ entity, assetMap }) {
     const media = entity.components?.media || {}
     const appearance = entity.components?.appearance || {}
     const asset = media.assetId ? assetMap.get(media.assetId) : null
+    const material = {
+        textureAsset: appearance.textureAssetId ? assetMap.get(appearance.textureAssetId) || null : null,
+        roughness: appearance.roughness,
+        metalness: appearance.metalness,
+        emissive: appearance.emissive,
+        emissiveIntensity: appearance.emissiveIntensity
+    }
 
     switch (entity.type) {
     case 'box':
@@ -72,6 +80,7 @@ function EntityVisual({ entity, assetMap }) {
                 boxSize={entity.components?.primitive?.size}
                 wireframe={Boolean(appearance.wireframe)}
                 opacity={appearance.opacity}
+                material={material}
             />
         )
     case 'sphere':
@@ -81,6 +90,7 @@ function EntityVisual({ entity, assetMap }) {
                 sphereRadius={entity.components?.primitive?.radius}
                 wireframe={Boolean(appearance.wireframe)}
                 opacity={appearance.opacity}
+                material={material}
             />
         )
     case 'cone':
@@ -91,6 +101,7 @@ function EntityVisual({ entity, assetMap }) {
                 coneHeight={entity.components?.primitive?.height}
                 wireframe={Boolean(appearance.wireframe)}
                 opacity={appearance.opacity}
+                material={material}
             />
         )
     case 'cylinder':
@@ -102,14 +113,56 @@ function EntityVisual({ entity, assetMap }) {
                 cylinderHeight={entity.components?.primitive?.height}
                 wireframe={Boolean(appearance.wireframe)}
                 opacity={appearance.opacity}
+                material={material}
             />
         )
     case 'image':
         return <ImageObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
     case 'video':
-        return <VideoObject assetRef={asset || null} data={asset?.url || null} opacity={appearance.opacity} />
+        return (
+            <VideoObject
+                assetRef={asset || null}
+                data={asset?.url || null}
+                opacity={appearance.opacity}
+                muted={media.muted !== false}
+                volume={media.volume}
+                loop={media.loop !== false}
+            />
+        )
     case 'model':
         return <ModelObject assetRef={asset || null} data={asset?.url || null} modelColor={appearance.color} applyModelColor={false} opacity={appearance.opacity} />
+    case 'audio':
+        return (
+            <AudioObject
+                assetRef={asset || null}
+                data={asset?.url || null}
+                color={appearance.color}
+                audioVolume={media.volume}
+                audioDistance={media.distance}
+                audioLoop={media.loop}
+                audioAutoplay={media.autoplay}
+                audioPaused={false}
+            />
+        )
+    case 'pointLight': {
+        const l = entity.components?.light || {}
+        return <pointLight color={l.color || '#ffffff'} intensity={l.intensity ?? 1} distance={l.distance ?? 10} decay={l.decay ?? 2} />
+    }
+    case 'spotLight': {
+        const l = entity.components?.light || {}
+        return <spotLight color={l.color || '#ffffff'} intensity={l.intensity ?? 2} distance={l.distance ?? 20} angle={l.angle ?? 0.52} penumbra={l.penumbra ?? 0.2} decay={l.decay ?? 2} />
+    }
+    case 'directionalLight': {
+        const l = entity.components?.light || {}
+        return <directionalLight color={l.color || '#fff7ea'} intensity={l.intensity ?? 1.5} />
+    }
+    case 'ambientLight': {
+        const l = entity.components?.light || {}
+        return <ambientLight color={l.color || '#ffffff'} intensity={l.intensity ?? 0.5} />
+    }
+    case 'group':
+        // children render via the hierarchy walk in AnimatedEntity
+        return null
     case 'portal':
         return <PortalObject entity={entity} />
     case 'text': {
@@ -155,7 +208,7 @@ function EntityVisual({ entity, assetMap }) {
         if (tc.variant === '3d') {
             return <Text3DObject data={value} color={appearance.color || '#ffffff'} fontSize3D={tc.fontSize3D} depth3D={tc.depth3D} />
         }
-        return <Text2DObject data={value} color={appearance.color || '#ffffff'} fontFamily={tc.fontFamily} fontWeight={tc.fontWeight} fontStyle={tc.fontStyle} />
+        return <Text2DObject data={value} color={appearance.color || '#ffffff'} fontFamily={tc.fontFamily} fontWeight={tc.fontWeight} fontStyle={tc.fontStyle} align={tc.align} />
     }
     default:
         return null
@@ -165,7 +218,7 @@ function EntityVisual({ entity, assetMap }) {
 // Idle motion layered on top of the authored transform -- gates and ground
 // stay put (they're architecture), flying pieces get a real flight path,
 // everything else gets a gentle bob + slow spin so the room feels alive.
-function AnimatedEntity({ entity, assetMap }) {
+function AnimatedEntity({ entity, assetMap, childMap = null }) {
     const groupRef = useRef(null)
     const basePos = entity.components?.transform?.position || [0, 0, 0]
     const baseRot = entity.components?.transform?.rotation || [0, 0, 0]
@@ -186,11 +239,18 @@ function AnimatedEntity({ entity, assetMap }) {
         applyAnimation(group, anim, basePos, baseRot, t)
     })
 
+    // Hidden entities hide their whole subtree, matching the editor.
+    if (entity.components?.runtime?.visible === false) return null
+
+    const children = childMap?.get(entity.id) || []
     return (
         <group ref={groupRef} position={basePos} rotation={baseRot} scale={baseScale}>
             <Suspense fallback={null}>
                 <EntityVisual entity={entity} assetMap={assetMap} />
             </Suspense>
+            {children.map((child) => (
+                <AnimatedEntity key={child.id} entity={child} assetMap={assetMap} childMap={childMap} />
+            ))}
         </group>
     )
 }
@@ -1058,6 +1118,18 @@ export default function LiveProjectScene({
         asset.url ? asset : { ...asset, url: buildProjectAssetUrl(projectId, asset.id) }
     ])), [doc?.assets, projectId])
     const gateEntity = useMemo(() => entities.find(isGateEntity) || null, [entities])
+    // Grouped children carry parent-relative transforms — render the hierarchy
+    // (roots only at the top level), matching the editor and portal embeds.
+    const entityChildMap = useMemo(() => {
+        const map = new Map()
+        for (const entity of entities) {
+            if (!entity.parentId) continue
+            if (!map.has(entity.parentId)) map.set(entity.parentId, [])
+            map.get(entity.parentId).push(entity)
+        }
+        return map
+    }, [entities])
+    const rootEntities = useMemo(() => entities.filter((e) => !e.parentId), [entities])
 
     const center = useMemo(() => {
         if (!entities.length) return new THREE.Vector3(0, 0, 0)
@@ -1136,8 +1208,8 @@ export default function LiveProjectScene({
                 <directionalLight color={directional.color} intensity={directional.intensity} position={directional.position} />
                 <Grid args={[80, 80]} cellColor="#2a3038" sectionColor="#3c4654" fadeDistance={40} infiniteGrid />
                 <AmbientField center={center} />
-                {showEntities && entities.map((entity) => (
-                    <AnimatedEntity key={entity.id} entity={entity} assetMap={assetMap} />
+                {showEntities && rootEntities.map((entity) => (
+                    <AnimatedEntity key={entity.id} entity={entity} assetMap={assetMap} childMap={entityChildMap} />
                 ))}
                 {showEntities && gateEntity ? <GateGlow entity={gateEntity} /> : null}
                 {interactive ? (

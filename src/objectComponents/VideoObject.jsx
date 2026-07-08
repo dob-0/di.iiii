@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
-import { attachVideoPlaybackRetry, configureVideoElement } from '../utils/videoPlayback.js'
+import { attachVideoPlaybackRetry, attachVideoSound, configureVideoElement } from '../utils/videoPlayback.js'
 
-function useVideoTextureSource(sourceUrl) {
+function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = true } = {}) {
     const [texture, setTexture] = useState(null)
     const [playbackBlocked, setPlaybackBlocked] = useState(false)
+    const videoRef = useRef(null)
 
     useEffect(() => {
         const resolvedSrc = typeof sourceUrl === 'string' ? sourceUrl.trim() : ''
@@ -17,6 +18,7 @@ function useVideoTextureSource(sourceUrl) {
         }
 
         const video = document.createElement('video')
+        videoRef.current = video
         configureVideoElement(video, resolvedSrc, { preload: 'auto' })
 
         const tex = new THREE.VideoTexture(video)
@@ -41,20 +43,29 @@ function useVideoTextureSource(sourceUrl) {
             video.pause()
             video.src = ''
             tex.dispose()
+            videoRef.current = null
             setTexture(null)
         }
     }, [sourceUrl])
 
+    // Sound and loop apply live without recreating the video/texture.
+    useEffect(() => {
+        const video = videoRef.current
+        if (!video) return undefined
+        video.loop = loop !== false
+        return attachVideoSound(video, { muted, volume })
+    }, [texture, muted, volume, loop])
+
     return { texture, playbackBlocked }
 }
 
-export default function VideoObject({ assetRef, data, opacity = 1, linkActive }) {
+export default function VideoObject({ assetRef, data, opacity = 1, linkActive, muted = true, volume = 1, loop = true }) {
     const assetUrl = useAssetUrl(assetRef, { preferRemoteSource: true })
     const isVideoType = !assetRef?.mimeType || assetRef.mimeType.startsWith('video/')
     const rawSource = (isVideoType ? assetUrl : null) || data || null
     const sourceUrl = typeof rawSource === 'string' ? rawSource.trim() : null
     const [size, setSize] = useState([1, 1])
-    const { texture, playbackBlocked } = useVideoTextureSource(sourceUrl)
+    const { texture, playbackBlocked } = useVideoTextureSource(sourceUrl, { muted, volume, loop })
 
     useEffect(() => {
         const resolvedSrc = typeof sourceUrl === 'string' ? sourceUrl.trim() : ''

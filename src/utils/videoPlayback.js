@@ -1,8 +1,8 @@
 export const isRemoteMediaUrl = (value) => /^https?:\/\//i.test(value || '')
 
-export const configureVideoElement = (video, sourceUrl, { preload = 'auto' } = {}) => {
+export const configureVideoElement = (video, sourceUrl, { preload = 'auto', loop = true } = {}) => {
     if (!video) return video
-    video.loop = true
+    video.loop = loop !== false
     video.muted = true
     video.defaultMuted = true
     video.volume = 0
@@ -18,6 +18,43 @@ export const configureVideoElement = (video, sourceUrl, { preload = 'auto' } = {
     video.src = sourceUrl
     video.load?.()
     return video
+}
+
+// Autoplay must start muted (browser policy). When an entity wants sound,
+// unmute after the first user gesture — allowed once playback is running —
+// or immediately if the session already had one (navigator.userActivation).
+export const attachVideoSound = (video, { muted = true, volume = 1 } = {}) => {
+    if (!video) return () => {}
+    if (muted !== false) {
+        video.muted = true
+        video.defaultMuted = true
+        video.volume = 0
+        return () => {}
+    }
+    const clamped = Math.min(1, Math.max(0, Number.isFinite(volume) ? volume : 1))
+    const unmute = () => {
+        video.muted = false
+        video.defaultMuted = false
+        video.volume = clamped
+    }
+    if (typeof navigator !== 'undefined' && navigator.userActivation?.hasBeenActive) {
+        unmute()
+        return () => {}
+    }
+    if (typeof window === 'undefined') return () => {}
+    const detach = () => {
+        window.removeEventListener('pointerdown', handler)
+        window.removeEventListener('keydown', handler)
+        window.removeEventListener('touchstart', handler)
+    }
+    function handler() {
+        unmute()
+        detach()
+    }
+    window.addEventListener('pointerdown', handler, { passive: true })
+    window.addEventListener('keydown', handler)
+    window.addEventListener('touchstart', handler, { passive: true })
+    return detach
 }
 
 export const attachVideoPlaybackRetry = (video, { onBlockedChange } = {}) => {

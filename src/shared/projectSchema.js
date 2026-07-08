@@ -200,7 +200,7 @@ export const buildDefaultComponentsForType = (type = 'box') => {
             base.media = { assetId: null, fit: 'contain', autoplay: false, loop: false, muted: true }
             break
         case 'video':
-            base.media = { assetId: null, fit: 'contain', autoplay: true, loop: true, muted: true }
+            base.media = { assetId: null, fit: 'contain', autoplay: true, loop: true, muted: true, volume: 0.8 }
             break
         case 'audio':
             base.media = { assetId: null, autoplay: true, loop: true, muted: false, volume: 0.8, distance: 8 }
