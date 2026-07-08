@@ -1,7 +1,7 @@
 // What can actually become a scene entity. Everything else still lives in the
 // space asset store (URL-referenced from code files), but gets no "+ Add".
 
-const MODEL_EXTENSIONS = ['glb', 'gltf']
+const MODEL_EXTENSIONS = ['glb', 'gltf', 'obj', 'stl', 'fbx']
 const PDF_MIME = 'application/pdf'
 
 export const extensionOf = (name = '') => {
@@ -24,7 +24,7 @@ export const canPlaceInScene = (asset) => {
 }
 
 export const ASSET_FORMAT_HINT =
-    'Scene formats: 3D models (.glb/.gltf) · images · video · audio · PDF (imported as image pages). Other files are stored and usable by URL.'
+    'Scene formats: 3D models (.glb/.gltf incl. Draco/Meshopt, .obj, .stl, .fbx) · images · video · audio · PDF (imported as image pages). Other files are stored and usable by URL.'
 
 // Render a PDF's pages to PNG File objects (page 1..maxPages). pdfjs is
 // imported lazily so it never lands in the main bundle.

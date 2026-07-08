@@ -1,13 +1,30 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
+import { useFrame } from '@react-three/fiber'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js'
+import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { MODEL_FORMATS, detectModelFormatFromMeta, detectModelFormatFromName } from '../utils/modelFormats.js'
 import { deleteAsset, getAssetBlob } from '../storage/assetStore.js'
 import { getAssetSourceUrl, streamRemoteAsset } from '../services/assetSources.js'
 import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
+
+// Compressed GLBs (Draco / Meshopt — the default export of most DCC tools and
+// asset stores) need their decoders registered or the load fails silently to
+// an invisible model. Decoder wasm ships in public/draco/.
+let sharedDracoLoader = null
+const getDracoLoader = () => {
+    if (!sharedDracoLoader) {
+        sharedDracoLoader = new DRACOLoader()
+        sharedDracoLoader.setDecoderPath('/draco/')
+    }
+    return sharedDracoLoader
+}
 
 export default function ModelObject({
     assetRef,
@@ -16,9 +33,12 @@ export default function ModelObject({
     applyModelColor = false,
     opacity = 1,
     materialsAssetRef = null,
-    modelFormat = null
+    modelFormat = null,
+    playAnimations = true,
+    animationSpeed = 1
 }) {
-    const [loadedScene, setLoadedScene] = useState(null)
+    const [loaded, setLoaded] = useState(null)
+    const loadedScene = loaded?.scene || null
 
     const effectiveFormat = useMemo(() => {
         if (modelFormat) return modelFormat
@@ -104,20 +124,21 @@ export default function ModelObject({
             return null
         }
 
-        const handleScene = (scene) => {
+        const handleScene = (scene, animations = []) => {
             if (disposed) return
-            setLoadedScene(scene)
+            setLoaded(scene ? { scene, animations } : null)
         }
 
         const handleError = (error) => {
             if (disposed) return
-            setLoadedScene(null)
+            console.warn('[ModelObject] failed to load model:', assetRef?.name || data, error?.message || error)
+            setLoaded(null)
         }
 
         const loadModel = async () => {
             const assetSource = await resolveAssetSource(assetRef, data)
             if (!assetSource) {
-                setLoadedScene(null)
+                setLoaded(null)
                 return
             }
             const materialSource = await resolveAssetSource(materialsAssetRef, null)
@@ -155,16 +176,26 @@ export default function ModelObject({
                     return
                 }
 
+                if (effectiveFormat === MODEL_FORMATS.FBX) {
+                    const arrayBuffer = await readArrayBuffer(assetSource)
+                    if (!arrayBuffer) throw new Error('FBX source missing array buffer.')
+                    const group = new FBXLoader().parse(arrayBuffer, '')
+                    handleScene(group, group?.animations || [])
+                    return
+                }
+
                 // default to GLTF/GLB
                 const arrayBuffer = await readArrayBuffer(assetSource)
                 if (!arrayBuffer) throw new Error('GLTF source missing array buffer.')
                 const loader = new GLTFLoader()
+                loader.setDRACOLoader(getDracoLoader())
+                loader.setMeshoptDecoder(MeshoptDecoder)
                 loader.parse(
                     arrayBuffer,
                     '',
                     (gltf) => {
                         const scene = gltf?.scene || gltf?.scenes?.[0] || null
-                        handleScene(scene)
+                        handleScene(scene, gltf?.animations || [])
                     },
                     handleError
                 )
@@ -182,7 +213,9 @@ export default function ModelObject({
 
     const renderedScene = useMemo(() => {
         if (!loadedScene) return null
-        const clone = loadedScene.clone(true)
+        // SkeletonUtils.clone keeps SkinnedMesh↔bone bindings intact; a plain
+        // deep clone renders rigged models frozen in their bind pose.
+        const clone = cloneSkeleton(loadedScene)
         clone.traverse((child) => {
             if (!child.isMesh) return
             let nextMaterial
@@ -216,6 +249,27 @@ export default function ModelObject({
         })
         return clone
     }, [loadedScene, applyModelColor, modelColor, opacity])
+
+    // Embedded animation clips (glTF/FBX) play on the rendered clone; speed 0
+    // or the Play animations toggle freezes them without reloading the model.
+    const mixerRef = useRef(null)
+    useEffect(() => {
+        mixerRef.current = null
+        const animations = loaded?.animations || []
+        if (!renderedScene || !animations.length || playAnimations === false) return undefined
+        const mixer = new THREE.AnimationMixer(renderedScene)
+        animations.forEach((clip) => mixer.clipAction(clip).play())
+        mixerRef.current = mixer
+        return () => {
+            mixer.stopAllAction()
+            mixerRef.current = null
+        }
+    }, [renderedScene, loaded, playAnimations])
+
+    useFrame((_, delta) => {
+        const speed = Number.isFinite(animationSpeed) ? animationSpeed : 1
+        mixerRef.current?.update(delta * speed)
+    })
 
     if (!renderedScene) return null
 

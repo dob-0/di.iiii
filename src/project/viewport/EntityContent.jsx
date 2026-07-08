@@ -172,7 +172,17 @@ export default function EntityContent({ entity, assetMap }) {
             />
         )
     case 'model':
-        return <ModelObject assetRef={asset || null} data={asset?.url || null} modelColor={appearance.color} applyModelColor={false} opacity={appearance.opacity} />
+        return (
+            <ModelObject
+                assetRef={asset || null}
+                data={asset?.url || null}
+                modelColor={appearance.color}
+                applyModelColor={false}
+                opacity={appearance.opacity}
+                playAnimations={media.playAnimations !== false}
+                animationSpeed={media.animationSpeed}
+            />
+        )
     case 'pointLight': {
         const l = entity.components?.light || {}
         return (

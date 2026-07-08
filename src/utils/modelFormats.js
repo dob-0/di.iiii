@@ -1,19 +1,22 @@
 export const MODEL_FORMATS = {
     GLTF: 'gltf',
     OBJ: 'obj',
-    STL: 'stl'
+    STL: 'stl',
+    FBX: 'fbx'
 }
 
 const extensionMatchers = [
     { format: MODEL_FORMATS.GLTF, extensions: ['.glb', '.gltf'] },
     { format: MODEL_FORMATS.OBJ, extensions: ['.obj'] },
-    { format: MODEL_FORMATS.STL, extensions: ['.stl'] }
+    { format: MODEL_FORMATS.STL, extensions: ['.stl'] },
+    { format: MODEL_FORMATS.FBX, extensions: ['.fbx'] }
 ]
 
 const mimeMatchers = [
     { format: MODEL_FORMATS.GLTF, hints: ['gltf', 'glb'] },
     { format: MODEL_FORMATS.OBJ, hints: ['obj'] },
-    { format: MODEL_FORMATS.STL, hints: ['stl'] }
+    { format: MODEL_FORMATS.STL, hints: ['stl'] },
+    { format: MODEL_FORMATS.FBX, hints: ['fbx'] }
 ]
 
 const normalize = (value) => (value || '').toLowerCase()

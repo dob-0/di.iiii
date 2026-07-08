@@ -299,7 +299,11 @@ const DEFINITIONS = {
             {
                 id: 'media',
                 label: 'Media',
-                fields: [{ label: 'Asset', component: 'media', path: ['assetId'], type: 'asset' }]
+                fields: [
+                    { label: 'Asset', component: 'media', path: ['assetId'], type: 'asset' },
+                    { label: 'Play animations (embedded clips)', component: 'media', path: ['playAnimations'], type: 'checkbox' },
+                    { label: 'Animation speed', component: 'media', path: ['animationSpeed'], type: 'number', min: 0, max: 3, step: 0.1 }
+                ]
             }
         ]
     },
