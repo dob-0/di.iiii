@@ -1386,3 +1386,86 @@ describe('server write contracts', () => {
         expect(commons.assets.some((a) => a.id === assetId)).toBe(false)
     })
 })
+
+describe('open-call application contracts', () => {
+    it('accepts public submissions without auth, gates review behind admin, and validates status updates', async () => {
+        const server = await startServer({ nodeEnv: 'production' })
+
+        const submitRes = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: 'Test Applicant',
+                email: 'test@example.am',
+                city: 'Gyumri',
+                why: 'City and Time',
+                experience: ['3D մոդելավորում']
+            })
+        })
+        expect(submitRes.status).toBe(201)
+        const submitted = await submitRes.json()
+        expect(submitted.ok).toBe(true)
+        expect(submitted.id).toBeTruthy()
+
+        const invalidRes = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: '', email: 'nope' })
+        })
+        expect(invalidRes.status).toBe(400)
+
+        const unauthenticatedList = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications`)
+        expect([401, 403]).toContain(unauthenticatedList.status)
+
+        const listRes = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications`, {
+            headers: withAuth(server.apiToken)
+        })
+        expect(listRes.status).toBe(200)
+        const listed = await listRes.json()
+        expect(listed.applications).toHaveLength(1)
+        expect(listed.applications[0].id).toBe(submitted.id)
+        expect(listed.applications[0].status).toBe('new')
+        expect(listed.applications[0].payload.why).toBe('City and Time')
+
+        const patchRes = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications/${submitted.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ status: 'shortlist', notes: 'strong portfolio' })
+        })
+        expect(patchRes.status).toBe(200)
+        const patched = await patchRes.json()
+        expect(patched.application.status).toBe('shortlist')
+        expect(patched.application.notes).toBe('strong portfolio')
+
+        const badPatch = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications/${submitted.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ status: 'maybe' })
+        })
+        expect(badPatch.status).toBe(400)
+    })
+
+    it('answers submission preflights permissively for sandboxed (Origin: null) iframes', async () => {
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
+
+        const preflight = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications`, {
+            method: 'OPTIONS',
+            headers: {
+                Origin: 'null',
+                'Access-Control-Request-Method': 'POST',
+                'Access-Control-Request-Headers': 'Content-Type'
+            }
+        })
+        expect(preflight.status).toBe(204)
+        expect(preflight.headers.get('access-control-allow-origin')).toBe('*')
+        expect(preflight.headers.get('access-control-allow-methods')).toContain('POST')
+
+        const submitRes = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Origin: 'null' },
+            body: JSON.stringify({ name: 'Sandboxed Applicant', email: 'sandbox@example.am' })
+        })
+        expect(submitRes.status).toBe(201)
+        expect(submitRes.headers.get('access-control-allow-origin')).toBe('*')
+    })
+})

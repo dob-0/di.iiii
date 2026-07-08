@@ -233,6 +233,22 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['assets', 'commons', 'share', 'public', 'studio'],
         updated: '2026-07-02'
+    },
+    {
+        id: 'open-call-applications',
+        category: 'Spaces & access',
+        title: 'Open-call applications',
+        summary: 'Public application forms on linked-space pages store submissions in di.iiii; admins review them in Ops Graph → Open Call.',
+        body: [
+            'A linked-space page (like the Beyond Form open call) can host its own application form. Submissions are stored in di.iiii and — where the call uses one — mirrored to the organizers\u2019 Google Form in the background.',
+            { list: [
+                'Review: admins open /admin \u2192 Open Call to see applications with status chips (new / shortlist / accepted / declined), per-applicant notes, and status counts.',
+                'Filter by status, expand a row for the full answers, and export everything as CSV for sharing with partners.',
+                'The public submit endpoint is unauthenticated and rate-limited; reviewing and updating requires an admin session.'
+            ] }
+        ],
+        tags: ['open call', 'applications', 'admin', 'forms'],
+        updated: '2026-07-09'
     }
 ]
 

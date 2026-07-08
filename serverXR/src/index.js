@@ -35,6 +35,8 @@ const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
+const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
+const openCallStore = require('./openCallStore')
 const { listUsers, findUserById, setUserSpaces, setUserUnrestricted, setUserRole } = require('./userStore')
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
 const githubApp = require('./githubApp')
@@ -279,6 +281,21 @@ const broadcastProjectLiveEvent = async (projectId, eventName, payload, excludeI
   })
 }
 
+// Public open-call submissions arrive from sandboxed space iframes whose
+// Origin is the literal string "null" — the allowlist below can never match
+// it, and its preflight handler would eat the OPTIONS without CORS headers.
+// This one unauthenticated endpoint gets permissive CORS ahead of the gate.
+const OPEN_CALL_SUBMIT_PATTERN = /\/api\/open-calls\/[A-Za-z0-9_-]+\/applications\/?$/
+app.use((req, res, next) => {
+  if (!OPEN_CALL_SUBMIT_PATTERN.test(req.path)) return next()
+  if (req.method !== 'POST' && req.method !== 'OPTIONS') return next()
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  if (req.method === 'OPTIONS') return res.status(204).end()
+  next()
+})
+
 app.use(cors({
   origin: buildCorsOriginHandler(config.corsOrigins),
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -507,6 +524,7 @@ const guestSessionLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, 
 const authAttemptLimiter = createRateLimiter({ windowMs: 60_000, max: 10, name: 'auth attempts' })
 const syncKeyMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'sync-key mints' })
 const uploadLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, name: 'uploads' })
+const openCallSubmitLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 20, name: 'open-call applications' })
 
 // Covers the OAuth start + callback routes registered by registerAuthRoutes below.
 router.use(['/api/auth/github', '/api/auth/google'], authAttemptLimiter)
@@ -932,6 +950,20 @@ router.use('/api/projects/:projectId', async (req, res, next) => {
   }
 })
 
+// Public, unauthenticated: open-call application submissions (registered
+// before the /api auth gate below; permissive CORS handled at app level).
+router.post('/api/open-calls/:callId/applications', openCallSubmitLimiter, (req, res, next) => {
+  try {
+    const { callId } = req.params
+    const body = req.body && typeof req.body === 'object' ? req.body : {}
+    const { name, email, phone, city, ...rest } = body
+    const application = openCallStore.createApplication({ callId, name, email, phone, city, payload: rest })
+    res.status(201).json({ ok: true, id: application.id })
+  } catch (error) {
+    next(error)
+  }
+})
+
 router.use('/api', requireReadRole('viewer'))
 router.use('/api', requireWriteRole('editor'))
 
@@ -950,6 +982,12 @@ registerStatusRoutes(router, {
 })
 
 registerIntegrationRoutes(router)
+
+registerOpenCallRoutes(router, {
+  requireAdminAlways,
+  listApplications: openCallStore.listApplications,
+  updateApplication: openCallStore.updateApplication
+})
 
 registerUserRoutes(router, {
   requireAdminAlways,

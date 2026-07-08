@@ -112,6 +112,21 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_public_assets_name ON public_assets(name);
 
+  CREATE TABLE IF NOT EXISTS open_call_applications (
+    id TEXT PRIMARY KEY,
+    call_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    phone TEXT,
+    city TEXT,
+    payload TEXT NOT NULL DEFAULT '{}',
+    status TEXT NOT NULL DEFAULT 'new',
+    notes TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_open_call_applications_call ON open_call_applications(call_id, created_at);
+
   CREATE TABLE IF NOT EXISTS migrations (
     key TEXT PRIMARY KEY,
     completed_at INTEGER NOT NULL

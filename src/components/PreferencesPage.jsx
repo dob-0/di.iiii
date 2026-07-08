@@ -20,9 +20,11 @@ import {
     getActionButtonClassName
 } from './preferences/PreferencesShared.jsx'
 import AdminManageSection from './preferences/AdminManageSection.jsx'
+import OpenCallSection from './preferences/OpenCallSection.jsx'
 
 const SECTIONS = [
     { key: 'manage', label: 'Manage', glyph: '▸' },
+    { key: 'opencall', label: 'Open Call', glyph: '✉' },
     { key: 'overview', label: 'Overview', glyph: '◆' },
     { key: 'topology', label: 'Topology', glyph: '◇' },
     { key: 'objects', label: 'Objects', glyph: '▦' },
@@ -422,6 +424,8 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                     )}
 
                     {activeSection === 'manage' && <AdminManageSection />}
+
+                    {activeSection === 'opencall' && <OpenCallSection />}
 
                     {activeSection === 'console' && (
                         <ModuleSection
