@@ -9,27 +9,25 @@ active_branch: dev
 
 ## Last commit
 
-`9187dc6` — on **staging**. `main` is now 8+ commits behind; prod still at `07084e2`.
+`c21da60` — on **staging**. `main` is ~14 commits behind; prod still at `07084e2`.
 
-## Last session (2026-07-08 eve — Studio creation-process gap list, all 9 shipped)
+## Latest session (2026-07-09 — media + object styles, four clean commits)
 
-- History panel (Photoshop-style, Scene window) on the op-log undo stack: labeled
-  steps, click-to-jump (one batched ops write), `useOpHistory.history()/jumpTo()`.
-- Scene tree: double-click rename, eye/lock toggles (runtime flags finally writable),
-  drag rows to re-parent (into group / sibling / root; world pos kept).
-- Duplicate/copy/paste/cut are hierarchy-aware (`entityClipboard.js`) — group-duplicate
-  child-drop bug fixed (known-fixes row + guards). Copy takes multi-selections.
-- Viewport file drop (OS + Files list) at cursor ground point; Ctrl snap on gizmo and
-  modal G/R/S; modal rotate/scale of multi-selection orbits shared centroid.
-- Primitive materials: texture (any image asset), roughness/metalness/emissive —
-  `PrimitiveMaterial.jsx`, neutral defaults in BOTH schema mirrors (schema-sync 18/18).
-- Follow-up pass: typed exact values in G/R/S (45 = 45°), 2D text Align, image-only
-  Texture picker (`cf63230`). Modal snap + shared pivot + typed input machine-verified.
-- All verified live via Playwright E2Es (undo 7/7, history 8/8, rename/toggles/dup 7/7,
-  reparent/drop/materials 6/6, modal snap/pivot 5/5, typed 45° exact); staging smoke 9/9.
+- `3864976` video sound (Muted/Volume/Loop live everywhere; unmute on first gesture)
+  + public-viewer parity: LiveProjectScene had dropped audio/lights/groups/hidden and
+  all new props — fixed + `rendererParity.test.js` tripwire (known-fixes row).
+- `d4c0e6c` four new primitives (plane/torus/capsule/ring), full pipeline both surfaces.
+- `3689ccc` material presets (Matte/Metal/Glass/Glow — Glow tints from entity color).
+- `c21da60` text styles: six 2D font stacks + named weights; 3D typeface select + bevels.
+- Local-dev gotcha: serverXR holds `shared/projectSchema.cjs` in memory — restart the
+  backend after any CJS mirror change or new entity types normalize to boxes.
 
 ## Earlier
 
+- 2026-07-08 eve: creation-process gap list, all 9 shipped + verified via Playwright
+  E2Es — History panel (click-to-jump on op-log undo), tree rename/eye/lock/drag-reparent,
+  hierarchy-aware duplicate/clipboard, viewport file drop, Ctrl snap + shared pivot +
+  typed G/R/S values, primitive materials. Staging smoke 9/9.
 - 2026-07-08 am: GitHub sync proven end-to-end (webhook auto-sync on prod), `dev`→`main`
   promoted; 2026-07-07: no-code GitHub sync UI + full audit fixed
   ([docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)).
@@ -53,9 +51,7 @@ active_branch: dev
 - `serverXR/.env.local` has a stale GitHub App key — copy `GITHUB_APP_PRIVATE_KEY_B64` from a
   host's `~/.config/dii/*.deploy.env`. If `br_id_ge` gets App-connected, disable its CI sync.
 - `origin/self-host` intentionally 1 commit ahead (`b9baa30`).
-- Next strategic work: op-log undo **landed + verified live** (two-client Playwright E2E
-  2026-07-08: undo reverts only own ops, redo incl. Ctrl+Shift+Z, zero document PUTs)
-  → content-addressed assets → self-host.
+- Next strategic work: content-addressed assets → self-host.
 
 ## Known fixes
 
