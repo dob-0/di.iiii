@@ -1468,4 +1468,20 @@ describe('open-call application contracts', () => {
         expect(submitRes.status).toBe(201)
         expect(submitRes.headers.get('access-control-allow-origin')).toBe('*')
     })
+
+    it('serves project asset reads with permissive CORS for sandboxed iframes', async () => {
+        const server = await startServer({ nodeEnv: 'production', extraEnv: { CORS_ORIGINS: 'https://di-studio.xyz' } })
+
+        const preflight = await fetch(`${server.baseUrl}/api/projects/some-project/assets/some-asset`, {
+            method: 'OPTIONS',
+            headers: { Origin: 'null', 'Access-Control-Request-Method': 'GET' }
+        })
+        expect(preflight.status).toBe(204)
+        expect(preflight.headers.get('access-control-allow-origin')).toBe('*')
+
+        const missing = await fetch(`${server.baseUrl}/api/projects/some-project/assets/some-asset`, {
+            headers: { Origin: 'null' }
+        })
+        expect(missing.headers.get('access-control-allow-origin')).toBe('*')
+    })
 })

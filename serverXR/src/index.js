@@ -281,16 +281,22 @@ const broadcastProjectLiveEvent = async (projectId, eventName, payload, excludeI
   })
 }
 
-// Public open-call submissions arrive from sandboxed space iframes whose
-// Origin is the literal string "null" — the allowlist below can never match
-// it, and its preflight handler would eat the OPTIONS without CORS headers.
-// This one unauthenticated endpoint gets permissive CORS ahead of the gate.
-const OPEN_CALL_SUBMIT_PATTERN = /\/api\/open-calls\/[A-Za-z0-9_-]+\/applications\/?$/
+// Space code documents run in sandboxed iframes whose Origin is the literal
+// string "null" — the allowlist below can never match it, and its preflight
+// handler would eat the OPTIONS without CORS headers. Endpoints those
+// documents must reach get permissive CORS ahead of the gate. Requests from
+// opaque origins carry no cookies, so auth-gated content stays gated.
+const PUBLIC_CORS_ROUTES = [
+  // open-call application submissions (unauthenticated writes)
+  { pattern: /\/api\/open-calls\/[A-Za-z0-9_-]+\/applications\/?$/, methods: 'POST, OPTIONS' },
+  // project asset reads (fetch()-based loaders like GLTF need CORS; <video>/<img> don't)
+  { pattern: /\/api\/projects\/[^/]+\/assets\/[^/]+\/?$/, methods: 'GET, HEAD, OPTIONS' }
+]
 app.use((req, res, next) => {
-  if (!OPEN_CALL_SUBMIT_PATTERN.test(req.path)) return next()
-  if (req.method !== 'POST' && req.method !== 'OPTIONS') return next()
+  const route = PUBLIC_CORS_ROUTES.find((r) => r.pattern.test(req.path))
+  if (!route || !route.methods.includes(req.method)) return next()
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', route.methods)
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') return res.status(204).end()
   next()
