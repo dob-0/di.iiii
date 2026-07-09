@@ -152,7 +152,7 @@ Useful local routes:
 
 ## Contributing
 
-New contributor or AI agent joining the project? Start with [ONBOARDING.md](ONBOARDING.md) — it covers prerequisites, fork + clone, local env setup, and `npm run dev`.
+New contributor or AI agent joining the project? Start with [ONBOARDING.md](ONBOARDING.md) — it covers prerequisites, fork + clone, local env setup, `npm run dev`, and setting up Claude Code with the project's checked-in AI workflow (don't start a fresh one — see ONBOARDING §8).
 
 Default contribution model is fork-based:
 
