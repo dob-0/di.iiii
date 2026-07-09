@@ -9,6 +9,13 @@ import EntityContent from '../../project/viewport/EntityContent.jsx'
 import WorldEnvironment from '../../project/viewport/WorldEnvironment.jsx'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { applyPivotTransform, getSelectionCentroid } from '../utils/multiTransform.js'
+import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../../project/viewport/timelinePlayback.js'
+import {
+    advanceTimelinePreview,
+    getTimelinePreview,
+    isTimelinePreviewPosed,
+    setTimelinePreview
+} from '../utils/timelinePreview.js'
 
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
@@ -28,6 +35,59 @@ function useSnapModifier() {
         }
     }, [])
     return snapping
+}
+
+// Timeline preview: pose the group from the sampled timeline while the Scene
+// window's Timeline section is playing or scrubbing this entity, restore the
+// authored pose (and touched material opacities) the moment it stops.
+function useTimelinePreviewPose(entity, groupRef, isDraggingRef = null) {
+    const wasPosed = useRef(false)
+    const opacityBackup = useRef(null)
+    const timeline = entity.components?.timeline
+    useFrame(() => {
+        const group = groupRef.current
+        if (!group) return
+        // Mid-drag the gizmo owns the group — neither pose nor restore may touch it.
+        if (isDraggingRef?.current === true) return
+        if (isTimelinePreviewPosed(entity.id) && hasTimelineTracks(timeline)) {
+            const pose = sampleTimeline(timeline, getTimelinePreview().time)
+            if (pose?.opacity !== undefined && !opacityBackup.current) {
+                const backup = new Map()
+                group.traverse((object) => {
+                    const materials = Array.isArray(object.material) ? object.material : object.material ? [object.material] : []
+                    materials.forEach((material) => backup.set(material, { opacity: material.opacity, transparent: material.transparent }))
+                })
+                opacityBackup.current = backup
+            }
+            const t = entity.components?.transform || {}
+            applyTimelinePose(group, pose, {
+                position: t.position || [0, 0, 0],
+                rotation: t.rotation || [0, 0, 0],
+                scale: t.scale || [1, 1, 1]
+            })
+            wasPosed.current = true
+            return
+        }
+        if (wasPosed.current) {
+            wasPosed.current = false
+            const t = entity.components?.transform || {}
+            group.position.set(...(t.position || [0, 0, 0]))
+            group.rotation.set(...(t.rotation || [0, 0, 0]))
+            group.scale.set(...(t.scale || [1, 1, 1]))
+            if (opacityBackup.current) {
+                opacityBackup.current.forEach((original, material) => {
+                    material.opacity = original.opacity
+                    material.transparent = original.transparent
+                })
+                opacityBackup.current = null
+            }
+        }
+    })
+}
+
+function TimelinePreviewDriver() {
+    useFrame((_, delta) => advanceTimelinePreview(delta))
+    return null
 }
 
 function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, gizmoMode, gizmoAxis = null, gizmoVisible = true, overrideTransform = null, onSelect, onToggleSelect, onTransformCommit, orbitRef }) {
@@ -74,6 +134,7 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
 
     const gizmoActive = isPrimary && editMode === 'edit' && gizmoVisible && !isLocked
     const snapping = useSnapModifier()
+    useTimelinePreviewPose(entity, groupRef, isDragging)
 
     // Attach TransformControls to the group
     useEffect(() => {
@@ -92,6 +153,11 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
 
         const handleDraggingChanged = (e) => {
             isDragging.current = e.value
+            // Grabbing the gizmo mid-preview hands the previewed pose to the drag:
+            // preview stops holding, the release commits where the user dropped it.
+            if (e.value && isTimelinePreviewPosed(entity.id)) {
+                setTimelinePreview({ playing: false, hold: false })
+            }
             if (orbitRef?.current) orbitRef.current.enabled = !e.value
             if (!e.value && groupRef.current) {
                 const { position, rotation, scale } = groupRef.current
@@ -148,12 +214,15 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
 }
 
 function SceneEntityNode({ entity, childMap, assetMap, selectedIdSet, selectedEntityId, editMode, gizmoMode, gizmoAxis, gizmoVisible, overrideById, onSelectEntity, onToggleSelectEntity, onTransformCommit, orbitRef }) {
+    const groupTimelineRef = useRef(null)
+    useTimelinePreviewPose(entity, groupTimelineRef)
     const t = entity.components?.transform || {}
     if (entity.type === 'group') {
         const children = childMap.get(entity.id) || []
         const selected = selectedIdSet.has(entity.id)
         return (
             <group
+                ref={groupTimelineRef}
                 position={t.position || [0, 0, 0]}
                 rotation={t.rotation || [0, 0, 0]}
                 scale={t.scale || [1, 1, 1]}
@@ -490,6 +559,7 @@ function StudioSceneContent({
                 intensity={document.worldState?.directionalLight?.intensity || 1.15}
                 position={document.worldState?.directionalLight?.position || [8, 12, 4]}
             />
+            <TimelinePreviewDriver />
             <group position={isArMode ? AR_SCENE_POSITION : DEFAULT_SCENE_POSITION}>
                 {document.worldState?.gridVisible !== false && !isArMode && (
                     <Grid

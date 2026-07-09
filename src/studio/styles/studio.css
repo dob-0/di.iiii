@@ -1110,6 +1110,52 @@
     background: var(--di-cyan);
 }
 
+/* Timeline (Scene window keyframe section) */
+.tlp-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.tlp-time {
+    margin-left: auto;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+    font-variant-numeric: tabular-nums;
+}
+
+.tlp-strip {
+    position: relative;
+    height: 16px;
+    margin: 2px 6px 8px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.tlp-key {
+    position: absolute;
+    top: 50%;
+    width: 9px;
+    height: 9px;
+    padding: 0;
+    transform: translate(-50%, -50%) rotate(45deg);
+    border: 1px solid rgba(77, 249, 255, 0.5);
+    border-radius: 2px;
+    background: rgba(8, 12, 20, 0.9);
+    cursor: ew-resize;
+    touch-action: none;
+}
+
+.tlp-key:hover {
+    border-color: var(--di-cyan);
+}
+
+.tlp-key--active {
+    background: var(--di-cyan);
+    border-color: var(--di-cyan);
+}
+
 /* Toggle */
 .insp-toggle {
     display: flex;

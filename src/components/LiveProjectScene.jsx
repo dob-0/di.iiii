@@ -31,6 +31,7 @@ import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject from '../project/viewport/PortalObject.jsx'
 import WorldEnvironment from '../project/viewport/WorldEnvironment.jsx'
 import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
+import { hasTimelineTracks, sampleTimeline, applyTimelinePose } from '../project/viewport/timelinePlayback.js'
 import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
 import {
     WALK_MAX_SPEED, FLY_SPEED, WALK_ACCEL, WALK_FRICTION, TURN_SPEED, EYE_HEIGHT,
@@ -303,10 +304,18 @@ function AnimatedEntity({ entity, assetMap, childMap = null }) {
     }, [entity.id])
 
     const anim = useMemo(() => resolveAnimation(entity), [entity])
+    const timeline = entity.components?.timeline
+    const timelineActive = hasTimelineTracks(timeline)
 
     useFrame((state) => {
         const group = groupRef.current
         if (!group) return
+        if (timelineActive) {
+            // Authored keyframes replace idle motion — no seed, playback is deterministic.
+            const pose = sampleTimeline(timeline, state.clock.getElapsedTime())
+            applyTimelinePose(group, pose, { position: basePos, rotation: baseRot, scale: baseScale })
+            return
+        }
         const t = state.clock.getElapsedTime() + seed
         applyAnimation(group, anim, basePos, baseRot, t)
     })

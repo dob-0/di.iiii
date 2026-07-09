@@ -21,6 +21,7 @@ import { formatAssetSize, optimizeGlbAsset, shouldSuggestGlbOptimization } from 
 import { canPlaceInScene, isPdfAsset, pdfToImageFiles } from '../utils/assetFormats.js'
 import { getSelectionCentroid } from '../utils/multiTransform.js'
 import { buildReparentPatch, cloneSubtree, collectSubtree, topLevelTargets } from '../utils/entityClipboard.js'
+import { isTimelinePreviewPosed, setTimelinePreview } from '../utils/timelinePreview.js'
 
 const DISPLAY_NAME_KEY = 'dii.studio.displayName'
 
@@ -758,6 +759,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
 
     const handleInspectorChange = (component, nextValue) => {
         if (selectedEntity) {
+            // Editing the transform while a timeline preview holds the pose would be
+            // invisible — release the hold so the edit shows, same as grabbing the gizmo.
+            if (component === 'transform' && isTimelinePreviewPosed(selectedEntity.id)) {
+                setTimelinePreview({ playing: false, hold: false })
+            }
             applyLocalOps({
                 type: 'updateComponent',
                 payload: {

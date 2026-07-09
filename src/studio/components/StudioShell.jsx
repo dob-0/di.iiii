@@ -17,6 +17,7 @@ import {
     ProjectPanel,
     PublishPanel,
     StructurePanel,
+    TimelinePanel,
 } from './StudioShellPanels.jsx'
 
 // Raycast a viewport double-click into the scene's ground plane (y=0) so a
@@ -459,6 +460,12 @@ export default function StudioShell({
                                 />
                             ) : (
                                 <p className="sfp-empty">Select an entity above or in the viewport to edit it.</p>
+                            )}
+                            {selectedEntity && selectedEntityIds.length <= 1 && (
+                                <TimelinePanel
+                                    entity={selectedEntity}
+                                    onTimelineChange={(next) => onInspectorChange?.('timeline', next)}
+                                />
                             )}
                             {editHistory && (
                                 <HistoryPanel steps={editHistory.steps} cursor={editHistory.cursor} onJumpTo={onHistoryJump} />

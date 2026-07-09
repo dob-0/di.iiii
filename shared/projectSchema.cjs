@@ -302,6 +302,36 @@ const normalizeWindowLayout = (layout = {}) => {
   }
 }
 
+const TIMELINE_PROPERTIES = ['position', 'rotation', 'scale', 'opacity']
+const TIMELINE_EASINGS = ['linear', 'ease']
+
+const normalizeTimeline = (source) => {
+  if (!source || typeof source !== 'object') return null
+  const duration = Math.max(0.1, ensureNumber(source.duration, 5))
+  const tracks = []
+  ;(Array.isArray(source.tracks) ? source.tracks : []).forEach((track) => {
+    if (!track || typeof track !== 'object') return
+    const property = ensureString(track.property, '')
+    if (!TIMELINE_PROPERTIES.includes(property)) return
+    if (tracks.some((existing) => existing.property === property)) return
+    const keys = (Array.isArray(track.keys) ? track.keys : [])
+      .filter((key) => key && typeof key === 'object')
+      .map((key) => {
+        const easing = ensureString(key.easing, 'ease')
+        return {
+          t: Math.min(duration, Math.max(0, ensureNumber(key.t, 0))),
+          value: property === 'opacity'
+            ? Math.min(1, Math.max(0, ensureNumber(key.value, 1)))
+            : ensureVector(key.value, property === 'scale' ? [1, 1, 1] : [0, 0, 0]),
+          easing: TIMELINE_EASINGS.includes(easing) ? easing : 'ease'
+        }
+      })
+      .sort((a, b) => a.t - b.t)
+    tracks.push({ property, keys })
+  })
+  return { duration, loop: ensureBoolean(source.loop, true), tracks }
+}
+
 const normalizeEntity = (entity = {}) => {
   const rawType = ensureString(entity.type, 'box')
   const type = ENTITY_TYPES.has(rawType) ? rawType : 'box'
@@ -379,6 +409,11 @@ const normalizeEntity = (entity = {}) => {
       speed: ensureNumber(sourceComponents.animation.speed, 1),
       amplitude: ensureNumber(sourceComponents.animation.amplitude, 1)
     }
+  }
+  if (sourceComponents.timeline) {
+    const timeline = normalizeTimeline(sourceComponents.timeline)
+    if (timeline) nextComponents.timeline = timeline
+    else delete nextComponents.timeline
   }
 
   return {

@@ -49,6 +49,42 @@ describe('projectSchema', () => {
         expect(document.entities[1].components.reference.label).toBe('')
     })
 
+    it('normalizes a timeline component: sorts keys, clamps to duration, drops junk tracks', () => {
+        const document = normalizeProjectDocument({
+            entities: [{
+                type: 'box',
+                components: {
+                    timeline: {
+                        duration: 4,
+                        tracks: [
+                            {
+                                property: 'position',
+                                keys: [
+                                    { t: 9, value: [1, 0, 0], easing: 'bounce' },
+                                    { t: 0, value: [0, 0, 0], easing: 'linear' }
+                                ]
+                            },
+                            { property: 'opacity', keys: [{ t: 2, value: 3 }] },
+                            { property: 'color', keys: [] },
+                            { property: 'position', keys: [] }
+                        ]
+                    }
+                }
+            }]
+        })
+
+        const timeline = document.entities[0].components.timeline
+        expect(timeline.duration).toBe(4)
+        expect(timeline.loop).toBe(true)
+        expect(timeline.tracks).toHaveLength(2)
+        expect(timeline.tracks[0].keys.map((k) => k.t)).toEqual([0, 4])
+        expect(timeline.tracks[0].keys[1].easing).toBe('ease')
+        expect(timeline.tracks[1].keys[0].value).toBe(1)
+        // entities without an authored timeline stay lean
+        const plain = normalizeProjectDocument({ entities: [{ type: 'box' }] })
+        expect(plain.entities[0].components.timeline).toBeUndefined()
+    })
+
     it('migrates v3 old-shape nodes and edges into v4 new-shape', () => {
         const document = normalizeProjectDocument({
             version: 3,
