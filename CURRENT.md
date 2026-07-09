@@ -9,20 +9,18 @@ active_branch: dev
 
 ## Last commit
 
-`ab046dd2` — dev == main == **prod** (promoted 2026-07-09; deploy green; smoke 9/9 PASS).
-## Latest session (2026-07-09 eve — newcomer onboarding + dev→main promotion)
+`4e080447` — dev == main == **prod** (promoted 2026-07-09; deploy green; smoke 9/9 PASS).
+## Latest session (2026-07-09 night — WCC mouse-look fix, deployed to prod)
 
-- **Onboarding shipped** (PR #25): `ONBOARDING.md` §8 "Working with Claude Code" — AI
-  workflow is checked in; per-person: CLI install, personal login (key never in repo),
-  trust prompt, plugins. New golden rule: newcomers never improvise a workflow.
-- **dev→main promoted** after manual OAuth verified on staging (blocker cleared); forks
-  of `main` now carry the full onboarding.
-
-## Earlier 2026-07-09 (now live on prod)
-
-- CAS per-space blob store + pre-hash dedupe (37 contracts green); Spaces-hub live card
-  previews + Preview manager; media/animation batch + keyframe timeline (12/12 E2E). Gotcha:
-  restart serverXR after `projectSchema.cjs` changes — stale schema boxes new entity types.
+- **WCC "walk works, mouse-look doesn't"** (PR #27): some Wayland setups GRANT pointer
+  lock but deliver only zero `movementX/Y` — watchdog abandons the broken lock after 30
+  all-zero moves, drag-look takes over. `?inputdebug=1` shows a live input HUD.
+  Awaiting user real-mouse confirmation on prod. Playwright CANNOT reproduce this
+  (injected input bypasses the compositor) — see known-fixes. 17 input-check contracts.
+- **PR #26 (draft, open)**: one-command self-host — `npm run selfhost -- <bundle>`,
+  space export/import CLI (`space:export`/`space:import`), round-trip contract tests.
+- Earlier 2026-07-09, live on prod: onboarding §8 + golden rule (PR #25); CAS blob
+  store; Spaces-hub live previews; media/animation timeline.
 
 ## What works
 
@@ -36,8 +34,8 @@ active_branch: dev
   Webhook canary `dob-0/di-sync-webhook-test`→`webhook-test` is permanent.
 - `serverXR/.env.local` stale GitHub App key — copy `GITHUB_APP_PRIVATE_KEY_B64` from a
   host's `~/.config/dii/*.deploy.env`. If `br_id_ge` gets App-connected, disable its CI sync.
-- `origin/self-host` intentionally 1 commit ahead (`b9baa30`). Next strategic work:
-  one-command self-host (portable space bundle: blobs+projects+meta).
+- `origin/self-host` intentionally 1 commit ahead (`b9baa30`). Self-host feature itself
+  is built and waiting in draft PR #26 (merge decision pending).
 
 ## Known fixes → [docs/ai/known-fixes.md](docs/ai/known-fixes.md) — check before any bug hunt.
 
