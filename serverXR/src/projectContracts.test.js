@@ -314,6 +314,74 @@ describe('project contracts', () => {
         expect((await honestResponse.json()).asset.id).toBe(expectedId)
     })
 
+    it('stores identical bytes once per space (blob store) with reference-safe deletes and GC', async () => {
+        const server = await startServer()
+        const { createHash } = await import('node:crypto')
+        const { readdir, writeFile: writeFsFile, mkdir } = await import('node:fs/promises')
+        const { execFile } = await import('node:child_process')
+        const { promisify } = await import('node:util')
+
+        const bytes = 'shared-space-bytes'
+        const hash = createHash('sha256').update(bytes).digest('hex')
+        const spaceDir = path.join(server.dataRoot, 'spaces', 'main')
+
+        for (const slug of ['cas-a', 'cas-b']) {
+            await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: slug, slug })
+            })
+            const formData = new FormData()
+            formData.append('asset', new Blob([bytes], { type: 'text/plain' }), 'shared.txt')
+            const upload = await fetch(`${server.baseUrl}/api/projects/${slug}/assets`, {
+                method: 'POST',
+                body: formData
+            })
+            expect(upload.status).toBe(200)
+            expect((await upload.json()).asset.id).toBe(hash)
+        }
+
+        // bytes live once in the space blob store; projects hold only meta refs
+        await expect(readdir(path.join(spaceDir, 'blobs'))).resolves.toEqual([hash])
+        for (const slug of ['cas-a', 'cas-b']) {
+            const entries = await readdir(path.join(spaceDir, 'projects', slug, 'assets'))
+            expect(entries).toEqual([`${hash}.json`])
+            const served = await fetch(`${server.baseUrl}/api/projects/${slug}/assets/${hash}`)
+            expect(await served.text()).toBe(bytes)
+        }
+
+        // deleting in one project must not break the other
+        expect((await fetch(`${server.baseUrl}/api/projects/cas-a/assets/${hash}`, { method: 'DELETE' })).status).toBe(200)
+        expect((await fetch(`${server.baseUrl}/api/projects/cas-a/assets/${hash}`)).status).toBe(404)
+        expect((await fetch(`${server.baseUrl}/api/projects/cas-a/assets/${hash}/meta`)).status).toBe(404)
+        const survivor = await fetch(`${server.baseUrl}/api/projects/cas-b/assets/${hash}`)
+        expect(survivor.status).toBe(200)
+        expect(await survivor.text()).toBe(bytes)
+        expect((await fetch(`${server.baseUrl}/api/projects/cas-b/assets/${hash}/meta`)).status).toBe(200)
+
+        // legacy project-local binaries (pre-blob layout) still serve and delete
+        const legacyBytes = 'legacy-local-bytes'
+        const legacyHash = createHash('sha256').update(legacyBytes).digest('hex')
+        const legacyAssetsDir = path.join(spaceDir, 'projects', 'cas-b', 'assets')
+        await mkdir(legacyAssetsDir, { recursive: true })
+        await writeFsFile(path.join(legacyAssetsDir, legacyHash), legacyBytes)
+        const legacyServed = await fetch(`${server.baseUrl}/api/projects/cas-b/assets/${legacyHash}`)
+        expect(legacyServed.status).toBe(200)
+        expect(await legacyServed.text()).toBe(legacyBytes)
+        expect((await fetch(`${server.baseUrl}/api/projects/cas-b/assets/${legacyHash}`, { method: 'DELETE' })).status).toBe(200)
+
+        // GC: blob survives while cas-b references it, is removed once orphaned
+        const gcScript = path.join(SERVER_ROOT, '..', 'scripts', 'gc-space-blobs.mjs')
+        const runGc = promisify(execFile)
+        const spacesDir = path.join(server.dataRoot, 'spaces')
+        await runGc('node', [gcScript, '--spaces-dir', spacesDir, '--apply'])
+        await expect(readdir(path.join(spaceDir, 'blobs'))).resolves.toEqual([hash])
+
+        expect((await fetch(`${server.baseUrl}/api/projects/cas-b/assets/${hash}`, { method: 'DELETE' })).status).toBe(200)
+        await runGc('node', [gcScript, '--spaces-dir', spacesDir, '--apply'])
+        await expect(readdir(path.join(spaceDir, 'blobs'))).resolves.toEqual([])
+    })
+
     it('recovers a corrupted project document by trimming trailing garbage', async () => {
         const server = await startServer()
 

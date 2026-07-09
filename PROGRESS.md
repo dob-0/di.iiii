@@ -5,6 +5,35 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-07-09 (eve) — Per-space CAS blob store (owner-approved storage change)
+
+**Who:** Claude (single agent; BAE). Storage-format change approved by Gevorg in-session
+(manifesto non-negotiable #2/#4 gate).
+
+### Done this session
+
+- **Blob store** (`serverXR/src/blobStore.js`): `spaces/<spaceId>/blobs/<sha256>` holds bytes
+  once per space. Project uploads with sha256 ids write the blob (skip if present) plus a
+  per-project `assets/<sha256>.json` reference — no more per-project binary copies. Legacy
+  uuid-style ids keep the old project-local layout.
+- **Reference-safe semantics** (`projectRoutes.js`): GET serves legacy local binary first,
+  else the space blob but only while the project holds the meta reference (deleted assets
+  404 even though the blob survives for other projects). DELETE removes only the reference.
+  `/meta` probe updated for blob-backed assets.
+- **GC** (`scripts/gc-space-blobs.mjs`): removes blobs no project references; dry run by
+  default, `--apply` to delete, `--space`/`--spaces-dir` filters. Asset routes never
+  delete blobs.
+- Contract test covers: one blob for two projects, delete-in-A keeps B alive, legacy
+  binary serve/delete, GC keeps referenced + reclaims orphaned. Backend README API
+  section rewritten; wiki line updated.
+- No client changes needed — dedupe probe (`/meta`) semantics preserved.
+
+### Next
+
+- One-command self-host: portable space bundle (blobs + projects + meta) + bootstrap.
+
+---
+
 ## 2026-07-09 (later) — Content-addressed assets: client pre-hash, dedupe, integrity verify
 
 **Who:** Claude (single agent; BAE + shared project layer)

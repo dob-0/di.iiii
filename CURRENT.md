@@ -12,17 +12,16 @@ active_branch: dev
 `8d59893b` — **live on staging** (content-addressed assets; smoke 9/9, /meta endpoint
 verified live). `main` behind; prod still at `07084e2`.
 
-## Latest session (2026-07-09 eve — content-addressed assets)
+## Latest session (2026-07-09 eve — CAS: dedupe + per-space blob store)
 
-- Client pre-hash (`crypto.subtle`) + upload dedupe via new
-  `GET /api/projects/:id/assets/:assetId/meta`; identical bytes skip the upload.
-- Server now verifies sha256-shaped client `assetId`s against real content hash (400 on
-  mismatch) — closed the replace-under-immutable-cache hole; streams hashing.
-- Contract + unit tests, known-fixes row, wiki line. Full validation green (508 unit,
-  36 contracts). Next CAS step: shared per-space blob store → one-command self-host.
-- Earlier 2026-07-09: media/styles/formats/animation batch + `d4b3ce6` keyframe timeline
-  (12/12 E2E). Local-dev gotcha: restart serverXR after `projectSchema.cjs` changes —
-  stale schema in memory normalizes new entity types to boxes.
+- Client pre-hash + upload dedupe (`/assets/:id/meta` probe); server verifies sha256 ids
+  against content (400 on mismatch) — replace-under-immutable-cache hole closed.
+- **Per-space blob store** (owner-approved): bytes live once in `spaces/<id>/blobs/<sha256>`,
+  projects hold only `<hash>.json` refs; legacy binaries still served; deletes remove refs
+  only; `scripts/gc-space-blobs.mjs` reclaims orphans (dry-run default). 37 contracts green.
+- Earlier 2026-07-09: media/styles/formats/animation batch + keyframe timeline (12/12 E2E).
+  Gotcha: restart serverXR after `projectSchema.cjs` changes — stale schema normalizes new
+  entity types to boxes.
 
 ## Earlier
 
@@ -49,7 +48,7 @@ verified live). `main` behind; prod still at `07084e2`.
 - `serverXR/.env.local` has a stale GitHub App key — copy `GITHUB_APP_PRIVATE_KEY_B64` from a
   host's `~/.config/dii/*.deploy.env`. If `br_id_ge` gets App-connected, disable its CI sync.
 - `origin/self-host` intentionally 1 commit ahead (`b9baa30`).
-- Next strategic work: per-space CAS blob store (in progress) → one-command self-host.
+- Next strategic work: one-command self-host (portable space bundle: blobs+projects+meta).
 
 ## Known fixes
 

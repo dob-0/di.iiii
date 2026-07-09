@@ -2,6 +2,7 @@ const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
+const { getSpaceBlobPaths, storeBlobFromFile } = require('../blobStore')
 
 function registerProjectRoutes(router, {
   appendProjectOps,
@@ -319,9 +320,16 @@ function registerProjectRoutes(router, {
       }
       const finalPath = path.join(assetsDir, assetId)
       const metaPath = path.join(assetsDir, `${assetId}.json`)
-      await fsp.rm(finalPath, { force: true })
-      await fsp.rm(metaPath, { force: true })
-      await fsp.rename(req.file.path, finalPath)
+      if (isSha256AssetId(assetId)) {
+        // content-addressed: bytes go to the space blob store (once per
+        // space); the project keeps only the <hash>.json reference
+        await storeBlobFromFile(spacesDir, project.spaceId, assetId, req.file.path)
+        await fsp.rm(finalPath, { force: true })
+      } else {
+        // legacy uuid-style ids stay project-local
+        await fsp.rm(finalPath, { force: true })
+        await fsp.rename(req.file.path, finalPath)
+      }
       const assetMeta = buildProjectAssetMeta({ assetId, file: req.file, source: 'server' })
       await writeJson(metaPath, assetMeta)
       const url = `${req.baseUrl || ''}/api/projects/${project.projectId}/assets/${assetId}`
@@ -354,8 +362,17 @@ function registerProjectRoutes(router, {
         return res.status(400).json({ error: 'Invalid asset id.' })
       }
       const { assetsDir } = getProjectPaths(spacesDir, project.spaceId, project.projectId)
-      await fsp.access(path.join(assetsDir, assetId))
       const meta = await readJson(path.join(assetsDir, `${assetId}.json`), null)
+      try {
+        await fsp.access(path.join(assetsDir, assetId))
+      } catch {
+        // no legacy binary: the asset exists only if this project holds the
+        // reference AND the space blob store holds the bytes
+        if (!meta) {
+          return res.status(404).json({ error: 'Asset not found.' })
+        }
+        await fsp.access(getSpaceBlobPaths(spacesDir, project.spaceId).blobPath(assetId))
+      }
       const url = `${req.baseUrl || ''}/api/projects/${project.projectId}/assets/${assetId}`
       res.json({ ok: true, asset: { ...(meta || { id: assetId }), url } })
     } catch (error) {
@@ -380,10 +397,22 @@ function registerProjectRoutes(router, {
       const filePath = path.join(assetsDir, assetId)
       const metaPath = path.join(assetsDir, `${assetId}.json`)
       const meta = await readJson(metaPath, null)
-      await fsp.access(filePath)
+      let servePath = filePath
+      try {
+        await fsp.access(filePath)
+      } catch {
+        // fall back to the space blob store, but only while this project
+        // still holds the <hash>.json reference — a deleted asset must 404
+        // even though other projects may keep the blob alive
+        if (!meta) {
+          return res.status(404).json({ error: 'Asset not found.' })
+        }
+        servePath = getSpaceBlobPaths(spacesDir, project.spaceId).blobPath(assetId)
+        await fsp.access(servePath)
+      }
       res.setHeader('Content-Type', meta?.mimeType || 'application/octet-stream')
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
-      res.sendFile(filePath)
+      res.sendFile(servePath)
     } catch (error) {
       if (error.code === 'ENOENT') {
         return res.status(404).json({ error: 'Asset not found.' })
@@ -405,13 +434,16 @@ function registerProjectRoutes(router, {
       await ensureSpaceWritable(project.spaceId)
       const { assetsDir } = getProjectPaths(spacesDir, project.spaceId, project.projectId)
       const filePath = path.join(assetsDir, assetId)
-      try {
-        await fsp.access(filePath)
-      } catch {
+      const metaPath = path.join(assetsDir, `${assetId}.json`)
+      // reference = legacy binary OR meta json; the space blob itself is
+      // shared and only ever removed by the GC script
+      const hasBinary = await fsp.access(filePath).then(() => true, () => false)
+      const hasMeta = await fsp.access(metaPath).then(() => true, () => false)
+      if (!hasBinary && !hasMeta) {
         return res.status(404).json({ error: 'Asset not found.' })
       }
       await fsp.rm(filePath, { force: true })
-      await fsp.rm(path.join(assetsDir, `${assetId}.json`), { force: true })
+      await fsp.rm(metaPath, { force: true })
       await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, { touch: true })
       res.json({ ok: true })
     } catch (error) {

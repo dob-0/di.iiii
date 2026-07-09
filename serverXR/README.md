@@ -114,10 +114,12 @@ Project flow:
 - `POST /api/projects/:projectId/ops`
 - `GET /api/projects/:projectId/events`
 
-Project assets:
+Project assets (content-addressed):
 
-- `POST /api/projects/:projectId/assets`
-- `GET /api/projects/:projectId/assets/:assetId`
+- `POST /api/projects/:projectId/assets` — sha256-shaped `assetId`s are verified against the file content (400 on mismatch); bytes land once per space in `spaces/<spaceId>/blobs/<sha256>`, the project keeps only an `assets/<sha256>.json` reference. Legacy uuid-style ids stay project-local.
+- `GET /api/projects/:projectId/assets/:assetId` — serves a legacy project-local binary first, else the space blob (only while the project holds the reference).
+- `GET /api/projects/:projectId/assets/:assetId/meta` — existence + meta probe used by client upload dedupe.
+- `DELETE /api/projects/:projectId/assets/:assetId` — removes the project reference only; orphaned blobs are reclaimed by `scripts/gc-space-blobs.mjs` (dry run by default, `--apply` to delete).
 
 Realtime presence:
 
