@@ -9,7 +9,7 @@ active_branch: dev
 
 ## Last commit
 
-`7dcbff6` — on **staging** (clip picker, HDR env maps, KTX2, OBJ+MTL). `main` further behind; prod still at `07084e2`.
+`d4b3ce6` — on **staging** (keyframe timeline). `main` further behind; prod still at `07084e2`.
 
 ## Latest session (2026-07-09 — media, styles, formats, animation)
 
@@ -19,8 +19,9 @@ active_branch: dev
 - `b4e5b7f` embedded GLB/FBX animation playback, Draco/Meshopt, OBJ/STL/FBX placement ·
   `7dcbff6` clip picker, HDR/EXR environment maps (+intensity), KTX2, MTL pairing — all
   Playwright-verified live (pixel-diff proof for env lighting).
-- Keyframe timeline: spec'd (per-entity `components.timeline`, Scene-window scrubber,
-  shared evaluator in both renderers), deferred to its own session.
+- `d4b3ce6` keyframe timeline shipped: per-entity `components.timeline`, Scene-window
+  Timeline section (record/scrub/key-drag/preview), shared evaluator in both renderers;
+  12/12 live E2E with pixel-diff playback proof.
 - Local-dev gotcha: restart serverXR after any `projectSchema.cjs` change — the old
   schema stays in memory and new entity types normalize to boxes.
 
