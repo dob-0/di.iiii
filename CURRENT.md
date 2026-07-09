@@ -9,51 +9,40 @@ active_branch: dev
 
 ## Last commit
 
-see `git log dev` — previews + CAS all **live on staging** (Playwright-verified).
-`main` behind; prod still at `07084e2`.
+`ab046dd2` — **dev == main == prod** (promoted 2026-07-09; publish + CI green;
+`smoke-check-cpanel.mjs` vs di-studio.xyz 9/9 PASS).
 
-## Latest session (2026-07-09 — CAS + live space-card previews)
+## Latest session (2026-07-09 eve — newcomer onboarding + dev→main promotion)
 
-- **Spaces hub live previews**: public+linked space cards embed the live route as a 16:9
-  miniature (`?preview=1` viewer mode: static orbit cam, no chrome; IO-gated mount/unmount
-  so off-screen cards cost nothing). Optimized: `lowPower` viewport mode (8s full-rate boot
-  → `frameloop="demand"`, DPR 1, low-power GPU hint; sync ops still invalidate) + boot
-  queue (max 2 concurrent iframe boots, slot frees on load/unmount/15s). Iframe lays
-  out at a 1024×576 virtual viewport, CSS-scaled to the card (true desktop miniature).
-  Card "Preview" manager: owners upload a custom cover image or keep the live embed
-  (`spaces.preview_image_asset_id`, PATCH-validated against space assets).
+- **Onboarding shipped** (PR #25): `ONBOARDING.md` §8 "Working with Claude Code" — the AI
+  workflow is checked in (`.claude/settings.json` perms+hooks, `.mcp.json`, agents,
+  commands); per-person steps: CLI install, personal login (key never in repo), trust
+  prompt, plugins (`frontend-design`, `security-guidance`). New golden rule: newcomers
+  never improvise a workflow; workflow changes update §8 in the same PR.
+- **dev→main promoted** after the manual OAuth sign-in was verified on staging (previous
+  pre-promotion blocker — cleared). Forks of `main` now carry the full onboarding.
+  Staging guests still share `main` via admin `globalSpaceId: "main"` (intentional).
 
-- Client pre-hash + upload dedupe (`/assets/:id/meta` probe); server verifies sha256 ids
-  against content (400 on mismatch) — replace-under-immutable-cache hole closed.
-- **Per-space blob store** (owner-approved): bytes live once in `spaces/<id>/blobs/<sha256>`,
-  projects hold only `<hash>.json` refs; legacy binaries still served; deletes remove refs
-  only; `scripts/gc-space-blobs.mjs` reclaims orphans (dry-run default). 37 contracts green.
-- Earlier 2026-07-09: media/styles/formats/animation batch + keyframe timeline (12/12 E2E).
-  Gotcha: restart serverXR after `projectSchema.cjs` changes — stale schema normalizes new
-  entity types to boxes.
+## Earlier 2026-07-09 (now live on prod)
 
-## Earlier
-
-- 2026-07-08: 9 creation-process gaps shipped + E2E'd; GitHub sync proven `dev`→`main`;
-  full audit ([docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)).
+- CAS per-space blob store + pre-hash upload dedupe (37 contracts green); Spaces-hub live
+  card previews + per-card Preview manager; media/animation batch + keyframe timeline
+  (12/12 E2E). Gotcha: restart serverXR after `projectSchema.cjs` changes — stale schema
+  normalizes new entity types to boxes.
 
 ## What works
 
 - Studio editor (five windows), Beta (node-first), WCC exhibition, orbit viewport, public viewer
 - Auth (session-cookie, roles, OAuth) with rate limiting; Admin Ops Graph; GitHub→space sync
-- Public-route self-serve (live links, visibility toggles) in both Studio surfaces — staging
 - Deploy: push `dev`→staging, `main`→prod, gated on `browser-checks.yml`
+- Checked-in newcomer onboarding incl. Claude Code (`ONBOARDING.md`, README → Contributing)
 
 ## What is broken / open
 
-- **Before promoting `dev`→`main`:** one manual OAuth sign-in click-through on staging.
-  Guest flow already verified programmatically (2026-07-08 eve): guest session/quota/OAuth
-  providers correct; guests share `main` because staging admin config sets
-  `globalSpaceId: "main"` (intentional open-jam mode — clear it in /admin for sandboxes).
-- Drive on prod verified live; full Google verification deferred (preferred fix: `drive.file`
-  scope + Picker). Webhook canary `dob-0/di-sync-webhook-test`→`webhook-test` is permanent.
-- `serverXR/.env.local` has a stale GitHub App key — copy `GITHUB_APP_PRIVATE_KEY_B64` from a
-  host's `~/.config/dii/*.deploy.env`. If `br_id_ge` gets App-connected, disable its CI sync.
+- Full Google Drive verification deferred (preferred: `drive.file` scope + Picker).
+  Webhook canary `dob-0/di-sync-webhook-test`→`webhook-test` is permanent.
+- `serverXR/.env.local` has a stale GitHub App key — copy `GITHUB_APP_PRIVATE_KEY_B64` from
+  a host's `~/.config/dii/*.deploy.env`. If `br_id_ge` gets App-connected, disable its CI sync.
 - `origin/self-host` intentionally 1 commit ahead (`b9baa30`).
 - Next strategic work: one-command self-host (portable space bundle: blobs+projects+meta).
 
