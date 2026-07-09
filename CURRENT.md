@@ -9,23 +9,26 @@ active_branch: dev
 
 ## Last commit
 
-`e9a86d9` — on **staging** (open-call applications + preview anchor fix). `main` further behind; prod still at `07084e2`.
+`7dcbff6` — on **staging** (clip picker, HDR env maps, KTX2, OBJ+MTL). `main` further behind; prod still at `07084e2`.
 
-## Latest session (2026-07-09 — media + object styles, four clean commits)
+## Latest session (2026-07-09 — media, styles, formats, animation)
 
-- `3864976` video sound + public-viewer parity (LiveProjectScene had dropped
-  audio/lights/groups/hidden + new props — fixed, `rendererParity.test.js` tripwire).
-- `d4c0e6c` plane/torus/capsule/ring · `3689ccc` material presets (Matte/Metal/Glass/
-  Glow) · `c21da60` text styles (six 2D font stacks, 3D typefaces + bevels).
+- `3864976` video sound + public-viewer parity (`rendererParity.test.js` tripwire) ·
+  `d4c0e6c` plane/torus/capsule/ring · `3689ccc` material presets · `c21da60` text styles.
+- `89cfe84` floating-window sizes/collapse persist + off-screen recovery; 17/17 E2E sweep.
+- `b4e5b7f` embedded GLB/FBX animation playback, Draco/Meshopt, OBJ/STL/FBX placement ·
+  `7dcbff6` clip picker, HDR/EXR environment maps (+intensity), KTX2, MTL pairing — all
+  Playwright-verified live (pixel-diff proof for env lighting).
+- Keyframe timeline: spec'd (per-entity `components.timeline`, Scene-window scrubber,
+  shared evaluator in both renderers), deferred to its own session.
 - Local-dev gotcha: restart serverXR after any `projectSchema.cjs` change — the old
   schema stays in memory and new entity types normalize to boxes.
 
 ## Earlier
 
-- 2026-07-08: creation-process gap list all 9 shipped + E2E-verified (History panel,
-  tree rename/eye/lock/drag-reparent, hierarchy clipboard, viewport drop, snap/pivot/
-  typed G/R/S, primitive materials); GitHub sync proven end-to-end, `dev`→`main`;
-  2026-07-07 full audit ([docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)).
+- 2026-07-08: 9 creation-process gaps shipped + E2E'd (History panel, tree rename/eye/
+  lock/reparent, clipboard, snap/pivot/typed G/R/S); GitHub sync proven `dev`→`main`;
+  full audit ([docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)).
 
 ## What works
 
