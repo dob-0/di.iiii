@@ -95,6 +95,20 @@ Never claim a task is done without these passing. The pre-session baseline is: 0
 
 **Files:** `beyond_form/src/HousesModel.jsx` (reference implementation), `beyond_form/scripts/sync-space.mjs` (asset upload + URL rewrite), `serverXR/src/index.js` (`PUBLIC_CORS_ROUTES`).
 
+### Open calls are a platform capability now — reuse the cycle, don't rebuild it
+
+**Rule:** When any project in the ecosystem needs an open call / application flow, reuse the pipeline built for Beyond Form end-to-end: in-design form → dual-write (organizers' Google Form + serverXR) → `/admin → Open Call` review board. New calls need only a new `callId` and a form component — the storage, API, CORS, rate limiting, and review UI already exist.
+
+**Why:** Built 2026-07-09 for beyond_form and verified end-to-end by the user on staging. The schema was deliberately made call-agnostic (identity columns + a `payload` JSON blob), so a second open call costs a form component, not a backend.
+
+**How:**
+1. **Backend (exists):** `POST /api/open-calls/:callId/applications` — public, rate-limited, permissive CORS for sandboxed iframes. Admin `GET`/`PATCH` (status: new/shortlist/accepted/declined + notes) behind `requireAdminAlways`. Store: `serverXR/src/openCallStore.js`.
+2. **Review board (exists):** `/admin → Open Call` tab — add the new call to the `OPEN_CALLS` list in `OpenCallSection.jsx`; chips/filters/notes/CSV come free.
+3. **Keeping the organizers' Google Form as canonical collector:** extract field entry IDs from `FB_PUBLIC_LOAD_DATA_` in the form's viewform HTML; **validate them via a prefill URL** (`viewform?entry.X=TEST` — the value echoes back if the ID is right) so you never test-submit into their spreadsheet; POST to `formResponse` with `mode: 'no-cors'` (response is opaque — enforce required fields client-side). Date questions submit as `entry.X_year/_month/_day`. Labels stay verbatim in the source language.
+4. **Dual-write semantics:** Google is canonical, serverXR is the review copy — success if either write lands, so neither system's downtime blocks an applicant.
+
+**Files:** `serverXR/src/openCallStore.js`, `serverXR/src/routes/openCallRoutes.js`, `src/components/preferences/OpenCallSection.jsx`, `src/services/openCallApi.js`, `beyond_form/src/ApplyForm.jsx` (reference form with the Google-proxy method).
+
 ### When a feature lands on one surface, ask whether it should apply to all of them — past and future
 
 **Rule:** Before calling a UX/behavior change "done," check whether the same capability already exists (or should exist) on every other surface that serves the same purpose — including spaces/projects/content that already existed before this change, not just new ones going forward. If it doesn't apply everywhere, say so explicitly and let the user decide the scope, rather than silently leaving it inconsistent.
