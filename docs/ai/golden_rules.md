@@ -480,3 +480,15 @@ It loads the URL at desktop aspect ratios (16:9, 16:10, 4:3, 1:1, ultrawide, sma
 
 **Files:** `src/components/LiveProjectScene.jsx` (Walker), `scratchpad/probe-walker2.mjs` pattern for input-class probes
 
+
+---
+
+### Newcomers never improvise a workflow — the onboarding is checked in
+
+**Rule:** Every newcomer (human or AI agent, including anyone working from a fork) is pointed to `ONBOARDING.md` before their first task — §1–7 for repo/env setup, §8 for Claude Code. A fresh Claude session must never invent its own workflow: no asking for API keys to put in project files, no new conventions, no parallel process. The project ships its workflow in tracked files (`AGENTS.md`, `.claude/settings.json`, `.mcp.json`, `.claude/agents/`, `.claude/commands/`); the only per-person steps are CLI install, personal login, the trust prompt, and the two standard plugins — all listed in §8.
+
+**Why:** A new collaborator forked the repo, started Claude, and got a from-scratch experience — the session began a new ad-hoc workflow and asked for an API key — because nothing told her the workflow already existed. All the machinery was in the repo; the instruction pointing to it was missing. Onboarding that isn't discoverable is the same as no onboarding.
+
+**How:** When the workflow changes (plugin set, hooks, permissions, MCP servers, slash commands), update `ONBOARDING.md` §8 in the same PR — same tier as CURRENT.md. When handing the repo to someone new, the entire instruction is one line: "clone, then follow ONBOARDING.md top to bottom."
+
+**Files:** `ONBOARDING.md` (§8), `README.md` (Contributing), `.claude/settings.json`, `.mcp.json`, `docs/ai/parallel-agents.md` (Mode 0 fork contract)
