@@ -1,0 +1,180 @@
+- generic [ref=e2]:
+  - button: Դիմել — Apply
+  - banner [ref=e3]:
+    - generic:
+      - generic:
+        - img
+        - text: Beyond Form
+        - text: Բաց կանչ — Open call
+      - generic:
+        - text: Gyumri Art Week
+        - text: 03.08 — 05.08
+    - generic:
+      - heading "Beyond Form" [level=1]
+      - generic [ref=e8]:
+        - generic [ref=e9]: 03.08 — 05.08
+        - link "Դիմել — Apply ↓" [ref=e10] [cursor=pointer]:
+          - /url: "#apply"
+    - navigation [ref=e11]:
+      - link "Աշխատարան / Workshop" [ref=e12] [cursor=pointer]:
+        - /url: "#about"
+      - link "Թեմա / Theme" [ref=e13] [cursor=pointer]:
+        - /url: "#theme"
+      - link "Մանրամասներ / Details" [ref=e14] [cursor=pointer]:
+        - /url: "#facts"
+      - link "Դիմել / Apply" [ref=e15] [cursor=pointer]:
+        - /url: "#apply"
+  - generic [ref=e16]:
+    - generic [ref=e17]:
+      - paragraph [ref=e18]: Բաց կանչ
+      - paragraph [ref=e19]: Beyond Form-ը եռօրյա ստեղծագործական աշխատարան է, որն իրականացվում է Gyumri Art Week-ի շրջանակում՝ Ժամանակակից արվեստի ինստիտուտի, Գյումրու Գեղարվեստի ակադեմիայի և G.Urban Platform-ի համագործակցությամբ։
+      - paragraph [ref=e20]: Աշխատարանը նախատեսված է երիտասարդ արվեստագետների, ուսանողների և բոլոր նրանց համար, ովքեր հետաքրքրված են ժամանակակից արվեստով, նոր մեդիաներով, 3D մոդելավորմամբ, 3D տպագրությամբ և վիզուալ պրոյեկցիաներով։
+      - paragraph [ref=e21]: Եռօրյա աշխատարանի ընթացքում մասնակիցները կծանոթանան թվային արտադրության և վիզուալ տեխնոլոգիաների հնարավորություններին, կզարգացնեն իրենց գաղափարները մենթորների աջակցությամբ և կստեղծեն արվեստի գործեր՝ հիմնված փառատոնի այս տարվա թեմայի վրա։
+    - generic [ref=e22]:
+      - paragraph [ref=e23]: Open call
+      - paragraph [ref=e24]: Beyond Form is a three-day creative workshop, implemented within the framework of Gyumri Art Week, in cooperation with the Institute of Contemporary Art, Gyumri Academy of Fine Arts and G.Urban Platform.
+      - paragraph [ref=e25]: The workshop is intended for young artists, students and all those who are interested in contemporary art, new media, 3D modeling, 3D printing and visual projections.
+      - paragraph [ref=e26]: During the three-day workshop, participants will get acquainted with the possibilities of digital production and visual technologies, develop their ideas with the support of mentors and create works of art based on this year's theme of the festival.
+  - link "Apply now" [ref=e27] [cursor=pointer]:
+    - /url: "#apply"
+    - generic [ref=e28]:
+      - generic [ref=e29]: Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳
+      - generic [ref=e30]: Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳
+  - generic [ref=e31]:
+    - heading "City and Time Քաղաքը և ժամանակը" [level=2] [ref=e35]:
+      - text: City and Time
+      - generic [ref=e36]: Քաղաքը և ժամանակը
+    - generic [ref=e37]:
+      - generic [ref=e38]:
+        - paragraph [ref=e39]: Քաղաքը, որպես ժամանակների հատման, համակեցության և փոխակերպման տարածք։
+        - paragraph [ref=e40]: Թեման առաջարկում է անդրադառնալ այն հարցերին, թե ինչպես են քաղաքները կրում հիշողությունը, ինչպես են փոխվում ժամանակի ընթացքում և ինչպիսի ապագաներ կարող ենք պատկերացնել դրանց համար։
+        - paragraph [ref=e41]: Գյումրին ոչ միայն փառատոնի անցկացման վայրն է, այլև կենդանի հետազոտական միջավայր, որի միջոցով հնարավոր է ուսումնասիրել ժամանակի և քաղաքի փոխհարաբերության բազմազան դրսևորումները։
+      - generic [ref=e42]:
+        - paragraph [ref=e43]: The city as a space of intersection, coexistence and transformation of times.
+        - paragraph [ref=e44]: The theme suggests addressing the questions of how cities carry memory, how they change over time, and what futures we can imagine for them.
+        - paragraph [ref=e45]: Gyumri is not only the venue for the festival, but also a living research environment through which it is possible to explore the diverse manifestations of the relationship between time and the city.
+  - generic [ref=e46]:
+    - article [ref=e47]:
+      - generic [ref=e48]: "01"
+      - heading "Ով / Who" [level=3] [ref=e49]
+      - paragraph [ref=e50]: Երիտասարդ արվեստագետներ, ուսանողներ և բոլոր նրանք, ովքեր հետաքրքրված են ժամանակակից արվեստով և նոր մեդիաներով։
+      - paragraph [ref=e51]: Young artists, students, and anyone interested in contemporary art and new media.
+    - article [ref=e52]:
+      - generic [ref=e53]: "02"
+      - heading "Ինչ / What" [level=3] [ref=e54]
+      - paragraph [ref=e55]: 3D մոդելավորում, 3D տպագրություն, վիզուալ պրոյեկցիաներ՝ մենթորների աջակցությամբ։
+      - paragraph [ref=e56]: 3D modeling, 3D printing, and visual projections — developed with the support of mentors.
+    - article [ref=e57]:
+      - generic [ref=e58]: "03"
+      - heading "Որտեղ / Where" [level=3] [ref=e59]
+      - paragraph [ref=e60]: Գյումրի — կենդանի հետազոտական միջավայր, Gyumri Art Week-ի շրջանակում։
+      - paragraph [ref=e61]: Gyumri — a living research environment, within the framework of Gyumri Art Week.
+  - link "Apply now" [ref=e62] [cursor=pointer]:
+    - /url: "#apply"
+    - generic [ref=e63]:
+      - generic [ref=e64]: Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳
+      - generic [ref=e65]: Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳ Դիմել ✳ Apply now ✳ Beyond Form ✳ 03.08 — 05.08 ✳ Gyumri ✳
+  - generic [ref=e66]:
+    - paragraph [ref=e67]:
+      - text: Ստեղծվող աշխատանքները կարող են լինել թեմայի անձնական, հետազոտական կամ փորձարարական մեկնաբանություններ։
+      - text: The works created can be personal, research, or experimental interpretations of the theme.
+    - heading "Դիմել — Apply" [level=2] [ref=e68]
+    - generic [ref=e69]:
+      - generic [ref=e70]:
+        - generic [ref=e71]:
+          - generic [ref=e72]: Անուն, ազգանուն
+          - generic [ref=e73]: Name, surname
+          - textbox "Անուն, ազգանուն Name, surname" [ref=e74]
+        - generic [ref=e75]:
+          - generic [ref=e76]: Տարիք
+          - generic [ref=e77]: Date of birth
+          - textbox "Տարիք Date of birth" [ref=e78]
+        - generic [ref=e79]:
+          - generic [ref=e80]: Քաղաք
+          - generic [ref=e81]: City
+          - textbox "Քաղաք City" [ref=e82]
+        - generic [ref=e83]:
+          - generic [ref=e84]: Հեռախոսահամար
+          - generic [ref=e85]: Phone number
+          - textbox "Հեռախոսահամար Phone number" [ref=e86]
+        - generic [ref=e87]:
+          - generic [ref=e88]: Էլեկտրոնային հասցե
+          - generic [ref=e89]: Email
+          - textbox "Էլեկտրոնային հասցե Email" [ref=e90]
+      - generic [ref=e91]:
+        - generic [ref=e92]: Կարճ ներկայացրեք ձեզ (մինչև 200 բառ)։
+        - generic [ref=e93]: Introduce yourself briefly (up to 200 words)
+        - textbox "Կարճ ներկայացրեք ձեզ (մինչև 200 բառ)։ Introduce yourself briefly (up to 200 words)" [ref=e94]
+      - generic [ref=e95]:
+        - generic [ref=e96]: Ինչո՞ւ եք ցանկանում մասնակցել Beyond Form աշխատարանին։
+        - generic [ref=e97]: Why do you want to take part in Beyond Form?
+        - textbox "Ինչո՞ւ եք ցանկանում մասնակցել Beyond Form աշխատարանին։ Why do you want to take part in Beyond Form?" [ref=e98]
+      - generic [ref=e99]:
+        - generic [ref=e100]: Ի՞նչն է ձեզ հետաքրքրում «Քաղաքը և ժամանակը» թեմայում։
+        - generic [ref=e101]: What interests you in the theme City and Time?
+        - textbox "Ի՞նչն է ձեզ հետաքրքրում «Քաղաքը և ժամանակը» թեմայում։ What interests you in the theme City and Time?" [ref=e102]
+      - generic [ref=e103]:
+        - generic [ref=e104]:
+          - text: Եթե արդեն ունեք գաղափար, համառոտ ներկայացրեք այն։
+          - emphasis [ref=e105]: · ըստ ցանկության
+        - generic [ref=e106]: If you already have an idea, describe it briefly
+        - textbox "Եթե արդեն ունեք գաղափար, համառոտ ներկայացրեք այն։ · ըստ ցանկության If you already have an idea, describe it briefly" [ref=e107]
+      - group "Ունե՞ք փորձ հետևյալ ուղղություններից որևէ մեկում։ · ըստ ցանկության Any experience in these areas?" [ref=e108]:
+        - generic [ref=e109]:
+          - generic [ref=e110]:
+            - text: Ունե՞ք փորձ հետևյալ ուղղություններից որևէ մեկում։
+            - emphasis [ref=e111]: · ըստ ցանկության
+          - generic [ref=e112]: Any experience in these areas?
+        - generic [ref=e113]:
+          - button "3D մոդելավորում" [ref=e114] [cursor=pointer]
+          - button "3D տպագրություն" [ref=e115] [cursor=pointer]
+          - button "Վիզուալ պրոյեկցիաներ" [ref=e116] [cursor=pointer]
+          - button "Թվային արվեստ" [ref=e117] [cursor=pointer]
+      - generic [ref=e118]:
+        - generic [ref=e119]:
+          - text: Կցեք ձեր պորտֆոլիոն կամ 3–5 աշխատանքների հղում։
+          - emphasis [ref=e120]: · ըստ ցանկության
+        - generic [ref=e121]: Portfolio or 3–5 links to your works
+        - textbox "Կցեք ձեր պորտֆոլիոն կամ 3–5 աշխատանքների հղում։ · ըստ ցանկության Portfolio or 3–5 links to your works" [ref=e122]
+      - generic [ref=e123]:
+        - generic [ref=e124]: Ի՞նչ եք ակնկալում ստանալ այս աշխատարանից։
+        - generic [ref=e125]: What do you expect from this workshop?
+        - textbox "Ի՞նչ եք ակնկալում ստանալ այս աշխատարանից։ What do you expect from this workshop?" [ref=e126]
+      - generic [ref=e127]:
+        - group "Հաստատո՞ւմ եք, որ կարող եք մասնակցել բոլոր երեք օրերին։ Can you attend all three days?" [ref=e128]:
+          - generic [ref=e129]:
+            - generic [ref=e130]: Հաստատո՞ւմ եք, որ կարող եք մասնակցել բոլոր երեք օրերին։
+            - generic [ref=e131]: Can you attend all three days?
+          - generic [ref=e132]:
+            - generic [ref=e133] [cursor=pointer]:
+              - radio "Այո" [ref=e134]
+              - generic [ref=e135]: Այո
+            - generic [ref=e136] [cursor=pointer]:
+              - radio "Ոչ" [ref=e137]
+              - generic [ref=e138]: Ոչ
+        - group "Ունե՞ք անձնական նոթբուք աշխատարանի համար։ Do you have a laptop you can bring?" [ref=e139]:
+          - generic [ref=e140]:
+            - generic [ref=e141]: Ունե՞ք անձնական նոթբուք աշխատարանի համար։
+            - generic [ref=e142]: Do you have a laptop you can bring?
+          - generic [ref=e143]:
+            - generic [ref=e144] [cursor=pointer]:
+              - radio "Այո" [ref=e145]
+              - generic [ref=e146]: Այո
+            - generic [ref=e147] [cursor=pointer]:
+              - radio "Ոչ, անհրաժեշտ է տրամադրել" [ref=e148]
+              - generic [ref=e149]: Ոչ, անհրաժեշտ է տրամադրել
+      - button "Ուղարկել — Submit" [ref=e150] [cursor=pointer]
+      - paragraph [ref=e151]:
+        - link "Կամ բացել Google Form-ը / Or open the Google Form" [ref=e152] [cursor=pointer]:
+          - /url: https://docs.google.com/forms/d/e/1FAIpQLScV1g-mu1jVS96-NgacscmwMExVktXWw6QfEtw2YeoBp2IoUA/viewform
+    - paragraph [ref=e153]: Beyond Form · 03.08 — 05.08 · Gyumri
+  - contentinfo [ref=e154]:
+    - generic [ref=e159]:
+      - generic [ref=e160]: Gyumri Art Week
+      - generic [ref=e161]: Ժամանակակից արվեստի ինստիտուտ
+      - generic [ref=e162]: Գյումրու Գեղարվեստի ակադեմիա
+      - generic [ref=e163]: G.Urban Platform
+    - img "Institute for Contemporary Art Yerevan · ArtNexus / The Swedish Arts Grants Committee · Sverige" [ref=e165]
+    - generic [ref=e166]:
+      - generic [ref=e167]: Beyond Form — Open Call
+      - generic [ref=e168]: 03.08 — 05.08
