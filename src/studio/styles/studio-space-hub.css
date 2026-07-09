@@ -220,6 +220,24 @@
     border: 1px solid rgba(83,215,155,0.2);
 }
 
+.ssh-card-preview {
+    margin: 0 0 10px;
+    aspect-ratio: 16 / 9;
+    background: #05070a;
+    border: 1px solid var(--di-cyan-border, rgba(77,249,255,0.1));
+    overflow: hidden;
+    position: relative;
+}
+
+.ssh-card-preview iframe {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    /* thumbnail only — the card itself is the click target */
+    pointer-events: none;
+}
+
 .ssh-space-label {
     margin: 0 0 4px;
     font-size: 1rem;

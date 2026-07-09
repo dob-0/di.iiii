@@ -91,6 +91,13 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // 'scene' entry view only -- fixed-camera and code/iframe presentations
     // are a deliberate per-project choice and stay exactly as authored.
     const [navMode, setNavMode] = useState('orbit')
+    // ?preview=1 — embedded thumbnail mode (Studio space cards): static
+    // authored camera, no navigation, no Walk/Fly or XR chrome. The document
+    // still live-syncs, so the thumbnail follows what is actually published.
+    const [isPreview] = useState(() => (
+        typeof window !== 'undefined'
+        && new URLSearchParams(window.location.search).get('preview') === '1'
+    ))
     const controlsRef = useRef(null)
     const iframeRef = useRef(null)
     const syncServiceRef = useRef(createProjectSyncService())
@@ -325,11 +332,12 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         if (entryView === 'fixed-camera') return
                         setCameraView(nextView)
                     }}
-                    enableNavigation={entryView !== 'fixed-camera'}
+                    enableNavigation={entryView !== 'fixed-camera' && !isPreview}
+                    showChrome={!isPreview}
                 />
             ) : null}
 
-            {state.status === 'ready' && entryView === 'scene' && navMode === 'orbit' ? (
+            {state.status === 'ready' && entryView === 'scene' && navMode === 'orbit' && !isPreview ? (
                 <button
                     type="button"
                     style={{ ...overlayButtonStyle, position: 'absolute', top: '1rem', right: '1rem', zIndex: 20 }}
@@ -367,6 +375,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 which owns the locomotion + its own Enter AR/VR + Exit XR buttons.
                 Hidden in walk mode to avoid duplicating those buttons. */}
             {(() => {
+                if (isPreview) return null
                 if (!(state.status === 'ready' && navMode === 'orbit' && entryView === 'scene')) return null
                 if (xrDefaultMode === 'off') return null
                 const wantsVr = xrDefaultMode === 'vr'

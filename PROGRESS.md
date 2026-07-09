@@ -5,6 +5,31 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-07-09 (night) — Live previews on Spaces-hub cards
+
+**Who:** Claude (single agent; UX + shared viewer). Finished the uncommitted SpaceHub
+preview WIP found in the tree, per Gevorg's ask ("preview of spaces which has live").
+
+### Done this session
+
+- **Space cards** (`SpaceHub.jsx`, `studio-space-hub.css`): public spaces with a linked
+  project show a 16:9 live preview — a real miniature of the published route. Smart
+  loading: `SpaceCardPreview` mounts its iframe via IntersectionObserver only while the
+  card is near the viewport and unmounts when scrolled away (frees the WebGL context);
+  `pointer-events: none` keeps the card itself the click target.
+- **Viewer preview mode** (`PublicProjectViewer.jsx`): `?preview=1` renders the authored
+  orbit camera with navigation disabled and no chrome — Walk/Fly, Enter AR/VR, and the
+  viewport fullscreen button all hidden (new `showChrome` prop on `StudioViewport`,
+  default true). Document still live-syncs, so thumbnails follow what's published.
+- Tests: SpaceHub preview gating (public+linked only, `?preview=1` src, IO mount) and
+  viewer preview/non-preview flag tests. Wiki: publishing article line.
+
+### Next
+
+- One-command self-host: portable space bundle (blobs + projects + meta) + bootstrap.
+
+---
+
 ## 2026-07-09 (eve) — Per-space CAS blob store (owner-approved storage change)
 
 **Who:** Claude (single agent; BAE). Storage-format change approved by Gevorg in-session

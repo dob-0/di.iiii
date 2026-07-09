@@ -44,8 +44,13 @@ vi.mock('../../hooks/useXrAr.js', () => ({
 }))
 
 vi.mock('../../studio/components/StudioViewport.jsx', () => ({
-    default: function MockStudioViewport({ document }) {
-        return <div>viewer-scene:{document.presentationState?.entryView || 'scene'}</div>
+    default: function MockStudioViewport({ document, enableNavigation, showChrome }) {
+        return (
+            <div>
+                <div>viewer-scene:{document.presentationState?.entryView || 'scene'}</div>
+                <div data-testid="viewport-flags">{`nav:${enableNavigation} chrome:${showChrome}`}</div>
+            </div>
+        )
     }
 }))
 
@@ -169,5 +174,41 @@ describe('PublicProjectViewer', () => {
 
         expect(await screen.findByText('viewer-scene:code')).toBeInTheDocument()
         expect(container.querySelector('iframe')).toBeNull()
+    })
+
+    const sceneDocumentResponse = {
+        version: 1,
+        document: {
+            projectMeta: { id: 'live-project', title: 'Live Project' },
+            presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+            entities: []
+        }
+    }
+
+    it('renders a static scene without navigation or chrome in ?preview=1 mode', async () => {
+        window.history.replaceState(null, '', '/main?preview=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+            expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+            expect(screen.getByTestId('viewport-flags').textContent).toBe('nav:false chrome:false')
+            expect(screen.queryByRole('button', { name: 'Walk / Fly' })).toBeNull()
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
+    it('keeps navigation and Walk / Fly outside preview mode', async () => {
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+        expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+        expect(screen.getByTestId('viewport-flags').textContent).toBe('nav:true chrome:true')
+        expect(await screen.findByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
     })
 })

@@ -12,7 +12,11 @@ active_branch: dev
 `8d59893b` — **live on staging** (content-addressed assets; smoke 9/9, /meta endpoint
 verified live). `main` behind; prod still at `07084e2`.
 
-## Latest session (2026-07-09 eve — CAS: dedupe + per-space blob store)
+## Latest session (2026-07-09 — CAS + live space-card previews)
+
+- **Spaces hub live previews**: public+linked space cards embed the live route as a 16:9
+  miniature (`?preview=1` viewer mode: static orbit cam, no chrome; IO-gated mount/unmount
+  so off-screen cards cost nothing). SpaceHub WIP from the tree finished and shipped.
 
 - Client pre-hash + upload dedupe (`/assets/:id/meta` probe); server verifies sha256 ids
   against content (400 on mismatch) — replace-under-immutable-cache hole closed.

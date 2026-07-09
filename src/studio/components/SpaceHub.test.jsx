@@ -130,6 +130,39 @@ describe('SpaceHub', () => {
         expect(draftsCard.querySelector('.ssh-live-link')).toBeNull()
     })
 
+    it('embeds a non-interactive live preview only on public spaces with a linked project', async () => {
+        // preview iframes mount when the card becomes visible
+        vi.stubGlobal('IntersectionObserver', class {
+            constructor(callback) { this.callback = callback }
+            observe(target) { this.callback([{ isIntersecting: true, target }]) }
+            unobserve() {}
+            disconnect() {}
+        })
+        try {
+            listServerSpaces.mockResolvedValue([
+                { id: 'showroom', label: 'Showroom', isOwner: true, isPublic: true, publishedProjectId: 'p1' },
+                { id: 'drafts', label: 'Drafts', isOwner: true, isPublic: false, publishedProjectId: 'p2' },
+                { id: 'bare', label: 'Bare', isOwner: true, isPublic: true }
+            ])
+
+            render(<SpaceHub />)
+
+            await screen.findByText('showroom')
+            const previewFrame = screen.getByText('showroom')
+                .closest('.ssh-space-card')
+                .querySelector('.ssh-card-preview iframe')
+            expect(previewFrame).not.toBeNull()
+            expect(previewFrame.getAttribute('src')).toBe('/showroom?preview=1')
+            expect(previewFrame.getAttribute('tabindex')).toBe('-1')
+
+            // not public → no preview; public without a linked project → no preview
+            expect(screen.getByText('drafts').closest('.ssh-space-card').querySelector('.ssh-card-preview')).toBeNull()
+            expect(screen.getByText('bare').closest('.ssh-space-card').querySelector('.ssh-card-preview')).toBeNull()
+        } finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
     it('gives admins management everywhere, including Set main', async () => {
         authState = { ...authState, role: 'admin' }
         listServerSpaces.mockResolvedValue([

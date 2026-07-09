@@ -875,6 +875,7 @@ export default function StudioViewport({
     onTransformCommitMany,
     onTransformCancel,
     enableNavigation = true,
+    showChrome = true,
     showHelp = false,
     onCloseHelp,
     onShowHelp,
@@ -957,7 +958,7 @@ export default function StudioViewport({
                 <div className="studio-transform-hud">{transformStatus.text}</div>
             )}
 
-            <FullscreenButton />
+            {showChrome && <FullscreenButton />}
             {onShowHelp && (
                 <button
                     type="button"

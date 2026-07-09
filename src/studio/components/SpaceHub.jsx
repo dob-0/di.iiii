@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Box, Container } from '@mui/material'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import { getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
@@ -17,6 +17,43 @@ import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import '../styles/studio-space-hub.css'
+
+// Live thumbnail of a published space: embeds the real live route in preview
+// mode (?preview=1 — static camera, no chrome, no XR offer). The iframe only
+// mounts while the card is near the viewport so off-screen spaces cost
+// nothing, and unmounts again when scrolled away to free its WebGL context.
+function SpaceCardPreview({ spaceId, label }) {
+    const hostRef = useRef(null)
+    const [visible, setVisible] = useState(false)
+
+    useEffect(() => {
+        const node = hostRef.current
+        if (!node) return undefined
+        if (typeof IntersectionObserver !== 'function') {
+            setVisible(true)
+            return undefined
+        }
+        const observer = new IntersectionObserver(
+            (entries) => setVisible(entries.some((entry) => entry.isIntersecting)),
+            { rootMargin: '160px' }
+        )
+        observer.observe(node)
+        return () => observer.disconnect()
+    }, [])
+
+    return (
+        <div ref={hostRef} className="ssh-card-preview" aria-hidden="true">
+            {visible ? (
+                <iframe
+                    src={`${buildAppSpacePath(spaceId)}?preview=1`}
+                    title={`${label} — live preview`}
+                    loading="lazy"
+                    tabIndex={-1}
+                />
+            ) : null}
+        </div>
+    )
+}
 
 export default function SpaceHub() {
     const { authenticated, type, role, canCreateSpace, ownedSpaceCount, spaceLimit, spaces: sessionScopes } = useAuthSession()
@@ -342,6 +379,9 @@ export default function SpaceHub() {
                                         {space.isPublic && <span className="ssh-badge-live">Live</span>}
                                         {space.isPublic && !canEnter(space) && <span className="ssh-badge-viewonly">View live</span>}
                                     </div>
+                                    {space.isPublic && space.publishedProjectId && (
+                                        <SpaceCardPreview spaceId={space.id} label={space.label || space.id} />
+                                    )}
                                     <p className="ssh-space-label">{space.label || space.id}</p>
                                     {linkedTitle && (
                                         <p className="ssh-space-project">Project: {linkedTitle}</p>
