@@ -80,6 +80,21 @@ Never claim a task is done without these passing. The pre-session baseline is: 0
 
 **Files:** `~/.cache/ms-playwright`, `node_modules/playwright` (di.iiii).
 
+### Heavy 3D asset → web: the crush-serve-fallback pipeline
+
+**Rule:** Never ship a raw scan/AI-generated model to a page. Every heavy 3D asset goes through the same pipeline: inspect → crush with gltf-transform → serve as a space asset (not inlined) → render with a static fallback → verify on the live deployment. This is the standard method for growing/polishing any project page in the ecosystem (beyond_form, br_id_ge, future spaces).
+
+**Why:** 2026-07-09, beyond_form: a Tripo3D model of the project logo arrived at 1.46M triangles / 41.6MB. One `gltf-transform optimize` pass (simplify + Draco + WebP 1k textures) took it to 661KB — 63× smaller, visually identical at page scale. Inlining it into the single-file build would have ballooned the page ~55MB; serving it as a space asset kept the page at 1.2MB with the model streaming in. The fallback image meant the page never looked broken while iterating.
+
+**How:**
+1. **Inspect first** — parse the GLB header (JSON chunk at byte 20) for triangle/texture counts, and render preview screenshots headlessly (three.js viewer + playwright; `preserveDrawingBuffer: true` or screenshots come back blank) so you know what the model *is* before deciding placement.
+2. **Crush:** `npx @gltf-transform/cli optimize in.glb out.glb --compress draco --texture-compress webp --texture-size 1024`. Expect 10–100× reduction on scan/AI meshes.
+3. **Serve, don't inline:** put the file in the repo's `public/` with a unique basename and reference it by that literal basename string in code — `scripts/sync-space.mjs` uploads it as a project asset and rewrites the basename to the asset URL in the built HTML. Works in dev (Vite serves `public/` at root) and on di-studio.xyz.
+4. **Fallback:** wrap the Canvas in Suspense + an error boundary with a static image fallback — WebGL loss or fetch failure must degrade to the flat asset, never to a hole.
+5. **Verify live, in the iframe:** sandboxed space iframes have origin `null`; `fetch()`-based loaders (GLTF/Draco) need the serverXR permissive-CORS shim for asset reads (in place since `7bfb260`). Media tags dodge CORS; fetch does not. Screenshot the deployed page, not just the local build.
+
+**Files:** `beyond_form/src/HousesModel.jsx` (reference implementation), `beyond_form/scripts/sync-space.mjs` (asset upload + URL rewrite), `serverXR/src/index.js` (`PUBLIC_CORS_ROUTES`).
+
 ### When a feature lands on one surface, ask whether it should apply to all of them — past and future
 
 **Rule:** Before calling a UX/behavior change "done," check whether the same capability already exists (or should exist) on every other surface that serves the same purpose — including spaces/projects/content that already existed before this change, not just new ones going forward. If it doesn't apply everywhere, say so explicitly and let the user decide the scope, rather than silently leaving it inconsistent.
