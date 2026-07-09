@@ -9,7 +9,8 @@ active_branch: dev
 
 ## Last commit
 
-`d4b3ce6` — on **staging** (keyframe timeline). `main` further behind; prod still at `07084e2`.
+`fab42f26` — pushed to `dev`, **staging deploy in flight** (content-addressed assets).
+`main` further behind; prod still at `07084e2`.
 
 ## Latest session (2026-07-09 eve — content-addressed assets)
 
