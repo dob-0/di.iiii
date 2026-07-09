@@ -49,6 +49,9 @@ function createSpaceStore({
     isPublic: Boolean(row.is_public),
     kind: normalizeSpaceKind(row.kind),
     publishedProjectId: row.published_project_id || null,
+    // Card-preview override: when set, hub cards show this space asset image
+    // instead of the live embed. null = default live preview.
+    previewImageAssetId: row.preview_image_asset_id || null,
     ownerUserId: row.owner_user_id || null,
     sceneVersion: row.scene_version || 0,
     createdAt: row.created_at,
@@ -66,6 +69,7 @@ function createSpaceStore({
       isPublic: Boolean(overrides.isPublic),
       kind: normalizeSpaceKind(overrides.kind),
       publishedProjectId: overrides.publishedProjectId || null,
+      previewImageAssetId: overrides.previewImageAssetId || null,
       ownerUserId: overrides.ownerUserId || null,
       createdAt: overrides.createdAt || now,
       updatedAt: now,
@@ -87,9 +91,9 @@ function createSpaceStore({
       selectAll:     db.prepare('SELECT * FROM spaces ORDER BY updated_at DESC'),
       selectStale:   db.prepare("SELECT id FROM spaces WHERE permanent = 0 AND kind != 'global' AND last_touched_at < ?"),
       countByOwner:  db.prepare('SELECT COUNT(*) as cnt FROM spaces WHERE owner_user_id = ?'),
-      upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-      insert:        db.prepare('INSERT INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-      update:        db.prepare('UPDATE spaces SET label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=? WHERE id=?'),
+      upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      insert:        db.prepare('INSERT INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      update:        db.prepare('UPDATE spaces SET label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, preview_image_asset_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=? WHERE id=?'),
       deleteById:    db.prepare('DELETE FROM spaces WHERE id = ?'),
       opsSelect:     db.prepare('SELECT data FROM space_ops WHERE space_id = ? ORDER BY version ASC'),
       opsDeleteAll:  db.prepare('DELETE FROM space_ops WHERE space_id = ?'),
@@ -111,6 +115,7 @@ function createSpaceStore({
       meta.isPublic ? 1 : 0,
       normalizeSpaceKind(meta.kind),
       meta.publishedProjectId ?? null,
+      meta.previewImageAssetId ?? null,
       meta.sceneVersion ?? 0,
       meta.createdAt ?? Date.now(),
       meta.updatedAt ?? Date.now(),
@@ -131,7 +136,7 @@ function createSpaceStore({
       const row = selectById.get(spaceId)
       if (!row) {
         const meta = buildMeta(spaceId, updates)
-        insert.run(spaceId, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0, meta.isPublic ? 1 : 0, meta.kind, meta.publishedProjectId ?? null, meta.sceneVersion ?? 0, meta.createdAt, meta.updatedAt, meta.lastTouchedAt, meta.ownerUserId ?? null)
+        insert.run(spaceId, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0, meta.isPublic ? 1 : 0, meta.kind, meta.publishedProjectId ?? null, meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, meta.createdAt, meta.updatedAt, meta.lastTouchedAt, meta.ownerUserId ?? null)
         return meta
       }
       const nextLabel     = 'label'            in updates ? (updates.label ?? '')                                                                    : row.label
@@ -140,11 +145,12 @@ function createSpaceStore({
       const nextPublic    = 'isPublic'         in updates ? (Boolean(updates.isPublic) ? 1 : 0)                                                      : row.is_public
       const nextKind      = 'kind'             in updates ? normalizeSpaceKind(updates.kind)                                                          : normalizeSpaceKind(row.kind)
       const nextPublished = 'publishedProjectId' in updates ? (updates.publishedProjectId ?? null)                                                   : row.published_project_id
+      const nextPreview   = 'previewImageAssetId' in updates ? (updates.previewImageAssetId ?? null)                                                 : row.preview_image_asset_id
       const nextVersion   = 'sceneVersion'     in updates ? (Number.isFinite(Number(updates.sceneVersion)) ? Number(updates.sceneVersion) : row.scene_version) : row.scene_version
       const nextTouched   = updates.touch !== false ? now : row.last_touched_at
       const nextOwner     = 'ownerUserId'      in updates ? (updates.ownerUserId ?? null)                                                            : row.owner_user_id
-      update.run(nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextVersion, now, nextTouched, nextOwner, spaceId)
-      return rowToMeta({ ...row, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner })
+      update.run(nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, spaceId)
+      return rowToMeta({ ...row, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner })
     })()
   }
 

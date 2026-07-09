@@ -1280,6 +1280,62 @@ describe('server write contracts', () => {
         expect(forcedRes.status).toBe(200)
     })
 
+    it('lets an owner set, validate, and clear the card preview image', async () => {
+        const server = await startServer()
+        const spaceId = 'preview-image-space'
+        const createRes = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ slug: spaceId, label: 'Preview Image Space', permanent: true })
+        })
+        expect(createRes.status).toBe(201)
+
+        // malformed id → 400; well-formed but missing asset → 404
+        const invalidRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ previewImageAssetId: '../escape' })
+        })
+        expect(invalidRes.status).toBe(400)
+        const missingRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ previewImageAssetId: 'deadbeef-0000-4000-8000-000000000000' })
+        })
+        expect(missingRes.status).toBe(404)
+
+        const formData = new FormData()
+        formData.append('asset', new Blob(['cover-bytes'], { type: 'image/png' }), 'cover.png')
+        const uploadRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets`, {
+            method: 'POST',
+            headers: withAuth(server.apiToken),
+            body: formData
+        })
+        expect(uploadRes.status).toBe(200)
+        const { assetId } = await uploadRes.json()
+
+        const setRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ previewImageAssetId: assetId })
+        })
+        expect(setRes.status).toBe(200)
+        expect((await setRes.json()).space.previewImageAssetId).toBe(assetId)
+
+        // the hub reads spaces from the list endpoint — the override must survive it
+        const listRes = await fetch(`${server.baseUrl}/api/spaces`, { headers: withAuth(server.apiToken) })
+        const listed = (await listRes.json()).spaces.find((space) => space.id === spaceId)
+        expect(listed.previewImageAssetId).toBe(assetId)
+
+        const clearRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ previewImageAssetId: null })
+        })
+        expect(clearRes.status).toBe(200)
+        expect((await clearRes.json()).space.previewImageAssetId).toBe(null)
+    })
+
     it('gates GitHub App discovery behind sign-in and reports unconfigured cleanly', async () => {
         // Blank the App vars explicitly — dotenv won't override set env vars, so
         // this wins over any developer serverXR/.env.local on the machine.

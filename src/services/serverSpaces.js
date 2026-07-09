@@ -32,11 +32,15 @@ export const updateServerSpace = async (spaceId, updates = {}) => {
             allowEdits: updates.allowEdits,
             isPublic: updates.isPublic,
             kind: updates.kind,
-            publishedProjectId: updates.publishedProjectId
+            publishedProjectId: updates.publishedProjectId,
+            previewImageAssetId: updates.previewImageAssetId
         }
     })
     return data.space
 }
+
+export const getServerSpaceAssetUrl = (spaceId, assetId) =>
+    `${apiBaseUrl}/api/spaces/${resolveServerSpaceId(spaceId)}/assets/${assetId}`
 
 export const deleteServerSpace = async (spaceId) => {
     await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}`, { method: 'DELETE' })

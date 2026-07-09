@@ -8,7 +8,9 @@ import {
     updateServerSpace,
     deleteServerSpace,
     getServerConfig,
-    patchServerConfig
+    patchServerConfig,
+    uploadServerAsset,
+    getServerSpaceAssetUrl
 } from '../../services/serverSpaces.js'
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
@@ -151,6 +153,8 @@ export default function SpaceHub() {
     const [linker, setLinker] = useState(null)
     // GitHub sync panel state: { spaceId, projects, loading }
     const [github, setGithub] = useState(null)
+    // card-preview manager panel state: { spaceId, busy, error }
+    const [previewMgr, setPreviewMgr] = useState(null)
     const [providers, setProviders] = useState(null) // null until sign-in requested
     const [copiedLiveId, setCopiedLiveId] = useState(null)
 
@@ -337,6 +341,35 @@ export default function SpaceHub() {
         }
     }, [loadSpaces])
 
+    const handleTogglePreviewMgr = useCallback((space, e) => {
+        e.stopPropagation()
+        setPreviewMgr(prev => prev?.spaceId === space.id ? null : { spaceId: space.id, busy: false, error: '' })
+    }, [])
+
+    const handleUseLivePreview = useCallback(async (space) => {
+        setPreviewMgr(prev => prev ? { ...prev, busy: true, error: '' } : prev)
+        try {
+            await updateServerSpace(space.id, { previewImageAssetId: null })
+            await loadSpaces()
+            setPreviewMgr(prev => prev ? { ...prev, busy: false } : prev)
+        } catch (err) {
+            setPreviewMgr(prev => prev ? { ...prev, busy: false, error: err.message || 'Could not update preview.' } : prev)
+        }
+    }, [loadSpaces])
+
+    const handlePreviewImageFile = useCallback(async (space, file) => {
+        if (!file) return
+        setPreviewMgr(prev => prev ? { ...prev, busy: true, error: '' } : prev)
+        try {
+            const uploaded = await uploadServerAsset(space.id, file)
+            await updateServerSpace(space.id, { previewImageAssetId: uploaded.assetId })
+            await loadSpaces()
+            setPreviewMgr(prev => prev ? { ...prev, busy: false } : prev)
+        } catch (err) {
+            setPreviewMgr(prev => prev ? { ...prev, busy: false, error: err.message || 'Could not upload image.' } : prev)
+        }
+    }, [loadSpaces])
+
     const handleStartRenameProject = useCallback((project, e) => {
         e.stopPropagation()
         setLinker(prev => prev ? { ...prev, renamingId: project.id, renameValue: project.title || '' } : prev)
@@ -462,9 +495,17 @@ export default function SpaceHub() {
                                         {space.isPublic && <span className="ssh-badge-live">Live</span>}
                                         {space.isPublic && !canEnter(space) && <span className="ssh-badge-viewonly">View live</span>}
                                     </div>
-                                    {space.isPublic && space.publishedProjectId && (
+                                    {space.previewImageAssetId ? (
+                                        <div className="ssh-card-preview" aria-hidden="true">
+                                            <img
+                                                src={getServerSpaceAssetUrl(space.id, space.previewImageAssetId)}
+                                                alt=""
+                                                loading="lazy"
+                                            />
+                                        </div>
+                                    ) : space.isPublic && space.publishedProjectId ? (
                                         <SpaceCardPreview spaceId={space.id} label={space.label || space.id} />
-                                    )}
+                                    ) : null}
                                     <p className="ssh-space-label">{space.label || space.id}</p>
                                     {linkedTitle && (
                                         <p className="ssh-space-project">Project: {linkedTitle}</p>
@@ -508,6 +549,12 @@ export default function SpaceHub() {
                                                 {space.publishedProjectId ? 'Change project' : 'Link project'}
                                             </button>
                                             <button
+                                                className={`ssh-card-btn${previewMgr?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
+                                                onClick={e => handleTogglePreviewMgr(space, e)}
+                                            >
+                                                Preview
+                                            </button>
+                                            <button
                                                 className={`ssh-card-btn${github?.spaceId === space.id ? ' ssh-card-btn--active' : ''}`}
                                                 onClick={e => handleOpenGithub(space, e)}
                                             >
@@ -524,6 +571,47 @@ export default function SpaceHub() {
                                             >
                                                 Delete
                                             </button>
+                                        </div>
+                                    )}
+
+                                    {previewMgr?.spaceId === space.id && (
+                                        <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
+                                            <p className="ssh-linker-status">
+                                                {space.previewImageAssetId
+                                                    ? 'Card shows a custom image.'
+                                                    : space.isPublic && space.publishedProjectId
+                                                        ? 'Card shows a live miniature of the published project.'
+                                                        : 'No live preview yet (needs a public space with a linked project) — you can set an image.'}
+                                            </p>
+                                            {previewMgr.error && <p className="ssh-linker-status ssh-linker-error">{previewMgr.error}</p>}
+                                            <div className="ssh-linker-footer">
+                                                <label className="ssh-card-btn">
+                                                    {previewMgr.busy ? 'Working…' : space.previewImageAssetId ? 'Replace image' : 'Upload image'}
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*"
+                                                        style={{ display: 'none' }}
+                                                        disabled={previewMgr.busy}
+                                                        onChange={e => {
+                                                            const file = e.target.files?.[0]
+                                                            e.target.value = ''
+                                                            handlePreviewImageFile(space, file)
+                                                        }}
+                                                    />
+                                                </label>
+                                                {space.previewImageAssetId && (
+                                                    <button
+                                                        className="ssh-card-btn"
+                                                        disabled={previewMgr.busy}
+                                                        onClick={() => handleUseLivePreview(space)}
+                                                    >
+                                                        Use live preview
+                                                    </button>
+                                                )}
+                                                <button className="ssh-card-btn" onClick={() => setPreviewMgr(null)}>
+                                                    Close
+                                                </button>
+                                            </div>
                                         </div>
                                     )}
 

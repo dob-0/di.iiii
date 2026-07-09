@@ -229,6 +229,14 @@
     position: relative;
 }
 
+/* Custom cover image (owner-set via the card's Preview manager) */
+.ssh-card-preview img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 /* The iframe is laid out at a desktop-sized virtual viewport (dimensions set
    inline by SpaceCardPreview) and scaled down to fit the card, so the embedded
    page renders its real desktop layout instead of a cramped ~340px one. */

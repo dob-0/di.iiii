@@ -20,6 +20,8 @@ see `git log dev` — previews + CAS all **live on staging** (Playwright-verifie
   → `frameloop="demand"`, DPR 1, low-power GPU hint; sync ops still invalidate) + boot
   queue (max 2 concurrent iframe boots, slot frees on load/unmount/15s). Iframe lays
   out at a 1024×576 virtual viewport, CSS-scaled to the card (true desktop miniature).
+  Card "Preview" manager: owners upload a custom cover image or keep the live embed
+  (`spaces.preview_image_asset_id`, PATCH-validated against space assets).
 
 - Client pre-hash + upload dedupe (`/assets/:id/meta` probe); server verifies sha256 ids
   against content (400 on mismatch) — replace-under-immutable-cache hole closed.

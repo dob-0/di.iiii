@@ -29,6 +29,12 @@ Read this before starting work. Update it before stopping.
   iframe lays out at 1024×576 and is CSS-`scale()`d to the card (ResizeObserver keeps
   the scale on resize) — previews now show a true desktop miniature instead of the
   page's cramped mobile layout zoomed into the thumbnail.
+- **Preview manager** (follow-up: "need place to manage… put image"): new Preview
+  button on managed cards opens a panel — upload a custom cover image or switch back
+  to the live miniature. New `spaces.preview_image_asset_id` column (ensureColumn
+  migration); PATCH validates the asset exists in the space (400 malformed / 404
+  missing), image served from the existing public space-assets route. Contract test +
+  SpaceHub tests + wiki line.
 
 ### Next
 

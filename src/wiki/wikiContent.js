@@ -73,6 +73,7 @@ export const WIKI_ARTICLES = [
             'If you own the space you do all of this yourself on the Spaces page (/studio): Rename, Public/Private, Link project, GitHub sync, and Delete sit on each of your space cards. No admin needed.',
             'Public spaces show their live link right on the card (and in the editor’s Spaces panel) with one-click Copy — that link is what visitors open. Public spaces you can’t edit are marked “View live”, and clicking their card takes you straight to the live view — one click, no login wall.',
             'Live space cards on the Spaces page also show a live preview — a real miniature of the published scene, streamed from the live route and always up to date. Previews only load while their card is on screen, so a long spaces list stays fast.',
+            'Owners manage the card preview from the Preview button on the card: keep the live miniature or upload a custom cover image (Replace image / Use live preview to switch back anytime). A cover image also works on spaces that aren’t public yet.',
             'The editor’s Spaces panel has the same self-serve Make Public / Make Private toggle as the Spaces page.',
             'Publishing (which project is live) and visibility (Public/Private) are independent choices — linking a project does not automatically make the space public.',
             'A published-but-private space shows a login wall to visitors instead of the scene.',

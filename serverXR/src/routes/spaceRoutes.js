@@ -168,7 +168,7 @@ function registerSpaceRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId } = req.body || {}
+      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId } = req.body || {}
       if (kind !== undefined && !['normal', 'global', 'sandbox'].includes(kind)) {
         return res.status(400).json({ error: 'kind must be one of: normal, global, sandbox.' })
       }
@@ -193,13 +193,35 @@ function registerSpaceRoutes(router, {
           }
         }
       }
+      // Card-preview image override: must be an asset that exists in this
+      // space so cards never point at a broken image. null/'' clears it back
+      // to the default live embed.
+      let nextPreviewImageAssetId
+      if (previewImageAssetId !== undefined) {
+        if (previewImageAssetId === null || previewImageAssetId === '') {
+          nextPreviewImageAssetId = null
+        } else {
+          const requested = String(previewImageAssetId).trim()
+          if (!isValidAssetId(requested)) {
+            return res.status(400).json({ error: 'Invalid preview image asset id.' })
+          }
+          const { assetsDir } = getSpacePaths(spaceId)
+          try {
+            await fsp.access(path.join(assetsDir, requested))
+          } catch {
+            return res.status(404).json({ error: 'Preview image asset not found in this space.' })
+          }
+          nextPreviewImageAssetId = requested
+        }
+      }
       const meta = await upsertSpaceMeta(spaceId, {
         ...(label !== undefined ? { label } : {}),
         ...(permanent !== undefined ? { permanent } : {}),
         ...(allowEdits !== undefined ? { allowEdits } : {}),
         ...(isPublic !== undefined ? { isPublic: Boolean(isPublic) } : {}),
         ...(kind !== undefined ? { kind } : {}),
-        ...(publishedProjectId !== undefined ? { publishedProjectId: nextPublishedProjectId } : {})
+        ...(publishedProjectId !== undefined ? { publishedProjectId: nextPublishedProjectId } : {}),
+        ...(previewImageAssetId !== undefined ? { previewImageAssetId: nextPreviewImageAssetId } : {})
       })
       res.json({ space: meta })
     } catch (error) {

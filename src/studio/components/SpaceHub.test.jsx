@@ -8,6 +8,7 @@ const getServerConfig = vi.fn()
 const updateServerSpace = vi.fn()
 const deleteServerSpace = vi.fn()
 const getApiAuthProviders = vi.fn()
+const uploadServerAsset = vi.fn()
 
 let authState
 
@@ -22,6 +23,8 @@ vi.mock('../../services/serverSpaces.js', () => ({
     updateServerSpace: (...args) => updateServerSpace(...args),
     deleteServerSpace: (...args) => deleteServerSpace(...args),
     patchServerConfig: vi.fn(),
+    uploadServerAsset: (...args) => uploadServerAsset(...args),
+    getServerSpaceAssetUrl: (spaceId, assetId) => `/serverXR/api/spaces/${spaceId}/assets/${assetId}`,
     // GithubSyncSection (rendered on demand from a card) uses these.
     getSpaceGithubLink: () => Promise.resolve(null),
     connectSpaceGithub: vi.fn(),
@@ -64,6 +67,8 @@ describe('SpaceHub', () => {
         getServerConfig.mockResolvedValue({})
         getApiAuthProviders.mockReset()
         mockAppNavigate.mockReset()
+        updateServerSpace.mockReset()
+        uploadServerAsset.mockReset()
         authState = {
             authenticated: true,
             type: 'session',
@@ -199,6 +204,40 @@ describe('SpaceHub', () => {
         } finally {
             vi.unstubAllGlobals()
         }
+    })
+
+    it('shows the custom preview image instead of the live embed when set', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'gallery', label: 'Gallery', isOwner: true, isPublic: true, publishedProjectId: 'p1', previewImageAssetId: 'cover123' }
+        ])
+
+        render(<SpaceHub />)
+
+        await screen.findByText('gallery')
+        const card = screen.getByText('gallery').closest('.ssh-space-card')
+        const image = card.querySelector('.ssh-card-preview img')
+        expect(image).not.toBeNull()
+        expect(image.getAttribute('src')).toBe('/serverXR/api/spaces/gallery/assets/cover123')
+        expect(card.querySelector('.ssh-card-preview iframe')).toBeNull()
+    })
+
+    it('uploads a preview image from the card Preview manager and links it to the space', async () => {
+        listServerSpaces.mockResolvedValue([
+            { id: 'mine', label: 'Mine', isOwner: true, isPublic: true, publishedProjectId: 'p1' }
+        ])
+        uploadServerAsset.mockResolvedValue({ assetId: 'newcover' })
+        updateServerSpace.mockResolvedValue({})
+
+        render(<SpaceHub />)
+
+        await screen.findByText('mine')
+        fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
+        const fileInput = screen.getByText('Upload image').querySelector('input[type="file"]')
+        const file = new File(['img-bytes'], 'cover.png', { type: 'image/png' })
+        fireEvent.change(fileInput, { target: { files: [file] } })
+
+        await waitFor(() => expect(uploadServerAsset).toHaveBeenCalledWith('mine', file))
+        await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('mine', { previewImageAssetId: 'newcover' }))
     })
 
     it('gives admins management everywhere, including Set main', async () => {
