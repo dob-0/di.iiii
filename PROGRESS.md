@@ -25,6 +25,10 @@ Read this before starting work. Update it before stopping.
 - Tests: boot-queue test (2 mount, third waits, load frees a slot) + `low:` flag in
   viewer preview tests. Trade-off accepted: keyframe/shader animation freezes in
   thumbnails after the 8s settle — still a live frame, desirable for a grid of cards.
+- **Virtual-viewport scaling** (follow-up: "previews is big than the window"): the
+  iframe lays out at 1024×576 and is CSS-`scale()`d to the card (ResizeObserver keeps
+  the scale on resize) — previews now show a true desktop miniature instead of the
+  page's cramped mobile layout zoomed into the thumbnail.
 
 ### Next
 

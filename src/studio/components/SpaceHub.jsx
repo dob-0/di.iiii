@@ -51,6 +51,14 @@ function requestPreviewBoot(start) {
     return entry.release
 }
 
+// Preview iframes lay out at this virtual desktop viewport and are scaled
+// down with a CSS transform to fit the card — an iframe laid out at the
+// card's real ~340px width renders the page's cramped mobile layout zoomed
+// into the thumbnail instead of a miniature of the desktop view. 16:9 to
+// match .ssh-card-preview's aspect-ratio, so the scaled height fits exactly.
+const PREVIEW_VIEWPORT_WIDTH = 1024
+const PREVIEW_VIEWPORT_HEIGHT = 576
+
 // Live thumbnail of a published space: embeds the real live route in preview
 // mode (?preview=1 — static camera, no chrome, no XR offer, low-power render
 // loop). The iframe only mounts while the card is near the viewport so
@@ -60,6 +68,7 @@ function SpaceCardPreview({ spaceId, label }) {
     const hostRef = useRef(null)
     const [visible, setVisible] = useState(false)
     const [booted, setBooted] = useState(false)
+    const [scale, setScale] = useState(0)
     const releaseRef = useRef(null)
 
     useEffect(() => {
@@ -73,6 +82,17 @@ function SpaceCardPreview({ spaceId, label }) {
             (entries) => setVisible(entries.some((entry) => entry.isIntersecting)),
             { rootMargin: '160px' }
         )
+        observer.observe(node)
+        return () => observer.disconnect()
+    }, [])
+
+    useEffect(() => {
+        const node = hostRef.current
+        if (!node) return undefined
+        const measure = () => setScale(node.clientWidth / PREVIEW_VIEWPORT_WIDTH)
+        measure()
+        if (typeof ResizeObserver !== 'function') return undefined
+        const observer = new ResizeObserver(measure)
         observer.observe(node)
         return () => observer.disconnect()
     }, [])
@@ -107,6 +127,11 @@ function SpaceCardPreview({ spaceId, label }) {
                     loading="lazy"
                     tabIndex={-1}
                     onLoad={() => releaseRef.current?.()}
+                    style={{
+                        width: `${PREVIEW_VIEWPORT_WIDTH}px`,
+                        height: `${PREVIEW_VIEWPORT_HEIGHT}px`,
+                        transform: `scale(${scale})`
+                    }}
                 />
             ) : null}
         </div>

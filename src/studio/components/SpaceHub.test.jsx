@@ -154,6 +154,10 @@ describe('SpaceHub', () => {
             expect(previewFrame).not.toBeNull()
             expect(previewFrame.getAttribute('src')).toBe('/showroom?preview=1')
             expect(previewFrame.getAttribute('tabindex')).toBe('-1')
+            // desktop virtual viewport, scaled down to the card by transform
+            expect(previewFrame.style.width).toBe('1024px')
+            expect(previewFrame.style.height).toBe('576px')
+            expect(previewFrame.style.transform).toMatch(/^scale\(/)
 
             // not public → no preview; public without a linked project → no preview
             expect(screen.getByText('drafts').closest('.ssh-space-card').querySelector('.ssh-card-preview')).toBeNull()
