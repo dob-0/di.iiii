@@ -13,22 +13,18 @@ active_branch: dev
 
 ## Latest session (2026-07-09 — media, styles, formats, animation)
 
-- `3864976` video sound + public-viewer parity (`rendererParity.test.js` tripwire) ·
-  `d4c0e6c` plane/torus/capsule/ring · `3689ccc` material presets · `c21da60` text styles.
-- `89cfe84` floating-window sizes/collapse persist + off-screen recovery; 17/17 E2E sweep.
-- `b4e5b7f` embedded GLB/FBX animation playback, Draco/Meshopt, OBJ/STL/FBX placement ·
-  `7dcbff6` clip picker, HDR/EXR environment maps (+intensity), KTX2, MTL pairing — all
-  Playwright-verified live (pixel-diff proof for env lighting).
-- `d4b3ce6` keyframe timeline shipped: per-entity `components.timeline`, Scene-window
-  Timeline section (record/scrub/key-drag/preview), shared evaluator in both renderers;
-  12/12 live E2E with pixel-diff playback proof.
+- `3864976` video sound + viewer parity tripwire · `d4c0e6c` 4 new shapes ·
+  `3689ccc` material presets · `c21da60` text styles · `89cfe84` window persistence.
+- `b4e5b7f` embedded GLB/FBX animation, Draco/Meshopt · `7dcbff6` clip picker,
+  HDR/EXR environment maps, KTX2, MTL pairing — all Playwright-verified live.
+- `d4b3ce6` keyframe timeline: per-entity `components.timeline`, Scene-window Timeline
+  section (record/scrub/key-drag/preview), shared evaluator in both renderers; 12/12 E2E.
 - Local-dev gotcha: restart serverXR after any `projectSchema.cjs` change — the old
   schema stays in memory and new entity types normalize to boxes.
 
 ## Earlier
 
-- 2026-07-08: 9 creation-process gaps shipped + E2E'd (History panel, tree rename/eye/
-  lock/reparent, clipboard, snap/pivot/typed G/R/S); GitHub sync proven `dev`→`main`;
+- 2026-07-08: 9 creation-process gaps shipped + E2E'd; GitHub sync proven `dev`→`main`;
   full audit ([docs/ai/audit-2026-07-07.md](docs/ai/audit-2026-07-07.md)).
 
 ## What works
