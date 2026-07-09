@@ -10,19 +10,19 @@ active_branch: dev
 ## Last commit
 
 `ab046dd2` — dev == main == **prod** (promoted 2026-07-09; deploy green; smoke 9/9 PASS).
-## Latest session (2026-07-09 eve — newcomer onboarding + dev→main promotion)
+## Latest session (2026-07-09 eve — onboarding, promotion, space bundles)
 
-- **Onboarding shipped** (PR #25): `ONBOARDING.md` §8 "Working with Claude Code" — AI
-  workflow is checked in; per-person: CLI install, personal login (key never in repo),
-  trust prompt, plugins. New golden rule: newcomers never improvise a workflow.
-- **dev→main promoted** after manual OAuth verified on staging (blocker cleared); forks
-  of `main` now carry the full onboarding.
+- **Onboarding shipped** (PR #25, merged+promoted): `ONBOARDING.md` §8 Claude Code setup;
+  golden rule: newcomers never improvise a workflow. Manual OAuth verified on staging.
+- **Portable space bundles** (this PR): `npm run space:export/space:import` — offline
+  tar.gz of a space (DB rows, op-logs, scene, assets, CAS blobs); strips secrets, `--as`
+  remaps URLs, GC-safe. `npm run selfhost -- <bundle>` = deps+env+import+run in one
+  command. Round-trip contract-tested (40 contracts). Docs: `docs/deploy/SELF_HOST.md`.
 
-## Earlier 2026-07-09 (now live on prod)
+## Earlier 2026-07-09 (live on prod)
 
-- CAS per-space blob store + pre-hash dedupe (37 contracts green); Spaces-hub live card
-  previews + Preview manager; media/animation batch + keyframe timeline (12/12 E2E). Gotcha:
-  restart serverXR after `projectSchema.cjs` changes — stale schema boxes new entity types.
+- CAS blob store + pre-hash dedupe; live card previews + Preview manager; media/animation
+  batch + keyframe timeline. Gotcha: restart serverXR after `projectSchema.cjs` changes.
 
 ## What works
 
@@ -36,8 +36,8 @@ active_branch: dev
   Webhook canary `dob-0/di-sync-webhook-test`→`webhook-test` is permanent.
 - `serverXR/.env.local` stale GitHub App key — copy `GITHUB_APP_PRIVATE_KEY_B64` from a
   host's `~/.config/dii/*.deploy.env`. If `br_id_ge` gets App-connected, disable its CI sync.
-- `origin/self-host` intentionally 1 commit ahead (`b9baa30`). Next strategic work:
-  one-command self-host (portable space bundle: blobs+projects+meta).
+- `origin/self-host` intentionally 1 commit ahead (`b9baa30`). Next: portable *install*
+  bundle (multi-space + config) and P2P/IPFS direction per MANIFESTO.
 
 ## Known fixes → [docs/ai/known-fixes.md](docs/ai/known-fixes.md) — check before any bug hunt.
 
