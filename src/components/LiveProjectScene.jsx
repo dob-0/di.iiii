@@ -450,6 +450,29 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 el.style.cursor = locked ? 'none' : 'crosshair'
                 onLockChangeRef.current?.(locked)
             }
+            // ?inputdebug=1 — live readout of what the browser actually
+            // delivers (lock state, movement deltas, element under cursor).
+            // Three Wayland look reports were undiagnosable from injected
+            // input; this shows the user's real event stream on their screen.
+            let debugHud = null
+            if (new URLSearchParams(window.location.search).has('inputdebug')) {
+                debugHud = document.createElement('div')
+                debugHud.style.cssText = 'position:fixed;top:8px;left:8px;z-index:99999;background:rgba(0,0,0,.85);color:#7dff9a;font:12px/1.5 monospace;padding:8px 10px;border-radius:6px;pointer-events:none;white-space:pre'
+                debugHud.textContent = 'inputdebug: waiting for mouse events…'
+                document.body.appendChild(debugHud)
+            }
+            let dbgMoves = 0
+            const dbg = (e) => {
+                if (!debugHud) return
+                dbgMoves++
+                const under = e ? document.elementFromPoint(e.clientX, e.clientY) : null
+                debugHud.textContent =
+                    `lock: ${document.pointerLockElement ? document.pointerLockElement.tagName : 'none'}${lockBroken ? ' (marked broken)' : ''}\n` +
+                    `moves: ${dbgMoves}  last mv: ${e ? `${e.movementX},${e.movementY}` : '-'}  buttons: ${e ? e.buttons : '-'}\n` +
+                    `zero-streak: ${zeroLockMoves}/${BROKEN_LOCK_ZERO_MOVES}  dragging: ${draggingCanvas}\n` +
+                    `under cursor: ${under ? `${under.tagName}${under.className ? '.' + String(under.className).split(' ')[0] : ''}` : '(locked/none)'}\n` +
+                    `yaw: ${player.yaw.toFixed(2)}  pitch: ${player.pitch.toFixed(2)}`
+            }
             // Pointer lock can be denied outright (Wayland browsers, iframe
             // policies, Chrome's cooldown after an Esc release) — dragging on
             // the canvas must keep working as a look control in that case.
@@ -462,6 +485,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             let lockBroken = false
             let zeroLockMoves = 0
             const onMouseMove = (e) => {
+                if (debugHud) dbg(e)
                 const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
                 if (lockedRef.current) {
                     if (e.movementX === 0 && e.movementY === 0) {
@@ -516,6 +540,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             document.addEventListener('mousemove', onMouseMove)
             return () => {
                 if (document.pointerLockElement === el) document.exitPointerLock()
+                if (debugHud) debugHud.remove()
                 el.style.cursor = ''
                 el.removeEventListener('pointerdown', onPointerDownWithLock)
                 el.removeEventListener('wheel', onWheel)
