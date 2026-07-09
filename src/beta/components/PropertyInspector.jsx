@@ -82,8 +82,8 @@ function PropertyField({ field, value, onChange, assetOptions = [] }) {
             </div>
         )
     }
-    if (field.type === 'presets') {
-        // Studio-only quick-look buttons; Beta's inspector has no multi-key patch path
+    if (field.type === 'presets' || field.type === 'modelClips') {
+        // Studio-only widgets (multi-key patch / clip registry); Beta skips them
         return null
     }
     if (field.type === 'connection') {

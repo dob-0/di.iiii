@@ -814,6 +814,23 @@ export function ProjectPanel({
             </CollapsibleSection>
 
             <CollapsibleSection title="Lighting">
+                <div className="insp-field">
+                    <label className="insp-label" htmlFor="studio-world-envmap">Environment map (.hdr / .exr)</label>
+                    <select
+                        id="studio-world-envmap"
+                        className="insp-select"
+                        value={world.environmentAssetId || ''}
+                        onChange={(event) => onWorldPatch({ environmentAssetId: event.target.value || null })}
+                    >
+                        <option value="">None</option>
+                        {(document.assets || []).filter((a) => /\.(hdr|exr)$/i.test(a.name || '')).map((a) => (
+                            <option key={a.id} value={a.id}>{a.name}</option>
+                        ))}
+                    </select>
+                </div>
+                {world.environmentAssetId && (
+                    <SliderField label="Environment intensity" value={world.environmentIntensity ?? 1} min={0} max={3} step={0.05} onChange={(v) => onWorldPatch({ environmentIntensity: v })} />
+                )}
                 <ColorField label="Ambient color" value={world.ambientLight?.color} onChange={(v) => onWorldPatch({ ambientLight: { color: v } })} />
                 <SliderField label="Ambient intensity" value={world.ambientLight?.intensity ?? 0.85} min={0} max={2} step={0.05} onChange={(v) => onWorldPatch({ ambientLight: { intensity: v } })} />
                 <ColorField label="Sun color" value={world.directionalLight?.color} onChange={(v) => onWorldPatch({ directionalLight: { color: v } })} />

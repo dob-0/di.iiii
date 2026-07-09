@@ -6,6 +6,7 @@ import { CameraControls, Grid, Html, TransformControls } from '@react-three/drei
 import { XR, useXR } from '@react-three/xr'
 import ModalTransform from './ModalTransform.jsx'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
+import WorldEnvironment from '../../project/viewport/WorldEnvironment.jsx'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { applyPivotTransform, getSelectionCentroid } from '../utils/multiTransform.js'
 
@@ -474,6 +475,12 @@ function StudioSceneContent({
         <>
             <RenderSettingsEffect renderSettings={document.renderSettings} />
             <color attach="background" args={[document.worldState?.backgroundColor || '#0a1118']} />
+            {document.worldState?.environmentAssetId && (
+                <WorldEnvironment
+                    environmentAsset={assetMap?.get(document.worldState.environmentAssetId) || null}
+                    intensity={document.worldState?.environmentIntensity}
+                />
+            )}
             <ambientLight
                 color={document.worldState?.ambientLight?.color || '#ffffff'}
                 intensity={document.worldState?.ambientLight?.intensity || 0.85}

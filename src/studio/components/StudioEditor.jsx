@@ -32,6 +32,11 @@ const detectEntityTypeFromFile = (file) => {
     return 'model'
 }
 
+// Support files that should import as assets only — placing them as entities
+// would create a broken model: env maps feed the World window, .mtl pairs
+// with an OBJ via the model's Materials picker.
+const isSupportAssetFile = (file) => /\.(hdr|exr|mtl)$/i.test(file?.name || '')
+
 const getStarterPlacement = (count = 0) => [((count % 4) - 1.5) * 1.4, 0, Math.floor(count / 4) * -1.8]
 
 // New objects should appear where the user is looking, not march out from world
@@ -420,6 +425,7 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                     type: 'upsertAsset',
                     payload: { asset }
                 }, { activityMessage })
+                if (isSupportAssetFile(file)) continue
                 const entityAsset = wasOptimized ? { ...asset, name: file.name } : asset
                 handleCreateEntity(detectEntityTypeFromFile(file), entityAsset, position)
             }

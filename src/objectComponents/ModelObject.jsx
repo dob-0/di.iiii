@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
-import { useFrame } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
+import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js'
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js'
@@ -10,6 +11,7 @@ import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js'
 import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { MODEL_FORMATS, detectModelFormatFromMeta, detectModelFormatFromName } from '../utils/modelFormats.js'
+import { registerModelClips } from '../project/viewport/modelClipRegistry.js'
 import { deleteAsset, getAssetBlob } from '../storage/assetStore.js'
 import { getAssetSourceUrl, streamRemoteAsset } from '../services/assetSources.js'
 import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
@@ -26,6 +28,18 @@ const getDracoLoader = () => {
     return sharedDracoLoader
 }
 
+// GPU-compressed (KTX2/Basis) textures need the transcoder plus the renderer's
+// capability flags; transcoder wasm ships in public/basis/.
+let sharedKtx2Loader = null
+const getKtx2Loader = (gl) => {
+    if (!sharedKtx2Loader) {
+        sharedKtx2Loader = new KTX2Loader()
+        sharedKtx2Loader.setTranscoderPath('/basis/')
+        if (gl) sharedKtx2Loader.detectSupport(gl)
+    }
+    return sharedKtx2Loader
+}
+
 export default function ModelObject({
     assetRef,
     data,
@@ -35,10 +49,12 @@ export default function ModelObject({
     materialsAssetRef = null,
     modelFormat = null,
     playAnimations = true,
-    animationSpeed = 1
+    animationSpeed = 1,
+    animationClip = ''
 }) {
     const [loaded, setLoaded] = useState(null)
     const loadedScene = loaded?.scene || null
+    const gl = useThree((state) => state.gl)
 
     const effectiveFormat = useMemo(() => {
         if (modelFormat) return modelFormat
@@ -126,6 +142,7 @@ export default function ModelObject({
 
         const handleScene = (scene, animations = []) => {
             if (disposed) return
+            registerModelClips(assetRef?.id, animations)
             setLoaded(scene ? { scene, animations } : null)
         }
 
@@ -189,6 +206,7 @@ export default function ModelObject({
                 if (!arrayBuffer) throw new Error('GLTF source missing array buffer.')
                 const loader = new GLTFLoader()
                 loader.setDRACOLoader(getDracoLoader())
+                loader.setKTX2Loader(getKtx2Loader(gl))
                 loader.setMeshoptDecoder(MeshoptDecoder)
                 loader.parse(
                     arrayBuffer,
@@ -209,7 +227,7 @@ export default function ModelObject({
         return () => {
             disposed = true
         }
-    }, [assetRef, materialsAssetRef, data, effectiveFormat])
+    }, [assetRef, materialsAssetRef, data, effectiveFormat, gl])
 
     const renderedScene = useMemo(() => {
         if (!loadedScene) return null
@@ -257,14 +275,18 @@ export default function ModelObject({
         mixerRef.current = null
         const animations = loaded?.animations || []
         if (!renderedScene || !animations.length || playAnimations === false) return undefined
+        // A named clip plays alone; empty (or a stale name after the asset
+        // changed) means play everything the file ships.
+        const selected = animationClip ? animations.filter((clip) => clip.name === animationClip) : animations
+        const active = selected.length ? selected : animations
         const mixer = new THREE.AnimationMixer(renderedScene)
-        animations.forEach((clip) => mixer.clipAction(clip).play())
+        active.forEach((clip) => mixer.clipAction(clip).play())
         mixerRef.current = mixer
         return () => {
             mixer.stopAllAction()
             mixerRef.current = null
         }
-    }, [renderedScene, loaded, playAnimations])
+    }, [renderedScene, loaded, playAnimations, animationClip])
 
     useFrame((_, delta) => {
         const speed = Number.isFinite(animationSpeed) ? animationSpeed : 1

@@ -1,6 +1,25 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { cloneValue } from '../../shared/projectSchema.js'
 import { listProjects } from '../../project/services/projectsApi.js'
+import { getModelClips, subscribeModelClips } from '../../project/viewport/modelClipRegistry.js'
+
+// Clip names only exist once a viewport has loaded the model file, so this
+// select re-renders when the registry learns them. Empty value = all clips.
+function ModelClipField({ label, assetId, value, onChange }) {
+    const clips = useSyncExternalStore(subscribeModelClips, () => getModelClips(assetId))
+    if (!clips.length) return null
+    return (
+        <div className="insp-field">
+            <label className="insp-label">{label}</label>
+            <select className="insp-select" value={value || ''} onChange={(e) => onChange(e.target.value || '')}>
+                <option value="">All clips</option>
+                {clips.map((name) => (
+                    <option key={name} value={name}>{name}</option>
+                ))}
+            </select>
+        </div>
+    )
+}
 
 // Portal "Project" picker: fetches the chosen space's projects so you select by
 // title instead of typing a raw id. Falls back to a free-text input when no
@@ -249,9 +268,16 @@ function InspField({ field, value, assetOptions = [], spaceOptions = [], sibling
     }
 
     if (field.type === 'select' || field.type === 'asset') {
-        const assetPool = field.accept
-            ? assetOptions.filter((a) => (a.mimeType || '').startsWith(field.accept))
-            : assetOptions
+        // accept: 'image/' filters by mime prefix; '.mtl'/'.hdr,.exr' by extension
+        // (formats whose uploads carry generic mimes).
+        const acceptMatch = (a) => {
+            if (!field.accept) return true
+            if (field.accept.startsWith('.')) {
+                return field.accept.split(',').some((ext) => (a.name || '').toLowerCase().endsWith(ext.trim()))
+            }
+            return (a.mimeType || '').startsWith(field.accept)
+        }
+        const assetPool = field.accept ? assetOptions.filter(acceptMatch) : assetOptions
         const options = field.type === 'asset'
             ? [{ value: '', label: 'Unassigned' }, ...assetPool.map((a) => ({ value: a.id, label: a.name }))]
             : (field.options || [])
@@ -334,6 +360,17 @@ function InspSection({ section, sectionValue, assetOptions, spaceOptions, onSect
                                 ))}
                             </div>
                         </div>
+                    ) : group.field.type === 'modelClips' ? (
+                        <ModelClipField
+                            key={`${section.id}-${group.field.label}`}
+                            label={group.field.label}
+                            assetId={readNestedValue(sectionValue, ['assetId']) || null}
+                            value={readNestedValue(sectionValue, group.field.path)}
+                            onChange={(nextValue) => {
+                                const next = setNestedValue(sectionValue, group.field.path, nextValue)
+                                onSectionChange?.(group.field.component || section.id, next)
+                            }}
+                        />
                     ) : group.field.type === 'presets' ? (
                         <div className="insp-field" key={`${section.id}-${group.field.label}`}>
                             <label className="insp-label">{group.field.label}</label>

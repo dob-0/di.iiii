@@ -97,6 +97,8 @@ export const defaultWindowLayout = {
 
 export const defaultWorldState = {
     backgroundColor: '#0a1118',
+    environmentAssetId: null,
+    environmentIntensity: 1,
     atmosphereBlend: false,
     hubDecor: false,
     spawn: null,
@@ -222,7 +224,7 @@ export const buildDefaultComponentsForType = (type = 'box') => {
             base.media = { assetId: null, autoplay: true, loop: true, muted: false, volume: 0.8, distance: 8 }
             break
         case 'model':
-            base.media = { assetId: null, autoplay: false, loop: false, muted: false, playAnimations: true, animationSpeed: 1 }
+            base.media = { assetId: null, materialsAssetId: null, autoplay: false, loop: false, muted: false, playAnimations: true, animationSpeed: 1, clip: '' }
             break
         case 'pointLight':
             base.appearance = { color: '#ffffff', opacity: 1 }

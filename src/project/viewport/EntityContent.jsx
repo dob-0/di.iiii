@@ -176,11 +176,13 @@ export default function EntityContent({ entity, assetMap }) {
             <ModelObject
                 assetRef={asset || null}
                 data={asset?.url || null}
+                materialsAssetRef={media.materialsAssetId ? assetMap?.get(media.materialsAssetId) || null : null}
                 modelColor={appearance.color}
                 applyModelColor={false}
                 opacity={appearance.opacity}
                 playAnimations={media.playAnimations !== false}
                 animationSpeed={media.animationSpeed}
+                animationClip={media.clip || ''}
             />
         )
     case 'pointLight': {

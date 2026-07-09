@@ -301,7 +301,9 @@ const DEFINITIONS = {
                 label: 'Media',
                 fields: [
                     { label: 'Asset', component: 'media', path: ['assetId'], type: 'asset' },
+                    { label: 'Materials (.mtl, for OBJ)', component: 'media', path: ['materialsAssetId'], type: 'asset', accept: '.mtl' },
                     { label: 'Play animations (embedded clips)', component: 'media', path: ['playAnimations'], type: 'checkbox' },
+                    { label: 'Clip', component: 'media', path: ['clip'], type: 'modelClips' },
                     { label: 'Animation speed', component: 'media', path: ['animationSpeed'], type: 'number', min: 0, max: 3, step: 0.1 }
                 ]
             }

@@ -29,6 +29,7 @@ import AudioObject from '../objectComponents/AudioObject.jsx'
 import Text2DObject from '../objectComponents/Text2DObject.jsx'
 import Text3DObject from '../objectComponents/Text3DObject.jsx'
 import PortalObject from '../project/viewport/PortalObject.jsx'
+import WorldEnvironment from '../project/viewport/WorldEnvironment.jsx'
 import { resolveAnimation, applyAnimation } from '../project/viewport/entityAnimation.js'
 import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
 import {
@@ -182,11 +183,13 @@ function EntityVisual({ entity, assetMap }) {
             <ModelObject
                 assetRef={asset || null}
                 data={asset?.url || null}
+                materialsAssetRef={media.materialsAssetId ? assetMap.get(media.materialsAssetId) || null : null}
                 modelColor={appearance.color}
                 applyModelColor={false}
                 opacity={appearance.opacity}
                 playAnimations={media.playAnimations !== false}
                 animationSpeed={media.animationSpeed}
+                animationClip={media.clip || ''}
             />
         )
     case 'audio':
@@ -1275,6 +1278,12 @@ export default function LiveProjectScene({
                 ) : null}
                 <ambientLight color={ambient.color} intensity={ambient.intensity} />
                 <directionalLight color={directional.color} intensity={directional.intensity} position={directional.position} />
+                {worldState.environmentAssetId && (
+                    <WorldEnvironment
+                        environmentAsset={assetMap.get(worldState.environmentAssetId) || null}
+                        intensity={worldState.environmentIntensity}
+                    />
+                )}
                 <Grid args={[80, 80]} cellColor="#2a3038" sectionColor="#3c4654" fadeDistance={40} infiniteGrid />
                 <AmbientField center={center} />
                 {showEntities && rootEntities.map((entity) => (
