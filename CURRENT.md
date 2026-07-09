@@ -11,16 +11,17 @@ active_branch: dev
 
 `d4b3ce6` — on **staging** (keyframe timeline). `main` further behind; prod still at `07084e2`.
 
-## Latest session (2026-07-09 — media, styles, formats, animation)
+## Latest session (2026-07-09 eve — content-addressed assets)
 
-- `3864976` video sound + viewer parity tripwire · `d4c0e6c` 4 new shapes ·
-  `3689ccc` material presets · `c21da60` text styles · `89cfe84` window persistence.
-- `b4e5b7f` embedded GLB/FBX animation, Draco/Meshopt · `7dcbff6` clip picker,
-  HDR/EXR environment maps, KTX2, MTL pairing — all Playwright-verified live.
-- `d4b3ce6` keyframe timeline: per-entity `components.timeline`, Scene-window Timeline
-  section (record/scrub/key-drag/preview), shared evaluator in both renderers; 12/12 E2E.
-- Local-dev gotcha: restart serverXR after any `projectSchema.cjs` change — the old
-  schema stays in memory and new entity types normalize to boxes.
+- Client pre-hash (`crypto.subtle`) + upload dedupe via new
+  `GET /api/projects/:id/assets/:assetId/meta`; identical bytes skip the upload.
+- Server now verifies sha256-shaped client `assetId`s against real content hash (400 on
+  mismatch) — closed the replace-under-immutable-cache hole; streams hashing.
+- Contract + unit tests, known-fixes row, wiki line. Full validation green (508 unit,
+  36 contracts). Next CAS step: shared per-space blob store → one-command self-host.
+- Earlier 2026-07-09: media/styles/formats/animation batch + `d4b3ce6` keyframe timeline
+  (12/12 E2E). Local-dev gotcha: restart serverXR after `projectSchema.cjs` changes —
+  stale schema in memory normalizes new entity types to boxes.
 
 ## Earlier
 

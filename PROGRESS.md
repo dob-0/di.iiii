@@ -5,6 +5,37 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-07-09 (later) — Content-addressed assets: client pre-hash, dedupe, integrity verify
+
+**Who:** Claude (single agent; BAE + shared project layer)
+
+### Done this session
+
+- **Client pre-hash + upload dedupe** (`src/project/services/projectsApi.js`): `hashFileSha256`
+  via `crypto.subtle`; `uploadProjectAsset` checks the new
+  `GET /api/projects/:id/assets/:assetId/meta` endpoint and skips the byte upload when the
+  project already holds the content (sha256-shaped ids only — legacy uuid ids still
+  overwrite-upload). Returned meta adopts the current file's name. Degrades gracefully
+  against servers without `/meta` and non-secure contexts (server hashes on receipt as before).
+- **Server integrity verify** (`serverXR/src/assetHash.js`, `routes/projectRoutes.js`,
+  `routes/spaceRoutes.js`): a client-supplied sha256-shaped `assetId` is now stream-hashed
+  and rejected with 400 on mismatch — previously any bytes could replace an immutable-cached
+  content address. Server-side hashing now streams instead of buffering whole files.
+- Contract test `content-addresses project assets…` (assign / meta 200 / meta 404 / forged-id
+  400 keeps original bytes / matching-id accepted), 4 client unit tests, known-fixes row,
+  wiki line in "How content flows".
+
+### Validation
+
+`lint` ✓ · `build` ✓ · `test --run` 508/508 ✓ · `test:server-contracts` 36/36 ✓ ·
+`docs:wiki:check` ✓ · `docs:ai:check` ✓
+
+### Next
+
+- Cross-project/space shared CAS store (one blob per hash per space) → one-command self-host.
+
+---
+
 ## 2026-07-07 — Full audit (app + AI layer), then closed every finding it raised
 
 **Who:** Claude (single agent; built on the morning's 6-way parallel audit)

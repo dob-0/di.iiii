@@ -1,6 +1,7 @@
 const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
+const { hashFileSha256, isSha256AssetId } = require('../assetHash')
 
 function registerProjectRoutes(router, {
   appendProjectOps,
@@ -304,9 +305,17 @@ function registerProjectRoutes(router, {
           await fsp.rm(req.file.path, { force: true }).catch(() => {})
           return res.status(400).json({ error: 'Invalid asset id.' })
         }
+        // sha256-shaped ids are content addresses — served immutable, so the
+        // bytes must actually hash to the id or a cached asset can be replaced
+        if (isSha256AssetId(assetId)) {
+          if (assetId.toLowerCase() !== await hashFileSha256(req.file.path)) {
+            await fsp.rm(req.file.path, { force: true }).catch(() => {})
+            return res.status(400).json({ error: 'Asset id does not match file content.' })
+          }
+          assetId = assetId.toLowerCase()
+        }
       } else {
-        const buf = await fsp.readFile(req.file.path)
-        assetId = crypto.createHash('sha256').update(buf).digest('hex')
+        assetId = await hashFileSha256(req.file.path)
       }
       const finalPath = path.join(assetsDir, assetId)
       const metaPath = path.join(assetsDir, `${assetId}.json`)
@@ -327,6 +336,31 @@ function registerProjectRoutes(router, {
     } catch (error) {
       if (req.file?.path) {
         await fsp.rm(req.file.path, { force: true }).catch(() => {})
+      }
+      next(error)
+    }
+  })
+
+  // Existence + meta check so clients can pre-hash and skip uploading bytes
+  // the server already has (content-addressed dedupe).
+  router.get('/api/projects/:projectId/assets/:assetId/meta', async (req, res, next) => {
+    try {
+      const project = await resolveProjectContext(req.params.projectId)
+      const assetId = req.params.assetId
+      if (!project) {
+        return res.status(404).json({ error: 'Project not found.' })
+      }
+      if (!isValidAssetId(assetId)) {
+        return res.status(400).json({ error: 'Invalid asset id.' })
+      }
+      const { assetsDir } = getProjectPaths(spacesDir, project.spaceId, project.projectId)
+      await fsp.access(path.join(assetsDir, assetId))
+      const meta = await readJson(path.join(assetsDir, `${assetId}.json`), null)
+      const url = `${req.baseUrl || ''}/api/projects/${project.projectId}/assets/${assetId}`
+      res.json({ ok: true, asset: { ...(meta || { id: assetId }), url } })
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        return res.status(404).json({ error: 'Asset not found.' })
       }
       next(error)
     }

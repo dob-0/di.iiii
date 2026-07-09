@@ -252,6 +252,68 @@ describe('project contracts', () => {
         expect(repeatDelete.status).toBe(404)
     })
 
+    it('content-addresses project assets: verifies supplied sha256 ids and exposes a meta check', async () => {
+        const server = await startServer()
+
+        await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'CAS Project', slug: 'cas-project' })
+        })
+
+        const bytes = 'content-addressed-bytes'
+        const { createHash } = await import('node:crypto')
+        const expectedId = createHash('sha256').update(bytes).digest('hex')
+
+        // no assetId supplied → server assigns the content hash
+        const formData = new FormData()
+        formData.append('asset', new Blob([bytes], { type: 'text/plain' }), 'cas.txt')
+        const uploadResponse = await fetch(`${server.baseUrl}/api/projects/cas-project/assets`, {
+            method: 'POST',
+            body: formData
+        })
+        expect(uploadResponse.status).toBe(200)
+        const uploaded = await uploadResponse.json()
+        expect(uploaded.asset.id).toBe(expectedId)
+
+        // meta check: 200 for existing content, 404 for unknown content
+        const metaResponse = await fetch(`${server.baseUrl}/api/projects/cas-project/assets/${expectedId}/meta`)
+        expect(metaResponse.status).toBe(200)
+        const meta = await metaResponse.json()
+        expect(meta.asset).toMatchObject({ id: expectedId })
+        expect(meta.asset.url).toMatch(new RegExp(`/assets/${expectedId}$`))
+
+        const missingId = expectedId.replace(/^./, expectedId[0] === '0' ? '1' : '0')
+        const missingMeta = await fetch(`${server.baseUrl}/api/projects/cas-project/assets/${missingId}/meta`)
+        expect(missingMeta.status).toBe(404)
+
+        // supplied sha256 id that does not match the bytes → rejected, asset untouched
+        const forged = new FormData()
+        forged.append('assetId', expectedId)
+        forged.append('asset', new Blob(['tampered-bytes'], { type: 'text/plain' }), 'cas.txt')
+        const forgedResponse = await fetch(`${server.baseUrl}/api/projects/cas-project/assets`, {
+            method: 'POST',
+            body: forged
+        })
+        expect(forgedResponse.status).toBe(400)
+        await expect(forgedResponse.json()).resolves.toMatchObject({
+            error: 'Asset id does not match file content.'
+        })
+        const survivor = await fetch(new URL(uploaded.asset.url, server.baseUrl))
+        expect(await survivor.text()).toBe(bytes)
+
+        // supplied sha256 id that matches → accepted
+        const honest = new FormData()
+        honest.append('assetId', expectedId.toUpperCase())
+        honest.append('asset', new Blob([bytes], { type: 'text/plain' }), 'cas.txt')
+        const honestResponse = await fetch(`${server.baseUrl}/api/projects/cas-project/assets`, {
+            method: 'POST',
+            body: honest
+        })
+        expect(honestResponse.status).toBe(200)
+        expect((await honestResponse.json()).asset.id).toBe(expectedId)
+    })
+
     it('recovers a corrupted project document by trimming trailing garbage', async () => {
         const server = await startServer()
 

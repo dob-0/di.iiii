@@ -1,5 +1,6 @@
+import { webcrypto } from 'node:crypto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createProject, listProjects } from './projectsApi.js'
+import { createProject, hashFileSha256, listProjects, uploadProjectAsset } from './projectsApi.js'
 
 const apiFetch = vi.fn()
 const createServerSpace = vi.fn()
@@ -81,5 +82,76 @@ describe('projectsApi', () => {
             }
         })
         expect(response).toEqual({ project: { id: 'wcc-project' } })
+    })
+})
+
+describe('content-addressed asset uploads', () => {
+    const HELLO_SHA256 = '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824'
+    const makeFile = (text, name) => ({
+        name,
+        arrayBuffer: async () => new TextEncoder().encode(text).buffer
+    })
+
+    // jsdom's File has no arrayBuffer(); give it one so pre-hashing runs
+    const makeUploadableFile = (text, name) => {
+        const file = new File([text], name, { type: 'text/plain' })
+        if (typeof file.arrayBuffer !== 'function') {
+            Object.defineProperty(file, 'arrayBuffer', {
+                value: async () => new TextEncoder().encode(text).buffer
+            })
+        }
+        return file
+    }
+
+    beforeEach(() => {
+        apiFetch.mockReset()
+        if (!globalThis.crypto?.subtle) {
+            vi.stubGlobal('crypto', webcrypto)
+        }
+    })
+
+    it('hashes file content to the sha256 hex digest', async () => {
+        await expect(hashFileSha256(makeFile('hello', 'hello.txt'))).resolves.toBe(HELLO_SHA256)
+    })
+
+    it('skips the byte upload when the server already has the content', async () => {
+        apiFetch.mockResolvedValueOnce({
+            ok: true,
+            asset: { id: HELLO_SHA256, name: 'original.txt', url: `/api/projects/p1/assets/${HELLO_SHA256}` }
+        })
+
+        const asset = await uploadProjectAsset('p1', makeFile('hello', 'renamed.txt'))
+
+        expect(apiFetch).toHaveBeenCalledTimes(1)
+        expect(apiFetch).toHaveBeenCalledWith(`/api/projects/p1/assets/${HELLO_SHA256}/meta`)
+        expect(asset).toMatchObject({ id: HELLO_SHA256, name: 'renamed.txt' })
+    })
+
+    it('uploads with the pre-hashed id when the content is missing', async () => {
+        const missing = new Error('Asset not found.')
+        missing.status = 404
+        apiFetch
+            .mockRejectedValueOnce(missing)
+            .mockResolvedValueOnce({ ok: true, asset: { id: HELLO_SHA256 } })
+
+        const asset = await uploadProjectAsset('p1', makeUploadableFile('hello', 'hello.txt'))
+
+        expect(apiFetch).toHaveBeenCalledTimes(2)
+        const [url, init] = apiFetch.mock.calls[1]
+        expect(url).toBe('/api/projects/p1/assets')
+        expect(init.method).toBe('POST')
+        expect(init.body.get('assetId')).toBe(HELLO_SHA256)
+        expect(asset).toEqual({ id: HELLO_SHA256 })
+    })
+
+    it('does not dedupe legacy non-sha asset ids', async () => {
+        apiFetch.mockResolvedValueOnce({ ok: true, asset: { id: 'legacy-uuid-1234' } })
+
+        await uploadProjectAsset('p1', makeUploadableFile('hello', 'hello.txt'), { assetId: 'legacy-uuid-1234' })
+
+        expect(apiFetch).toHaveBeenCalledTimes(1)
+        const [url, init] = apiFetch.mock.calls[0]
+        expect(url).toBe('/api/projects/p1/assets')
+        expect(init.body.get('assetId')).toBe('legacy-uuid-1234')
     })
 })

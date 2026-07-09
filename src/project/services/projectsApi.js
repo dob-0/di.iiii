@@ -103,12 +103,43 @@ export const submitProjectOps = async (projectId, baseVersion, ops = []) => {
     })
 }
 
-export const uploadProjectAsset = async (projectId, file, options = {}) => {
-    const formData = new FormData()
-    if (options.assetId) {
-        formData.append('assetId', options.assetId)
+// Content-address the file locally so identical bytes can skip the upload.
+// Returns '' when hashing is unavailable (non-secure context, odd File impl);
+// the server hashes on receipt either way.
+export const hashFileSha256 = async (file) => {
+    if (!globalThis.crypto?.subtle?.digest || typeof file?.arrayBuffer !== 'function') return ''
+    try {
+        const digest = await globalThis.crypto.subtle.digest('SHA-256', await file.arrayBuffer())
+        return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, '0')).join('')
+    } catch {
+        return ''
     }
-    formData.append('asset', file, options.filename || file.name)
+}
+
+export const getProjectAssetMeta = async (projectId, assetId) => {
+    const data = await apiFetch(`/api/projects/${projectId}/assets/${assetId}/meta`)
+    return data.asset
+}
+
+export const uploadProjectAsset = async (projectId, file, options = {}) => {
+    const assetId = options.assetId || await hashFileSha256(file)
+    const name = options.filename || file.name
+    // dedupe only on sha256-shaped ids: legacy uuid ids don't pin the bytes,
+    // so an existing id there must still overwrite-upload as before
+    if (/^[a-f0-9]{64}$/i.test(assetId)) {
+        try {
+            const existing = await getProjectAssetMeta(projectId, assetId)
+            if (existing) return { ...existing, ...(name ? { name } : {}) }
+        } catch {
+            // missing asset, older server without /meta, transient failure —
+            // fall through and let the real upload succeed or surface the error
+        }
+    }
+    const formData = new FormData()
+    if (assetId) {
+        formData.append('assetId', assetId)
+    }
+    formData.append('asset', file, name)
     const data = await apiFetch(`/api/projects/${projectId}/assets`, {
         method: 'POST',
         body: formData

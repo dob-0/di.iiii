@@ -1,6 +1,7 @@
 const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
+const { hashFileSha256, isSha256AssetId } = require('../assetHash')
 const googleDrive = require('../googleDrive')
 const { isGuestSubject } = require('../authAccess')
 const driveAccount = require('../googleDriveAccount')
@@ -389,10 +390,19 @@ function registerSpaceRoutes(router, {
           await fsp.rm(req.file.path, { force: true }).catch(() => {})
           return res.status(400).json({ error: 'Invalid asset id.' })
         }
-        assetId = requested
+        // sha256-shaped ids are content addresses — served immutable, so the
+        // bytes must actually hash to the id or a cached asset can be replaced
+        if (isSha256AssetId(requested)) {
+          if (requested.toLowerCase() !== await hashFileSha256(req.file.path)) {
+            await fsp.rm(req.file.path, { force: true }).catch(() => {})
+            return res.status(400).json({ error: 'Asset id does not match file content.' })
+          }
+          assetId = requested.toLowerCase()
+        } else {
+          assetId = requested
+        }
       } else {
-        const buf = await fsp.readFile(req.file.path)
-        assetId = crypto.createHash('sha256').update(buf).digest('hex')
+        assetId = await hashFileSha256(req.file.path)
       }
       const finalPath = path.join(assetsDir, assetId)
       const metaPath = path.join(assetsDir, `${assetId}.json`)
