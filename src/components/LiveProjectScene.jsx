@@ -36,7 +36,8 @@ import { flyVertFromStick, moveFromStick, xrTurnSpeed } from './xrFlyControl.js'
 import {
     WALK_MAX_SPEED, FLY_SPEED, WALK_ACCEL, WALK_FRICTION, TURN_SPEED, EYE_HEIGHT,
     POINTER_LOCK_SENSITIVITY, DRAG_LOOK_SENSITIVITY, TOUCH_LOOK_SENSITIVITY, TRACKPAD_LOOK_SENSITIVITY,
-    WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF
+    WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF,
+    BROKEN_LOCK_ZERO_MOVES
 } from './walkModeConfig.js'
 import './liveProjectScene.css'
 
@@ -445,6 +446,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             const onLockChange = () => {
                 const locked = document.pointerLockElement === el
                 lockedRef.current = locked
+                if (locked) zeroLockMoves = 0
                 el.style.cursor = locked ? 'none' : 'crosshair'
                 onLockChangeRef.current?.(locked)
             }
@@ -452,9 +454,24 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             // policies, Chrome's cooldown after an Esc release) — dragging on
             // the canvas must keep working as a look control in that case.
             let draggingCanvas = false
+            // Denied lock is not the only failure mode: some Wayland setups
+            // grant the lock but deliver only zero movement deltas, so the
+            // view freezes while walking still works. Count consecutive
+            // all-zero locked moves; past the threshold, abandon the lock
+            // (and never re-request it) so drag-look takes over.
+            let lockBroken = false
+            let zeroLockMoves = 0
             const onMouseMove = (e) => {
                 const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
                 if (lockedRef.current) {
+                    if (e.movementX === 0 && e.movementY === 0) {
+                        if (!lockBroken && ++zeroLockMoves >= BROKEN_LOCK_ZERO_MOVES) {
+                            lockBroken = true
+                            document.exitPointerLock()
+                        }
+                        return
+                    }
+                    zeroLockMoves = 0
                     player.yaw -= e.movementX * POINTER_LOCK_SENSITIVITY
                     player.pitch = THREE.MathUtils.clamp(
                         player.pitch - e.movementY * POINTER_LOCK_SENSITIVITY,
@@ -484,7 +501,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             }
             const onPointerDownWithLock = () => {
                 draggingCanvas = true
-                if (lockedRef.current) return
+                if (lockedRef.current || lockBroken) return
                 const req = el.requestPointerLock()
                 if (req && typeof req.catch === 'function') {
                     req.catch(() => { /* denied — drag-look fallback takes over */ })
