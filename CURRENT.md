@@ -9,8 +9,8 @@ active_branch: dev
 
 ## Last commit
 
-`fab42f26` — pushed to `dev`, **staging deploy in flight** (content-addressed assets).
-`main` further behind; prod still at `07084e2`.
+`8d59893b` — **live on staging** (content-addressed assets; smoke 9/9, /meta endpoint
+verified live). `main` behind; prod still at `07084e2`.
 
 ## Latest session (2026-07-09 eve — content-addressed assets)
 
@@ -42,13 +42,14 @@ active_branch: dev
   Guest flow already verified programmatically (2026-07-08 eve): guest session/quota/OAuth
   providers correct; guests share `main` because staging admin config sets
   `globalSpaceId: "main"` (intentional open-jam mode — clear it in /admin for sandboxes).
-- `fix/native-drag-ghost` branch duplicates work now on `dev` — delete after confirming.
+- Uncommitted `SpaceHub.jsx` live-preview-iframe experiment in the working tree (another
+  session's WIP, no CSS yet) — finish or discard before it goes stale.
 - Drive on prod verified live; full Google verification deferred (preferred fix: `drive.file`
   scope + Picker). Webhook canary `dob-0/di-sync-webhook-test`→`webhook-test` is permanent.
 - `serverXR/.env.local` has a stale GitHub App key — copy `GITHUB_APP_PRIVATE_KEY_B64` from a
   host's `~/.config/dii/*.deploy.env`. If `br_id_ge` gets App-connected, disable its CI sync.
 - `origin/self-host` intentionally 1 commit ahead (`b9baa30`).
-- Next strategic work: content-addressed assets → self-host.
+- Next strategic work: per-space CAS blob store (in progress) → one-command self-host.
 
 ## Known fixes
 
