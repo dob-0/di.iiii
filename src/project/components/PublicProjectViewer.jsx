@@ -334,6 +334,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     }}
                     enableNavigation={entryView !== 'fixed-camera' && !isPreview}
                     showChrome={!isPreview}
+                    lowPower={isPreview}
                 />
             ) : null}
 

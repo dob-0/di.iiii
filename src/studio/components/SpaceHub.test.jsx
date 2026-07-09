@@ -163,6 +163,40 @@ describe('SpaceHub', () => {
         }
     })
 
+    it('boots at most two previews at once and frees a slot when an iframe loads', async () => {
+        vi.stubGlobal('IntersectionObserver', class {
+            constructor(callback) { this.callback = callback }
+            observe(target) { this.callback([{ isIntersecting: true, target }]) }
+            unobserve() {}
+            disconnect() {}
+        })
+        try {
+            listServerSpaces.mockResolvedValue([
+                { id: 'one', label: 'One', isOwner: true, isPublic: true, publishedProjectId: 'p1' },
+                { id: 'two', label: 'Two', isOwner: true, isPublic: true, publishedProjectId: 'p2' },
+                { id: 'three', label: 'Three', isOwner: true, isPublic: true, publishedProjectId: 'p3' }
+            ])
+
+            render(<SpaceHub />)
+
+            await screen.findByText('one')
+            const framesIn = (spaceId) => screen.getByText(spaceId)
+                .closest('.ssh-space-card')
+                .querySelector('.ssh-card-preview iframe')
+            // only the first two boot; the third waits for a free slot
+            expect(framesIn('one')).not.toBeNull()
+            expect(framesIn('two')).not.toBeNull()
+            expect(framesIn('three')).toBeNull()
+
+            fireEvent.load(framesIn('one'))
+            await waitFor(() => expect(framesIn('three')).not.toBeNull())
+            // the loaded iframe stays mounted — only its boot slot was freed
+            expect(framesIn('one')).not.toBeNull()
+        } finally {
+            vi.unstubAllGlobals()
+        }
+    })
+
     it('gives admins management everywhere, including Set main', async () => {
         authState = { ...authState, role: 'admin' }
         listServerSpaces.mockResolvedValue([

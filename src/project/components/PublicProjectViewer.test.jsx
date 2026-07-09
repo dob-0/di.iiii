@@ -44,11 +44,11 @@ vi.mock('../../hooks/useXrAr.js', () => ({
 }))
 
 vi.mock('../../studio/components/StudioViewport.jsx', () => ({
-    default: function MockStudioViewport({ document, enableNavigation, showChrome }) {
+    default: function MockStudioViewport({ document, enableNavigation, showChrome, lowPower }) {
         return (
             <div>
                 <div>viewer-scene:{document.presentationState?.entryView || 'scene'}</div>
-                <div data-testid="viewport-flags">{`nav:${enableNavigation} chrome:${showChrome}`}</div>
+                <div data-testid="viewport-flags">{`nav:${enableNavigation} chrome:${showChrome} low:${lowPower}`}</div>
             </div>
         )
     }
@@ -194,7 +194,7 @@ describe('PublicProjectViewer', () => {
             render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
 
             expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
-            expect(screen.getByTestId('viewport-flags').textContent).toBe('nav:false chrome:false')
+            expect(screen.getByTestId('viewport-flags').textContent).toBe('nav:false chrome:false low:true')
             expect(screen.queryByRole('button', { name: 'Walk / Fly' })).toBeNull()
         } finally {
             window.history.replaceState(null, '', '/')
@@ -208,7 +208,7 @@ describe('PublicProjectViewer', () => {
         render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
 
         expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
-        expect(screen.getByTestId('viewport-flags').textContent).toBe('nav:true chrome:true')
+        expect(screen.getByTestId('viewport-flags').textContent).toBe('nav:true chrome:true low:false')
         expect(await screen.findByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
     })
 })

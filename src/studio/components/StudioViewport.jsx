@@ -876,12 +876,23 @@ export default function StudioViewport({
     onTransformCancel,
     enableNavigation = true,
     showChrome = true,
+    lowPower = false,
     showHelp = false,
     onCloseHelp,
     onShowHelp,
 }) {
     const viewportRef = useRef(null)
     const [transformStatus, setTransformStatus] = useState(null)
+    // Low-power mode (space-card previews): render at full rate while the
+    // scene boots and assets stream in, then drop to on-demand frames —
+    // live-sync document updates re-render through React, which invalidates
+    // demand mode, so the thumbnail keeps tracking edits at ~zero idle cost.
+    const [settled, setSettled] = useState(false)
+    useEffect(() => {
+        if (!lowPower) return undefined
+        const timer = setTimeout(() => setSettled(true), 8000)
+        return () => clearTimeout(timer)
+    }, [lowPower])
     const camera = cameraView || document.worldState?.savedView || {}
 
     const handlePointerMove = (event) => {
@@ -905,8 +916,12 @@ export default function StudioViewport({
             <Canvas
                 style={{ height: '100%' }}
                 shadows={document.renderSettings?.shadows !== false}
-                gl={{ antialias: document.renderSettings?.antialias !== false }}
-                dpr={[document.renderSettings?.dprMin ?? 1, document.renderSettings?.dprMax ?? 2]}
+                gl={{
+                    antialias: document.renderSettings?.antialias !== false,
+                    powerPreference: lowPower ? 'low-power' : 'default'
+                }}
+                dpr={lowPower ? 1 : [document.renderSettings?.dprMin ?? 1, document.renderSettings?.dprMax ?? 2]}
+                frameloop={lowPower && settled ? 'demand' : 'always'}
                 camera={{
                     position: camera.position || [0, 2.4, 6.5],
                     fov: camera.fov || 50,

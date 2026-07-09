@@ -5,6 +5,33 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-07-09 (late) — Space-card preview optimization
+
+**Who:** Claude (single agent; UX + viewport). Follow-up to the live previews:
+"i like it but need to optimized".
+
+### Done this session
+
+- **Low-power viewport mode** (`StudioViewport.jsx`, new `lowPower` prop): preview
+  renders at full rate for 8s while assets stream in, then drops to
+  `frameloop="demand"` — idle GPU cost ~0; live-sync ops re-render through React,
+  which invalidates demand mode, so thumbnails still track edits. DPR pinned to 1
+  (was up to 2 — 4× the pixels for a ~340px card) and `powerPreference: 'low-power'`
+  so browsers may pick the integrated GPU. `PublicProjectViewer` passes
+  `lowPower={isPreview}`; the real viewer is untouched.
+- **Boot queue** (`SpaceHub.jsx`): at most 2 preview iframes boot concurrently
+  (each is a full app instance — 4+ simultaneous boots janked first paint). A slot
+  frees on iframe load, card unmount/scroll-away, or a 15s backstop.
+- Tests: boot-queue test (2 mount, third waits, load frees a slot) + `low:` flag in
+  viewer preview tests. Trade-off accepted: keyframe/shader animation freezes in
+  thumbnails after the 8s settle — still a live frame, desirable for a grid of cards.
+
+### Next
+
+- One-command self-host: portable space bundle (blobs + projects + meta) + bootstrap.
+
+---
+
 ## 2026-07-09 (night) — Live previews on Spaces-hub cards
 
 **Who:** Claude (single agent; UX + shared viewer). Finished the uncommitted SpaceHub

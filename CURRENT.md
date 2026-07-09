@@ -9,14 +9,16 @@ active_branch: dev
 
 ## Last commit
 
-`8d59893b` — **live on staging** (content-addressed assets; smoke 9/9, /meta endpoint
-verified live). `main` behind; prod still at `07084e2`.
+see `git log dev` — previews + CAS all **live on staging** (Playwright-verified).
+`main` behind; prod still at `07084e2`.
 
 ## Latest session (2026-07-09 — CAS + live space-card previews)
 
 - **Spaces hub live previews**: public+linked space cards embed the live route as a 16:9
   miniature (`?preview=1` viewer mode: static orbit cam, no chrome; IO-gated mount/unmount
-  so off-screen cards cost nothing). SpaceHub WIP from the tree finished and shipped.
+  so off-screen cards cost nothing). Optimized: `lowPower` viewport mode (8s full-rate boot
+  → `frameloop="demand"`, DPR 1, low-power GPU hint; sync ops still invalidate) + boot
+  queue (max 2 concurrent iframe boots, slot frees on load/unmount/15s).
 
 - Client pre-hash + upload dedupe (`/assets/:id/meta` probe); server verifies sha256 ids
   against content (400 on mismatch) — replace-under-immutable-cache hole closed.
@@ -45,8 +47,6 @@ verified live). `main` behind; prod still at `07084e2`.
   Guest flow already verified programmatically (2026-07-08 eve): guest session/quota/OAuth
   providers correct; guests share `main` because staging admin config sets
   `globalSpaceId: "main"` (intentional open-jam mode — clear it in /admin for sandboxes).
-- Uncommitted `SpaceHub.jsx` live-preview-iframe experiment in the working tree (another
-  session's WIP, no CSS yet) — finish or discard before it goes stale.
 - Drive on prod verified live; full Google verification deferred (preferred fix: `drive.file`
   scope + Picker). Webhook canary `dob-0/di-sync-webhook-test`→`webhook-test` is permanent.
 - `serverXR/.env.local` has a stale GitHub App key — copy `GITHUB_APP_PRIVATE_KEY_B64` from a

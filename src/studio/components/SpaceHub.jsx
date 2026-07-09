@@ -18,13 +18,49 @@ import { buildAppSpacePath } from '../../utils/spaceRouting.js'
 import { getSpaceShareUrl } from '../../storage/spaceStore.js'
 import '../styles/studio-space-hub.css'
 
+// Each preview iframe is a full app instance, so a burst of simultaneous
+// boots janks the hub on first paint. At most this many previews boot at
+// once; a slot frees when the iframe's document loads (or the card unmounts
+// or scrolls away before that).
+const PREVIEW_BOOT_SLOTS = 2
+const previewBootQueue = { active: 0, waiting: [] }
+
+function requestPreviewBoot(start) {
+    const entry = { start, granted: false, released: false }
+    const grantNext = () => {
+        while (previewBootQueue.active < PREVIEW_BOOT_SLOTS && previewBootQueue.waiting.length) {
+            const next = previewBootQueue.waiting.shift()
+            next.granted = true
+            previewBootQueue.active += 1
+            next.start()
+        }
+    }
+    entry.release = () => {
+        if (entry.released) return
+        entry.released = true
+        if (entry.granted) {
+            previewBootQueue.active -= 1
+        } else {
+            const index = previewBootQueue.waiting.indexOf(entry)
+            if (index !== -1) previewBootQueue.waiting.splice(index, 1)
+        }
+        grantNext()
+    }
+    previewBootQueue.waiting.push(entry)
+    grantNext()
+    return entry.release
+}
+
 // Live thumbnail of a published space: embeds the real live route in preview
-// mode (?preview=1 — static camera, no chrome, no XR offer). The iframe only
-// mounts while the card is near the viewport so off-screen spaces cost
-// nothing, and unmounts again when scrolled away to free its WebGL context.
+// mode (?preview=1 — static camera, no chrome, no XR offer, low-power render
+// loop). The iframe only mounts while the card is near the viewport so
+// off-screen spaces cost nothing, and unmounts again when scrolled away to
+// free its WebGL context. Boots are queued through requestPreviewBoot above.
 function SpaceCardPreview({ spaceId, label }) {
     const hostRef = useRef(null)
     const [visible, setVisible] = useState(false)
+    const [booted, setBooted] = useState(false)
+    const releaseRef = useRef(null)
 
     useEffect(() => {
         const node = hostRef.current
@@ -41,14 +77,36 @@ function SpaceCardPreview({ spaceId, label }) {
         return () => observer.disconnect()
     }, [])
 
+    useEffect(() => {
+        if (!visible) {
+            setBooted(false)
+            return undefined
+        }
+        const release = requestPreviewBoot(() => setBooted(true))
+        releaseRef.current = release
+        return () => {
+            releaseRef.current = null
+            release()
+        }
+    }, [visible])
+
+    // Backstop: if the iframe never fires load (network error, blocked), free
+    // the boot slot anyway so the rest of the queue is not starved.
+    useEffect(() => {
+        if (!booted) return undefined
+        const timer = setTimeout(() => releaseRef.current?.(), 15000)
+        return () => clearTimeout(timer)
+    }, [booted])
+
     return (
         <div ref={hostRef} className="ssh-card-preview" aria-hidden="true">
-            {visible ? (
+            {visible && booted ? (
                 <iframe
                     src={`${buildAppSpacePath(spaceId)}?preview=1`}
                     title={`${label} — live preview`}
                     loading="lazy"
                     tabIndex={-1}
+                    onLoad={() => releaseRef.current?.()}
                 />
             ) : null}
         </div>
