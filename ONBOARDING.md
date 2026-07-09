@@ -7,7 +7,8 @@ inline.
 
 > TL;DR for the impatient: install prerequisites → fork & clone → `npm install`
 > (root **and** `serverXR`) → create `serverXR/.env` → `npm run dev` → open
-> `http://localhost:5173/main`.
+> `http://localhost:5173/main`. Using Claude Code? Don't skip §8 — the project
+> ships its own AI workflow; you only log in and trust it.
 
 ---
 
@@ -142,7 +143,51 @@ Branch rules (see `README.md` / `CURRENT.md`):
 - Normal work happens on **`dev`** → deploys to staging.
 - Promote **`dev` → `main`** for production. Don't start feature work on `main`.
 
-## 8. Known Windows gotchas (already handled)
+## 8. Working with Claude Code (the team's AI workflow)
+
+The project's AI workflow is **already checked into the repo** — do not invent
+your own or let a fresh Claude session improvise one. When you start `claude`
+from the repo root, it automatically gets:
+
+- `CLAUDE.md` → `AGENTS.md` — the working contract: role routing, scope rules,
+  validation commands, branch flow
+- a session-start hook that prints `CURRENT.md` (live project state) at the top
+  of every session
+- `.claude/settings.json` — the pre-approved permission allow-list (npm, git,
+  scripts, docker…) plus guard hooks (pre-push validation gate, schema-sync
+  warnings)
+- `.mcp.json` — the `context7` (library docs) and `playwright` (browser
+  testing) MCP servers
+- `.claude/agents/` role subagents and `.claude/commands/` slash commands
+  (`/branch`, `/check`, `/ship`, `/stack`, `/live`)
+
+What each person still does **once**, on their own account:
+
+1. Install Claude Code: `npm install -g @anthropic-ai/claude-code` (or the
+   native installer from claude.com/claude-code).
+2. Run `claude` and log in when prompted — either a Claude.ai subscription
+   (Pro/Max/Team seat) or an Anthropic Console API key. This is personal
+   auth/billing; **never paste an API key into any file in this repo**.
+3. Start `claude` from the repo root. The first session asks whether to trust
+   the project's settings, hooks, and MCP servers — accept, or none of the
+   workflow above loads.
+4. Install the two standard plugins (inside a Claude session):
+
+   ```
+   /plugin install frontend-design@claude-plugins-official
+   /plugin install security-guidance@claude-plugins-official
+   ```
+
+Good first prompt: *"Read CURRENT.md and AGENTS.md and summarize how work
+happens in this repo"* — cheaper than letting the session discover it mid-task.
+
+Personal overrides (your own notes, extra permissions) go in `CLAUDE.local.md`
+or `.claude/settings.local.json` — both gitignored, never in the tracked files
+above. If you work from a fork, Claude follows the Mode 0 contract in
+[docs/ai/parallel-agents.md](docs/ai/parallel-agents.md): validate → commit →
+push to a task branch on *your fork* automatically; it never pushes upstream.
+
+## 9. Known Windows gotchas (already handled)
 
 - **`npm run dev` → `spawn EINVAL`**: Node 24 won't spawn `npm.cmd` directly.
   Fixed in `scripts/dev-stack.mjs` (`shell: true` on Windows). If you see this,
