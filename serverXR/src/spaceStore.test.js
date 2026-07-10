@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const { createSpaceStore } = require('./spaceStore.js')
-const { initDb, closeDb } = require('./db.js')
+const { initDb, closeDb, getDb } = require('./db.js')
 
 let store
 let tmpDir
@@ -97,5 +97,50 @@ describe('spaceStore moveSpace', () => {
         await store.upsertSpaceMeta('b', { label: 'B' })
         await expect(store.moveSpace('a', 'b')).rejects.toThrow(/already exists/)
         expect(await store.moveSpace('missing', 'anywhere')).toBeNull()
+    })
+})
+
+describe('spaceStore archiveIdleAccountSandboxes', () => {
+    const insertProject = (id, spaceId) => {
+        const now = Date.now()
+        getDb().prepare(
+            'INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, 0, ?, ?, ?, ?)'
+        ).run(id, spaceId, 'P', 'studio-v3', now, now, now)
+    }
+
+    it('folds an idle account sandbox into a scene snapshot; guests and project-holders are skipped', async () => {
+        const archivingStore = createSpaceStore({ spacesDir: tmpDir, blankScene: { objects: [] }, accountSandboxTtlMs: 1 })
+        await archivingStore.upsertSpaceMeta('sandbox-idle-user', { kind: 'sandbox', permanent: true, sceneVersion: 2 })
+        await archivingStore.ensureSpaceScene('sandbox-idle-user')
+        fs.writeFileSync(path.join(tmpDir, 'sandbox-idle-user', 'scene.json'), JSON.stringify({ objects: [{ id: 'kept-thing' }] }))
+        await archivingStore.upsertSpaceMeta('sandbox-with-work', { kind: 'sandbox', permanent: true, sceneVersion: 1 })
+        insertProject('proj-1', 'sandbox-with-work')
+        await archivingStore.upsertSpaceMeta('sandbox-guestx', { kind: 'sandbox', permanent: false, sceneVersion: 1 })
+        await new Promise((r) => setTimeout(r, 5))
+
+        const archived = await archivingStore.archiveIdleAccountSandboxes()
+
+        expect(archived).toEqual(['sandbox-idle-user'])
+        expect(await archivingStore.loadSpaceMeta('sandbox-idle-user')).toBeNull()
+        const snapshot = await archivingStore.readLatestSpaceSnapshot('sandbox-idle-user')
+        expect(snapshot?.scene?.objects?.[0]?.id).toBe('kept-thing')
+        expect(await archivingStore.loadSpaceMeta('sandbox-with-work')).not.toBeNull()
+        expect(await archivingStore.loadSpaceMeta('sandbox-guestx')).not.toBeNull()
+    })
+
+    it('deletes never-touched empty sandboxes without writing a snapshot and leaves fresh ones alone', async () => {
+        const archivingStore = createSpaceStore({ spacesDir: tmpDir, blankScene: { objects: [] }, accountSandboxTtlMs: 1 })
+        await archivingStore.upsertSpaceMeta('sandbox-empty', { kind: 'sandbox', permanent: true, sceneVersion: 0 })
+        await new Promise((r) => setTimeout(r, 5))
+        expect(await archivingStore.archiveIdleAccountSandboxes()).toEqual(['sandbox-empty'])
+        expect(await archivingStore.readLatestSpaceSnapshot('sandbox-empty')).toBeNull()
+
+        const patientStore = createSpaceStore({ spacesDir: tmpDir, blankScene: { objects: [] }, accountSandboxTtlMs: 1000 * 60 * 60 })
+        await patientStore.upsertSpaceMeta('sandbox-fresh', { kind: 'sandbox', permanent: true, sceneVersion: 1 })
+        expect(await patientStore.archiveIdleAccountSandboxes()).toEqual([])
+        expect(await patientStore.loadSpaceMeta('sandbox-fresh')).not.toBeNull()
+
+        const disabledStore = createSpaceStore({ spacesDir: tmpDir, blankScene: { objects: [] } })
+        expect(await disabledStore.archiveIdleAccountSandboxes()).toEqual([])
     })
 })

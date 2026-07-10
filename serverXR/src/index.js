@@ -128,6 +128,7 @@ const releaseInfo = loadReleaseInfo(config.directories.root)
 
 const {
   appendOpsHistory,
+  archiveIdleAccountSandboxes,
   buildMeta,
   collectSceneAssetRefs,
   countSpacesOwnedBy,
@@ -158,6 +159,7 @@ const {
   defaultSpaceId: DEFAULT_SPACE_ID,
   defaultTtlMs: DEFAULT_TTL_MS,
   sandboxTtlMs: config.sandboxTtlMs,
+  accountSandboxTtlMs: config.accountSandboxTtlMs,
   blankScene: BLANK_SCENE
 })
 
@@ -565,6 +567,17 @@ const ensureOwnSandbox = async (state, spaceId) => {
     allowEdits: true,
     permanent: !isGuest
   })
+  // Revive: if this account's sandbox was archived while idle, the scene
+  // snapshot survives outside spacesDir — put it back so the room they left
+  // is the room they return to.
+  if (!isGuest) {
+    const snapshot = await readLatestSpaceSnapshot(spaceId)
+    if (snapshot?.scene) {
+      const { scenePath } = getSpacePaths(spaceId)
+      await writeJson(scenePath, snapshot.scene)
+      await upsertSpaceMeta(spaceId, { sceneVersion: 1 })
+    }
+  }
 }
 
 // Keep the room: when a guest signs in, their sandbox — scene, projects,
@@ -1351,7 +1364,8 @@ registerSyncRoutes(router, {
 router.post('/api/admin/sandboxes/purge', requireAdminAlways, async (req, res, next) => {
   try {
     const removed = await pruneStaleSandboxes()
-    res.json({ ok: true, removed: removed.length })
+    const archived = await archiveIdleAccountSandboxes()
+    res.json({ ok: true, removed: removed.length, archived: archived.length })
   } catch (error) {
     next(error)
   }
@@ -1409,6 +1423,9 @@ initStorage()
     snapshotOpenSpace().catch((error) => console.warn('Failed to snapshot open space', error))
     setInterval(() => {
       snapshotOpenSpace().catch((error) => console.warn('Failed to snapshot open space', error))
+      // Long-idle account sandboxes fold down to a snapshot (revived on
+      // return by ensureOwnSandbox) so permanent sandboxes never pile up.
+      archiveIdleAccountSandboxes().catch((error) => console.warn('Failed to archive idle sandboxes', error))
     }, 1000 * 60 * 60 * 24)
 
     const httpServer = http.createServer(app)
