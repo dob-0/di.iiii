@@ -81,7 +81,9 @@ const registerAuthRoutes = (router, {
       }
     })
     setAuthSessionCookie(res, session.value)
-    res.redirect(frontendUrl || '/')
+    // ?auth=ok lets the client confirm the sign-in (AuthReturnNotice) —
+    // OAuth used to return with no marker at all, so success was silent.
+    res.redirect(`${frontendUrl || '/'}?auth=ok`)
   }
 
   if (oauth.github.enabled) {

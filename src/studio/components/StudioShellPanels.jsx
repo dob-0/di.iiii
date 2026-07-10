@@ -49,6 +49,8 @@ import {
     SUPPORTED_EXTENSIONS
 } from '../../utils/codeFilesBundle.js'
 import { useDriveImport } from '../../hooks/useDriveImport.js'
+import useAuthSession from '../../hooks/useAuthSession.js'
+import { getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
 import { listCommonsAssets } from '../../services/serverSpaces.js'
 import { formatAssetSize } from '../utils/assetOptimization.js'
 import { ASSET_FORMAT_HINT, canPlaceInScene } from '../utils/assetFormats.js'
@@ -1531,6 +1533,75 @@ export function PublishPanel({
     activity
 }) {
     const [activityOpen, setActivityOpen] = useState(false)
+    const { type: authType } = useAuthSession()
+    const isGuest = authType === 'guest'
+    const [providers, setProviders] = useState(null)
+
+    useEffect(() => {
+        if (!isGuest) return undefined
+        let cancelled = false
+        getApiAuthProviders()
+            .then((next) => { if (!cancelled) setProviders(next) })
+            .catch(() => { if (!cancelled) setProviders({ github: false, google: false }) })
+        return () => { cancelled = true }
+    }, [isGuest])
+
+    const exportButton = (
+        <Button
+            variant="outlined"
+            startIcon={<RocketLaunchIcon />}
+            onClick={onExportProject}
+            disabled={Boolean(exportStatus && exportStatus.phase !== 'error')}
+        >
+            {exportStatus?.phase === 'downloading'
+                ? `Exporting ${exportStatus.completed}/${exportStatus.total}`
+                : exportStatus?.phase === 'packing'
+                    ? `Packing ${Math.round(exportStatus.percent || 0)}%`
+                    : 'Export project'}
+        </Button>
+    )
+
+    // The moment a guest opens Share is the moment their work became worth
+    // keeping — meet it with the upgrade path, not publish controls their
+    // temporary sandbox can't meaningfully use.
+    if (isGuest) {
+        return (
+            <Stack spacing={2} sx={{ p: 2 }}>
+                <Card variant="outlined" sx={{ p: 2 }}>
+                    <Stack spacing={1.5} alignItems="flex-start">
+                        <Typography variant="subtitle2">Keep this work</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            You’re building in a temporary guest sandbox — it disappears after about a
+                            week. Sign in to keep this space, publish it, and share a live link.
+                        </Typography>
+                        {providers?.github ? (
+                            <Button variant="contained" onClick={() => { window.location.href = getOAuthUrl('github') }}>
+                                Continue with GitHub
+                            </Button>
+                        ) : null}
+                        {providers?.google ? (
+                            <Button
+                                variant={providers?.github ? 'outlined' : 'contained'}
+                                onClick={() => { window.location.href = getOAuthUrl('google') }}
+                            >
+                                Continue with Google
+                            </Button>
+                        ) : null}
+                    </Stack>
+                </Card>
+                <Card variant="outlined" sx={{ p: 1.5 }}>
+                    <Stack spacing={1} alignItems="flex-start">
+                        <Typography variant="subtitle2">No account? Take it with you</Typography>
+                        <Typography variant="body2" color="text.secondary">
+                            Export downloads the whole project — you can import it into any space later.
+                        </Typography>
+                        {exportButton}
+                    </Stack>
+                </Card>
+            </Stack>
+        )
+    }
+
     return (
         <Stack spacing={2} sx={{ p: 2 }}>
             <FormControlLabel
@@ -1638,18 +1709,7 @@ export function PublishPanel({
                 <Button variant="contained" startIcon={<ShareIcon />} onClick={onCopyShareLink}>
                     Copy share link
                 </Button>
-                <Button
-                    variant="outlined"
-                    startIcon={<RocketLaunchIcon />}
-                    onClick={onExportProject}
-                    disabled={Boolean(exportStatus && exportStatus.phase !== 'error')}
-                >
-                    {exportStatus?.phase === 'downloading'
-                        ? `Exporting ${exportStatus.completed}/${exportStatus.total}`
-                        : exportStatus?.phase === 'packing'
-                            ? `Packing ${Math.round(exportStatus.percent || 0)}%`
-                            : 'Export project'}
-                </Button>
+                {exportButton}
                 <Button component="label" variant="outlined">
                     Import project
                     <input
