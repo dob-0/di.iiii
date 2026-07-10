@@ -9,8 +9,8 @@ active_branch: dev
 
 ## Last commit
 
-`47406526` — dev = guest-journey rethink shipped (PRs #38–#41) + staging commons
-repointed to `open` (verified: fresh guests scoped `['open', sandbox-*]`, smoke 9/9).
+`95cc4fdd` — dev = guest-journey rethink (PRs #38–#41) + sandbox archive/revive
+(PR #42). Staging commons repointed to `open` (verified, smoke 9/9).
 Prod (`main`) is at `13357b82` — promote after real-device pass + user's word.
 
 ## Last session (2026-07-10 night — three-place space model)
@@ -32,6 +32,9 @@ https://claude.ai/code/artifact/d0267562-fa6d-4fa7-9c2f-be3d4e094778
   sandbox (`promoteGuestSandbox`/`moveSpace`); `&kept=1` → toast. Never clobbers.
 - Staging repoint executed (user-approved): deleted stray empty `open-jam` in
   `main`, PATCH `/api/config {"globalSpaceId": null}` → server ensured `open`.
+- **#42 archive+revive** (2026-07-11): account sandboxes idle >180d
+  (`ACCOUNT_SANDBOX_TTL_MS`) fold to a scene snapshot + delete; owner's return
+  auto-restores. Project-holding sandboxes never archived. Daily sweep + purge.
 
 ## What works
 

@@ -5,6 +5,26 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-07-11 — Sandbox archive + revive: permanent sandboxes never pile up
+
+**Who:** Claude. User asked whether many future users would re-flood the studio
+with sandboxes; answer was "only permanent account sandboxes grow unbounded" —
+user chose the archive + revive option to close that path (PR #42, merged to dev).
+
+- `archiveIdleAccountSandboxes` (spaceStore): account sandboxes idle past
+  `ACCOUNT_SANDBOX_TTL_MS` (default 180d) snapshot their scene then delete;
+  empty ones delete without a snapshot; sandboxes holding Studio projects are
+  never archived (snapshots capture only the scene).
+- `ensureOwnSandbox` revives: a returning owner's fresh sandbox is restored
+  from its latest snapshot (sceneVersion set to 1) — the room comes back.
+- Runs on the daily boot interval and inside `POST /api/admin/sandboxes/purge`
+  (response now `{ ok, removed, archived }`; hub Sweep button unchanged).
+- Tests: 2 store unit tests + 1 HTTP contract (build → archive → 404 → owner
+  GET restores scene). Wiki article updated with the six-month promise.
+- Validation: lint, build, 570 unit, 46 contracts, wiki check — all green.
+
+---
+
 ## 2026-07-10 (night) — Guest journey rethink: three-place space model shipped
 
 **Who:** Claude. User: "still messy… we need one sandbox per user, one open space
