@@ -59,4 +59,19 @@ describe('spaceStore kind', () => {
         expect(await reapingStore.loadSpaceMeta('keep')).not.toBeNull()
         expect(await reapingStore.loadSpaceMeta('drop')).toBeNull()
     })
+
+    it('reaps idle sandboxes on the shorter sandbox TTL while normal spaces of the same age survive', async () => {
+        const reapingStore = createSpaceStore({
+            spacesDir: tmpDir,
+            blankScene: { objects: [] },
+            defaultTtlMs: 1000 * 60 * 60,
+            sandboxTtlMs: 1
+        })
+        await reapingStore.upsertSpaceMeta('regular', { kind: 'normal', permanent: false, touch: false })
+        await reapingStore.upsertSpaceMeta('sandbox-idle', { kind: 'sandbox', permanent: false, touch: false })
+        await new Promise((r) => setTimeout(r, 5))
+        await reapingStore.pruneSpaces()
+        expect(await reapingStore.loadSpaceMeta('regular')).not.toBeNull()
+        expect(await reapingStore.loadSpaceMeta('sandbox-idle')).toBeNull()
+    })
 })

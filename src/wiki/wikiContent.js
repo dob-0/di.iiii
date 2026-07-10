@@ -44,10 +44,11 @@ export const WIKI_ARTICLES = [
                 'Private sandbox (default) — each guest gets their own throwaway sandbox space, isolated from everyone else. A banner on the Spaces page marks the session as temporary.',
                 'Shared global space — an admin can set a guest entry space in /admin → Manage; then every guest lands in that one editable space (good for an open jam or exhibition).'
             ] },
+            'A sandbox only comes into existence when the guest actually enters it — just viewing a published space never creates one. Sandboxes are private to their session (they never appear in anyone else’s directory, including the admin’s) and are cleaned up after about a week of inactivity.',
             'Guests cannot create their own named spaces — sign in with GitHub or Google to get spaces that are yours and stay.'
         ],
         tags: ['guest', 'sandbox', 'access'],
-        updated: '2026-07-08'
+        updated: '2026-07-10'
     },
     {
         id: 'free-spaces',

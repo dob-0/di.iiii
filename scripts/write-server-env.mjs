@@ -54,6 +54,7 @@ if (!SAFE_SERVER_API_TOKEN_PATTERN.test(requiredValues.API_TOKEN)) {
 const optionalValues = {
     SHARED_ROOT: process.env.SHARED_ROOT || '',
     SPACE_TTL_MS: process.env.SPACE_TTL_MS || '',
+    SANDBOX_TTL_MS: process.env.SANDBOX_TTL_MS || '',
     SPACES_DIR: process.env.SPACES_DIR || '',
     UPLOADS_DIR: process.env.UPLOADS_DIR || '',
     // One-click GitHub space-sync (dii-space-sync App). Sourced from the

@@ -10,20 +10,18 @@ active_branch: dev
 ## Last commit
 
 `4e080447` — dev == main == **prod** (promoted 2026-07-09; deploy green; smoke 9/9 PASS).
-## Latest session (2026-07-10 — Drive drive.file+Picker; install bundles on staging)
+## Latest session (2026-07-10 — guest sandbox fix; Drive drive.file+Picker)
 
-- **Drive scope migration** (this PR): `drive.readonly` → **`drive.file`** (non-sensitive,
-  no Google verification) + Google Picker. New "Pick from Drive" button (both surfaces),
-  `/picker-token` endpoint, `GOOGLE_APP_ID` env. Needs Cloud console: enable Picker API,
-  add drive.file scope, set GOOGLE_APP_ID — see `docs/ops/GOOGLE_DRIVE_INTEGRATION.md`.
-  NOT runtime-tested (needs real Google account on staging).
-- **Whole-install bundles** (PR #28, on staging, smoke 9/9): `npm run
-  install:export/install:import` — every space + instance config in one tar.gz;
-  `selfhost` auto-detects. Real-data round-trip verified (6 spaces, 98 MB).
-- **Space bundles + self-host** (PR #26, staging): `space:export/import`, `selfhost`.
-- **WCC mouse-look on Wayland** (PR #27, on prod): zero-delta pointer lock → drag-look
-  fallback; `?inputdebug=1` HUD. Awaiting user real-mouse confirmation on prod.
-- Earlier, on prod: onboarding §8 (PR #25); CAS blob store; live previews; timeline.
+- **Guest sandbox cleanup** (this PR): sandboxes lazy-provision on first entry (page
+  views mint nothing), hidden from everyone else's `GET /api/spaces` (admin incl.;
+  guest's own card synthesized until provisioned), idle ones reaped after 7 days
+  (`SANDBOX_TTL_MS`). Fixes admin directory flooded with "Guest Sandbox" rows.
+- **Drive scope migration** (staging): `drive.readonly` → **`drive.file`** + Picker,
+  "Pick from Drive" buttons, `/picker-token`, `GOOGLE_APP_ID`. Needs Cloud console
+  setup + real-account click-through — `docs/ops/GOOGLE_DRIVE_INTEGRATION.md`.
+- **Whole-install bundles** (PR #28) + **space bundles/self-host** (PR #26) on staging;
+  real-data round-trip verified (6 spaces, 98 MB); `selfhost` auto-detects bundle type.
+- **WCC mouse-look on Wayland** (PR #27, prod): awaiting user real-mouse confirmation.
 
 ## What works
 

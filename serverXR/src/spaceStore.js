@@ -14,6 +14,7 @@ function createSpaceStore({
   spacesDir,
   defaultSpaceId = 'main',
   defaultTtlMs = 0,
+  sandboxTtlMs = 0,
   blankScene
 } = {}) {
   const safeSlug = (value = '') => String(value)
@@ -90,6 +91,7 @@ function createSpaceStore({
       selectExists:  db.prepare('SELECT 1 FROM spaces WHERE id = ?'),
       selectAll:     db.prepare('SELECT * FROM spaces ORDER BY updated_at DESC'),
       selectStale:   db.prepare("SELECT id FROM spaces WHERE permanent = 0 AND kind != 'global' AND last_touched_at < ?"),
+      selectStaleSandbox: db.prepare("SELECT id FROM spaces WHERE permanent = 0 AND kind = 'sandbox' AND last_touched_at < ?"),
       countByOwner:  db.prepare('SELECT COUNT(*) as cnt FROM spaces WHERE owner_user_id = ?'),
       upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
       insert:        db.prepare('INSERT INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
@@ -200,10 +202,11 @@ function createSpaceStore({
   }
 
   const pruneSpaces = async () => {
-    if (!defaultTtlMs) return
-    const cutoff = Date.now() - defaultTtlMs
-    const rows = s().selectStale.all(cutoff)
-    await Promise.all(rows.map(row => deleteSpace(row.id)))
+    const stale = []
+    if (defaultTtlMs) stale.push(...s().selectStale.all(Date.now() - defaultTtlMs))
+    if (sandboxTtlMs) stale.push(...s().selectStaleSandbox.all(Date.now() - sandboxTtlMs))
+    const ids = [...new Set(stale.map(row => row.id))]
+    await Promise.all(ids.map(id => deleteSpace(id)))
   }
 
   const readOpsHistory = async (spaceId) =>
