@@ -144,11 +144,14 @@ function DriveImportSection({ onDriveImportUrl, onDriveImportSelection }) {
                         )}
                         {drive.status?.connected && (
                             <>
+                                <button className="scc-btn spa-btn-wide" onClick={drive.pick} disabled={drive.busy}>
+                                    Pick from Drive
+                                </button>
                                 <div className="spa-drive-row">
                                     <input
                                         type="text"
                                         className="insp-input"
-                                        placeholder="Search your Drive"
+                                        placeholder="Search files you picked before"
                                         value={drive.search}
                                         onChange={(e) => drive.setSearch(e.target.value)}
                                         onKeyDown={(e) => { if (e.key === 'Enter') drive.runSearch() }}

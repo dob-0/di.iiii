@@ -1,5 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
-import { getDriveStatus, listDriveFiles, disconnectDrive, getDriveConnectUrl } from '../services/serverSpaces.js'
+import { getDriveStatus, listDriveFiles, disconnectDrive, getDriveConnectUrl, getDrivePickerToken } from '../services/serverSpaces.js'
+
+// The Google Picker script loads once per page; the promise is the lock.
+let pickerApiPromise = null
+const loadPickerApi = () => {
+    if (pickerApiPromise) return pickerApiPromise
+    pickerApiPromise = new Promise((resolve, reject) => {
+        const fail = (message) => { pickerApiPromise = null; reject(new Error(message)) }
+        const loadPicker = () => window.gapi.load('picker', {
+            callback: resolve,
+            onerror: () => fail('Could not load the Google Picker.')
+        })
+        if (window.gapi?.load) return loadPicker()
+        const script = document.createElement('script')
+        script.src = 'https://apis.google.com/js/api.js'
+        script.async = true
+        script.onload = loadPicker
+        script.onerror = () => fail('Could not load Google APIs (offline or blocked?).')
+        document.head.appendChild(script)
+    })
+    return pickerApiPromise
+}
 
 // Google Drive import state machine, shared by every editor surface (classic
 // AssetPanel, Studio AssetsPanel). Callers supply the two import actions —
@@ -107,9 +128,8 @@ export function useDriveImport({ importByUrl, importBySelection } = {}) {
         })
     }
 
-    const importSelected = async () => {
-        const ids = [...selected]
-        if (!ids.length || busy) return
+    const importByIds = async (ids) => {
+        if (!ids.length) return 0
         setBusy(true)
         setNotice(null)
         try {
@@ -119,11 +139,49 @@ export function useDriveImport({ importByUrl, importBySelection } = {}) {
             setNotice(count
                 ? { kind: 'ok', text: `Imported ${count} file${count === 1 ? '' : 's'}${failed ? ` · ${failed} skipped` : ''}.` }
                 : { kind: 'error', text: 'Nothing was imported.' })
-            if (count) setSelected(new Set())
+            return count
         } catch (error) {
             setNotice({ kind: 'error', text: error?.message || 'Import failed.' })
+            return 0
         } finally {
             setBusy(false)
+        }
+    }
+
+    const importSelected = async () => {
+        if (busy) return
+        const count = await importByIds([...selected])
+        if (count) setSelected(new Set())
+    }
+
+    // Google Picker: under the drive.file scope this is how a user grants the
+    // app access to files — picked files import immediately and show up in the
+    // search list afterwards.
+    const pick = async () => {
+        if (busy) return
+        setNotice(null)
+        try {
+            const cfg = await getDrivePickerToken()
+            await loadPickerApi()
+            const picker = window.google.picker
+            const view = new picker.DocsView(picker.ViewId.DOCS)
+                .setIncludeFolders(true)
+                .setSelectFolderEnabled(false)
+            let builder = new picker.PickerBuilder()
+                .addView(view)
+                .setOAuthToken(cfg.accessToken)
+                .setDeveloperKey(cfg.apiKey)
+                .enableFeature(picker.Feature.MULTISELECT_ENABLED)
+                .setCallback(async (data) => {
+                    if (data.action !== picker.Action.PICKED) return
+                    const ids = (data.docs || []).map((d) => d.id).filter(Boolean)
+                    const count = await importByIds(ids)
+                    if (count) runSearch('')
+                })
+            if (cfg.appId) builder = builder.setAppId(cfg.appId)
+            builder.build().setVisible(true)
+        } catch (error) {
+            setNotice({ kind: 'error', text: error?.message || 'Could not open the Google Picker.' })
         }
     }
 
@@ -171,5 +229,6 @@ export function useDriveImport({ importByUrl, importBySelection } = {}) {
         toggleSelect,
         importSelected,
         importUrl,
+        pick,
     }
 }

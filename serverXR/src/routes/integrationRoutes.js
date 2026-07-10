@@ -101,7 +101,31 @@ function registerIntegrationRoutes(router) {
     res.json({ ok: true })
   })
 
-  // Browse the caller's own Drive: ?q= name search, ?folderId= to list a folder.
+  // Config + short-lived access token for the client-side Google Picker. Under
+  // the drive.file scope the Picker is how a user grants the app access to
+  // files; the token is the user's own and only reaches what they pick.
+  router.get('/api/integrations/google-drive/picker-token', async (req, res, next) => {
+    try {
+      const userId = currentUserId(req)
+      if (!userId) return res.status(401).json({ error: 'Sign in first.' })
+      if (!config.googleDrive.apiKey) {
+        return res.status(501).json({ error: 'Google Picker is not configured on this server (GOOGLE_API_KEY).' })
+      }
+      const auth = await driveAccount.getValidAccessToken(userId)
+      if (!auth) return res.status(403).json({ error: 'Drive not connected.' })
+      res.set('Cache-Control', 'no-store')
+      res.json({
+        accessToken: auth.accessToken,
+        apiKey: config.googleDrive.apiKey,
+        appId: config.googleDrive.appId || null
+      })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // Browse files already granted to the app (drive.file: what the caller has
+  // picked before): ?q= name search, ?folderId= to list a folder.
   router.get('/api/integrations/google-drive/files', async (req, res, next) => {
     try {
       const userId = currentUserId(req)

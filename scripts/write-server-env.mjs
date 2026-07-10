@@ -66,6 +66,8 @@ const optionalValues = {
     // Optional Google Drive asset import (folder listing + metadata). Keyless
     // single-file import works without it.
     GOOGLE_API_KEY: process.env.GOOGLE_API_KEY || '',
+    // Cloud project number — Google Picker grants under the drive.file scope.
+    GOOGLE_APP_ID: process.env.GOOGLE_APP_ID || '',
     // OAuth (login + "Connect your Drive"). Emitted only when set in the deploy
     // config, so they survive the .env regeneration on deploy.
     OAUTH_CALLBACK_BASE_URL: process.env.OAUTH_CALLBACK_BASE_URL || '',

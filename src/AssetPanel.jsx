@@ -439,11 +439,19 @@ export default function AssetPanel({ onClose, surfaceMode = 'floating' }) {
                         {/* File picker — only when a Drive is connected */}
                         {drive.status?.connected && (
                             <>
+                                <button
+                                    type="button"
+                                    className="asset-action-button primary"
+                                    onClick={drive.pick}
+                                    disabled={drive.busy}
+                                >
+                                    Pick from Drive
+                                </button>
                                 <div className="asset-drive-import">
                                     <input
                                         type="text"
                                         className="asset-drive-input"
-                                        placeholder="Search your Drive by name"
+                                        placeholder="Search files you picked before"
                                         value={drive.search}
                                         onChange={(e) => drive.setSearch(e.target.value)}
                                         onKeyDown={(e) => { if (e.key === 'Enter') drive.runSearch() }}

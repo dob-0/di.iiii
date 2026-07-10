@@ -5,9 +5,12 @@ Two ways to pull assets into a space from Google Drive (Studio → Project Asset
 1. **Public share link** — paste an "Anyone with the link" file URL. Works with no
    server secrets. A shared *folder* also works, but folder listing needs
    `GOOGLE_API_KEY` (below).
-2. **Connect your Drive** — per-user OAuth. Each signed-in user connects their own
-   Google account, browses their own files, and imports the selected ones. Tokens
-   are stored per user, encrypted at rest.
+2. **Connect your Drive** — per-user OAuth under the **`drive.file`** scope
+   (non-sensitive: no Google verification/security assessment). Each signed-in
+   user connects their own Google account and picks files with the **Google
+   Picker**; the app can only ever access files the user picked. Previously
+   picked files stay listable/searchable in the panel. Tokens are stored per
+   user, encrypted at rest.
 
 ## Server env
 
@@ -18,7 +21,8 @@ allowlist (put them in `~/.config/dii/<env>.deploy.env`, like the GitHub-sync va
 | --- | --- | --- |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Connect-your-Drive (and login) | Same OAuth client as Google login. |
 | `OAUTH_CALLBACK_BASE_URL` | Connect-your-Drive | Public origin, e.g. `https://di-studio.xyz/serverXR`. |
-| `GOOGLE_API_KEY` | Public *folder* import + richer metadata | Not required for single public files. |
+| `GOOGLE_API_KEY` | Google Picker (developerKey) + public *folder* import | Not required for single public files. |
+| `GOOGLE_APP_ID` | Google Picker under `drive.file` | The Cloud project **number** — ties Picker grants to the OAuth client. |
 
 If `GOOGLE_CLIENT_ID` is unset, the "Connect Google Drive" button hides and only
 the public-link path shows.
@@ -26,14 +30,19 @@ the public-link path shows.
 ## Google Cloud console (one time)
 
 For **Connect your Drive**:
-1. Enable the **Google Drive API** for the project.
-2. OAuth consent screen → add scope `https://www.googleapis.com/auth/drive.readonly`.
+1. Enable the **Google Drive API** and the **Google Picker API** for the project.
+2. OAuth consent screen → add scope `https://www.googleapis.com/auth/drive.file`
+   (non-sensitive — no verification needed; remove `drive.readonly` if it is
+   still listed from before the Picker migration).
 3. Credentials → the OAuth client → Authorized redirect URIs → add:
    `${OAUTH_CALLBACK_BASE_URL}/api/integrations/google-drive/callback`
    (e.g. `https://di-studio.xyz/serverXR/api/integrations/google-drive/callback`).
+4. Credentials → create an **API key**, restrict it to the Drive + Picker APIs,
+   set it as `GOOGLE_API_KEY`; set the project **number** (Cloud console
+   dashboard) as `GOOGLE_APP_ID`.
 
-For **public folder import**: Credentials → create an **API key**, restrict it to
-the Drive API, set it as `GOOGLE_API_KEY`.
+Existing `drive.readonly` grants keep working until users revoke them; new
+connects consent to `drive.file` only.
 
 ## How it works
 
@@ -52,6 +61,7 @@ the Drive API, set it as `GOOGLE_API_KEY`.
 - `GET  /api/integrations/google-drive/connect` — redirect to Google consent
 - `GET  /api/integrations/google-drive/callback` — exchange code, store tokens
 - `POST /api/integrations/google-drive/disconnect` — drop the caller's tokens
-- `GET  /api/integrations/google-drive/files?q=&folderId=` — browse own Drive
+- `GET  /api/integrations/google-drive/picker-token` — `{ accessToken, apiKey, appId }` for the client-side Picker
+- `GET  /api/integrations/google-drive/files?q=&folderId=` — browse files already granted (picked before)
 - `POST /api/spaces/:id/assets/import-drive` — public link (file/folder)
 - `POST /api/spaces/:id/assets/import-drive-account` — import own Drive by `fileIds`/`url`
