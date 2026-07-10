@@ -5,12 +5,14 @@
  *   npm run selfhost                          # fresh install, blank main space
  *   npm run selfhost -- my.space-bundle.tar.gz            # import + run
  *   npm run selfhost -- my.space-bundle.tar.gz --as demo  # import under a new id
+ *   npm run selfhost -- di.install-bundle.tar.gz          # whole-install bundle
  *
  * Does, in order, skipping anything already done:
  *   1. npm install (root + serverXR) if node_modules is missing
  *   2. create serverXR/.env from .env.example with local-friendly defaults
  *      (REQUIRE_AUTH=false) and an empty serverXR/.env.local
- *   3. import the bundle via scripts/space-bundle.mjs (if one is given)
+ *   3. import the bundle — space-bundle.mjs or install-bundle.mjs, detected
+ *      by the archive's manifest (if one is given)
  *   4. start the dev stack (serverXR + Vite) and print the space URL
  */
 
@@ -64,11 +66,18 @@ if (!fs.existsSync(envPath)) {
 }
 if (!fs.existsSync(envLocalPath)) await fsp.writeFile(envLocalPath, '')
 
-// 3. bundle import
+// 3. bundle import — install bundles carry install.json at the archive root,
+// space bundles carry bundle.json; route on that.
 let spaceId = null
 if (bundlePath) {
-    if (!fs.existsSync(path.resolve(bundlePath))) die(`bundle not found: ${bundlePath}`)
-    const importArgs = [path.join(ROOT_DIR, 'scripts/space-bundle.mjs'), 'import', path.resolve(bundlePath)]
+    const resolved = path.resolve(bundlePath)
+    if (!fs.existsSync(resolved)) die(`bundle not found: ${bundlePath}`)
+    const listing = spawnSync('tar', ['-tzf', resolved], { encoding: 'utf8' })
+    if (listing.status !== 0) die(`cannot read archive ${bundlePath}`)
+    const isInstallBundle = /(^|\/)install\.json$/m.test(listing.stdout || '')
+    if (isInstallBundle && spaceIdOverride) die('--as applies to single-space bundles only')
+    const script = isInstallBundle ? 'scripts/install-bundle.mjs' : 'scripts/space-bundle.mjs'
+    const importArgs = [path.join(ROOT_DIR, script), 'import', resolved]
     if (spaceIdOverride) importArgs.push('--as', spaceIdOverride)
     log(`importing ${path.basename(bundlePath)}…`)
     const result = spawnSync(process.execPath, importArgs, { cwd: ROOT_DIR, encoding: 'utf8' })
@@ -77,6 +86,10 @@ if (bundlePath) {
     if (result.status !== 0) process.exit(result.status ?? 1)
     const match = (result.stdout || '').match(/imported ".+" as "([^"]+)"/)
     spaceId = match ? match[1] : spaceIdOverride
+    if (isInstallBundle) {
+        const spaces = (result.stdout || '').match(/\(\d+ spaces: ([^)]+)\)/)
+        spaceId = spaces ? spaces[1].split(', ')[0] : null
+    }
 }
 
 // 4. run

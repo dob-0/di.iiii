@@ -73,8 +73,36 @@ Rules the importer enforces:
 - Recreates project `<hash>.json` refs, so `scripts/gc-space-blobs.mjs` will
   not reap imported blobs.
 
+## Whole-install bundles
+
+Move *every* space plus the admin instance config in one archive — a full
+install you can hand someone as a file:
+
+```bash
+npm run install:export                                   # → di.install-bundle.tar.gz
+npm run install:export -- --spaces main,wcc --out my.tar.gz
+npm run install:import -- di.install-bundle.tar.gz       # onto a fresh data root
+npm run install:import -- di.install-bundle.tar.gz --force --owner <userId>
+npm run selfhost -- di.install-bundle.tar.gz             # selfhost detects the format
+```
+
+An install bundle is a `tar.gz` of per-space bundles plus the instance config:
+
+```
+install.json                      manifest (format, version, space list)
+spaces/<id>.space-bundle.tar.gz   one space bundle per space (format above)
+config/_server-config.json        admin instance config (globalSpaceId …), if set
+```
+
+Same stripping rules as space bundles, applied per space. User accounts are
+never included — on import, spaces have no owner unless you pass `--owner`.
+Import refuses to overwrite existing spaces or an existing
+`spaces/_server-config.json` without `--force`.
+
 ## Verification
 
 Round-trip fidelity (meta, documents, CAS bytes, legacy asset bytes, `--force`
-guard, `--as` remap) is covered by `serverXR/src/bundleContracts.test.js`,
-part of `npm run test:server-contracts`.
+guard, `--as` remap) is covered by `serverXR/src/bundleContracts.test.js`;
+whole-install round-trips (multi-space, `--spaces` subset, instance config)
+by `serverXR/src/installBundleContracts.test.js` — both part of
+`npm run test:server-contracts`.
