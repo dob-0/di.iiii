@@ -5,6 +5,44 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-07-10 — Bundles shipped, Drive picker migration, CI noise fix
+
+**Who:** Claude (single agent; backend + scripts + CI). Session goal: "where are we
+stuck, work next" — unstick the queue, then take the deferred strategic items.
+
+### Done this session
+
+- **PR #26 landed** (was stuck as a conflicting draft): only conflict was CURRENT.md;
+  resolved, merged to dev, staging deploy + smoke 9/9 PASS.
+- **PR #28 — whole-install bundles** (the queued strategic follow-on):
+  `npm run install:export/install:import` — every space + `spaces/_server-config.json`
+  in one tar.gz of nested space bundles (composes `space-bundle.mjs` exports);
+  `--spaces` subset, `--force`, `--owner`; `selfhost` detects install vs space bundles
+  by manifest. New `installBundleContracts.test.js` (multi-space + config round-trip,
+  subset, force guard). Real-data check: exported the local install (6 spaces, 98 MB),
+  imported into a fresh root cleanly. Docs: SELF_HOST.md.
+- **PR #29 — Drive `drive.readonly` → `drive.file` + Google Picker** (clears the
+  Google-verification blocker permanently): new `picker-token` endpoint (caller's own
+  token + `GOOGLE_API_KEY`/`GOOGLE_APP_ID`), shared `pick()` in `useDriveImport`
+  (loads Picker on demand, imports via the existing selection path), one
+  "Pick from Drive" button per surface, search now lists previously picked files.
+  Wiki + `docs/ops/GOOGLE_DRIVE_INTEGRATION.md` updated. NOT runtime-tested —
+  needs Cloud console (Picker API, drive.file scope, GOOGLE_APP_ID) + a real-account
+  click-through on staging.
+- **PR #30 — `open-pr` red-X fixed**: the fork-side auto-PR template also ran
+  upstream where `UPSTREAM_PR_TOKEN` doesn't exist. Job-level repo guard (mirrored in
+  `docs/templates/fork-auto-pr.yml`); verified skipped on its own push. Known-fixes row.
+- Triaged PR #24 (fork `work/session`): zero code — playwright logs + `public/taron/`
+  assets; left alone as someone's live WIP. Restored stray `spaces/wcc/scene.json`
+  working-tree deletion.
+
+### Next
+
+- User: Cloud console setup + Drive click-through on staging; WCC real-mouse check on
+  prod; GitHub App key from a host shell. Then promote dev→main.
+- Strategic: P2P/IPFS direction per MANIFESTO (design doc first — CAS blobs and
+  bundles are already content-addressed, natural fit).
+
 ## 2026-07-09 (late) — Space-card preview optimization
 
 **Who:** Claude (single agent; UX + viewport). Follow-up to the live previews:
