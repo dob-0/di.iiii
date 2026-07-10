@@ -487,3 +487,8 @@
     font-size: 0.75rem;
     color: #f0a020;
 }
+
+.ssh-space-warning .ssh-card-btn {
+    margin-left: 6px;
+    vertical-align: baseline;
+}

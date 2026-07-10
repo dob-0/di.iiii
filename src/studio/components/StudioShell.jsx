@@ -113,6 +113,7 @@ export default function StudioShell({
     liveProjectState,
     onSetLiveProject,
     onClearLiveProject,
+    onMakeSpacePublic,
     onSaveCurrentCamera,
     onCopyShareLink,
     onViewLive,
@@ -479,7 +480,7 @@ export default function StudioShell({
                     )}
                     {isOpen('publish') && (
                         <StudioFloatingPanel key={`publish-${layoutKey}`} title="Share" onClose={() => toggle('publish')} initialWidth={360} minWidth={300} {...panelChrome('publish')}>
-                            <PublishPanel document={document} publishState={document?.publishState} liveProjectState={liveProjectState} onPublishPatch={onPublishPatch} onSetLiveProject={onSetLiveProject} onClearLiveProject={onClearLiveProject} onCopyShareLink={onCopyShareLink} onExportProject={onExportProject} exportStatus={exportStatus} onImportProjectFile={onImportProjectFile} xrState={xrState} presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} onSaveCurrentCamera={onSaveCurrentCamera} activity={syncState?.activity} />
+                            <PublishPanel document={document} publishState={document?.publishState} liveProjectState={liveProjectState} onPublishPatch={onPublishPatch} onSetLiveProject={onSetLiveProject} onClearLiveProject={onClearLiveProject} onMakeSpacePublic={onMakeSpacePublic} onCopyShareLink={onCopyShareLink} onExportProject={onExportProject} exportStatus={exportStatus} onImportProjectFile={onImportProjectFile} xrState={xrState} presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} onSaveCurrentCamera={onSaveCurrentCamera} activity={syncState?.activity} />
                         </StudioFloatingPanel>
                     )}
                     {isOpen('world') && (

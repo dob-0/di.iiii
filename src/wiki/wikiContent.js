@@ -77,11 +77,11 @@ export const WIKI_ARTICLES = [
             'Owners manage the card preview from the Preview button on the card: keep the live miniature or upload a custom cover image (Replace image / Use live preview to switch back anytime). A cover image also works on spaces that aren’t public yet.',
             'The editor’s Spaces panel has the same self-serve Make Public / Make Private toggle as the Spaces page.',
             'Publishing (which project is live) and visibility (Public/Private) are independent choices — linking a project does not automatically make the space public.',
-            'A published-but-private space shows a login wall to visitors instead of the scene.',
+            'A published-but-private space shows a login wall to visitors instead of the scene. The editor’s Share window and the space card both tell you when that’s the case and offer a one-click “Make space public” right there — no hunting for the toggle.',
             'Opening an editor URL (like /<space>/studio) with an account that isn’t scoped to that space no longer dead-ends: if the space is public you are taken to its live view; only private spaces show the access-restricted screen.'
         ],
         tags: ['publish', 'public', 'sharing', 'owner', 'live link'],
-        updated: '2026-07-09'
+        updated: '2026-07-10'
     },
     {
         id: 'studio-basics',

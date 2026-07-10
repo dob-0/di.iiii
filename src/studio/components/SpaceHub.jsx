@@ -513,6 +513,11 @@ export default function SpaceHub() {
                                     {space.publishedProjectId && !space.isPublic && (
                                         <p className="ssh-space-warning">
                                             ⚠ Not public — visitors will see a login wall, not the project.
+                                            {canManage(space) && (
+                                                <button className="ssh-card-btn" onClick={e => handleTogglePublic(space, e)}>
+                                                    Make public
+                                                </button>
+                                            )}
                                         </p>
                                     )}
                                     {space.isPublic && (
