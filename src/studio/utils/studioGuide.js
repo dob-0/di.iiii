@@ -136,24 +136,24 @@ export const STUDIO_SHORTCUT_SECTIONS = [
     }
 ]
 
-// The guest first-run welcome auto-opens the help dialog exactly once per
-// browser. Keyed on "welcome", not "help", so a future non-guest first-run
-// can use its own key without colliding.
-export const STUDIO_WELCOME_SEEN_KEY = 'di.studio.welcomeSeen'
+// Guest first-run guidance is a sequence of action-completed coach marks
+// (StudioCoachMarks) — a hint dies when its action happens, nothing to read
+// past. The visual help dialog it replaced stays available behind ?.
+export const STUDIO_COACH_DONE_KEY = 'di.studio.coachDone'
 
-export function shouldShowStudioWelcome(authType) {
+export function shouldShowStudioCoach(authType) {
     if (authType !== 'guest') return false
     try {
-        return !window.localStorage.getItem(STUDIO_WELCOME_SEEN_KEY)
+        return !window.localStorage.getItem(STUDIO_COACH_DONE_KEY)
     } catch {
         return false
     }
 }
 
-export function markStudioWelcomeSeen() {
+export function markStudioCoachDone() {
     try {
-        window.localStorage.setItem(STUDIO_WELCOME_SEEN_KEY, '1')
+        window.localStorage.setItem(STUDIO_COACH_DONE_KEY, '1')
     } catch {
-        // storage unavailable (private mode) — welcome may show again, harmless
+        // storage unavailable (private mode) — coach may show again, harmless
     }
 }

@@ -507,16 +507,26 @@ const resolveOpenSpaceId = async () => {
   return normalizeSpaceId(configured || '') || normalizeSpaceId(config.openSpaceId) || null
 }
 
+// The shared project everyone lands in when they step into the open space.
+// A fixed id lets the client forward /open/studio straight into it.
+const OPEN_JAM_PROJECT_ID = 'open-jam'
+
 // The open space is ensured at boot (and whenever an admin repoints it) so
 // "step inside" always has somewhere alive to land. kind 'global' keeps it
-// out of the TTL sweep and admin-delete-only.
+// out of the TTL sweep and admin-delete-only. Its jam project is ensured
+// alongside — the door must never open onto an empty project list.
 const ensureOpenSpace = async () => {
   const openId = await resolveOpenSpaceId()
   setCommunalSpaceId(openId)
   if (!openId) return
-  if (await spaceExists(openId)) return
-  await ensureSpaceScene(openId)
-  await upsertSpaceMeta(openId, { label: 'Open Space', kind: 'global', allowEdits: true, permanent: true, isPublic: true })
+  if (!(await spaceExists(openId))) {
+    await ensureSpaceScene(openId)
+    await upsertSpaceMeta(openId, { label: 'Open Space', kind: 'global', allowEdits: true, permanent: true, isPublic: true })
+  }
+  const jam = await findProjectById(SPACES_DIR, OPEN_JAM_PROJECT_ID)
+  if (!jam) {
+    await ensureProject(SPACES_DIR, openId, OPEN_JAM_PROJECT_ID, { title: 'Open Jam', source: 'studio-v3' })
+  }
 }
 
 // Every guest can touch the communal open space plus exactly one private

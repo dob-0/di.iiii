@@ -628,6 +628,12 @@ describe('server write contracts', () => {
         })
         expect(openWrite.status).toBe(200)
 
+        // The shared jam project is ensured with the space — the door never
+        // opens onto an empty project hub.
+        const jam = await fetch(`${server.baseUrl}/api/projects/open-jam`, { headers: { Cookie: guestCookie } })
+        expect(jam.status).toBe(200)
+        await expect(jam.json()).resolves.toMatchObject({ project: { id: 'open-jam', spaceId: 'open' } })
+
         // Guests cannot create named spaces.
         const guestCreate = await fetch(`${server.baseUrl}/api/spaces`, {
             method: 'POST',
