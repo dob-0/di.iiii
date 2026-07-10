@@ -196,6 +196,8 @@ describe('PublicProjectViewer', () => {
             expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
             expect(screen.getByTestId('viewport-flags').textContent).toBe('nav:false chrome:false low:true')
             expect(screen.queryByRole('button', { name: 'Walk / Fly' })).toBeNull()
+            // hub-card preview thumbnails must not carry the view→create badge
+            expect(screen.queryByText('Made with di.iiii')).toBeNull()
         } finally {
             window.history.replaceState(null, '', '/')
         }
@@ -210,5 +212,18 @@ describe('PublicProjectViewer', () => {
         expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
         expect(screen.getByTestId('viewport-flags').textContent).toBe('nav:true chrome:true low:false')
         expect(await screen.findByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
+    })
+
+    // Regression guard: the public viewer is the platform's widest audience and
+    // used to offer no path from viewing into creating (UX audit 2026-07-10).
+    it('offers the Made with di.iiii affordance to public visitors', async () => {
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+        expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+        const badge = screen.getByRole('link', { name: /build your own space/i })
+        expect(badge).toHaveAttribute('href', '/')
     })
 })
