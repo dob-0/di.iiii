@@ -5,7 +5,44 @@ Read this before starting work. Update it before stopping.
 
 ---
 
-## 2026-07-10 (later) — Full cross-persona UX audit + 6 fix slices shipped
+## 2026-07-10 (night) — Guest journey rethink: three-place space model shipped
+
+**Who:** Claude. User: "still messy… we need one sandbox per user, one open space
+to collab, and the [owned spaces] for users." Storyboard agreed first (all four
+decisions D1–D4 approved), then built as 4 slices:
+https://claude.ai/code/artifact/d0267562-fa6d-4fa7-9c2f-be3d4e094778
+
+### The model — three places, that's all
+
+**Open Space** (one communal `open` space, everyone edits, ensured at boot) ·
+**Your sandbox** (exactly one per identity, guests throwaway / accounts permanent) ·
+**Your spaces** (owned, unchanged). Landing's primary CTA is now the door.
+
+### Shipped (all merged to dev, tests + wiki + known-fixes each)
+
+- **PR #38** server model — communal grant in `canAccessSpace` (no cookie re-mints),
+  deterministic `getOwnSandboxSpaceId`, admin `sandboxSummary` + purge endpoint,
+  daily open-space snapshot + `restore-snapshot` route. Watch out: `GUEST_SPACES=*`
+  in a `.env.local` no longer means "all spaces" for guests — it falls through to
+  the default open space.
+- **PR #39** hub three shelves (Open Space / Your sandbox / Your spaces); admin sees
+  sandboxes as one collapsed row with Sweep expired; sandbox cards hide raw ids.
+- **PR #40** "Step inside" landing CTA → `/open/studio` → auto-forward into the
+  boot-ensured shared `open-jam` project (`?browse=1` keeps the hub list). Guest
+  first-run: `StudioCoachMarks` action-completed pills (select → add → share)
+  replace the auto-opening help dialog (help stays behind `?`).
+- **PR #41** keep the room — at sign-in (OAuth or token), the old guest cookie is
+  still on the request; `promoteGuestSandbox` + `spaceStore.moveSpace` re-home the
+  guest's whole sandbox onto the account's sandbox id. Never clobbers account work.
+  Toast: "Signed in — your sandbox came with you."
+
+### Open
+
+- Staging verify: open space + open-jam exist after deploy; check `globalSpaceId`
+  in staging/prod config (a set value repoints the commons — null → default `open`).
+- Real-device click-through still owed for this + the previous session's slices.
+- Slice 6 of the old audit (invite links) still designed-not-built.
+- Prod promotion on user's word.
 
 **Who:** Claude (audit fan-out: 5 parallel code-sweep agents; then single-agent fixes).
 Session goal: "guest UX isn't intuitive → analyze every user type, then fix one by one."

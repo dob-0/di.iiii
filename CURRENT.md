@@ -9,40 +9,40 @@ active_branch: dev
 
 ## Last commit
 
-`13357b82` — dev == main == **prod** (promoted 2026-07-10; deploy green, smoke PASS).
-Prod now runs mesh co-presence, guest-sandbox fix, UX slices 1–5 & 7 (PRs #32–#37).
+`024ef867` — dev = guest-journey rethink shipped (PRs #38–#41); staging deploying.
+Prod (`main`) is at `13357b82` — promote after staging verify + user's word.
 
-## Last session (2026-07-10 — three-way env sync + promotion)
+## Last session (2026-07-10 night — three-place space model)
 
-- **Local/staging/prod data now byte-identical**: 6 spaces (main, wcc, br-id-ge,
-  beyond-form, platform-recordar, azd) — metadata, scenes, documents, and asset
-  lists all match (admin-API sync; user picked winners per conflict).
-- **br-id-ge resolved by user**: kept prod's `newww` (retitled "v.oooooo 2") +
-  `v-oooooo`; July 7 local variant discarded. Local test spaces (ghtest, n000,
-  digital-theather) deleted by user; tl-e2e junk project removed.
-- **Open-call safety shipped**: applications live ONLY in each env's DB, excluded
-  from bundles — `scripts/backup-open-call-applications.mjs` + golden rule; export
-  before any bulk data op. Prod had 10 live applications, untouched.
-- **Promoted dev→main with user override** of the staging click-through gate;
-  UX slices shipped to prod without full visual QA — watch for user reports.
-- Backups: 98MB install bundle, per-env JSON snapshots, 44 deleted orphan assets →
-  session scratchpad + `serverXR/data/_backups/` (gitignored).
+Storyboard agreed (D1–D4), then built: one communal **Open Space** + one
+**sandbox per identity** + your owned spaces. Artifact:
+https://claude.ai/code/artifact/d0267562-fa6d-4fa7-9c2f-be3d4e094778
+
+- **#38 server**: `open` space ensured at boot (kind global, public); communal +
+  own-sandbox grants live in `canAccessSpace` (existing sessions covered, no
+  cookie re-mint); admin `sandboxSummary` + `POST /api/admin/sandboxes/purge`;
+  daily open-space snapshot + `POST /api/spaces/:id/restore-snapshot`.
+- **#39 hub**: three shelves (Open Space / Your sandbox / Your spaces); admin
+  sandbox flood collapses to one row with Sweep expired.
+- **#40 entry**: landing primary CTA "Step inside" → `/open/studio` → forwards
+  into boot-ensured `open-jam` project (`?browse=1` = hub list). Guest first-run
+  = `StudioCoachMarks` action pills; help dialog no longer auto-opens.
+- **#41 keep the room**: at sign-in the guest sandbox moves onto the account's
+  sandbox (`promoteGuestSandbox`/`moveSpace`); `&kept=1` → toast. Never clobbers.
 
 ## What works
 
-- Studio editor (five windows + phone layout + visual help), Beta, WCC, public viewer
-- Auth (session-cookie, roles, OAuth-first gate) with rate limiting; Admin Ops Graph
+- Studio (five windows + phone layout + visual help + coach marks), Beta, WCC, viewer
+- Auth (session-cookie, roles, OAuth-first) + open-space/sandbox implicit grants
 - Deploy: push `dev`→staging, `main`→prod, gated on `browser-checks.yml`
 
 ## Open
 
-- UX slices 1–5 & 7 never got the planned staging click-through (esp. phone Studio
-  + guest welcome) — now live on prod; verify with real users.
-- Slice 6 self-serve sharing (owner-minted invite links) — designed, awaiting user go.
-- Drive `drive.file`+Picker still blocked on Cloud console setup + real-account test.
-- `serverXR/.env.local` stale GitHub App key — copy from a host's `~/.config/dii/*.deploy.env`.
-- Envs drift again on any edit (no auto-sync); resync scripts in 2026-07-10 session scratchpad.
-- Prod backend hung intermittently pre-deploy (1-in-3 timeouts); deploy restart cleared it — watch.
+- Staging verify: `open` + `open-jam` exist post-deploy; check `globalSpaceId` in
+  staging/prod config (set value repoints the commons; null → default `open`).
+- Real-device click-through owed: this session + previous UX slices (now on prod).
+- Old audit slice 6 (invite links) designed, not built. Drive Picker still blocked
+  on Cloud console. Stale GitHub App key in `serverXR/.env.local`. Watch prod hangs.
 
 ## Known fixes → [docs/ai/known-fixes.md](docs/ai/known-fixes.md) — check before any bug hunt.
 
