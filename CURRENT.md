@@ -9,46 +9,40 @@ active_branch: dev
 
 ## Last commit
 
-`590337ab` — dev = UX-audit slices 1–5 & 7 merged (PRs #32–#37); staging deploy pending smoke.
-Prod (`main`) is still at `4e080447` — promote after staging click-through.
+`13357b82` — dev == main == **prod** (promoted 2026-07-10; deploy green, smoke PASS).
+Prod now runs mesh co-presence, guest-sandbox fix, UX slices 1–5 & 7 (PRs #32–#37).
 
-## Latest session (2026-07-10 — full UX audit + fix roadmap, 6 slices shipped)
+## Last session (2026-07-10 — three-way env sync + promotion)
 
-Cross-persona UX audit (guest/creator/viewer/WCC/collab/mobile/admin) → 7-slice roadmap.
-Shipped to dev, each with tests + wiki + known-fixes:
-- **#32 publish unified**: Share window + SpaceHub disclose public/private, one-click
-  "Make space public", truthful set-live messages. No silent flips (by design).
-- **#33 view→create**: `MadeWithBadge` on all public surfaces (viewer orbit/walk, WCC);
-  hidden on ?preview=1 thumbnails.
-- **#34 visual Studio help**: `StudioHelpDialog` (Move/Build/Edit/Share CSS diagrams,
-  hotkeys = Shortcuts tab), guest first-run auto-open (`di.studio.welcomeSeen`).
-- **#35 intent moments**: guest Share window = "Keep this work" (OAuth + export);
-  OAuth returns `?auth=ok` → `AuthReturnNotice` toast (error finally surfaced too).
-- **#36 surface the buried**: AuthGate OAuth-first (token behind disclosure); Drive
-  section open by default; Settings/admin links admin-only.
-- **#37 Studio on phones**: five-window bottom nav + sheets behind `isMobile`;
-  desktop unchanged (`panelBodies` map shared by both layouts).
-
-**Not built — awaiting user decision**: slice 6 self-serve sharing (owner-minted
-invite links; the only slice touching the server access model). Design proposed.
-
-**Env data sync (2026-07-10, parallel session):** local/staging/prod space content
-now byte-identical (6 spaces; admin-API sync, backups in session scratchpad).
-Open-call applications are DB-only, excluded from bundles — back up before any
-data op: `scripts/backup-open-call-applications.mjs` (rule in golden_rules.md).
+- **Local/staging/prod data now byte-identical**: 6 spaces (main, wcc, br-id-ge,
+  beyond-form, platform-recordar, azd) — metadata, scenes, documents, and asset
+  lists all match (admin-API sync; user picked winners per conflict).
+- **br-id-ge resolved by user**: kept prod's `newww` (retitled "v.oooooo 2") +
+  `v-oooooo`; July 7 local variant discarded. Local test spaces (ghtest, n000,
+  digital-theather) deleted by user; tl-e2e junk project removed.
+- **Open-call safety shipped**: applications live ONLY in each env's DB, excluded
+  from bundles — `scripts/backup-open-call-applications.mjs` + golden rule; export
+  before any bulk data op. Prod had 10 live applications, untouched.
+- **Promoted dev→main with user override** of the staging click-through gate;
+  UX slices shipped to prod without full visual QA — watch for user reports.
+- Backups: 98MB install bundle, per-env JSON snapshots, 44 deleted orphan assets →
+  session scratchpad + `serverXR/data/_backups/` (gitignored).
 
 ## What works
 
-- Studio editor (five windows, now phone layout + visual help), Beta, WCC, public viewer
+- Studio editor (five windows + phone layout + visual help), Beta, WCC, public viewer
 - Auth (session-cookie, roles, OAuth-first gate) with rate limiting; Admin Ops Graph
 - Deploy: push `dev`→staging, `main`→prod, gated on `browser-checks.yml`
 
-## What is broken / open
+## Open
 
-- Staging click-through of the 6 UX slices pending (esp. phone Studio + guest welcome).
+- UX slices 1–5 & 7 never got the planned staging click-through (esp. phone Studio
+  + guest welcome) — now live on prod; verify with real users.
+- Slice 6 self-serve sharing (owner-minted invite links) — designed, awaiting user go.
 - Drive `drive.file`+Picker still blocked on Cloud console setup + real-account test.
 - `serverXR/.env.local` stale GitHub App key — copy from a host's `~/.config/dii/*.deploy.env`.
-- UX audit artifact (all personas, ranked findings): https://claude.ai/code/artifact/a739fd54-d04c-4cad-a18e-707470c36b0a
+- Envs drift again on any edit (no auto-sync); resync scripts in 2026-07-10 session scratchpad.
+- Prod backend hung intermittently pre-deploy (1-in-3 timeouts); deploy restart cleared it — watch.
 
 ## Known fixes → [docs/ai/known-fixes.md](docs/ai/known-fixes.md) — check before any bug hunt.
 
