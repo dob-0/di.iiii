@@ -9,6 +9,8 @@ const DEFAULT_STATE = {
     subject: null,
     label: null,
     spaces: null,
+    openSpaceId: null,
+    sandboxSpaceId: null,
     expiresAt: null,
     spaceLimit: null,
     ownedSpaceCount: 0,
