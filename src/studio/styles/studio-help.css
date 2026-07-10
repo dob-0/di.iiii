@@ -1,0 +1,402 @@
+/* Studio visual help dialog (StudioHelpDialog). Same di.i vocabulary as the
+   rest of Studio: cyan accent, black glass, mono kickers. The diagrams are
+   pure CSS so they cost nothing and always match the theme. */
+
+.sh-help-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.sh-help-scrim {
+    position: absolute;
+    inset: 0;
+    border: none;
+    background: rgba(6, 10, 16, 0.82);
+    backdrop-filter: blur(6px);
+    cursor: default;
+}
+
+.sh-help-dialog {
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+    max-height: min(86vh, 640px);
+    overflow-y: auto;
+    background: rgba(14, 20, 30, 0.97);
+    border: 1px solid rgba(79, 214, 255, 0.25);
+    border-radius: 12px;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
+    padding: 24px 28px 16px;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.sh-help-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.sh-help-mark {
+    font-size: 22px;
+    color: var(--di-cyan, #4fd6ff);
+    line-height: 1.2;
+}
+
+.sh-help-header-text {
+    flex: 1;
+}
+
+.sh-help-header-text h3 {
+    margin: 0 0 2px;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+
+.sh-help-header-text p {
+    margin: 0;
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.sh-help-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.4);
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    padding: 0 4px;
+}
+
+.sh-help-close:hover { color: #fff; }
+
+.sh-help-mode-tabs,
+.sh-help-section-tabs {
+    display: flex;
+    gap: 6px;
+}
+
+.sh-help-mode-tabs button,
+.sh-help-section-tabs button {
+    appearance: none;
+    background: none;
+    border: 1px solid rgba(79, 214, 255, 0.2);
+    border-radius: 999px;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.sh-help-mode-tabs button.is-active,
+.sh-help-section-tabs button.is-active {
+    color: var(--di-cyan, #4fd6ff);
+    border-color: var(--di-cyan, #4fd6ff);
+    background: rgba(79, 214, 255, 0.1);
+}
+
+.sh-help-body {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 18px;
+}
+
+@media (max-width: 640px) {
+    .sh-help-body { grid-template-columns: 1fr; }
+}
+
+/* ---- diagram stage ---- */
+
+.sh-help-stage {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sh-help-diagram {
+    position: relative;
+    height: 150px;
+    border: 1px solid rgba(79, 214, 255, 0.18);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #05070a;
+}
+
+.sh-help-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(79, 214, 255, 0.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(79, 214, 255, 0.12) 1px, transparent 1px);
+    background-size: 24px 24px;
+    transform: perspective(300px) rotateX(55deg) translateY(30%) scale(2);
+    transform-origin: center 70%;
+}
+
+.sh-help-cube {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    width: 34px;
+    height: 34px;
+    transform: translate(-50%, -50%) rotate(-8deg);
+    border: 1.5px solid var(--di-cyan, #4fd6ff);
+    background: rgba(79, 214, 255, 0.12);
+    border-radius: 3px;
+}
+
+.sh-help-cube--small {
+    width: 22px;
+    height: 22px;
+}
+
+.sh-help-cube--selected {
+    box-shadow: 0 0 12px rgba(79, 214, 255, 0.45);
+}
+
+.sh-help-orbit {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    width: 110px;
+    height: 64px;
+    transform: translate(-50%, -50%);
+    border: 1px dashed rgba(79, 214, 255, 0.5);
+    border-radius: 50%;
+}
+
+.sh-help-cam {
+    position: absolute;
+    left: calc(50% + 52px);
+    top: calc(52% - 4px);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--di-cyan, #4fd6ff);
+    box-shadow: 0 0 8px rgba(79, 214, 255, 0.8);
+    animation: sh-help-orbit-dot 6s linear infinite;
+    transform-origin: -52px 4px;
+}
+
+@keyframes sh-help-orbit-dot {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.sh-help-plus {
+    position: absolute;
+    left: calc(50% + 30px);
+    top: calc(52% - 34px);
+    color: var(--di-cyan, #4fd6ff);
+    font-size: 18px;
+    font-weight: 600;
+    animation: sh-help-pulse 2.4s ease-in-out infinite;
+}
+
+.sh-help-chip-tray {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 7px;
+    border: 1px solid rgba(79, 214, 255, 0.3);
+    border-radius: 6px;
+    background: rgba(10, 16, 24, 0.8);
+}
+
+.sh-help-chip-tray span {
+    width: 26px;
+    height: 7px;
+    border-radius: 2px;
+    background: rgba(79, 214, 255, 0.35);
+}
+
+.sh-help-chip-tray span:first-child {
+    background: var(--di-cyan, #4fd6ff);
+}
+
+.sh-help-axis {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    height: 2px;
+    width: 46px;
+    transform-origin: left center;
+}
+
+.sh-help-axis--x { background: #ff6b81; transform: rotate(14deg); }
+.sh-help-axis--y { background: #6bff9e; transform: rotate(-90deg); width: 40px; }
+.sh-help-axis--z { background: #6b9eff; transform: rotate(160deg); }
+
+.sh-help-ring {
+    position: absolute;
+    left: 50%;
+    top: 52%;
+    width: 84px;
+    height: 84px;
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(79, 214, 255, 0.5);
+    border-radius: 50%;
+    animation: sh-help-pulse 3s ease-in-out infinite;
+}
+
+.sh-help-link-pill {
+    position: absolute;
+    right: 12px;
+    bottom: 12px;
+    padding: 3px 10px;
+    border: 1px solid var(--di-cyan, #4fd6ff);
+    border-radius: 999px;
+    color: var(--di-cyan, #4fd6ff);
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+}
+
+@keyframes sh-help-pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sh-help-cam, .sh-help-plus, .sh-help-ring { animation: none; }
+}
+
+/* ---- callouts + steps ---- */
+
+.sh-help-callouts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.sh-help-callout {
+    border: 1px solid rgba(79, 214, 255, 0.15);
+    border-radius: 6px;
+    padding: 8px 10px;
+    background: rgba(10, 16, 24, 0.6);
+}
+
+.sh-help-callout-icon {
+    display: block;
+    color: var(--di-cyan, #4fd6ff);
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.sh-help-callout strong {
+    display: block;
+    font-size: 11.5px;
+    margin-bottom: 2px;
+}
+
+.sh-help-callout p {
+    margin: 0;
+    font-size: 10.5px;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.sh-help-steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sh-help-steps li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(79, 214, 255, 0.15);
+    border-radius: 6px;
+    padding: 9px 12px;
+    background: rgba(10, 16, 24, 0.6);
+}
+
+.sh-help-steps li span {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--di-cyan, #4fd6ff);
+    border-radius: 50%;
+    color: var(--di-cyan, #4fd6ff);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.sh-help-steps li p {
+    margin: 0;
+    font-size: 12.5px;
+}
+
+/* ---- shortcuts mode ---- */
+
+.sh-help-shortcuts {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px 28px;
+}
+
+@media (max-width: 640px) {
+    .sh-help-shortcuts { grid-template-columns: 1fr; }
+}
+
+.sh-help-shortcut-title {
+    color: rgba(79, 214, 255, 0.7);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.sh-help-shortcut-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 7px;
+}
+
+.sh-help-shortcut-row code {
+    color: var(--di-cyan, #4fd6ff);
+    background: rgba(79, 214, 255, 0.1);
+    border: 1px solid rgba(79, 214, 255, 0.2);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-size: 11px;
+    white-space: nowrap;
+    font-family: ui-monospace, monospace;
+}
+
+.sh-help-shortcut-row span {
+    color: rgba(200, 216, 232, 0.8);
+    font-size: 12px;
+    text-align: right;
+}
+
+.sh-help-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    padding-top: 12px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.3);
+    font-size: 11px;
+}
