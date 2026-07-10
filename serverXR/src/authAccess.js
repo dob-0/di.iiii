@@ -75,11 +75,38 @@ const isAuthScopeAllowedForSpace = (spaces, spaceId) => {
   return normalizedSpaces.includes(normalizedSpaceId)
 }
 
+// The communal open space: one shared world every authenticated session may
+// enter and edit. Registered once at boot (and on admin config changes) so the
+// grant lives here, next to the rest of the scope logic, instead of being
+// minted into every cookie — existing long-lived sessions get it for free.
+let communalSpaceId = null
+const setCommunalSpaceId = (value) => {
+  communalSpaceId = normalizeAuthScopeSpaceId(value) || null
+}
+const getCommunalSpaceId = () => communalSpaceId
+
+// One sandbox per identity, derived from the subject the same way guest
+// sandboxes always were — deterministic, so a returning user reuses the same
+// space instead of minting a new one per visit.
+const getOwnSandboxSpaceId = (subject) => {
+  const cleaned = String(subject || '').replace(/[^a-z0-9]+/gi, '').toLowerCase().slice(0, 16)
+  return cleaned ? `sandbox-${cleaned}` : null
+}
+
 // Single source of truth for "can this auth state touch this space", used by
 // both the HTTP middleware (index.js) and the realtime socket handlers. Takes
 // the whole auth-state object so scope logic lives in one place.
 const canAccessSpace = (authState, spaceId) => {
   if (authState && authState.isUnrestricted) return true
+  const normalizedSpaceId = normalizeAuthScopeSpaceId(spaceId)
+  if (authState?.authenticated && normalizedSpaceId) {
+    if (communalSpaceId && normalizedSpaceId === communalSpaceId) return true
+    // Session identities (accounts and guests) always reach their own sandbox,
+    // whether or not the cookie scope mentions it.
+    if (authState.type === 'session' || authState.type === 'guest') {
+      if (normalizedSpaceId === getOwnSandboxSpaceId(authState.subject)) return true
+    }
+  }
   const spaces = authState ? authState.spaces : null
   return isAuthScopeAllowedForSpace(spaces, spaceId)
 }
@@ -100,6 +127,9 @@ module.exports = {
   AUTH_ROLE_LEVELS,
   DEFAULT_AUTH_ROLE,
   canAccessSpace,
+  getCommunalSpaceId,
+  getOwnSandboxSpaceId,
+  setCommunalSpaceId,
   formatAuthScopeLabel,
   formatAuthRoleLabel,
   getAuthRoleLevel,

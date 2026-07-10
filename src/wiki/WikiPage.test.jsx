@@ -38,7 +38,7 @@ describe('WikiPage', () => {
 
         fireEvent.change(screen.getByLabelText('Search the wiki'), { target: { value: 'sandbox' } })
         // sandbox article survives the filter; an unrelated one is gone
-        expect(screen.getAllByText('Guest & sandbox modes').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('The Open Space, your sandbox & guest mode').length).toBeGreaterThan(0)
         expect(screen.queryByText('Keyboard shortcuts')).toBeNull()
     })
 })

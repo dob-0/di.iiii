@@ -589,7 +589,7 @@ describe('server write contracts', () => {
         await expect(deletedSpace.json()).resolves.toMatchObject({ ok: true })
     })
 
-    it('gives each guest a private sandbox by default, shared global space only when configured', async () => {
+    it('gives every session the communal open space plus one private sandbox', async () => {
         const server = await startServer({
             nodeEnv: 'production',
             extraEnv: {
@@ -598,20 +598,35 @@ describe('server write contracts', () => {
             }
         })
 
-        // Fresh anonymous visitor → guest session scoped to a private sandbox.
+        // Fresh anonymous visitor → guest session scoped to the open space
+        // plus a private sandbox.
         const guest = await fetch(`${server.baseUrl}/api/auth/session`)
         expect(guest.status).toBe(200)
         const guestState = await guest.json()
-        expect(guestState).toMatchObject({ authenticated: true, type: 'guest', role: 'editor' })
-        expect(guestState.spaces).toHaveLength(1)
-        expect(guestState.spaces[0]).toMatch(/^sandbox-/)
+        expect(guestState).toMatchObject({ authenticated: true, type: 'guest', role: 'editor', openSpaceId: 'open' })
+        expect(guestState.spaces).toHaveLength(2)
+        expect(guestState.spaces[0]).toBe('open')
+        expect(guestState.spaces[1]).toMatch(/^sandbox-/)
+        expect(guestState.sandboxSpaceId).toBe(guestState.spaces[1])
         const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
 
-        // Two guests never share a sandbox.
+        // Two guests share the open space but never a sandbox.
         const secondGuest = await fetch(`${server.baseUrl}/api/auth/session`)
         const secondState = await secondGuest.json()
-        expect(secondState.spaces[0]).toMatch(/^sandbox-/)
-        expect(secondState.spaces[0]).not.toBe(guestState.spaces[0])
+        expect(secondState.spaces[0]).toBe('open')
+        expect(secondState.spaces[1]).not.toBe(guestState.spaces[1])
+
+        // The open space is ensured at boot — public, communal, sweep-proof —
+        // and guests can write to it.
+        const openMeta = await fetch(`${server.baseUrl}/api/spaces/open`, { headers: { Cookie: guestCookie } })
+        expect(openMeta.status).toBe(200)
+        await expect(openMeta.json()).resolves.toMatchObject({ space: { kind: 'global', isPublic: true } })
+        const openWrite = await fetch(`${server.baseUrl}/api/spaces/open/scene`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Cookie: guestCookie },
+            body: JSON.stringify({ objects: [{ id: 'guest-cube' }], assets: [] })
+        })
+        expect(openWrite.status).toBe(200)
 
         // Guests cannot create named spaces.
         const guestCreate = await fetch(`${server.baseUrl}/api/spaces`, {
@@ -624,9 +639,10 @@ describe('server write contracts', () => {
 
         // Issuing sessions alone writes nothing: sandboxes are provisioned
         // lazily on first access, so pure viewers never mint spaces.
-        const sandboxId = guestState.spaces[0]
+        const sandboxId = guestState.spaces[1]
         const adminListBefore = await fetch(`${server.baseUrl}/api/spaces`, { headers: withAuth(server.apiToken) })
         const beforeIds = (await adminListBefore.json()).spaces.map((s) => s.id)
+        expect(beforeIds).toContain('open')
         expect(beforeIds.some((id) => id.startsWith('sandbox-'))).toBe(false)
 
         // The guest still sees their own sandbox card (synthesized until provisioned).
@@ -642,15 +658,17 @@ describe('server write contracts', () => {
         await expect(provisioned.json()).resolves.toMatchObject({ space: { kind: 'sandbox', label: 'Guest Sandbox' } })
 
         // …while a stranger requesting an unprovisioned sandbox id mints nothing.
-        const strangerProbe = await fetch(`${server.baseUrl}/api/spaces/${secondState.spaces[0]}`, { headers: withAuth(server.apiToken) })
+        const strangerProbe = await fetch(`${server.baseUrl}/api/spaces/${secondState.spaces[1]}`, { headers: withAuth(server.apiToken) })
         expect(strangerProbe.status).toBe(404)
 
-        // Even once provisioned, sandboxes stay out of everyone else's directory (admin included).
+        // Even once provisioned, sandboxes stay out of everyone else's
+        // directory — the admin gets the collapsed summary instead of cards.
         const adminListAfter = await fetch(`${server.baseUrl}/api/spaces`, { headers: withAuth(server.apiToken) })
-        const afterIds = (await adminListAfter.json()).spaces.map((s) => s.id)
-        expect(afterIds.some((id) => id.startsWith('sandbox-'))).toBe(false)
+        const adminAfter = await adminListAfter.json()
+        expect(adminAfter.spaces.some((s) => s.id.startsWith('sandbox-'))).toBe(false)
+        expect(adminAfter.sandboxSummary).toMatchObject({ total: 1 })
 
-        // Admin flips the guest entry to a shared global space → new guests land there.
+        // Admin repoints the open space → new guests land there, sandbox still private.
         const sharedSpace = await fetch(`${server.baseUrl}/api/spaces`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
@@ -665,10 +683,103 @@ describe('server write contracts', () => {
         expect(configPatch.status).toBe(200)
 
         const sharedGuest = await fetch(`${server.baseUrl}/api/auth/session`)
-        await expect(sharedGuest.json()).resolves.toMatchObject({
-            type: 'guest',
-            spaces: ['shared-main']
+        const sharedState = await sharedGuest.json()
+        expect(sharedState.type).toBe('guest')
+        expect(sharedState.spaces[0]).toBe('shared-main')
+        expect(sharedState.spaces[1]).toMatch(/^sandbox-/)
+    })
+
+    it('accounts reach their own persistent sandbox without cookie scope, and admins can purge stale guest sandboxes', async () => {
+        const editorToken = 'sandbox-editor-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                SANDBOX_TTL_MS: '1',
+                EDITOR_API_TOKEN: editorToken,
+                EDITOR_ALLOWED_SPACES: 'role-space'
+            }
         })
+
+        // Mint a cookie session for the editor identity (stands in for an
+        // OAuth account: type 'session', non-guest subject, scoped spaces).
+        const mint = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: editorToken })
+        })
+        expect(mint.status).toBe(200)
+        const accountCookie = (mint.headers.get('set-cookie') || '').split(';')[0]
+
+        // The session reports its deterministic sandbox even though the
+        // cookie scope never mentions it.
+        const session = await fetch(`${server.baseUrl}/api/auth/session`, { headers: { Cookie: accountCookie } })
+        const sessionState = await session.json()
+        expect(sessionState.sandboxSpaceId).toMatch(/^sandbox-/)
+        expect(sessionState.spaces || []).not.toContain(sessionState.sandboxSpaceId)
+
+        // First access provisions it as a permanent (sweep-proof) sandbox.
+        const sceneRead = await fetch(`${server.baseUrl}/api/spaces/${sessionState.sandboxSpaceId}/scene`, {
+            headers: { Cookie: accountCookie }
+        })
+        expect(sceneRead.status).toBe(200)
+        const meta = await fetch(`${server.baseUrl}/api/spaces/${sessionState.sandboxSpaceId}`, { headers: withAuth(server.apiToken) })
+        await expect(meta.json()).resolves.toMatchObject({ space: { kind: 'sandbox', label: 'Sandbox', permanent: true } })
+
+        // A guest provisions a throwaway sandbox; with SANDBOX_TTL_MS=1 it is
+        // immediately stale — the admin purge removes it but never the
+        // permanent account sandbox.
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guestState = await guest.json()
+        const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
+        await fetch(`${server.baseUrl}/api/spaces/${guestState.sandboxSpaceId}/scene`, { headers: { Cookie: guestCookie } })
+        await wait(20)
+
+        const purge = await fetch(`${server.baseUrl}/api/admin/sandboxes/purge`, {
+            method: 'POST',
+            headers: withAuth(server.apiToken)
+        })
+        expect(purge.status).toBe(200)
+        await expect(purge.json()).resolves.toMatchObject({ ok: true, removed: 1 })
+        const guestProbe = await fetch(`${server.baseUrl}/api/spaces/${guestState.sandboxSpaceId}`, { headers: withAuth(server.apiToken) })
+        expect(guestProbe.status).toBe(404)
+        const accountProbe = await fetch(`${server.baseUrl}/api/spaces/${sessionState.sandboxSpaceId}`, { headers: withAuth(server.apiToken) })
+        expect(accountProbe.status).toBe(200)
+    })
+
+    it('restores the open space scene from its boot snapshot', async () => {
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false' }
+        })
+
+        // Vandalize the open space…
+        const vandalize = await fetch(`${server.baseUrl}/api/spaces/open/scene`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ objects: [{ id: 'vandal' }], assets: [] })
+        })
+        expect(vandalize.status).toBe(200)
+
+        // …then restore the latest snapshot (taken at boot; poll briefly in
+        // case the boot snapshot write is still in flight).
+        let restore
+        const deadline = Date.now() + 5000
+        for (;;) {
+            restore = await fetch(`${server.baseUrl}/api/spaces/open/restore-snapshot`, {
+                method: 'POST',
+                headers: withAuth(server.apiToken)
+            })
+            if (restore.status !== 404 || Date.now() > deadline) break
+            await wait(200)
+        }
+        expect(restore.status).toBe(200)
+        const restored = await restore.json()
+        expect(restored.ok).toBe(true)
+        expect(restored.restoredFrom).toBeTruthy()
+
+        const scene = await (await fetch(`${server.baseUrl}/api/spaces/open/scene`, { headers: withAuth(server.apiToken) })).json()
+        expect((scene.scene.objects || []).some((o) => o.id === 'vandal')).toBe(false)
     })
 
     it('enforces the same space scope on reads as on writes, except for isPublic spaces', async () => {
@@ -764,22 +875,23 @@ describe('server write contracts', () => {
 
         const unauthenticatedList = await fetch(`${server.baseUrl}/api/spaces`)
         expect(unauthenticatedList.status).toBe(200)
-        const unauthenticatedIds = (await unauthenticatedList.json()).spaces.map((space) => space.id)
-        expect(unauthenticatedIds).toEqual(['public-space'])
+        // The communal open space is public by design, so it shows for everyone.
+        const unauthenticatedIds = (await unauthenticatedList.json()).spaces.map((space) => space.id).sort()
+        expect(unauthenticatedIds).toEqual(['open', 'public-space'])
 
         const editorList = await fetch(`${server.baseUrl}/api/spaces`, {
             headers: withAuth(editorToken)
         })
         expect(editorList.status).toBe(200)
         const editorIds = (await editorList.json()).spaces.map((space) => space.id).sort()
-        expect(editorIds).toEqual(['public-space', 'role-space'])
+        expect(editorIds).toEqual(['open', 'public-space', 'role-space'])
 
         const adminList = await fetch(`${server.baseUrl}/api/spaces`, {
             headers: withAuth(server.apiToken)
         })
         expect(adminList.status).toBe(200)
         const adminIds = (await adminList.json()).spaces.map((space) => space.id).sort()
-        expect(adminIds).toEqual(['hidden-space', 'main', 'public-space', 'role-space'])
+        expect(adminIds).toEqual(['hidden-space', 'main', 'open', 'public-space', 'role-space'])
     })
 
     it('restricts /api/users to admins on every method, including GET', async () => {
