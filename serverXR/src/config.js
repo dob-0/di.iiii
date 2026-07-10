@@ -226,6 +226,9 @@ const config = {
   // ones expire much sooner than regular spaces; a returning guest gets a
   // fresh sandbox re-provisioned on next access.
   sandboxTtlMs: Number(process.env.SANDBOX_TTL_MS || 1000 * 60 * 60 * 24 * 7),
+  // The communal open space every authenticated session can enter and edit.
+  // The config store's globalSpaceId (admin-settable) overrides this default id.
+  openSpaceId: String(process.env.OPEN_SPACE_ID || 'open').trim().toLowerCase(),
   freeSpaceLimit: Number(process.env.FREE_SPACE_LIMIT) || 3,
   liveSync: {
     url: (process.env.LIVE_API_URL || 'https://di-studio.xyz/serverXR').replace(/\/+$/, ''),

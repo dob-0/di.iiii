@@ -13,11 +13,14 @@ const {
   canAccessSpace,
   formatAuthScopeLabel,
   formatAuthRoleLabel,
+  getCommunalSpaceId,
+  getOwnSandboxSpaceId,
   hasRequiredAuthRole,
   isAuthScopeAllowedForSpace,
   isGuestSubject,
   normalizeAuthRole,
-  normalizeAuthScopeSpaces
+  normalizeAuthScopeSpaces,
+  setCommunalSpaceId
 } = require('./authAccess')
 const {
   createAuthSessionValue,
@@ -132,6 +135,7 @@ const {
   ensureDefaultSpace,
   ensureSpaceScene,
   ensureSpaceWritable,
+  getSandboxStats,
   getSpacePaths,
   hydrateSceneAssetManifest,
   isValidAssetId,
@@ -139,9 +143,12 @@ const {
   loadSpaceMeta,
   normalizeSpaceId,
   pruneSpaces,
+  pruneStaleSandboxes,
+  readLatestSpaceSnapshot,
   readOpsHistory,
   saveSpaceMeta,
   serveAsset,
+  snapshotSpaceScene,
   spaceExists,
   upsertSpaceMeta,
   writeOpsHistory
@@ -487,38 +494,66 @@ const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
 
 const GUEST_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30
 
-// Decide what a brand-new guest can touch:
-//  - default → each guest gets a private 'sandbox' space id; the space itself
-//    is provisioned lazily on first access (ensureGuestSandbox below), so pure
-//    viewers — the vast majority of guest sessions — never create FS/DB rows;
-//  - admin sets a globalSpaceId in config (guest entry) → everyone shares that
-//    one editable 'global' space instead (open jam / exhibition mode);
-//  - GUEST_SPACES env (dev-only override) forces a shared space when the
-//    config is silent.
-const resolveGuestSpaces = async (guestId) => {
+// The communal open space id: the admin-set globalSpaceId wins (legacy
+// "open jam" knob, kept as the override), otherwise the config default.
+// GUEST_SPACES env stays as a dev-only override when the config is silent.
+const resolveOpenSpaceId = async () => {
   const cfg = await configStore.read()
-  const globalSpaceId = Object.prototype.hasOwnProperty.call(cfg, 'globalSpaceId')
+  const configured = Object.prototype.hasOwnProperty.call(cfg, 'globalSpaceId') && cfg.globalSpaceId
     ? cfg.globalSpaceId
     : (process.env.GUEST_SPACES ? (GUEST_SPACES[0] || null) : null)
-  if (globalSpaceId) {
-    return [normalizeSpaceId(globalSpaceId) || globalSpaceId]
-  }
-  return [normalizeSpaceId(`sandbox-${guestId.replace(/[^a-z0-9]+/gi, '').slice(0, 16)}`)]
+  // Non-slug overrides (legacy GUEST_SPACES=* wildcard) fall through to the
+  // default id instead of silently disabling the open space.
+  return normalizeSpaceId(configured || '') || normalizeSpaceId(config.openSpaceId) || null
 }
 
-// A sandbox id is only provisionable by the session that carries it in its own
-// cookie scope — strangers can't mint junk spaces by requesting sandbox-* ids.
-const isOwnGuestSandbox = (state, spaceId) =>
-  Boolean(spaceId) &&
-  spaceId.startsWith('sandbox-') &&
-  Array.isArray(state?.spaces) && state.spaces.includes(spaceId) &&
-  (state.type === 'guest' || isGuestSubject(state.subject))
+// The open space is ensured at boot (and whenever an admin repoints it) so
+// "step inside" always has somewhere alive to land. kind 'global' keeps it
+// out of the TTL sweep and admin-delete-only.
+const ensureOpenSpace = async () => {
+  const openId = await resolveOpenSpaceId()
+  setCommunalSpaceId(openId)
+  if (!openId) return
+  if (await spaceExists(openId)) return
+  await ensureSpaceScene(openId)
+  await upsertSpaceMeta(openId, { label: 'Open Space', kind: 'global', allowEdits: true, permanent: true, isPublic: true })
+}
 
-const ensureGuestSandbox = async (state, spaceId) => {
-  if (!isOwnGuestSandbox(state, spaceId)) return
+// Every guest can touch the communal open space plus exactly one private
+// sandbox derived from their id. Neither space exists yet at issuance —
+// sandboxes are provisioned lazily on first access (ensureOwnSandbox below),
+// so pure viewers never create FS/DB rows.
+const resolveGuestSpaces = async (guestId) => {
+  const openId = await resolveOpenSpaceId()
+  const sandboxId = normalizeSpaceId(getOwnSandboxSpaceId(guestId))
+  return [...(openId ? [openId] : []), ...(sandboxId ? [sandboxId] : [])]
+}
+
+// A sandbox id is only provisionable by the identity it derives from — guests
+// carry theirs in the cookie scope, accounts match on subject — so strangers
+// can't mint junk spaces by requesting sandbox-* ids.
+const isOwnSandbox = (state, spaceId) => {
+  if (!spaceId || !spaceId.startsWith('sandbox-')) return false
+  if (state?.type === 'guest' || isGuestSubject(state?.subject)) {
+    return Array.isArray(state?.spaces) && state.spaces.includes(spaceId)
+  }
+  return state?.type === 'session' && spaceId === getOwnSandboxSpaceId(state.subject)
+}
+
+const ensureOwnSandbox = async (state, spaceId) => {
+  if (!isOwnSandbox(state, spaceId)) return
   if (await spaceExists(spaceId)) return
+  const isGuest = state.type === 'guest' || isGuestSubject(state.subject)
   await ensureSpaceScene(spaceId)
-  await upsertSpaceMeta(spaceId, { label: 'Guest Sandbox', kind: 'sandbox', allowEdits: true, permanent: false })
+  // Account sandboxes are permanent (one per user, survives the sweep);
+  // guest ones stay throwaway. No ownerUserId — a sandbox never counts
+  // toward the owned-space quota.
+  await upsertSpaceMeta(spaceId, {
+    label: isGuest ? 'Guest Sandbox' : 'Sandbox',
+    kind: 'sandbox',
+    allowEdits: true,
+    permanent: !isGuest
+  })
 }
 
 const issueGuestSession = async (res) => {
@@ -616,6 +651,12 @@ router.get('/api/auth/session', async (req, res, next) => {
     const ownedSpaceCount = ownerId ? countSpacesOwnedBy(ownerId) : 0
     const canCreateSpace = !config.requireAuth || exempt || (Boolean(ownerId) && ownedSpaceCount < spaceLimit)
 
+    // Every session knows its places: the communal open space and its own
+    // sandbox (deterministic from the subject; provisioned lazily on access).
+    const sandboxSpaceId = state.authenticated && (state.type === 'guest' || state.type === 'session')
+      ? normalizeSpaceId(getOwnSandboxSpaceId(state.subject) || '')
+      : null
+
     res.json({
       requireAuth: config.requireAuth,
       authenticated: Boolean(state.authenticated),
@@ -626,6 +667,8 @@ router.get('/api/auth/session', async (req, res, next) => {
       spaces: state.spaces,
       isUnrestricted: Boolean(state.isUnrestricted),
       expiresAt: state.session?.expiresAt || null,
+      openSpaceId: getCommunalSpaceId(),
+      sandboxSpaceId,
       spaceLimit,
       ownedSpaceCount,
       canCreateSpace
@@ -952,9 +995,9 @@ router.post('/api/github/webhook', async (req, res) => {
 router.use('/api/spaces/:spaceId', async (req, res, next) => {
   req.requiredSpaceId = normalizeSpaceId(req.params.spaceId) || null
   try {
-    // Guest sandboxes are provisioned here, on first real space access,
-    // instead of at session issuance — see resolveGuestSpaces.
-    await ensureGuestSandbox(req.authState || getPublicAuthState(req), req.requiredSpaceId)
+    // Sandboxes are provisioned here, on first real space access, instead of
+    // at session issuance — see resolveGuestSpaces / ensureOwnSandbox.
+    await ensureOwnSandbox(req.authState || getPublicAuthState(req), req.requiredSpaceId)
   } catch (error) {
     return next(error)
   }
@@ -1049,6 +1092,7 @@ registerSpaceRoutes(router, {
   findUserById,
   getLiveBucket,
   getPublicAuthState,
+  getSandboxStats,
   getSpacePaths,
   hydrateSceneAssetManifest,
   canAccessSpace,
@@ -1066,6 +1110,7 @@ registerSpaceRoutes(router, {
   requireSpaceOwnerOrAdminWrite,
   onDeleteSpace: async (spaceId) => removeProjectIndexEntriesForSpace(SPACES_DIR, spaceId),
   readJson,
+  readLatestSpaceSnapshot,
   readOpsHistory,
   saveSpaceMeta,
   serveAsset,
@@ -1241,9 +1286,23 @@ registerSyncRoutes(router, {
   upsertSpaceMeta,
 })
 
+// Admin sweep for the hub's collapsed sandbox row: remove guest sandboxes the
+// TTL has already expired — the same thing the 30-minute timer does, on demand.
+router.post('/api/admin/sandboxes/purge', requireAdminAlways, async (req, res, next) => {
+  try {
+    const removed = await pruneStaleSandboxes()
+    res.json({ ok: true, removed: removed.length })
+  } catch (error) {
+    next(error)
+  }
+})
+
 registerConfigRoutes(router, {
   requireAdminAlways,
-  configStore
+  configStore,
+  // Repointing globalSpaceId moves the communal grant and ensures the new
+  // open space exists.
+  onConfigChanged: () => ensureOpenSpace()
 })
 
 const mountTargets = new Set([config.mountPath])
@@ -1271,13 +1330,26 @@ app.use((err, req, res, next) => {
 
 const PORT = config.port
 
+const snapshotOpenSpace = async () => {
+  const openId = getCommunalSpaceId()
+  if (!openId || !(await spaceExists(openId))) return
+  await snapshotSpaceScene(openId)
+}
+
 initStorage()
   .then(async () => {
     await ensureDefaultSpace()
+    await ensureOpenSpace()
     pruneSpaces().catch((error) => console.warn('Failed to prune spaces', error))
     setInterval(() => {
       pruneSpaces().catch((error) => console.warn('Failed to prune spaces', error))
     }, 1000 * 60 * 30)
+    // Daily scene snapshot of the open space — vandalism insurance (admin
+    // restores via POST /api/spaces/:id/restore-snapshot).
+    snapshotOpenSpace().catch((error) => console.warn('Failed to snapshot open space', error))
+    setInterval(() => {
+      snapshotOpenSpace().catch((error) => console.warn('Failed to snapshot open space', error))
+    }, 1000 * 60 * 60 * 24)
 
     const httpServer = http.createServer(app)
 

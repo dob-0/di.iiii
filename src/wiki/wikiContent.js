@@ -36,19 +36,21 @@ export const WIKI_ARTICLES = [
     {
         id: 'guest-and-sandbox-modes',
         category: 'Spaces & access',
-        title: 'Guest & sandbox modes',
-        summary: 'Signed-out visitors get a private sandbox each by default; admins can switch to one shared space.',
+        title: 'The Open Space, your sandbox & guest mode',
+        summary: 'Everyone shares one communal Open Space, and every visitor — guest or account — gets exactly one private sandbox.',
         body: [
-            'Visitors who are not signed in still get a working session so they can explore without an account.',
+            'There are three kinds of places, and everyone gets the first two without an account:',
             { list: [
-                'Private sandbox (default) — each guest gets their own throwaway sandbox space, isolated from everyone else. A banner on the Spaces page marks the session as temporary.',
-                'Shared global space — an admin can set a guest entry space in /admin → Manage; then every guest lands in that one editable space (good for an open jam or exhibition).'
+                'The Open Space — one shared world where every visitor can build, together, live. It is always there and survives cleanup; an admin can restore it from a daily snapshot if it gets trashed.',
+                'Your sandbox — exactly one private scratch space per person, the same one every time you return (same browser for guests; account-bound once signed in). It never appears in anyone else’s directory, admins included.',
+                'Your spaces — real named spaces you own and can publish. These need a sign-in.'
             ] },
-            'A sandbox only comes into existence when the guest actually enters it — just viewing a published space never creates one. Sandboxes are private to their session (they never appear in anyone else’s directory, including the admin’s) and are cleaned up after about a week of inactivity.',
+            'A sandbox only comes into existence when you actually enter it — just viewing a published space never creates one. Guest sandboxes are cleaned up after about a week of inactivity; account sandboxes are permanent.',
             'Guests cannot create their own named spaces — sign in with GitHub or Google to get spaces that are yours and stay.',
-            'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google), or Export the project as a file you can import into any space later. After signing in, a confirmation appears so you know it worked.'
+            'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google), or Export the project as a file you can import into any space later. After signing in, a confirmation appears so you know it worked.',
+            'For admins: /admin → Manage can repoint the communal space (the guest entry field), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.'
         ],
-        tags: ['guest', 'sandbox', 'access'],
+        tags: ['guest', 'sandbox', 'open space', 'access'],
         updated: '2026-07-10'
     },
     {

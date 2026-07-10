@@ -93,6 +93,7 @@ function createSpaceStore({
       selectStale:   db.prepare("SELECT id FROM spaces WHERE permanent = 0 AND kind != 'global' AND last_touched_at < ?"),
       selectStaleSandbox: db.prepare("SELECT id FROM spaces WHERE permanent = 0 AND kind = 'sandbox' AND last_touched_at < ?"),
       countByOwner:  db.prepare('SELECT COUNT(*) as cnt FROM spaces WHERE owner_user_id = ?'),
+      countSandboxes: db.prepare("SELECT COUNT(*) as cnt FROM spaces WHERE kind = 'sandbox'"),
       upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
       insert:        db.prepare('INSERT INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
       update:        db.prepare('UPDATE spaces SET label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, preview_image_asset_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=? WHERE id=?'),
@@ -209,6 +210,55 @@ function createSpaceStore({
     await Promise.all(ids.map(id => deleteSpace(id)))
   }
 
+  // Powers the admin hub's collapsed sandbox row: how many exist, how many
+  // the TTL sweep would remove right now.
+  const getSandboxStats = () => {
+    const total = s().countSandboxes.get()?.cnt || 0
+    const stale = sandboxTtlMs ? s().selectStaleSandbox.all(Date.now() - sandboxTtlMs).length : 0
+    return { total, stale }
+  }
+
+  const pruneStaleSandboxes = async () => {
+    if (!sandboxTtlMs) return []
+    const ids = s().selectStaleSandbox.all(Date.now() - sandboxTtlMs).map(row => row.id)
+    await Promise.all(ids.map(id => deleteSpace(id)))
+    return ids
+  }
+
+  // Scene-level snapshots — vandalism insurance for the communal open space.
+  // Assets stay in the space's own store, so a restore only puts the scene
+  // JSON back; the files live outside spacesDir so they never look like spaces.
+  const snapshotsDir = path.resolve(spacesDir, '..', 'snapshots')
+
+  const snapshotSpaceScene = async (spaceId, { keep = 7 } = {}) => {
+    const { scenePath } = getSpacePaths(spaceId)
+    const scene = await readJson(scenePath, null)
+    if (!scene) return null
+    const dir = path.join(snapshotsDir, spaceId)
+    await ensureDir(dir)
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const file = path.join(dir, `${stamp}.json`)
+    await writeJson(file, scene)
+    const entries = (await fsp.readdir(dir)).filter(name => name.endsWith('.json')).sort()
+    const excess = entries.slice(0, Math.max(0, entries.length - keep))
+    await Promise.all(excess.map(name => fsp.rm(path.join(dir, name), { force: true })))
+    return file
+  }
+
+  const readLatestSpaceSnapshot = async (spaceId) => {
+    const dir = path.join(snapshotsDir, spaceId)
+    let entries = []
+    try {
+      entries = (await fsp.readdir(dir)).filter(name => name.endsWith('.json')).sort()
+    } catch {
+      return null
+    }
+    const latest = entries[entries.length - 1]
+    if (!latest) return null
+    const scene = await readJson(path.join(dir, latest), null)
+    return scene ? { scene, takenAt: latest.replace(/\.json$/, '') } : null
+  }
+
   const readOpsHistory = async (spaceId) =>
     s().opsSelect.all(spaceId).map(row => JSON.parse(row.data))
 
@@ -299,6 +349,7 @@ function createSpaceStore({
     ensureDefaultSpace,
     ensureSpaceScene,
     ensureSpaceWritable,
+    getSandboxStats,
     getSpacePaths,
     hydrateSceneAssetManifest,
     isValidAssetId,
@@ -306,7 +357,10 @@ function createSpaceStore({
     loadSpaceMeta,
     normalizeSpaceId,
     pruneSpaces,
+    pruneStaleSandboxes,
+    readLatestSpaceSnapshot,
     readOpsHistory,
+    snapshotSpaceScene,
     saveSpaceMeta,
     serveAsset,
     spaceExists,
