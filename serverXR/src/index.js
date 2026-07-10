@@ -148,6 +148,7 @@ const {
   spacesDir: SPACES_DIR,
   defaultSpaceId: DEFAULT_SPACE_ID,
   defaultTtlMs: DEFAULT_TTL_MS,
+  sandboxTtlMs: config.sandboxTtlMs,
   blankScene: BLANK_SCENE
 })
 
@@ -486,7 +487,9 @@ const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
 const GUEST_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30
 
 // Decide what a brand-new guest can touch:
-//  - default → each guest gets a private 'sandbox' space provisioned on demand;
+//  - default → each guest gets a private 'sandbox' space id; the space itself
+//    is provisioned lazily on first access (ensureGuestSandbox below), so pure
+//    viewers — the vast majority of guest sessions — never create FS/DB rows;
 //  - admin sets a globalSpaceId in config (guest entry) → everyone shares that
 //    one editable 'global' space instead (open jam / exhibition mode);
 //  - GUEST_SPACES env (dev-only override) forces a shared space when the
@@ -499,10 +502,22 @@ const resolveGuestSpaces = async (guestId) => {
   if (globalSpaceId) {
     return [normalizeSpaceId(globalSpaceId) || globalSpaceId]
   }
-  const sandboxId = normalizeSpaceId(`sandbox-${guestId.replace(/[^a-z0-9]+/gi, '').slice(0, 16)}`)
-  await ensureSpaceScene(sandboxId)
-  await upsertSpaceMeta(sandboxId, { label: 'Guest Sandbox', kind: 'sandbox', allowEdits: true, permanent: false })
-  return [sandboxId]
+  return [normalizeSpaceId(`sandbox-${guestId.replace(/[^a-z0-9]+/gi, '').slice(0, 16)}`)]
+}
+
+// A sandbox id is only provisionable by the session that carries it in its own
+// cookie scope — strangers can't mint junk spaces by requesting sandbox-* ids.
+const isOwnGuestSandbox = (state, spaceId) =>
+  Boolean(spaceId) &&
+  spaceId.startsWith('sandbox-') &&
+  Array.isArray(state?.spaces) && state.spaces.includes(spaceId) &&
+  (state.type === 'guest' || isGuestSubject(state.subject))
+
+const ensureGuestSandbox = async (state, spaceId) => {
+  if (!isOwnGuestSandbox(state, spaceId)) return
+  if (await spaceExists(spaceId)) return
+  await ensureSpaceScene(spaceId)
+  await upsertSpaceMeta(spaceId, { label: 'Guest Sandbox', kind: 'sandbox', allowEdits: true, permanent: false })
 }
 
 const issueGuestSession = async (res) => {
@@ -933,8 +948,15 @@ router.post('/api/github/webhook', async (req, res) => {
 // route handler enforces the free-tier quota (and blocks guests/tokens). Space
 // *management* (PATCH/DELETE below) is owner-or-admin, enforced by
 // requireSpaceOwnerOrAdminWrite on the routes themselves.
-router.use('/api/spaces/:spaceId', (req, res, next) => {
+router.use('/api/spaces/:spaceId', async (req, res, next) => {
   req.requiredSpaceId = normalizeSpaceId(req.params.spaceId) || null
+  try {
+    // Guest sandboxes are provisioned here, on first real space access,
+    // instead of at session issuance — see resolveGuestSpaces.
+    await ensureGuestSandbox(req.authState || getPublicAuthState(req), req.requiredSpaceId)
+  } catch (error) {
+    return next(error)
+  }
   next()
 })
 

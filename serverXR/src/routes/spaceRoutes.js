@@ -87,12 +87,28 @@ function registerSpaceRoutes(router, {
     try {
       const spaces = await listSpaces()
       const state = req.authState || getPublicAuthState(req)
-      if (!config.requireAuth) {
-        return res.json({ spaces: spaces.map((space) => withIsOwner(state, space)) })
-      }
-      const visible = spaces.filter((space) =>
-        space.isPublic || (state.authenticated && canAccessSpace(state, space.id))
+      const ownSpaces = Array.isArray(state.spaces) ? state.spaces : []
+      // Guest sandboxes are private per-session scratch space — they never
+      // belong in anyone else's directory, including the admin's.
+      let visible = spaces.filter((space) =>
+        space.kind !== 'sandbox' || ownSpaces.includes(space.id)
       )
+      if (config.requireAuth) {
+        visible = visible.filter((space) =>
+          space.isPublic || (state.authenticated && canAccessSpace(state, space.id))
+        )
+      }
+      // A guest's sandbox is provisioned lazily on first access; until then,
+      // synthesize its card so the hub still shows the session's own space.
+      const isGuest = state.type === 'guest' || isGuestSubject(state.subject)
+      if (isGuest) {
+        const pending = ownSpaces.find((id) =>
+          id.startsWith('sandbox-') && !visible.some((space) => space.id === id)
+        )
+        if (pending) {
+          visible.push(buildMeta(pending, { label: 'Guest Sandbox', kind: 'sandbox', allowEdits: true, permanent: false }))
+        }
+      }
       res.json({ spaces: visible.map((space) => withIsOwner(state, space)) })
     } catch (error) {
       next(error)

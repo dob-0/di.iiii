@@ -622,6 +622,34 @@ describe('server write contracts', () => {
         expect(guestCreate.status).toBe(403)
         await expect(guestCreate.json()).resolves.toMatchObject({ code: 'auth_required' })
 
+        // Issuing sessions alone writes nothing: sandboxes are provisioned
+        // lazily on first access, so pure viewers never mint spaces.
+        const sandboxId = guestState.spaces[0]
+        const adminListBefore = await fetch(`${server.baseUrl}/api/spaces`, { headers: withAuth(server.apiToken) })
+        const beforeIds = (await adminListBefore.json()).spaces.map((s) => s.id)
+        expect(beforeIds.some((id) => id.startsWith('sandbox-'))).toBe(false)
+
+        // The guest still sees their own sandbox card (synthesized until provisioned).
+        const guestList = await fetch(`${server.baseUrl}/api/spaces`, { headers: { Cookie: guestCookie } })
+        const guestSpaces = (await guestList.json()).spaces
+        expect(guestSpaces.some((s) => s.id === sandboxId && s.kind === 'sandbox')).toBe(true)
+
+        // First real access provisions the sandbox for its own session…
+        const scene = await fetch(`${server.baseUrl}/api/spaces/${sandboxId}/scene`, { headers: { Cookie: guestCookie } })
+        expect(scene.status).toBe(200)
+        const provisioned = await fetch(`${server.baseUrl}/api/spaces/${sandboxId}`, { headers: withAuth(server.apiToken) })
+        expect(provisioned.status).toBe(200)
+        await expect(provisioned.json()).resolves.toMatchObject({ space: { kind: 'sandbox', label: 'Guest Sandbox' } })
+
+        // …while a stranger requesting an unprovisioned sandbox id mints nothing.
+        const strangerProbe = await fetch(`${server.baseUrl}/api/spaces/${secondState.spaces[0]}`, { headers: withAuth(server.apiToken) })
+        expect(strangerProbe.status).toBe(404)
+
+        // Even once provisioned, sandboxes stay out of everyone else's directory (admin included).
+        const adminListAfter = await fetch(`${server.baseUrl}/api/spaces`, { headers: withAuth(server.apiToken) })
+        const afterIds = (await adminListAfter.json()).spaces.map((s) => s.id)
+        expect(afterIds.some((id) => id.startsWith('sandbox-'))).toBe(false)
+
         // Admin flips the guest entry to a shared global space → new guests land there.
         const sharedSpace = await fetch(`${server.baseUrl}/api/spaces`, {
             method: 'POST',
