@@ -112,3 +112,27 @@ describe('StudioShell transform shortcuts', () => {
         expect(screen.getByTestId('gizmo-axis')).toHaveTextContent('all')
     })
 })
+
+// Regression guard: Studio computed isMobile and ignored it — phones got the
+// desktop drag-panel UI (UX audit 2026-07-10, mobile finding #1).
+describe('StudioShell mobile chrome', () => {
+    it('replaces floating panels and the control cluster with a bottom nav on phones', () => {
+        renderShell({ isMobile: true })
+        expect(screen.getByRole('navigation', { name: 'Studio windows' })).toBeInTheDocument()
+        expect(screen.queryByTestId('gizmo-mode')).not.toBeInTheDocument()
+    })
+
+    it('opens one window at a time as a bottom sheet and toggles it closed', () => {
+        renderShell({ isMobile: true })
+        fireEvent.click(screen.getByRole('button', { name: 'Scene' }))
+        expect(screen.getByLabelText('Close panel')).toBeInTheDocument()
+        fireEvent.click(screen.getByRole('button', { name: 'Scene' }))
+        expect(screen.queryByLabelText('Close panel')).not.toBeInTheDocument()
+    })
+
+    it('keeps the desktop chrome unchanged off phones', () => {
+        renderShell({})
+        expect(screen.queryByRole('navigation', { name: 'Studio windows' })).not.toBeInTheDocument()
+        expect(screen.getByTestId('gizmo-mode')).toBeInTheDocument()
+    })
+})

@@ -1,0 +1,127 @@
+/* Studio on phones (StudioShell isMobile branch): full-screen viewport with a
+   top context bar, a five-window bottom nav, and one panel at a time as a
+   bottom sheet. Same di.i vocabulary as the desktop shell. */
+
+.smb-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
+    background: linear-gradient(rgba(5, 8, 12, 0.9), rgba(5, 8, 12, 0));
+    pointer-events: none;
+}
+
+.smb-topbar > * {
+    pointer-events: auto;
+}
+
+.smb-title {
+    flex: 1;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.smb-top-btn {
+    appearance: none;
+    border: 1px solid rgba(79, 214, 255, 0.3);
+    background: rgba(10, 16, 24, 0.85);
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 999px;
+    font-size: 13px;
+    padding: 6px 12px;
+    cursor: pointer;
+}
+
+.smb-top-btn.is-active {
+    color: var(--di-cyan, #4fd6ff);
+    border-color: var(--di-cyan, #4fd6ff);
+    background: rgba(79, 214, 255, 0.15);
+}
+
+.smb-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
+    display: flex;
+    gap: 4px;
+    padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+    background: rgba(6, 10, 16, 0.94);
+    border-top: 1px solid rgba(79, 214, 255, 0.2);
+    backdrop-filter: blur(10px);
+}
+
+.smb-nav-btn {
+    flex: 1;
+    appearance: none;
+    border: 1px solid transparent;
+    background: none;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 11.5px;
+    letter-spacing: 0.05em;
+    padding: 9px 2px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.smb-nav-btn.is-active {
+    color: var(--di-cyan, #4fd6ff);
+    border-color: rgba(79, 214, 255, 0.35);
+    background: rgba(79, 214, 255, 0.1);
+}
+
+.smb-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(48px + env(safe-area-inset-bottom));
+    z-index: 55;
+    max-height: 62dvh;
+    display: flex;
+    flex-direction: column;
+    background: rgba(10, 15, 22, 0.97);
+    border-top: 1px solid rgba(79, 214, 255, 0.25);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -16px 48px rgba(0, 0, 0, 0.6);
+}
+
+.smb-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px 8px;
+    color: var(--di-cyan, #4fd6ff);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(79, 214, 255, 0.12);
+}
+
+.smb-sheet-head button {
+    appearance: none;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.smb-sheet-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+}

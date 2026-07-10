@@ -9,6 +9,7 @@ import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import { shouldShowStudioWelcome, markStudioWelcomeSeen } from '../utils/studioGuide.js'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
+import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import {
@@ -26,6 +27,15 @@ import {
 // quick-inserted entity lands where the cursor pointed, not at a fixed default.
 // Returns null when the camera/canvas isn't resolvable or the ray misses the
 // plane (e.g. looking up at the horizon) — callers fall back to view placement.
+// The five Studio windows, as a phone bottom nav (order = frequency of use).
+const MOBILE_PANELS = [
+    ['create', 'Create'],
+    ['scene', 'Scene'],
+    ['world', 'World'],
+    ['publish', 'Share'],
+    ['files', 'Code']
+]
+
 const GROUND_PLANE = new Plane(new Vector3(0, 1, 0), 0)
 const groundRaycaster = new Raycaster()
 const computeGroundPoint = (event, controlsRef) => {
@@ -212,6 +222,7 @@ export default function StudioShell({
         toggle(id)
     }, [toggle])
     const [showHelp, setShowHelp] = useState(false)
+    const [mobileSheet, setMobileSheet] = useState(null)
     const { type: authType } = useAuthSession()
 
     // First-run welcome: a guest's first Studio entry opens the visual help
@@ -420,33 +431,17 @@ export default function StudioShell({
         onCloseHelp: () => setShowHelp(false),
     }
 
-    return (
-        <div className="sfp-root" onDoubleClick={handleViewportDoubleClick} onDragOver={handleViewportDragOver} onDrop={handleViewportDrop} role="application" aria-label="3D viewport">
-            <StudioViewportLayout
-                layout={vpLayout}
-                onSplit={vpSplit}
-                onClose={vpClose}
-                onSetRatio={vpSetRatio}
-                shared={viewportShared}
-            />
-
-            {loading && (
-                <div className="sfp-overlay-card">Loading project…</div>
-            )}
-            {loadError && (
-                <div className="sfp-overlay-card sfp-overlay-card--error">{loadError}</div>
-            )}
-
-            {!uiHidden && (
-                <>
-                    {isOpen('create') && (
-                        <StudioFloatingPanel key={`create-${layoutKey}`} title="Create" onClose={() => toggle('create')} initialWidth={280} {...panelChrome('create')}>
+    // One source of truth for each window's content, shared by the desktop
+    // floating panels and the mobile bottom sheet (slice 7: Studio on phones).
+    const panelBodies = {
+        create: (
+            <>
                             <LibraryPanel onCreateEntity={onCreateEntity} />
                             <AssetsPanel libraryItems={libraryItems} onAssetFilesSelected={onAssetFilesSelected} onCreateFromAsset={onCreateFromAsset} onDriveImportUrl={onDriveImportUrl} onDriveImportSelection={onDriveImportSelection} onToggleAssetShared={onToggleAssetShared} onCommonsImport={onCommonsImport} onDeleteLibraryItem={onDeleteLibraryItem} />
-                        </StudioFloatingPanel>
-                    )}
-                    {isOpen('scene') && (
-                        <StudioFloatingPanel key={`scene-${layoutKey}`} title="Scene" onClose={() => toggle('scene')} initialWidth={300} {...panelChrome('scene')}>
+            </>
+        ),
+        scene: (
+            <>
                             <StructurePanel
                                 entities={entities}
                                 selectedEntityId={selectedEntityId}
@@ -483,21 +478,67 @@ export default function StudioShell({
                             {editHistory && (
                                 <HistoryPanel steps={editHistory.steps} cursor={editHistory.cursor} onJumpTo={onHistoryJump} />
                             )}
+            </>
+        ),
+        files: (
+            <>
+                            <FilesPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} libraryItems={libraryItems} />
+            </>
+        ),
+        publish: (
+            <>
+                            <PublishPanel document={document} publishState={document?.publishState} liveProjectState={liveProjectState} onPublishPatch={onPublishPatch} onSetLiveProject={onSetLiveProject} onClearLiveProject={onClearLiveProject} onMakeSpacePublic={onMakeSpacePublic} onCopyShareLink={onCopyShareLink} onExportProject={onExportProject} exportStatus={exportStatus} onImportProjectFile={onImportProjectFile} xrState={xrState} presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} onSaveCurrentCamera={onSaveCurrentCamera} activity={syncState?.activity} />
+            </>
+        ),
+        world: (
+            <>
+                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} />
+            </>
+        )
+    }
+
+    return (
+        <div className="sfp-root" onDoubleClick={handleViewportDoubleClick} onDragOver={handleViewportDragOver} onDrop={handleViewportDrop} role="application" aria-label="3D viewport">
+            <StudioViewportLayout
+                layout={vpLayout}
+                onSplit={vpSplit}
+                onClose={vpClose}
+                onSetRatio={vpSetRatio}
+                shared={viewportShared}
+            />
+
+            {loading && (
+                <div className="sfp-overlay-card">Loading project…</div>
+            )}
+            {loadError && (
+                <div className="sfp-overlay-card sfp-overlay-card--error">{loadError}</div>
+            )}
+
+            {!uiHidden && !isMobile && (
+                <>
+                    {isOpen('create') && (
+                        <StudioFloatingPanel key={`create-${layoutKey}`} title="Create" onClose={() => toggle('create')} initialWidth={280} {...panelChrome('create')}>
+                            {panelBodies.create}
+                        </StudioFloatingPanel>
+                    )}
+                    {isOpen('scene') && (
+                        <StudioFloatingPanel key={`scene-${layoutKey}`} title="Scene" onClose={() => toggle('scene')} initialWidth={300} {...panelChrome('scene')}>
+                            {panelBodies.scene}
                         </StudioFloatingPanel>
                     )}
                     {isOpen('files') && (
                         <StudioFloatingPanel key={`files-${layoutKey}`} title="Code" onClose={() => toggle('files')} initialWidth={480} minWidth={320} maxWidth={800} {...panelChrome('files')}>
-                            <FilesPanel presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} libraryItems={libraryItems} />
+                            {panelBodies.files}
                         </StudioFloatingPanel>
                     )}
                     {isOpen('publish') && (
                         <StudioFloatingPanel key={`publish-${layoutKey}`} title="Share" onClose={() => toggle('publish')} initialWidth={360} minWidth={300} {...panelChrome('publish')}>
-                            <PublishPanel document={document} publishState={document?.publishState} liveProjectState={liveProjectState} onPublishPatch={onPublishPatch} onSetLiveProject={onSetLiveProject} onClearLiveProject={onClearLiveProject} onMakeSpacePublic={onMakeSpacePublic} onCopyShareLink={onCopyShareLink} onExportProject={onExportProject} exportStatus={exportStatus} onImportProjectFile={onImportProjectFile} xrState={xrState} presentationState={document?.presentationState} onPresentationPatch={onPresentationPatch} onSaveCurrentCamera={onSaveCurrentCamera} activity={syncState?.activity} />
+                            {panelBodies.publish}
                         </StudioFloatingPanel>
                     )}
                     {isOpen('world') && (
                         <StudioFloatingPanel key={`world-${layoutKey}`} title="World" onClose={() => toggle('world')} initialWidth={280} {...panelChrome('world')}>
-                            <ProjectPanel document={document} displayName={displayName} onDisplayNameChange={onDisplayNameChange} onProjectMetaPatch={onProjectMetaPatch} onWorldPatch={onWorldPatch} onRenderSettingsPatch={onRenderSettingsPatch} onOpenHub={onBackToHub} />
+                            {panelBodies.world}
                         </StudioFloatingPanel>
                     )}
 
@@ -526,6 +567,43 @@ export default function StudioShell({
                         onResetLayout={resetLayout}
                         onShowHelp={() => setShowHelp(true)}
                     />
+                </>
+            )}
+
+            {!uiHidden && isMobile && (
+                <>
+                    <div className="smb-topbar">
+                        <button type="button" className="smb-top-btn" onClick={onBackToHub} aria-label="Back to projects">←</button>
+                        <span className="smb-title">{document?.projectMeta?.title || liveProjectState?.spaceLabel || 'Project'}</span>
+                        <button
+                            type="button"
+                            className={`smb-top-btn${viewportEditMode === 'edit' ? ' is-active' : ''}`}
+                            onClick={() => setViewportEditMode((m) => (m === 'navigate' ? 'edit' : 'navigate'))}
+                        >
+                            {viewportEditMode === 'edit' ? 'Editing' : 'Edit'}
+                        </button>
+                    </div>
+                    {mobileSheet && (
+                        <div className="smb-sheet">
+                            <div className="smb-sheet-head">
+                                <span>{MOBILE_PANELS.find(([id]) => id === mobileSheet)?.[1]}</span>
+                                <button type="button" onClick={() => setMobileSheet(null)} aria-label="Close panel">×</button>
+                            </div>
+                            <div className="smb-sheet-body">{panelBodies[mobileSheet]}</div>
+                        </div>
+                    )}
+                    <nav className="smb-nav" aria-label="Studio windows">
+                        {MOBILE_PANELS.map(([id, label]) => (
+                            <button
+                                key={id}
+                                type="button"
+                                className={`smb-nav-btn${mobileSheet === id ? ' is-active' : ''}`}
+                                onClick={() => setMobileSheet((current) => (current === id ? null : id))}
+                            >
+                                {label}
+                            </button>
+                        ))}
+                    </nav>
                 </>
             )}
 
