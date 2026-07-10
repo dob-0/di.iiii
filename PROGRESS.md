@@ -5,6 +5,42 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-07-10 (later) — Full cross-persona UX audit + 6 fix slices shipped
+
+**Who:** Claude (audit fan-out: 5 parallel code-sweep agents; then single-agent fixes).
+Session goal: "guest UX isn't intuitive → analyze every user type, then fix one by one."
+
+### Audit
+
+Mapped guest, registered creator, public viewer, WCC visitor, collaborator, mobile,
+and admin journeys file-by-file. Report (journeys, ranked findings, 5 cross-cutting
+patterns, 7-slice roadmap): https://claude.ai/code/artifact/a739fd54-d04c-4cad-a18e-707470c36b0a
+Headlines: split-brain publish (says "Published", space stays private); public viewer
+had zero path to creating; Studio had zero onboarding (hotkey table only); no
+self-serve sharing; Studio ignored its own isMobile; "Settings" was an admin dead end.
+
+### Shipped (all merged to dev, each with regression tests + wiki + known-fixes)
+
+- **PR #32** publish intent unified — visibility disclosed + one-click Make public
+  in Share window and SpaceHub card; truthful messages; no silent flips.
+- **PR #33** `MadeWithBadge` view→create affordance on every public surface.
+- **PR #34** `StudioHelpDialog` visual help (4 CSS-diagram guides + Shortcuts tab);
+  guest first-run auto-open once per browser.
+- **PR #35** guest "Keep this work" card in Share (OAuth + export); `?auth=ok` +
+  `AuthReturnNotice` toast — OAuth returns are no longer silent.
+- **PR #36** OAuth-first AuthGate (token behind disclosure); Drive section open by
+  default; Settings/admin links admin-gated.
+- **PR #37** Studio phone layout — bottom nav + sheets via shared `panelBodies` map.
+
+### Open
+
+- Slice 6 (self-serve sharing via owner-minted invite links) designed, NOT built —
+  waiting on user approval (touches server access model).
+- Staging click-through pending: phone Studio, guest welcome, OAuth toast, badge.
+- Prod promotion (dev→main) after click-through.
+
+---
+
 ## 2026-07-10 — Bundles shipped, Drive picker migration, CI noise fix
 
 **Who:** Claude (single agent; backend + scripts + CI). Session goal: "where are we

@@ -9,33 +9,41 @@ active_branch: dev
 
 ## Last commit
 
-`4e080447` — dev == main == **prod** (promoted 2026-07-09; deploy green; smoke 9/9 PASS).
-## Latest session (2026-07-10 — guest sandbox fix; Drive drive.file+Picker)
+`590337ab` — dev = UX-audit slices 1–5 & 7 merged (PRs #32–#37); staging deploy pending smoke.
+Prod (`main`) is still at `4e080447` — promote after staging click-through.
 
-- **Guest sandbox cleanup** (this PR): sandboxes lazy-provision on first entry (page
-  views mint nothing), hidden from everyone else's `GET /api/spaces` (admin incl.;
-  guest's own card synthesized until provisioned), idle ones reaped after 7 days
-  (`SANDBOX_TTL_MS`). Fixes admin directory flooded with "Guest Sandbox" rows.
-- **Drive scope migration** (staging): `drive.readonly` → **`drive.file`** + Picker,
-  "Pick from Drive" buttons, `/picker-token`, `GOOGLE_APP_ID`. Needs Cloud console
-  setup + real-account click-through — `docs/ops/GOOGLE_DRIVE_INTEGRATION.md`.
-- **Whole-install bundles** (PR #28) + **space bundles/self-host** (PR #26) on staging;
-  real-data round-trip verified (6 spaces, 98 MB); `selfhost` auto-detects bundle type.
-- **WCC mouse-look on Wayland** (PR #27, prod): awaiting user real-mouse confirmation.
+## Latest session (2026-07-10 — full UX audit + fix roadmap, 6 slices shipped)
+
+Cross-persona UX audit (guest/creator/viewer/WCC/collab/mobile/admin) → 7-slice roadmap.
+Shipped to dev, each with tests + wiki + known-fixes:
+- **#32 publish unified**: Share window + SpaceHub disclose public/private, one-click
+  "Make space public", truthful set-live messages. No silent flips (by design).
+- **#33 view→create**: `MadeWithBadge` on all public surfaces (viewer orbit/walk, WCC);
+  hidden on ?preview=1 thumbnails.
+- **#34 visual Studio help**: `StudioHelpDialog` (Move/Build/Edit/Share CSS diagrams,
+  hotkeys = Shortcuts tab), guest first-run auto-open (`di.studio.welcomeSeen`).
+- **#35 intent moments**: guest Share window = "Keep this work" (OAuth + export);
+  OAuth returns `?auth=ok` → `AuthReturnNotice` toast (error finally surfaced too).
+- **#36 surface the buried**: AuthGate OAuth-first (token behind disclosure); Drive
+  section open by default; Settings/admin links admin-only.
+- **#37 Studio on phones**: five-window bottom nav + sheets behind `isMobile`;
+  desktop unchanged (`panelBodies` map shared by both layouts).
+
+**Not built — awaiting user decision**: slice 6 self-serve sharing (owner-minted
+invite links; the only slice touching the server access model). Design proposed.
 
 ## What works
 
-- Studio editor (five windows), Beta (node-first), WCC exhibition, orbit viewport, public viewer
-- Auth (session-cookie, roles, OAuth) with rate limiting; Admin Ops Graph; GitHub→space sync
+- Studio editor (five windows, now phone layout + visual help), Beta, WCC, public viewer
+- Auth (session-cookie, roles, OAuth-first gate) with rate limiting; Admin Ops Graph
 - Deploy: push `dev`→staging, `main`→prod, gated on `browser-checks.yml`
 
 ## What is broken / open
 
-- Drive `drive.file`+Picker shipped in code; blocked on Cloud console setup + a real-account
-  click-through. Webhook canary `dob-0/di-sync-webhook-test`→`webhook-test` is permanent.
-- `serverXR/.env.local` stale GitHub App key — copy `GITHUB_APP_PRIVATE_KEY_B64` from a
-  host's `~/.config/dii/*.deploy.env`. If `br_id_ge` gets App-connected, disable its CI sync.
-- `origin/self-host` intentionally 1 commit ahead (`b9baa30`). Next: P2P/IPFS per MANIFESTO.
+- Staging click-through of the 6 UX slices pending (esp. phone Studio + guest welcome).
+- Drive `drive.file`+Picker still blocked on Cloud console setup + real-account test.
+- `serverXR/.env.local` stale GitHub App key — copy from a host's `~/.config/dii/*.deploy.env`.
+- UX audit artifact (all personas, ranked findings): https://claude.ai/code/artifact/a739fd54-d04c-4cad-a18e-707470c36b0a
 
 ## Known fixes → [docs/ai/known-fixes.md](docs/ai/known-fixes.md) — check before any bug hunt.
 
