@@ -492,3 +492,29 @@ It loads the URL at desktop aspect ratios (16:9, 16:10, 4:3, 1:1, ultrawide, sma
 **How:** When the workflow changes (plugin set, hooks, permissions, MCP servers, slash commands), update `ONBOARDING.md` §8 in the same PR — same tier as CURRENT.md. When handing the repo to someone new, the entire instruction is one line: "clone, then follow ONBOARDING.md top to bottom."
 
 **Files:** `ONBOARDING.md` (§8), `README.md` (Contributing), `.claude/settings.json`, `.mcp.json`, `docs/ai/parallel-agents.md` (Mode 0 fork contract)
+
+---
+
+### Node child processes: a signal-killed child leaves `exitCode` null forever
+
+**Rule:** Never use `child.exitCode === null` to mean "still running." A child that died from a signal (SIGTERM/SIGKILL) has `exitCode: null` permanently — only `signalCode` is set. Guard process-teardown helpers with an explicit `let exited = false; child.once('exit', () => { exited = true })` flag, and make `stop()` idempotent, or a second stop will `kill()` a corpse and await an `'exit'` event that already fired — a silent, unbounded hang.
+
+**Why:** The space-bundle contract suite stops the source server mid-test (to prove export works offline) and again in `afterEach`. The second stop saw `exitCode === null` on the already-SIGTERM-killed child, sent SIGKILL, and awaited `once('exit')` forever — every test "passed" its body then died on a 30s hook timeout. The other contract suites never hit this only because they stop each server exactly once.
+
+**How:** Track exit via the event, not the field:
+
+```js
+let exited = false
+child.once('exit', () => { exited = true })
+const stop = async () => {
+  if (exited) return
+  child.kill('SIGTERM')
+  const sawExit = await Promise.race([
+    new Promise(r => child.once('exit', () => r(true))),
+    wait(3000).then(() => false)
+  ])
+  if (!sawExit && !exited) { child.kill('SIGKILL'); await new Promise(r => child.once('exit', r)) }
+}
+```
+
+**Files:** `serverXR/src/bundleContracts.test.js` (the guarded pattern); `httpContracts.test.js` / `projectContracts.test.js` carry the unguarded single-stop variant — copy the guarded one for any new suite that stops servers mid-test.

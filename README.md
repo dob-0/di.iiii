@@ -211,6 +211,7 @@ By task:
 - user-facing help (in-app `/wiki` + landing teaser, single source of truth): [src/wiki/wikiContent.js](src/wiki/wikiContent.js)
 - documentation sync system (how the surfaces stay in lockstep): [docs/ops/doc-sync-system.md](docs/ops/doc-sync-system.md)
 - new contributor setup: [ONBOARDING.md](ONBOARDING.md)
+- self-hosting a space (portable bundle export/import): [docs/deploy/SELF_HOST.md](docs/deploy/SELF_HOST.md)
 - running multiple agents/contributors at once: [docs/ai/parallel-agents.md](docs/ai/parallel-agents.md)
 - shared project logic: [src/project/AGENTS.md](src/project/AGENTS.md)
 - backend/runtime: [serverXR README](serverXR/README.md)
