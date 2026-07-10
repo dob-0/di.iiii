@@ -881,13 +881,36 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
             dispatch({
                 type: 'append-activity',
                 level: 'info',
-                message: `Published this project to /${resolvedSpaceId}.`
+                message: nextSpace?.isPublic
+                    ? `Published this project to /${resolvedSpaceId} — live for visitors.`
+                    : `Set as the live project for /${resolvedSpaceId}. The space is still private — visitors will see a login wall until you make it public.`
             })
         } catch (error) {
             dispatch({
                 type: 'append-activity',
                 level: 'error',
                 message: `Could not set the live project: ${error.message || 'unknown error'}`
+            })
+        } finally {
+            setIsUpdatingLiveProject(false)
+        }
+    }
+
+    const handleMakeSpacePublic = async () => {
+        setIsUpdatingLiveProject(true)
+        try {
+            const nextSpace = await updateServerSpace(resolvedSpaceId, { isPublic: true })
+            setSpaceMeta(nextSpace)
+            dispatch({
+                type: 'append-activity',
+                level: 'info',
+                message: `Made /${resolvedSpaceId} public — visitors can now enter.`
+            })
+        } catch (error) {
+            dispatch({
+                type: 'append-activity',
+                level: 'error',
+                message: `Could not make the space public: ${error.message || 'unknown error'}`
             })
         } finally {
             setIsUpdatingLiveProject(false)
@@ -1081,10 +1104,14 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 spaceLabel: spaceMeta?.label || resolvedSpaceId,
                 currentLiveProjectId: spaceMeta?.publishedProjectId || null,
                 isLiveProject: spaceMeta?.publishedProjectId === projectId,
+                // null until space meta loads, so the panel doesn't flash a
+                // "private" warning for a space that turns out to be public
+                isPublic: spaceMeta ? Boolean(spaceMeta.isPublic) : null,
                 isUpdating: isUpdatingLiveProject
             }}
             onSetLiveProject={handleSetLiveProject}
             onClearLiveProject={handleClearLiveProject}
+            onMakeSpacePublic={handleMakeSpacePublic}
             />
             <AssetOptimizationDialog
                 prompt={assetOptimizationPrompt}

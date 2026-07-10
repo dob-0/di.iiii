@@ -1519,6 +1519,7 @@ export function PublishPanel({
     onPublishPatch,
     onSetLiveProject,
     onClearLiveProject,
+    onMakeSpacePublic,
     onCopyShareLink,
     onExportProject,
     exportStatus,
@@ -1554,6 +1555,25 @@ export function PublishPanel({
                                 ? `Another project is currently live in this space: ${liveProjectState.currentLiveProjectId}`
                                 : 'No live project is set for this space yet.'}
                     </Typography>
+                    {liveProjectState?.isPublic === true ? (
+                        <Typography variant="body2" color="success.main">
+                            Space is public — visitors can enter at the route above.
+                        </Typography>
+                    ) : liveProjectState?.isPublic === false ? (
+                        <Stack spacing={1} alignItems="flex-start">
+                            <Typography variant="body2" color="warning.main">
+                                ⚠ Space is private — visitors will see a login wall, not the project.
+                            </Typography>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={onMakeSpacePublic}
+                                disabled={liveProjectState?.isUpdating}
+                            >
+                                Make space public
+                            </Button>
+                        </Stack>
+                    ) : null}
                     <Stack direction={{ xs: 'column', md: 'row' }} spacing={1}>
                         <Button
                             variant={liveProjectState?.isLiveProject ? 'contained' : 'outlined'}
