@@ -1,0 +1,84 @@
+/* Guest first-run coach pill (StudioCoachMarks): one action-completed hint
+   at a time, bottom-center, above the mobile bottom nav when present. */
+
+.studio-coach {
+    position: fixed;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    z-index: 70;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    background: rgba(6, 10, 16, 0.92);
+    border: 1px solid rgba(79, 214, 255, 0.3);
+    border-radius: 999px;
+    color: var(--di-text, #e8f4f8);
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    max-width: calc(100vw - 24px);
+}
+
+.studio-coach-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.studio-coach-dots {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.studio-coach-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(79, 214, 255, 0.25);
+}
+
+.studio-coach-dot.is-done {
+    background: var(--di-cyan, #4fd6ff);
+}
+
+.studio-coach-dot.is-active {
+    background: rgba(79, 214, 255, 0.6);
+    box-shadow: 0 0 6px rgba(79, 214, 255, 0.5);
+}
+
+.studio-coach-close {
+    appearance: none;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 2px;
+    flex-shrink: 0;
+}
+
+.studio-coach-close:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+@media (max-width: 700px) {
+    .studio-coach {
+        bottom: calc(64px + env(safe-area-inset-bottom));
+    }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .studio-coach {
+        animation: studio-coach-in 0.3s ease;
+    }
+
+    @keyframes studio-coach-in {
+        from {
+            opacity: 0;
+            translate: 0 6px;
+        }
+    }
+}
