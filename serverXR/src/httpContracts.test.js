@@ -753,6 +753,70 @@ describe('server write contracts', () => {
         expect(accountProbe.status).toBe(200)
     })
 
+    it('carries a guest sandbox onto the account at sign-in, without clobbering existing account work', async () => {
+        const editorToken = 'keep-room-editor-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                EDITOR_API_TOKEN: editorToken
+            }
+        })
+
+        // A guest builds something in their sandbox…
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guestState = await guest.json()
+        const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
+        const guestSandboxId = guestState.sandboxSpaceId
+        const write = await fetch(`${server.baseUrl}/api/spaces/${guestSandboxId}/scene`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Cookie: guestCookie },
+            body: JSON.stringify({ objects: [{ id: 'kept-cube' }], assets: [] })
+        })
+        expect(write.status).toBe(200)
+
+        // …then signs in. Token session mint is the same upgrade moment as an
+        // OAuth callback: the old guest cookie still rides on the request.
+        const mint = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: guestCookie },
+            body: JSON.stringify({ token: editorToken })
+        })
+        expect(mint.status).toBe(200)
+        await expect(mint.clone().json()).resolves.toMatchObject({ keptSandbox: true })
+        const accountCookie = (mint.headers.get('set-cookie') || '').split(';')[0]
+
+        // The account's sandbox now holds the guest's scene, permanently.
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`, { headers: { Cookie: accountCookie } })).json()
+        expect(session.sandboxSpaceId).not.toBe(guestSandboxId)
+        const scene = await (await fetch(`${server.baseUrl}/api/spaces/${session.sandboxSpaceId}/scene`, { headers: { Cookie: accountCookie } })).json()
+        expect((scene.scene.objects || []).some((o) => o.id === 'kept-cube')).toBe(true)
+        const meta = await (await fetch(`${server.baseUrl}/api/spaces/${session.sandboxSpaceId}`, { headers: withAuth(server.apiToken) })).json()
+        expect(meta.space).toMatchObject({ kind: 'sandbox', label: 'Sandbox', permanent: true })
+        const gone = await fetch(`${server.baseUrl}/api/spaces/${guestSandboxId}`, { headers: withAuth(server.apiToken) })
+        expect(gone.status).toBe(404)
+
+        // A second guest signing in to the SAME identity never clobbers the
+        // account sandbox that now has real work in it.
+        const guest2 = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guest2State = await guest2.json()
+        const guest2Cookie = (guest2.headers.get('set-cookie') || '').split(';')[0]
+        await fetch(`${server.baseUrl}/api/spaces/${guest2State.sandboxSpaceId}/scene`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Cookie: guest2Cookie },
+            body: JSON.stringify({ objects: [{ id: 'other-cube' }], assets: [] })
+        })
+        const mint2 = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: guest2Cookie },
+            body: JSON.stringify({ token: editorToken })
+        })
+        await expect(mint2.json()).resolves.toMatchObject({ keptSandbox: false })
+        const sceneAfter = await (await fetch(`${server.baseUrl}/api/spaces/${session.sandboxSpaceId}/scene`, { headers: withAuth(server.apiToken) })).json()
+        expect((sceneAfter.scene.objects || []).some((o) => o.id === 'kept-cube')).toBe(true)
+        expect((sceneAfter.scene.objects || []).some((o) => o.id === 'other-cube')).toBe(false)
+    })
+
     it('restores the open space scene from its boot snapshot', async () => {
         const server = await startServer({
             nodeEnv: 'production',

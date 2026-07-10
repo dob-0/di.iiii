@@ -141,6 +141,7 @@ const {
   isValidAssetId,
   listSpaces,
   loadSpaceMeta,
+  moveSpace,
   normalizeSpaceId,
   pruneSpaces,
   pruneStaleSandboxes,
@@ -566,6 +567,47 @@ const ensureOwnSandbox = async (state, spaceId) => {
   })
 }
 
+// Keep the room: when a guest signs in, their sandbox — scene, projects,
+// assets — moves onto the account's own sandbox id, so the work survives the
+// identity switch. Skipped unless the guest actually built something, and it
+// never clobbers existing account work.
+const promoteGuestSandbox = async (priorState, userId) => {
+  try {
+    if (!priorState?.authenticated || !isGuestSubject(priorState.subject)) return false
+    const fromId = normalizeSpaceId(getOwnSandboxSpaceId(priorState.subject) || '')
+    if (!fromId || !(await spaceExists(fromId))) return false
+    const fromMeta = await loadSpaceMeta(fromId)
+    const fromProjects = await listProjectsInSpace(SPACES_DIR, fromId)
+    if ((fromMeta?.sceneVersion || 0) === 0 && fromProjects.length === 0) return false
+    const toId = normalizeSpaceId(getOwnSandboxSpaceId(userId) || '')
+    if (!toId || toId === fromId) return false
+    if (await spaceExists(toId)) {
+      const toMeta = await loadSpaceMeta(toId)
+      const toProjects = await listProjectsInSpace(SPACES_DIR, toId)
+      if ((toMeta?.sceneVersion || 0) > 0 || toProjects.length > 0) return false
+      await deleteSpace(toId)
+    }
+    await moveSpace(fromId, toId, { label: 'Sandbox', permanent: true })
+    // Project documents carry their spaceId in projectMeta — repoint them so
+    // clients loading the moved projects see a consistent home.
+    for (const project of fromProjects) {
+      try {
+        const doc = await readProjectDocument(SPACES_DIR, toId, project.id)
+        if (doc?.projectMeta?.spaceId && doc.projectMeta.spaceId !== toId) {
+          await writeProjectDocument(SPACES_DIR, toId, project.id, {
+            ...doc,
+            projectMeta: { ...doc.projectMeta, spaceId: toId }
+          })
+        }
+      } catch { /* best-effort — a stale embedded spaceId is cosmetic */ }
+    }
+    return true
+  } catch (error) {
+    console.warn('Failed to promote guest sandbox', error)
+    return false
+  }
+}
+
 const issueGuestSession = async (res) => {
   const guestId = `guest:${crypto.randomUUID()}`
   const spaces = await resolveGuestSpaces(guestId)
@@ -599,7 +641,10 @@ router.use(['/api/auth/github', '/api/auth/google'], authAttemptLimiter)
 registerAuthRoutes(router, {
   config,
   createAuthSessionValue,
-  setAuthSessionCookie
+  setAuthSessionCookie,
+  // OAuth callback = session upgrade: the old guest cookie is still on the
+  // request, so the guest's sandbox can follow them (keep the room).
+  onSessionUpgrade: (req, user) => promoteGuestSandbox(readAuthSession(req), user.id)
 })
 
 router.get('/api/auth/session', async (req, res, next) => {
@@ -688,7 +733,7 @@ router.get('/api/auth/session', async (req, res, next) => {
   }
 })
 
-router.post('/api/auth/session', authAttemptLimiter, (req, res) => {
+router.post('/api/auth/session', authAttemptLimiter, async (req, res) => {
   if (!config.requireAuth) {
     clearAuthSessionCookie(res)
     res.json({
@@ -707,6 +752,10 @@ router.post('/api/auth/session', authAttemptLimiter, (req, res) => {
     res.status(401).json({ error: 'Unauthorized' })
     return
   }
+
+  // Session upgrade: the request still carries the previous cookie, so a
+  // guest's sandbox can follow them onto the new identity (keep the room).
+  const keptSandbox = await promoteGuestSandbox(readAuthSession(req), identity.subject)
 
   const session = createAuthSessionValue({
     secret: config.auth.sessionSecret,
@@ -729,7 +778,8 @@ router.post('/api/auth/session', authAttemptLimiter, (req, res) => {
     label: identity.label,
     spaces: identity.spaces,
     isUnrestricted: Boolean(identity.isUnrestricted),
-    expiresAt: session.expiresAt
+    expiresAt: session.expiresAt,
+    keptSandbox
   })
 })
 

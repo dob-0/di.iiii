@@ -75,3 +75,27 @@ describe('spaceStore kind', () => {
         expect(await reapingStore.loadSpaceMeta('sandbox-idle')).toBeNull()
     })
 })
+
+describe('spaceStore moveSpace', () => {
+    it('re-homes the row, its children, and the directory under the new id', async () => {
+        await store.upsertSpaceMeta('sandbox-guest1', { kind: 'sandbox', label: 'Guest Sandbox', sceneVersion: 3 })
+        await store.ensureSpaceScene('sandbox-guest1')
+        await store.writeOpsHistory('sandbox-guest1', [{ opId: 'op1', version: 3, type: 'noop', payload: {} }])
+        fs.writeFileSync(path.join(tmpDir, 'sandbox-guest1', 'assets', 'blob.bin'), 'bytes')
+
+        const moved = await store.moveSpace('sandbox-guest1', 'sandbox-account', { label: 'Sandbox', permanent: true })
+
+        expect(moved).toMatchObject({ id: 'sandbox-account', label: 'Sandbox', permanent: true, kind: 'sandbox', sceneVersion: 3 })
+        expect(await store.loadSpaceMeta('sandbox-guest1')).toBeNull()
+        expect(await store.readOpsHistory('sandbox-account')).toHaveLength(1)
+        expect(fs.existsSync(path.join(tmpDir, 'sandbox-account', 'assets', 'blob.bin'))).toBe(true)
+        expect(fs.existsSync(path.join(tmpDir, 'sandbox-guest1'))).toBe(false)
+    })
+
+    it('refuses to move onto an existing space and no-ops on missing sources', async () => {
+        await store.upsertSpaceMeta('a', { label: 'A' })
+        await store.upsertSpaceMeta('b', { label: 'B' })
+        await expect(store.moveSpace('a', 'b')).rejects.toThrow(/already exists/)
+        expect(await store.moveSpace('missing', 'anywhere')).toBeNull()
+    })
+})

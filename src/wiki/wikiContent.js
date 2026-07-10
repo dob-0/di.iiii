@@ -49,7 +49,7 @@ export const WIKI_ARTICLES = [
             'The Spaces page (/studio) shows exactly these shelves: Open Space · Your sandbox · Your spaces — so the answer to “where am I, what’s mine” is always the page itself. Admins additionally see guest sandboxes collapsed into one row with a count and a “Sweep expired” action.',
             'A sandbox only comes into existence when you actually enter it — just viewing a published space never creates one. Guest sandboxes are cleaned up after about a week of inactivity; account sandboxes are permanent.',
             'Guests cannot create their own named spaces — sign in with GitHub or Google to get spaces that are yours and stay.',
-            'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google), or Export the project as a file you can import into any space later. After signing in, a confirmation appears so you know it worked.',
+            'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google) — the room comes with you: your whole sandbox, scene, projects and assets, moves onto your account automatically — or Export the project as a file you can import into any space later. The sign-in confirmation says when your sandbox came along. Existing account work is never overwritten by a later guest session.',
             'For admins: /admin → Manage can repoint the communal space (the guest entry field), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.'
         ],
         tags: ['guest', 'sandbox', 'open space', 'access'],

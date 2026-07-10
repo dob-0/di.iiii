@@ -210,6 +210,39 @@ function createSpaceStore({
     await Promise.all(ids.map(id => deleteSpace(id)))
   }
 
+  // Re-home a space under a new id — row, children (ops, projects), and the
+  // whole directory (scene, assets, project dirs). Powers guest→account
+  // sandbox promotion; the target id must not exist (caller deletes first).
+  const moveSpace = async (fromId, toId, overrides = {}) => {
+    const db = getDb()
+    const row = s().selectById.get(fromId)
+    if (!row || fromId === toId) return null
+    if (s().selectExists.get(toId)) {
+      throw new Error(`Cannot move space: target "${toId}" already exists.`)
+    }
+    const meta = { ...rowToMeta(row), ...overrides, id: toId }
+    const now = Date.now()
+    db.transaction(() => {
+      s().insert.run(toId, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0,
+        meta.isPublic ? 1 : 0, normalizeSpaceKind(meta.kind), meta.publishedProjectId ?? null,
+        meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, row.created_at, now, now,
+        meta.ownerUserId ?? null)
+      db.prepare('UPDATE space_ops SET space_id = ? WHERE space_id = ?').run(toId, fromId)
+      db.prepare('UPDATE projects SET space_id = ? WHERE space_id = ?').run(toId, fromId)
+      s().deleteById.run(fromId)
+    })()
+    const { spaceDir: fromDir } = getSpacePaths(fromId)
+    const { spaceDir: toDir } = getSpacePaths(toId)
+    try {
+      await fsp.rm(toDir, { recursive: true, force: true })
+      await fsp.rename(fromDir, toDir)
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error
+      // No directory yet (row-only space) — nothing on disk to carry over.
+    }
+    return loadSpaceMeta(toId)
+  }
+
   // Powers the admin hub's collapsed sandbox row: how many exist, how many
   // the TTL sweep would remove right now.
   const getSandboxStats = () => {
@@ -355,6 +388,7 @@ function createSpaceStore({
     isValidAssetId,
     listSpaces,
     loadSpaceMeta,
+    moveSpace,
     normalizeSpaceId,
     pruneSpaces,
     pruneStaleSandboxes,
