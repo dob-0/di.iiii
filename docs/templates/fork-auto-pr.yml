@@ -26,6 +26,10 @@ on:
 
 jobs:
   open-pr:
+    # Fork-side only: in the upstream repo agents open PRs themselves and the
+    # UPSTREAM_PR_TOKEN secret intentionally doesn't exist, so the job would
+    # fail red on every task-branch push.
+    if: github.repository != 'dob-0/di.iiii'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
