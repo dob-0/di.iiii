@@ -101,6 +101,39 @@ for (const [label, props] of [
     await page.waitForTimeout(300)
 }
 
+// -- broken pointer lock: granted but only zero deltas (Wayland-class) --------
+// Denied is not the only lock failure: some compositors grant the lock and
+// then deliver zero movement on every event. mousemove only fires on physical
+// motion, so a run of all-zero locked moves means the lock can never look —
+// the walker must abandon it and route the mouse to drag-look instead.
+{
+    await page.mouse.click(cx, cy)
+    await page.waitForTimeout(400)
+    const locked = await page.evaluate(() => document.pointerLockElement?.tagName === 'CANVAS')
+    await page.evaluate(() => {
+        for (let i = 0; i < 35; i++) {
+            document.dispatchEvent(new MouseEvent('mousemove', { movementX: 0, movementY: 0, bubbles: true }))
+        }
+    })
+    await page.waitForTimeout(400)
+    const released = await page.evaluate(() => document.pointerLockElement === null)
+    check('broken lock (all-zero locked moves): lock is abandoned', locked && released)
+
+    await page.mouse.click(cx, cy)
+    await page.waitForTimeout(400)
+    const stillFree = await page.evaluate(() => document.pointerLockElement === null)
+    const before = await state()
+    await page.mouse.move(cx, cy)
+    await page.mouse.down()
+    await page.mouse.move(cx + 200, cy + 60, { steps: 10 })
+    await page.mouse.up()
+    await settle()
+    const after = await state()
+    check('broken lock: never re-requested, drag-look takes over',
+        stillFree && after.yaw !== before.yaw && after.pitch !== before.pitch,
+        `yaw Δ ${(after.yaw - before.yaw).toFixed(3)}, pitch Δ ${(after.pitch - before.pitch).toFixed(3)}`)
+}
+
 // -- drag-look fallback when pointer lock is denied ---------------------------
 {
     await page.evaluate(() => {

@@ -9,20 +9,21 @@ active_branch: dev
 
 ## Last commit
 
-`ab046dd2` — dev == main == **prod** (promoted 2026-07-09; deploy green; smoke 9/9 PASS).
-## Latest session (2026-07-09 eve — onboarding, promotion, space bundles)
+`4e080447` — dev == main == **prod** (promoted 2026-07-09; deploy green; smoke 9/9 PASS).
+## Latest session (2026-07-10 — self-host bundles merged; earlier: WCC mouse-look)
 
-- **Onboarding shipped** (PR #25, merged+promoted): `ONBOARDING.md` §8 Claude Code setup;
-  golden rule: newcomers never improvise a workflow. Manual OAuth verified on staging.
-- **Portable space bundles** (this PR): `npm run space:export/space:import` — offline
-  tar.gz of a space (DB rows, op-logs, scene, assets, CAS blobs); strips secrets, `--as`
-  remaps URLs, GC-safe. `npm run selfhost -- <bundle>` = deps+env+import+run in one
-  command. Round-trip contract-tested (40 contracts). Docs: `docs/deploy/SELF_HOST.md`.
-
-## Earlier 2026-07-09 (live on prod)
-
-- CAS blob store + pre-hash dedupe; live card previews + Preview manager; media/animation
-  batch + keyframe timeline. Gotcha: restart serverXR after `projectSchema.cjs` changes.
+- **Portable space bundles + one-command self-host** (PR #26, merged to dev):
+  `npm run space:export/space:import` — offline tar.gz of a space (DB rows, op-logs,
+  scene, assets, CAS blobs); strips secrets, `--as` remaps URLs, GC-safe.
+  `npm run selfhost -- <bundle>` = deps+env+import+run in one command. Round-trip
+  contract-tested (40 contracts). Docs: `docs/deploy/SELF_HOST.md`.
+- **WCC "walk works, mouse-look doesn't"** (PR #27, on prod): some Wayland setups GRANT
+  pointer lock but deliver only zero `movementX/Y` — watchdog abandons the broken lock
+  after 30 all-zero moves, drag-look takes over. `?inputdebug=1` shows a live input HUD.
+  Awaiting user real-mouse confirmation on prod. Playwright CANNOT reproduce this
+  (injected input bypasses the compositor) — see known-fixes. 17 input-check contracts.
+- Earlier 2026-07-09, live on prod: onboarding §8 + golden rule (PR #25); CAS blob
+  store; Spaces-hub live previews; media/animation timeline.
 
 ## What works
 
