@@ -29,6 +29,7 @@ const {
 const { config, buildCorsOriginHandler } = require('./config')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { initializeSocket } = require('./socketHandlers')
+const { initializeMesh } = require('./meshHub')
 const { loadReleaseInfo } = require('./releaseInfo')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
@@ -1293,6 +1294,8 @@ initStorage()
       }
     })
     console.log('[Socket.IO] Initialized for real-time collaboration')
+
+    initializeMesh(httpServer, config)
 
     httpServer.listen(PORT, () => {
       pushEvent('server-started', {
