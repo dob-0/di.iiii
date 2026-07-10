@@ -38,8 +38,10 @@ https://claude.ai/code/artifact/d0267562-fa6d-4fa7-9c2f-be3d4e094778
 
 ## Open
 
-- Staging verify: `open` + `open-jam` exist post-deploy; check `globalSpaceId` in
-  staging/prod config (set value repoints the commons; null → default `open`).
+- **Prod promotion checklist**: merge dev→main, then repoint the commons on prod
+  exactly as done on staging 2026-07-10: DELETE the stray empty `open-jam` boot
+  creates in `main`, PATCH `/api/config {"globalSpaceId": null}` (admin token) —
+  verified sequence; staging now serves `open` + `open-jam` correctly.
 - Real-device click-through owed: this session + previous UX slices (now on prod).
 - Old audit slice 6 (invite links) designed, not built. Drive Picker still blocked
   on Cloud console. Stale GitHub App key in `serverXR/.env.local`. Watch prod hangs.
