@@ -295,13 +295,20 @@ async function importSpace(args) {
     }
 }
 
+export { exportSpace, importSpace, resolvePaths, SLUG_REGEX }
+
 // ---------------------------------------------------------------- main
 
-const args = parseArgs(process.argv.slice(2))
-if (args.command === 'export') await exportSpace(args)
-else if (args.command === 'import') await importSpace(args)
-else {
-    console.log('Usage: node scripts/space-bundle.mjs export <spaceId> [--data-root <dir>] [--out <file>]')
-    console.log('       node scripts/space-bundle.mjs import <bundle.tar.gz> [--data-root <dir>] [--as <id>] [--owner <userId>] [--force]')
-    process.exit(args.command ? 1 : 0)
+const invokedDirectly = process.argv[1]
+    && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+
+if (invokedDirectly) {
+    const args = parseArgs(process.argv.slice(2))
+    if (args.command === 'export') await exportSpace(args)
+    else if (args.command === 'import') await importSpace(args)
+    else {
+        console.log('Usage: node scripts/space-bundle.mjs export <spaceId> [--data-root <dir>] [--out <file>]')
+        console.log('       node scripts/space-bundle.mjs import <bundle.tar.gz> [--data-root <dir>] [--as <id>] [--owner <userId>] [--force]')
+        process.exit(args.command ? 1 : 0)
+    }
 }
