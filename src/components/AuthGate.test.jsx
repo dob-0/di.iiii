@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import AuthGate from './AuthGate.jsx'
 
@@ -8,9 +8,11 @@ vi.mock('../hooks/useAuthSession.js', () => ({
     default: () => mockUseAuthSession()
 }))
 
+const providersState = vi.hoisted(() => ({ current: { github: false, google: false } }))
+
 vi.mock('../services/apiClient.js', () => ({
     hasServerApi: true,
-    getApiAuthProviders: () => Promise.resolve({ github: false, google: false }),
+    getApiAuthProviders: () => Promise.resolve(providersState.current),
     getOAuthUrl: () => ''
 }))
 
@@ -70,5 +72,46 @@ describe('AuthGate out-of-scope handling', () => {
 
         expect(screen.getByText('editor')).toBeInTheDocument()
         expect(mockAppNavigate).not.toHaveBeenCalled()
+    })
+})
+
+const signedOutSession = () => ({
+    requireAuth: true,
+    authenticated: false,
+    loading: false,
+    error: null,
+    spaces: null,
+    login: vi.fn(),
+    logout: vi.fn(),
+    refresh: vi.fn()
+})
+
+// Regression guard: the sign-in card used to lead with the machine-oriented
+// access-token field while OAuth (the human path) popped in late below an
+// "or" divider (UX audit 2026-07-10).
+describe('AuthGate sign-in card priority', () => {
+    afterEach(() => {
+        providersState.current = { github: false, google: false }
+    })
+
+    it('leads with OAuth and keeps the token behind a disclosure', async () => {
+        providersState.current = { github: true, google: true }
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        render(<AuthGate>editor</AuthGate>)
+
+        expect(await screen.findByRole('button', { name: /Continue with GitHub/ })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /Continue with Google/ })).toBeInTheDocument()
+        expect(screen.queryByPlaceholderText('Access token')).not.toBeInTheDocument()
+
+        fireEvent.click(screen.getByRole('button', { name: 'Use an access token instead' }))
+        expect(screen.getByPlaceholderText('Access token')).toBeInTheDocument()
+    })
+
+    it('falls back to the token form when no OAuth provider is enabled', async () => {
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        render(<AuthGate>editor</AuthGate>)
+
+        expect(await screen.findByPlaceholderText('Access token')).toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: /Continue with/ })).not.toBeInTheDocument()
     })
 })
