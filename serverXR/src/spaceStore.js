@@ -15,6 +15,7 @@ function createSpaceStore({
   defaultSpaceId = 'main',
   defaultTtlMs = 0,
   sandboxTtlMs = 0,
+  accountSandboxTtlMs = 0,
   blankScene
 } = {}) {
   const safeSlug = (value = '') => String(value)
@@ -94,6 +95,8 @@ function createSpaceStore({
       selectStaleSandbox: db.prepare("SELECT id FROM spaces WHERE permanent = 0 AND kind = 'sandbox' AND last_touched_at < ?"),
       countByOwner:  db.prepare('SELECT COUNT(*) as cnt FROM spaces WHERE owner_user_id = ?'),
       countSandboxes: db.prepare("SELECT COUNT(*) as cnt FROM spaces WHERE kind = 'sandbox'"),
+      selectIdleAccountSandbox: db.prepare("SELECT id, scene_version FROM spaces WHERE permanent = 1 AND kind = 'sandbox' AND last_touched_at < ?"),
+      countProjectsInSpace: db.prepare('SELECT COUNT(*) as cnt FROM projects WHERE space_id = ?'),
       upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
       insert:        db.prepare('INSERT INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
       update:        db.prepare('UPDATE spaces SET label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, preview_image_asset_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=? WHERE id=?'),
@@ -258,6 +261,23 @@ function createSpaceStore({
     return ids
   }
 
+  // Archive + revive: long-idle account sandboxes fold down to a scene
+  // snapshot instead of occupying a space row forever — ensureOwnSandbox
+  // restores the snapshot when the owner comes back. Sandboxes holding Studio
+  // projects are left alone (snapshots only capture the scene).
+  const archiveIdleAccountSandboxes = async () => {
+    if (!accountSandboxTtlMs) return []
+    const rows = s().selectIdleAccountSandbox.all(Date.now() - accountSandboxTtlMs)
+    const archived = []
+    for (const row of rows) {
+      if ((s().countProjectsInSpace.get(row.id)?.cnt || 0) > 0) continue
+      if ((row.scene_version || 0) > 0) await snapshotSpaceScene(row.id, { keep: 1 })
+      await deleteSpace(row.id)
+      archived.push(row.id)
+    }
+    return archived
+  }
+
   // Scene-level snapshots — vandalism insurance for the communal open space.
   // Assets stay in the space's own store, so a restore only puts the scene
   // JSON back; the files live outside spacesDir so they never look like spaces.
@@ -375,6 +395,7 @@ function createSpaceStore({
 
   return {
     appendOpsHistory,
+    archiveIdleAccountSandboxes,
     buildMeta,
     collectSceneAssetRefs,
     countSpacesOwnedBy,

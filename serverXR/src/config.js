@@ -226,6 +226,9 @@ const config = {
   // ones expire much sooner than regular spaces; a returning guest gets a
   // fresh sandbox re-provisioned on next access.
   sandboxTtlMs: Number(process.env.SANDBOX_TTL_MS || 1000 * 60 * 60 * 24 * 7),
+  // Account sandboxes are permanent but not immortal: after this idle window
+  // they archive down to a scene snapshot and are revived on next access.
+  accountSandboxTtlMs: Number(process.env.ACCOUNT_SANDBOX_TTL_MS || 1000 * 60 * 60 * 24 * 180),
   // The communal open space every authenticated session can enter and edit.
   // The config store's globalSpaceId (admin-settable) overrides this default id.
   openSpaceId: String(process.env.OPEN_SPACE_ID || 'open').trim().toLowerCase(),

@@ -753,6 +753,54 @@ describe('server write contracts', () => {
         expect(accountProbe.status).toBe(200)
     })
 
+    it('archives a long-idle account sandbox to a snapshot and revives it when the owner returns', async () => {
+        const editorToken = 'archive-editor-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                ACCOUNT_SANDBOX_TTL_MS: '1',
+                EDITOR_API_TOKEN: editorToken
+            }
+        })
+
+        const mint = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: editorToken })
+        })
+        const accountCookie = (mint.headers.get('set-cookie') || '').split(';')[0]
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`, { headers: { Cookie: accountCookie } })).json()
+        const sandboxId = session.sandboxSpaceId
+
+        // The account builds something, then goes idle past the TTL.
+        const write = await fetch(`${server.baseUrl}/api/spaces/${sandboxId}/scene`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Cookie: accountCookie },
+            body: JSON.stringify({ objects: [{ id: 'archived-cube' }], assets: [] })
+        })
+        expect(write.status).toBe(200)
+        await wait(20)
+
+        // The sweep folds the sandbox down to a snapshot — the space row and
+        // directory are gone…
+        const purge = await fetch(`${server.baseUrl}/api/admin/sandboxes/purge`, {
+            method: 'POST',
+            headers: withAuth(server.apiToken)
+        })
+        await expect(purge.json()).resolves.toMatchObject({ ok: true, archived: 1 })
+        const goneProbe = await fetch(`${server.baseUrl}/api/spaces/${sandboxId}`, { headers: withAuth(server.apiToken) })
+        expect(goneProbe.status).toBe(404)
+
+        // …but the owner's next visit re-provisions it from the snapshot.
+        const revived = await (await fetch(`${server.baseUrl}/api/spaces/${sandboxId}/scene`, {
+            headers: { Cookie: accountCookie }
+        })).json()
+        expect((revived.scene.objects || []).some((o) => o.id === 'archived-cube')).toBe(true)
+        const meta = await fetch(`${server.baseUrl}/api/spaces/${sandboxId}`, { headers: withAuth(server.apiToken) })
+        await expect(meta.json()).resolves.toMatchObject({ space: { kind: 'sandbox', permanent: true } })
+    })
+
     it('carries a guest sandbox onto the account at sign-in, without clobbering existing account work', async () => {
         const editorToken = 'keep-room-editor-token'
         const server = await startServer({
