@@ -27,7 +27,10 @@ const loadPickerApi = () => {
 // importByUrl(url) for public share links, importBySelection(fileIds) for the
 // connected-account picker — both resolving to { entries, failed }.
 export function useDriveImport({ importByUrl, importBySelection } = {}) {
-    const [open, setOpen] = useState(false)
+    // Open by default: collapsed-by-default buried the whole Drive feature two
+    // levels deep, and hid the ?drive= return notice unless the section was
+    // manually reopened (UX audit 2026-07-10). Still collapsible.
+    const [open, setOpen] = useState(true)
     const [url, setUrl] = useState('')
     const [busy, setBusy] = useState(false)
     const [notice, setNotice] = useState(null)

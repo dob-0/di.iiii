@@ -65,7 +65,9 @@ describe('AssetPanel', () => {
             </SceneContext.Provider>
         )
 
-        expect(screen.getByRole('button', { name: 'Import' })).toBeTruthy()
+        // Two "Import" buttons since the Drive section opens by default: the
+        // panel's primary file import plus Drive's paste-a-link import.
+        expect(screen.getAllByRole('button', { name: 'Import' }).length).toBeGreaterThanOrEqual(1)
         expect(screen.getByRole('button', { name: /Clean Up/i })).toBeTruthy()
         expect(screen.getByRole('button', { name: 'Reveal' })).toBeTruthy()
         expect(screen.getByRole('button', { name: 'Download' })).toBeTruthy()

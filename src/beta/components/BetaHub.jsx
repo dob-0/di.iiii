@@ -12,12 +12,14 @@ import {
 } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { appNavigate } from '../../utils/appNavigate.js'
+import useAuthSession from '../../hooks/useAuthSession.js'
 import { buildStudioHubPath } from '../../studio/utils/studioRouting.js'
 import { buildBetaProjectPath, navigateToBetaPath } from '../utils/betaRouting.js'
 import { GUIDE_AUDIENCES } from '../utils/betaGuide.js'
 import SpaceSyncPanel from '../../components/SpaceSyncPanel.jsx'
 
 export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
+    const { role } = useAuthSession()
     const [projects, setProjects] = useState([])
     const [title, setTitle] = useState('Untitled Project')
     const [status, setStatus] = useState('Loading beta projects...')
@@ -251,7 +253,9 @@ export default function BetaHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                 <footer className="beta-hub-footer">
                     <button type="button" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>studio</button>
                     <button type="button" onClick={() => appNavigate(buildAppSpacePath(spaceId))}>public</button>
-                    <button type="button" onClick={() => appNavigate(buildPreferencesPath(spaceId))}>admin</button>
+                    {role === 'admin' && (
+                        <button type="button" onClick={() => appNavigate(buildPreferencesPath(spaceId))}>admin</button>
+                    )}
                 </footer>
 
                 {importWarnings.length ? (

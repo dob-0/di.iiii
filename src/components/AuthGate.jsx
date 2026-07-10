@@ -13,7 +13,11 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
     const [token, setToken] = useState('')
     const [submitting, setSubmitting] = useState(false)
     const [loginError, setLoginError] = useState(null)
-    const [providers, setProviders] = useState({ github: false, google: false })
+    // null = still loading, so OAuth buttons don't pop in below an already-
+    // rendered token form. Humans sign in with OAuth; the token is the
+    // machine/admin path and stays behind a disclosure.
+    const [providers, setProviders] = useState(null)
+    const [showToken, setShowToken] = useState(false)
 
     // Out-of-scope sessions get sent to the space's public live view instead of
     // a dead end — but only when the space is actually public (flag fails closed).
@@ -27,7 +31,9 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
     const { isPublic: liveIsPublic, loading: liveLoading } = useSpacePublicFlag(outOfScope ? requiredSpaceId : null)
 
     useEffect(() => {
-        getApiAuthProviders().then(setProviders).catch(() => {})
+        getApiAuthProviders()
+            .then(setProviders)
+            .catch(() => setProviders({ github: false, google: false }))
     }, [])
 
     useEffect(() => {
@@ -149,41 +155,15 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
                     di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
                 </Typography>
                 <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
-                    Enter your access token to continue.
+                    Sign in to continue.
                 </Typography>
-                <TextField
-                    type="password"
-                    size="small"
-                    placeholder="Access token"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                    // eslint-disable-next-line jsx-a11y/no-autofocus
-                    autoFocus
-                    autoComplete="current-password"
-                    disabled={submitting}
-                    error={Boolean(loginError)}
-                    helperText={loginError || ''}
-                    inputProps={{ spellCheck: false }}
-                />
-                <Button
-                    type="submit"
-                    variant="contained"
-                    disabled={!token.trim() || submitting}
-                    sx={{
-                        background: 'var(--ui-accent)',
-                        color: '#07111b',
-                        fontWeight: 700,
-                        textTransform: 'none',
-                        '&:hover': { background: 'var(--ui-accent-strong)' }
-                    }}
-                >
-                    {submitting ? <CircularProgress size={18} sx={{ color: '#07111b' }} /> : 'Sign in'}
-                </Button>
-                {(providers.github || providers.google) && (
+                {providers === null ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
+                        <CircularProgress size={18} sx={{ color: 'var(--ui-accent)' }} />
+                    </Box>
+                ) : null}
+                {(providers?.github || providers?.google) ? (
                     <>
-                        <Divider sx={{ borderColor: 'var(--ui-border)' }}>
-                            <Typography variant="caption" sx={{ color: 'var(--ui-text-muted)' }}>or</Typography>
-                        </Divider>
                         {providers.github && (
                             <Button
                                 fullWidth
@@ -221,7 +201,53 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
                             </Button>
                         )}
                     </>
-                )}
+                ) : null}
+                {(showToken || (providers !== null && !providers.github && !providers.google)) ? (
+                    <>
+                        {(providers?.github || providers?.google) ? (
+                            <Divider sx={{ borderColor: 'var(--ui-border)' }}>
+                                <Typography variant="caption" sx={{ color: 'var(--ui-text-muted)' }}>access token</Typography>
+                            </Divider>
+                        ) : null}
+                <TextField
+                    type="password"
+                    size="small"
+                    placeholder="Access token"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    // eslint-disable-next-line jsx-a11y/no-autofocus
+                    autoFocus
+                    autoComplete="current-password"
+                    disabled={submitting}
+                    error={Boolean(loginError)}
+                    helperText={loginError || ''}
+                    inputProps={{ spellCheck: false }}
+                />
+                <Button
+                    type="submit"
+                    variant="contained"
+                    disabled={!token.trim() || submitting}
+                    sx={{
+                        background: 'var(--ui-accent)',
+                        color: '#07111b',
+                        fontWeight: 700,
+                        textTransform: 'none',
+                        '&:hover': { background: 'var(--ui-accent-strong)' }
+                    }}
+                >
+                    {submitting ? <CircularProgress size={18} sx={{ color: '#07111b' }} /> : 'Sign in'}
+                </Button>
+                    </>
+                ) : (providers?.github || providers?.google) ? (
+                    <Button
+                        variant="text"
+                        size="small"
+                        onClick={() => setShowToken(true)}
+                        sx={{ textTransform: 'none', color: 'var(--ui-text-muted)', alignSelf: 'flex-start', px: 0 }}
+                    >
+                        Use an access token instead
+                    </Button>
+                ) : null}
             </Stack>
         </Box>
     )

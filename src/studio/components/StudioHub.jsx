@@ -5,6 +5,7 @@ import { buildAppSpacePath, buildPreferencesPath } from '../../utils/spaceRoutin
 import { buildBetaHubPath } from '../../beta/utils/betaRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
 import GridFloorBackground from '../../components/GridFloorBackground.jsx'
+import useAuthSession from '../../hooks/useAuthSession.js'
 import {
     DEFAULT_PROJECT_SPACE_ID,
     createProject,
@@ -39,6 +40,7 @@ const formatSource = (source = '') => {
 }
 
 export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
+    const { role } = useAuthSession()
     const [projects, setProjects] = useState([])
     const [status, setStatus] = useState('loading...')
     const [isBusy, setIsBusy] = useState(false)
@@ -220,8 +222,15 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     )}
                     <span className="sh-sep">·</span>
                     <button className="sh-link" onClick={() => appNavigate(buildBetaHubPath(spaceId))}>Beta</button>
-                    <span className="sh-sep">·</span>
-                    <button className="sh-link" onClick={() => appNavigate(buildPreferencesPath(spaceId))}>Settings</button>
+                    {/* /admin gates non-admins out — showing this to everyone
+                        was the audit's "Settings dead-end" (labeled Settings, led
+                        to an admin wall, bounced the user back). Admin-only now. */}
+                    {role === 'admin' && (
+                        <>
+                            <span className="sh-sep">·</span>
+                            <button className="sh-link" onClick={() => appNavigate(buildPreferencesPath(spaceId))}>Admin</button>
+                        </>
+                    )}
                     <span className="sh-sep">·</span>
                     <button className="sh-link" onClick={() => appNavigate(buildAppSpacePath(spaceId))}>Live</button>
                 </div>

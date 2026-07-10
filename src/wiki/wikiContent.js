@@ -215,7 +215,7 @@ export const WIKI_ARTICLES = [
         title: 'Import from Google Drive',
         summary: 'Connect your Drive and pick files with the Google picker, or paste a public share link.',
         body: [
-            'In the Studio editor open the Create window and click Google Drive (the classic editor has the same button in Project Assets). Two ways to bring files in:',
+            'In the Studio editor open the Create window — the Google Drive section sits right under Import files, already expanded (the classic editor has the same section in Project Assets). Two ways to bring files in:',
             { list: [
                 'Connect your Drive: sign in with Google once, then hit Pick from Drive — Google’s own file picker opens, and whatever you pick imports into the current space. di.iiii can only ever see the files you pick, nothing else in your Drive.',
                 'Files you picked before stay searchable in the panel for quick re-import.',
