@@ -45,6 +45,7 @@ export const WIKI_ARTICLES = [
                 'Your sandbox — exactly one private scratch space per person, the same one every time you return (same browser for guests; account-bound once signed in). It never appears in anyone else’s directory, admins included.',
                 'Your spaces — real named spaces you own and can publish. These need a sign-in.'
             ] },
+            'The Spaces page (/studio) shows exactly these shelves: Open Space · Your sandbox · Your spaces — so the answer to “where am I, what’s mine” is always the page itself. Admins additionally see guest sandboxes collapsed into one row with a count and a “Sweep expired” action.',
             'A sandbox only comes into existence when you actually enter it — just viewing a published space never creates one. Guest sandboxes are cleaned up after about a week of inactivity; account sandboxes are permanent.',
             'Guests cannot create their own named spaces — sign in with GitHub or Google to get spaces that are yours and stay.',
             'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google), or Export the project as a file you can import into any space later. After signing in, a confirmation appears so you know it worked.',

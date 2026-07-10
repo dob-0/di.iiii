@@ -130,6 +130,36 @@
 
 .ssh-status-error { color: #ff6b6b; }
 
+.ssh-shelf {
+    margin-bottom: 22px;
+}
+
+.ssh-shelf-label {
+    margin: 0 0 10px;
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--di-cyan, #4df9ff);
+}
+
+.ssh-shelf-hint {
+    color: var(--di-text-muted, rgba(200,230,240,0.45));
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.ssh-sandbox-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.82rem;
+    color: var(--di-text-muted, rgba(200,230,240,0.55));
+    padding: 8px 10px;
+    border: 1px dashed rgba(77,249,255,0.15);
+    border-radius: 2px;
+    margin-top: 4px;
+}
+
 .ssh-guest-banner {
     font-size: 0.82rem;
     color: var(--di-text-muted, rgba(200,230,240,0.55));

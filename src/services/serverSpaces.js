@@ -10,6 +10,16 @@ export const listServerSpaces = async () => {
     return data.spaces || []
 }
 
+// Full index payload: the spaces plus, for admins, the collapsed sandbox
+// summary ({ total, stale }) the hub shows instead of sandbox cards.
+export const fetchServerSpacesIndex = async () => {
+    const data = await apiFetch('/api/spaces')
+    return { spaces: data.spaces || [], sandboxSummary: data.sandboxSummary || null }
+}
+
+export const purgeStaleSandboxes = async () =>
+    apiFetch('/api/admin/sandboxes/purge', { method: 'POST' })
+
 export const getServerSpace = async (spaceId) => {
     const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}`)
     return data.space || null
