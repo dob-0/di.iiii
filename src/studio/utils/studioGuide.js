@@ -1,0 +1,159 @@
+// Content model for Studio's visual help (StudioHelpDialog) — same
+// data-driven pattern as Beta's betaGuide.js. Copy stays terse on purpose:
+// the diagrams carry the explanation, the words only anchor them.
+
+export const STUDIO_GUIDE_SECTIONS = [
+    {
+        id: 'move',
+        label: 'Move',
+        title: 'Look around',
+        description: 'The viewport is a camera you fly, not a page you scroll.',
+        icon: '◎',
+        callouts: [
+            { icon: '↻', title: 'Orbit', detail: 'Drag (or middle-drag) to circle the scene.' },
+            { icon: '⇅', title: 'Zoom', detail: 'Scroll to move closer or further.' },
+            { icon: '✛', title: 'Pan', detail: 'Right-drag to slide sideways.' }
+        ],
+        steps: [
+            'Drag to orbit around the scene',
+            'Scroll to zoom in and out',
+            'Click any object to select it',
+            'Press F to frame what you selected'
+        ]
+    },
+    {
+        id: 'build',
+        label: 'Build',
+        title: 'Put things in the world',
+        description: 'Everything starts in the Create window — or straight from your files.',
+        icon: '◈',
+        callouts: [
+            { icon: '⬡', title: 'Create window', detail: 'Shapes, lights, and your file library.' },
+            { icon: '⊕', title: 'Quick insert', detail: 'Double-click the ground to add right there.' },
+            { icon: '⇩', title: 'Drop files', detail: 'Drag images or models onto the viewport.' }
+        ],
+        steps: [
+            'Open the Create window',
+            'Click a shape — it lands in the scene',
+            'Or double-click the ground to quick-insert',
+            'Or drop a file straight onto the viewport'
+        ]
+    },
+    {
+        id: 'edit',
+        label: 'Edit',
+        title: 'Shape it',
+        description: 'Select something, then move, rotate, and scale it in place.',
+        icon: '✛',
+        callouts: [
+            { icon: '⇄', title: 'Tab', detail: 'Switch between Navigate and Edit mode.' },
+            { icon: '✥', title: 'G · R · S', detail: 'Grab, rotate, scale the selection.' },
+            { icon: '◫', title: 'Scene window', detail: 'Exact values live in the inspector.' }
+        ],
+        steps: [
+            'Click an object to select it',
+            'Press Tab to enter Edit mode',
+            'G moves · R rotates · S scales',
+            'X, Y or Z locks the axis mid-move'
+        ]
+    },
+    {
+        id: 'share',
+        label: 'Share',
+        title: 'Show it to the world',
+        description: 'A space goes live in two explicit steps — publish, then make public.',
+        icon: '◉',
+        callouts: [
+            { icon: '▸', title: 'Set live', detail: 'The Share window picks the live project.' },
+            { icon: '◍', title: 'Make public', detail: 'Same window — flips the login wall away.' },
+            { icon: '⧉', title: 'Copy link', detail: 'The /space URL is what visitors open.' }
+        ],
+        steps: [
+            'Open the Share window',
+            'Set this project as live',
+            'Make the space public',
+            'Copy the link and send it'
+        ]
+    }
+]
+
+export const STUDIO_SHORTCUT_SECTIONS = [
+    {
+        title: 'Selection',
+        rows: [
+            ['Click', 'Select entity'],
+            ['Ctrl / Shift + Click', 'Multi-select'],
+            ['A', 'Select all'],
+            ['Alt+A', 'Deselect all'],
+            ['Esc', 'Deselect'],
+        ]
+    },
+    {
+        title: 'Transform',
+        rows: [
+            ['G', 'Move (grab) mode'],
+            ['R', 'Rotate mode'],
+            ['S', 'Scale mode'],
+            ['→ X / Y / Z', 'Constrain axis + start drag'],
+            ['→ A', 'All axes (uniform)'],
+            ['Shift + drag', 'Fine / slow adjustment'],
+            ['Click · Enter · Space', 'Confirm'],
+            ['Esc', 'Cancel'],
+        ]
+    },
+    {
+        title: 'Edit',
+        rows: [
+            ['Ctrl+C / X / V', 'Copy / Cut / Paste'],
+            ['Shift+D / Ctrl+D', 'Duplicate'],
+            ['Del / Backspace', 'Delete selected'],
+            ['Ctrl+G', 'Group selection'],
+            ['Ctrl+Shift+G', 'Ungroup'],
+            ['F', 'Frame selection'],
+            ['Ctrl+Z', 'Undo'],
+            ['Ctrl+Shift+Z / Ctrl+Y', 'Redo'],
+        ]
+    },
+    {
+        title: 'View',
+        rows: [
+            ['Tab / E', 'Toggle Navigate ↔ Edit'],
+            ['T', 'Toggle gizmo visibility'],
+            ['H', 'Hide / show UI'],
+            ['Scroll', 'Zoom'],
+            ['Middle drag', 'Orbit'],
+            ['Right drag', 'Pan'],
+        ]
+    },
+    {
+        title: 'UI',
+        rows: [
+            ['Double-click viewport', 'Quick insert'],
+            ['Shift+A', 'Tile panels'],
+            ['Shift+R', 'Reset layout'],
+            ['Shift+?', 'Show this help'],
+        ]
+    }
+]
+
+// The guest first-run welcome auto-opens the help dialog exactly once per
+// browser. Keyed on "welcome", not "help", so a future non-guest first-run
+// can use its own key without colliding.
+export const STUDIO_WELCOME_SEEN_KEY = 'di.studio.welcomeSeen'
+
+export function shouldShowStudioWelcome(authType) {
+    if (authType !== 'guest') return false
+    try {
+        return !window.localStorage.getItem(STUDIO_WELCOME_SEEN_KEY)
+    } catch {
+        return false
+    }
+}
+
+export function markStudioWelcomeSeen() {
+    try {
+        window.localStorage.setItem(STUDIO_WELCOME_SEEN_KEY, '1')
+    } catch {
+        // storage unavailable (private mode) — welcome may show again, harmless
+    }
+}

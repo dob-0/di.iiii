@@ -6,6 +6,8 @@ import StudioFloatingPanel from './StudioFloatingPanel.jsx'
 import StudioControlCluster from './StudioControlCluster.jsx'
 import StudioQuickInsert from './StudioQuickInsert.jsx'
 import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
+import useAuthSession from '../../hooks/useAuthSession.js'
+import { shouldShowStudioWelcome, markStudioWelcomeSeen } from '../utils/studioGuide.js'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
 import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
@@ -210,6 +212,16 @@ export default function StudioShell({
         toggle(id)
     }, [toggle])
     const [showHelp, setShowHelp] = useState(false)
+    const { type: authType } = useAuthSession()
+
+    // First-run welcome: a guest's first Studio entry opens the visual help
+    // once per browser — the editor otherwise offers zero guidance until you
+    // already know the hotkeys (UX audit 2026-07-10).
+    useEffect(() => {
+        if (!shouldShowStudioWelcome(authType)) return
+        markStudioWelcomeSeen()
+        setShowHelp(true)
+    }, [authType])
 
     const selectGizmoMode = useCallback((mode) => {
         setViewportGizmoMode(mode)
