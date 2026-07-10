@@ -10,20 +10,20 @@ active_branch: dev
 ## Last commit
 
 `4e080447` — dev == main == **prod** (promoted 2026-07-09; deploy green; smoke 9/9 PASS).
-## Latest session (2026-07-10 — install bundles; self-host merged + on staging)
+## Latest session (2026-07-10 — Drive drive.file+Picker; install bundles on staging)
 
-- **Whole-install bundles** (this PR): `npm run install:export/install:import` — every
-  space + admin instance config (`_server-config.json`) in one tar.gz of nested space
-  bundles; `--spaces` subset, `--force` overwrite; `selfhost` auto-detects the format.
-  Users never included. 42 contracts. Real-data round-trip verified (6 spaces, 98 MB).
-- **Portable space bundles + one-command self-host** (PR #26, merged; staging smoke
-  9/9 PASS): `npm run space:export/space:import` — offline tar.gz of a space; strips
-  secrets, `--as` remaps URLs, GC-safe. `npm run selfhost -- <bundle>` = one command.
-  Docs: `docs/deploy/SELF_HOST.md`.
-- **WCC mouse-look on Wayland** (PR #27, on prod): pointer lock granted but zero deltas
-  → watchdog falls back to drag-look; `?inputdebug=1` HUD. Awaiting user real-mouse
-  confirmation on prod (Playwright can't reproduce — see known-fixes).
-- Earlier, live on prod: onboarding §8 (PR #25); CAS blob store; live previews; timeline.
+- **Drive scope migration** (this PR): `drive.readonly` → **`drive.file`** (non-sensitive,
+  no Google verification) + Google Picker. New "Pick from Drive" button (both surfaces),
+  `/picker-token` endpoint, `GOOGLE_APP_ID` env. Needs Cloud console: enable Picker API,
+  add drive.file scope, set GOOGLE_APP_ID — see `docs/ops/GOOGLE_DRIVE_INTEGRATION.md`.
+  NOT runtime-tested (needs real Google account on staging).
+- **Whole-install bundles** (PR #28, on staging, smoke 9/9): `npm run
+  install:export/install:import` — every space + instance config in one tar.gz;
+  `selfhost` auto-detects. Real-data round-trip verified (6 spaces, 98 MB).
+- **Space bundles + self-host** (PR #26, staging): `space:export/import`, `selfhost`.
+- **WCC mouse-look on Wayland** (PR #27, on prod): zero-delta pointer lock → drag-look
+  fallback; `?inputdebug=1` HUD. Awaiting user real-mouse confirmation on prod.
+- Earlier, on prod: onboarding §8 (PR #25); CAS blob store; live previews; timeline.
 
 ## What works
 
@@ -33,8 +33,8 @@ active_branch: dev
 
 ## What is broken / open
 
-- Full Google Drive verification deferred (preferred: `drive.file` scope + Picker).
-  Webhook canary `dob-0/di-sync-webhook-test`→`webhook-test` is permanent.
+- Drive `drive.file`+Picker shipped in code; blocked on Cloud console setup + a real-account
+  click-through. Webhook canary `dob-0/di-sync-webhook-test`→`webhook-test` is permanent.
 - `serverXR/.env.local` stale GitHub App key — copy `GITHUB_APP_PRIVATE_KEY_B64` from a
   host's `~/.config/dii/*.deploy.env`. If `br_id_ge` gets App-connected, disable its CI sync.
 - `origin/self-host` intentionally 1 commit ahead (`b9baa30`). Next: P2P/IPFS per MANIFESTO.

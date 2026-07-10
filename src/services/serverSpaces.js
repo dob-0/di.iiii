@@ -216,6 +216,9 @@ export const listDriveFiles = async ({ q = '', folderId = '' } = {}) => {
 export const disconnectDrive = async () =>
     apiFetch('/api/integrations/google-drive/disconnect', { method: 'POST' })
 
+export const getDrivePickerToken = async () =>
+    apiFetch('/api/integrations/google-drive/picker-token')
+
 export const importDriveSelection = async (spaceId, fileIds) => {
     if (!spaceId) throw new Error('space id required')
     const ids = Array.isArray(fileIds) ? fileIds.filter(Boolean) : []

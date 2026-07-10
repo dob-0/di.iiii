@@ -9,8 +9,10 @@ const AUTH_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth'
 const TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token'
 const USERINFO_ENDPOINT = 'https://www.googleapis.com/oauth2/v3/userinfo'
 
-// Read-only is all we need to list + download the user's files.
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly'
+// drive.file is a non-sensitive scope (no Google verification/security
+// assessment needed): the app can only reach files the user explicitly picks
+// via the Google Picker, or files the app itself created.
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file'
 const SCOPES = [DRIVE_SCOPE, 'openid', 'email']
 
 function httpPostForm(url, form) {

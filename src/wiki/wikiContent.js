@@ -209,19 +209,20 @@ export const WIKI_ARTICLES = [
         id: 'google-drive-import',
         category: 'Editing',
         title: 'Import from Google Drive',
-        summary: 'Connect your Drive to browse your own files, or paste a public share link.',
+        summary: 'Connect your Drive and pick files with the Google picker, or paste a public share link.',
         body: [
             'In the Studio editor open the Create window and click Google Drive (the classic editor has the same button in Project Assets). Two ways to bring files in:',
             { list: [
-                'Connect your Drive: sign in with Google once, then search your own Drive and import selected files — each person connects their own account, and files import into the current space.',
+                'Connect your Drive: sign in with Google once, then hit Pick from Drive — Google’s own file picker opens, and whatever you pick imports into the current space. di.iiii can only ever see the files you pick, nothing else in your Drive.',
+                'Files you picked before stay searchable in the panel for quick re-import.',
                 'Public link: paste an “Anyone with the link” file URL — no login needed. A shared folder imports every file inside (needs GOOGLE_API_KEY on the server).',
                 'Native Google Docs/Sheets/Slides come in as PDF/CSV; other files keep their original bytes.',
                 'Imported files land in the space asset store exactly like uploads, so they work everywhere.',
                 'Disconnect anytime — it removes your stored Drive access from the server.'
             ] }
         ],
-        tags: ['assets', 'google', 'drive', 'import', 'studio'],
-        updated: '2026-07-02'
+        tags: ['assets', 'google', 'drive', 'import', 'studio', 'picker'],
+        updated: '2026-07-10'
     },
     {
         id: 'asset-commons',

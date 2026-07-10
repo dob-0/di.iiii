@@ -229,8 +229,11 @@ const config = {
   },
   googleDrive: {
     // Optional. Unlocks folder import + real metadata; keyless single-file import
-    // works without it.
-    apiKey: (process.env.GOOGLE_API_KEY || '').trim()
+    // works without it. The Google Picker also needs it (developerKey).
+    apiKey: (process.env.GOOGLE_API_KEY || '').trim(),
+    // Google Cloud project number — ties Picker grants to the OAuth client
+    // under the drive.file scope.
+    appId: (process.env.GOOGLE_APP_ID || '').trim()
   },
   oauth: {
     callbackBase: oauthCallbackBase,
