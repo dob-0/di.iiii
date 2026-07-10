@@ -5,6 +5,7 @@ import { Grid, Text, Billboard } from '@react-three/drei'
 import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState } from '@react-three/xr'
 import * as THREE from 'three'
 import { useXrAr } from '../hooks/useXrAr.js'
+import MadeWithBadge from './MadeWithBadge.jsx'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
     buildProjectAssetUrl,
@@ -1470,6 +1471,7 @@ export default function LiveProjectScene({
                         <span className="live-scene-title">
                             {title}{nearestLabel ? ` · ${nearestLabel}` : ''}
                         </span>
+                        <MadeWithBadge variant="chrome" />
                     </header>
 
                     {interactive && !isMobile && !isLocked && (

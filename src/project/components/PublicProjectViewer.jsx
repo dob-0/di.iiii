@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import LiveProjectScene from '../../components/LiveProjectScene.jsx'
+import MadeWithBadge from '../../components/MadeWithBadge.jsx'
 import { createProjectSyncService } from '../services/projectSyncService.js'
 import {
     DEFAULT_PROJECT_SPACE_ID,
@@ -346,6 +347,11 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 >
                     Walk / Fly
                 </button>
+            ) : null}
+
+            {/* walk mode shows the badge in the LiveProjectScene chrome header */}
+            {state.status === 'ready' && navMode === 'orbit' && !isPreview ? (
+                <MadeWithBadge variant="floating" />
             ) : null}
 
             {state.status === 'loading' ? (
