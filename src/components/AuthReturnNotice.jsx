@@ -15,7 +15,11 @@ export default function AuthReturnNotice() {
         const marker = params.get('auth')
         if (marker !== 'ok' && marker !== 'error') return undefined
 
+        // kept=1: the guest's sandbox was promoted onto the account during
+        // sign-in — the toast should say the work survived.
+        const kept = params.get('kept') === '1'
         params.delete('auth')
+        params.delete('kept')
         const query = params.toString()
         window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`)
 
@@ -23,11 +27,12 @@ export default function AuthReturnNotice() {
         if (marker === 'error') {
             setNotice({ tone: 'error', text: 'Sign-in failed — please try again.' })
         } else {
-            setNotice({ tone: 'ok', text: 'Signed in.' })
+            const suffix = kept ? ' — your sandbox came with you' : ''
+            setNotice({ tone: 'ok', text: `Signed in${suffix}.` })
             getApiSession()
                 .then((session) => {
                     if (cancelled || !session?.authenticated) return
-                    setNotice({ tone: 'ok', text: `Signed in as ${session.label || session.subject}.` })
+                    setNotice({ tone: 'ok', text: `Signed in as ${session.label || session.subject}${suffix}.` })
                 })
                 .catch(() => {})
         }

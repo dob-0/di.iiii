@@ -13,7 +13,8 @@ const GUEST_SPACES = process.env.GUEST_SPACES
 const registerAuthRoutes = (router, {
   config,
   createAuthSessionValue,
-  setAuthSessionCookie
+  setAuthSessionCookie,
+  onSessionUpgrade = null
 }) => {
   const frontendUrl = config.oauth.frontendUrl
   const { oauth } = config
@@ -68,7 +69,17 @@ const registerAuthRoutes = (router, {
 
   router.use(passport.initialize())
 
-  const issueSessionAndRedirect = (res, user) => {
+  const issueSessionAndRedirect = async (req, res, user) => {
+    // Before the new cookie replaces the old one, give the host a chance to
+    // carry guest work across the identity switch (sandbox promotion).
+    let kept = false
+    if (typeof onSessionUpgrade === 'function') {
+      try {
+        kept = Boolean(await onSessionUpgrade(req, user))
+      } catch {
+        kept = false
+      }
+    }
     const session = createAuthSessionValue({
       secret: config.auth.sessionSecret,
       ttlMs: config.authSession.ttlMs,
@@ -83,7 +94,8 @@ const registerAuthRoutes = (router, {
     setAuthSessionCookie(res, session.value)
     // ?auth=ok lets the client confirm the sign-in (AuthReturnNotice) —
     // OAuth used to return with no marker at all, so success was silent.
-    res.redirect(`${frontendUrl || '/'}?auth=ok`)
+    // &kept=1 tells the toast the guest's sandbox came along.
+    res.redirect(`${frontendUrl || '/'}?auth=ok${kept ? '&kept=1' : ''}`)
   }
 
   if (oauth.github.enabled) {
@@ -92,7 +104,7 @@ const registerAuthRoutes = (router, {
     )
     router.get('/api/auth/github/callback',
       passport.authenticate('github', { failureRedirect: `${frontendUrl || '/'}?auth=error`, session: false }),
-      (req, res) => issueSessionAndRedirect(res, req.user)
+      (req, res, next) => issueSessionAndRedirect(req, res, req.user).catch(next)
     )
   }
 
@@ -102,7 +114,7 @@ const registerAuthRoutes = (router, {
     )
     router.get('/api/auth/google/callback',
       passport.authenticate('google', { failureRedirect: `${frontendUrl || '/'}?auth=error`, session: false }),
-      (req, res) => issueSessionAndRedirect(res, req.user)
+      (req, res, next) => issueSessionAndRedirect(req, res, req.user).catch(next)
     )
   }
 

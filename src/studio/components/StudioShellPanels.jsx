@@ -1572,7 +1572,8 @@ export function PublishPanel({
                         <Typography variant="subtitle2">Keep this work</Typography>
                         <Typography variant="body2" color="text.secondary">
                             You’re building in a temporary guest sandbox — it disappears after about a
-                            week. Sign in to keep this space, publish it, and share a live link.
+                            week. Sign in and the room comes with you: your sandbox, everything in it,
+                            kept on your account.
                         </Typography>
                         {providers?.github ? (
                             <Button variant="contained" onClick={() => { window.location.href = getOAuthUrl('github') }}>
