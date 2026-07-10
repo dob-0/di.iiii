@@ -32,6 +32,11 @@ Shipped to dev, each with tests + wiki + known-fixes:
 **Not built — awaiting user decision**: slice 6 self-serve sharing (owner-minted
 invite links; the only slice touching the server access model). Design proposed.
 
+**Env data sync (2026-07-10, parallel session):** local/staging/prod space content
+now byte-identical (6 spaces; admin-API sync, backups in session scratchpad).
+Open-call applications are DB-only, excluded from bundles — back up before any
+data op: `scripts/backup-open-call-applications.mjs` (rule in golden_rules.md).
+
 ## What works
 
 - Studio editor (five windows, now phone layout + visual help), Beta, WCC, public viewer

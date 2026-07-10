@@ -518,3 +518,13 @@ const stop = async () => {
 ```
 
 **Files:** `serverXR/src/bundleContracts.test.js` (the guarded pattern); `httpContracts.test.js` / `projectContracts.test.js` carry the unguarded single-stop variant — copy the guarded one for any new suite that stops servers mid-test.
+
+### Open-call applications live only in the DB — back them up before any data operation
+
+**Rule:** `open_call_applications` rows (real people applying via the live open-call form) exist ONLY in each environment's SQLite DB. They are NOT in space bundles, install bundles, scene/document syncs, or git. Before any bulk data operation on an environment that has a live open call — bundle import/restore, space deletion, DB surgery, environment resync — export them first: `node scripts/backup-open-call-applications.mjs --base-url <origin>/serverXR --token <admin-token> --label <env>`. Never delete the space hosting an open call (`beyond-form`) as part of cleanup while the call is running.
+
+**Why:** During the 2026-07-10 three-way environment sync, prod's application count grew from 8 to 10 *while the sync was running* — submissions arrive continuously. `install-bundle.mjs`/`space-bundle.mjs` deliberately exclude user tables, so a "restore onto fresh root" recovery would have silently destroyed every application with no error and no trace.
+
+**How:** The backup script writes timestamped JSON to `serverXR/data/_backups/open-call/` (gitignored — applications contain names/emails/phones and must never be committed). Content syncs via scene/document PUTs are safe: applications are keyed by `call_id`, not joined to space/project rows.
+
+**Files:** `scripts/backup-open-call-applications.mjs` (exporter), `serverXR/src/routes/openCallRoutes.js` (admin list endpoint), `serverXR/src/openCallStore.js`, `serverXR/src/db.js` (table).
