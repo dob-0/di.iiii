@@ -9,8 +9,9 @@ active_branch: dev
 
 ## Last commit
 
-`024ef867` — dev = guest-journey rethink shipped (PRs #38–#41); staging deploying.
-Prod (`main`) is at `13357b82` — promote after staging verify + user's word.
+`47406526` — dev = guest-journey rethink shipped (PRs #38–#41) + staging commons
+repointed to `open` (verified: fresh guests scoped `['open', sandbox-*]`, smoke 9/9).
+Prod (`main`) is at `13357b82` — promote after real-device pass + user's word.
 
 ## Last session (2026-07-10 night — three-place space model)
 
@@ -29,6 +30,8 @@ https://claude.ai/code/artifact/d0267562-fa6d-4fa7-9c2f-be3d4e094778
   = `StudioCoachMarks` action pills; help dialog no longer auto-opens.
 - **#41 keep the room**: at sign-in the guest sandbox moves onto the account's
   sandbox (`promoteGuestSandbox`/`moveSpace`); `&kept=1` → toast. Never clobbers.
+- Staging repoint executed (user-approved): deleted stray empty `open-jam` in
+  `main`, PATCH `/api/config {"globalSpaceId": null}` → server ensured `open`.
 
 ## What works
 
@@ -38,11 +41,12 @@ https://claude.ai/code/artifact/d0267562-fa6d-4fa7-9c2f-be3d4e094778
 
 ## Open
 
-- **Prod promotion checklist**: merge dev→main, then repoint the commons on prod
-  exactly as done on staging 2026-07-10: DELETE the stray empty `open-jam` boot
-  creates in `main`, PATCH `/api/config {"globalSpaceId": null}` (admin token) —
-  verified sequence; staging now serves `open` + `open-jam` correctly.
-- Real-device click-through owed: this session + previous UX slices (now on prod).
+- **Prod promotion checklist** (on user's word): merge dev→main + push, then
+  repoint prod as done on staging 2026-07-10: DELETE the stray empty `open-jam`
+  boot creates in `main`, PATCH `/api/config {"globalSpaceId": null}` (prod admin
+  token = PROD_API_TOKEN in serverXR/.env.local). Prod API calls need approval.
+- Real-device click-through owed: staging (this session) + previous UX slices
+  (on prod). Note: old guest cookies keep `main` in scope until re-mint (≤30d).
 - Old audit slice 6 (invite links) designed, not built. Drive Picker still blocked
   on Cloud console. Stale GitHub App key in `serverXR/.env.local`. Watch prod hangs.
 
