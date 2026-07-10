@@ -10,6 +10,15 @@ vi.mock('../../hooks/useDriveImport.js', () => ({
     useDriveImport: () => ({ status: 'idle' })
 }))
 
+const authState = vi.hoisted(() => ({ current: { type: null } }))
+vi.mock('../../hooks/useAuthSession.js', () => ({
+    default: () => authState.current
+}))
+vi.mock('../../services/apiClient.js', () => ({
+    getApiAuthProviders: vi.fn(() => Promise.resolve({ github: true, google: true })),
+    getOAuthUrl: (provider) => `/api/auth/${provider}`
+}))
+
 const baseProps = {
     document: { publishState: {} },
     publishState: { shareEnabled: true },
@@ -64,6 +73,29 @@ describe('PublishPanel space visibility', () => {
         )
         expect(screen.getByText(/Space is public — visitors can enter/)).toBeTruthy()
         expect(screen.queryByRole('button', { name: 'Make space public' })).toBeNull()
+    })
+
+    // Regression guard: sign-in nudges used to be ambient-only — the moment a
+    // guest opens Share (their work just became keep-worthy) now leads with
+    // the upgrade path instead of publish controls their sandbox can't use.
+    it('shows guests the keep-this-work path instead of publish controls', async () => {
+        authState.current = { type: 'guest' }
+        try {
+            render(
+                <PublishPanel
+                    {...baseProps}
+                    liveProjectState={liveState({ isPublic: false })}
+                    onMakeSpacePublic={vi.fn()}
+                />
+            )
+            expect(screen.getByText('Keep this work')).toBeTruthy()
+            expect(await screen.findByRole('button', { name: 'Continue with GitHub' })).toBeTruthy()
+            expect(screen.getByRole('button', { name: 'Export project' })).toBeTruthy()
+            expect(screen.queryByText('Share enabled')).toBeNull()
+            expect(screen.queryByRole('button', { name: 'Set as live project' })).toBeNull()
+        } finally {
+            authState.current = { type: null }
+        }
     })
 
     it('shows neither state before space meta has loaded', () => {

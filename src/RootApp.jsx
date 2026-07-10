@@ -3,6 +3,7 @@ import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom'
 import { setAppNavigate } from './utils/appNavigate.js'
 import { getBetaLocationState, isBetaLocation } from './beta/utils/betaRouting.js'
 import AuthGate from './components/AuthGate.jsx'
+import AuthReturnNotice from './components/AuthReturnNotice.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
@@ -139,6 +140,7 @@ function AppRouter() {
 export default function RootApp() {
     return (
         <BrowserRouter>
+            <AuthReturnNotice />
             <AppRouter />
         </BrowserRouter>
     )
