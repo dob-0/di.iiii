@@ -283,4 +283,17 @@ describe('SpaceHub', () => {
             expect(link.getAttribute('href')).toBe('/serverXR/api/auth/github')
         })
     })
+
+    it('hub root owns its own scroll — the document never scrolls (html/body/#root are position:fixed)', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const cssPath = ['src/studio/styles/studio-space-hub.css', 'studio/styles/studio-space-hub.css']
+            .map(p => path.join(cwd(), p))
+            .find(p => fs.existsSync(p))
+        const css = fs.readFileSync(cssPath, 'utf8')
+        const rootBlock = css.match(/\.ssh-root\s*\{[^}]*\}/)?.[0] ?? ''
+        expect(rootBlock).toMatch(/overflow-y:\s*auto/)
+        expect(rootBlock).not.toMatch(/min-height:\s*100vh/)
+    })
 })
