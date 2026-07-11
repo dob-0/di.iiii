@@ -1,7 +1,11 @@
 /* Studio Space Hub — space selector at /studio */
 
 .ssh-root {
-    min-height: 100vh;
+    /* html/body/#root are position:fixed (base.css) — the document never
+       scrolls, so this root must own its own scroll like .studio-hub-root */
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     background: var(--di-bg, #0a1118);
     color: var(--di-text, #e8f4f8);
 }
