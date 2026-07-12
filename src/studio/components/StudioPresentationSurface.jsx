@@ -86,7 +86,7 @@ export default function StudioPresentationSurface({
                     title={document.projectMeta?.title || document.projectMeta?.id || 'Studio URL preview'}
                     src={codeUrl}
                     loading="lazy"
-                    sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                    sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
                     referrerPolicy="strict-origin-when-cross-origin"
                     style={{
                         border: 0,
@@ -113,7 +113,7 @@ export default function StudioPresentationSurface({
             <iframe
                 title={document.projectMeta?.title || document.projectMeta?.id || 'Studio code preview'}
                 srcDoc={previewDocument}
-                sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
                 style={{
                     border: 0,
                     width: '100%',

@@ -84,7 +84,7 @@ function BrowserPanelWindow({ node }) {
             <iframe
                 title={title}
                 src={url}
-                sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
             />
         </div>
     )

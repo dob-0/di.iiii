@@ -75,6 +75,9 @@ describe('StudioPresentationSurface', () => {
         expect(iframe).not.toBeNull()
         expect(iframe?.getAttribute('srcdoc')).toContain('Studio code preview')
         expect(iframe?.getAttribute('srcdoc')).toContain(PREVIEW_HOST_MESSAGE_TYPE)
+        // Without escape, tabs opened by preview content inherit the sandbox's
+        // opaque origin and white-screen (module loads become cross-origin).
+        expect(iframe?.getAttribute('sandbox')).toContain('allow-popups-to-escape-sandbox')
         expect(viewportPropsSpy).not.toHaveBeenCalled()
     })
 

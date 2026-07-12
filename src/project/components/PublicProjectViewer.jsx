@@ -281,7 +281,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         title={viewerTitle}
                         src={presentationState.codeUrl.trim()}
                         loading="lazy"
-                        sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                        sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
                         referrerPolicy="strict-origin-when-cross-origin"
                         style={{
                             border: 0,
@@ -295,7 +295,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         ref={iframeRef}
                         title={viewerTitle}
                         srcDoc={previewDocument}
-                        sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                        sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-modals"
                         style={{
                             border: 0,
                             width: '100%',
