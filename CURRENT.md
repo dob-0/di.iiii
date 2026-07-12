@@ -9,24 +9,29 @@ active_branch: dev
 
 ## Last commit
 
-`dev` = `2ccfdec8` — invite links (PR #44) + useAuthSession unmount-abort CI
-fix. Deployed to staging, workflow smoke green + manual smoke 9/9.
+`dev` = open inscriptions (append-only portal writes, for br_id_ge vi.ritual);
+before that `2ccfdec8` — invite links (PR #44), deployed to staging, smoke green.
 Prod (`main`) = `533a3716` (scroll fix hotfixed; still lacks #38–#44).
 
-## Last session (2026-07-12 — invite links, audit slice 6)
+## Last session (2026-07-12 — open inscriptions / vi.ritual)
 
-- Shipped self-serve sharing (PR #44 → dev → staging): owners mint 7-day invite
-  links from the SpaceHub card; opening one grants that space to any session —
-  registered (DB + cookie via `grantSpaceToSessionUser`) or guest (cookie-only).
-- Server mirrors syncKeyStore: `space_invites` + `inviteStore.js`, owner-gated
-  `POST/GET/DELETE /api/spaces/:id/invites`, fail-closed `POST /api/invites/redeem`;
-  invitees can't mint invites (no escalation). Revoke is API-only (no UI, by choice).
-- AuthGate auto-redeems `?invite=` when out of scope (wins over the public-view
-  redirect), strips the param; expired links get a one-line note.
-- Fixed a CI-only teardown race the deploy tripped: `useAuthSession` now aborts
-  its session fetch on unmount (known-fixes entry + regression test).
-- Tests: 3 inviteStore unit + 1 invite HTTP contract + 2 hook tests; wiki
-  `invite-links` article + highlight; all validation green (577 unit / 47 contract).
+- **Open inscriptions**: a public space can opt in (`PATCH {"openInscriptions":true}`,
+  new spaces column via ensureColumn) to anonymous, append-only writes:
+  `POST /api/spaces/:id/inscriptions {name, word}` — registered BEFORE the /api
+  auth gates (like open-call submissions), rate-limited (12/10min), server builds
+  the single sanitized `text-2d` object (`insc-…`, golden-spiral placement) itself;
+  update/delete impossible on this path, generic ops route stays gated
+  (`serverXR/src/routes/inscriptionRoutes.js`). Kill switch: `allowEdits:false`.
+- Built for br_id_ge's **vi.ritual**: finishing the rite writes the inscription
+  into the di.iiii space `vi-ritual` (client wiring in br_id_ge `index.html`,
+  gated by `<meta name="field-url">`, live locally; prod pending space creation).
+- Tests: 1 HTTP contract (opt-in gate, sanitize, append-only, kill switch) —
+  48/48 contracts green. Wiki `open-inscriptions` article added.
+
+## Previous session (2026-07-12 — invite links, audit slice 6)
+
+- Invite links (PR #44 → dev → staging): owner-minted 7-day links, AuthGate
+  auto-redeems `?invite=`; details in git history + wiki `invite-links`.
 
 ## What works
 

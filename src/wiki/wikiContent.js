@@ -280,6 +280,22 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['open call', 'applications', 'admin', 'forms'],
         updated: '2026-07-09'
+    },
+    {
+        id: 'open-inscriptions',
+        category: 'Spaces & access',
+        title: 'Open inscriptions',
+        summary: 'A public space can opt in to anonymous, append-only inscriptions — visitors add one line of text to the scene, nothing else.',
+        body: [
+            'Open inscriptions let an artwork or event page write a visitor’s answer into a di.iiii space without accounts or tokens (built for br_id_ge’s vi.ritual: complete the rite, and your inscription becomes a persistent object in the space).',
+            { list: [
+                'Opt-in per space: PATCH /api/spaces/:id with { "openInscriptions": true } (owner or admin). The space must also be public.',
+                'Visitors POST /api/spaces/:id/inscriptions with { name, word } — the server itself builds a single sanitized text object (insc-…) and appends it to the scene. Update and delete are impossible on this path; the generic ops route stays fully gated.',
+                'Rate-limited per client, capped at 999 inscriptions per space; setting allowEdits=false pauses new inscriptions instantly, and restore-snapshot remains the recovery path.'
+            ] }
+        ],
+        tags: ['inscriptions', 'spaces', 'public', 'br_id_ge'],
+        updated: '2026-07-12'
     }
 ]
 

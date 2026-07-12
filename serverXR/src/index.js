@@ -36,6 +36,7 @@ const { initializeMesh } = require('./meshHub')
 const { loadReleaseInfo } = require('./releaseInfo')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
+const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
@@ -1110,6 +1111,26 @@ router.post('/api/open-calls/:callId/applications', openCallSubmitLimiter, (req,
   } catch (error) {
     next(error)
   }
+})
+
+// Public, unauthenticated, append-only: space inscriptions (the br_id_ge
+// portal write path). Registered before the gates like open-call submissions;
+// per-space opt-in + sanitization live in the route itself.
+registerInscriptionRoutes(router, {
+  appendOpsHistory,
+  applySceneOps,
+  blankScene: BLANK_SCENE,
+  broadcastLiveEvent,
+  ensureSpaceScene,
+  ensureSpaceWritable,
+  getSpacePaths,
+  inscriptionLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 12, name: 'inscriptions' }),
+  loadSpaceMeta,
+  maxOpHistory: MAX_OP_HISTORY,
+  normalizeSpaceId,
+  readJson,
+  upsertSpaceMeta,
+  writeJson
 })
 
 router.use('/api', requireReadRole('viewer'))

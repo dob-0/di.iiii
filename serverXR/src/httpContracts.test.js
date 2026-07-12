@@ -1907,3 +1907,93 @@ describe('open-call application contracts', () => {
         expect(redeemRevoked.status).toBe(404)
     })
 })
+
+describe('open inscriptions (append-only portal writes)', () => {
+    it('accepts anonymous inscriptions only on opted-in public spaces, append-only', async () => {
+        const server = await startServer({ requireAuth: true })
+
+        // field space: created by admin, made public + openInscriptions
+        const create = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ slug: 'vi-field', label: 'vi.ritual field' })
+        })
+        expect(create.status).toBe(201)
+        const patch = await fetch(`${server.baseUrl}/api/spaces/vi-field`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ isPublic: true, openInscriptions: true })
+        })
+        expect(patch.status).toBe(200)
+        const patched = await patch.json()
+        expect(patched.space.openInscriptions).toBe(true)
+
+        // a second public space WITHOUT the flag refuses inscriptions
+        const other = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ slug: 'plain-public', label: 'Plain' })
+        })
+        expect(other.status).toBe(201)
+        await fetch(`${server.baseUrl}/api/spaces/plain-public`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ isPublic: true })
+        })
+        const refused = await fetch(`${server.baseUrl}/api/spaces/plain-public/inscriptions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: 'anna', word: 'thread' })
+        })
+        expect(refused.status).toBe(403)
+
+        // anonymous inscription on the opted-in space lands as a scene object
+        const inscribe = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: '  anna ', word: 'thread  across ' })
+        })
+        expect(inscribe.status).toBe(201)
+        const inscribed = await inscribe.json()
+        expect(inscribed.ok).toBe(true)
+        expect(inscribed.id.startsWith('insc-')).toBe(true)
+        expect(inscribed.total).toBe(1)
+
+        const sceneRes = await fetch(`${server.baseUrl}/api/spaces/vi-field/scene`)
+        expect(sceneRes.status).toBe(200)
+        const scenePayload = await sceneRes.json()
+        const stones = (scenePayload.scene?.objects || []).filter((obj) => obj.id.startsWith('insc-'))
+        expect(stones.length).toBe(1)
+        expect(stones[0].type).toBe('text-2d')
+        expect(stones[0].data).toBe('anna · thread across')
+
+        // a word is required
+        const empty = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: 'anna', word: '   ' })
+        })
+        expect(empty.status).toBe(400)
+
+        // the generic ops route stays gated — inscriptions do not open writes
+        const rawOps = await fetch(`${server.baseUrl}/api/spaces/vi-field/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseVersion: 1, ops: [{ type: 'deleteObject', payload: { objectId: inscribed.id } }] })
+        })
+        expect(rawOps.status).toBe(401)
+
+        // allowEdits=false is the owner's kill switch
+        await fetch(`${server.baseUrl}/api/spaces/vi-field`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ allowEdits: false })
+        })
+        const killed = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: 'b', word: 'later' })
+        })
+        expect(killed.status).toBe(403)
+    })
+})
