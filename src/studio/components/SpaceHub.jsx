@@ -11,7 +11,8 @@ import {
     patchServerConfig,
     purgeStaleSandboxes,
     uploadServerAsset,
-    getServerSpaceAssetUrl
+    getServerSpaceAssetUrl,
+    mintSpaceInvite
 } from '../../services/serverSpaces.js'
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
@@ -160,6 +161,7 @@ export default function SpaceHub() {
     const [previewMgr, setPreviewMgr] = useState(null)
     const [providers, setProviders] = useState(null) // null until sign-in requested
     const [copiedLiveId, setCopiedLiveId] = useState(null)
+    const [copiedInviteId, setCopiedInviteId] = useState(null)
 
     const isGuest = type === 'guest'
     const isAccount = authenticated && !isGuest
@@ -278,6 +280,25 @@ export default function SpaceHub() {
             setTimeout(() => setCopiedLiveId(null), 2000)
         } catch {
             window.prompt('Copy live link', url)
+        }
+    }, [])
+
+    // Invite = the space's studio URL + a one-week token the server mints;
+    // AuthGate redeems it on arrival and the recipient lands in scope.
+    const handleCopyInvite = useCallback(async (space, e) => {
+        e.stopPropagation()
+        try {
+            const { token } = await mintSpaceInvite(space.id)
+            const url = `${window.location.origin}${buildStudioHubPath(space.id)}?invite=${encodeURIComponent(token)}`
+            try {
+                await navigator.clipboard.writeText(url)
+                setCopiedInviteId(space.id)
+                setTimeout(() => setCopiedInviteId(null), 2000)
+            } catch {
+                window.prompt('Copy invite link (valid 7 days)', url)
+            }
+        } catch (err) {
+            alert(err.message || 'Could not create invite link.')
         }
     }, [])
 
@@ -582,6 +603,9 @@ export default function SpaceHub() {
                                                 onClick={e => handleTogglePublic(space, e)}
                                             >
                                                 {space.isPublic ? 'Public' : 'Private'}
+                                            </button>
+                                            <button className="ssh-card-btn" onClick={e => handleCopyInvite(space, e)}>
+                                                {copiedInviteId === space.id ? 'Invite copied' : 'Invite'}
                                             </button>
                                             <button
                                                 className={`ssh-card-btn${isLinking ? ' ssh-card-btn--active' : ''}`}

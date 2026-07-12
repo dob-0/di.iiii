@@ -1798,4 +1798,112 @@ describe('open-call application contracts', () => {
         })
         expect(missing.headers.get('access-control-allow-origin')).toBe('*')
     })
+
+    it('lets a space owner mint invite links that grant scope on redeem, and revoke them', async () => {
+        const editorToken = 'invite-owner-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                EDITOR_API_TOKEN: editorToken,
+                EDITOR_ALLOWED_SPACES: 'invite-space',
+                GUEST_SPACES: ''
+            }
+        })
+
+        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: editorToken })
+        })
+        expect(login.status).toBe(200)
+        const ownerCookie = (login.headers.get('set-cookie') || '').split(';')[0]
+
+        // Owner creates a private space.
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
+            body: JSON.stringify({ label: 'Invite Space', slug: 'invite-space' })
+        })
+        expect(created.status).toBe(201)
+
+        // A stranger guest can neither see the space nor mint invites for it.
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
+        const guestProbe = await fetch(`${server.baseUrl}/api/spaces/invite-space`, { headers: { Cookie: guestCookie } })
+        expect(guestProbe.status).toBe(403)
+        const guestMint = await fetch(`${server.baseUrl}/api/spaces/invite-space/invites`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: guestCookie },
+            body: JSON.stringify({})
+        })
+        expect(guestMint.status).toBe(403)
+
+        // Owner mints an invite — plaintext token shown once.
+        const minted = await fetch(`${server.baseUrl}/api/spaces/invite-space/invites`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: ownerCookie },
+            body: JSON.stringify({ label: 'crew' })
+        })
+        expect(minted.status).toBe(201)
+        const mintedBody = await minted.json()
+        expect(mintedBody.token).toMatch(/^dii_invite_/)
+        expect(mintedBody.invite).toMatchObject({ spaceId: 'invite-space', label: 'crew', useCount: 0 })
+
+        // Garbage and tampered tokens fail closed.
+        const badRedeem = await fetch(`${server.baseUrl}/api/invites/redeem`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: guestCookie },
+            body: JSON.stringify({ token: 'dii_invite_deadbeef.not-the-secret' })
+        })
+        expect(badRedeem.status).toBe(404)
+
+        // Guest redeems the real invite → new cookie carries the space in scope.
+        const redeemed = await fetch(`${server.baseUrl}/api/invites/redeem`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: guestCookie },
+            body: JSON.stringify({ token: mintedBody.token })
+        })
+        expect(redeemed.status).toBe(200)
+        await expect(redeemed.json()).resolves.toMatchObject({
+            ok: true,
+            granted: true,
+            space: { id: 'invite-space' }
+        })
+        const grantedCookie = (redeemed.headers.get('set-cookie') || '').split(';')[0]
+        expect(grantedCookie).toBeTruthy()
+        const guestRead = await fetch(`${server.baseUrl}/api/spaces/invite-space`, { headers: { Cookie: grantedCookie } })
+        expect(guestRead.status).toBe(200)
+
+        // Scope membership is not ownership — the invited guest still can't
+        // manage the space or mint further invites (no escalation).
+        const invitedMint = await fetch(`${server.baseUrl}/api/spaces/invite-space/invites`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: grantedCookie },
+            body: JSON.stringify({})
+        })
+        expect(invitedMint.status).toBe(403)
+
+        // Owner sees usage, then revokes; a revoked invite stops redeeming.
+        const listed = await fetch(`${server.baseUrl}/api/spaces/invite-space/invites`, { headers: { Cookie: ownerCookie } })
+        expect(listed.status).toBe(200)
+        const { invites } = await listed.json()
+        expect(invites).toHaveLength(1)
+        expect(invites[0].useCount).toBe(1)
+
+        const revoked = await fetch(`${server.baseUrl}/api/spaces/invite-space/invites/${invites[0].id}`, {
+            method: 'DELETE',
+            headers: { Cookie: ownerCookie }
+        })
+        expect(revoked.status).toBe(200)
+
+        const secondGuest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const secondCookie = (secondGuest.headers.get('set-cookie') || '').split(';')[0]
+        const redeemRevoked = await fetch(`${server.baseUrl}/api/invites/redeem`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: secondCookie },
+            body: JSON.stringify({ token: mintedBody.token })
+        })
+        expect(redeemRevoked.status).toBe(404)
+    })
 })
