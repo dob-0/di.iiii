@@ -43,6 +43,7 @@ const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
 const openCallStore = require('./openCallStore')
 const { listUsers, findUserById, setUserSpaces, setUserUnrestricted, setUserRole } = require('./userStore')
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
+const { mintInvite, resolveInvite, markInviteUsed, listInvites, revokeInvite } = require('./inviteStore')
 const githubApp = require('./githubApp')
 const spaceSyncPlan = require('./spaceSyncPlan')
 const spaceLinkStore = require('./spaceLinkStore')
@@ -645,6 +646,8 @@ const issueGuestSession = async (res) => {
 const guestSessionLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, name: 'new guest sessions' })
 const authAttemptLimiter = createRateLimiter({ windowMs: 60_000, max: 10, name: 'auth attempts' })
 const syncKeyMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'sync-key mints' })
+const inviteMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite mints' })
+const inviteRedeemLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite redeems' })
 const uploadLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, name: 'uploads' })
 const openCallSubmitLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 20, name: 'open-call applications' })
 
@@ -1206,7 +1209,7 @@ const requireSpaceOwnerOrAdmin = async (req, res) => {
   if (!meta) { res.status(404).json({ error: 'Space not found.' }); return null }
   const state = req.authState || {}
   if (!isSpaceOwnerOrAdminState(state, meta)) {
-    res.status(403).json({ error: 'Only the space owner can manage sync keys.' })
+    res.status(403).json({ error: 'Only the space owner can manage sharing for this space.' })
     return null
   }
   return { spaceId, meta, state }
@@ -1245,6 +1248,100 @@ router.delete('/api/spaces/:spaceId/sync-keys/:id', async (req, res, next) => {
       return res.status(404).json({ error: 'Key not found.' })
     }
     res.json({ ok: true, revoked: req.params.id })
+  } catch (error) { next(error) }
+})
+
+// Space invites — owner-minted share links. Management mirrors sync keys
+// (owner-or-admin only); redeeming grants scope membership to the space, so
+// the redeemer's own role still governs what they can do inside it.
+router.post('/api/spaces/:spaceId/invites', inviteMintLimiter, async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    const label = String(req.body?.label || 'invite').slice(0, 80)
+    const createdByUserId = ctx.state.type === 'session' ? ctx.state.subject : (ctx.meta.ownerUserId || null)
+    const { token, invite } = mintInvite({ spaceId: ctx.spaceId, createdByUserId, label })
+    res.status(201).json({
+      ok: true,
+      token,
+      invite,
+      note: 'Copy this invite now — it is shown only once.'
+    })
+  } catch (error) { next(error) }
+})
+
+router.get('/api/spaces/:spaceId/invites', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    res.json({ invites: listInvites(ctx.spaceId) })
+  } catch (error) { next(error) }
+})
+
+router.delete('/api/spaces/:spaceId/invites/:id', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    if (!revokeInvite(ctx.spaceId, req.params.id)) {
+      return res.status(404).json({ error: 'Invite not found.' })
+    }
+    res.json({ ok: true, revoked: req.params.id })
+  } catch (error) { next(error) }
+})
+
+// Redeem an invite: append the space to the caller's scope. Works for both
+// registered sessions (persisted to users.spaces + cookie re-mint) and guest
+// sessions (cookie-only re-mint — the 30-day guest cookie carries the grant;
+// sign-in later persists it via the normal keep-the-room path). Invalid,
+// expired, and revoked tokens are indistinguishable, and the response never
+// leaks space internals beyond id/label/visibility.
+router.post('/api/invites/redeem', inviteRedeemLimiter, async (req, res, next) => {
+  try {
+    const state = req.authState || {}
+    if (config.requireAuth && !state.authenticated) {
+      return res.status(401).json({ error: 'A session is required to redeem an invite.' })
+    }
+    const resolved = resolveInvite(String(req.body?.token || ''))
+    if (!resolved) return res.status(404).json({ error: 'Invite is invalid or has expired.' })
+    const spaceId = resolved.spaceId
+    const meta = await loadSpaceMeta(spaceId)
+    if (!meta) return res.status(404).json({ error: 'Invite is invalid or has expired.' })
+    const spacePublic = { id: meta.id, label: meta.label, isPublic: Boolean(meta.isPublic) }
+
+    if (!config.requireAuth || canAccessSpace(state, spaceId)) {
+      markInviteUsed(resolved.inviteId)
+      return res.json({ ok: true, granted: false, space: spacePublic })
+    }
+    if (state.type !== 'session' && state.type !== 'guest') {
+      return res.status(403).json({ error: 'Invites can only be redeemed by a browser session.' })
+    }
+
+    let dbUser = null
+    if (!isGuestSubject(state.subject)) {
+      try { dbUser = findUserById(state.subject) } catch { dbUser = null }
+    }
+    if (dbUser) {
+      grantSpaceToSessionUser(req, res, state.subject, spaceId)
+    } else {
+      if (!config.auth.sessionSecret) {
+        return res.status(503).json({ error: 'Sessions are unavailable.' })
+      }
+      const nextSpaces = [...(state.spaces || []), spaceId]
+      const session = createAuthSessionValue({
+        secret: config.auth.sessionSecret,
+        ttlMs: GUEST_SESSION_TTL_MS,
+        session: {
+          subject: state.subject,
+          label: state.label,
+          role: state.role,
+          spaces: nextSpaces,
+          isUnrestricted: false
+        }
+      })
+      setAuthSessionCookie(res, session.value)
+    }
+    markInviteUsed(resolved.inviteId)
+    res.json({ ok: true, granted: true, space: spacePublic })
   } catch (error) { next(error) }
 })
 

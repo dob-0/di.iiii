@@ -49,6 +49,17 @@ export const updateServerSpace = async (spaceId, updates = {}) => {
     return data.space
 }
 
+export const mintSpaceInvite = async (spaceId, label = 'invite') => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/invites`, {
+        method: 'POST',
+        body: { label }
+    })
+    return data
+}
+
+export const redeemSpaceInvite = async (token) =>
+    apiFetch('/api/invites/redeem', { method: 'POST', body: { token } })
+
 export const getServerSpaceAssetUrl = (spaceId, assetId) =>
     `${apiBaseUrl}/api/spaces/${resolveServerSpaceId(spaceId)}/assets/${assetId}`
 

@@ -90,6 +90,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-07-10'
     },
     {
+        id: 'invite-links',
+        category: 'Spaces & access',
+        title: 'Invite links: share a private space',
+        summary: 'Owners mint invite links that let anyone — even guests — step into a private space. No admin needed.',
+        body: [
+            'Every space card on the Spaces page (/studio) has an Invite button for spaces you own. One click mints a fresh invite link and copies it — send it to whoever you want in the room.',
+            'Opening the link grants access on arrival: the recipient lands straight in the space, whether they are signed in or just a guest. Guests keep the access with their guest session (about 30 days); signing in later carries it onto their account along with their sandbox.',
+            'An invite grants access to that one space only — it does not make anyone an owner, and invited people cannot mint further invites or manage the space.',
+            'Each link is valid for 7 days and works for any number of people until it expires. Minting again gives a new link; the old one keeps working until its own expiry.',
+            'Invalid or expired links show a clear message on the access screen — ask the owner for a fresh one.'
+        ],
+        tags: ['invite', 'sharing', 'collaboration', 'access', 'owner'],
+        updated: '2026-07-12'
+    },
+    {
         id: 'studio-basics',
         category: 'Editing',
         title: 'Studio editor basics',
@@ -270,7 +285,7 @@ export const WIKI_ARTICLES = [
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['guest-and-sandbox-modes', 'free-spaces', 'publishing', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

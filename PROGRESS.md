@@ -5,6 +5,38 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-07-12 — Invite links: self-serve sharing without the admin (audit slice 6)
+
+**Who:** Claude. Session opened with a status pass (both envs smoke-green), then
+user picked the last unbuilt audit slice: owner-minted invite links. Design
+locked with the user first: guests may redeem; one-button UI (no management
+surface yet — server keeps list/revoke endpoints).
+
+- `space_invites` table + `inviteStore.js`, a sibling of `syncKeyStore.js`:
+  `dii_invite_<id>.<secret>`, sha256-at-rest, constant-time compare, fail-closed
+  resolve, 7-day default TTL, `use_count`/`last_used_at` bumped only on redeem.
+- Routes: `POST/GET/DELETE /api/spaces/:spaceId/invites` behind the existing
+  `requireSpaceOwnerOrAdmin` (rate-limited mint) — scope membership is NOT
+  ownership, so invited people can't mint invites (no escalation). Redeem:
+  `POST /api/invites/redeem` — registered users go through
+  `grantSpaceToSessionUser` (DB + cookie re-mint); guests get a cookie-only
+  re-mint (30d); token-login sessions get the cookie path too. Invalid /
+  expired / revoked are indistinguishable 404s.
+- SpaceHub card: Invite button (owner-only, existing `.ssh-card-btn`) mints and
+  copies `<origin>/<space>/studio?invite=<token>` — the studio path so the gate
+  always runs, even for public spaces.
+- AuthGate: `?invite=` auto-redeems when out of scope, then refreshes the
+  session and strips the param; pending invite wins over the public-view
+  redirect; failure adds one line to the access-restricted screen.
+- Tests: 3 inviteStore unit tests (tamper/revoke/expiry/usage) + 1 end-to-end
+  HTTP contract (mint gate, guest redeem, no-escalation, revoke). Wiki article
+  `invite-links` added + highlighted.
+- Validation: lint, build, 575 unit, 47 contracts, wiki + docs checks — green.
+- Branch `feat/invite-links`; sync-key manage 403 copy generalized ("manage
+  sharing for this space").
+
+---
+
 ## 2026-07-11 — Sandbox archive + revive: permanent sandboxes never pile up
 
 **Who:** Claude. User asked whether many future users would re-flood the studio
