@@ -304,7 +304,12 @@ const PUBLIC_CORS_ROUTES = [
   // open-call application submissions (unauthenticated writes)
   { pattern: /\/api\/open-calls\/[A-Za-z0-9_-]+\/applications\/?$/, methods: 'POST, OPTIONS' },
   // project asset reads (fetch()-based loaders like GLTF need CORS; <video>/<img> don't)
-  { pattern: /\/api\/projects\/[^/]+\/assets\/[^/]+\/?$/, methods: 'GET, HEAD, OPTIONS' }
+  { pattern: /\/api\/projects\/[^/]+\/assets\/[^/]+\/?$/, methods: 'GET, HEAD, OPTIONS' },
+  // open inscriptions (anonymous, append-only, opt-in per space — see inscriptionRoutes)
+  { pattern: /\/api\/spaces\/[a-z0-9-]+\/inscriptions\/?$/, methods: 'POST, OPTIONS' },
+  // space scene reads — the field viewer fetches its own space's scene from
+  // inside the sandboxed preview (opaque origin); private spaces still 401
+  { pattern: /\/api\/spaces\/[a-z0-9-]+\/scene\/?$/, methods: 'GET, HEAD, OPTIONS' }
 ]
 app.use((req, res, next) => {
   const route = PUBLIC_CORS_ROUTES.find((r) => r.pattern.test(req.path))
@@ -313,6 +318,9 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', route.methods)
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') return res.status(204).end()
+  // this block is authoritative for these routes: drop the Origin so the
+  // general cors() below can't overwrite '*' with an echoed origin
+  delete req.headers.origin
   next()
 })
 

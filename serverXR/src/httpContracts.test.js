@@ -1975,6 +1975,16 @@ describe('open inscriptions (append-only portal writes)', () => {
         })
         expect(empty.status).toBe(400)
 
+        // sandboxed viewers (opaque origin) need CORS on the public paths
+        const preflight = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions`, {
+            method: 'OPTIONS',
+            headers: { Origin: 'null', 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'Content-Type' }
+        })
+        expect(preflight.status).toBe(204)
+        expect(preflight.headers.get('access-control-allow-origin')).toBe('*')
+        const sceneCors = await fetch(`${server.baseUrl}/api/spaces/vi-field/scene`, { headers: { Origin: 'null' } })
+        expect(sceneCors.headers.get('access-control-allow-origin')).toBe('*')
+
         // the generic ops route stays gated — inscriptions do not open writes
         const rawOps = await fetch(`${server.baseUrl}/api/spaces/vi-field/ops`, {
             method: 'POST',
