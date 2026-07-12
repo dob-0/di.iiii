@@ -3,19 +3,19 @@
 **Every AI reads this before anything else. ≤50 lines. Read in full.**
 Updated at the end of every session. Replace content — do not append.
 
-active_branch: feat/invite-links
+active_branch: dev
 
 ---
 
 ## Last commit
 
-`dev` = `6b181746` (guest-journey rethink #38–#41, sandbox archive/revive #42,
-SpaceHub scroll fix). Prod (`main`) = `533a3716` (scroll fix hotfixed; still
-lacks #38–#42). Staging commons repointed to `open` (verified, smoke 9/9).
+`dev` = `2ccfdec8` — invite links (PR #44) + useAuthSession unmount-abort CI
+fix. Deployed to staging, workflow smoke green + manual smoke 9/9.
+Prod (`main`) = `533a3716` (scroll fix hotfixed; still lacks #38–#44).
 
 ## Last session (2026-07-12 — invite links, audit slice 6)
 
-Self-serve sharing built on `feat/invite-links` (uncommitted → see git status):
+Self-serve sharing shipped via PR #44 (merged to dev, live on staging):
 - `inviteStore.js` + `space_invites` table (mirror of syncKeyStore):
   `dii_invite_<id>.<secret>`, 7-day TTL, fail-closed, use_count on redeem only.
 - `POST/GET/DELETE /api/spaces/:id/invites` (owner-or-admin, rate-limited);
@@ -32,12 +32,11 @@ Self-serve sharing built on `feat/invite-links` (uncommitted → see git status)
 
 - Studio (five windows + phone layout + visual help + coach marks), Beta, WCC, viewer
 - Auth (session-cookie, roles, OAuth-first) + open-space/sandbox implicit grants
-- Invite links (this branch, not yet merged to dev/staging)
+- Invite links (staging; prod after promotion)
 - Deploy: push `dev`→staging, `main`→prod, gated on `browser-checks.yml`
 
 ## Open
 
-- **feat/invite-links**: commit + PR to dev + staging smoke, on user's word.
 - **Prod promotion checklist** (on user's word): merge dev→main + push, then
   repoint prod as done on staging 2026-07-10: DELETE the stray empty `open-jam`
   boot creates in `main`, PATCH `/api/config {"globalSpaceId": null}` (prod admin
