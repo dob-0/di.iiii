@@ -15,18 +15,18 @@ Prod (`main`) = `533a3716` (scroll fix hotfixed; still lacks #38–#44).
 
 ## Last session (2026-07-12 — invite links, audit slice 6)
 
-Self-serve sharing shipped via PR #44 (merged to dev, live on staging):
-- `inviteStore.js` + `space_invites` table (mirror of syncKeyStore):
-  `dii_invite_<id>.<secret>`, 7-day TTL, fail-closed, use_count on redeem only.
-- `POST/GET/DELETE /api/spaces/:id/invites` (owner-or-admin, rate-limited);
-  `POST /api/invites/redeem` grants scope: registered → `grantSpaceToSessionUser`
-  (DB + cookie), guest/token sessions → cookie-only re-mint. No escalation:
-  invitees can't mint invites.
-- SpaceHub owner card: Invite button → copies `/<space>/studio?invite=<token>`.
-- AuthGate: auto-redeems `?invite=` when out of scope, refreshes session,
-  strips param; invite wins over public-view redirect; failure = one-line note.
-- Tests: inviteStore.test.js (3) + httpContracts invite contract (1). Wiki
-  `invite-links` article + highlight. All validation green (575 unit / 47 contract).
+- Shipped self-serve sharing (PR #44 → dev → staging): owners mint 7-day invite
+  links from the SpaceHub card; opening one grants that space to any session —
+  registered (DB + cookie via `grantSpaceToSessionUser`) or guest (cookie-only).
+- Server mirrors syncKeyStore: `space_invites` + `inviteStore.js`, owner-gated
+  `POST/GET/DELETE /api/spaces/:id/invites`, fail-closed `POST /api/invites/redeem`;
+  invitees can't mint invites (no escalation). Revoke is API-only (no UI, by choice).
+- AuthGate auto-redeems `?invite=` when out of scope (wins over the public-view
+  redirect), strips the param; expired links get a one-line note.
+- Fixed a CI-only teardown race the deploy tripped: `useAuthSession` now aborts
+  its session fetch on unmount (known-fixes entry + regression test).
+- Tests: 3 inviteStore unit + 1 invite HTTP contract + 2 hook tests; wiki
+  `invite-links` article + highlight; all validation green (577 unit / 47 contract).
 
 ## What works
 
@@ -41,8 +41,8 @@ Self-serve sharing shipped via PR #44 (merged to dev, live on staging):
   repoint prod as done on staging 2026-07-10: DELETE the stray empty `open-jam`
   boot creates in `main`, PATCH `/api/config {"globalSpaceId": null}` (prod admin
   token = PROD_API_TOKEN in serverXR/.env.local). Prod API calls need approval.
-- Real-device click-through owed: staging (guest journey + invites once merged)
-  + previous UX slices (on prod). Old guest cookies keep `main` in scope ≤30d.
+- Real-device click-through owed: staging (guest journey + invite flow) +
+  previous UX slices (on prod). Old guest cookies keep `main` in scope ≤30d.
 - Drive Picker blocked on Cloud console. Stale GitHub App key in
   `serverXR/.env.local`. Watch prod hangs.
 
