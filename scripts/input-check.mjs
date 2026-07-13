@@ -15,9 +15,9 @@
  *   4. ctrlKey wheel (pinch zoom) is ignored entirely.
  *   5. Mouse look works with pointer lock engaged.
  *   6. Drag-look works when pointer lock is denied (Wayland / post-Esc cooldown).
- *   7. A granted lock that delivers dead deltas — all zeros OR the degenerate
- *      constant ±1,0 crawl seen live via ?inputdebug=1 — is abandoned and
- *      drag-look takes over.
+ *   7. A granted lock that delivers dead deltas — all zeros OR the ±1..±4
+ *      both-axis noise captured live on KDE Wayland + Firefox — is abandoned
+ *      and drag-look takes over; the first-after-engage spike is swallowed.
  *   8. A failed project-document fetch shows a visible error + Retry instead
  *      of silently blocking mouse/wheel input forever behind the loading
  *      overlay (that combination reads exactly like "I can move but can't
@@ -137,12 +137,13 @@ for (const [label, props] of [
         `yaw Δ ${(after.yaw - before.yaw).toFixed(3)}, pitch Δ ${(after.pitch - before.pitch).toFixed(3)}`)
 }
 
-// -- broken pointer lock: granted but degenerate constant deltas --------------
-// Second broken-lock shape seen live (?inputdebug=1, July 2026): lock granted,
-// mousemove firing, but every event carries movementX=±1, movementY=0 —
-// vertical look dead, horizontal an imperceptible crawl, and the all-zero
-// watchdog never trips because the deltas aren't zero. Needs a fresh page:
-// the block above already latched lockBroken on the main one.
+// -- broken pointer lock: granted but degenerate noise deltas -----------------
+// Broken-lock shapes seen in a live event capture (KDE Wayland + Firefox,
+// July 2026): lock granted, mousemove firing, but real mouse sweeps arrive as
+// ±1..±4 noise in BOTH axes — plus one wild spike (-19,-116) as the first
+// event after each lock engage, which must be swallowed (it was yanking the
+// view and resetting the dead-streak). Replays that exact stream. Needs a
+// fresh page: the block above already latched lockBroken on the main one.
 {
     const degPage = await browser.newPage({ viewport: { width: 1280, height: 800 } })
     await degPage.goto(URL, { waitUntil: 'domcontentloaded' })
@@ -156,14 +157,20 @@ for (const [label, props] of [
     await degPage.mouse.click(dcx, dcy)
     await degPage.waitForTimeout(400)
     const locked = await degPage.evaluate(() => document.pointerLockElement?.tagName === 'CANVAS')
+    const preSpike = await dstate()
     await degPage.evaluate(() => {
-        for (let i = 0; i < 35; i++) {
-            document.dispatchEvent(new MouseEvent('mousemove', { movementX: -1, movementY: 0, bubbles: true }))
-        }
+        const noise = [[-2, 1], [0, 1], [1, 0], [2, 0], [-1, 1], [4, 0], [0, 0]]
+        const mv = (x, y) => document.dispatchEvent(new MouseEvent('mousemove', { movementX: x, movementY: y, bubbles: true }))
+        mv(-19, -116) // first-after-engage spike from the live capture
+        for (let i = 0; i < 35; i++) mv(...noise[i % noise.length])
     })
     await degPage.waitForTimeout(400)
+    const postSpike = await dstate()
     const released = await degPage.evaluate(() => document.pointerLockElement === null)
-    check('broken lock (constant -1,0 locked moves): lock is abandoned', locked && released)
+    check('broken lock (±4 noise locked moves): lock is abandoned', locked && released)
+    check('first locked move (spike) is swallowed: view did not rail',
+        Math.abs(postSpike.pitch - preSpike.pitch) < 0.5,
+        `pitch ${preSpike.pitch.toFixed(2)} → ${postSpike.pitch.toFixed(2)}`)
 
     const before = await dstate()
     await degPage.mouse.move(dcx, dcy)
@@ -216,6 +223,24 @@ for (const [label, props] of [
     check('drag with poisoned movementX/Y (constant -1,0): still looks via cursor position',
         a3.yaw !== b3.yaw && a3.pitch !== b3.pitch,
         `yaw Δ ${(a3.yaw - b3.yaw).toFixed(3)}, pitch Δ ${(a3.pitch - b3.pitch).toFixed(3)}`)
+
+    // The inverse glitch (seen in headless Firefox around lock release):
+    // clientX/Y zeroed or frozen while movementX/Y is healthy — drag-look
+    // must fall back to movement deltas for those events.
+    const b4 = await state()
+    await page.evaluate(({ x, y }) => {
+        const el = document.querySelector('canvas')
+        el.dispatchEvent(new PointerEvent('pointerdown', { button: 0, buttons: 1, clientX: x, clientY: y, pointerId: 98, bubbles: true }))
+        for (let i = 1; i <= 25; i++) {
+            document.dispatchEvent(new MouseEvent('mousemove', { movementX: 9, movementY: 4, clientX: 0, clientY: 0, buttons: 1, bubbles: true }))
+        }
+        document.dispatchEvent(new PointerEvent('pointerup', { pointerId: 98, bubbles: true }))
+    }, { x: cx, y: cy })
+    await settle()
+    const a4 = await state()
+    check('drag with zeroed clientX/Y (lock-release glitch): still looks via movement deltas',
+        a4.yaw !== b4.yaw && a4.pitch !== b4.pitch,
+        `yaw Δ ${(a4.yaw - b4.yaw).toFixed(3)}, pitch Δ ${(a4.pitch - b4.pitch).toFixed(3)}`)
 }
 
 // -- failed document load: visible error + Retry, not a silent stuck overlay --

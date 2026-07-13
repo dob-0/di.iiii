@@ -38,7 +38,7 @@ import {
     WALK_MAX_SPEED, FLY_SPEED, WALK_ACCEL, WALK_FRICTION, TURN_SPEED, EYE_HEIGHT,
     POINTER_LOCK_SENSITIVITY, DRAG_LOOK_SENSITIVITY, TOUCH_LOOK_SENSITIVITY, TRACKPAD_LOOK_SENSITIVITY,
     WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF,
-    BROKEN_LOCK_DEAD_MOVES
+    BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX
 } from './walkModeConfig.js'
 import './liveProjectScene.css'
 
@@ -447,7 +447,10 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             const onLockChange = () => {
                 const locked = document.pointerLockElement === el
                 lockedRef.current = locked
-                if (locked) deadLockMoves = 0
+                if (locked) {
+                    deadLockMoves = 0
+                    firstLockedMove = true
+                }
                 dragLastX = null
                 dragLastY = null
                 el.style.cursor = locked ? 'none' : 'crosshair'
@@ -490,6 +493,10 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             // lock (and never re-request it) so drag-look takes over.
             let lockBroken = false
             let deadLockMoves = 0
+            // The first locked move after an engage carries one wild spike
+            // (e.g. -19,-116 in the July 2026 event capture) — it both yanks
+            // the view and resets the dead-streak, so swallow it entirely.
+            let firstLockedMove = false
             // Drag-look never reads e.movementX/movementY: the same broken
             // compositors poison them on unlocked moves too (constant -1,0),
             // and the visible cursor's clientX/clientY is the one delta
@@ -501,7 +508,12 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 if (debugHud) dbg(e)
                 const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
                 if (lockedRef.current) {
-                    if (e.movementY === 0 && Math.abs(e.movementX) <= 1) {
+                    if (firstLockedMove) {
+                        firstLockedMove = false
+                        return
+                    }
+                    if (Math.abs(e.movementX) <= BROKEN_LOCK_DEAD_DELTA_MAX &&
+                        Math.abs(e.movementY) <= BROKEN_LOCK_DEAD_DELTA_MAX) {
                         if (!lockBroken && ++deadLockMoves >= BROKEN_LOCK_DEAD_MOVES) {
                             lockBroken = true
                             document.exitPointerLock()
@@ -517,16 +529,35 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                         pitchLimit
                     )
                 } else if (draggingCanvas) {
-                    if (dragLastX !== null) {
-                        player.yaw -= (e.clientX - dragLastX) * DRAG_LOOK_SENSITIVITY
-                        player.pitch = THREE.MathUtils.clamp(
-                            player.pitch - (e.clientY - dragLastY) * DRAG_LOOK_SENSITIVITY,
-                            -pitchLimit,
-                            pitchLimit
-                        )
+                    // Around a lock release some browsers emit events with
+                    // clientX/Y zeroed or frozen while movementX/Y is healthy
+                    // — the exact inverse of the broken-compositor case. Use
+                    // position deltas when the cursor coords look alive, and
+                    // fall back to movement deltas on the 0,0 glitch.
+                    const glitched = e.clientX === 0 && e.clientY === 0
+                    let dx
+                    let dy
+                    if (glitched || dragLastX === null) {
+                        dx = e.movementX
+                        dy = e.movementY
+                    } else {
+                        dx = e.clientX - dragLastX
+                        dy = e.clientY - dragLastY
+                        if (dx === 0 && dy === 0) {
+                            dx = e.movementX
+                            dy = e.movementY
+                        }
                     }
-                    dragLastX = e.clientX
-                    dragLastY = e.clientY
+                    if (!glitched) {
+                        dragLastX = e.clientX
+                        dragLastY = e.clientY
+                    }
+                    player.yaw -= dx * DRAG_LOOK_SENSITIVITY
+                    player.pitch = THREE.MathUtils.clamp(
+                        player.pitch - dy * DRAG_LOOK_SENSITIVITY,
+                        -pitchLimit,
+                        pitchLimit
+                    )
                 }
             }
             // Scroll never pitches the camera: pixel-mode deltas from high-res
@@ -549,8 +580,13 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 if (e.button !== 0) return
                 try { el.setPointerCapture(e.pointerId) } catch { /* pointer already gone */ }
                 draggingCanvas = true
-                dragLastX = e.clientX
-                dragLastY = e.clientY
+                if (e.clientX === 0 && e.clientY === 0) {
+                    dragLastX = null
+                    dragLastY = null
+                } else {
+                    dragLastX = e.clientX
+                    dragLastY = e.clientY
+                }
                 if (lockedRef.current || lockBroken) return
                 const req = el.requestPointerLock()
                 if (req && typeof req.catch === 'function') {
