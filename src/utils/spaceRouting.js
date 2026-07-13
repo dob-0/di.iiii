@@ -77,6 +77,14 @@ export const getAppLocationState = (locationLike = null) => {
             }
         }
         if (segment) {
+            const segments = relative.split('/')
+            if (segments[1] === 'p' && segments[2]) {
+                return {
+                    page: APP_PAGE_EDITOR,
+                    spaceId: segment,
+                    projectId: segments[2]
+                }
+            }
             return {
                 page: APP_PAGE_EDITOR,
                 spaceId: segment

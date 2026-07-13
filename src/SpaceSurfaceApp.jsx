@@ -78,6 +78,7 @@ export default function SpaceSurfaceApp({ routeState }) {
     }, [spaceId, shouldResolvePublishedSurface])
 
     const publishedProjectId = surfaceState.space?.publishedProjectId || null
+    const routeProjectId = routeState?.projectId || null
 
     if (isLocalRootWorkspace) {
         return (
@@ -89,6 +90,22 @@ export default function SpaceSurfaceApp({ routeState }) {
 
     if (shouldResolvePublishedSurface && (surfaceState.status === 'idle' || surfaceState.status === 'loading')) {
         return null
+    }
+
+    // direct project link (/:space/p/:projectId) — the one-pager viewer for any
+    // project of the space, not just the published one; auth is still enforced
+    // upstream by SpaceSurfaceRoute for non-public spaces
+    if (shouldResolvePublishedSurface && routeProjectId) {
+        return (
+            <Suspense fallback={null}>
+                <PublicProjectViewer
+                    key={`${spaceId}:${routeProjectId}`}
+                    spaceId={spaceId}
+                    projectId={routeProjectId}
+                    spaceLabel={surfaceState.space?.label || spaceId}
+                />
+            </Suspense>
+        )
     }
 
     if (shouldResolvePublishedSurface && publishedProjectId) {

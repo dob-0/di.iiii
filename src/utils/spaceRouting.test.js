@@ -24,6 +24,19 @@ describe('spaceRouting', () => {
         })
     })
 
+    it('parses /:space/p/:projectId as a direct project link', () => {
+        expect(getAppLocationState(new URL('https://example.com/br_id_ge/p/br-id-ge-hosq'))).toEqual({
+            page: 'editor',
+            spaceId: 'br_id_ge',
+            projectId: 'br-id-ge-hosq'
+        })
+
+        expect(getAppLocationState(new URL('https://example.com/br_id_ge/p/'))).toEqual({
+            page: 'editor',
+            spaceId: 'br_id_ge'
+        })
+    })
+
     it('reserves product-owned route segments as space names', () => {
         expect(isReservedAppSegment('admin')).toBe(true)
         expect(isReservedAppSegment('beta')).toBe(true)

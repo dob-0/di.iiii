@@ -45,6 +45,26 @@ describe('SpaceSurfaceApp', () => {
         expect(await screen.findByText('public-project-viewer:main:live-project')).toBeInTheDocument()
     })
 
+    it('renders the public viewer for a direct project link, ignoring the published pointer', async () => {
+        getServerSpace.mockResolvedValue({
+            id: 'main',
+            label: 'Main Space',
+            publishedProjectId: 'live-project'
+        })
+
+        render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'main', projectId: 'draft-project' }} />)
+
+        expect(await screen.findByText('public-project-viewer:main:draft-project')).toBeInTheDocument()
+    })
+
+    it('renders a direct project link even if space metadata fails to load', async () => {
+        getServerSpace.mockRejectedValue(new Error('network down'))
+
+        render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'main', projectId: 'draft-project' }} />)
+
+        expect(await screen.findByText('public-project-viewer:main:draft-project')).toBeInTheDocument()
+    })
+
     it('opens the blank node workspace on the bare root route', async () => {
         render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: null }} />)
 
