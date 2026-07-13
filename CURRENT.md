@@ -9,25 +9,23 @@ active_branch: dev
 
 ## Last commit
 
-`main` = `57b1ca6a` — **PROMOTED dev→main 2026-07-13, prod deploy green**: open
-inscriptions, public CORS (inscriptions + scene reads), invite links (#44), WCC
-walker fix (#46), sandbox popup escape + top-navigation, beta wire fix, TS-LSP
-plugin. `dev` = same + digitalkar comment rename.
+`main` = `dev` = `5abf8351` — **PROMOTED dev→main 2026-07-13 (second), prod
+green**: direct project links `/:space/p/:projectId` in the public viewer
+(share any project of a public space without moving the published pointer;
+tests + wiki entry included). Earlier same day: open inscriptions, public
+CORS, invite links (#44), WCC walker fix (#46), sandbox popup escape.
 
-## Last session (2026-07-13 — prod promotion + br_id_ge go-live)
+## Last session (2026-07-13 afternoon — /p/ links + open-call backup)
 
-- Promoted dev→main (merge conflict in known-fixes.md resolved by union; branch
-  protection bypassed as admin); Publish cPanel Release green; prod health 200.
-- br_id_ge went communal on prod: space `br_id_ge` openInscriptions ON, published
-  face = `landing` (admin PATCH — CI sync keys correctly cannot move the pointer),
-  first inscription written via the public API.
-- New serverXR since last promotion: `inscriptionRoutes.js` (anonymous append-only
-  writes, opt-in per space, rate-limited) + PUBLIC_CORS_ROUTES entries for
-  inscriptions/scene (block now drops Origin so cors() can't override '*').
-- Preview iframes: `allow-popups-to-escape-sandbox` + `allow-top-navigation-by-
-  user-activation` (white-tab class fixed); Beta graph wires painted for the first
-  time (zero-area svg). All in known-fixes with guards.
-- Prod config verified: `globalSpaceId` already null; no stray open-jam in `main`.
+- Found the `/p/:projectId` feature complete but uncommitted in the working
+  tree; full validation green (lint, 581 fe tests, build, 48 contracts, wiki
+  check) → committed `5abf8351`, pushed dev→staging, promoted dev→main.
+  Publish cPanel Release green; prod smoke 8/8; `/br_id_ge/p/landing` 200.
+- Open-call backup before touching prod: `beyond-form` space + 13 applications
+  (3 new since Jul 10) pulled into private `dob-0/di-spaces` (`ef9286e`);
+  `sync-all.sh` now includes beyond-form + an applications dump step.
+- br_id_ge communal on prod since morning session: openInscriptions ON,
+  published face `landing`, `inscriptionRoutes.js` + PUBLIC_CORS_ROUTES live.
 
 ## What works
 
