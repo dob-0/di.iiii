@@ -39,6 +39,8 @@ const formatSource = (source = '') => {
     }
 }
 
+const isArchivedTitle = (title = '') => title.trimStart().startsWith('[archived]')
+
 export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const { role, openSpaceId } = useAuthSession()
     const [projects, setProjects] = useState([])
@@ -48,8 +50,14 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [creatingTitle, setCreatingTitle] = useState(null)
     const [renamingId, setRenamingId] = useState(null)
     const [renameValue, setRenameValue] = useState('')
+    const [showArchived, setShowArchived] = useState(false)
 
     const mostRecentProject = useMemo(() => projects[0] || null, [projects])
+    const archivedProjects = useMemo(() => projects.filter(p => isArchivedTitle(p.title)), [projects])
+    const visibleProjects = useMemo(
+        () => showArchived ? projects : projects.filter(p => !isArchivedTitle(p.title)),
+        [projects, showArchived]
+    )
 
     useEffect(() => {
         setSpaceLabel(spaceId)
@@ -243,6 +251,14 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     )}
                     <span className="sh-sep">·</span>
                     <button className="sh-link" onClick={() => appNavigate(buildAppSpacePath(spaceId))}>Live</button>
+                    {archivedProjects.length > 0 && (
+                        <>
+                            <span className="sh-sep">·</span>
+                            <button className="sh-link" onClick={() => setShowArchived(v => !v)}>
+                                {showArchived ? 'Hide archived' : `${archivedProjects.length} archived`}
+                            </button>
+                        </>
+                    )}
                 </div>
 
                 {/* Status */}
@@ -267,9 +283,9 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                 )}
 
                 {/* Projects */}
-                {projects.length > 0 && (
+                {visibleProjects.length > 0 && (
                     <div className="sh-projects-grid">
-                        {projects.map((project) => {
+                        {visibleProjects.map((project) => {
                             const isRenaming = renamingId === project.id
                             return (
                                 <div
