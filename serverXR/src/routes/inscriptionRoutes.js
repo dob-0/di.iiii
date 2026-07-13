@@ -15,7 +15,7 @@ const crypto = require('node:crypto')
 const NAME_MAX = 40
 const WORD_MAX = 60
 const FIELD_MAX = 999
-const INSCRIPTION_COLOR = '#cdb98f' // khachkar tuff
+const INSCRIPTION_COLOR = '#cdb98f' // digitalkar tuff
 
 const cleanLine = (value, max) => String(value ?? '')
   // eslint-disable-next-line no-control-regex
