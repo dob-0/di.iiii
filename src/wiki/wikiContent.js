@@ -114,7 +114,8 @@ export const WIKI_ARTICLES = [
         body: [
             'Open the Studio, pick or create a project, and start building.',
             { list: [
-                'Five windows, one per job: Create (shapes, lights, and one Files library — imports, Google Drive, Commons), Scene (entity tree + selected-entity editing), World (scene-wide settings), Share (publish, export, activity), Code (HTML/CSS/JS files + the 3D↔code viewport toggle).',
+                'Five scene windows, one per job: Create (shapes, lights, and one Files library — imports, Google Drive, Commons), Scene (entity tree + selected-entity editing), World (scene-wide settings), Share (publish, export, activity), Code (HTML/CSS/JS files + the 3D↔code viewport toggle).',
+                'A sixth, space-level window — Projects — lists every project in the space: click to switch, ＋ New to create, hover a row to rename or delete (the live project is badged; deleting it clears the published pointer). No more hub round-trips to hop between projects.',
                 'Every file — uploaded, from Google Drive, or from the Commons — sits in the Create window’s Files list with + Add to place it in the scene, badges for scene usage and public sharing, and × to delete. PDFs import as image pages.',
                 'Drag to position; edit the selected entity in the Scene window — world defaults live in the World window.',
                 'In the Scene tree: double-click any entity to rename it, and use the per-row circle (show/hide) and square (lock/unlock) toggles — hidden entities disappear from the scene, locked ones can be selected but not moved.',
@@ -136,7 +137,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['studio', 'editor', 'basics'],
-        updated: '2026-07-10'
+        updated: '2026-07-13'
     },
     {
         id: 'studio-content-model',

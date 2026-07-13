@@ -1359,3 +1359,133 @@
     background: rgba(242,95,92,0.08);
     border-color: rgba(242,95,92,0.2);
 }
+
+/* ── Projects window (spp) ─────────────────────────────────── */
+.spp-root {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+}
+.spp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: 46vh;
+    overflow-y: auto;
+}
+.spp-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-radius: 8px;
+}
+.spp-row--current {
+    background: rgba(255, 255, 255, 0.08);
+}
+.spp-open {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    appearance: none;
+    background: none;
+    border: 0;
+    color: #e8eef4;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    padding: 7px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+.spp-row:not(.spp-row--current) .spp-open:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+.spp-row--current .spp-open {
+    cursor: default;
+    font-weight: 600;
+}
+.spp-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.spp-badge {
+    flex: none;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #7deeff;
+    border: 1px solid rgba(125, 238, 255, 0.4);
+    border-radius: 999px;
+    padding: 1px 7px;
+}
+.spp-actions {
+    flex: none;
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+}
+.spp-row:hover .spp-actions,
+.spp-row:focus-within .spp-actions {
+    opacity: 1;
+}
+.spp-icon {
+    appearance: none;
+    background: none;
+    border: 0;
+    color: #9fb0bf;
+    font-size: 13px;
+    line-height: 1;
+    padding: 6px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+.spp-icon:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e8eef4;
+}
+.spp-icon--danger:hover {
+    color: #ff7a95;
+}
+.spp-rename,
+.spp-new-form {
+    flex: 1;
+    display: flex;
+    gap: 4px;
+}
+.spp-rename input,
+.spp-new-form input {
+    flex: 1;
+    min-width: 0;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 8px;
+    color: #e8eef4;
+    font: inherit;
+    font-size: 13px;
+    padding: 6px 8px;
+    outline: none;
+}
+.spp-new {
+    appearance: none;
+    background: none;
+    border: 1px dashed rgba(255, 255, 255, 0.22);
+    border-radius: 8px;
+    color: #9fb0bf;
+    font: inherit;
+    font-size: 13px;
+    padding: 7px 8px;
+    cursor: pointer;
+}
+.spp-new:hover {
+    color: #e8eef4;
+    border-color: rgba(255, 255, 255, 0.4);
+}
+.spp-status {
+    font-size: 12px;
+    color: #9fb0bf;
+    padding: 4px 8px;
+}

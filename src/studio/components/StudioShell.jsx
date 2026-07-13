@@ -4,6 +4,7 @@ import StudioInspector from './StudioInspector.jsx'
 import StudioViewportLayout from './StudioViewportLayout.jsx'
 import StudioFloatingPanel from './StudioFloatingPanel.jsx'
 import StudioControlCluster from './StudioControlCluster.jsx'
+import StudioProjectsPanel from './StudioProjectsPanel.jsx'
 import StudioQuickInsert from './StudioQuickInsert.jsx'
 import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
 import useAuthSession from '../../hooks/useAuthSession.js'
@@ -64,6 +65,7 @@ const DEFAULT_POSITIONS = () => {
         world:   { x: rightX,                y: midY + 30 },
         publish: { x: Math.round(vw * 0.55), y: midY },
         files:   { x: Math.round(vw * 0.3),  y: 90 },
+        projects:{ x: 16,                    y: midY },
     }
 }
 
@@ -534,6 +536,14 @@ export default function StudioShell({
                     {isOpen('world') && (
                         <StudioFloatingPanel key={`world-${layoutKey}`} title="World" onClose={() => toggle('world')} initialWidth={280} {...panelChrome('world')}>
                             {panelBodies.world}
+                        </StudioFloatingPanel>
+                    )}
+                    {isOpen('projects') && (
+                        <StudioFloatingPanel key={`projects-${layoutKey}`} title="Projects" onClose={() => toggle('projects')} initialWidth={260} {...panelChrome('projects')}>
+                            <StudioProjectsPanel
+                                spaceId={document?.projectMeta?.spaceId}
+                                currentProjectId={document?.projectMeta?.id}
+                            />
                         </StudioFloatingPanel>
                     )}
 

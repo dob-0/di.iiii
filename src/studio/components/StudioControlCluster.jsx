@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { usePanelDrag } from '../../hooks/usePanelDrag.js'
 
-// Five windows, one per job: add things, edit the scene, configure the world,
-// ship it, write code.
+// Five scene windows, one per job: add things, edit the scene, configure the
+// world, ship it, write code — plus Projects, the space-level window for
+// hopping between and managing the space's projects without the hub detour.
 const PANEL_BUTTONS = [
     { key: 'create', label: 'Create' },
     { key: 'scene', label: 'Scene' },
     { key: 'world', label: 'World' },
     { key: 'publish', label: 'Share' },
     { key: 'files', label: 'Code' },
+    { key: 'projects', label: 'Projects' },
 ]
 
 export default function StudioControlCluster({
