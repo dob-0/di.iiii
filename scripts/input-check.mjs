@@ -198,6 +198,24 @@ for (const [label, props] of [
     await page.mouse.move(cx - 150, cy - 150, { steps: 8 }); await settle()
     const a2 = await state()
     check('unlocked move without button: does not look', a2.yaw === b2.yaw && a2.pitch === b2.pitch)
+
+    // Broken Wayland compositors poison movementX/movementY on UNLOCKED moves
+    // too (constant -1,0 — the fourth WCC look report, Firefox/Wayland), so
+    // drag-look must derive deltas from clientX/clientY, never movement*.
+    const b3 = await state()
+    await page.evaluate(({ x, y }) => {
+        const el = document.querySelector('canvas')
+        el.dispatchEvent(new PointerEvent('pointerdown', { button: 0, buttons: 1, clientX: x, clientY: y, pointerId: 99, bubbles: true }))
+        for (let i = 1; i <= 25; i++) {
+            document.dispatchEvent(new MouseEvent('mousemove', { movementX: -1, movementY: 0, clientX: x + i * 8, clientY: y + i * 3, buttons: 1, bubbles: true }))
+        }
+        document.dispatchEvent(new PointerEvent('pointerup', { pointerId: 99, bubbles: true }))
+    }, { x: cx, y: cy })
+    await settle()
+    const a3 = await state()
+    check('drag with poisoned movementX/Y (constant -1,0): still looks via cursor position',
+        a3.yaw !== b3.yaw && a3.pitch !== b3.pitch,
+        `yaw Δ ${(a3.yaw - b3.yaw).toFixed(3)}, pitch Δ ${(a3.pitch - b3.pitch).toFixed(3)}`)
 }
 
 // -- failed document load: visible error + Retry, not a silent stuck overlay --

@@ -448,6 +448,8 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 const locked = document.pointerLockElement === el
                 lockedRef.current = locked
                 if (locked) deadLockMoves = 0
+                dragLastX = null
+                dragLastY = null
                 el.style.cursor = locked ? 'none' : 'crosshair'
                 onLockChangeRef.current?.(locked)
             }
@@ -469,7 +471,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 const under = e ? document.elementFromPoint(e.clientX, e.clientY) : null
                 debugHud.textContent =
                     `lock: ${document.pointerLockElement ? document.pointerLockElement.tagName : 'none'}${lockBroken ? ' (marked broken)' : ''}\n` +
-                    `moves: ${dbgMoves}  last mv: ${e ? `${e.movementX},${e.movementY}` : '-'}  buttons: ${e ? e.buttons : '-'}\n` +
+                    `moves: ${dbgMoves}  last mv: ${e ? `${e.movementX},${e.movementY}` : '-'}  client: ${e ? `${e.clientX},${e.clientY}` : '-'}  buttons: ${e ? e.buttons : '-'}\n` +
                     `dead-streak: ${deadLockMoves}/${BROKEN_LOCK_DEAD_MOVES}  dragging: ${draggingCanvas}\n` +
                     `under cursor: ${under ? `${under.tagName}${under.className ? '.' + String(under.className).split(' ')[0] : ''}` : '(locked/none)'}\n` +
                     `yaw: ${player.yaw.toFixed(2)}  pitch: ${player.pitch.toFixed(2)}`
@@ -488,6 +490,13 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             // lock (and never re-request it) so drag-look takes over.
             let lockBroken = false
             let deadLockMoves = 0
+            // Drag-look never reads e.movementX/movementY: the same broken
+            // compositors poison them on unlocked moves too (constant -1,0),
+            // and the visible cursor's clientX/clientY is the one delta
+            // source that cannot lie. Seeded on pointerdown, re-seeded after
+            // a lock release (client coords freeze while locked).
+            let dragLastX = null
+            let dragLastY = null
             const onMouseMove = (e) => {
                 if (debugHud) dbg(e)
                 const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
@@ -508,12 +517,16 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                         pitchLimit
                     )
                 } else if (draggingCanvas) {
-                    player.yaw -= e.movementX * DRAG_LOOK_SENSITIVITY
-                    player.pitch = THREE.MathUtils.clamp(
-                        player.pitch - e.movementY * DRAG_LOOK_SENSITIVITY,
-                        -pitchLimit,
-                        pitchLimit
-                    )
+                    if (dragLastX !== null) {
+                        player.yaw -= (e.clientX - dragLastX) * DRAG_LOOK_SENSITIVITY
+                        player.pitch = THREE.MathUtils.clamp(
+                            player.pitch - (e.clientY - dragLastY) * DRAG_LOOK_SENSITIVITY,
+                            -pitchLimit,
+                            pitchLimit
+                        )
+                    }
+                    dragLastX = e.clientX
+                    dragLastY = e.clientY
                 }
             }
             // Scroll never pitches the camera: pixel-mode deltas from high-res
@@ -536,6 +549,8 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 if (e.button !== 0) return
                 try { el.setPointerCapture(e.pointerId) } catch { /* pointer already gone */ }
                 draggingCanvas = true
+                dragLastX = e.clientX
+                dragLastY = e.clientY
                 if (lockedRef.current || lockBroken) return
                 const req = el.requestPointerLock()
                 if (req && typeof req.catch === 'function') {
