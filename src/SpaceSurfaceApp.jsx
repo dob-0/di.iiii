@@ -103,6 +103,7 @@ export default function SpaceSurfaceApp({ routeState }) {
                     spaceId={spaceId}
                     projectId={routeProjectId}
                     spaceLabel={surfaceState.space?.label || spaceId}
+                    showProjectSwitcher
                 />
             </Suspense>
         )

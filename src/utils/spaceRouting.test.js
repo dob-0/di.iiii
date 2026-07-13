@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
     APP_PAGE_PREFERENCES,
     buildPreferencesPath,
+    buildPublicProjectPath,
     getAppLocationState,
     isReservedAppSegment
 } from './spaceRouting.js'
@@ -22,6 +23,10 @@ describe('spaceRouting', () => {
             page: APP_PAGE_PREFERENCES,
             spaceId: 'debug-space'
         })
+    })
+
+    it('builds direct project link paths', () => {
+        expect(buildPublicProjectPath('br_id_ge', 'br-id-ge-hosq')).toBe('/br_id_ge/p/br-id-ge-hosq')
     })
 
     it('parses /:space/p/:projectId as a direct project link', () => {

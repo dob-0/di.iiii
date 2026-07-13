@@ -35,6 +35,11 @@ export const buildAppSpacePath = (spaceId) => {
     return `${prefix}/${spaceId}`.replace(/\/{2,}/g, '/')
 }
 
+export const buildPublicProjectPath = (spaceId, projectId) => {
+    const prefix = getAppBasePrefix()
+    return `${prefix}/${spaceId}/p/${projectId}`.replace(/\/{2,}/g, '/')
+}
+
 export const buildPreferencesPath = (spaceId) => {
     const prefix = getAppBasePrefix()
     const basePath = `${prefix}/${APP_PAGE_PREFERENCES_ROUTE}`.replace(/\/{2,}/g, '/')

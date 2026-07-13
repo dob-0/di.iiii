@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import LiveProjectScene from '../../components/LiveProjectScene.jsx'
 import MadeWithBadge from '../../components/MadeWithBadge.jsx'
+import ProjectSwitcher from './ProjectSwitcher.jsx'
 import { createProjectSyncService } from '../services/projectSyncService.js'
 import {
     DEFAULT_PROJECT_SPACE_ID,
@@ -78,7 +79,7 @@ const resolveViewerCamera = (document) => {
     return computeAutoFrameCamera(document) || document.worldState?.savedView || null
 }
 
-export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', initialCameraView = null }) {
+export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', initialCameraView = null, showProjectSwitcher = false }) {
     const [state, setState] = useState({
         status: 'loading',
         document: null,
@@ -347,6 +348,15 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 >
                     Walk / Fly
                 </button>
+            ) : null}
+
+            {/* direct project links only — the published face stays chrome-free */}
+            {showProjectSwitcher && state.status !== 'loading' && navMode === 'orbit' && !isPreview ? (
+                <ProjectSwitcher
+                    spaceId={resolvedRouteSpaceId}
+                    currentProjectId={projectId}
+                    spaceLabel={spaceLabel}
+                />
             ) : null}
 
             {/* walk mode shows the badge in the LiveProjectScene chrome header */}
