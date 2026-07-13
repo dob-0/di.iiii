@@ -3,7 +3,7 @@ const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
 const googleDrive = require('../googleDrive')
-const { isGuestSubject } = require('../authAccess')
+const { getOwnSandboxSpaceId, isGuestSubject } = require('../authAccess')
 const driveAccount = require('../googleDriveAccount')
 const commonsStore = require('../commonsStore')
 
@@ -24,6 +24,7 @@ function registerSpaceRoutes(router, {
   findProjectById,
   getLiveBucket,
   getPublicAuthState = () => ({ spaces: null }),
+  getSandboxStats = null,
   getSpacePaths,
   hydrateSceneAssetManifest,
   canAccessSpace = () => true,
@@ -39,6 +40,7 @@ function registerSpaceRoutes(router, {
   requireAdminWrite = (req, res, next) => next(),
   requireSpaceOwnerOrAdminWrite = (req, res, next) => next(),
   readJson,
+  readLatestSpaceSnapshot = null,
   readOpsHistory,
   saveSpaceMeta,
   serveAsset,
@@ -88,28 +90,40 @@ function registerSpaceRoutes(router, {
       const spaces = await listSpaces()
       const state = req.authState || getPublicAuthState(req)
       const ownSpaces = Array.isArray(state.spaces) ? state.spaces : []
-      // Guest sandboxes are private per-session scratch space — they never
-      // belong in anyone else's directory, including the admin's.
+      const isGuest = state.type === 'guest' || isGuestSubject(state.subject)
+      // One sandbox per identity: guests carry theirs in the cookie scope,
+      // accounts derive it from the subject.
+      const ownSandboxId = isGuest
+        ? (ownSpaces.find((id) => id.startsWith('sandbox-')) || null)
+        : (state.type === 'session' ? normalizeSpaceId(getOwnSandboxSpaceId(state.subject) || '') : null)
+      // Sandboxes are private per-identity scratch space — they never belong
+      // in anyone else's directory, including the admin's (admins get the
+      // collapsed sandboxSummary below instead).
       let visible = spaces.filter((space) =>
-        space.kind !== 'sandbox' || ownSpaces.includes(space.id)
+        space.kind !== 'sandbox' || space.id === ownSandboxId
       )
       if (config.requireAuth) {
         visible = visible.filter((space) =>
           space.isPublic || (state.authenticated && canAccessSpace(state, space.id))
         )
       }
-      // A guest's sandbox is provisioned lazily on first access; until then,
+      // A sandbox is provisioned lazily on first access; until then,
       // synthesize its card so the hub still shows the session's own space.
-      const isGuest = state.type === 'guest' || isGuestSubject(state.subject)
-      if (isGuest) {
-        const pending = ownSpaces.find((id) =>
-          id.startsWith('sandbox-') && !visible.some((space) => space.id === id)
-        )
-        if (pending) {
-          visible.push(buildMeta(pending, { label: 'Guest Sandbox', kind: 'sandbox', allowEdits: true, permanent: false }))
-        }
+      if (ownSandboxId && !visible.some((space) => space.id === ownSandboxId)) {
+        visible.push(buildMeta(ownSandboxId, {
+          label: isGuest ? 'Guest Sandbox' : 'Sandbox',
+          kind: 'sandbox',
+          allowEdits: true,
+          permanent: !isGuest
+        }))
       }
-      res.json({ spaces: visible.map((space) => withIsOwner(state, space)) })
+      const sandboxSummary = state.isUnrestricted && typeof getSandboxStats === 'function'
+        ? getSandboxStats()
+        : null
+      res.json({
+        spaces: visible.map((space) => withIsOwner(state, space)),
+        ...(sandboxSummary ? { sandboxSummary } : {})
+      })
     } catch (error) {
       next(error)
     }
@@ -184,7 +198,7 @@ function registerSpaceRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId } = req.body || {}
+      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId, openInscriptions } = req.body || {}
       if (kind !== undefined && !['normal', 'global', 'sandbox'].includes(kind)) {
         return res.status(400).json({ error: 'kind must be one of: normal, global, sandbox.' })
       }
@@ -237,7 +251,8 @@ function registerSpaceRoutes(router, {
         ...(isPublic !== undefined ? { isPublic: Boolean(isPublic) } : {}),
         ...(kind !== undefined ? { kind } : {}),
         ...(publishedProjectId !== undefined ? { publishedProjectId: nextPublishedProjectId } : {}),
-        ...(previewImageAssetId !== undefined ? { previewImageAssetId: nextPreviewImageAssetId } : {})
+        ...(previewImageAssetId !== undefined ? { previewImageAssetId: nextPreviewImageAssetId } : {}),
+        ...(openInscriptions !== undefined ? { openInscriptions: Boolean(openInscriptions) } : {})
       })
       res.json({ space: meta })
     } catch (error) {
@@ -375,6 +390,34 @@ function registerSpaceRoutes(router, {
     }
   })
 
+  // Full scene replacement as a single replaceScene op — used by PUT scene
+  // and by snapshot restore, so connected clients pick either up live.
+  const replaceSceneAndBroadcast = async (spaceId, sceneData) => {
+    await ensureSpaceWritable(spaceId)
+    const { spaceDir, scenePath, assetsDir } = getSpacePaths(spaceId)
+    await fsp.mkdir(spaceDir, { recursive: true })
+    await fsp.mkdir(assetsDir, { recursive: true })
+    await writeJson(scenePath, sceneData)
+    const meta = await loadSpaceMeta(spaceId)
+    const currentVersion = meta?.sceneVersion || 0
+    const nextVersion = currentVersion + 1
+    const resetOp = {
+      opId: crypto.randomUUID?.() || `op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      clientId: 'server',
+      type: 'replaceScene',
+      payload: { scene: sceneData },
+      version: nextVersion,
+      timestamp: Date.now()
+    }
+    await writeOpsHistory(spaceId, [resetOp])
+    await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: nextVersion })
+    broadcastLiveEvent(spaceId, 'scene-op', {
+      version: nextVersion,
+      ops: [resetOp]
+    })
+    return { newVersion: nextVersion }
+  }
+
   router.put('/api/spaces/:spaceId/scene', async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -383,29 +426,29 @@ function registerSpaceRoutes(router, {
       if (!sceneData || typeof sceneData !== 'object') {
         return res.status(400).json({ error: 'Scene payload required.' })
       }
-      await ensureSpaceWritable(spaceId)
-      const { spaceDir, scenePath, assetsDir } = getSpacePaths(spaceId)
-      await fsp.mkdir(spaceDir, { recursive: true })
-      await fsp.mkdir(assetsDir, { recursive: true })
-      await writeJson(scenePath, sceneData)
-      const meta = await loadSpaceMeta(spaceId)
-      const currentVersion = meta?.sceneVersion || 0
-      const nextVersion = currentVersion + 1
-      const resetOp = {
-        opId: crypto.randomUUID?.() || `op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-        clientId: 'server',
-        type: 'replaceScene',
-        payload: { scene: sceneData },
-        version: nextVersion,
-        timestamp: Date.now()
-      }
-      await writeOpsHistory(spaceId, [resetOp])
-      await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: nextVersion })
-      broadcastLiveEvent(spaceId, 'scene-op', {
-        version: nextVersion,
-        ops: [resetOp]
-      })
+      await replaceSceneAndBroadcast(spaceId, sceneData)
       res.json({ ok: true })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // Vandalism insurance for the open space (works for any snapshotted space):
+  // put the latest scene snapshot back. Owner-or-admin; the open space has no
+  // owner, so there it is effectively admin-only.
+  router.post('/api/spaces/:spaceId/restore-snapshot', requireSpaceOwnerOrAdminWrite, async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      if (typeof readLatestSpaceSnapshot !== 'function') {
+        return res.status(501).json({ error: 'Snapshots are not available.' })
+      }
+      const snapshot = await readLatestSpaceSnapshot(spaceId)
+      if (!snapshot) {
+        return res.status(404).json({ error: 'No snapshot available for this space.' })
+      }
+      const { newVersion } = await replaceSceneAndBroadcast(spaceId, snapshot.scene)
+      res.json({ ok: true, restoredFrom: snapshot.takenAt, newVersion })
     } catch (error) {
       next(error)
     }

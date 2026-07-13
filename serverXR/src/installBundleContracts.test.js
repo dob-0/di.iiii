@@ -161,15 +161,15 @@ describe('install bundle contracts', () => {
 
         const workDir = await makeTempDir('dii-install-out-')
         const bundlePath = path.join(workDir, 'install.tar.gz')
-        // the server auto-provisions a 'main' space on boot, so "every space"
-        // is main + the two seeded ones
+        // the server auto-provisions the 'main' and 'open' spaces on boot, so
+        // "every space" is those two + the two seeded ones
         const { stdout: exportOut } = await runInstallScript(['export', '--out', bundlePath], sourceRoot)
-        expect(exportOut).toContain('3 spaces')
+        expect(exportOut).toContain('4 spaces')
         expect(exportOut).toContain('instance config')
 
         const targetRoot = await makeTempDir('dii-install-data-b-')
         const { stdout: importOut } = await runInstallScript(['import', bundlePath], targetRoot)
-        expect(importOut).toMatch(/3 spaces: .*install-a.*install-b/)
+        expect(importOut).toMatch(/4 spaces: .*install-a.*install-b/)
 
         const importedConfig = JSON.parse(
             await readFile(path.join(targetRoot, 'spaces', '_server-config.json'), 'utf8'))

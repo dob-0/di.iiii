@@ -3,14 +3,16 @@ import { Box, Container } from '@mui/material'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import { getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
 import {
-    listServerSpaces,
+    fetchServerSpacesIndex,
     createServerSpace,
     updateServerSpace,
     deleteServerSpace,
     getServerConfig,
     patchServerConfig,
+    purgeStaleSandboxes,
     uploadServerAsset,
-    getServerSpaceAssetUrl
+    getServerSpaceAssetUrl,
+    mintSpaceInvite
 } from '../../services/serverSpaces.js'
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
@@ -141,8 +143,10 @@ function SpaceCardPreview({ spaceId, label }) {
 }
 
 export default function SpaceHub() {
-    const { authenticated, type, role, canCreateSpace, ownedSpaceCount, spaceLimit, spaces: sessionScopes } = useAuthSession()
+    const { authenticated, type, role, canCreateSpace, ownedSpaceCount, spaceLimit, spaces: sessionScopes, openSpaceId, sandboxSpaceId } = useAuthSession()
     const [spaces, setSpaces] = useState([])
+    const [sandboxSummary, setSandboxSummary] = useState(null)
+    const [isPurging, setIsPurging] = useState(false)
     const [status, setStatus] = useState('loading...')
     const [creatingTitle, setCreatingTitle] = useState(null)
     const [isBusy, setIsBusy] = useState(false)
@@ -157,6 +161,7 @@ export default function SpaceHub() {
     const [previewMgr, setPreviewMgr] = useState(null)
     const [providers, setProviders] = useState(null) // null until sign-in requested
     const [copiedLiveId, setCopiedLiveId] = useState(null)
+    const [copiedInviteId, setCopiedInviteId] = useState(null)
 
     const isGuest = type === 'guest'
     const isAccount = authenticated && !isGuest
@@ -166,8 +171,10 @@ export default function SpaceHub() {
     const loadSpaces = useCallback(async () => {
         setStatus('loading...')
         try {
-            const [list, cfg] = await Promise.all([listServerSpaces(), getServerConfig()])
+            const [index, cfg] = await Promise.all([fetchServerSpacesIndex(), getServerConfig()])
+            const list = index.spaces
             setSpaces(list)
+            setSandboxSummary(index.sandboxSummary || null)
             setDefaultSpaceId(cfg.defaultSpaceId || null)
             setStatus('')
             // resolve titles for any linked projects
@@ -195,10 +202,14 @@ export default function SpaceHub() {
     const openSpace = (spaceId) =>
         navigateToStudioPath(buildStudioHubPath(spaceId))
 
-    // A card opens the editor only when the session can actually work there
-    // (owner/admin, or scoped in — e.g. guests jamming in main). Public spaces
-    // you can't enter go straight to their live view instead of a login wall.
+    // A card opens the editor only when the session can actually work there.
+    // The Open Space and your own sandbox are always enterable (the server
+    // grants them implicitly, outside the cookie scope). Public spaces you
+    // can't enter go straight to their live view instead of a login wall.
     const canEnter = (space) => canManage(space)
+        || space.id === openSpaceId
+        || space.id === sandboxSpaceId
+        || space.kind === 'sandbox'
         || (Array.isArray(sessionScopes) && sessionScopes.includes(space.id))
 
     const openCard = (space) => {
@@ -224,6 +235,18 @@ export default function SpaceHub() {
             setIsBusy(false)
         }
     }
+
+    const handlePurgeSandboxes = useCallback(async () => {
+        setIsPurging(true)
+        try {
+            await purgeStaleSandboxes()
+            await loadSpaces()
+        } catch (err) {
+            alert(err.message || 'Could not sweep sandboxes.')
+        } finally {
+            setIsPurging(false)
+        }
+    }, [loadSpaces])
 
     const handleRename = useCallback(async (space, e) => {
         e.stopPropagation()
@@ -257,6 +280,25 @@ export default function SpaceHub() {
             setTimeout(() => setCopiedLiveId(null), 2000)
         } catch {
             window.prompt('Copy live link', url)
+        }
+    }, [])
+
+    // Invite = the space's studio URL + a one-week token the server mints;
+    // AuthGate redeems it on arrival and the recipient lands in scope.
+    const handleCopyInvite = useCallback(async (space, e) => {
+        e.stopPropagation()
+        try {
+            const { token } = await mintSpaceInvite(space.id)
+            const url = `${window.location.origin}${buildStudioHubPath(space.id)}?invite=${encodeURIComponent(token)}`
+            try {
+                await navigator.clipboard.writeText(url)
+                setCopiedInviteId(space.id)
+                setTimeout(() => setCopiedInviteId(null), 2000)
+            } catch {
+                window.prompt('Copy invite link (valid 7 days)', url)
+            }
+        } catch (err) {
+            alert(err.message || 'Could not create invite link.')
         }
     }, [])
 
@@ -393,6 +435,17 @@ export default function SpaceHub() {
         }
     }, [linker])
 
+    // Three shelves — the whole space model at a glance: where we meet,
+    // what's mine, what I own. Anything not open/sandbox falls to the third.
+    const openSpaceCard = spaces.find(s => s.id === openSpaceId) || null
+    const sandboxCard = spaces.find(s => s.kind === 'sandbox') || null
+    const restSpaces = spaces.filter(s => s !== openSpaceCard && s !== sandboxCard)
+    const shelves = [
+        openSpaceCard && { key: 'open', label: 'Open Space', hint: 'everyone builds here, together', items: [openSpaceCard] },
+        sandboxCard && { key: 'sandbox', label: 'Your sandbox', hint: 'private scratch — only you see it', items: [sandboxCard] },
+        restSpaces.length > 0 && { key: 'spaces', label: isAccount ? 'Your spaces' : 'Live spaces', hint: null, items: restSpaces }
+    ].filter(Boolean)
+
     return (
         <Box className="studio-shell-root ssh-root">
             <Container maxWidth="xl" sx={{ py: { xs: 3, md: 4 } }}>
@@ -459,9 +512,8 @@ export default function SpaceHub() {
 
                 {isGuest && (
                     <p className="ssh-guest-banner">
-                        {spaces.some(s => s.kind === 'sandbox')
-                            ? 'Guest session — you\'re working in a private temporary sandbox. Sign in to create spaces that are yours and stay.'
-                            : 'Guest session — you\'re in a shared space. Sign in to create your own spaces.'}
+                        Guest session — build with everyone in the Open Space, or use your private sandbox.
+                        Sign in to create spaces that are yours and stay.
                     </p>
                 )}
 
@@ -471,9 +523,14 @@ export default function SpaceHub() {
                     </p>
                 )}
 
-                {spaces.length > 0 && (
-                    <div className="ssh-spaces-grid">
-                        {spaces.map((space) => {
+                {shelves.map(({ key, label, hint, items }) => (
+                    <section key={key} className="ssh-shelf">
+                        <p className="ssh-shelf-label">
+                            {label}
+                            {hint ? <span className="ssh-shelf-hint"> — {hint}</span> : null}
+                        </p>
+                        <div className="ssh-spaces-grid">
+                        {items.map((space) => {
                             const isMain = space.id === defaultSpaceId
                             const isLinking = linker?.spaceId === space.id
                             const linkedTitle = space.publishedProjectId
@@ -490,7 +547,7 @@ export default function SpaceHub() {
                                     onKeyDown={e => e.key === 'Enter' && openCard(space)}
                                 >
                                     <div className="ssh-card-header">
-                                        <span className="ssh-space-id">{space.id}</span>
+                                        <span className="ssh-space-id">{space.kind === 'sandbox' ? 'sandbox' : space.id}</span>
                                         {isMain && <span className="ssh-badge-main">Main</span>}
                                         {space.isPublic && <span className="ssh-badge-live">Live</span>}
                                         {space.isPublic && !canEnter(space) && <span className="ssh-badge-viewonly">View live</span>}
@@ -546,6 +603,9 @@ export default function SpaceHub() {
                                                 onClick={e => handleTogglePublic(space, e)}
                                             >
                                                 {space.isPublic ? 'Public' : 'Private'}
+                                            </button>
+                                            <button className="ssh-card-btn" onClick={e => handleCopyInvite(space, e)}>
+                                                {copiedInviteId === space.id ? 'Invite copied' : 'Invite'}
                                             </button>
                                             <button
                                                 className={`ssh-card-btn${isLinking ? ' ssh-card-btn--active' : ''}`}
@@ -698,6 +758,21 @@ export default function SpaceHub() {
                                 </div>
                             )
                         })}
+                        </div>
+                    </section>
+                ))}
+
+                {isAdmin && sandboxSummary && sandboxSummary.total > 0 && (
+                    <div className="ssh-sandbox-row">
+                        <span>
+                            Guest sandboxes — {sandboxSummary.total} active
+                            {sandboxSummary.stale > 0 ? `, ${sandboxSummary.stale} expired` : ''}
+                        </span>
+                        {sandboxSummary.stale > 0 && (
+                            <button className="ssh-card-btn" onClick={handlePurgeSandboxes} disabled={isPurging}>
+                                {isPurging ? 'Sweeping…' : 'Sweep expired'}
+                            </button>
+                        )}
                     </div>
                 )}
             </Container>

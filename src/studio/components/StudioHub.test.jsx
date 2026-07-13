@@ -43,6 +43,12 @@ vi.mock('../utils/studioRouting.js', () => ({
     navigateToStudioPath: (...args) => navigateToStudioPath(...args)
 }))
 
+let authState = {}
+
+vi.mock('../../hooks/useAuthSession.js', () => ({
+    default: () => authState
+}))
+
 describe('StudioHub', () => {
     beforeEach(() => {
         createProject.mockReset()
@@ -55,7 +61,21 @@ describe('StudioHub', () => {
         updateServerSpace.mockReset()
         navigateToStudioPath.mockReset()
         importLegacySceneFile.mockReset()
+        authState = { role: null, openSpaceId: null }
         vi.spyOn(window, 'confirm').mockImplementation(() => true)
+    })
+
+    it('forwards the open-space hub straight into the shared jam project', async () => {
+        authState = { role: null, openSpaceId: 'open' }
+        listProjects.mockResolvedValue([
+            { id: 'open-jam', title: 'Open Jam', updatedAt: Date.now(), source: 'studio-v3' }
+        ])
+
+        render(<StudioHub spaceId="open" />)
+
+        await waitFor(() =>
+            expect(navigateToStudioPath).toHaveBeenCalledWith('/open/studio/projects/open-jam')
+        )
     })
 
     it('clears the live pointer before deleting a published project', async () => {

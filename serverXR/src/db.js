@@ -73,6 +73,20 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_sync_keys_space ON space_sync_keys(space_id);
 
+  CREATE TABLE IF NOT EXISTS space_invites (
+    id TEXT PRIMARY KEY,
+    space_id TEXT NOT NULL REFERENCES spaces(id) ON DELETE CASCADE,
+    created_by_user_id TEXT,
+    secret_hash TEXT NOT NULL,
+    label TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    last_used_at INTEGER,
+    expires_at INTEGER,
+    revoked INTEGER NOT NULL DEFAULT 0,
+    use_count INTEGER NOT NULL DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_space_invites_space ON space_invites(space_id);
+
   CREATE TABLE IF NOT EXISTS space_links (
     space_id TEXT PRIMARY KEY REFERENCES spaces(id) ON DELETE CASCADE,
     owner TEXT NOT NULL,
@@ -203,6 +217,7 @@ function initDb(dbPath) {
   ensureColumn(db, 'spaces', 'kind', "TEXT NOT NULL DEFAULT 'normal'")
   ensureColumn(db, 'spaces', 'owner_user_id', 'TEXT')
   ensureColumn(db, 'spaces', 'preview_image_asset_id', 'TEXT')
+  ensureColumn(db, 'spaces', 'open_inscriptions', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'users', 'spaces', 'TEXT')
   ensureColumn(db, 'users', 'is_unrestricted', 'INTEGER NOT NULL DEFAULT 0')
   backfillUserUnrestricted(db)

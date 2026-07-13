@@ -40,7 +40,7 @@ const formatSource = (source = '') => {
 }
 
 export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
-    const { role } = useAuthSession()
+    const { role, openSpaceId } = useAuthSession()
     const [projects, setProjects] = useState([])
     const [status, setStatus] = useState('loading...')
     const [isBusy, setIsBusy] = useState(false)
@@ -70,6 +70,16 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     }, [spaceId])
 
     useEffect(() => { loadProjects() }, [loadProjects])
+
+    // The open space is a door, not a lobby: forward straight into the shared
+    // jam project so "step inside" lands in 3D. ?browse=1 keeps the project
+    // list reachable for management.
+    useEffect(() => {
+        if (!openSpaceId || spaceId !== openSpaceId) return
+        if (new URLSearchParams(window.location.search).has('browse')) return
+        const jam = projects.find(p => p.id === 'open-jam') || projects[0]
+        if (jam) navigateToStudioPath(buildStudioProjectPath(jam.id, spaceId))
+    }, [projects, spaceId, openSpaceId])
 
     const openProject = (projectId) =>
         navigateToStudioPath(buildStudioProjectPath(projectId, spaceId))

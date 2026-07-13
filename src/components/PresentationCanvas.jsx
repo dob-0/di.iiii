@@ -69,7 +69,7 @@ export default function PresentationCanvas({
                             title="Space link preview"
                             src={url}
                             loading="lazy"
-                            sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                            sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals"
                             referrerPolicy="strict-origin-when-cross-origin"
                         />
                         <div className="presentation-frame-note-stack">
@@ -87,7 +87,7 @@ export default function PresentationCanvas({
                             className="presentation-frame"
                             title="Space code preview"
                             srcDoc={previewDocument}
-                            sandbox="allow-scripts allow-forms allow-popups allow-modals"
+                            sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals"
                         />
                         <div className="presentation-frame-note-stack">
                             {previewIssueMessage && (

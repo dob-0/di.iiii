@@ -10,6 +10,16 @@ export const listServerSpaces = async () => {
     return data.spaces || []
 }
 
+// Full index payload: the spaces plus, for admins, the collapsed sandbox
+// summary ({ total, stale }) the hub shows instead of sandbox cards.
+export const fetchServerSpacesIndex = async () => {
+    const data = await apiFetch('/api/spaces')
+    return { spaces: data.spaces || [], sandboxSummary: data.sandboxSummary || null }
+}
+
+export const purgeStaleSandboxes = async () =>
+    apiFetch('/api/admin/sandboxes/purge', { method: 'POST' })
+
 export const getServerSpace = async (spaceId) => {
     const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}`)
     return data.space || null
@@ -38,6 +48,17 @@ export const updateServerSpace = async (spaceId, updates = {}) => {
     })
     return data.space
 }
+
+export const mintSpaceInvite = async (spaceId, label = 'invite') => {
+    const data = await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/invites`, {
+        method: 'POST',
+        body: { label }
+    })
+    return data
+}
+
+export const redeemSpaceInvite = async (token) =>
+    apiFetch('/api/invites/redeem', { method: 'POST', body: { token } })
 
 export const getServerSpaceAssetUrl = (spaceId, assetId) =>
     `${apiBaseUrl}/api/spaces/${resolveServerSpaceId(spaceId)}/assets/${assetId}`

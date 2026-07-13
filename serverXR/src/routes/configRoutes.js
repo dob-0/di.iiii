@@ -1,4 +1,4 @@
-function registerConfigRoutes(router, { requireAdminAlways, configStore }) {
+function registerConfigRoutes(router, { requireAdminAlways, configStore, onConfigChanged = null }) {
   const serializeConfig = (cfg) => ({
     defaultSpaceId: cfg.defaultSpaceId || null,
     // null = no global space → each guest gets a private sandbox.
@@ -25,6 +25,9 @@ function registerConfigRoutes(router, { requireAdminAlways, configStore }) {
         updates.globalSpaceId = globalSpaceId || null
       }
       const updated = await configStore.patch(updates)
+      if (typeof onConfigChanged === 'function') {
+        await onConfigChanged(updated)
+      }
       res.json({ config: serializeConfig(updated) })
     } catch (error) {
       next(error)

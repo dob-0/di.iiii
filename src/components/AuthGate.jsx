@@ -3,9 +3,23 @@ import { useEffect, useState } from 'react'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useSpacePublicFlag from '../hooks/useSpacePublicFlag.js'
 import { getApiAuthProviders, getOAuthUrl, hasServerApi } from '../services/apiClient.js'
+import { redeemSpaceInvite } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { buildAppSpacePath } from '../utils/spaceRouting.js'
 import AccountButton from './AccountButton.jsx'
+
+const readInviteTokenFromUrl = () => {
+    if (typeof window === 'undefined') return null
+    try { return new URLSearchParams(window.location.search).get('invite') || null } catch { return null }
+}
+
+const stripInviteFromUrl = () => {
+    try {
+        const url = new URL(window.location.href)
+        url.searchParams.delete('invite')
+        window.history.replaceState(window.history.state, '', url.toString())
+    } catch { /* cosmetic — the param only matters on first load */ }
+}
 
 export default function AuthGate({ children, requiredSpaceId = null, showAccountButton = true }) {
     const authSession = useAuthSession()
@@ -18,6 +32,10 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
     // machine/admin path and stays behind a disclosure.
     const [providers, setProviders] = useState(null)
     const [showToken, setShowToken] = useState(false)
+    // ?invite=… — owner-minted invite link. Redeemed once, against the session
+    // that arrives with it (guest or registered), then stripped from the URL.
+    const [inviteToken] = useState(readInviteTokenFromUrl)
+    const [inviteStatus, setInviteStatus] = useState(inviteToken ? 'pending' : 'none')
 
     // Out-of-scope sessions get sent to the space's public live view instead of
     // a dead end — but only when the space is actually public (flag fails closed).
@@ -29,6 +47,7 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
         && !sessionSpaces.includes(requiredSpaceId)
     )
     const { isPublic: liveIsPublic, loading: liveLoading } = useSpacePublicFlag(outOfScope ? requiredSpaceId : null)
+    const invitePending = inviteStatus === 'pending'
 
     useEffect(() => {
         getApiAuthProviders()
@@ -37,10 +56,34 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
     }, [])
 
     useEffect(() => {
-        if (outOfScope && liveIsPublic) {
+        if (!inviteToken || inviteStatus !== 'pending' || !authenticated) return
+        if (!outOfScope) {
+            // Already in scope — the invite has nothing to grant here.
+            stripInviteFromUrl()
+            setInviteStatus('none')
+            return
+        }
+        let cancelled = false
+        redeemSpaceInvite(inviteToken)
+            .then(() => {
+                if (cancelled) return
+                stripInviteFromUrl()
+                setInviteStatus('none')
+                refresh()
+            })
+            .catch(() => {
+                if (!cancelled) setInviteStatus('failed')
+            })
+        return () => { cancelled = true }
+    }, [inviteToken, inviteStatus, authenticated, outOfScope, refresh])
+
+    useEffect(() => {
+        // An unredeemed invite wins over the public-view redirect: an invite to
+        // a public space still grants scope (e.g. to edit), so let it resolve.
+        if (outOfScope && liveIsPublic && !invitePending) {
             appNavigate(buildAppSpacePath(requiredSpaceId), { replace: true })
         }
-    }, [outOfScope, liveIsPublic, requiredSpaceId])
+    }, [outOfScope, liveIsPublic, requiredSpaceId, invitePending])
 
     if (loading) {
         return (
@@ -84,7 +127,7 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
         const { spaces } = authSession
         const inScope = !requiredSpaceId || !Array.isArray(spaces) || spaces.includes(requiredSpaceId)
         if (!inScope) {
-            if (liveLoading || liveIsPublic) {
+            if (invitePending || liveLoading || liveIsPublic) {
                 return (
                     <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <CircularProgress size={28} sx={{ color: 'var(--ui-accent)' }} />
@@ -101,6 +144,11 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
                             Access restricted — your session isn&apos;t scoped to &ldquo;{requiredSpaceId}&rdquo;.
                             {spaces.length > 0 ? ` Allowed: ${spaces.join(', ')}.` : ' Allowed: no spaces.'}
                         </Typography>
+                        {inviteStatus === 'failed' && (
+                            <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                                The invite link you followed is invalid or has expired — ask the owner for a fresh one.
+                            </Typography>
+                        )}
                         <AccountButton authState={authSession} onLogout={refresh} />
                     </Stack>
                 </Box>

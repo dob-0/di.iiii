@@ -13,11 +13,14 @@ const {
   canAccessSpace,
   formatAuthScopeLabel,
   formatAuthRoleLabel,
+  getCommunalSpaceId,
+  getOwnSandboxSpaceId,
   hasRequiredAuthRole,
   isAuthScopeAllowedForSpace,
   isGuestSubject,
   normalizeAuthRole,
-  normalizeAuthScopeSpaces
+  normalizeAuthScopeSpaces,
+  setCommunalSpaceId
 } = require('./authAccess')
 const {
   createAuthSessionValue,
@@ -33,6 +36,7 @@ const { initializeMesh } = require('./meshHub')
 const { loadReleaseInfo } = require('./releaseInfo')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
+const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
@@ -40,6 +44,7 @@ const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
 const openCallStore = require('./openCallStore')
 const { listUsers, findUserById, setUserSpaces, setUserUnrestricted, setUserRole } = require('./userStore')
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
+const { mintInvite, resolveInvite, markInviteUsed, listInvites, revokeInvite } = require('./inviteStore')
 const githubApp = require('./githubApp')
 const spaceSyncPlan = require('./spaceSyncPlan')
 const spaceLinkStore = require('./spaceLinkStore')
@@ -125,6 +130,7 @@ const releaseInfo = loadReleaseInfo(config.directories.root)
 
 const {
   appendOpsHistory,
+  archiveIdleAccountSandboxes,
   buildMeta,
   collectSceneAssetRefs,
   countSpacesOwnedBy,
@@ -132,16 +138,21 @@ const {
   ensureDefaultSpace,
   ensureSpaceScene,
   ensureSpaceWritable,
+  getSandboxStats,
   getSpacePaths,
   hydrateSceneAssetManifest,
   isValidAssetId,
   listSpaces,
   loadSpaceMeta,
+  moveSpace,
   normalizeSpaceId,
   pruneSpaces,
+  pruneStaleSandboxes,
+  readLatestSpaceSnapshot,
   readOpsHistory,
   saveSpaceMeta,
   serveAsset,
+  snapshotSpaceScene,
   spaceExists,
   upsertSpaceMeta,
   writeOpsHistory
@@ -150,6 +161,7 @@ const {
   defaultSpaceId: DEFAULT_SPACE_ID,
   defaultTtlMs: DEFAULT_TTL_MS,
   sandboxTtlMs: config.sandboxTtlMs,
+  accountSandboxTtlMs: config.accountSandboxTtlMs,
   blankScene: BLANK_SCENE
 })
 
@@ -292,7 +304,12 @@ const PUBLIC_CORS_ROUTES = [
   // open-call application submissions (unauthenticated writes)
   { pattern: /\/api\/open-calls\/[A-Za-z0-9_-]+\/applications\/?$/, methods: 'POST, OPTIONS' },
   // project asset reads (fetch()-based loaders like GLTF need CORS; <video>/<img> don't)
-  { pattern: /\/api\/projects\/[^/]+\/assets\/[^/]+\/?$/, methods: 'GET, HEAD, OPTIONS' }
+  { pattern: /\/api\/projects\/[^/]+\/assets\/[^/]+\/?$/, methods: 'GET, HEAD, OPTIONS' },
+  // open inscriptions (anonymous, append-only, opt-in per space — see inscriptionRoutes)
+  { pattern: /\/api\/spaces\/[a-z0-9-]+\/inscriptions\/?$/, methods: 'POST, OPTIONS' },
+  // space scene reads — the field viewer fetches its own space's scene from
+  // inside the sandboxed preview (opaque origin); private spaces still 401
+  { pattern: /\/api\/spaces\/[a-z0-9-]+\/scene\/?$/, methods: 'GET, HEAD, OPTIONS' }
 ]
 app.use((req, res, next) => {
   const route = PUBLIC_CORS_ROUTES.find((r) => r.pattern.test(req.path))
@@ -301,6 +318,9 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Methods', route.methods)
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') return res.status(204).end()
+  // this block is authoritative for these routes: drop the Origin so the
+  // general cors() below can't overwrite '*' with an echoed origin
+  delete req.headers.origin
   next()
 })
 
@@ -487,38 +507,128 @@ const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
 
 const GUEST_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30
 
-// Decide what a brand-new guest can touch:
-//  - default → each guest gets a private 'sandbox' space id; the space itself
-//    is provisioned lazily on first access (ensureGuestSandbox below), so pure
-//    viewers — the vast majority of guest sessions — never create FS/DB rows;
-//  - admin sets a globalSpaceId in config (guest entry) → everyone shares that
-//    one editable 'global' space instead (open jam / exhibition mode);
-//  - GUEST_SPACES env (dev-only override) forces a shared space when the
-//    config is silent.
-const resolveGuestSpaces = async (guestId) => {
+// The communal open space id: the admin-set globalSpaceId wins (legacy
+// "open jam" knob, kept as the override), otherwise the config default.
+// GUEST_SPACES env stays as a dev-only override when the config is silent.
+const resolveOpenSpaceId = async () => {
   const cfg = await configStore.read()
-  const globalSpaceId = Object.prototype.hasOwnProperty.call(cfg, 'globalSpaceId')
+  const configured = Object.prototype.hasOwnProperty.call(cfg, 'globalSpaceId') && cfg.globalSpaceId
     ? cfg.globalSpaceId
     : (process.env.GUEST_SPACES ? (GUEST_SPACES[0] || null) : null)
-  if (globalSpaceId) {
-    return [normalizeSpaceId(globalSpaceId) || globalSpaceId]
-  }
-  return [normalizeSpaceId(`sandbox-${guestId.replace(/[^a-z0-9]+/gi, '').slice(0, 16)}`)]
+  // Non-slug overrides (legacy GUEST_SPACES=* wildcard) fall through to the
+  // default id instead of silently disabling the open space.
+  return normalizeSpaceId(configured || '') || normalizeSpaceId(config.openSpaceId) || null
 }
 
-// A sandbox id is only provisionable by the session that carries it in its own
-// cookie scope — strangers can't mint junk spaces by requesting sandbox-* ids.
-const isOwnGuestSandbox = (state, spaceId) =>
-  Boolean(spaceId) &&
-  spaceId.startsWith('sandbox-') &&
-  Array.isArray(state?.spaces) && state.spaces.includes(spaceId) &&
-  (state.type === 'guest' || isGuestSubject(state.subject))
+// The shared project everyone lands in when they step into the open space.
+// A fixed id lets the client forward /open/studio straight into it.
+const OPEN_JAM_PROJECT_ID = 'open-jam'
 
-const ensureGuestSandbox = async (state, spaceId) => {
-  if (!isOwnGuestSandbox(state, spaceId)) return
+// The open space is ensured at boot (and whenever an admin repoints it) so
+// "step inside" always has somewhere alive to land. kind 'global' keeps it
+// out of the TTL sweep and admin-delete-only. Its jam project is ensured
+// alongside — the door must never open onto an empty project list.
+const ensureOpenSpace = async () => {
+  const openId = await resolveOpenSpaceId()
+  setCommunalSpaceId(openId)
+  if (!openId) return
+  if (!(await spaceExists(openId))) {
+    await ensureSpaceScene(openId)
+    await upsertSpaceMeta(openId, { label: 'Open Space', kind: 'global', allowEdits: true, permanent: true, isPublic: true })
+  }
+  const jam = await findProjectById(SPACES_DIR, OPEN_JAM_PROJECT_ID)
+  if (!jam) {
+    await ensureProject(SPACES_DIR, openId, OPEN_JAM_PROJECT_ID, { title: 'Open Jam', source: 'studio-v3' })
+  }
+}
+
+// Every guest can touch the communal open space plus exactly one private
+// sandbox derived from their id. Neither space exists yet at issuance —
+// sandboxes are provisioned lazily on first access (ensureOwnSandbox below),
+// so pure viewers never create FS/DB rows.
+const resolveGuestSpaces = async (guestId) => {
+  const openId = await resolveOpenSpaceId()
+  const sandboxId = normalizeSpaceId(getOwnSandboxSpaceId(guestId))
+  return [...(openId ? [openId] : []), ...(sandboxId ? [sandboxId] : [])]
+}
+
+// A sandbox id is only provisionable by the identity it derives from — guests
+// carry theirs in the cookie scope, accounts match on subject — so strangers
+// can't mint junk spaces by requesting sandbox-* ids.
+const isOwnSandbox = (state, spaceId) => {
+  if (!spaceId || !spaceId.startsWith('sandbox-')) return false
+  if (state?.type === 'guest' || isGuestSubject(state?.subject)) {
+    return Array.isArray(state?.spaces) && state.spaces.includes(spaceId)
+  }
+  return state?.type === 'session' && spaceId === getOwnSandboxSpaceId(state.subject)
+}
+
+const ensureOwnSandbox = async (state, spaceId) => {
+  if (!isOwnSandbox(state, spaceId)) return
   if (await spaceExists(spaceId)) return
+  const isGuest = state.type === 'guest' || isGuestSubject(state.subject)
   await ensureSpaceScene(spaceId)
-  await upsertSpaceMeta(spaceId, { label: 'Guest Sandbox', kind: 'sandbox', allowEdits: true, permanent: false })
+  // Account sandboxes are permanent (one per user, survives the sweep);
+  // guest ones stay throwaway. No ownerUserId — a sandbox never counts
+  // toward the owned-space quota.
+  await upsertSpaceMeta(spaceId, {
+    label: isGuest ? 'Guest Sandbox' : 'Sandbox',
+    kind: 'sandbox',
+    allowEdits: true,
+    permanent: !isGuest
+  })
+  // Revive: if this account's sandbox was archived while idle, the scene
+  // snapshot survives outside spacesDir — put it back so the room they left
+  // is the room they return to.
+  if (!isGuest) {
+    const snapshot = await readLatestSpaceSnapshot(spaceId)
+    if (snapshot?.scene) {
+      const { scenePath } = getSpacePaths(spaceId)
+      await writeJson(scenePath, snapshot.scene)
+      await upsertSpaceMeta(spaceId, { sceneVersion: 1 })
+    }
+  }
+}
+
+// Keep the room: when a guest signs in, their sandbox — scene, projects,
+// assets — moves onto the account's own sandbox id, so the work survives the
+// identity switch. Skipped unless the guest actually built something, and it
+// never clobbers existing account work.
+const promoteGuestSandbox = async (priorState, userId) => {
+  try {
+    if (!priorState?.authenticated || !isGuestSubject(priorState.subject)) return false
+    const fromId = normalizeSpaceId(getOwnSandboxSpaceId(priorState.subject) || '')
+    if (!fromId || !(await spaceExists(fromId))) return false
+    const fromMeta = await loadSpaceMeta(fromId)
+    const fromProjects = await listProjectsInSpace(SPACES_DIR, fromId)
+    if ((fromMeta?.sceneVersion || 0) === 0 && fromProjects.length === 0) return false
+    const toId = normalizeSpaceId(getOwnSandboxSpaceId(userId) || '')
+    if (!toId || toId === fromId) return false
+    if (await spaceExists(toId)) {
+      const toMeta = await loadSpaceMeta(toId)
+      const toProjects = await listProjectsInSpace(SPACES_DIR, toId)
+      if ((toMeta?.sceneVersion || 0) > 0 || toProjects.length > 0) return false
+      await deleteSpace(toId)
+    }
+    await moveSpace(fromId, toId, { label: 'Sandbox', permanent: true })
+    // Project documents carry their spaceId in projectMeta — repoint them so
+    // clients loading the moved projects see a consistent home.
+    for (const project of fromProjects) {
+      try {
+        const doc = await readProjectDocument(SPACES_DIR, toId, project.id)
+        if (doc?.projectMeta?.spaceId && doc.projectMeta.spaceId !== toId) {
+          await writeProjectDocument(SPACES_DIR, toId, project.id, {
+            ...doc,
+            projectMeta: { ...doc.projectMeta, spaceId: toId }
+          })
+        }
+      } catch { /* best-effort — a stale embedded spaceId is cosmetic */ }
+    }
+    return true
+  } catch (error) {
+    console.warn('Failed to promote guest sandbox', error)
+    return false
+  }
 }
 
 const issueGuestSession = async (res) => {
@@ -545,6 +655,8 @@ const issueGuestSession = async (res) => {
 const guestSessionLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, name: 'new guest sessions' })
 const authAttemptLimiter = createRateLimiter({ windowMs: 60_000, max: 10, name: 'auth attempts' })
 const syncKeyMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'sync-key mints' })
+const inviteMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite mints' })
+const inviteRedeemLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite redeems' })
 const uploadLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, name: 'uploads' })
 const openCallSubmitLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 20, name: 'open-call applications' })
 
@@ -554,7 +666,10 @@ router.use(['/api/auth/github', '/api/auth/google'], authAttemptLimiter)
 registerAuthRoutes(router, {
   config,
   createAuthSessionValue,
-  setAuthSessionCookie
+  setAuthSessionCookie,
+  // OAuth callback = session upgrade: the old guest cookie is still on the
+  // request, so the guest's sandbox can follow them (keep the room).
+  onSessionUpgrade: (req, user) => promoteGuestSandbox(readAuthSession(req), user.id)
 })
 
 router.get('/api/auth/session', async (req, res, next) => {
@@ -616,6 +731,12 @@ router.get('/api/auth/session', async (req, res, next) => {
     const ownedSpaceCount = ownerId ? countSpacesOwnedBy(ownerId) : 0
     const canCreateSpace = !config.requireAuth || exempt || (Boolean(ownerId) && ownedSpaceCount < spaceLimit)
 
+    // Every session knows its places: the communal open space and its own
+    // sandbox (deterministic from the subject; provisioned lazily on access).
+    const sandboxSpaceId = state.authenticated && (state.type === 'guest' || state.type === 'session')
+      ? normalizeSpaceId(getOwnSandboxSpaceId(state.subject) || '')
+      : null
+
     res.json({
       requireAuth: config.requireAuth,
       authenticated: Boolean(state.authenticated),
@@ -626,6 +747,8 @@ router.get('/api/auth/session', async (req, res, next) => {
       spaces: state.spaces,
       isUnrestricted: Boolean(state.isUnrestricted),
       expiresAt: state.session?.expiresAt || null,
+      openSpaceId: getCommunalSpaceId(),
+      sandboxSpaceId,
       spaceLimit,
       ownedSpaceCount,
       canCreateSpace
@@ -635,7 +758,7 @@ router.get('/api/auth/session', async (req, res, next) => {
   }
 })
 
-router.post('/api/auth/session', authAttemptLimiter, (req, res) => {
+router.post('/api/auth/session', authAttemptLimiter, async (req, res) => {
   if (!config.requireAuth) {
     clearAuthSessionCookie(res)
     res.json({
@@ -654,6 +777,10 @@ router.post('/api/auth/session', authAttemptLimiter, (req, res) => {
     res.status(401).json({ error: 'Unauthorized' })
     return
   }
+
+  // Session upgrade: the request still carries the previous cookie, so a
+  // guest's sandbox can follow them onto the new identity (keep the room).
+  const keptSandbox = await promoteGuestSandbox(readAuthSession(req), identity.subject)
 
   const session = createAuthSessionValue({
     secret: config.auth.sessionSecret,
@@ -676,7 +803,8 @@ router.post('/api/auth/session', authAttemptLimiter, (req, res) => {
     label: identity.label,
     spaces: identity.spaces,
     isUnrestricted: Boolean(identity.isUnrestricted),
-    expiresAt: session.expiresAt
+    expiresAt: session.expiresAt,
+    keptSandbox
   })
 })
 
@@ -952,9 +1080,9 @@ router.post('/api/github/webhook', async (req, res) => {
 router.use('/api/spaces/:spaceId', async (req, res, next) => {
   req.requiredSpaceId = normalizeSpaceId(req.params.spaceId) || null
   try {
-    // Guest sandboxes are provisioned here, on first real space access,
-    // instead of at session issuance — see resolveGuestSpaces.
-    await ensureGuestSandbox(req.authState || getPublicAuthState(req), req.requiredSpaceId)
+    // Sandboxes are provisioned here, on first real space access, instead of
+    // at session issuance — see resolveGuestSpaces / ensureOwnSandbox.
+    await ensureOwnSandbox(req.authState || getPublicAuthState(req), req.requiredSpaceId)
   } catch (error) {
     return next(error)
   }
@@ -991,6 +1119,26 @@ router.post('/api/open-calls/:callId/applications', openCallSubmitLimiter, (req,
   } catch (error) {
     next(error)
   }
+})
+
+// Public, unauthenticated, append-only: space inscriptions (the br_id_ge
+// portal write path). Registered before the gates like open-call submissions;
+// per-space opt-in + sanitization live in the route itself.
+registerInscriptionRoutes(router, {
+  appendOpsHistory,
+  applySceneOps,
+  blankScene: BLANK_SCENE,
+  broadcastLiveEvent,
+  ensureSpaceScene,
+  ensureSpaceWritable,
+  getSpacePaths,
+  inscriptionLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 12, name: 'inscriptions' }),
+  loadSpaceMeta,
+  maxOpHistory: MAX_OP_HISTORY,
+  normalizeSpaceId,
+  readJson,
+  upsertSpaceMeta,
+  writeJson
 })
 
 router.use('/api', requireReadRole('viewer'))
@@ -1049,6 +1197,7 @@ registerSpaceRoutes(router, {
   findUserById,
   getLiveBucket,
   getPublicAuthState,
+  getSandboxStats,
   getSpacePaths,
   hydrateSceneAssetManifest,
   canAccessSpace,
@@ -1066,6 +1215,7 @@ registerSpaceRoutes(router, {
   requireSpaceOwnerOrAdminWrite,
   onDeleteSpace: async (spaceId) => removeProjectIndexEntriesForSpace(SPACES_DIR, spaceId),
   readJson,
+  readLatestSpaceSnapshot,
   readOpsHistory,
   saveSpaceMeta,
   serveAsset,
@@ -1088,7 +1238,7 @@ const requireSpaceOwnerOrAdmin = async (req, res) => {
   if (!meta) { res.status(404).json({ error: 'Space not found.' }); return null }
   const state = req.authState || {}
   if (!isSpaceOwnerOrAdminState(state, meta)) {
-    res.status(403).json({ error: 'Only the space owner can manage sync keys.' })
+    res.status(403).json({ error: 'Only the space owner can manage sharing for this space.' })
     return null
   }
   return { spaceId, meta, state }
@@ -1127,6 +1277,100 @@ router.delete('/api/spaces/:spaceId/sync-keys/:id', async (req, res, next) => {
       return res.status(404).json({ error: 'Key not found.' })
     }
     res.json({ ok: true, revoked: req.params.id })
+  } catch (error) { next(error) }
+})
+
+// Space invites — owner-minted share links. Management mirrors sync keys
+// (owner-or-admin only); redeeming grants scope membership to the space, so
+// the redeemer's own role still governs what they can do inside it.
+router.post('/api/spaces/:spaceId/invites', inviteMintLimiter, async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    const label = String(req.body?.label || 'invite').slice(0, 80)
+    const createdByUserId = ctx.state.type === 'session' ? ctx.state.subject : (ctx.meta.ownerUserId || null)
+    const { token, invite } = mintInvite({ spaceId: ctx.spaceId, createdByUserId, label })
+    res.status(201).json({
+      ok: true,
+      token,
+      invite,
+      note: 'Copy this invite now — it is shown only once.'
+    })
+  } catch (error) { next(error) }
+})
+
+router.get('/api/spaces/:spaceId/invites', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    res.json({ invites: listInvites(ctx.spaceId) })
+  } catch (error) { next(error) }
+})
+
+router.delete('/api/spaces/:spaceId/invites/:id', async (req, res, next) => {
+  try {
+    const ctx = await requireSpaceOwnerOrAdmin(req, res)
+    if (!ctx) return
+    if (!revokeInvite(ctx.spaceId, req.params.id)) {
+      return res.status(404).json({ error: 'Invite not found.' })
+    }
+    res.json({ ok: true, revoked: req.params.id })
+  } catch (error) { next(error) }
+})
+
+// Redeem an invite: append the space to the caller's scope. Works for both
+// registered sessions (persisted to users.spaces + cookie re-mint) and guest
+// sessions (cookie-only re-mint — the 30-day guest cookie carries the grant;
+// sign-in later persists it via the normal keep-the-room path). Invalid,
+// expired, and revoked tokens are indistinguishable, and the response never
+// leaks space internals beyond id/label/visibility.
+router.post('/api/invites/redeem', inviteRedeemLimiter, async (req, res, next) => {
+  try {
+    const state = req.authState || {}
+    if (config.requireAuth && !state.authenticated) {
+      return res.status(401).json({ error: 'A session is required to redeem an invite.' })
+    }
+    const resolved = resolveInvite(String(req.body?.token || ''))
+    if (!resolved) return res.status(404).json({ error: 'Invite is invalid or has expired.' })
+    const spaceId = resolved.spaceId
+    const meta = await loadSpaceMeta(spaceId)
+    if (!meta) return res.status(404).json({ error: 'Invite is invalid or has expired.' })
+    const spacePublic = { id: meta.id, label: meta.label, isPublic: Boolean(meta.isPublic) }
+
+    if (!config.requireAuth || canAccessSpace(state, spaceId)) {
+      markInviteUsed(resolved.inviteId)
+      return res.json({ ok: true, granted: false, space: spacePublic })
+    }
+    if (state.type !== 'session' && state.type !== 'guest') {
+      return res.status(403).json({ error: 'Invites can only be redeemed by a browser session.' })
+    }
+
+    let dbUser = null
+    if (!isGuestSubject(state.subject)) {
+      try { dbUser = findUserById(state.subject) } catch { dbUser = null }
+    }
+    if (dbUser) {
+      grantSpaceToSessionUser(req, res, state.subject, spaceId)
+    } else {
+      if (!config.auth.sessionSecret) {
+        return res.status(503).json({ error: 'Sessions are unavailable.' })
+      }
+      const nextSpaces = [...(state.spaces || []), spaceId]
+      const session = createAuthSessionValue({
+        secret: config.auth.sessionSecret,
+        ttlMs: GUEST_SESSION_TTL_MS,
+        session: {
+          subject: state.subject,
+          label: state.label,
+          role: state.role,
+          spaces: nextSpaces,
+          isUnrestricted: false
+        }
+      })
+      setAuthSessionCookie(res, session.value)
+    }
+    markInviteUsed(resolved.inviteId)
+    res.json({ ok: true, granted: true, space: spacePublic })
   } catch (error) { next(error) }
 })
 
@@ -1241,9 +1485,24 @@ registerSyncRoutes(router, {
   upsertSpaceMeta,
 })
 
+// Admin sweep for the hub's collapsed sandbox row: remove guest sandboxes the
+// TTL has already expired — the same thing the 30-minute timer does, on demand.
+router.post('/api/admin/sandboxes/purge', requireAdminAlways, async (req, res, next) => {
+  try {
+    const removed = await pruneStaleSandboxes()
+    const archived = await archiveIdleAccountSandboxes()
+    res.json({ ok: true, removed: removed.length, archived: archived.length })
+  } catch (error) {
+    next(error)
+  }
+})
+
 registerConfigRoutes(router, {
   requireAdminAlways,
-  configStore
+  configStore,
+  // Repointing globalSpaceId moves the communal grant and ensures the new
+  // open space exists.
+  onConfigChanged: () => ensureOpenSpace()
 })
 
 const mountTargets = new Set([config.mountPath])
@@ -1271,13 +1530,29 @@ app.use((err, req, res, next) => {
 
 const PORT = config.port
 
+const snapshotOpenSpace = async () => {
+  const openId = getCommunalSpaceId()
+  if (!openId || !(await spaceExists(openId))) return
+  await snapshotSpaceScene(openId)
+}
+
 initStorage()
   .then(async () => {
     await ensureDefaultSpace()
+    await ensureOpenSpace()
     pruneSpaces().catch((error) => console.warn('Failed to prune spaces', error))
     setInterval(() => {
       pruneSpaces().catch((error) => console.warn('Failed to prune spaces', error))
     }, 1000 * 60 * 30)
+    // Daily scene snapshot of the open space — vandalism insurance (admin
+    // restores via POST /api/spaces/:id/restore-snapshot).
+    snapshotOpenSpace().catch((error) => console.warn('Failed to snapshot open space', error))
+    setInterval(() => {
+      snapshotOpenSpace().catch((error) => console.warn('Failed to snapshot open space', error))
+      // Long-idle account sandboxes fold down to a snapshot (revived on
+      // return by ensureOwnSandbox) so permanent sandboxes never pile up.
+      archiveIdleAccountSandboxes().catch((error) => console.warn('Failed to archive idle sandboxes', error))
+    }, 1000 * 60 * 60 * 24)
 
     const httpServer = http.createServer(app)
 

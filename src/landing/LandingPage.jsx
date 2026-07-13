@@ -160,7 +160,10 @@ export default function LandingPage() {
                     </Typography>
 
                     <Stack direction="row" spacing={2} sx={{ pt: 1, pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href="/studio">
+                        <Button className="landing-cta-primary" variant="contained" size="large" href="/open/studio">
+                            Step inside
+                        </Button>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href="/studio">
                             Open Studio
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href="/beta">
@@ -422,11 +425,15 @@ export default function LandingPage() {
                         Start building your space.
                     </Typography>
                     <Typography className="lp-enter-body">
-                        Open the Studio to start a new scene, or open Beta for the node-first workflow.
+                        Step inside to build with everyone in the Open Space, open the Studio to start
+                        your own scene, or try Beta for the node-first workflow.
                         Everything runs in your browser — no sign-up required to explore.
                     </Typography>
                     <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', justifyContent: 'center', mb: 2 }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href="/studio">
+                        <Button className="landing-cta-primary" variant="contained" size="large" href="/open/studio">
+                            Step inside
+                        </Button>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href="/studio">
                             Open Studio
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href="/beta">

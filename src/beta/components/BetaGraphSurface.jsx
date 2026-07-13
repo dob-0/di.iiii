@@ -350,7 +350,10 @@ export default function BetaGraphSurface({
                 style={{ transform: `translate(${panX}px,${panY}px) scale(${zoom})`, transformOrigin: '0 0' }}
             >
                     <svg
-                        style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', overflow: 'visible' }}
+                        // 1×1, not 100%: the stage collapses to zero height (all
+                        // children are absolute) and Chromium paints NOTHING inside
+                        // a zero-area svg — overflow:visible only works with area.
+                        style={{ position: 'absolute', top: 0, left: 0, width: '1px', height: '1px', pointerEvents: 'none', overflow: 'visible' }}
                     >
                         {wires.map((wire) => {
                             const isHovered = hoveredWireId === wire.id

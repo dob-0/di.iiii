@@ -9,8 +9,11 @@ const updateServerSpace = vi.fn()
 const deleteServerSpace = vi.fn()
 const getApiAuthProviders = vi.fn()
 const uploadServerAsset = vi.fn()
+const purgeStaleSandboxes = vi.fn()
 
 let authState
+// Admin-only summary the hub's collapsed sandbox row renders from.
+let sandboxSummary = null
 
 vi.mock('../../hooks/useAuthSession.js', () => ({
     default: () => authState
@@ -18,6 +21,11 @@ vi.mock('../../hooks/useAuthSession.js', () => ({
 
 vi.mock('../../services/serverSpaces.js', () => ({
     listServerSpaces: (...args) => listServerSpaces(...args),
+    fetchServerSpacesIndex: async (...args) => ({
+        spaces: await listServerSpaces(...args),
+        sandboxSummary
+    }),
+    purgeStaleSandboxes: (...args) => purgeStaleSandboxes(...args),
     getServerConfig: (...args) => getServerConfig(...args),
     createServerSpace: vi.fn(),
     updateServerSpace: (...args) => updateServerSpace(...args),
@@ -69,6 +77,8 @@ describe('SpaceHub', () => {
         mockAppNavigate.mockReset()
         updateServerSpace.mockReset()
         uploadServerAsset.mockReset()
+        purgeStaleSandboxes.mockReset()
+        sandboxSummary = null
         authState = {
             authenticated: true,
             type: 'session',
@@ -262,11 +272,51 @@ describe('SpaceHub', () => {
 
         render(<SpaceHub />)
 
-        await screen.findByText('sandbox-abc')
-        expect(screen.getByText(/private temporary sandbox/i)).toBeTruthy()
-        expect(cardActionsFor('sandbox-abc')).toEqual([])
+        // Sandbox cards hide their noisy generated id behind a plain label.
+        await screen.findByText('Guest Sandbox')
+        expect(screen.getByText(/Open Space, or use your private sandbox/i)).toBeTruthy()
+        expect(cardActionsFor('Guest Sandbox')).toEqual([])
         expect(screen.getByRole('button', { name: 'Sign in to create' })).toBeTruthy()
         expect(screen.queryByText(/Space limit reached/)).toBeNull()
+    })
+
+    it('groups the directory into Open Space / sandbox / spaces shelves and opens the open space in the editor', async () => {
+        const { navigateToStudioPath } = await import('../utils/studioRouting.js')
+        authState = { ...authState, openSpaceId: 'open', sandboxSpaceId: 'sandbox-me' }
+        listServerSpaces.mockResolvedValue([
+            { id: 'open', label: 'Open Space', kind: 'global', isPublic: true, isOwner: false },
+            { id: 'sandbox-me', label: 'Sandbox', kind: 'sandbox', isOwner: false },
+            { id: 'mine', label: 'Mine', isOwner: true }
+        ])
+
+        render(<SpaceHub />)
+
+        await screen.findByText('mine')
+        const shelfLabels = [...document.querySelectorAll('.ssh-shelf-label')].map((el) => el.textContent)
+        expect(shelfLabels[0]).toMatch(/^Open Space/)
+        expect(shelfLabels[1]).toMatch(/^Your sandbox/)
+        expect(shelfLabels[2]).toMatch(/^Your spaces/)
+
+        // The open space is public but everyone can enter it — the card opens
+        // the editor, never the read-only live view.
+        fireEvent.click(screen.getByText('open'))
+        expect(navigateToStudioPath).toHaveBeenCalledWith('/open/studio')
+        expect(mockAppNavigate).not.toHaveBeenCalled()
+    })
+
+    it('shows admins a collapsed sandbox row with an expired sweep instead of sandbox cards', async () => {
+        authState = { ...authState, role: 'admin' }
+        sandboxSummary = { total: 14, stale: 3 }
+        purgeStaleSandboxes.mockResolvedValue({ ok: true, removed: 3 })
+        listServerSpaces.mockResolvedValue([
+            { id: 'main', label: 'Main Space', isOwner: false }
+        ])
+
+        render(<SpaceHub />)
+
+        await screen.findByText(/Guest sandboxes — 14 active, 3 expired/)
+        fireEvent.click(screen.getByRole('button', { name: 'Sweep expired' }))
+        await waitFor(() => expect(purgeStaleSandboxes).toHaveBeenCalledTimes(1))
     })
 
     it('sign-in button reveals working OAuth provider links instead of a broken token login', async () => {

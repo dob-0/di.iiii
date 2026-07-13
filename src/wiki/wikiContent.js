@@ -36,20 +36,24 @@ export const WIKI_ARTICLES = [
     {
         id: 'guest-and-sandbox-modes',
         category: 'Spaces & access',
-        title: 'Guest & sandbox modes',
-        summary: 'Signed-out visitors get a private sandbox each by default; admins can switch to one shared space.',
+        title: 'The Open Space, your sandbox & guest mode',
+        summary: 'Everyone shares one communal Open Space, and every visitor — guest or account — gets exactly one private sandbox.',
         body: [
-            'Visitors who are not signed in still get a working session so they can explore without an account.',
+            'The landing page’s “Step inside” button drops you straight into the Open Space’s shared build — no account, no space picker, one click to 3D.',
+            'There are three kinds of places, and everyone gets the first two without an account:',
             { list: [
-                'Private sandbox (default) — each guest gets their own throwaway sandbox space, isolated from everyone else. A banner on the Spaces page marks the session as temporary.',
-                'Shared global space — an admin can set a guest entry space in /admin → Manage; then every guest lands in that one editable space (good for an open jam or exhibition).'
+                'The Open Space — one shared world where every visitor can build, together, live. It is always there and survives cleanup; an admin can restore it from a daily snapshot if it gets trashed.',
+                'Your sandbox — exactly one private scratch space per person, the same one every time you return (same browser for guests; account-bound once signed in). It never appears in anyone else’s directory, admins included.',
+                'Your spaces — real named spaces you own and can publish. These need a sign-in.'
             ] },
-            'A sandbox only comes into existence when the guest actually enters it — just viewing a published space never creates one. Sandboxes are private to their session (they never appear in anyone else’s directory, including the admin’s) and are cleaned up after about a week of inactivity.',
+            'The Spaces page (/studio) shows exactly these shelves: Open Space · Your sandbox · Your spaces — so the answer to “where am I, what’s mine” is always the page itself. Admins additionally see guest sandboxes collapsed into one row with a count and a “Sweep expired” action.',
+            'A sandbox only comes into existence when you actually enter it — just viewing a published space never creates one. Guest sandboxes are cleaned up after about a week of inactivity. Account sandboxes are yours for good: one untouched for about six months is folded down to a scene snapshot to keep the system lean, and your next visit restores it exactly as you left it. A sandbox holding Studio projects is never archived.',
             'Guests cannot create their own named spaces — sign in with GitHub or Google to get spaces that are yours and stay.',
-            'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google), or Export the project as a file you can import into any space later. After signing in, a confirmation appears so you know it worked.'
+            'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google) — the room comes with you: your whole sandbox, scene, projects and assets, moves onto your account automatically — or Export the project as a file you can import into any space later. The sign-in confirmation says when your sandbox came along. Existing account work is never overwritten by a later guest session.',
+            'For admins: /admin → Manage can repoint the communal space (the guest entry field), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.'
         ],
-        tags: ['guest', 'sandbox', 'access'],
-        updated: '2026-07-10'
+        tags: ['guest', 'sandbox', 'open space', 'access'],
+        updated: '2026-07-11'
     },
     {
         id: 'free-spaces',
@@ -86,6 +90,21 @@ export const WIKI_ARTICLES = [
         updated: '2026-07-10'
     },
     {
+        id: 'invite-links',
+        category: 'Spaces & access',
+        title: 'Invite links: share a private space',
+        summary: 'Owners mint invite links that let anyone — even guests — step into a private space. No admin needed.',
+        body: [
+            'Every space card on the Spaces page (/studio) has an Invite button for spaces you own. One click mints a fresh invite link and copies it — send it to whoever you want in the room.',
+            'Opening the link grants access on arrival: the recipient lands straight in the space, whether they are signed in or just a guest. Guests keep the access with their guest session (about 30 days); signing in later carries it onto their account along with their sandbox.',
+            'An invite grants access to that one space only — it does not make anyone an owner, and invited people cannot mint further invites or manage the space.',
+            'Each link is valid for 7 days and works for any number of people until it expires. Minting again gives a new link; the old one keeps working until its own expiry.',
+            'Invalid or expired links show a clear message on the access screen — ask the owner for a fresh one.'
+        ],
+        tags: ['invite', 'sharing', 'collaboration', 'access', 'owner'],
+        updated: '2026-07-12'
+    },
+    {
         id: 'studio-basics',
         category: 'Editing',
         title: 'Studio editor basics',
@@ -110,7 +129,7 @@ export const WIKI_ARTICLES = [
                 'Undo / redo with Ctrl+Z / Ctrl+Y — undo reverts only your own last change (a slider drag or a typing burst counts as one step), so working alongside collaborators is safe: their edits are never rolled back by your undo.',
                 'History (Scene window, collapsed at the bottom): a Photoshop-style list of your session’s steps — click any step to jump back or forward to it, or “Session start” to rewind everything. Jumping is just batched undo/redo, so it is equally collaborator-safe.',
                 'Your panel layout is fully remembered — open panels, positions, resized dimensions, and collapsed headers all restore next visit; shrinking the browser window pulls stranded panels back into view. Arrange → Reset returns everything to the default layout.',
-                'Lost? The ? button (or Shift+?) opens the visual help: four illustrated guides — Move, Build, Edit, Share — plus the full keyboard-shortcut reference on its Shortcuts tab. Guests see it automatically on their very first Studio visit.',
+                'Lost? The ? button (or Shift+?) opens the visual help: four illustrated guides — Move, Build, Edit, Share — plus the full keyboard-shortcut reference on its Shortcuts tab. On a guest’s very first visit a small coach pill walks through the three moves that matter — select something, add something, open Share — each hint completing itself the moment you do it.',
                 'On a phone, Studio switches to a touch layout: the five windows become a bottom bar, each opening as a swipe-friendly sheet over the full-screen viewport, with back and Edit-mode buttons up top. The desktop floating-panel workspace is unchanged.'
             ] }
         ],
@@ -261,12 +280,28 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['open call', 'applications', 'admin', 'forms'],
         updated: '2026-07-09'
+    },
+    {
+        id: 'open-inscriptions',
+        category: 'Spaces & access',
+        title: 'Open inscriptions',
+        summary: 'A public space can opt in to anonymous, append-only inscriptions — visitors add one line of text to the scene, nothing else.',
+        body: [
+            'Open inscriptions let an artwork or event page write a visitor’s answer into a di.iiii space without accounts or tokens (built for br_id_ge’s vi.ritual: complete the rite, and your inscription becomes a persistent object in the space).',
+            { list: [
+                'Opt-in per space: PATCH /api/spaces/:id with { "openInscriptions": true } (owner or admin). The space must also be public.',
+                'Visitors POST /api/spaces/:id/inscriptions with { name, word } — the server itself builds a single sanitized text object (insc-…) and appends it to the scene. Update and delete are impossible on this path; the generic ops route stays fully gated.',
+                'Rate-limited per client, capped at 999 inscriptions per space; setting allowEdits=false pauses new inscriptions instantly, and restore-snapshot remains the recovery path.'
+            ] }
+        ],
+        tags: ['inscriptions', 'spaces', 'public', 'br_id_ge'],
+        updated: '2026-07-12'
     }
 ]
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['guest-and-sandbox-modes', 'free-spaces', 'publishing', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

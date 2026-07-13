@@ -23,12 +23,16 @@ export const POINTER_LOCK_SENSITIVITY = 0.018
 export const DRAG_LOOK_SENSITIVITY = POINTER_LOCK_SENSITIVITY * 0.35
 export const TOUCH_LOOK_SENSITIVITY = 0.005
 export const TRACKPAD_LOOK_SENSITIVITY = 0.004
-// Some Wayland setups GRANT pointer lock but then deliver only zero
-// movement deltas (relative motion broken at the compositor/portal) — a
-// lock that can never look. mousemove only fires on physical motion, so
-// this many consecutive all-zero locked moves means the lock is broken:
-// abandon it and stop re-requesting so drag-look takes over.
-export const BROKEN_LOCK_ZERO_MOVES = 30
+// Some Wayland setups GRANT pointer lock but then deliver useless movement
+// deltas (relative motion broken at the compositor/portal) — a lock that can
+// never look. Two observed shapes: all-zero deltas, and a degenerate constant
+// crawl (movementY pinned to 0, movementX stuck at ±1 — live-diagnosed via
+// ?inputdebug=1, July 2026). mousemove only fires on physical motion and real
+// looking always produces varied deltas with vertical jitter, so this many
+// consecutive dead locked moves (|movementX| ≤ 1 AND movementY === 0) means
+// the lock is broken: abandon it and stop re-requesting so drag-look takes
+// over.
+export const BROKEN_LOCK_DEAD_MOVES = 30
 
 // -- Wheel / dolly --
 // Metres of forward motion per scroll pixel: one classic wheel notch (~48px

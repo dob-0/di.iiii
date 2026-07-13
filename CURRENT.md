@@ -9,46 +9,47 @@ active_branch: dev
 
 ## Last commit
 
-`590337ab` — dev = UX-audit slices 1–5 & 7 merged (PRs #32–#37); staging deploy pending smoke.
-Prod (`main`) is still at `4e080447` — promote after staging click-through.
+`dev` = open inscriptions (append-only portal writes, for br_id_ge vi.ritual);
+before that `2ccfdec8` — invite links (PR #44), deployed to staging, smoke green.
+Prod (`main`) = `533a3716` (scroll fix hotfixed; still lacks #38–#44).
 
-## Latest session (2026-07-10 — full UX audit + fix roadmap, 6 slices shipped)
+## Last session (2026-07-12 — open inscriptions / vi.ritual)
 
-Cross-persona UX audit (guest/creator/viewer/WCC/collab/mobile/admin) → 7-slice roadmap.
-Shipped to dev, each with tests + wiki + known-fixes:
-- **#32 publish unified**: Share window + SpaceHub disclose public/private, one-click
-  "Make space public", truthful set-live messages. No silent flips (by design).
-- **#33 view→create**: `MadeWithBadge` on all public surfaces (viewer orbit/walk, WCC);
-  hidden on ?preview=1 thumbnails.
-- **#34 visual Studio help**: `StudioHelpDialog` (Move/Build/Edit/Share CSS diagrams,
-  hotkeys = Shortcuts tab), guest first-run auto-open (`di.studio.welcomeSeen`).
-- **#35 intent moments**: guest Share window = "Keep this work" (OAuth + export);
-  OAuth returns `?auth=ok` → `AuthReturnNotice` toast (error finally surfaced too).
-- **#36 surface the buried**: AuthGate OAuth-first (token behind disclosure); Drive
-  section open by default; Settings/admin links admin-only.
-- **#37 Studio on phones**: five-window bottom nav + sheets behind `isMobile`;
-  desktop unchanged (`panelBodies` map shared by both layouts).
+- **Open inscriptions**: a public space can opt in (`PATCH {"openInscriptions":true}`,
+  new spaces column via ensureColumn) to anonymous, append-only writes:
+  `POST /api/spaces/:id/inscriptions {name, word}` — registered BEFORE the /api
+  auth gates (like open-call submissions), rate-limited (12/10min), server builds
+  the single sanitized `text-2d` object (`insc-…`, golden-spiral placement) itself;
+  update/delete impossible on this path, generic ops route stays gated
+  (`serverXR/src/routes/inscriptionRoutes.js`). Kill switch: `allowEdits:false`.
+- Built for br_id_ge's **vi.ritual**: finishing the rite writes the inscription
+  into the di.iiii space `vi-ritual` (client wiring in br_id_ge `index.html`,
+  gated by `<meta name="field-url">`, live locally; prod pending space creation).
+- Tests: 1 HTTP contract (opt-in gate, sanitize, append-only, kill switch) —
+  48/48 contracts green. Wiki `open-inscriptions` article added.
 
-**Not built — awaiting user decision**: slice 6 self-serve sharing (owner-minted
-invite links; the only slice touching the server access model). Design proposed.
+## Previous session (2026-07-12 — invite links, audit slice 6)
 
-**Env data sync (2026-07-10, parallel session):** local/staging/prod space content
-now byte-identical (6 spaces; admin-API sync, backups in session scratchpad).
-Open-call applications are DB-only, excluded from bundles — back up before any
-data op: `scripts/backup-open-call-applications.mjs` (rule in golden_rules.md).
+- Invite links (PR #44 → dev → staging): owner-minted 7-day links, AuthGate
+  auto-redeems `?invite=`; details in git history + wiki `invite-links`.
 
 ## What works
 
-- Studio editor (five windows, now phone layout + visual help), Beta, WCC, public viewer
-- Auth (session-cookie, roles, OAuth-first gate) with rate limiting; Admin Ops Graph
+- Studio (five windows + phone layout + visual help + coach marks), Beta, WCC, viewer
+- Auth (session-cookie, roles, OAuth-first) + open-space/sandbox implicit grants
+- Invite links (staging; prod after promotion)
 - Deploy: push `dev`→staging, `main`→prod, gated on `browser-checks.yml`
 
-## What is broken / open
+## Open
 
-- Staging click-through of the 6 UX slices pending (esp. phone Studio + guest welcome).
-- Drive `drive.file`+Picker still blocked on Cloud console setup + real-account test.
-- `serverXR/.env.local` stale GitHub App key — copy from a host's `~/.config/dii/*.deploy.env`.
-- UX audit artifact (all personas, ranked findings): https://claude.ai/code/artifact/a739fd54-d04c-4cad-a18e-707470c36b0a
+- **Prod promotion checklist** (on user's word): merge dev→main + push, then
+  repoint prod as done on staging 2026-07-10: DELETE the stray empty `open-jam`
+  boot creates in `main`, PATCH `/api/config {"globalSpaceId": null}` (prod admin
+  token = PROD_API_TOKEN in serverXR/.env.local). Prod API calls need approval.
+- Real-device click-through owed: staging (guest journey + invite flow) +
+  previous UX slices (on prod). Old guest cookies keep `main` in scope ≤30d.
+- Drive Picker blocked on Cloud console. Stale GitHub App key in
+  `serverXR/.env.local`. Watch prod hangs.
 
 ## Known fixes → [docs/ai/known-fixes.md](docs/ai/known-fixes.md) — check before any bug hunt.
 

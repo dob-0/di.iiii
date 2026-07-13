@@ -5,7 +5,96 @@ Read this before starting work. Update it before stopping.
 
 ---
 
-## 2026-07-10 (later) — Full cross-persona UX audit + 6 fix slices shipped
+## 2026-07-12 — Invite links: self-serve sharing without the admin (audit slice 6)
+
+**Who:** Claude. Session opened with a status pass (both envs smoke-green), then
+user picked the last unbuilt audit slice: owner-minted invite links. Design
+locked with the user first: guests may redeem; one-button UI (no management
+surface yet — server keeps list/revoke endpoints).
+
+- `space_invites` table + `inviteStore.js`, a sibling of `syncKeyStore.js`:
+  `dii_invite_<id>.<secret>`, sha256-at-rest, constant-time compare, fail-closed
+  resolve, 7-day default TTL, `use_count`/`last_used_at` bumped only on redeem.
+- Routes: `POST/GET/DELETE /api/spaces/:spaceId/invites` behind the existing
+  `requireSpaceOwnerOrAdmin` (rate-limited mint) — scope membership is NOT
+  ownership, so invited people can't mint invites (no escalation). Redeem:
+  `POST /api/invites/redeem` — registered users go through
+  `grantSpaceToSessionUser` (DB + cookie re-mint); guests get a cookie-only
+  re-mint (30d); token-login sessions get the cookie path too. Invalid /
+  expired / revoked are indistinguishable 404s.
+- SpaceHub card: Invite button (owner-only, existing `.ssh-card-btn`) mints and
+  copies `<origin>/<space>/studio?invite=<token>` — the studio path so the gate
+  always runs, even for public spaces.
+- AuthGate: `?invite=` auto-redeems when out of scope, then refreshes the
+  session and strips the param; pending invite wins over the public-view
+  redirect; failure adds one line to the access-restricted screen.
+- Tests: 3 inviteStore unit tests (tamper/revoke/expiry/usage) + 1 end-to-end
+  HTTP contract (mint gate, guest redeem, no-escalation, revoke). Wiki article
+  `invite-links` added + highlighted.
+- Validation: lint, build, 575 unit, 47 contracts, wiki + docs checks — green.
+- Branch `feat/invite-links`; sync-key manage 403 copy generalized ("manage
+  sharing for this space").
+
+---
+
+## 2026-07-11 — Sandbox archive + revive: permanent sandboxes never pile up
+
+**Who:** Claude. User asked whether many future users would re-flood the studio
+with sandboxes; answer was "only permanent account sandboxes grow unbounded" —
+user chose the archive + revive option to close that path (PR #42, merged to dev).
+
+- `archiveIdleAccountSandboxes` (spaceStore): account sandboxes idle past
+  `ACCOUNT_SANDBOX_TTL_MS` (default 180d) snapshot their scene then delete;
+  empty ones delete without a snapshot; sandboxes holding Studio projects are
+  never archived (snapshots capture only the scene).
+- `ensureOwnSandbox` revives: a returning owner's fresh sandbox is restored
+  from its latest snapshot (sceneVersion set to 1) — the room comes back.
+- Runs on the daily boot interval and inside `POST /api/admin/sandboxes/purge`
+  (response now `{ ok, removed, archived }`; hub Sweep button unchanged).
+- Tests: 2 store unit tests + 1 HTTP contract (build → archive → 404 → owner
+  GET restores scene). Wiki article updated with the six-month promise.
+- Validation: lint, build, 570 unit, 46 contracts, wiki check — all green.
+
+---
+
+## 2026-07-10 (night) — Guest journey rethink: three-place space model shipped
+
+**Who:** Claude. User: "still messy… we need one sandbox per user, one open space
+to collab, and the [owned spaces] for users." Storyboard agreed first (all four
+decisions D1–D4 approved), then built as 4 slices:
+https://claude.ai/code/artifact/d0267562-fa6d-4fa7-9c2f-be3d4e094778
+
+### The model — three places, that's all
+
+**Open Space** (one communal `open` space, everyone edits, ensured at boot) ·
+**Your sandbox** (exactly one per identity, guests throwaway / accounts permanent) ·
+**Your spaces** (owned, unchanged). Landing's primary CTA is now the door.
+
+### Shipped (all merged to dev, tests + wiki + known-fixes each)
+
+- **PR #38** server model — communal grant in `canAccessSpace` (no cookie re-mints),
+  deterministic `getOwnSandboxSpaceId`, admin `sandboxSummary` + purge endpoint,
+  daily open-space snapshot + `restore-snapshot` route. Watch out: `GUEST_SPACES=*`
+  in a `.env.local` no longer means "all spaces" for guests — it falls through to
+  the default open space.
+- **PR #39** hub three shelves (Open Space / Your sandbox / Your spaces); admin sees
+  sandboxes as one collapsed row with Sweep expired; sandbox cards hide raw ids.
+- **PR #40** "Step inside" landing CTA → `/open/studio` → auto-forward into the
+  boot-ensured shared `open-jam` project (`?browse=1` keeps the hub list). Guest
+  first-run: `StudioCoachMarks` action-completed pills (select → add → share)
+  replace the auto-opening help dialog (help stays behind `?`).
+- **PR #41** keep the room — at sign-in (OAuth or token), the old guest cookie is
+  still on the request; `promoteGuestSandbox` + `spaceStore.moveSpace` re-home the
+  guest's whole sandbox onto the account's sandbox id. Never clobbers account work.
+  Toast: "Signed in — your sandbox came with you."
+
+### Open
+
+- Staging verify: open space + open-jam exist after deploy; check `globalSpaceId`
+  in staging/prod config (a set value repoints the commons — null → default `open`).
+- Real-device click-through still owed for this + the previous session's slices.
+- Slice 6 of the old audit (invite links) still designed-not-built.
+- Prod promotion on user's word.
 
 **Who:** Claude (audit fan-out: 5 parallel code-sweep agents; then single-agent fixes).
 Session goal: "guest UX isn't intuitive → analyze every user type, then fix one by one."

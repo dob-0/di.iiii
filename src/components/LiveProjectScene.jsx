@@ -38,7 +38,7 @@ import {
     WALK_MAX_SPEED, FLY_SPEED, WALK_ACCEL, WALK_FRICTION, TURN_SPEED, EYE_HEIGHT,
     POINTER_LOCK_SENSITIVITY, DRAG_LOOK_SENSITIVITY, TOUCH_LOOK_SENSITIVITY, TRACKPAD_LOOK_SENSITIVITY,
     WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF,
-    BROKEN_LOCK_ZERO_MOVES
+    BROKEN_LOCK_DEAD_MOVES
 } from './walkModeConfig.js'
 import './liveProjectScene.css'
 
@@ -447,7 +447,9 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             const onLockChange = () => {
                 const locked = document.pointerLockElement === el
                 lockedRef.current = locked
-                if (locked) zeroLockMoves = 0
+                if (locked) deadLockMoves = 0
+                dragLastX = null
+                dragLastY = null
                 el.style.cursor = locked ? 'none' : 'crosshair'
                 onLockChangeRef.current?.(locked)
             }
@@ -469,8 +471,8 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 const under = e ? document.elementFromPoint(e.clientX, e.clientY) : null
                 debugHud.textContent =
                     `lock: ${document.pointerLockElement ? document.pointerLockElement.tagName : 'none'}${lockBroken ? ' (marked broken)' : ''}\n` +
-                    `moves: ${dbgMoves}  last mv: ${e ? `${e.movementX},${e.movementY}` : '-'}  buttons: ${e ? e.buttons : '-'}\n` +
-                    `zero-streak: ${zeroLockMoves}/${BROKEN_LOCK_ZERO_MOVES}  dragging: ${draggingCanvas}\n` +
+                    `moves: ${dbgMoves}  last mv: ${e ? `${e.movementX},${e.movementY}` : '-'}  client: ${e ? `${e.clientX},${e.clientY}` : '-'}  buttons: ${e ? e.buttons : '-'}\n` +
+                    `dead-streak: ${deadLockMoves}/${BROKEN_LOCK_DEAD_MOVES}  dragging: ${draggingCanvas}\n` +
                     `under cursor: ${under ? `${under.tagName}${under.className ? '.' + String(under.className).split(' ')[0] : ''}` : '(locked/none)'}\n` +
                     `yaw: ${player.yaw.toFixed(2)}  pitch: ${player.pitch.toFixed(2)}`
             }
@@ -479,37 +481,52 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             // the canvas must keep working as a look control in that case.
             let draggingCanvas = false
             // Denied lock is not the only failure mode: some Wayland setups
-            // grant the lock but deliver only zero movement deltas, so the
-            // view freezes while walking still works. Count consecutive
-            // all-zero locked moves; past the threshold, abandon the lock
-            // (and never re-request it) so drag-look takes over.
+            // grant the lock but deliver dead movement deltas — all zeros, or
+            // a degenerate constant crawl (movementY pinned to 0, movementX
+            // stuck at ±1; seen live via ?inputdebug=1) — so the view freezes
+            // while walking still works. Real looking always produces varied
+            // deltas with vertical jitter within a few events, so count
+            // consecutive dead locked moves; past the threshold, abandon the
+            // lock (and never re-request it) so drag-look takes over.
             let lockBroken = false
-            let zeroLockMoves = 0
+            let deadLockMoves = 0
+            // Drag-look never reads e.movementX/movementY: the same broken
+            // compositors poison them on unlocked moves too (constant -1,0),
+            // and the visible cursor's clientX/clientY is the one delta
+            // source that cannot lie. Seeded on pointerdown, re-seeded after
+            // a lock release (client coords freeze while locked).
+            let dragLastX = null
+            let dragLastY = null
             const onMouseMove = (e) => {
                 if (debugHud) dbg(e)
                 const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
                 if (lockedRef.current) {
-                    if (e.movementX === 0 && e.movementY === 0) {
-                        if (!lockBroken && ++zeroLockMoves >= BROKEN_LOCK_ZERO_MOVES) {
+                    if (e.movementY === 0 && Math.abs(e.movementX) <= 1) {
+                        if (!lockBroken && ++deadLockMoves >= BROKEN_LOCK_DEAD_MOVES) {
                             lockBroken = true
                             document.exitPointerLock()
                         }
-                        return
+                    } else {
+                        deadLockMoves = 0
                     }
-                    zeroLockMoves = 0
+                    if (e.movementX === 0 && e.movementY === 0) return
                     player.yaw -= e.movementX * POINTER_LOCK_SENSITIVITY
                     player.pitch = THREE.MathUtils.clamp(
                         player.pitch - e.movementY * POINTER_LOCK_SENSITIVITY,
                         -pitchLimit,
                         pitchLimit
                     )
-                } else if (draggingCanvas && e.buttons === 1) {
-                    player.yaw -= e.movementX * DRAG_LOOK_SENSITIVITY
-                    player.pitch = THREE.MathUtils.clamp(
-                        player.pitch - e.movementY * DRAG_LOOK_SENSITIVITY,
-                        -pitchLimit,
-                        pitchLimit
-                    )
+                } else if (draggingCanvas) {
+                    if (dragLastX !== null) {
+                        player.yaw -= (e.clientX - dragLastX) * DRAG_LOOK_SENSITIVITY
+                        player.pitch = THREE.MathUtils.clamp(
+                            player.pitch - (e.clientY - dragLastY) * DRAG_LOOK_SENSITIVITY,
+                            -pitchLimit,
+                            pitchLimit
+                        )
+                    }
+                    dragLastX = e.clientX
+                    dragLastY = e.clientY
                 }
             }
             // Scroll never pitches the camera: pixel-mode deltas from high-res
@@ -524,8 +541,16 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 player.yaw -= e.deltaX * scale * TRACKPAD_LOOK_SENSITIVITY
                 wheelDollyRef.current -= e.deltaY * scale * WHEEL_DOLLY_SPEED
             }
-            const onPointerDownWithLock = () => {
+            // Drag state comes from our own down/up pair, not mousemove's
+            // e.buttons — the same broken compositors report buttons: 0 mid-
+            // drag (seen via ?inputdebug=1). Capture keeps the up arriving
+            // even when released off-window; cancel/blur cover the rest.
+            const onPointerDownWithLock = (e) => {
+                if (e.button !== 0) return
+                try { el.setPointerCapture(e.pointerId) } catch { /* pointer already gone */ }
                 draggingCanvas = true
+                dragLastX = e.clientX
+                dragLastY = e.clientY
                 if (lockedRef.current || lockBroken) return
                 const req = el.requestPointerLock()
                 if (req && typeof req.catch === 'function') {
@@ -537,6 +562,8 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             el.addEventListener('pointerdown', onPointerDownWithLock)
             el.addEventListener('wheel', onWheel, { passive: true })
             document.addEventListener('pointerup', onPointerUp)
+            document.addEventListener('pointercancel', onPointerUp)
+            window.addEventListener('blur', onPointerUp)
             document.addEventListener('pointerlockchange', onLockChange)
             document.addEventListener('mousemove', onMouseMove)
             return () => {
@@ -546,6 +573,8 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 el.removeEventListener('pointerdown', onPointerDownWithLock)
                 el.removeEventListener('wheel', onWheel)
                 document.removeEventListener('pointerup', onPointerUp)
+                document.removeEventListener('pointercancel', onPointerUp)
+                window.removeEventListener('blur', onPointerUp)
                 document.removeEventListener('pointerlockchange', onLockChange)
                 document.removeEventListener('mousemove', onMouseMove)
             }

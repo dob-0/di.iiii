@@ -15,6 +15,7 @@ function createSpaceStore({
   defaultSpaceId = 'main',
   defaultTtlMs = 0,
   sandboxTtlMs = 0,
+  accountSandboxTtlMs = 0,
   blankScene
 } = {}) {
   const safeSlug = (value = '') => String(value)
@@ -54,6 +55,8 @@ function createSpaceStore({
     // instead of the live embed. null = default live preview.
     previewImageAssetId: row.preview_image_asset_id || null,
     ownerUserId: row.owner_user_id || null,
+    // Owner opt-in: anonymous append-only inscriptions (see inscriptionRoutes).
+    openInscriptions: Boolean(row.open_inscriptions),
     sceneVersion: row.scene_version || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -72,6 +75,7 @@ function createSpaceStore({
       publishedProjectId: overrides.publishedProjectId || null,
       previewImageAssetId: overrides.previewImageAssetId || null,
       ownerUserId: overrides.ownerUserId || null,
+      openInscriptions: Boolean(overrides.openInscriptions),
       createdAt: overrides.createdAt || now,
       updatedAt: now,
       lastTouchedAt: now,
@@ -93,9 +97,12 @@ function createSpaceStore({
       selectStale:   db.prepare("SELECT id FROM spaces WHERE permanent = 0 AND kind != 'global' AND last_touched_at < ?"),
       selectStaleSandbox: db.prepare("SELECT id FROM spaces WHERE permanent = 0 AND kind = 'sandbox' AND last_touched_at < ?"),
       countByOwner:  db.prepare('SELECT COUNT(*) as cnt FROM spaces WHERE owner_user_id = ?'),
-      upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-      insert:        db.prepare('INSERT INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-      update:        db.prepare('UPDATE spaces SET label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, preview_image_asset_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=? WHERE id=?'),
+      countSandboxes: db.prepare("SELECT COUNT(*) as cnt FROM spaces WHERE kind = 'sandbox'"),
+      selectIdleAccountSandbox: db.prepare("SELECT id, scene_version FROM spaces WHERE permanent = 1 AND kind = 'sandbox' AND last_touched_at < ?"),
+      countProjectsInSpace: db.prepare('SELECT COUNT(*) as cnt FROM projects WHERE space_id = ?'),
+      upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      insert:        db.prepare('INSERT INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      update:        db.prepare('UPDATE spaces SET label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, preview_image_asset_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=?, open_inscriptions=? WHERE id=?'),
       deleteById:    db.prepare('DELETE FROM spaces WHERE id = ?'),
       opsSelect:     db.prepare('SELECT data FROM space_ops WHERE space_id = ? ORDER BY version ASC'),
       opsDeleteAll:  db.prepare('DELETE FROM space_ops WHERE space_id = ?'),
@@ -122,7 +129,8 @@ function createSpaceStore({
       meta.createdAt ?? Date.now(),
       meta.updatedAt ?? Date.now(),
       meta.lastTouchedAt ?? Date.now(),
-      meta.ownerUserId ?? null
+      meta.ownerUserId ?? null,
+      meta.openInscriptions ? 1 : 0
     )
     const { spaceDir } = getSpacePaths(spaceId)
     await ensureDir(spaceDir)
@@ -138,7 +146,7 @@ function createSpaceStore({
       const row = selectById.get(spaceId)
       if (!row) {
         const meta = buildMeta(spaceId, updates)
-        insert.run(spaceId, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0, meta.isPublic ? 1 : 0, meta.kind, meta.publishedProjectId ?? null, meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, meta.createdAt, meta.updatedAt, meta.lastTouchedAt, meta.ownerUserId ?? null)
+        insert.run(spaceId, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0, meta.isPublic ? 1 : 0, meta.kind, meta.publishedProjectId ?? null, meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, meta.createdAt, meta.updatedAt, meta.lastTouchedAt, meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0)
         return meta
       }
       const nextLabel     = 'label'            in updates ? (updates.label ?? '')                                                                    : row.label
@@ -151,8 +159,9 @@ function createSpaceStore({
       const nextVersion   = 'sceneVersion'     in updates ? (Number.isFinite(Number(updates.sceneVersion)) ? Number(updates.sceneVersion) : row.scene_version) : row.scene_version
       const nextTouched   = updates.touch !== false ? now : row.last_touched_at
       const nextOwner     = 'ownerUserId'      in updates ? (updates.ownerUserId ?? null)                                                            : row.owner_user_id
-      update.run(nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, spaceId)
-      return rowToMeta({ ...row, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner })
+      const nextInscribe  = 'openInscriptions' in updates ? (Boolean(updates.openInscriptions) ? 1 : 0)                                              : row.open_inscriptions
+      update.run(nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, nextInscribe, spaceId)
+      return rowToMeta({ ...row, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe })
     })()
   }
 
@@ -207,6 +216,105 @@ function createSpaceStore({
     if (sandboxTtlMs) stale.push(...s().selectStaleSandbox.all(Date.now() - sandboxTtlMs))
     const ids = [...new Set(stale.map(row => row.id))]
     await Promise.all(ids.map(id => deleteSpace(id)))
+  }
+
+  // Re-home a space under a new id — row, children (ops, projects), and the
+  // whole directory (scene, assets, project dirs). Powers guest→account
+  // sandbox promotion; the target id must not exist (caller deletes first).
+  const moveSpace = async (fromId, toId, overrides = {}) => {
+    const db = getDb()
+    const row = s().selectById.get(fromId)
+    if (!row || fromId === toId) return null
+    if (s().selectExists.get(toId)) {
+      throw new Error(`Cannot move space: target "${toId}" already exists.`)
+    }
+    const meta = { ...rowToMeta(row), ...overrides, id: toId }
+    const now = Date.now()
+    db.transaction(() => {
+      s().insert.run(toId, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0,
+        meta.isPublic ? 1 : 0, normalizeSpaceKind(meta.kind), meta.publishedProjectId ?? null,
+        meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, row.created_at, now, now,
+        meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0)
+      db.prepare('UPDATE space_ops SET space_id = ? WHERE space_id = ?').run(toId, fromId)
+      db.prepare('UPDATE projects SET space_id = ? WHERE space_id = ?').run(toId, fromId)
+      s().deleteById.run(fromId)
+    })()
+    const { spaceDir: fromDir } = getSpacePaths(fromId)
+    const { spaceDir: toDir } = getSpacePaths(toId)
+    try {
+      await fsp.rm(toDir, { recursive: true, force: true })
+      await fsp.rename(fromDir, toDir)
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error
+      // No directory yet (row-only space) — nothing on disk to carry over.
+    }
+    return loadSpaceMeta(toId)
+  }
+
+  // Powers the admin hub's collapsed sandbox row: how many exist, how many
+  // the TTL sweep would remove right now.
+  const getSandboxStats = () => {
+    const total = s().countSandboxes.get()?.cnt || 0
+    const stale = sandboxTtlMs ? s().selectStaleSandbox.all(Date.now() - sandboxTtlMs).length : 0
+    return { total, stale }
+  }
+
+  const pruneStaleSandboxes = async () => {
+    if (!sandboxTtlMs) return []
+    const ids = s().selectStaleSandbox.all(Date.now() - sandboxTtlMs).map(row => row.id)
+    await Promise.all(ids.map(id => deleteSpace(id)))
+    return ids
+  }
+
+  // Archive + revive: long-idle account sandboxes fold down to a scene
+  // snapshot instead of occupying a space row forever — ensureOwnSandbox
+  // restores the snapshot when the owner comes back. Sandboxes holding Studio
+  // projects are left alone (snapshots only capture the scene).
+  const archiveIdleAccountSandboxes = async () => {
+    if (!accountSandboxTtlMs) return []
+    const rows = s().selectIdleAccountSandbox.all(Date.now() - accountSandboxTtlMs)
+    const archived = []
+    for (const row of rows) {
+      if ((s().countProjectsInSpace.get(row.id)?.cnt || 0) > 0) continue
+      if ((row.scene_version || 0) > 0) await snapshotSpaceScene(row.id, { keep: 1 })
+      await deleteSpace(row.id)
+      archived.push(row.id)
+    }
+    return archived
+  }
+
+  // Scene-level snapshots — vandalism insurance for the communal open space.
+  // Assets stay in the space's own store, so a restore only puts the scene
+  // JSON back; the files live outside spacesDir so they never look like spaces.
+  const snapshotsDir = path.resolve(spacesDir, '..', 'snapshots')
+
+  const snapshotSpaceScene = async (spaceId, { keep = 7 } = {}) => {
+    const { scenePath } = getSpacePaths(spaceId)
+    const scene = await readJson(scenePath, null)
+    if (!scene) return null
+    const dir = path.join(snapshotsDir, spaceId)
+    await ensureDir(dir)
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const file = path.join(dir, `${stamp}.json`)
+    await writeJson(file, scene)
+    const entries = (await fsp.readdir(dir)).filter(name => name.endsWith('.json')).sort()
+    const excess = entries.slice(0, Math.max(0, entries.length - keep))
+    await Promise.all(excess.map(name => fsp.rm(path.join(dir, name), { force: true })))
+    return file
+  }
+
+  const readLatestSpaceSnapshot = async (spaceId) => {
+    const dir = path.join(snapshotsDir, spaceId)
+    let entries = []
+    try {
+      entries = (await fsp.readdir(dir)).filter(name => name.endsWith('.json')).sort()
+    } catch {
+      return null
+    }
+    const latest = entries[entries.length - 1]
+    if (!latest) return null
+    const scene = await readJson(path.join(dir, latest), null)
+    return scene ? { scene, takenAt: latest.replace(/\.json$/, '') } : null
   }
 
   const readOpsHistory = async (spaceId) =>
@@ -292,6 +400,7 @@ function createSpaceStore({
 
   return {
     appendOpsHistory,
+    archiveIdleAccountSandboxes,
     buildMeta,
     collectSceneAssetRefs,
     countSpacesOwnedBy,
@@ -299,14 +408,19 @@ function createSpaceStore({
     ensureDefaultSpace,
     ensureSpaceScene,
     ensureSpaceWritable,
+    getSandboxStats,
     getSpacePaths,
     hydrateSceneAssetManifest,
     isValidAssetId,
     listSpaces,
     loadSpaceMeta,
+    moveSpace,
     normalizeSpaceId,
     pruneSpaces,
+    pruneStaleSandboxes,
+    readLatestSpaceSnapshot,
     readOpsHistory,
+    snapshotSpaceScene,
     saveSpaceMeta,
     serveAsset,
     spaceExists,

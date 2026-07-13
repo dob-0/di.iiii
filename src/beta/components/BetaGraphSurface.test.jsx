@@ -79,6 +79,12 @@ describe('BetaGraphSurface', () => {
         )
         const paths = container.querySelectorAll('svg path')
         expect(paths.length).toBeGreaterThan(0)
+        // The wire svg must have its own non-zero box: the stage it sits in
+        // collapses to zero height (all children absolute), and Chromium paints
+        // nothing inside a zero-area svg even with overflow:visible.
+        const wireSvg = paths[0].closest('svg')
+        expect(wireSvg.style.height).not.toBe('100%')
+        expect(wireSvg.style.overflow).toBe('visible')
     })
 
     it('supports zooming in and out with graph controls', () => {

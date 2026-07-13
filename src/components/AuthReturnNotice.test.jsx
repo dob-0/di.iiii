@@ -42,6 +42,16 @@ describe('AuthReturnNotice', () => {
         expect(getApiSessionMock).not.toHaveBeenCalled()
     })
 
+    it('says the sandbox came along when the server marks a kept promotion', async () => {
+        window.history.replaceState(null, '', '/?auth=ok&kept=1')
+        getApiSessionMock.mockResolvedValue({ authenticated: true, label: 'Ada', subject: 'u1' })
+
+        render(<AuthReturnNotice />)
+
+        expect(await screen.findByText('Signed in as Ada — your sandbox came with you.')).toBeInTheDocument()
+        expect(window.location.search).toBe('')
+    })
+
     it('keeps unrelated query params while stripping the marker', async () => {
         window.history.replaceState(null, '', '/main?preview=1&auth=ok')
         getApiSessionMock.mockResolvedValue({ authenticated: true, label: 'Ada', subject: 'u1' })
