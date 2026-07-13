@@ -17,6 +17,7 @@ import {
     setTimelinePreview
 } from '../utils/timelinePreview.js'
 import StudioHelpDialog from './StudioHelpDialog.jsx'
+import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
@@ -784,6 +785,7 @@ export default function StudioViewport({
 }) {
     const viewportRef = useRef(null)
     const [transformStatus, setTransformStatus] = useState(null)
+    const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
     // Low-power mode (space-card previews): render at full rate while the
     // scene boots and assets stream in, then drop to on-demand frames —
     // live-sync document updates re-render through React, which invalidates
@@ -815,7 +817,9 @@ export default function StudioViewport({
             onPointerLeave={onCursorLeave}
         >
             <Canvas
+                key={canvasKey}
                 style={{ height: '100%' }}
+                onCreated={({ gl }) => bindContextGuard(gl)}
                 shadows={document.renderSettings?.shadows !== false}
                 gl={{
                     antialias: document.renderSettings?.antialias !== false,
@@ -860,6 +864,8 @@ export default function StudioViewport({
                     />
                 </XR>
             </Canvas>
+
+            {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
 
             {setEditMode && (
                 <ViewportToolbar

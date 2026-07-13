@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react'
 import { Canvas } from '@react-three/fiber'
 import * as THREE from 'three'
 import Experience from '../Experience.jsx'
+import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
 
 const SceneContentXr = lazy(() => import('../xr/SceneContentXr.jsx'))
 
@@ -18,6 +19,8 @@ export default function SceneCanvas({
     onCanvasPointerMove,
     onCanvasPointerLeave
 }) {
+    const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
+
     const handlePointerMissed = (event) => {
         if (isGizmoVisible && selectedObjectIds.length > 0) {
             return
@@ -39,6 +42,7 @@ export default function SceneCanvas({
             onPointerLeave={onCanvasPointerLeave}
         >
             <Canvas
+                key={canvasKey}
                 style={{ height: '100dvh' }}
                 orthographic={cameraSettings?.orthographic}
                 camera={cameraProps}
@@ -52,6 +56,7 @@ export default function SceneCanvas({
                     if (rendererRef) {
                         rendererRef.current = gl
                     }
+                    bindContextGuard(gl)
                     // Avoid Three warnings about resizing while an XR session is presenting.
                     const originalSetSize = gl.setSize.bind(gl)
                     const originalSetPixelRatio = gl.setPixelRatio.bind(gl)
@@ -85,6 +90,7 @@ export default function SceneCanvas({
                     </Suspense>
                 )}
             </Canvas>
+            {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
         </div>
     )
 }

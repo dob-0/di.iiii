@@ -1,0 +1,29 @@
+.webgl-context-lost {
+    position: absolute;
+    inset: 0;
+    z-index: 40;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: rgba(6, 10, 16, 0.82);
+    color: var(--di-text, #fff);
+    font-size: 13px;
+    text-align: center;
+    backdrop-filter: blur(4px);
+}
+
+.webgl-context-lost button {
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    background: rgba(6, 10, 16, 0.92);
+    color: var(--di-cyan, #4df9ff);
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.webgl-context-lost button:hover {
+    border-color: var(--di-cyan, #4df9ff);
+}

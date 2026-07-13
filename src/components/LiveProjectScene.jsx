@@ -6,6 +6,7 @@ import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState }
 import * as THREE from 'three'
 import { useXrAr } from '../hooks/useXrAr.js'
 import MadeWithBadge from './MadeWithBadge.jsx'
+import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
     buildProjectAssetUrl,
@@ -1226,6 +1227,7 @@ export default function LiveProjectScene({
     const arTouchElRef = useRef(null)
     const isArActive = xr.isArModeActive && xr.isXrPresenting
     const playerRef = useRef({ x: 0, z: 6, yaw: Math.PI, pitch: 0, altY: EYE_HEIGHT })
+    const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
     // Dev-only observability hook for scripts/input-check.mjs: input-contract
     // probes assert on real walker state instead of guessing from screenshots.
     // The ref (not the object) — worldState.spawn replaces playerRef.current.
@@ -1342,10 +1344,12 @@ export default function LiveProjectScene({
     return (
         <>
             <Canvas
+                key={canvasKey}
                 className="live-scene-canvas"
                 camera={{ position: [0, EYE_HEIGHT, 6], fov: interactive ? 60 : 45, near: 0.1, far: 200 }}
                 dpr={[1, 1.8]}
                 gl={{ antialias: true }}
+                onCreated={({ gl }) => bindContextGuard(gl)}
                 style={{ position: 'absolute', inset: 0, display: 'block', touchAction: 'none' }}
             >
                 <XR store={xr.xrStore}>
@@ -1392,6 +1396,8 @@ export default function LiveProjectScene({
                 {interactive && <XrLocomotion playerRef={playerRef} joystickRef={joystickRef} flyMode={flyMode} vertTouchRef={vertTouchRef} />}
                 </XR>
             </Canvas>
+
+            {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
 
             {/* Joystick and the Fly toggle are functional controls, not
                 branding chrome -- a touch device has no F key and no other

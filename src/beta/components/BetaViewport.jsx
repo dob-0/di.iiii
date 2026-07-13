@@ -8,6 +8,7 @@ import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
 import { getBetaWorldBackgroundColor } from '../utils/viewportWorldState.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../utils/nodeGraphRuntime.js'
+import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 
 const isSpatialNode = (node) => getNodeType(node?.typeId)?.render === 'spatial-3d'
 
@@ -247,6 +248,7 @@ export default function BetaViewport({
     showEmptyHint = true
 }) {
     const viewportRef = useRef(null)
+    const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
     const camera = document.worldState?.savedView || {}
     const spatialNodes = useMemo(
         () => (document.nodes || []).filter(isSpatialNode),
@@ -326,7 +328,9 @@ export default function BetaViewport({
                 </div>
             ) : null}
             <Canvas
+                key={canvasKey}
                 shadows
+                onCreated={({ gl }) => bindContextGuard(gl)}
                 camera={{
                     position: camera.position || [0, 2.4, 6.5],
                     fov: 50,
@@ -346,6 +350,7 @@ export default function BetaViewport({
                     nodeScale={nodeScale}
                 />
             </Canvas>
+            {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}
             <div className="beta-cursor-layer">
                 {Object.values(cursors).map((cursor) => (
                     <div
