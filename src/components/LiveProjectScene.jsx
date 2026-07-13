@@ -39,7 +39,7 @@ import {
     WALK_MAX_SPEED, FLY_SPEED, WALK_ACCEL, WALK_FRICTION, TURN_SPEED, EYE_HEIGHT,
     POINTER_LOCK_SENSITIVITY, DRAG_LOOK_SENSITIVITY, TOUCH_LOOK_SENSITIVITY, TRACKPAD_LOOK_SENSITIVITY,
     WHEEL_DOLLY_SPEED, WALK_PITCH_LIMIT, FLY_PITCH_LIMIT, JOY_RADIUS, BOUNDS_MARGIN, BOUNDS_MIN_HALF,
-    BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX
+    BROKEN_LOCK_DEAD_MOVES, BROKEN_LOCK_DEAD_DELTA_MAX, BROKEN_LOCK_SETTLE_MS
 } from './walkModeConfig.js'
 import './liveProjectScene.css'
 
@@ -450,7 +450,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 lockedRef.current = locked
                 if (locked) {
                     deadLockMoves = 0
-                    firstLockedMove = true
+                    lockEngagedAt = performance.now()
                 }
                 dragLastX = null
                 dragLastY = null
@@ -494,10 +494,10 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             // lock (and never re-request it) so drag-look takes over.
             let lockBroken = false
             let deadLockMoves = 0
-            // The first locked move after an engage carries one wild spike
-            // (e.g. -19,-116 in the July 2026 event capture) — it both yanks
-            // the view and resets the dead-streak, so swallow it entirely.
-            let firstLockedMove = false
+            // Engage-time garbage (see BROKEN_LOCK_SETTLE_MS): deltas inside
+            // the settle window are counted for the dead-streak but never
+            // applied to the view.
+            let lockEngagedAt = 0
             // Drag-look never reads e.movementX/movementY: the same broken
             // compositors poison them on unlocked moves too (constant -1,0),
             // and the visible cursor's clientX/clientY is the one delta
@@ -509,10 +509,6 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                 if (debugHud) dbg(e)
                 const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
                 if (lockedRef.current) {
-                    if (firstLockedMove) {
-                        firstLockedMove = false
-                        return
-                    }
                     if (Math.abs(e.movementX) <= BROKEN_LOCK_DEAD_DELTA_MAX &&
                         Math.abs(e.movementY) <= BROKEN_LOCK_DEAD_DELTA_MAX) {
                         if (!lockBroken && ++deadLockMoves >= BROKEN_LOCK_DEAD_MOVES) {
@@ -522,6 +518,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                     } else {
                         deadLockMoves = 0
                     }
+                    if (performance.now() - lockEngagedAt < BROKEN_LOCK_SETTLE_MS) return
                     if (e.movementX === 0 && e.movementY === 0) return
                     player.yaw -= e.movementX * POINTER_LOCK_SENSITIVITY
                     player.pitch = THREE.MathUtils.clamp(
