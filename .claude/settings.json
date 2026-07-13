@@ -1,5 +1,4 @@
 {
-  "enabledMcpjsonServers": ["context7", "playwright"],
   "permissions": {
     "allow": [
       "Bash(bash scripts/ollama-task.sh *)",
@@ -53,6 +52,10 @@
     ],
     "defaultMode": "auto"
   },
+  "enabledMcpjsonServers": [
+    "context7",
+    "playwright"
+  ],
   "hooks": {
     "SessionStart": [
       {
@@ -81,8 +84,8 @@
           {
             "type": "command",
             "command": "bash scripts/pre-push-gate.sh",
-            "statusMessage": "Pre-push gate (lint + schema-sync + wiki)...",
-            "timeout": 180
+            "timeout": 180,
+            "statusMessage": "Pre-push gate (lint + schema-sync + wiki)..."
           }
         ]
       },
@@ -150,6 +153,7 @@
   },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
-    "security-guidance@claude-plugins-official": true
+    "security-guidance@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true
   }
 }
