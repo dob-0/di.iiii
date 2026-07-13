@@ -9,11 +9,12 @@ active_branch: dev
 
 ## Last commit
 
-`main` = `dev` = `a70da5d9` — **PROMOTED dev→main 2026-07-13 (third), prod
-green**: admin delete for open-call applications (DELETE route + board
-button, contract-tested, E2E-verified on prod). Before that same day:
-direct project links `/:space/p/:projectId`; open inscriptions, public
-CORS, invite links (#44), WCC walker fix (#46), sandbox popup escape.
+`dev` = `dcffff0f` — WebGL context-loss recovery: shared guard + overlay
+in all four R3F surfaces (auto-remount once, manual Restore button after
+that). Also on dev: `4a4ad18e` Projects window (other session). `main` =
+`a70da5d9` — prod green: admin delete for open-call applications; before
+that same day: direct project links `/:space/p/:projectId`; open
+inscriptions, public CORS, invite links (#44), WCC walker fix (#46).
 
 ## Last session (2026-07-13 afternoon — /p/ links + open-call backup)
 
