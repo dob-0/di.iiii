@@ -1163,7 +1163,9 @@ registerIntegrationRoutes(router)
 registerOpenCallRoutes(router, {
   requireAdminAlways,
   listApplications: openCallStore.listApplications,
-  updateApplication: openCallStore.updateApplication
+  updateApplication: openCallStore.updateApplication,
+  deleteApplication: openCallStore.deleteApplication,
+  getApplication: openCallStore.getApplication
 })
 
 registerUserRoutes(router, {

@@ -277,11 +277,12 @@ export const WIKI_ARTICLES = [
             { list: [
                 'Review: admins open /admin \u2192 Open Call to see applications with status chips (new / shortlist / accepted / declined), per-applicant notes, and status counts.',
                 'Filter by status, expand a row for the full answers, and export everything as CSV for sharing with partners.',
-                'The public submit endpoint is unauthenticated and rate-limited; reviewing and updating requires an admin session.'
+                'Delete removes an application permanently (confirmation required) — use it to clear test submissions and junk entries.',
+                'The public submit endpoint is unauthenticated and rate-limited; reviewing, updating, and deleting require an admin session.'
             ] }
         ],
         tags: ['open call', 'applications', 'admin', 'forms'],
-        updated: '2026-07-09'
+        updated: '2026-07-13'
     },
     {
         id: 'open-inscriptions',

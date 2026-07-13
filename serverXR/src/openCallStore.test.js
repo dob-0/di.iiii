@@ -8,6 +8,7 @@ const { initDb, closeDb } = require('./db.js')
 const {
   APPLICATION_STATUSES,
   createApplication,
+  deleteApplication,
   getApplication,
   listApplications,
   updateApplication
@@ -72,5 +73,14 @@ describe('openCallStore', () => {
     expect(() => updateApplication(app.id, { status: 'maybe' })).toThrow(/status must be one of/)
     expect(APPLICATION_STATUSES).toContain('accepted')
     expect(updateApplication('missing-id', { status: 'accepted' })).toBeNull()
+  })
+
+  it('deletes an application and returns null for unknown ids', () => {
+    const app = createApplication(validInput())
+    const deleted = deleteApplication(app.id)
+    expect(deleted.id).toBe(app.id)
+    expect(getApplication(app.id)).toBeNull()
+    expect(listApplications({ callId: 'beyond_form' })).toHaveLength(0)
+    expect(deleteApplication(app.id)).toBeNull()
   })
 })

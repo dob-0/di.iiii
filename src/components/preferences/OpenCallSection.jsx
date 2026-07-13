@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { listOpenCallApplications, updateOpenCallApplication } from '../../services/openCallApi.js'
+import { deleteOpenCallApplication, listOpenCallApplications, updateOpenCallApplication } from '../../services/openCallApi.js'
 import { MetricCard, ModuleSection } from './PreferencesShared.jsx'
 
 const OPEN_CALLS = [
@@ -42,7 +42,7 @@ const buildCsv = (applications) => {
     return [header.map(csvEscape).join(','), ...rows].join('\n')
 }
 
-function ApplicationRow({ app, busy, onSetStatus, onSaveNotes }) {
+function ApplicationRow({ app, busy, onSetStatus, onSaveNotes, onDelete }) {
     const [open, setOpen] = useState(false)
     const [notesDraft, setNotesDraft] = useState(app.notes)
 
@@ -69,6 +69,14 @@ function ApplicationRow({ app, busy, onSetStatus, onSaveNotes }) {
                             → {s}
                         </button>
                     ))}
+                    <button
+                        type="button"
+                        className="preferences-inline-action warning"
+                        disabled={busy}
+                        onClick={() => onDelete(app)}
+                    >
+                        Delete
+                    </button>
                 </div>
             </div>
             <div className="preferences-space-meta mono">
@@ -139,6 +147,19 @@ export default function OpenCallSection() {
         }
     }
 
+    const remove = async (app) => {
+        if (!window.confirm(`Delete application from "${app.name}" (${app.email})? This cannot be undone.`)) return
+        setBusyId(app.id); setError('')
+        try {
+            await deleteOpenCallApplication(callId, app.id)
+            setApplications((prev) => prev ? prev.filter((a) => a.id !== app.id) : prev)
+        } catch (e) {
+            setError(e.message || 'Delete failed.')
+        } finally {
+            setBusyId(null)
+        }
+    }
+
     const exportCsv = () => {
         const blob = new Blob([buildCsv(applications || [])], { type: 'text/csv;charset=utf-8' })
         const link = document.createElement('a')
@@ -191,6 +212,7 @@ export default function OpenCallSection() {
                         busy={busyId === app.id}
                         onSetStatus={(a, status) => patch(a, { status })}
                         onSaveNotes={(a, notes) => patch(a, { notes })}
+                        onDelete={remove}
                     />
                 ))}
                 {applications !== null && visible.length === 0 && !error && (

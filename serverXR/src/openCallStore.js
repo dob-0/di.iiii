@@ -102,9 +102,17 @@ const updateApplication = (id, { status, notes } = {}) => {
   return getApplication(id)
 }
 
+const deleteApplication = (id) => {
+  const existing = getApplication(id)
+  if (!existing) return null
+  getDb().prepare('DELETE FROM open_call_applications WHERE id = ?').run(String(id))
+  return existing
+}
+
 module.exports = {
   APPLICATION_STATUSES,
   createApplication,
+  deleteApplication,
   getApplication,
   listApplications,
   updateApplication

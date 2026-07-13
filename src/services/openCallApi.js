@@ -14,3 +14,10 @@ export const updateOpenCallApplication = async (callId, applicationId, patch = {
     )
     return data.application || null
 }
+
+export const deleteOpenCallApplication = async (callId, applicationId) => {
+    await apiFetch(
+        `/api/open-calls/${encodeURIComponent(callId)}/applications/${encodeURIComponent(applicationId)}`,
+        { method: 'DELETE' }
+    )
+}

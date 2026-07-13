@@ -1757,6 +1757,29 @@ describe('open-call application contracts', () => {
             body: JSON.stringify({ status: 'maybe' })
         })
         expect(badPatch.status).toBe(400)
+
+        const unauthenticatedDelete = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications/${submitted.id}`, {
+            method: 'DELETE'
+        })
+        expect([401, 403]).toContain(unauthenticatedDelete.status)
+
+        const wrongCallDelete = await fetch(`${server.baseUrl}/api/open-calls/other_call/applications/${submitted.id}`, {
+            method: 'DELETE',
+            headers: withAuth(server.apiToken)
+        })
+        expect(wrongCallDelete.status).toBe(404)
+
+        const deleteRes = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications/${submitted.id}`, {
+            method: 'DELETE',
+            headers: withAuth(server.apiToken)
+        })
+        expect(deleteRes.status).toBe(200)
+        expect((await deleteRes.json()).ok).toBe(true)
+
+        const afterDelete = await fetch(`${server.baseUrl}/api/open-calls/beyond_form/applications`, {
+            headers: withAuth(server.apiToken)
+        })
+        expect((await afterDelete.json()).applications).toHaveLength(0)
     })
 
     it('answers submission preflights permissively for sandboxed (Origin: null) iframes', async () => {
