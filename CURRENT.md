@@ -9,10 +9,10 @@ active_branch: dev
 
 ## Last commit
 
-`main` = `dev` = `5abf8351` — **PROMOTED dev→main 2026-07-13 (second), prod
-green**: direct project links `/:space/p/:projectId` in the public viewer
-(share any project of a public space without moving the published pointer;
-tests + wiki entry included). Earlier same day: open inscriptions, public
+`main` = `dev` = `a70da5d9` — **PROMOTED dev→main 2026-07-13 (third), prod
+green**: admin delete for open-call applications (DELETE route + board
+button, contract-tested, E2E-verified on prod). Before that same day:
+direct project links `/:space/p/:projectId`; open inscriptions, public
 CORS, invite links (#44), WCC walker fix (#46), sandbox popup escape.
 
 ## Last session (2026-07-13 afternoon — /p/ links + open-call backup)
