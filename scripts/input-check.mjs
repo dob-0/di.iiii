@@ -15,7 +15,10 @@
  *   4. ctrlKey wheel (pinch zoom) is ignored entirely.
  *   5. Mouse look works with pointer lock engaged.
  *   6. Drag-look works when pointer lock is denied (Wayland / post-Esc cooldown).
- *   7. A failed project-document fetch shows a visible error + Retry instead
+ *   7. A granted lock that delivers dead deltas — all zeros OR the degenerate
+ *      constant ±1,0 crawl seen live via ?inputdebug=1 — is abandoned and
+ *      drag-look takes over.
+ *   8. A failed project-document fetch shows a visible error + Retry instead
  *      of silently blocking mouse/wheel input forever behind the loading
  *      overlay (that combination reads exactly like "I can move but can't
  *      look" — see docs/ai/known-fixes.md), and an automatic retry recovers
@@ -132,6 +135,48 @@ for (const [label, props] of [
     check('broken lock: never re-requested, drag-look takes over',
         stillFree && after.yaw !== before.yaw && after.pitch !== before.pitch,
         `yaw Δ ${(after.yaw - before.yaw).toFixed(3)}, pitch Δ ${(after.pitch - before.pitch).toFixed(3)}`)
+}
+
+// -- broken pointer lock: granted but degenerate constant deltas --------------
+// Second broken-lock shape seen live (?inputdebug=1, July 2026): lock granted,
+// mousemove firing, but every event carries movementX=±1, movementY=0 —
+// vertical look dead, horizontal an imperceptible crawl, and the all-zero
+// watchdog never trips because the deltas aren't zero. Needs a fresh page:
+// the block above already latched lockBroken on the main one.
+{
+    const degPage = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+    await degPage.goto(URL, { waitUntil: 'domcontentloaded' })
+    await degPage.waitForSelector('canvas', { timeout: 20000 })
+    await degPage.waitForFunction(() => window.__diiWalkerRef?.current, null, { timeout: 20000 })
+    await degPage.waitForTimeout(2500)
+    const dbox = await degPage.locator('canvas').first().boundingBox()
+    const dcx = dbox.x + dbox.width / 2
+    const dcy = dbox.y + dbox.height / 2
+    const dstate = () => degPage.evaluate(() => ({ ...window.__diiWalkerRef.current }))
+    await degPage.mouse.click(dcx, dcy)
+    await degPage.waitForTimeout(400)
+    const locked = await degPage.evaluate(() => document.pointerLockElement?.tagName === 'CANVAS')
+    await degPage.evaluate(() => {
+        for (let i = 0; i < 35; i++) {
+            document.dispatchEvent(new MouseEvent('mousemove', { movementX: -1, movementY: 0, bubbles: true }))
+        }
+    })
+    await degPage.waitForTimeout(400)
+    const released = await degPage.evaluate(() => document.pointerLockElement === null)
+    check('broken lock (constant -1,0 locked moves): lock is abandoned', locked && released)
+
+    const before = await dstate()
+    await degPage.mouse.move(dcx, dcy)
+    await degPage.mouse.down()
+    await degPage.mouse.move(dcx + 200, dcy + 60, { steps: 10 })
+    await degPage.mouse.up()
+    await degPage.waitForTimeout(350)
+    const after = await dstate()
+    const stillFree = await degPage.evaluate(() => document.pointerLockElement === null)
+    check('broken lock (constant deltas): never re-requested, drag-look takes over',
+        stillFree && after.yaw !== before.yaw && after.pitch !== before.pitch,
+        `yaw Δ ${(after.yaw - before.yaw).toFixed(3)}, pitch Δ ${(after.pitch - before.pitch).toFixed(3)}`)
+    await degPage.close()
 }
 
 // -- drag-look fallback when pointer lock is denied ---------------------------
