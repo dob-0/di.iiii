@@ -35,6 +35,13 @@ export const TRACKPAD_LOOK_SENSITIVITY = 0.004
 // slow look can trip this too — acceptable: drag-look remains fully usable.
 export const BROKEN_LOCK_DEAD_DELTA_MAX = 4
 export const BROKEN_LOCK_DEAD_MOVES = 30
+// The first locked move(s) after an engage carry garbage: one wild spike
+// (-19,-116 in the live capture, ~18ms after engage — railed the pitch) and,
+// in some Chromium builds, a synthetic position-sized event at engage time.
+// Locked deltas inside this window are not APPLIED to the view (dead-streak
+// counting still runs); a count-based "skip the first event" is not enough
+// because the number of engage-time garbage events varies per browser.
+export const BROKEN_LOCK_SETTLE_MS = 200
 
 // -- Wheel / dolly --
 // Metres of forward motion per scroll pixel: one classic wheel notch (~48px

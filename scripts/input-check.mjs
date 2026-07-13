@@ -154,16 +154,23 @@ for (const [label, props] of [
     const dcx = dbox.x + dbox.width / 2
     const dcy = dbox.y + dbox.height / 2
     const dstate = () => degPage.evaluate(() => ({ ...window.__diiWalkerRef.current }))
-    await degPage.mouse.click(dcx, dcy)
-    await degPage.waitForTimeout(400)
-    const locked = await degPage.evaluate(() => document.pointerLockElement?.tagName === 'CANVAS')
     const preSpike = await dstate()
-    await degPage.evaluate(() => {
-        const noise = [[-2, 1], [0, 1], [1, 0], [2, 0], [-1, 1], [4, 0], [0, 0]]
-        const mv = (x, y) => document.dispatchEvent(new MouseEvent('mousemove', { movementX: x, movementY: y, bubbles: true }))
-        mv(-19, -116) // first-after-engage spike from the live capture
-        for (let i = 0; i < 35; i++) mv(...noise[i % noise.length])
-    })
+    // The engage-time spike must land inside the settle window, so the poll
+    // and the dispatch both run in-page — no client roundtrip in between.
+    const replay = degPage.evaluate(() => new Promise((resolve) => {
+        const tick = () => {
+            if (!document.pointerLockElement) return requestAnimationFrame(tick)
+            const noise = [[-2, 1], [0, 1], [1, 0], [2, 0], [-1, 1], [4, 0], [0, 0]]
+            const mv = (x, y) => document.dispatchEvent(new MouseEvent('mousemove', { movementX: x, movementY: y, bubbles: true }))
+            mv(-19, -116) // first-after-engage spike from the live capture
+            for (let i = 0; i < 35; i++) mv(...noise[i % noise.length])
+            resolve(true)
+        }
+        tick()
+        setTimeout(() => resolve(false), 5000)
+    }))
+    await degPage.mouse.click(dcx, dcy)
+    const locked = await replay
     await degPage.waitForTimeout(400)
     const postSpike = await dstate()
     const released = await degPage.evaluate(() => document.pointerLockElement === null)
