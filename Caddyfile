@@ -1,0 +1,3 @@
+{$SITE_DOMAIN} {
+	reverse_proxy client:80
+}
