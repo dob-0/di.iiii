@@ -6,7 +6,10 @@ import { listProjects } from '../services/projectsApi.js'
 // Known hierarchies for specific spaces, front door first. Unlisted ids keep
 // the server's order (most-recently-touched) and sort after every listed id.
 const SPACE_PROJECT_ORDER = {
-    'br-id-ge': ['landing', 'newww', 'br-id-ge-graph', 'br-id-ge-field',
+    // Client-side spaceId stays underscore (`br_id_ge`, the raw URL segment) --
+    // only the server slugifies to hyphens for on-disk paths. Keying this
+    // hyphenated made the whole ordering silently inert.
+    br_id_ge: ['landing', 'newww', 'br-id-ge-graph', 'br-id-ge-field',
         'br-id-ge-hosq', 'br-id-ge-jam', 'br-id-ge-guide',
         'ops-board', 'v-oooooo', 'br-id-ge-lab']
 }
