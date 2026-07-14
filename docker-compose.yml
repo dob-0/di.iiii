@@ -80,7 +80,7 @@ services:
     command: >
       tunnel --no-autoupdate
       ${CLOUDFLARE_TUNNEL_TOKEN:+run --token ${CLOUDFLARE_TUNNEL_TOKEN}}
-      ${CLOUDFLARE_TUNNEL_TOKEN:-url http://client:80}
+      ${CLOUDFLARE_TUNNEL_TOKEN:---url http://client:80}
     depends_on:
       client:
         condition: service_started
