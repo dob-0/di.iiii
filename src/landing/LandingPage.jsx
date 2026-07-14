@@ -5,6 +5,12 @@ import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath } from '../utils/spaceRouting.js'
 import './landing.css'
 
+const FEATURED_SPACES = [
+    { id: 'wcc', label: 'WCC Exhibition', href: '/wcc', className: 'landing-cta-wcc' },
+    { id: 'br-id-ge', label: 'br_id_ge', href: '/br_id_ge', className: 'landing-cta-br-id-ge' },
+    { id: 'beyond-form', label: 'beyond_form', href: '/beyond-form', className: 'landing-cta-beyond-form' }
+]
+
 const STEPS = [
     { n: '01', title: 'Open a space', body: 'Click "Open Studio" or go to any space URL. No account required to view. Sign in only to edit.' },
     { n: '02', title: 'Add objects', body: 'Use the Library panel to add 3D shapes, text, images, or 3D models. Drag to position them.' },
@@ -172,9 +178,20 @@ export default function LandingPage() {
                         <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={() => setEntered(true)}>
                             Enter Space
                         </Button>
-                        <Button className="landing-cta-ghost landing-cta-wcc" variant="outlined" size="large" href="/wcc">
-                            WCC Exhibition
-                        </Button>
+                    </Stack>
+
+                    <Stack direction="row" spacing={1.5} sx={{ pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
+                        {FEATURED_SPACES.map((space) => (
+                            <Button
+                                key={space.id}
+                                className={`landing-cta-ghost ${space.className}`}
+                                variant="outlined"
+                                size="small"
+                                href={space.href}
+                            >
+                                {space.label}
+                            </Button>
+                        ))}
                     </Stack>
 
                     <Box component="a" className="lp-scroll-hint" href="#what" aria-label="Scroll to learn more">

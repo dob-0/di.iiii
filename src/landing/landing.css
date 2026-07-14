@@ -76,6 +76,32 @@
     border-color: #fff !important;
 }
 
+.landing-cta-br-id-ge {
+    color: #00e5ff !important;
+    background: transparent !important;
+    border: 2px solid #00e5ff !important;
+    font-weight: 700 !important;
+}
+
+.landing-cta-br-id-ge:hover {
+    color: #000 !important;
+    background: #00e5ff !important;
+    border-color: #00e5ff !important;
+}
+
+.landing-cta-beyond-form {
+    color: #fff !important;
+    background: transparent !important;
+    border: 2px solid #fff !important;
+    font-weight: 700 !important;
+}
+
+.landing-cta-beyond-form:hover {
+    color: #000 !important;
+    background: #fff !important;
+    border-color: #fff !important;
+}
+
 .lp-btn-link {
     color: var(--di-text-muted) !important;
     font-size: 0.82rem !important;

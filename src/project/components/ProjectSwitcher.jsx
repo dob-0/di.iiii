@@ -3,6 +3,24 @@ import { appNavigate } from '../../utils/appNavigate.js'
 import { buildPublicProjectPath } from '../../utils/spaceRouting.js'
 import { listProjects } from '../services/projectsApi.js'
 
+// Known hierarchies for specific spaces, front door first. Unlisted ids keep
+// the server's order (most-recently-touched) and sort after every listed id.
+const SPACE_PROJECT_ORDER = {
+    'br-id-ge': ['landing', 'newww', 'br-id-ge-graph', 'br-id-ge-field',
+        'br-id-ge-hosq', 'br-id-ge-jam', 'br-id-ge-guide',
+        'ops-board', 'v-oooooo', 'br-id-ge-lab']
+}
+
+function sortProjectsForSpace(spaceId, projects) {
+    const order = SPACE_PROJECT_ORDER[spaceId]
+    if (!order) return projects
+    const rank = (id) => {
+        const index = order.indexOf(id)
+        return index === -1 ? order.length : index
+    }
+    return [...projects].sort((a, b) => rank(a.id) - rank(b.id))
+}
+
 const pillStyle = {
     appearance: 'none',
     border: '1px solid rgba(255,255,255,0.14)',
@@ -68,7 +86,8 @@ export default function ProjectSwitcher({ spaceId, currentProjectId, spaceLabel 
         listProjects(spaceId)
             .then((response) => {
                 if (cancelled) return
-                setProjects(Array.isArray(response) ? response : [])
+                const list = Array.isArray(response) ? response : []
+                setProjects(sortProjectsForSpace(spaceId, list))
             })
             .catch(() => {
                 if (cancelled) return
