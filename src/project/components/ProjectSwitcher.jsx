@@ -22,7 +22,11 @@ const cardStyle = {
     padding: '0.4rem',
     minWidth: '14rem',
     maxWidth: '20rem',
-    maxHeight: '60dvh',
+    // Capped so a long project list can never grow down into the
+    // bottom-left "Made with di.iiii" badge -- both are pinned to the
+    // left edge with no shared layout, so the badge's footprint (its
+    // own 1rem margin plus height) has to be reserved here explicitly.
+    maxHeight: 'min(60dvh, calc(100dvh - 9rem))',
     overflowY: 'auto',
     boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
     backdropFilter: 'blur(12px)'

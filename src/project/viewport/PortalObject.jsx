@@ -87,6 +87,22 @@ function EmbeddedScene({ projectId }) {
     )
 }
 
+// A dark plate behind billboarded label text so it stays legible over
+// whatever the camera happens to be looking through it at (another node's
+// label, a project's own header/legend content) instead of visually merging
+// with it. Width is a character-count estimate, not a text measurement --
+// good enough for short node labels.
+function LabelPlate({ text, fontSize, maxWidth }) {
+    const width = Math.min(maxWidth ?? Infinity, fontSize * 0.62 * String(text).length + fontSize * 0.9)
+    const height = fontSize * 1.7
+    return (
+        <mesh position={[0, 0, -0.01]} renderOrder={-1}>
+            <planeGeometry args={[width, height]} />
+            <meshBasicMaterial color="#04070c" transparent opacity={0.72} depthWrite={false} />
+        </mesh>
+    )
+}
+
 // Portal (gateway) mode: a ring marker + floating label. Clicking enters the
 // space in the live viewer; in the Studio editor the click is left to the
 // editor's own selection handling (so a portal stays selectable/movable).
@@ -106,6 +122,7 @@ function PortalGateway({ spaceId, label, color = '#4df9ff' }) {
             </mesh>
             {label ? (
                 <Billboard position={[0, 1.9, 0]}>
+                    <LabelPlate text={label} fontSize={0.4} />
                     <Text fontSize={0.4} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.018} outlineColor="#04070c">
                         {label}
                     </Text>
@@ -125,6 +142,7 @@ export default function PortalObject({ entity }) {
                 <EmbeddedScene projectId={reference.projectId} />
                 {reference.label ? (
                     <Billboard position={[0, 3.4, 0]}>
+                        <LabelPlate text={reference.label} fontSize={0.7} maxWidth={9} />
                         <Text fontSize={0.7} maxWidth={9} color="#ffffff" outlineWidth={0.02} outlineColor="#000000" anchorX="center" anchorY="middle">
                             {reference.label}
                         </Text>
