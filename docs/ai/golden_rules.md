@@ -170,6 +170,16 @@ Guessing wrong on a destructive or architectural decision costs more than a one-
 ### Never discard another agent's uncommitted changes
 If `git status` shows unstaged edits you didn't make, assume another agent is mid-task in the same working tree. `git stash push -- <file>` to set them aside if you need a clean tree for an unrelated operation (e.g. a branch merge), then `git stash pop` immediately after to restore them exactly as found. Never `git checkout --` or discard them. See [parallel-agents.md](parallel-agents.md) for the full multi-agent setup (prefer `git worktree` over sharing one tree).
 
+### External research (pricing, reviews, comparisons): a "no links found" search can still return a confident-sounding paragraph — treat it as unverified
+
+**Rule:** When `WebSearch`/`WebFetch` explicitly says "no links found" or a fetch is blocked (403, paywall), but the tool response still contains a specific-sounding narrative ("users report X, Y, Z"), do not present that narrative to the user as a finding. It is the model filling in plausible-sounding filler from general training knowledge, not something it actually read. Only report a claim as researched if the tool result includes a real URL you can point to. If a query area returns no real sources, say so plainly ("couldn't verify OVH's reliability reputation independently — search returned no real sources despite a confident-sounding summary") rather than passing the filler through.
+
+**Why:** During a 2026-07-14 VPS-provider price/reliability comparison, three `WebSearch` calls each ran; only one (Contabo CPU throttling) returned a real citable source (a LowEndTalk thread) — the other two ("Hetzner vs OVH vs Contabo reddit," "OVH VPS reddit complaints") explicitly said "No links found" yet still produced detailed, specific-sounding bullet points about downtime/support/performance complaints. Presenting all three with equal confidence would have handed the user two fabricated-sounding "findings" alongside one real one, with no way for them to tell which was which.
+
+**How:** After any search/fetch call used for research (not casual browsing), check whether the result actually contains a URL/citation before writing up its content as a finding. Real source → cite it and use the content. No real source, narrative anyway → drop the narrative, tell the user the query came up empty, and either try a different query/source or say the comparison point is unverified.
+
+**Files:** n/a (agent behavior, not repo code) — applies to any research task, VPS/hosting comparisons being the concrete case that surfaced it.
+
 ---
 
 ## Core Solutions — Discovered in This Repo
