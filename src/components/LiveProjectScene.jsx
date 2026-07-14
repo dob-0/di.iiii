@@ -404,7 +404,6 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
     const speedRef = useRef(0)
     const strafeSpeedRef = useRef(0)
     const bobPhaseRef = useRef(0)
-    const lockedRef = useRef(false)
     const wheelDollyRef = useRef(0)
     const touchLookRef = useRef(null)
     const touchMoveRef = useRef(null)
@@ -445,12 +444,11 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
         if (!isTouch) {
             // Desktop: pointer lock
             const onLockChange = () => {
+                // deadLockMoves/lockEngagedAt reset lives in onMouseMove now
+                // (see sawLocked) — this event lags document.pointerLockElement
+                // by a task, so resetting the dead-streak state here too could
+                // wipe out progress onMouseMove already made on real events.
                 const locked = document.pointerLockElement === el
-                lockedRef.current = locked
-                if (locked) {
-                    deadLockMoves = 0
-                    lockEngagedAt = performance.now()
-                }
                 dragLastX = null
                 dragLastY = null
                 el.style.cursor = locked ? 'none' : 'crosshair'
@@ -504,10 +502,35 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
             // a lock release (client coords freeze while locked).
             let dragLastX = null
             let dragLastY = null
+            // Mirrors document.pointerLockElement === el, updated inside
+            // onMouseMove itself (see below) rather than only in
+            // onLockChange, so the just-engaged transition is never missed.
+            let sawLocked = false
             const onMouseMove = (e) => {
                 if (debugHud) dbg(e)
                 const pitchLimit = flyRef.current ? FLY_PITCH_LIMIT : WALK_PITCH_LIMIT
-                if (lockedRef.current) {
+                // Read the lock straight off the DOM, not lockedRef: the spec
+                // queues 'pointerlockchange' as its own task, so
+                // pointerLockElement is already set for one or more mousemove
+                // events before onLockChange (and lockedRef) catches up. Those
+                // events fell through to the drag-look branch below instead
+                // of counting toward the dead-streak — quietly burning part
+                // of BROKEN_LOCK_DEAD_MOVES' budget on every engage, which is
+                // why the noisy-lock capture below only sometimes reached the
+                // threshold before running out of replayed events.
+                const isLocked = document.pointerLockElement === el
+                // Same lag applies to onLockChange's lockEngagedAt/
+                // deadLockMoves reset: the settle window must start counting
+                // from the first mousemove that actually observes the lock,
+                // not from whenever the pointerlockchange task happens to
+                // run (which can be after that first move, letting the
+                // engage-time spike straight through the settle check).
+                if (isLocked && !sawLocked) {
+                    deadLockMoves = 0
+                    lockEngagedAt = performance.now()
+                }
+                sawLocked = isLocked
+                if (isLocked) {
                     if (Math.abs(e.movementX) <= BROKEN_LOCK_DEAD_DELTA_MAX &&
                         Math.abs(e.movementY) <= BROKEN_LOCK_DEAD_DELTA_MAX) {
                         if (!lockBroken && ++deadLockMoves >= BROKEN_LOCK_DEAD_MOVES) {
@@ -584,7 +607,7 @@ function Walker({ playerRef, onNearestZone, entities, bounds, joystickRef, joyVi
                     dragLastX = e.clientX
                     dragLastY = e.clientY
                 }
-                if (lockedRef.current || lockBroken) return
+                if (document.pointerLockElement === el || lockBroken) return
                 const req = el.requestPointerLock()
                 if (req && typeof req.catch === 'function') {
                     req.catch(() => { /* denied — drag-look fallback takes over */ })
