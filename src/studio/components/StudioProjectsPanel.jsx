@@ -77,11 +77,20 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
         if (!window.confirm(`Delete "${project.title || project.id}"? Cannot be undone.`)) return
         setBusy(true)
         try {
-            if (publishedProjectId === project.id) {
-                await updateServerSpace(spaceId, { publishedProjectId: null })
-                setPublishedProjectId(null)
-            }
+            const wasPublished = publishedProjectId === project.id
+            // Delete first: if it fails, nothing about the space's publish
+            // state changes. Only clear the live pointer once the project is
+            // actually gone, so a failed delete never leaves the space
+            // silently unpublished while the project still exists.
             await deleteProject(project.id)
+            if (wasPublished) {
+                try {
+                    await updateServerSpace(spaceId, { publishedProjectId: null })
+                    setPublishedProjectId(null)
+                } catch (unpublishError) {
+                    setStatus(`Project deleted, but the space's live pointer could not be cleared: ${unpublishError.message || unpublishError}`)
+                }
+            }
             await loadProjects()
         } catch (e) {
             setStatus(e.message || 'delete failed')

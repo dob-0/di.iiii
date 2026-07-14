@@ -1,0 +1,267 @@
+/* The Spaces constellation — an additive spatial lens over the card grid.
+   Reuses the platform tokens; the manage panel borrows the .insp-* field
+   vocabulary so it reads as the same system as the editor inspector. */
+
+.scon-root {
+    position: relative;
+    width: 100%;
+    height: min(72vh, 720px);
+    border: 1px solid var(--di-line, #1b2634);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #05080d;
+}
+
+.scon-canvas-wrap {
+    position: absolute;
+    inset: 0;
+}
+
+.scon-canvas-wrap canvas {
+    display: block;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Node labels rendered through drei <Html>. */
+.scon-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    transform: translateY(-4px);
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    opacity: 0.85;
+    transition: opacity 0.25s;
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+}
+.scon-label--on { opacity: 1; }
+.scon-label--dim { opacity: 0.4; }
+.scon-label-id {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.5rem;
+    letter-spacing: 0.16em;
+    text-transform: lowercase;
+    color: var(--di-dim, #5f6b7a);
+}
+.scon-label-name {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 300;
+    font-size: 0.82rem;
+    color: #eaf3fb;
+    text-shadow: 0 0 12px rgba(0, 0, 0, 0.9);
+}
+
+.scon-sat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.52rem;
+    letter-spacing: 0.08em;
+    color: #c3d0dc;
+    white-space: nowrap;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.95);
+    opacity: 0.8;
+    pointer-events: none;
+}
+.scon-sat-label--live { color: #4fd6ff; opacity: 1; }
+
+.scon-legend {
+    position: absolute;
+    left: 14px;
+    bottom: 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 0.58rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--di-dim, #5f6b7a);
+    pointer-events: none;
+}
+.scon-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.scon-legend i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+.scon-hint {
+    position: absolute;
+    right: 14px;
+    bottom: 12px;
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--di-dim, #5f6b7a);
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+/* The manage panel — slides over the right edge of the canvas. */
+.scon-panel {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: min(340px, 88%);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 16px;
+    background: rgba(10, 16, 24, 0.92);
+    border: 1px solid var(--di-line, #1b2634);
+    border-radius: 8px;
+    backdrop-filter: blur(8px);
+    overflow-y: auto;
+    animation: scon-slide 0.22s ease;
+}
+@keyframes scon-slide {
+    from { transform: translateX(12px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.scon-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.scon-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.56rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    border-radius: 3px;
+    border: 1px solid currentColor;
+}
+.scon-badge--main { color: #ffb347; }
+.scon-badge--live { color: #4fd6ff; }
+.scon-badge--public { color: #7fc4e8; }
+.scon-badge--private { color: #8a93a6; }
+.scon-badge--sandbox { color: #5f6b7a; }
+
+.scon-x {
+    background: none;
+    border: none;
+    color: var(--di-dim, #5f6b7a);
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 2px 6px;
+    line-height: 1;
+}
+.scon-x:hover { color: #eaf3fb; }
+
+.scon-static { color: #eaf3fb; font-size: 0.95rem; padding: 6px 0; }
+.scon-subid {
+    font-size: 0.56rem;
+    letter-spacing: 0.14em;
+    color: var(--di-dim, #5f6b7a);
+    margin-top: 4px;
+}
+
+.scon-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.scon-btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 7px 11px;
+    border-radius: 4px;
+    border: 1px solid var(--di-line, #1b2634);
+    background: rgba(5, 8, 13, 0.7);
+    color: #c3d0dc;
+    cursor: pointer;
+    transition: 0.18s;
+}
+.scon-btn:hover { border-color: #4fd6ff; color: #eaf3fb; }
+.scon-btn--go { border-color: #4fd6ff; color: #4fd6ff; }
+.scon-btn--go:hover { background: rgba(79, 214, 255, 0.12); }
+.scon-btn--danger:hover { border-color: #ff2a5f; color: #ff2a5f; }
+
+.scon-projects {
+    border-top: 1px solid var(--di-line, #1b2634);
+    padding-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.scon-projects-head {
+    font-size: 0.56rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--di-dim, #5f6b7a);
+    margin-bottom: 4px;
+}
+.scon-muted { font-size: 0.6rem; color: var(--di-dim, #5f6b7a); letter-spacing: 0.08em; }
+
+.scon-prow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: 4px;
+}
+.scon-prow:hover { background: rgba(255, 255, 255, 0.03); }
+.scon-prow--live { background: rgba(79, 214, 255, 0.06); }
+.scon-prow-name {
+    flex: 1;
+    text-align: left;
+    background: none;
+    border: none;
+    color: #c3d0dc;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.82rem;
+    cursor: pointer;
+    padding: 2px 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.scon-prow-name:hover { color: #eaf3fb; }
+.scon-prow-input { flex: 1; font-size: 0.82rem; }
+.scon-prow-live {
+    font-size: 0.52rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #4fd6ff;
+}
+.scon-prow-set {
+    font-size: 0.52rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--di-dim, #5f6b7a);
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+.scon-prow-set:hover { color: #4fd6ff; }
+
+/* The view toggle on the Spaces header. */
+.ssh-view-toggle {
+    display: inline-flex;
+    border: 1px solid var(--di-line, #1b2634);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-right: 10px;
+}
+.ssh-view-toggle button {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 7px 12px;
+    background: transparent;
+    border: none;
+    color: var(--di-dim, #5f6b7a);
+    cursor: pointer;
+    transition: 0.18s;
+}
+.ssh-view-toggle button.on { background: rgba(79, 214, 255, 0.14); color: #4fd6ff; }
+
+@media (prefers-reduced-motion: reduce) {
+    .scon-panel { animation: none; }
+}

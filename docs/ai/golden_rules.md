@@ -528,3 +528,23 @@ const stop = async () => {
 **How:** The backup script writes timestamped JSON to `serverXR/data/_backups/open-call/` (gitignored — applications contain names/emails/phones and must never be committed). Content syncs via scene/document PUTs are safe: applications are keyed by `call_id`, not joined to space/project rows.
 
 **Files:** `scripts/backup-open-call-applications.mjs` (exporter), `serverXR/src/routes/openCallRoutes.js` (admin list endpoint), `serverXR/src/openCallStore.js`, `serverXR/src/db.js` (table).
+
+### External work only counts as "in di.iiii" once it's a Studio Project the user can open and edit
+
+**Rule:** For any linked project (e.g. `br_id_ge`), a page/doc/rider is not "done" when it exists as a file in a repo — it is done when it is synced into a di.iiii space as a **Project** the user can open in Studio and edit directly (text, layout, assets) without touching a code editor or repo. Repos (public or ops) are file sources and CI/Pages mirrors only; di.iiii Studio is the editing surface. When adding or changing content that a linked project owns, update its `di-space*.json` manifest and run the sync script in the same change, not as an afterthought.
+
+**Why:** di.iiii is the user's own platform — the whole point of building it is that authoring happens inside it, not scattered across local files he has to ask an agent to open. The br_id_ge-ops architecture makes this explicit: hosq/jam/rider/graph drafts live in the ops repo as source, but `scripts/sync-ops.sh` pushes each one into a project inside the single public space `br_id_ge`, specifically so the user can open Studio and edit it live. `scripts/graduate.sh` then promotes an approved draft to the public repo/Pages mirror for sharing — sharing is the repo's job, editing is Studio's job. Treating a repo file as the finished artifact skips the reason di.iiii exists.
+
+**How:** New or changed content for a linked project → (1) edit the source file, (2) confirm/add its entry in the project's `di-space*.json` manifest, (3) run the sync command (`sync-ops.sh` / `sync-space.mjs` / equivalent), (4) tell the user which Studio project now holds it so they can open and adjust it themselves. Never treat "I edited the HTML file" as the end state for content the user needs to iterate on visually.
+
+**Files:** `br_id_ge-ops/scripts/sync-ops.sh`, `br_id_ge-ops/AGENTS.md` (architecture), `br_id_ge/scripts/sync-space.mjs` (public repo CI sync), `src/studio/components/StudioShell.jsx` (Projects window, per the five-windows-plus-Projects rule above).
+
+### Once a project is Studio-edited, the repo sync becomes one-way and dangerous — stop pushing, or build the pull first
+
+**Rule:** The moment the user starts editing a synced project's content live in Studio (user command 2026-07-13, br_id_ge hosq), that project's Studio document — not the repo file — is the source of truth. `space-sync.mjs`/`sync-ops.sh`-style sync scripts in this codebase are **push-only** (repo → space `PUT`, no read-back). Re-running one of them against a Studio-edited project silently overwrites the user's live edits with the stale repo file — there is no warning, no diff, no undo. Until a project has an explicit pull/export tool (Studio document → repo file), do not: (a) hand-edit that project's repo source file, or (b) run the push-sync against it. Direct the user to edit in Studio instead, and treat the repo copy as stale until someone builds the missing pull direction.
+
+**Why:** Same content, two editable copies, one-directional sync = a data-loss trap the instant editing moves off the repo. This was caught before it bit anyone (br_id_ge hosq rider, 2026-07-13) only because the user said out loud that Studio should be authoritative going forward — nothing in the sync tooling itself would have surfaced the conflict.
+
+**How:** If a linked project genuinely needs both a Studio-editable copy and a repo mirror (e.g. for git history or CI/Pages), the fix is a real pull command — `GET` the space document content and write it back to the repo file — not a convention to "just remember not to sync." Until that exists, keep the set of Studio-authoritative projects small and explicit (documented per-repo, e.g. `br_id_ge-ops/AGENTS.md`), and treat any push-sync script as scoped to repo-authoritative projects only.
+
+**Files:** `scripts/space-sync.mjs` (push-only, no pull), `br_id_ge-ops/scripts/sync-ops.sh`, `br_id_ge-ops/AGENTS.md` (per-project authority list).

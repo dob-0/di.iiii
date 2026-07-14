@@ -232,8 +232,6 @@ const deleteProject = async (spacesDir, spaceId, projectId) => {
   await fsp.rm(projectDir, { recursive: true, force: true })
 }
 
-const removeProjectIndexEntriesForSpace = async (spacesDir, spaceId) => {}
-
 const buildProjectAssetMeta = ({ assetId, file, source = 'server' }) => {
   if (!assetId) throw new Error('buildProjectAssetMeta: assetId is required (must be SHA-256 hex)')
   return {
@@ -265,7 +263,6 @@ module.exports = {
   readProjectIndex,
   readProjectDocument,
   readProjectOps,
-  removeProjectIndexEntriesForSpace,
   upsertProjectMeta,
   appendProjectOps,
   writeJson,

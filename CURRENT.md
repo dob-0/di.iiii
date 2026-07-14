@@ -16,24 +16,23 @@ that). Also on dev: `4a4ad18e` Projects window (other session). `main` =
 that same day: direct project links `/:space/p/:projectId`; open
 inscriptions, public CORS, invite links (#44), WCC walker fix (#46).
 
-## Last session (2026-07-13 afternoon — /p/ links + open-call backup)
+**Uncommitted right now** (validated, confirm before committing/pushing):
+Spaces Grid/Map toggle + a 16-bug deep-audit fix set (below). Green: lint,
+609 fe tests, build, 48 contracts, wiki check.
 
-- Found the `/p/:projectId` feature complete but uncommitted in the working
-  tree; full validation green (lint, 581 fe tests, build, 48 contracts, wiki
-  check) → committed `5abf8351`, pushed dev→staging, promoted dev→main.
-  Publish cPanel Release green; prod smoke 8/8; `/br_id_ge/p/landing` 200.
-- Open-call backup before touching prod: `beyond-form` space + 13 applications
-  (3 new since Jul 10) pulled into private `dob-0/di-spaces` (`ef9286e`);
-  `sync-all.sh` now includes beyond-form + an applications dump step.
-- br_id_ge communal on prod since morning session: openInscriptions ON,
-  published face `landing`, `inscriptionRoutes.js` + PUBLIC_CORS_ROUTES live.
+## Last session (2026-07-14 — full-codebase deep audit)
+
+User asked for a full audit ("check every line, fix it all"). 7-agent parallel
+find + 2x adversarial verify per finding, whole repo: 26 raw → 16 confirmed
+bugs, 2 critical (`/api/sync/spaces/:id/*` had zero per-space auth scope; every
+Beta window's drag/resize was silently dead) — full list + fixes + new/updated
+regression tests in [known-fixes.md](docs/ai/known-fixes.md)'s last row.
 
 ## What works
 
 - Studio (five windows + phone layout + visual help + coach marks), Beta, WCC, viewer
 - Auth (session-cookie, roles, OAuth-first) + open-space/sandbox implicit grants
-- Invite links + open inscriptions + public CORS (LIVE on prod since 2026-07-13)
-- Deploy: push `dev`→staging, `main`→prod, gated on `browser-checks.yml`
+- Invite links + open inscriptions + public CORS; deploy: `dev`→staging, `main`→prod
 
 ## Open
 

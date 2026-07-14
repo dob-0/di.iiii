@@ -164,10 +164,19 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         setIsBusy(true)
         try {
             const spaceMeta = await getServerSpace(spaceId).catch(() => null)
-            if (spaceMeta?.publishedProjectId === project.id) {
-                await updateServerSpace(spaceId, { publishedProjectId: null })
-            }
+            const wasPublished = spaceMeta?.publishedProjectId === project.id
+            // Delete first: if it fails, nothing about the space's publish
+            // state changes. Only clear the live pointer once the project is
+            // actually gone, so a failed delete never leaves the space
+            // silently unpublished while the project still exists.
             await deleteProject(project.id)
+            if (wasPublished) {
+                try {
+                    await updateServerSpace(spaceId, { publishedProjectId: null })
+                } catch (unpublishError) {
+                    setStatus(`Project deleted, but the space's live pointer could not be cleared: ${unpublishError.message || unpublishError}`)
+                }
+            }
             await loadProjects()
         } catch (e) {
             setStatus(e.message || 'delete failed')

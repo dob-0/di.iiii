@@ -77,7 +77,6 @@ const {
   normalizeProjectId,
   readProjectDocument,
   readProjectOps,
-  removeProjectIndexEntriesForSpace,
   upsertProjectMeta,
   writeProjectDocument
 } = require('./projectStore')
@@ -1090,6 +1089,14 @@ router.use('/api/spaces/:spaceId', async (req, res, next) => {
   next()
 })
 
+// Sync routes act on a space (pull/push/status) just like /api/spaces/:spaceId
+// — without this, requireWriteRole below sees requiredSpaceId=null and skips
+// the per-space scope check entirely.
+router.use('/api/sync/spaces/:spaceId', (req, res, next) => {
+  req.requiredSpaceId = normalizeSpaceId(req.params.spaceId) || null
+  next()
+})
+
 router.use('/api/projects/:projectId', async (req, res, next) => {
   try {
     const project = await resolveProjectContext(req.params.projectId)
@@ -1216,7 +1223,6 @@ registerSpaceRoutes(router, {
   readProjectDocument,
   requireAdminWrite,
   requireSpaceOwnerOrAdminWrite,
-  onDeleteSpace: async (spaceId) => removeProjectIndexEntriesForSpace(SPACES_DIR, spaceId),
   readJson,
   readLatestSpaceSnapshot,
   readOpsHistory,

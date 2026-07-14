@@ -1,4 +1,3 @@
-import { getNodeType } from '../project/nodeRegistry.js'
 
 export const PROJECT_DOCUMENT_VERSION = 4
 export const ENTITY_TYPES = [
@@ -514,6 +513,11 @@ const normalizePresentationFixedCamera = (camera = {}, worldState = defaultWorld
     const source = camera && typeof camera === 'object' ? camera : {}
     const worldView = worldState?.savedView || defaultWorldState.savedView
     const projection = ensureString(source.projection, defaultPresentationFixedCamera.projection)
+    const near = Math.max(0.001, ensureNumber(source.near, defaultPresentationFixedCamera.near))
+    const rawFar = Math.max(0.01, ensureNumber(source.far, defaultPresentationFixedCamera.far))
+    // far must exceed near or the camera frustum is degenerate/inverted and
+    // renders blank — mirrors sceneSchema.js's normalizeFixedCamera guard.
+    const far = rawFar > near ? rawFar : Math.max(defaultPresentationFixedCamera.far, near + 1)
     return {
         ...cloneValue(defaultPresentationFixedCamera),
         ...cloneValue(source),
@@ -522,8 +526,8 @@ const normalizePresentationFixedCamera = (camera = {}, worldState = defaultWorld
         target: ensureVector(source.target, worldView.target || defaultPresentationFixedCamera.target),
         fov: Math.max(1, ensureNumber(source.fov, defaultPresentationFixedCamera.fov)),
         zoom: Math.max(0.01, ensureNumber(source.zoom, defaultPresentationFixedCamera.zoom)),
-        near: Math.max(0.001, ensureNumber(source.near, defaultPresentationFixedCamera.near)),
-        far: Math.max(0.01, ensureNumber(source.far, defaultPresentationFixedCamera.far)),
+        near,
+        far,
         locked: ensureBoolean(source.locked, defaultPresentationFixedCamera.locked)
     }
 }
@@ -719,15 +723,6 @@ export const normalizeProjectDocument = (document = {}) => {
     }
 }
 
-const validateNodeTypeId = (typeId) => {
-    if (!typeId || typeof typeId !== 'string') return false
-    try {
-        return Boolean(getNodeType(typeId))
-    } catch {
-        return true
-    }
-}
-
 export const applyProjectOps = (document, ops = []) => {
     let nextDocument = normalizeProjectDocument(document)
     let entities = new Map(nextDocument.entities.map((entity) => [entity.id, entity]))
@@ -782,7 +777,6 @@ export const applyProjectOps = (document, ops = []) => {
                 if (!payload.node) break
                 const node = normalizeProjectNode(payload.node)
                 if (!node) break
-                if (!validateNodeTypeId(node.typeId)) break
                 if (SINGLETON_TYPE_IDS.has(node.typeId)) {
                     const duplicate = Array.from(nodes.values()).some((existing) => existing.typeId === node.typeId)
                     if (duplicate) break
@@ -1010,7 +1004,7 @@ const invertSingleOp = (document, op) => {
         case 'createNode': {
             if (!payload.node || !ensureString(payload.node.id)) break
             const node = normalizeProjectNode(payload.node)
-            if (!node || !validateNodeTypeId(node.typeId)) break
+            if (!node) break
             if (SINGLETON_TYPE_IDS.has(node.typeId)
                 && Array.from(nodes.values()).some((existing) => existing.typeId === node.typeId)) break
             // create-over-existing replaces; recreating the prior node would trip

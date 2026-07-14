@@ -78,17 +78,6 @@
     cursor: grabbing;
 }
 
-/* compact density — hide type label */
-.beta-world-node-card[data-density="compact"] .beta-world-node-type {
-    display: none;
-}
-
-/* large density — a bit more breathing room */
-.beta-world-node-card[data-density="large"] {
-    gap: calc(8px * var(--card-scale, 1));
-    padding: calc(20px * var(--card-scale, 1)) calc(18px * var(--card-scale, 1)) calc(16px * var(--card-scale, 1));
-}
-
 .beta-world-node-icon {
     font-size: calc(24px * var(--card-scale, 1));
     line-height: 1;

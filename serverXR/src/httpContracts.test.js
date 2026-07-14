@@ -337,6 +337,38 @@ describe('server write contracts', () => {
             allowedSpaces: ['role-space']
         })
 
+        // Regression: /api/sync/spaces/:spaceId/* must enforce the same
+        // per-space scope as /api/spaces/:spaceId — it previously had no
+        // middleware setting req.requiredSpaceId, so canAccessSpace(state, null)
+        // treated it as scope-exempt and any editor could push/pull any space.
+        const deniedSyncPush = await fetch(`${server.baseUrl}/api/sync/spaces/other-space/push`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(editorToken)
+            }
+        })
+        expect(deniedSyncPush.status).toBe(403)
+        await expect(deniedSyncPush.json()).resolves.toMatchObject({
+            error: 'Space access denied.',
+            requiredSpaceId: 'other-space',
+            allowedSpaces: ['role-space']
+        })
+
+        const deniedSyncPull = await fetch(`${server.baseUrl}/api/sync/spaces/other-space/pull`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                ...withAuth(editorToken)
+            }
+        })
+        expect(deniedSyncPull.status).toBe(403)
+        await expect(deniedSyncPull.json()).resolves.toMatchObject({
+            error: 'Space access denied.',
+            requiredSpaceId: 'other-space',
+            allowedSpaces: ['role-space']
+        })
+
         // Space creation is open to signed-in accounts (governed by the free-tier
         // quota), but an API-token identity is not a session account, so it is
         // still blocked — now with an account-required error rather than admin-role.

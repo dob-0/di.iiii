@@ -32,6 +32,17 @@ const shareAsset = ({ assetId, spaceId, name, mimeType = '', size = 0, license =
 const unshareAsset = (assetId) =>
   getDb().prepare('DELETE FROM public_assets WHERE asset_id = ?').run(assetId).changes > 0
 
+// Space moved (e.g. guest sandbox -> account) — repoint any commons entries
+// still referencing the old id so they don't go stale pointing at a space
+// id that no longer exists.
+const updateSpaceId = (fromSpaceId, toSpaceId) =>
+  getDb().prepare('UPDATE public_assets SET space_id = ? WHERE space_id = ?').run(toSpaceId, fromSpaceId)
+
+// Space deleted outright — its shared commons entries no longer point at
+// anything real and would otherwise survive forever in listings.
+const deleteBySpace = (spaceId) =>
+  getDb().prepare('DELETE FROM public_assets WHERE space_id = ?').run(spaceId)
+
 const getAsset = (assetId) =>
   toPublic(getDb().prepare('SELECT * FROM public_assets WHERE asset_id = ?').get(assetId))
 
@@ -58,4 +69,4 @@ const getSharedIdSet = (assetIds = []) => {
   return new Set(rows.map((r) => r.asset_id))
 }
 
-module.exports = { shareAsset, unshareAsset, getAsset, listAssets, getSharedIdSet }
+module.exports = { shareAsset, unshareAsset, getAsset, listAssets, getSharedIdSet, updateSpaceId, deleteBySpace }

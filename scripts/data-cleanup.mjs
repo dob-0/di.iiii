@@ -44,11 +44,12 @@ console.log(`\n[${mode}] env=${plan.env} base=${tgt.base}\n`);
 // A copy-pasted plan with "env": "prod" must not delete production data on
 // momentum — applying against prod requires typing the confirmation phrase.
 if (apply && plan.env === 'prod') {
-  const spaceCount = Array.isArray(plan.spaces) ? plan.spaces.length : 0;
+  const spaceCount = Array.isArray(plan.deleteSpaces) ? plan.deleteSpaces.length : 0;
+  const projectCount = Array.isArray(plan.deleteProjects) ? plan.deleteProjects.length : 0;
   const { createInterface } = await import('node:readline/promises');
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   const answer = await rl.question(
-    `\n  !! You are about to DELETE ${spaceCount} space(s) on PRODUCTION (${tgt.base}).\n` +
+    `\n  !! You are about to DELETE ${spaceCount} space(s) and ${projectCount} project(s) on PRODUCTION (${tgt.base}).\n` +
     `  Type "delete on prod" to continue: `
   );
   rl.close();

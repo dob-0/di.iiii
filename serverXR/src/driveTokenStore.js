@@ -6,8 +6,17 @@ const crypto = require('node:crypto')
 const { getDb } = require('./db')
 const { config } = require('./config')
 
+// A hardcoded fallback literal here would be a fixed, publicly-visible key —
+// worse than no encryption, since every install would share it. When no real
+// session secret is configured (REQUIRE_AUTH=false with nothing set), fall
+// back to a random per-process key instead: tokens encrypted with it can't
+// be decrypted after a restart (forcing a Drive re-connect), but a leaked DB
+// file alone still can't be decrypted by anyone.
+if (!config.auth.sessionSecret) {
+  console.warn('[driveTokenStore] No AUTH_SESSION_SECRET configured — Drive tokens are encrypted with a random key that will not survive a server restart. Set AUTH_SESSION_SECRET for stable encryption.')
+}
 const KEY = crypto.createHash('sha256')
-  .update(`drive-token:${config.auth.sessionSecret || 'di-local-dev-secret'}`)
+  .update(`drive-token:${config.auth.sessionSecret || crypto.randomBytes(32).toString('hex')}`)
   .digest() // 32 bytes
 
 function encrypt(plain) {

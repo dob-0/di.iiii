@@ -16,6 +16,7 @@ import {
 } from '../../services/serverSpaces.js'
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
+import SpaceConstellation from './SpaceConstellation.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath } from '../../utils/spaceRouting.js'
@@ -162,6 +163,14 @@ export default function SpaceHub() {
     const [providers, setProviders] = useState(null) // null until sign-in requested
     const [copiedLiveId, setCopiedLiveId] = useState(null)
     const [copiedInviteId, setCopiedInviteId] = useState(null)
+    // 'grid' = the card shelves (default); 'map' = the spatial constellation lens.
+    const [viewMode, setViewMode] = useState(() => {
+        try { return localStorage.getItem('di_spaces_view') === 'map' ? 'map' : 'grid' } catch { return 'grid' }
+    })
+    const selectView = useCallback((mode) => {
+        setViewMode(mode)
+        try { localStorage.setItem('di_spaces_view', mode) } catch { /* private mode */ }
+    }, [])
 
     const isGuest = type === 'guest'
     const isAccount = authenticated && !isGuest
@@ -455,6 +464,12 @@ export default function SpaceHub() {
                         <h1 className="ssh-title">Spaces</h1>
                     </div>
                     <div className="ssh-actions">
+                        {spaces.length > 0 && (
+                            <div className="ssh-view-toggle" role="group" aria-label="Spaces view">
+                                <button type="button" className={viewMode === 'grid' ? 'on' : ''} onClick={() => selectView('grid')} aria-pressed={viewMode === 'grid'}>Grid</button>
+                                <button type="button" className={viewMode === 'map' ? 'on' : ''} onClick={() => selectView('map')} aria-pressed={viewMode === 'map'}>Map</button>
+                            </div>
+                        )}
                         {isAccount ? (
                             creatingTitle === null ? (
                                 canCreateSpace ? (
@@ -523,7 +538,31 @@ export default function SpaceHub() {
                     </p>
                 )}
 
-                {shelves.map(({ key, label, hint, items }) => (
+                {viewMode === 'map' && spaces.length > 0 && (
+                    <SpaceConstellation
+                        spaces={spaces}
+                        defaultSpaceId={defaultSpaceId}
+                        openSpaceId={openSpaceId}
+                        canManage={canManage}
+                        onOpen={(space) => openCard(space)}
+                        onRename={async (space, next) => {
+                            try {
+                                await updateServerSpace(space.id, { label: next })
+                                await loadSpaces()
+                            } catch (err) {
+                                alert(err.message || 'Could not rename space.')
+                            }
+                        }}
+                        onDelete={handleDelete}
+                        onTogglePublic={handleTogglePublic}
+                        onCopyLink={handleCopyLiveLink}
+                        onSetMain={handleSetMain}
+                        onLinkProject={handleLinkProject}
+                        copiedLiveId={copiedLiveId}
+                    />
+                )}
+
+                {viewMode === 'grid' && shelves.map(({ key, label, hint, items }) => (
                     <section key={key} className="ssh-shelf">
                         <p className="ssh-shelf-label">
                             {label}

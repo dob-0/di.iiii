@@ -3,6 +3,7 @@ const fs = require('node:fs')
 const fsp = require('node:fs/promises')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { getDb } = require('./db')
+const commonsStore = require('./commonsStore')
 
 const SLUG_REGEX = /^[a-z0-9-]{3,48}$/
 const ASSET_ID_REGEX = /^[a-f0-9-]{8,64}$/i
@@ -206,6 +207,7 @@ function createSpaceStore({
 
   const deleteSpace = async (spaceId) => {
     s().deleteById.run(spaceId)
+    commonsStore.deleteBySpace(spaceId)
     const { spaceDir } = getSpacePaths(spaceId)
     await fsp.rm(spaceDir, { recursive: true, force: true })
   }
@@ -237,6 +239,7 @@ function createSpaceStore({
         meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0)
       db.prepare('UPDATE space_ops SET space_id = ? WHERE space_id = ?').run(toId, fromId)
       db.prepare('UPDATE projects SET space_id = ? WHERE space_id = ?').run(toId, fromId)
+      commonsStore.updateSpaceId(fromId, toId)
       s().deleteById.run(fromId)
     })()
     const { spaceDir: fromDir } = getSpacePaths(fromId)

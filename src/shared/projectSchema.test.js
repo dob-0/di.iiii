@@ -206,12 +206,17 @@ describe('projectSchema', () => {
         expect(afterDeleteNode.edges).toHaveLength(0)
     })
 
-    it('rejects unknown typeIds and enforces singleton node types on the client', () => {
+    it('accepts unknown typeIds (matches the server, which never validates them) and enforces singleton node types on the client', () => {
         const base = normalizeProjectDocument({})
+        // shared/projectSchema.cjs (the server's authoritative mirror) intentionally
+        // accepts any typeId — rejecting it here would let a client whose local
+        // registry lags behind (version skew) silently diverge from the document
+        // every other client and the server agree on.
         const afterUnknown = applyProjectOps(base, [
             { type: 'createNode', payload: { node: { id: 'bogus', typeId: 'does.not.exist' } } }
         ])
-        expect(afterUnknown.nodes).toHaveLength(0)
+        expect(afterUnknown.nodes).toHaveLength(1)
+        expect(afterUnknown.nodes[0].id).toBe('bogus')
 
         const afterSingleton = applyProjectOps(base, [
             { type: 'createNode', payload: { node: { id: 'light-a', typeId: 'world.light' } } },

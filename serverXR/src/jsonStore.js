@@ -39,6 +39,12 @@ async function readJson(filePath, fallback = null) {
     } catch (error) {
       const recovered = tryRecoverJson(raw)
       if (recovered !== null) {
+        // Keep the original bytes before overwriting — recovery truncates to
+        // the last parseable prefix, which can silently drop real content if
+        // the corruption is mid-file, not just a truncated tail.
+        const backupPath = `${filePath}.corrupt-${Date.now()}.bak`
+        await fsp.writeFile(backupPath, raw)
+        console.error(`[jsonStore] Recovered malformed JSON in ${filePath} by truncating to the last parseable prefix. Original bytes backed up to ${backupPath} — verify no content was lost.`)
         await writeJson(filePath, recovered)
         return recovered
       }

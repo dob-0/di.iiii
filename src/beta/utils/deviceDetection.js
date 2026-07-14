@@ -51,19 +51,14 @@ export function getDefaultNodeScale(deviceType) {
 }
 
 /**
- * Available density levels for node sizing.
- * Each entry: { value: number, label: string, density: 'compact'|'normal'|'large' }
+ * Available scale levels for node sizing.
  */
 export function getAvailableScales() {
     return [
-        { value: 0.75, label: 'Compact', density: 'compact' },
-        { value: 0.875, label: 'Small', density: 'compact' },
-        { value: 1.0, label: 'Normal', density: 'normal' },
-        { value: 1.25, label: 'Large', density: 'large' },
-        { value: 1.5, label: 'XL', density: 'large' },
+        { value: 0.75, label: 'Compact' },
+        { value: 0.875, label: 'Small' },
+        { value: 1.0, label: 'Normal' },
+        { value: 1.25, label: 'Large' },
+        { value: 1.5, label: 'XL' },
     ]
 }
-
-/**
- * Resolve density class from a scale value
- */

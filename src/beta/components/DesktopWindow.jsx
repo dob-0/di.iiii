@@ -24,6 +24,8 @@ export default function DesktopWindow({
     }))
     const interactionRef = useRef(null)
     const [dragMode, setDragMode] = useState(null)
+    const draftRef = useRef(draft)
+    useEffect(() => { draftRef.current = draft }, [draft])
 
     useEffect(() => {
         if (interactionRef.current) return
@@ -42,7 +44,7 @@ export default function DesktopWindow({
     }, [allowOverflowLeft, allowOverflowTop, minTop, windowState.height, windowState.width, windowState.x, windowState.y])
 
     useEffect(() => {
-        if (!interactionRef.current) return undefined
+        if (!dragMode) return undefined
         const handlePointerMove = (event) => {
             const state = interactionRef.current
             if (!state) return
@@ -78,7 +80,7 @@ export default function DesktopWindow({
             interactionRef.current = null
             setDragMode(null)
             if (!state) return
-            const nextFrame = clampWindowFrame(draft, {
+            const nextFrame = clampWindowFrame(draftRef.current, {
                 minTop,
                 allowOverflowLeft,
                 allowOverflowTop,
@@ -102,7 +104,7 @@ export default function DesktopWindow({
             window.removeEventListener('pointerup', handlePointerUp)
             window.removeEventListener('pointercancel', handlePointerUp)
         }
-    }, [allowOverflowLeft, allowOverflowTop, draft, minTop, onPatch, canvasZoom])
+    }, [dragMode, allowOverflowLeft, allowOverflowTop, minTop, onPatch, canvasZoom])
 
     const startDrag = (event) => {
         if (event.target.closest('button')) return

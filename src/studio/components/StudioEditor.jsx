@@ -65,11 +65,12 @@ const buildDownload = (content, filename, type = 'application/json') => {
 }
 
 const readCurrentCameraSnapshot = (controlsRef, fallback) => {
-    const camera = controlsRef.current?.object
-    const target = controlsRef.current?.target
-    if (!camera || !target) {
+    const cc = controlsRef.current
+    const camera = cc?.camera || cc?._camera
+    if (!camera || typeof cc.getTarget !== 'function') {
         return fallback
     }
+    const target = cc.getTarget(new Vector3())
     return {
         position: camera.position.toArray(),
         target: target.toArray(),

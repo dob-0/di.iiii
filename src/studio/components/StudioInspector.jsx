@@ -148,6 +148,11 @@ function InspNumber({ field, value, onChange, compact = false, axisColor }) {
                     step={baseStep}
                     onChange={(e) => {
                         const v = Number(e.target.value)
+                        // Skip intermediate states like '' or a lone '-' (both
+                        // parse to 0/NaN) instead of committing 0 — otherwise
+                        // the controlled input snaps back to 0 mid-keystroke
+                        // and a leading '-' can never be typed.
+                        if (e.target.value.trim() === '' || !Number.isFinite(v)) return
                         stateRef.current.onChange(Math.min(fieldMax, Math.max(fieldMin, v)))
                     }}
                     onKeyDown={handleKeyDown}

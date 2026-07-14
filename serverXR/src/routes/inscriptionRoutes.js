@@ -12,6 +12,17 @@
 
 const crypto = require('node:crypto')
 
+// Concurrent inscriptions to the same space race on scene.json's read-modify-
+// write (no compare-and-swap, unlike /ops): serialize per-space so a second
+// visitor's write never silently clobbers a first visitor's still-unsaved one.
+const spaceWriteLocks = new Map()
+function withSpaceLock(spaceId, fn) {
+  const prev = spaceWriteLocks.get(spaceId) || Promise.resolve()
+  const run = prev.then(fn, fn)
+  spaceWriteLocks.set(spaceId, run.then(() => {}, () => {}))
+  return run
+}
+
 const NAME_MAX = 40
 const WORD_MAX = 60
 const FIELD_MAX = 999
@@ -64,41 +75,52 @@ function registerInscriptionRoutes(router, {
       if (!word) return res.status(400).json({ error: 'An inscription needs a word.' })
 
       await ensureSpaceScene(spaceId)
-      const { scenePath } = getSpacePaths(spaceId)
-      const scene = await readJson(scenePath, blankScene)
-      const existing = (scene.objects || []).filter((obj) => String(obj?.id || '').startsWith('insc-'))
-      if (existing.length >= FIELD_MAX) {
+
+      const result = await withSpaceLock(spaceId, async () => {
+        const { scenePath } = getSpacePaths(spaceId)
+        const scene = await readJson(scenePath, blankScene)
+        const existing = (scene.objects || []).filter((obj) => String(obj?.id || '').startsWith('insc-'))
+        if (existing.length >= FIELD_MAX) {
+          return { full: true }
+        }
+
+        const object = {
+          id: `insc-${crypto.randomUUID()}`,
+          type: 'text-2d',
+          data: `${name} · ${word}`,
+          position: spiralPosition(existing.length),
+          rotation: [0, 0, 0],
+          scale: [1, 1, 1],
+          color: INSCRIPTION_COLOR,
+          isVisible: true,
+          fontWeight: 'normal',
+          fontStyle: 'normal'
+        }
+        const op = {
+          opId: crypto.randomUUID(),
+          clientId: 'vi.ritual',
+          type: 'addObject',
+          payload: { object }
+        }
+
+        // Re-read meta inside the lock — another inscription queued ahead of
+        // this one may have already advanced sceneVersion.
+        const freshMeta = await loadSpaceMeta(spaceId)
+        const currentVersion = freshMeta?.sceneVersion || 0
+        const versionedOp = { ...op, version: currentVersion + 1, timestamp: Date.now() }
+        const updatedScene = applySceneOps(scene, [versionedOp])
+        await writeJson(scenePath, updatedScene)
+        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory)
+        await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: versionedOp.version })
+        broadcastLiveEvent(spaceId, 'scene-op', { version: versionedOp.version, ops: [versionedOp] })
+
+        return { id: object.id, total: existing.length + 1 }
+      })
+
+      if (result.full) {
         return res.status(409).json({ error: 'The field is full.' })
       }
-
-      const object = {
-        id: `insc-${crypto.randomUUID()}`,
-        type: 'text-2d',
-        data: `${name} · ${word}`,
-        position: spiralPosition(existing.length),
-        rotation: [0, 0, 0],
-        scale: [1, 1, 1],
-        color: INSCRIPTION_COLOR,
-        isVisible: true,
-        fontWeight: 'normal',
-        fontStyle: 'normal'
-      }
-      const op = {
-        opId: crypto.randomUUID(),
-        clientId: 'vi.ritual',
-        type: 'addObject',
-        payload: { object }
-      }
-
-      const currentVersion = meta.sceneVersion || 0
-      const versionedOp = { ...op, version: currentVersion + 1, timestamp: Date.now() }
-      const updatedScene = applySceneOps(scene, [versionedOp])
-      await writeJson(scenePath, updatedScene)
-      await appendOpsHistory(spaceId, [versionedOp], maxOpHistory)
-      await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: versionedOp.version })
-      broadcastLiveEvent(spaceId, 'scene-op', { version: versionedOp.version, ops: [versionedOp] })
-
-      res.status(201).json({ ok: true, id: object.id, total: existing.length + 1 })
+      res.status(201).json({ ok: true, id: result.id, total: result.total })
     } catch (error) {
       next(error)
     }

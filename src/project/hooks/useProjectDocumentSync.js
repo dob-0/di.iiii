@@ -57,7 +57,14 @@ export function useProjectDocumentSync({
         dispatch?.({ type: 'load-start' })
         try {
             const response = await getProjectDocument(projectId)
-            versionRef.current = Number(response.version) || 0
+            const nextVersion = Number(response.version) || 0
+            if (nextVersion < versionRef.current) {
+                // The realtime catch-up (onReady) already advanced past this
+                // snapshot while the GET was in flight — applying it now would
+                // silently revert the document to a stale state.
+                return
+            }
+            versionRef.current = nextVersion
             dispatch?.({
                 type: 'load-success',
                 document: response.document,

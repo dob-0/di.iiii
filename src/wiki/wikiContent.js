@@ -35,6 +35,19 @@ export const WIKI_ARTICLES = [
         updated: '2026-07-13'
     },
     {
+        id: 'spaces-map-view',
+        category: 'Spaces & access',
+        title: 'Grid or Map: two ways to see your spaces',
+        summary: 'The Spaces page has a Grid/Map toggle — Map is a spatial, orbit-and-click view of your spaces and their projects.',
+        body: [
+            'The Spaces page (/studio) has a Grid / Map toggle next to the page title whenever you have at least one space. Grid is the familiar card shelves; Map renders every space as a node you can orbit around and zoom into.',
+            'Click a node in Map view to open a side panel for that space — rename, copy the live link, make public/private, set as main, delete, and manage its projects — the same actions as the grid, just reached from the map. Clicking a selected node’s satellite projects lets you rename them or set one live.',
+            'Your choice of Grid or Map is remembered on this device for next time.'
+        ],
+        tags: ['spaces', 'map', 'constellation', 'ui'],
+        updated: '2026-07-14'
+    },
+    {
         id: 'guest-and-sandbox-modes',
         category: 'Spaces & access',
         title: 'The Open Space, your sandbox & guest mode',

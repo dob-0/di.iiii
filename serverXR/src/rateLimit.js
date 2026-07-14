@@ -1,10 +1,15 @@
 // Minimal fixed-window rate limiter — zero deps, same spirit as httpClient.js.
-// Keyed by first-hop X-Forwarded-For (cPanel/nginx sits in front of this app and
+// Keyed by X-Forwarded-For (cPanel/nginx sits in front of this app and
 // `trust proxy` is not enabled, so req.ip alone would put every real visitor in
 // the proxy's single bucket) with req.ip as the direct-connection fallback.
+// nginx's single hop APPENDS the true connecting IP as the LAST entry — a
+// client can freely fake earlier entries, so the first entry is attacker-
+// controlled and must not be trusted as the key.
 
-const clientKey = (req) =>
-  (String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()) || req.ip || 'unknown'
+const clientKey = (req) => {
+  const list = String(req.headers['x-forwarded-for'] || '').split(',').map((s) => s.trim()).filter(Boolean)
+  return list[list.length - 1] || req.ip || 'unknown'
+}
 
 // createRateLimiter({ windowMs, max, name }) -> Express middleware.
 // Over-limit requests get 429 + Retry-After (seconds). Buckets are pruned on
