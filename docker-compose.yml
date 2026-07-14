@@ -9,6 +9,13 @@ name: dii
 #   docker compose --profile tunnel up --build -d
 #   docker compose logs tunnel   ← grab the *.trycloudflare.com URL
 #
+# Run with a real domain + automatic HTTPS (a DNS A record already points
+# the domain at this host -- Caddy gets and renews the cert itself, no
+# Cloudflare account, no manual certbot):
+#   echo "SITE_DOMAIN=your.domain" >> .env
+#   echo "PORT=8080" >> .env   ← keeps client off host port 80 so Caddy can take it
+#   docker compose --profile https up --build -d
+#
 # Modes:
 #   Standalone  — no extra config, fully self-contained
 #   Networked   — set FEDERATION_PEERS to connect to other nodes (coming soon)
@@ -87,8 +94,33 @@ services:
     restart: unless-stopped
     profiles: ["tunnel"]
 
+  # ── Caddy — optional, profile: https ──────────────────────────────────────────
+  # Real domain + automatic Let's Encrypt HTTPS, no Cloudflare account needed.
+  # Requires an A/AAAA record already pointing SITE_DOMAIN at this host, and
+  # PORT set to something other than 80 in .env (see the run comment above)
+  # so Caddy alone owns host ports 80/443.
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN in .env to the domain pointing at this host}
+    depends_on:
+      client:
+        condition: service_started
+    restart: unless-stopped
+    profiles: ["https"]
+
 # ── Volumes ───────────────────────────────────────────────────────────────────
 volumes:
   data:
     # SQLite DB + uploaded assets — the node's sovereign data store.
     # Back it up with: docker run --rm -v dii_data:/data -v $(pwd):/backup alpine tar czf /backup/data-backup.tar.gz /data
+  caddy_data:
+    # Let's Encrypt certs + account key — keep across restarts to avoid rate limits.
+  caddy_config:
