@@ -18,6 +18,11 @@ on:
       - dev
       - main
 
+# The default GITHUB_TOKEN only needs to check out this repo; PR creation on
+# dob-0/di.iiii goes through the separate UPSTREAM_PR_TOKEN secret above.
+permissions:
+  contents: read
+
 jobs:
   open-pr:
     # Fork-side only: in the upstream repo agents open PRs themselves and the

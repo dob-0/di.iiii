@@ -10,6 +10,9 @@ name: Browser Checks
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   browser-checks:
     runs-on: ubuntu-latest
