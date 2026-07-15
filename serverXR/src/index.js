@@ -1457,6 +1457,11 @@ router.delete('/api/spaces/:spaceId/github-link', async (req, res, next) => {
   } catch (error) { next(error) }
 })
 
+// Same upload throttle as space assets — project asset uploads share the
+// same disk/bandwidth cost and were missing this limiter entirely.
+router.use('/api/projects/:projectId/assets', (req, res, next) =>
+  req.method === 'POST' ? uploadLimiter(req, res, next) : next())
+
 registerProjectRoutes(router, {
   appendProjectOps,
   applyProjectOps,

@@ -1,7 +1,14 @@
+const crypto = require('node:crypto')
 const passport = require('passport')
 const { Strategy: GitHubStrategy } = require('passport-github2')
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20')
 const { upsertUser } = require('../userStore')
+const { signLoginState, verifyLoginState } = require('../loginState')
+
+// A random per-process secret when none is configured (e.g. REQUIRE_AUTH=false
+// self-host setups) — avoids signing with a fixed, publicly-known string.
+// State tokens are short-lived, so not surviving a restart is fine.
+const FALLBACK_STATE_SECRET = crypto.randomBytes(32).toString('hex')
 
 // Dev-only override: comma-separated space ids guests can use without signing in.
 // Defaults to ['main'] in any environment where it isn't set (staging/production
@@ -18,6 +25,14 @@ const registerAuthRoutes = (router, {
 }) => {
   const frontendUrl = config.oauth.frontendUrl
   const { oauth } = config
+  const stateSecret = config.auth.sessionSecret || FALLBACK_STATE_SECRET
+
+  const requireValidLoginState = (req, res, next) => {
+    if (!verifyLoginState(stateSecret, req.query.state)) {
+      return res.redirect(`${frontendUrl || '/'}?auth=error`)
+    }
+    next()
+  }
 
   if (oauth.github.enabled) {
     passport.use(new GitHubStrategy(
@@ -100,9 +115,10 @@ const registerAuthRoutes = (router, {
 
   if (oauth.github.enabled) {
     router.get('/api/auth/github',
-      passport.authenticate('github', { scope: ['user:email'], session: false })
+      passport.authenticate('github', { scope: ['user:email'], session: false, state: signLoginState(stateSecret) })
     )
     router.get('/api/auth/github/callback',
+      requireValidLoginState,
       passport.authenticate('github', { failureRedirect: `${frontendUrl || '/'}?auth=error`, session: false }),
       (req, res, next) => issueSessionAndRedirect(req, res, req.user).catch(next)
     )
@@ -110,9 +126,10 @@ const registerAuthRoutes = (router, {
 
   if (oauth.google.enabled) {
     router.get('/api/auth/google',
-      passport.authenticate('google', { scope: ['profile', 'email'], session: false })
+      passport.authenticate('google', { scope: ['profile', 'email'], session: false, state: signLoginState(stateSecret) })
     )
     router.get('/api/auth/google/callback',
+      requireValidLoginState,
       passport.authenticate('google', { failureRedirect: `${frontendUrl || '/'}?auth=error`, session: false }),
       (req, res, next) => issueSessionAndRedirect(req, res, req.user).catch(next)
     )
