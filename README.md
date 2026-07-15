@@ -1,4 +1,4 @@
-# di.iiii
+<img src="public/brand/wordmark-on-black.png" alt="di.iiii" width="360">
 
 ## Web XR Authoring Platform
 
