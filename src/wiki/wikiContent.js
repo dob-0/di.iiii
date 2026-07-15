@@ -314,6 +314,38 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['inscriptions', 'spaces', 'public', 'br_id_ge'],
         updated: '2026-07-12'
+    },
+    {
+        id: 'beta-lane',
+        category: 'Editing',
+        title: 'Beta: the experimental node-first editor',
+        summary: 'Beta is a second, experimental editor lane at /<space>/beta — node-first project documents, for research-style iteration alongside Studio.',
+        body: [
+            'Studio is the main, stable editor. Beta is a separate lane at /<space>/beta for the same space’s projects, built around a recursive, node-first document model instead of Studio’s window/entity model — it’s where node-based and research-style editor work happens.',
+            { list: [
+                'Reached from a space at /<space>/beta (protected the same way as Studio — sign-in required for non-public spaces).',
+                'Beta and Studio share the same underlying projects and persistence, but the two editors are not drop-in equivalents — a project built with one lane’s assumptions may not look or behave identically in the other.',
+                'Expect it to be less polished and to change more often than Studio: it is where new node-first ideas get tried before (if ever) they inform Studio.'
+            ] }
+        ],
+        tags: ['beta', 'nodes', 'editor', 'experimental'],
+        updated: '2026-07-15'
+    },
+    {
+        id: 'wcc-exhibition',
+        category: 'Spaces & access',
+        title: 'WCC: Women Creating Change — a virtual exhibition space',
+        summary: 'WCC is a linked-space exhibition at /wcc — a landing page plus a /wcc/scene 3D gallery of participant artworks, same pattern as br_id_ge.',
+        body: [
+            '“WCC: Women Creating Change” is a contemporary-art initiative supporting participants in turning personal experience into artworks, presented through a virtual exhibition — like br_id_ge and Beyond Form, it lives in di.iiii as a linked space (a real space like any other, routed through the normal public/private check).',
+            { list: [
+                '/wcc — the exhibition landing page: about text, session recaps, and the participating artists’ works with concept statements.',
+                '/wcc/scene — the 3D gallery experience showing those works in-world.',
+                'Public when the wcc space is marked public (same server-verified isPublic check as any other space) — otherwise it falls back to the normal sign-in gate.'
+            ] }
+        ],
+        tags: ['wcc', 'exhibition', 'linked-space', 'art'],
+        updated: '2026-07-15'
     }
 ]
 

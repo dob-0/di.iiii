@@ -11,6 +11,7 @@ This repo currently behaves like one platform with multiple editor generations r
 | `Admin/Ops` | `/admin?space=<id>` | Active | Operator/debug/status route |
 | `V2 Beta` | `/<space>/beta` and `/beta` | Experimental v2 lane | Project workflow used for active experiments without replacing Studio |
 | `Studio` | `/<space>/studio` and `/studio` | Stable main authoring workspace | Space-scoped project workflow |
+| `WCC` | `/wcc` and `/wcc/scene` | Active, linked-space exhibition | Landing page + 3D gallery for the "Women Creating Change" exhibition |
 | `serverXR` | `/serverXR` | Required backend | Spaces, projects, assets, ops, SSE, presence |
 
 ## Canonical Code Ownership
@@ -36,6 +37,9 @@ This repo currently behaves like one platform with multiple editor generations r
 - `src/studio/`
   - Studio-specific routes and UI
   - stable main authoring surface attached to a space route
+- `src/wcc/`
+  - the `wcc` linked-space exhibition (landing page + 3D gallery), routed through the same
+    server-verified public/private check as any other space
 - `shared/`
   - backend/runtime shared schemas
 - `src/shared/`
