@@ -8,3 +8,12 @@ dist
 *.local
 *.log
 coverage
+
+# Apache/cPanel-only shims (public/.htaccess, public/wcc/.htaccess,
+# public/serverXR/.htaccess, *.php scene shims). cPanel builds the same
+# dist/ separately outside Docker and still needs these at their repo
+# paths, so they stay in the repo -- only excluded from what Docker
+# copies into the build context (and therefore out of the final nginx
+# image, which has no use for them).
+public/**/.htaccess
+public/**/*.php
