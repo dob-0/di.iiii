@@ -66,8 +66,10 @@ this session with admin override — a real PR flow is still an open item.
 - Real-device click-through owed: guest journey + invite flow.
 - ANSCC research-grant angle for `br_id_ge` — ~1 month out, if pursued.
 - Drive Picker blocked on Cloud console. Stale GitHub App key in `serverXR/.env.local`.
-- Deadweight from the audit still untouched: orphaned cPanel `.htaccess`/PHP
-  files + cron scripts, `smoke-check.mjs` rename.
+- Deadweight from the audit: CPU limits sized + `smoke-check.mjs` rename both
+  done. Still untouched: orphaned cPanel `.htaccess`/PHP files + cron scripts
+  — left alone since they still back the intentionally-preserved cPanel
+  fallback until its hosting term expires.
 
 ## Known fixes → [docs/ai/known-fixes.md](docs/ai/known-fixes.md) — check before any bug hunt.
 
