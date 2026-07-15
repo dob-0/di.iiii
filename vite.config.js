@@ -130,6 +130,21 @@ export default {
                 target: DEV_PROXY_API_TARGET,
                 changeOrigin: true,
                 ws: true
+            },
+            // Project documents store asset/API URLs as bare `/api/...` (no
+            // `/serverXR` prefix) because in production Express serves both
+            // frontend and API from one origin, mounted at APP_BASE_PATH. In
+            // dev, Vite (5173) and the backend (4000, mounted at /serverXR)
+            // are different origins, so without this entry bare `/api/*`
+            // requests hit Vite's SPA fallback instead of the backend --
+            // image/model asset fetches silently get back HTML. The backend
+            // itself only answers under /serverXR/api/*, so the prefix has
+            // to be added back on the way through, not just forwarded as-is.
+            '/api': {
+                target: DEV_PROXY_API_TARGET,
+                changeOrigin: true,
+                ws: true,
+                rewrite: (path) => `/serverXR${path}`
             }
         }
     },
