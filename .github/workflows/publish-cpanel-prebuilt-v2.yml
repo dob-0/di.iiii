@@ -1,8 +1,12 @@
 name: Publish cPanel Release
 
+# Auto-trigger on push removed 2026-07-15: production DNS fully cut over to
+# the VPS (Docker/Caddy), and this pipeline's smoke-check has been failing
+# every run since (the cPanel host's release.gitCommit stays null, so the
+# "wait for expected SHA" step always times out) while burning CI minutes
+# for a fallback host real traffic no longer reaches. Kept as
+# workflow_dispatch only — run manually if cPanel is ever needed again.
 on:
-  push:
-    branches: [main, dev]
   workflow_dispatch:
     inputs:
       source_ref:
