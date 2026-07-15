@@ -7,6 +7,8 @@
 # Inert until STAGING_DOMAIN is set in .env and its DNS record exists --
 # with no DNS pointing at it, Caddy just logs a harmless cert-issuance
 # failure for this one block; the SITE_DOMAIN block above is unaffected.
-{$STAGING_DOMAIN:staging.invalid.internal} {
+# Default lives in docker-compose.yml's environment: mapping, not here as
+# a Caddyfile {$VAR:default} -- see the comment there for why.
+{$STAGING_DOMAIN} {
 	reverse_proxy host.docker.internal:{$STAGING_PORT:8081}
 }

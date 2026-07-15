@@ -138,7 +138,13 @@ services:
       - caddy_config:/config
     environment:
       SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN in .env to the domain pointing at this host}
-      STAGING_DOMAIN: ${STAGING_DOMAIN:-}
+      # Default lives here, not in the Caddyfile placeholder: compose's
+      # environment: mapping always sets this key inside the container, even
+      # when STAGING_DOMAIN is unset in .env (present-but-empty), and Caddy's
+      # own {$VAR:default} placeholder only falls back when the var is fully
+      # absent -- an empty value produces a keyless second server block,
+      # which Caddy refuses to start (only the first block may be keyless).
+      STAGING_DOMAIN: ${STAGING_DOMAIN:-staging.invalid.internal}
       STAGING_PORT: ${STAGING_PORT:-8081}
     # Lets the Caddyfile's staging site block reach the staging Compose
     # project's client container by its host-published port, without
