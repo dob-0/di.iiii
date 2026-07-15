@@ -57,16 +57,17 @@ function registerSpaceRoutes(router, {
       return scene
     }
     const { assetsDir } = getSpacePaths(spaceId)
-    const availableAssets = []
-    for (const asset of scene.assets) {
-      if (!asset?.id) continue
+    const checked = await Promise.all(scene.assets.map(async (asset) => {
+      if (!asset?.id) return null
       try {
         await fsp.access(path.join(assetsDir, asset.id))
-        availableAssets.push(asset)
+        return asset
       } catch {
         // Skip manifest entries whose asset file is missing on disk.
+        return null
       }
-    }
+    }))
+    const availableAssets = checked.filter(Boolean)
     if (availableAssets.length === scene.assets.length) {
       return scene
     }
@@ -857,17 +858,18 @@ function registerSpaceRoutes(router, {
       if (!force) {
         const usedBy = []
         if (listProjectsInSpace && readProjectDocument) {
-          for (const project of await listProjectsInSpace(spacesDir, spaceId)) {
+          const projects = await listProjectsInSpace(spacesDir, spaceId)
+          const usages = await Promise.all(projects.map(async (project) => {
             const doc = await readProjectDocument(spacesDir, spaceId, project.id).catch(() => null)
             const entities = (doc?.entities || []).filter((e) => e?.components?.media?.assetId === assetId)
-            if (entities.length) {
-              usedBy.push({
-                projectId: project.id,
-                title: project.title || project.id,
-                entities: entities.map((e) => e.name || e.id)
-              })
+            if (!entities.length) return null
+            return {
+              projectId: project.id,
+              title: project.title || project.id,
+              entities: entities.map((e) => e.name || e.id)
             }
-          }
+          }))
+          usedBy.push(...usages.filter(Boolean))
         }
         // Legacy V1 scenes reference assets directly on their objects, not via
         // project documents — without this pass, deleting an asset used only by
