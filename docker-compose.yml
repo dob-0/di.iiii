@@ -67,14 +67,16 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    # Safety ceiling only, not a tuned production limit -- bounds a runaway/compromised
-    # container so it can't starve the others; Compose doesn't isolate this by default the
-    # way cPanel's shared-hosting LVE caps used to. Main workload, so it gets the most headroom.
-    deploy:
-      resources:
-        limits:
-          cpus: '1.5'
-          memory: 1G
+    # Real ceiling, not just documentation: `cpus`/`mem_limit` at this top level are applied
+    # directly by the Docker Engine even under plain `docker compose up` -- unlike
+    # `deploy.resources.limits`, which is a Swarm-mode key that `docker compose` (no
+    # `--compatibility`, no Swarm) silently ignores entirely, so those numbers were never
+    # actually enforced. Sized against the real 2 vCPU / 3.7GB Hetzner host (confirmed via
+    # `nproc`/`free -h`): all five services summed to 3.1 against 2 actual vCPUs, trimmed
+    # proportionally to 1.8 (10% host headroom), keeping the same relative priority:
+    # server > client ≈ caddy > staging-server > staging-client. Main workload, most headroom.
+    cpus: '0.9'
+    mem_limit: 1g
 
   # ── Frontend: nginx + React SPA ───────────────────────────────────────────────
   client:
@@ -91,13 +93,11 @@ services:
       server:
         condition: service_healthy
     restart: unless-stopped
-    # Safety ceiling only -- bounds a runaway/compromised container, doesn't isolate this
-    # like cPanel's LVE used to. nginx serving a static SPA is very light.
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 128M
+    # Real ceiling (see server's comment above for why top-level cpus/mem_limit, not
+    # deploy.resources). nginx serving a static SPA is very light. Trimmed as part of the
+    # host-wide CPU rebalance -- see server's comment above.
+    cpus: '0.3'
+    mem_limit: 128m
 
   # ── Cloudflare Tunnel — optional, profile: tunnel ─────────────────────────────
   # Exposes the stack publicly with no port forwarding or static IP.
@@ -114,13 +114,11 @@ services:
         condition: service_started
     restart: unless-stopped
     profiles: ["tunnel"]
-    # Safety ceiling only -- bounds a runaway/compromised container, doesn't isolate this
-    # like cPanel's LVE used to. cloudflared is a lightweight relay process.
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 128M
+    # Real ceiling (see server's comment above). cloudflared is a lightweight relay process.
+    # Alternative deployment mode to `caddy` below (mutually exclusive profiles), so it
+    # isn't part of the same-host CPU budget those two are rebalanced against.
+    cpus: '0.5'
+    mem_limit: 128m
 
   # ── Caddy — optional, profile: https ──────────────────────────────────────────
   # Real domain + automatic Let's Encrypt HTTPS, no Cloudflare account needed.
@@ -156,13 +154,11 @@ services:
         condition: service_started
     restart: unless-stopped
     profiles: ["https"]
-    # Safety ceiling only -- bounds a runaway/compromised container, doesn't isolate this
-    # like cPanel's LVE used to. TLS termination is light.
-    deploy:
-      resources:
-        limits:
-          cpus: '0.5'
-          memory: 128M
+    # Real ceiling (see server's comment above for why top-level cpus/mem_limit, not
+    # deploy.resources). TLS termination is light. Trimmed as part of the host-wide CPU
+    # rebalance -- see server's comment above.
+    cpus: '0.3'
+    mem_limit: 128m
 
 # ── Volumes ───────────────────────────────────────────────────────────────────
 volumes:

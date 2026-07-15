@@ -38,6 +38,14 @@ this session with admin override — a real PR flow is still an open item.
   prod-alias to the real staging deployment via production's Caddy.
 - No `release.json`/git-commit stamp in the build yet — `/api/health` still
   can't confirm what commit is running; cross-check `gh run list` if unsure.
+- Ran a fresh 6-dimension audit + fixed the two highest findings: login OAuth
+  had no CSRF `state` (passport-oauth2 falls back to a no-op `NullStore` under
+  `session:false` — added a hand-signed/verified state, same pattern as the
+  Drive-connect flow); and the CPU `deploy.resources.limits` on both compose
+  files were never actually enforced under plain `docker compose up` (Swarm-only
+  key, no `--compatibility` passed) — switched to top-level `cpus`/`mem_limit`,
+  which the Docker Engine applies directly, keeping the same 1.8-vCPU budget
+  another session had already right-sized against the host.
 
 ## What works
 
@@ -59,8 +67,7 @@ this session with admin override — a real PR flow is still an open item.
 - ANSCC research-grant angle for `br_id_ge` — ~1 month out, if pursued.
 - Drive Picker blocked on Cloud console. Stale GitHub App key in `serverXR/.env.local`.
 - Deadweight from the audit still untouched: orphaned cPanel `.htaccess`/PHP
-  files + cron scripts, `smoke-check-cpanel.mjs` rename, CPU resource-limit
-  sizing against real VPS specs (currently oversubscribed with staging live).
+  files + cron scripts, `smoke-check-cpanel.mjs` rename.
 
 ## Known fixes → [docs/ai/known-fixes.md](docs/ai/known-fixes.md) — check before any bug hunt.
 

@@ -35,12 +35,14 @@ services:
       GITHUB_CLIENT_SECRET: ${STAGING_GITHUB_CLIENT_SECRET:-}
     # Small ceiling: staging only ever serves one person clicking through at
     # a time, it must not be able to meaningfully compete with production
-    # for the VPS's 2 vCPU / 4GB (docs/ai/roles/infrastructure-engineer.md).
-    deploy:
-      resources:
-        limits:
-          cpus: '0.4'
-          memory: 384M
+    # for the VPS's 2 vCPU / 3.7GB (confirmed via `nproc`/`free -h` on the
+    # real host). Trimmed further as part of the host-wide CPU rebalance --
+    # all five services' cpus limits summed to 3.1 against 2 actual vCPUs;
+    # see docker-compose.yml's server service for the full explanation,
+    # including why this is `cpus`/`mem_limit` (actually enforced by plain
+    # `docker compose up`) rather than the Swarm-only `deploy.resources`.
+    cpus: '0.2'
+    mem_limit: 384m
 
   client:
     # No `ports:` override here -- base docker-compose.yml's client port is
@@ -49,8 +51,5 @@ services:
     # concatenates list-type fields across -f files, it doesn't replace them
     # -- an extra `ports:` entry here would try to bind 80 a second time and
     # collide with production's Caddy).
-    deploy:
-      resources:
-        limits:
-          cpus: '0.2'
-          memory: 64M
+    cpus: '0.1'
+    mem_limit: 64m
