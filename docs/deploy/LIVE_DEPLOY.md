@@ -4,96 +4,35 @@ This is the shortest practical runbook for normal future work.
 
 If you only remember one thing, remember this:
 
-- `dev` = active development → deploys to `staging.di-studio.xyz`
-- `main` = production → deploys to `di-studio.xyz`
+- `dev` = active development → deploys to VPS staging (once one-time setup
+  is done — see below)
+- `main` = production → deploys to the Hetzner VPS (Docker/Caddy)
 - normal promotion path: `dev -> main`
+- there is no `staging` source branch — staging is a deploy target, not a branch
 
-## Golden Path
+## Golden Path (VPS, current)
 
-- local work happens on `dev`
-- push `dev` → GitHub Actions publishes `cpanel-staging` → staging.di-studio.xyz updates
-- verify staging
-- merge `dev` into `main` and push → GitHub Actions publishes `cpanel-production` → production updates
-- there is no `staging` source branch — staging is a GitHub Actions environment, not a branch
+Production DNS was cut over from cPanel to the Hetzner VPS on 2026-07-15.
+The VPS (GHCR + SSH, Docker Compose) is now the real deploy target for both
+environments:
+
+- push `dev` → [deploy-vps-staging.yml](../../.github/workflows/deploy-vps-staging.yml)
+  builds images, pushes to GHCR, SSHes into the VPS, restarts the staging
+  Compose project (`docker-compose.staging.yml`) — small, isolated, shares
+  the box with production but not its resources or secrets
+- push `main` → [deploy-vps.yml](../../.github/workflows/deploy-vps.yml) does
+  the same for the production Compose project
+- full detail, one-time VPS setup, required GitHub secrets/variables:
+  [VPS_DOCKER_DEPLOY.md](VPS_DOCKER_DEPLOY.md)
+
+**Staging is wired up but not yet exercised** — the one-time VPS setup
+(second checkout directory, `.env`, DNS record, GitHub secrets) hasn't been
+done yet. Until it is, a `dev` push builds and pushes images to GHCR but the
+SSH/restart step will fail fast on a missing `VPS_STAGING_DEPLOY_PATH`
+variable. Production is live and does not depend on staging being set up.
 
 Do not start routine feature work on `main`.
 Use `main` as a starting point only for an emergency production hotfix.
-
-Canonical pieces:
-
-- workflow:
-  - [.github/workflows/publish-cpanel-prebuilt-v2.yml](../../.github/workflows/publish-cpanel-prebuilt-v2.yml)
-- release bundle:
-  - `.deploy/cpanel/`
-- apply script:
-  - [scripts/cpanel-apply-prebuilt-release.sh](../../scripts/cpanel-apply-prebuilt-release.sh)
-
-## Shortcut Commands
-
-From the repo root:
-
-```bash
-npm run deploy:status
-npm run deploy:dev
-npm run deploy:staging
-npm run deploy:production
-npm run deploy:host:staging
-npm run deploy:host:production
-```
-
-Equivalent single helper form:
-
-```bash
-npm run deploy -- status
-npm run deploy -- staging
-npm run deploy -- production
-npm run deploy -- host staging
-npm run deploy -- host production
-```
-
-Rules:
-
-- `dev` is the integration lane — pushing it triggers the staging deploy automatically
-- `deploy:production` merges `dev` into `main` and pushes
-- `deploy:host:*` is only for the matching cPanel clone or host shell
-- `deploy:remote:*` is optional for a future SSH-capable host and is not part of the current shared-host flow
-- `npm run smoke:cpanel` is the quick verification command
-
-Current host truth:
-
-- push `dev` (or run `npm run deploy:staging`) to update staging
-- verify staging at `https://staging.di-studio.xyz`
-- run `npm run deploy:production` to merge `dev` into `main` and push to production
-- cPanel applies the published `cpanel-*` branches automatically
-
-Future SSH/VPS staging path:
-
-- [.github/workflows/deploy-staging-ssh.yml](../../.github/workflows/deploy-staging-ssh.yml)
-- [SSH_STAGING_DEPLOY.md](SSH_STAGING_DEPLOY.md)
-- disabled by default until `ENABLE_SSH_STAGING_DEPLOY=true` and staging SSH secrets are configured
-
-## Auto Apply Via Cron
-
-If the host does not allow SSH but does allow cPanel `Terminal` and `Cron Jobs`, use:
-
-```bash
-cd /home/distudio/repositories/di.iiii-staging
-bash scripts/cpanel-poll-deploy.sh staging
-```
-
-```bash
-cd /home/distudio/repositories/di.iiii-production
-bash scripts/cpanel-poll-deploy.sh production
-```
-
-Suggested cron entries:
-
-```cron
-*/2 * * * * cd /home/distudio/repositories/di.iiii-staging && bash scripts/cpanel-poll-deploy.sh staging >> /home/distudio/logs/staging-auto-deploy.log 2>&1
-*/2 * * * * cd /home/distudio/repositories/di.iiii-production && bash scripts/cpanel-poll-deploy.sh production >> /home/distudio/logs/production-auto-deploy.log 2>&1
-```
-
-This is pull-based auto-deploy rather than SSH push deploy, but on this host it is the simplest fully repeatable option.
 
 ## Daily Workflow
 
@@ -105,105 +44,79 @@ git pull --ff-only origin dev
 npm run dev
 ```
 
-### To update staging
-
-1. Push `dev`:
+### To update staging (once the one-time VPS setup is done)
 
 ```bash
 git push origin dev
-# or
-npm run deploy:staging
 ```
 
-2. Wait about 1-2 minutes for GitHub Actions to publish `cpanel-staging`.
-
-3. Verify:
+Wait for the `Deploy VPS Staging` GitHub Action to finish, then verify:
 
 ```bash
-curl -s https://staging.di-studio.xyz/serverXR/api/health
-npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
+curl -s https://<staging-domain>/serverXR/api/health
+node scripts/smoke-check-cpanel.mjs --base-url https://<staging-domain>
 ```
 
 ### To update production
 
-1. Merge the verified `dev` into `main`:
+Merge the verified `dev` into `main` and push:
 
 ```bash
-npm run deploy:production
-# equivalent to: git checkout main && git merge dev --no-edit && git push origin main && git checkout dev
+git checkout main && git merge dev --no-edit && git push origin main && git checkout dev
 ```
 
-2. Wait about 1-2 minutes for GitHub publish plus cPanel cron.
-
-3. Verify:
+Wait for the `Deploy VPS (GHCR + SSH)` GitHub Action to finish, then verify:
 
 ```bash
 curl -s https://di-studio.xyz/serverXR/api/health
-npm run smoke:cpanel -- --base-url https://di-studio.xyz
+node scripts/smoke-check-cpanel.mjs --base-url https://di-studio.xyz
 ```
 
 Resolve any merge conflicts between `dev` and `main` before shipping.
 
-## What Is Automatic Today
-
-- GitHub-side prebuilt publish is automatic on pushes to `dev` and `main`
-- the prebuilt branches are:
-  - `cpanel-staging` (from `dev` push)
-  - `cpanel-production` (from `main` push)
-- `workflow_dispatch` exists for repair or recovery work, but it should not replace the normal `dev -> main` promotion flow
-
 ## Emergency Hotfix Path
 
-When production needs an urgent fix, start from `main`, then bring the same commit back into `dev` so the branches do not drift apart.
-
-## What May Still Be Manual
-
-- first-time cron setup in cPanel
-- host recovery when a cPanel clone diverges
-- manual cPanel apply if cron is disabled or delayed
-- if cPanel says branches diverged, use the reset recovery steps in [cPanel Prebuilt Deploy](CPANEL_PREBUILT_DEPLOY.md)
-
-## Runtime Contract
-
-- `/serverXR` stays owned by the cPanel Node.js App
-- frontend lives in the web root
-- backend lives in `serverXR` or `serverXR-staging`
-- shared schema files live outside the backend repo copy and must be pointed to with `SHARED_ROOT`
-- staging and production do not automatically share media/content
-
-Per environment keep these aligned:
-
-- `APP_BASE_PATH=/serverXR`
-- `DATA_ROOT=<environment specific>`
-- `SHARED_ROOT=<environment specific>`
-- `CORS_ORIGINS=<environment specific>`
-- `API_TOKEN` and `VITE_API_TOKEN` must match
+When production needs an urgent fix, start from `main`, then bring the same
+commit back into `dev` so the branches do not drift apart.
 
 ## Public Surfaces
 
-- public app: `https://your-domain/`
-- public/main route: `https://your-domain/main`
-- public/space route: `https://your-domain/<space>`
-- admin: `https://your-domain/admin?space=main`
-- Studio: `https://your-domain/main/studio`
-- Beta: `https://your-domain/main/beta`
-- backend monitor: `https://your-domain/serverXR/`
-- backend health: `https://your-domain/serverXR/api/health`
+- public app: `https://di-studio.xyz/`
+- public/main route: `https://di-studio.xyz/main`
+- public/space route: `https://di-studio.xyz/<space>`
+- admin: `https://di-studio.xyz/admin?space=main`
+- Studio: `https://di-studio.xyz/main/studio`
+- Beta: `https://di-studio.xyz/main/beta`
+- backend health: `https://di-studio.xyz/serverXR/api/health`
 
 ## First Checks If Something Breaks
 
-1. `https://<host>/serverXR/api/health`
-2. Passenger `.htaccess` inside the web-root `serverXR/` mount
-3. backend `.env`
-4. `DATA_ROOT` and `SHARED_ROOT`
+1. `https://di-studio.xyz/serverXR/api/health`
+2. `docker compose ps` / `docker compose logs server` on the VPS
+3. the VPS checkout's `.env`
+4. `docker compose logs caddy` if TLS/routing looks wrong
 5. browser console and network panel
 
-## Legacy Fallbacks
+## cPanel Fallback (legacy)
 
-These docs still exist for emergency use, but they are not the default future path:
+cPanel is no longer the live path but remains a documented fallback until
+its hosting term expires. `publish-cpanel-prebuilt-v2.yml`'s automatic push
+trigger was disabled (2026-07-15, #63) — its smoke-check was failing every
+run since the DNS cutover, and it was burning CI minutes for a host real
+traffic no longer reaches. It still runs via `workflow_dispatch` if cPanel
+is ever needed again.
 
-- [docs/deploy/legacy/README.md](legacy/README.md)
-- [docs/deploy/legacy/CPANEL_GIT_PULL_DEPLOY.md](legacy/CPANEL_GIT_PULL_DEPLOY.md)
-- [docs/deploy/legacy/PM2_QUICK_GUIDE.md](legacy/PM2_QUICK_GUIDE.md)
+Canonical pieces (unchanged, kept for that fallback):
 
-The old legacy SSH-push GitHub workflows were removed on purpose so the Actions page reflects the real path in use.
+- workflow: [.github/workflows/publish-cpanel-prebuilt-v2.yml](../../.github/workflows/publish-cpanel-prebuilt-v2.yml)
+  (manual dispatch only)
+- release bundle: `.deploy/cpanel/`
+- apply script: [scripts/cpanel-apply-prebuilt-release.sh](../../scripts/cpanel-apply-prebuilt-release.sh)
+- `npm run deploy:host:*` — only for the matching cPanel clone/host shell
+- cron-based auto-apply, host runtime contract, and recovery steps: see
+  [CPANEL_PREBUILT_DEPLOY.md](CPANEL_PREBUILT_DEPLOY.md) and
+  [legacy/README.md](legacy/README.md)
+
+`npm run deploy:staging` / `deploy:production` (via `scripts/deploy.mjs`)
+still just push `dev` / merge-and-push `main` — same git operations as
+above, regardless of which workflow is currently wired to that branch.
