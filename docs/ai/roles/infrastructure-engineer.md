@@ -38,32 +38,32 @@ You may read any file to understand what to build or deploy. You do not edit pro
 Production DNS (`di-studio.xyz`) is fully cut over to a **Hetzner VPS running Docker + Caddy**.
 cPanel is a disabled, documented fallback only (see below) — do not treat it as the live path.
 
-**The deploy pipeline is not wired up yet.** The current production container was deployed by
-hand — `deploy-vps.yml` has never had a successful run; every historical run fails a precondition
-check because `VPS_HOST`/`VPS_SSH_USER`/`VPS_SSH_KEY` (secrets) and `VPS_DEPLOY_PATH` (variable)
-were never set in the GitHub repo (`gh secret list`/`gh variable list` confirm this — check `gh
-run list --workflow=deploy-vps.yml` before assuming a push deploys anything). There is also no
-`release.json`/git-commit stamp anywhere in the build, so `/api/health` can't currently confirm
-what's actually running vs. what's on `main`. Do not tell anyone "push to main to deploy" until
-this is fixed and verified with a real run.
+**The deploy pipeline is wired up and verified (2026-07-16).** Both `deploy-vps.yml` (production,
+push to `main`) and `deploy-vps-staging.yml` (staging, push to `dev`) have had real, successful
+end-to-end runs — GitHub secrets/variables are set (`VPS_HOST`, `VPS_SSH_USER`, `VPS_SSH_KEY`,
+`VPS_DEPLOY_PATH`, `VPS_STAGING_DEPLOY_PATH`, `REGISTRY_USER`, `VPS_BASE_URL`,
+`VPS_STAGING_BASE_URL`). Both workflows `git checkout <deployed-sha> -- <tracked compose/Caddy
+files>` before restarting the stack, so config drift on the host is caught automatically, not
+just image updates. There is still no `release.json`/git-commit stamp anywhere in the build, so
+`/api/health` can't confirm what's running purely from that endpoint — cross-check with `gh run
+list --workflow=deploy-vps.yml` and the run's `head_sha` if in doubt.
 
 ### Frontend + Backend (VPS, Docker Compose)
 
 - **Hosting:** Hetzner VPS (~2 vCPU / 4GB), Docker Compose stack: `client` (nginx serving Vite's
   `dist/`), `server` (Node/Express), `caddy` (TLS termination + reverse proxy, `profile: https`).
-- **Deploy trigger (once configured):** push to `main` → `.github/workflows/deploy-vps.yml`
-  builds `dii-server`/`dii-client` images, pushes to GHCR, SSHes into the VPS,
-  `docker compose pull && up -d`. See the pipeline-not-wired-up note above — this does not
-  currently happen.
+- **Deploy trigger:** push to `main` → `.github/workflows/deploy-vps.yml` builds `dii-server`/
+  `dii-client` images, pushes to GHCR, SSHes into the VPS, syncs tracked config, `docker compose
+  pull && up -d`, reloads Caddy.
 - **Staging:** push to `dev` → `deploy-vps-staging.yml` — same VPS, a separate low-resource
-  Compose project (`docker-compose.staging.yml`) in its own checkout dir, fronted by production's
-  Caddy via a second site block. Same missing-secrets problem as production; see
-  `docs/deploy/VPS_DOCKER_DEPLOY.md` for the one-time host + GitHub setup this needs.
+  Compose project (`docker-compose.staging.yml`) in its own checkout dir (`/opt/di.iiii-staging`),
+  fronted by production's Caddy via a second site block at `staging.di-studio.xyz`.
 - **Data:** a mounted `/data` volume — SQLite DB + `spaces/` directory with binary assets.
 - **Config:** `docker-compose.yml` (base) + `docker-compose.prod.yml` (pull-from-GHCR override) +
-  `docker-compose.staging.yml` (staging override). CPU/memory `limits` are set per-service but
-  currently oversubscribe the 2 vCPU host when staging is added in (see audit notes) — check
-  actual host specs before raising any service's ceiling.
+  `docker-compose.caddy-hardened.yml` (production only — resets the client's published port so
+  Caddy is the only way in) + `docker-compose.staging.yml` (staging override). CPU/memory `limits`
+  are set per-service but oversubscribe the 2 vCPU host once staging is running alongside prod
+  (see audit notes) — check actual host specs before raising any service's ceiling.
 
 ### cPanel — Legacy Fallback (disabled)
 
@@ -96,16 +96,18 @@ dev → main
 ```
 
 - Routine feature work: start on `dev`
-- Production deploy: merge `dev` into `main` and push — triggers `deploy-vps.yml` (currently
-  fails on missing secrets, see the note above; deploy is manual until that's fixed)
-- Staging deploy: push to `dev` — triggers `deploy-vps-staging.yml` (same missing-secrets problem)
+- Production deploy: merge `dev` into `main` and push — triggers `deploy-vps.yml`
+- Staging deploy: push to `dev` — triggers `deploy-vps-staging.yml`
 - Emergency hotfix only: work directly on `main`
+- Note: `main` currently has a "changes must go through a PR" branch protection rule that direct
+  pushes bypass with an admin warning — a real PR flow for `main` is still an open item, not yet
+  the enforced norm
 
 ---
 
 ## GitHub Actions Patterns
 
-### VPS Deploy Workflows (written, not yet functional)
+### VPS Deploy Workflows (live, verified)
 
 `deploy-vps.yml` (production, push to `main`) and `deploy-vps-staging.yml` (staging, push to
 `dev`) both: build+push images to GHCR, SSH into the VPS, `docker compose pull && up -d`, then

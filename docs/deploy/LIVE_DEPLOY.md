@@ -4,40 +4,33 @@ This is the shortest practical runbook for normal future work.
 
 If you only remember one thing, remember this:
 
-- `dev` = active development → *intended* to deploy to VPS staging (pipeline
-  not wired up yet — see below)
-- `main` = production → *intended* to deploy to the Hetzner VPS (Docker/Caddy);
-  currently deployed by hand, same unwired pipeline
+- `dev` = active development → deploys to VPS staging
+- `main` = production → deploys to the Hetzner VPS (Docker/Caddy)
 - normal promotion path: `dev -> main`
 - there is no `staging` source branch — staging is a deploy target, not a branch
 
-## Golden Path (VPS, current — pipeline not yet wired up)
+## Golden Path (VPS, current)
 
-Production DNS was cut over from cPanel to the Hetzner VPS on 2026-07-15,
-but that cutover was a **manual** deploy — the automated pipeline below has
-never had a successful run for either environment. Don't tell anyone "push
-to deploy" until this is fixed and verified with a real run; check `gh run
-list --workflow=deploy-vps.yml` before assuming otherwise.
-
-Intended flow, once configured:
+Production DNS was cut over from cPanel to the Hetzner VPS on 2026-07-15
+(manual deploy); the automated pipeline below was wired up and verified
+end-to-end (both environments, real runs) on 2026-07-16.
 
 - push `dev` → [deploy-vps-staging.yml](../../.github/workflows/deploy-vps-staging.yml)
   builds images, pushes to GHCR, SSHes into the VPS, restarts the staging
   Compose project (`docker-compose.staging.yml`) — small, isolated, shares
-  the box with production but not its resources or secrets
+  the box with production but not its resources or secrets; served at
+  `staging.di-studio.xyz` via production's Caddy
 - push `main` → [deploy-vps.yml](../../.github/workflows/deploy-vps.yml) does
   the same for the production Compose project
-- full detail, one-time VPS setup, required GitHub secrets/variables:
-  [VPS_DOCKER_DEPLOY.md](VPS_DOCKER_DEPLOY.md)
+- both workflows `git checkout <deployed-sha> -- <tracked compose/Caddy
+  files>` before restarting, so config drift on the host gets caught
+  automatically, not just image updates
+- full detail, GitHub secrets/variables reference: [VPS_DOCKER_DEPLOY.md](VPS_DOCKER_DEPLOY.md)
 
-**Neither workflow is wired up** — `VPS_HOST`/`VPS_SSH_USER`/`VPS_SSH_KEY`
-(secrets) and `VPS_DEPLOY_PATH`/`VPS_STAGING_DEPLOY_PATH` (variables) don't
-exist in the GitHub repo yet, so every run so far (both environments) fails
-the precondition check before touching the VPS at all. Someone with VPS/
-GitHub-admin access needs to do the one-time setup in VPS_DOCKER_DEPLOY.md.
-There's also no `release.json`/git-commit stamp in the build yet, so even a
-working pipeline can't currently be verified against `/api/health` — confirm
-by hand what's running on the VPS before assuming it matches `main`.
+There's still no `release.json`/git-commit stamp in the build, so
+`/api/health`'s `release` field stays null — can't yet verify what's running
+purely from that endpoint. Cross-check with `gh run list --workflow=deploy-vps.yml`
+(or `-staging`) and the run's `head_sha` if you need to confirm.
 
 Do not start routine feature work on `main`.
 Use `main` as a starting point only for an emergency production hotfix.
