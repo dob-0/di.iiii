@@ -55,7 +55,7 @@ Wait for the `Deploy VPS Staging` GitHub Action to finish, then verify:
 
 ```bash
 curl -s https://<staging-domain>/serverXR/api/health
-node scripts/smoke-check-cpanel.mjs --base-url https://<staging-domain>
+node scripts/smoke-check.mjs --base-url https://<staging-domain>
 ```
 
 ### To update production
@@ -70,7 +70,7 @@ Wait for the `Deploy VPS (GHCR + SSH)` GitHub Action to finish, then verify:
 
 ```bash
 curl -s https://di-studio.xyz/serverXR/api/health
-node scripts/smoke-check-cpanel.mjs --base-url https://di-studio.xyz
+node scripts/smoke-check.mjs --base-url https://di-studio.xyz
 ```
 
 Resolve any merge conflicts between `dev` and `main` before shipping.

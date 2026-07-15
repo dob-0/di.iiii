@@ -122,7 +122,7 @@ git push origin dev
 
 ```bash
 curl -s https://staging.di-studio.xyz/serverXR/api/health
-npm run smoke:cpanel -- --base-url https://staging.di-studio.xyz
+npm run smoke -- --base-url https://staging.di-studio.xyz
 ```
 
 ### Production
@@ -147,7 +147,7 @@ git checkout main && git merge dev --no-edit && git push origin main && git chec
 
 ```bash
 curl -s https://di-studio.xyz/serverXR/api/health
-npm run smoke:cpanel -- --base-url https://di-studio.xyz
+npm run smoke -- --base-url https://di-studio.xyz
 ```
 
 ## Automatic Behavior

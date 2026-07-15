@@ -27,7 +27,7 @@
         "deploy:remote:production": "node scripts/deploy.mjs remote production",
         "deploy:cpanel": "node scripts/stage-cpanel-nodeapp-release.mjs",
         "env:serverxr": "node scripts/write-server-env.mjs",
-        "smoke:cpanel": "node scripts/smoke-check-cpanel.mjs",
+        "smoke": "node scripts/smoke-check.mjs",
         "checkpoint": "node scripts/create-checkpoint.mjs",
         "sync:space-assets": "node scripts/sync-space-assets.mjs",
         "space:new": "node scripts/space-new.mjs",

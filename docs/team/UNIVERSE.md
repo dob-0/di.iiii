@@ -25,7 +25,7 @@ Owns the promotion path from dev to staging to production, cPanel prebuilt relea
 
 - Home: `scripts/`, `deploy/`, `.github/workflows/`
 - Skills: `dii-deploy-workflow`, `dii-ai-doc-maintenance`
-- Runs: `npm run deploy:staging`, `npm run smoke:cpanel staging`
+- Runs: `npm run deploy:staging`, `npm run smoke staging`
 
 ---
 

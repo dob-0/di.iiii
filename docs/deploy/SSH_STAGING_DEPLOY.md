@@ -67,7 +67,7 @@ After a deploy:
 
 ```bash
 curl -s https://<staging-host>/serverXR/api/health
-npm run smoke:cpanel -- --base-url https://<staging-host>
+npm run smoke -- --base-url https://<staging-host>
 ```
 
 The health response should include `release.deploymentMode = "ssh-rsync"`.

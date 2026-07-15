@@ -32,7 +32,7 @@ Advance code through the correct branch path, verify the host, and document the 
 ## Commands
 - Promote to production: `git checkout main && git merge dev --no-edit && git push origin main && git checkout dev`
 - Check CI: `gh run list --workflow publish-cpanel-prebuilt-v2.yml`
-- Verify production host: `npm run smoke:cpanel production`
+- Verify production host: `npm run smoke production`
 
 ## Smoke Check After Deploy
 1. Wait 1-2 minutes for cPanel cron to apply the published branch.
@@ -70,7 +70,7 @@ Advance code through the correct branch path, verify the host, and document the 
 ## Validation
 - Before promoting: `npm run test && npm run build`
 - Backend contract changes: `npm run test:server-contracts` first
-- After deploy: `npm run smoke:cpanel`
+- After deploy: `npm run smoke`
 
 ## Completion Checks
 - No routine work started on main.

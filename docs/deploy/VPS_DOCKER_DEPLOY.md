@@ -56,7 +56,7 @@ term expires. Do not delete it as part of adopting this path.
    (defaults: `REGISTRY_USER=youruser`, `IMAGE_TAG=latest` — see
    `.env.example`).
 3. Runs a smoke check against `/serverXR/api/health` (and the other routes in
-   `scripts/smoke-check-cpanel.mjs`) using `--base-url ${VPS_BASE_URL}`.
+   `scripts/smoke-check.mjs`) using `--base-url ${VPS_BASE_URL}`.
 
 ## Required GitHub Configuration
 
@@ -104,13 +104,10 @@ git show a92feb00:.github/workflows/deploy-staging-ssh.yml
 
 ## Follow-Ups
 
-- `scripts/smoke-check-cpanel.mjs` is generic over `--base-url` already and
-  works unchanged here; it should be renamed to something host-neutral (e.g.
-  `smoke-check.mjs`) once the cPanel path is retired, so as not to keep
-  implying a cPanel-only tool.
+- Both production and staging have been exercised for real (2026-07-16):
+  GitHub secrets/variables set, real deploy runs verified end-to-end for
+  each. `staging.di-studio.xyz` is live at `/opt/di.iiii-staging`.
 - Consider adding a rollback note (`IMAGE_TAG=<previous-sha>` + re-run
-  `pull && up -d`) once this path has been exercised for real.
-- The staging path above is written but **not yet exercised**: no VPS
-  directory, DNS record, or GitHub secrets/variables exist for it yet. The
-  first real run will need someone with VPS/DNS access to do the one-time
-  setup steps.
+  `pull && up -d`) — not yet needed in practice, but worth having on hand.
+- No `release.json`/git-commit stamp in the build yet, so `/api/health`
+  can't self-report what's deployed — cross-check `gh run list` if unsure.

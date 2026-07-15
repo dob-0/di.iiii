@@ -111,8 +111,8 @@ dev → main
 
 `deploy-vps.yml` (production, push to `main`) and `deploy-vps-staging.yml` (staging, push to
 `dev`) both: build+push images to GHCR, SSH into the VPS, `docker compose pull && up -d`, then
-run `scripts/smoke-check-cpanel.mjs` (misleadingly named — it's the shared smoke check for both
-the VPS and cPanel paths) against the deployed host.
+run `scripts/smoke-check.mjs` (shared smoke check for both the VPS and cPanel paths, renamed
+from `smoke-check-cpanel.mjs` since it was never cPanel-specific) against the deployed host.
 
 Required GitHub secrets/variables: see `docs/deploy/VPS_DOCKER_DEPLOY.md`.
 

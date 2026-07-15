@@ -500,10 +500,10 @@ const handlers = {
         console.log('Triggered the production prebuilt release on the remote cPanel host.')
     },
     'smoke:staging': async () => {
-        await runMaybe(nodeCommand, ['scripts/smoke-check-cpanel.mjs', '--base-url', 'https://staging.di-studio.xyz'])
+        await runMaybe(nodeCommand, ['scripts/smoke-check.mjs', '--base-url', 'https://staging.di-studio.xyz'])
     },
     'smoke:production': async () => {
-        await runMaybe(nodeCommand, ['scripts/smoke-check-cpanel.mjs', '--base-url', 'https://di-studio.xyz'])
+        await runMaybe(nodeCommand, ['scripts/smoke-check.mjs', '--base-url', 'https://di-studio.xyz'])
     },
     'build:staging': async () => {
         await runMaybe(nodeCommand, ['scripts/stage-cpanel-nodeapp-release.mjs'], {

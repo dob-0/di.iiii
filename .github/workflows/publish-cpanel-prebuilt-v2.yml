@@ -157,4 +157,4 @@ jobs:
           exit 1
 
       - name: Smoke check
-        run: node scripts/smoke-check-cpanel.mjs --base-url "${BASE_URL}"
+        run: node scripts/smoke-check.mjs --base-url "${BASE_URL}"

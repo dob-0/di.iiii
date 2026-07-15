@@ -141,11 +141,11 @@ jobs:
         run: |
           set -euo pipefail
           if [ -z "${SMOKE_BASE_URL:-}" ]; then
-            echo "::warning::VPS_BASE_URL repository variable not set — skipping smoke check. Set it to run scripts/smoke-check-cpanel.mjs against the deployed host."
+            echo "::warning::VPS_BASE_URL repository variable not set — skipping smoke check. Set it to run scripts/smoke-check.mjs against the deployed host."
             exit 0
           fi
-          # Reusing scripts/smoke-check-cpanel.mjs as-is: its checks (frontend
+          # Reusing scripts/smoke-check.mjs as-is: its checks (frontend
           # root, /serverXR/api/health, etc.) are generic over --base-url and
           # not cPanel-specific. Follow-up: rename/generalize it once the
           # cPanel path is retired.
-          node scripts/smoke-check-cpanel.mjs --base-url "${SMOKE_BASE_URL}"
+          node scripts/smoke-check.mjs --base-url "${SMOKE_BASE_URL}"

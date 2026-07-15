@@ -155,7 +155,7 @@ npm run test:server-contracts   # http / project / bundle contracts
 npm run docs:ai:sync            # keep AGENTS/CLAUDE/GEMINI mirrors in sync
 npm run docs:ai:check           # verify the mirrors are in sync
 npm run docs:wiki:check         # verify user-facing wiki is in lockstep
-node scripts/smoke-check-cpanel.mjs --base-url <origin>
+node scripts/smoke-check.mjs --base-url <origin>
 ```
 
 **Definition of done includes docs:** a user-facing change updates

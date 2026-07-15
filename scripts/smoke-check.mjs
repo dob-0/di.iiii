@@ -226,16 +226,16 @@ const summary = {
 
 results.forEach((entry) => {
     const prefix = entry.ok ? 'PASS' : 'FAIL'
-    console.log(`[smoke:cpanel] ${prefix} ${entry.name} -> ${entry.url}`)
+    console.log(`[smoke] ${prefix} ${entry.name} -> ${entry.url}`)
     if (!entry.ok) {
-        entry.issues.forEach((issue) => console.log(`[smoke:cpanel]   ${issue}`))
+        entry.issues.forEach((issue) => console.log(`[smoke]   ${issue}`))
     }
 })
 
 if (outputPath) {
     await mkdir(path.dirname(outputPath), { recursive: true })
     await writeFile(outputPath, `${JSON.stringify(summary, null, 2)}\n`, 'utf8')
-    console.log(`[smoke:cpanel] Wrote ${outputPath}`)
+    console.log(`[smoke] Wrote ${outputPath}`)
 }
 
 if (!summary.success) {

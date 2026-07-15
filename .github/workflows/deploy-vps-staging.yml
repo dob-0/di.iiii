@@ -136,4 +136,4 @@ jobs:
             echo "::warning::VPS_STAGING_BASE_URL repository variable not set — skipping smoke check."
             exit 0
           fi
-          node scripts/smoke-check-cpanel.mjs --base-url "${SMOKE_BASE_URL}"
+          node scripts/smoke-check.mjs --base-url "${SMOKE_BASE_URL}"
