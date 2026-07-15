@@ -9,6 +9,7 @@ const path = require('node:path')
 const crypto = require('node:crypto')
 const { initDb } = require('./db')
 const { migrateFromFilesystem } = require('./migrate')
+const logger = require('./logger')
 const {
   canAccessSpace,
   formatAuthScopeLabel,
@@ -254,7 +255,7 @@ const broadcastLiveEvent = (spaceId, eventName, payload, excludeId) => {
     try {
       client.res.write(data)
     } catch (error) {
-      console.warn('Failed to write SSE event', error)
+      logger.warn('Failed to write SSE event', error)
       client.res.end()
       entry.bucket.delete(clientId)
     }
@@ -287,7 +288,7 @@ const broadcastProjectLiveEvent = async (projectId, eventName, payload, excludeI
     try {
       client.res.write(data)
     } catch (error) {
-      console.warn('Failed to write project SSE event', error)
+      logger.warn('Failed to write project SSE event', error)
       client.res.end()
       entry.bucket.delete(clientId)
     }
@@ -626,7 +627,7 @@ const promoteGuestSandbox = async (priorState, userId) => {
     }
     return true
   } catch (error) {
-    console.warn('Failed to promote guest sandbox', error)
+    logger.warn('Failed to promote guest sandbox', error)
     return false
   }
 }
@@ -1068,7 +1069,7 @@ router.post('/api/github/webhook', async (req, res) => {
     }
     res.json({ ok: true, repo: full, synced })
   } catch (error) {
-    console.error('[github-webhook]', error?.message || error)
+    logger.error('[github-webhook]', error?.message || error)
     res.status(500).json({ error: 'Webhook processing failed.' })
   }
 })
@@ -1525,7 +1526,7 @@ mountTargets.forEach((targetPath) => {
 
 app.use((err, req, res, next) => {
   pushEvent('error', { message: err.message })
-  console.error(err)
+  logger.error(err)
   if (err?.code === 'LIMIT_FILE_SIZE') {
     res.status(413).json({ error: 'Uploaded file is too large.' })
     return
@@ -1549,18 +1550,18 @@ initStorage()
   .then(async () => {
     await ensureDefaultSpace()
     await ensureOpenSpace()
-    pruneSpaces().catch((error) => console.warn('Failed to prune spaces', error))
+    pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
     setInterval(() => {
-      pruneSpaces().catch((error) => console.warn('Failed to prune spaces', error))
+      pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
     }, 1000 * 60 * 30)
     // Daily scene snapshot of the open space — vandalism insurance (admin
     // restores via POST /api/spaces/:id/restore-snapshot).
-    snapshotOpenSpace().catch((error) => console.warn('Failed to snapshot open space', error))
+    snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
     setInterval(() => {
-      snapshotOpenSpace().catch((error) => console.warn('Failed to snapshot open space', error))
+      snapshotOpenSpace().catch((error) => logger.warn('Failed to snapshot open space', error))
       // Long-idle account sandboxes fold down to a snapshot (revived on
       // return by ensureOwnSandbox) so permanent sandboxes never pile up.
-      archiveIdleAccountSandboxes().catch((error) => console.warn('Failed to archive idle sandboxes', error))
+      archiveIdleAccountSandboxes().catch((error) => logger.warn('Failed to archive idle sandboxes', error))
     }, 1000 * 60 * 60 * 24)
 
     const httpServer = http.createServer(app)
@@ -1577,7 +1578,7 @@ initStorage()
         return findProjectById(SPACES_DIR, projectId)
       }
     })
-    console.log('[Socket.IO] Initialized for real-time collaboration')
+    logger.info('[Socket.IO] Initialized for real-time collaboration')
 
     initializeMesh(httpServer, config)
 
@@ -1588,10 +1589,10 @@ initStorage()
         releaseId: releaseInfo.releaseId,
         deployEnv: releaseInfo.deployEnv
       })
-      console.log(`Server running. Listening on: ${PORT}`)
+      logger.info(`Server running. Listening on: ${PORT}`)
     })
   })
   .catch((error) => {
-    console.error('Failed to initialize storage', error)
+    logger.error('Failed to initialize storage', error)
     process.exit(1)
   })

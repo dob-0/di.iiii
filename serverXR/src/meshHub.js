@@ -21,6 +21,7 @@
 
 const { WebSocketServer } = require('ws')
 const { URL } = require('url')
+const logger = require('./logger')
 
 // Abuse caps — this hub is public and unauthenticated by default, so bound it.
 const MAX_ROOMS = 200
@@ -259,7 +260,7 @@ function initializeMesh(httpServer, config = {}) {
     })
   })
 
-  console.log(`[Mesh] Live co-presence hub on ${meshPath}${roomSecret ? ' (secret-gated)' : ''}`)
+  logger.info(`[Mesh] Live co-presence hub on ${meshPath}${roomSecret ? ' (secret-gated)' : ''}`)
   return { wss, state, meshPath }
 }
 

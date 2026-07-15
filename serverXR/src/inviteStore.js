@@ -13,6 +13,7 @@
 
 const crypto = require('node:crypto')
 const { getDb } = require('./db')
+const logger = require('./logger')
 
 const PREFIX = 'dii_invite_'
 const DEFAULT_TTL_MS = 7 * 24 * 60 * 60 * 1000
@@ -80,7 +81,7 @@ const markInviteUsed = (inviteId) => {
       'UPDATE space_invites SET use_count = use_count + 1, last_used_at = ? WHERE id = ?'
     ).run(Date.now(), inviteId)
   } catch (err) {
-    console.warn('[inviteStore] use_count bump failed:', err?.message || err)
+    logger.warn('[inviteStore] use_count bump failed:', err?.message || err)
   }
 }
 

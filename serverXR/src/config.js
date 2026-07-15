@@ -1,6 +1,7 @@
 const path = require('node:path')
 const { URL } = require('node:url')
 const { normalizeAuthRole, normalizeAuthScopeSpaces } = require('./authAccess')
+const logger = require('./logger')
 
 const normalizeBasePath = (value) => {
   if (!value) return ''
@@ -184,7 +185,7 @@ if (requireAuth && !authSessionSecret) {
 }
 
 if (requireAuth && !process.env.AUTH_SESSION_SECRET && authSessionSecret) {
-  console.warn(
+  logger.warn(
     '[serverXR] AUTH_SESSION_SECRET is not set — falling back to an API bearer token as the ' +
     'session-cookie signing key. Anyone holding that token can forge session cookies for any ' +
     'role. Set a dedicated AUTH_SESSION_SECRET in the server env.'

@@ -2,6 +2,7 @@ const path = require('node:path')
 const fsp = require('node:fs/promises')
 const { readJson } = require('./jsonStore')
 const { getDb } = require('./db')
+const logger = require('./logger')
 
 const MIGRATION_KEY = 'v1_filesystem'
 
@@ -80,7 +81,7 @@ async function migrateFromFilesystem(spacesDir) {
         )
         spacesImported++
       } catch (err) {
-        console.warn(`[migrate] Skipping space ${spaceId}: ${err.message}`)
+        logger.warn(`[migrate] Skipping space ${spaceId}: ${err.message}`)
         continue
       }
 
@@ -90,7 +91,7 @@ async function migrateFromFilesystem(spacesDir) {
             insertSpaceOp.run(spaceId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? Date.now())
             opsImported++
           } catch (err) {
-            console.warn(`[migrate] Skipping space op v${op.version} in ${spaceId}: ${err.message}`)
+            logger.warn(`[migrate] Skipping space op v${op.version} in ${spaceId}: ${err.message}`)
           }
         }
       }
@@ -109,7 +110,7 @@ async function migrateFromFilesystem(spacesDir) {
           )
           projectsImported++
         } catch (err) {
-          console.warn(`[migrate] Skipping project ${projectId}: ${err.message}`)
+          logger.warn(`[migrate] Skipping project ${projectId}: ${err.message}`)
           continue
         }
 
@@ -119,7 +120,7 @@ async function migrateFromFilesystem(spacesDir) {
               insertProjectOp.run(projectId, op.version ?? 0, JSON.stringify(op), op.timestamp ?? Date.now())
               opsImported++
             } catch (err) {
-              console.warn(`[migrate] Skipping project op v${op.version} in ${projectId}: ${err.message}`)
+              logger.warn(`[migrate] Skipping project op v${op.version} in ${projectId}: ${err.message}`)
             }
           }
         }
@@ -129,7 +130,7 @@ async function migrateFromFilesystem(spacesDir) {
     db.prepare('INSERT OR REPLACE INTO migrations (key, completed_at) VALUES (?, ?)').run(MIGRATION_KEY, Date.now())
   })()
 
-  console.log(`[migrate] Imported ${spacesImported} spaces, ${projectsImported} projects, ${opsImported} ops`)
+  logger.info(`[migrate] Imported ${spacesImported} spaces, ${projectsImported} projects, ${opsImported} ops`)
   return { spacesImported, projectsImported, opsImported }
 }
 

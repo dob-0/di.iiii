@@ -4,6 +4,7 @@ const fsp = require('node:fs/promises')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { getDb } = require('./db')
 const commonsStore = require('./commonsStore')
+const logger = require('./logger')
 
 const SLUG_REGEX = /^[a-z0-9-]{3,48}$/
 const ASSET_ID_REGEX = /^[a-f0-9-]{8,64}$/i
@@ -395,7 +396,7 @@ function createSpaceStore({
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
     const stream = fs.createReadStream(filePath)
     stream.on('error', (error) => {
-      console.error(error)
+      logger.error(error)
       res.status(500).end('Failed to read asset')
     })
     stream.pipe(res)

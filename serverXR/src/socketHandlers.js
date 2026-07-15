@@ -7,6 +7,7 @@ const {
 } = require('./authAccess')
 const { readCookie, verifyAuthSessionValue } = require('./authSession')
 const { buildCorsOriginHandler } = require('./config')
+const logger = require('./logger')
 
 // Store active connections
 const spaceConnections = new Map()
@@ -140,7 +141,7 @@ function initializeSocket(httpServer, config) {
         message: 'Space is read-only.'
       })
     } catch (error) {
-      console.error(`[Socket] Failed to verify edit permissions for ${spaceId}:`, error)
+      logger.error(`[Socket] Failed to verify edit permissions for ${spaceId}:`, error)
       socket.emit('server-error', {
         spaceId,
         message: 'Unable to verify space permissions.'
@@ -172,7 +173,7 @@ function initializeSocket(httpServer, config) {
         message: 'Project not found.'
       })
     } catch (error) {
-      console.error(`[Socket] Failed to verify project ${projectId}:`, error)
+      logger.error(`[Socket] Failed to verify project ${projectId}:`, error)
       socket.emit('server-error', {
         projectId,
         message: 'Unable to verify project.'
@@ -236,7 +237,7 @@ function initializeSocket(httpServer, config) {
   }
 
   io.on('connection', (socket) => {
-    console.log(`[Socket] Connected: ${socket.id}`)
+    logger.info(`[Socket] Connected: ${socket.id}`)
 
     // User joins a space
     socket.on('join-space', (data) => {
@@ -250,7 +251,7 @@ function initializeSocket(httpServer, config) {
         return
       }
 
-      console.log(`[Socket] ${userName} joined space: ${spaceId}`)
+      logger.info(`[Socket] ${userName} joined space: ${spaceId}`)
       joinConnectionBucket({
         bucketMap: spaceConnections,
         bucketId: spaceId,
@@ -273,7 +274,7 @@ function initializeSocket(httpServer, config) {
       }
       socket.data.projectSpaces.set(project.projectId || projectId, project.spaceId || null)
 
-      console.log(`[Socket] ${userName} joined project: ${projectId}`)
+      logger.info(`[Socket] ${userName} joined project: ${projectId}`)
       joinConnectionBucket({
         bucketMap: projectConnections,
         bucketId: projectId,
@@ -292,7 +293,7 @@ function initializeSocket(httpServer, config) {
       if (!spaceId) return
       if (!(await ensureEditableSpace(spaceId, socket))) return
 
-      console.log(`[Socket] Scene update from ${socket.id}:`, {
+      logger.info(`[Socket] Scene update from ${socket.id}:`, {
         spaceId,
         changesCount: changes?.length || 0
       })
@@ -312,7 +313,7 @@ function initializeSocket(httpServer, config) {
       if (!spaceId) return
       if (!(await ensureEditableSpace(spaceId, socket))) return
 
-      console.log(`[Socket] Object changed in space ${spaceId}: ${objectId} (${action})`)
+      logger.info(`[Socket] Object changed in space ${spaceId}: ${objectId} (${action})`)
 
       // Broadcast to others in space
       socket.to(`space-${spaceId}`).emit('object-changed', {
@@ -331,7 +332,7 @@ function initializeSocket(httpServer, config) {
       if (!spaceId || !object) return
       if (!(await ensureEditableSpace(spaceId, socket))) return
 
-      console.log(`[Socket] Object added in space ${spaceId} by ${socket.id}`)
+      logger.info(`[Socket] Object added in space ${spaceId} by ${socket.id}`)
 
       // Broadcast to others in space
       socket.to(`space-${spaceId}`).emit('object-added', {
@@ -347,7 +348,7 @@ function initializeSocket(httpServer, config) {
       if (!spaceId || !objectId) return
       if (!(await ensureEditableSpace(spaceId, socket))) return
 
-      console.log(`[Socket] Object deleted in space ${spaceId}: ${objectId}`)
+      logger.info(`[Socket] Object deleted in space ${spaceId}: ${objectId}`)
 
       // Broadcast to others in space
       socket.to(`space-${spaceId}`).emit('object-deleted', {
@@ -409,7 +410,7 @@ function initializeSocket(httpServer, config) {
 
     // Disconnect
     socket.on('disconnect', () => {
-      console.log(`[Socket] Disconnected: ${socket.id}`)
+      logger.info(`[Socket] Disconnected: ${socket.id}`)
 
       // Remove from all spaces
       for (const [spaceId] of spaceConnections.entries()) {
@@ -435,7 +436,7 @@ function initializeSocket(httpServer, config) {
 
     // Error handling
     socket.on('error', (error) => {
-      console.error(`[Socket] Error from ${socket.id}:`, error)
+      logger.error(`[Socket] Error from ${socket.id}:`, error)
     })
   })
 
