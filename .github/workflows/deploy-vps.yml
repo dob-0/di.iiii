@@ -76,6 +76,9 @@ jobs:
       VPS_DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
       REGISTRY_USER: ${{ vars.REGISTRY_USER }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Check SSH deploy configuration
         run: |
           set -euo pipefail
