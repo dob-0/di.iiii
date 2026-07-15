@@ -175,12 +175,17 @@ Normal promotion path:
 4. verify staging
 5. promote to `main`
 
-Deploys are driven by pushes, via GitHub Actions (GHCR build + SSH to the Hetzner VPS):
+Deploys are meant to be driven by pushes, via GitHub Actions (GHCR build + SSH to the Hetzner VPS):
 
 ```bash
 git push origin dev    # deploys to VPS staging — see .github/workflows/deploy-vps-staging.yml
 git push origin main   # deploys to VPS production — see .github/workflows/deploy-vps.yml
 ```
+
+**Not wired up yet:** both workflows need `VPS_HOST`/`VPS_SSH_USER`/`VPS_SSH_KEY` GitHub secrets
+and a `VPS_DEPLOY_PATH`/`VPS_STAGING_DEPLOY_PATH` variable that don't exist in this repo yet —
+every run so far has failed the precondition check before touching the VPS. Deploys are manual
+until someone with VPS/GitHub-admin access sets these up; see `docs/deploy/VPS_DOCKER_DEPLOY.md`.
 
 `npm run deploy:*` (`scripts/deploy.mjs`) is the older cPanel-era path, kept only as a documented
 fallback (see `docs/deploy/legacy/`) — it is not how `di-studio.xyz` is deployed today.

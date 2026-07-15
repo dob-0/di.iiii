@@ -4,17 +4,22 @@ This is the shortest practical runbook for normal future work.
 
 If you only remember one thing, remember this:
 
-- `dev` = active development → deploys to VPS staging (once one-time setup
-  is done — see below)
-- `main` = production → deploys to the Hetzner VPS (Docker/Caddy)
+- `dev` = active development → *intended* to deploy to VPS staging (pipeline
+  not wired up yet — see below)
+- `main` = production → *intended* to deploy to the Hetzner VPS (Docker/Caddy);
+  currently deployed by hand, same unwired pipeline
 - normal promotion path: `dev -> main`
 - there is no `staging` source branch — staging is a deploy target, not a branch
 
-## Golden Path (VPS, current)
+## Golden Path (VPS, current — pipeline not yet wired up)
 
-Production DNS was cut over from cPanel to the Hetzner VPS on 2026-07-15.
-The VPS (GHCR + SSH, Docker Compose) is now the real deploy target for both
-environments:
+Production DNS was cut over from cPanel to the Hetzner VPS on 2026-07-15,
+but that cutover was a **manual** deploy — the automated pipeline below has
+never had a successful run for either environment. Don't tell anyone "push
+to deploy" until this is fixed and verified with a real run; check `gh run
+list --workflow=deploy-vps.yml` before assuming otherwise.
+
+Intended flow, once configured:
 
 - push `dev` → [deploy-vps-staging.yml](../../.github/workflows/deploy-vps-staging.yml)
   builds images, pushes to GHCR, SSHes into the VPS, restarts the staging
@@ -25,11 +30,14 @@ environments:
 - full detail, one-time VPS setup, required GitHub secrets/variables:
   [VPS_DOCKER_DEPLOY.md](VPS_DOCKER_DEPLOY.md)
 
-**Staging is wired up but not yet exercised** — the one-time VPS setup
-(second checkout directory, `.env`, DNS record, GitHub secrets) hasn't been
-done yet. Until it is, a `dev` push builds and pushes images to GHCR but the
-SSH/restart step will fail fast on a missing `VPS_STAGING_DEPLOY_PATH`
-variable. Production is live and does not depend on staging being set up.
+**Neither workflow is wired up** — `VPS_HOST`/`VPS_SSH_USER`/`VPS_SSH_KEY`
+(secrets) and `VPS_DEPLOY_PATH`/`VPS_STAGING_DEPLOY_PATH` (variables) don't
+exist in the GitHub repo yet, so every run so far (both environments) fails
+the precondition check before touching the VPS at all. Someone with VPS/
+GitHub-admin access needs to do the one-time setup in VPS_DOCKER_DEPLOY.md.
+There's also no `release.json`/git-commit stamp in the build yet, so even a
+working pipeline can't currently be verified against `/api/health` — confirm
+by hand what's running on the VPS before assuming it matches `main`.
 
 Do not start routine feature work on `main`.
 Use `main` as a starting point only for an emergency production hotfix.

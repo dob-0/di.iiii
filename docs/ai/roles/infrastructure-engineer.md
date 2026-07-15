@@ -38,16 +38,27 @@ You may read any file to understand what to build or deploy. You do not edit pro
 Production DNS (`di-studio.xyz`) is fully cut over to a **Hetzner VPS running Docker + Caddy**.
 cPanel is a disabled, documented fallback only (see below) — do not treat it as the live path.
 
+**The deploy pipeline is not wired up yet.** The current production container was deployed by
+hand — `deploy-vps.yml` has never had a successful run; every historical run fails a precondition
+check because `VPS_HOST`/`VPS_SSH_USER`/`VPS_SSH_KEY` (secrets) and `VPS_DEPLOY_PATH` (variable)
+were never set in the GitHub repo (`gh secret list`/`gh variable list` confirm this — check `gh
+run list --workflow=deploy-vps.yml` before assuming a push deploys anything). There is also no
+`release.json`/git-commit stamp anywhere in the build, so `/api/health` can't currently confirm
+what's actually running vs. what's on `main`. Do not tell anyone "push to main to deploy" until
+this is fixed and verified with a real run.
+
 ### Frontend + Backend (VPS, Docker Compose)
 
 - **Hosting:** Hetzner VPS (~2 vCPU / 4GB), Docker Compose stack: `client` (nginx serving Vite's
   `dist/`), `server` (Node/Express), `caddy` (TLS termination + reverse proxy, `profile: https`).
-- **Deploy trigger:** push to `main` → `.github/workflows/deploy-vps.yml` builds `dii-server`/
-  `dii-client` images, pushes to GHCR, SSHes into the VPS, `docker compose pull && up -d`.
+- **Deploy trigger (once configured):** push to `main` → `.github/workflows/deploy-vps.yml`
+  builds `dii-server`/`dii-client` images, pushes to GHCR, SSHes into the VPS,
+  `docker compose pull && up -d`. See the pipeline-not-wired-up note above — this does not
+  currently happen.
 - **Staging:** push to `dev` → `deploy-vps-staging.yml` — same VPS, a separate low-resource
   Compose project (`docker-compose.staging.yml`) in its own checkout dir, fronted by production's
-  Caddy via a second site block. See `docs/deploy/VPS_DOCKER_DEPLOY.md` for the one-time host
-  setup this still needs before a `dev` push actually deploys anywhere.
+  Caddy via a second site block. Same missing-secrets problem as production; see
+  `docs/deploy/VPS_DOCKER_DEPLOY.md` for the one-time host + GitHub setup this needs.
 - **Data:** a mounted `/data` volume — SQLite DB + `spaces/` directory with binary assets.
 - **Config:** `docker-compose.yml` (base) + `docker-compose.prod.yml` (pull-from-GHCR override) +
   `docker-compose.staging.yml` (staging override). CPU/memory `limits` are set per-service but
@@ -85,15 +96,16 @@ dev → main
 ```
 
 - Routine feature work: start on `dev`
-- Production deploy: merge `dev` into `main` and push — triggers `deploy-vps.yml`
-- Staging deploy: push to `dev` — triggers `deploy-vps-staging.yml` (once one-time VPS setup is done)
+- Production deploy: merge `dev` into `main` and push — triggers `deploy-vps.yml` (currently
+  fails on missing secrets, see the note above; deploy is manual until that's fixed)
+- Staging deploy: push to `dev` — triggers `deploy-vps-staging.yml` (same missing-secrets problem)
 - Emergency hotfix only: work directly on `main`
 
 ---
 
 ## GitHub Actions Patterns
 
-### VPS Deploy Workflows (live)
+### VPS Deploy Workflows (written, not yet functional)
 
 `deploy-vps.yml` (production, push to `main`) and `deploy-vps-staging.yml` (staging, push to
 `dev`) both: build+push images to GHCR, SSH into the VPS, `docker compose pull && up -d`, then
