@@ -107,4 +107,4 @@ function isConnected(userId) {
   return Boolean(getDb().prepare('SELECT 1 FROM user_drive_tokens WHERE user_id = ?').get(userId))
 }
 
-module.exports = { saveTokens, updateAccessToken, getTokens, deleteTokens, isConnected, _encrypt: encrypt, _decrypt: decrypt }
+module.exports = { saveTokens, updateAccessToken, getTokens, deleteTokens, isConnected }

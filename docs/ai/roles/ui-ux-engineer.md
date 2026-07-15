@@ -188,7 +188,6 @@ The create dialog uses a memoized `definitions` list from the node registry. Do 
 | `src/styles/inspector/*.css` | Input controls (vector, inputs, overlays) |
 | `src/styles/controls.css` | Button, input, select components |
 | `src/styles/menu.css` | Dropdown menu components |
-| `src/styles/layout-split.css` | Split-pane layout |
 | `src/styles/layout-stack.css` | Stack layout |
 | `src/beta/styles/beta.css` | Beta-specific overrides and components |
 

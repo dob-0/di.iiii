@@ -5,9 +5,9 @@ const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { getDb } = require('./db')
 const commonsStore = require('./commonsStore')
 const logger = require('./logger')
+const { isValidAssetId } = require('./assetHash')
 
 const SLUG_REGEX = /^[a-z0-9-]{3,48}$/
-const ASSET_ID_REGEX = /^[a-f0-9-]{8,64}$/i
 
 const SPACE_KINDS = ['normal', 'global', 'sandbox']
 const normalizeSpaceKind = (value) => SPACE_KINDS.includes(value) ? value : 'normal'
@@ -42,8 +42,6 @@ function createSpaceStore({
       opsPath: path.join(spaceDir, 'ops.json')
     }
   }
-
-  const isValidAssetId = (value = '') => ASSET_ID_REGEX.test(String(value).trim())
 
   const rowToMeta = (row) => !row ? null : ({
     id: row.id,

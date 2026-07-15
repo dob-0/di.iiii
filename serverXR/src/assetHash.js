@@ -2,8 +2,10 @@ const fs = require('node:fs')
 const crypto = require('node:crypto')
 
 const SHA256_HEX_REGEX = /^[a-f0-9]{64}$/i
+const ASSET_ID_REGEX = /^[a-f0-9-]{8,64}$/i
 
 const isSha256AssetId = (value = '') => SHA256_HEX_REGEX.test(String(value).trim())
+const isValidAssetId = (value = '') => ASSET_ID_REGEX.test(String(value).trim())
 
 const hashFileSha256 = (filePath) => new Promise((resolve, reject) => {
   const hash = crypto.createHash('sha256')
@@ -16,5 +18,7 @@ const hashFileSha256 = (filePath) => new Promise((resolve, reject) => {
 module.exports = {
   SHA256_HEX_REGEX,
   isSha256AssetId,
+  ASSET_ID_REGEX,
+  isValidAssetId,
   hashFileSha256
 }

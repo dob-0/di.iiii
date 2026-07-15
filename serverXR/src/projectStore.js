@@ -3,6 +3,7 @@ const fsp = require('node:fs/promises')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { getDb } = require('./db')
 const { loadSharedModule } = require('./sharedRuntime')
+const { isValidAssetId } = require('./assetHash')
 const {
   defaultProjectDocument,
   normalizeProjectDocument
@@ -14,7 +15,6 @@ const PROJECT_DOCUMENT_FILE = 'document.json'
 const PROJECT_OPS_FILE = 'ops.json'
 
 const PROJECT_ID_REGEX = /^[a-z0-9-]{3,64}$/
-const ASSET_ID_REGEX = /^[a-f0-9-]{8,64}$/i
 
 const safeSlug = (value = '') => String(value)
   .toLowerCase()
@@ -27,8 +27,6 @@ const normalizeProjectId = (value) => {
   const slug = safeSlug(value)
   return (slug && PROJECT_ID_REGEX.test(slug)) ? slug : null
 }
-
-const isValidAssetId = (value = '') => ASSET_ID_REGEX.test(String(value).trim())
 
 const rowToMeta = (row) => !row ? null : ({
   id: row.id,
