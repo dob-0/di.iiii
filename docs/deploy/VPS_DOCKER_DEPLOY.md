@@ -11,11 +11,35 @@ term expires. Do not delete it as part of adopting this path.
 ## Workflow
 
 - [.github/workflows/deploy-vps.yml](../../.github/workflows/deploy-vps.yml)
-- triggers on push to `main` (production only, for now)
-- `dev`/staging is not wired up yet — it depends on whether staging ends up
-  on the same VPS or a separate host. Once that's confirmed, add a `dev`
-  trigger with its own host secrets/variables (or a `staging` GitHub
-  Environment) alongside this one.
+  — triggers on push to `main` (production).
+- [.github/workflows/deploy-vps-staging.yml](../../.github/workflows/deploy-vps-staging.yml)
+  — triggers on push to `dev` (staging). Decided against a second VPS: at
+  2 vCPU/4GB (see `docs/ai/roles/infrastructure-engineer.md`), staging runs
+  as a separate, deliberately small Compose project
+  (`docker-compose.staging.yml`, 0.4 CPU/384M server + 0.2 CPU/64M client —
+  small enough that it can't meaningfully starve production's 1.5 CPU/1GB)
+  on the **same** VPS, in a **separate checkout directory** with its own
+  `.env` so it never inherits production's `COMPOSE_PROFILES=https` or
+  secrets. Production's Caddy (the only Caddy instance; staging has none)
+  reverse-proxies `STAGING_DOMAIN` to staging's host-published client port
+  — see the second site block in `Caddyfile`.
+
+### One-time VPS setup for staging
+
+1. Clone this repo (or copy the compose files + `Caddyfile`) into a second
+   directory, sibling to the production checkout, e.g.
+   `/opt/dii` (prod) and `/opt/dii-staging` (staging).
+2. In `/opt/dii-staging/.env`: set `PORT` to a free host port (e.g. `8081`)
+   and fill in the `STAGING_*` vars documented in `.env.example`
+   (`STAGING_AUTH_SESSION_SECRET` especially — generate a fresh one, do not
+   reuse production's).
+3. In `/opt/dii` (production)'s `.env`: set `STAGING_DOMAIN` (a subdomain
+   DNS already points at this same host, e.g. `staging.your-domain`) and
+   `STAGING_PORT` to match step 2's port. Restart production's `caddy`
+   service (`docker compose --profile https up -d caddy`) to pick up the
+   new site block.
+4. Configure the GitHub secrets/variables below, then push to `dev` or run
+   the workflow manually.
 
 ## What It Does
 
@@ -58,6 +82,15 @@ Variables (repo or `production` Environment):
 None of these are committed anywhere in this repo — configure them in the
 GitHub repo/environment settings before the workflow can run.
 
+Staging (`deploy-vps-staging.yml`) reuses the same `VPS_HOST`/`VPS_SSH_USER`/
+`VPS_SSH_PORT`/`VPS_SSH_KEY` secrets (same VPS) plus its own `staging`
+Environment variables:
+
+- `VPS_STAGING_DEPLOY_PATH` — the **separate** staging checkout directory
+  from step 1 above (not `VPS_DEPLOY_PATH`)
+- `VPS_STAGING_BASE_URL` — base URL to smoke-check (e.g.
+  `https://staging.your-domain`); skipped with a warning if unset
+
 ## Reusable Raw Material
 
 The now-deleted `.github/workflows/deploy-staging-ssh.yml` (removed in
@@ -75,6 +108,9 @@ git show a92feb00:.github/workflows/deploy-staging-ssh.yml
   works unchanged here; it should be renamed to something host-neutral (e.g.
   `smoke-check.mjs`) once the cPanel path is retired, so as not to keep
   implying a cPanel-only tool.
-- Wire up staging once its VPS/host target is confirmed.
 - Consider adding a rollback note (`IMAGE_TAG=<previous-sha>` + re-run
   `pull && up -d`) once this path has been exercised for real.
+- The staging path above is written but **not yet exercised**: no VPS
+  directory, DNS record, or GitHub secrets/variables exist for it yet. The
+  first real run will need someone with VPS/DNS access to do the one-time
+  setup steps.

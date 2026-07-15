@@ -1,3 +1,12 @@
 {$SITE_DOMAIN} {
 	reverse_proxy client:80
 }
+
+# Staging, deployed as a separate low-resource Compose project on this same
+# host (see docker-compose.staging.yml + docs/deploy/VPS_DOCKER_DEPLOY.md).
+# Inert until STAGING_DOMAIN is set in .env and its DNS record exists --
+# with no DNS pointing at it, Caddy just logs a harmless cert-issuance
+# failure for this one block; the SITE_DOMAIN block above is unaffected.
+{$STAGING_DOMAIN:staging.invalid.internal} {
+	reverse_proxy host.docker.internal:{$STAGING_PORT:8081}
+}

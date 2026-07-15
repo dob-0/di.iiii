@@ -137,6 +137,13 @@ services:
       - caddy_config:/config
     environment:
       SITE_DOMAIN: ${SITE_DOMAIN:?set SITE_DOMAIN in .env to the domain pointing at this host}
+      STAGING_DOMAIN: ${STAGING_DOMAIN:-}
+      STAGING_PORT: ${STAGING_PORT:-8081}
+    # Lets the Caddyfile's staging site block reach the staging Compose
+    # project's client container by its host-published port, without
+    # joining the two projects to a shared Docker network.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       client:
         condition: service_started

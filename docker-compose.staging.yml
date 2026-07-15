@@ -1,0 +1,56 @@
+# Staging override — same VPS as production, deliberately small footprint.
+#
+# Intended usage: a SEPARATE checkout directory on the VPS from the
+# production one (see docs/deploy/VPS_DOCKER_DEPLOY.md), each with its own
+# .env, so this project never inherits production's COMPOSE_PROFILES=https
+# or secrets. Production's Caddy (profile: https, in the production
+# directory) reaches this stack via the host-published client port --
+# see the second site block in Caddyfile.
+#
+# Usage on the VPS, from the staging checkout directory:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.staging.yml pull
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.staging.yml up -d
+#
+# Do NOT pass --profile https or --profile tunnel here -- this project has
+# no Caddy/tunnel service of its own; production's Caddy fronts it instead.
+
+name: dii-staging
+
+services:
+  server:
+    environment:
+      # Deliberately separate from production's secrets -- same signing
+      # key across environments would let a staging session cookie be
+      # replayed against production if CORS/cookie scoping ever slipped.
+      REQUIRE_AUTH: ${STAGING_REQUIRE_AUTH:-false}
+      ADMIN_API_TOKEN: ${STAGING_ADMIN_API_TOKEN:-}
+      AUTH_SESSION_SECRET: ${STAGING_AUTH_SESSION_SECRET:?set STAGING_AUTH_SESSION_SECRET in the staging .env}
+      AUTH_SESSION_COOKIE_SECURE: ${STAGING_AUTH_SESSION_COOKIE_SECURE:-true}
+      CORS_ORIGINS: ${STAGING_CORS_ORIGINS:-}
+      GOOGLE_API_KEY: ${STAGING_GOOGLE_API_KEY:-}
+      GOOGLE_CLIENT_ID: ${STAGING_GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${STAGING_GOOGLE_CLIENT_SECRET:-}
+      OAUTH_CALLBACK_BASE_URL: ${STAGING_OAUTH_CALLBACK_BASE_URL:-}
+      GITHUB_CLIENT_ID: ${STAGING_GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${STAGING_GITHUB_CLIENT_SECRET:-}
+    # Small ceiling: staging only ever serves one person clicking through at
+    # a time, it must not be able to meaningfully compete with production
+    # for the VPS's 2 vCPU / 4GB (docs/ai/roles/infrastructure-engineer.md).
+    deploy:
+      resources:
+        limits:
+          cpus: '0.4'
+          memory: 384M
+
+  client:
+    # No `ports:` override here -- base docker-compose.yml's client port is
+    # `${PORT:-80}:80`; the staging directory's .env sets PORT to a non-80
+    # value (e.g. 8081) instead, so this list is never appended to (Compose
+    # concatenates list-type fields across -f files, it doesn't replace them
+    # -- an extra `ports:` entry here would try to bind 80 a second time and
+    # collide with production's Caddy).
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 64M

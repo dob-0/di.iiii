@@ -43,11 +43,12 @@ the Hetzner VPS** (Docker/Caddy), not cPanel.
 
 ## Open
 
-- **Staging deploy target is currently undefined.** `publish-cpanel-prebuilt-v2.yml`'s
-  push trigger was removed for both `main` and `dev`; `deploy-vps.yml` only
-  triggers on `main`. A `dev`/staging push right now auto-deploys nowhere —
-  decide whether staging moves to the VPS (separate host/compose profile) or
-  gets a manual-dispatch cPanel deploy for now.
+- Staging deploy is now wired up (`deploy-vps-staging.yml` + `docker-compose.staging.yml`,
+  same VPS as prod, separate low-resource Compose project + checkout dir —
+  see `docs/deploy/VPS_DOCKER_DEPLOY.md`) but **not yet exercised**: no VPS
+  staging directory, DNS record, or GitHub secrets/variables exist yet.
+  Needs someone with VPS/DNS access to do the one-time setup in that doc
+  before a `dev` push actually deploys anywhere.
   `docs/deploy/LIVE_DEPLOY.md` still describes the old cPanel-only golden
   path and needs a rewrite to match.
 - Manual click-through still owed: homepage buttons, br_id_ge dropdown
@@ -66,7 +67,7 @@ the Hetzner VPS** (Docker/Caddy), not cPanel.
 ## Deploy & validation
 
 ```bash
-git push origin main       # now deploys to the VPS (GHCR + SSH), see deploy-vps.yml
-git push origin dev        # no auto-deploy target right now — see Open above
+git push origin main       # deploys to the VPS (GHCR + SSH), see deploy-vps.yml
+git push origin dev        # deploys to VPS staging (small Compose project) once one-time setup is done — see Open above
 npm run lint && npm run build && npm run test -- --run && npm run test:server-contracts && npm run docs:wiki:check
 ```
