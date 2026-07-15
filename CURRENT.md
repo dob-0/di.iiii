@@ -49,8 +49,6 @@ the Hetzner VPS** (Docker/Caddy), not cPanel.
   staging directory, DNS record, or GitHub secrets/variables exist yet.
   Needs someone with VPS/DNS access to do the one-time setup in that doc
   before a `dev` push actually deploys anywhere.
-  `docs/deploy/LIVE_DEPLOY.md` still describes the old cPanel-only golden
-  path and needs a rewrite to match.
 - Manual click-through still owed: homepage buttons, br_id_ge dropdown
   order/cross-nav — now doubly worth re-checking since `08669f50` changed
   the same sort logic after `43b5c387`.

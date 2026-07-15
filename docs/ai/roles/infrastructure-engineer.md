@@ -35,34 +35,34 @@ You may read any file to understand what to build or deploy. You do not edit pro
 
 ## Current Deployment Architecture — Elite Knowledge
 
-### Frontend
+Production DNS (`di-studio.xyz`) is fully cut over to a **Hetzner VPS running Docker + Caddy**.
+cPanel is a disabled, documented fallback only (see below) — do not treat it as the live path.
 
-- **Hosting:** cPanel `public_html` (static files)
-- **Deploy trigger:** cron job pulls prebuilt GitHub branch every few minutes
-- **Build:** Vite — output is `dist/`
+### Frontend + Backend (VPS, Docker Compose)
 
-### Backend
+- **Hosting:** Hetzner VPS (~2 vCPU / 4GB), Docker Compose stack: `client` (nginx serving Vite's
+  `dist/`), `server` (Node/Express), `caddy` (TLS termination + reverse proxy, `profile: https`).
+- **Deploy trigger:** push to `main` → `.github/workflows/deploy-vps.yml` builds `dii-server`/
+  `dii-client` images, pushes to GHCR, SSHes into the VPS, `docker compose pull && up -d`.
+- **Staging:** push to `dev` → `deploy-vps-staging.yml` — same VPS, a separate low-resource
+  Compose project (`docker-compose.staging.yml`) in its own checkout dir, fronted by production's
+  Caddy via a second site block. See `docs/deploy/VPS_DOCKER_DEPLOY.md` for the one-time host
+  setup this still needs before a `dev` push actually deploys anywhere.
+- **Data:** a mounted `/data` volume — SQLite DB + `spaces/` directory with binary assets.
+- **Config:** `docker-compose.yml` (base) + `docker-compose.prod.yml` (pull-from-GHCR override) +
+  `docker-compose.staging.yml` (staging override). CPU/memory `limits` are set per-service but
+  currently oversubscribe the 2 vCPU host when staging is added in (see audit notes) — check
+  actual host specs before raising any service's ceiling.
 
-- **Hosting:** cPanel Node.js App at `/serverXR`
-- **Process manager:** PM2 via `ecosystem.config.js`
-- **Deploy trigger:** same cron model as frontend
-- **Data:** `serverXR/data/` — SQLite DB + `spaces/` directory with binary assets
+### cPanel — Legacy Fallback (disabled)
 
-### cPanel Limitations (known)
+Kept only until its hosting term expires; do not build new deploy work against it.
 
-- No reliable process resurrection — PM2 restarts are controlled by cPanel, not us
-- Shared disk I/O affects SQLite write performance under load
-- No Docker support
-- No background workers
-- Awkward deploy: prebuilt-branch model
-
-### Target Infrastructure: Hetzner CX22
-
-- ~€4/mo: 2 vCPU, 4GB RAM, 40GB SSD
-- PM2 for process management
-- Nginx reverse proxy
-- GitHub Actions: push to `main` → build → push `cpanel-production` → cPanel auto-deploys
-- SQLite and assets on a mounted volume
+- `publish-cpanel-prebuilt-v2.yml` is `workflow_dispatch`-only (no longer triggers on push)
+- Docs: `docs/deploy/CPANEL_DEPLOYMENT.md`, `docs/deploy/CPANEL_PREBUILT_DEPLOY.md`,
+  `docs/deploy/legacy/` — treat as historical reference, not instructions to follow
+- Known limitations that motivated the VPS move: no reliable process resurrection, shared disk
+  I/O hurting SQLite write performance, no Docker support, no background workers
 
 ### Docker Build Rule — Critical
 
@@ -85,27 +85,22 @@ dev → main
 ```
 
 - Routine feature work: start on `dev`
-- Production deploy: merge `dev` into `main` and push
+- Production deploy: merge `dev` into `main` and push — triggers `deploy-vps.yml`
+- Staging deploy: push to `dev` — triggers `deploy-vps-staging.yml` (once one-time VPS setup is done)
 - Emergency hotfix only: work directly on `main`
-
-Pushing to `main` triggers `publish-cpanel-prebuilt-v2.yml` which builds and pushes to `cpanel-production`. cPanel cron picks it up within a few minutes.
 
 ---
 
 ## GitHub Actions Patterns
 
-### SSH Deploy Workflow (opt-in, for future VPS)
+### VPS Deploy Workflows (live)
 
-Trigger: push to `main` or manual dispatch.
+`deploy-vps.yml` (production, push to `main`) and `deploy-vps-staging.yml` (staging, push to
+`dev`) both: build+push images to GHCR, SSH into the VPS, `docker compose pull && up -d`, then
+run `scripts/smoke-check-cpanel.mjs` (misleadingly named — it's the shared smoke check for both
+the VPS and cPanel paths) against the deployed host.
 
-Steps:
-1. Checkout repo
-2. Build frontend (`npm ci && npm run build`)
-3. rsync `dist/` to VPS public directory
-4. rsync `serverXR/` to VPS app directory
-5. SSH restart: `pm2 reload dii-server`
-
-Required GitHub secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `VPS_DEPLOY_PATH`.
+Required GitHub secrets/variables: see `docs/deploy/VPS_DOCKER_DEPLOY.md`.
 
 ### Never in CI
 

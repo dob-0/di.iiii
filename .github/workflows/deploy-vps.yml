@@ -1,14 +1,12 @@
 name: Deploy VPS (GHCR + SSH)
 
-# New, additive deploy path for the Hetzner VPS Docker Compose stack. This
-# runs alongside the legacy cPanel path (publish-cpanel-prebuilt-v2.yml) —
-# neither replaces the other yet. cPanel stays the documented fallback until
-# its hosting term expires; see docs/deploy/VPS_DOCKER_DEPLOY.md.
+# Golden-path production deploy: Hetzner VPS Docker Compose stack, DNS fully
+# cut over from cPanel. cPanel (publish-cpanel-prebuilt-v2.yml) is disabled
+# (workflow_dispatch-only) and kept only as a documented fallback until its
+# hosting term expires; see docs/deploy/VPS_DOCKER_DEPLOY.md.
 #
-# Only `main` (production) is wired up here. `dev` (staging) is intentionally
-# left out: it's unconfirmed whether staging will live on the same VPS or a
-# separate host. Once that's decided, add a `dev` trigger below targeting the
-# staging host/secrets with the same jobs (or a `staging` GitHub Environment).
+# Only `main` (production) is wired up here. `dev` (staging) deploys via
+# deploy-vps-staging.yml, same VPS, isolated as a separate Compose project.
 
 on:
   push:

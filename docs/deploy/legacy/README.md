@@ -4,9 +4,9 @@ These files are kept for emergency recovery only.
 
 Do not use them as the normal deploy path for this repo.
 
-## Canonical Path
+## Historical Path (superseded)
 
-The default production flow is:
+This described the old default production flow, before the VPS cutover:
 
 1. work on `dev`
 2. promote through `staging` and `main`
@@ -14,10 +14,12 @@ The default production flow is:
 4. let cPanel `Git Version Control` apply it
 5. keep `/serverXR` owned by the cPanel Node.js App
 
+Production is now on a Hetzner VPS (Docker + Caddy) — see `docs/deploy/VPS_DOCKER_DEPLOY.md` for
+the current path.
+
 ## Use This Archive Only When
 
-- the canonical GitHub prebuilt publish/apply path is unavailable
-- you are doing disaster recovery
+- the VPS deploy path is unavailable and you're doing cPanel-specific disaster recovery
 - you need old host-specific commands to recover service quickly
 
 ## Archived Materials

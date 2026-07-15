@@ -21,7 +21,7 @@ Project links:
 
 - live site: [di-studio.xyz](https://di-studio.xyz)
 - primary public repo: [dob-0/di.iiii](https://github.com/dob-0/di.iiii)
-- latest checkpoint: [Checkpoint 2026-04-21](docs/checkpoints/2026-04-21.md)
+- latest checkpoint: [Checkpoint 2026-04-09](docs/checkpoints/2026-04-09.md)
 - AI quick context: [AGENTS.md](AGENTS.md)
 - AI knowledge base: [docs/ai/index.md](docs/ai/index.md)
 - public-context materials: [docs/deck](docs/deck/)
@@ -175,12 +175,15 @@ Normal promotion path:
 4. verify staging
 5. promote to `main`
 
-From the repo root:
+Deploys are driven by pushes, via GitHub Actions (GHCR build + SSH to the Hetzner VPS):
 
 ```bash
-npm run deploy:staging
-npm run deploy:production
+git push origin dev    # deploys to VPS staging — see .github/workflows/deploy-vps-staging.yml
+git push origin main   # deploys to VPS production — see .github/workflows/deploy-vps.yml
 ```
+
+`npm run deploy:*` (`scripts/deploy.mjs`) is the older cPanel-era path, kept only as a documented
+fallback (see `docs/deploy/legacy/`) — it is not how `di-studio.xyz` is deployed today.
 
 Rules:
 
@@ -197,10 +200,14 @@ For pushing teaser pages, multi-file experiences, or project packages to a live 
 ```mermaid
 flowchart LR
     work["Daily work"] --> dev["dob-0/di.iiii<br/>primary public repo"]
-    dev --> branchDev["dev branch<br/>→ staging.di-studio.xyz"]
-    branchDev --> branchMain["main branch<br/>→ di-studio.xyz"]
-    branchMain --> release["cpanel-* release branches"]
-    release --> hosting["cPanel hosting"]
+    dev --> branchDev["dev branch"]
+    dev --> branchMain["main branch"]
+    branchDev --> ghcrStaging["GHCR build<br/>deploy-vps-staging.yml"]
+    branchMain --> ghcrProd["GHCR build<br/>deploy-vps.yml"]
+    ghcrStaging --> vpsStaging["Hetzner VPS<br/>staging Compose project"]
+    ghcrProd --> vpsProd["Hetzner VPS<br/>production Compose project<br/>→ di-studio.xyz"]
+    branchMain -.disabled fallback.-> release["cpanel-* release branches"]
+    release -.-> hosting["cPanel hosting<br/>(legacy, workflow_dispatch-only)"]
 ```
 
 ## Read Next
@@ -218,7 +225,7 @@ By task:
 - project architecture: [Project Surfaces](docs/architecture/PROJECT_SURFACES.md)
 - node model direction: [Recursive Node Core](docs/architecture/RECURSIVE_NODE_CORE.md)
 - audit and growth plan: [Project Audit And Growth Plan](docs/architecture/PROJECT_AUDIT_2026-04-17.md)
-- latest checkpoint: [Checkpoint 2026-04-21](docs/checkpoints/2026-04-21.md)
+- latest checkpoint: [Checkpoint 2026-04-09](docs/checkpoints/2026-04-09.md)
 - development framework: [Project Development And Optimization Framework](docs/roadmaps/PROJECT_DEVELOPMENT_FRAMEWORK.md)
 - deploy/release: [Live Deploy Runbook](docs/deploy/LIVE_DEPLOY.md)
 - publishing content to spaces: [Publish Workflow](docs/deploy/PUBLISH_WORKFLOW.md)

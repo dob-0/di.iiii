@@ -1,8 +1,10 @@
-# cPanel Deployment Guide
+# cPanel Deployment Guide (Legacy Fallback)
 
-This file describes the current safe deployment model for the dii platform.
+**Not the current deploy path.** Production is now on a Hetzner VPS (Docker + Caddy) — see
+`docs/deploy/VPS_DOCKER_DEPLOY.md`. This file describes the disabled cPanel model, kept only as
+a documented fallback until its hosting term expires.
 
-## Canonical Model
+## Fallback Model
 
 - source branches:
   - `dev` — active development and staging source

@@ -1,7 +1,11 @@
-// Manual CJS mirror of src/shared/projectSchema.js (keep in lockstep).
+// Manual CJS mirror of src/shared/projectSchema.js — required because that
+// file transitively imports the browser-only node registry, which CJS
+// server tests can't load. Keep this in lockstep by hand; drift is caught
+// by serverXR/src/schemaSync.test.js (`npm run test:schema-sync`), which
+// runs the same normalization inputs through both files.
 // Server-side consumers (serverXR) load this via loadSharedModule('projectSchema.cjs').
 // This file intentionally does NOT import the client-only node registry,
-// so it accepts any typeId without validation.
+// so it accepts any typeId without validation — same as the ESM original.
 
 const PROJECT_DOCUMENT_VERSION = 4
 

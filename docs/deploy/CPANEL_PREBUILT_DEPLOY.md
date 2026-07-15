@@ -1,8 +1,11 @@
-# cPanel Prebuilt Deploy
+# cPanel Prebuilt Deploy (Legacy Fallback)
 
-This is the canonical deploy path for this repo.
+**Not the current deploy path.** Production is now on a Hetzner VPS (Docker + Caddy) — see
+`docs/deploy/VPS_DOCKER_DEPLOY.md`. `publish-cpanel-prebuilt-v2.yml` is disabled
+(`workflow_dispatch`-only). This describes the disabled flow, kept only as a documented fallback
+until the cPanel hosting term expires.
 
-It is a GitHub-to-cPanel Git flow:
+It was a GitHub-to-cPanel Git flow:
 
 - GitHub Actions publishes prebuilt `cpanel-*` branches
 - cPanel `Git Version Control` tracks those branches
