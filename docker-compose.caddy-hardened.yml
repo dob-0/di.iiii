@@ -1,0 +1,20 @@
+# Optional hardening for the --profile https (Caddy) mode.
+#
+# The base docker-compose.yml still publishes the client's port to the host
+# (moved off 80 via PORT=8080 so Caddy can take 80/443) so it stays directly
+# reachable — useful for debugging, but it means TLS and any Caddy-level
+# header/security rules can be bypassed by hitting that port directly.
+#
+# This file removes the client's host port entirely: Caddy becomes the only
+# way in, reaching the client over the internal Docker network (client:80).
+# Opt in when you want that stricter posture:
+#
+#   docker compose --profile https -f docker-compose.yml -f docker-compose.prod.yml \
+#     -f docker-compose.caddy-hardened.yml up -d
+#
+# Do not use this without the https profile actually running — with no Caddy
+# and no published port, the client would be unreachable from outside the host.
+
+services:
+  client:
+    ports: !reset []

@@ -111,6 +111,13 @@ jobs:
           cd "${DEPLOY_PATH}"
           export REGISTRY_USER
           export IMAGE_TAG
+
+          # Keep the deploy-relevant tracked config files in sync with the
+          # exact commit being deployed. Everything else on this checkout
+          # (.env, data volumes, etc.) is untouched.
+          git fetch --quiet origin
+          git checkout --quiet "${IMAGE_TAG}" -- docker-compose.yml docker-compose.prod.yml docker-compose.staging.yml
+
           # No --profile https/tunnel: this project has no Caddy/tunnel
           # service of its own, production's Caddy fronts it instead.
           docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.staging.yml pull

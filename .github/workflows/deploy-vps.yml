@@ -113,8 +113,23 @@ jobs:
           cd "${DEPLOY_PATH}"
           export REGISTRY_USER
           export IMAGE_TAG
-          docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
-          docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+          # Keep the deploy-relevant tracked config files in sync with the
+          # exact commit being deployed. Everything else on this checkout
+          # (.env, data volumes, etc.) is untouched.
+          git fetch --quiet origin
+          git checkout --quiet "${IMAGE_TAG}" -- docker-compose.yml docker-compose.prod.yml docker-compose.caddy-hardened.yml Caddyfile
+
+          COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.prod.yml)
+          if [ -f docker-compose.caddy-hardened.yml ]; then
+            COMPOSE_FILES+=(-f docker-compose.caddy-hardened.yml)
+          fi
+          docker compose --profile https "${COMPOSE_FILES[@]}" pull
+          docker compose --profile https "${COMPOSE_FILES[@]}" up -d
+          # Caddyfile is a read-only bind mount -- content-only edits don't
+          # trigger a recreate on their own, so reload it explicitly.
+          docker compose --profile https "${COMPOSE_FILES[@]}" exec -T caddy caddy reload --config /etc/caddy/Caddyfile --force || \
+            docker compose --profile https "${COMPOSE_FILES[@]}" restart caddy
           REMOTE_SCRIPT
 
       - name: Smoke check
