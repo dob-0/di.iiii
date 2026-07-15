@@ -66,6 +66,14 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    # Safety ceiling only, not a tuned production limit -- bounds a runaway/compromised
+    # container so it can't starve the others; Compose doesn't isolate this by default the
+    # way cPanel's shared-hosting LVE caps used to. Main workload, so it gets the most headroom.
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1G
 
   # ── Frontend: nginx + React SPA ───────────────────────────────────────────────
   client:
@@ -82,6 +90,13 @@ services:
       server:
         condition: service_healthy
     restart: unless-stopped
+    # Safety ceiling only -- bounds a runaway/compromised container, doesn't isolate this
+    # like cPanel's LVE used to. nginx serving a static SPA is very light.
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
 
   # ── Cloudflare Tunnel — optional, profile: tunnel ─────────────────────────────
   # Exposes the stack publicly with no port forwarding or static IP.
@@ -98,6 +113,13 @@ services:
         condition: service_started
     restart: unless-stopped
     profiles: ["tunnel"]
+    # Safety ceiling only -- bounds a runaway/compromised container, doesn't isolate this
+    # like cPanel's LVE used to. cloudflared is a lightweight relay process.
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
 
   # ── Caddy — optional, profile: https ──────────────────────────────────────────
   # Real domain + automatic Let's Encrypt HTTPS, no Cloudflare account needed.
@@ -120,6 +142,13 @@ services:
         condition: service_started
     restart: unless-stopped
     profiles: ["https"]
+    # Safety ceiling only -- bounds a runaway/compromised container, doesn't isolate this
+    # like cPanel's LVE used to. TLS termination is light.
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
 
 # ── Volumes ───────────────────────────────────────────────────────────────────
 volumes:
