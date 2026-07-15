@@ -149,12 +149,30 @@ const coerceProjectDocument = (spaceId, projectId, document = null, projectMeta 
   }
 }
 
+// Short-circuiting deep-equal — used instead of comparing two full
+// JSON.stringify passes on every read, which serializes the whole document
+// twice even when nothing changed (the common case).
+const deepEqual = (a, b) => {
+  if (a === b) return true
+  if (Array.isArray(a) || Array.isArray(b)) {
+    if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false
+    return a.every((item, index) => deepEqual(item, b[index]))
+  }
+  const isObj = (v) => v !== null && typeof v === 'object'
+  if (isObj(a) && isObj(b)) {
+    const aKeys = Object.keys(a)
+    if (aKeys.length !== Object.keys(b).length) return false
+    return aKeys.every((key) => Object.prototype.hasOwnProperty.call(b, key) && deepEqual(a[key], b[key]))
+  }
+  return false
+}
+
 const readProjectDocument = async (spacesDir, spaceId, projectId) => {
   const { documentPath } = getProjectPaths(spacesDir, spaceId, projectId)
   const existing = await readJson(documentPath, null)
   const projectMeta = await loadProjectMeta(spacesDir, spaceId, projectId)
   const nextDocument = coerceProjectDocument(spaceId, projectId, existing, projectMeta)
-  if (existing && JSON.stringify(existing) !== JSON.stringify(nextDocument)) {
+  if (existing && !deepEqual(existing, nextDocument)) {
     await writeJson(documentPath, nextDocument)
   }
   return nextDocument

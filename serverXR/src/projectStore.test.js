@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, rm, stat } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
@@ -11,7 +11,11 @@ const {
     deleteProject,
     ensureProject,
     findProjectById,
-    readProjectIndex
+    getProjectPaths,
+    readJson,
+    readProjectDocument,
+    readProjectIndex,
+    writeJson
 } = require('./projectStore.js')
 const { initDb, closeDb } = require('./db.js')
 
@@ -68,5 +72,41 @@ describe('projectStore', () => {
 
         await deleteProject(spacesDir, 'gallery', 'delete-me')
         expect(await findProjectById(spacesDir, 'delete-me')).toBeNull()
+    })
+
+    it('readProjectDocument does not rewrite an already-normalized document', async () => {
+        const spacesDir = await createSpacesDir()
+        await ensureProject(spacesDir, 'main', 'stable-doc', { title: 'Stable' })
+        const { documentPath } = getProjectPaths(spacesDir, 'main', 'stable-doc')
+
+        await readProjectDocument(spacesDir, 'main', 'stable-doc')
+        const before = (await stat(documentPath)).mtimeMs
+
+        await new Promise((resolve) => setTimeout(resolve, 10))
+        await readProjectDocument(spacesDir, 'main', 'stable-doc')
+        const after = (await stat(documentPath)).mtimeMs
+
+        expect(after).toBe(before)
+    })
+
+    it('readProjectDocument persists a self-heal correction back to disk', async () => {
+        const spacesDir = await createSpacesDir()
+        await ensureProject(spacesDir, 'main', 'stale-doc', { title: 'Stale' })
+        const { documentPath } = getProjectPaths(spacesDir, 'main', 'stale-doc')
+
+        // Simulate a document with an unrecognized entity type — the kind of
+        // stale/malformed content normalizeEntity self-heals to 'box'. This
+        // is a content-level correction, not a version bump, so it exercises
+        // the general "existing differs from normalized" path, not just a
+        // version-number fast path.
+        const stale = await readJson(documentPath, null)
+        stale.entities = [{ id: 'e1', type: 'not-a-real-type', components: {} }]
+        await writeJson(documentPath, stale)
+
+        const result = await readProjectDocument(spacesDir, 'main', 'stale-doc')
+        expect(result.entities[0].type).toBe('box')
+
+        const onDisk = await readJson(documentPath, null)
+        expect(onDisk.entities[0].type).toBe('box')
     })
 })
