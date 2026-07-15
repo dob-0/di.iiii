@@ -67,13 +67,14 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    # Real ceiling, not just documentation: `cpus`/`mem_limit` at this top level are applied
-    # directly by the Docker Engine even under plain `docker compose up` -- unlike
-    # `deploy.resources.limits`, which is a Swarm-mode key that `docker compose` (no
-    # `--compatibility`, no Swarm) silently ignores entirely, so those numbers were never
-    # actually enforced. Sized against the real 2 vCPU / 3.7GB Hetzner host (confirmed via
-    # `nproc`/`free -h`): all five services summed to 3.1 against 2 actual vCPUs, trimmed
-    # proportionally to 1.8 (10% host headroom), keeping the same relative priority:
+    # Real ceiling: `cpus`/`mem_limit` at this top level are the pre-Swarm Compose keys,
+    # applied directly by the Docker Engine on any Compose version (verified live via
+    # `docker inspect` -- NanoCpus/Memory matched the old deploy.resources.limits values
+    # exactly, so that mechanism was already being enforced too on this host's Compose
+    # version; this syntax is just simpler/more universally compatible, not a bug fix).
+    # Sized against the real 2 vCPU / 3.7GB Hetzner host (confirmed via `nproc`/`free -h`):
+    # all five services summed to 3.1 against 2 actual vCPUs, trimmed proportionally to 1.8
+    # (10% host headroom), keeping the same relative priority:
     # server > client ≈ caddy > staging-server > staging-client. Main workload, most headroom.
     cpus: '0.9'
     mem_limit: 1g

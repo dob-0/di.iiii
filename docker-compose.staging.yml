@@ -39,8 +39,7 @@ services:
     # real host). Trimmed further as part of the host-wide CPU rebalance --
     # all five services' cpus limits summed to 3.1 against 2 actual vCPUs;
     # see docker-compose.yml's server service for the full explanation,
-    # including why this is `cpus`/`mem_limit` (actually enforced by plain
-    # `docker compose up`) rather than the Swarm-only `deploy.resources`.
+    # including why this uses the pre-Swarm `cpus`/`mem_limit` keys.
     cpus: '0.2'
     mem_limit: 384m
 
