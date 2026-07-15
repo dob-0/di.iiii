@@ -25,14 +25,23 @@ export const TOUCH_LOOK_SENSITIVITY = 0.005
 export const TRACKPAD_LOOK_SENSITIVITY = 0.004
 // Some Wayland setups GRANT pointer lock but then deliver useless movement
 // deltas (relative motion broken at the compositor/portal) — a lock that can
-// never look. Two observed shapes: all-zero deltas, and a degenerate constant
-// crawl (movementY pinned to 0, movementX stuck at ±1 — live-diagnosed via
-// ?inputdebug=1, July 2026). mousemove only fires on physical motion and real
-// looking always produces varied deltas with vertical jitter, so this many
-// consecutive dead locked moves (|movementX| ≤ 1 AND movementY === 0) means
-// the lock is broken: abandon it and stop re-requesting so drag-look takes
-// over.
+// never look. Observed shapes (live event capture on KDE Wayland + Firefox,
+// July 2026): all-zero deltas, a constant ±1,0 crawl, and small random noise
+// in BOTH axes (±1..±4) while the user is physically sweeping the mouse —
+// the same sweep produces 50-120px deltas the instant the lock is released.
+// A locked move is "dead" when both |movementX| and |movementY| are at or
+// under this ceiling; this many consecutive dead moves means the lock is
+// broken: abandon it and stop re-requesting so drag-look takes over. A real
+// slow look can trip this too — acceptable: drag-look remains fully usable.
+export const BROKEN_LOCK_DEAD_DELTA_MAX = 4
 export const BROKEN_LOCK_DEAD_MOVES = 30
+// The first locked move(s) after an engage carry garbage: one wild spike
+// (-19,-116 in the live capture, ~18ms after engage — railed the pitch) and,
+// in some Chromium builds, a synthetic position-sized event at engage time.
+// Locked deltas inside this window are not APPLIED to the view (dead-streak
+// counting still runs); a count-based "skip the first event" is not enough
+// because the number of engage-time garbage events varies per browser.
+export const BROKEN_LOCK_SETTLE_MS = 200
 
 // -- Wheel / dolly --
 // Metres of forward motion per scroll pixel: one classic wheel notch (~48px
