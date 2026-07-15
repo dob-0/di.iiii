@@ -15,8 +15,13 @@ const driveAccount = require('../googleDriveAccount')
 // started it (CSRF defense + user identity across the redirect).
 const STATE_TTL_MS = 10 * 60 * 1000
 
+// A random per-process secret when none is configured (e.g. REQUIRE_AUTH=false
+// self-host setups) — avoids signing with a fixed, publicly-known string.
+// State tokens are short-lived (STATE_TTL_MS), so not surviving a restart is fine.
+const FALLBACK_STATE_SECRET = crypto.randomBytes(32).toString('hex')
+
 function signState(userId) {
-  const secret = config.auth.sessionSecret || 'di-local-dev-secret'
+  const secret = config.auth.sessionSecret || FALLBACK_STATE_SECRET
   const payload = Buffer.from(JSON.stringify({ u: userId, n: crypto.randomBytes(8).toString('hex'), t: Date.now() }))
     .toString('base64url')
   const mac = crypto.createHmac('sha256', secret).update(payload).digest('base64url')
@@ -26,7 +31,7 @@ function signState(userId) {
 function verifyState(state) {
   if (!state || typeof state !== 'string' || !state.includes('.')) return null
   const [payload, mac] = state.split('.')
-  const secret = config.auth.sessionSecret || 'di-local-dev-secret'
+  const secret = config.auth.sessionSecret || FALLBACK_STATE_SECRET
   const expected = crypto.createHmac('sha256', secret).update(payload).digest('base64url')
   const a = Buffer.from(mac)
   const b = Buffer.from(expected)

@@ -36,11 +36,12 @@ services:
       APP_BASE_PATH: /serverXR
       DATA_ROOT: /data
 
-      # Auth — set REQUIRE_AUTH=true to lock the instance
-      REQUIRE_AUTH: ${REQUIRE_AUTH:-false}
+      # Auth — defaults to on since NODE_ENV is always production here;
+      # set REQUIRE_AUTH=false in .env only for a deliberately open instance.
+      REQUIRE_AUTH: ${REQUIRE_AUTH:-true}
       ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-}
       AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET:-}
-      AUTH_SESSION_COOKIE_SECURE: ${AUTH_SESSION_COOKIE_SECURE:-false}
+      AUTH_SESSION_COOKIE_SECURE: ${AUTH_SESSION_COOKIE_SECURE:-true}
 
       # Uploads
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-100}

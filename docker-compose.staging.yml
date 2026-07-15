@@ -22,7 +22,7 @@ services:
       # Deliberately separate from production's secrets -- same signing
       # key across environments would let a staging session cookie be
       # replayed against production if CORS/cookie scoping ever slipped.
-      REQUIRE_AUTH: ${STAGING_REQUIRE_AUTH:-false}
+      REQUIRE_AUTH: ${STAGING_REQUIRE_AUTH:-true}
       ADMIN_API_TOKEN: ${STAGING_ADMIN_API_TOKEN:-}
       AUTH_SESSION_SECRET: ${STAGING_AUTH_SESSION_SECRET:?set STAGING_AUTH_SESSION_SECRET in the staging .env}
       AUTH_SESSION_COOKIE_SECURE: ${STAGING_AUTH_SESSION_COOKIE_SECURE:-true}

@@ -1,13 +1,18 @@
 // Minimal fixed-window rate limiter — zero deps, same spirit as httpClient.js.
-// Keyed by X-Forwarded-For (cPanel/nginx sits in front of this app and
-// `trust proxy` is not enabled, so req.ip alone would put every real visitor in
-// the proxy's single bucket) with req.ip as the direct-connection fallback.
-// nginx's single hop APPENDS the true connecting IP as the LAST entry — a
-// client can freely fake earlier entries, so the first entry is attacker-
-// controlled and must not be trusted as the key.
-
+// Keyed by X-Forwarded-For, with req.ip as the direct-connection fallback.
+// `trust proxy` is not enabled, so req.ip alone would put every real visitor
+// in the proxy chain's single bucket.
+//
+// VPS topology: browser -> Caddy -> nginx (client container) -> this server —
+// TWO trusted hops each append the true peer IP they saw. nginx's hop is
+// LAST (always the same container IP, useless as a key); Caddy's hop is
+// SECOND-TO-LAST and is the real client IP as seen directly by Caddy's TCP
+// accept — not attacker-forgeable via a spoofed XFF header, unlike anything
+// earlier in the list. Only trust the last two hops; if fewer than two
+// proxies are in front of us, fall back to the last entry.
 const clientKey = (req) => {
   const list = String(req.headers['x-forwarded-for'] || '').split(',').map((s) => s.trim()).filter(Boolean)
+  if (list.length >= 2) return list[list.length - 2]
   return list[list.length - 1] || req.ip || 'unknown'
 }
 

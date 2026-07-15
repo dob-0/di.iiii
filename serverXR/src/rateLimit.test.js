@@ -62,12 +62,16 @@ describe('createRateLimiter', () => {
         }
     })
 
-    // The app runs behind a cPanel proxy without `trust proxy`, so req.ip is the
-    // proxy for every visitor — the limiter must key on the forwarded client.
-    // nginx's single hop APPENDS the true connecting IP as the LAST entry;
-    // earlier entries are attacker-suppliable and must not be trusted.
-    it('keys on the last X-Forwarded-For hop before req.ip', () => {
-        expect(clientKey(makeReq({ headers: { 'x-forwarded-for': '203.0.113.9, 10.0.0.1' } }))).toBe('10.0.0.1')
+    // The app runs behind two trusted proxy hops on the VPS (Caddy, then nginx
+    // in the client container) without `trust proxy`, so req.ip is always the
+    // nginx container for every visitor — the limiter must key on the
+    // forwarded client. Each trusted hop APPENDS the true peer IP it saw, so
+    // the last entry (nginx's peer, i.e. Caddy) is constant and useless; the
+    // second-to-last entry (Caddy's peer, i.e. the real client) is the one to
+    // trust — anything earlier is attacker-suppliable via a spoofed header.
+    it('keys on the second-to-last X-Forwarded-For hop (real client behind two trusted proxies)', () => {
+        expect(clientKey(makeReq({ headers: { 'x-forwarded-for': '203.0.113.9, 10.0.0.1' } }))).toBe('203.0.113.9')
+        expect(clientKey(makeReq({ headers: { 'x-forwarded-for': 'spoofed, 203.0.113.9, 10.0.0.1' } }))).toBe('203.0.113.9')
         expect(clientKey(makeReq({ headers: { 'x-forwarded-for': '1.2.3.4' } }))).toBe('1.2.3.4')
         expect(clientKey(makeReq())).toBe('10.0.0.1')
         expect(clientKey({ headers: {} })).toBe('unknown')
