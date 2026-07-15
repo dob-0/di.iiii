@@ -1,6 +1,7 @@
 const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
+const logger = require('./logger')
 
 async function ensureDir(dirPath) {
   await fsp.mkdir(dirPath, { recursive: true })
@@ -44,7 +45,7 @@ async function readJson(filePath, fallback = null) {
         // the corruption is mid-file, not just a truncated tail.
         const backupPath = `${filePath}.corrupt-${Date.now()}.bak`
         await fsp.writeFile(backupPath, raw)
-        console.error(`[jsonStore] Recovered malformed JSON in ${filePath} by truncating to the last parseable prefix. Original bytes backed up to ${backupPath} — verify no content was lost.`)
+        logger.error(`[jsonStore] Recovered malformed JSON in ${filePath} by truncating to the last parseable prefix. Original bytes backed up to ${backupPath} — verify no content was lost.`)
         await writeJson(filePath, recovered)
         return recovered
       }
