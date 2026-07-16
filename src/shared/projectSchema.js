@@ -26,7 +26,19 @@ export const WINDOW_IDS = ['viewport', 'assets', 'inspector', 'outliner', 'activ
 const ENTITY_TYPE_SET = new Set(ENTITY_TYPES)
 const LEGACY_ROOT_NODE_IDS = new Set(['root-node', 'world-root', 'view-root'])
 const LEGACY_ROOT_TYPE_IDS = new Set(['core.project', 'world.root', 'view.root'])
-const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar', 'world.light', 'world.background', 'world.grid', 'universe.world'])
+const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar'])
+// These four are singletons per node-scope (parentId), not document-wide — a project
+// can have multiple worlds (one per node-in-node scope), but only one of each per scope.
+const SCOPE_SINGLETON_TYPE_IDS = new Set(['world.light', 'world.background', 'world.grid', 'universe.world'])
+
+// Returns the key duplicate nodes are deduped on: the bare typeId for true
+// document-wide singletons, `typeId::parentId` for scope singletons, or null if
+// the type isn't a singleton at all (no dedup).
+const getSingletonDedupKey = (node) => {
+    if (SINGLETON_TYPE_IDS.has(node.typeId)) return node.typeId
+    if (SCOPE_SINGLETON_TYPE_IDS.has(node.typeId)) return `${node.typeId}::${node.parentId || ''}`
+    return null
+}
 
 export const cloneValue = (value) => {
     if (Array.isArray(value)) {
@@ -674,9 +686,10 @@ const normalizeNodesList = (list = []) => {
     for (const raw of Array.isArray(list) ? list : []) {
         const normalized = normalizeProjectNode(raw)
         if (!normalized) continue
-        if (SINGLETON_TYPE_IDS.has(normalized.typeId)) {
-            if (seenSingletons.has(normalized.typeId)) continue
-            seenSingletons.add(normalized.typeId)
+        const dedupKey = getSingletonDedupKey(normalized)
+        if (dedupKey) {
+            if (seenSingletons.has(dedupKey)) continue
+            seenSingletons.add(dedupKey)
         }
         out.push(normalized)
     }
@@ -777,8 +790,9 @@ export const applyProjectOps = (document, ops = []) => {
                 if (!payload.node) break
                 const node = normalizeProjectNode(payload.node)
                 if (!node) break
-                if (SINGLETON_TYPE_IDS.has(node.typeId)) {
-                    const duplicate = Array.from(nodes.values()).some((existing) => existing.typeId === node.typeId)
+                const dedupKey = getSingletonDedupKey(node)
+                if (dedupKey) {
+                    const duplicate = Array.from(nodes.values()).some((existing) => getSingletonDedupKey(existing) === dedupKey)
                     if (duplicate) break
                 }
                 nodes.set(node.id, node)
@@ -1014,8 +1028,8 @@ const invertSingleOp = (document, op) => {
             if (!payload.node || !ensureString(payload.node.id)) break
             const node = normalizeProjectNode(payload.node)
             if (!node) break
-            if (SINGLETON_TYPE_IDS.has(node.typeId)
-                && Array.from(nodes.values()).some((existing) => existing.typeId === node.typeId)) break
+            const dedupKey = getSingletonDedupKey(node)
+            if (dedupKey && Array.from(nodes.values()).some((existing) => getSingletonDedupKey(existing) === dedupKey)) break
             // create-over-existing replaces; recreating the prior node would trip
             // the singleton guard against the replacement, so it stays untracked
             // (no UI path produces it)

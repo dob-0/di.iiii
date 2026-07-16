@@ -537,6 +537,9 @@ export const NODE_TYPES = {
         label: 'World',
         category: 'universe',
         runtime: 'any',
+        // Scope-relative, not document-wide: exactly one per node-scope (parentId),
+        // enforced by getSingletonDedupKey in src/shared/projectSchema.js — a project
+        // can have multiple worlds, one per node-in-node scope.
         singleton: true,
         inputs: [
             { id: 'title',    type: 'string',  label: 'Title',    default: 'World'    },

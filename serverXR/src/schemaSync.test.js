@@ -64,6 +64,32 @@ describe('constants', () => {
     const worldNodes = doc.nodes.filter((n) => n.typeId === 'universe.world')
     expect(worldNodes.length).toBe(1)
   })
+
+  it('universe.world is a singleton per node-scope (parentId), not document-wide', () => {
+    // Two worlds under the SAME parent scope -> collapse to one (first wins).
+    const sameParent = normalizeProjectDocument({
+      nodes: [
+        { id: 'p', typeId: 'geom.cube', label: 'parent', values: {} },
+        { id: 'a', typeId: 'universe.world', label: 'w1', parentId: 'p', values: {} },
+        { id: 'b', typeId: 'universe.world', label: 'w2', parentId: 'p', values: {} },
+      ]
+    })
+    const sameParentWorlds = sameParent.nodes.filter((n) => n.typeId === 'universe.world')
+    expect(sameParentWorlds.length).toBe(1)
+    expect(sameParentWorlds[0].id).toBe('a')
+
+    // Two worlds under DIFFERENT parent scopes -> both survive.
+    const diffParent = normalizeProjectDocument({
+      nodes: [
+        { id: 'p1', typeId: 'geom.cube', label: 'parent1', values: {} },
+        { id: 'p2', typeId: 'geom.cube', label: 'parent2', values: {} },
+        { id: 'a', typeId: 'universe.world', label: 'w1', parentId: 'p1', values: {} },
+        { id: 'b', typeId: 'universe.world', label: 'w2', parentId: 'p2', values: {} },
+      ]
+    })
+    const diffParentWorlds = diffParent.nodes.filter((n) => n.typeId === 'universe.world')
+    expect(diffParentWorlds.length).toBe(2)
+  })
 })
 
 // --- normalizeProjectDocument ---
@@ -119,6 +145,25 @@ describe('applyProjectOps', () => {
       payload: { entityId: 'e2' }
     }])
     expect(withoutEntity.entities.find((e) => e.id === 'e2')).toBeUndefined()
+  })
+
+  it('createNode drops a second universe.world in the same scope, but allows one in a different scope', () => {
+    const withFirstWorld = applyProjectOps({}, [
+      { type: 'createNode', payload: { node: { id: 'p', typeId: 'geom.cube', label: 'parent', values: {} } } },
+      { type: 'createNode', payload: { node: { id: 'w1', typeId: 'universe.world', label: 'World 1', parentId: 'p', values: {} } } },
+    ])
+    expect(withFirstWorld.nodes.some((n) => n.id === 'w1')).toBe(true)
+
+    const withDuplicateInSameScope = applyProjectOps(withFirstWorld, [
+      { type: 'createNode', payload: { node: { id: 'w2', typeId: 'universe.world', label: 'World 2', parentId: 'p', values: {} } } },
+    ])
+    expect(withDuplicateInSameScope.nodes.some((n) => n.id === 'w2')).toBe(false)
+
+    const withWorldInDifferentScope = applyProjectOps(withFirstWorld, [
+      { type: 'createNode', payload: { node: { id: 'q', typeId: 'geom.cube', label: 'other parent', values: {} } } },
+      { type: 'createNode', payload: { node: { id: 'w3', typeId: 'universe.world', label: 'World 3', parentId: 'q', values: {} } } },
+    ])
+    expect(withWorldInDifferentScope.nodes.some((n) => n.id === 'w3')).toBe(true)
   })
 
   it('createNode + deleteNode removes dangling edges', () => {

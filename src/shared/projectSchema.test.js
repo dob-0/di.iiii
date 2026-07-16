@@ -261,6 +261,25 @@ describe('projectSchema', () => {
         expect(afterSingleton.nodes).toHaveLength(1)
         expect(afterSingleton.nodes[0].id).toBe('light-a')
     })
+
+    it('scopes world.light/world.background/world.grid/universe.world singletons per node-scope (parentId), not document-wide', () => {
+        const base = normalizeProjectDocument({})
+        const afterSameScope = applyProjectOps(base, [
+            { type: 'createNode', payload: { node: { id: 'parent', typeId: 'geom.cube' } } },
+            { type: 'createNode', payload: { node: { id: 'world-a', typeId: 'universe.world', parentId: 'parent' } } },
+            { type: 'createNode', payload: { node: { id: 'world-b', typeId: 'universe.world', parentId: 'parent' } } }
+        ])
+        expect(afterSameScope.nodes.filter((n) => n.typeId === 'universe.world')).toHaveLength(1)
+        expect(afterSameScope.nodes.find((n) => n.typeId === 'universe.world').id).toBe('world-a')
+
+        const afterDifferentScope = applyProjectOps(base, [
+            { type: 'createNode', payload: { node: { id: 'parentA', typeId: 'geom.cube' } } },
+            { type: 'createNode', payload: { node: { id: 'parentB', typeId: 'geom.cube' } } },
+            { type: 'createNode', payload: { node: { id: 'world-a', typeId: 'universe.world', parentId: 'parentA' } } },
+            { type: 'createNode', payload: { node: { id: 'world-b', typeId: 'universe.world', parentId: 'parentB' } } }
+        ])
+        expect(afterDifferentScope.nodes.filter((n) => n.typeId === 'universe.world')).toHaveLength(2)
+    })
 })
 
 describe('invertProjectOps', () => {
