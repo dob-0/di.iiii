@@ -18,8 +18,12 @@ import { getInspectorSections } from '../../project/entityRegistry.js'
 import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
+import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
 import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
+
+const NODE_ZERO_TYPE_ID = 'universe.node0'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
@@ -117,7 +121,6 @@ export default function BetaEditor({
     const [readChatCount, setReadChatCount] = useState(0)
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
     const [isWorldOverlay, setIsWorldOverlay] = useState(false)
-    const [navStack, setNavStack] = useState([null])
 
     const initialStoreState = useMemo(() => {
         if (projectId || !localStorageKey) return undefined
@@ -200,7 +203,8 @@ export default function BetaEditor({
         () => authoredNodes.filter((node) => matchesNodeTypeSurface(getNodeType(node.typeId), activeSurface)),
         [activeSurface, authoredNodes]
     )
-    const currentScopeId = navStack[navStack.length - 1]
+    const scope = useNodeGraphScope({ nodes: authoredNodes, rootTypeId: NODE_ZERO_TYPE_ID })
+    const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, goToRoot: scopeGoToRoot, reset: scopeReset } = scope
     // Panel nodes float as windows; graph cards are non-panel, non-context nodes in the current scope
     const graphCardNodes = useMemo(
         () => nodes.filter((node) => {
@@ -237,8 +241,8 @@ export default function BetaEditor({
         setIsWorldFullscreen(false)
         setIsWorldOverlay(false)
         setOutlinerOpen(false)
-        setNavStack([null])
-    }, [hasAnyNodes])
+        scopeReset()
+    }, [hasAnyNodes, scopeReset])
 
     useEffect(() => {
         if (!hasWorldNode) {
@@ -246,25 +250,6 @@ export default function BetaEditor({
             setIsWorldOverlay(false)
         }
     }, [hasWorldNode])
-
-    // Auto-enter Node 0's scope on load or when it first appears
-    useEffect(() => {
-        if (!hasNodeZero) return
-        const node0 = authoredNodes.find((n) => n.typeId === 'universe.node0')
-        if (node0) setNavStack((prev) => prev.includes(node0.id) ? prev : [null, node0.id])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasNodeZero])
-
-    // Truncate navStack when a scoped node is deleted — prevents ghost scope
-    useEffect(() => {
-        const nodeIds = new Set(authoredNodes.map((n) => n.id))
-        setNavStack((prev) => {
-            const cutAt = prev.findIndex((id) => id !== null && !nodeIds.has(id))
-            if (cutAt === -1) return prev
-            const next = prev.slice(0, cutAt)
-            return next.length > 0 ? next : [null]
-        })
-    }, [authoredNodes])
 
     useEffect(() => {
         if (!isLocalWorkspace || !localStorageKey) return
@@ -356,17 +341,14 @@ export default function BetaEditor({
         const node = authoredNodes.find((n) => n.id === nodeId)
         if (!node) return
         if (node.typeId === 'universe.world') setIsWorldFullscreen(true)
-        setNavStack((prev) => [...prev, nodeId])
-    }, [authoredNodes])
+        scopeEnterNode(nodeId)
+    }, [authoredNodes, scopeEnterNode])
 
     const handleNavigateToScope = useCallback((targetIndex) => {
-        setNavStack((prev) => {
-            const next = prev.slice(0, targetIndex + 1)
-            const newScopeId = next[next.length - 1]
-            if (worldNode && newScopeId !== worldNode.id) setIsWorldFullscreen(false)
-            return next
-        })
-    }, [worldNode])
+        const newScopeId = navStack[targetIndex] ?? null
+        if (worldNode && newScopeId !== worldNode.id) setIsWorldFullscreen(false)
+        scopeNavigateToScope(targetIndex)
+    }, [navStack, scopeNavigateToScope, worldNode])
 
     const handleInspectorChange = (component, nextComponentValue) => {
         if (surfaceSelectedNode) {
@@ -463,37 +445,8 @@ export default function BetaEditor({
         })
     }
 
-    const buildNodeValues = (definitionId, params, place) => {
-        const type = getNodeType(definitionId)
-        const render = type?.render || 'hidden'
-        const values = { ...(params || {}) }
-        if (render === 'spatial-3d' && place?.point) {
-            const liftY = definitionId === 'geom.cube' ? 0.5 : 1.2
-            values.position = [
-                place.point[0] || 0,
-                Math.max(liftY, (place.point[1] || 0) + liftY),
-                place.point[2] || 0
-            ]
-        }
-        if (render === 'panel-2d') {
-            const isWorldNode = definitionId === 'universe.world'
-            const defaultW = isWorldNode ? 680 : 360
-            const defaultH = isWorldNode ? 480 : 280
-            const defaultX = isWorldNode
-                ? Math.max(16, (place?.clientX ?? 400) - 340)
-                : ((place?.clientX ?? 280) - 180)
-            values.frame = {
-                x: defaultX,
-                y: Math.max(workspaceTop + 24, (place?.clientY ?? (workspaceTop + 180)) - 36),
-                width: defaultW,
-                height: defaultH,
-                zIndex: topZIndex + 1,
-                title: params?.title || type?.label || definitionId,
-                visible: true
-            }
-        }
-        return values
-    }
+    const buildNodeValues = (definitionId, params, place) =>
+        buildNodeValuesForType(definitionId, params, place, { workspaceTop, topZIndex })
 
     const handlePaletteCreate = ({ definition, params, placement: palettePlace }) => {
         if (!definition) return
@@ -520,7 +473,7 @@ export default function BetaEditor({
     const handleStartFromNodeZero = (placement = null) => {
         const existing = authoredNodes.find((node) => node.typeId === 'universe.node0')
         if (existing) {
-            if (!navStack.includes(existing.id)) setNavStack([null, existing.id])
+            if (!navStack.includes(existing.id)) scopeGoToRoot(existing.id)
             return
         }
 
@@ -554,7 +507,7 @@ export default function BetaEditor({
             }
         ], { activityMessage: 'Created Node 0.' })
         // Enter Node 0's interior — canvas becomes its world
-        setNavStack([null, node.id])
+        scopeGoToRoot(node.id)
     }
 
     const handleWorldSurfaceDoubleClick = (placement) => {
