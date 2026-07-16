@@ -1,6 +1,6 @@
 # di.iiii Control Server
 
-`serverXR` is the Node/Express backend for `di.iiii`. It runs behind the cPanel Node.js App model, serves the monitor UI, persists space and project data, and is authoritative for edit enforcement, publish state, assets, SSE, and collaborator presence.
+`serverXR` is the Node/Express backend for `di.iiii`. It runs as a Docker container behind Caddy on the production VPS (cPanel's Node.js App model is a documented fallback, not the primary path — see Deploy Notes below), serves the monitor UI, persists space and project data, and is authoritative for edit enforcement, publish state, assets, SSE, and collaborator presence.
 
 Runtime baseline:
 
@@ -193,25 +193,39 @@ Security notes:
 
 These values matter more than older deploy folklore:
 
-- staging should use `DATA_ROOT=/home/distudio/serverXR-staging/data`
-- staging should use `SHARED_ROOT=/home/distudio/shared-staging`
-- production should use `DATA_ROOT=/home/distudio/serverXR/data`
-- production should use `SHARED_ROOT=/home/distudio/shared`
+- Docker (production + staging, see Deploy Notes): `DATA_ROOT=/data` (a mounted volume;
+  set in `docker-compose.yml`/`Dockerfile`), no `SHARED_ROOT` — `shared/` is baked into
+  the image at `/shared` at build time and `sharedRuntime.js` resolves it there by default
+- cPanel fallback only: staging `DATA_ROOT=/home/distudio/serverXR-staging/data` +
+  `SHARED_ROOT=/home/distudio/shared-staging`; production `DATA_ROOT=/home/distudio/serverXR/data`
+  + `SHARED_ROOT=/home/distudio/shared`
 - `API_TOKEN` stays server-only for normal builds; browser editors create an http-only auth session when a protected write needs it
 - prefer a dedicated `EDITOR_API_TOKEN` for day-to-day authoring and reserve admin tokens for space/publish management
 - use `EDITOR_ALLOWED_SPACES` or scoped `AUTH_IDENTITIES` entries when an editor should only operate inside named spaces
-- the Node app mount stays `/serverXR` in both environments
+- the app mount stays `/serverXR` in every environment
 - reserve admin tokens for publish and space-management work
 
 If `/serverXR/api/health` fails, check in this order:
 
-1. Passenger `.htaccess` inside the web-root `serverXR/` mount
+1. `docker compose ps` / `docker compose logs server` (cPanel fallback: Passenger `.htaccess` inside the web-root `serverXR/` mount)
 2. backend `.env`
 3. `DATA_ROOT`
-4. `SHARED_ROOT`
+4. `SHARED_ROOT` (cPanel fallback only — see above)
 5. then code
 
 ## Deploy Notes
+
+Primary path — Docker on the VPS, behind Caddy; full detail in
+[docs/deploy/VPS_DOCKER_DEPLOY.md](../docs/deploy/VPS_DOCKER_DEPLOY.md) and
+[docs/deploy/LIVE_DEPLOY.md](../docs/deploy/LIVE_DEPLOY.md):
+
+- `git push origin dev` deploys to VPS staging, `git push origin main` deploys to VPS production
+- built from `serverXR/Dockerfile` (`node:22-alpine`), run via `docker-compose.yml` + `docker-compose.prod.yml`
+- application root inside the image: `/app`; startup: `node src/index.js`; mount: `/serverXR`
+
+### cPanel Fallback (legacy)
+
+Kept as a documented fallback until its hosting term expires — not the default path.
 
 Recommended cPanel Node.js App settings:
 
@@ -236,8 +250,6 @@ Canonical deploy path:
 - cPanel `Git Version Control` tracks those branches
 - `.cpanel.yml` runs `scripts/cpanel-apply-prebuilt-release.sh`
 - `/serverXR` stays owned by the cPanel Node.js App
-
-Fallbacks still exist for disaster recovery, but they are not the default path.
 
 ## For Humans And AI Agents
 
