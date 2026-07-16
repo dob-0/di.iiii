@@ -5,10 +5,19 @@ const { Strategy: GoogleStrategy } = require('passport-google-oauth20')
 const { upsertUser } = require('../userStore')
 const { signLoginState, verifyLoginState } = require('../loginState')
 
-// A random per-process secret when none is configured (e.g. REQUIRE_AUTH=false
-// self-host setups) — avoids signing with a fixed, publicly-known string.
-// State tokens are short-lived, so not surviving a restart is fine.
-const FALLBACK_STATE_SECRET = crypto.randomBytes(32).toString('hex')
+// Derive a stable fallback secret from OAuth client secrets when no
+// AUTH_SESSION_SECRET/API_TOKEN is configured (e.g. REQUIRE_AUTH=false
+// self-host setups). Must stay identical across processes/restarts on the
+// same deployment — a random-per-process secret breaks state verification
+// whenever the authorize and callback hops land on different processes
+// (e.g. cPanel/Passenger spawning or recycling workers).
+const deriveFallbackStateSecret = (oauth) => {
+  const material = [oauth?.github?.clientSecret, oauth?.google?.clientSecret]
+    .filter(Boolean)
+    .join('|')
+  if (!material) return crypto.randomBytes(32).toString('hex')
+  return crypto.createHash('sha256').update(`login-state:${material}`).digest('hex')
+}
 
 // Dev-only override: comma-separated space ids guests can use without signing in.
 // Defaults to ['main'] in any environment where it isn't set (staging/production
@@ -25,7 +34,7 @@ const registerAuthRoutes = (router, {
 }) => {
   const frontendUrl = config.oauth.frontendUrl
   const { oauth } = config
-  const stateSecret = config.auth.sessionSecret || FALLBACK_STATE_SECRET
+  const stateSecret = config.auth.sessionSecret || deriveFallbackStateSecret(oauth)
 
   const requireValidLoginState = (req, res, next) => {
     if (!verifyLoginState(stateSecret, req.query.state)) {

@@ -1,3 +1,4 @@
+import crypto from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
 import { registerAuthRoutes } from './authRoutes.js'
 import { signLoginState } from '../loginState.js'
@@ -74,6 +75,42 @@ describe('registerAuthRoutes login CSRF state', () => {
     const res = { redirect: vi.fn() }
     const next = vi.fn()
     requireValidLoginState(req, res, next)
+    expect(next).toHaveBeenCalled()
+    expect(res.redirect).not.toHaveBeenCalled()
+  })
+
+  it('the state secret fallback (no auth.sessionSecret) is stable across separate process-like instances', () => {
+    // Regression guard: the fallback used to be `crypto.randomBytes` generated once
+    // per module load, so a state signed on one process (or one route registration)
+    // failed to verify on another — exactly what happens when a host recycles/spawns
+    // multiple server processes between the OAuth authorize and callback hops.
+    const configNoSessionSecret = {
+      ...baseConfig,
+      oauth: { ...baseConfig.oauth, github: { ...baseConfig.oauth.github, enabled: true } },
+      auth: { sessionSecret: '' }
+    }
+
+    const routerB = makeFakeRouter()
+    registerAuthRoutes(routerB, {
+      config: configNoSessionSecret,
+      createAuthSessionValue: vi.fn(),
+      setAuthSessionCookie: vi.fn()
+    })
+    const [requireValidLoginStateB] = routerB.routes['get /api/auth/github/callback']
+
+    // Signed by "process A" (an independently derived fallback secret)...
+    const stateSignedElsewhere = signLoginState(
+      crypto
+        .createHash('sha256')
+        .update(`login-state:${configNoSessionSecret.oauth.github.clientSecret}|${configNoSessionSecret.oauth.google.clientSecret}`)
+        .digest('hex')
+    )
+
+    // ...must still verify on "process B" (routerB's independently derived fallback secret).
+    const req = { query: { state: stateSignedElsewhere } }
+    const res = { redirect: vi.fn() }
+    const next = vi.fn()
+    requireValidLoginStateB(req, res, next)
     expect(next).toHaveBeenCalled()
     expect(res.redirect).not.toHaveBeenCalled()
   })
