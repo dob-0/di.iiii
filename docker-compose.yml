@@ -102,12 +102,6 @@ services:
       server:
         condition: service_healthy
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/"]
-      interval: 20s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
     logging:
       driver: json-file
       options:
@@ -131,7 +125,7 @@ services:
       ${CLOUDFLARE_TUNNEL_TOKEN:---url http://client:80}
     depends_on:
       client:
-        condition: service_healthy
+        condition: service_started
     restart: unless-stopped
     profiles: ["tunnel"]
     logging:
@@ -176,18 +170,9 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       client:
-        condition: service_healthy
+        condition: service_started
     restart: unless-stopped
     profiles: ["https"]
-    healthcheck:
-      # Admin API only (loopback, not externally published) -- a liveness
-      # check independent of TLS/domain config, so it can't false-negative
-      # on an inert STAGING_DOMAIN block with no DNS yet (see the comment above).
-      test: ["CMD", "wget", "-qO-", "http://localhost:2019/config/"]
-      interval: 20s
-      timeout: 5s
-      retries: 3
-      start_period: 5s
     logging:
       driver: json-file
       options:
