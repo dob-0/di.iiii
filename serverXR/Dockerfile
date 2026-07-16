@@ -1,5 +1,8 @@
 # Build from repo root: docker build -f serverXR/Dockerfile -t dii-server .
-FROM node:22-alpine
+# Pinned by digest (audit #26): a floating tag can silently change under us on
+# rebuild; re-pin deliberately (see docs/deploy/VPS_DOCKER_DEPLOY.md) rather than
+# letting the base image drift. Tag kept alongside the digest for readability.
+FROM node:22-alpine@sha256:16e22a550f3863206a3f701448c45f7912c6896a62de43add43bb9c86130c3e2
 
 # Run as non-root user
 RUN addgroup -S app && adduser -S app -G app

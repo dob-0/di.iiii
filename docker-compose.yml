@@ -132,7 +132,9 @@ services:
   # Quick tunnel (no account): random *.trycloudflare.com URL, watch the logs.
   # Named tunnel (your domain): set CLOUDFLARE_TUNNEL_TOKEN in .env instead.
   tunnel:
-    image: cloudflare/cloudflared:latest
+    # Pinned by digest (audit #26) so this floating tag can't silently change
+    # under us on the next `pull`; re-pin deliberately, see VPS_DOCKER_DEPLOY.md.
+    image: cloudflare/cloudflared:latest@sha256:4f6655284ab3d252b7f28fedb19fe6c8fc82ee5b1295c20ac74d475e5398a52d
     command: >
       tunnel --no-autoupdate
       ${CLOUDFLARE_TUNNEL_TOKEN:+run --token ${CLOUDFLARE_TUNNEL_TOKEN}}
@@ -159,7 +161,9 @@ services:
   # PORT set to something other than 80 in .env (see the run comment above)
   # so Caddy alone owns host ports 80/443.
   caddy:
-    image: caddy:2-alpine
+    # Pinned by digest (audit #26) so this floating tag can't silently change
+    # under us on the next `pull`; re-pin deliberately, see VPS_DOCKER_DEPLOY.md.
+    image: caddy:2-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     ports:
       - "80:80"
       - "443:443"

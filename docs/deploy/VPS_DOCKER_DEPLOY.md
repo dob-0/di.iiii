@@ -173,6 +173,37 @@ with it. An off-box copy (object storage, another host) would close this,
 but needs a destination + credentials someone has to choose — ask before
 picking one.
 
+## Base Image Pinning (audit #26, 2026-07-17)
+
+`Dockerfile`, `serverXR/Dockerfile`, and `docker-compose.yml` (the `caddy`/`tunnel`
+services) pin every base image by digest (`image:tag@sha256:...`), not just a
+floating tag. A floating tag (`node:22-alpine`, `nginx:alpine`, `caddy:2-alpine`,
+`cloudflare/cloudflared:latest`) can point at a different actual image tomorrow
+than it does today — the next `docker build`/`docker compose pull` silently
+picks up whatever the tag currently resolves to, with no diff or review. Pinning
+the digest makes every build/pull reproducible until someone deliberately re-pins.
+
+**Trade-off, on purpose:** this means these images never get security patches
+automatically. Re-pin on a schedule you choose (not automated) — check for a
+new digest, review what changed, then bump deliberately:
+
+```bash
+skopeo inspect docker://node@sha256:<current-digest>  # sanity-check what's pinned now
+skopeo inspect docker://node:22-alpine                 # see what the floating tag resolves to today
+```
+
+(`skopeo` doesn't accept a combined `tag@digest` reference — the `docker://name@sha256:...`
+form above, without a tag, is how to inspect a pinned digest directly. The `tag@digest`
+syntax in `FROM`/`image:` lines is Docker/Compose-only.)
+
+After picking a new digest: update the `FROM`/`image:` line, then run the same
+validation this repo's Docker changes always get before touching a real deploy
+— confirm the new digest actually pulls and the resulting container behaves as
+expected — **before** pushing to `dev`. This is the same class of file
+(`docker-compose.yml`) that caused the 2026-07-16 production outage (see the
+healthcheck incident in `docs/ai/known-fixes.md`); treat any edit here with that
+same caution, not as a routine dependency bump.
+
 ## Follow-Ups
 
 - Both production and staging have been exercised for real (2026-07-16):
