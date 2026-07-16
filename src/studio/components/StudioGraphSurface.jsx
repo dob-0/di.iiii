@@ -1,8 +1,11 @@
 import { useState } from 'react'
-// Reuses Beta's real graph canvas rather than building a second renderer —
-// dev-only (see graphViewFlag.js) so this stylesheet import can't affect
-// any shipped Studio surface; verified zero class-name collisions with
-// studio.css before adding this import.
+// Reuses Beta's real graph canvas rather than building a second renderer.
+// This import is NOT gated by dev-only (see graphViewFlag.js) — it ships in
+// every production build regardless of the flag, since this whole component
+// is imported unconditionally by StudioViewportLayout.jsx. It's safe anyway
+// because beta.css is fully `.beta-*`-namespaced (no bare element/`*`
+// selectors, prefixed keyframes) — verified zero class-name collisions with
+// studio.css before adding this import, not because the flag keeps it out.
 import '../../beta/styles/beta.css'
 import BetaGraphSurface from '../../beta/components/BetaGraphSurface.jsx'
 

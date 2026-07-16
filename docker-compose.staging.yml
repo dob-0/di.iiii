@@ -45,8 +45,9 @@ services:
 
   client:
     # No `ports:` override here -- base docker-compose.yml's client port is
-    # `${PORT:-80}:80`; the staging directory's .env sets PORT to a non-80
-    # value (e.g. 8081) instead, so this list is never appended to (Compose
+    # `${PORT:-80}:8080` (container side is 8080 since audit #27's non-root
+    # nginx switch); the staging directory's .env sets the host-side PORT to
+    # a non-80 value (e.g. 8081) instead, so this list is never appended to (Compose
     # concatenates list-type fields across -f files, it doesn't replace them
     # -- an extra `ports:` entry here would try to bind 80 a second time and
     # collide with production's Caddy).
