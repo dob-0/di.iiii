@@ -45,6 +45,21 @@ on both branches; both staging and production confirmed healthy (see below).
   file, they're unused by staging). `GET /api/auth/providers` on staging
   now returns `{github:true,google:true}`; both flows verified live
   end-to-end by the user (successful GitHub + Google sign-in).
+- Staging was also missing all real content spaces (`wcc`, `br-id-ge`,
+  `beyond-form`) — only had the default `open` space, since staging's DB
+  started empty when it was set up yesterday and nothing had synced prod's
+  actual spaces into it (staging tests deploys, it was never meant to mirror
+  prod's content). Used the existing `scripts/space-bundle.mjs export`/`import`
+  tool (designed for exactly this — moves a space's DB rows + assets + blob
+  store between installs, strips sync keys/GitHub links) to copy all three
+  from prod into staging: exported inside `dii-server-1` (read-only,
+  confirmed prod's `updatedAt` timestamps unchanged after), `docker cp`'d the
+  bundles across, imported inside `dii-staging-server-1`. All three now
+  return `isPublic: true` on staging's `/api/spaces/:id`. Script isn't baked
+  into the Docker image (dev/ops tool only) — had to `docker cp` it in and
+  symlink `/app/serverXR → /app` so its `require('../serverXR/src/db.js')`
+  resolved against the container's flattened `/app/src` layout; cleaned up
+  the temp script/bundles from both containers and the VPS host afterward.
 
 ### Previous session (2026-07-16 — deploy pipeline made real, full audit, one incident, live sign-in bug fixed)
 
