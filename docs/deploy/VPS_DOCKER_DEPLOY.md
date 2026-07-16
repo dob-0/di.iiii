@@ -16,8 +16,12 @@ term expires. Do not delete it as part of adopting this path.
   — triggers on push to `dev` (staging). Decided against a second VPS: at
   2 vCPU/4GB (see `docs/ai/roles/infrastructure-engineer.md`), staging runs
   as a separate, deliberately small Compose project
-  (`docker-compose.staging.yml`, 0.4 CPU/384M server + 0.2 CPU/64M client —
-  small enough that it can't meaningfully starve production's 1.5 CPU/1GB)
+  (`docker-compose.staging.yml`, 0.2 CPU/384M server + 0.1 CPU/64M client —
+  small enough that it can't meaningfully starve production's 0.9 CPU/1G
+  server + 0.3 CPU/128M client + 0.3 CPU/128M Caddy, all five summing to
+  1.8 vCPU against the host's real 2 — enforced via top-level `cpus`/
+  `mem_limit`, not the Swarm-only `deploy.resources.limits`, see
+  `docs/ai/known-fixes.md`)
   on the **same** VPS, in a **separate checkout directory** with its own
   `.env` so it never inherits production's `COMPOSE_PROFILES=https` or
   secrets. Production's Caddy (the only Caddy instance; staging has none)
@@ -46,15 +50,27 @@ term expires. Do not delete it as part of adopting this path.
 1. Builds `ghcr.io/<owner>/dii-server` (from `serverXR/Dockerfile`) and
    `ghcr.io/<owner>/dii-client` (from `Dockerfile`), tagged with the commit
    SHA and `latest`, and pushes both to GHCR.
-2. SSHes into the VPS and runs, in `VPS_DEPLOY_PATH`:
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
-   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-   ```
-   `docker-compose.prod.yml` overrides `server`/`client` to pull
-   `ghcr.io/${REGISTRY_USER}/dii-*:${IMAGE_TAG}` instead of building locally
-   (defaults: `REGISTRY_USER=youruser`, `IMAGE_TAG=latest` — see
-   `.env.example`).
+2. SSHes into the VPS and, in `VPS_DEPLOY_PATH`:
+   - `git fetch` + `git checkout <deployed-sha> -- docker-compose.yml
+     docker-compose.prod.yml docker-compose.caddy-hardened.yml Caddyfile` —
+     syncs the tracked compose/Caddy config to the exact commit being
+     deployed first (everything else on the checkout — `.env`, data volumes —
+     is untouched), closing a gap where the workflow used to only pull new
+     images and never noticed config drift.
+   - `docker compose --profile https -f docker-compose.yml -f
+     docker-compose.prod.yml [-f docker-compose.caddy-hardened.yml] pull`
+     then `up -d`. `docker-compose.prod.yml` overrides `server`/`client` to
+     pull `ghcr.io/${REGISTRY_USER}/dii-*:${IMAGE_TAG}` instead of building
+     locally (defaults: `REGISTRY_USER=youruser`, `IMAGE_TAG=latest` — see
+     `.env.example`); `docker-compose.caddy-hardened.yml` is added only if
+     present in the checkout.
+   - Reloads Caddy afterward (`caddy reload`, falling back to `restart` if
+     that fails) — its Caddyfile is a read-only bind mount, so a content-only
+     change doesn't trigger a container recreate on its own.
+
+   (Staging's workflow does the same three steps against
+   `docker-compose.staging.yml` instead of `.prod.yml`/`caddy-hardened.yml`,
+   and has no Caddy of its own to reload.)
 3. Runs a smoke check against `/serverXR/api/health` (and the other routes in
    `scripts/smoke-check.mjs`) using `--base-url ${VPS_BASE_URL}`.
 

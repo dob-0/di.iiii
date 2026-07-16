@@ -1,0 +1,23 @@
+version: 2
+updates:
+  # Docker base images (node:22-alpine, nginx:alpine, caddy:2-alpine,
+  # cloudflare/cloudflared:latest) are floating tags with no update path
+  # otherwise — a hand-pinned digest would just go stale/unpatched with
+  # nothing to refresh it. Dependabot opens a PR on new releases instead.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directory: /serverXR
+    schedule:
+      interval: weekly
+
+  # Third-party Actions are SHA-pinned (see known-fixes.md) for supply-chain
+  # safety, which means they never move on their own — Dependabot opens a PR
+  # (with the SHA re-verified against the new tag) when a real update ships.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
