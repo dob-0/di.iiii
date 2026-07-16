@@ -62,7 +62,11 @@ services:
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:4000/serverXR/api/health"]
+      # 127.0.0.1, not localhost: busybox wget resolves localhost to the
+      # container's IPv6 loopback first and (unlike curl) never falls back
+      # to IPv4 on connection refused -- see client/caddy below, where this
+      # bug actually bit (nginx/Caddy admin API don't bind IPv6 loopback).
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4000/serverXR/api/health"]
       interval: 20s
       timeout: 5s
       retries: 3
@@ -102,6 +106,16 @@ services:
       server:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      # 127.0.0.1, not localhost -- see server's healthcheck comment above.
+      # Confirmed live (docker exec): `wget http://localhost/` gets connection
+      # refused (nginx's `listen 80;` is IPv4-only, wget tries ::1 first and
+      # doesn't fall back); `wget http://127.0.0.1/` succeeds.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     logging:
       driver: json-file
       options:
@@ -125,7 +139,7 @@ services:
       ${CLOUDFLARE_TUNNEL_TOKEN:---url http://client:80}
     depends_on:
       client:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     profiles: ["tunnel"]
     logging:
@@ -170,8 +184,21 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       client:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      # Admin API only (loopback, not externally published) -- a liveness
+      # check independent of TLS/domain config, so it can't false-negative
+      # on an inert STAGING_DOMAIN block with no DNS yet (see the comment above).
+      # 127.0.0.1, not localhost -- see server's healthcheck comment above.
+      # Confirmed live (docker exec): Caddy's admin API only binds the IPv4
+      # loopback, so `wget http://localhost:2019/` (which tries ::1 first
+      # and doesn't fall back) gets connection refused; 127.0.0.1 succeeds.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:2019/config/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
     profiles: ["https"]
     logging:
       driver: json-file
