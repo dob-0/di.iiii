@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { createEdge, createNode } from '../../project/nodeRegistry.js'
-import { createNodeGraphContext } from './nodeGraphRuntime.js'
+import { createNodeGraphContext } from '../../project/graph/nodeGraphRuntime.js'
 import { getBetaWorldBackgroundColor } from './viewportWorldState.js'
 
 describe('getBetaWorldBackgroundColor', () => {

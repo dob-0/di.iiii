@@ -1,4 +1,4 @@
-import { evaluateNodeInputs } from './nodeGraphRuntime.js'
+import { evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 
 export function getBetaWorldBackgroundColor(document, graphContext = null) {
     const backgroundNode = (document?.nodes || []).find((node) => node?.typeId === 'world.background')

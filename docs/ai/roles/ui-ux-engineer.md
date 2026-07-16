@@ -31,9 +31,9 @@ The boundary inside JSX files: you own the `return (...)` block and layout-relat
 ```
 serverXR/                         ← absolute prohibition — no reads, no edits
 src/project/nodeRegistry.js       ← node model is NSE territory
-src/beta/utils/nodeGraphRuntime.js← graph execution is NSE territory
-src/beta/utils/nodeInspectorSections.js
-src/beta/utils/nodeSurfaceFilters.js
+src/project/graph/nodeGraphRuntime.js← graph execution is NSE territory
+src/project/graph/nodeInspectorSections.js
+src/project/graph/nodeSurfaceFilters.js
 src/beta/utils/surfaceWorkflow.js
 shared/                           ← schema contracts — SPE territory
 src/shared/                       ← schema contracts — SPE territory

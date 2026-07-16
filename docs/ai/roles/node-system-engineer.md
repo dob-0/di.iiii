@@ -11,9 +11,9 @@ You own the node graph data model — what nodes exist, what ports they have, ho
 
 ```
 src/project/nodeRegistry.js           ← canonical node and port type definitions
-src/beta/utils/nodeGraphRuntime.js    ← graph evaluation and node execution
-src/beta/utils/nodeInspectorSections.js← inspector field definitions per node type
-src/beta/utils/nodeSurfaceFilters.js  ← which nodes appear on which surface
+src/project/graph/nodeGraphRuntime.js    ← graph evaluation and node execution
+src/project/graph/nodeInspectorSections.js← inspector field definitions per node type
+src/project/graph/nodeSurfaceFilters.js  ← which nodes appear on which surface
 src/beta/utils/surfaceWorkflow.js     ← which workflow actions appear per surface
 src/beta/utils/betaGuide.js          ← Beta help content (surface-aware)
 ```
@@ -119,7 +119,7 @@ Do not put filtering logic in the component that renders the inspector — it be
 
 ## Graph Runtime — Elite Knowledge
 
-### File: `src/beta/utils/nodeGraphRuntime.js`
+### File: `src/project/graph/nodeGraphRuntime.js`
 
 The runtime evaluates the node graph: given a document with nodes and edges, it produces output values for each node's output ports.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createEdge, createNode } from '../../project/nodeRegistry.js'
+import { createEdge, createNode } from '../nodeRegistry.js'
 import {
     createNodeGraphContext,
     evaluateNodeInput,

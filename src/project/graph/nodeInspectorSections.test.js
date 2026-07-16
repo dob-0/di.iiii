@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createNode } from '../../project/nodeRegistry.js'
+import { createNode } from '../nodeRegistry.js'
 import { deriveNodeInspectorSections } from './nodeInspectorSections.js'
 
 describe('deriveNodeInspectorSections', () => {

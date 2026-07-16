@@ -1,4 +1,4 @@
-import { getNodeInputs } from '../../project/nodeRegistry.js'
+import { getNodeInputs } from '../nodeRegistry.js'
 
 const asNumber = (value, fallback = 0) => {
     const next = Number(value)

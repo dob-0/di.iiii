@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getNodeType } from '../../project/nodeRegistry.js'
+import { getNodeType } from '../nodeRegistry.js'
 import { filterNodeTypesForSurface, matchesNodeTypeSurface } from './nodeSurfaceFilters.js'
 
 describe('matchesNodeTypeSurface', () => {

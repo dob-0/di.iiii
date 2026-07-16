@@ -1,4 +1,4 @@
-import { getNodeType } from '../../project/nodeRegistry.js'
+import { getNodeType } from '../nodeRegistry.js'
 
 const portToInspectorField = (port, node = null) => {
     const label = port.label || port.id

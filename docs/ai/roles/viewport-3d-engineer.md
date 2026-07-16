@@ -25,7 +25,7 @@ src/styles/                           ← UX territory
 *.css                                 ← any CSS file (except inline style for canvas size)
 serverXR/                             ← BAE territory
 src/project/nodeRegistry.js           ← NSE territory
-src/beta/utils/nodeGraphRuntime.js    ← NSE territory
+src/project/graph/nodeGraphRuntime.js    ← NSE territory
 shared/                               ← SPE territory
 ```
 

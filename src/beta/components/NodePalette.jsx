@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { listNodeTypes } from '../../project/nodeRegistry.js'
-import { filterNodeTypesForSurface } from '../utils/nodeSurfaceFilters.js'
+import { filterNodeTypesForSurface } from '../../project/graph/nodeSurfaceFilters.js'
 
 const PALETTE_WIDTH = 280
 const PALETTE_MAX_HEIGHT = 320
