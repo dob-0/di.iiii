@@ -174,7 +174,14 @@ pushAuthIdentity(authIdentities, apiToken, {
 })
 
 const authIdentityLookup = new Map(authIdentities.map(identity => [identity.token, identity]))
-const authSessionSecret = (process.env.AUTH_SESSION_SECRET || apiToken || authIdentities[0]?.token || '').trim()
+// Falls back to an admin-role token only, never `authIdentities[0]` blindly —
+// that would let whichever token happened to be configured first (even a
+// viewer-only token, e.g. a self-host with only VIEWER_API_TOKEN set) become
+// the session-cookie signing key, letting its holder forge an admin session.
+// A compromised admin token is already full compromise, so falling back to
+// one isn't a new escalation the way falling back to a lower-role one would be.
+const adminFallbackToken = authIdentities.find(identity => identity.role === 'admin')?.token
+const authSessionSecret = (process.env.AUTH_SESSION_SECRET || apiToken || adminFallbackToken || '').trim()
 
 if (requireAuth && !authIdentities.length) {
   throw new Error('At least one auth token is required when REQUIRE_AUTH is enabled.')
