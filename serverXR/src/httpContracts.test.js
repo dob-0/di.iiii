@@ -1506,6 +1506,43 @@ describe('server write contracts', () => {
         expect(opsPayload.ops.filter(op => op.version === 1)).toHaveLength(1)
     })
 
+    // Regression test for audit finding #16: a client retry resent the same
+    // opId, and the server had no way to recognize it — treated as brand-new,
+    // reapplied and given a fresh version number. Simulates the retry: submit
+    // at baseVersion 0, then resubmit the identical (same-opId) op at
+    // baseVersion 1, as a client does after a 409 catch-up reveals its own
+    // retried op already landed.
+    it('does not reapply or re-version a space ops batch whose opId was already committed', async () => {
+        const server = await startServer()
+        const retriedOp = {
+            opId: 'space-retry-op-fixed-id',
+            type: 'addObject',
+            payload: { object: { id: 'retry-object', type: 'box' } }
+        }
+
+        const first = await fetch(`${server.baseUrl}/api/spaces/main/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ baseVersion: 0, ops: [retriedOp] })
+        })
+        expect(first.status).toBe(200)
+        expect((await first.json()).newVersion).toBe(1)
+
+        const retry = await fetch(`${server.baseUrl}/api/spaces/main/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ baseVersion: 1, ops: [retriedOp] })
+        })
+        expect(retry.status).toBe(200)
+        const retryBody = await retry.json()
+        expect(retryBody.newVersion).toBe(1)
+        expect(retryBody.ops).toEqual([])
+
+        const opsResponse = await fetch(`${server.baseUrl}/api/spaces/main/ops`, { headers: withAuth(server.apiToken) })
+        const opsPayload = await opsResponse.json()
+        expect(opsPayload.ops.filter(op => op.opId === 'space-retry-op-fixed-id')).toHaveLength(1)
+    })
+
     it('throttles repeated login attempts with 429 + Retry-After', async () => {
         const server = await startServer({ nodeEnv: 'production', requireAuth: true })
 

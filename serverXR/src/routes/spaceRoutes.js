@@ -386,11 +386,26 @@ function registerSpaceRoutes(router, {
           return { conflict: true, latestVersion: currentVersion, pendingOps }
         }
 
+        // Idempotency guard: a client retry (request timed out but the
+        // server actually committed) resends the same batch by opId. Without
+        // this, the retry's ops get treated as brand new — reapplied and
+        // given a fresh version number, inflating the op-log with duplicate
+        // history entries for the same edit every time a retry happens.
+        const existingHistory = await readOpsHistory(spaceId)
+        const existingOpIds = new Set(existingHistory.map((op) => op.opId).filter(Boolean))
+        const newOps = normalizedOps.filter((op) => !op.opId || !existingOpIds.has(op.opId))
+        if (!newOps.length) {
+          // Every op in this batch was already applied — nothing to do, but
+          // this isn't a conflict either; respond with the current state so
+          // the client's retry completes cleanly instead of erroring.
+          return { nextVersion: currentVersion, opsWithVersion: [] }
+        }
+
         const { scenePath } = getSpacePaths(spaceId)
         const scene = await readJson(scenePath, blankScene)
         let nextVersion = currentVersion
         const timestamp = Date.now()
-        const opsWithVersion = normalizedOps.map((op) => ({
+        const opsWithVersion = newOps.map((op) => ({
           ...op,
           version: ++nextVersion,
           timestamp
@@ -406,10 +421,12 @@ function registerSpaceRoutes(router, {
         return res.status(409).json({ latestVersion: result.latestVersion, pendingOps: result.pendingOps })
       }
       const { nextVersion, opsWithVersion } = result
-      broadcastLiveEvent(spaceId, 'scene-op', {
-        version: nextVersion,
-        ops: opsWithVersion
-      })
+      if (opsWithVersion.length) {
+        broadcastLiveEvent(spaceId, 'scene-op', {
+          version: nextVersion,
+          ops: opsWithVersion
+        })
+      }
       res.json({
         newVersion: nextVersion,
         ops: opsWithVersion

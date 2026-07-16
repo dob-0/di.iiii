@@ -601,4 +601,60 @@ describe('project contracts', () => {
         const repaired = JSON.parse(await readFile(documentPath, 'utf8'))
         expect(repaired.projectMeta.spaceId).toBe('gallery')
     })
+
+    // Regression test for audit finding #16: a client retry (e.g. the
+    // response to a successful commit never arrived) resent the same batch
+    // by opId, and the server had no way to recognize it — the retry got
+    // treated as brand-new ops, reapplied and given a fresh version number,
+    // inflating the op-log with duplicate history entries for one logical
+    // edit. Simulates the retry directly: submit at baseVersion N, then
+    // resubmit the identical (same-opId) ops at baseVersion N+1 (as if the
+    // client had caught up via the normal conflict/catch-up path first).
+    it('does not reapply or re-version an ops batch whose opId was already committed', async () => {
+        const server = await startServer()
+
+        await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Idempotency Project', slug: 'idempotency-project' })
+        })
+
+        const retriedOp = {
+            opId: 'retry-op-fixed-id',
+            type: 'createEntity',
+            payload: { entity: { id: 'entity-retry', type: 'box', name: 'Retry Entity' } }
+        }
+
+        const first = await fetch(`${server.baseUrl}/api/projects/idempotency-project/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseVersion: 0, ops: [retriedOp] })
+        })
+        expect(first.status).toBe(200)
+        const firstBody = await first.json()
+        expect(firstBody.newVersion).toBe(1)
+
+        // Resend the SAME opId, at the now-current baseVersion — exactly
+        // what a client does after a 409 catch-up reveals its own retried op
+        // already landed.
+        const retry = await fetch(`${server.baseUrl}/api/projects/idempotency-project/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseVersion: 1, ops: [retriedOp] })
+        })
+        expect(retry.status).toBe(200)
+        const retryBody = await retry.json()
+        // No new version, no new ops — this was recognized as already done.
+        expect(retryBody.newVersion).toBe(1)
+        expect(retryBody.ops).toEqual([])
+
+        const documentResponse = await fetch(`${server.baseUrl}/api/projects/idempotency-project/document`)
+        const documentPayload = await documentResponse.json()
+        expect(documentPayload.version).toBe(1)
+        expect(documentPayload.document.entities).toHaveLength(1)
+
+        const opsResponse = await fetch(`${server.baseUrl}/api/projects/idempotency-project/ops`)
+        const opsPayload = await opsResponse.json()
+        expect(opsPayload.ops.filter((op) => op.opId === 'retry-op-fixed-id')).toHaveLength(1)
+    })
 })

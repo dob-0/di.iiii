@@ -279,10 +279,26 @@ function registerProjectRoutes(router, {
           }
         }
 
+        // Idempotency guard: a client retry (request timed out but the
+        // server actually committed) resends the same batch by opId. Without
+        // this, the retry's ops get treated as brand new — reapplied and
+        // given a fresh version number, inflating the op-log with duplicate
+        // history entries for the same edit every time a retry happens.
+        const existingOps = await readProjectOps(spacesDir, project.spaceId, project.projectId)
+        const existingOpIds = new Set(existingOps.map((op) => op.opId).filter(Boolean))
+        const newOps = normalizedOps.filter((op) => !op.opId || !existingOpIds.has(op.opId))
+        if (!newOps.length) {
+          // Every op in this batch was already applied — nothing to do, but
+          // this isn't a conflict either; respond with the current state so
+          // the client's retry completes cleanly instead of erroring.
+          const currentDocument = await readProjectDocument(spacesDir, project.spaceId, project.projectId)
+          return { nextVersion: currentVersion, nextMeta: fresh.meta, nextDocument: currentDocument, versionedOps: [] }
+        }
+
         const document = await readProjectDocument(spacesDir, project.spaceId, project.projectId)
         let nextVersion = currentVersion
         const timestamp = Date.now()
-        const versionedOps = normalizedOps.map((op) => ({
+        const versionedOps = newOps.map((op) => ({
           ...op,
           version: ++nextVersion,
           timestamp
@@ -311,10 +327,12 @@ function registerProjectRoutes(router, {
         return res.status(409).json({ latestVersion: result.latestVersion, pendingOps: result.pendingOps })
       }
       const { nextVersion, nextMeta, nextDocument, versionedOps } = result
-      await broadcastProjectLiveEvent(project.projectId, 'project-op', {
-        version: nextVersion,
-        ops: versionedOps
-      })
+      if (versionedOps.length) {
+        await broadcastProjectLiveEvent(project.projectId, 'project-op', {
+          version: nextVersion,
+          ops: versionedOps
+        })
+      }
       res.json({
         ok: true,
         newVersion: nextVersion,
