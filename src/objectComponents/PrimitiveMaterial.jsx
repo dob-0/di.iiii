@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
+import { asColor } from '../utils/colorValue.js'
 
 // Standard material shared by the solid primitives (box, sphere, cone,
 // cylinder). Defaults mirror bare meshStandardMaterial (roughness 1,
@@ -47,14 +48,14 @@ export default function PrimitiveMaterial({ color, wireframe = false, opacity = 
         <meshStandardMaterial
             // toggling map on/off needs a shader recompile — remount instead
             key={map ? map.uuid : 'flat'}
-            color={color}
+            color={asColor(color)}
             map={map}
             wireframe={wireframe}
             transparent={wireframe || opacity < 1}
             opacity={opacity}
             roughness={Number.isFinite(roughness) ? Math.min(1, Math.max(0, roughness)) : 1}
             metalness={Number.isFinite(metalness) ? Math.min(1, Math.max(0, metalness)) : 0}
-            emissive={emissive || '#000000'}
+            emissive={asColor(emissive, '#000000')}
             emissiveIntensity={Number.isFinite(emissiveIntensity) ? Math.max(0, emissiveIntensity) : 1}
             {...(side !== undefined ? { side } : {})}
         />

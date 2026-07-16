@@ -9,6 +9,7 @@ import { getNodeType } from '../../project/nodeRegistry.js'
 import { getBetaWorldBackgroundColor } from '../utils/viewportWorldState.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../utils/nodeGraphRuntime.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
+import { asColor } from '../../utils/colorValue.js'
 
 const isSpatialNode = (node) => getNodeType(node?.typeId)?.render === 'spatial-3d'
 
@@ -84,7 +85,7 @@ function renderNodeBody(node, values) {
             return (
                 <mesh>
                     <planeGeometry args={[w, h]} />
-                    <meshStandardMaterial color={values.color || '#5fa8ff'} side={2} />
+                    <meshStandardMaterial color={asColor(values.color, '#5fa8ff')} side={2} />
                 </mesh>
             )
         }

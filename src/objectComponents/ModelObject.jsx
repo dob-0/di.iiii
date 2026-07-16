@@ -15,6 +15,7 @@ import { registerModelClips } from '../project/viewport/modelClipRegistry.js'
 import { deleteAsset, getAssetBlob } from '../storage/assetStore.js'
 import { getAssetSourceUrl, streamRemoteAsset } from '../services/assetSources.js'
 import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
+import { asColor } from '../utils/colorValue.js'
 
 // Compressed GLBs (Draco / Meshopt — the default export of most DCC tools and
 // asset stores) need their decoders registered or the load fails silently to
@@ -271,8 +272,9 @@ export default function ModelObject({
             if (!child.isMesh) return
             let nextMaterial
             if (applyModelColor) {
+                const resolvedColor = asColor(modelColor)
                 nextMaterial = new THREE.MeshBasicMaterial({
-                    color: new THREE.Color(modelColor)
+                    color: Array.isArray(resolvedColor) ? new THREE.Color(...resolvedColor) : new THREE.Color(resolvedColor)
                 })
             } else if (Array.isArray(child.material)) {
                 nextMaterial = child.material.map((mat) => mat?.clone?.() || mat)
