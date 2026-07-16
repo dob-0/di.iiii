@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildNodeValues } from './nodeGraphAuthoring.js'
+import { buildNodeValues, isRootGraphNode } from './nodeGraphAuthoring.js'
 
 describe('buildNodeValues', () => {
     it('lifts a spatial-3d node above the clicked surface point', () => {
@@ -46,5 +46,21 @@ describe('buildNodeValues', () => {
         const values = buildNodeValues('view.text', {}, {})
         expect(values.frame.zIndex).toBe(7)
         expect(values.frame.y).toBeGreaterThanOrEqual(0)
+    })
+})
+
+describe('isRootGraphNode', () => {
+    it('is true for a node matching the root type id', () => {
+        expect(isRootGraphNode({ id: 'n0', typeId: 'universe.node0' }, 'universe.node0')).toBe(true)
+    })
+
+    it('is false for any other node type', () => {
+        expect(isRootGraphNode({ id: 'n1', typeId: 'geom.cube' }, 'universe.node0')).toBe(false)
+    })
+
+    it('is false with no node, no rootTypeId, or a null node', () => {
+        expect(isRootGraphNode(null, 'universe.node0')).toBe(false)
+        expect(isRootGraphNode({ id: 'n0', typeId: 'universe.node0' }, null)).toBe(false)
+        expect(isRootGraphNode(undefined, undefined)).toBe(false)
     })
 })

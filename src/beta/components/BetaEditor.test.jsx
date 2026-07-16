@@ -5,7 +5,15 @@ import TextPanelWindow from './TextPanelWindow.jsx'
 // Mock 3D deps before importing BetaEditor to avoid ResizeObserver errors in jsdom
 vi.mock('./BetaViewport.jsx', () => ({ default: () => <div data-testid="mock-viewport" /> }))
 vi.mock('./BetaGraphSurface.jsx', () => ({
-    default: (props) => <div data-testid="mock-graph" role="presentation" onDoubleClick={() => props.onDoubleClick?.({})} />
+    default: (props) => (
+        <div data-testid="mock-graph" role="presentation" onDoubleClick={() => props.onDoubleClick?.({})}>
+            {props.selectedNodeId && (
+                <button type="button" onClick={() => props.onDeleteNode?.(props.selectedNodeId)}>
+                    delete-via-graph-canvas
+                </button>
+            )}
+        </div>
+    )
 }))
 const mockApplyLocalOps = vi.fn()
 const mockReplaceDocument = vi.fn(() => Promise.resolve())
@@ -158,6 +166,101 @@ describe('BetaEditor canvas mode', () => {
         // Node 0 is no longer a floating panel — topbar is its presence, scope label shows its name
         expect(screen.queryByRole('dialog', { name: 'Node 0' })).toBeNull()
         expect(screen.getAllByText('Node 0').length).toBeGreaterThan(0)
+    })
+})
+
+describe('BetaEditor Node 0 deletion guard', () => {
+    const GUARD_STORAGE_KEY = 'test-node0-delete-guard'
+
+    afterEach(() => {
+        window.localStorage.removeItem(GUARD_STORAGE_KEY)
+        vi.restoreAllMocks()
+    })
+
+    // activeSurface must be 'graph' — matches the real app's state after Node 0
+    // is actually created (handleStartFromNodeZero sets it explicitly), and is
+    // required for a render:'hidden' node type like universe.node0 to count as
+    // "surface selected" (schema default is 'world', which only matches
+    // spatial-3d/world-category types).
+    const seedSelectedNodeZero = () => {
+        window.localStorage.setItem(
+            GUARD_STORAGE_KEY,
+            JSON.stringify({
+                nodes: [makeNodeZero()],
+                edges: [],
+                workspaceState: { selectedNodeId: 'node-0', activeSurface: 'graph' }
+            })
+        )
+    }
+
+    it('asks for confirmation before deleting Node 0 via the Delete FAB, and aborts on cancel', () => {
+        seedSelectedNodeZero()
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+        mockApplyLocalOps.mockClear()
+        render(<BetaEditor localStorageKey={GUARD_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+        expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/Node 0/))
+        const deletedNode0 = mockApplyLocalOps.mock.calls
+            .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
+            .flat()
+            .some((op) => op.type === 'deleteNode' && op.payload.nodeId === 'node-0')
+        expect(deletedNode0).toBe(false)
+    })
+
+    it('deletes Node 0 via the Delete FAB once the user confirms', () => {
+        seedSelectedNodeZero()
+        vi.spyOn(window, 'confirm').mockReturnValue(true)
+        mockApplyLocalOps.mockClear()
+        render(<BetaEditor localStorageKey={GUARD_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+        const deletedNode0 = mockApplyLocalOps.mock.calls
+            .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
+            .flat()
+            .some((op) => op.type === 'deleteNode' && op.payload.nodeId === 'node-0')
+        expect(deletedNode0).toBe(true)
+    })
+
+    it('asks for confirmation before deleting Node 0 via the graph canvas\'s own delete path', () => {
+        seedSelectedNodeZero()
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+        mockApplyLocalOps.mockClear()
+        render(<BetaEditor localStorageKey={GUARD_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByText('delete-via-graph-canvas'))
+
+        expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/Node 0/))
+        const deletedNode0 = mockApplyLocalOps.mock.calls
+            .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
+            .flat()
+            .some((op) => op.type === 'deleteNode' && op.payload.nodeId === 'node-0')
+        expect(deletedNode0).toBe(false)
+    })
+
+    it('never asks for confirmation when deleting a normal (non-root) node', () => {
+        window.localStorage.setItem(
+            GUARD_STORAGE_KEY,
+            JSON.stringify({
+                nodes: [makeNodeZero(), { id: 'c1', typeId: 'geom.cube', label: 'Test Cube', values: {} }],
+                edges: [],
+                workspaceState: { selectedNodeId: 'c1' }
+            })
+        )
+        const confirmSpy = vi.spyOn(window, 'confirm')
+        mockApplyLocalOps.mockClear()
+        render(<BetaEditor localStorageKey={GUARD_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+
+        expect(confirmSpy).not.toHaveBeenCalled()
+        const deletedCube = mockApplyLocalOps.mock.calls
+            .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
+            .flat()
+            .some((op) => op.type === 'deleteNode' && op.payload.nodeId === 'c1')
+        expect(deletedCube).toBe(true)
     })
 })
 

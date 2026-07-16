@@ -19,7 +19,7 @@ import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
-import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
+import { buildNodeValues as buildNodeValuesForType, isRootGraphNode } from '../../project/graph/nodeGraphAuthoring.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
 import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
 
@@ -384,6 +384,12 @@ export default function BetaEditor({
 
     const handleDeleteSelected = useCallback(() => {
         if (surfaceSelectedNode) {
+            if (isRootGraphNode(surfaceSelectedNode, NODE_ZERO_TYPE_ID)) {
+                const confirmed = window.confirm(
+                    'Delete Node 0? This removes the topbar and node navigation for this project — you\'ll need to double-click the canvas to place a new one.'
+                )
+                if (!confirmed) return
+            }
             applyLocalOps([
                 {
                     type: 'deleteNode',
@@ -915,10 +921,19 @@ export default function BetaEditor({
                         type: 'deleteEdge',
                         payload: { edgeId }
                     })}
-                    onDeleteNode={(nodeId) => applyLocalOps([
-                        { type: 'deleteNode', payload: { nodeId } },
-                        { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
-                    ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })}
+                    onDeleteNode={(nodeId) => {
+                        const node = authoredNodes.find((n) => n.id === nodeId)
+                        if (isRootGraphNode(node, NODE_ZERO_TYPE_ID)) {
+                            const confirmed = window.confirm(
+                                'Delete Node 0? This removes the topbar and node navigation for this project — you\'ll need to double-click the canvas to place a new one.'
+                            )
+                            if (!confirmed) return
+                        }
+                        applyLocalOps([
+                            { type: 'deleteNode', payload: { nodeId } },
+                            { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
+                        ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })
+                    }}
                     onMoveNode={(nodeId, nextX, nextY) => applyLocalOps({
                         type: 'updateNode',
                         payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }

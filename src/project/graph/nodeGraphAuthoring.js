@@ -37,3 +37,12 @@ export const buildNodeValues = (definitionId, params, place, { workspaceTop = 0,
     }
     return values
 }
+
+// A root node (e.g. Beta's "Node 0") is a normal, deletable node in the
+// document, but the topbar/back-navigation UI in both Beta and Studio's
+// graph views depends on one existing — deleting it silently removes that
+// whole UI with no way back except a page reload. Callers should confirm
+// with the user before deleting a node this returns true for; the actual
+// confirmation UI/wording stays with the caller since that's lane-specific.
+export const isRootGraphNode = (node, rootTypeId) =>
+    Boolean(node && rootTypeId && node.typeId === rootTypeId)
