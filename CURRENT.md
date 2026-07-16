@@ -9,12 +9,11 @@ active_branch: dev
 
 ## Last commit
 
-`dev` local HEAD has one uncommitted-to-remote fix on top of `40c5806d`
-(OAuth sign-in fallback-secret fix, see below — not yet pushed). `main` =
-`c90f1a65`. Deploy pipeline is live and verified on both branches; prod
-confirmed healthy post-incident (see below).
+`dev` = `main` = `dc1be3aa` (dev's dep-bump commit `40c5806d` is included).
+Deploy pipeline is live and verified on both branches; both staging and
+production confirmed healthy on this exact commit (see below).
 
-## Last session (2026-07-16 — deploy pipeline made real, full audit, one incident, live sign-in bug)
+## Last session (2026-07-16 — deploy pipeline made real, full audit, one incident, live sign-in bug fixed + shipped)
 
 - User reported OAuth sign-in on `di-studio.xyz` failing with "Sign-in
   failed — please try again." Root cause: the CSRF `state` fix below signed
@@ -29,14 +28,13 @@ confirmed healthy post-incident (see below).
   Drive-connect state signer (`integrationRoutes.js`); added a one-time
   startup `logger.warn` when this fallback path is active so it's visible
   in prod logs; added a regression test simulating a restart between
-  authorize and callback. Full writeup: `docs/ai/known-fixes.md`. **Not yet
-  pushed to `dev`** — do that next, then verify sign-in works on
-  `di-studio.xyz` after the deploy. Also still open: get `AUTH_SESSION_SECRET`
-  set in prod's `.env` on the VPS for defense-in-depth (needs VPS host,
-  which lives only in the `VPS_HOST` GitHub secret — not retrievable, and
-  not recorded anywhere in this repo on purpose).
-- Found `deploy-vps.yml`/`deploy-vps-staging.yml` had never had a successful run
-
+  authorize and callback. Full writeup: `docs/ai/known-fixes.md`. **Pushed to
+  `dev`, promoted to `main`, deployed to both staging and production** —
+  `/api/health` on both confirms `gitCommit: dc1be3aa...`, healthy. Still
+  open: get a dedicated `AUTH_SESSION_SECRET` set in prod's `.env` on the
+  VPS for defense-in-depth (needs the VPS host, which lives only in the
+  `VPS_HOST` GitHub secret — not retrievable, and not recorded anywhere in
+  this repo on purpose).
 - Found `deploy-vps.yml`/`deploy-vps-staging.yml` had never had a successful run
   (no GitHub secrets/variables set, production was live but deployed by hand).
   Wired both up, did the one-time staging setup (`/opt/di.iiii-staging`, fresh
@@ -74,10 +72,12 @@ confirmed healthy post-incident (see below).
 - Do not re-add a `client`/`caddy` healthcheck without testing the exact
   command against a real running container first (suspect `wget` missing
   from `nginx:alpine`; try `curl` or a startup-time-only check).
-- Promote `dev`'s dep-bump commit (`40c5806d`) to `main` whenever — low risk.
 - `main`'s "PR required" branch protection is still bypassed by direct
-  pushes (admin override, including this session's emergency hotfix) —
-  decide whether to actually enforce it or drop it.
+  pushes (admin override, used again this session for the sign-in fix and
+  the earlier emergency hotfix) — decide whether to actually enforce it or
+  drop it.
+- Set a dedicated `AUTH_SESSION_SECRET` in prod's `.env` on the VPS — needs
+  the VPS host (only in the `VPS_HOST` GitHub secret).
 - Brand: canonical domain/handle undecided (di-studio.xyz vs thedi.studio vs
   IG handle); `/privacy` still not wired into app routes.
 - Real-device click-through owed: guest journey + invite flow.
