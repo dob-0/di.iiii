@@ -594,7 +594,7 @@ export default function SpaceHub() {
                                     {space.previewImageAssetId ? (
                                         <div className="ssh-card-preview" aria-hidden="true">
                                             <img
-                                                src={getServerSpaceAssetUrl(space.id, space.previewImageAssetId)}
+                                                src={getServerSpaceAssetUrl(space.id, space.previewImageAssetId, { width: 480 })}
                                                 alt=""
                                                 loading="lazy"
                                             />

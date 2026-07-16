@@ -1,6 +1,7 @@
 const path = require('node:path')
 const fs = require('node:fs')
 const fsp = require('node:fs/promises')
+const sharp = require('sharp')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { getDb } = require('./db')
 const commonsStore = require('./commonsStore')
@@ -8,6 +9,19 @@ const logger = require('./logger')
 const { isValidAssetId } = require('./assetHash')
 
 const SLUG_REGEX = /^[a-z0-9-]{3,48}$/
+
+// Thumbnail variants for image assets — the space hub grid used to pull the
+// full-resolution original for every card's preview image. Resized once per
+// (asset, width) and cached to disk next to the original; only images (never
+// SVG, which sharp would rasterize pointlessly) get a variant.
+const THUMBNAIL_MAX_WIDTH = 640
+const THUMBNAILABLE_MIME_PREFIX = 'image/'
+const NON_THUMBNAILABLE_MIME_TYPES = new Set(['image/svg+xml'])
+const isThumbnailableImage = (mimeType) =>
+  typeof mimeType === 'string' &&
+  mimeType.startsWith(THUMBNAILABLE_MIME_PREFIX) &&
+  !NON_THUMBNAILABLE_MIME_TYPES.has(mimeType)
+const thumbnailPath = (filePath, width) => `${filePath}.thumb-${width}.webp`
 
 const SPACE_KINDS = ['normal', 'global', 'sandbox']
 const normalizeSpaceKind = (value) => SPACE_KINDS.includes(value) ? value : 'normal'
@@ -385,12 +399,8 @@ function createSpaceStore({
     }
   }
 
-  const serveAsset = async (spaceId, assetId, res) => {
-    const { assetsDir } = getSpacePaths(spaceId)
-    const filePath = path.join(assetsDir, assetId)
-    const meta = await readJson(path.join(assetsDir, `${assetId}.json`), null)
-    await fsp.access(filePath)
-    res.setHeader('Content-Type', meta?.mimeType || 'application/octet-stream')
+  const serveFile = (res, filePath, contentType) => {
+    res.setHeader('Content-Type', contentType || 'application/octet-stream')
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
     const stream = fs.createReadStream(filePath)
     stream.on('error', (error) => {
@@ -398,6 +408,57 @@ function createSpaceStore({
       res.status(500).end('Failed to read asset')
     })
     stream.pipe(res)
+  }
+
+  // Deleting the source asset must also drop any cached thumbnail variants
+  // (one file per requested width) or they'd leak on disk forever.
+  const removeAssetThumbnails = async (assetsDir, assetId) => {
+    const prefix = `${assetId}.thumb-`
+    let entries
+    try {
+      entries = await fsp.readdir(assetsDir)
+    } catch {
+      return
+    }
+    await Promise.all(
+      entries
+        .filter((name) => name.startsWith(prefix))
+        .map((name) => fsp.rm(path.join(assetsDir, name), { force: true }))
+    )
+  }
+
+  const serveAsset = async (spaceId, assetId, res, { width } = {}) => {
+    const { assetsDir } = getSpacePaths(spaceId)
+    const filePath = path.join(assetsDir, assetId)
+    const meta = await readJson(path.join(assetsDir, `${assetId}.json`), null)
+    await fsp.access(filePath)
+
+    const requestedWidth = Math.trunc(Number(width))
+    if (requestedWidth > 0 && isThumbnailableImage(meta?.mimeType)) {
+      const clampedWidth = Math.min(requestedWidth, THUMBNAIL_MAX_WIDTH)
+      const thumbPath = thumbnailPath(filePath, clampedWidth)
+      try {
+        await fsp.access(thumbPath)
+      } catch {
+        try {
+          await sharp(filePath)
+            .resize({ width: clampedWidth, withoutEnlargement: true })
+            .webp({ quality: 80 })
+            .toFile(thumbPath)
+        } catch (error) {
+          logger.warn(`[serveAsset] thumbnail generation failed for ${spaceId}/${assetId}: ${error.message}`)
+        }
+      }
+      const hasThumb = await fsp.access(thumbPath).then(() => true, () => false)
+      if (hasThumb) {
+        return serveFile(res, thumbPath, 'image/webp')
+      }
+      // Fall through to the original on any generation failure (corrupt
+      // image, unsupported subformat, etc.) — a slow thumbnail is better
+      // than a broken preview.
+    }
+
+    serveFile(res, filePath, meta?.mimeType)
   }
 
   return {
@@ -422,6 +483,7 @@ function createSpaceStore({
     pruneStaleSandboxes,
     readLatestSpaceSnapshot,
     readOpsHistory,
+    removeAssetThumbnails,
     snapshotSpaceScene,
     saveSpaceMeta,
     serveAsset,

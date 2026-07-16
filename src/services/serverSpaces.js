@@ -60,8 +60,11 @@ export const mintSpaceInvite = async (spaceId, label = 'invite') => {
 export const redeemSpaceInvite = async (token) =>
     apiFetch('/api/invites/redeem', { method: 'POST', body: { token } })
 
-export const getServerSpaceAssetUrl = (spaceId, assetId) =>
-    `${apiBaseUrl}/api/spaces/${resolveServerSpaceId(spaceId)}/assets/${assetId}`
+// `width` requests a resized/cached image variant (ignored for non-image
+// assets, or served at full size if generation fails) — see spaceStore.js
+// serveAsset. Omit for the original file.
+export const getServerSpaceAssetUrl = (spaceId, assetId, { width } = {}) =>
+    `${apiBaseUrl}/api/spaces/${resolveServerSpaceId(spaceId)}/assets/${assetId}${width ? `?w=${width}` : ''}`
 
 export const deleteServerSpace = async (spaceId) => {
     await apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}`, { method: 'DELETE' })

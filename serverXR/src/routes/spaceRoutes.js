@@ -42,6 +42,7 @@ function registerSpaceRoutes(router, {
   readJson,
   readLatestSpaceSnapshot = null,
   readOpsHistory,
+  removeAssetThumbnails,
   saveSpaceMeta,
   serveAsset,
   spacesDir,
@@ -121,8 +122,22 @@ function registerSpaceRoutes(router, {
       const sandboxSummary = state.isUnrestricted && typeof getSandboxStats === 'function'
         ? getSandboxStats()
         : null
+      const mapped = visible.map((space) => withIsOwner(state, space))
+
+      // Pagination is opt-in via ?limit= (and optional ?offset=): omitting it
+      // preserves the original full-list response so existing callers (the
+      // Space Hub currently renders the whole set in-memory) are unaffected.
+      // Bounds server-side cost as the space/sandbox population grows without
+      // forcing a frontend change until one actually needs "load more" UI.
+      const limit = Number.parseInt(req.query.limit, 10)
+      const hasPaging = Number.isInteger(limit) && limit > 0
+      const offsetParam = Number.parseInt(req.query.offset, 10)
+      const offset = hasPaging && Number.isInteger(offsetParam) && offsetParam > 0 ? offsetParam : 0
+      const spacesOut = hasPaging ? mapped.slice(offset, offset + limit) : mapped
+
       res.json({
-        spaces: visible.map((space) => withIsOwner(state, space)),
+        spaces: spacesOut,
+        ...(hasPaging ? { total: mapped.length, offset, limit, hasMore: offset + limit < mapped.length } : {}),
         ...(sandboxSummary ? { sandboxSummary } : {})
       })
     } catch (error) {
@@ -826,7 +841,7 @@ function registerSpaceRoutes(router, {
       if (!spaceId || !isValidAssetId(assetId)) {
         return res.status(400).json({ error: 'Invalid request.' })
       }
-      await serveAsset(spaceId, assetId, res)
+      await serveAsset(spaceId, assetId, res, { width: req.query.w })
     } catch (error) {
       if (error.code === 'ENOENT') {
         return res.status(404).json({ error: 'Asset not found.' })
@@ -899,6 +914,7 @@ function registerSpaceRoutes(router, {
       }
       await fsp.rm(filePath, { force: true })
       await fsp.rm(path.join(assetsDir, `${assetId}.json`), { force: true })
+      await removeAssetThumbnails(assetsDir, assetId)
       res.json({ ok: true })
     } catch (error) {
       next(error)

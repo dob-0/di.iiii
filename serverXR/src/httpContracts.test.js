@@ -1731,6 +1731,36 @@ describe('server write contracts', () => {
         const commons = await commonsRes.json()
         expect(commons.assets.some((a) => a.id === assetId)).toBe(false)
     })
+
+    it('GET /api/spaces returns the full list unpaginated by default, and pages when ?limit= is given', async () => {
+        const server = await startServer({ nodeEnv: 'production' })
+        for (const slug of ['pg-alpha', 'pg-bravo', 'pg-charlie']) {
+            const created = await fetch(`${server.baseUrl}/api/spaces`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+                body: JSON.stringify({ slug, label: slug, permanent: true })
+            })
+            expect(created.status).toBe(201)
+        }
+
+        const unpaged = await fetch(`${server.baseUrl}/api/spaces`, { headers: withAuth(server.apiToken) })
+        expect(unpaged.status).toBe(200)
+        const unpagedBody = await unpaged.json()
+        expect(unpagedBody.spaces.length).toBeGreaterThanOrEqual(3)
+        expect(unpagedBody.total).toBeUndefined()
+        expect(unpagedBody.hasMore).toBeUndefined()
+
+        const total = unpagedBody.spaces.length
+        const firstPage = await fetch(`${server.baseUrl}/api/spaces?limit=2`, { headers: withAuth(server.apiToken) })
+        const firstBody = await firstPage.json()
+        expect(firstBody.spaces).toHaveLength(2)
+        expect(firstBody).toMatchObject({ total, offset: 0, limit: 2, hasMore: total > 2 })
+
+        const secondPage = await fetch(`${server.baseUrl}/api/spaces?limit=2&offset=2`, { headers: withAuth(server.apiToken) })
+        const secondBody = await secondPage.json()
+        expect(secondBody.offset).toBe(2)
+        expect(secondBody.spaces).toEqual(unpagedBody.spaces.slice(2, 4))
+    })
 })
 
 describe('open-call application contracts', () => {
