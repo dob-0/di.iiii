@@ -1161,11 +1161,13 @@ module.exports = {
   WINDOW_IDS,
   defaultProjectDocument,
   defaultPresentationState,
+  defaultPresentationFixedCamera,
   defaultPublishState,
   defaultWorldState,
   defaultRenderSettings,
   defaultXrState,
   defaultWindowLayout,
+  defaultWorkspaceState,
   buildDefaultComponentsForType,
   cloneValue,
   ensureVector,
@@ -1180,6 +1182,7 @@ module.exports = {
   normalizeProjectEdge,
   normalizeProjectMeta,
   normalizeWindowLayout,
+  normalizeWorkspaceState,
   applyProjectOps,
   invertProjectOps
 }

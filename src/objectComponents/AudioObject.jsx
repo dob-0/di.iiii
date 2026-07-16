@@ -115,6 +115,19 @@ export default function AudioObject({
         }
     }, [autoplay, canUsePositional, loop, paused, sourceUrl, volume])
 
+    // The effect above only pauses on cleanup (it re-runs on every dep
+    // change, so clearing .src there would interrupt an in-progress src
+    // swap) — on the component's actual final unmount, also clear .src and
+    // drop the ref, matching every other asset element's real teardown
+    // (PrimitiveMaterial/ImageObject already dispose fully on unmount).
+    React.useEffect(() => () => {
+        if (htmlAudioElRef.current) {
+            htmlAudioElRef.current.pause?.()
+            htmlAudioElRef.current.src = ''
+            htmlAudioElRef.current = null
+        }
+    }, [])
+
     return (
         <mesh position-y={0.5}>
             <Sphere args={[0.3, 16, 16]}>

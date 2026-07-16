@@ -179,6 +179,22 @@ describe('ESM/CJS mirror equivalence', () => {
     expect([...schema.WINDOW_IDS].sort()).toEqual([...esm.WINDOW_IDS].sort())
   })
 
+  // Regression test for audit finding #24: the CJS mirror's module.exports
+  // omitted defaultWorkspaceState, defaultPresentationFixedCamera, and
+  // normalizeWorkspaceState, all of which the ESM source exports — unused
+  // by any serverXR consumer today, but exactly the kind of thing that
+  // silently becomes a real drift point the next time something server-side
+  // needs one of them.
+  it('exports defaultWorkspaceState, defaultPresentationFixedCamera, and normalizeWorkspaceState from both mirrors', async () => {
+    const esm = await loadEsm()
+    expect(schema.defaultWorkspaceState).toBeDefined()
+    expect(schema.defaultPresentationFixedCamera).toBeDefined()
+    expect(typeof schema.normalizeWorkspaceState).toBe('function')
+    expect(schema.defaultWorkspaceState).toEqual(esm.defaultWorkspaceState)
+    expect(schema.defaultPresentationFixedCamera).toEqual(esm.defaultPresentationFixedCamera)
+    expect(schema.normalizeWorkspaceState({})).toEqual(esm.normalizeWorkspaceState({}))
+  })
+
   const FIXTURES = [
     {},
     { nodes: [{ id: 'a', typeId: 'universe.world', label: 'w', values: {} }] },
