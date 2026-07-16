@@ -67,6 +67,14 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+    # Caps the default json-file driver, which has no size limit otherwise --
+    # left unbounded, a long-running container's logs can fill a small VPS's
+    # disk with nothing to prune them. Applied to every service below too.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     # Real ceiling: `cpus`/`mem_limit` at this top level are the pre-Swarm Compose keys,
     # applied directly by the Docker Engine on any Compose version (verified live via
     # `docker inspect` -- NanoCpus/Memory matched the old deploy.resources.limits values
@@ -94,6 +102,17 @@ services:
       server:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     # Real ceiling (see server's comment above for why top-level cpus/mem_limit, not
     # deploy.resources). nginx serving a static SPA is very light. Trimmed as part of the
     # host-wide CPU rebalance -- see server's comment above.
@@ -112,9 +131,14 @@ services:
       ${CLOUDFLARE_TUNNEL_TOKEN:---url http://client:80}
     depends_on:
       client:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     profiles: ["tunnel"]
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     # Real ceiling (see server's comment above). cloudflared is a lightweight relay process.
     # Alternative deployment mode to `caddy` below (mutually exclusive profiles), so it
     # isn't part of the same-host CPU budget those two are rebalanced against.
@@ -152,9 +176,23 @@ services:
       - "host.docker.internal:host-gateway"
     depends_on:
       client:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
     profiles: ["https"]
+    healthcheck:
+      # Admin API only (loopback, not externally published) -- a liveness
+      # check independent of TLS/domain config, so it can't false-negative
+      # on an inert STAGING_DOMAIN block with no DNS yet (see the comment above).
+      test: ["CMD", "wget", "-qO-", "http://localhost:2019/config/"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     # Real ceiling (see server's comment above for why top-level cpus/mem_limit, not
     # deploy.resources). TLS termination is light. Trimmed as part of the host-wide CPU
     # rebalance -- see server's comment above.
