@@ -9,6 +9,7 @@ function registerSyncRoutes(router, {
   writeJson,
   upsertSpaceMeta,
   normalizeSpaceId,
+  ensureSpaceWritable,
 } = {}) {
   const { liveSync, directories } = config
   const repoRoot = path.resolve(directories.root, '..')
@@ -74,6 +75,10 @@ function registerSyncRoutes(router, {
       const spaceId = normalizeSpaceId(req.params.spaceId)
       if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
       if (!liveSync.url) return res.status(503).json({ error: 'LIVE_API_URL not configured on the server.' })
+      // Pull overwrites the local scene, same as every other space-mutating
+      // route (POST /ops, PUT /scene) — it must respect the read-only flag
+      // too, or a locked space can still be overwritten via sync.
+      await ensureSpaceWritable(spaceId)
 
       const response = await liveFetch(`/api/spaces/${spaceId}/scene`)
       if (!response.ok) {

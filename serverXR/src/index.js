@@ -1507,6 +1507,7 @@ registerSyncRoutes(router, {
   writeJson,
   upsertSpaceMeta,
   normalizeSpaceId,
+  ensureSpaceWritable,
 })
 
 // Admin sweep for the hub's collapsed sandbox row: remove guest sandboxes the
