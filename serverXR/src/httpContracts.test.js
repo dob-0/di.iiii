@@ -1527,6 +1527,28 @@ describe('server write contracts', () => {
         expect(Number(sawTooMany.headers.get('retry-after'))).toBeGreaterThan(0)
     })
 
+    // Regression test for audit finding #9: /api/sync/spaces/:spaceId had no
+    // rate limiter at all, unlike the equivalent asset-upload route — pull/push
+    // do real disk I/O plus an outbound HTTP call with nothing throttling it.
+    it('throttles repeated sync status requests with 429 + Retry-After', async () => {
+        const server = await startServer()
+
+        let sawTooMany = null
+        for (let i = 0; i < 31; i++) {
+            const attempt = await fetch(`${server.baseUrl}/api/sync/spaces/main/status`, {
+                headers: withAuth(server.apiToken)
+            })
+            if (attempt.status === 429) {
+                sawTooMany = attempt
+                break
+            }
+            expect(attempt.status).toBe(200)
+        }
+
+        expect(sawTooMany).not.toBeNull()
+        expect(Number(sawTooMany.headers.get('retry-after'))).toBeGreaterThan(0)
+    })
+
     // undici (global fetch) instantiates a WASM HTTP parser that OOMs under
     // cPanel/LVE memory limits — every outbound HTTP call in serverXR must go
     // through httpClient.js (node:http/https). This bug class shipped twice

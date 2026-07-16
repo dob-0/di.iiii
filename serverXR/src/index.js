@@ -660,6 +660,10 @@ const syncKeyMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, n
 const inviteMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite mints' })
 const inviteRedeemLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite redeems' })
 const uploadLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, name: 'uploads' })
+// pull/push do real disk I/O plus an outbound HTTP call to the configured
+// live server, with no limiter previously — same class of gap the upload
+// route already had one for (audit finding #9).
+const syncLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'space sync' })
 const openCallSubmitLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 20, name: 'open-call applications' })
 
 // Covers the OAuth start + callback routes registered by registerAuthRoutes below.
@@ -1493,6 +1497,8 @@ registerProjectRoutes(router, {
   writeJson,
   writeProjectDocument
 })
+
+router.use('/api/sync/spaces/:spaceId', syncLimiter)
 
 registerSyncRoutes(router, {
   config,
