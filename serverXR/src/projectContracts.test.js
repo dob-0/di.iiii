@@ -523,6 +523,43 @@ describe('project contracts', () => {
         expect(() => JSON.parse(repaired)).not.toThrow()
     })
 
+    // Regression test for audit finding #13: the global error handler
+    // forwarded err.message unconditionally for ANY uncaught exception,
+    // including raw internal errors (e.g. a JSON parse failure, or an fs
+    // error that embeds an absolute server path) that never set an explicit
+    // err.status. Unrecoverable JSON (not just truncated — real garbage with
+    // no parseable brace/bracket prefix at all) makes readJson re-throw the
+    // raw SyntaxError uncaught; this proves the client now gets a generic
+    // message instead of that internal detail.
+    it('does not leak an internal error message to the client when a document is unrecoverably corrupted', async () => {
+        const server = await startServer()
+
+        await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Unrecoverable Project', slug: 'unrecoverable-project' })
+        })
+
+        const documentPath = path.join(
+            server.dataRoot,
+            'spaces',
+            'main',
+            'projects',
+            'unrecoverable-project',
+            'document.json'
+        )
+        // No '{'/'}'/'['/']' anywhere — tryRecoverJson's truncate-to-last-
+        // brace strategy has nothing to recover, so readJson re-throws.
+        await writeFile(documentPath, 'not json at all, no braces or brackets here')
+
+        const documentResponse = await fetch(`${server.baseUrl}/api/projects/unrecoverable-project/document`)
+        expect(documentResponse.status).toBe(500)
+        const payload = await documentResponse.json()
+        expect(payload.error).not.toMatch(/json|token|unexpected|position/i)
+        expect(payload.error).not.toContain(documentPath)
+        expect(payload.error).not.toContain(server.dataRoot)
+    })
+
     it('repairs non-main project documents whose embedded space drifts back to main', async () => {
         const server = await startServer()
 

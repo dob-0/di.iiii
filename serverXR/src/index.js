@@ -1550,7 +1550,15 @@ app.use((err, req, res, next) => {
     res.status(400).json({ error: err.message })
     return
   }
-  res.status(err?.status || 500).json({ error: err.message || 'Server error' })
+  // Only forward err.message when the route deliberately set err.status —
+  // that means it's a controlled, safe-to-show message ("Invalid space
+  // id.", "Space is read-only."). An error with no status is unexpected
+  // (e.g. a raw fs ENOENT, which embeds the absolute server path) and must
+  // not leak internals to the client — the real message is already logged
+  // above via logger.error/pushEvent for anyone operating the server.
+  const status = err?.status || 500
+  const message = err?.status ? (err.message || 'Server error') : 'Server error'
+  res.status(status).json({ error: message })
 })
 
 const PORT = config.port
