@@ -154,4 +154,73 @@ describe('useProjectDocumentSync', () => {
         expect(result.current.store.state.pendingSyncError).toBeNull()
         expect(result.current.store.state.document.presentationState.codeHtml).toContain('Retry me')
     }, 10000)
+
+    // Regression test for the 2026-07-16 audit finding: a 401 (expired
+    // session) used to be treated exactly like a transient 500 — retried
+    // forever every SYNC_RETRY_DELAY_MS with a generic "sync failed" message,
+    // giving the user no signal that reloading/re-authenticating (not
+    // waiting) is what's actually needed.
+    it('on a 401, stops auto-retrying and surfaces authExpired instead of looping forever — but never drops the edit', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'studio-project', title: 'Studio Project' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        submitProjectOpsMock.mockImplementation(async () => {
+            const error = new Error('Unauthorized')
+            error.status = 401
+            throw error
+        })
+
+        const { result } = renderHook(() => {
+            const store = useProjectStore()
+            const sync = useProjectDocumentSync({ projectId: 'studio-project', store })
+            return { store, sync }
+        })
+
+        await waitFor(() => {
+            expect(result.current.store.state.document.projectMeta.id).toBe('studio-project')
+        })
+
+        act(() => {
+            result.current.sync.applyLocalOps({
+                type: 'setPresentationState',
+                payload: { patch: { mode: 'code', codeHtml: '<main>Keep me</main>' } }
+            })
+        })
+
+        await waitFor(() => {
+            expect(result.current.store.state.authExpired).toBe(true)
+        })
+        expect(result.current.store.state.pendingSyncError).toMatch(/session has expired|session expired/i)
+        // The edit must still be applied locally — a 401 must never drop
+        // unsaved work, same guarantee as the generic-failure retry path.
+        expect(result.current.store.state.document.presentationState.codeHtml).toContain('Keep me')
+
+        // No auto-retry: waiting past SYNC_RETRY_DELAY_MS must NOT produce
+        // another submitProjectOps call on its own.
+        const callsRightAfter = submitProjectOpsMock.mock.calls.length
+        await new Promise((resolve) => setTimeout(resolve, 4500))
+        expect(submitProjectOpsMock.mock.calls.length).toBe(callsRightAfter)
+
+        // Recovery path: once re-authenticated, retrySync (or the next local
+        // edit) flushes the still-queued batch and clears authExpired.
+        submitProjectOpsMock.mockImplementation(async (_projectId, _baseVersion, ops) => ({
+            newVersion: 2,
+            ops
+        }))
+        await act(async () => {
+            await result.current.sync.retrySync()
+        })
+        await waitFor(() => {
+            expect(result.current.store.state.authExpired).toBe(false)
+        })
+        expect(result.current.store.state.version).toBe(2)
+        expect(result.current.store.state.document.presentationState.codeHtml).toContain('Keep me')
+    }, 10000)
 })

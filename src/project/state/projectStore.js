@@ -28,7 +28,8 @@ export const createProjectStoreState = ({
     presenceState: 'disconnected',
     sceneStreamState: 'idle',
     sceneStreamError: null,
-    pendingSyncError: null
+    pendingSyncError: null,
+    authExpired: false
 })
 
 export function projectStoreReducer(state, action) {
@@ -132,7 +133,8 @@ export function projectStoreReducer(state, action) {
         case 'pending-sync-error':
             return {
                 ...state,
-                pendingSyncError: action.error || null
+                pendingSyncError: action.error || null,
+                authExpired: Boolean(action.authExpired)
             }
         default:
             return state

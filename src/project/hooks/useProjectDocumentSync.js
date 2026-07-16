@@ -130,8 +130,27 @@ export function useProjectDocumentSync({
                         type: 'set-version',
                         version: versionRef.current
                     })
-                    dispatch?.({ type: 'pending-sync-error', error: null })
+                    dispatch?.({ type: 'pending-sync-error', error: null, authExpired: false })
                 } catch (error) {
+                    if (error?.status === 401) {
+                        // Session expired mid-edit: retrying with the same
+                        // stale session will just fail again forever (the
+                        // "silent infinite retry" bug — see docs/ai/known-fixes.md).
+                        // Keep the edit queued (never drop it) but stop
+                        // auto-retrying; it'll try again on the next local
+                        // edit, by which point the user has hopefully signed
+                        // back in. Surface a distinct message so this reads
+                        // as "you're signed out," not a generic sync hiccup.
+                        pendingQueueRef.current.unshift(...batch)
+                        pushActivity('Your session has expired — sign in again to keep syncing.', 'error')
+                        dispatch?.({
+                            type: 'pending-sync-error',
+                            error: 'Session expired — sign in again to keep syncing.',
+                            authExpired: true
+                        })
+                        clearTimeout(retryTimerRef.current)
+                        break
+                    }
                     if (error?.status === 409) {
                         const latestVersion = Number(error?.data?.latestVersion)
                         const pendingOps = Array.isArray(error?.data?.pendingOps) ? error.data.pendingOps : []
@@ -242,13 +261,18 @@ export function useProjectDocumentSync({
         presenceState: state?.presenceState || 'disconnected',
         sceneStreamState: state?.sceneStreamState || 'idle',
         sceneStreamError: state?.sceneStreamError || null,
-        pendingSyncError: state?.pendingSyncError || null
-    }), [state?.presenceState, state?.sceneStreamError, state?.sceneStreamState, state?.pendingSyncError])
+        pendingSyncError: state?.pendingSyncError || null,
+        authExpired: Boolean(state?.authExpired)
+    }), [state?.presenceState, state?.sceneStreamError, state?.sceneStreamState, state?.pendingSyncError, state?.authExpired])
 
     return {
         applyLocalOps,
         replaceDocument,
         reloadDocument,
+        // Exposed so a "sign in again" prompt can retry the queued edit
+        // immediately after re-auth, instead of waiting for the next local
+        // edit to happen to naturally retrigger flushQueue.
+        retrySync: flushQueue,
         syncState,
         localClientId: localClientIdRef.current
     }
