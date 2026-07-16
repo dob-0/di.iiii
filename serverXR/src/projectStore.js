@@ -84,7 +84,7 @@ const s = () => {
     upsert:           db.prepare('INSERT OR REPLACE INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
     update:           db.prepare('UPDATE projects SET title=?, document_version=?, source=?, updated_at=?, last_touched_at=? WHERE id=?'),
     deleteById:       db.prepare('DELETE FROM projects WHERE id = ?'),
-    opsSelect:        db.prepare('SELECT data FROM project_ops WHERE project_id = ? ORDER BY version ASC'),
+    opsSelect:        db.prepare('SELECT data FROM project_ops WHERE project_id = ? ORDER BY version ASC, seq ASC'),
     opsDeleteAll:     db.prepare('DELETE FROM project_ops WHERE project_id = ?'),
     opsInsert:        db.prepare('INSERT INTO project_ops (project_id, version, data, created_at) VALUES (?, ?, ?, ?)'),
     opsCount:         db.prepare('SELECT COUNT(*) as cnt FROM project_ops WHERE project_id = ?'),

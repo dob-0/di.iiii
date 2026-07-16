@@ -6,6 +6,9 @@ const googleDrive = require('../googleDrive')
 const { getOwnSandboxSpaceId, isGuestSubject } = require('../authAccess')
 const driveAccount = require('../googleDriveAccount')
 const commonsStore = require('../commonsStore')
+const { createKeyedLock } = require('../asyncLock')
+
+const withSpaceOpsLock = createKeyedLock()
 
 function registerSpaceRoutes(router, {
   appendOpsHistory,
@@ -369,30 +372,40 @@ function registerSpaceRoutes(router, {
       }
 
       await ensureSpaceScene(spaceId)
-      const meta = await ensureSpaceWritable(spaceId)
-      const currentVersion = meta?.sceneVersion || 0
-      if (parsedBaseVersion !== currentVersion) {
-        const history = await readOpsHistory(spaceId)
-        const pendingOps = history.filter(entry => (entry.version || 0) > parsedBaseVersion)
-        return res.status(409).json({
-          latestVersion: currentVersion,
-          pendingOps
-        })
-      }
 
-      const { scenePath } = getSpacePaths(spaceId)
-      const scene = await readJson(scenePath, blankScene)
-      let nextVersion = currentVersion
-      const timestamp = Date.now()
-      const opsWithVersion = normalizedOps.map((op) => ({
-        ...op,
-        version: ++nextVersion,
-        timestamp
-      }))
-      const updatedScene = applySceneOps(scene, opsWithVersion)
-      await writeJson(scenePath, updatedScene)
-      await appendOpsHistory(spaceId, opsWithVersion, maxOpHistory)
-      await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: nextVersion })
+      // Serialized per space: the version check and the read-modify-write it
+      // guards must be one atomic step, or two concurrent requests at the
+      // same baseVersion both pass the check and both write, one silently
+      // clobbering the other.
+      const result = await withSpaceOpsLock(spaceId, async () => {
+        const meta = await ensureSpaceWritable(spaceId)
+        const currentVersion = meta?.sceneVersion || 0
+        if (parsedBaseVersion !== currentVersion) {
+          const history = await readOpsHistory(spaceId)
+          const pendingOps = history.filter(entry => (entry.version || 0) > parsedBaseVersion)
+          return { conflict: true, latestVersion: currentVersion, pendingOps }
+        }
+
+        const { scenePath } = getSpacePaths(spaceId)
+        const scene = await readJson(scenePath, blankScene)
+        let nextVersion = currentVersion
+        const timestamp = Date.now()
+        const opsWithVersion = normalizedOps.map((op) => ({
+          ...op,
+          version: ++nextVersion,
+          timestamp
+        }))
+        const updatedScene = applySceneOps(scene, opsWithVersion)
+        await writeJson(scenePath, updatedScene)
+        await appendOpsHistory(spaceId, opsWithVersion, maxOpHistory)
+        await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: nextVersion })
+        return { nextVersion, opsWithVersion }
+      })
+
+      if (result.conflict) {
+        return res.status(409).json({ latestVersion: result.latestVersion, pendingOps: result.pendingOps })
+      }
+      const { nextVersion, opsWithVersion } = result
       broadcastLiveEvent(spaceId, 'scene-op', {
         version: nextVersion,
         ops: opsWithVersion
@@ -408,7 +421,9 @@ function registerSpaceRoutes(router, {
 
   // Full scene replacement as a single replaceScene op — used by PUT scene
   // and by snapshot restore, so connected clients pick either up live.
-  const replaceSceneAndBroadcast = async (spaceId, sceneData) => {
+  // Serialized per space (same lock as POST /ops) so this can't interleave
+  // its read-modify-write with a concurrent ops write and silently clobber it.
+  const replaceSceneAndBroadcast = async (spaceId, sceneData) => withSpaceOpsLock(spaceId, async () => {
     await ensureSpaceWritable(spaceId)
     const { spaceDir, scenePath, assetsDir } = getSpacePaths(spaceId)
     await fsp.mkdir(spaceDir, { recursive: true })
@@ -432,7 +447,7 @@ function registerSpaceRoutes(router, {
       ops: [resetOp]
     })
     return { newVersion: nextVersion }
-  }
+  })
 
   router.put('/api/spaces/:spaceId/scene', async (req, res, next) => {
     try {

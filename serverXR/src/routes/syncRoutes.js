@@ -8,6 +8,7 @@ function registerSyncRoutes(router, {
   readJson,
   writeJson,
   upsertSpaceMeta,
+  normalizeSpaceId,
 } = {}) {
   const { liveSync, directories } = config
   const repoRoot = path.resolve(directories.root, '..')
@@ -25,8 +26,8 @@ function registerSyncRoutes(router, {
   // Returns local and live scene info so the UI can show whether they're in sync.
   router.get('/api/sync/spaces/:spaceId/status', async (req, res, next) => {
     try {
-      const spaceId = req.params.spaceId
-      if (!spaceId) return res.status(400).json({ error: 'spaceId required' })
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
 
       const { scenePath } = getSpacePaths(spaceId)
       const localScene = await readJson(scenePath, null)
@@ -70,8 +71,8 @@ function registerSyncRoutes(router, {
   // Also writes to spaces/{spaceId}/scene.json for git tracking.
   router.post('/api/sync/spaces/:spaceId/pull', async (req, res, next) => {
     try {
-      const spaceId = req.params.spaceId
-      if (!spaceId) return res.status(400).json({ error: 'spaceId required' })
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
       if (!liveSync.url) return res.status(503).json({ error: 'LIVE_API_URL not configured on the server.' })
 
       const response = await liveFetch(`/api/spaces/${spaceId}/scene`)
@@ -109,8 +110,8 @@ function registerSyncRoutes(router, {
   // Reads the local scene and sends it to the live server.
   router.post('/api/sync/spaces/:spaceId/push', async (req, res, next) => {
     try {
-      const spaceId = req.params.spaceId
-      if (!spaceId) return res.status(400).json({ error: 'spaceId required' })
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
       if (!liveSync.url) return res.status(503).json({ error: 'LIVE_API_URL not configured on the server.' })
       if (!liveSync.token) {
         return res.status(503).json({

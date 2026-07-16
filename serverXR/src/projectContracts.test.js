@@ -217,6 +217,63 @@ describe('project contracts', () => {
         ])
     })
 
+    // Regression test for a real lost-update race (docs/ai/known-fixes.md,
+    // 2026-07-16 audit): two requests at the same baseVersion, fired truly
+    // concurrently (not sequentially like the test above), used to both pass
+    // the conflict check and both write — one silently clobbering the
+    // other's op while both callers got 200. The fix serializes the
+    // check-then-write per project (serverXR/src/asyncLock.js); this test
+    // asserts exactly one of the two now wins with a 200 and the other gets a
+    // real 409, and the surviving entity set matches whichever one actually won.
+    it('serializes two truly concurrent ops requests at the same baseVersion — exactly one wins, the other gets 409', async () => {
+        const server = await startServer()
+
+        const createResponse = await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Race Project', slug: 'race-project', source: 'studio-v3' })
+        })
+        expect(createResponse.status).toBe(201)
+
+        const makeRequest = (entityId) => fetch(`${server.baseUrl}/api/projects/race-project/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [{
+                    type: 'createEntity',
+                    payload: { entity: { id: entityId, type: 'box', name: entityId } }
+                }]
+            })
+        })
+
+        const [responseA, responseB] = await Promise.all([
+            makeRequest('entity-a'),
+            makeRequest('entity-b')
+        ])
+        const statuses = [responseA.status, responseB.status].sort()
+        expect(statuses).toEqual([200, 409])
+
+        const winner = responseA.status === 200 ? responseA : responseB
+        const winnerBody = await winner.json()
+        expect(winnerBody.newVersion).toBe(1)
+
+        // The document must reflect exactly the winner's entity — not both
+        // (which would mean the loser's write silently landed too, the
+        // exact corruption this test guards against) and not neither.
+        const documentResponse = await fetch(`${server.baseUrl}/api/projects/race-project/document`)
+        const documentPayload = await documentResponse.json()
+        expect(documentPayload.version).toBe(1)
+        expect(documentPayload.document.entities).toHaveLength(1)
+
+        // The op log must have exactly one version-1 row (the DB-level
+        // UNIQUE index on (project_id, version) is the last line of defense
+        // if the lock were ever bypassed) — no duplicate-version rows.
+        const opsResponse = await fetch(`${server.baseUrl}/api/projects/race-project/ops`)
+        const opsPayload = await opsResponse.json()
+        expect(opsPayload.ops.filter(op => op.version === 1)).toHaveLength(1)
+    })
+
     it('uploads and serves project assets from the hybrid project container', async () => {
         const server = await startServer()
 

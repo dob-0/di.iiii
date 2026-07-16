@@ -1474,6 +1474,38 @@ describe('server write contracts', () => {
         expect(uploads).toEqual([])
     })
 
+    // Regression test for a real lost-update race (docs/ai/known-fixes.md,
+    // 2026-07-16 audit): two requests at the same baseVersion, fired truly
+    // concurrently, used to both pass the conflict check and both write to
+    // scene.json — one silently clobbering the other's op while both callers
+    // got 200. The fix serializes the check-then-write per space
+    // (serverXR/src/asyncLock.js); this asserts exactly one now wins with a
+    // 200 and the other gets a real 409.
+    it('serializes two truly concurrent space ops requests at the same baseVersion — exactly one wins, the other gets 409', async () => {
+        const server = await startServer()
+
+        const makeRequest = (label) => fetch(`${server.baseUrl}/api/spaces/main/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [{ type: 'addObject', payload: { object: { id: `race-${label}`, type: 'box' } } }]
+            })
+        })
+
+        const [responseA, responseB] = await Promise.all([makeRequest('a'), makeRequest('b')])
+        const statuses = [responseA.status, responseB.status].sort()
+        expect(statuses).toEqual([200, 409])
+
+        const winner = responseA.status === 200 ? responseA : responseB
+        const winnerBody = await winner.json()
+        expect(winnerBody.newVersion).toBe(1)
+
+        const opsResponse = await fetch(`${server.baseUrl}/api/spaces/main/ops`, { headers: withAuth(server.apiToken) })
+        const opsPayload = await opsResponse.json()
+        expect(opsPayload.ops.filter(op => op.version === 1)).toHaveLength(1)
+    })
+
     it('throttles repeated login attempts with 429 + Retry-After', async () => {
         const server = await startServer({ nodeEnv: 'production', requireAuth: true })
 

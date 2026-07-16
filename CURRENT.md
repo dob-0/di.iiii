@@ -9,75 +9,57 @@ active_branch: dev
 
 ## Last commit
 
-`dev` = `63c6f1d3` (docs-only, one commit ahead of `main`'s `97326544` —
-harmless, not yet promoted, no rush). Deploy pipeline is live and verified
-on both branches; both staging and production confirmed healthy (see below).
+`dev` has fixes not yet on `main` (full-repo audit fixes below — not pushed
+yet as of this write-up). Deploy pipeline is live and verified on both
+branches; both staging and production confirmed healthy on their last
+deployed commits.
 
-## Last session (2026-07-16 — verified Open Call feature end-to-end, no code changes)
+## Last session (2026-07-16 — full 6-phase repo audit + top-5 fixes)
 
-- User asked to test the Open Call feature (public application submission +
-  admin review) and confirm it's healthy. No bugs found.
-- Local dev backend on port 4000 was up but every route 404'd (stale
-  process from an earlier session). Restarted it clean — logs showed
-  normal boot (SQLite, Socket.IO, mesh hub all initialized).
-- Root cause of the earlier 404s was a red herring, not a real bug: routes
-  are mounted under `/serverXR/api/...` locally, not bare `/api/...` — the
-  first health probe just hit the wrong path.
-- Exercised the real flow directly against the running backend:
-  `POST /serverXR/api/open-calls/:callId/applications` (public, rate-limited)
-  succeeded and persisted correctly to `data/di.db`; missing-email input
-  correctly rejected with `400`; the admin read endpoint
-  (`GET .../applications`) correctly returned `401` for an unauthenticated
-  request. Cleaned up the dummy test row afterward. User also confirmed the
-  Preferences → Open Call UI directly.
-- Automated coverage (`openCallStore.test.js`, `httpContracts.test.js`,
-  `ViewPanel.test.jsx`) also passes clean, 46/46.
+- Ran a 6-phase parallel audit (serverXR backend, schema/op-log/CRDT, node
+  system, 3D/viewport, Studio/Beta frontend, infra/deploy) — ~28 findings,
+  full list + rationale in `docs/ai/known-fixes.md`. Fixed the top 5:
+  1. **Path traversal + auth-scope bypass in `syncRoutes.js`** — never
+     sanitized `spaceId` before touching the filesystem; fixed to match
+     every other route's `normalizeSpaceId` + 400 pattern.
+  2–4. **Lost-update race** in `POST /api/{spaces,projects}/:id/ops` and the
+     full-document/scene replace paths — version-checked across multiple
+     `await`s with no atomicity, so two concurrent writes at the same
+     version could both succeed, one silently clobbering the other. Fixed
+     with a new per-key async lock (`serverXR/src/asyncLock.js`) around the
+     whole check-then-write; DB gained a `dedupeAndUniqueOps` migration
+     making `(space_id/project_id, version)` genuinely `UNIQUE` (defense in
+     depth). Regression tests fire truly concurrent (`Promise.all`) HTTP
+     requests against a real spawned server and prove exactly one wins.
+     Golden rule added — this exact shape existed in 3 places at once.
+  5. **"No backup" — false positive.** A working nightly backup cron
+     (`/root/vps-backup.sh`) was already live on the VPS; the audit only
+     saw the git repo, which never had it committed. Committed it
+     (`deploy/vps-backup.sh`) plus a new, validated `deploy/vps-restore.sh`
+     (dry-run tested against a scratch Docker volume, not prod). Documented
+     in `docs/deploy/VPS_DOCKER_DEPLOY.md`. Still open: backups are
+     VPS-local only, no off-box copy.
+  Full test suite (640 tests) + build pass clean.
+- Remaining ~23 lower-priority findings from the audit are listed in
+  `docs/ai/known-fixes.md` — not yet triaged/fixed.
 
-- `staging.di-studio.xyz` OAuth is now fully configured: GitHub via a
-  dedicated "staging di" OAuth App (its own client ID/secret, callback
-  `https://staging.di-studio.xyz/serverXR/api/auth/github/callback`), Google
-  via a pre-existing dedicated "staging di" OAuth client
-  (`123917400390-dr28...apps.googleusercontent.com`, redirect URI already
-  present). Both wired into `/opt/di.iiii-staging/.env` under the
-  `STAGING_GITHUB_CLIENT_ID`/`STAGING_GOOGLE_CLIENT_ID` etc. vars (staging's
-  compose override reads `STAGING_`-prefixed names, not the bare ones —
-  don't edit the bare `GITHUB_CLIENT_ID`/`GOOGLE_CLIENT_ID` lines in that
-  file, they're unused by staging). `GET /api/auth/providers` on staging
-  now returns `{github:true,google:true}`; both flows verified live
-  end-to-end by the user (successful GitHub + Google sign-in).
-- Staging was also missing all real content spaces (`wcc`, `br-id-ge`,
-  `beyond-form`) — only had the default `open` space, since staging's DB
-  started empty when it was set up yesterday and nothing had synced prod's
-  actual spaces into it (staging tests deploys, it was never meant to mirror
-  prod's content). Used the existing `scripts/space-bundle.mjs export`/`import`
-  tool (designed for exactly this — moves a space's DB rows + assets + blob
-  store between installs, strips sync keys/GitHub links) to copy all three
-  from prod into staging: exported inside `dii-server-1` (read-only,
-  confirmed prod's `updatedAt` timestamps unchanged after), `docker cp`'d the
-  bundles across, imported inside `dii-staging-server-1`. All three now
-  return `isPublic: true` on staging's `/api/spaces/:id`. Script isn't baked
-  into the Docker image (dev/ops tool only) — had to `docker cp` it in and
-  symlink `/app/serverXR → /app` so its `require('../serverXR/src/db.js')`
-  resolved against the container's flattened `/app/src` layout; cleaned up
-  the temp script/bundles from both containers and the VPS host afterward.
+### Previous session (2026-07-16 — staging OAuth + content spaces wired up)
 
-### Previous session (2026-07-16 — deploy pipeline made real, full audit, one incident, live sign-in bug fixed)
+- `staging.di-studio.xyz` OAuth fully configured (dedicated GitHub + Google
+  OAuth apps) and its DB seeded with prod's real spaces (`wcc`, `br-id-ge`,
+  `beyond-form`) via `scripts/space-bundle.mjs`. Both are manual/one-time —
+  no auto-sync going forward; re-run per-space if new content is needed on
+  staging. `ssh dii-vps` alias set up for direct VPS access.
 
-- Live OAuth sign-in bug on `di-studio.xyz`: real root cause was
-  `signLoginState()` called once at route-registration time instead of
-  per-request, so every login shared one `state` token that expired after
-  `STATE_TTL_MS` (10 min). Fixed, regression-tested, verified live on prod.
-  Full writeup: `docs/ai/known-fixes.md`; golden rule added.
-- `deploy-vps.yml`/`deploy-vps-staging.yml` wired up and verified end-to-end
-  for the first time (previously prod was deployed by hand).
-- Full audit fixed: unenforced CPU limits under plain `docker compose`,
-  OAuth CSRF, missing upload rate limit, a `morgan` CVE, unpinned GH
-  Actions, added space-preview thumbnailing + spaces pagination.
-- `release.json` baked into the server image so `/api/health` self-reports
-  `deployEnv`/`gitCommit`.
-- **Caused a brief prod outage**: bad `client`/`caddy` healthcheck stalled
-  Caddy's startup dependency. Reverted (`c90f1a65`), redeployed, confirmed
-  clean. See Open below — don't re-add without testing the exact command.
+### Earlier session (2026-07-16 — deploy pipeline made real, live sign-in bug)
+
+- `deploy-vps.yml`/`deploy-vps-staging.yml` wired up and verified
+  end-to-end for the first time (prod was previously deployed by hand).
+- Live OAuth sign-in bug on `di-studio.xyz` fixed (state signed once at
+  startup instead of per-request) — see `docs/ai/known-fixes.md`.
+- Caused and recovered from a brief prod outage (bad `client`/`caddy`
+  healthcheck) — don't re-add one without testing the exact command
+  against a real container first.
 
 ## What works
 
@@ -85,23 +67,19 @@ on both branches; both staging and production confirmed healthy (see below).
 - Auth (session-cookie, roles, OAuth-first, CSRF-protected login) + open-space/sandbox implicit grants
 - Production + staging both live on the VPS (Docker/Caddy), both deploy via
   `git push origin main`/`dev` — verified working end-to-end, release.json included.
+- Nightly VPS backups (see `docs/deploy/VPS_DOCKER_DEPLOY.md`), restore path now written and validated.
 
 ## Open
 
-- Do not re-add a `client`/`caddy` healthcheck without testing the exact
-  command against a real running container first (suspect `wget` missing
-  from `nginx:alpine`; try `curl` or a startup-time-only check).
-- `main`'s "PR required" branch protection is still bypassed by direct
-  pushes (admin override, used again this session for the sign-in fix and
-  the earlier emergency hotfix) — decide whether to actually enforce it or
-  drop it.
-- Brand: canonical domain/handle undecided (di-studio.xyz vs thedi.studio vs
-  IG handle); `/privacy` still not wired into app routes.
+- Push this session's fixes to `dev`, verify on staging, promote to `main`.
+- ~23 lower-priority audit findings not yet triaged — see `docs/ai/known-fixes.md`'s latest entry.
+- Off-box backup copy still missing (VPS-local only) — needs a destination/credentials decision.
+- `main`'s "PR required" branch protection is still bypassed by direct pushes (admin override) — decide whether to enforce it.
+- Brand: canonical domain/handle undecided (di-studio.xyz vs thedi.studio vs IG handle); `/privacy` still not wired into app routes.
 - Real-device click-through owed: guest journey + invite flow.
 - ANSCC research-grant angle for `br_id_ge` — ~1 month out, if pursued.
 - Drive Picker blocked on Cloud console. Stale GitHub App key in `serverXR/.env.local`.
-- Orphaned cPanel `.htaccess`/PHP files + cron scripts — left alone, still
-  back the intentionally-preserved cPanel fallback until its hosting term expires.
+- Orphaned cPanel `.htaccess`/PHP files + cron scripts — left alone, still back the intentionally-preserved cPanel fallback until its hosting term expires.
 
 ## Known fixes → [docs/ai/known-fixes.md](docs/ai/known-fixes.md) — check before any bug hunt.
 

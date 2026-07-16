@@ -3,6 +3,9 @@ const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
 const { getSpaceBlobPaths, storeBlobFromFile } = require('../blobStore')
+const { createKeyedLock } = require('../asyncLock')
+
+const withProjectLock = createKeyedLock()
 
 function registerProjectRoutes(router, {
   appendProjectOps,
@@ -166,30 +169,47 @@ function registerProjectRoutes(router, {
         return res.status(404).json({ error: 'Project not found.' })
       }
       await ensureSpaceWritable(project.spaceId)
-      const document = normalizeProjectDocument(req.body || blankProjectDocument)
-      const currentVersion = Number(project.meta?.documentVersion) || 0
-      const nextVersion = currentVersion + 1
-      document.projectMeta = {
-        ...document.projectMeta,
-        id: project.projectId,
-        spaceId: project.spaceId,
-        createdAt: project.meta?.createdAt || Date.now(),
-        updatedAt: Date.now()
-      }
-      await writeProjectDocument(spacesDir, project.spaceId, project.projectId, document)
-      const resetOp = {
-        opId: crypto.randomUUID?.() || `project-op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-        clientId: 'server',
-        type: 'replaceDocument',
-        payload: { document },
-        version: nextVersion,
-        timestamp: Date.now()
-      }
-      await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory)
-      const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
-        title: document.projectMeta.title,
-        documentVersion: nextVersion
+      // Serialized per project: without this, a full-document PUT racing a
+      // concurrent POST /ops (or another PUT) can interleave its read-modify-
+      // write with theirs and silently clobber the other's change — the lock
+      // makes this endpoint's replace atomic relative to every other writer
+      // for the same project, even though it's still last-write-wins by
+      // design (a full replace has no baseVersion to conflict-check against).
+      const result = await withProjectLock(project.projectId, async () => {
+        // Re-fetch inside the lock: `project.meta` was read before we
+        // acquired it and may already be stale.
+        const fresh = await resolveProjectContext(project.projectId)
+        if (!fresh) return null
+        const document = normalizeProjectDocument(req.body || blankProjectDocument)
+        const currentVersion = Number(fresh.meta?.documentVersion) || 0
+        const nextVersion = currentVersion + 1
+        document.projectMeta = {
+          ...document.projectMeta,
+          id: project.projectId,
+          spaceId: project.spaceId,
+          createdAt: fresh.meta?.createdAt || Date.now(),
+          updatedAt: Date.now()
+        }
+        await writeProjectDocument(spacesDir, project.spaceId, project.projectId, document)
+        const resetOp = {
+          opId: crypto.randomUUID?.() || `project-op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+          clientId: 'server',
+          type: 'replaceDocument',
+          payload: { document },
+          version: nextVersion,
+          timestamp: Date.now()
+        }
+        await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory)
+        const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
+          title: document.projectMeta.title,
+          documentVersion: nextVersion
+        })
+        return { nextVersion, nextMeta, document, resetOp }
       })
+      if (!result) {
+        return res.status(404).json({ error: 'Project not found.' })
+      }
+      const { nextVersion, nextMeta, document, resetOp } = result
       await broadcastProjectLiveEvent(project.projectId, 'project-op', {
         version: nextVersion,
         ops: [resetOp]
@@ -241,37 +261,56 @@ function registerProjectRoutes(router, {
       if (!normalizedOps.length) {
         return res.status(400).json({ error: 'No operations provided.' })
       }
-      const currentVersion = Number(project.meta?.documentVersion) || 0
-      if (baseVersion !== currentVersion) {
-        const pendingOps = await readProjectOps(spacesDir, project.spaceId, project.projectId)
-        return res.status(409).json({
-          latestVersion: currentVersion,
-          pendingOps: pendingOps.filter(entry => (entry.version || 0) > baseVersion)
-        })
-      }
 
-      const document = await readProjectDocument(spacesDir, project.spaceId, project.projectId)
-      let nextVersion = currentVersion
-      const timestamp = Date.now()
-      const versionedOps = normalizedOps.map((op) => ({
-        ...op,
-        version: ++nextVersion,
-        timestamp
-      }))
-      const nextDocument = applyProjectOps(document, versionedOps)
-      nextDocument.projectMeta = {
-        ...nextDocument.projectMeta,
-        id: project.projectId,
-        spaceId: project.spaceId,
-        createdAt: project.meta?.createdAt || nextDocument.projectMeta.createdAt,
-        updatedAt: Date.now()
-      }
-      await writeProjectDocument(spacesDir, project.spaceId, project.projectId, nextDocument)
-      await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory)
-      const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
-        title: nextDocument.projectMeta.title,
-        documentVersion: nextVersion
+      // Serialized per project: the version check and the read-modify-write
+      // it guards must be one atomic step, or two concurrent requests at the
+      // same baseVersion both pass the check and both write, one silently
+      // clobbering the other (the race this lock exists to close).
+      const result = await withProjectLock(project.projectId, async () => {
+        const fresh = await resolveProjectContext(project.projectId)
+        if (!fresh) return { notFound: true }
+        const currentVersion = Number(fresh.meta?.documentVersion) || 0
+        if (baseVersion !== currentVersion) {
+          const pendingOps = await readProjectOps(spacesDir, project.spaceId, project.projectId)
+          return {
+            conflict: true,
+            latestVersion: currentVersion,
+            pendingOps: pendingOps.filter(entry => (entry.version || 0) > baseVersion)
+          }
+        }
+
+        const document = await readProjectDocument(spacesDir, project.spaceId, project.projectId)
+        let nextVersion = currentVersion
+        const timestamp = Date.now()
+        const versionedOps = normalizedOps.map((op) => ({
+          ...op,
+          version: ++nextVersion,
+          timestamp
+        }))
+        const nextDocument = applyProjectOps(document, versionedOps)
+        nextDocument.projectMeta = {
+          ...nextDocument.projectMeta,
+          id: project.projectId,
+          spaceId: project.spaceId,
+          createdAt: fresh.meta?.createdAt || nextDocument.projectMeta.createdAt,
+          updatedAt: Date.now()
+        }
+        await writeProjectDocument(spacesDir, project.spaceId, project.projectId, nextDocument)
+        await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory)
+        const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
+          title: nextDocument.projectMeta.title,
+          documentVersion: nextVersion
+        })
+        return { nextVersion, nextMeta, nextDocument, versionedOps }
       })
+
+      if (result.notFound) {
+        return res.status(404).json({ error: 'Project not found.' })
+      }
+      if (result.conflict) {
+        return res.status(409).json({ latestVersion: result.latestVersion, pendingOps: result.pendingOps })
+      }
+      const { nextVersion, nextMeta, nextDocument, versionedOps } = result
       await broadcastProjectLiveEvent(project.projectId, 'project-op', {
         version: nextVersion,
         ops: versionedOps

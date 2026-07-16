@@ -118,6 +118,36 @@ over `rsync` instead of Docker Compose. Recoverable with:
 git show a92feb00:.github/workflows/deploy-staging-ssh.yml
 ```
 
+## Backup & Restore
+
+Production's SQLite DB + uploads/spaces/snapshots are backed up nightly via
+a root crontab entry on the VPS (`17 3 * * * /root/vps-backup.sh`) — this
+was already live and working when a 2026-07-16 audit flagged "no backup
+mechanism" as a gap; the audit only reviewed the git repo, not the VPS
+itself, and the script was never committed here. It now is:
+
+- `deploy/vps-backup.sh` — version-controlled copy of `/root/vps-backup.sh`.
+  Takes a consistent SQLite snapshot (`VACUUM INTO`, WAL-safe) of the running
+  `dii-server-1`'s DB, tars it with `uploads`/`spaces`/`snapshots` from the
+  `dii_data` volume into `/root/backups/dii-backup-<timestamp>.tar.gz`,
+  prunes anything older than 14 days.
+- `deploy/vps-restore.sh` — companion restore script (didn't exist before
+  2026-07-16). Stops `dii-server-1`, extracts a chosen backup into `dii_data`
+  replacing what's there, restarts the stack. Requires typing `restore` to
+  confirm — this overwrites live data. Validated 2026-07-16 by dry-running
+  the extraction logic against a disposable scratch volume (not production)
+  and confirming the restored DB opens cleanly and contains all real spaces.
+
+**No deploy step keeps the VPS copies and these files in sync** — if you
+change either script, `scp` it to `/root/` on the VPS by hand
+(`scp deploy/vps-backup.sh dii-vps:/root/vps-backup.sh`) and `chmod +x`.
+
+**Known gap, not yet addressed**: backups are local to the VPS only. A
+host-level disaster (not just a lost Docker volume) takes the backups down
+with it. An off-box copy (object storage, another host) would close this,
+but needs a destination + credentials someone has to choose — ask before
+picking one.
+
 ## Follow-Ups
 
 - Both production and staging have been exercised for real (2026-07-16):

@@ -203,6 +203,28 @@ function backfillGlobalSpace(db) {
   db.prepare('INSERT OR REPLACE INTO migrations (key, completed_at) VALUES (?, ?)').run(KEY, Date.now())
 }
 
+// Before the per-space/per-project write lock (asyncLock.js) was added, a
+// concurrent-write race could append two op rows sharing the same (id,
+// version) — nothing ever rejected it, since the index on (id, version) was
+// never UNIQUE. Dedupe any that already exist (keep the highest `seq`, i.e.
+// the most recently inserted — insertion order via AUTOINCREMENT is the only
+// ordering signal available once two rows share a version) before making the
+// index UNIQUE, since CREATE UNIQUE INDEX fails outright on existing
+// duplicates. Runs once (guarded by the migrations table).
+function dedupeAndUniqueOps(db) {
+  const KEY = 'v4_unique_ops_version'
+  if (db.prepare('SELECT 1 FROM migrations WHERE key = ?').get(KEY)) return
+  db.transaction(() => {
+    db.exec('DELETE FROM space_ops WHERE seq NOT IN (SELECT MAX(seq) FROM space_ops GROUP BY space_id, version)')
+    db.exec('DELETE FROM project_ops WHERE seq NOT IN (SELECT MAX(seq) FROM project_ops GROUP BY project_id, version)')
+    db.exec('DROP INDEX IF EXISTS idx_space_ops')
+    db.exec('DROP INDEX IF EXISTS idx_project_ops')
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_space_ops ON space_ops(space_id, version)')
+    db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_project_ops ON project_ops(project_id, version)')
+  })()
+  db.prepare('INSERT OR REPLACE INTO migrations (key, completed_at) VALUES (?, ?)').run(KEY, Date.now())
+}
+
 function initDb(dbPath) {
   if (_db) {
     try { _db.close() } catch {}
@@ -222,6 +244,7 @@ function initDb(dbPath) {
   ensureColumn(db, 'users', 'is_unrestricted', 'INTEGER NOT NULL DEFAULT 0')
   backfillUserUnrestricted(db)
   backfillGlobalSpace(db)
+  dedupeAndUniqueOps(db)
   _db = db
   return _db
 }
