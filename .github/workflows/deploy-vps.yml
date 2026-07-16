@@ -52,6 +52,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Build timestamp
+        id: time
+        run: echo "utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Build and push ${{ matrix.image }}
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
@@ -61,6 +65,13 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:${{ github.sha }}
             ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:latest
+          # release.json is baked in by serverXR/Dockerfile only -- the client's Dockerfile
+          # doesn't declare these ARGs, so build-push-action just passes them through unused.
+          build-args: |
+            GIT_COMMIT=${{ github.sha }}
+            GIT_REF=${{ github.ref_name }}
+            DEPLOY_ENV=production
+            BUILD_TIME=${{ steps.time.outputs.utc }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

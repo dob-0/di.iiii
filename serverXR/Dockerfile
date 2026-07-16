@@ -18,6 +18,17 @@ COPY serverXR/public/ ./public/
 # sharedRuntime.js resolves these at /shared — no mount needed
 COPY shared/ /shared/
 
+# Release metadata for GET /api/health -- lets a deployed host self-report
+# what commit is actually running (releaseInfo.js reads this from the
+# WORKDIR). Defaults are placeholders for local `docker build` without
+# --build-arg; the CI workflows pass the real values.
+ARG GIT_COMMIT=unknown
+ARG GIT_REF=unknown
+ARG DEPLOY_ENV=unknown
+ARG BUILD_TIME=unknown
+RUN printf '{"deployEnv":"%s","sourceRef":"%s","gitCommit":"%s","releaseId":"%s","generatedAt":"%s"}\n' \
+    "${DEPLOY_ENV}" "${GIT_REF}" "${GIT_COMMIT}" "${GIT_COMMIT}" "${BUILD_TIME}" > release.json
+
 ENV NODE_ENV=production
 ENV PORT=4000
 ENV APP_BASE_PATH=/serverXR
