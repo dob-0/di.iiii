@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import BetaViewport from './BetaViewport.jsx'
+import BetaViewport, { renderNodeBody } from './BetaViewport.jsx'
 
 vi.mock('@react-three/fiber', () => ({
     Canvas: ({ children }) => <div data-testid="mock-canvas">{children}</div>,
@@ -83,5 +83,18 @@ describe('BetaViewport', () => {
 
         expect(boxObjectSpy).toHaveBeenCalled()
         expect(boxObjectSpy.mock.calls[0][0].boxSize).toEqual([1, 5, 100])
+    })
+
+    // Regression test for audit finding #22: universe.desk.3d is registered
+    // with render:'spatial-3d' (category:'universe'), making it eligible for
+    // World's node palette, but renderNodeBody's switch had no case for it —
+    // placing one in World silently rendered nothing at all. Calling
+    // renderNodeBody directly (no DOM mount needed) avoids depending on a
+    // real WebGL/R3F canvas just to prove a body element now exists.
+    it('renders a visible body for universe.desk.3d instead of null', () => {
+        const node = { id: 'desk-1', typeId: 'universe.desk.3d', label: '3D Desk' }
+        const body = renderNodeBody(node, { bgColor: '#112233', gridVisible: true })
+        expect(body).not.toBeNull()
+        expect(body.type).toBe('group')
     })
 })

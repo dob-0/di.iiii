@@ -71,7 +71,7 @@ function PlaneWithTexture({ w, h, textureUrl }) {
     )
 }
 
-function renderNodeBody(node, values) {
+export function renderNodeBody(node, values) {
     switch (node.typeId) {
         case 'geom.cube':
             return <BoxObject color={values.color || '#5fa8ff'} boxSize={asPositiveVec3(values.size, [1, 1, 1])} />
@@ -90,6 +90,29 @@ function renderNodeBody(node, values) {
                 </mesh>
             )
         }
+        // A registered node type with no case here silently rendered
+        // nothing when placed in World (it's category:'universe',
+        // render:'spatial-3d', so it IS eligible for World's palette) -
+        // audit finding #22. Represented as a translucent boundary box
+        // tinted by its own bgColor field, with a small floor grid when
+        // gridVisible is on - values.scale already sizes it via the outer
+        // group transform (see NodeVisual), so this only needs a unit body.
+        case 'universe.desk.3d':
+            return (
+                <group>
+                    <mesh>
+                        <boxGeometry args={[1, 1, 1]} />
+                        <meshStandardMaterial color={asColor(values.bgColor, '#0a0e16')} transparent opacity={0.35} />
+                    </mesh>
+                    <mesh>
+                        <boxGeometry args={[1, 1, 1]} />
+                        <meshBasicMaterial color={asColor(values.bgColor, '#0a0e16')} wireframe />
+                    </mesh>
+                    {values.gridVisible !== false && (
+                        <Grid args={[1, 1]} position={[0, -0.5, 0]} cellSize={0.1} sectionSize={0.5} fadeDistance={2} infiniteGrid={false} />
+                    )}
+                </group>
+            )
         default:
             return null
     }
