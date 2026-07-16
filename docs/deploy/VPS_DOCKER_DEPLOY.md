@@ -107,6 +107,31 @@ Environment variables:
 - `VPS_STAGING_BASE_URL` — base URL to smoke-check (e.g.
   `https://staging.your-domain`); skipped with a warning if unset
 
+### GHCR image authentication on the VPS
+
+`ghcr.io/dob-0/dii-server` and `dii-client` were public by accident until
+2026-07-16 (default GHCR visibility, never explicitly set) — anyone with
+the URL could pull the compiled backend/frontend, undermining the repo
+being private. Both are now **private**. The `docker compose ... pull`
+step in `deploy-vps.yml`/`deploy-vps-staging.yml` runs directly on the VPS
+via SSH, separate from the GH-Actions runner that builds/pushes (which
+authenticates with the ephemeral `secrets.GITHUB_TOKEN`, useless for a
+persistent host login) — so the VPS itself needs its own durable
+credential to keep pulling.
+
+One-time setup (already done as of 2026-07-16, only needed again if the
+VPS is rebuilt or the token is rotated): a classic PAT (`read:packages`
+scope only, no other permissions — fine-grained tokens don't support GHCR
+package permissions as of this writing) was used to `docker login ghcr.io`
+as `root` on the VPS, once. This persists in `/root/.docker/config.json`
+(unencrypted, per Docker's own credential-store warning — acceptable here
+since it's `read:packages`-only, not a repo/account-wide token) and covers
+both the production and staging deploy paths, since they share one Docker
+daemon on the box. Nothing in this repo or in CI holds that token; it
+lives only on the VPS. To rotate it: generate a new classic PAT the same
+way, `docker login ghcr.io -u dob-0 --password-stdin` on the VPS with it,
+then revoke the old one on GitHub.
+
 ## Reusable Raw Material
 
 The now-deleted `.github/workflows/deploy-staging-ssh.yml` (removed in
