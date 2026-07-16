@@ -692,6 +692,11 @@ export default function BetaEditor({
                     nodeScale={nodeScale}
                     scopeId={node.id}
                     worldNode={node}
+                    isLive={(document.workspaceState?.liveWorldNodeIdByScope || {})[node.parentId || ''] === node.id}
+                    onSetLive={() => applyLocalOps({
+                        type: 'setWorkspaceState',
+                        payload: { patch: { liveWorldNodeIdByScope: { [node.parentId || '']: node.id } } }
+                    })}
                     onEnterFullscreen={() => setIsWorldFullscreen(true)}
                     onEnterOverlay={() => {
                         setIsWorldOverlay(true)

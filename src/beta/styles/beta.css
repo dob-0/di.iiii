@@ -1332,6 +1332,12 @@
     background: var(--di-cyan-dim);
 }
 
+.beta-world-panel-btn.is-live {
+    color: #ff5f5f;
+    border-color: #ff5f5f;
+    background: rgba(255, 95, 95, 0.12);
+}
+
 /* ── World fullscreen mode ── */
 
 .beta-world-fullscreen {

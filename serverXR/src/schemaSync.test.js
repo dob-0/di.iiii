@@ -189,6 +189,26 @@ describe('applyProjectOps', () => {
     expect(doc.worldState.backgroundColor).toBe('#ff0000')
     expect(typeof doc.worldState.ambientLight).toBe('object')
   })
+
+  it('setWorkspaceState patches liveWorldNodeIdByScope without an explicit new op type, and does not wipe other scopes\' entries', () => {
+    const afterFirst = applyProjectOps({}, [{
+      type: 'setWorkspaceState',
+      payload: { patch: { liveWorldNodeIdByScope: { scopeA: 'world-a' } } }
+    }])
+    expect(afterFirst.workspaceState.liveWorldNodeIdByScope).toEqual({ scopeA: 'world-a' })
+
+    const afterSecond = applyProjectOps(afterFirst, [{
+      type: 'setWorkspaceState',
+      payload: { patch: { liveWorldNodeIdByScope: { scopeB: 'world-b' } } }
+    }])
+    expect(afterSecond.workspaceState.liveWorldNodeIdByScope).toEqual({ scopeA: 'world-a', scopeB: 'world-b' })
+
+    const afterOverwrite = applyProjectOps(afterSecond, [{
+      type: 'setWorkspaceState',
+      payload: { patch: { liveWorldNodeIdByScope: { scopeA: 'world-a2' } } }
+    }])
+    expect(afterOverwrite.workspaceState.liveWorldNodeIdByScope).toEqual({ scopeA: 'world-a2', scopeB: 'world-b' })
+  })
 })
 
 // --- mergePatch ---

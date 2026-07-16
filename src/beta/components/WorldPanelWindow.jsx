@@ -15,6 +15,8 @@ export default function WorldPanelWindow({
     nodeScale = 1,
     scopeId,
     worldNode,
+    isLive = false,
+    onSetLive,
     onEnterFullscreen,
     onEnterOverlay,
 }) {
@@ -39,6 +41,16 @@ export default function WorldPanelWindow({
                 worldNode={worldNode}
             />
             <div className="beta-world-panel-actions">
+                <button
+                    type="button"
+                    className={`beta-world-panel-btn${isLive ? ' is-live' : ''}`}
+                    onClick={onSetLive}
+                    title={isLive ? 'Live output for this scope' : 'Mark as live output for this scope'}
+                    aria-label={isLive ? 'Live output for this scope' : 'Mark as live output for this scope'}
+                    aria-pressed={isLive}
+                >
+                    ●
+                </button>
                 <button
                     type="button"
                     className="beta-world-panel-btn"

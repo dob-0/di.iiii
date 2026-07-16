@@ -174,7 +174,11 @@ export const defaultPublishState = {
 
 export const defaultWorkspaceState = {
     activeSurface: 'world',
-    selectedNodeId: null
+    selectedNodeId: null,
+    // Which universe.world node is the "live"/output one for a given scope — a flat
+    // map keyed by scopeId (root scope key is '') so it works uniformly without a
+    // container node to hold a values field. At most one live world per scope.
+    liveWorldNodeIdByScope: {}
 }
 
 export const defaultProjectDocument = {
@@ -672,11 +676,13 @@ const normalizeTemplate = (template = {}) => {
 export const normalizeWorkspaceState = (workspace = {}) => {
     const source = workspace && typeof workspace === 'object' ? workspace : {}
     const activeSurface = ensureString(source.activeSurface, defaultWorkspaceState.activeSurface)
+    const liveMap = source.liveWorldNodeIdByScope
     return {
         ...cloneValue(defaultWorkspaceState),
         ...cloneValue(source),
         activeSurface: ['world', 'view', 'graph'].includes(activeSurface) ? activeSurface : defaultWorkspaceState.activeSurface,
-        selectedNodeId: ensureString(source.selectedNodeId, '') || null
+        selectedNodeId: ensureString(source.selectedNodeId, '') || null,
+        liveWorldNodeIdByScope: (liveMap && typeof liveMap === 'object' && !Array.isArray(liveMap)) ? cloneValue(liveMap) : {}
     }
 }
 

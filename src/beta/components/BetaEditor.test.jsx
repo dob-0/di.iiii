@@ -264,6 +264,53 @@ describe('BetaEditor Node 0 deletion guard', () => {
     })
 })
 
+describe('BetaEditor live-world toggle', () => {
+    const LIVE_STORAGE_KEY = 'test-live-world'
+
+    afterEach(() => {
+        window.localStorage.removeItem(LIVE_STORAGE_KEY)
+    })
+
+    const makeWorldNode = (id, parentId = null) => ({
+        id,
+        typeId: 'universe.world',
+        label: 'World',
+        parentId,
+        values: { frame: { x: 0, y: 0, width: 200, height: 200, visible: true } }
+    })
+
+    it('marks a world live for its scope via setWorkspaceState, keyed by parentId', () => {
+        window.localStorage.setItem(
+            LIVE_STORAGE_KEY,
+            JSON.stringify({ nodes: [makeWorldNode('world-1')], edges: [], workspaceState: {} })
+        )
+        mockApplyLocalOps.mockClear()
+        render(<BetaEditor localStorageKey={LIVE_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByRole('button', { name: /Mark as live output for this scope/i }))
+
+        const setLiveOp = mockApplyLocalOps.mock.calls
+            .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
+            .flat()
+            .find((op) => op.type === 'setWorkspaceState' && op.payload?.patch?.liveWorldNodeIdByScope)
+        expect(setLiveOp?.payload.patch.liveWorldNodeIdByScope).toEqual({ '': 'world-1' })
+    })
+
+    it('shows a world as live when the document already marks it so', () => {
+        window.localStorage.setItem(
+            LIVE_STORAGE_KEY,
+            JSON.stringify({
+                nodes: [makeWorldNode('world-1')],
+                edges: [],
+                workspaceState: { liveWorldNodeIdByScope: { '': 'world-1' } }
+            })
+        )
+        render(<BetaEditor localStorageKey={LIVE_STORAGE_KEY} />)
+
+        expect(screen.getByRole('button', { name: /^Live output for this scope/i })).toBeTruthy()
+    })
+})
+
 describe('TextPanelWindow', () => {
     it('renders the view.text content port value', () => {
         render(
