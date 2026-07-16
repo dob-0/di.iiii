@@ -1624,6 +1624,42 @@ describe('server write contracts', () => {
         expect(forcedRes.status).toBe(200)
     })
 
+    // Regression test for audit finding #11: a supplied assetId that ISN'T
+    // sha256-shaped (the legacy uuid-style path) had no integrity check at
+    // all — any writer could silently overwrite an existing legacy asset's
+    // bytes under the same id. A brand-new legacy id is still accepted as-is
+    // (the migration case this path exists for); an existing one now
+    // requires a content match.
+    it('protects legacy (non-sha256) space asset ids from being silently overwritten with different content', async () => {
+        const server = await startServer()
+        const legacyId = '11111111-2222-4333-8444-555555555555'
+
+        const first = new FormData()
+        first.append('assetId', legacyId)
+        first.append('asset', new Blob(['original-legacy-bytes'], { type: 'text/plain' }), 'legacy.txt')
+        const firstRes = await fetch(`${server.baseUrl}/api/spaces/main/assets`, {
+            method: 'POST',
+            headers: withAuth(server.apiToken),
+            body: first
+        })
+        expect(firstRes.status).toBe(200)
+        const firstAsset = await firstRes.json()
+        expect(firstAsset.assetId).toBe(legacyId)
+
+        const poison = new FormData()
+        poison.append('assetId', legacyId)
+        poison.append('asset', new Blob(['attacker-controlled-bytes'], { type: 'text/plain' }), 'legacy.txt')
+        const poisonRes = await fetch(`${server.baseUrl}/api/spaces/main/assets`, {
+            method: 'POST',
+            headers: withAuth(server.apiToken),
+            body: poison
+        })
+        expect(poisonRes.status).toBe(409)
+
+        const survivor = await fetch(new URL(firstAsset.url, server.baseUrl))
+        expect(await survivor.text()).toBe('original-legacy-bytes')
+    })
+
     it('lets an owner set, validate, and clear the card preview image', async () => {
         const server = await startServer()
         const spaceId = 'preview-image-space'

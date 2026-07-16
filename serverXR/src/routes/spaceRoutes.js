@@ -511,6 +511,17 @@ function registerSpaceRoutes(router, {
           }
           assetId = requested.toLowerCase()
         } else {
+          // Non-sha256 (legacy uuid-style) ids have no content address to
+          // verify against, so a first-time id is accepted as-is — but if
+          // one already exists at this id, only an identical re-upload may
+          // pass; anything else would silently overwrite content anyone
+          // else could already be referencing/caching under that same id.
+          const existingPath = path.join(assetsDir, requested)
+          const existingHash = await hashFileSha256(existingPath).catch(() => null)
+          if (existingHash !== null && existingHash !== await hashFileSha256(req.file.path)) {
+            await fsp.rm(req.file.path, { force: true }).catch(() => {})
+            return res.status(409).json({ error: 'An asset already exists at this id with different content.' })
+          }
           assetId = requested
         }
       } else {

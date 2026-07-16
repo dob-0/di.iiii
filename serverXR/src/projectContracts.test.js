@@ -371,6 +371,61 @@ describe('project contracts', () => {
         expect((await honestResponse.json()).asset.id).toBe(expectedId)
     })
 
+    // Regression test for audit finding #11: a supplied assetId that ISN'T
+    // sha256-shaped (the legacy uuid-style migration path) had no integrity
+    // check at all — any writer could silently overwrite an existing legacy
+    // asset's bytes under the same id, poisoning whatever already referenced
+    // it. Fixed by requiring a content match for any *existing* id; a
+    // brand-new legacy id is still accepted as-is (the migration case this
+    // path exists for).
+    it('protects legacy (non-sha256) asset ids from being silently overwritten with different content', async () => {
+        const server = await startServer()
+
+        await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Legacy Asset Project', slug: 'legacy-asset-project' })
+        })
+
+        const legacyId = '11111111-2222-4333-8444-555555555555'
+
+        const first = new FormData()
+        first.append('assetId', legacyId)
+        first.append('asset', new Blob(['original-legacy-bytes'], { type: 'text/plain' }), 'legacy.txt')
+        const firstResponse = await fetch(`${server.baseUrl}/api/projects/legacy-asset-project/assets`, {
+            method: 'POST',
+            body: first
+        })
+        expect(firstResponse.status).toBe(200)
+        const firstAsset = await firstResponse.json()
+        expect(firstAsset.asset.id).toBe(legacyId)
+
+        // A second upload under the SAME legacy id with DIFFERENT bytes must
+        // be rejected — this is the exact overwrite/poisoning this fix closes.
+        const poison = new FormData()
+        poison.append('assetId', legacyId)
+        poison.append('asset', new Blob(['attacker-controlled-bytes'], { type: 'text/plain' }), 'legacy.txt')
+        const poisonResponse = await fetch(`${server.baseUrl}/api/projects/legacy-asset-project/assets`, {
+            method: 'POST',
+            body: poison
+        })
+        expect(poisonResponse.status).toBe(409)
+
+        const survivor = await fetch(new URL(firstAsset.asset.url, server.baseUrl))
+        expect(await survivor.text()).toBe('original-legacy-bytes')
+
+        // The SAME bytes re-uploaded under the same legacy id is a harmless
+        // no-op, not an error (re-imports of the same export must not fail).
+        const identical = new FormData()
+        identical.append('assetId', legacyId)
+        identical.append('asset', new Blob(['original-legacy-bytes'], { type: 'text/plain' }), 'legacy.txt')
+        const identicalResponse = await fetch(`${server.baseUrl}/api/projects/legacy-asset-project/assets`, {
+            method: 'POST',
+            body: identical
+        })
+        expect(identicalResponse.status).toBe(200)
+    })
+
     it('stores identical bytes once per space (blob store) with reference-safe deletes and GC', async () => {
         const server = await startServer()
         const { createHash } = await import('node:crypto')
