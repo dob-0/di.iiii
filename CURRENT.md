@@ -33,6 +33,19 @@ on both branches; both staging and production confirmed healthy (see below).
 - Automated coverage (`openCallStore.test.js`, `httpContracts.test.js`,
   `ViewPanel.test.jsx`) also passes clean, 46/46.
 
+- `staging.di-studio.xyz` OAuth is now fully configured: GitHub via a
+  dedicated "staging di" OAuth App (its own client ID/secret, callback
+  `https://staging.di-studio.xyz/serverXR/api/auth/github/callback`), Google
+  via a pre-existing dedicated "staging di" OAuth client
+  (`123917400390-dr28...apps.googleusercontent.com`, redirect URI already
+  present). Both wired into `/opt/di.iiii-staging/.env` under the
+  `STAGING_GITHUB_CLIENT_ID`/`STAGING_GOOGLE_CLIENT_ID` etc. vars (staging's
+  compose override reads `STAGING_`-prefixed names, not the bare ones —
+  don't edit the bare `GITHUB_CLIENT_ID`/`GOOGLE_CLIENT_ID` lines in that
+  file, they're unused by staging). `GET /api/auth/providers` on staging
+  now returns `{github:true,google:true}`; both flows verified live
+  end-to-end by the user (successful GitHub + Google sign-in).
+
 ### Previous session (2026-07-16 — deploy pipeline made real, full audit, one incident, live sign-in bug fixed)
 
 - Live OAuth sign-in bug on `di-studio.xyz`: real root cause was
@@ -40,7 +53,6 @@ on both branches; both staging and production confirmed healthy (see below).
   per-request, so every login shared one `state` token that expired after
   `STATE_TTL_MS` (10 min). Fixed, regression-tested, verified live on prod.
   Full writeup: `docs/ai/known-fixes.md`; golden rule added.
-- `staging.di-studio.xyz` still has no OAuth configured (see Open below).
 - `deploy-vps.yml`/`deploy-vps-staging.yml` wired up and verified end-to-end
   for the first time (previously prod was deployed by hand).
 - Full audit fixed: unenforced CPU limits under plain `docker compose`,
@@ -61,11 +73,6 @@ on both branches; both staging and production confirmed healthy (see below).
 
 ## Open
 
-- `staging.di-studio.xyz` has no OAuth configured at all (empty
-  `GITHUB_CLIENT_ID`/`SECRET`, `GOOGLE_CLIENT_ID`/`SECRET`,
-  `OAUTH_CALLBACK_BASE_URL` in `/opt/di.iiii-staging/.env`) — sign-in on
-  staging can't work until someone with GitHub/Google developer console
-  access creates OAuth app credentials for that domain and sets them there.
 - Do not re-add a `client`/`caddy` healthcheck without testing the exact
   command against a real running container first (suspect `wget` missing
   from `nginx:alpine`; try `curl` or a startup-time-only check).
