@@ -1,6 +1,7 @@
 const path = require('node:path')
 const fs = require('node:fs')
 const fsp = require('node:fs/promises')
+const crypto = require('node:crypto')
 const sharp = require('sharp')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { getDb } = require('./db')
@@ -440,12 +441,24 @@ function createSpaceStore({
       try {
         await fsp.access(thumbPath)
       } catch {
+        // Write to a unique temp path and rename into place atomically —
+        // two concurrent requests for the same (assetId, width) can both
+        // reach here (both saw the thumbnail missing), and sharp's
+        // .toFile() isn't atomic on its own: two writers to the same path
+        // can interleave, so a third reader can get served a truncated/
+        // corrupt file, cached `immutable` under that name for as long as
+        // the cache holds it. Each writer now finishes into its own temp
+        // file first; whichever rename lands last simply wins, but every
+        // rename target is always a complete file, never a partial one.
+        const tempThumbPath = `${thumbPath}.${process.pid}.${crypto.randomUUID()}.tmp`
         try {
           await sharp(filePath)
             .resize({ width: clampedWidth, withoutEnlargement: true })
             .webp({ quality: 80 })
-            .toFile(thumbPath)
+            .toFile(tempThumbPath)
+          await fsp.rename(tempThumbPath, thumbPath)
         } catch (error) {
+          await fsp.rm(tempThumbPath, { force: true }).catch(() => {})
           logger.warn(`[serveAsset] thumbnail generation failed for ${spaceId}/${assetId}: ${error.message}`)
         }
       }

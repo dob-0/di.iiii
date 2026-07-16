@@ -116,6 +116,41 @@ describe('spaceStore thumbnailing', () => {
         expect(body.toString()).toBe('not an image')
     })
 
+    // Regression test for audit finding #14: two concurrent requests for the
+    // same (assetId, width) both saw the thumbnail missing and both called
+    // sharp(...).toFile(thumbPath) directly — writing to the same path
+    // concurrently isn't atomic, so a third reader could get served a
+    // truncated/corrupt file. The fix writes to a unique temp file first and
+    // renames into place; this proves N concurrent requests always resolve
+    // to one complete, valid webp file, never a corrupt one.
+    it('produces a valid, complete thumbnail under real concurrent requests for the same width', async () => {
+        await writeImageAsset('img-race', { width: 1200, height: 900 })
+
+        const requests = Array.from({ length: 8 }, () => makeFakeRes())
+        const results = await Promise.all(
+            requests.map(({ res, finished }) =>
+                store.serveAsset('gallery', 'img-race', res, { width: 250 }).then(() => finished)
+            )
+        )
+
+        for (const body of results) {
+            expect(body.length).toBeGreaterThan(0)
+            // eslint-disable-next-line no-await-in-loop
+            const meta = await sharp(body).metadata()
+            expect(meta.width).toBe(250)
+            expect(meta.format).toBe('webp')
+        }
+
+        const thumbPath = path.join(assetsDir, 'img-race.thumb-250.webp')
+        const onDisk = await sharp(thumbPath).metadata()
+        expect(onDisk.width).toBe(250)
+        expect(onDisk.format).toBe('webp')
+
+        // No leftover temp files from the losing writers.
+        const files = await fsp.readdir(assetsDir)
+        expect(files.some((name) => name.includes('.tmp'))).toBe(false)
+    })
+
     it('removeAssetThumbnails deletes every cached variant for an asset', async () => {
         await writeImageAsset('img-5')
         const a = makeFakeRes()
