@@ -20,7 +20,7 @@ const validInput = (overrides = {}) => ({
   email: 'test@example.am',
   phone: '+374 00 000000',
   city: 'Gyumri',
-  payload: { why: 'City and Time', experience: ['3D մոդելավորում'] },
+  payload: { why: 'City and Time', experience: ['3D modeling'] },
   ...overrides
 })
 
@@ -82,5 +82,42 @@ describe('openCallStore', () => {
     expect(getApplication(app.id)).toBeNull()
     expect(listApplications({ callId: 'beyond_form' })).toHaveLength(0)
     expect(deleteApplication(app.id)).toBeNull()
+  })
+
+  // Regression test for audit finding #15: identity fields had no
+  // control-character sanitization at all (contrast with
+  // inscriptionRoutes.js's cleanLine), unlike every other public write path.
+  // Built from String.fromCharCode so the exact control bytes under test
+  // are explicit rather than typed as literal characters.
+  it('strips control characters and collapses whitespace in single-line identity fields', () => {
+    const TAB = String.fromCharCode(9)
+    const NEWLINE = String.fromCharCode(10)
+    const app = createApplication(validInput({
+      name: ['Jane', TAB, NEWLINE, 'Doe'].join(''),
+      phone: '+374 00 000000',
+      city: 'Gyumri'
+    }))
+    expect(app.name).toBe('Jane Doe')
+    expect(app.phone).toBe('+374 00 000000')
+    expect(app.city).toBe('Gyumri')
+  })
+
+  // Payload values are genuinely multi-line (a "why participate" essay) -
+  // only NUL/other non-printable control chars are stripped; \n and \t
+  // (real, legitimate whitespace) survive.
+  it('sanitizes payload values without destroying legitimate multi-line text', () => {
+    const NUL = String.fromCharCode(0)
+    const TAB = String.fromCharCode(9)
+    const NEWLINE = String.fromCharCode(10)
+    const app = createApplication(validInput({
+      payload: {
+        why: ['Line one', NEWLINE, 'Line two', TAB, 'tabbed', NUL, 'nulled'].join(''),
+        nested: { about: ['Also', NUL, 'here'].join('') },
+        list: [['ok', NUL, 'one'].join(''), ['ok', NUL, 'two'].join('')]
+      }
+    }))
+    expect(app.payload.why).toBe(['Line one', NEWLINE, 'Line two', TAB, 'tabbednulled'].join(''))
+    expect(app.payload.nested.about).toBe('Alsohere')
+    expect(app.payload.list).toEqual(['okone', 'oktwo'])
   })
 })

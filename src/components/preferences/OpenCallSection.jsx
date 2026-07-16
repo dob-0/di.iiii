@@ -23,9 +23,21 @@ const PAYLOAD_LABELS = [
     ['laptop', 'Laptop']
 ]
 
-const csvEscape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`
+// CSV formula injection: a spreadsheet app treats a cell starting with
+// =/+/-/@ (or tab/CR, which can smuggle a leading one past casual review)
+// as a formula, not text — a public submission field opened straight into
+// Excel/Sheets could run attacker-controlled logic. Prefixing with a
+// leading apostrophe is the standard mitigation; spreadsheet apps render
+// it as plain text and drop the mark, csvEscape's own quoting handles the
+// rest for text apps.
+const FORMULA_INJECTION_PREFIX = /^[=+\-@\t\r]/
+const csvEscape = (value) => {
+    let text = String(value ?? '')
+    if (FORMULA_INJECTION_PREFIX.test(text)) text = `'${text}`
+    return `"${text.replace(/"/g, '""')}"`
+}
 
-const buildCsv = (applications) => {
+export const buildCsv = (applications) => {
     const payloadKeys = PAYLOAD_LABELS.map(([key]) => key)
     const header = ['id', 'created', 'status', 'name', 'email', 'phone', 'city', ...payloadKeys, 'notes']
     const rows = applications.map((app) => [

@@ -28,7 +28,40 @@ const toPublic = (row) => {
   }
 }
 
-const cleanText = (value, max = MAX_FIELD_LENGTH) => String(value ?? '').trim().slice(0, max)
+// Built via the RegExp constructor from explicit \uXXXX escapes (never a
+// literal /[...]/ character class) so no raw control byte lives in this
+// source file.
+// Single-line fields (name/email/phone/city, plus the call id, status,
+// notes): strip control chars and collapse whitespace, like
+// inscriptionRoutes.js's cleanLine — these are never legitimately multi-line.
+// eslint-disable-next-line no-control-regex
+const CONTROL_CHARS = new RegExp('[\\u0000-\\u001f\\u007f\\u2028\\u2029]', 'g')
+const cleanText = (value, max = MAX_FIELD_LENGTH) => String(value ?? '')
+  .replace(CONTROL_CHARS, ' ')
+  .replace(/\s+/g, ' ')
+  .trim()
+  .slice(0, max)
+
+// Payload values are call-specific and often genuinely multi-line (a "why
+// participate" essay answer) — collapsing newlines like cleanText would
+// destroy legitimate content. Only strip characters with no legitimate use
+// in free text (NUL and other non-printable control chars); keep \n/\r/\t.
+// eslint-disable-next-line no-control-regex
+const NON_TEXT_CONTROL_CHARS = new RegExp('[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]', 'g')
+const cleanPayloadValue = (value) => typeof value === 'string'
+  ? value.replace(NON_TEXT_CONTROL_CHARS, '')
+  : value
+
+const sanitizePayload = (value, depth = 0) => {
+  if (depth > 5) return null
+  if (Array.isArray(value)) return value.map((item) => sanitizePayload(item, depth + 1))
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, val]) => [cleanPayloadValue(key), sanitizePayload(val, depth + 1)])
+    )
+  }
+  return cleanPayloadValue(value)
+}
 
 const createApplication = ({ callId, name, email, phone = '', city = '', payload = {} }) => {
   const normalizedCallId = cleanText(callId, 64)
@@ -49,7 +82,8 @@ const createApplication = ({ callId, name, email, phone = '', city = '', payload
     error.status = 400
     throw error
   }
-  const serializedPayload = JSON.stringify(payload && typeof payload === 'object' ? payload : {})
+  const sanitizedPayload = sanitizePayload(payload && typeof payload === 'object' ? payload : {})
+  const serializedPayload = JSON.stringify(sanitizedPayload)
   if (serializedPayload.length > MAX_PAYLOAD_LENGTH) {
     const error = new Error('Application payload is too large.')
     error.status = 413
