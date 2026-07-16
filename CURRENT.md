@@ -9,34 +9,49 @@ active_branch: dev
 
 ## Last commit
 
-`dev` = `main` = `dc1be3aa` (dev's dep-bump commit `40c5806d` is included).
-Deploy pipeline is live and verified on both branches; both staging and
-production confirmed healthy on this exact commit (see below).
+`dev` = `main` = `19f56ade` on `dev` / `97326544` on `main` (docs-only
+commit after `main` was cut — harmless, not yet promoted, no rush). Deploy
+pipeline is live and verified on both branches; both staging and
+production confirmed healthy (see below).
 
-## Last session (2026-07-16 — deploy pipeline made real, full audit, one incident, live sign-in bug fixed + shipped)
+## Last session (2026-07-16 — deploy pipeline made real, full audit, one incident, live sign-in bug — two attempts, second one real)
 
 - User reported OAuth sign-in on `di-studio.xyz` failing with "Sign-in
-  failed — please try again." Suspected (at the time) that the CSRF `state`
-  fix below signed login state with a fallback secret (`crypto.randomBytes`)
-  generated once per process when `AUTH_SESSION_SECRET` isn't configured,
-  and that a container restart between sign-in click and OAuth callback
-  invalidated it. **Correction after SSHing into the VPS**: `AUTH_SESSION_SECRET`
-  was already set on both prod and staging the whole time, so that fallback
-  path was never actually reachable — the real trigger for the reported
-  failure is unconfirmed (server container was recreated by the fix's own
-  deploy, so pre-incident logs are gone). The code fix itself is still a
-  legitimate hardening (closes a real bug for any `REQUIRE_AUTH=false`
-  no-secret deployment, now a golden rule) and shipped clean — deriving the
-  fallback deterministically from OAuth client secrets instead of random
-  bytes; same fix applied to the Drive-connect state signer
-  (`integrationRoutes.js`); added a startup `logger.warn` when the fallback
-  path is active; added a regression test. Full writeup + correction:
-  `docs/ai/known-fixes.md`. **Pushed to `dev`, promoted to `main`, deployed
-  to both staging and production** — `/api/health` on both confirms
-  `gitCommit: dc1be3aa...`, healthy; a real login was observed succeeding in
-  `dii-server-1`'s logs post-deploy. Got VPS SSH access set up this session
-  (`ssh dii-vps`, alias in `~/.ssh/config`) — no need to ask the user for
-  the host again.
+  failed — please try again." **First fix attempt (wrong theory)**: suspected
+  the CSRF `state` commit's fallback secret was random-per-process and broke
+  across container restarts. Shipped it, redeployed, user confirmed it
+  worked. **~24 minutes later, user reported it broke again — both GitHub
+  and Google.** SSHed into the VPS (`ssh dii-vps`, alias now saved to
+  `~/.ssh/config` — no need to ask for the host again) and found the first
+  theory was wrong: `AUTH_SESSION_SECRET` was already correctly set on both
+  prod and staging the whole time.
+- **Real root cause, found by curling the live endpoint**: two `curl`s to
+  `/api/auth/github` seconds apart returned the byte-identical `state`
+  value. `router.get('/api/auth/github', passport.authenticate('github',
+  { state: signLoginState(stateSecret) }))` calls `signLoginState()` once,
+  at route-registration time (server startup) — not per request — so every
+  login shared one state token for the container's entire life. That token
+  is only valid for `STATE_TTL_MS` (10 min), which is exactly why the first
+  fix's redeploy "worked" (fresh state, timestamp ≈ startup) and then broke
+  again once 10 minutes passed. Fixed by wrapping `passport.authenticate` in
+  a per-request handler so the state is signed fresh every time. Regression
+  test calls the authorize handler twice and asserts the state differs.
+  Verified live: two direct `curl`s to both `/api/auth/github` and
+  `/api/auth/google` on prod now return different `state` each time.
+  Full writeup (including the wrong first theory, kept for the record):
+  `docs/ai/known-fixes.md`; general lesson codified in
+  `docs/ai/golden_rules.md` ("Never call a per-request-value function as an
+  argument to `router.get(path, middlewareFactory(...))`").
+- **Separate, still-open finding**: `staging.di-studio.xyz` has OAuth fully
+  unconfigured (`GITHUB_CLIENT_ID`/`SECRET`, `GOOGLE_CLIENT_ID`/`SECRET`,
+  `OAUTH_CALLBACK_BASE_URL` all empty in `/opt/di.iiii-staging/.env`,
+  confirmed via `GET /api/auth/providers` → `{github:false,google:false}`).
+  Sign-in on staging cannot work until real OAuth app credentials for that
+  domain are added — needs a human with GitHub/Google developer console
+  access, not a code fix. Not done this session.
+- Both fixes pushed to `dev`, promoted to `main`, deployed to both staging
+  and production — `/api/health` on both confirms the latest commit,
+  healthy.
 - Found `deploy-vps.yml`/`deploy-vps-staging.yml` had never had a successful run
   (no GitHub secrets/variables set, production was live but deployed by hand).
   Wired both up, did the one-time staging setup (`/opt/di.iiii-staging`, fresh
@@ -71,6 +86,11 @@ production confirmed healthy on this exact commit (see below).
 
 ## Open
 
+- `staging.di-studio.xyz` has no OAuth configured at all (empty
+  `GITHUB_CLIENT_ID`/`SECRET`, `GOOGLE_CLIENT_ID`/`SECRET`,
+  `OAUTH_CALLBACK_BASE_URL` in `/opt/di.iiii-staging/.env`) — sign-in on
+  staging can't work until someone with GitHub/Google developer console
+  access creates OAuth app credentials for that domain and sets them there.
 - Do not re-add a `client`/`caddy` healthcheck without testing the exact
   command against a real running container first (suspect `wget` missing
   from `nginx:alpine`; try `curl` or a startup-time-only check).
