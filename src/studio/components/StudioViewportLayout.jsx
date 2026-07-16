@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import StudioPresentationSurface from './StudioPresentationSurface.jsx'
 import StudioGraphSurface from './StudioGraphSurface.jsx'
+import StudioWorldSurface from './StudioWorldSurface.jsx'
 import { isGraphViewEnabled } from '../utils/graphViewFlag.js'
 
 // All views use PerspectiveCamera. "Ortho" views fake it: large distance + small FOV ≈ parallel projection.
@@ -134,6 +135,9 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
                 {isGraphViewEnabled() && (
                     <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h', 'graph')} title="Split with a node-graph view (dev preview)">N</button>
                 )}
+                {isGraphViewEnabled() && (
+                    <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h', 'world')} title="Split with the live world's 3D view (dev preview)">W</button>
+                )}
                 {!isRoot && (
                     <button className="svl-ctrl-btn svl-ctrl-btn--close" onClick={() => onClose(node.id)} title="Close pane">×</button>
                 )}
@@ -200,6 +204,23 @@ function GraphPane({ node, isRoot, onSplit, onClose, shared }) {
     )
 }
 
+function WorldPane({ node, isRoot, onSplit, onClose, shared }) {
+    return (
+        <div className="svl-pane">
+            <div className="svl-pane-controls">
+                <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h')} title="Split left/right">H</button>
+                <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'v')} title="Split top/bottom">V</button>
+                {!isRoot && (
+                    <button className="svl-ctrl-btn svl-ctrl-btn--close" onClick={() => onClose(node.id)} title="Close pane">×</button>
+                )}
+            </div>
+            <div className="svl-canvas">
+                <StudioWorldSurface document={shared.document} />
+            </div>
+        </div>
+    )
+}
+
 function SplitContainer({ node, onSplit, onClose, setRatio, shared }) {
     const containerRef  = useRef(null)
     const [ratio, setLocalRatio] = useState(node.ratio ?? 0.5)
@@ -247,6 +268,9 @@ function LayoutNode({ node, isRoot, onSplit, onClose, setRatio, shared }) {
     }
     if (node.viewType === 'graph') {
         return <GraphPane node={node} isRoot={isRoot} onSplit={onSplit} onClose={onClose} shared={shared} />
+    }
+    if (node.viewType === 'world') {
+        return <WorldPane node={node} isRoot={isRoot} onSplit={onSplit} onClose={onClose} shared={shared} />
     }
     return <ViewPane node={node} isRoot={isRoot} onSplit={onSplit} onClose={onClose} shared={shared} />
 }
