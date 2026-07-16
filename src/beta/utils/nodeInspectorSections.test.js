@@ -48,4 +48,49 @@ describe('deriveNodeInspectorSections', () => {
         expect(numberField).toBeDefined()
         expect(numberField.type).toBe('number')
     })
+
+    // Regression tests for audit finding #19: these node types store real
+    // user-facing config in defaultValues (OSC target IP/port, PTZ OSC
+    // address, RTMP destination, recording filename pattern) that was never
+    // exposed as an inspector field at all — only fields backed by a real
+    // port showed up, so users had no way to edit these settings from the
+    // UI. hostHint is deliberately excluded (an internal/documentation hint,
+    // not user config) — these tests also confirm it stays absent.
+    it('exposes device.ptz.osc\'s OSC address as an editable field', () => {
+        const node = createNode('device.ptz.osc')
+        const sections = deriveNodeInspectorSections(node)
+        const field = sections[0].fields.find((f) => f.path[0] === 'oscAddress')
+        expect(field).toMatchObject({ label: 'OSC Address', type: 'text' })
+        expect(sections[0].fields.some((f) => f.path[0] === 'hostHint')).toBe(false)
+    })
+
+    it('exposes device.osc.in\'s listen port as an editable field', () => {
+        const node = createNode('device.osc.in')
+        const sections = deriveNodeInspectorSections(node)
+        const field = sections[0].fields.find((f) => f.path[0] === 'port')
+        expect(field).toMatchObject({ label: 'Listen Port', type: 'number' })
+    })
+
+    it('exposes device.osc.out\'s target host and port as editable fields', () => {
+        const node = createNode('device.osc.out')
+        const sections = deriveNodeInspectorSections(node)
+        const hostField = sections[0].fields.find((f) => f.path[0] === 'targetHost')
+        const portField = sections[0].fields.find((f) => f.path[0] === 'targetPort')
+        expect(hostField).toMatchObject({ label: 'Target Host', type: 'text' })
+        expect(portField).toMatchObject({ label: 'Target Port', type: 'number' })
+    })
+
+    it('exposes stream.output\'s RTMP target URL as an editable field', () => {
+        const node = createNode('stream.output')
+        const sections = deriveNodeInspectorSections(node)
+        const field = sections[0].fields.find((f) => f.path[0] === 'target')
+        expect(field).toMatchObject({ label: 'Target URL', type: 'text' })
+    })
+
+    it('exposes stream.recorder\'s file pattern as an editable field', () => {
+        const node = createNode('stream.recorder')
+        const sections = deriveNodeInspectorSections(node)
+        const field = sections[0].fields.find((f) => f.path[0] === 'filePattern')
+        expect(field).toMatchObject({ label: 'File Pattern', type: 'text' })
+    })
 })

@@ -44,7 +44,15 @@ export const deriveNodeInspectorSections = (node) => {
         ]
     }
 
-    const fields = (type.inputs || []).map((port) => portToInspectorField(port, node)).filter(Boolean)
+    // Some node types store real user-facing config in defaultValues that
+    // isn't also a port (an OSC target IP/port, an RTMP destination, a
+    // recording filename pattern) — those were never surfaced anywhere in
+    // the inspector at all, unlike port-backed fields. configInputs
+    // declares them in the same {id, type, label} shape as a port; they
+    // read/write node.values[id] through the exact same path mechanism.
+    const fields = [...(type.inputs || []), ...(type.configInputs || [])]
+        .map((port) => portToInspectorField(port, node))
+        .filter(Boolean)
 
     // For value/source nodes with no inputs but an editable `value` field
     if (!fields.length && node.values !== undefined && 'value' in { ...type.defaultValues }) {

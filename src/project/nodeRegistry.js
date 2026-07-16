@@ -263,6 +263,12 @@ export const NODE_TYPES = {
             hostHint: 'windows',
             oscAddress: '/ptz',
         },
+        // Config-only fields (not ports): stored in node.values same as any
+        // port, but were never exposed as an inspector field before — see
+        // docs/ai/known-fixes.md, audit finding #19.
+        configInputs: [
+            { id: 'oscAddress', type: 'string', label: 'OSC Address' },
+        ],
         render: 'hidden',
     },
 
@@ -282,6 +288,9 @@ export const NODE_TYPES = {
             hostHint: 'windows',
             port: 8000,
         },
+        configInputs: [
+            { id: 'port', type: 'number', label: 'Listen Port' },
+        ],
         render: 'hidden',
     },
 
@@ -304,6 +313,10 @@ export const NODE_TYPES = {
             targetHost: '127.0.0.1',
             targetPort: 9000,
         },
+        configInputs: [
+            { id: 'targetHost', type: 'string', label: 'Target Host' },
+            { id: 'targetPort', type: 'number', label: 'Target Port' },
+        ],
         render: 'hidden',
     },
 
@@ -416,6 +429,9 @@ export const NODE_TYPES = {
             hostHint: 'windows',
             target: 'rtmp://localhost/live/main',
         },
+        configInputs: [
+            { id: 'target', type: 'string', label: 'Target URL' },
+        ],
         render: 'hidden',
     },
 
@@ -439,6 +455,9 @@ export const NODE_TYPES = {
             hostHint: 'windows',
             filePattern: 'recording-{timestamp}.mp4',
         },
+        configInputs: [
+            { id: 'filePattern', type: 'string', label: 'File Pattern' },
+        ],
         render: 'hidden',
     },
 
