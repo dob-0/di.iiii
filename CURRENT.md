@@ -16,25 +16,27 @@ production confirmed healthy on this exact commit (see below).
 ## Last session (2026-07-16 — deploy pipeline made real, full audit, one incident, live sign-in bug fixed + shipped)
 
 - User reported OAuth sign-in on `di-studio.xyz` failing with "Sign-in
-  failed — please try again." Root cause: the CSRF `state` fix below signed
-  login state with a fallback secret (`crypto.randomBytes`) generated once
-  per **process** when `AUTH_SESSION_SECRET`/`API_TOKEN` aren't configured —
-  which happens in this deployment's `REQUIRE_AUTH=false` open-guest mode.
-  Any container restart between a user's sign-in click and the OAuth
-  callback (redeploys/crash-restarts — several happened today) invalidated
-  the state. Fixed by deriving that fallback deterministically from the
-  configured OAuth client secrets instead of random bytes, so it's stable
-  across restarts without a new env var; same latent bug also fixed in the
-  Drive-connect state signer (`integrationRoutes.js`); added a one-time
-  startup `logger.warn` when this fallback path is active so it's visible
-  in prod logs; added a regression test simulating a restart between
-  authorize and callback. Full writeup: `docs/ai/known-fixes.md`. **Pushed to
-  `dev`, promoted to `main`, deployed to both staging and production** —
-  `/api/health` on both confirms `gitCommit: dc1be3aa...`, healthy. Still
-  open: get a dedicated `AUTH_SESSION_SECRET` set in prod's `.env` on the
-  VPS for defense-in-depth (needs the VPS host, which lives only in the
-  `VPS_HOST` GitHub secret — not retrievable, and not recorded anywhere in
-  this repo on purpose).
+  failed — please try again." Suspected (at the time) that the CSRF `state`
+  fix below signed login state with a fallback secret (`crypto.randomBytes`)
+  generated once per process when `AUTH_SESSION_SECRET` isn't configured,
+  and that a container restart between sign-in click and OAuth callback
+  invalidated it. **Correction after SSHing into the VPS**: `AUTH_SESSION_SECRET`
+  was already set on both prod and staging the whole time, so that fallback
+  path was never actually reachable — the real trigger for the reported
+  failure is unconfirmed (server container was recreated by the fix's own
+  deploy, so pre-incident logs are gone). The code fix itself is still a
+  legitimate hardening (closes a real bug for any `REQUIRE_AUTH=false`
+  no-secret deployment, now a golden rule) and shipped clean — deriving the
+  fallback deterministically from OAuth client secrets instead of random
+  bytes; same fix applied to the Drive-connect state signer
+  (`integrationRoutes.js`); added a startup `logger.warn` when the fallback
+  path is active; added a regression test. Full writeup + correction:
+  `docs/ai/known-fixes.md`. **Pushed to `dev`, promoted to `main`, deployed
+  to both staging and production** — `/api/health` on both confirms
+  `gitCommit: dc1be3aa...`, healthy; a real login was observed succeeding in
+  `dii-server-1`'s logs post-deploy. Got VPS SSH access set up this session
+  (`ssh dii-vps`, alias in `~/.ssh/config`) — no need to ask the user for
+  the host again.
 - Found `deploy-vps.yml`/`deploy-vps-staging.yml` had never had a successful run
   (no GitHub secrets/variables set, production was live but deployed by hand).
   Wired both up, did the one-time staging setup (`/opt/di.iiii-staging`, fresh
@@ -76,8 +78,6 @@ production confirmed healthy on this exact commit (see below).
   pushes (admin override, used again this session for the sign-in fix and
   the earlier emergency hotfix) — decide whether to actually enforce it or
   drop it.
-- Set a dedicated `AUTH_SESSION_SECRET` in prod's `.env` on the VPS — needs
-  the VPS host (only in the `VPS_HOST` GitHub secret).
 - Brand: canonical domain/handle undecided (di-studio.xyz vs thedi.studio vs
   IG handle); `/privacy` still not wired into app routes.
 - Real-device click-through owed: guest journey + invite flow.
