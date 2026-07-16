@@ -1,4 +1,4 @@
-const BETA_BASE_PATH = ((import.meta.env.BASE_URL) || '/').replace(/\/+$/, '') || '/'
+import { createBasePathHelpers, joinPath } from '../../project/routing/laneBasePath.js'
 
 export const BETA_PAGE_HUB = 'hub'
 export const BETA_PAGE_PROJECT = 'project'
@@ -6,39 +6,30 @@ export const BETA_PAGE_PROJECTS = 'projects'
 export const BETA_RESERVED_SEGMENT = 'beta'
 export const DEFAULT_BETA_SPACE_ID = 'main'
 
-const getBasePrefix = () => (BETA_BASE_PATH === '/' ? '' : BETA_BASE_PATH)
-
-const stripBasePath = (pathname = '/') => {
-    if (!pathname) return '/'
-    if (BETA_BASE_PATH !== '/' && pathname.startsWith(BETA_BASE_PATH)) {
-        const stripped = pathname.slice(BETA_BASE_PATH.length)
-        return stripped || '/'
-    }
-    return pathname
-}
+const { getBasePrefix, stripBasePath } = createBasePathHelpers(import.meta.env.BASE_URL || '/')
 
 export const buildBetaHubPath = (spaceId = null) => {
     const prefix = getBasePrefix()
     if (!spaceId) {
-        return `${prefix}/${BETA_RESERVED_SEGMENT}`.replace(/\/{2,}/g, '/')
+        return joinPath(prefix, BETA_RESERVED_SEGMENT)
     }
-    return `${prefix}/${spaceId}/${BETA_RESERVED_SEGMENT}`.replace(/\/{2,}/g, '/')
+    return joinPath(prefix, spaceId, BETA_RESERVED_SEGMENT)
 }
 
 export const buildBetaProjectsPath = (spaceId = null) => {
     const prefix = getBasePrefix()
     if (!spaceId) {
-        return `${prefix}/${BETA_RESERVED_SEGMENT}/projects`.replace(/\/{2,}/g, '/')
+        return joinPath(prefix, BETA_RESERVED_SEGMENT, 'projects')
     }
-    return `${prefix}/${spaceId}/${BETA_RESERVED_SEGMENT}/projects`.replace(/\/{2,}/g, '/')
+    return joinPath(prefix, spaceId, BETA_RESERVED_SEGMENT, 'projects')
 }
 
 export const buildBetaProjectPath = (projectId, spaceId = null) => {
     const prefix = getBasePrefix()
     if (!spaceId) {
-        return `${prefix}/${BETA_RESERVED_SEGMENT}/projects/${projectId}`.replace(/\/{2,}/g, '/')
+        return joinPath(prefix, BETA_RESERVED_SEGMENT, 'projects', projectId)
     }
-    return `${prefix}/${spaceId}/${BETA_RESERVED_SEGMENT}/projects/${projectId}`.replace(/\/{2,}/g, '/')
+    return joinPath(prefix, spaceId, BETA_RESERVED_SEGMENT, 'projects', projectId)
 }
 
 export const getBetaLocationState = (

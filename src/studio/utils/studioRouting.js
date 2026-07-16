@@ -1,4 +1,4 @@
-const STUDIO_BASE_PATH = ((import.meta.env.BASE_URL) || '/').replace(/\/+$/, '') || '/'
+import { createBasePathHelpers, joinPath } from '../../project/routing/laneBasePath.js'
 
 export const STUDIO_PAGE_SPACES = 'spaces'
 export const STUDIO_PAGE_HUB = 'hub'
@@ -6,36 +6,30 @@ export const STUDIO_PAGE_PROJECT = 'project'
 export const STUDIO_RESERVED_SEGMENT = 'studio'
 export const DEFAULT_STUDIO_SPACE_ID = 'main'
 
-const getBasePrefix = () => (STUDIO_BASE_PATH === '/' ? '' : STUDIO_BASE_PATH)
-
-const stripBasePath = (pathname = '/') => {
-    if (!pathname) return '/'
-    if (STUDIO_BASE_PATH !== '/' && pathname.startsWith(STUDIO_BASE_PATH)) {
-        const stripped = pathname.slice(STUDIO_BASE_PATH.length)
-        return stripped || '/'
-    }
-    return pathname
-}
+const { getBasePrefix, stripBasePath } = createBasePathHelpers(import.meta.env.BASE_URL || '/')
 
 export const buildStudioSpacesPath = () => {
     const prefix = getBasePrefix()
-    return `${prefix}/${STUDIO_RESERVED_SEGMENT}`.replace(/\/{2,}/g, '/')
+    return joinPath(prefix, STUDIO_RESERVED_SEGMENT)
 }
 
 export const buildStudioHubPath = (spaceId = null) => {
     const prefix = getBasePrefix()
     if (!spaceId) {
-        return `${prefix}/${spaceId || DEFAULT_STUDIO_SPACE_ID}/${STUDIO_RESERVED_SEGMENT}`.replace(/\/{2,}/g, '/')
+        // spaceId is falsy in this branch, so `spaceId || DEFAULT_STUDIO_SPACE_ID`
+        // always resolves to DEFAULT_STUDIO_SPACE_ID — preserved as-is from the
+        // pre-extraction code rather than "fixed" here (out of scope for this pass).
+        return joinPath(prefix, spaceId || DEFAULT_STUDIO_SPACE_ID, STUDIO_RESERVED_SEGMENT)
     }
-    return `${prefix}/${spaceId}/${STUDIO_RESERVED_SEGMENT}`.replace(/\/{2,}/g, '/')
+    return joinPath(prefix, spaceId, STUDIO_RESERVED_SEGMENT)
 }
 
 export const buildStudioProjectPath = (projectId, spaceId = null) => {
     const prefix = getBasePrefix()
     if (!spaceId) {
-        return `${prefix}/${STUDIO_RESERVED_SEGMENT}/projects/${projectId}`.replace(/\/{2,}/g, '/')
+        return joinPath(prefix, STUDIO_RESERVED_SEGMENT, 'projects', projectId)
     }
-    return `${prefix}/${spaceId}/${STUDIO_RESERVED_SEGMENT}/projects/${projectId}`.replace(/\/{2,}/g, '/')
+    return joinPath(prefix, spaceId, STUDIO_RESERVED_SEGMENT, 'projects', projectId)
 }
 
 export const getStudioLocationState = (
