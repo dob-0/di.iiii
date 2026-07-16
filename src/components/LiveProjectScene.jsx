@@ -7,6 +7,7 @@ import * as THREE from 'three'
 import { useXrAr } from '../hooks/useXrAr.js'
 import MadeWithBadge from './MadeWithBadge.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGuard.jsx'
+import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
     buildProjectAssetUrl,
@@ -1428,7 +1429,9 @@ export default function LiveProjectScene({
                 <Grid args={[80, 80]} cellColor="#2a3038" sectionColor="#3c4654" fadeDistance={40} infiniteGrid />
                 <AmbientField center={center} />
                 {showEntities && rootEntities.map((entity) => (
-                    <AnimatedEntity key={entity.id} entity={entity} assetMap={assetMap} childMap={entityChildMap} />
+                    <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
+                        <AnimatedEntity entity={entity} assetMap={assetMap} childMap={entityChildMap} />
+                    </SceneEntityErrorBoundary>
                 ))}
                 {showEntities && gateEntity ? <GateGlow entity={gateEntity} /> : null}
                 {interactive ? (

@@ -10,6 +10,7 @@ import { getBetaWorldBackgroundColor } from '../utils/viewportWorldState.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../utils/nodeGraphRuntime.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
+import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 
 const isSpatialNode = (node) => getNodeType(node?.typeId)?.render === 'spatial-3d'
 
@@ -204,13 +205,14 @@ function SceneContent({
             </mesh>
             <Suspense fallback={null}>
                 {(document.entities || []).map((entity) => (
-                    <EntityVisual
-                        key={entity.id}
-                        entity={entity}
-                        assetMap={assetMap}
-                        selected={entity.id === selectedEntityId}
-                        onSelect={onSelectEntity}
-                    />
+                    <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
+                        <EntityVisual
+                            entity={entity}
+                            assetMap={assetMap}
+                            selected={entity.id === selectedEntityId}
+                            onSelect={onSelectEntity}
+                        />
+                    </SceneEntityErrorBoundary>
                 ))}
                 {renderableNodes.map((node) => (
                     <NodeVisual

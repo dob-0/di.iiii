@@ -18,6 +18,7 @@ import {
 } from '../utils/timelinePreview.js'
 import StudioHelpDialog from './StudioHelpDialog.jsx'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
+import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 
 const AR_SCENE_POSITION = [0, 0, -1.2]
 const DEFAULT_SCENE_POSITION = [0, 0, 0]
@@ -579,23 +580,24 @@ function StudioSceneContent({
                 )}
                 <Suspense fallback={null}>
                     {rootEntities.map((entity) => (
-                        <SceneEntityNode
-                            key={entity.id}
-                            entity={entity}
-                            childMap={childMap}
-                            assetMap={assetMap}
-                            selectedIdSet={selectedIdSet}
-                            selectedEntityId={selectedEntityId}
-                            editMode={editMode}
-                            gizmoMode={gizmoMode}
-                            gizmoAxis={gizmoAxis}
-                            gizmoVisible={gizmoVisibleEffective && transformableSelectedEntities.length === 1}
-                            overrideById={previewById}
-                            onSelectEntity={onSelectEntity}
-                            onToggleSelectEntity={onToggleSelectEntity}
-                            onTransformCommit={onTransformCommit}
-                            orbitRef={controlsRef}
-                        />
+                        <SceneEntityErrorBoundary key={entity.id} resetKey={entity.id}>
+                            <SceneEntityNode
+                                entity={entity}
+                                childMap={childMap}
+                                assetMap={assetMap}
+                                selectedIdSet={selectedIdSet}
+                                selectedEntityId={selectedEntityId}
+                                editMode={editMode}
+                                gizmoMode={gizmoMode}
+                                gizmoAxis={gizmoAxis}
+                                gizmoVisible={gizmoVisibleEffective && transformableSelectedEntities.length === 1}
+                                overrideById={previewById}
+                                onSelectEntity={onSelectEntity}
+                                onToggleSelectEntity={onToggleSelectEntity}
+                                onTransformCommit={onTransformCommit}
+                                orbitRef={controlsRef}
+                            />
+                        </SceneEntityErrorBoundary>
                     ))}
                     <MultiSelectionGizmo
                         entities={transformableSelectedEntities}
