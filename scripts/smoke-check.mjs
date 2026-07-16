@@ -87,9 +87,13 @@ const checks = [
         bodyExcludes: ['Index of /serverXR/']
     },
     {
+        // 401 is a valid outcome here, not just 400/404: with REQUIRE_AUTH=true
+        // (the default in production/staging), serverXR correctly rejects an
+        // unauthenticated request before ever checking whether the asset
+        // exists -- still proof the proxy routed the request to serverXR.
         name: 'asset route proxy',
         path: '/serverXR/api/spaces/main/assets/not-a-real-asset',
-        expectedStatuses: [400, 404],
+        expectedStatuses: [400, 401, 404],
         contentTypeExcludes: ['text/html'],
         bodyExcludes: ['Index of /serverXR/', '503 Service Unavailable']
     }
