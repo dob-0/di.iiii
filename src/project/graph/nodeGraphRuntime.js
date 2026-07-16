@@ -30,7 +30,8 @@ const mixValues = (a, b, t) => {
 
 export const createNodeGraphContext = (document = {}) => ({
     nodesById: new Map((document.nodes || []).map((node) => [node.id, node])),
-    edges: document.edges || []
+    edges: document.edges || [],
+    outputCache: new Map()
 })
 
 const getNodeInputDefault = (node, portId) => {
@@ -43,9 +44,23 @@ export const evaluateNodeOutput = (node, portId, context, stack = new Set()) => 
     const key = `${node.id}:out:${portId}`
     if (stack.has(key)) return undefined
 
+    // A node's output within one pass depends only on the (fixed, for the
+    // pass's lifetime) document + edges, so it's safe to cache by node+port
+    // regardless of which caller path reached it first — this is what lets
+    // a diamond dependency (two nodes sharing an upstream source) evaluate
+    // that source once instead of once per consumer.
+    const cache = context?.outputCache
+    if (cache?.has(key)) return cache.get(key)
+
     const nextStack = new Set(stack)
     nextStack.add(key)
 
+    const result = computeNodeOutput(node, portId, context, nextStack)
+    cache?.set(key, result)
+    return result
+}
+
+const computeNodeOutput = (node, portId, context, nextStack) => {
     switch (node.typeId) {
         case 'value.number':
         case 'value.color':

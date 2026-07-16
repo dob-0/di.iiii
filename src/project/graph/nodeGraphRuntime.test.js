@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createEdge, createNode } from '../nodeRegistry.js'
 import {
     createNodeGraphContext,
@@ -89,5 +89,34 @@ describe('nodeGraphRuntime', () => {
         })
 
         expect(evaluateNodeInputs(panel, context).content).toBe('Hello graph')
+    })
+
+    // Regression test for audit finding #23: a shared upstream node (here,
+    // `sin` feeding both `left` and `right`) was recomputed once per
+    // consumer within a single evaluation pass instead of once per pass.
+    // Spying on Math.sin (the only thing `math.sin` calls) makes the
+    // recomputation directly observable without inspecting internals.
+    it('memoizes a shared upstream node within one evaluation pass', () => {
+        const sinSpy = vi.spyOn(Math, 'sin')
+        const angle = createNode('value.number', { id: 'angle', values: { value: 1 } })
+        const sin = createNode('math.sin', { id: 'sin' })
+        const left = createNode('math.add', { id: 'left' })
+        const right = createNode('math.add', { id: 'right' })
+        const context = createNodeGraphContext({
+            nodes: [angle, sin, left, right],
+            edges: [
+                createEdge('angle', 'out', 'sin', 'in'),
+                createEdge('sin', 'out', 'left', 'a'),
+                createEdge('sin', 'out', 'right', 'a')
+            ]
+        })
+
+        const leftOut = evaluateNodeOutput(left, 'out', context)
+        const rightOut = evaluateNodeOutput(right, 'out', context)
+
+        expect(leftOut).toBe(rightOut)
+        expect(sinSpy).toHaveBeenCalledTimes(1)
+
+        sinSpy.mockRestore()
     })
 })
