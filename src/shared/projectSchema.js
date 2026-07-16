@@ -801,7 +801,16 @@ export const applyProjectOps = (document, ops = []) => {
                     ...(patch.assetRef !== undefined ? { assetRef: patch.assetRef || null } : {}),
                     values: nextValues
                 }
-                nodes.set(nodeId, merged)
+                // Every other update op (updateEntity/updateComponent) routes
+                // its merged result back through its normalizer before
+                // storing; this one didn't, so an updateNode op's `values`
+                // patch landed completely unchecked — no bounding, no type
+                // coercion, unlike every other write path. normalizeProjectNode
+                // is a no-op on an already-well-formed node (same function
+                // createNode already runs payload.node through), so this only
+                // adds the missing guard, it doesn't change normal behavior.
+                const normalized = normalizeProjectNode(merged)
+                if (normalized) nodes.set(nodeId, normalized)
                 break
             }
             case 'deleteNode': {

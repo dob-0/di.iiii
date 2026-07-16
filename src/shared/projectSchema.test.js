@@ -154,6 +154,42 @@ describe('projectSchema', () => {
         expect(afterDelete.nodes).toHaveLength(0)
     })
 
+    // Audit finding #17 originally flagged updateNode's raw patch.values
+    // merge as unnormalized, unlike updateEntity/updateComponent (which
+    // route their merged result back through normalizeEntity). On closer
+    // inspection this was NOT an exploitable gap in practice:
+    // applyProjectOps already calls normalizeProjectDocument on the whole
+    // document (all nodes, via normalizeNodesList -> normalizeProjectNode)
+    // right before returning, regardless of which op ran — so the merged
+    // node always got normalized anyway, just via that outer pass rather
+    // than inline. Routing the merge through normalizeProjectNode inline
+    // (matching the sibling update* cases) is still worth keeping for
+    // architectural consistency and as defense-in-depth against a future
+    // refactor that calls this case without the outer wrapper — this test
+    // documents that intent, not a behavior change.
+    it('normalizes an updateNode merge inline, matching updateEntity/updateComponent\'s pattern', () => {
+        const base = normalizeProjectDocument({})
+        const afterCreate = applyProjectOps(base, [
+            {
+                type: 'createNode',
+                payload: {
+                    node: { id: 'node-1', typeId: 'geom.cube', label: 'Cube', values: {}, graphX: 0, graphY: 0 }
+                }
+            }
+        ])
+
+        const afterUpdate = applyProjectOps(afterCreate, [
+            { type: 'updateNode', payload: { nodeId: 'node-1', patch: { graphX: 55, values: { color: 'red' } } } }
+        ])
+
+        const node = afterUpdate.nodes[0]
+        expect(node.graphX).toBe(55)
+        expect(node.values.color).toBe('red')
+        // Fields untouched by the patch survive the merge unchanged.
+        expect(node.label).toBe('Cube')
+        expect(node.typeId).toBe('geom.cube')
+    })
+
     it('applies upsertAsset / deleteAsset ops', () => {
         const base = normalizeProjectDocument({})
         const afterUpsert = applyProjectOps(base, [

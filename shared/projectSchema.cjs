@@ -814,7 +814,13 @@ const applyProjectOps = (document, ops = []) => {
           ...(patch.assetRef !== undefined ? { assetRef: patch.assetRef || null } : {}),
           values: nextValues
         }
-        nodes.set(nodeId, merged)
+        // Every other update op (updateEntity/updateComponent) routes its
+        // merged result back through its normalizer before storing; this one
+        // didn't, so an updateNode op's `values` patch landed completely
+        // unchecked. normalizeProjectNode is a no-op on an already-well-formed
+        // node, so this only adds the missing guard.
+        const normalized = normalizeProjectNode(merged)
+        if (normalized) nodes.set(nodeId, normalized)
         break
       }
       case 'deleteNode': {
