@@ -13,7 +13,7 @@ vi.mock('../../project/hooks/useProjectDocumentSync.js', () => ({
     useProjectDocumentSync: () => ({ applyLocalOps: mockApplyLocalOps, replaceDocument: mockReplaceDocument })
 }))
 vi.mock('../../project/hooks/useProjectPresence.js', () => ({
-    useProjectPresence: () => ({ users: [], cursors: [], emitCursor: vi.fn(), clearCursor: vi.fn() })
+    useProjectPresence: () => ({ users: [], cursors: [], emitCursor: vi.fn(), clearCursor: vi.fn(), messages: [], sendChatMessage: vi.fn() })
 }))
 
 import BetaEditor from './BetaEditor.jsx'

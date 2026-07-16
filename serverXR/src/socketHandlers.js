@@ -1,3 +1,4 @@
+const crypto = require('node:crypto')
 const { Server } = require('socket.io')
 const {
   canAccessSpace,
@@ -12,6 +13,9 @@ const logger = require('./logger')
 // Store active connections
 const spaceConnections = new Map()
 const projectConnections = new Map()
+
+const CHAT_MESSAGE_MAX_LENGTH = 500
+const CHAT_MESSAGE_MIN_INTERVAL_MS = 300
 
 const readSocketToken = (socket) => {
   const authToken = socket?.handshake?.auth?.token
@@ -392,6 +396,39 @@ function initializeSocket(httpServer, config) {
         socketId: socket.id,
         cursor,
         timestamp: Date.now()
+      })
+    })
+
+    // Ephemeral project chat — not persisted, room-scoped like project-cursor
+    socket.on('project-chat-message', async (data) => {
+      const { projectId, text, userId, userName } = data || {}
+      if (!projectId) return
+      const trimmed = String(text || '').trim().slice(0, CHAT_MESSAGE_MAX_LENGTH)
+      if (!trimmed) return
+
+      const now = Date.now()
+      if (now - (socket.data.lastChatMessageAt || 0) < CHAT_MESSAGE_MIN_INTERVAL_MS) return
+      socket.data.lastChatMessageAt = now
+
+      let projectSpaceId = socket.data?.projectSpaces?.get(projectId)
+      if (!projectSpaceId) {
+        const project = await ensureProjectAvailable(projectId, socket)
+        if (!project) return
+        projectSpaceId = project.spaceId || null
+        if (!socket.data.projectSpaces) {
+          socket.data.projectSpaces = new Map()
+        }
+        socket.data.projectSpaces.set(project.projectId || projectId, projectSpaceId)
+      }
+      if (!canAccessSpace(socket.data?.authState, projectSpaceId)) return
+
+      socket.to(`project-${projectId}`).emit('project-chat-message', {
+        id: crypto.randomUUID(),
+        userId: userId || socket.id,
+        userName: userName || null,
+        socketId: socket.id,
+        text: trimmed,
+        timestamp: now
       })
     })
 

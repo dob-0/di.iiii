@@ -6,6 +6,7 @@ import { generateId } from '../../shared/projectSchema.js'
 const DEFAULT_DISPLAY_NAME_STORAGE_KEY = 'dii.project.displayName'
 const DEFAULT_USER_ID_STORAGE_KEY = 'dii.project.userId'
 const CURSOR_STALE_MS = 3000
+const MAX_CHAT_MESSAGES = 200
 
 const readStoredValue = (primaryKey, fallbackKeys = []) => {
     const keys = [primaryKey, ...fallbackKeys].filter(Boolean)
@@ -71,6 +72,7 @@ export function useProjectPresence({
     const [presenceState, setPresenceState] = useState('disconnected')
     const [users, setUsers] = useState([])
     const [cursors, setCursors] = useState({})
+    const [messages, setMessages] = useState([])
 
     useEffect(() => {
         persistStoredValue(displayNameStorageKey, resolvedName)
@@ -78,6 +80,7 @@ export function useProjectPresence({
 
     useEffect(() => {
         if (!projectId) return undefined
+        setMessages([])
         const hasWindow = typeof window !== 'undefined'
         const { serverUrl, path, auth } = getSocketConfigForRuntime({
             configuredBase: import.meta.env.VITE_API_BASE_URL || '',
@@ -151,6 +154,10 @@ export function useProjectPresence({
             }))
         })
 
+        socket.on('project-chat-message', (payload) => {
+            setMessages((current) => [...current, { ...payload, receivedAt: Date.now() }].slice(-MAX_CHAT_MESSAGES))
+        })
+
         socketRef.current = socket
         return () => {
             socketRef.current = null
@@ -217,6 +224,26 @@ export function useProjectPresence({
         }
     }, [])
 
+    const sendChatMessage = useCallback((text) => {
+        const trimmed = String(text || '').trim()
+        if (!trimmed || !projectId || !socketRef.current?.connected) return
+        socketRef.current.emit('project-chat-message', {
+            projectId,
+            userId: localUserId,
+            userName: resolvedName,
+            text: trimmed
+        })
+        setMessages((current) => [...current, {
+            id: generateId('chat-msg'),
+            userId: localUserId,
+            userName: resolvedName,
+            text: trimmed,
+            timestamp: Date.now(),
+            receivedAt: Date.now(),
+            self: true
+        }].slice(-MAX_CHAT_MESSAGES))
+    }, [localUserId, projectId, resolvedName])
+
     return {
         displayName: resolvedName,
         localUserId,
@@ -224,6 +251,8 @@ export function useProjectPresence({
         users,
         cursors,
         emitCursor,
-        clearCursor
+        clearCursor,
+        messages,
+        sendChatMessage
     }
 }

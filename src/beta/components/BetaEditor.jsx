@@ -8,6 +8,7 @@ import TextPanelWindow from './TextPanelWindow.jsx'
 import ImagePanelWindow from './ImagePanelWindow.jsx'
 import WorldPanelWindow from './WorldPanelWindow.jsx'
 import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
+import ChatPanelWindow from './ChatPanelWindow.jsx'
 import BetaHelpDialog from './BetaHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
@@ -111,6 +112,9 @@ export default function BetaEditor({
     const [helpOpen, setHelpOpen] = useState(false)
     const [outlinerOpen, setOutlinerOpen] = useState(false)
     const [outlinerFrame, setOutlinerFrame] = useState({ x: 24, y: 56, width: 240, height: 360, zIndex: 20, minimized: false, pinned: false })
+    const [chatOpen, setChatOpen] = useState(false)
+    const [chatFrame, setChatFrame] = useState({ x: 24, y: 432, width: 280, height: 360, zIndex: 20, minimized: false, pinned: false })
+    const [readChatCount, setReadChatCount] = useState(0)
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
     const [isWorldOverlay, setIsWorldOverlay] = useState(false)
     const [navStack, setNavStack] = useState([null])
@@ -138,6 +142,10 @@ export default function BetaEditor({
         anonymousLabel: 'Beta',
         userIdPrefix: 'beta-user'
     })
+    useEffect(() => {
+        if (chatOpen) setReadChatCount(presence.messages.length)
+    }, [chatOpen, presence.messages.length])
+    const unreadChatCount = chatOpen ? 0 : Math.max(0, presence.messages.length - readChatCount)
     const topbarRef = useRef(null)
     const workflowRef = useRef(null)
     const [workspaceTop, setWorkspaceTop] = useState(168)
@@ -896,6 +904,15 @@ export default function BetaEditor({
                                     {surfaceNodeCount} {surfaceNodeCount === 1 ? 'node' : 'nodes'}
                                 </button>
                             )}
+                            <button
+                                type="button"
+                                className={`beta-topbar-node-count${chatOpen ? ' is-active' : ''}`}
+                                onClick={() => setChatOpen((v) => !v)}
+                                title="Toggle chat"
+                                aria-label="Toggle chat"
+                            >
+                                Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
+                            </button>
                             <div className="beta-topbar-overflow">
                                 <button type="button" className="beta-topbar-overflow-btn" onClick={() => setOverflowOpen((v) => !v)}>⋯</button>
                                 {overflowOpen && (
@@ -1081,6 +1098,25 @@ export default function BetaEditor({
                         nodes={surfaceNodes}
                         selectedNodeId={workspaceState.selectedNodeId || null}
                         onSelectNode={(nodeId) => selectNode(nodeId)}
+                    />
+                </DesktopWindow>
+            )}
+
+            {chatOpen && (
+                <DesktopWindow
+                    windowState={chatFrame}
+                    title="Chat"
+                    kicker={activeSurface}
+                    minTop={workspaceTop}
+                    onFocus={() => setChatFrame((f) => ({ ...f, zIndex: 20 }))}
+                    onPatch={(patch) => setChatFrame((f) => ({ ...f, ...patch }))}
+                    onClose={() => setChatOpen(false)}
+                    onToggleMinimize={() => setChatFrame((f) => ({ ...f, minimized: !f.minimized }))}
+                    onTogglePin={() => setChatFrame((f) => ({ ...f, pinned: !f.pinned }))}
+                >
+                    <ChatPanelWindow
+                        messages={presence.messages}
+                        onSend={presence.sendChatMessage}
                     />
                 </DesktopWindow>
             )}
