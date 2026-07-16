@@ -40,6 +40,29 @@ const getKtx2Loader = (gl) => {
     return sharedKtx2Loader
 }
 
+// GLTF/OBJ/STL/FBX loaders (and the per-render SkeletonUtils clone below)
+// never free their GPU resources on their own — swapping or removing a model
+// entity otherwise leaks geometries/materials/textures for the rest of the
+// session. `materialsOnly` skips geometry disposal for the *cloned* render
+// tree, since its geometries are shared-by-reference with the original
+// loaded scene (SkeletonUtils.clone does not deep-clone geometry), which
+// owns and disposes them itself.
+export const disposeObject3D = (root, { materialsOnly = false } = {}) => {
+    if (!root) return
+    root.traverse((child) => {
+        if (!materialsOnly && child.geometry) child.geometry.dispose()
+        const materials = Array.isArray(child.material) ? child.material : (child.material ? [child.material] : [])
+        for (const material of materials) {
+            if (!material) continue
+            for (const key of Object.keys(material)) {
+                const value = material[key]
+                if (value?.isTexture) value.dispose()
+            }
+            material.dispose()
+        }
+    })
+}
+
 export default function ModelObject({
     assetRef,
     data,
@@ -229,6 +252,16 @@ export default function ModelObject({
         }
     }, [assetRef, materialsAssetRef, data, effectiveFormat, gl])
 
+    // Dispose the previously loaded scene's geometries/materials/textures
+    // the moment a new one replaces it (effect cleanup fires just before the
+    // next run when `loadedScene` changes, and on unmount) — this is the
+    // original parsed model, not the per-render clone below.
+    useEffect(() => {
+        return () => {
+            if (loadedScene) disposeObject3D(loadedScene)
+        }
+    }, [loadedScene])
+
     const renderedScene = useMemo(() => {
         if (!loadedScene) return null
         // SkeletonUtils.clone keeps SkinnedMesh↔bone bindings intact; a plain
@@ -267,6 +300,16 @@ export default function ModelObject({
         })
         return clone
     }, [loadedScene, applyModelColor, modelColor, opacity])
+
+    // The clone above creates a fresh material per mesh on every recompute
+    // (color/opacity change, or a new model) — dispose the previous clone's
+    // materials only, since its geometries are shared references back to
+    // `loadedScene`, which owns and disposes them via the effect above.
+    useEffect(() => {
+        return () => {
+            if (renderedScene) disposeObject3D(renderedScene, { materialsOnly: true })
+        }
+    }, [renderedScene])
 
     // Embedded animation clips (glTF/FBX) play on the rendered clone; speed 0
     // or the Play animations toggle freezes them without reloading the model.
