@@ -132,7 +132,13 @@ const registerAuthRoutes = (router, {
 
   if (oauth.github.enabled) {
     router.get('/api/auth/github',
-      passport.authenticate('github', { scope: ['user:email'], session: false, state: signLoginState(stateSecret) })
+      // `state` must be signed fresh on every request — passport.authenticate(name, opts)
+      // is a middleware *factory*, but calling it here at route-registration time would
+      // bake a single state value into the closure for the process's entire lifetime
+      // (the exact bug this replaced: every login shared one state token, so it worked
+      // only within STATE_TTL_MS of server start and failed for everyone after that).
+      (req, res, next) =>
+        passport.authenticate('github', { scope: ['user:email'], session: false, state: signLoginState(stateSecret) })(req, res, next)
     )
     router.get('/api/auth/github/callback',
       requireValidLoginState,
@@ -143,7 +149,8 @@ const registerAuthRoutes = (router, {
 
   if (oauth.google.enabled) {
     router.get('/api/auth/google',
-      passport.authenticate('google', { scope: ['profile', 'email'], session: false, state: signLoginState(stateSecret) })
+      (req, res, next) =>
+        passport.authenticate('google', { scope: ['profile', 'email'], session: false, state: signLoginState(stateSecret) })(req, res, next)
     )
     router.get('/api/auth/google/callback',
       requireValidLoginState,

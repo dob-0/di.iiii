@@ -114,4 +114,35 @@ describe('registerAuthRoutes login CSRF state', () => {
     expect(next).toHaveBeenCalled()
     expect(res.redirect).not.toHaveBeenCalled()
   })
+
+  it('the github authorize route signs a fresh state on every request, not once at registration', () => {
+    // Regression guard for a real production incident (2026-07-16): the route handler used
+    // to be `passport.authenticate('github', { state: signLoginState(stateSecret) })` passed
+    // directly to router.get — signLoginState() ran once, at route-registration time, and
+    // that single state value got baked into the closure for the rest of the process's life.
+    // Every login shared the same state token, so it only worked within STATE_TTL_MS (10 min)
+    // of server start and failed with "Sign-in failed" for every login after that, until the
+    // next restart — live-verified: two curl requests seconds apart returned an identical
+    // `state` in the redirect Location header.
+    const router = makeFakeRouter()
+    registerAuthRoutes(router, {
+      config: { ...baseConfig, oauth: { ...baseConfig.oauth, github: { ...baseConfig.oauth.github, enabled: true } } },
+      createAuthSessionValue: vi.fn(),
+      setAuthSessionCookie: vi.fn()
+    })
+    const [authorizeHandler] = router.routes['get /api/auth/github']
+
+    const extractState = () => {
+      const res = { redirect: vi.fn(), setHeader: vi.fn(), end: vi.fn(), statusCode: 0 }
+      authorizeHandler({ query: {} }, res, vi.fn())
+      const [, location] = res.setHeader.mock.calls.find(([header]) => header === 'Location')
+      return new URL(location).searchParams.get('state')
+    }
+
+    const first = extractState()
+    const second = extractState()
+    expect(first).toBeTruthy()
+    expect(second).toBeTruthy()
+    expect(first).not.toBe(second)
+  })
 })
