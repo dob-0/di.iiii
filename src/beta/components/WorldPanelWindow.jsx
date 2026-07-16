@@ -13,6 +13,8 @@ export default function WorldPanelWindow({
     onCursorMove,
     onCursorLeave,
     nodeScale = 1,
+    scopeId,
+    worldNode,
     onEnterFullscreen,
     onEnterOverlay,
 }) {
@@ -33,6 +35,8 @@ export default function WorldPanelWindow({
                 onCursorLeave={onCursorLeave}
                 nodeScale={nodeScale}
                 showEmptyHint={false}
+                scopeId={scopeId}
+                worldNode={worldNode}
             />
             <div className="beta-world-panel-actions">
                 <button

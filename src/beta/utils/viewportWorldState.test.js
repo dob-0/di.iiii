@@ -36,4 +36,29 @@ describe('getBetaWorldBackgroundColor', () => {
 
         expect(getBetaWorldBackgroundColor(document, createNodeGraphContext(document))).toBe('#112233')
     })
+
+    it('only matches a world.background node in the same scope when scopeId is given', () => {
+        const document = {
+            worldState: { backgroundColor: '#05070a' },
+            nodes: [
+                { id: 'bg-other-scope', typeId: 'world.background', parentId: 'other-world', values: { color: '#ff0000' } }
+            ]
+        }
+        // Not in scope 'my-world' — falls through to worldState, not the other scope's node.
+        expect(getBetaWorldBackgroundColor(document, null, { scopeId: 'my-world' })).toBe('#05070a')
+
+        const documentWithMatch = {
+            nodes: [
+                { id: 'bg-other-scope', typeId: 'world.background', parentId: 'other-world', values: { color: '#ff0000' } },
+                { id: 'bg-my-scope', typeId: 'world.background', parentId: 'my-world', values: { color: '#00ff00' } }
+            ]
+        }
+        expect(getBetaWorldBackgroundColor(documentWithMatch, null, { scopeId: 'my-world' })).toBe('#00ff00')
+    })
+
+    it('falls back to the world node\'s own bgColor before worldState, once scoped', () => {
+        const document = { worldState: { backgroundColor: '#05070a' }, nodes: [] }
+        const worldNode = { id: 'world-1', values: { bgColor: '#663399' } }
+        expect(getBetaWorldBackgroundColor(document, null, { scopeId: 'root', worldNode })).toBe('#663399')
+    })
 })

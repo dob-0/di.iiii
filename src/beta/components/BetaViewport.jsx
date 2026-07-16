@@ -159,19 +159,34 @@ function SceneContent({
     onSelectNode,
     onWorldDoubleClick,
     onMoveNode,
-    nodeScale = 1
+    nodeScale = 1,
+    scopeId,
+    worldNode
 }) {
     // Keyed on assets + project id so the map only rebuilds when assets change,
     // not on every document identity change from a sync tick.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const assetMap = useMemo(() => buildAssetMap(document), [document.assets, document.projectMeta?.id])
     const graphContext = useMemo(() => createNodeGraphContext(document), [document])
+    // scopeId undefined = unscoped, matches the old document-wide behavior; a real
+    // scope (including root, `null`) only renders/uses siblings of that scope — see
+    // the identical comment in viewportWorldState.js.
+    const inScope = (node) => scopeId === undefined || (node.parentId || null) === scopeId
     const renderableNodes = useMemo(
-        () => (document.nodes || []).filter(isSpatialNode),
-        [document.nodes]
+        () => (document.nodes || []).filter((node) => isSpatialNode(node) && inScope(node)),
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [document.nodes, scopeId]
     )
-    const lightNode = useMemo(() => (document.nodes || []).find((node) => node?.typeId === 'world.light') || null, [document.nodes])
-    const gridNode = useMemo(() => (document.nodes || []).find((node) => node?.typeId === 'world.grid') || null, [document.nodes])
+    const lightNode = useMemo(
+        () => (document.nodes || []).find((node) => node?.typeId === 'world.light' && inScope(node)) || null,
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [document.nodes, scopeId]
+    )
+    const gridNode = useMemo(
+        () => (document.nodes || []).find((node) => node?.typeId === 'world.grid' && inScope(node)) || null,
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [document.nodes, scopeId]
+    )
     const resolvedLight = lightNode ? evaluateNodeInputs(lightNode, graphContext) : null
     const resolvedGrid = gridNode ? evaluateNodeInputs(gridNode, graphContext) : null
     const [draggingNodeId, setDraggingNodeId] = useState(null)
@@ -179,7 +194,7 @@ function SceneContent({
 
     return (
         <>
-            <color attach="background" args={[getBetaWorldBackgroundColor(document, graphContext)]} />
+            <color attach="background" args={[getBetaWorldBackgroundColor(document, graphContext, { scopeId, worldNode })]} />
             <ambientLight
                 color={resolvedLight?.ambientColor ?? document.worldState?.ambientLight?.color ?? '#ffffff'}
                 intensity={resolvedLight?.ambientIntensity ?? document.worldState?.ambientLight?.intensity ?? 0.8}
@@ -271,14 +286,16 @@ export default function BetaViewport({
     onCursorMove,
     onCursorLeave,
     nodeScale = 1,
-    showEmptyHint = true
+    showEmptyHint = true,
+    scopeId,
+    worldNode
 }) {
     const viewportRef = useRef(null)
     const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
     const camera = document.worldState?.savedView || {}
     const spatialNodes = useMemo(
-        () => (document.nodes || []).filter(isSpatialNode),
-        [document.nodes]
+        () => (document.nodes || []).filter((node) => isSpatialNode(node) && (scopeId === undefined || (node.parentId || null) === scopeId)),
+        [document.nodes, scopeId]
     )
     const isEmpty = spatialNodes.length === 0 && (document.entities || []).length === 0
 
@@ -374,6 +391,8 @@ export default function BetaViewport({
                     onWorldDoubleClick={onWorldDoubleClick}
                     onMoveNode={onMoveNode}
                     nodeScale={nodeScale}
+                    scopeId={scopeId}
+                    worldNode={worldNode}
                 />
             </Canvas>
             {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}

@@ -97,4 +97,61 @@ describe('BetaViewport', () => {
         expect(body).not.toBeNull()
         expect(body.type).toBe('group')
     })
+
+    it('without a scopeId, renders every spatial node document-wide (unscoped, matches old behavior)', () => {
+        boxObjectSpy.mockClear()
+        render(
+            <BetaViewport
+                document={{
+                    worldState: {},
+                    entities: [],
+                    edges: [],
+                    nodes: [
+                        { id: 'cube-a', typeId: 'geom.cube', parentId: 'world-1', label: 'A', values: {} },
+                        { id: 'cube-b', typeId: 'geom.cube', parentId: 'world-2', label: 'B', values: {} }
+                    ]
+                }}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        expect(boxObjectSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('with a scopeId, only renders spatial nodes that are siblings of that scope', () => {
+        boxObjectSpy.mockClear()
+        render(
+            <BetaViewport
+                document={{
+                    worldState: {},
+                    entities: [],
+                    edges: [],
+                    nodes: [
+                        { id: 'cube-a', typeId: 'geom.cube', parentId: 'world-1', label: 'A', values: {} },
+                        { id: 'cube-b', typeId: 'geom.cube', parentId: 'world-2', label: 'B', values: {} }
+                    ]
+                }}
+                scopeId="world-1"
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        expect(boxObjectSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it('shows the empty-world hint when the given scope has no spatial nodes, even if other scopes do', () => {
+        render(
+            <BetaViewport
+                document={{
+                    worldState: {},
+                    entities: [],
+                    edges: [],
+                    nodes: [
+                        { id: 'cube-other', typeId: 'geom.cube', parentId: 'world-2', label: 'Other', values: {} }
+                    ]
+                }}
+                scopeId="world-1"
+                onWorldDoubleClick={() => {}}
+            />
+        )
+        expect(screen.getByText('Cursor is material.')).toBeTruthy()
+    })
 })

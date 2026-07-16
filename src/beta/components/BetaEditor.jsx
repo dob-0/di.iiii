@@ -225,9 +225,11 @@ export default function BetaEditor({
         [authoredNodes]
     )
     const hasGraphNodes = createdNodesExcludingNodeZero.length > 0
+    // universe.world is a per-scope singleton (Phase 0) — "the" world is whichever
+    // one is a sibling of the current scope, not a single document-wide node.
     const worldNode = useMemo(
-        () => authoredNodes.find((node) => node.typeId === 'universe.world') || null,
-        [authoredNodes]
+        () => authoredNodes.find((node) => node.typeId === 'universe.world' && (node.parentId || null) === currentScopeId) || null,
+        [authoredNodes, currentScopeId]
     )
     const hasWorldNode = Boolean(worldNode)
     const topbarLocationText = useMemo(() => {
@@ -688,6 +690,8 @@ export default function BetaEditor({
                     onCursorMove={presence.emitCursor}
                     onCursorLeave={presence.clearCursor}
                     nodeScale={nodeScale}
+                    scopeId={node.id}
+                    worldNode={node}
                     onEnterFullscreen={() => setIsWorldFullscreen(true)}
                     onEnterOverlay={() => {
                         setIsWorldOverlay(true)
@@ -1024,6 +1028,8 @@ export default function BetaEditor({
                         onCursorLeave={presence.clearCursor}
                         nodeScale={nodeScale}
                         showEmptyHint={false}
+                        scopeId={worldNode?.id}
+                        worldNode={worldNode}
                     />
                 </div>
             )}
@@ -1046,6 +1052,8 @@ export default function BetaEditor({
                         onCursorLeave={presence.clearCursor}
                         nodeScale={nodeScale}
                         showEmptyHint={false}
+                        scopeId={worldNode?.id}
+                        worldNode={worldNode}
                     />
                 </div>
             )}
