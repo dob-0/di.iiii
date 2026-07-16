@@ -202,6 +202,26 @@ if (requireAuth && !process.env.AUTH_SESSION_SECRET && authSessionSecret) {
 const oauthCallbackBase = (process.env.OAUTH_CALLBACK_BASE_URL || '').replace(/\/+$/, '')
 const oauthFrontendUrl = (process.env.OAUTH_FRONTEND_URL || '/').replace(/\/+$/, '') || '/'
 
+// `enabled` only checks *_CLIENT_ID (an ID with no matching secret still
+// reports the provider as enabled) — a config where docker-compose.yml's
+// `${VAR:-}` silently defaulted just the secret half to empty would look
+// configured right up until a real login attempt fails with a confusing
+// OAuth error, instead of a clear signal at startup that something's
+// half-set. Audit finding #21.
+for (const [provider, idVar, secretVar] of [
+  ['GitHub', 'GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET'],
+  ['Google', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']
+]) {
+  const hasId = Boolean((process.env[idVar] || '').trim())
+  const hasSecret = Boolean((process.env[secretVar] || '').trim())
+  if (hasId !== hasSecret) {
+    logger.warn(
+      `[serverXR] ${idVar} is set but ${secretVar} is not (or vice versa) — ${provider} sign-in ` +
+      `will report as enabled but fail at login time. Set both or neither.`
+    )
+  }
+}
+
 const config = {
   port: Number(process.env.PORT) || 4000,
   basePath,

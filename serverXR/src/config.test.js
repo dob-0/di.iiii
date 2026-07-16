@@ -91,3 +91,64 @@ describe('config: auth session secret fallback (2026-07-16 audit fix #7)', () =>
         })
     })
 })
+
+// Regression tests for audit finding #21: oauth.*.enabled only checks
+// *_CLIENT_ID, so a half-set provider (ID present, secret missing — e.g.
+// docker-compose.yml's ${VAR:-} silently defaulting just the secret half to
+// empty) reports as enabled and only fails at actual login time with a
+// confusing OAuth error, no signal at startup that anything's wrong.
+describe('config: OAuth half-configured provider warning (2026-07-16 audit fix #21)', () => {
+    const CONFIG_PATH = require.resolve('./config.js')
+    const LOGGER_PATH = require.resolve('./logger.js')
+    const ENV_KEYS = ['GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET', 'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET']
+    let savedEnv
+
+    const withFreshConfig = (env, fn) => {
+        savedEnv = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]))
+        for (const key of ENV_KEYS) delete process.env[key]
+        Object.assign(process.env, env)
+        delete require.cache[CONFIG_PATH]
+        const logger = require('./logger.js')
+        const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+        try {
+            fn(require('./config.js').config, warnSpy)
+        } finally {
+            warnSpy.mockRestore()
+            for (const key of ENV_KEYS) {
+                if (savedEnv[key] === undefined) delete process.env[key]
+                else process.env[key] = savedEnv[key]
+            }
+            delete require.cache[CONFIG_PATH]
+            delete require.cache[LOGGER_PATH]
+        }
+    }
+
+    it('warns when a client id is set with no matching secret', () => {
+        withFreshConfig({ GITHUB_CLIENT_ID: 'abc123' }, (config, warnSpy) => {
+            expect(config.oauth.github.enabled).toBe(true)
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/GITHUB_CLIENT_ID.*GITHUB_CLIENT_SECRET/s))
+        })
+    })
+
+    it('warns when a client secret is set with no matching id', () => {
+        withFreshConfig({ GOOGLE_CLIENT_SECRET: 'shh' }, (config, warnSpy) => {
+            expect(config.oauth.google.enabled).toBe(false)
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/GOOGLE_CLIENT_ID.*GOOGLE_CLIENT_SECRET/s))
+        })
+    })
+
+    it('does not warn when both id and secret are set', () => {
+        withFreshConfig({ GITHUB_CLIENT_ID: 'abc123', GITHUB_CLIENT_SECRET: 'def456' }, (config, warnSpy) => {
+            expect(config.oauth.github.enabled).toBe(true)
+            expect(warnSpy).not.toHaveBeenCalled()
+        })
+    })
+
+    it('does not warn when both id and secret are absent (provider simply disabled)', () => {
+        withFreshConfig({}, (config, warnSpy) => {
+            expect(config.oauth.github.enabled).toBe(false)
+            expect(config.oauth.google.enabled).toBe(false)
+            expect(warnSpy).not.toHaveBeenCalled()
+        })
+    })
+})
