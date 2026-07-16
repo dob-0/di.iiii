@@ -101,7 +101,9 @@ services:
         # Set only if client and server are on different origins.
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
     ports:
-      - "${PORT:-80}:80"
+      # Host side unchanged -- only the container-internal port moved to
+      # 8080 (audit #27: non-root nginx can't bind below 1024).
+      - "${PORT:-80}:8080"
     depends_on:
       server:
         condition: service_healthy
@@ -110,8 +112,14 @@ services:
       # 127.0.0.1, not localhost -- see server's healthcheck comment above.
       # Confirmed live (docker exec): `wget http://localhost/` gets connection
       # refused (nginx's `listen 80;` is IPv4-only, wget tries ::1 first and
-      # doesn't fall back); `wget http://127.0.0.1/` succeeds.
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      # doesn't fall back); `wget http://127.0.0.1/` succeeds. Port moved to
+      # 8080 to match nginx's new non-root listen port (audit #27) -- if
+      # nginxinc/nginx-unprivileged's alpine base doesn't ship wget the way
+      # this was verified for plain nginx:alpine, this check will fail loud
+      # (service never reports healthy) rather than silently proxying to a
+      # container that isn't actually serving -- watch this on the very
+      # first staging deploy after this change.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
       interval: 20s
       timeout: 5s
       retries: 3
@@ -138,7 +146,7 @@ services:
     command: >
       tunnel --no-autoupdate
       ${CLOUDFLARE_TUNNEL_TOKEN:+run --token ${CLOUDFLARE_TUNNEL_TOKEN}}
-      ${CLOUDFLARE_TUNNEL_TOKEN:---url http://client:80}
+      ${CLOUDFLARE_TUNNEL_TOKEN:---url http://client:8080}
     depends_on:
       client:
         condition: service_healthy

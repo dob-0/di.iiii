@@ -20,8 +20,13 @@ ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 
 # Stage 2: serve with nginx
-FROM nginx:alpine@sha256:7068961d45b07b2af510ac002e9daa63a1d3eba2111202d6768798690800fffd
+# Non-root by design (audit #27): the official unprivileged variant already
+# runs its master+worker processes as the `nginx` user and listens on 8080
+# (an unprivileged port a non-root process can actually bind), instead of
+# hand-patching the regular nginx:alpine image's root-owned cache/pid dirs
+# and permissions ourselves with no way to test the result before deploy.
+FROM nginxinc/nginx-unprivileged:alpine@sha256:a718212f9cf21e241f14067333000a3f0930292f5354fe0db269e9a2a2596b9e
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

@@ -177,7 +177,8 @@ picking one.
 
 `Dockerfile`, `serverXR/Dockerfile`, and `docker-compose.yml` (the `caddy`/`tunnel`
 services) pin every base image by digest (`image:tag@sha256:...`), not just a
-floating tag. A floating tag (`node:22-alpine`, `nginx:alpine`, `caddy:2-alpine`,
+floating tag. A floating tag (`node:22-alpine`, `nginxinc/nginx-unprivileged:alpine`
+— swapped from plain `nginx:alpine` by audit #27, see below — `caddy:2-alpine`,
 `cloudflare/cloudflared:latest`) can point at a different actual image tomorrow
 than it does today — the next `docker build`/`docker compose pull` silently
 picks up whatever the tag currently resolves to, with no diff or review. Pinning
@@ -203,6 +204,42 @@ expected — **before** pushing to `dev`. This is the same class of file
 (`docker-compose.yml`) that caused the 2026-07-16 production outage (see the
 healthcheck incident in `docs/ai/known-fixes.md`); treat any edit here with that
 same caution, not as a routine dependency bump.
+
+## Client Container Non-Root Hardening (audit #27, 2026-07-17)
+
+`server` already ran as a non-root `app` user; `client` (nginx serving the
+built SPA) ran as root — the same nginx master process default every other
+di.iiii container had already moved away from. Fixed by swapping the base
+image from plain `nginx:alpine` to `nginxinc/nginx-unprivileged:alpine` (the
+official pre-hardened unprivileged variant — already runs as the `nginx`
+user, listens on 8080 by default) rather than hand-patching nginx:alpine's
+root-owned cache/pid directories ourselves with no way to test the result
+before a real deploy.
+
+Non-root means nginx can't bind a port below 1024, so the container's
+internal listen port moved from 80 to 8080. **This is a container-internal
+port only** — every host-facing port stays the same:
+
+- `docker-compose.yml`: `client`'s `ports:` mapping is still `${PORT:-80}:8080`
+  (host side unchanged, only the container side moved); the healthcheck now
+  hits `http://127.0.0.1:8080/`; the `tunnel` service's default target moved
+  to `http://client:8080`.
+- `Caddyfile`: `reverse_proxy client:8080` (production's Caddy talks to the
+  client over the internal Docker network, so it has to know the new port —
+  staging is unaffected, it's reached via `host.docker.internal:$STAGING_PORT`,
+  a host-published port that never changed).
+- `nginx.conf`: `listen 8080;` instead of `listen 80;`.
+
+**Known residual risk, same class as the 2026-07-16 healthcheck outage**: the
+client healthcheck's `wget` was previously verified to actually work inside
+plain `nginx:alpine` (see that incident's writeup). `nginxinc/nginx-unprivileged`
+is alpine-based too and very likely ships the same busybox `wget`, but this
+specific image was **not** independently verified before shipping (no local
+Docker daemon available to test). If it turns out not to, the healthcheck
+fails loudly (container never reports healthy, `depends_on: service_healthy`
+blocks `caddy`/`tunnel` from starting) rather than silently breaking — watch
+the very first staging deploy after this change lands, the same way the
+healthcheck incident was caught.
 
 ## Follow-Ups
 

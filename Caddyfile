@@ -1,5 +1,7 @@
 {$SITE_DOMAIN} {
-	reverse_proxy client:80
+	# Container-internal port moved to 8080 (audit #27): the client
+	# container now runs nginx as non-root, which can't bind below 1024.
+	reverse_proxy client:8080
 }
 
 # Staging, deployed as a separate low-resource Compose project on this same

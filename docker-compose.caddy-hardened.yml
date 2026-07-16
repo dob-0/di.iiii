@@ -6,7 +6,8 @@
 # header/security rules can be bypassed by hitting that port directly.
 #
 # This file removes the client's host port entirely: Caddy becomes the only
-# way in, reaching the client over the internal Docker network (client:80).
+# way in, reaching the client over the internal Docker network (client:8080 --
+# the client's non-root nginx listens on 8080, see audit #27 in known-fixes.md).
 # Opt in when you want that stricter posture:
 #
 #   docker compose --profile https -f docker-compose.yml -f docker-compose.prod.yml \
