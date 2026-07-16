@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import StudioPresentationSurface from './StudioPresentationSurface.jsx'
+import StudioGraphSurface from './StudioGraphSurface.jsx'
+import { isGraphViewEnabled } from '../utils/graphViewFlag.js'
 
 // All views use PerspectiveCamera. "Ortho" views fake it: large distance + small FOV ≈ parallel projection.
 // This lets every transition (including ortho↔perspective) animate smoothly with setLookAt.
@@ -129,6 +131,9 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
             <div className="svl-pane-controls">
                 <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h')} title="Split left/right">H</button>
                 <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'v')} title="Split top/bottom">V</button>
+                {isGraphViewEnabled() && (
+                    <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h', 'graph')} title="Split with a node-graph view (dev preview)">N</button>
+                )}
                 {!isRoot && (
                     <button className="svl-ctrl-btn svl-ctrl-btn--close" onClick={() => onClose(node.id)} title="Close pane">×</button>
                 )}
@@ -178,6 +183,23 @@ function ViewPane({ node, isRoot, onSplit, onClose, shared }) {
     )
 }
 
+function GraphPane({ node, isRoot, onSplit, onClose, shared }) {
+    return (
+        <div className="svl-pane">
+            <div className="svl-pane-controls">
+                <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'h')} title="Split left/right">H</button>
+                <button className="svl-ctrl-btn" onClick={() => onSplit(node.id, 'v')} title="Split top/bottom">V</button>
+                {!isRoot && (
+                    <button className="svl-ctrl-btn svl-ctrl-btn--close" onClick={() => onClose(node.id)} title="Close pane">×</button>
+                )}
+            </div>
+            <div className="svl-canvas">
+                <StudioGraphSurface document={shared.document} />
+            </div>
+        </div>
+    )
+}
+
 function SplitContainer({ node, onSplit, onClose, setRatio, shared }) {
     const containerRef  = useRef(null)
     const [ratio, setLocalRatio] = useState(node.ratio ?? 0.5)
@@ -222,6 +244,9 @@ function SplitContainer({ node, onSplit, onClose, setRatio, shared }) {
 function LayoutNode({ node, isRoot, onSplit, onClose, setRatio, shared }) {
     if (node.type === 'split') {
         return <SplitContainer node={node} onSplit={onSplit} onClose={onClose} setRatio={setRatio} shared={shared} />
+    }
+    if (node.viewType === 'graph') {
+        return <GraphPane node={node} isRoot={isRoot} onSplit={onSplit} onClose={onClose} shared={shared} />
     }
     return <ViewPane node={node} isRoot={isRoot} onSplit={onSplit} onClose={onClose} shared={shared} />
 }

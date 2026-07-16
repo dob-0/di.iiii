@@ -12,7 +12,12 @@ vi.mock('./StudioPresentationSurface.jsx', () => ({
     }
 }))
 
+vi.mock('./StudioGraphSurface.jsx', () => ({
+    default: ({ document }) => <output data-testid="graph-surface">{document?.projectMeta?.id || 'no-doc'}</output>
+}))
+
 const singlePane = { type: 'view', id: 'root' }
+const graphPane = { type: 'view', id: 'root', viewType: 'graph' }
 
 describe('StudioViewportLayout camera wiring', () => {
     // Regression guard: StudioEditor's controlsRef was a plain useRef that no
@@ -62,5 +67,35 @@ describe('StudioViewportLayout camera wiring', () => {
         )
         const view = JSON.parse(screen.getByTestId('camera-view').textContent)
         expect(view.position).toEqual([4, 3, 6.5])
+    })
+})
+
+describe('StudioViewportLayout node-graph pane (dev-only preview)', () => {
+    it('renders the 3D viewport for a leaf with no viewType (default/unaffected)', () => {
+        render(
+            <StudioViewportLayout
+                layout={singlePane}
+                onSplit={vi.fn()}
+                onClose={vi.fn()}
+                onSetRatio={vi.fn()}
+                shared={{}}
+            />
+        )
+        expect(screen.getByTestId('camera-view')).toBeInTheDocument()
+        expect(screen.queryByTestId('graph-surface')).not.toBeInTheDocument()
+    })
+
+    it('renders StudioGraphSurface for a viewType: "graph" leaf, not the 3D viewport', () => {
+        render(
+            <StudioViewportLayout
+                layout={graphPane}
+                onSplit={vi.fn()}
+                onClose={vi.fn()}
+                onSetRatio={vi.fn()}
+                shared={{ document: { projectMeta: { id: 'proj-1' } } }}
+            />
+        )
+        expect(screen.getByTestId('graph-surface')).toHaveTextContent('proj-1')
+        expect(screen.queryByTestId('camera-view')).not.toBeInTheDocument()
     })
 })
