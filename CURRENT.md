@@ -9,11 +9,33 @@ active_branch: dev
 
 ## Last commit
 
-`dev` = `40c5806d`, `main` = `c90f1a65` (dev has one extra low-risk dep-bump
-commit not yet promoted). Deploy pipeline is live and verified on both
-branches; prod confirmed healthy post-incident (see below).
+`dev` local HEAD has one uncommitted-to-remote fix on top of `40c5806d`
+(OAuth sign-in fallback-secret fix, see below — not yet pushed). `main` =
+`c90f1a65`. Deploy pipeline is live and verified on both branches; prod
+confirmed healthy post-incident (see below).
 
-## Last session (2026-07-16 — deploy pipeline made real, full audit, one incident)
+## Last session (2026-07-16 — deploy pipeline made real, full audit, one incident, live sign-in bug)
+
+- User reported OAuth sign-in on `di-studio.xyz` failing with "Sign-in
+  failed — please try again." Root cause: the CSRF `state` fix below signed
+  login state with a fallback secret (`crypto.randomBytes`) generated once
+  per **process** when `AUTH_SESSION_SECRET`/`API_TOKEN` aren't configured —
+  which happens in this deployment's `REQUIRE_AUTH=false` open-guest mode.
+  Any container restart between a user's sign-in click and the OAuth
+  callback (redeploys/crash-restarts — several happened today) invalidated
+  the state. Fixed by deriving that fallback deterministically from the
+  configured OAuth client secrets instead of random bytes, so it's stable
+  across restarts without a new env var; same latent bug also fixed in the
+  Drive-connect state signer (`integrationRoutes.js`); added a one-time
+  startup `logger.warn` when this fallback path is active so it's visible
+  in prod logs; added a regression test simulating a restart between
+  authorize and callback. Full writeup: `docs/ai/known-fixes.md`. **Not yet
+  pushed to `dev`** — do that next, then verify sign-in works on
+  `di-studio.xyz` after the deploy. Also still open: get `AUTH_SESSION_SECRET`
+  set in prod's `.env` on the VPS for defense-in-depth (needs VPS host,
+  which lives only in the `VPS_HOST` GitHub secret — not retrievable, and
+  not recorded anywhere in this repo on purpose).
+- Found `deploy-vps.yml`/`deploy-vps-staging.yml` had never had a successful run
 
 - Found `deploy-vps.yml`/`deploy-vps-staging.yml` had never had a successful run
   (no GitHub secrets/variables set, production was live but deployed by hand).

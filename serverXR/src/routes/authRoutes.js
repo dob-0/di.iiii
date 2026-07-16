@@ -4,6 +4,7 @@ const { Strategy: GitHubStrategy } = require('passport-github2')
 const { Strategy: GoogleStrategy } = require('passport-google-oauth20')
 const { upsertUser } = require('../userStore')
 const { signLoginState, verifyLoginState } = require('../loginState')
+const logger = require('../logger')
 
 // Derive a stable fallback secret from OAuth client secrets when no
 // AUTH_SESSION_SECRET/API_TOKEN is configured (e.g. REQUIRE_AUTH=false
@@ -34,6 +35,13 @@ const registerAuthRoutes = (router, {
 }) => {
   const frontendUrl = config.oauth.frontendUrl
   const { oauth } = config
+  if (!config.auth.sessionSecret) {
+    logger.warn(
+      '[serverXR] No AUTH_SESSION_SECRET/API_TOKEN configured — OAuth login-state is signed with ' +
+      'a secret derived from the OAuth client secrets. Fine for a self-host/no-auth deployment; ' +
+      'set AUTH_SESSION_SECRET if this is meant to be a hardened deployment.'
+    )
+  }
   const stateSecret = config.auth.sessionSecret || deriveFallbackStateSecret(oauth)
 
   const requireValidLoginState = (req, res, next) => {
