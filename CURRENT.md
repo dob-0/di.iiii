@@ -9,12 +9,31 @@ active_branch: dev
 
 ## Last commit
 
-`dev` has fixes not yet on `main` (this session's multi-world pass plus
-earlier Beta/Studio and full-repo audit work — not pushed yet). Deploy
-pipeline live and verified on both branches; staging/production both
-healthy on their last deployed commits.
+`dev` pushed to `origin` and deployed to staging — CI green, staging
+healthy. `main` not yet updated (multi-world pass + full-repo audit work
+still only on `dev`). Local checkout is 1 commit ahead of `origin/dev`
+(a `perf(ci)` commit from the concurrent audit session, not yet pushed by
+them — leave it for them to push, not ours to publish).
 
-## Last session (2026-07-17 — multi-world graphs + live Studio 3D render, dev-only)
+## Last session (2026-07-17 — pushed multi-world pass to staging, coordinated with concurrent audit session)
+
+- Pushed `dev` (multi-world pass + everything queued behind it) to
+  `origin/dev` → `Deploy VPS Staging` succeeded, staging is live on it.
+- A concurrent session is independently running a full-repo audit,
+  committing straight to `dev` on this same machine in parallel (same git
+  identity `dob-0`, tagged `(audit #N)`) — confirmed by commit history,
+  not assumed.
+- Their audit work shipped a flaky test (`httpContracts.test.js`'s
+  sync-status rate-limit test, real HTTP/disk I/O, 5000ms default
+  timeout) that failed one CI run under runner load. Per their own
+  in-file comment this now also gates real deploys, so asked to stabilize
+  rather than ignore — they fixed it themselves (`fee4fa91`, timeout
+  5000ms→20000ms, no behavior change) before we touched it. CI green
+  since.
+- Net: nothing left outstanding from this session's own scope; watched
+  CI/deploy status via `gh run list` rather than guessing.
+
+## Previous session (2026-07-17 — multi-world graphs + live Studio 3D render, dev-only)
 
 User wanted TouchDesigner-style multi-world: several independent worlds
 (one per node-scope), one marked "live", rendered as real 3D inside Studio
@@ -73,7 +92,10 @@ second independent WebGL canvas rendering that World's real scene with a
 
 ## Open
 
-- Push this session's fixes to `dev` → verify staging → promote to `main`.
+- Promote `dev` → `main` when ready (staging verified healthy, prod not
+  yet updated).
+- Concurrent audit session has a local unpushed `perf(ci)` commit on this
+  checkout — not pushed on their behalf; check if it's landed next session.
 - ~23 lower-priority audit findings untriaged — `docs/ai/known-fixes.md`.
 - Studio dev-only panes need a product decision before leaving dev-only:
   inspector wiring, flag rollout audience, Beta-vs-Studio long-term shape.
