@@ -35,12 +35,14 @@ const LEGACY_ROOT_TYPE_IDS = new Set(['core.project', 'world.root', 'view.root']
 const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar'])
 // These four are singletons per node-scope (parentId), not document-wide — a project
 // can have multiple worlds (one per node-in-node scope), but only one of each per scope.
-const SCOPE_SINGLETON_TYPE_IDS = new Set(['world.light', 'world.background', 'world.grid', 'universe.world'])
+// Exported so lane UI (e.g. Beta's palette) can predict a dedup drop *before*
+// dispatching the op and show a real message instead of a silent no-op.
+export const SCOPE_SINGLETON_TYPE_IDS = new Set(['world.light', 'world.background', 'world.grid', 'universe.world'])
 
 // Returns the key duplicate nodes are deduped on: the bare typeId for true
 // document-wide singletons, `typeId::parentId` for scope singletons, or null if
 // the type isn't a singleton at all (no dedup).
-const getSingletonDedupKey = (node) => {
+export const getSingletonDedupKey = (node) => {
     if (SINGLETON_TYPE_IDS.has(node.typeId)) return node.typeId
     if (SCOPE_SINGLETON_TYPE_IDS.has(node.typeId)) return `${node.typeId}::${node.parentId || ''}`
     return null

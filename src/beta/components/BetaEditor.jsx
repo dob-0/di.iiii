@@ -22,6 +22,7 @@ import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
 import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
+import { getSingletonDedupKey } from '../../shared/projectSchema.js'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
@@ -460,6 +461,18 @@ export default function BetaEditor({
 
     const buildNodeValues = (definitionId, params, place) =>
         buildNodeValuesForType(definitionId, params, place, { workspaceTop, topZIndex })
+
+    // Predicts whether creating this type in the current scope would be
+    // silently dropped by the schema's singleton dedup (e.g. a second World
+    // in the same scope) — checked before dispatching so the palette can
+    // explain it instead of just closing with nothing happening.
+    const getPaletteBlockReason = useCallback((definition) => {
+        const dedupKey = getSingletonDedupKey({ typeId: definition.id, parentId: currentScopeId })
+        if (!dedupKey) return null
+        const alreadyExists = authoredNodes.some((node) => getSingletonDedupKey(node) === dedupKey)
+        if (!alreadyExists) return null
+        return `Only one ${definition.label} per scope — place it inside a different node to create another.`
+    }, [authoredNodes, currentScopeId])
 
     const handlePaletteCreate = ({ definition, params, placement: palettePlace }) => {
         if (!definition) return
@@ -1056,6 +1069,7 @@ export default function BetaEditor({
                 placement={paletteState.placement}
                 onClose={() => setPaletteState({ open: false, surface: 'world', placement: null })}
                 onCreate={handlePaletteCreate}
+                getBlockReason={getPaletteBlockReason}
             />
 
         </main>

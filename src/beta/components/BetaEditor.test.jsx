@@ -385,6 +385,40 @@ describe('BetaEditor per-universe chrome visibility', () => {
     })
 })
 
+// Regression test for a real user report (2026-07-17): a second World in the
+// same scope was silently dropped by the schema's per-scope singleton dedup
+// — no error, no new node, the palette just closed. Now the palette explains
+// it instead of silently doing nothing.
+describe('BetaEditor blocked palette create', () => {
+    const BLOCK_STORAGE_KEY = 'test-palette-block'
+
+    afterEach(() => {
+        window.localStorage.removeItem(BLOCK_STORAGE_KEY)
+    })
+
+    it('warns instead of silently dropping a second World in the same scope', () => {
+        window.localStorage.setItem(
+            BLOCK_STORAGE_KEY,
+            makeWorkspaceDoc([
+                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+            ])
+        )
+        mockApplyLocalOps.mockClear()
+        render(<BetaEditor localStorageKey={BLOCK_STORAGE_KEY} />)
+
+        fireEvent.doubleClick(screen.getByTestId('mock-graph'))
+        fireEvent.change(screen.getByPlaceholderText('type a node name…'), { target: { value: 'World' } })
+        fireEvent.keyDown(screen.getByPlaceholderText('type a node name…'), { key: 'Enter' })
+
+        expect(screen.getByText(/Only one World per scope/)).toBeTruthy()
+        const createdWorld = mockApplyLocalOps.mock.calls
+            .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
+            .flat()
+            .some((op) => op.type === 'createNode' && op.payload?.node?.typeId === 'universe.world')
+        expect(createdWorld).toBe(false)
+    })
+})
+
 describe('TextPanelWindow', () => {
     it('renders the view.text content port value', () => {
         render(

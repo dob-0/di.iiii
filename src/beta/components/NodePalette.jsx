@@ -44,10 +44,17 @@ export default function NodePalette({
     surface = 'world',
     placement = null,
     onClose,
-    onCreate
+    onCreate,
+    // Pure predicate: (definition) => a message string if creating this type
+    // right now would be silently dropped (e.g. a scope-singleton like World
+    // that already exists in the current scope), or null/undefined if fine.
+    // Checked at confirm time so the palette can explain the block instead of
+    // just closing with nothing happening.
+    getBlockReason = () => null
 }) {
     const [query, setQuery] = useState('')
     const [activeIndex, setActiveIndex] = useState(0)
+    const [blockedMessage, setBlockedMessage] = useState(null)
     const inputRef = useRef(null)
     const listRef = useRef(null)
 
@@ -63,11 +70,13 @@ export default function NodePalette({
         if (!open) return
         setQuery('')
         setActiveIndex(0)
+        setBlockedMessage(null)
         requestAnimationFrame(() => inputRef.current?.focus())
     }, [open])
 
     useEffect(() => {
         setActiveIndex(0)
+        setBlockedMessage(null)
     }, [query])
 
     if (!open || !placement) return null
@@ -76,6 +85,11 @@ export default function NodePalette({
 
     const handleConfirm = (definition) => {
         if (!definition) return
+        const reason = getBlockReason(definition)
+        if (reason) {
+            setBlockedMessage(reason)
+            return
+        }
         onCreate({
             definition,
             params: { ...(definition.defaultParams || {}) },
@@ -139,6 +153,9 @@ export default function NodePalette({
                         spellCheck={false}
                     />
                 </div>
+                {blockedMessage && (
+                    <div className="beta-node-palette-warning">{blockedMessage}</div>
+                )}
                 {definitions.length > 0 ? (
                     <ul ref={listRef} className="beta-node-palette-list">
                         {definitions.map((definition, index) => (
