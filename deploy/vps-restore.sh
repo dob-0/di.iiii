@@ -47,11 +47,16 @@ echo "== stopping dii-server-1 =="
 docker stop dii-server-1
 
 echo "== extracting backup into dii_data volume =="
+# dii-server-1 runs as uid 100 / gid 101 (the 'app' user); the alpine
+# container here runs as root, so ownership after extraction depends on
+# what's baked into the archive rather than the live container's user.
+# Force it explicitly instead of trusting that to hold.
 docker run --rm -v dii_data:/data -v "$(dirname "$BACKUP_FILE")":/backup alpine sh -c "
   cd /data &&
   rm -rf uploads spaces snapshots di.db di.db-wal di.db-shm &&
   tar xzf /backup/$(basename "$BACKUP_FILE") &&
-  mv .backup-snapshot.db di.db
+  mv .backup-snapshot.db di.db &&
+  chown -R 100:101 /data
 "
 
 echo "== restarting stack =="

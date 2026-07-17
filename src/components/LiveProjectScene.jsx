@@ -1297,10 +1297,17 @@ export default function LiveProjectScene({
         const s = doc?.worldState?.spawn
         if (!s || spawnAppliedRef.current === projectId) return
         spawnAppliedRef.current = projectId
-        playerRef.current = {
+        // Mutate in place, don't replace the object: Walker's mouse/touch-look
+        // listeners are wired up once on mount and close over this exact
+        // playerRef.current reference. Reassigning it here orphaned that
+        // closure -- mouse-look kept mutating the old discarded object while
+        // the camera's useFrame read the new one, so yaw/pitch changed (visible
+        // in ?inputdebug=1) but the view never rotated. WASD still worked
+        // because its useFrame reads playerRef.current fresh every frame.
+        Object.assign(playerRef.current, {
             x: s.x ?? 0, z: s.z ?? 0, yaw: s.yaw ?? 0,
             pitch: s.pitch ?? 0, altY: s.altY ?? EYE_HEIGHT
-        }
+        })
     }, [doc, projectId])
 
     // The library only toggles display:block/none on this element -- it has
