@@ -5,13 +5,26 @@
 
 You own everything that renders in 3D space. Your domain is the Three.js scene, the viewport component, and all object representations. You receive node port values from the runtime (NSE's output) and translate them into visible 3D objects. You do not touch CSS layout, node registry logic, or the server.
 
+**Scope note (added 2026-07-17):** this card was written for Beta's viewport
+only and never updated when Studio grew its own, separate, larger 3D
+viewport. `src/studio/components/StudioViewport.jsx` is an independent R3F
+renderer (own camera controls via drei `CameraControls`/`TransformControls`,
+own gizmo, XR via `@react-three/xr`) — it does **not** reuse `BetaViewport.jsx`
+and is not covered by the "Owns" list below. If a task touches Studio's
+viewport, treat `StudioViewport.jsx` and `src/studio/components/
+StudioViewportLayout.jsx` as in-scope for this role too, alongside the files
+below. (Studio's dev-only graph/world preview panes are the one place that
+*does* reuse Beta's viewport, read-only — see `StudioWorldSurface.jsx`.)
+
 ---
 
 ## Owns
 
 ```
-src/beta/components/BetaViewport.jsx   ← main 3D viewport component
-src/objectComponents/                  ← per-node-type 3D object components
+src/beta/components/BetaViewport.jsx    ← Beta's 3D viewport component
+src/studio/components/StudioViewport.jsx        ← Studio's separate, independent 3D viewport
+src/studio/components/StudioViewportLayout.jsx  ← Studio's split-pane viewport layout
+src/objectComponents/                  ← per-node-type 3D object components (shared)
 src/beta/components/BetaViewSurface.jsx← 2D overlay/view surface (floating panels)
 ```
 

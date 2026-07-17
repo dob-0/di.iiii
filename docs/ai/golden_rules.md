@@ -54,7 +54,7 @@ PROGRESS.md line counts go stale between sessions. Read the file, run `wc -l`, c
 npm run lint
 npm run test
 ```
-Never claim a task is done without these passing. The pre-session baseline is: 0 lint errors, 219 tests passing. If either degrades, fix it before stopping.
+Never claim a task is done without these passing. The baseline is always "0 lint errors, current `npm run test` count all green" — run it fresh rather than trusting a number written here; a pinned count (this doc has done it before — "219 tests," and separately "221"/"16" in the 2026-07-07 audit) always goes stale within a few sessions. If either degrades, fix it before stopping.
 
 ### Coding is not done — test as a human would, in a real browser
 

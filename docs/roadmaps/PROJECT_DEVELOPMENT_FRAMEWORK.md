@@ -117,24 +117,26 @@ This order matches the repo audit and gives the best leverage.
 2. decompose the biggest frontend orchestration files by domain
 3. reduce public bundle weight and add route-level lazy loading where it matters
 4. keep cleaning route ownership and operator/admin boundaries
-5. move persistence toward a database plus object storage model when the current filesystem approach starts blocking growth
+5. ~~move persistence toward a database~~ — **done**: SQLite (`node:sqlite`) has been live for space/project metadata and the op-log since April 2026. Document *content* (JSON) and asset blobs are still filesystem-based under a `DATA_ROOT` volume — moving those to object storage remains open if/when that specifically starts blocking growth, but "add a database" is no longer the open item
 
 ## Recommended Next Milestone
 
 If the goal is to improve development speed and optimization leverage right now, start with a foundation pass that combines architecture cleanup and performance wins:
 
-1. split `src/App.jsx` and `src/components/PreferencesPage.jsx` by domain responsibility
+1. ~~split `src/App.jsx` and `src/components/PreferencesPage.jsx` by domain responsibility~~ — **done** (verified 2026-07-17: `App.jsx` is 56 lines, `PreferencesPage.jsx` 565 — both already split down from the sizes this milestone was written against)
 2. add route-level lazy loading for `Studio`, `Beta`, and heavy operator-only surfaces
 3. keep shared project behavior moving into `src/project/` instead of editor-specific shells
 4. define the next auth hardening slice in `serverXR` so security work advances in parallel with frontend cleanup
 
 ## Hotspots To Watch
 
-These are known pressure points where work should stay intentional:
+These are known pressure points where work should stay intentional. `src/App.jsx`
+and `src/components/PreferencesPage.jsx` are removed from this list as of
+2026-07-17 — both already split down to 56 and 565 lines respectively;
+re-add them only if they grow back into a real problem.
 
-- `src/App.jsx`
-- `src/components/PreferencesPage.jsx`
-- `src/studio/components/StudioShell.jsx`
+- `src/studio/components/StudioShell.jsx` (643 lines as of 2026-07-17 — smaller
+  than when this list was written, but still the largest Studio shell file)
 - `src/hooks/useAssetPipeline.js`
 - `serverXR/src/index.js`
 - `serverXR/src/routes/spaceRoutes.js`

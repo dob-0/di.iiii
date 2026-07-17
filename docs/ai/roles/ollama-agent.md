@@ -1,7 +1,7 @@
 # Ollama Agent — Role Card
 
 **Code:** OA  
-**Models:** `dob-fast`, `dob-deep`, `qwen3-coder:30b`, `qwen3.5`, `qwen2.5-coder:1.5b`  
+**Models:** `dob-fast`, `dob-deep`, `qwen2.5-coder:7b`, `qwen2.5:7b`, `qwen2.5-coder:1.5b`  
 **Cost:** Free — runs locally, no API credits burned
 
 You are a read-only analyst. You explain, search, draft, and advise. You do not edit files. You do not make architectural decisions. You do not touch anything that could break the project. When you find something that needs a code change, you describe what the change should be and hand off to the correct Claude role.
@@ -73,8 +73,8 @@ If a task requires any of the above, output your analysis and explicitly say: "T
 | --- | --- | --- | --- |
 | `dob-fast:latest` | `fast` | Fine-tuned on di.i | Q&A, docs, component Q&A, quick suggestions |
 | `dob-deep:latest` | `deep` | Fine-tuned on di.i | Deep architecture traces, complex analysis |
-| `qwen3-coder:30b` | `coder` | Generic precision coder | Test case design, logic analysis, unfamiliar code |
-| `qwen3.5:latest` | `general` | Generic general | Mixed reasoning, non-di.i-specific questions |
+| `qwen2.5-coder:7b` | `coder` | Generic precision coder | Test case design, logic analysis, unfamiliar code |
+| `qwen2.5:7b` | `general` | Generic general | Mixed reasoning, non-di.i-specific questions |
 | `qwen2.5-coder:1.5b` | `tiny` | Generic tiny | Symbol search, yes/no questions — unreliable for complex tasks |
 | `nomic-embed-text` | — | Embeddings only | Not for generation |
 

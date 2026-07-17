@@ -63,13 +63,24 @@ Ops are append-only. New op types must be expressible as commutative inserts —
 
 ### Connection: `serverXR/src/db.js`
 
+**Corrected 2026-07-17** (this section previously described a `better-sqlite3`
+API, which is wrong — checked directly against `db.js`):
+
 ```js
-const db = new Database(DB_PATH);
-db.pragma('journal_mode = WAL');   // WAL for concurrent readers
-db.pragma('foreign_keys = ON');
+const { DatabaseSync } = require('node:sqlite')  // not better-sqlite3
+const db = new DatabaseSync(dbPath)
+// addCompatLayer(db) patches in a .pragma()/.transaction() shim so the
+// rest of the codebase can use the better-sqlite3-shaped API it was
+// written against, without the actual better-sqlite3 dependency.
+db.pragma('journal_mode = WAL')
+db.pragma('foreign_keys = ON')
 ```
 
-`DB_PATH` defaults to `{DATA_ROOT}/di.db`. Override with `DB_PATH` env var.
+`node:sqlite` was chosen deliberately (see `docs/ai/golden_rules.md`):
+`better-sqlite3` has no prebuilt binary for this Node version / no C++
+toolchain on the retired cPanel host, and `node-sqlite3-wasm` OOMs under
+CloudLinux LVE memory caps. `DB_PATH` defaults to `{DATA_ROOT}/di.db`.
+Override with the `DB_PATH` env var.
 
 ### Prepared Statement Pattern
 

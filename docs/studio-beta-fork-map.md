@@ -109,7 +109,7 @@ So camera, controls, selection, and per-frame logic are duplicated — only the 
 These have **no counterpart** on the other side. This is why neither surface can simply replace the other.
 
 ### Beta-only — node-graph + floating-window editor
-- **Node-graph editing:** `utils/nodeGraphRuntime.js`, `NodePalette.jsx`, `BetaGraphSurface.jsx`, `OpCreateDialog.jsx`, `utils/nodeInspectorSections.js`, `utils/nodeSurfaceFilters.js`
+- **Node-graph editing:** `utils/nodeGraphRuntime.js`, `NodePalette.jsx`, `BetaGraphSurface.jsx`, `utils/nodeInspectorSections.js`, `utils/nodeSurfaceFilters.js` (`OpCreateDialog.jsx` was removed as dead code on 2026-07-07 — see `docs/ai/audit-2026-07-07.md` — corrected here 2026-07-17 after this doc briefly re-listed it as extant)
 - **Floating "desktop window" UI:** `DesktopWindow.jsx` + `ImagePanelWindow` / `TextPanelWindow` / `WorldPanelWindow` / `OutlinerPanelWindow`
 - **Onboarding/workflow:** `utils/surfaceWorkflow.js`, `utils/betaGuide.js`, `BetaHelpDialog.jsx`
 - **Misc:** `BlankNodeWorkspaceApp.jsx`, `utils/localWorkspaceStorage.js`, `utils/deviceDetection.js`

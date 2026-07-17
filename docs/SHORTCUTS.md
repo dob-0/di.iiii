@@ -66,7 +66,14 @@ With nothing selected, `G`/`R`/`S` just set the drag-handle gizmo mode.
 | `Shift+A` | Auto-tile open panels |
 | `Shift+R` | Reset panel positions |
 
-## Main app editor (`/<space>`)
+## V1 legacy editor (`/<space>`, `src/App.jsx`)
+
+**This is the V1/compatibility lane, not Studio or Beta** (confirmed 2026-07-17
+by tracing `useEditorShortcuts.js` → `useAppEditorActions.js` →
+`useAppEditorInteractionState.js` → `useAppState.js` → `App.jsx`, which
+`README.md`/the fork-map doc both describe as the legacy editor shell). Listed
+here for completeness since it's still reachable, not because it's an
+actively-developed surface.
 
 Handled in [`src/hooks/useEditorShortcuts.js`](../src/hooks/useEditorShortcuts.js).
 

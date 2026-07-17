@@ -40,12 +40,17 @@ The op-log format is the most important contract in the codebase. It must remain
 
 Before adding any new op type, answer: can this op be applied in any order relative to other ops of the same type and still converge? If no, the op design is wrong.
 
-### Asset IDs Move Toward Content-Addressing
+### Asset IDs Are Content-Addressed (shipped)
 
-Current state: `crypto.randomUUID()` for new assets.  
-Direction: SHA-256 of file content — IPFS-compatible.
+**Corrected 2026-07-17** — this section previously said content-addressing
+was a future direction with `crypto.randomUUID()` still current. Checked
+directly: SHA-256-shaped asset IDs are already enforced server-side
+(`spaceRoutes.js`/`projectRoutes.js` hash-verify uploaded bytes against the
+claimed id, 400 on mismatch). Legacy UUID-style ids from before this change
+still exist and stay project-local/mutable — new assets get a real content
+hash.
 
-Do not introduce new ID schemes that are not content-addressable. Any new asset reference schema must be compatible with SHA-256 content hashes as a future drop-in.
+Do not introduce new ID schemes that are not content-addressable.
 
 ---
 

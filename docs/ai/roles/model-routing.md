@@ -31,8 +31,8 @@ this table.
 "What does X do?" / "Where is Y defined?"          → Ollama dob-fast or qwen2.5-coder:1.5b
 "Write PROGRESS.md session entry"                  → Ollama dob-fast
 "Add a golden rule"                                → Ollama dob-fast
-"Explain why this bug happened"                    → Ollama dob-deep or qwen3-coder:30b
-"Write tests for this utility function"            → Ollama qwen3-coder:30b or Haiku
+"Explain why this bug happened"                    → Ollama dob-deep or qwen2.5-coder:7b
+"Write tests for this utility function"            → Ollama qwen2.5-coder:7b or Haiku
 "Fix a lint warning in one file"                   → Haiku
 "Add a small UI tweak (color, spacing)"            → Haiku
 "Fix a layout bug (measured heights, insets)"      → Sonnet — layout precision required

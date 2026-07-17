@@ -1,4 +1,14 @@
-# Project Audit And Growth Plan
+# Project Audit And Growth Plan (Archived — 2026-04-17 snapshot)
+
+> **Historical.** Every line-count, file-size, and file-list in this doc is a
+> snapshot from 2026-04-17 and has since drifted — e.g. `App.jsx`,
+> `PreferencesPage.jsx`, and `StudioShell.jsx` have all been split down
+> significantly since (see `docs/ai/golden_rules.md`'s "File splitting" entry
+> and `docs/ai/audit-2026-07-17.md`). The client-side `VITE_API_TOKEN` bearer-
+> token finding below has also since been fixed (auth now uses http-only
+> session cookies — see `serverXR/README.md`). Treat this doc as "what the
+> project looked like then," not current state; use `docs/ai/golden_rules.md`
+> and `CURRENT.md` for what's true now.
 
 Audit date: `2026-04-17`
 

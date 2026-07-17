@@ -67,7 +67,7 @@ If a task requires touching any of these files, stop, identify the correct role,
 
 ### Visual Language Rules
 
-- **Corners:** square — `border-radius: 0` everywhere. Never add rounding.
+- **Corners:** small radii, not square — checked directly against `src/studio/styles/studio.css` (2026-07-17 audit): panels/buttons use a real scale (5px/6px/7px/3px, `50%` for circular controls), not `border-radius: 0`. Follow `docs/ai/ui-system.md`'s documented radius scale for the exact value per component family; this doc previously claimed "square everywhere," which was wrong.
 - **Borders:** `1px solid var(--di-cyan-border)` at rest, `var(--di-cyan)` on hover/selected.
 - **Backgrounds:** `#000` or `#0a0a0a` for cards. No grays, no gradients.
 - **Typography:** monospace for labels, codes, identifiers (`'JetBrains Mono', 'Fira Code', monospace`). Sans-serif only for prose. Letter-spacing `0.08em` to `0.18em` for labels. Lowercase preferred.
@@ -171,10 +171,6 @@ Both legacy entities AND Beta nodes count. Do not revert to checking only `entit
 
 The `view.image` node's asset picker should only show `type === 'image'` assets. The filter lives in `nodeInspectorSections.js` (NSE territory) — do not duplicate it in CSS or render logic.
 
-### OpCreateDialog stability
-
-The create dialog uses a memoized `definitions` list from the node registry. Do not replace the memoized source with a live call — this causes `Maximum update depth exceeded` during renders.
-
 ---
 
 ## CSS Files — What Lives Where
@@ -200,7 +196,7 @@ Add new Beta-specific rules to `beta.css`. Add new shared rules to the appropria
 - `npm run lint` passes with 0 warnings
 - `npm run test` passes (no new failures)
 - No hardcoded pixel values for measurements that depend on runtime layout
-- Visual identity preserved: black background, cyan accent only, square corners, monospace labels
+- Visual identity preserved: black background, cyan accent only, radii matching `docs/ai/ui-system.md`'s scale, monospace labels
 - No `position: relative` on surface containers
 - Inspector top set via `style` prop, not CSS override
 - Workflow strip height passed down as prop, not re-measured in child components

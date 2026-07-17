@@ -63,7 +63,7 @@ Do this before the feature leaves dev-only.
 
 ## What works
 
-- Studio (five windows + phone layout + visual help), Beta, WCC, viewer
+- Studio (six desktop panels — Create/Scene/World/Share/Code/Projects — five on the mobile nav, + phone layout + visual help), Beta, WCC, viewer
 - Auth (session-cookie, roles, OAuth-first, CSRF-protected) + open-space/sandbox grants
 - Production + staging both live on VPS, deploy via `git push origin main`/`dev`
 - Nightly VPS backups + validated restore path
