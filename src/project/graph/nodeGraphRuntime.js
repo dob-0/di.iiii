@@ -28,11 +28,31 @@ const mixValues = (a, b, t) => {
     return t < 0.5 ? (a ?? b) : (b ?? a)
 }
 
-export const createNodeGraphContext = (document = {}) => ({
-    nodesById: new Map((document.nodes || []).map((node) => [node.id, node])),
-    edges: document.edges || [],
-    outputCache: new Map()
-})
+// Indexes edges by their target (toNodeId:toPort) once per pass, so
+// evaluateNodeInput's per-port lookup is an O(1) Map get instead of an O(E)
+// linear scan of every edge in the document -- this scales with graph size
+// and compounds with the per-node-per-port call pattern (2026-07-17 perf
+// audit; edges.find() is still exported/kept as a fallback for any caller
+// constructing a context by hand without going through this function).
+const buildEdgesByTarget = (edges) => {
+    const map = new Map()
+    for (const edge of edges) {
+        if (!edge) continue
+        const key = `${edge.toNodeId}:${edge.toPort}`
+        if (!map.has(key)) map.set(key, edge)
+    }
+    return map
+}
+
+export const createNodeGraphContext = (document = {}) => {
+    const edges = document.edges || []
+    return {
+        nodesById: new Map((document.nodes || []).map((node) => [node.id, node])),
+        edges,
+        edgesByTarget: buildEdgesByTarget(edges),
+        outputCache: new Map()
+    }
+}
 
 const getNodeInputDefault = (node, portId) => {
     const portDef = getNodeInputs(node).find((port) => port.id === portId)
@@ -141,7 +161,9 @@ export const evaluateNodeInput = (node, portId, context, stack = new Set()) => {
     const key = `${node.id}:in:${portId}`
     if (stack.has(key)) return node.values?.[portId] ?? getNodeInputDefault(node, portId)
 
-    const edge = context?.edges?.find((candidate) => candidate.toNodeId === node.id && candidate.toPort === portId)
+    const edge = context?.edgesByTarget
+        ? context.edgesByTarget.get(`${node.id}:${portId}`)
+        : context?.edges?.find((candidate) => candidate.toNodeId === node.id && candidate.toPort === portId)
     if (edge) {
         const source = context?.nodesById?.get(edge.fromNodeId)
         if (source) {

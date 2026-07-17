@@ -8,6 +8,36 @@ import {
 } from './nodeGraphRuntime.js'
 
 describe('nodeGraphRuntime', () => {
+    // Regression test for the 2026-07-17 perf audit: evaluateNodeInput did a
+    // linear edges.find() scan per input port, O(E) per lookup. createNode
+    // GraphContext now builds an edgesByTarget index once per pass so the
+    // lookup is an O(1) Map get instead.
+    it('createNodeGraphContext builds an edgesByTarget index, and evaluateNodeInput uses it', () => {
+        const color = createNode('value.color', { id: 'color-1', values: { value: '#00ff00' } })
+        const cube = createNode('geom.cube', { id: 'cube-1' })
+        const edge = createEdge('color-1', 'out', 'cube-1', 'color')
+        const context = createNodeGraphContext({ nodes: [color, cube], edges: [edge] })
+
+        expect(context.edgesByTarget).toBeInstanceOf(Map)
+        expect(context.edgesByTarget.get('cube-1:color')).toBe(edge)
+
+        const findSpy = vi.spyOn(context.edges, 'find')
+        expect(evaluateNodeInput(cube, 'color', context)).toBe('#00ff00')
+        expect(findSpy).not.toHaveBeenCalled()
+    })
+
+    it('falls back to a linear edge scan for a hand-built context with no edgesByTarget', () => {
+        const color = createNode('value.color', { id: 'color-1', values: { value: '#00ff00' } })
+        const cube = createNode('geom.cube', { id: 'cube-1' })
+        const edge = createEdge('color-1', 'out', 'cube-1', 'color')
+        const handBuiltContext = {
+            nodesById: new Map([['color-1', color], ['cube-1', cube]]),
+            edges: [edge]
+        }
+
+        expect(evaluateNodeInput(cube, 'color', handBuiltContext)).toBe('#00ff00')
+    })
+
     it('resolves source outputs into render-node inputs', () => {
         const color = createNode('value.color', { id: 'color-1', values: { value: '#00ff00' } })
         const cube = createNode('geom.cube', { id: 'cube-1' })

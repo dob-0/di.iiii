@@ -460,7 +460,7 @@ function AboutProject({ lang = 'en' }) {
                             onClick={() => setProcessColor(true)}
                             aria-label={`Reveal process image ${index + 1} in color`}
                         >
-                            <img src={image.src} alt={image.alt} />
+                            <img src={image.src} alt={image.alt} loading="lazy" />
                         </button>
                     ))}
                 </div>
@@ -491,6 +491,7 @@ function SupportedBy({ lang = 'en', inAbout = false }) {
                         src={logo.src}
                         alt={logo.alt}
                         className="wcc-supported-by__logo"
+                        loading="lazy"
                         style={inAbout && i === supportedByLogos.length - 1 ? { marginLeft: '-8px' } : undefined}
                     />
                 ))}

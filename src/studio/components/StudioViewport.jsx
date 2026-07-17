@@ -129,8 +129,20 @@ function SelectableEntity({ entity, assetMap, selected, isPrimary, editMode, giz
         }
     }, [isPrimary, isVisible, scene, selected])
 
-    useFrame(() => {
+    // setFromObject does a full subtree traverse + bbox recompute -- only
+    // worth paying every frame while the object is actually moving (an
+    // active drag/gizmo transform); otherwise the position-sync effect
+    // above already re-renders on every real transform change, so a single
+    // sync there keeps the box correct without a per-frame cost for a
+    // selected-but-static entity (2026-07-17 perf audit).
+    useEffect(() => {
         if (highlightRef.current && groupRef.current) {
+            highlightRef.current.setFromObject(groupRef.current)
+        }
+    }, [overrideTransform, entity.components?.transform, selected])
+
+    useFrame(() => {
+        if (isDragging.current && highlightRef.current && groupRef.current) {
             highlightRef.current.setFromObject(groupRef.current)
         }
     })
