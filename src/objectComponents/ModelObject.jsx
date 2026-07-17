@@ -16,6 +16,7 @@ import { deleteAsset, getAssetBlob } from '../storage/assetStore.js'
 import { getAssetSourceUrl, streamRemoteAsset } from '../services/assetSources.js'
 import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
 import { asColor } from '../utils/colorValue.js'
+import { isContentAddressedAssetUrl } from '../utils/contentAddressedAsset.js'
 
 // Compressed GLBs (Draco / Meshopt — the default export of most DCC tools and
 // asset stores) need their decoders registered or the load fails silently to
@@ -136,7 +137,15 @@ export default function ModelObject({
                 return source.blob.arrayBuffer()
             }
             if (source.url) {
-                const response = await fetch(source.url, { cache: 'no-store' })
+                // Content-addressed asset ids (sha256 of the actual bytes)
+                // can never change without changing the id -- the server's
+                // own immutable Cache-Control is safe to trust there, so
+                // don't force-bypass the browser cache the way non-content-
+                // addressed (legacy, mutable) urls still must (2026-07-17
+                // perf audit -- models are often the largest asset in a
+                // scene, and previously re-downloaded on every mount).
+                const cache = isContentAddressedAssetUrl(source.url) ? 'default' : 'no-store'
+                const response = await fetch(source.url, { cache })
                 if (!response.ok) throw new Error(`Failed to fetch ${source.url}`)
                 const contentType = response.headers.get('content-type') || ''
                 if (isHtmlLikeMimeType(contentType)) {
@@ -153,7 +162,8 @@ export default function ModelObject({
                 return source.blob.text()
             }
             if (source.url) {
-                const response = await fetch(source.url, { cache: 'no-store' })
+                const cache = isContentAddressedAssetUrl(source.url) ? 'default' : 'no-store'
+                const response = await fetch(source.url, { cache })
                 if (!response.ok) throw new Error(`Failed to fetch ${source.url}`)
                 const contentType = response.headers.get('content-type') || ''
                 if (isHtmlLikeMimeType(contentType)) {

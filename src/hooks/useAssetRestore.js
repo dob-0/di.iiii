@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { saveAssetBlob, dataUrlToBlob, blobToDataUrl, hasAssetStoreQuotaExceeded, resetAssetStoreQuotaExceeded } from '../storage/assetStore.js'
 import { registerAssetSources, clearAssetSources, setAssetSource } from '../services/assetSources.js'
+import { isContentAddressedAssetUrl } from '../utils/contentAddressedAsset.js'
 
 export function useAssetRestore({
     defaultSceneRemoteBase = '',
@@ -78,7 +79,12 @@ export function useAssetRestore({
                     blob = await blobLoader(item)
                 } else if (item?.url) {
                     try {
-                        const response = await fetch(item.url, { cache: 'no-store' })
+                        // Content-addressed (sha256) ids can never change
+                        // without changing the id -- safe to trust the
+                        // server's own immutable Cache-Control there instead
+                        // of force-bypassing it (2026-07-17 perf audit).
+                        const cache = isContentAddressedAssetUrl(item.id) ? 'default' : 'no-store'
+                        const response = await fetch(item.url, { cache })
                         if (response.ok) {
                             blob = await response.blob()
                         } else {
