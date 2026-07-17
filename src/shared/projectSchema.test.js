@@ -262,6 +262,21 @@ describe('projectSchema', () => {
         expect(afterSingleton.nodes[0].id).toBe('light-a')
     })
 
+    // Regression test for the 2026-07-17 audit: universe.node0 is registered
+    // (nodeRegistry.js) with singleton:true, but the schema's dedup sets
+    // previously omitted it from both SINGLETON_TYPE_IDS and
+    // SCOPE_SINGLETON_TYPE_IDS -- so a second root node could be created with
+    // no guard at all, unlike every other singleton type.
+    it('enforces universe.node0 as a document-wide singleton', () => {
+        const base = normalizeProjectDocument({})
+        const afterSecondRoot = applyProjectOps(base, [
+            { type: 'createNode', payload: { node: { id: 'node0-a', typeId: 'universe.node0' } } },
+            { type: 'createNode', payload: { node: { id: 'node0-b', typeId: 'universe.node0' } } }
+        ])
+        expect(afterSecondRoot.nodes.filter((n) => n.typeId === 'universe.node0')).toHaveLength(1)
+        expect(afterSecondRoot.nodes.find((n) => n.typeId === 'universe.node0').id).toBe('node0-a')
+    })
+
     it('scopes world.light/world.background/world.grid/universe.world singletons per node-scope (parentId), not document-wide', () => {
         const base = normalizeProjectDocument({})
         const afterSameScope = applyProjectOps(base, [

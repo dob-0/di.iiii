@@ -26,7 +26,7 @@ export const WINDOW_IDS = ['viewport', 'assets', 'inspector', 'outliner', 'activ
 const ENTITY_TYPE_SET = new Set(ENTITY_TYPES)
 const LEGACY_ROOT_NODE_IDS = new Set(['root-node', 'world-root', 'view-root'])
 const LEGACY_ROOT_TYPE_IDS = new Set(['core.project', 'world.root', 'view.root'])
-const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar'])
+const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar', 'universe.node0'])
 // These four are singletons per node-scope (parentId), not document-wide — a project
 // can have multiple worlds (one per node-in-node scope), but only one of each per scope.
 const SCOPE_SINGLETON_TYPE_IDS = new Set(['world.light', 'world.background', 'world.grid', 'universe.world'])
