@@ -60,22 +60,41 @@ function registerSpaceRoutes(router, {
   writeOpsHistory,
   onDeleteSpace = null
 }) {
-  const filterAvailableSceneAssets = async (spaceId, scene) => {
+  // GET /scene is unauthenticated (PUBLIC_CORS_ROUTES) and hit on every
+  // public-space page view -- filterAvailableSceneAssets used to do one
+  // fs.access syscall per asset on EVERY such request, uncached. The asset
+  // set only actually changes when the scene does, so cache the resolved
+  // "available asset ids" per (spaceId, sceneVersion) -- a cheap, correct
+  // cache key since sceneVersion already bumps on every scene write
+  // (2026-07-17 perf audit). Bounded FIFO so long-running processes with
+  // many spaces/versions don't grow this unboundedly.
+  const AVAILABLE_ASSETS_CACHE_MAX = 500
+  const availableAssetsCache = new Map()
+  const filterAvailableSceneAssets = async (spaceId, scene, sceneVersion = 0) => {
     if (!scene || typeof scene !== 'object' || !Array.isArray(scene.assets) || !scene.assets.length) {
       return scene
     }
-    const { assetsDir } = getSpacePaths(spaceId)
-    const checked = await Promise.all(scene.assets.map(async (asset) => {
-      if (!asset?.id) return null
-      try {
-        await fsp.access(path.join(assetsDir, asset.id))
-        return asset
-      } catch {
-        // Skip manifest entries whose asset file is missing on disk.
-        return null
+    const cacheKey = `${spaceId}:${sceneVersion}`
+    let availableIds = availableAssetsCache.get(cacheKey)
+    if (!availableIds) {
+      const { assetsDir } = getSpacePaths(spaceId)
+      const checked = await Promise.all(scene.assets.map(async (asset) => {
+        if (!asset?.id) return null
+        try {
+          await fsp.access(path.join(assetsDir, asset.id))
+          return asset.id
+        } catch {
+          // Skip manifest entries whose asset file is missing on disk.
+          return null
+        }
+      }))
+      availableIds = new Set(checked.filter(Boolean))
+      if (availableAssetsCache.size >= AVAILABLE_ASSETS_CACHE_MAX) {
+        availableAssetsCache.delete(availableAssetsCache.keys().next().value)
       }
-    }))
-    const availableAssets = checked.filter(Boolean)
+      availableAssetsCache.set(cacheKey, availableIds)
+    }
+    const availableAssets = scene.assets.filter((asset) => asset?.id && availableIds.has(asset.id))
     if (availableAssets.length === scene.assets.length) {
       return scene
     }
@@ -331,7 +350,7 @@ function registerSpaceRoutes(router, {
       const assetBaseUrl = `${req.baseUrl || ''}/api/spaces/${spaceId}/assets`
       const meta = await loadSpaceMeta(spaceId)
       const hydratedScene = hydrateSceneAssetManifest(scene, assetBaseUrl)
-      const filteredScene = await filterAvailableSceneAssets(spaceId, hydratedScene)
+      const filteredScene = await filterAvailableSceneAssets(spaceId, hydratedScene, meta?.sceneVersion || 0)
       res.json({
         scene: filteredScene,
         version: meta?.sceneVersion || 0
