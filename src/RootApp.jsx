@@ -2,7 +2,6 @@ import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom'
 import { setAppNavigate } from './utils/appNavigate.js'
 import { getBetaLocationState, isBetaLocation } from './beta/utils/betaRouting.js'
-import AuthGate from './components/AuthGate.jsx'
 import AuthReturnNotice from './components/AuthReturnNotice.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
@@ -15,9 +14,17 @@ const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 const WccExperience = lazy(() => import('./wcc/WccExperience.jsx'))
 const WikiPage = lazy(() => import('./wiki/WikiPage.jsx'))
+// AuthGate pulls in MUI + AccountButton -- lazy so public routes (landing,
+// wiki, any public space) that never render a gate don't pay for MUI in
+// their eager bundle (2026-07-17 perf audit).
+const AuthGate = lazy(() => import('./components/AuthGate.jsx'))
 
 function ProtectedSurface({ children, requiredSpaceId = null, showAccountButton = true }) {
-    return <AuthGate requiredSpaceId={requiredSpaceId} showAccountButton={showAccountButton}>{children}</AuthGate>
+    return (
+        <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+            <AuthGate requiredSpaceId={requiredSpaceId} showAccountButton={showAccountButton}>{children}</AuthGate>
+        </Suspense>
+    )
 }
 
 function SpaceSurfaceRoute({ appState }) {

@@ -226,6 +226,16 @@ export default {
 
                     if (pkg === 'react' || pkg === 'react-dom') return 'react-vendor'
 
+                    // react-router-dom is imported at RootApp.jsx's top level (routing
+                    // has to exist before anything can render), so it's a genuine,
+                    // unavoidable eager dependency of the entry -- but left in the
+                    // generic 'vendor' bucket below, that forced MUI/emotion (only
+                    // needed once AuthGate actually renders) to ride along eagerly
+                    // too, since manualChunks merges everything mapped to the same
+                    // name into one chunk regardless of why each piece is reachable.
+                    // Its own chunk keeps the two decoupled (2026-07-17 perf audit).
+                    if (pkg === 'react-router-dom' || pkg === 'react-router' || pkg === '@remix-run/router') return 'router-vendor'
+
                     if (pkg === 'jszip' || pkg === 'idb-keyval') return 'utils-vendor'
 
                     // gsap is only ever imported by the lazy-loaded wcc route
