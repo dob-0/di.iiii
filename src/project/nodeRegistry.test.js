@@ -79,6 +79,16 @@ describe('NODE_TYPES', () => {
         expect(rootType.singleton).toBeFalsy()
     })
 
+    // Product decision 2026-07-17: universe.space carries a per-universe
+    // showChrome flag so one universe can be a normal authoring space (full
+    // topbar) and another a chromeless embed/kiosk view. Defaults to true —
+    // existing/new universes keep the full-chrome behavior unless someone
+    // explicitly turns it off.
+    it('universe.space defaults to showChrome: true', () => {
+        const node = createNode('universe.space')
+        expect(node.values.showChrome).toBe(true)
+    })
+
     it('node.null is the extensibility primitive', () => {
         const nullType = NODE_TYPES['node.null']
         expect(nullType.isNull).toBe(true)

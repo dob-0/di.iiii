@@ -226,6 +226,23 @@ export default function BetaEditor({
         [authoredNodes, currentScopeId]
     )
     const hasWorldNode = Boolean(worldNode)
+    // Per-universe chrome control (product decision 2026-07-17): walk up from
+    // the current scope to the nearest ancestor universe.space node and read
+    // its showChrome value — lets one universe be a normal authoring space
+    // (full topbar) and another a chromeless embed/kiosk view. No ancestor
+    // universe.space anywhere in the stack (e.g. true document root, or
+    // inside a non-universe container with no universe ancestor) always
+    // shows chrome. Esc already pops the scope stack unconditionally
+    // (existing handler below), so chromeless scopes are never a dead end.
+    const chromeVisible = useMemo(() => {
+        for (let i = navStack.length - 1; i >= 1; i--) {
+            const scopeNode = authoredNodes.find((n) => n.id === navStack[i])
+            if (scopeNode?.typeId === 'universe.space') {
+                return scopeNode.values?.showChrome !== false
+            }
+        }
+        return true
+    }, [navStack, authoredNodes])
     const topbarLocationText = useMemo(() => {
         if (!hasGraphNodes && !hasWorldNode) return 'Double-click to place your first node'
         return workflow.title
@@ -719,12 +736,13 @@ export default function BetaEditor({
     }
 
     const workspaceTitle = isLocalWorkspace ? 'Blank White Workspace' : (document.projectMeta?.title || 'Beta Project')
-    const graphTopInset = workspaceTop
+    const graphTopInset = chromeVisible ? workspaceTop : 0
 
     return (
         <main className="beta-editor-shell">
-            <header className="beta-topbar is-seeded" ref={topbarRef}>
-                <>
+            <header className={`beta-topbar${chromeVisible ? ' is-seeded' : ''}`} ref={topbarRef}>
+                {chromeVisible && (
+                    <>
                         <div className="beta-topbar-left">
                             <button type="button" className="beta-topbar-back" onClick={() => {
                                 navigateToBetaPath(buildBetaProjectsPath(resolvedSpaceId))
@@ -838,7 +856,8 @@ export default function BetaEditor({
                                 )}
                             </div>
                         </div>
-                </>
+                    </>
+                )}
             </header>
 
             {state.loading ? <div className="beta-overlay-message">Loading project…</div> : null}

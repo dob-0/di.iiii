@@ -12,6 +12,11 @@ vi.mock('./BetaGraphSurface.jsx', () => ({
                     delete-via-graph-canvas
                 </button>
             )}
+            {props.nodes?.[0] && (
+                <button type="button" onClick={() => props.onEnterNode?.(props.nodes[0].id)}>
+                    enter-first-node
+                </button>
+            )}
         </div>
     )
 }))
@@ -334,6 +339,49 @@ describe('BetaEditor live-world toggle', () => {
         render(<BetaEditor localStorageKey={LIVE_STORAGE_KEY} />)
 
         expect(screen.getByRole('button', { name: /^Live output for this scope/i })).toBeTruthy()
+    })
+})
+
+// Product decision 2026-07-17: universe.space's showChrome value lets one
+// universe be a normal authoring space (full topbar) and another a
+// chromeless embed/kiosk view, without a global toggle.
+describe('BetaEditor per-universe chrome visibility', () => {
+    const CHROME_STORAGE_KEY = 'test-chrome-visibility'
+
+    afterEach(() => {
+        window.localStorage.removeItem(CHROME_STORAGE_KEY)
+    })
+
+    const makeUniverse = (id, showChrome) => ({
+        id,
+        typeId: 'universe.space',
+        label: 'Universe',
+        values: { title: 'Universe', showChrome }
+    })
+
+    it('shows the full topbar at the true document root', () => {
+        window.localStorage.setItem(CHROME_STORAGE_KEY, makeWorkspaceDoc([makeUniverse('u1', false)]))
+        render(<BetaEditor localStorageKey={CHROME_STORAGE_KEY} />)
+
+        expect(screen.getByRole('button', { name: /Help/i })).toBeTruthy()
+    })
+
+    it('hides the full topbar once inside a universe with showChrome: false', () => {
+        window.localStorage.setItem(CHROME_STORAGE_KEY, makeWorkspaceDoc([makeUniverse('u1', false)]))
+        render(<BetaEditor localStorageKey={CHROME_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByText('enter-first-node'))
+
+        expect(screen.queryByRole('button', { name: /Help/i })).toBeNull()
+    })
+
+    it('keeps the full topbar inside a universe with showChrome: true', () => {
+        window.localStorage.setItem(CHROME_STORAGE_KEY, makeWorkspaceDoc([makeUniverse('u1', true)]))
+        render(<BetaEditor localStorageKey={CHROME_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByText('enter-first-node'))
+
+        expect(screen.getByRole('button', { name: /Help/i })).toBeTruthy()
     })
 })
 
