@@ -1195,7 +1195,7 @@ registerUserRoutes(router, {
 router.use('/api/spaces/:spaceId/assets', (req, res, next) =>
   req.method === 'POST' ? uploadLimiter(req, res, next) : next())
 
-registerSpaceRoutes(router, {
+const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   appendOpsHistory,
   applySceneOps,
   blankScene: BLANK_SCENE,
@@ -1213,6 +1213,7 @@ registerSpaceRoutes(router, {
   findUserById,
   getLiveBucket,
   getPublicAuthState,
+  isAllowedUpload,
   getSandboxStats,
   getSpacePaths,
   hydrateSceneAssetManifest,
@@ -1504,10 +1505,9 @@ registerSyncRoutes(router, {
   config,
   getSpacePaths,
   readJson,
-  writeJson,
-  upsertSpaceMeta,
   normalizeSpaceId,
   ensureSpaceWritable,
+  replaceSceneAndBroadcast,
 })
 
 // Admin sweep for the hub's collapsed sandbox row: remove guest sandboxes the

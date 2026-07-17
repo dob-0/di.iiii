@@ -2,7 +2,7 @@ const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
-const googleDrive = require('../googleDrive')
+const defaultGoogleDrive = require('../googleDrive')
 const { getOwnSandboxSpaceId, isGuestSubject } = require('../authAccess')
 const driveAccount = require('../googleDriveAccount')
 const commonsStore = require('../commonsStore')
@@ -27,6 +27,8 @@ function registerSpaceRoutes(router, {
   findProjectById,
   getLiveBucket,
   getPublicAuthState = () => ({ spaces: null }),
+  isAllowedUpload = () => true,
+  googleDrive = defaultGoogleDrive,
   getSandboxStats = null,
   getSpacePaths,
   hydrateSceneAssetManifest,
@@ -619,6 +621,13 @@ function registerSpaceRoutes(router, {
       for (const item of items) {
         try {
           const file = await googleDrive.downloadFile(item, { apiKey, accessToken, maxBytes })
+          // Direct uploads go through multer's fileFilter (isAllowedUpload) —
+          // this path writes external bytes straight to disk and previously
+          // skipped that check entirely, trusting whatever MIME type Drive
+          // reported (audit 2026-07-17).
+          if (!isAllowedUpload({ mimetype: file.mimeType, originalname: file.name })) {
+            throw new Error('Unsupported asset type.')
+          }
           const assetId = crypto.createHash('sha256').update(file.buffer).digest('hex')
           const finalPath = path.join(assetsDir, assetId)
           const metaPath = path.join(assetsDir, `${assetId}.json`)
@@ -685,6 +694,9 @@ function registerSpaceRoutes(router, {
       for (const item of items) {
         try {
           const file = await googleDrive.downloadFile(item, { accessToken, maxBytes })
+          if (!isAllowedUpload({ mimetype: file.mimeType, originalname: file.name })) {
+            throw new Error('Unsupported asset type.')
+          }
           const assetId = crypto.createHash('sha256').update(file.buffer).digest('hex')
           await fsp.writeFile(path.join(assetsDir, assetId), file.buffer)
           const meta = {
@@ -1012,6 +1024,12 @@ function registerSpaceRoutes(router, {
       next(error)
     }
   })
+
+  // Exposed so other route modules (syncRoutes' pull, which also replaces a
+  // whole scene) go through the same locked, versioned, broadcast write path
+  // instead of hand-rolling their own version bump that can desync from the
+  // real op-log (see docs/ai/known-fixes.md, audit #2026-07-17).
+  return { replaceSceneAndBroadcast }
 }
 
 module.exports = {

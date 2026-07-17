@@ -1,5 +1,9 @@
+import os from 'node:os'
+import path from 'node:path'
+import fsp from 'node:fs/promises'
 import { describe, expect, it, vi } from 'vitest'
 import { registerSyncRoutes } from './syncRoutes.js'
+
 
 // registerSyncRoutes only needs the plain Express-style route handlers it
 // wires up — a fake router captures them without a real HTTP server.
@@ -21,16 +25,19 @@ const normalizeSpaceId = (value) => {
 }
 
 describe('registerSyncRoutes space id validation', () => {
-  const setup = ({ ensureSpaceWritable = vi.fn().mockResolvedValue({}), ...overrides } = {}) => {
+  const setup = ({
+    ensureSpaceWritable = vi.fn().mockResolvedValue({}),
+    replaceSceneAndBroadcast = vi.fn().mockResolvedValue({ newVersion: 1 }),
+    ...overrides
+  } = {}) => {
     const router = makeFakeRouter()
     registerSyncRoutes(router, {
       config: { liveSync: { url: '', token: '' }, directories: { root: '/data/spaces' } },
       getSpacePaths: vi.fn(),
       readJson: vi.fn(),
-      writeJson: vi.fn(),
-      upsertSpaceMeta: vi.fn(),
       normalizeSpaceId,
       ensureSpaceWritable,
+      replaceSceneAndBroadcast,
       ...overrides
     })
     return router
@@ -67,16 +74,15 @@ describe('registerSyncRoutes space id validation', () => {
 // space explicitly marked read-only (allowEdits: false) could still be
 // overwritten via sync.
 describe('registerSyncRoutes read-only enforcement', () => {
-  const setup = (ensureSpaceWritable) => {
+  const setup = (ensureSpaceWritable, replaceSceneAndBroadcast = vi.fn().mockResolvedValue({ newVersion: 1 })) => {
     const router = makeFakeRouter()
     registerSyncRoutes(router, {
       config: { liveSync: { url: 'https://live.example', token: '' }, directories: { root: '/data/spaces' } },
       getSpacePaths: vi.fn(() => ({ spaceDir: '/tmp/space', scenePath: '/tmp/space/scene.json', assetsDir: '/tmp/space/assets' })),
       readJson: vi.fn(),
-      writeJson: vi.fn(),
-      upsertSpaceMeta: vi.fn(),
       normalizeSpaceId,
-      ensureSpaceWritable
+      ensureSpaceWritable,
+      replaceSceneAndBroadcast
     })
     return router
   }
@@ -114,5 +120,53 @@ describe('registerSyncRoutes read-only enforcement', () => {
     // proving ensureSpaceWritable isn't what stopped it.
     expect(next).toHaveBeenCalled()
     expect(next.mock.calls[0][0]).not.toBe(undefined)
+  })
+})
+
+// Regression test for the 2026-07-17 audit: pull used to write scene.json
+// directly and bump sceneVersion from the REMOTE scene's own embedded
+// version field (`(scene.version ?? 0) + 1`), with no op-log entry and no
+// SSE broadcast -- connected clients silently stopped seeing pulled scenes
+// live and could hit spurious version mismatches afterward. Pull must now
+// delegate the actual write to the same locked/versioned/broadcast helper
+// every other whole-scene replace uses.
+describe('registerSyncRoutes pull delegates the write to replaceSceneAndBroadcast', () => {
+  it('pulls the live scene and writes it through replaceSceneAndBroadcast, not a hand-rolled version bump', async () => {
+    const pulledScene = { version: 999, objects: [{ id: 'a' }], assets: [] }
+    const httpRequest = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => ({ scene: pulledScene }),
+      text: ''
+    })
+    const ensureSpaceWritable = vi.fn().mockResolvedValue({ allowEdits: true })
+    const replaceSceneAndBroadcast = vi.fn().mockResolvedValue({ newVersion: 7 })
+    const tmpRoot = path.join(os.tmpdir(), `syncRoutes-test-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+    const router = makeFakeRouter()
+    registerSyncRoutes(router, {
+      config: { liveSync: { url: 'https://live.example', token: '' }, directories: { root: path.join(tmpRoot, 'spaces') } },
+      getSpacePaths: vi.fn(() => ({ spaceDir: '/tmp/space', scenePath: '/tmp/space/scene.json', assetsDir: '/tmp/space/assets' })),
+      readJson: vi.fn(),
+      normalizeSpaceId,
+      ensureSpaceWritable,
+      replaceSceneAndBroadcast,
+      httpRequest
+    })
+    const [handler] = router.routes['post /api/sync/spaces/:spaceId/pull']
+
+    const req = { params: { spaceId: 'open-space' } }
+    const json = vi.fn()
+    const res = { status: vi.fn(() => ({ json })), json }
+    const next = vi.fn()
+    await handler(req, res, next)
+
+    expect(next).not.toHaveBeenCalled()
+    // The remote scene's own `version: 999` must never be used to compute
+    // the local version -- that's exactly the bug. replaceSceneAndBroadcast
+    // owns version bumping entirely from the local counter.
+    expect(replaceSceneAndBroadcast).toHaveBeenCalledWith('open-space', pulledScene)
+    expect(json).toHaveBeenCalledWith(expect.objectContaining({ ok: true, objects: 1, assets: 0 }))
+
+    await fsp.rm(tmpRoot, { recursive: true, force: true })
   })
 })

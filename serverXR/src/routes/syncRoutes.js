@@ -1,15 +1,15 @@
 const path = require('node:path')
 const fsp = require('node:fs/promises')
-const { httpRequest } = require('../httpClient')
+const { httpRequest: defaultHttpRequest } = require('../httpClient')
 
 function registerSyncRoutes(router, {
   config,
   getSpacePaths,
   readJson,
-  writeJson,
-  upsertSpaceMeta,
   normalizeSpaceId,
   ensureSpaceWritable,
+  replaceSceneAndBroadcast,
+  httpRequest = defaultHttpRequest,
 } = {}) {
   const { liveSync, directories } = config
   const repoRoot = path.resolve(directories.root, '..')
@@ -75,9 +75,9 @@ function registerSyncRoutes(router, {
       const spaceId = normalizeSpaceId(req.params.spaceId)
       if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
       if (!liveSync.url) return res.status(503).json({ error: 'LIVE_API_URL not configured on the server.' })
-      // Pull overwrites the local scene, same as every other space-mutating
-      // route (POST /ops, PUT /scene) — it must respect the read-only flag
-      // too, or a locked space can still be overwritten via sync.
+      // Checked upfront (before the live round trip) so a doomed request
+      // against a locked space fails fast instead of waiting on the network
+      // first; replaceSceneAndBroadcast below enforces it again regardless.
       await ensureSpaceWritable(spaceId)
 
       const response = await liveFetch(`/api/spaces/${spaceId}/scene`)
@@ -90,11 +90,16 @@ function registerSyncRoutes(router, {
         return res.status(502).json({ error: 'Live server returned an unexpected scene format.' })
       }
 
-      // Save to local server data dir
-      const { spaceDir, scenePath, assetsDir } = getSpacePaths(spaceId)
-      await fsp.mkdir(assetsDir, { recursive: true })
-      await writeJson(scenePath, scene)
-      await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: (scene.version ?? 0) + 1 })
+      // Go through the same locked, version-bumped, broadcast write path as
+      // every other whole-scene replace (PUT /scene, restore-snapshot).
+      // Previously this route wrote the file directly and bumped
+      // sceneVersion from the REMOTE scene's own embedded version instead of
+      // the local counter, with no op-log entry and no SSE broadcast --
+      // connected clients silently stopped seeing pulled scenes live and
+      // could hit spurious version mismatches afterward (audit 2026-07-17).
+      // replaceSceneAndBroadcast also enforces the read-only flag itself, so
+      // a locked space still can't be overwritten via sync.
+      await replaceSceneAndBroadcast(spaceId, scene)
 
       // Also save to repo-root spaces/ dir for git tracking
       const trackedPath = path.join(repoRoot, 'spaces', spaceId, 'scene.json')
