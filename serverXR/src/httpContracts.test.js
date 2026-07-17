@@ -1567,6 +1567,11 @@ describe('server write contracts', () => {
     // Regression test for audit finding #9: /api/sync/spaces/:spaceId had no
     // rate limiter at all, unlike the equivalent asset-upload route — pull/push
     // do real disk I/O plus an outbound HTTP call with nothing throttling it.
+    // Generous timeout (default is 5000ms): up to 31 sequential real HTTP
+    // round trips against a spawned server, each doing real disk I/O plus an
+    // outbound liveFetch attempt, has flaked on a loaded CI runner more than
+    // once (2026-07-17) -- this test now also gates real deploys (audit
+    // 2026-07-17's CI-gate fix), so flakiness here has real cost.
     it('throttles repeated sync status requests with 429 + Retry-After', async () => {
         const server = await startServer()
 
@@ -1584,7 +1589,7 @@ describe('server write contracts', () => {
 
         expect(sawTooMany).not.toBeNull()
         expect(Number(sawTooMany.headers.get('retry-after'))).toBeGreaterThan(0)
-    })
+    }, 20000)
 
     // undici (global fetch) instantiates a WASM HTTP parser that OOMs under
     // cPanel/LVE memory limits — every outbound HTTP call in serverXR must go
