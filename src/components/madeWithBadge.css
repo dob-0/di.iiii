@@ -1,34 +1,36 @@
 .made-with-di {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
-    border-radius: 999px;
-    background: rgba(0, 0, 0, 0.55);
-    color: var(--di-text-muted, rgba(255, 255, 255, 0.4));
+    gap: 5px;
+    padding: 2px 1px;
+    /* Solid color + mix-blend-mode:difference inverts against whatever sits
+       behind it, so one badge stays legibly minimal on a light brutalist
+       site and a dark one alike, instead of a fixed cyan pill that only
+       suited the platform's own dark theme. */
+    color: rgba(255, 255, 255, 0.85);
     font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
-    font-size: 0.7rem;
-    letter-spacing: 0.04em;
+    font-size: 0.65rem;
+    letter-spacing: 0.03em;
     text-decoration: none;
     white-space: nowrap;
-    transition: color 0.15s ease, border-color 0.15s ease;
+    mix-blend-mode: difference;
+    transition: opacity 0.15s ease;
+    opacity: 0.55;
 }
 
 .made-with-di:hover,
 .made-with-di:focus-visible {
-    color: var(--di-cyan, #4df9ff);
-    border-color: var(--di-cyan, #4df9ff);
+    opacity: 0.9;
 }
 
 .made-with-di-mark {
-    color: var(--di-cyan, #4df9ff);
+    opacity: 0.8;
 }
 
 .made-with-di--floating {
     position: absolute;
-    left: 1rem;
-    bottom: 1rem;
+    left: 0.75rem;
+    bottom: 0.6rem;
     z-index: 20;
 }
 
