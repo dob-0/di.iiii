@@ -725,20 +725,6 @@ describe('server write contracts', () => {
         expect(sharedState.type).toBe('guest')
         expect(sharedState.spaces[0]).toBe('shared-main')
         expect(sharedState.spaces[1]).toMatch(/^sandbox-/)
-
-        // Admin also points the landing page's "Enter Space" at this same
-        // space; the value round-trips and is readable without auth (the
-        // landing page itself is unauthenticated).
-        const landingPatch = await fetch(`${server.baseUrl}/api/config`, {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
-            body: JSON.stringify({ landingSpaceId: 'shared-main' })
-        })
-        expect(landingPatch.status).toBe(200)
-        await expect(landingPatch.json()).resolves.toMatchObject({ config: { landingSpaceId: 'shared-main' } })
-
-        const publicConfig = await fetch(`${server.baseUrl}/api/config`)
-        await expect(publicConfig.json()).resolves.toMatchObject({ config: { landingSpaceId: 'shared-main' } })
     })
 
     it('accounts reach their own persistent sandbox without cookie scope, and admins can purge stale guest sandboxes', async () => {

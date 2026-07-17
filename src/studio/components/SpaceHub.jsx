@@ -8,7 +8,6 @@ import {
     updateServerSpace,
     deleteServerSpace,
     getServerConfig,
-    patchServerConfig,
     purgeStaleSandboxes,
     uploadServerAsset,
     getServerSpaceAssetUrl,
@@ -321,16 +320,6 @@ export default function SpaceHub() {
         }
     }, [loadSpaces])
 
-    const handleSetMain = useCallback(async (space, e) => {
-        e.stopPropagation()
-        try {
-            await patchServerConfig({ defaultSpaceId: space.id })
-            setDefaultSpaceId(space.id)
-        } catch (err) {
-            alert(err.message || 'Could not set main space.')
-        }
-    }, [])
-
     const handleOpenLinker = useCallback(async (space, e) => {
         e.stopPropagation()
         if (linker?.spaceId === space.id) {
@@ -556,7 +545,6 @@ export default function SpaceHub() {
                         onDelete={handleDelete}
                         onTogglePublic={handleTogglePublic}
                         onCopyLink={handleCopyLiveLink}
-                        onSetMain={handleSetMain}
                         onLinkProject={handleLinkProject}
                         copiedLiveId={copiedLiveId}
                     />
@@ -664,11 +652,6 @@ export default function SpaceHub() {
                                             >
                                                 GitHub sync
                                             </button>
-                                            {isAdmin && !isMain && (
-                                                <button className="ssh-card-btn" onClick={e => handleSetMain(space, e)}>
-                                                    Set main
-                                                </button>
-                                            )}
                                             <button
                                                 className="ssh-card-btn ssh-card-btn--danger"
                                                 onClick={e => handleDelete(space, e)}

@@ -104,24 +104,27 @@ const CAPABILITIES = [
 
 export default function LandingPage() {
     const [entered, setEntered] = useState(false)
-    // Admin-configured via /admin ("Set as Enter Space") — when set, "Enter
-    // Space" opens that real, populated space instead of the decorative
-    // walkable void this page's own background renders.
-    const [landingSpaceId, setLandingSpaceId] = useState(null)
+    // The platform's "Main" space (set from /admin, or inline in Studio Hub's
+    // per-space "Main" badge) is the same space that already represents the
+    // platform elsewhere — reuse it here instead of a second, parallel
+    // landing-only setting. When set, "Enter Space" opens that real,
+    // populated space instead of the decorative walkable void this page's
+    // own background renders.
+    const [mainSpaceId, setMainSpaceId] = useState(null)
     const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
     const heroRef = useRef(null)
 
     useEffect(() => {
         let cancelled = false
         getServerConfig().then((cfg) => {
-            if (!cancelled) setLandingSpaceId(cfg?.landingSpaceId || null)
+            if (!cancelled) setMainSpaceId(cfg?.defaultSpaceId || null)
         }).catch(() => {})
         return () => { cancelled = true }
     }, [])
 
     const handleEnterSpace = () => {
-        if (landingSpaceId) {
-            window.location.href = buildAppSpacePath(landingSpaceId)
+        if (mainSpaceId) {
+            window.location.href = buildAppSpacePath(mainSpaceId)
             return
         }
         setEntered(true)

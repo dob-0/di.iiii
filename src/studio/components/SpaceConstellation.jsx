@@ -155,7 +155,6 @@ export default function SpaceConstellation({
     onDelete,
     onTogglePublic,
     onCopyLink,
-    onSetMain,
     onLinkProject,
     copiedLiveId
 }) {
@@ -300,9 +299,6 @@ export default function SpaceConstellation({
                                 <button type="button" className="scon-btn" onClick={(e) => onTogglePublic(selectedSpace, e)}>
                                     {selectedSpace.isPublic ? 'Make private' : 'Make public'}
                                 </button>
-                                {selected.id !== defaultSpaceId && (
-                                    <button type="button" className="scon-btn" onClick={(e) => onSetMain(selectedSpace, e)}>Set main</button>
-                                )}
                                 <button type="button" className="scon-btn scon-btn--danger" onClick={(e) => onDelete(selectedSpace, e)}>Delete</button>
                             </>
                         )}

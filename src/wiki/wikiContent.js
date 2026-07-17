@@ -41,11 +41,11 @@ export const WIKI_ARTICLES = [
         summary: 'The Spaces page has a Grid/Map toggle — Map is a spatial, orbit-and-click view of your spaces and their projects.',
         body: [
             'The Spaces page (/studio) has a Grid / Map toggle next to the page title whenever you have at least one space. Grid is the familiar card shelves; Map renders every space as a node you can orbit around and zoom into.',
-            'Click a node in Map view to open a side panel for that space — rename, copy the live link, make public/private, set as main, delete, and manage its projects — the same actions as the grid, just reached from the map. Clicking a selected node’s satellite projects lets you rename them or set one live.',
+            'Click a node in Map view to open a side panel for that space — rename, copy the live link, make public/private, delete, and manage its projects — the same actions as the grid, just reached from the map. Clicking a selected node’s satellite projects lets you rename them or set one live. Which space is "Main" (marked with a badge here and on the grid) is set from /admin only.',
             'Your choice of Grid or Map is remembered on this device for next time.'
         ],
         tags: ['spaces', 'map', 'constellation', 'ui'],
-        updated: '2026-07-14'
+        updated: '2026-07-17'
     },
     {
         id: 'guest-and-sandbox-modes',
@@ -65,7 +65,7 @@ export const WIKI_ARTICLES = [
             'Guests cannot create their own named spaces — sign in with GitHub or Google to get spaces that are yours and stay.',
             'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google) — the room comes with you: your whole sandbox, scene, projects and assets, moves onto your account automatically — or Export the project as a file you can import into any space later. The sign-in confirmation says when your sandbox came along. Existing account work is never overwritten by a later guest session.',
             'For admins: /admin → Manage can repoint the communal space (the guest entry), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.',
-            'The landing page’s “Enter Space” button (distinct from “Step inside”) opens whichever space an admin has set as the Enter Space target under /admin → Manage → a space → “Set as Enter Space”. That space needs a published project to show anything; until one is set, “Enter Space” falls back to a decorative walkable preview instead.'
+            'The landing page’s “Enter Space” button (distinct from “Step inside”) opens whichever space is set as "Main" under /admin → Manage → a space → “Set as main”. That space needs a published project to show anything; until one is set as Main, “Enter Space” falls back to a decorative walkable preview instead.'
         ],
         tags: ['guest', 'sandbox', 'open space', 'access'],
         updated: '2026-07-17'

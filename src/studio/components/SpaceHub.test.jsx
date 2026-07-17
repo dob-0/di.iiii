@@ -101,8 +101,6 @@ describe('SpaceHub', () => {
         expect(cardActionsFor('mine')).toEqual(
             expect.arrayContaining(['Rename', 'Delete', 'GitHub sync'])
         )
-        // Owner is not an admin — no Set main anywhere.
-        expect(cardActionsFor('mine')).not.toContain('Set main')
         // Someone else's public space: no management, only the live-link Copy.
         expect(cardActionsFor('theirs')).toEqual(['Copy'])
         expect(screen.getByText('View live')).toBeTruthy()
@@ -250,7 +248,7 @@ describe('SpaceHub', () => {
         await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('mine', { previewImageAssetId: 'newcover' }))
     })
 
-    it('gives admins management everywhere, including Set main', async () => {
+    it('gives admins management everywhere, but not Set main -- that only lives in /admin now', async () => {
         authState = { ...authState, role: 'admin' }
         listServerSpaces.mockResolvedValue([
             { id: 'anyones', label: 'Anyones', isOwner: false }
@@ -260,8 +258,9 @@ describe('SpaceHub', () => {
 
         await screen.findByText('anyones')
         expect(cardActionsFor('anyones')).toEqual(
-            expect.arrayContaining(['Rename', 'Delete', 'Set main'])
+            expect.arrayContaining(['Rename', 'Delete'])
         )
+        expect(cardActionsFor('anyones')).not.toContain('Set main')
     })
 
     it('shows guests a sandbox banner and no management or create controls', async () => {
