@@ -9,29 +9,45 @@ active_branch: dev
 
 ## Last commit
 
-`dev` pushed to `origin` and deployed to staging — CI green, staging
-healthy. `main` not yet updated (multi-world pass + full-repo audit work
-still only on `dev`). Local checkout is 1 commit ahead of `origin/dev`
-(a `perf(ci)` commit from the concurrent audit session, not yet pushed by
-them — leave it for them to push, not ours to publish).
+`main` promoted to `f656bc63` (fast-forward from `dev`) and deployed to
+production — user tested staging first (including a live mouse-look
+retest), confirmed healthy, then explicitly asked to push to `main`.
+Both `dev` and `main` are even.
 
-## Last session (2026-07-17 — pushed multi-world pass to staging, coordinated with concurrent audit session)
+## Last session (2026-07-17 — perf audit shipped to staging, two live bugs found+fixed, promoted to prod)
 
-- Pushed `dev` (multi-world pass + everything queued behind it) to
-  `origin/dev` → `Deploy VPS Staging` succeeded, staging is live on it.
-- A concurrent session is independently running a full-repo audit,
-  committing straight to `dev` on this same machine in parallel (same git
-  identity `dob-0`, tagged `(audit #N)`) — confirmed by commit history,
-  not assumed.
-- Their audit work shipped a flaky test (`httpContracts.test.js`'s
-  sync-status rate-limit test, real HTTP/disk I/O, 5000ms default
-  timeout) that failed one CI run under runner load. Per their own
-  in-file comment this now also gates real deploys, so asked to stabilize
-  rather than ignore — they fixed it themselves (`fee4fa91`, timeout
-  5000ms→20000ms, no behavior change) before we touched it. CI green
-  since.
-- Net: nothing left outstanding from this session's own scope; watched
-  CI/deploy status via `gh run list` rather than guessing.
+- Ran a deep perf audit (5 parallel research agents) across build
+  chunking, code-splitting, asset caching, server query paths, and Beta/
+  Studio render loops; shipped all 12 fixes to `dev`/staging with
+  regression tests for each (confirmed failing pre-fix via `git stash`).
+- User manual-tested staging and hit a real live bug: `GET /projects/
+  main/document` 500ing repeatedly. Root cause: `/data/spaces/*` on the
+  staging volume was `root`-owned (leftover from an earlier `docker cp`
+  import) while the server runs as non-root `app` → `EACCES` on the
+  read-path write-back. Fixed live via `docker exec -u root ... chown -R
+  app:app /data/spaces` on the VPS, no code change; verified via repeat
+  200s + a headless Playwright check.
+- Second live bug: mouse-look (pointer-lock/drag camera rotation) didn't
+  turn the camera on `/wcc/scene`, though WASD worked and `?inputdebug=1`
+  showed healthy lock state + changing yaw/pitch. User insisted this was
+  old and pre-existing, not caused by the perf work — asked to
+  git-blame/compare history instead of bisecting today's commits.
+  `git log -L` on the spawn effect found it: commit `a79c689c`
+  (2026-06-29, data-driven spawn) reassigns `playerRef.current` to a
+  whole new object once `worldState.spawn` loads; `Walker`'s mouse/touch-
+  look listeners are wired up once at mount and closed over the old
+  object, so mouse-look kept mutating an orphaned object forever while
+  the camera's per-frame code read the new one. Fixed with `Object.assign`
+  (mutate in place) instead of reassignment — `src/components/
+  LiveProjectScene.jsx`.
+- Also hardened `deploy/vps-restore.sh` to `chown -R 100:101 /data` after
+  restore, matching the same ownership class of bug.
+- User re-verified mouse-look fixed on staging, then approved promoting
+  `dev` → `main`; fast-forwarded and pushed, production deploy triggered.
+- A concurrent audit session was working on this same repo/branch in
+  parallel this session too (own `perf(ci)` commit, own `CURRENT.md`
+  coordination note at `d6eb7e19`) — no conflicts, just interleaved
+  pushes to `dev`.
 
 ## Previous session (2026-07-17 — multi-world graphs + live Studio 3D render, dev-only)
 
@@ -92,10 +108,8 @@ second independent WebGL canvas rendering that World's real scene with a
 
 ## Open
 
-- Promote `dev` → `main` when ready (staging verified healthy, prod not
-  yet updated).
-- Concurrent audit session has a local unpushed `perf(ci)` commit on this
-  checkout — not pushed on their behalf; check if it's landed next session.
+- Do a quick prod smoke-check now that `main` deployed (same checklist
+  run on staging: routes, sign-in, node dragging, tab sync, model cache).
 - ~23 lower-priority audit findings untriaged — `docs/ai/known-fixes.md`.
 - Studio dev-only panes need a product decision before leaving dev-only:
   inspector wiring, flag rollout audience, Beta-vs-Studio long-term shape.
