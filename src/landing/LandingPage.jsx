@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, Typography } from '@mui/material'
 import GridFloorBackground from '../components/GridFloorBackground.jsx'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
-import { buildWikiPath } from '../utils/spaceRouting.js'
+import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
+import { getServerConfig } from '../services/serverSpaces.js'
 import './landing.css'
 
 const FEATURED_SPACES = [
@@ -103,8 +104,28 @@ const CAPABILITIES = [
 
 export default function LandingPage() {
     const [entered, setEntered] = useState(false)
+    // Admin-configured via /admin ("Set as Enter Space") — when set, "Enter
+    // Space" opens that real, populated space instead of the decorative
+    // walkable void this page's own background renders.
+    const [landingSpaceId, setLandingSpaceId] = useState(null)
     const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
     const heroRef = useRef(null)
+
+    useEffect(() => {
+        let cancelled = false
+        getServerConfig().then((cfg) => {
+            if (!cancelled) setLandingSpaceId(cfg?.landingSpaceId || null)
+        }).catch(() => {})
+        return () => { cancelled = true }
+    }, [])
+
+    const handleEnterSpace = () => {
+        if (landingSpaceId) {
+            window.location.href = buildAppSpacePath(landingSpaceId)
+            return
+        }
+        setEntered(true)
+    }
     // The decorative WebGL background is fixed and full-screen; once the hero
     // scrolls out of view it's hidden behind opaque sections anyway. Stop
     // compositing/rendering it then so it doesn't stutter page scroll.
@@ -175,7 +196,7 @@ export default function LandingPage() {
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href="/beta">
                             Try Beta
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={() => setEntered(true)}>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
                             Enter Space
                         </Button>
                     </Stack>
@@ -456,7 +477,7 @@ export default function LandingPage() {
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href="/beta">
                             Try Beta
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={() => setEntered(true)}>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
                             Enter Space
                         </Button>
                         <Button className="lp-btn-link" href="/serverXR/api/health">

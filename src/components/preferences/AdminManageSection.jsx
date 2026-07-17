@@ -51,6 +51,7 @@ export default function AdminManageSection() {
 
     const globalSpaceId = config.globalSpaceId || null
     const defaultSpaceId = config.defaultSpaceId || null
+    const landingSpaceId = config.landingSpaceId || null
 
     const loadSpaces = useCallback(async () => {
         try {
@@ -144,6 +145,13 @@ export default function AdminManageSection() {
             await loadSpaces()
         }, 'Could not set the default space.')
     ), [runMutation, loadSpaces])
+
+    const setLandingSpace = useCallback((spaceId) => (
+        runMutation(async () => {
+            await patchServerConfig({ landingSpaceId: landingSpaceId === spaceId ? null : spaceId })
+            await loadSpaces()
+        }, 'Could not update the landing page entry space.')
+    ), [landingSpaceId, runMutation, loadSpaces])
 
     // ─── project actions ──────────────────────────────────────────
     const addProject = useCallback((spaceId) => {
@@ -298,6 +306,7 @@ export default function AdminManageSection() {
                         projectsBucket={projectsBySpace[selectedSpace.id]}
                         isGlobal={globalSpaceId === selectedSpace.id}
                         isDefault={defaultSpaceId === selectedSpace.id}
+                        isLandingSpace={landingSpaceId === selectedSpace.id}
                         editing={editing}
                         startEdit={startEdit}
                         submitEdit={submitEdit}
@@ -305,6 +314,7 @@ export default function AdminManageSection() {
                         onPatch={(updates) => patchSpace(selectedSpace.id, updates)}
                         onSetGlobal={() => setGuestGlobal(selectedSpace.id)}
                         onSetDefault={() => setDefault(selectedSpace.id)}
+                        onSetLandingSpace={() => setLandingSpace(selectedSpace.id)}
                         onDelete={() => removeSpace(selectedSpace)}
                         draftProject={draftProject}
                         setDraftProject={setDraftProject}
@@ -418,9 +428,9 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
 }
 
 function SpaceDetail({
-    space, users, projectsBucket, isGlobal, isDefault,
+    space, users, projectsBucket, isGlobal, isDefault, isLandingSpace,
     editing, startEdit, submitEdit, setEditing,
-    onPatch, onSetGlobal, onSetDefault, onDelete,
+    onPatch, onSetGlobal, onSetDefault, onSetLandingSpace, onDelete,
     draftProject, setDraftProject, onAddProject, onToggleUserSpace, onSelectProject
 }) {
     const isEditing = editing?.type === 'space' && editing.id === space.id
@@ -467,6 +477,9 @@ function SpaceDetail({
                         </button>
                         <button type="button" className={`toggle-button ${isGlobal ? 'active success-button' : ''}`} onClick={onSetGlobal} title="Signed-out visitors land in this shared space">
                             {isGlobal ? 'Guest entry ✓' : 'Make guest entry'}
+                        </button>
+                        <button type="button" className={`toggle-button ${isLandingSpace ? 'active success-button' : ''}`} onClick={onSetLandingSpace} title="The landing page's 'Enter Space' button opens this space (needs a published project to show anything)">
+                            {isLandingSpace ? 'Enter Space target ✓' : 'Set as Enter Space'}
                         </button>
                     </div>
                 )}
