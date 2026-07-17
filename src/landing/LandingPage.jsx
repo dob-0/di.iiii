@@ -4,6 +4,18 @@ import GridFloorBackground from '../components/GridFloorBackground.jsx'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
+import { buildBetaHubPath } from '../beta/utils/betaRouting.js'
+import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
+
+// "Try Beta"/"Open Studio" must land guests somewhere they can actually edit.
+// The bare '/beta'/'/studio' routes default to the 'main' space — di.iiii's
+// restricted flagship space, not a sandbox — so a guest session (which has no
+// write scope there) gets silently bounced by AuthGate's out-of-scope-but-
+// public redirect straight to the read-only live viewer, same destination as
+// the separate "Enter Space" button. Point both at the communal 'open' space
+// instead, which every session (guest included) already has implicit access to.
+const TRY_BETA_HREF = buildBetaHubPath('open')
+const OPEN_STUDIO_HREF = buildStudioHubPath('open')
 import './landing.css'
 
 const FEATURED_SPACES = [
@@ -104,6 +116,11 @@ const CAPABILITIES = [
 
 export default function LandingPage() {
     const [entered, setEntered] = useState(false)
+    // Walk/fly and the calm orbiting view are both rendered by the same
+    // GridFloorBackground while "entered" -- previously the only way back to
+    // the orbit view once you'd moved was a full Exit + Enter Space round
+    // trip. This lets you flip between them without leaving "entered" at all.
+    const [viewMode, setViewMode] = useState(false)
     // The platform's "Main" space (set from /admin, or inline in Studio Hub's
     // per-space "Main" badge) is the same space that already represents the
     // platform elsewhere — reuse it here instead of a second, parallel
@@ -150,6 +167,13 @@ export default function LandingPage() {
         return () => observer.disconnect()
     }, [])
 
+    useEffect(() => {
+        if (!entered) return undefined
+        const onKey = (e) => { if (e.key.toLowerCase() === 'v') setViewMode((v) => !v) }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+    }, [entered])
+
     const showBackground = entered || heroInView
 
     return (
@@ -160,19 +184,19 @@ export default function LandingPage() {
                 <nav className="lp-nav">
                     <a href="/" className="lp-nav-logo">di<span className="lp-dot">.</span>iiii</a>
                     <div className="lp-nav-links">
-                        <a href="/studio" className="lp-nav-link">Studio</a>
-                        <a href="/beta" className="lp-nav-link">Beta</a>
+                        <a href={OPEN_STUDIO_HREF} className="lp-nav-link">Studio</a>
+                        <a href={TRY_BETA_HREF} className="lp-nav-link">Beta</a>
                         <a href={buildWikiPath()} className="lp-nav-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
                     </div>
-                    <a href="/studio" className="lp-nav-cta">Open Studio</a>
+                    <a href={OPEN_STUDIO_HREF} className="lp-nav-cta">Open Studio</a>
                 </nav>
             )}
 
             {/* ── HERO ─────────────────────────────────────────── */}
             <Box className="lp-hero" component="section" ref={heroRef}>
                 <Box className="lp-hero-bg" sx={{ display: showBackground ? 'block' : 'none' }}>
-                    <GridFloorBackground aria-hidden="true" interactive={entered} />
+                    <GridFloorBackground aria-hidden="true" interactive={entered && !viewMode} />
                 </Box>
 
                 <Stack className={`lp-hero-inner${entered ? ' lp-hero-inner--hidden' : ''}`} alignItems="center" spacing={0}>
@@ -193,10 +217,10 @@ export default function LandingPage() {
                         <Button className="landing-cta-primary" variant="contained" size="large" href="/open/studio">
                             Step inside
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href="/studio">
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={OPEN_STUDIO_HREF}>
                             Open Studio
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href="/beta">
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={TRY_BETA_HREF}>
                             Try Beta
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
@@ -227,14 +251,19 @@ export default function LandingPage() {
 
                 {entered && (
                     <>
-                        <button type="button" className="lp-enter-exit" onClick={() => setEntered(false)}>
+                        <button type="button" className="lp-enter-exit" onClick={() => { setEntered(false); setViewMode(false) }}>
                             ← Exit space
                         </button>
-                        <p className="lp-enter-hint">
-                            {isMobile
-                                ? 'Joystick to move · Drag to look · Fly button to switch modes'
-                                : 'Walk (WASD) · Drag to look · F to fly (Space/Q up · C/E down)'}
-                        </p>
+                        <button type="button" className="lp-enter-exit lp-enter-viewtoggle" onClick={() => setViewMode((v) => !v)}>
+                            {viewMode ? '→ Walk / fly' : '◐ View mode'}
+                        </button>
+                        {!viewMode && (
+                            <p className="lp-enter-hint">
+                                {isMobile
+                                    ? 'Joystick to move · Drag to look · Fly button to switch modes'
+                                    : 'Walk (WASD) · Drag to look · F to fly (Space/Q up · C/E down) · V to view'}
+                            </p>
+                        )}
                     </>
                 )}
             </Box>
@@ -474,10 +503,10 @@ export default function LandingPage() {
                         <Button className="landing-cta-primary" variant="contained" size="large" href="/open/studio">
                             Step inside
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href="/studio">
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={OPEN_STUDIO_HREF}>
                             Open Studio
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href="/beta">
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={TRY_BETA_HREF}>
                             Try Beta
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
@@ -498,8 +527,8 @@ export default function LandingPage() {
                 <div className="lp-footer-inner">
                     <span className="lp-footer-brand">di<span className="lp-dot">.</span>iiii</span>
                     <nav className="lp-footer-nav" aria-label="Footer navigation">
-                        <a href="/studio" className="lp-footer-link">Studio</a>
-                        <a href="/beta" className="lp-footer-link">Beta</a>
+                        <a href={OPEN_STUDIO_HREF} className="lp-footer-link">Studio</a>
+                        <a href={TRY_BETA_HREF} className="lp-footer-link">Beta</a>
                         <a href={buildWikiPath()} className="lp-footer-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
                         <a href="/serverXR/api/health" className="lp-footer-link">API</a>
