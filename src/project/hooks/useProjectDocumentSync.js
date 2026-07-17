@@ -13,6 +13,13 @@ const MAX_SEEN_OPS = 2000
 // A failed op batch is retried automatically after this delay rather than
 // hot-looping against a persistent failure (e.g. the backend being down).
 const SYNC_RETRY_DELAY_MS = 4000
+// A 409 (version conflict) catches up and resubmits immediately -- fine
+// against an isolated race, but with no cap a client that can never win a
+// sustained version race against a faster concurrent writer would retry
+// forever. After this many consecutive conflicts in one flush, fall back to
+// the same "surface an error, wait, retry" path as any other failure instead
+// of resubmitting instantly again.
+const MAX_CONSECUTIVE_CONFLICT_RETRIES = 5
 
 export function useProjectDocumentSync({
     projectId,
@@ -117,12 +124,14 @@ export function useProjectDocumentSync({
             return
         }
         isFlushingRef.current = true
+        let consecutiveConflicts = 0
 
         try {
             while (pendingQueueRef.current.length) {
                 const batch = pendingQueueRef.current.splice(0, pendingQueueRef.current.length)
                 try {
                     const response = await submitProjectOps(projectId, versionRef.current, batch)
+                    consecutiveConflicts = 0
                     const appliedOps = Array.isArray(response?.ops) && response.ops.length ? response.ops : batch
                     rememberSeenOps(appliedOps)
                     versionRef.current = Number(response?.newVersion) || versionRef.current
@@ -152,6 +161,24 @@ export function useProjectDocumentSync({
                         break
                     }
                     if (error?.status === 409) {
+                        consecutiveConflicts += 1
+                        if (consecutiveConflicts > MAX_CONSECUTIVE_CONFLICT_RETRIES) {
+                            // Sustained version race against a faster concurrent
+                            // writer -- stop resubmitting instantly. Fall through
+                            // to the same queue-and-delay path every other error
+                            // uses instead of looping forever.
+                            pendingQueueRef.current.unshift(...batch)
+                            pushActivity('Project sync is stuck behind concurrent edits — retrying shortly.', 'error')
+                            dispatch?.({
+                                type: 'pending-sync-error',
+                                error: 'Sync is stuck behind concurrent edits — retrying shortly.'
+                            })
+                            clearTimeout(retryTimerRef.current)
+                            retryTimerRef.current = setTimeout(() => {
+                                void flushQueue()
+                            }, SYNC_RETRY_DELAY_MS)
+                            break
+                        }
                         const latestVersion = Number(error?.data?.latestVersion)
                         const pendingOps = Array.isArray(error?.data?.pendingOps) ? error.data.pendingOps : []
                         if (Number.isFinite(latestVersion)) {

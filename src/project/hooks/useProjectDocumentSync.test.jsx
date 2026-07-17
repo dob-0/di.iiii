@@ -155,6 +155,69 @@ describe('useProjectDocumentSync', () => {
         expect(result.current.store.state.document.presentationState.codeHtml).toContain('Retry me')
     }, 10000)
 
+    // Regression test for the 2026-07-17 audit finding: a sustained version
+    // conflict (409) used to catch-up-and-resubmit with no cap at all -- a
+    // client that can never win a version race against a faster concurrent
+    // writer would retry instantly forever. It must now give up after
+    // MAX_CONSECUTIVE_CONFLICT_RETRIES, surface a visible error, and fall
+    // back to the same delayed-retry path as any other failure (which then
+    // succeeds once the race clears).
+    it('gives up resubmitting after sustained 409 conflicts and falls back to a delayed retry', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'studio-project', title: 'Studio Project' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        let attempt = 0
+        submitProjectOpsMock.mockImplementation(async (_projectId, _baseVersion, ops) => {
+            attempt += 1
+            if (attempt <= 6) {
+                const error = new Error('Version conflict')
+                error.status = 409
+                error.data = { latestVersion: 1, pendingOps: [] }
+                throw error
+            }
+            return { newVersion: 2, ops }
+        })
+
+        const { result } = renderHook(() => {
+            const store = useProjectStore()
+            const sync = useProjectDocumentSync({ projectId: 'studio-project', store })
+            return { store, sync }
+        })
+
+        await waitFor(() => {
+            expect(result.current.store.state.document.projectMeta.id).toBe('studio-project')
+        })
+
+        act(() => {
+            result.current.sync.applyLocalOps({
+                type: 'setPresentationState',
+                payload: { patch: { mode: 'code', codeHtml: '<main>Conflict me</main>' } }
+            })
+        })
+
+        // Six consecutive 409s (past the cap) must stop resubmitting
+        // instantly and surface a visible error -- never drop the edit.
+        await waitFor(() => {
+            expect(result.current.store.state.pendingSyncError).toBeTruthy()
+        })
+        expect(attempt).toBe(6)
+        expect(result.current.store.state.document.presentationState.codeHtml).toContain('Conflict me')
+
+        // The delayed retry (SYNC_RETRY_DELAY_MS) then succeeds once the mock
+        // stops conflicting, same as the generic-error retry path.
+        await waitFor(() => {
+            expect(result.current.store.state.version).toBe(2)
+        }, { timeout: 8000 })
+        expect(result.current.store.state.pendingSyncError).toBeNull()
+    }, 10000)
+
     // Regression test for the 2026-07-16 audit finding: a 401 (expired
     // session) used to be treated exactly like a transient 500 — retried
     // forever every SYNC_RETRY_DELAY_MS with a generic "sync failed" message,
