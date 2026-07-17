@@ -1,8 +1,13 @@
 name: CI
 
 on:
-  push:
-    branches: [ dev, main ]
+  # No `push` trigger for dev/main: deploy-vps.yml / deploy-vps-staging.yml
+  # call this workflow (workflow_call) as their gating `test` job, so a push
+  # to either branch already runs this suite exactly once. A `push` trigger
+  # here too would run it a SECOND, fully redundant time in parallel (found
+  # during the 2026-07-17 optimization audit — this doubled CI compute and
+  # Playwright installs on every deploy push for no benefit, since deploying
+  # was already correctly gated).
   pull_request:
     branches: [ dev, main ]
   # Lets deploy-vps.yml / deploy-vps-staging.yml gate their build-and-push

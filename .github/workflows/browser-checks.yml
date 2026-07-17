@@ -37,6 +37,19 @@ jobs:
             npm --prefix serverXR install
           fi
 
+      # Caches the downloaded Chromium binary across runs (keyed on the
+      # lockfile, so a Playwright version bump invalidates it automatically).
+      # System deps (apt) still install every run -- GH-hosted runners are
+      # fresh each time, that part isn't cacheable -- but skipping the
+      # browser download itself saves real time on every CI/deploy run
+      # (found during the 2026-07-17 optimization audit).
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
