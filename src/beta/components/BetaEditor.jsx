@@ -388,7 +388,7 @@ export default function BetaEditor({
         if (surfaceSelectedNode) {
             if (isRootGraphNode(surfaceSelectedNode, NODE_ZERO_TYPE_ID)) {
                 const confirmed = window.confirm(
-                    'Delete Node 0? This removes the topbar and node navigation for this project — you\'ll need to double-click the canvas to place a new one.'
+                    'Delete Node 0? Every node in this project is parented under it, so this deletes the ENTIRE graph, not just the topbar/navigation — this cannot be undone from here.'
                 )
                 if (!confirmed) return
             }
@@ -414,6 +414,7 @@ export default function BetaEditor({
 
     const handleResetLocalWorkspace = () => {
         if (!isLocalWorkspace) return
+        if (!window.confirm('Reset Workspace? This wipes the entire local workspace — every node, edge, and window — and cannot be undone.')) return
         clearLocalWorkspaceDocument(localStorageKey)
         dispatch({ type: 'replace-document', document: {}, version: 0 })
         dispatch({
@@ -934,7 +935,7 @@ export default function BetaEditor({
                         const node = authoredNodes.find((n) => n.id === nodeId)
                         if (isRootGraphNode(node, NODE_ZERO_TYPE_ID)) {
                             const confirmed = window.confirm(
-                                'Delete Node 0? This removes the topbar and node navigation for this project — you\'ll need to double-click the canvas to place a new one.'
+                                'Delete Node 0? Every node in this project is parented under it, so this deletes the ENTIRE graph, not just the topbar/navigation — this cannot be undone from here.'
                             )
                             if (!confirmed) return
                         }

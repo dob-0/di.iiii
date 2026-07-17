@@ -240,6 +240,32 @@ describe('BetaEditor Node 0 deletion guard', () => {
         expect(deletedNode0).toBe(false)
     })
 
+    // Regression test for the 2026-07-17 audit: "Reset Workspace" wipes the
+    // entire local document (every node/edge/window) and previously had NO
+    // confirmation at all, unlike the equally-destructive Node 0 delete path.
+    it('asks for confirmation before Reset Workspace, and aborts on cancel', () => {
+        seedSelectedNodeZero()
+        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+        render(<BetaEditor localStorageKey={GUARD_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByText('⋯'))
+        fireEvent.click(screen.getByText('Reset Workspace'))
+
+        expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/Reset Workspace/))
+        expect(window.localStorage.getItem(GUARD_STORAGE_KEY)).not.toBeNull()
+    })
+
+    it('resets the workspace via the overflow menu once the user confirms', () => {
+        seedSelectedNodeZero()
+        vi.spyOn(window, 'confirm').mockReturnValue(true)
+        render(<BetaEditor localStorageKey={GUARD_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByText('⋯'))
+        fireEvent.click(screen.getByText('Reset Workspace'))
+
+        expect(screen.queryByText('Node 0')).toBeNull()
+    })
+
     it('never asks for confirmation when deleting a normal (non-root) node', () => {
         window.localStorage.setItem(
             GUARD_STORAGE_KEY,
