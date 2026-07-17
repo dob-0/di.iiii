@@ -8,7 +8,7 @@ const driveAccount = require('../googleDriveAccount')
 const commonsStore = require('../commonsStore')
 const { createKeyedLock } = require('../asyncLock')
 
-const withSpaceOpsLock = createKeyedLock()
+const defaultWithSpaceOpsLock = createKeyedLock()
 
 function registerSpaceRoutes(router, {
   appendOpsHistory,
@@ -29,6 +29,7 @@ function registerSpaceRoutes(router, {
   getPublicAuthState = () => ({ spaces: null }),
   isAllowedUpload = () => true,
   googleDrive = defaultGoogleDrive,
+  withSpaceOpsLock = defaultWithSpaceOpsLock,
   getSandboxStats = null,
   getSpacePaths,
   hydrateSceneAssetManifest,

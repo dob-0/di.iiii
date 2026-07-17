@@ -37,6 +37,7 @@ const { initializeMesh } = require('./meshHub')
 const { loadReleaseInfo } = require('./releaseInfo')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
+const { createKeyedLock } = require('./asyncLock')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
@@ -1135,6 +1136,15 @@ router.post('/api/open-calls/:callId/applications', openCallSubmitLimiter, (req,
   }
 })
 
+// Shared with registerSpaceRoutes below (same instance, not just the same
+// factory) so an inscription write and a normal /ops write to the same space
+// serialize against each other instead of two independent lock maps letting
+// them race (audit 2026-07-17). Created here, before either registration,
+// since inscriptions must register ahead of the auth gate further down while
+// spaceRoutes registers after it -- reordering either would change who needs
+// auth for what.
+const sharedSpaceOpsLock = createKeyedLock()
+
 // Public, unauthenticated, append-only: space inscriptions (the br_id_ge
 // portal write path). Registered before the gates like open-call submissions;
 // per-space opt-in + sanitization live in the route itself.
@@ -1151,6 +1161,7 @@ registerInscriptionRoutes(router, {
   maxOpHistory: MAX_OP_HISTORY,
   normalizeSpaceId,
   readJson,
+  withSpaceOpsLock: sharedSpaceOpsLock,
   upsertSpaceMeta,
   writeJson
 })
@@ -1204,6 +1215,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   collectSceneAssetRefs,
   config,
   countSpacesOwnedBy,
+  withSpaceOpsLock: sharedSpaceOpsLock,
   spaceLimit: config.freeSpaceLimit,
   grantSpaceToSessionUser,
   deleteSpace,

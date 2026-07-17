@@ -11,17 +11,7 @@
 //  - rate-limited per client; allowEdits=false stays the owner's kill switch
 
 const crypto = require('node:crypto')
-
-// Concurrent inscriptions to the same space race on scene.json's read-modify-
-// write (no compare-and-swap, unlike /ops): serialize per-space so a second
-// visitor's write never silently clobbers a first visitor's still-unsaved one.
-const spaceWriteLocks = new Map()
-function withSpaceLock(spaceId, fn) {
-  const prev = spaceWriteLocks.get(spaceId) || Promise.resolve()
-  const run = prev.then(fn, fn)
-  spaceWriteLocks.set(spaceId, run.then(() => {}, () => {}))
-  return run
-}
+const { createKeyedLock } = require('../asyncLock')
 
 const NAME_MAX = 40
 const WORD_MAX = 60
@@ -57,7 +47,14 @@ function registerInscriptionRoutes(router, {
   normalizeSpaceId,
   readJson,
   upsertSpaceMeta,
-  writeJson
+  writeJson,
+  // Same per-space lock instance spaceRoutes.js uses for /ops and whole-scene
+  // replaces (createKeyedLock() in asyncLock.js) -- previously this route
+  // kept its own separate lock map, so an inscription write and a normal
+  // op-write to the same space could race outside each other's mutex
+  // (audit 2026-07-17). Falls back to a fresh per-registration lock only if
+  // the caller doesn't inject one (e.g. an isolated test).
+  withSpaceOpsLock = createKeyedLock()
 }) {
   router.post('/api/spaces/:spaceId/inscriptions', inscriptionLimiter, async (req, res, next) => {
     try {
@@ -76,7 +73,7 @@ function registerInscriptionRoutes(router, {
 
       await ensureSpaceScene(spaceId)
 
-      const result = await withSpaceLock(spaceId, async () => {
+      const result = await withSpaceOpsLock(spaceId, async () => {
         const { scenePath } = getSpacePaths(spaceId)
         const scene = await readJson(scenePath, blankScene)
         const existing = (scene.objects || []).filter((obj) => String(obj?.id || '').startsWith('insc-'))
