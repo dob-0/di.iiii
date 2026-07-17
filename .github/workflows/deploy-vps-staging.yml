@@ -23,7 +23,16 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # Gate on the same test/lint/build/contract suite CI runs on every push —
+  # previously this workflow and ci.yml were independent, so a failing test
+  # suite did not block a staging deploy either (audit 2026-07-17).
+  test:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   build-and-push:
+    needs: test
     runs-on: ubuntu-latest
     strategy:
       matrix:

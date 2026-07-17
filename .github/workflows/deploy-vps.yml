@@ -25,7 +25,18 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  # Gate on the same test/lint/build/contract suite CI runs on every push —
+  # previously this workflow and ci.yml were independent, so a failing test
+  # suite did not block a production deploy (audit 2026-07-17). This calls
+  # ci.yml as a reusable workflow (workflow_call), the same pattern this repo
+  # already uses for browser-checks.yml.
+  test:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   build-and-push:
+    needs: test
     runs-on: ubuntu-latest
     strategy:
       matrix:
