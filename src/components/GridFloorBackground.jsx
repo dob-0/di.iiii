@@ -1,6 +1,11 @@
-import { Suspense, useEffect, useState } from 'react'
-import LiveProjectScene from './LiveProjectScene.jsx'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { listServerSpaces } from '../services/serverSpaces.js'
+
+// Lazy so pages that use this purely as a decorative background (the public
+// landing page, the wiki) don't force three.js into their own static import
+// graph -- it was already wrapped in the Suspense boundary below, just not
+// actually code-split (2026-07-17 perf audit).
+const LiveProjectScene = lazy(() => import('./LiveProjectScene.jsx'))
 
 const PREFERRED_SPACE_ID = 'main'
 

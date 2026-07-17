@@ -155,10 +155,46 @@ export default {
         sourcemap: false,
         // 3D dependencies are large; raise warning threshold so CI stays clean.
         chunkSizeWarningLimit: 2000,
+        modulePreload: {
+            // Vite's own heuristic modulepreloads any chunk shared by enough
+            // lazy routes from the root index.html itself -- three-vendor,
+            // vendor, and wcc-vendor all qualify (nearly every route needs
+            // three.js) and were confirmed via a real build to be eagerly
+            // modulepreloaded from index.html even after the entry chunk's own
+            // hard import of three-vendor was removed (2026-07-17 perf audit).
+            // Filter them out of the HTML-level preload list only -- the
+            // per-route preload lists used by each React.lazy() call (hostType
+            // 'js') are untouched, so a route that actually needs three.js
+            // still prefetches it the moment that route's own dynamic import
+            // fires, just not from the very first paint.
+            resolveDependencies: (filename, deps, { hostType }) => {
+                if (hostType !== 'html') return deps
+                // react-vendor (the React runtime itself) and app-runtime/
+                // rolldown-runtime (tiny, genuinely needed to boot at all) stay.
+                // Only the large, route-specific vendor bundles are deferred.
+                return deps.filter((dep) => !/\/(three-vendor|vendor|wcc-vendor)-/.test(dep))
+            }
+        },
         rollupOptions: {
             output: {
                 manualChunks(id) {
                     const normalizedId = id.split('\\').join('/')
+
+                    // Vite/rolldown's internal dynamic-import preload helper (used to
+                    // wrap EVERY React.lazy()/import() call in the app) is a virtual
+                    // module, not a node_modules package, so the check below never
+                    // classified it -- rolldown's own chunking then co-located it
+                    // inside 'three-vendor', making that ~425KB-gzipped chunk a real
+                    // static dependency of the entry chunk and eagerly
+                    // modulepreloaded on every route, including ones with no 3D at
+                    // all (confirmed via a real build + inspecting index.html's
+                    // modulepreload list and the entry chunk's import statements;
+                    // 2026-07-17 perf audit). Giving it its own tiny chunk keeps it
+                    // out of three-vendor without touching three-vendor's own
+                    // internal grouping (splitting THAT causes real cross-chunk TDZ
+                    // crashes, see the comment below -- do not go there).
+                    if (normalizedId.includes('vite/preload-helper')) return 'app-runtime'
+
                     if (!normalizedId.includes('node_modules/')) return
 
                     const parts = normalizedId.split('node_modules/')[1].split('/')
