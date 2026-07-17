@@ -38,6 +38,7 @@ const { loadReleaseInfo } = require('./releaseInfo')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { createKeyedLock } = require('./asyncLock')
+const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
@@ -388,6 +389,8 @@ const readAuthToken = (req) => {
 
 const normalizeAuthToken = (value = '') => String(value || '').trim().replace(/^bearer\s+/i, '')
 
+const { getFreshDbIdentity } = createSessionDbSync({ findUserById, normalizeAuthRole })
+
 const readAuthSession = (req) => {
   const value = readCookie(req.get('cookie') || '', config.authSession.cookieName)
   const result = verifyAuthSessionValue(value, { secret: config.auth.sessionSecret })
@@ -398,15 +401,26 @@ const readAuthSession = (req) => {
   if (!role) {
     return buildAuthState({ authenticated: false, type: 'session', reason: 'legacy' })
   }
+  let effectiveRole = role
+  let effectiveSpaces = result.session?.spaces
+  let effectiveUnrestricted = result.session?.isUnrestricted
+  if (result.session?.subject) {
+    const fresh = getFreshDbIdentity(result.session.subject)
+    if (fresh && fresh.dbRole) {
+      effectiveRole = fresh.dbRole
+      effectiveSpaces = fresh.dbSpaces
+      effectiveUnrestricted = fresh.dbUnrestricted
+    }
+  }
   return {
     ...buildAuthState({
       authenticated: true,
       type: 'session',
-      role,
+      role: effectiveRole,
       subject: result.session?.subject,
       label: result.session?.label,
-      spaces: result.session?.spaces,
-      isUnrestricted: result.session?.isUnrestricted,
+      spaces: effectiveSpaces,
+      isUnrestricted: effectiveUnrestricted,
       session: result.session
     }),
     session: result.session
