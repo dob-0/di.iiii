@@ -80,6 +80,7 @@ const {
   normalizeProjectId,
   readProjectDocument,
   readProjectOps,
+  readProjectOpsSince,
   upsertProjectMeta,
   writeProjectDocument
 } = require('./projectStore')
@@ -152,6 +153,7 @@ const {
   pruneStaleSandboxes,
   readLatestSpaceSnapshot,
   readOpsHistory,
+  readOpsHistorySince,
   removeAssetThumbnails,
   saveSpaceMeta,
   serveAsset,
@@ -1259,6 +1261,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   readJson,
   readLatestSpaceSnapshot,
   readOpsHistory,
+  readOpsHistorySince,
   removeAssetThumbnails,
   saveSpaceMeta,
   serveAsset,
@@ -1516,6 +1519,7 @@ registerProjectRoutes(router, {
   readJson,
   readProjectDocument,
   readProjectOps,
+  readProjectOpsSince,
   resolveProjectContext,
   spacesDir: SPACES_DIR,
   spaceExists,

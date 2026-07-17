@@ -26,6 +26,7 @@ function registerProjectRoutes(router, {
   normalizeSpaceId,
   readProjectDocument,
   readProjectOps,
+  readProjectOpsSince,
   readJson,
   resolveProjectContext,
   spacesDir,
@@ -232,11 +233,14 @@ function registerProjectRoutes(router, {
         return res.status(404).json({ error: 'Project not found.' })
       }
       const since = Number(req.query.since)
-      const history = await readProjectOps(spacesDir, project.spaceId, project.projectId)
-      const latestVersion = Number(project.meta?.documentVersion) || 0
+      // Pushed into SQL via the existing (project_id, version) index instead
+      // of reading+parsing the whole retained history and filtering in JS
+      // (2026-07-17 perf audit) -- this is the most frequent read of this
+      // table (every catch-up/reconnect hits it).
       const filtered = Number.isFinite(since)
-        ? history.filter(entry => (entry.version || 0) > since)
-        : history
+        ? await readProjectOpsSince(spacesDir, project.spaceId, project.projectId, since)
+        : await readProjectOps(spacesDir, project.spaceId, project.projectId)
+      const latestVersion = Number(project.meta?.documentVersion) || 0
       res.json({
         ops: filtered,
         latestVersion

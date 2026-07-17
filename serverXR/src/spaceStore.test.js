@@ -144,3 +144,42 @@ describe('spaceStore archiveIdleAccountSandboxes', () => {
         expect(await disabledStore.archiveIdleAccountSandboxes()).toEqual([])
     })
 })
+
+// Regression tests for the 2026-07-17 perf audit: GET /ops?since= used to
+// read+parse the ENTIRE retained op history and filter by version in JS.
+// readOpsHistorySince pushes that filter into SQL via the existing
+// (space_id, version) index instead.
+describe('spaceStore readOpsHistorySince', () => {
+    it('returns only ops with version > since, in the same order as readOpsHistory', async () => {
+        await store.upsertSpaceMeta('alpha', {})
+        await store.writeOpsHistory('alpha', [
+            { opId: 'op1', version: 1, type: 'noop', payload: {} },
+            { opId: 'op2', version: 2, type: 'noop', payload: {} },
+            { opId: 'op3', version: 3, type: 'noop', payload: {} },
+            { opId: 'op4', version: 4, type: 'noop', payload: {} }
+        ])
+
+        const since2 = await store.readOpsHistorySince('alpha', 2)
+        expect(since2.map((op) => op.opId)).toEqual(['op3', 'op4'])
+
+        const full = await store.readOpsHistory('alpha')
+        const filteredInJs = full.filter((op) => (op.version || 0) > 2)
+        expect(since2).toEqual(filteredInJs)
+    })
+
+    it('returns an empty array when since is at or past the latest version', async () => {
+        await store.upsertSpaceMeta('beta', {})
+        await store.writeOpsHistory('beta', [{ opId: 'op1', version: 1, type: 'noop', payload: {} }])
+        expect(await store.readOpsHistorySince('beta', 1)).toEqual([])
+        expect(await store.readOpsHistorySince('beta', 99)).toEqual([])
+    })
+
+    it('does not leak another space\'s ops', async () => {
+        await store.upsertSpaceMeta('gamma-a', {})
+        await store.upsertSpaceMeta('gamma-b', {})
+        await store.writeOpsHistory('gamma-a', [{ opId: 'a1', version: 1, type: 'noop', payload: {} }])
+        await store.writeOpsHistory('gamma-b', [{ opId: 'b1', version: 1, type: 'noop', payload: {} }])
+        expect((await store.readOpsHistorySince('gamma-a', 0)).map((op) => op.opId)).toEqual(['a1'])
+        expect((await store.readOpsHistorySince('gamma-b', 0)).map((op) => op.opId)).toEqual(['b1'])
+    })
+})

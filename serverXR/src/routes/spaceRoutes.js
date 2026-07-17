@@ -48,6 +48,7 @@ function registerSpaceRoutes(router, {
   readJson,
   readLatestSpaceSnapshot = null,
   readOpsHistory,
+  readOpsHistorySince,
   removeAssetThumbnails,
   saveSpaceMeta,
   serveAsset,
@@ -345,12 +346,15 @@ function registerSpaceRoutes(router, {
       const spaceId = normalizeSpaceId(req.params.spaceId)
       if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
       const since = Number(req.query.since)
-      const history = await readOpsHistory(spaceId)
+      // Pushed into SQL via the existing (space_id, version) index instead
+      // of reading+parsing the whole retained history and filtering in JS
+      // (2026-07-17 perf audit) -- this is the most frequent read of this
+      // table (every catch-up/reconnect hits it).
+      const filtered = Number.isFinite(since)
+        ? await readOpsHistorySince(spaceId, since)
+        : await readOpsHistory(spaceId)
       const meta = await loadSpaceMeta(spaceId)
       const latestVersion = meta?.sceneVersion || 0
-      const filtered = Number.isFinite(since)
-        ? history.filter(entry => (entry.version || 0) > since)
-        : history
       res.json({
         ops: filtered,
         latestVersion

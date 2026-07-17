@@ -120,6 +120,7 @@ function createSpaceStore({
       update:        db.prepare('UPDATE spaces SET label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, preview_image_asset_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=?, open_inscriptions=? WHERE id=?'),
       deleteById:    db.prepare('DELETE FROM spaces WHERE id = ?'),
       opsSelect:     db.prepare('SELECT data FROM space_ops WHERE space_id = ? ORDER BY version ASC, seq ASC'),
+      opsSelectSince: db.prepare('SELECT data FROM space_ops WHERE space_id = ? AND version > ? ORDER BY version ASC, seq ASC'),
       opsDeleteAll:  db.prepare('DELETE FROM space_ops WHERE space_id = ?'),
       opsInsert:     db.prepare('INSERT INTO space_ops (space_id, version, data, created_at) VALUES (?, ?, ?, ?)'),
       opsCount:      db.prepare('SELECT COUNT(*) as cnt FROM space_ops WHERE space_id = ?'),
@@ -337,6 +338,13 @@ function createSpaceStore({
   const readOpsHistory = async (spaceId) =>
     s().opsSelect.all(spaceId).map(row => JSON.parse(row.data))
 
+  // Pushes the version filter into SQL via the existing (space_id, version)
+  // index instead of reading+parsing the whole retained history and
+  // filtering in JS -- used by GET /ops?since=, the most frequent read of
+  // this table (2026-07-17 perf audit).
+  const readOpsHistorySince = async (spaceId, since) =>
+    s().opsSelectSince.all(spaceId, since).map(row => JSON.parse(row.data))
+
   const writeOpsHistory = async (spaceId, ops) => {
     const { opsDeleteAll, opsInsert } = s()
     const now = Date.now()
@@ -496,6 +504,7 @@ function createSpaceStore({
     pruneStaleSandboxes,
     readLatestSpaceSnapshot,
     readOpsHistory,
+    readOpsHistorySince,
     removeAssetThumbnails,
     snapshotSpaceScene,
     saveSpaceMeta,

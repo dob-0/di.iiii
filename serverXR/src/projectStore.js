@@ -85,6 +85,7 @@ const s = () => {
     update:           db.prepare('UPDATE projects SET title=?, document_version=?, source=?, updated_at=?, last_touched_at=? WHERE id=?'),
     deleteById:       db.prepare('DELETE FROM projects WHERE id = ?'),
     opsSelect:        db.prepare('SELECT data FROM project_ops WHERE project_id = ? ORDER BY version ASC, seq ASC'),
+    opsSelectSince:   db.prepare('SELECT data FROM project_ops WHERE project_id = ? AND version > ? ORDER BY version ASC, seq ASC'),
     opsDeleteAll:     db.prepare('DELETE FROM project_ops WHERE project_id = ?'),
     opsInsert:        db.prepare('INSERT INTO project_ops (project_id, version, data, created_at) VALUES (?, ?, ?, ?)'),
     opsCount:         db.prepare('SELECT COUNT(*) as cnt FROM project_ops WHERE project_id = ?'),
@@ -185,6 +186,13 @@ const writeProjectDocument = async (spacesDir, spaceId, projectId, document) => 
 const readProjectOps = async (spacesDir, spaceId, projectId) =>
   s().opsSelect.all(projectId).map(r => JSON.parse(r.data))
 
+// Pushes the version filter into SQL via the existing (project_id, version)
+// index instead of reading+parsing the whole retained history and
+// filtering in JS -- used by GET .../ops?since=, the most frequent read of
+// this table (2026-07-17 perf audit).
+const readProjectOpsSince = async (spacesDir, spaceId, projectId, since) =>
+  s().opsSelectSince.all(projectId, since).map(r => JSON.parse(r.data))
+
 const writeProjectOps = async (spacesDir, spaceId, projectId, ops) => {
   const { opsDeleteAll, opsInsert } = s()
   const now = Date.now()
@@ -279,6 +287,7 @@ module.exports = {
   readProjectIndex,
   readProjectDocument,
   readProjectOps,
+  readProjectOpsSince,
   upsertProjectMeta,
   appendProjectOps,
   writeJson,
