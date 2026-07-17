@@ -35,7 +35,13 @@ const WINDOW_IDS = ['viewport', 'assets', 'inspector', 'outliner', 'activity', '
 
 const LEGACY_ROOT_NODE_IDS = new Set(['root-node', 'world-root', 'view-root'])
 const LEGACY_ROOT_TYPE_IDS = new Set(['core.project', 'world.root', 'view.root'])
-const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar', 'universe.node0'])
+// universe.node0 is deliberately NOT here — product decision 2026-07-17: Node 0
+// is an ordinary, non-singleton node type (a plain top-level container/"root dir"
+// entry, not a forced, undeletable, one-per-document seed). Do not re-add it to
+// this set without checking with the user first — an earlier audit pass added it
+// as a bug fix (registry said singleton:true, schema didn't enforce it) before
+// this decision was made; that enforcement was intentionally reverted, not missed.
+const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar'])
 // These four are singletons per node-scope (parentId), not document-wide — a project
 // can have multiple worlds (one per node-in-node scope), but only one of each per scope.
 const SCOPE_SINGLETON_TYPE_IDS = new Set(['world.light', 'world.background', 'world.grid', 'universe.world'])

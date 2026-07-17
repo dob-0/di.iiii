@@ -32,11 +32,14 @@ walks this as a navigation stack (`navStack`, `[null]` = document root);
 entering a node pushes its id, so "the graph inside node X" is just every
 other node whose `parentId === X`.
 
-**Node 0** (`universe.node0`) is the conventional root: Beta treats it as the
-anchor for topbar/breadcrumb navigation and auto-enters its scope on load.
-It is **not** actually enforced as unique — the registry marks it
-`singleton: true` but the schema's dedup logic omits it from both singleton
-sets (fixed as part of the 2026-07-17 audit, see `known-fixes.md`).
+**Node 0** (`universe.node0`) is an ordinary node type, not a special root
+(product decision 2026-07-17, reversing an earlier audit fix that had made it
+a document-wide singleton). The true document root is `currentScopeId === null`
+in `useNodeGraphScope` — a plain, always-available scope you can place any
+node directly into, same as any node's interior. Node 0 is not auto-created,
+not auto-entered on load, not a singleton, and not undeletable; it's just a
+node type you can place (like any other) if you want a node literally called
+"Node 0". See `docs/ai/known-fixes.md` for the full history of this reversal.
 
 ## Evaluation
 

@@ -65,15 +65,18 @@ describe('NODE_TYPES', () => {
         expect(NODE_TYPES['world.light'].singleton).toBe(true)
         expect(NODE_TYPES['world.background'].singleton).toBe(true)
         expect(NODE_TYPES['time'].singleton).toBe(true)
-        expect(NODE_TYPES['universe.node0'].singleton).toBe(true)
     })
 
-    it('universe.node0 is available as the root seed node', () => {
+    // Product decision 2026-07-17: Node 0 is an ordinary node type, not a
+    // singleton — it's placeable like any other node, not a forced one-per-
+    // document root.
+    it('universe.node0 is an ordinary node type, not a singleton', () => {
         const rootType = NODE_TYPES['universe.node0']
         expect(rootType).toBeTruthy()
         expect(rootType.category).toBe('universe')
         expect(rootType.render).toBe('hidden')
         expect(rootType.defaultValues.title).toBe('Node 0')
+        expect(rootType.singleton).toBeFalsy()
     })
 
     it('node.null is the extensibility primitive', () => {

@@ -512,7 +512,8 @@ export const NODE_TYPES = {
         label: 'Node 0',
         category: 'universe',
         runtime: 'any',
-        singleton: true,
+        // Ordinary node, not a singleton (product decision 2026-07-17) — a plain
+        // top-level "root dir" entry, placeable multiple times like any other type.
         inputs: [
             { id: 'title',       type: 'string',  label: 'Title',       default: 'Node 0' },
             { id: 'description', type: 'string',  label: 'Description', default: 'Root seed node for this space' },

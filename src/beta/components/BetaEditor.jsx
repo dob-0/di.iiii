@@ -19,11 +19,9 @@ import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
-import { buildNodeValues as buildNodeValuesForType, isRootGraphNode } from '../../project/graph/nodeGraphAuthoring.js'
+import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
 import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
-
-const NODE_ZERO_TYPE_ID = 'universe.node0'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
@@ -203,28 +201,24 @@ export default function BetaEditor({
         () => authoredNodes.filter((node) => matchesNodeTypeSurface(getNodeType(node.typeId), activeSurface)),
         [activeSurface, authoredNodes]
     )
-    const scope = useNodeGraphScope({ nodes: authoredNodes, rootTypeId: NODE_ZERO_TYPE_ID })
-    const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, goToRoot: scopeGoToRoot, reset: scopeReset } = scope
-    // Panel nodes float as windows; graph cards are non-panel, non-context nodes in the current scope
+    // Node-graph scope has no forced root type — the true document root
+    // (currentScopeId === null) is a plain, always-available scope you can
+    // place any node type directly into, same as any node's interior. Node 0
+    // is an ordinary node, not an auto-created/auto-entered singleton (product
+    // decision 2026-07-17 — see nodeRegistry.js/projectSchema.js comments).
+    const scope = useNodeGraphScope({ nodes: authoredNodes })
+    const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, reset: scopeReset } = scope
+    // Panel nodes float as windows; graph cards are non-panel nodes in the current scope
     const graphCardNodes = useMemo(
         () => nodes.filter((node) => {
             if (getNodeType(node.typeId)?.render === 'panel-2d') return false
-            if (node.typeId === 'universe.node0') return false  // topbar is node0's presence
             return (node.parentId || null) === currentScopeId
         }),
         [nodes, currentScopeId]
     )
     const surfaceNodeCount = authoredNodes.length
     const hasAnyNodes = surfaceNodeCount > 0
-    const hasNodeZero = useMemo(
-        () => authoredNodes.some((node) => node.typeId === 'universe.node0'),
-        [authoredNodes]
-    )
-    const createdNodesExcludingNodeZero = useMemo(
-        () => authoredNodes.filter((node) => node.typeId !== 'universe.node0'),
-        [authoredNodes]
-    )
-    const hasGraphNodes = createdNodesExcludingNodeZero.length > 0
+    const hasGraphNodes = hasAnyNodes
     // universe.world is a per-scope singleton (Phase 0) — "the" world is whichever
     // one is a sibling of the current scope, not a single document-wide node.
     const worldNode = useMemo(
@@ -233,10 +227,9 @@ export default function BetaEditor({
     )
     const hasWorldNode = Boolean(worldNode)
     const topbarLocationText = useMemo(() => {
-        if (!hasNodeZero) return 'Double-click to place Node 0'
         if (!hasGraphNodes && !hasWorldNode) return 'Double-click to place your first node'
         return workflow.title
-    }, [hasGraphNodes, hasNodeZero, hasWorldNode, workflow.title])
+    }, [hasGraphNodes, hasWorldNode, workflow.title])
 
     useEffect(() => {
         if (hasAnyNodes) return
@@ -386,12 +379,6 @@ export default function BetaEditor({
 
     const handleDeleteSelected = useCallback(() => {
         if (surfaceSelectedNode) {
-            if (isRootGraphNode(surfaceSelectedNode, NODE_ZERO_TYPE_ID)) {
-                const confirmed = window.confirm(
-                    'Delete Node 0? Every node in this project is parented under it, so this deletes the ENTIRE graph, not just the topbar/navigation — this cannot be undone from here.'
-                )
-                if (!confirmed) return
-            }
             applyLocalOps([
                 {
                     type: 'deleteNode',
@@ -477,46 +464,6 @@ export default function BetaEditor({
             { type: 'setWorkspaceState', payload: { patch: workspacePatch } }
         ], { activityMessage: `Created ${definition.label}.` })
         setPaletteState({ open: false, surface: paletteState.surface, placement: null })
-    }
-
-    const handleStartFromNodeZero = (placement = null) => {
-        const existing = authoredNodes.find((node) => node.typeId === 'universe.node0')
-        if (existing) {
-            if (!navStack.includes(existing.id)) scopeGoToRoot(existing.id)
-            return
-        }
-
-        const graphX = (placement?.graphX ?? placement?.clientX ?? 200) - (ROOT_WORLD_CARD_WIDTH / 2)
-        const graphY = Math.max(20, (placement?.graphY ?? placement?.clientY ?? (workspaceTop + 160)) - (ROOT_WORLD_CARD_HEIGHT / 2))
-        const placementForValues = {
-            clientX: placement?.clientX ?? 220,
-            clientY: placement?.clientY ?? (workspaceTop + 160)
-        }
-
-        const node = createNode('universe.node0', {
-            graphX,
-            graphY,
-            values: buildNodeValues('universe.node0', {
-                title: 'Node 0'
-            }, placementForValues)
-        })
-        if (!node) return
-
-        dispatch({ type: 'select-entity', entityId: null })
-        applyLocalOps([
-            { type: 'createNode', payload: { node } },
-            {
-                type: 'setWorkspaceState',
-                payload: {
-                    patch: {
-                        activeSurface: 'graph',
-                        selectedNodeId: null
-                    }
-                }
-            }
-        ], { activityMessage: 'Created Node 0.' })
-        // Enter Node 0's interior — canvas becomes its world
-        scopeGoToRoot(node.id)
     }
 
     const handleWorldSurfaceDoubleClick = (placement) => {
@@ -772,13 +719,12 @@ export default function BetaEditor({
     }
 
     const workspaceTitle = isLocalWorkspace ? 'Blank White Workspace' : (document.projectMeta?.title || 'Beta Project')
-    const graphTopInset = hasNodeZero ? workspaceTop : 0
+    const graphTopInset = workspaceTop
 
     return (
         <main className="beta-editor-shell">
-            <header className={`beta-topbar${hasNodeZero ? ' is-seeded' : ''}`} ref={topbarRef}>
-                {hasNodeZero && (
-                    <>
+            <header className="beta-topbar is-seeded" ref={topbarRef}>
+                <>
                         <div className="beta-topbar-left">
                             <button type="button" className="beta-topbar-back" onClick={() => {
                                 navigateToBetaPath(buildBetaProjectsPath(resolvedSpaceId))
@@ -808,14 +754,6 @@ export default function BetaEditor({
                                             </span>
                                         )
                                     })}
-                                </nav>
-                            ) : hasNodeZero ? (
-                                <nav className="beta-topbar-breadcrumb" aria-label="Node scope">
-                                    <button type="button" className="beta-topbar-crumb is-current">◈</button>
-                                    <span className="beta-topbar-crumb-group">
-                                        <span className="beta-topbar-crumb-sep">›</span>
-                                        <button type="button" className="beta-topbar-crumb" onClick={() => handleStartFromNodeZero()}>Node 0</button>
-                                    </span>
                                 </nav>
                             ) : (
                                 <span className="beta-topbar-location" aria-live="polite">{topbarLocationText}</span>
@@ -886,7 +824,7 @@ export default function BetaEditor({
                                 <button type="button" className="beta-topbar-overflow-btn" onClick={() => setOverflowOpen((v) => !v)}>⋯</button>
                                 {overflowOpen && (
                                     <div className="beta-topbar-overflow-menu">
-                                        <button type="button" onClick={() => { handleStartFromNodeZero(); setOverflowOpen(false) }}>Node 0</button>
+                                        <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
                                         <button type="button" onClick={() => { handleCreateStreamingPrototype(); setOverflowOpen(false) }}>Streaming Prototype</button>
                                         {isLocalWorkspace && (
                                             <button type="button" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Reset Workspace</button>
@@ -900,8 +838,7 @@ export default function BetaEditor({
                                 )}
                             </div>
                         </div>
-                    </>
-                )}
+                </>
             </header>
 
             {state.loading ? <div className="beta-overlay-message">Loading project…</div> : null}
@@ -918,7 +855,7 @@ export default function BetaEditor({
                     key={currentScopeId || 'root'}
                     topInset={graphTopInset}
                     nodes={graphCardNodes}
-                    emptyHint={hasNodeZero ? 'Double-click to place your first node.' : 'Cursor is material. Double-click to place Node 0.'}
+                    emptyHint="Double-click to place your first node."
                     edges={document.edges || []}
                     selectedNodeId={workspaceState.selectedNodeId}
                     onEnterNode={handleEnterNode}
@@ -932,13 +869,6 @@ export default function BetaEditor({
                         payload: { edgeId }
                     })}
                     onDeleteNode={(nodeId) => {
-                        const node = authoredNodes.find((n) => n.id === nodeId)
-                        if (isRootGraphNode(node, NODE_ZERO_TYPE_ID)) {
-                            const confirmed = window.confirm(
-                                'Delete Node 0? Every node in this project is parented under it, so this deletes the ENTIRE graph, not just the topbar/navigation — this cannot be undone from here.'
-                            )
-                            if (!confirmed) return
-                        }
                         applyLocalOps([
                             { type: 'deleteNode', payload: { nodeId } },
                             { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
@@ -948,17 +878,7 @@ export default function BetaEditor({
                         type: 'updateNode',
                         payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
                     })}
-                    onDoubleClick={(placement) => {
-                        if (!hasNodeZero) {
-                            handleStartFromNodeZero(placement)
-                            return
-                        }
-                        if (currentScopeId === null) {
-                            handleStartFromNodeZero()
-                            return
-                        }
-                        openPalette('graph', placement)
-                    }}
+                    onDoubleClick={(placement) => openPalette('graph', placement)}
                 />
                 {/* Panel nodes float above the graph as viewport-fixed windows */}
                 {visibleViewNodes.map((node, index) => {

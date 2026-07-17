@@ -122,8 +122,11 @@ describe('BetaEditor undo/redo', () => {
         mockReplaceDocument.mockClear()
         render(<BetaEditor projectId="proj-1" />)
 
-        // Seed history by creating Node 0 (double-click on the empty graph surface).
+        // Seed history by creating a node via the palette (double-click on the
+        // empty graph surface opens it directly — no forced Node 0 first step).
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
+        fireEvent.change(screen.getByPlaceholderText('type a node name…'), { target: { value: 'Cube' } })
+        fireEvent.keyDown(screen.getByPlaceholderText('type a node name…'), { key: 'Enter' })
         const batches = () => mockApplyLocalOps.mock.calls
             .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
         const createdNode = batches().flat().find((op) => op.type === 'createNode')
@@ -144,7 +147,10 @@ describe('BetaEditor canvas mode', () => {
         window.localStorage.removeItem(CANVAS_STORAGE_KEY)
     })
 
-    it('auto-enters Node 0 when a blank workspace already has one', () => {
+    // Product decision 2026-07-17: Node 0 is an ordinary node, not an
+    // auto-created/auto-entered singleton root — a pre-existing one just sits
+    // as a plain top-level node like any other, not force-entered on load.
+    it('does not auto-enter a pre-existing Node 0 — it sits as an ordinary top-level node', () => {
         window.localStorage.setItem(
             CANVAS_STORAGE_KEY,
             makeWorkspaceDoc([
@@ -163,13 +169,27 @@ describe('BetaEditor canvas mode', () => {
         expect(screen.queryByRole('button', { name: /graph/i })).toBeNull()
         // World button only appears after a spatial node is added
         expect(screen.queryByRole('button', { name: /world/i })).toBeNull()
-        // Node 0 is no longer a floating panel — topbar is its presence, scope label shows its name
-        expect(screen.queryByRole('dialog', { name: 'Node 0' })).toBeNull()
-        expect(screen.getAllByText('Node 0').length).toBeGreaterThan(0)
+        // Not auto-entered: no breadcrumb crumb for it, no "Node 0" text anywhere
+        expect(screen.queryByText('Node 0')).toBeNull()
+    })
+
+    it('opens the node palette directly on double-click, on a completely empty project', () => {
+        mockApplyLocalOps.mockClear()
+        render(<BetaEditor localStorageKey={CANVAS_STORAGE_KEY} canvasMode />)
+
+        fireEvent.doubleClick(screen.getByTestId('mock-graph'))
+
+        expect(screen.getByRole('dialog', { name: 'Create node' })).toBeTruthy()
+        // No node auto-created just by opening the palette
+        expect(mockApplyLocalOps).not.toHaveBeenCalled()
     })
 })
 
-describe('BetaEditor Node 0 deletion guard', () => {
+// Product decision 2026-07-17: Node 0 is an ordinary node — deleting it (via
+// either the Delete FAB or the graph canvas's own delete path) behaves exactly
+// like deleting any other node, no special confirmation. Only Reset Workspace
+// (a document-wide wipe) still confirms.
+describe('BetaEditor delete/reset confirmations', () => {
     const GUARD_STORAGE_KEY = 'test-node0-delete-guard'
 
     afterEach(() => {
@@ -177,11 +197,6 @@ describe('BetaEditor Node 0 deletion guard', () => {
         vi.restoreAllMocks()
     })
 
-    // activeSurface must be 'graph' — matches the real app's state after Node 0
-    // is actually created (handleStartFromNodeZero sets it explicitly), and is
-    // required for a render:'hidden' node type like universe.node0 to count as
-    // "surface selected" (schema default is 'world', which only matches
-    // spatial-3d/world-category types).
     const seedSelectedNodeZero = () => {
         window.localStorage.setItem(
             GUARD_STORAGE_KEY,
@@ -193,30 +208,15 @@ describe('BetaEditor Node 0 deletion guard', () => {
         )
     }
 
-    it('asks for confirmation before deleting Node 0 via the Delete FAB, and aborts on cancel', () => {
+    it('deletes Node 0 via the Delete FAB with no confirmation, same as any other node', () => {
         seedSelectedNodeZero()
-        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+        const confirmSpy = vi.spyOn(window, 'confirm')
         mockApplyLocalOps.mockClear()
         render(<BetaEditor localStorageKey={GUARD_STORAGE_KEY} />)
 
         fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
 
-        expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/Node 0/))
-        const deletedNode0 = mockApplyLocalOps.mock.calls
-            .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
-            .flat()
-            .some((op) => op.type === 'deleteNode' && op.payload.nodeId === 'node-0')
-        expect(deletedNode0).toBe(false)
-    })
-
-    it('deletes Node 0 via the Delete FAB once the user confirms', () => {
-        seedSelectedNodeZero()
-        vi.spyOn(window, 'confirm').mockReturnValue(true)
-        mockApplyLocalOps.mockClear()
-        render(<BetaEditor localStorageKey={GUARD_STORAGE_KEY} />)
-
-        fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
-
+        expect(confirmSpy).not.toHaveBeenCalled()
         const deletedNode0 = mockApplyLocalOps.mock.calls
             .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
             .flat()
@@ -224,25 +224,25 @@ describe('BetaEditor Node 0 deletion guard', () => {
         expect(deletedNode0).toBe(true)
     })
 
-    it('asks for confirmation before deleting Node 0 via the graph canvas\'s own delete path', () => {
+    it('deletes Node 0 via the graph canvas\'s own delete path with no confirmation', () => {
         seedSelectedNodeZero()
-        const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+        const confirmSpy = vi.spyOn(window, 'confirm')
         mockApplyLocalOps.mockClear()
         render(<BetaEditor localStorageKey={GUARD_STORAGE_KEY} />)
 
         fireEvent.click(screen.getByText('delete-via-graph-canvas'))
 
-        expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/Node 0/))
+        expect(confirmSpy).not.toHaveBeenCalled()
         const deletedNode0 = mockApplyLocalOps.mock.calls
             .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
             .flat()
             .some((op) => op.type === 'deleteNode' && op.payload.nodeId === 'node-0')
-        expect(deletedNode0).toBe(false)
+        expect(deletedNode0).toBe(true)
     })
 
     // Regression test for the 2026-07-17 audit: "Reset Workspace" wipes the
     // entire local document (every node/edge/window) and previously had NO
-    // confirmation at all, unlike the equally-destructive Node 0 delete path.
+    // confirmation at all — this guard is unrelated to Node 0 and stays.
     it('asks for confirmation before Reset Workspace, and aborts on cancel', () => {
         seedSelectedNodeZero()
         const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
