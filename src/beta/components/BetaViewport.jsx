@@ -1,4 +1,4 @@
-import { Suspense, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
@@ -191,6 +191,16 @@ function SceneContent({
     const resolvedGrid = gridNode ? evaluateNodeInputs(gridNode, graphContext) : null
     const [draggingNodeId, setDraggingNodeId] = useState(null)
     const dragNodeYRef = useRef(0)
+    // rAF-gated (2026-07-17 perf audit): R3F's pointer events fire on every
+    // raw DOM pointermove, which can exceed the display refresh rate on
+    // high-poll-rate input devices -- each call was committing a document op
+    // + re-evaluating the whole node graph. Capping to one commit per
+    // animation frame is a real, safe win with no change in drag feel.
+    const dragRafRef = useRef(null)
+    const dragPendingRef = useRef(null)
+    useEffect(() => () => {
+        if (dragRafRef.current !== null) cancelAnimationFrame(dragRafRef.current)
+    }, [])
 
     return (
         <>
@@ -230,11 +240,23 @@ function SceneContent({
                     if (!draggingNodeId) return
                     event.stopPropagation()
                     const point = event.point?.toArray?.() || [0, 0, 0]
-                    onMoveNode?.(draggingNodeId, [point[0], dragNodeYRef.current, point[2]])
+                    dragPendingRef.current = [point[0], dragNodeYRef.current, point[2]]
+                    if (dragRafRef.current === null) {
+                        dragRafRef.current = requestAnimationFrame(() => {
+                            dragRafRef.current = null
+                            if (dragPendingRef.current) onMoveNode?.(draggingNodeId, dragPendingRef.current)
+                        })
+                    }
                 }}
                 onPointerUp={(event) => {
                     if (!draggingNodeId) return
                     event.stopPropagation()
+                    if (dragRafRef.current !== null) {
+                        cancelAnimationFrame(dragRafRef.current)
+                        dragRafRef.current = null
+                        if (dragPendingRef.current) onMoveNode?.(draggingNodeId, dragPendingRef.current)
+                    }
+                    dragPendingRef.current = null
                     setDraggingNodeId(null)
                 }}
             >

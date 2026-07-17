@@ -215,18 +215,38 @@ export default function BetaGraphSurface({
 
     useEffect(() => {
         if (!isDraggingNode) return undefined
+        // rAF-gated: raw pointermove can fire far more often than the display
+        // refresh rate (high-poll-rate mice/trackpads), and each call was
+        // committing a document op + re-evaluating the whole node graph --
+        // capping to one commit per animation frame is a real, safe win with
+        // no change in drag responsiveness (2026-07-17 perf audit).
+        let rafId = null
+        let pendingPos = null
+        const flush = () => {
+            rafId = null
+            if (!pendingPos) return
+            const { nextX, nextY } = pendingPos
+            pendingPos = null
+            onMoveNode?.(draggingNodeId, nextX, nextY)
+        }
         const move = (event) => {
             const node = nodeById.get(draggingNodeId)
             if (!node) return
             const point = clientPointToGraphPoint(event.clientX, event.clientY)
-            const nextX = point.x - dragOffsetRef.current.x
-            const nextY = point.y - dragOffsetRef.current.y
-            onMoveNode?.(draggingNodeId, nextX, nextY)
+            pendingPos = {
+                nextX: point.x - dragOffsetRef.current.x,
+                nextY: point.y - dragOffsetRef.current.y
+            }
+            if (rafId === null) rafId = requestAnimationFrame(flush)
         }
-        const up = () => setDraggingNodeId(null)
+        const up = () => {
+            if (rafId !== null) { cancelAnimationFrame(rafId); flush() }
+            setDraggingNodeId(null)
+        }
         window.addEventListener('pointermove', move)
         window.addEventListener('pointerup', up)
         return () => {
+            if (rafId !== null) cancelAnimationFrame(rafId)
             window.removeEventListener('pointermove', move)
             window.removeEventListener('pointerup', up)
         }

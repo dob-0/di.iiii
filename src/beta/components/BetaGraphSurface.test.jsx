@@ -189,4 +189,54 @@ describe('BetaGraphSurface', () => {
         expect(onMoveNode).toHaveBeenCalled()
         expect(onMoveNode.mock.calls.at(-1)).toEqual(['color-1', -40, -30])
     })
+
+    // Regression test for the 2026-07-17 perf audit: every raw pointermove
+    // during a node drag used to call onMoveNode directly -- committing a
+    // document op and re-evaluating the whole node graph per event, even
+    // though pointermove can fire far more often than the display refresh
+    // rate. Moves are now coalesced to at most one commit per animation
+    // frame (still flushed synchronously on release, so the final position
+    // is never lost or delayed).
+    it('coalesces rapid pointermove events into one onMoveNode call per animation frame', () => {
+        const onMoveNode = vi.fn()
+        const colorNode = makeNode('value.color', { id: 'color-1', graphX: 40, graphY: 30 })
+        const { container } = render(
+            <BetaGraphSurface
+                nodes={[colorNode]}
+                edges={[]}
+                onMoveNode={onMoveNode}
+            />
+        )
+
+        const nodeCard = container.querySelector('.beta-graph-node-card')
+        nodeCard.setPointerCapture = vi.fn()
+
+        const rafCallbacks = []
+        const rafSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb) => {
+            rafCallbacks.push(cb)
+            return rafCallbacks.length
+        })
+
+        fireEvent.pointerDown(nodeCard, { button: 0, clientX: 50, clientY: 40, pointerId: 1 })
+        // Five rapid moves within the same (unflushed) animation frame --
+        // only the first should schedule a rAF; onMoveNode must not have
+        // been called yet, since nothing has flushed.
+        fireEvent.pointerMove(window, { clientX: 10, clientY: 10 })
+        fireEvent.pointerMove(window, { clientX: 0, clientY: 0 })
+        fireEvent.pointerMove(window, { clientX: -10, clientY: -10 })
+        fireEvent.pointerMove(window, { clientX: -20, clientY: -20 })
+        fireEvent.pointerMove(window, { clientX: -30, clientY: -20 })
+
+        expect(onMoveNode).not.toHaveBeenCalled()
+        expect(rafSpy).toHaveBeenCalledTimes(1)
+
+        // Simulate the animation frame firing: only the LATEST position (not
+        // all five) should be committed.
+        rafCallbacks[0]()
+        expect(onMoveNode).toHaveBeenCalledTimes(1)
+        expect(onMoveNode.mock.calls[0]).toEqual(['color-1', -40, -30])
+
+        rafSpy.mockRestore()
+        fireEvent.pointerUp(window)
+    })
 })
