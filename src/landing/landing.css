@@ -312,6 +312,11 @@ body.is-landing .account-btn-wrapper {
     background: var(--di-cyan-dim);
 }
 
+.lp-enter-viewtoggle {
+    left: auto;
+    right: 18px;
+}
+
 .lp-enter-hint {
     position: fixed;
     bottom: 26px;

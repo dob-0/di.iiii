@@ -1253,6 +1253,7 @@ export default function LiveProjectScene({
     showChrome = true,
     showEntities = true,
     onExit = null,
+    exitLabel = '← Exit',
     title = ''
 }) {
     const { doc, loadError, retryDocument } = useLiveProjectDocument(projectId)
@@ -1567,7 +1568,7 @@ export default function LiveProjectScene({
 
                     <header className="live-scene-chrome">
                         <button type="button" className="live-scene-exit" onClick={onExit}>
-                            ← Exit
+                            {exitLabel}
                         </button>
                         <span className="live-scene-title">
                             {title}{nearestLabel ? ` · ${nearestLabel}` : ''}

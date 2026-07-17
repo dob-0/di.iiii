@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import PublicProjectViewer from './PublicProjectViewer.jsx'
 import { PREVIEW_ENTER_EXHIBITION_KIND, PREVIEW_HOST_MESSAGE_TYPE } from '../../utils/presentationPreviewDocument.js'
@@ -49,6 +49,16 @@ vi.mock('../../studio/components/StudioViewport.jsx', () => ({
             <div>
                 <div>viewer-scene:{document.presentationState?.entryView || 'scene'}</div>
                 <div data-testid="viewport-flags">{`nav:${enableNavigation} chrome:${showChrome} low:${lowPower}`}</div>
+            </div>
+        )
+    }
+}))
+
+vi.mock('../../components/LiveProjectScene.jsx', () => ({
+    default: function MockLiveProjectScene({ onExit, exitLabel }) {
+        return (
+            <div>
+                <button type="button" onClick={onExit}>{exitLabel}</button>
             </div>
         )
     }
@@ -211,6 +221,27 @@ describe('PublicProjectViewer', () => {
 
         expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
         expect(screen.getByTestId('viewport-flags').textContent).toBe('nav:true chrome:true low:false')
+        expect(await screen.findByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
+    })
+
+    // Regression guard: walking/flying then clicking the scene's own exit
+    // button used to say "← Exit" -- indistinguishable from actually leaving
+    // the page, when it really just swaps back to the orbit viewer in place.
+    // Confirmed live: the button worked correctly all along (round-trips back
+    // to Walk / Fly), the bug was purely the misleading label.
+    it('labels the walk-mode exit button "View mode", not a generic "Exit", and it returns to Walk / Fly', async () => {
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+        const walkButton = await screen.findByRole('button', { name: 'Walk / Fly' })
+        fireEvent.click(walkButton)
+
+        const viewModeButton = await screen.findByRole('button', { name: '← View mode' })
+        expect(screen.queryByRole('button', { name: '← Exit' })).toBeNull()
+
+        fireEvent.click(viewModeButton)
         expect(await screen.findByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
     })
 

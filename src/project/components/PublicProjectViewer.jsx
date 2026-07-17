@@ -318,6 +318,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     showChrome
                     title={viewerTitle}
                     onExit={() => setNavMode('orbit')}
+                    exitLabel="← View mode"
                 />
             ) : document ? (
                 <StudioViewport
