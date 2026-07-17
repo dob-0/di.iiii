@@ -9,12 +9,57 @@ active_branch: dev
 
 ## Last commit
 
-`main` promoted to `f656bc63` (fast-forward from `dev`) and deployed to
-production — user tested staging first (including a live mouse-look
-retest), confirmed healthy, then explicitly asked to push to `main`.
-Both `dev` and `main` are even.
+`dev` at `bd072fef` (own scope this session) + `66e41c4e` (concurrent
+session, Beta per-universe topbar chrome — landed after, unrelated).
+`main` still at `f656bc63` from earlier this session's promotion; this
+session's landing/viewer work has NOT been promoted to `main` yet.
 
-## Last session (2026-07-17 — perf audit shipped to staging, two live bugs found+fixed, promoted to prod)
+## Last session (2026-07-17 cont'd — landing "Enter Space" target + a real Walk/Fly UX bug, both shipped to staging only)
+
+- Built "Enter Space" (landing page) to open an admin-chosen populated
+  space instead of an empty decorative void — first attempt invented a
+  new `landingSpaceId` config field; user caught it as wrong ("no its
+  tooo old bag" energy but for design this time) — reverted and reused
+  the platform's existing "Main" space concept (`defaultSpaceId`)
+  instead, and consolidated its one remaining write-UI into `/admin`
+  (removed the duplicate inline "Set main" from Studio Hub's grid + map
+  views). `GET/PATCH /api/config` unchanged in final shape.
+- CI flaked once on an unrelated pre-existing test
+  (`projectContracts.test.js` "unrecoverable-project" ENOENT) — passed
+  57/57 locally, re-ran the failed CI job rather than guessing, it
+  went green on retry.
+- Verified the whole loop live end-to-end via direct VPS/container
+  `node -e fetch(...)` calls to staging's own `/api/config` (using the
+  container's own `ADMIN_API_TOKEN`, never extracted to disk) + headless
+  Playwright — set `beyond-form` as Main, confirmed Enter Space
+  navigated there, then cleared it back to `null` per the user's
+  correction that it was only ever a test value.
+- Real bug from user report: after using a real project's "Walk / Fly"
+  toggle (`PublicProjectViewer.jsx`), there was no way back to the calm
+  view without a full page Exit + re-Enter. The toggle-back mechanism
+  actually already worked — verified live, round-trips fine — the only
+  real defect was its label: `LiveProjectScene`'s chrome exit button was
+  hardcoded `← Exit`, identical wording to the landing page's own real
+  "Exit space", so it read as "leaves the page" when it doesn't. Added
+  an `exitLabel` prop (default unchanged for `WccExperience.jsx`'s real
+  exit case), `PublicProjectViewer` now passes `"← View mode"`.
+  Regression test mocks `LiveProjectScene` to assert the label and the
+  round trip back to the `Walk / Fly` button.
+- Also shipped a smaller, separate, tested addition to the landing
+  page's own decorative preview: a "◐ View mode" button + `V` key so it
+  can flip back to the calm orbit view without a full Exit + re-Enter
+  either — same idea in miniature, not the actual bug fix.
+- None of staging's current public spaces (`wcc`, `beyond-form`,
+  `br-id-ge`) expose the generic Walk/Fly button — they're all custom
+  experiences — so the real-viewer fix could only be click-verified
+  locally against `/main`, not live on staging; user confirmed the
+  landing-page toggle live on staging separately (after a hard refresh
+  cleared a stale cached bundle).
+- Made the "Made with di.iiii" badge minimal + `mix-blend-mode:
+  difference` so it reads on any published site's theme instead of a
+  fixed dark-cyan pill that clashed on a B/W brutalist site.
+
+## Earlier this session (perf audit shipped to staging, two live bugs found+fixed, promoted to prod)
 
 - Ran a deep perf audit (5 parallel research agents) across build
   chunking, code-splitting, asset caching, server query paths, and Beta/
@@ -108,8 +153,13 @@ second independent WebGL canvas rendering that World's real scene with a
 
 ## Open
 
-- Do a quick prod smoke-check now that `main` deployed (same checklist
-  run on staging: routes, sign-in, node dragging, tab sync, model cache).
+- Promote this session's `dev` work (Enter Space/Main-space reuse, the
+  Walk/Fly "View mode" label fix, badge minimal restyle) to `main` when
+  the user is ready — not yet asked for.
+- No published staging space currently exercises the generic Walk/Fly
+  button (all are custom experiences) — if that regression test class
+  matters going forward, consider publishing one plain `entryView:
+  'scene'` demo project.
 - ~23 lower-priority audit findings untriaged — `docs/ai/known-fixes.md`.
 - Studio dev-only panes need a product decision before leaving dev-only:
   inspector wiring, flag rollout audience, Beta-vs-Studio long-term shape.
