@@ -199,6 +199,20 @@ if (requireAuth && !process.env.AUTH_SESSION_SECRET && authSessionSecret) {
   )
 }
 
+// requireAuth/cookieSecure both silently default to off unless NODE_ENV is
+// the exact string 'production' — a real production deploy with NODE_ENV
+// merely unset (not misconfigured, just absent) runs fully open with
+// non-secure cookies and nothing surfaces the fact (audit 2026-07-17). This
+// is a warning only, not a behavior change — don't flip a working deploy's
+// defaults out from under it, just make the silent case loud.
+if (!requireAuth && !process.env.REQUIRE_AUTH) {
+  logger.warn(
+    `[serverXR] REQUIRE_AUTH is unset and NODE_ENV is "${process.env.NODE_ENV || ''}" (not "production") — ` +
+    'auth is running fully OPEN (every request treated as admin) and cookies are not marked Secure. ' +
+    'If this is a real deployment, set REQUIRE_AUTH=true (and NODE_ENV=production) explicitly.'
+  )
+}
+
 const oauthCallbackBase = (process.env.OAUTH_CALLBACK_BASE_URL || '').replace(/\/+$/, '')
 const oauthFrontendUrl = (process.env.OAUTH_FRONTEND_URL || '/').replace(/\/+$/, '') || '/'
 

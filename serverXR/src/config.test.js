@@ -137,18 +137,71 @@ describe('config: OAuth half-configured provider warning (2026-07-16 audit fix #
         })
     })
 
-    it('does not warn when both id and secret are set', () => {
+    it('does not warn about OAuth when both id and secret are set', () => {
         withFreshConfig({ GITHUB_CLIENT_ID: 'abc123', GITHUB_CLIENT_SECRET: 'def456' }, (config, warnSpy) => {
             expect(config.oauth.github.enabled).toBe(true)
-            expect(warnSpy).not.toHaveBeenCalled()
+            expect(warnSpy).not.toHaveBeenCalledWith(expect.stringMatching(/GITHUB_CLIENT_ID.*GITHUB_CLIENT_SECRET/s))
         })
     })
 
-    it('does not warn when both id and secret are absent (provider simply disabled)', () => {
+    it('does not warn about OAuth when both id and secret are absent (provider simply disabled)', () => {
         withFreshConfig({}, (config, warnSpy) => {
             expect(config.oauth.github.enabled).toBe(false)
             expect(config.oauth.google.enabled).toBe(false)
-            expect(warnSpy).not.toHaveBeenCalled()
+            expect(warnSpy).not.toHaveBeenCalledWith(expect.stringMatching(/CLIENT_ID.*CLIENT_SECRET/s))
+        })
+    })
+})
+
+// Regression test for the 2026-07-17 audit: requireAuth/cookieSecure both
+// silently default to off unless NODE_ENV is exactly 'production' — a real
+// deploy with NODE_ENV merely unset (not misconfigured, just absent) runs
+// fully open with no signal at startup. This test only checks the warning
+// fires (and doesn't fire when it shouldn't) -- it's not a behavior change.
+describe('config: insecure-default warning when NODE_ENV/REQUIRE_AUTH are unset (audit 2026-07-17)', () => {
+    const CONFIG_PATH = require.resolve('./config.js')
+    const LOGGER_PATH = require.resolve('./logger.js')
+    const ENV_KEYS = ['NODE_ENV', 'REQUIRE_AUTH', 'AUTH_SESSION_SECRET', 'ADMIN_API_TOKEN']
+    let savedEnv
+
+    const withFreshConfig = (env, fn) => {
+        savedEnv = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]))
+        for (const key of ENV_KEYS) delete process.env[key]
+        Object.assign(process.env, env)
+        delete require.cache[CONFIG_PATH]
+        const logger = require('./logger.js')
+        const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+        try {
+            fn(require('./config.js').config, warnSpy)
+        } finally {
+            warnSpy.mockRestore()
+            for (const key of ENV_KEYS) {
+                if (savedEnv[key] === undefined) delete process.env[key]
+                else process.env[key] = savedEnv[key]
+            }
+            delete require.cache[CONFIG_PATH]
+            delete require.cache[LOGGER_PATH]
+        }
+    }
+
+    it('warns when NODE_ENV and REQUIRE_AUTH are both unset', () => {
+        withFreshConfig({}, (config, warnSpy) => {
+            expect(config.requireAuth).toBe(false)
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/REQUIRE_AUTH is unset/))
+        })
+    })
+
+    it('does not warn when REQUIRE_AUTH is explicitly set to false', () => {
+        withFreshConfig({ REQUIRE_AUTH: 'false' }, (config, warnSpy) => {
+            expect(config.requireAuth).toBe(false)
+            expect(warnSpy).not.toHaveBeenCalledWith(expect.stringMatching(/REQUIRE_AUTH is unset/))
+        })
+    })
+
+    it('does not warn when NODE_ENV=production (requireAuth resolves true)', () => {
+        withFreshConfig({ NODE_ENV: 'production', AUTH_SESSION_SECRET: 'dedicated-secret', ADMIN_API_TOKEN: 'admin-secret-token' }, (config, warnSpy) => {
+            expect(config.requireAuth).toBe(true)
+            expect(warnSpy).not.toHaveBeenCalledWith(expect.stringMatching(/REQUIRE_AUTH is unset/))
         })
     })
 })
