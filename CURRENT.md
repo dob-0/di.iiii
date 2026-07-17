@@ -38,10 +38,12 @@ Known, flagged (not silently dropped): `isWorldFullscreen` still one
 boolean not per-world; Studio's multi-live-world tie-break is arbitrary
 first-in-document-order (no scope-nav UI in Studio yet).
 
-**Owed:** real live-browser click-through — Playwright's Chromium isn't
-installed in this sandbox, manual CDP scripting was deprioritized; relied
-on the phases' new unit/regression coverage + clean lint/build instead.
-Do this before the feature leaves dev-only.
+Live-browser click-through now done: installed Playwright's bundled
+Chromium, drove it via raw CDP (its `chrome` channel needs root to
+install, unavailable here). Beta → created/live-marked a World, added a
+Cube inside its scope → Studio on the same project, clicked "W", got a
+second independent WebGL canvas rendering that World's real scene with a
+"READ-ONLY · LIVE WORLD" badge, zero console errors.
 
 `npm run lint`/`build`/`test` clean throughout (737/737 tests, up from 726).
 
@@ -72,7 +74,6 @@ Do this before the feature leaves dev-only.
 ## Open
 
 - Push this session's fixes to `dev` → verify staging → promote to `main`.
-- Live-browser click-through owed for the multi-world pass (see above).
 - ~23 lower-priority audit findings untriaged — `docs/ai/known-fixes.md`.
 - Studio dev-only panes need a product decision before leaving dev-only:
   inspector wiring, flag rollout audience, Beta-vs-Studio long-term shape.
