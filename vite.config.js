@@ -192,6 +192,15 @@ export default {
 
                     if (pkg === 'jszip' || pkg === 'idb-keyval') return 'utils-vendor'
 
+                    // gsap is only ever imported by the lazy-loaded wcc route
+                    // (WccExperience.jsx / wcc/landing/LandingPage.jsx). Left in
+                    // the 'vendor' catch-all below, it gets merged into the SAME
+                    // chunk as eagerly-loaded deps (e.g. MUI via AuthGate), which
+                    // drags gsap into every route's eager load too. Giving it its
+                    // own chunk name lets it stay lazy, loaded only when the wcc
+                    // route actually mounts (2026-07-17 perf audit).
+                    if (pkg === 'gsap') return 'wcc-vendor'
+
                     return 'vendor'
                 }
             }

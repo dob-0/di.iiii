@@ -1,10 +1,14 @@
 import { OrbitControls } from '@react-three/drei'
 import * as THREE from 'three'
 import { useThree } from '@react-three/fiber'
-import { Perf } from 'r3f-perf'
-import { useContext } from 'react'
+import { lazy, Suspense, useContext } from 'react'
 import { SceneContext, UiContext, SceneSettingsContext, ActionsContext, RefsContext } from './contexts/AppContexts.js'
 import SceneBase from './components/SceneBase.jsx'
+
+// Dev/debug FPS overlay, only ever shown behind isPerfVisible -- lazy so its
+// ~1.3MB doesn't ship eagerly in the three.js vendor chunk for every user
+// who never toggles it on (2026-07-17 perf audit).
+const Perf = lazy(() => import('r3f-perf').then((mod) => ({ default: mod.Perf })))
 
 export default function Experience() {
     const { objects, selectedObjectId, selectedObjectIds, clearSelection } = useContext(SceneContext)
@@ -39,7 +43,11 @@ export default function Experience() {
 
     return (
         <>
-            {isPerfVisible && <Perf position="top-left" />}
+            {isPerfVisible && (
+                <Suspense fallback={null}>
+                    <Perf position="top-left" />
+                </Suspense>
+            )}
 
             {camera && gl?.domElement && (
                 <OrbitControls
