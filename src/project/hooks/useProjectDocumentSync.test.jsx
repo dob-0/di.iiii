@@ -98,6 +98,57 @@ describe('useProjectDocumentSync', () => {
         expect(result.current.store.state.document.presentationState.codeHtml).toContain('Live Studio Preview')
     })
 
+    // Regression test for the 2026-07-17 perf audit: applyLocalOps used to
+    // call flushQueue synchronously every time -- a continuous edit (slider
+    // drag) firing many ops per second produced roughly one POST per event.
+    // Rapid successive calls within the throttle window must now coalesce
+    // into a single submitProjectOps call carrying every op, not one call
+    // each.
+    it('coalesces rapid successive applyLocalOps calls into a single network request', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'studio-project', title: 'Studio Project' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+        submitProjectOpsMock.mockImplementation(async (_projectId, _baseVersion, ops) => ({
+            newVersion: 2,
+            ops
+        }))
+
+        const { result } = renderHook(() => {
+            const store = useProjectStore()
+            const sync = useProjectDocumentSync({ projectId: 'studio-project', store })
+            return { store, sync }
+        })
+
+        await waitFor(() => {
+            expect(result.current.store.state.document.projectMeta.id).toBe('studio-project')
+        })
+
+        // Five rapid "drag" updates fired back-to-back, well within the
+        // throttle window -- these must all land in ONE network request.
+        act(() => {
+            for (let i = 0; i < 5; i += 1) {
+                result.current.sync.applyLocalOps({
+                    type: 'setPresentationState',
+                    payload: { patch: { mode: 'code', codeHtml: `<main>Drag frame ${i}</main>` } }
+                })
+            }
+        })
+
+        await waitFor(() => {
+            expect(result.current.store.state.version).toBe(2)
+        })
+
+        expect(submitProjectOpsMock).toHaveBeenCalledTimes(1)
+        expect(submitProjectOpsMock.mock.calls[0][2]).toHaveLength(5)
+        expect(result.current.store.state.document.presentationState.codeHtml).toContain('Drag frame 4')
+    })
+
     it('retries a failed op batch instead of dropping it, and surfaces a visible error until it clears', async () => {
         getProjectDocumentMock.mockResolvedValue({
             version: 1,

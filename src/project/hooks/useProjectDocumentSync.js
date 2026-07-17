@@ -20,6 +20,16 @@ const SYNC_RETRY_DELAY_MS = 4000
 // the same "surface an error, wait, retry" path as any other failure instead
 // of resubmitting instantly again.
 const MAX_CONSECUTIVE_CONFLICT_RETRIES = 5
+// applyLocalOps used to call flushQueue synchronously every time -- fine for
+// a single click, but a continuous edit (slider/color-picker drag) firing
+// many ops per second turned into roughly one POST per input event on a
+// fast connection (optimistic apply already made the edit feel instant
+// locally, so this bought nothing perceptually). A short throttle window
+// coalesces bursts into far fewer requests without ever waiting more than
+// this long to actually sync -- unlike a naive trailing debounce, a
+// continuous multi-second drag still flushes periodically instead of only
+// once at the very end (2026-07-17 perf audit).
+const FLUSH_THROTTLE_MS = 50
 
 export function useProjectDocumentSync({
     projectId,
@@ -34,6 +44,7 @@ export function useProjectDocumentSync({
     const pendingQueueRef = useRef([])
     const isFlushingRef = useRef(false)
     const retryTimerRef = useRef(null)
+    const flushThrottleTimerRef = useRef(null)
     const localClientIdRef = useRef(generateId(clientIdPrefix))
     const seenOpIdsRef = useRef(new Set())
     const seenOpOrderRef = useRef([])
@@ -216,6 +227,20 @@ export function useProjectDocumentSync({
         }
     }, [applyRemoteOps, dispatch, projectId, pushActivity, rememberSeenOps])
 
+    // Coalesces bursts of applyLocalOps calls (see FLUSH_THROTTLE_MS above)
+    // into one flushQueue() per window, instead of one per call.
+    const scheduleFlush = useCallback(() => {
+        if (flushThrottleTimerRef.current !== null) return
+        flushThrottleTimerRef.current = setTimeout(() => {
+            flushThrottleTimerRef.current = null
+            void flushQueue()
+        }, FLUSH_THROTTLE_MS)
+    }, [flushQueue])
+
+    useEffect(() => () => {
+        if (flushThrottleTimerRef.current !== null) clearTimeout(flushThrottleTimerRef.current)
+    }, [])
+
     const applyLocalOps = useCallback((ops = [], options = {}) => {
         const normalizedOps = (Array.isArray(ops) ? ops : [ops])
             .filter(Boolean)
@@ -235,8 +260,8 @@ export function useProjectDocumentSync({
         if (options.activityMessage) {
             pushActivity(options.activityMessage, options.activityLevel || 'info')
         }
-        void flushQueue()
-    }, [dispatch, flushQueue, opIdPrefix, pushActivity, rememberSeenOps])
+        scheduleFlush()
+    }, [dispatch, opIdPrefix, pushActivity, rememberSeenOps, scheduleFlush])
 
     const replaceDocument = useCallback(async (document, options = {}) => {
         if (!projectId) return
