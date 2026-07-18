@@ -196,17 +196,26 @@ If `git status` shows unstaged edits you didn't make, assume another agent is mi
 
 **Rule:** Before starting any large task (multi-hour, multi-file, or fan-out/multi-agent), size it against Claude usage limits — the 5-hour rolling session window and the weekly cap. If usage state is known (`/usage`, or the user says they're near a limit), factor it in; if unknown, assume mid-window and route to the cheapest adequate model per the existing model-routing rules (Ollama free lane first for analysis/docs/planning). If the task plausibly won't fit the remaining window, split it into checkpointable phases *before* starting — each phase must end in a state safe to stop at: tests pass, work committed locally, nothing half-edited.
 
-**Why:** A limit hit mid-task with files half-edited, WIP only in chat context, and no resume notes bricks the process: the next window starts cold, re-investigates, and may discard or clobber the unfinished work. Every convention/perk discovered during a session that lives only in chat dies with the session. Planning against the budget up front costs one minute; recovering from an unplanned cutoff costs a session.
+**Why:** A limit hit mid-task with files half-edited, WIP only in chat context, and no resume notes bricks the process: the next window starts cold, re-investigates, and may discard or clobber the unfinished work. Planning against the budget up front costs one minute; recovering from an unplanned cutoff costs a session.
 
 **How — the never-brick workflow when a limit is near or hit mid-task:**
 1. Stop starting new subtasks.
 2. Finish or revert the current file-level edit so the tree is coherent.
 3. Commit WIP locally on `dev` with a clear `wip:` message — never push.
 4. Update CURRENT.md's Open section with exact resume state: what's done, what's next, which files are mid-flight.
-5. Record any hard-won learning from the session in golden_rules.md or known-fixes.md so the perk survives even if the session dies.
-Resume the next window from CURRENT.md, not from memory. And at any time — limit or not — valuable perks/conventions discovered during a session (by user or agent) must be codified in golden_rules.md / known-fixes.md / CURRENT.md in the same session, never left only in chat context.
+Resume the next window from CURRENT.md, not from memory.
 
-**Files:** `CURRENT.md` (Open section = resume state), `docs/ai/golden_rules.md`, `docs/ai/known-fixes.md`, `docs/ai/roles/model-routing.md` (cheapest-adequate-model routing), `scripts/ollama-task.sh` (free lane).
+**Files:** `CURRENT.md` (Open section = resume state), `docs/ai/roles/model-routing.md` (cheapest-adequate-model routing), `scripts/ollama-task.sh` (free lane).
+
+### Valuable perks and conventions get codified the same session they appear — never left only in chat
+
+**Rule:** Anything of durable value discovered during a session — a convention, a workflow that worked, a hard-won fix, a tool trick, a decision with reasons (a "perk") — must be written into its durable home *in that same session*: behavior rules here in golden_rules.md, bug fixes in known-fixes.md, session/resume state in CURRENT.md, product decisions in the relevant doc. This holds for things discovered by the user or by any agent, and regardless of who does the writing — if another agent produced the perk, the session that notices it uncodified codifies it.
+
+**Why:** Chat context dies with the session — on a limit, a crash, or simply the end of the conversation. Every perk that lives only in chat is re-discovered (or worse, contradicted) by the next session at full cost. The repo's whole AI-memory system (CURRENT.md / golden_rules / known-fixes) only works if capture happens at discovery time, not "later".
+
+**How:** When you notice a durable learning mid-task, write it down immediately or add an explicit line to CURRENT.md's Open section so it cannot be forgotten at session end. Ending a session with an uncaptured perk is the same class of "not done" as shipping a bug fix without its known-fixes entry.
+
+**Files:** `docs/ai/golden_rules.md`, `docs/ai/known-fixes.md`, `CURRENT.md`.
 
 ---
 
