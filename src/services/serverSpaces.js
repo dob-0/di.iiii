@@ -25,6 +25,22 @@ export const getServerSpace = async (spaceId) => {
     return data.space || null
 }
 
+// Resolves a bare /{spaceSlugOrId}/{projectSlugOrId} public link to its real
+// ids — docs/architecture/SPEC_space_urls_and_portability.md. Segments are
+// forwarded verbatim (not run through resolveServerSpaceId) since the server
+// does its own slug-or-id matching; returns null on a 404 rather than
+// throwing, so callers can fall through to a plain space route instead of
+// treating "not a real project slug" as an error.
+export const resolveVanityProjectLink = async (spaceSegment, projectSegment) => {
+    try {
+        const data = await apiFetch(`/api/resolve/${encodeURIComponent(spaceSegment)}/${encodeURIComponent(projectSegment)}`)
+        return { space: data.space || null, project: data.project || null }
+    } catch (error) {
+        if (error?.status === 404) return null
+        throw error
+    }
+}
+
 export const createServerSpace = async ({ label, slug, isPermanent = false } = {}) => {
     const data = await apiFetch('/api/spaces', {
         method: 'POST',

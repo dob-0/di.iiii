@@ -16,13 +16,16 @@ vi.mock('./hooks/useAuthSession.js', () => ({
 }))
 
 const mockSpacePublicOverrides = {}
+const mockVanityResolutions = {}
 
 vi.mock('./services/serverSpaces.js', () => ({
     supportsServerSpaces: true,
     getServerSpace: (spaceId) => Promise.resolve({
         id: spaceId,
         isPublic: spaceId === 'pub' || Boolean(mockSpacePublicOverrides[spaceId])
-    })
+    }),
+    resolveVanityProjectLink: (spaceSegment, projectSegment) =>
+        Promise.resolve(mockVanityResolutions[`${spaceSegment}/${projectSegment}`] || null)
 }))
 
 vi.mock('./components/AuthGate.jsx', () => ({
@@ -119,6 +122,35 @@ describe('RootApp', () => {
         window.history.pushState({}, '', '/main')
         render(<RootApp />)
         expect(await screen.findByText('space-surface-app:editor:main')).toBeInTheDocument()
+    })
+})
+
+// docs/architecture/SPEC_space_urls_and_portability.md — the bare
+// /{space}/{project} public link shape.
+describe('RootApp vanity project links', () => {
+    afterEach(() => {
+        window.history.pushState({}, '', '/')
+        for (const key of Object.keys(mockVanityResolutions)) delete mockVanityResolutions[key]
+    })
+
+    it('resolves a real slug pair to the REAL ids, not the raw URL segments', async () => {
+        mockVanityResolutions['wcc/artistplace'] = {
+            space: { id: 'wcc-space-real-id', isPublic: true },
+            project: { id: 'artistplace-project-real-id' }
+        }
+        window.history.pushState({}, '', '/wcc/artistplace')
+        render(<RootApp />)
+
+        expect(await screen.findByText('space-surface-app:editor:wcc-space-real-id')).toBeInTheDocument()
+    })
+
+    it('falls through to a plain space route when the second segment is not a real project slug', async () => {
+        // No entry in mockVanityResolutions for 'somespace/randomtext' — the
+        // hook resolves to null (mocked 404), same as production.
+        window.history.pushState({}, '', '/somespace/randomtext')
+        render(<RootApp />)
+
+        expect(await screen.findByText('space-surface-app:editor:somespace')).toBeInTheDocument()
     })
 })
 

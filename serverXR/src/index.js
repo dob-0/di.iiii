@@ -74,10 +74,14 @@ const {
   deleteProject,
   ensureProject,
   findProjectById,
+  findProjectBySlug,
   getProjectPaths,
+  isReservedProjectSlug,
   isValidAssetId: isValidProjectAssetId,
   listProjectsInSpace,
+  loadProjectMeta,
   normalizeProjectId,
+  normalizeProjectSlug,
   readProjectDocument,
   readProjectOps,
   readProjectOpsSince,
@@ -141,14 +145,17 @@ const {
   ensureDefaultSpace,
   ensureSpaceScene,
   ensureSpaceWritable,
+  findSpaceBySlug,
   getSandboxStats,
   getSpacePaths,
   hydrateSceneAssetManifest,
+  isReservedSpaceSlug,
   isValidAssetId,
   listSpaces,
   loadSpaceMeta,
   moveSpace,
   normalizeSpaceId,
+  normalizeSpaceSlug,
   pruneSpaces,
   pruneStaleSandboxes,
   readLatestSpaceSnapshot,
@@ -1138,6 +1145,25 @@ router.use('/api/projects/:projectId', async (req, res, next) => {
   }
 })
 
+// Resolves a bare /{spaceSlugOrId}/{projectSlugOrId} public link to its real
+// ids — docs/architecture/SPEC_space_urls_and_portability.md. Must set
+// req.requiredSpaceId (mirroring the /api/spaces/:spaceId and
+// /api/projects/:projectId blocks above) BEFORE the blanket requireReadRole
+// gate below, or a private space's slug would leak unauthenticated — the
+// "silent hardcoded fallback"/fail-open bug class this session's known-fixes
+// entry is about, applied here to a brand new route rather than an existing
+// one.
+router.use('/api/resolve/:spaceSegment/:projectSegment', async (req, res, next) => {
+  try {
+    const spaceSegment = req.params.spaceSegment
+    const space = (await findSpaceBySlug(spaceSegment)) || (await loadSpaceMeta(normalizeSpaceId(spaceSegment) || spaceSegment))
+    req.requiredSpaceId = space?.id || null
+    next()
+  } catch (error) {
+    next(error)
+  }
+})
+
 // Public, unauthenticated: open-call application submissions (registered
 // before the /api auth gate below; permissive CORS handled at app level).
 router.post('/api/open-calls/:callId/applications', openCallSubmitLimiter, (req, res, next) => {
@@ -1193,6 +1219,27 @@ const resolveProjectContext = async (projectId) => {
   return findProjectById(SPACES_DIR, normalized)
 }
 
+// Registered after the requireReadRole/requireWriteRole gates above (line
+// ~1211-1212), so the req.requiredSpaceId set by the /api/resolve/... router.use
+// block further up has already been enforced by the time this handler runs —
+// a private space's slug/id 404s the same as a nonexistent one, never
+// distinguishing "exists but private" from "doesn't exist" (avoids leaking
+// existence). docs/architecture/SPEC_space_urls_and_portability.md.
+router.get('/api/resolve/:spaceSegment/:projectSegment', async (req, res, next) => {
+  try {
+    const spaceSegment = req.params.spaceSegment
+    const projectSegment = req.params.projectSegment
+    const space = (await findSpaceBySlug(spaceSegment)) || (await loadSpaceMeta(normalizeSpaceId(spaceSegment) || spaceSegment))
+    if (!space) return res.status(404).json({ error: 'Not found.' })
+    const project = (await findProjectBySlug(space.id, projectSegment)) ||
+      (await loadProjectMeta(SPACES_DIR, space.id, normalizeProjectId(projectSegment) || projectSegment))
+    if (!project || project.spaceId !== space.id) return res.status(404).json({ error: 'Not found.' })
+    res.json({ space, project })
+  } catch (error) {
+    next(error)
+  }
+})
+
 registerStatusRoutes(router, {
   recentEvents,
   releaseInfo,
@@ -1238,6 +1285,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   ensureSpaceScene,
   ensureSpaceWritable,
   findProjectById,
+  findSpaceBySlug,
   findUserById,
   getLiveBucket,
   getPublicAuthState,
@@ -1247,6 +1295,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   hydrateSceneAssetManifest,
   canAccessSpace,
   isAuthScopeAllowedForSpace,
+  isReservedSpaceSlug,
   isValidAssetId,
   loadSpaceMeta,
   listSpaces,
@@ -1255,6 +1304,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   normalizeIncomingOps,
   normalizeProjectId,
   normalizeSpaceId,
+  normalizeSpaceSlug,
   readProjectDocument,
   requireAdminWrite,
   requireSpaceOwnerOrAdminWrite,
@@ -1507,14 +1557,17 @@ registerProjectRoutes(router, {
   deleteProjectWithIndex: async (spaceId, projectId) => deleteProject(SPACES_DIR, spaceId, projectId),
   ensureProject,
   ensureSpaceWritable,
+  findProjectBySlug,
   getProjectLiveBucket,
   getProjectPaths,
+  isReservedProjectSlug,
   isValidAssetId: isValidProjectAssetId,
   listProjectsInSpace,
   maxOpHistory: MAX_OP_HISTORY,
   normalizeIncomingOps,
   normalizeProjectDocument,
   normalizeProjectId,
+  normalizeProjectSlug,
   normalizeSpaceId,
   readJson,
   readProjectDocument,

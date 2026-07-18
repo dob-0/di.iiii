@@ -100,10 +100,11 @@ export const WIKI_ARTICLES = [
             'A public space also shares every project individually at /<space>/p/<project-id> — the same no-login viewer as the live route, without touching the published pointer. Handy for one-pagers, drafts, and documents that live next to the main page. Direct project links carry a small floating project list (top-left), so viewers can hop between the space’s pages without a detour through the hub; the published live route stays chrome-free.',
             'A published-but-private space shows a login wall to visitors instead of the scene. The editor’s Share window and the space card both tell you when that’s the case and offer a one-click “Make space public” right there — no hunting for the toggle.',
             'Opening an editor URL (like /<space>/studio) with an account that isn’t scoped to that space no longer dead-ends: if the space is public you are taken to its live view; only private spaces show the access-restricted screen.',
-            'Every public space carries a small “Made with di.iiii — build yours” badge, so visitors who like what they see have a way in. It never appears on hub-card preview thumbnails.'
+            'Every public space carries a small “Made with di.iiii — build yours” badge, so visitors who like what they see have a way in. It never appears on hub-card preview thumbnails.',
+            'Spaces and individual projects can each get a clean public link (a slug) that’s independent of their internal id — e.g. /wcc/artistplace instead of a longer id-based path. Set it from /admin → Manage (“Edit public link” next to Rename); old id-based links keep working forever, they’re never replaced. Every project link in a space’s floating project switcher has a one-click Copy link action that uses the slug when one is set.'
         ],
-        tags: ['publish', 'public', 'sharing', 'owner', 'live link'],
-        updated: '2026-07-13'
+        tags: ['publish', 'public', 'sharing', 'owner', 'live link', 'slug', 'custom link'],
+        updated: '2026-07-19'
     },
     {
         id: 'invite-links',
@@ -183,12 +184,13 @@ export const WIKI_ARTICLES = [
             'Admins manage everything from /admin → Manage: a directory tree of spaces, each expanding to its projects.',
             { list: [
                 'Create / rename / delete spaces and projects inline.',
+                'Edit a space or project’s public link (slug) separately from its rename — the id underneath never changes, so old links stay valid.',
                 'Toggle Public / Permanent / Locked, set the published project, and choose the default space.',
                 'Set the guest entry (shared global space) and grant per-account access and roles (viewer / editor / admin).'
             ] }
         ],
-        tags: ['admin', 'manage', 'access'],
-        updated: '2026-07-08'
+        tags: ['admin', 'manage', 'access', 'slug'],
+        updated: '2026-07-19'
     },
     {
         id: 'keyboard-shortcuts',

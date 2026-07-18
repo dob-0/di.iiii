@@ -24,7 +24,7 @@ import {
     buildStudioProjectPath,
     navigateToStudioPath
 } from '../../studio/utils/studioRouting.js'
-import { buildAppSpacePath } from '../../utils/spaceRouting.js'
+import { buildAppSpacePath, buildVanityProjectPath } from '../../utils/spaceRouting.js'
 
 const ROLES = [
     { key: 'viewer', hint: 'Read-only access' },
@@ -165,6 +165,13 @@ export default function AdminManageSection() {
         }, 'Could not rename project.')
     ), [runMutation, loadProjects])
 
+    const patchProject = useCallback((spaceId, projectId, updates) => (
+        runMutation(async () => {
+            await updateProject(projectId, updates)
+            await loadProjects(spaceId)
+        }, 'Could not update project.')
+    ), [runMutation, loadProjects])
+
     const removeProject = useCallback((spaceId, project) => {
         if (!window.confirm(`Delete project "${project.title || project.id}"? This cannot be undone.`)) return
         runMutation(async () => {
@@ -205,9 +212,15 @@ export default function AdminManageSection() {
     const submitEdit = () => {
         if (!editing) return
         const value = editing.value.trim()
-        if (value) {
+        // Public-link (slug) fields allow an empty value to explicitly clear
+        // the slug back to id-only addressing — unlike label/title, empty
+        // here is a real, meaningful choice, not "nothing to save."
+        const isSlugEdit = editing.type === 'space-slug' || editing.type === 'project-slug'
+        if (value || isSlugEdit) {
             if (editing.type === 'space') patchSpace(editing.id, { label: value })
             if (editing.type === 'project') renameProject(selection.spaceId, editing.id, value)
+            if (editing.type === 'space-slug') patchSpace(editing.id, { slug: value || null })
+            if (editing.type === 'project-slug') patchProject(selection.spaceId, editing.id, { slug: value || null })
         }
         setEditing(null)
     }
@@ -423,7 +436,7 @@ function SpaceDetail({
     onPatch, onSetGlobal, onSetDefault, onDelete,
     draftProject, setDraftProject, onAddProject, onToggleUserSpace, onSelectProject
 }) {
-    const isEditing = editing?.type === 'space' && editing.id === space.id
+    const isEditing = editing?.id === space.id && (editing.type === 'space' || editing.type === 'space-slug')
     const projects = projectsBucket?.items || []
     return (
         <>
@@ -438,12 +451,18 @@ function SpaceDetail({
                     </div>
                 }
             >
+                <InfoPair
+                    label="Public link"
+                    value={buildAppSpacePath(space.slug || space.id)}
+                    mono
+                />
                 {isEditing ? (
                     <form className="preferences-inline-form" onSubmit={(e) => { e.preventDefault(); submitEdit() }}>
                         <input
                             className="preferences-input"
                             ref={(el) => el?.focus()}
                             value={editing.value}
+                            placeholder={editing.type === 'space-slug' ? 'Leave empty to clear (falls back to id)' : ''}
                             onChange={(e) => setEditing({ ...editing, value: e.target.value })}
                             onKeyDown={(e) => e.key === 'Escape' && setEditing(null)}
                         />
@@ -453,6 +472,7 @@ function SpaceDetail({
                 ) : (
                     <div className="preferences-command-grid">
                         <button type="button" className="toggle-button" onClick={() => startEdit('space', space.id, space.label || space.id)}>Rename</button>
+                        <button type="button" className="toggle-button" onClick={() => startEdit('space-slug', space.id, space.slug || '')} title="Independently renameable from id — old links to the id keep working forever">Edit public link</button>
                         <button type="button" className={`toggle-button ${space.isPublic ? 'active success-button' : ''}`} onClick={() => onPatch({ isPublic: !space.isPublic })}>
                             {space.isPublic ? 'Public ✓' : 'Private'}
                         </button>
@@ -627,7 +647,7 @@ function CommonsModerationSection() {
 }
 
 function ProjectDetail({ space, project, isPublished, editing, startEdit, submitEdit, setEditing, onPublish, onUnpublish, onDelete }) {
-    const isEditing = editing?.type === 'project' && editing.id === project.id
+    const isEditing = editing?.id === project.id && (editing.type === 'project' || editing.type === 'project-slug')
     return (
         <ModuleSection
             title={project.title || 'Untitled'}
@@ -640,6 +660,11 @@ function ProjectDetail({ space, project, isPublished, editing, startEdit, submit
             }
         >
             <InfoPair label="Project ID" value={project.id} mono />
+            <InfoPair
+                label="Public link"
+                value={buildVanityProjectPath(space?.slug || project.spaceId, project.slug || project.id)}
+                mono
+            />
             <InfoPair label="Source" value={project.source || 'project'} />
             <InfoPair label="Published" value={isPublished ? 'Yes — live for this space' : 'No'} />
 
@@ -649,6 +674,7 @@ function ProjectDetail({ space, project, isPublished, editing, startEdit, submit
                         className="preferences-input"
                         ref={(el) => el?.focus()}
                         value={editing.value}
+                        placeholder={editing.type === 'project-slug' ? 'Leave empty to clear (falls back to id)' : ''}
                         onChange={(e) => setEditing({ ...editing, value: e.target.value })}
                         onKeyDown={(e) => e.key === 'Escape' && setEditing(null)}
                     />
@@ -658,6 +684,7 @@ function ProjectDetail({ space, project, isPublished, editing, startEdit, submit
             ) : (
                 <div className="preferences-command-grid">
                     <button type="button" className="toggle-button" onClick={() => startEdit('project', project.id, project.title || '')}>Rename</button>
+                    <button type="button" className="toggle-button" onClick={() => startEdit('project-slug', project.id, project.slug || '')} title="Independently renameable from id — old links to the id keep working forever">Edit public link</button>
                     {isPublished ? (
                         <button type="button" className="toggle-button active success-button" onClick={onUnpublish}>Unpublish</button>
                     ) : (

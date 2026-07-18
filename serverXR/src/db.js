@@ -240,11 +240,19 @@ function initDb(dbPath) {
   ensureColumn(db, 'spaces', 'owner_user_id', 'TEXT')
   ensureColumn(db, 'spaces', 'preview_image_asset_id', 'TEXT')
   ensureColumn(db, 'spaces', 'open_inscriptions', 'INTEGER NOT NULL DEFAULT 0')
+  ensureColumn(db, 'spaces', 'slug', 'TEXT')
+  ensureColumn(db, 'projects', 'slug', 'TEXT')
   ensureColumn(db, 'users', 'spaces', 'TEXT')
   ensureColumn(db, 'users', 'is_unrestricted', 'INTEGER NOT NULL DEFAULT 0')
   backfillUserUnrestricted(db)
   backfillGlobalSpace(db)
   dedupeAndUniqueOps(db)
+  // Nullable, independently-renameable public handle distinct from the
+  // immutable id (docs/architecture/SPEC_space_urls_and_portability.md) —
+  // WHERE slug IS NOT NULL so unset spaces/projects (the common case) never
+  // collide against each other on the NULL value.
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_spaces_slug ON spaces(slug) WHERE slug IS NOT NULL')
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_projects_slug ON projects(space_id, slug) WHERE slug IS NOT NULL')
   _db = db
   return _db
 }

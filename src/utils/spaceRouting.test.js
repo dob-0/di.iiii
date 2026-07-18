@@ -3,6 +3,7 @@ import {
     APP_PAGE_PREFERENCES,
     buildPreferencesPath,
     buildPublicProjectPath,
+    buildVanityProjectPath,
     getAppLocationState,
     isReservedAppSegment
 } from './spaceRouting.js'
@@ -47,5 +48,30 @@ describe('spaceRouting', () => {
         expect(isReservedAppSegment('beta')).toBe(true)
         expect(isReservedAppSegment('studio')).toBe(true)
         expect(isReservedAppSegment('gallery')).toBe(false)
+    })
+
+    // docs/architecture/SPEC_space_urls_and_portability.md — the bare
+    // /{space}/{project} public link shape (resolved server-side, this only
+    // classifies the URL).
+    it('builds the vanity project link shape', () => {
+        expect(buildVanityProjectPath('wcc', 'artistplace')).toBe('/wcc/artistplace')
+    })
+
+    it('classifies a bare two-segment path as a candidate project-slug route', () => {
+        expect(getAppLocationState(new URL('https://example.com/wcc/artistplace'))).toEqual({
+            page: 'editor',
+            spaceId: 'wcc',
+            projectSlugSegment: 'artistplace'
+        })
+    })
+
+    it('never classifies /:space/studio or /:space/beta as a project-slug route — those are claimed earlier by Studio/Beta\'s own location parsers, but this must not misclassify them either as a defense-in-depth guard', () => {
+        expect(getAppLocationState(new URL('https://example.com/somespace/studio')).projectSlugSegment).toBeUndefined()
+        expect(getAppLocationState(new URL('https://example.com/somespace/beta')).projectSlugSegment).toBeUndefined()
+    })
+
+    it('does not classify the /p/ shape (even a bare trailing /p/) as a project-slug route', () => {
+        expect(getAppLocationState(new URL('https://example.com/br_id_ge/p')).projectSlugSegment).toBeUndefined()
+        expect(getAppLocationState(new URL('https://example.com/br_id_ge/p/some-id')).projectSlugSegment).toBeUndefined()
     })
 })

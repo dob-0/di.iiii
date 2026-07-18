@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { appNavigate } from '../../utils/appNavigate.js'
-import { buildPublicProjectPath } from '../../utils/spaceRouting.js'
+import { buildPublicProjectPath, buildVanityProjectPath } from '../../utils/spaceRouting.js'
 import { listProjects } from '../services/projectsApi.js'
 
 // Known hierarchies for specific spaces, front door first. Unlisted ids keep
@@ -76,12 +76,46 @@ const activeItemStyle = {
     cursor: 'default'
 }
 
+const rowStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '0.25rem'
+}
+
+const copyButtonStyle = {
+    appearance: 'none',
+    flexShrink: 0,
+    border: 0,
+    background: 'transparent',
+    color: '#f5f7fa',
+    opacity: 0.6,
+    borderRadius: '8px',
+    padding: '0.4rem 0.5rem',
+    fontSize: '0.85rem',
+    cursor: 'pointer'
+}
+
 // Floating list of a space's projects on direct project links (/:space/p/:id),
 // so viewers can hop between one-pagers without a detour through the hub.
 export default function ProjectSwitcher({ spaceId, currentProjectId, spaceLabel = '' }) {
     const [open, setOpen] = useState(false)
     const [projects, setProjects] = useState(null)
+    const [copiedId, setCopiedId] = useState(null)
     const rootRef = useRef(null)
+
+    // Vanity link (docs/architecture/SPEC_space_urls_and_portability.md) when
+    // the project has a slug set; falls back to the guaranteed-stable /p/{id}
+    // form otherwise — never a dead/unresolvable link either way.
+    const copyProjectLink = (project) => {
+        const path = project.slug
+            ? buildVanityProjectPath(spaceId, project.slug)
+            : buildPublicProjectPath(spaceId, project.id)
+        const url = `${window.location.origin}${path}`
+        navigator.clipboard?.writeText(url).then(() => {
+            setCopiedId(project.id)
+            setTimeout(() => setCopiedId((current) => (current === project.id ? null : current)), 1500)
+        }).catch(() => {})
+    }
 
     useEffect(() => {
         if (!open || projects || !spaceId) return undefined
@@ -146,20 +180,33 @@ export default function ProjectSwitcher({ spaceId, currentProjectId, spaceLabel 
                         projects.map((project) => {
                             const isCurrent = project.id === currentProjectId
                             return (
-                                <button
-                                    key={project.id}
-                                    type="button"
-                                    aria-current={isCurrent ? 'page' : undefined}
-                                    style={isCurrent ? { ...itemStyle, ...activeItemStyle } : itemStyle}
-                                    onClick={() => {
-                                        setOpen(false)
-                                        if (!isCurrent) {
-                                            appNavigate(buildPublicProjectPath(spaceId, project.id))
-                                        }
-                                    }}
-                                >
-                                    {project.title || project.id}
-                                </button>
+                                <div key={project.id} style={rowStyle}>
+                                    <button
+                                        type="button"
+                                        aria-current={isCurrent ? 'page' : undefined}
+                                        style={{ ...(isCurrent ? { ...itemStyle, ...activeItemStyle } : itemStyle), flex: 1 }}
+                                        onClick={() => {
+                                            setOpen(false)
+                                            if (!isCurrent) {
+                                                appNavigate(buildPublicProjectPath(spaceId, project.id))
+                                            }
+                                        }}
+                                    >
+                                        {project.title || project.id}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        style={copyButtonStyle}
+                                        title="Copy public link"
+                                        aria-label={`Copy public link for ${project.title || project.id}`}
+                                        onClick={(event) => {
+                                            event.stopPropagation()
+                                            copyProjectLink(project)
+                                        }}
+                                    >
+                                        {copiedId === project.id ? 'Copied ✓' : 'Copy link'}
+                                    </button>
+                                </div>
                             )
                         })
                     )}

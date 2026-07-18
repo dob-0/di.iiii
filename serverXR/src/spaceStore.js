@@ -11,6 +11,12 @@ const { isValidAssetId } = require('./assetHash')
 
 const SLUG_REGEX = /^[a-z0-9-]{3,48}$/
 
+// A space's public `slug` (independently renameable, distinct from its
+// immutable `id`) must never shadow a reserved top-level route segment —
+// see src/utils/spaceRouting.js's RESERVED_APP_SEGMENTS on the client side,
+// which this mirrors. docs/architecture/SPEC_space_urls_and_portability.md.
+const RESERVED_SPACE_SLUGS = new Set(['admin', 'preferences', 'prefrenaces', 'preferances', 'wiki', 'beta', 'studio', 'p'])
+
 // Thumbnail variants for image assets — the space hub grid used to pull the
 // full-resolution original for every card's preview image. Resized once per
 // (asset, width) and cached to disk next to the original; only images (never
@@ -47,6 +53,17 @@ function createSpaceStore({
     return (slug && SLUG_REGEX.test(slug)) ? slug : null
   }
 
+  // Same format as normalizeSpaceId, but for the separate, independently
+  // renameable public `slug` field — no fallback-to-default, since an unset
+  // slug (null) is the normal case (reads fall back to id via COALESCE).
+  const normalizeSpaceSlug = (value) => {
+    if (value === null || value === undefined || value === '') return null
+    const slug = safeSlug(value)
+    return (slug && SLUG_REGEX.test(slug)) ? slug : undefined
+  }
+
+  const isReservedSpaceSlug = (slug) => RESERVED_SPACE_SLUGS.has(slug)
+
   const getSpacePaths = (spaceId) => {
     const spaceDir = path.join(spacesDir, spaceId)
     return {
@@ -60,6 +77,9 @@ function createSpaceStore({
 
   const rowToMeta = (row) => !row ? null : ({
     id: row.id,
+    // Public handle for links — independently renameable, unlike id. null
+    // means "not set yet"; readers/link-builders fall back to id themselves.
+    slug: row.slug || null,
     label: row.label,
     permanent: Boolean(row.permanent),
     allowEdits: Boolean(row.allow_edits),
@@ -82,6 +102,7 @@ function createSpaceStore({
     const now = Date.now()
     return {
       id: spaceId,
+      slug: overrides.slug || null,
       label: (overrides.label && String(overrides.label).trim()) || spaceId,
       permanent: Boolean(overrides.permanent),
       allowEdits: overrides.allowEdits !== false,
@@ -108,6 +129,7 @@ function createSpaceStore({
     _s = {
       selectById:    db.prepare('SELECT * FROM spaces WHERE id = ?'),
       selectExists:  db.prepare('SELECT 1 FROM spaces WHERE id = ?'),
+      selectBySlug:  db.prepare('SELECT * FROM spaces WHERE slug = ?'),
       selectAll:     db.prepare('SELECT * FROM spaces ORDER BY updated_at DESC'),
       selectStale:   db.prepare("SELECT id FROM spaces WHERE permanent = 0 AND kind != 'global' AND last_touched_at < ?"),
       selectStaleSandbox: db.prepare("SELECT id FROM spaces WHERE permanent = 0 AND kind = 'sandbox' AND last_touched_at < ?"),
@@ -115,9 +137,9 @@ function createSpaceStore({
       countSandboxes: db.prepare("SELECT COUNT(*) as cnt FROM spaces WHERE kind = 'sandbox'"),
       selectIdleAccountSandbox: db.prepare("SELECT id, scene_version FROM spaces WHERE permanent = 1 AND kind = 'sandbox' AND last_touched_at < ?"),
       countProjectsInSpace: db.prepare('SELECT COUNT(*) as cnt FROM projects WHERE space_id = ?'),
-      upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-      insert:        db.prepare('INSERT INTO spaces (id, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
-      update:        db.prepare('UPDATE spaces SET label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, preview_image_asset_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=?, open_inscriptions=? WHERE id=?'),
+      upsert:        db.prepare('INSERT OR REPLACE INTO spaces (id, slug, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      insert:        db.prepare('INSERT INTO spaces (id, slug, label, permanent, allow_edits, is_public, kind, published_project_id, preview_image_asset_id, scene_version, created_at, updated_at, last_touched_at, owner_user_id, open_inscriptions) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+      update:        db.prepare('UPDATE spaces SET slug=?, label=?, permanent=?, allow_edits=?, is_public=?, kind=?, published_project_id=?, preview_image_asset_id=?, scene_version=?, updated_at=?, last_touched_at=?, owner_user_id=?, open_inscriptions=? WHERE id=?'),
       deleteById:    db.prepare('DELETE FROM spaces WHERE id = ?'),
       opsSelect:     db.prepare('SELECT data FROM space_ops WHERE space_id = ? ORDER BY version ASC, seq ASC'),
       opsSelectSince: db.prepare('SELECT data FROM space_ops WHERE space_id = ? AND version > ? ORDER BY version ASC, seq ASC'),
@@ -134,6 +156,7 @@ function createSpaceStore({
   const saveSpaceMeta = async (spaceId, meta) => {
     s().upsert.run(
       spaceId,
+      meta.slug ?? null,
       meta.label ?? '',
       meta.permanent ? 1 : 0,
       meta.allowEdits !== false ? 1 : 0,
@@ -154,6 +177,8 @@ function createSpaceStore({
 
   const spaceExists = async (spaceId) => Boolean(s().selectExists.get(spaceId))
 
+  const findSpaceBySlug = async (slug) => rowToMeta(s().selectBySlug.get(slug))
+
   const upsertSpaceMeta = async (spaceId, updates = {}) => {
     const db = getDb()
     const { insert, update, selectById } = s()
@@ -162,9 +187,10 @@ function createSpaceStore({
       const row = selectById.get(spaceId)
       if (!row) {
         const meta = buildMeta(spaceId, updates)
-        insert.run(spaceId, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0, meta.isPublic ? 1 : 0, meta.kind, meta.publishedProjectId ?? null, meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, meta.createdAt, meta.updatedAt, meta.lastTouchedAt, meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0)
+        insert.run(spaceId, meta.slug ?? null, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0, meta.isPublic ? 1 : 0, meta.kind, meta.publishedProjectId ?? null, meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, meta.createdAt, meta.updatedAt, meta.lastTouchedAt, meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0)
         return meta
       }
+      const nextSlug      = 'slug'             in updates ? (updates.slug ?? null)                                                                    : row.slug
       const nextLabel     = 'label'            in updates ? (updates.label ?? '')                                                                    : row.label
       const nextPermanent = 'permanent'        in updates ? (Boolean(updates.permanent) ? 1 : 0)                                                    : row.permanent
       const nextEdits     = 'allowEdits'       in updates ? (updates.allowEdits !== false ? 1 : 0)                                                  : row.allow_edits
@@ -176,8 +202,8 @@ function createSpaceStore({
       const nextTouched   = updates.touch !== false ? now : row.last_touched_at
       const nextOwner     = 'ownerUserId'      in updates ? (updates.ownerUserId ?? null)                                                            : row.owner_user_id
       const nextInscribe  = 'openInscriptions' in updates ? (Boolean(updates.openInscriptions) ? 1 : 0)                                              : row.open_inscriptions
-      update.run(nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, nextInscribe, spaceId)
-      return rowToMeta({ ...row, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe })
+      update.run(nextSlug, nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, nextInscribe, spaceId)
+      return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe })
     })()
   }
 
@@ -248,7 +274,7 @@ function createSpaceStore({
     const meta = { ...rowToMeta(row), ...overrides, id: toId }
     const now = Date.now()
     db.transaction(() => {
-      s().insert.run(toId, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0,
+      s().insert.run(toId, meta.slug ?? null, meta.label, meta.permanent ? 1 : 0, meta.allowEdits !== false ? 1 : 0,
         meta.isPublic ? 1 : 0, normalizeSpaceKind(meta.kind), meta.publishedProjectId ?? null,
         meta.previewImageAssetId ?? null, meta.sceneVersion ?? 0, row.created_at, now, now,
         meta.ownerUserId ?? null, meta.openInscriptions ? 1 : 0)
@@ -492,14 +518,17 @@ function createSpaceStore({
     ensureDefaultSpace,
     ensureSpaceScene,
     ensureSpaceWritable,
+    findSpaceBySlug,
     getSandboxStats,
     getSpacePaths,
     hydrateSceneAssetManifest,
+    isReservedSpaceSlug,
     isValidAssetId,
     listSpaces,
     loadSpaceMeta,
     moveSpace,
     normalizeSpaceId,
+    normalizeSpaceSlug,
     pruneSpaces,
     pruneStaleSandboxes,
     readLatestSpaceSnapshot,

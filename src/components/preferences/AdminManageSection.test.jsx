@@ -31,7 +31,8 @@ vi.mock('../../studio/utils/studioRouting.js', () => ({
     navigateToStudioPath: vi.fn()
 }))
 vi.mock('../../utils/spaceRouting.js', () => ({
-    buildAppSpacePath: (s) => `/${s}`
+    buildAppSpacePath: (s) => `/${s}`,
+    buildVanityProjectPath: (s, p) => `/${s}/${p}`
 }))
 
 import AdminManageSection from './AdminManageSection.jsx'
@@ -42,7 +43,7 @@ import {
     listGithubRepos,
     connectSpaceGithub
 } from '../../services/serverSpaces.js'
-import { listProjects } from '../../project/services/projectsApi.js'
+import { listProjects, updateProject } from '../../project/services/projectsApi.js'
 import { listUsers } from '../../services/usersApi.js'
 import { navigateToStudioPath } from '../../studio/utils/studioRouting.js'
 
@@ -114,5 +115,23 @@ describe('AdminManageSection', () => {
         fireEvent.click(openButton)
 
         expect(navigateToStudioPath).toHaveBeenCalledWith('/demo/studio/projects/p1')
+    })
+
+    // docs/architecture/SPEC_space_urls_and_portability.md — vanity slugs.
+    it('sets a project\'s public link (slug) independently from renaming its title', async () => {
+        updateProject.mockResolvedValue({ id: 'p1', title: 'First Project', spaceId: 'demo', slug: 'artistplace' })
+        render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+        const projectLinks = await screen.findAllByText('First Project')
+        fireEvent.click(projectLinks[0])
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Edit public link' }))
+        const input = screen.getByRole('textbox')
+        fireEvent.change(input, { target: { value: 'artistplace' } })
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+        await waitFor(() => expect(updateProject).toHaveBeenCalledWith('p1', { slug: 'artistplace' }))
+        // Title must not have been touched by the slug-only edit.
+        expect(updateProject).not.toHaveBeenCalledWith('p1', expect.objectContaining({ title: expect.anything() }))
     })
 })

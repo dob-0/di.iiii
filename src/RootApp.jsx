@@ -2,14 +2,17 @@ import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom'
 import { setAppNavigate } from './utils/appNavigate.js'
 import { getBetaLocationState, isBetaLocation } from './beta/utils/betaRouting.js'
+import { getSeedLocationState, isSeedLocation } from './seed/utils/seedRouting.js'
 import AuthReturnNotice from './components/AuthReturnNotice.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
+import useResolveSlugProject from './hooks/useResolveSlugProject.js'
 import { getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
-import { APP_PAGE_PREFERENCES, APP_PAGE_WIKI, getAppLocationState } from './utils/spaceRouting.js'
+import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_WIKI, getAppLocationState } from './utils/spaceRouting.js'
 
 const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
+const SeedApp = lazy(() => import('./seed/SeedApp.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 const WccExperience = lazy(() => import('./wcc/WccExperience.jsx'))
@@ -46,6 +49,31 @@ function SpaceSurfaceRoute({ appState }) {
     )
 }
 
+// Resolves the bare /{spaceSlugOrId}/{projectSlugOrId} public link shape —
+// docs/architecture/SPEC_space_urls_and_portability.md. On a hit, reuses
+// SpaceSurfaceRoute's existing isPublic-gating logic with the REAL resolved
+// ids (never the raw, unverified URL segments). On a miss (404, or no
+// server API support) falls through to treating segment 0 as a plain space
+// route, same as today — /somespace/randomtext never breaks, it just stops
+// being a project deep-link and becomes a normal space visit.
+function SlugProjectRoute({ appState }) {
+    const { result, error } = useResolveSlugProject(appState.spaceId, appState.projectSlugSegment)
+
+    if (result === undefined && !error) {
+        return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+
+    if (result?.space?.id && result?.project?.id) {
+        return (
+            <SpaceSurfaceRoute
+                appState={{ page: APP_PAGE_EDITOR, spaceId: result.space.id, projectId: result.project.id }}
+            />
+        )
+    }
+
+    return <SpaceSurfaceRoute appState={{ page: appState.page, spaceId: appState.spaceId }} />
+}
+
 // wcc is a real space like any other — route it through the same
 // server-verified isPublic check instead of assuming it's always public.
 function WccSurfaceRoute({ mode }) {
@@ -76,6 +104,7 @@ function AppRouter() {
     }, [rrNavigate])
     const location = useLocation()
     const betaState = getBetaLocationState(location)
+    const seedState = getSeedLocationState(location)
     const studioState = getStudioLocationState(location)
     const appState = getAppLocationState(location)
 
@@ -113,6 +142,23 @@ function AppRouter() {
         )
     }
 
+    if (isSeedLocation(seedState)) {
+        return (
+            <ProtectedSurface requiredSpaceId={seedState.spaceId}>
+                <Suspense
+                    fallback={
+                        <RouteSurfaceFallback
+                            label="Loading Seed"
+                            detail="Preparing the node-graph workspace..."
+                        />
+                    }
+                >
+                    <SeedApp initialRoute={seedState} />
+                </Suspense>
+            </ProtectedSurface>
+        )
+    }
+
     if (appState.page === APP_PAGE_WIKI) {
         return (
             <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
@@ -139,6 +185,10 @@ function AppRouter() {
         && (pathSegments.length === 1 || (pathSegments.length === 2 && pathSegments[1] === 'scene'))
     if (isWccSurface) {
         return <WccSurfaceRoute mode={pathSegments[1] === 'scene' ? 'scene' : 'landing'} />
+    }
+
+    if (appState.projectSlugSegment) {
+        return <SlugProjectRoute appState={appState} />
     }
 
     return <SpaceSurfaceRoute appState={appState} />

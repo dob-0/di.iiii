@@ -59,7 +59,28 @@ describe('ProjectSwitcher', () => {
         await userEvent.click(screen.getByRole('button', { name: /br_id_ge/ }))
 
         const nav = await screen.findByRole('navigation', { name: /projects in this space/i })
-        const items = within(nav).getAllByRole('button')
+        // Excludes each row's "Copy link" action button — this assertion is
+        // about project title ordering, not every button in the nav.
+        const items = within(nav).getAllByRole('button').filter((el) => el.textContent !== 'Copy link')
         expect(items.map((el) => el.textContent)).toEqual(['br_id_ge', 'graph', 'jam brief'])
+    })
+
+    // docs/architecture/SPEC_space_urls_and_portability.md — vanity slugs.
+    it('copies the vanity link when a project has a slug, the /p/ fallback otherwise', async () => {
+        listProjects.mockResolvedValue([
+            { id: 'has-slug', title: 'Has Slug', slug: 'artistplace' },
+            { id: 'no-slug', title: 'No Slug' }
+        ])
+        const writeText = vi.fn().mockResolvedValue(undefined)
+        Object.assign(navigator, { clipboard: { writeText } })
+
+        render(<ProjectSwitcher spaceId="wcc" currentProjectId="has-slug" spaceLabel="wcc" />)
+        await userEvent.click(screen.getByRole('button', { name: /wcc/ }))
+
+        await userEvent.click(await screen.findByRole('button', { name: /Copy public link for Has Slug/ }))
+        expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/wcc/artistplace`)
+
+        await userEvent.click(screen.getByRole('button', { name: /Copy public link for No Slug/ }))
+        expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/wcc/p/no-slug`)
     })
 })

@@ -28,9 +28,24 @@ const normalizeProjectId = (value) => {
   return (slug && PROJECT_ID_REGEX.test(slug)) ? slug : null
 }
 
+// Public handle, independently renameable from the immutable id — see
+// docs/architecture/SPEC_space_urls_and_portability.md. Unlike space slugs,
+// project slugs only need to be unique within their own space (the public
+// link shape is /{spaceSlugOrId}/{projectSlugOrId}), and are additionally
+// blocked from 'studio'/'beta'/'p' — those would be ambiguous with the
+// existing /{space}/studio, /{space}/beta, /{space}/p/... routes.
+const PROJECT_RESERVED_SLUGS = new Set(['studio', 'beta', 'p'])
+const normalizeProjectSlug = (value) => {
+  if (value === null || value === undefined || value === '') return null
+  const slug = safeSlug(value)
+  return (slug && PROJECT_ID_REGEX.test(slug)) ? slug : undefined
+}
+const isReservedProjectSlug = (slug) => PROJECT_RESERVED_SLUGS.has(slug)
+
 const rowToMeta = (row) => !row ? null : ({
   id: row.id,
   spaceId: row.space_id,
+  slug: row.slug || null,
   title: row.title,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -44,6 +59,7 @@ const buildProjectMeta = (spaceId, projectId, overrides = {}) => {
   return {
     id: projectId,
     spaceId,
+    slug: overrides.slug || null,
     title: (typeof overrides.title === 'string' && overrides.title.trim()) || 'Untitled Project',
     createdAt: overrides.createdAt || now,
     updatedAt: now,
@@ -79,10 +95,11 @@ const s = () => {
     selectById:       db.prepare('SELECT * FROM projects WHERE id = ?'),
     selectBySpace:    db.prepare('SELECT * FROM projects WHERE id = ? AND space_id = ?'),
     selectBySpaceAll: db.prepare('SELECT * FROM projects WHERE space_id = ? ORDER BY updated_at DESC'),
+    selectBySlug:     db.prepare('SELECT * FROM projects WHERE space_id = ? AND slug = ?'),
     selectAllIndex:   db.prepare('SELECT id, space_id FROM projects'),
-    insert:           db.prepare('INSERT INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
-    upsert:           db.prepare('INSERT OR REPLACE INTO projects (id, space_id, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'),
-    update:           db.prepare('UPDATE projects SET title=?, document_version=?, source=?, updated_at=?, last_touched_at=? WHERE id=?'),
+    insert:           db.prepare('INSERT INTO projects (id, space_id, slug, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+    upsert:           db.prepare('INSERT OR REPLACE INTO projects (id, space_id, slug, title, document_version, source, created_at, updated_at, last_touched_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'),
+    update:           db.prepare('UPDATE projects SET slug=?, title=?, document_version=?, source=?, updated_at=?, last_touched_at=? WHERE id=?'),
     deleteById:       db.prepare('DELETE FROM projects WHERE id = ?'),
     opsSelect:        db.prepare('SELECT data FROM project_ops WHERE project_id = ? ORDER BY version ASC, seq ASC'),
     opsSelectSince:   db.prepare('SELECT data FROM project_ops WHERE project_id = ? AND version > ? ORDER BY version ASC, seq ASC'),
@@ -102,6 +119,8 @@ const readProjectIndex = async (spacesDir) =>
 const loadProjectMeta = async (spacesDir, spaceId, projectId) =>
   rowToMeta(s().selectBySpace.get(projectId, spaceId))
 
+const findProjectBySlug = async (spaceId, slug) => rowToMeta(s().selectBySlug.get(spaceId, slug))
+
 const upsertProjectMeta = async (spacesDir, spaceId, projectId, updates = {}) => {
   const db = getDb()
   const { insert, update, selectById } = s()
@@ -110,15 +129,16 @@ const upsertProjectMeta = async (spacesDir, spaceId, projectId, updates = {}) =>
     const row = selectById.get(projectId)
     if (!row) {
       const meta = buildProjectMeta(spaceId, projectId, updates)
-      insert.run(projectId, spaceId, meta.title, meta.documentVersion, meta.source, meta.createdAt, meta.updatedAt, meta.lastTouchedAt)
+      insert.run(projectId, spaceId, meta.slug ?? null, meta.title, meta.documentVersion, meta.source, meta.createdAt, meta.updatedAt, meta.lastTouchedAt)
       return meta
     }
+    const nextSlug    = 'slug' in updates ? (updates.slug ?? null) : row.slug
     const nextTitle   = updates.title !== undefined ? (String(updates.title || '').trim() || row.title) : row.title
     const nextVersion = updates.documentVersion !== undefined ? (Number(updates.documentVersion) || 0) : row.document_version
     const nextSource  = updates.source !== undefined ? updates.source : row.source
     const nextTouched = updates.touch === false ? row.last_touched_at : now
-    update.run(nextTitle, nextVersion, nextSource, now, nextTouched, projectId)
-    return rowToMeta({ ...row, title: nextTitle, document_version: nextVersion, source: nextSource, updated_at: now, last_touched_at: nextTouched })
+    update.run(nextSlug, nextTitle, nextVersion, nextSource, now, nextTouched, projectId)
+    return rowToMeta({ ...row, slug: nextSlug, title: nextTitle, document_version: nextVersion, source: nextSource, updated_at: now, last_touched_at: nextTouched })
   })()
 }
 
@@ -278,11 +298,14 @@ module.exports = {
   deleteProject,
   ensureProject,
   findProjectById,
+  findProjectBySlug,
   getProjectPaths,
+  isReservedProjectSlug,
   isValidAssetId,
   listProjectsInSpace,
   loadProjectMeta,
   normalizeProjectId,
+  normalizeProjectSlug,
   readJson,
   readProjectIndex,
   readProjectDocument,

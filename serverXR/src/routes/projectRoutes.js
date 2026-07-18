@@ -15,14 +15,17 @@ function registerProjectRoutes(router, {
   deleteProjectWithIndex,
   ensureProject,
   ensureSpaceWritable,
+  findProjectBySlug,
   getProjectLiveBucket,
   getProjectPaths,
+  isReservedProjectSlug = () => false,
   isValidAssetId,
   listProjectsInSpace,
   maxOpHistory,
   normalizeIncomingOps,
   normalizeProjectDocument,
   normalizeProjectId,
+  normalizeProjectSlug = () => null,
   normalizeSpaceId,
   readProjectDocument,
   readProjectOps,
@@ -102,8 +105,30 @@ function registerProjectRoutes(router, {
         return res.status(404).json({ error: 'Project not found.' })
       }
       await ensureSpaceWritable(project.spaceId)
+      // Public handle, independently renameable from id, unique within the
+      // owning space only — docs/architecture/SPEC_space_urls_and_portability.md.
+      let nextSlug
+      if (req.body?.slug !== undefined) {
+        const normalized = normalizeProjectSlug(req.body.slug)
+        if (normalized === undefined) {
+          return res.status(400).json({ error: 'Invalid slug. Use lowercase letters, numbers, or dashes (min 3 characters).' })
+        }
+        if (normalized !== null) {
+          if (isReservedProjectSlug(normalized)) {
+            return res.status(400).json({ error: `"${normalized}" is a reserved word and can't be used as a slug.` })
+          }
+          if (normalized !== project.projectId) {
+            const existing = await findProjectBySlug(project.spaceId, normalized)
+            if (existing && existing.id !== project.projectId) {
+              return res.status(409).json({ error: 'That slug is already taken in this space.' })
+            }
+          }
+        }
+        nextSlug = normalized
+      }
       const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
-        ...(req.body?.title !== undefined ? { title: req.body.title } : {})
+        ...(req.body?.title !== undefined ? { title: req.body.title } : {}),
+        ...(req.body?.slug !== undefined ? { slug: nextSlug } : {})
       })
       const document = await readProjectDocument(spacesDir, project.spaceId, project.projectId)
       document.projectMeta = {

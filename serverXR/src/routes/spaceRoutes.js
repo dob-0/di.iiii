@@ -25,6 +25,7 @@ function registerSpaceRoutes(router, {
   ensureSpaceScene,
   ensureSpaceWritable,
   findProjectById,
+  findSpaceBySlug,
   getLiveBucket,
   getPublicAuthState = () => ({ spaces: null }),
   isAllowedUpload = () => true,
@@ -34,6 +35,7 @@ function registerSpaceRoutes(router, {
   getSpacePaths,
   hydrateSceneAssetManifest,
   canAccessSpace = () => true,
+  isReservedSpaceSlug = () => false,
   isValidAssetId,
   loadSpaceMeta,
   listSpaces,
@@ -42,6 +44,7 @@ function registerSpaceRoutes(router, {
   normalizeIncomingOps,
   normalizeProjectId,
   normalizeSpaceId,
+  normalizeSpaceSlug = () => null,
   readProjectDocument = null,
   requireAdminWrite = (req, res, next) => next(),
   requireSpaceOwnerOrAdminWrite = (req, res, next) => next(),
@@ -240,9 +243,33 @@ function registerSpaceRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId, openInscriptions } = req.body || {}
+      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId, openInscriptions, slug } = req.body || {}
       if (kind !== undefined && !['normal', 'global', 'sandbox'].includes(kind)) {
         return res.status(400).json({ error: 'kind must be one of: normal, global, sandbox.' })
+      }
+      // Public handle, independently renameable from id — see
+      // docs/architecture/SPEC_space_urls_and_portability.md. null/'' clears
+      // it back to id-only addressing; a reserved word or format mismatch is
+      // rejected outright (never silently coerced/dropped); a taken slug 409s
+      // rather than something else's link quietly resolving to this space.
+      let nextSlug
+      if (slug !== undefined) {
+        const normalized = normalizeSpaceSlug(slug)
+        if (normalized === undefined) {
+          return res.status(400).json({ error: 'Invalid slug. Use lowercase letters, numbers, or dashes (min 3 characters).' })
+        }
+        if (normalized !== null) {
+          if (isReservedSpaceSlug(normalized)) {
+            return res.status(400).json({ error: `"${normalized}" is a reserved word and can't be used as a slug.` })
+          }
+          if (normalized !== spaceId) {
+            const existing = await findSpaceBySlug(normalized)
+            if (existing && existing.id !== spaceId) {
+              return res.status(409).json({ error: 'That slug is already taken.' })
+            }
+          }
+        }
+        nextSlug = normalized
       }
       // Owners self-serve label/visibility/publish target; kind and permanent
       // change platform behavior (guest entry, retention) and stay admin-only.
@@ -294,7 +321,8 @@ function registerSpaceRoutes(router, {
         ...(kind !== undefined ? { kind } : {}),
         ...(publishedProjectId !== undefined ? { publishedProjectId: nextPublishedProjectId } : {}),
         ...(previewImageAssetId !== undefined ? { previewImageAssetId: nextPreviewImageAssetId } : {}),
-        ...(openInscriptions !== undefined ? { openInscriptions: Boolean(openInscriptions) } : {})
+        ...(openInscriptions !== undefined ? { openInscriptions: Boolean(openInscriptions) } : {}),
+        ...(slug !== undefined ? { slug: nextSlug } : {})
       })
       res.json({ space: meta })
     } catch (error) {

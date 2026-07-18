@@ -40,6 +40,15 @@ export const buildPublicProjectPath = (spaceId, projectId) => {
     return `${prefix}/${spaceId}/p/${projectId}`.replace(/\/{2,}/g, '/')
 }
 
+// Clean public link shape — /{spaceSlugOrId}/{projectSlugOrId}, resolved
+// server-side via /api/resolve/... (docs/architecture/SPEC_space_urls_and_portability.md).
+// buildPublicProjectPath (the /p/ form above) stays the guaranteed-stable
+// fallback: use it whenever only raw ids are in hand, or a slug isn't set.
+export const buildVanityProjectPath = (spaceSlugOrId, projectSlugOrId) => {
+    const prefix = getAppBasePrefix()
+    return `${prefix}/${spaceSlugOrId}/${projectSlugOrId}`.replace(/\/{2,}/g, '/')
+}
+
 export const buildPreferencesPath = (spaceId) => {
     const prefix = getAppBasePrefix()
     const basePath = `${prefix}/${APP_PAGE_PREFERENCES_ROUTE}`.replace(/\/{2,}/g, '/')
@@ -88,6 +97,24 @@ export const getAppLocationState = (locationLike = null) => {
                     page: APP_PAGE_EDITOR,
                     spaceId: segment,
                     projectId: segments[2]
+                }
+            }
+            // Bare two-segment shape (/{spaceSlugOrId}/{projectSlugOrId}) — this
+            // classifies the URL shape only; segments[1] here is unresolved and
+            // untrusted (could be a real project slug, a typo, or nothing) until
+            // the resolving component (SlugProjectRoute) confirms it against
+            // /api/resolve/... and falls back to a plain space route on a 404,
+            // never assuming/defaulting it means anything. Excludes 'p' (already
+            // reserved by the /p/ shape above) and RESERVED_APP_SEGMENTS
+            // ('studio'/'beta'/etc) — those are claimed earlier in RootApp's
+            // dispatch order by their own location parsers regardless, but this
+            // is a defense-in-depth guard so getAppLocationState is correct on
+            // its own, not dependent on caller dispatch order.
+            if (segments[1] && segments[1] !== 'p' && !isReservedAppSegment(segments[1])) {
+                return {
+                    page: APP_PAGE_EDITOR,
+                    spaceId: segment,
+                    projectSlugSegment: segments[1]
                 }
             }
             return {
