@@ -8,16 +8,18 @@ Short routing guide for AI agents working in `deploy/`.
 - cPanel env examples and release templates
 - checked-in deploy contracts that explain how artifacts should be staged and applied
 
-## VPS Docker Deploy (new production path)
+## VPS Docker Deploy (current production path, live since 2026-07-15)
 
-- [docs/deploy/VPS_DOCKER_DEPLOY.md](../docs/deploy/VPS_DOCKER_DEPLOY.md) documents the GHCR + SSH
-  deploy path: [.github/workflows/deploy-vps.yml](../.github/workflows/deploy-vps.yml) builds/pushes
-  `dii-server`/`dii-client` images to GHCR on push to `main`, then SSHes into the VPS to
+- [docs/deploy/LIVE_DEPLOY.md](../docs/deploy/LIVE_DEPLOY.md) is the current deploy truth.
+  [docs/deploy/VPS_DOCKER_DEPLOY.md](../docs/deploy/VPS_DOCKER_DEPLOY.md) documents the GHCR + SSH
+  deploy path: [.github/workflows/deploy-vps.yml](../.github/workflows/deploy-vps.yml) /
+  [deploy-vps-staging.yml](../.github/workflows/deploy-vps-staging.yml) build/push
+  `dii-server`/`dii-client` images to GHCR on push to `main`/`dev`, then SSH into the VPS to
   `docker compose -f docker-compose.yml -f docker-compose.prod.yml pull && up -d`.
-- Needs `VPS_SSH_KEY`, `VPS_HOST`, `VPS_SSH_USER` (secrets) and `REGISTRY_USER`, `VPS_DEPLOY_PATH`,
-  `VPS_BASE_URL` (variables) configured in the repo before it can run — none are set yet.
-- This is additive: cPanel (`publish-cpanel-prebuilt-v2.yml`, `cpanel-staging`/`cpanel-production`)
-  is untouched and remains the documented fallback until its hosting term expires.
+- Required secrets/variables are configured on both prod and staging as of 2026-07-16 — this is
+  the live path, not a future/additive one.
+- cPanel (`publish-cpanel-prebuilt-v2.yml`, `cpanel-staging`/`cpanel-production`) is untouched and
+  remains the documented fallback until its hosting term expires.
 
 ## When To Edit Here
 

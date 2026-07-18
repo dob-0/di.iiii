@@ -64,3 +64,27 @@ describe('own-sandbox grant', () => {
     expect(canAccessSpace({ authenticated: true, isUnrestricted: true }, 'anything')).toBe(true)
   })
 })
+
+// null/undefined `spaces` intentionally means "unrestricted" — this is the
+// counterpart to the known bug class (docs/ai/known-fixes.md): a scope of
+// null/undefined must only ever reach canAccessSpace for an account that is
+// actually meant to be unrestricted (e.g. via isUnrestricted/an explicit
+// grant), never as an accidental default for a normal scoped account. This
+// locks in the current intended semantics so a future change can't silently
+// widen who ends up unrestricted.
+describe('canAccessSpace: null/undefined spaces semantics', () => {
+  it('null spaces means unrestricted — same class as the OAuth spaces:null bug this guards against', () => {
+    const account = { authenticated: true, type: 'session', subject: 'github:99', spaces: null }
+    expect(canAccessSpace(account, 'any-space')).toBe(true)
+  })
+
+  it('undefined spaces falls back to the same unrestricted default as explicit null', () => {
+    const account = { authenticated: true, type: 'session', subject: 'github:99' }
+    expect(canAccessSpace(account, 'any-space')).toBe(true)
+  })
+
+  it('an explicit empty array is NOT the same as null/undefined — denies everywhere', () => {
+    const account = { authenticated: true, type: 'session', subject: 'github:99', spaces: [] }
+    expect(canAccessSpace(account, 'any-space')).toBe(false)
+  })
+})
