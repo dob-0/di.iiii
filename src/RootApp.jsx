@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom'
 import { setAppNavigate } from './utils/appNavigate.js'
 import { getBetaLocationState, isBetaLocation } from './beta/utils/betaRouting.js'
+import { getSeedLocationState, isSeedLocation } from './seed/utils/seedRouting.js'
 import AuthReturnNotice from './components/AuthReturnNotice.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
@@ -11,6 +12,7 @@ import { getStudioLocationState, isStudioLocation } from './studio/utils/studioR
 import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_WIKI, getAppLocationState } from './utils/spaceRouting.js'
 
 const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
+const SeedApp = lazy(() => import('./seed/SeedApp.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 const WccExperience = lazy(() => import('./wcc/WccExperience.jsx'))
@@ -102,6 +104,7 @@ function AppRouter() {
     }, [rrNavigate])
     const location = useLocation()
     const betaState = getBetaLocationState(location)
+    const seedState = getSeedLocationState(location)
     const studioState = getStudioLocationState(location)
     const appState = getAppLocationState(location)
 
@@ -134,6 +137,23 @@ function AppRouter() {
                     }
                 >
                     <BetaApp initialRoute={betaState} />
+                </Suspense>
+            </ProtectedSurface>
+        )
+    }
+
+    if (isSeedLocation(seedState)) {
+        return (
+            <ProtectedSurface requiredSpaceId={seedState.spaceId}>
+                <Suspense
+                    fallback={
+                        <RouteSurfaceFallback
+                            label="Loading Seed"
+                            detail="Preparing the node-graph workspace..."
+                        />
+                    }
+                >
+                    <SeedApp initialRoute={seedState} />
                 </Suspense>
             </ProtectedSurface>
         )
