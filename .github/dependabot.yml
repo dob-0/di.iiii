@@ -6,11 +6,13 @@ updates:
   # nothing to refresh it. Dependabot opens a PR on new releases instead.
   - package-ecosystem: docker
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
 
   - package-ecosystem: docker
     directory: /serverXR
+    target-branch: dev
     schedule:
       interval: weekly
 
@@ -19,5 +21,6 @@ updates:
   # (with the SHA re-verified against the new tag) when a real update ships.
   - package-ecosystem: github-actions
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
