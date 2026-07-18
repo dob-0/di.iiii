@@ -9,12 +9,56 @@ active_branch: dev
 
 ## Last commit
 
-`dev` at `bd072fef` (own scope this session) + `66e41c4e` (concurrent
-session, Beta per-universe topbar chrome — landed after, unrelated).
-`main` still at `f656bc63` from earlier this session's promotion; this
-session's landing/viewer work has NOT been promoted to `main` yet.
+`dev` at `e374d70f` (own scope this session, not yet pushed — see Open).
+`main` still at `f656bc63`; nothing from this or the prior session has
+been promoted to `main` yet.
 
-## Last session (2026-07-17 cont'd — landing "Enter Space" target + a real Walk/Fly UX bug, both shipped to staging only)
+## Last session (2026-07-18 — Studio wrong-space bug fix + hardening batch 1+2)
+
+- Real user-reported bug: opening a project in Studio via a direct/
+  bookmarked link (no space segment in the URL, e.g. from admin's
+  "Open in Studio") silently landed in the `main` space instead of the
+  project's real space — everything but the project document itself
+  (assets, publish state, back-to-hub link) was wrong. Root cause:
+  `getStudioLocationState` (`src/studio/utils/studioRouting.js`)
+  hardcoded `spaceId: defaultSpaceId` for space-less URLs instead of
+  leaving it unset, pre-empting `StudioEditor`'s own fallback to
+  `document.projectMeta.spaceId`. Fixed + admin's two "Open in Studio"
+  buttons (`AdminManageSection.jsx`) switched from an async `space`
+  lookup (`space?.id`, could resolve null/stale) to `project.spaceId`
+  (DB-sourced, travels with the project row). Regression tests added;
+  known-fixes.md updated. Pushed to `dev`, staging verified.
+- User then asked for a "full audit + hardening plan" covering this bug
+  class, general security, and AI-agent stale-fact citation (caught the
+  agent citing an old cPanel deploy workflow and a wrong Ollama model
+  name in the same session). Planned via EnterPlanMode, approved, shipped
+  in two batches (not yet pushed — local commits `1a56e9a7`, `e374d70f`):
+  - **Batch 1**: `config.js` now hard-fails boot in production if
+    `AUTH_SESSION_SECRET` falls back to an API token instead of only
+    warning; CI + Dependabot gained `npm audit` coverage (root +
+    serverXR); new `scripts/check-fallback-patterns.mjs` (CI-gated)
+    greps `serverXR/src` for the "silent hardcoded fallback" bug-class
+    shape; `known-fixes.md` got a bug-class header naming all 4 known
+    instances; `golden_rules.md`/`agent-operating-contract.md` gained a
+    "verify infra/deploy/tool facts before citing" rule.
+  - **Batch 2**: new `fallbackContracts.test.js` (server-side analog of
+    the spaceId bug, wired into `test:server-contracts`) +
+    `authAccess.test.js` cases locking in null/undefined-spaces-means-
+    unrestricted semantics; `docs:ai:check`'s rot-scan extended to
+    `docs/deploy/*.md` for stale legacy-workflow-name citations — running
+    it for real found and fixed two genuinely stale citations beyond the
+    known allowlist candidates (`.claude/agents/infra.md` still called
+    the cPanel workflow "Current deploy"; `deploy/AGENTS.md` still
+    described the VPS path as unconfigured/additive when it's been live
+    primary since 2026-07-15).
+  - User's own global `~/.claude/CLAUDE.md` (outside this repo) also had
+    the same stale cPanel deploy claim — fixed on request.
+  - Full plan: `/home/nooo/.claude/plans/stateless-greeting-bengio.md`.
+    Deferred items (not started): recover/re-list the ~23 untriaged audit
+    findings, decide whether to test-gate `deploy-space-code.yml`, rotate
+    the stale GitHub App key, a speculative periodic memory-self-audit.
+
+## Previous session (2026-07-17 cont'd — landing "Enter Space" target + a real Walk/Fly UX bug, both shipped to staging only)
 
 - Built "Enter Space" (landing page) to open an admin-chosen populated
   space instead of an empty decorative void — first attempt invented a
@@ -153,6 +197,13 @@ second independent WebGL canvas rendering that World's real scene with a
 
 ## Open
 
+- Push this session's local `dev` commits (`1a56e9a7`, `e374d70f`,
+  hardening batches 1+2) — not yet asked for. The earlier spaceId bug fix
+  (`74cad01f`) is already pushed and staging-verified.
+- Hardening plan deferred items (see plan file above): recover/re-list
+  the ~23 untriaged findings below, decide on test-gating
+  `deploy-space-code.yml`, rotate the stale GitHub App key, a speculative
+  periodic memory-self-audit.
 - Promote this session's `dev` work (Enter Space/Main-space reuse, the
   Walk/Fly "View mode" label fix, badge minimal restyle) to `main` when
   the user is ready — not yet asked for.
