@@ -9,9 +9,11 @@ active_branch: dev
 
 ## Last commit
 
-`dev` at `e374d70f` (own scope this session, not yet pushed — see Open).
-`main` still at `f656bc63`; nothing from this or the prior session has
-been promoted to `main` yet.
+`dev` at `fd5df88d` (own scope this session, just pushed — coordination
+note: if you're a concurrent session, `git pull --rebase origin dev`
+before pushing your own work, same as the existing parallel-agents
+convention). `main` still at `f656bc63`; nothing from this or the prior
+session has been promoted to `main` yet.
 
 ## Last session (2026-07-18 — Studio wrong-space bug fix + hardening batch 1+2)
 
@@ -197,9 +199,10 @@ second independent WebGL canvas rendering that World's real scene with a
 
 ## Open
 
-- Push this session's local `dev` commits (`1a56e9a7`, `e374d70f`,
-  hardening batches 1+2) — not yet asked for. The earlier spaceId bug fix
-  (`74cad01f`) is already pushed and staging-verified.
+- Hardening batches 1+2 (`1a56e9a7`, `e374d70f`, `fd5df88d`) pushed to
+  `dev` — deploy to staging should trigger automatically, not yet
+  manually re-verified live (all local validation passed: lint/build/790
+  tests/npm audit/docs checks).
 - Hardening plan deferred items (see plan file above): recover/re-list
   the ~23 untriaged findings below, decide on test-gating
   `deploy-space-code.yml`, rotate the stale GitHub App key, a speculative
