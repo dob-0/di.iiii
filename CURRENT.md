@@ -9,17 +9,26 @@ active_branch: dev
 
 ## Last commit
 
-`dev` pushed at `f7306204`, staging deployed + live-verified (health
-reports this sha; landing/wiki/wcc/beyond-form all render, zero JS
-errors). Contains: AGPL license + promo docs (`293e8faf`…`6cac5423`,
-user-approved push), vanity links (`26452eb3`), `src/seed/` lane commit
-(`9c70e534` — CI was broken because `26452eb3` shipped RootApp's seed
-import without the untracked `src/seed/`; lane committed after full
-local validation 887/887), then `f7306204` dropped the seed import from
-RootApp again (parallel session's call) — seed files are in the repo
-but `/open/seed` is currently unrouted. `main` still at `f656bc63`.
+`dev` local at `fe30ea53` — **NOT pushed yet** (this session's own commit,
+see below). Last pushed/staging-verified sha is `f7306204`'s parent chain
+plus `d908bcd3` (a revert that restored the seed-lane routing `f7306204`
+had dropped) and `422143f7` (docs-only) — i.e. by the time you read this,
+`/open/seed` should already be routed correctly again; if a fresh
+`git status`/`git diff HEAD -- src/RootApp.jsx` shows the seed import
+missing AGAIN, that's a real regression, not stale info — fix it the same
+way (re-add `getSeedLocationState`/`isSeedLocation` import, `SeedApp` lazy
+import, `seedState` variable, and the `isSeedLocation(seedState)` branch
+in `AppRouter`) rather than assuming it was ever meant to be dropped.
+`main` still at `f656bc63`.
 
-## This session (2026-07-19 — kill node-type singletons, fork `src/seed/` lane, universal code panel; uncommitted)
+## This session (2026-07-19 — kill node-type singletons, universal code panel; committed `fe30ea53`, not pushed)
+
+The `src/seed/` lane itself (fork of Beta, hierarchy-as-connection active
+markers) was committed separately by a concurrent session (`9c70e534`,
+after `26452eb3` shipped RootApp's seed import without the untracked
+`src/seed/` directory — a real CI-breaking near-miss, now fixed). This
+session's own commit (`fe30ea53`) covers the schema/registry/Beta/docs
+side of the same work — the two commits together are the full picture.
 
 User wanted free-form node nesting ("build like lego") instead of the
 one-per-scope restriction a same-day-earlier session had just added a
@@ -27,7 +36,7 @@ warning for. Went through a deep multi-tool research pass (TouchDesigner,
 Notch, Kantan Mapper, Houdini, Blender, Nuke, Unreal Blueprints, vvvv,
 Cables.gl, Max/MSP, VCV Rack, Resolume, QLab, Ableton, Hydra) before landing
 on a concrete plan — full writeup: `/home/nooo/.claude/plans/luminous-bouncing-otter.md`.
-Shipped (lint/build/all touched tests green throughout, not yet committed):
+Shipped (lint/build/887 tests green throughout):
 
 1. **Removed the singleton system entirely** — `SINGLETON_TYPE_IDS`/
    `SCOPE_SINGLETON_TYPE_IDS`/`getSingletonDedupKey` deleted from both
@@ -55,8 +64,13 @@ Design detail + explicitly-deferred Phase 2 (boundary In/Out nodes, a
 closed-outer-panel/custom-parameter side-channel, Studio-as-a-brick, a
 separate performance-safe surface): plan file above,
 `docs/architecture/RECURSIVE_NODE_CORE.md` ("Nesting"/"The `seed` lane"),
-`docs/ai/known-fixes.md` (last row). Not yet committed/pushed, not yet
-manually click-verified live — next step for whoever picks this back up.
+`docs/ai/known-fixes.md` (last row). Committed (`fe30ea53`), not pushed —
+user deferred the push decision. Not yet manually click-verified live
+(hit a real routing regression during the first attempt — a concurrent
+session's `f7306204` had dropped the seed import from `RootApp.jsx`,
+already reverted by `d908bcd3` before this — see "Last commit" above
+before assuming that's still broken). Next: push (when asked) + a live
+click-through of `/open/seed`.
 
 ## Previous session (2026-07-19 — audience/promotion/licensing)
 
