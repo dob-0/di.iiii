@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import {
-    DEFAULT_STUDIO_SPACE_ID,
     STUDIO_PAGE_SPACES,
     STUDIO_PAGE_HUB,
     STUDIO_PAGE_PROJECT,
@@ -31,8 +30,16 @@ describe('studioRouting', () => {
             isStudio: true,
             page: STUDIO_PAGE_PROJECT,
             projectId: 'demo-project',
-            spaceId: DEFAULT_STUDIO_SPACE_ID
+            spaceId: null
         })
+    })
+
+    it('leaves spaceId unset for a space-less direct project link so StudioEditor falls back to the project\'s own space', () => {
+        // Regression test: this branch used to hardcode DEFAULT_STUDIO_SPACE_ID,
+        // which silently forced every direct project open (no space segment in
+        // the URL) onto the 'main' space instead of the project's real space.
+        const state = getStudioLocationState(new URL('https://example.com/studio/projects/demo-project'))
+        expect(state.spaceId).toBeNull()
     })
 
     it('parses space-scoped Studio routes', () => {

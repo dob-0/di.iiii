@@ -73,7 +73,10 @@ export const getStudioLocationState = (
             isStudio: true,
             page: STUDIO_PAGE_PROJECT,
             projectId: segments[2],
-            spaceId: defaultSpaceId
+            // No space segment in the URL — leave spaceId unset so StudioEditor
+            // falls back to the project's own document.projectMeta.spaceId
+            // instead of being forced onto 'main' (was the wrong-space bug).
+            spaceId: null
         }
     }
 

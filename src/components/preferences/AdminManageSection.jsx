@@ -485,7 +485,7 @@ function SpaceDetail({
                                 </button>
                                 <div className="preferences-space-flags">
                                     {space.publishedProjectId === project.id && <span className="preferences-badge success">published</span>}
-                                    <button type="button" className="preferences-inline-action" onClick={() => navigateToStudioPath(buildStudioProjectPath(project.id, space.id))}>Open</button>
+                                    <button type="button" className="preferences-inline-action" onClick={() => navigateToStudioPath(buildStudioProjectPath(project.id, project.spaceId))}>Open</button>
                                 </div>
                             </div>
                             <div className="preferences-space-meta mono">{project.id}</div>
@@ -634,7 +634,7 @@ function ProjectDetail({ space, project, isPublished, editing, startEdit, submit
             subtitle={`Project · ${space?.label || space?.id || ''}`}
             actions={
                 <div className="preferences-module-actions">
-                    <button type="button" className="preferences-inline-action" onClick={() => navigateToStudioPath(buildStudioProjectPath(project.id, space?.id))}>Open in Studio</button>
+                    <button type="button" className="preferences-inline-action" onClick={() => navigateToStudioPath(buildStudioProjectPath(project.id, project.spaceId))}>Open in Studio</button>
                     <button type="button" className="preferences-inline-action warning" onClick={onDelete}>Delete</button>
                 </div>
             }

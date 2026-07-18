@@ -44,6 +44,7 @@ import {
 } from '../../services/serverSpaces.js'
 import { listProjects } from '../../project/services/projectsApi.js'
 import { listUsers } from '../../services/usersApi.js'
+import { navigateToStudioPath } from '../../studio/utils/studioRouting.js'
 
 describe('AdminManageSection', () => {
     beforeEach(() => {
@@ -54,7 +55,7 @@ describe('AdminManageSection', () => {
         ])
         getServerConfig.mockResolvedValue({ defaultSpaceId: 'main', globalSpaceId: 'main' })
         listUsers.mockResolvedValue([])
-        listProjects.mockResolvedValue([{ id: 'p1', title: 'First Project' }])
+        listProjects.mockResolvedValue([{ id: 'p1', title: 'First Project', spaceId: 'demo' }])
     })
 
     it('renders the spaces tree and root overview', async () => {
@@ -97,5 +98,21 @@ describe('AdminManageSection', () => {
         await waitFor(() => expect(listProjects).toHaveBeenCalledWith('demo'))
         // appears in both the tree leaf and the space detail's project list
         expect((await screen.findAllByText('First Project')).length).toBeGreaterThan(0)
+    })
+
+    // Regression guard: "Open in Studio" must build the link from the
+    // project's own spaceId, not the async-loaded `spaces` list lookup —
+    // using the latter could resolve to null/stale mid-load and silently
+    // drop the space segment, sending the direct link to the wrong space.
+    it('opens a project in Studio using the project\'s own spaceId', async () => {
+        render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+        const projectLinks = await screen.findAllByText('First Project')
+        fireEvent.click(projectLinks[0])
+
+        const openButton = await screen.findByRole('button', { name: 'Open in Studio' })
+        fireEvent.click(openButton)
+
+        expect(navigateToStudioPath).toHaveBeenCalledWith('/demo/studio/projects/p1')
     })
 })
