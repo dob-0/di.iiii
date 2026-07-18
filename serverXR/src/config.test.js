@@ -205,3 +205,55 @@ describe('config: insecure-default warning when NODE_ENV/REQUIRE_AUTH are unset 
         })
     })
 })
+
+// A hardened production deploy must not boot with an API bearer token
+// standing in as the session-cookie signing key (same weak-fallback class as
+// the recurring "value silently degrades instead of failing loudly" bug —
+// see docs/ai/known-fixes.md). Non-production keeps the existing warn-only
+// behavior so self-host/dev setups aren't broken by this change.
+describe('config: hard-fails in production when AUTH_SESSION_SECRET falls back to an API token', () => {
+    const CONFIG_PATH = require.resolve('./config.js')
+    const LOGGER_PATH = require.resolve('./logger.js')
+    const ENV_KEYS = ['NODE_ENV', 'REQUIRE_AUTH', 'AUTH_SESSION_SECRET', 'ADMIN_API_TOKEN']
+    let savedEnv
+
+    const withFreshRequire = (env, fn) => {
+        savedEnv = Object.fromEntries(ENV_KEYS.map((key) => [key, process.env[key]]))
+        for (const key of ENV_KEYS) delete process.env[key]
+        Object.assign(process.env, env)
+        delete require.cache[CONFIG_PATH]
+        const logger = require('./logger.js')
+        const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {})
+        try {
+            fn(warnSpy)
+        } finally {
+            warnSpy.mockRestore()
+            for (const key of ENV_KEYS) {
+                if (savedEnv[key] === undefined) delete process.env[key]
+                else process.env[key] = savedEnv[key]
+            }
+            delete require.cache[CONFIG_PATH]
+            delete require.cache[LOGGER_PATH]
+        }
+    }
+
+    it('throws at boot in production when only an API token backs the session secret', () => {
+        withFreshRequire({ NODE_ENV: 'production', ADMIN_API_TOKEN: 'admin-secret-token' }, () => {
+            expect(() => require('./config.js')).toThrow(/AUTH_SESSION_SECRET is not set/)
+        })
+    })
+
+    it('still only warns (does not throw) outside production', () => {
+        withFreshRequire({ NODE_ENV: 'development', REQUIRE_AUTH: 'true', ADMIN_API_TOKEN: 'admin-secret-token' }, (warnSpy) => {
+            expect(() => require('./config.js')).not.toThrow()
+            expect(warnSpy).toHaveBeenCalledWith(expect.stringMatching(/AUTH_SESSION_SECRET is not set/))
+        })
+    })
+
+    it('does not throw in production when a dedicated AUTH_SESSION_SECRET is set', () => {
+        withFreshRequire({ NODE_ENV: 'production', AUTH_SESSION_SECRET: 'dedicated-secret', ADMIN_API_TOKEN: 'admin-secret-token' }, (warnSpy) => {
+            expect(() => require('./config.js')).not.toThrow()
+            expect(warnSpy).not.toHaveBeenCalledWith(expect.stringMatching(/AUTH_SESSION_SECRET is not set/))
+        })
+    })
+})

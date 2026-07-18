@@ -192,11 +192,19 @@ if (requireAuth && !authSessionSecret) {
 }
 
 if (requireAuth && !process.env.AUTH_SESSION_SECRET && authSessionSecret) {
-  logger.warn(
-    '[serverXR] AUTH_SESSION_SECRET is not set — falling back to an API bearer token as the ' +
-    'session-cookie signing key. Anyone holding that token can forge session cookies for any ' +
-    'role. Set a dedicated AUTH_SESSION_SECRET in the server env.'
-  )
+  const isProduction = String(process.env.NODE_ENV || '').toLowerCase() === 'production'
+  const message = '[serverXR] AUTH_SESSION_SECRET is not set — falling back to an API bearer ' +
+    'token as the session-cookie signing key. Anyone holding that token can forge session ' +
+    'cookies for any role. Set a dedicated AUTH_SESSION_SECRET in the server env.'
+  if (isProduction) {
+    // Same silent-degrade shape as the requireAuth/cookieSecure NODE_ENV
+    // check below (audit 2026-07-17) and the recurring "value silently
+    // falls back to something weaker/wrong instead of failing loudly" bug
+    // class in known-fixes.md — a hardened production deploy must not boot
+    // with a session-signing key an API-token holder could forge.
+    throw new Error(message)
+  }
+  logger.warn(message)
 }
 
 // requireAuth/cookieSecure both silently default to off unless NODE_ENV is

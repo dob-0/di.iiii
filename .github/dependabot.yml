@@ -24,3 +24,19 @@ updates:
     target-branch: dev
     schedule:
       interval: weekly
+
+  # npm dependency advisories were previously only caught by manually running
+  # `npm audit` — CI's new audit step (ci.yml) catches regressions on open
+  # PRs, but only Dependabot proactively opens a PR when a new advisory lands
+  # against an already-merged dependency.
+  - package-ecosystem: npm
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: npm
+    directory: /serverXR
+    target-branch: dev
+    schedule:
+      interval: weekly

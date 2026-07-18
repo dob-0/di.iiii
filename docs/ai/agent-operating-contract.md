@@ -13,6 +13,9 @@ At project open:
 - read `CURRENT.md` immediately after — it points to the known-fixes table and prevents re-doing solved work
 - read the nearest scoped `AGENTS.md` before edits
 - use `docs/ai/index.md` only for deeper reference
+- if the task touches deploy/infra, re-read `docs/deploy/LIVE_DEPLOY.md` even if you recall it —
+  deploy topology changes without a corresponding memory update (see golden_rules.md's "Verify
+  infra/deploy/tool facts before citing them")
 
 During active work:
 

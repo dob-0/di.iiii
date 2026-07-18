@@ -49,6 +49,18 @@ Look at the `??` (untracked) list. Files from a previous uncommitted session may
 ### Verify actual file state — do not trust stale numbers
 PROGRESS.md line counts go stale between sessions. Read the file, run `wc -l`, check git status before assuming a task is open. A "1457-line file" may already be split and uncommitted.
 
+### Verify infra/deploy/tool facts before citing them — don't answer from recall
+The same staleness risk as the rule above applies to facts that live outside this repo's file
+contents: deploy workflow names, hosting topology, model/tool names. These change without a
+corresponding memory update, and citing an old one reads as confidently wrong rather than
+obviously outdated. Concrete incident: this repo migrated its production deploy off cPanel to a
+Hetzner VPS on 2026-07-15 (`docs/deploy/LIVE_DEPLOY.md` — the doc `AGENTS.md` calls "deploy
+truth"); an agent session afterward still cited the old `publish-cpanel-prebuilt-v2.yml` workflow
+from session memory instead of re-reading that doc. Before citing a deploy workflow name or infra
+topology fact, re-read `docs/deploy/LIVE_DEPLOY.md` rather than recalling it. Before citing a
+model/tool name (e.g. an Ollama tag), verify it still exists (`ollama list` or equivalent) rather
+than trusting cached knowledge of what used to be configured.
+
 ### Run lint and tests after every code change
 ```bash
 npm run lint

@@ -3,6 +3,24 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## Recurring bug class: silent hardcoded fallback
+
+A per-entity value (spaceId, auth scope, asset id) gets read from a source that can be
+absent/malformed, and the code substitutes a hardcoded default or trusts the caller instead of
+failing loudly or resolving the real value. Four confirmed instances so far — when touching
+routing, auth, or scope-resolution code, check whether the change you're making could produce a
+fifth:
+
+1. Studio direct-project-link `spaceId` silently hardcoded to `'main'` instead of falling through
+   to the project's real space (`getStudioLocationState`, row further down this table).
+2. OAuth sessions hardcoded `spaces: null` (meaning *unrestricted* access) instead of a real scope.
+3. `spaceId === 'wcc'` string-literal special case bypassing the real `isPublic` auth check.
+4. Asset IDs trusted from the client instead of being verified against the actual content hash.
+
+Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the literal pattern;
+`serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
+contract assertions.
+
 | Symptom | Root cause | Fix | File |
 |---------|-----------|-----|------|
 | Guest work silently lost at sign-in: OAuth/token login replaces the guest cookie, orphaning the guest sandbox until the 7-day sweep eats it (the Share window promised "sign in to keep this space" but nothing carried it) | Session upgrade minted the new identity without looking at the old one — the guest cookie is still on the upgrade request, but nothing read it | `promoteGuestSandbox` runs at both upgrade moments (OAuth callback via `onSessionUpgrade`, token login in POST /api/auth/session): if the prior guest built anything, `spaceStore.moveSpace` re-homes the sandbox (row, ops, projects, directory) onto the account's sandbox id; never clobbers non-empty account sandboxes; redirect gains `&kept=1` → AuthReturnNotice says "your sandbox came with you". Guards: spaceStore moveSpace tests + httpContracts keep-the-room case | `serverXR/src/spaceStore.js` `serverXR/src/index.js` `serverXR/src/routes/authRoutes.js` `src/components/AuthReturnNotice.jsx` |

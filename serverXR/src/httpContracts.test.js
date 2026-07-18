@@ -78,6 +78,12 @@ const startServer = async ({
         DATA_ROOT: sandboxDataRoot,
         API_TOKEN: apiToken,
         CORS_ORIGINS: '*',
+        // A real production boot now hard-fails if AUTH_SESSION_SECRET falls
+        // back to an API token (config.js) — give the fixture a dedicated one
+        // so nodeEnv:'production' tests unrelated to that specific guard
+        // (CORS, cookie-secure, etc.) don't trip it. Tests that want to
+        // exercise the fallback/throw behavior itself unset it via extraEnv.
+        AUTH_SESSION_SECRET: 'test-session-secret',
         ...(releaseManifest ? { SERVERXR_RELEASE_FILE: releaseFilePath } : {}),
         ...extraEnv
     }

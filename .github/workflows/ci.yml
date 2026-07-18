@@ -43,6 +43,16 @@ jobs:
             npm --prefix serverXR install
           fi
 
+      # High/critical only — low/moderate advisories churn too often on
+      # transitive deps to gate a deploy on; audit-2026-07-18 confirmed 0
+      # vulnerabilities at this threshold in both package trees at the time
+      # this step was added.
+      - name: Audit dependencies (root)
+        run: npm audit --production --audit-level=high
+
+      - name: Audit dependencies (serverXR)
+        run: npm --prefix serverXR audit --production --audit-level=high
+
       - name: Lint
         run: npm run lint
 
@@ -61,6 +71,9 @@ jobs:
 
       - name: Schema-sync tests
         run: npm run test:schema-sync
+
+      - name: Check for silent hardcoded fallback patterns
+        run: npm run check:fallback-patterns
 
       - name: Check AI docs
         run: npm run docs:ai:check
