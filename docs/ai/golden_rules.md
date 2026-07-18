@@ -192,6 +192,22 @@ If `git status` shows unstaged edits you didn't make, assume another agent is mi
 
 **Files:** n/a (agent behavior, not repo code) — applies to any research task, VPS/hosting comparisons being the concrete case that surfaced it.
 
+### Size every large task against usage limits before starting — and never let a limit brick the process
+
+**Rule:** Before starting any large task (multi-hour, multi-file, or fan-out/multi-agent), size it against Claude usage limits — the 5-hour rolling session window and the weekly cap. If usage state is known (`/usage`, or the user says they're near a limit), factor it in; if unknown, assume mid-window and route to the cheapest adequate model per the existing model-routing rules (Ollama free lane first for analysis/docs/planning). If the task plausibly won't fit the remaining window, split it into checkpointable phases *before* starting — each phase must end in a state safe to stop at: tests pass, work committed locally, nothing half-edited.
+
+**Why:** A limit hit mid-task with files half-edited, WIP only in chat context, and no resume notes bricks the process: the next window starts cold, re-investigates, and may discard or clobber the unfinished work. Every convention/perk discovered during a session that lives only in chat dies with the session. Planning against the budget up front costs one minute; recovering from an unplanned cutoff costs a session.
+
+**How — the never-brick workflow when a limit is near or hit mid-task:**
+1. Stop starting new subtasks.
+2. Finish or revert the current file-level edit so the tree is coherent.
+3. Commit WIP locally on `dev` with a clear `wip:` message — never push.
+4. Update CURRENT.md's Open section with exact resume state: what's done, what's next, which files are mid-flight.
+5. Record any hard-won learning from the session in golden_rules.md or known-fixes.md so the perk survives even if the session dies.
+Resume the next window from CURRENT.md, not from memory. And at any time — limit or not — valuable perks/conventions discovered during a session (by user or agent) must be codified in golden_rules.md / known-fixes.md / CURRENT.md in the same session, never left only in chat context.
+
+**Files:** `CURRENT.md` (Open section = resume state), `docs/ai/golden_rules.md`, `docs/ai/known-fixes.md`, `docs/ai/roles/model-routing.md` (cheapest-adequate-model routing), `scripts/ollama-task.sh` (free lane).
+
 ---
 
 ## Core Solutions — Discovered in This Repo

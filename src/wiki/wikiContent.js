@@ -230,6 +230,19 @@ export const WIKI_ARTICLES = [
         updated: '2026-06-26'
     },
     {
+        id: 'license-and-openness',
+        category: 'For developers',
+        title: 'License & openness',
+        summary: 'di.iiii is open source under AGPL-3.0 — read it, run it, self-host it; your content stays yours.',
+        body: [
+            'The di.iiii platform code is licensed under the GNU AGPL-3.0 (see the LICENSE file in the repository). Anyone may read, use, modify, and self-host it; anyone who hosts a modified copy must publish their changes under the same license — the commons can grow but not be enclosed.',
+            'Content is separate from code: spaces and projects you create belong to you, and published spaces stay free to visit — no login is ever needed to view a public space.',
+            'Self-hosting is a supported path (npm run selfhost, docs/deploy/SELF_HOST.md), and space bundles are exportable, so your work is never locked to this host.'
+        ],
+        tags: ['license', 'open source', 'agpl', 'developers'],
+        updated: '2026-07-19'
+    },
+    {
         id: 'github-sync',
         category: 'For developers',
         title: 'GitHub sync',
