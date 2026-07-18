@@ -53,4 +53,15 @@ round. News beats, not generic platform pushes.
 - Live URLs (verified 200): https://di-studio.xyz/br_id_ge · /wcc · /beyond-form
 - Sustainability/licensing story: `SUSTAINABILITY.md`.
 
-<!-- deep-research: fold in channel norms, festival deadlines, contacts when workflow completes -->
+## Research status (2026-07-19, 101-agent verified sweep)
+
+- Festival/funding findings folded into `drafts/stakeholders.md`; sustainability
+  comparables into `SUSTAINABILITY.md`. Every claim there survived 3-0 adversarial
+  verification with primary sources.
+- **Community-launch claims (Three.js forum norms, Show HN patterns, r/WebXR) did NOT
+  survive verification** — treat the norms noted in the drafts as unverified best
+  practice: read each forum's current posting rules manually before posting.
+- Near-term action calendar the research produced: **EMAP call opens 3 Sep 2026
+  (deadline 6 Nov)** · **Horizon HERITAGE deadline 23 Sep 2026** (needs a heritage
+  consortium partner — start that conversation now) · Jan 2027 wave (Prix Ars
+  Electronica, ECHOES call 3) · FIVARS next annual cycle (best WebXR fit).

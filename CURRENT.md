@@ -9,13 +9,37 @@ active_branch: dev
 
 ## Last commit
 
-`dev` at `fd5df88d` (own scope this session, just pushed — coordination
-note: if you're a concurrent session, `git pull --rebase origin dev`
-before pushing your own work, same as the existing parallel-agents
-convention). `main` still at `f656bc63`; nothing from this or the prior
-session has been promoted to `main` yet.
+`dev` local at promo/licensing commits (`293e8faf` LICENSE, `67377167`
+promo docs, + research fold-in) on top of `fd5df88d` — **NOT pushed**
+(license adoption awaits user's explicit push). A concurrent session has
+~20 uncommitted serverXR/beta files in the tree — do not `git add -A`.
+`main` still at `f656bc63`.
 
-## Last session (2026-07-18 — Studio wrong-space bug fix + hardening batch 1+2)
+## Last session (2026-07-19 — audience/promotion/licensing)
+
+- **License**: repo now AGPL-3.0 (`LICENSE` + package.json
+  `"license": "AGPL-3.0-only"`) — makes the landing's "Open source"
+  claim true. Direction user-confirmed: open like a library, revenue
+  from services around it, never from closing the code.
+- **Promotion kit**: `docs/promo/` — PLAN.md (ranked audiences, phased
+  rollout), SUSTAINABILITY.md (AGPL code + CC-BY asset commons +
+  4 revenue lanes; Blender-fund model verified), drafts/ (Notations #2
+  post, Show HN, Three.js forum, Reddit, stakeholder mail template +
+  verified festival/grant list). 101-agent deep-research verified the
+  festival/funding claims 3-0; community-launch norms did NOT survive
+  verification — re-check forum rules manually before posting.
+- **Near-term calendar**: EMAP call opens 3 Sep 2026 (deadline 6 Nov);
+  Horizon HERITAGE deadline 23 Sep 2026 (needs heritage-institution
+  consortium partner); Jan 2027: Prix Ars Electronica + ECHOES call 3;
+  FIVARS next cycle = best WebXR fit. Submit works, not the platform.
+- Wiki: new "License & openness" article. Golden rule added:
+  usage-limit sizing + never-brick checkpoint workflow
+  (docs/ai/golden_rules.md, Agent Behavior Rules).
+- **Owed by user**: 60–90s demo recording; fill warm-contact names in
+  drafts/stakeholders.md; approve pushes + every outbound post/mail.
+- **Nothing was posted, mailed, or pushed.**
+
+## Previous session (2026-07-18 — Studio wrong-space bug fix + hardening batch 1+2)
 
 - Real user-reported bug: opening a project in Studio via a direct/
   bookmarked link (no space segment in the URL, e.g. from admin's

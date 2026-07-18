@@ -33,4 +33,18 @@ Follow-up owed: a short `/terms` page stating the above in plain words (pairs wi
    (digital heritage, Creative Europe-class programs) fit the manifesto's 30-year
    retrievability mission.
 
-<!-- deep-research: refine with Blender/Godot/PenPot/Excalidraw comparables + realistic numbers -->
+## What the research verified (2026-07-19)
+
+- **Blender Development Fund** is the proven template: individual recurring
+  memberships from €5/month whose benefits are just badges + website mention —
+  low-friction, copyable by a small platform today. Blender's *corporate* tier sells
+  roadmap access and exposure to blender.org's 2.3M monthly visitors — that lane needs
+  audience scale di.iiii doesn't have yet. Realistic sequence: individual memberships
+  now, corporate sponsorship later. (fund.blender.org, 3-0 verified)
+- **Grants are the nearest real money** (see `drafts/stakeholders.md`): EMAP
+  residencies (€4k artist + €4k project, call opens 3 Sep 2026, deadline 6 Nov 2026),
+  Horizon Europe HERITAGE (deadline 23 Sep 2026, via a heritage-institution
+  consortium — Armenia is a fully associated country), ECHOES cascading grants
+  (€60k, call 3 publishes 31 Jan 2027, needs a CHI partner), Prix Ars Electronica
+  (Jan 2027, up to €10k). Every other 2026 festival window has already closed —
+  the calendar favors preparing submissions now for the Sep–Jan wave.
