@@ -9,19 +9,40 @@ active_branch: dev
 
 ## Last commit
 
-`dev` local at `fe30ea53` — **NOT pushed yet** (this session's own commit,
-see below). Last pushed/staging-verified sha is `f7306204`'s parent chain
-plus `d908bcd3` (a revert that restored the seed-lane routing `f7306204`
-had dropped) and `422143f7` (docs-only) — i.e. by the time you read this,
-`/open/seed` should already be routed correctly again; if a fresh
-`git status`/`git diff HEAD -- src/RootApp.jsx` shows the seed import
-missing AGAIN, that's a real regression, not stale info — fix it the same
-way (re-add `getSeedLocationState`/`isSeedLocation` import, `SeedApp` lazy
-import, `seedState` variable, and the `isSeedLocation(seedState)` branch
-in `AppRouter`) rather than assuming it was ever meant to be dropped.
-`main` still at `f656bc63`.
+`dev` at `c0d33af5` — pushed, matches `origin/dev` exactly (verified via
+`git fetch` + `git log HEAD..origin/dev` / `origin/dev..HEAD`, both empty).
+Staging deploy green and health-checked live. `main` still at `f656bc63`.
 
-## This session (2026-07-19 — kill node-type singletons, universal code panel; committed `fe30ea53`, not pushed)
+## Session (2026-07-19 — vanity space/project links + a real concurrent-edit incident)
+
+Shipped clean public links: spaces/projects get a `slug` independently
+renameable from their immutable id, enabling `/wcc/artistplace`-style short
+links alongside the existing `/p/{id}` and `/studio/projects/{id}` forms
+(both kept forever, nothing replaced). Server: `spaces.slug`/`projects.slug`
+columns, `PATCH` validation (reserved words, 409 on collision), new
+`GET /api/resolve/:space/:project`. Client: `getAppLocationState` classifies
+the bare two-segment shape, `SlugProjectRoute` resolves it and falls back to
+a plain space route on a miss. Admin gets an "Edit public link" action;
+`ProjectSwitcher` gets one-click "Copy link". Full proposal (custom domains
+and in-app space export still draft-only): `docs/architecture/
+SPEC_space_urls_and_portability.md`. Committed `26452eb3`.
+
+**Real incident, now resolved**: this repo runs multiple concurrent Claude
+sessions sharing the same on-disk working tree (see `docs/ai/parallel-
+agents.md`). Editing `src/RootApp.jsx` landed a stray import from another
+session's in-progress, uncommitted `src/seed/` lane — `src/RootApp.jsx` on
+disk already had their edits when mine were applied, and the whole file got
+committed together, breaking the pushed build (`f7306204` attempted a fix
+by stripping the import; that raced with the other session's own fix,
+`9c70e534`, which committed the real `src/seed/` files instead — `d908bcd3`
+reverted `f7306204` once the actual fix was confirmed). Net effect after
+all three commits: both features are intact, correctly wired, and verified
+live. **Lesson for next session**: when a shared file was very likely
+touched by someone else recently (long-running repo, multiple active
+sessions), diff the actual staged change before committing — don't assume
+"what's on disk when I `git add` this file" is only your own edit.
+
+## Previous session (2026-07-19 — kill node-type singletons, universal code panel; committed `fe30ea53`, pushed)
 
 The `src/seed/` lane itself (fork of Beta, hierarchy-as-connection active
 markers) was committed separately by a concurrent session (`9c70e534`,
@@ -64,8 +85,8 @@ Design detail + explicitly-deferred Phase 2 (boundary In/Out nodes, a
 closed-outer-panel/custom-parameter side-channel, Studio-as-a-brick, a
 separate performance-safe surface): plan file above,
 `docs/architecture/RECURSIVE_NODE_CORE.md` ("Nesting"/"The `seed` lane"),
-`docs/ai/known-fixes.md` (last row). Committed (`fe30ea53`), not pushed —
-user deferred the push decision. Not yet manually click-verified live
+`docs/ai/known-fixes.md` (last row). Committed (`fe30ea53`) and pushed
+(`c0d33af5` on top, docs-only). Not yet manually click-verified live
 (hit a real routing regression during the first attempt — a concurrent
 session's `f7306204` had dropped the seed import from `RootApp.jsx`,
 already reverted by `d908bcd3` before this — see "Last commit" above
@@ -177,21 +198,23 @@ click-through of `/open/seed`.
 - Nightly VPS backups + validated restore path
 - Studio dev-only panes: read-only node-graph ("N" split) and live-world 3D ("W" split)
 - `src/seed/` (dev-only, `/open/seed`): free-form node nesting, active
-  markers for World/Light/Background/Grid, universal code panel — not yet
-  committed/pushed or manually click-verified live.
+  markers for World/Light/Background/Grid, universal code panel — pushed,
+  not yet manually click-verified live.
+- Vanity space/project links (`/wcc/artistplace`-style) — pushed, backend
+  flow manually smoke-tested end-to-end (create/patch/collision/resolve),
+  not yet click-verified through the actual admin UI in a live browser.
 
 ## Open
 
-- **This session's node-graph rework is uncommitted** — lint/build/tests all
-  green locally, but not yet committed, pushed, or manually click-verified
-  in a live browser. Next step for whoever picks this back up.
-- Hardening batches 1+2 (`1a56e9a7`, `e374d70f`, `fd5df88d`) pushed to
-  `dev` — deploy to staging should trigger automatically, not yet
-  manually re-verified live (all local validation passed: lint/build/790
-  tests/npm audit/docs checks).
+- `seed` lane + vanity links: both pushed and building clean, neither has
+  had a manual live click-through yet — next step for whoever picks this
+  back up.
 - Hardening plan deferred items: recover/re-list the ~23 untriaged
   findings below, decide on test-gating `deploy-space-code.yml`, rotate
   the stale GitHub App key, a speculative periodic memory-self-audit.
+- Custom domains + in-app space export (`SPEC_space_urls_and_portability.md`
+  items 3c/3d) — plan-only, not started, 3c needs product-owner sign-off
+  before any code (new infra: Caddy/DNS).
 - Promote Enter Space/Main-space reuse + Walk/Fly label fix + badge
   restyle to `main` when the user is ready — not yet asked for.
 - License/promo work (see previous-session entry above) — owed by user:
