@@ -9,13 +9,56 @@ active_branch: dev
 
 ## Last commit
 
-`dev` local at promo/licensing commits (`293e8faf` LICENSE, `67377167`
-promo docs, + research fold-in) on top of `fd5df88d` — **NOT pushed**
-(license adoption awaits user's explicit push). A concurrent session has
-~20 uncommitted serverXR/beta files in the tree — do not `git add -A`.
-`main` still at `f656bc63`.
+`dev` pushed at `f7306204`, staging deployed + live-verified (health
+reports this sha; landing/wiki/wcc/beyond-form all render, zero JS
+errors). Contains: AGPL license + promo docs (`293e8faf`…`6cac5423`,
+user-approved push), vanity links (`26452eb3`), `src/seed/` lane commit
+(`9c70e534` — CI was broken because `26452eb3` shipped RootApp's seed
+import without the untracked `src/seed/`; lane committed after full
+local validation 887/887), then `f7306204` dropped the seed import from
+RootApp again (parallel session's call) — seed files are in the repo
+but `/open/seed` is currently unrouted. `main` still at `f656bc63`.
 
-## Last session (2026-07-19 — audience/promotion/licensing)
+## This session (2026-07-19 — kill node-type singletons, fork `src/seed/` lane, universal code panel; uncommitted)
+
+User wanted free-form node nesting ("build like lego") instead of the
+one-per-scope restriction a same-day-earlier session had just added a
+warning for. Went through a deep multi-tool research pass (TouchDesigner,
+Notch, Kantan Mapper, Houdini, Blender, Nuke, Unreal Blueprints, vvvv,
+Cables.gl, Max/MSP, VCV Rack, Resolume, QLab, Ableton, Hydra) before landing
+on a concrete plan — full writeup: `/home/nooo/.claude/plans/luminous-bouncing-otter.md`.
+Shipped (lint/build/all touched tests green throughout, not yet committed):
+
+1. **Removed the singleton system entirely** — `SINGLETON_TYPE_IDS`/
+   `SCOPE_SINGLETON_TYPE_IDS`/`getSingletonDedupKey` deleted from both
+   `src/shared/projectSchema.js` and `shared/projectSchema.cjs` (not left
+   unused — actually gone). Stripped `singleton:true` from the 6 affected
+   `nodeRegistry.js` types. Removed Beta's same-day blocked-create warning
+   (`getPaletteBlockReason`, `NodePalette.jsx`'s `getBlockReason` prop/CSS).
+2. **New lane `src/seed/`** — full fork of `src/beta/` (first lane-forked-
+   from-another-lane in the project; see `PROJECT_SURFACES.md`'s "On forking
+   a new lane from Beta"), routed at `/open/seed`, wired into `RootApp.jsx`.
+   Own localStorage namespace (`dii.seed.*`). Fixed one opportunistic bug
+   while forking: edges are now scope-filtered before rendering.
+3. **Hierarchy-as-connection active markers** (Kantan Mapper pattern) — new
+   generic `workspaceState.activeNodeIdByTypeScope` map (keyed
+   `typeId::scopeId`) for World/Light/Background/Grid, alongside the
+   pre-existing `liveWorldNodeIdByScope`. Small ● toggle on `seed`'s graph
+   node cards. Beta itself keeps its simpler `.find()`-first-match lookup.
+4. **Universal code panel** — every node type (not just `node.null`) gets an
+   inert "Code" inspector section, `values.__code` (distinct reserved key).
+   No execution anywhere — storage/display only, deliberately out of scope.
+5. Added `authoringOnly: true` (cosmetic palette tag) to the ~24 node types
+   that don't compute/render anything real yet.
+
+Design detail + explicitly-deferred Phase 2 (boundary In/Out nodes, a
+closed-outer-panel/custom-parameter side-channel, Studio-as-a-brick, a
+separate performance-safe surface): plan file above,
+`docs/architecture/RECURSIVE_NODE_CORE.md` ("Nesting"/"The `seed` lane"),
+`docs/ai/known-fixes.md` (last row). Not yet committed/pushed, not yet
+manually click-verified live — next step for whoever picks this back up.
+
+## Previous session (2026-07-19 — audience/promotion/licensing)
 
 - **License**: repo now AGPL-3.0 (`LICENSE` + package.json
   `"license": "AGPL-3.0-only"`) — makes the landing's "Open source"
@@ -84,132 +127,31 @@ promo docs, + research fold-in) on top of `fd5df88d` — **NOT pushed**
     findings, decide whether to test-gate `deploy-space-code.yml`, rotate
     the stale GitHub App key, a speculative periodic memory-self-audit.
 
-## Previous session (2026-07-17 cont'd — landing "Enter Space" target + a real Walk/Fly UX bug, both shipped to staging only)
-
-- Built "Enter Space" (landing page) to open an admin-chosen populated
-  space instead of an empty decorative void — first attempt invented a
-  new `landingSpaceId` config field; user caught it as wrong ("no its
-  tooo old bag" energy but for design this time) — reverted and reused
-  the platform's existing "Main" space concept (`defaultSpaceId`)
-  instead, and consolidated its one remaining write-UI into `/admin`
-  (removed the duplicate inline "Set main" from Studio Hub's grid + map
-  views). `GET/PATCH /api/config` unchanged in final shape.
-- CI flaked once on an unrelated pre-existing test
-  (`projectContracts.test.js` "unrecoverable-project" ENOENT) — passed
-  57/57 locally, re-ran the failed CI job rather than guessing, it
-  went green on retry.
-- Verified the whole loop live end-to-end via direct VPS/container
-  `node -e fetch(...)` calls to staging's own `/api/config` (using the
-  container's own `ADMIN_API_TOKEN`, never extracted to disk) + headless
-  Playwright — set `beyond-form` as Main, confirmed Enter Space
-  navigated there, then cleared it back to `null` per the user's
-  correction that it was only ever a test value.
-- Real bug from user report: after using a real project's "Walk / Fly"
-  toggle (`PublicProjectViewer.jsx`), there was no way back to the calm
-  view without a full page Exit + re-Enter. The toggle-back mechanism
-  actually already worked — verified live, round-trips fine — the only
-  real defect was its label: `LiveProjectScene`'s chrome exit button was
-  hardcoded `← Exit`, identical wording to the landing page's own real
-  "Exit space", so it read as "leaves the page" when it doesn't. Added
-  an `exitLabel` prop (default unchanged for `WccExperience.jsx`'s real
-  exit case), `PublicProjectViewer` now passes `"← View mode"`.
-  Regression test mocks `LiveProjectScene` to assert the label and the
-  round trip back to the `Walk / Fly` button.
-- Also shipped a smaller, separate, tested addition to the landing
-  page's own decorative preview: a "◐ View mode" button + `V` key so it
-  can flip back to the calm orbit view without a full Exit + re-Enter
-  either — same idea in miniature, not the actual bug fix.
-- None of staging's current public spaces (`wcc`, `beyond-form`,
-  `br-id-ge`) expose the generic Walk/Fly button — they're all custom
-  experiences — so the real-viewer fix could only be click-verified
-  locally against `/main`, not live on staging; user confirmed the
-  landing-page toggle live on staging separately (after a hard refresh
-  cleared a stale cached bundle).
-- Made the "Made with di.iiii" badge minimal + `mix-blend-mode:
-  difference` so it reads on any published site's theme instead of a
-  fixed dark-cyan pill that clashed on a B/W brutalist site.
-
-## Earlier this session (perf audit shipped to staging, two live bugs found+fixed, promoted to prod)
-
-- Ran a deep perf audit (5 parallel research agents) across build
-  chunking, code-splitting, asset caching, server query paths, and Beta/
-  Studio render loops; shipped all 12 fixes to `dev`/staging with
-  regression tests for each (confirmed failing pre-fix via `git stash`).
-- User manual-tested staging and hit a real live bug: `GET /projects/
-  main/document` 500ing repeatedly. Root cause: `/data/spaces/*` on the
-  staging volume was `root`-owned (leftover from an earlier `docker cp`
-  import) while the server runs as non-root `app` → `EACCES` on the
-  read-path write-back. Fixed live via `docker exec -u root ... chown -R
-  app:app /data/spaces` on the VPS, no code change; verified via repeat
-  200s + a headless Playwright check.
-- Second live bug: mouse-look (pointer-lock/drag camera rotation) didn't
-  turn the camera on `/wcc/scene`, though WASD worked and `?inputdebug=1`
-  showed healthy lock state + changing yaw/pitch. User insisted this was
-  old and pre-existing, not caused by the perf work — asked to
-  git-blame/compare history instead of bisecting today's commits.
-  `git log -L` on the spawn effect found it: commit `a79c689c`
-  (2026-06-29, data-driven spawn) reassigns `playerRef.current` to a
-  whole new object once `worldState.spawn` loads; `Walker`'s mouse/touch-
-  look listeners are wired up once at mount and closed over the old
-  object, so mouse-look kept mutating an orphaned object forever while
-  the camera's per-frame code read the new one. Fixed with `Object.assign`
-  (mutate in place) instead of reassignment — `src/components/
-  LiveProjectScene.jsx`.
-- Also hardened `deploy/vps-restore.sh` to `chown -R 100:101 /data` after
-  restore, matching the same ownership class of bug.
-- User re-verified mouse-look fixed on staging, then approved promoting
-  `dev` → `main`; fast-forwarded and pushed, production deploy triggered.
-- A concurrent audit session was working on this same repo/branch in
-  parallel this session too (own `perf(ci)` commit, own `CURRENT.md`
-  coordination note at `d6eb7e19`) — no conflicts, just interleaved
-  pushes to `dev`.
-
-## Previous session (2026-07-17 — multi-world graphs + live Studio 3D render, dev-only)
-
-User wanted TouchDesigner-style multi-world: several independent worlds
-(one per node-scope), one marked "live", rendered as real 3D inside Studio
-— not just a read-only graph view. Explicit "max extended version" ask, 4
-phases, each committed:
-1. **Scoped singletons** — `world.light`/`background`/`grid`/`universe.world`
-   moved from document-wide to per-scope dedup (`getSingletonDedupKey`,
-   `typeId::parentId`) in `src/shared/projectSchema.js` + CJS mirror
-   `shared/projectSchema.cjs`.
-2. **Scoped rendering** — `BetaViewport.jsx` gained `scopeId`; each World's
-   own `values.bgColor` is now load-bearing (was inert), falls back to
-   `document.worldState` last (untouched, still Studio's own concern).
-3. **Live pointer** — `workspaceState.liveWorldNodeIdByScope` map via
-   existing `setWorkspaceState`/`mergePatch` (no new op type); "●" toggle
-   on Beta World panels.
-4. **Studio render pane** — new `StudioWorldSurface.jsx` (reuses
-   `BetaViewport` read-only), flag-gated "W" split button in
-   `StudioViewportLayout.jsx`, dev-only (`isGraphViewEnabled()`).
-
-Known, flagged (not silently dropped): `isWorldFullscreen` still one
-boolean not per-world; Studio's multi-live-world tie-break is arbitrary
-first-in-document-order (no scope-nav UI in Studio yet).
-
-Live-browser click-through now done: installed Playwright's bundled
-Chromium, drove it via raw CDP (its `chrome` channel needs root to
-install, unavailable here). Beta → created/live-marked a World, added a
-Cube inside its scope → Studio on the same project, clicked "W", got a
-second independent WebGL canvas rendering that World's real scene with a
-"READ-ONLY · LIVE WORLD" badge, zero console errors.
-
-`npm run lint`/`build`/`test` clean throughout (737/737 tests, up from 726).
-
 ### Previous sessions (compressed — see PROGRESS.md for full detail)
 
-- **2026-07-17, Beta audit → Studio graph pane**: fixed a real window-
-  clipping CSS bug (`.beta-window` flex layout), corrected stale docs,
-  deduped routing plumbing, extracted node-graph engine into
-  `src/project/graph/`, added Studio's first read-only graph pane
-  (`StudioGraphSurface.jsx`, dev-only "N" split), fixed a Node-0-deletion
-  safety bug. 726/726 tests.
+- **2026-07-17 cont'd**: landing "Enter Space" reuses the existing "Main"
+  space concept (`defaultSpaceId`) rather than a new config field; a real
+  Walk/Fly UX bug fixed (mislabeled exit button, not a broken mechanism);
+  "Made with di.iiii" badge restyled to work on any theme.
+- **2026-07-17, perf audit**: 12 fixes (build chunking, code-splitting,
+  caching, query paths, render loops) shipped to prod; two live bugs found
+  during manual verification and fixed (`/data/spaces` root-owned →
+  EACCES, and a pre-existing mouse-look bug from a stale `playerRef`
+  reassignment, `git log -L`-blamed to commit `a79c689c`).
+- **2026-07-17, multi-world graphs**: `world.light`/`background`/`grid`/
+  `universe.world` moved to per-scope dedup, `BetaViewport.jsx` scoped
+  rendering, `workspaceState.liveWorldNodeIdByScope` live-pointer + "●"
+  toggle, Studio's read-only `StudioWorldSurface.jsx` render pane
+  (dev-only "W" split) — this is the multi-world/singleton system this
+  session's node-graph rework builds on top of and then removes.
+- **2026-07-17, Beta audit → Studio graph pane**: fixed a window-clipping
+  CSS bug, extracted the node-graph engine into `src/project/graph/`,
+  added Studio's first read-only graph pane (dev-only "N" split), fixed a
+  Node-0-deletion safety bug.
 - **2026-07-16, full repo audit**: fixed path-traversal/auth-scope bug in
-  `syncRoutes.js`, a lost-update race on concurrent doc writes (new
-  `asyncLock.js` + DB unique constraint), confirmed nightly VPS backups
-  already existed (committed + added validated restore script). ~23 lower
-  findings still open, see `docs/ai/known-fixes.md`.
+  `syncRoutes.js`, a lost-update race on concurrent doc writes, confirmed
+  nightly VPS backups already existed. ~23 lower findings still open, see
+  `docs/ai/known-fixes.md`.
 - **Earlier**: deploy pipeline made real (staging+prod on VPS/Docker/Caddy),
   OAuth sign-in bug fixed (state signed per-request, not once at startup).
 
@@ -220,20 +162,27 @@ second independent WebGL canvas rendering that World's real scene with a
 - Production + staging both live on VPS, deploy via `git push origin main`/`dev`
 - Nightly VPS backups + validated restore path
 - Studio dev-only panes: read-only node-graph ("N" split) and live-world 3D ("W" split)
+- `src/seed/` (dev-only, `/open/seed`): free-form node nesting, active
+  markers for World/Light/Background/Grid, universal code panel — not yet
+  committed/pushed or manually click-verified live.
 
 ## Open
 
+- **This session's node-graph rework is uncommitted** — lint/build/tests all
+  green locally, but not yet committed, pushed, or manually click-verified
+  in a live browser. Next step for whoever picks this back up.
 - Hardening batches 1+2 (`1a56e9a7`, `e374d70f`, `fd5df88d`) pushed to
   `dev` — deploy to staging should trigger automatically, not yet
   manually re-verified live (all local validation passed: lint/build/790
   tests/npm audit/docs checks).
-- Hardening plan deferred items (see plan file above): recover/re-list
-  the ~23 untriaged findings below, decide on test-gating
-  `deploy-space-code.yml`, rotate the stale GitHub App key, a speculative
-  periodic memory-self-audit.
-- Promote this session's `dev` work (Enter Space/Main-space reuse, the
-  Walk/Fly "View mode" label fix, badge minimal restyle) to `main` when
-  the user is ready — not yet asked for.
+- Hardening plan deferred items: recover/re-list the ~23 untriaged
+  findings below, decide on test-gating `deploy-space-code.yml`, rotate
+  the stale GitHub App key, a speculative periodic memory-self-audit.
+- Promote Enter Space/Main-space reuse + Walk/Fly label fix + badge
+  restyle to `main` when the user is ready — not yet asked for.
+- License/promo work (see previous-session entry above) — owed by user:
+  demo recording, warm-contact names, approve every outbound post/mail.
+  Nothing posted/mailed/pushed yet.
 - No published staging space currently exercises the generic Walk/Fly
   button (all are custom experiences) — if that regression test class
   matters going forward, consider publishing one plain `entryView:
@@ -241,6 +190,8 @@ second independent WebGL canvas rendering that World's real scene with a
 - ~23 lower-priority audit findings untriaged — `docs/ai/known-fixes.md`.
 - Studio dev-only panes need a product decision before leaving dev-only:
   inspector wiring, flag rollout audience, Beta-vs-Studio long-term shape.
+  `seed` lane raises the same question one level up — see
+  `docs/architecture/PROJECT_SURFACES.md`'s "On forking a new lane".
 - Off-box backup copy still missing (VPS-local only).
 - `main`'s branch protection still bypassed by admin-override direct pushes.
 - Brand: canonical domain/handle undecided; `/privacy` not wired into routes.
