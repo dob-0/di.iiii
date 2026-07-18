@@ -47,7 +47,14 @@ export const getCategoryColor = (categoryId) =>
 //   'web'   — browser only (WebXR, WebCamera, WebAudio APIs)
 //   'local' — local runtime only (native drivers, USB, serial)
 //
-// singleton: only one instance of this type per space
+// singleton: dead metadata, not enforced anywhere (product decision
+// 2026-07-19 — no node type is a singleton). Left as unused `false` on
+// existing types rather than stripped everywhere; do not read it.
+//
+// authoringOnly: this type is placeable and editable but doesn't compute or
+// render anything real yet (nodeGraphRuntime.js has no case for it, and it's
+// not viewport-consumed) — cosmetic UI hint only (e.g. a palette tag), never
+// gates creation.
 
 export const NODE_TYPES = {
 
@@ -130,7 +137,7 @@ export const NODE_TYPES = {
         label: 'Time',
         category: 'source',
         runtime: 'any',
-        singleton: true,
+        authoringOnly: true,
         inputs: [
             { id: 'bpm', type: 'number', label: 'BPM', default: 120 },
         ],
@@ -149,7 +156,7 @@ export const NODE_TYPES = {
         label: 'AR Camera',
         category: 'source',
         runtime: 'web',
-        singleton: true,
+        authoringOnly: true,
         inputs: [],
         outputs: [
             { id: 'frame',   type: 'texture', label: 'Frame'   },
@@ -165,6 +172,7 @@ export const NODE_TYPES = {
         label: 'Webcam',
         category: 'source',
         runtime: 'web',
+        authoringOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
@@ -179,6 +187,7 @@ export const NODE_TYPES = {
         label: 'Microphone',
         category: 'source',
         runtime: 'web',
+        authoringOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
@@ -194,6 +203,7 @@ export const NODE_TYPES = {
         label: 'Insta360 Camera',
         category: 'source',
         runtime: 'any',
+        authoringOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
@@ -210,6 +220,7 @@ export const NODE_TYPES = {
         label: 'Stereo Camera',
         category: 'source',
         runtime: 'local',
+        authoringOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
@@ -228,6 +239,7 @@ export const NODE_TYPES = {
         label: 'RealSense D405',
         category: 'source',
         runtime: 'local',
+        authoringOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
@@ -250,6 +262,7 @@ export const NODE_TYPES = {
         label: 'PTZ Camera (OSC)',
         category: 'device',
         runtime: 'local',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'pan',  type: 'number', label: 'Pan',  default: 0 },
@@ -277,6 +290,7 @@ export const NODE_TYPES = {
         label: 'OSC In',
         category: 'device',
         runtime: 'local',
+        authoringOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
@@ -299,6 +313,7 @@ export const NODE_TYPES = {
         label: 'OSC Out',
         category: 'device',
         runtime: 'local',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'address', type: 'string', label: 'Address', default: '/control' },
@@ -325,6 +340,7 @@ export const NODE_TYPES = {
         label: 'MIDI In',
         category: 'device',
         runtime: 'local',
+        authoringOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
@@ -346,6 +362,7 @@ export const NODE_TYPES = {
         label: 'MIDI Out',
         category: 'device',
         runtime: 'local',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'note',     type: 'number', label: 'Note',     default: 60 },
@@ -373,6 +390,7 @@ export const NODE_TYPES = {
         label: 'Stream Compositor',
         category: 'stream',
         runtime: 'any',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'primary', type: 'texture', label: 'Primary Source' },
@@ -395,6 +413,7 @@ export const NODE_TYPES = {
         label: 'Stream Switcher',
         category: 'stream',
         runtime: 'any',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'a',      type: 'texture', label: 'A'                   },
@@ -417,6 +436,7 @@ export const NODE_TYPES = {
         label: 'Stream Output',
         category: 'stream',
         runtime: 'local',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'video', type: 'texture', label: 'Video In' },
@@ -440,6 +460,7 @@ export const NODE_TYPES = {
         label: 'Stream Recorder',
         category: 'stream',
         runtime: 'local',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'video', type: 'texture', label: 'Video In' },
@@ -466,6 +487,7 @@ export const NODE_TYPES = {
         label: 'Program Monitor',
         category: 'stream',
         runtime: 'any',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'src',      type: 'texture', label: 'Source'                 },
@@ -484,6 +506,7 @@ export const NODE_TYPES = {
         label: 'Operator Controller',
         category: 'stream',
         runtime: 'any',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'title',    type: 'string', label: 'Title',    default: 'Operator Desk' },
@@ -512,6 +535,7 @@ export const NODE_TYPES = {
         label: 'Node 0',
         category: 'universe',
         runtime: 'any',
+        authoringOnly: true,
         // Ordinary node, not a singleton (product decision 2026-07-17) — a plain
         // top-level "root dir" entry, placeable multiple times like any other type.
         inputs: [
@@ -538,10 +562,11 @@ export const NODE_TYPES = {
         label: 'World',
         category: 'universe',
         runtime: 'any',
-        // Scope-relative, not document-wide: exactly one per node-scope (parentId),
-        // enforced by getSingletonDedupKey in src/shared/projectSchema.js — a project
-        // can have multiple worlds, one per node-in-node scope.
-        singleton: true,
+        // Free-form, not a singleton (product decision 2026-07-19) — any number
+        // of World nodes can exist in one scope. Which one is "active" for a
+        // scope is a hierarchy-as-connection pick (workspaceState.
+        // liveWorldNodeIdByScope / activeNodeIdByTypeScope), not a schema-level
+        // restriction — see src/shared/projectSchema.js.
         inputs: [
             { id: 'title',    type: 'string',  label: 'Title',    default: 'World'    },
             { id: 'bgColor',  type: 'color',   label: 'Sky',      default: '#0a0e16'  },
@@ -565,6 +590,7 @@ export const NODE_TYPES = {
         label: 'Universe',
         category: 'universe',
         runtime: 'any',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'title',       type: 'string', label: 'Title', default: 'New Universe' },
@@ -595,6 +621,7 @@ export const NODE_TYPES = {
         label: '2D Desk',
         category: 'universe',
         runtime: 'any',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'title',    type: 'string', label: 'Title', default: '2D Desk'   },
@@ -620,6 +647,7 @@ export const NODE_TYPES = {
         label: '3D Desk',
         category: 'universe',
         runtime: 'any',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'title',       type: 'string', label: 'Title', default: '3D Desk'     },
@@ -647,6 +675,7 @@ export const NODE_TYPES = {
         label: 'Activate Node',
         category: 'universe',
         runtime: 'any',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'target',  type: 'string', label: 'Target ID', default: '' },
@@ -667,6 +696,7 @@ export const NODE_TYPES = {
         label: 'Universe Link',
         category: 'universe',
         runtime: 'any',
+        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'from', type: 'string', label: 'From Universe', default: '' },
@@ -960,7 +990,7 @@ export const NODE_TYPES = {
     },
 
     // -----------------------------------------------------------------------
-    // WORLD — singleton nodes that define the space itself
+    // WORLD — nodes that define the space itself
     // -----------------------------------------------------------------------
 
     'world.light': {
@@ -968,7 +998,6 @@ export const NODE_TYPES = {
         label: 'Light',
         category: 'world',
         runtime: 'any',
-        singleton: true,
         inputs: [
             { id: 'ambientColor',           type: 'color',  label: 'Ambient Color',     default: '#ffffff'  },
             { id: 'ambientIntensity',        type: 'number', label: 'Ambient Intensity', default: 0.8        },
@@ -986,7 +1015,6 @@ export const NODE_TYPES = {
         label: 'Background',
         category: 'world',
         runtime: 'any',
-        singleton: true,
         inputs: [
             { id: 'color',   type: 'color',   label: 'Color'   },
             { id: 'texture', type: 'texture', label: 'Texture' },
@@ -1001,7 +1029,6 @@ export const NODE_TYPES = {
         label: 'Grid',
         category: 'world',
         runtime: 'any',
-        singleton: true,
         inputs: [
             { id: 'visible', type: 'boolean', label: 'Visible', default: true     },
             { id: 'size',    type: 'number',  label: 'Size',    default: 24       },

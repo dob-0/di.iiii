@@ -242,7 +242,7 @@ describe('projectSchema', () => {
         expect(afterDeleteNode.edges).toHaveLength(0)
     })
 
-    it('accepts unknown typeIds (matches the server, which never validates them) and enforces singleton node types on the client', () => {
+    it('accepts unknown typeIds (matches the server, which never validates them)', () => {
         const base = normalizeProjectDocument({})
         // shared/projectSchema.cjs (the server's authoritative mirror) intentionally
         // accepts any typeId — rejecting it here would let a client whose local
@@ -253,40 +253,42 @@ describe('projectSchema', () => {
         ])
         expect(afterUnknown.nodes).toHaveLength(1)
         expect(afterUnknown.nodes[0].id).toBe('bogus')
+    })
 
-        const afterSingleton = applyProjectOps(base, [
+    // Product decision 2026-07-19: no node type is a singleton — every type,
+    // including the former document-wide singletons (time, source.ar) and the
+    // former per-scope singletons (world.light/world.background/world.grid/
+    // universe.world), nests freely any number of times in any scope. This
+    // generalizes the earlier universe.node0 reversal (2026-07-17, "an
+    // ordinary, non-singleton node type — a plain top-level 'root dir' entry
+    // you place like any other node") to every remaining former singleton.
+    it('does not treat any node type as a singleton — multiple instances are always allowed', () => {
+        const base = normalizeProjectDocument({})
+
+        const afterDocumentWide = applyProjectOps(base, [
+            { type: 'createNode', payload: { node: { id: 'node0-a', typeId: 'universe.node0' } } },
+            { type: 'createNode', payload: { node: { id: 'node0-b', typeId: 'universe.node0' } } },
+            { type: 'createNode', payload: { node: { id: 'time-a', typeId: 'time' } } },
+            { type: 'createNode', payload: { node: { id: 'time-b', typeId: 'time' } } }
+        ])
+        expect(afterDocumentWide.nodes.filter((n) => n.typeId === 'universe.node0')).toHaveLength(2)
+        expect(afterDocumentWide.nodes.filter((n) => n.typeId === 'time')).toHaveLength(2)
+
+        const afterSameScope = applyProjectOps(base, [
             { type: 'createNode', payload: { node: { id: 'light-a', typeId: 'world.light' } } },
             { type: 'createNode', payload: { node: { id: 'light-b', typeId: 'world.light' } } }
         ])
-        expect(afterSingleton.nodes).toHaveLength(1)
-        expect(afterSingleton.nodes[0].id).toBe('light-a')
+        expect(afterSameScope.nodes.filter((n) => n.typeId === 'world.light')).toHaveLength(2)
     })
 
-    // Product decision 2026-07-17: universe.node0 is an ordinary, non-singleton
-    // node type — a plain top-level "root dir" entry you place like any other
-    // node, not a forced/undeletable/one-per-document seed. An earlier audit
-    // pass had added node0 to SINGLETON_TYPE_IDS as a consistency bug fix
-    // (nodeRegistry.js said singleton:true, schema didn't enforce it); that
-    // enforcement is intentionally reverted here, not missed — multiple node0
-    // nodes (e.g. one per scope, or several at the root) are allowed.
-    it('does not treat universe.node0 as a singleton — multiple root nodes are allowed', () => {
-        const base = normalizeProjectDocument({})
-        const afterSecondRoot = applyProjectOps(base, [
-            { type: 'createNode', payload: { node: { id: 'node0-a', typeId: 'universe.node0' } } },
-            { type: 'createNode', payload: { node: { id: 'node0-b', typeId: 'universe.node0' } } }
-        ])
-        expect(afterSecondRoot.nodes.filter((n) => n.typeId === 'universe.node0')).toHaveLength(2)
-    })
-
-    it('scopes world.light/world.background/world.grid/universe.world singletons per node-scope (parentId), not document-wide', () => {
+    it('keeps former scope-singletons (world.light/world.background/world.grid/universe.world) in both the same scope and different scopes', () => {
         const base = normalizeProjectDocument({})
         const afterSameScope = applyProjectOps(base, [
             { type: 'createNode', payload: { node: { id: 'parent', typeId: 'geom.cube' } } },
             { type: 'createNode', payload: { node: { id: 'world-a', typeId: 'universe.world', parentId: 'parent' } } },
             { type: 'createNode', payload: { node: { id: 'world-b', typeId: 'universe.world', parentId: 'parent' } } }
         ])
-        expect(afterSameScope.nodes.filter((n) => n.typeId === 'universe.world')).toHaveLength(1)
-        expect(afterSameScope.nodes.find((n) => n.typeId === 'universe.world').id).toBe('world-a')
+        expect(afterSameScope.nodes.filter((n) => n.typeId === 'universe.world')).toHaveLength(2)
 
         const afterDifferentScope = applyProjectOps(base, [
             { type: 'createNode', payload: { node: { id: 'parentA', typeId: 'geom.cube' } } },

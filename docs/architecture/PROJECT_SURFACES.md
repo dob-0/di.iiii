@@ -10,6 +10,7 @@ This repo currently behaves like one platform with multiple editor generations r
 | `V1 Legacy` | `/<space>` and `/main` | Fallback/history lane | Legacy editor fallback when a space does not have a live published project |
 | `Admin/Ops` | `/admin?space=<id>` | Active | Operator/debug/status route |
 | `V2 Beta` | `/<space>/beta` and `/beta` | Experimental v2 lane | Project workflow used for active experiments without replacing Studio |
+| `Seed` | `/<space>/seed` and `/seed` | Experimental lane, forked from Beta (2026-07-19) | Free-form node nesting (no singletons), universal per-node code panel — see `docs/architecture/RECURSIVE_NODE_CORE.md` |
 | `Studio` | `/<space>/studio` and `/studio` | Stable main authoring workspace | Space-scoped project workflow |
 | `WCC` | `/wcc` and `/wcc/scene` | Active, linked-space exhibition | Landing page + 3D gallery for the "Women Creating Change" exhibition |
 | `serverXR` | `/serverXR` | Required backend | Spaces, projects, assets, ops, SSE, presence |
@@ -34,6 +35,9 @@ This repo currently behaves like one platform with multiple editor generations r
   - Beta-specific routes and UI
   - experimental workspace attached to a space route
   - project logic here should be treated as wrappers over shared modules, not the long-term home
+- `src/seed/`
+  - Seed-specific routes and UI — a fork of `src/beta/` (2026-07-19), same ownership rules apply
+  - experimental workspace attached to a space route, kept independent of Beta (no shared components between the two lanes, each is a full fork)
 - `src/studio/`
   - Studio-specific routes and UI
   - stable main authoring surface attached to a space route
@@ -88,3 +92,20 @@ These source labels are currently meaningful:
 - keep route purpose clearer than implementation history
 - keep Beta scoped under spaces instead of treating it like a separate product world
 - keep Studio scoped under spaces instead of treating it like a separate product world
+- keep `Seed` scoped under spaces the same way — no special-casing beyond what Beta already gets
+
+### On forking a new lane from Beta (Seed, 2026-07-19)
+
+Before this, no lane had ever been forked from another lane — each existing
+lane (V1, Beta, Studio) was built independently, and no doc stated a policy
+for how an experimental lane graduates, gets superseded, or is retired (the
+closest prior mention, an unresolved "define which Beta features graduate
+into Studio" bullet, lives only in the archived `PROJECT_AUDIT_2026-04-17.md`
+and was never acted on). Seed is the first instance of this pattern: fork the
+whole lane, diverge only where the new lane's actual behavior differs (see
+`docs/architecture/RECURSIVE_NODE_CORE.md`'s "The `seed` lane" section for
+exactly what changed), and let both lanes keep running side by side rather
+than committing up front to "Seed replaces Beta." Whether Seed eventually
+absorbs Beta, stays permanently parallel, or itself gets superseded by a
+later fork is an open product decision, not a foregone conclusion — update
+this section when that's decided.

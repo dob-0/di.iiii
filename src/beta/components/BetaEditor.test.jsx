@@ -385,37 +385,37 @@ describe('BetaEditor per-universe chrome visibility', () => {
     })
 })
 
-// Regression test for a real user report (2026-07-17): a second World in the
-// same scope was silently dropped by the schema's per-scope singleton dedup
-// — no error, no new node, the palette just closed. Now the palette explains
-// it instead of silently doing nothing.
-describe('BetaEditor blocked palette create', () => {
-    const BLOCK_STORAGE_KEY = 'test-palette-block'
+// Regression test for product decision 2026-07-19: no node type is a
+// singleton anymore — a second World in the same scope used to be silently
+// dropped (then, briefly, blocked with a warning); it's now just a normal
+// second node, no dedup, no warning.
+describe('BetaEditor free-nesting palette create', () => {
+    const FREE_NEST_STORAGE_KEY = 'test-palette-free-nest'
 
     afterEach(() => {
-        window.localStorage.removeItem(BLOCK_STORAGE_KEY)
+        window.localStorage.removeItem(FREE_NEST_STORAGE_KEY)
     })
 
-    it('warns instead of silently dropping a second World in the same scope', () => {
+    it('creates a second World in the same scope without any block or warning', () => {
         window.localStorage.setItem(
-            BLOCK_STORAGE_KEY,
+            FREE_NEST_STORAGE_KEY,
             makeWorkspaceDoc([
                 { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
             ])
         )
         mockApplyLocalOps.mockClear()
-        render(<BetaEditor localStorageKey={BLOCK_STORAGE_KEY} />)
+        render(<BetaEditor localStorageKey={FREE_NEST_STORAGE_KEY} />)
 
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
         fireEvent.change(screen.getByPlaceholderText('type a node name…'), { target: { value: 'World' } })
         fireEvent.keyDown(screen.getByPlaceholderText('type a node name…'), { key: 'Enter' })
 
-        expect(screen.getByText(/Only one World per scope/)).toBeTruthy()
+        expect(screen.queryByText(/Only one World per scope/)).toBeNull()
         const createdWorld = mockApplyLocalOps.mock.calls
             .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
             .flat()
             .some((op) => op.type === 'createNode' && op.payload?.node?.typeId === 'universe.world')
-        expect(createdWorld).toBe(false)
+        expect(createdWorld).toBe(true)
     })
 })
 

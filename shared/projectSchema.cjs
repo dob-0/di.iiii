@@ -35,25 +35,16 @@ const WINDOW_IDS = ['viewport', 'assets', 'inspector', 'outliner', 'activity', '
 
 const LEGACY_ROOT_NODE_IDS = new Set(['root-node', 'world-root', 'view-root'])
 const LEGACY_ROOT_TYPE_IDS = new Set(['core.project', 'world.root', 'view.root'])
-// universe.node0 is deliberately NOT here — product decision 2026-07-17: Node 0
-// is an ordinary, non-singleton node type (a plain top-level container/"root dir"
-// entry, not a forced, undeletable, one-per-document seed). Do not re-add it to
-// this set without checking with the user first — an earlier audit pass added it
-// as a bug fix (registry said singleton:true, schema didn't enforce it) before
-// this decision was made; that enforcement was intentionally reverted, not missed.
-const SINGLETON_TYPE_IDS = new Set(['time', 'source.ar'])
-// These four are singletons per node-scope (parentId), not document-wide — a project
-// can have multiple worlds (one per node-in-node scope), but only one of each per scope.
-const SCOPE_SINGLETON_TYPE_IDS = new Set(['world.light', 'world.background', 'world.grid', 'universe.world'])
-
-// Returns the key duplicate nodes are deduped on: the bare typeId for true
-// document-wide singletons, `typeId::parentId` for scope singletons, or null if
-// the type isn't a singleton at all (no dedup).
-const getSingletonDedupKey = (node) => {
-    if (SINGLETON_TYPE_IDS.has(node.typeId)) return node.typeId
-    if (SCOPE_SINGLETON_TYPE_IDS.has(node.typeId)) return `${node.typeId}::${node.parentId || ''}`
-    return null
-}
+// No node type is a singleton — product decision 2026-07-19: every node type
+// (including former singletons world.light/world.background/world.grid/
+// universe.world/time/source.ar) nests freely, any number of times, in any
+// scope. Do not re-add a singleton-dedup mechanism without checking with the
+// user first. universe.node0 went through this same reversal earlier
+// (2026-07-17); this generalizes it to every remaining former singleton.
+// For scope-repeatable types where exactly one "active" result is wanted
+// (e.g. a World's active Light/Background/Grid), see
+// workspaceState.activeNodeIdByTypeScope in src/seed's editor — a hierarchy-
+// as-connection picker, not a schema-level restriction.
 
 const cloneValue = (value) => {
   if (Array.isArray(value)) {
@@ -179,7 +170,12 @@ const defaultWorkspaceState = {
   // Which universe.world node is the "live"/output one for a given scope — a flat
   // map keyed by scopeId (root scope key is '') so it works uniformly without a
   // container node to hold a values field. At most one live world per scope.
-  liveWorldNodeIdByScope: {}
+  liveWorldNodeIdByScope: {},
+  // Generalizes liveWorldNodeIdByScope to any scope-repeatable type where
+  // exactly one "active" result is wanted (world.light/world.background/
+  // world.grid) — a hierarchy-as-connection picker, not a schema-level
+  // restriction. Keyed by `${typeId}::${scopeId}` (root scope key is '').
+  activeNodeIdByTypeScope: {}
 }
 
 const defaultProjectDocument = {
@@ -678,26 +674,22 @@ const normalizeWorkspaceState = (workspace = {}) => {
   const source = workspace && typeof workspace === 'object' ? workspace : {}
   const activeSurface = ensureString(source.activeSurface, defaultWorkspaceState.activeSurface)
   const liveMap = source.liveWorldNodeIdByScope
+  const activeMap = source.activeNodeIdByTypeScope
   return {
     ...cloneValue(defaultWorkspaceState),
     ...cloneValue(source),
     activeSurface: ['world', 'view', 'graph'].includes(activeSurface) ? activeSurface : defaultWorkspaceState.activeSurface,
     selectedNodeId: ensureString(source.selectedNodeId, '') || null,
-    liveWorldNodeIdByScope: (liveMap && typeof liveMap === 'object' && !Array.isArray(liveMap)) ? cloneValue(liveMap) : {}
+    liveWorldNodeIdByScope: (liveMap && typeof liveMap === 'object' && !Array.isArray(liveMap)) ? cloneValue(liveMap) : {},
+    activeNodeIdByTypeScope: (activeMap && typeof activeMap === 'object' && !Array.isArray(activeMap)) ? cloneValue(activeMap) : {}
   }
 }
 
 const normalizeNodesList = (list = []) => {
-  const seenSingletons = new Set()
   const out = []
   for (const raw of Array.isArray(list) ? list : []) {
     const normalized = normalizeProjectNode(raw)
     if (!normalized) continue
-    const dedupKey = getSingletonDedupKey(normalized)
-    if (dedupKey) {
-      if (seenSingletons.has(dedupKey)) continue
-      seenSingletons.add(dedupKey)
-    }
     out.push(normalized)
   }
   return out
@@ -815,11 +807,6 @@ const applyProjectOps = (document, ops = []) => {
         if (!payload.node) break
         const node = normalizeProjectNode(payload.node)
         if (!node) break
-        const dedupKey = getSingletonDedupKey(node)
-        if (dedupKey) {
-          const duplicate = Array.from(nodes.values()).some((existing) => getSingletonDedupKey(existing) === dedupKey)
-          if (duplicate) break
-        }
         nodes.set(node.id, node)
         break
       }
@@ -1053,11 +1040,6 @@ const invertSingleOp = (document, op) => {
       if (!payload.node || !ensureString(payload.node.id)) break
       const node = normalizeProjectNode(payload.node)
       if (!node) break
-      const dedupKey = getSingletonDedupKey(node)
-      if (dedupKey && Array.from(nodes.values()).some((existing) => getSingletonDedupKey(existing) === dedupKey)) break
-      // create-over-existing replaces; recreating the prior node would trip
-      // the singleton guard against the replacement, so it stays untracked
-      // (no UI path produces it)
       if (nodes.has(node.id)) break
       return [{ type: 'deleteNode', payload: { nodeId: node.id } }]
     }

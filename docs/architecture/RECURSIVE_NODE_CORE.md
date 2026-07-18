@@ -1,10 +1,11 @@
 # Recursive Node Core
 
-Ground truth as of 2026-07-17 (written after this file was found to be a
-dead link from `AGENTS.md`/`README.md`/`ORIENTATION_MAP.md` for an unknown
-period — see `docs/ai/audit-2026-07-17.md`). Source of truth is always the
-code below, not this doc; re-verify before trusting a specific claim here
-if it's been a while.
+Ground truth as of 2026-07-19 (updated when the singleton system was removed
+and the `seed` lane forked from Beta; originally written after this file was
+found to be a dead link from `AGENTS.md`/`README.md`/`ORIENTATION_MAP.md` for
+an unknown period — see `docs/ai/audit-2026-07-17.md`). Source of truth is
+always the code below, not this doc; re-verify before trusting a specific
+claim here if it's been a while.
 
 ## The two type systems in one document
 
@@ -18,10 +19,13 @@ other:
   own viewport and V1.
 - **`nodes[]` / `edges[]` / `templates[]`** — the node graph. Node *instance*
   shape is `{id, typeId, label, values, graphX, graphY, runtimeId, assetRef,
-  parentId}`; type *metadata* (ports, category, render surface, singleton
-  flag) lives entirely in `src/project/nodeRegistry.js`, looked up by
-  `typeId`. The schema layer does not import the registry — normalization
-  never validates `typeId` against it (see "What's enforced" below).
+  parentId}`; type *metadata* (ports, category, render surface, an
+  `authoringOnly` cosmetic hint) lives entirely in `src/project/
+  nodeRegistry.js`, looked up by `typeId`. The schema layer does not import
+  the registry — normalization never validates `typeId` against it (see
+  "What's enforced" below). The registry still carries a `singleton` field on
+  ~33 types but it's dead metadata as of 2026-07-19 (see "Nesting" below) —
+  do not read it.
 
 ## Recursion: nodes inside nodes
 
@@ -40,6 +44,46 @@ node directly into, same as any node's interior. Node 0 is not auto-created,
 not auto-entered on load, not a singleton, and not undeletable; it's just a
 node type you can place (like any other) if you want a node literally called
 "Node 0". See `docs/ai/known-fixes.md` for the full history of this reversal.
+
+## Nesting: no node type is a singleton
+
+Product decision 2026-07-19 generalizes the Node 0 reversal above to every
+remaining former singleton (`time`, `source.ar`, `universe.world`,
+`world.light`, `world.background`, `world.grid`): none of them are enforced
+as singletons anymore, anywhere. `SINGLETON_TYPE_IDS`/`SCOPE_SINGLETON_TYPE_IDS`/
+`getSingletonDedupKey` were deleted outright from `src/shared/projectSchema.js`
+and `shared/projectSchema.cjs` (not just unused — gone, so nobody accidentally
+re-enforces them). Any number of any node type can exist in one scope now;
+`createNode` never silently drops a duplicate.
+
+This follows a deliberate design (a multi-tool research pass across
+TouchDesigner, Houdini, Blender, Nuke, Unreal Blueprints, vvvv, Resolume,
+Cables.gl, Max/MSP, VCV Rack, QLab, and Ableton informed it), not just "fewer
+restrictions": **hierarchy is the connection**. Being a sibling inside a
+scope (via `parentId`) is itself the meaningful relationship — no wire
+needed — the same pattern Kantan Mapper (a shipped TouchDesigner tool) uses
+for its list of mapping shapes: adding a shape is adding a child, full stop.
+
+For the few scope-repeatable types where exactly one result is genuinely
+needed (a World's active Light/Background/Grid, or which World is "the" live
+one for a scope), the answer isn't a schema-level restriction — it's an
+explicit **active marker**, stored in `workspaceState`:
+
+- `liveWorldNodeIdByScope` — pre-existing, `universe.world`-specific, keyed by
+  scopeId. Set via the World panel's own live toggle; read by
+  `StudioWorldSurface.jsx` and (in the `seed` lane) `SeedEditor.jsx`'s
+  `worldNode` lookup.
+- `activeNodeIdByTypeScope` — added 2026-07-19, generalizes the same idea to
+  `world.light`/`world.background`/`world.grid`. Keyed by `` `${typeId}::${scopeId}` ``.
+  Set via a small ● toggle on the node's graph card (`seed`'s
+  `SeedGraphSurface.jsx`); read by `SeedViewport.jsx` and
+  `viewportWorldState.js`'s `pickActiveTypeNode` helper. Both maps default to
+  the first-created candidate when nothing's been explicitly marked.
+
+Beta was not given this active-marker mechanism (kept as the original
+sketch — its `worldNode`/`lightNode`/`gridNode` lookups just pick the first
+sibling via `.find()`, which is fine now that a duplicate isn't blocked, just
+not the "correct" pick when there's more than one).
 
 ## Evaluation
 
@@ -61,8 +105,10 @@ Cycle protection is a `stack` Set of `id:in/out:port` keys threaded through
 recursive calls; re-entry returns the node's stored/default value rather
 than infinite-looping.
 
-Consumers of this runtime today: only `src/beta/*`
-(`BetaViewport`/`BetaEditor`/`viewportWorldState`). Studio's own viewport does
+Consumers of this runtime today: `src/beta/*`
+(`BetaViewport`/`BetaEditor`/`viewportWorldState`) and, since 2026-07-19,
+`src/seed/*` (`SeedViewport`/`SeedEditor`/`viewportWorldState`) — a lane
+forked from Beta, see "The `seed` lane" below. Studio's own viewport does
 not evaluate the graph — Studio's dev-only graph/world preview panes
 (`StudioGraphSurface.jsx`/`StudioWorldSurface.jsx`) reuse Beta's components
 read-only, gated off in production builds.
@@ -73,8 +119,8 @@ read-only, gated off in production builds.
 window/grid/camera/render settings; enum whitelists (presentation mode,
 `activeSurface`, XR default mode, tone mapping, reference mode); edges are
 dropped unless both endpoints exist; `selectedNodeId` is nulled if it
-doesn't resolve; the two singleton dedup sets (`SINGLETON_TYPE_IDS`,
-`SCOPE_SINGLETON_TYPE_IDS`).
+doesn't resolve. (Singleton dedup used to be enforced here too — removed
+2026-07-19, see "Nesting" above.)
 
 **Not enforced** — real, convention-only gaps worth knowing before assuming
 otherwise:
@@ -97,10 +143,32 @@ otherwise:
   `type.inputs` + `type.configInputs`; `getNodeInputs` does not).
 - **`node.null`'s dynamic per-instance ports** (`values.portDefs`), handled
   specially in port-listing helpers.
-- **Per-scope singletons.** `universe.world`/`world.light`/`world.background`/
-  `world.grid` dedup per `parentId` (`typeId::parentId` key), not
-  document-wide — a scope-relative distinction the registry's plain boolean
-  `singleton` flag doesn't itself express.
+- **No singletons, active markers instead.** See "Nesting" above — replaces
+  what used to be here about per-scope singleton dedup.
+- **Universal code panel** (`src/project/graph/nodeInspectorSections.js`,
+  2026-07-19). Every node type — not just `node.null` — gets an inspector
+  "Code" section, stored under a reserved `values.__code` key (distinct from
+  `node.null`'s real, load-bearing `values.body`). Fully inert: nothing
+  reads or executes `values.__code` anywhere, it's storage/display only.
+  Wiring note: the section's own `id` ('code') differs from the Ports
+  section's ('values') for React-key/labeling purposes, so it routes reads
+  and writes back to the shared `node.values` object via `component:
+  'values'` on the section and its field — the same mechanism the
+  `worldState` inspector section already used for its own fields.
+
+## The `seed` lane
+
+`src/seed/` (routes at `/open/seed`) is a fork of Beta, added 2026-07-19 —
+the first lane forked from Beta rather than built from scratch (no prior
+graduation/retirement policy existed for experimental lanes before this; see
+`docs/architecture/PROJECT_SURFACES.md`). It carries the same node registry,
+`useNodeGraphScope.js`, and `nodeGraphRuntime.js` as Beta, with three real
+differences: no singleton/blocked-create warning (nothing left to block, see
+"Nesting" above), the active-marker mechanism for World/Light/Background/Grid
+(see "Nesting" above), and a scope-filtered edge list passed to its graph
+surface (Beta passes the document's full, unfiltered edge list — a latent
+inconsistency `seed` doesn't carry forward). Everything else — window
+management, palette, presence, op history — is an unmodified fork.
 
 ## CJS/ESM mirror status
 
@@ -109,4 +177,7 @@ directly as part of the 2026-07-17 audit and are behaviorally identical —
 every apparent difference is cosmetic (module syntax, `Set` vs array+derived-
 set for `ENTITY_TYPES`). `serverXR/src/schemaSync.test.js` round-trips
 representative documents/op-batches through both and is the regression guard
-against future drift.
+against future drift. The 2026-07-19 singleton removal and
+`activeNodeIdByTypeScope` addition were made identically in both files in the
+same change; `schemaSync.test.js` was updated to assert free nesting (was:
+"universe.world is treated as a singleton") rather than deleted.

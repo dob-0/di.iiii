@@ -20,6 +20,28 @@ const portToInspectorField = (port, node = null) => {
     return { label, path, type: 'text', portType: port.type || 'any' }
 }
 
+// Every node type — not just node.null — gets this section, so any brick can
+// optionally be viewed/edited "as code" (product decision 2026-07-19). Stored
+// under a reserved values.__code key so it never collides with node.null's
+// real values.body (that stays load-bearing, read by getNodeInputs/
+// getNodeOutputs) or any future type's own body-named port. Stays fully
+// inert — nothing reads or executes values.__code anywhere; it's storage and
+// display only.
+//
+// `component: 'values'` (section AND field) is required, not decorative: the
+// inspector's values map only ever has one top-level `values` key for a
+// node, so a section with its own distinct `id` (needed as a stable React
+// key, and to render as its own labeled block) must explicitly route reads
+// (section.component, the id-lookup fallback) and writes (field.component)
+// back to that shared object — same pattern the World section already uses
+// for its own fields.
+const CODE_SECTION = {
+    id: 'code',
+    label: 'Code',
+    component: 'values',
+    fields: [{ label: 'Body', path: ['__code'], type: 'textarea', portType: 'string', component: 'values' }]
+}
+
 export const deriveNodeInspectorSections = (node) => {
     if (!node) return []
     const typeId = node.typeId || node.definitionId
@@ -40,7 +62,8 @@ export const deriveNodeInspectorSections = (node) => {
                     { label: 'Body', path: ['body'], type: 'textarea', portType: 'string' },
                     ...dynamicPorts
                 ]
-            }
+            },
+            CODE_SECTION
         ]
     }
 
@@ -65,6 +88,7 @@ export const deriveNodeInspectorSections = (node) => {
         fields.push({ label: type.label || 'Value', path: ['value'], type: fieldType, portType: outType || 'any' })
     }
 
-    if (!fields.length) return []
-    return [{ id: 'values', label: 'Ports', fields }]
+    const sections = fields.length ? [{ id: 'values', label: 'Ports', fields }] : []
+    sections.push(CODE_SECTION)
+    return sections
 }

@@ -15,7 +15,6 @@ describe('deriveNodeInspectorSections', () => {
         })
 
         const sections = deriveNodeInspectorSections(node)
-        expect(sections).toHaveLength(1)
         expect(sections[0].fields.map((field) => field.label)).toEqual(['Body', 'Title'])
         expect(sections[0].fields[0]).toMatchObject({ path: ['body'], type: 'textarea' })
     })
@@ -37,7 +36,6 @@ describe('deriveNodeInspectorSections', () => {
     it('exposes a synthetic value field for value/source nodes with no inputs', () => {
         const colorNode = createNode('value.color')
         const colorSections = deriveNodeInspectorSections(colorNode)
-        expect(colorSections).toHaveLength(1)
         const colorField = colorSections[0].fields.find((f) => f.path[0] === 'value')
         expect(colorField).toBeDefined()
         expect(colorField.type).toBe('color')
@@ -92,5 +90,33 @@ describe('deriveNodeInspectorSections', () => {
         const sections = deriveNodeInspectorSections(node)
         const field = sections[0].fields.find((f) => f.path[0] === 'filePattern')
         expect(field).toMatchObject({ label: 'File Pattern', type: 'text' })
+    })
+
+    // Universal code panel (product decision 2026-07-19): every node type,
+    // not just node.null, gets an inert "view as code" section. It's stored
+    // under values.__code — a distinct key from node.null's real values.body
+    // — and routes through the shared 'values' component so it reads/writes
+    // the same node.values object the Ports/Node section uses, even though
+    // its own section id ('code') differs for React-key/labeling purposes.
+    it('appends an inert Code section (values.__code) to every node type', () => {
+        for (const typeId of ['geom.cube', 'value.color', 'view.image', 'device.ptz.osc', 'node.null']) {
+            const node = createNode(typeId)
+            const sections = deriveNodeInspectorSections(node)
+            const codeSection = sections.find((section) => section.id === 'code')
+            expect(codeSection, `${typeId} should have a Code section`).toBeDefined()
+            expect(codeSection.component).toBe('values')
+            expect(codeSection.fields).toEqual([
+                { label: 'Body', path: ['__code'], type: 'textarea', portType: 'string', component: 'values' }
+            ])
+        }
+    })
+
+    it('keeps the Code section\'s values.__code distinct from node.null\'s own values.body', () => {
+        const node = createNode('node.null', { values: { body: 'the null node body', portDefs: [] } })
+        const sections = deriveNodeInspectorSections(node)
+        const bodySection = sections.find((section) => section.id === 'values')
+        const codeSection = sections.find((section) => section.id === 'code')
+        expect(bodySection.fields[0].path).toEqual(['body'])
+        expect(codeSection.fields[0].path).toEqual(['__code'])
     })
 })

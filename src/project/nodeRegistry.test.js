@@ -61,16 +61,21 @@ describe('NODE_TYPES', () => {
         expect(NODE_TYPES['math.add'].render).toBe('hidden')
     })
 
-    it('singleton nodes are marked', () => {
-        expect(NODE_TYPES['world.light'].singleton).toBe(true)
-        expect(NODE_TYPES['world.background'].singleton).toBe(true)
-        expect(NODE_TYPES['time'].singleton).toBe(true)
+    // Product decision 2026-07-19: no node type is a singleton — every type,
+    // including the former singletons (time, source.ar, universe.world,
+    // world.light, world.background, world.grid), is free-form and
+    // placeable any number of times. Generalizes the earlier universe.node0
+    // reversal (2026-07-17) to every remaining former singleton.
+    it('no node type is marked singleton', () => {
+        expect(NODE_TYPES['world.light'].singleton).toBeFalsy()
+        expect(NODE_TYPES['world.background'].singleton).toBeFalsy()
+        expect(NODE_TYPES['world.grid'].singleton).toBeFalsy()
+        expect(NODE_TYPES['universe.world'].singleton).toBeFalsy()
+        expect(NODE_TYPES['time'].singleton).toBeFalsy()
+        expect(NODE_TYPES['source.ar'].singleton).toBeFalsy()
     })
 
-    // Product decision 2026-07-17: Node 0 is an ordinary node type, not a
-    // singleton — it's placeable like any other node, not a forced one-per-
-    // document root.
-    it('universe.node0 is an ordinary node type, not a singleton', () => {
+    it('universe.node0 is an ordinary node type', () => {
         const rootType = NODE_TYPES['universe.node0']
         expect(rootType).toBeTruthy()
         expect(rootType.category).toBe('universe')

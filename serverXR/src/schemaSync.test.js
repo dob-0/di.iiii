@@ -53,20 +53,21 @@ describe('constants', () => {
     }
   })
 
-  it('universe.world is treated as a singleton (regression: was missing from CJS SINGLETON_TYPE_IDS)', () => {
-    // Two universe.world nodes → only one should survive normalization
-    const doc = normalizeProjectDocument({
+  // Product decision 2026-07-19: no node type is a singleton — every type
+  // nests freely, any number of times, in any scope (generalizes the earlier
+  // universe.node0 reversal, 2026-07-17, to every remaining former
+  // singleton). This test used to assert the opposite (universe.world
+  // deduped to one per document); it now asserts free nesting survives
+  // normalization in both the CJS mirror and the same/different-scope cases.
+  it('universe.world nests freely — multiple instances survive normalization, document-wide and per-scope', () => {
+    const documentWide = normalizeProjectDocument({
       nodes: [
         { id: 'a', typeId: 'universe.world', label: 'w1', values: {} },
         { id: 'b', typeId: 'universe.world', label: 'w2', values: {} },
       ]
     })
-    const worldNodes = doc.nodes.filter((n) => n.typeId === 'universe.world')
-    expect(worldNodes.length).toBe(1)
-  })
+    expect(documentWide.nodes.filter((n) => n.typeId === 'universe.world').length).toBe(2)
 
-  it('universe.world is a singleton per node-scope (parentId), not document-wide', () => {
-    // Two worlds under the SAME parent scope -> collapse to one (first wins).
     const sameParent = normalizeProjectDocument({
       nodes: [
         { id: 'p', typeId: 'geom.cube', label: 'parent', values: {} },
@@ -74,11 +75,8 @@ describe('constants', () => {
         { id: 'b', typeId: 'universe.world', label: 'w2', parentId: 'p', values: {} },
       ]
     })
-    const sameParentWorlds = sameParent.nodes.filter((n) => n.typeId === 'universe.world')
-    expect(sameParentWorlds.length).toBe(1)
-    expect(sameParentWorlds[0].id).toBe('a')
+    expect(sameParent.nodes.filter((n) => n.typeId === 'universe.world').length).toBe(2)
 
-    // Two worlds under DIFFERENT parent scopes -> both survive.
     const diffParent = normalizeProjectDocument({
       nodes: [
         { id: 'p1', typeId: 'geom.cube', label: 'parent1', values: {} },
@@ -87,8 +85,7 @@ describe('constants', () => {
         { id: 'b', typeId: 'universe.world', label: 'w2', parentId: 'p2', values: {} },
       ]
     })
-    const diffParentWorlds = diffParent.nodes.filter((n) => n.typeId === 'universe.world')
-    expect(diffParentWorlds.length).toBe(2)
+    expect(diffParent.nodes.filter((n) => n.typeId === 'universe.world').length).toBe(2)
   })
 })
 
@@ -103,17 +100,6 @@ describe('normalizeProjectDocument', () => {
     expect(Array.isArray(doc.assets)).toBe(true)
     expect(typeof doc.worldState).toBe('object')
     expect(typeof doc.windowLayout).toBe('object')
-  })
-
-  it('rejects duplicate singleton nodes', () => {
-    const doc = normalizeProjectDocument({
-      nodes: [
-        { id: 'a', typeId: 'universe.world', label: 'w1', values: {} },
-        { id: 'b', typeId: 'universe.world', label: 'w2', values: {} },
-      ]
-    })
-    const worldNodes = doc.nodes.filter((n) => n.typeId === 'universe.world')
-    expect(worldNodes.length).toBe(1)
   })
 
   it('drops legacy root node types', () => {
@@ -147,17 +133,17 @@ describe('applyProjectOps', () => {
     expect(withoutEntity.entities.find((e) => e.id === 'e2')).toBeUndefined()
   })
 
-  it('createNode drops a second universe.world in the same scope, but allows one in a different scope', () => {
+  it('createNode allows a second universe.world in the same scope, and one in a different scope', () => {
     const withFirstWorld = applyProjectOps({}, [
       { type: 'createNode', payload: { node: { id: 'p', typeId: 'geom.cube', label: 'parent', values: {} } } },
       { type: 'createNode', payload: { node: { id: 'w1', typeId: 'universe.world', label: 'World 1', parentId: 'p', values: {} } } },
     ])
     expect(withFirstWorld.nodes.some((n) => n.id === 'w1')).toBe(true)
 
-    const withDuplicateInSameScope = applyProjectOps(withFirstWorld, [
+    const withSecondInSameScope = applyProjectOps(withFirstWorld, [
       { type: 'createNode', payload: { node: { id: 'w2', typeId: 'universe.world', label: 'World 2', parentId: 'p', values: {} } } },
     ])
-    expect(withDuplicateInSameScope.nodes.some((n) => n.id === 'w2')).toBe(false)
+    expect(withSecondInSameScope.nodes.some((n) => n.id === 'w2')).toBe(true)
 
     const withWorldInDifferentScope = applyProjectOps(withFirstWorld, [
       { type: 'createNode', payload: { node: { id: 'q', typeId: 'geom.cube', label: 'other parent', values: {} } } },
