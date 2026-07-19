@@ -419,6 +419,59 @@ describe('SeedEditor free-nesting palette create', () => {
     })
 })
 
+// Regression: universe.world (and every other panel-2d node type) never
+// rendered as an enterable graph card, so scopeEnterNode was unreachable for
+// them — nodes created while "inside" a World always landed as siblings at
+// the surrounding scope instead of real children of the World (found via
+// live manual testing, confirmed by inspecting parentId directly against
+// the server's own document). DesktopWindow's Enter button, wired to the
+// same handleEnterNode used by the graph card's double-click, is the fix.
+describe('SeedEditor world scope entry', () => {
+    const ENTER_STORAGE_KEY = 'test-world-scope-entry'
+
+    afterEach(() => {
+        window.localStorage.removeItem(ENTER_STORAGE_KEY)
+    })
+
+    it('navigates into a World node\'s own scope via its window\'s Enter button', () => {
+        window.localStorage.setItem(
+            ENTER_STORAGE_KEY,
+            makeWorkspaceDoc([
+                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+            ])
+        )
+        render(<SeedEditor localStorageKey={ENTER_STORAGE_KEY} />)
+
+        expect(screen.queryByRole('navigation', { name: 'Node scope' })).toBeNull()
+
+        fireEvent.click(screen.getByText('Enter ›'))
+
+        expect(screen.getByRole('navigation', { name: 'Node scope' })).toBeTruthy()
+    })
+
+    it('parents a node created after entering World to the World node, not its surrounding scope', () => {
+        window.localStorage.setItem(
+            ENTER_STORAGE_KEY,
+            makeWorkspaceDoc([
+                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+            ])
+        )
+        mockApplyLocalOps.mockClear()
+        render(<SeedEditor localStorageKey={ENTER_STORAGE_KEY} />)
+
+        fireEvent.click(screen.getByText('Enter ›'))
+        fireEvent.doubleClick(screen.getByTestId('mock-graph'))
+        fireEvent.change(screen.getByPlaceholderText('type a node name…'), { target: { value: 'Cube' } })
+        fireEvent.keyDown(screen.getByPlaceholderText('type a node name…'), { key: 'Enter' })
+
+        const createdCube = mockApplyLocalOps.mock.calls
+            .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
+            .flat()
+            .find((op) => op.type === 'createNode' && op.payload?.node?.typeId === 'geom.cube')
+        expect(createdCube?.payload.node.parentId).toBe('world-1')
+    })
+})
+
 describe('TextPanelWindow', () => {
     it('renders the view.text content port value', () => {
         render(

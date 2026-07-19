@@ -11,6 +11,7 @@ export default function DesktopWindow({
     onClose,
     onToggleMinimize,
     onTogglePin,
+    onEnter,
     minTop = undefined,
     allowOverflowLeft = false,
     allowOverflowTop = false,
@@ -157,6 +158,15 @@ export default function DesktopWindow({
                     <h3>{title}</h3>
                 </div>
                 <div className="seed-window-actions">
+                    {onEnter && (
+                        <button
+                            type="button"
+                            title="Enter this node's scope to place children inside it"
+                            onClick={(event) => { event.stopPropagation(); onEnter() }}
+                        >
+                            Enter ›
+                        </button>
+                    )}
                     <button type="button" onClick={(event) => { event.stopPropagation(); onTogglePin?.() }}>
                         {windowState.pinned ? 'Unpin' : 'Pin'}
                     </button>

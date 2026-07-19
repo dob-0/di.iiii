@@ -991,6 +991,7 @@ export default function SeedEditor({
                                     patch: { values: { frame: { ...(node.values?.frame || {}), pinned: !node.values?.frame?.pinned } } }
                                 }
                             })}
+                            onEnter={() => handleEnterNode(node.id)}
                         >
                             {renderViewNodeContent(node)}
                         </DesktopWindow>

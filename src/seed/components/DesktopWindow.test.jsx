@@ -27,4 +27,31 @@ describe('DesktopWindow', () => {
         expect(patch.x).not.toBe(windowState.x)
         expect(patch.y).not.toBe(windowState.y)
     })
+
+    // Regression: panel-2d node types (universe.world, view.text, etc.) never
+    // rendered as an enterable graph card, so there was no way to reach
+    // scopeEnterNode for them — nodes created "inside" a World always landed
+    // as siblings at the surrounding scope instead of real children. The
+    // window itself is now the entry point.
+    it('renders an Enter button when onEnter is provided and calls it on click', () => {
+        const onEnter = vi.fn()
+        render(
+            <DesktopWindow windowState={windowState} title="World" onEnter={onEnter}>
+                content
+            </DesktopWindow>
+        )
+
+        fireEvent.click(screen.getByText('Enter ›'))
+        expect(onEnter).toHaveBeenCalledTimes(1)
+    })
+
+    it('omits the Enter button when onEnter is not provided', () => {
+        render(
+            <DesktopWindow windowState={windowState} title="World">
+                content
+            </DesktopWindow>
+        )
+
+        expect(screen.queryByText('Enter ›')).not.toBeInTheDocument()
+    })
 })
