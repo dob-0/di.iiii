@@ -71,7 +71,46 @@ prod = `2ad9c016` (verified via `origin/main` + prod health endpoint —
 not `f656bc63`). **User explicitly held production** ("no wait no
 production") — work stays on dev/staging until they say promote.
 
-## Session (2026-07-19 — live-verified `src/seed/`, found + fixed a real World-nesting bug)
+## Session (2026-07-19 — live-verified vanity links + seed on staging, reorganized Admin UI)
+
+Ran the full validation suite on the previous sessions' unpushed/unverified
+work (lint/build/887 tests/64 contract tests/docs checks — all clean, one
+`syncRoutes.test.js` timeout confirmed flaky under parallel load, not a
+real failure), then manually click-through tested on `staging.di-studio.xyz`
+via the Chrome extension: `/wcc` + `/wcc/scene` (untouched, still correct),
+a bogus vanity-link segment (hits `GET /api/resolve/...`, 404s, falls
+through cleanly to the plain space — no crash), `/open/studio` (not
+hijacked by the new 2-segment routing), and `/open/seed` (loads clean, no
+console errors). Confirmed auth gating works both directions (blocked from
+a space outside the guest session's scope, allowed into a public one).
+**Not verified**: the admin slug-edit UI and `ProjectSwitcher`'s "Copy
+link" button — this session only had guest/anonymous access, no owner
+login, on staging or local dev.
+
+User then flagged the admin/preferences area as "messy — target audience
+and backend are mixed" and asked about adding role tiers (super-admin/
+admin/etc). Audited first rather than guessing: the role model itself
+(`guest < viewer < editor < admin` global rank + per-space grant list +
+per-space owner, `serverXR/src/authAccess.js`) is reasonable as-is — the
+actual mess is `AdminManageSection.jsx`'s space/project detail panels
+mixing audience-facing controls (public link, public/private, publish,
+main, guest entry) with backend/infra controls (permanent/temporary,
+edit-lock, raw ids, embedded GitHub-sync internals) in one undifferentiated
+button grid, plus `PreferencesPage.jsx`'s "Admin Console" bundling 7
+unrelated debug/telemetry tabs alongside the 2 real access-control tabs
+with no visual distinction. Presented two options — reorganize-only vs.
+add real owner/platform-admin tiering — user picked reorganize-only.
+
+Shipped (`df8ac3c8`, pushed): `AdminManageSection.jsx`'s space/project
+detail panels split into "Audience & publishing" vs "Storage & sync" /
+"Details"; `PreferencesPage.jsx`'s `SectionNav` now groups Manage/Open
+Call under an "admin" label separately from the 7 debug tabs under
+"diagnostics". No schema/role/route changes — pure UI reorg. Lint clean,
+build clean, 887/887 tests green. **Not yet visually confirmed** — same
+no-admin-login gap as above; user was about to log in and check when this
+recap was written.
+
+## Previous session (2026-07-19 — live-verified `src/seed/`, found + fixed a real World-nesting bug)
 
 Did the manual live click-through of `/open/seed` that the previous two
 sessions had shipped but never actually run (browser extension wasn't
@@ -311,9 +350,16 @@ click-through of `/open/seed`.
   World/Light/Background/Grid, universal code panel, and now (`40d96c0d`,
   not pushed) actually entering a World/panel-2d node's own scope to place
   real children — verified live at 1 and 4 nesting levels.
-- Vanity space/project links (`/wcc/artistplace`-style) — pushed, backend
-  flow manually smoke-tested end-to-end (create/patch/collision/resolve),
-  not yet click-verified through the actual admin UI in a live browser.
+- Vanity space/project links (`/wcc/artistplace`-style) — pushed, routing
+  click-verified live on staging (public link resolve, 404 fallback, no
+  regressions on `/wcc`/`/open/studio`); the admin slug-edit UI and
+  `ProjectSwitcher`'s copy-link button still not clicked through (needs
+  owner login, this session only had guest access).
+- `AdminManageSection`/`PreferencesPage` reorganized (`df8ac3c8`, pushed):
+  audience-facing controls (public link, publish, main, guest entry) now
+  visually separate from backend/infra controls (permanent/temp, edit-
+  lock, raw ids, GitHub sync) and from the 7 unrelated debug/telemetry
+  tabs — pure UI split, no schema/role change, not yet visually confirmed.
 
 ## Open
 
@@ -322,8 +368,10 @@ click-through of `/open/seed`.
 - Nested-World WebGL context-loss/tab-freeze bug (see session entry above)
   — reproduced twice, not yet fixed. Likely simultaneous-context exhaustion
   from multiple live 3D viewports mounted at once.
-- vanity links: pushed and building clean, still no manual live click-
-  through through the actual admin UI.
+- vanity links: routing/backend live-verified; admin slug-edit UI + copy-
+  link button still need an owner-logged-in click-through.
+- Admin UI reorg (`df8ac3c8`) needs visual confirmation — user was about
+  to log in as admin to check when this recap was written.
 - Hardening plan deferred items: recover/re-list the ~23 untriaged
   findings below, decide on test-gating `deploy-space-code.yml`, rotate
   the stale GitHub App key, a speculative periodic memory-self-audit.
