@@ -8,6 +8,7 @@ This is the role system for AI agents working in di.iiii. Every task has an owne
 
 | Role | Code | What They Own | What They Never Touch |
 |------|------|--------------|----------------------|
+| [Producer](producer.md) | PRO | User-message intake, docs/ai/INBOX.md, scope defense of running work (default first hat, always on) | Implementation files, the current task's scope |
 | [Technical Architect](technical-architect.md) | TA | AGENTS.md, MANIFESTO.md, non-negotiables, cross-cutting calls | Implementation files |
 | [UI/UX Engineer](ui-ux-engineer.md) | UX | All CSS, all visual layout, React render/JSX, visual identity | serverXR/, nodeRegistry, schema, nodeGraphRuntime |
 | [Node System Engineer](node-system-engineer.md) | NSE | nodeRegistry, ports, graph model, nodeGraphRuntime | CSS, layout, serverXR, Three.js rendering |

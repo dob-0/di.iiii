@@ -14,6 +14,8 @@ Full process contract: **[docs/ai/agent-operating-contract.md](docs/ai/agent-ope
 
 Assign one primary owner per task. Read the role card before acting; your scope is locked to its "Owns" list, and "Must Never Touch" files are off-limits (don't read, don't edit).
 
+**Default first hat, always on:** the Producer (`docs/ai/roles/producer.md`) — classify every incoming user message (steering the current task vs. a new impulsive idea), park new ideas verbatim + translated in `docs/ai/INBOX.md`, never mix them into running work, review the inbox at session end.
+
 ```text
 CSS / layout / visual?              → docs/ai/roles/ui-ux-engineer.md
 nodeRegistry / ports / graph model? → docs/ai/roles/node-system-engineer.md
