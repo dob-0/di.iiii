@@ -10,9 +10,11 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-`dev` at `40d96c0d` — **local, not yet pushed** (1 commit ahead of
-`origin/dev`, which is still at `c0d33af5`). Staging deploy green/health-
-checked as of `c0d33af5`. `main` still at `f656bc63`.
+`dev` at `a6f4b20d` — pushed, matches `origin/dev`. Staging deploy
+triggered by the push, not yet re-verified live post-deploy. `main` =
+prod = `2ad9c016` (verified via `origin/main` + prod health endpoint —
+not `f656bc63`). **User explicitly held production** ("no wait no
+production") — work stays on dev/staging until they say promote.
 
 ## Session (2026-07-19 — live-verified `src/seed/`, found + fixed a real World-nesting bug)
 
@@ -51,7 +53,7 @@ context exhaustion (browsers cap concurrent contexts, ~16). Not touched
 this session — flagged for whoever picks up World-viewport work next.
 
 Committed `40d96c0d` (code + tests, 4 new tests, 891/891 suite green,
-lint clean). **Not pushed** — only explicitly asked to commit.
+lint clean) + docs commit `a6f4b20d`. Pushed to `origin/dev`.
 
 ## Previous session (2026-07-19 — vanity space/project links + a real concurrent-edit incident)
 
@@ -153,9 +155,21 @@ click-through of `/open/seed`.
 - Wiki: new "License & openness" article. Golden rule added:
   usage-limit sizing + never-brick checkpoint workflow
   (docs/ai/golden_rules.md, Agent Behavior Rules).
+- **Later same session**: pushed to dev + staging live-verified (landing/
+  wiki/wcc/beyond-form, zero JS errors); unbricked CI by committing the
+  missing `src/seed/` lane (`9c70e534`); golden rule split into two
+  (budget sizing vs same-session perk capture, `44d12e1b`); docs IA fix —
+  one canonical lane map in README/CURRENT.md/AGENTS.md (`7753699c`);
+  new **Producer role** (`docs/ai/roles/producer.md`, `6892b005`) —
+  default first hat: classify user messages, park impulsive ideas
+  verbatim+translated in `docs/ai/INBOX.md`, never mix into running work.
+  Inbox has its first real entry: **sound-in-spaces** (parked). Results
+  artifact page published (private) for the user.
 - **Owed by user**: 60–90s demo recording; fill warm-contact names in
-  drafts/stakeholders.md; approve pushes + every outbound post/mail.
-- **Nothing was posted, mailed, or pushed.**
+  drafts/stakeholders.md; approve every outbound post/mail (Notations #2
+  draft ready for Jul 20); say when to promote dev → main (license goes
+  live on prod only then).
+- **Nothing was posted or mailed. Production untouched.**
 
 ## Previous session (2026-07-18 — Studio wrong-space bug fix + hardening batch 1+2)
 
@@ -248,7 +262,8 @@ click-through of `/open/seed`.
 
 ## Open
 
-- `40d96c0d` (World-nesting scope-entry fix) needs a push when asked.
+- World-nesting scope-entry fix (`40d96c0d`) pushed — owed: re-verify live
+  on staging post-deploy.
 - Nested-World WebGL context-loss/tab-freeze bug (see session entry above)
   — reproduced twice, not yet fixed. Likely simultaneous-context exhaustion
   from multiple live 3D viewports mounted at once.
@@ -263,8 +278,11 @@ click-through of `/open/seed`.
 - Promote Enter Space/Main-space reuse + Walk/Fly label fix + badge
   restyle to `main` when the user is ready — not yet asked for.
 - License/promo work (see previous-session entry above) — owed by user:
-  demo recording, warm-contact names, approve every outbound post/mail.
-  Nothing posted/mailed/pushed yet.
+  demo recording, warm-contact names, approve every outbound post/mail
+  (Notations #2 draft ready for Jul 20). On staging; prod promotion held
+  by user.
+- `docs/ai/INBOX.md`: **sound-in-spaces** parked (XRC→VPE, size M/L) —
+  review at next session start via the Producer protocol.
 - No published staging space currently exercises the generic Walk/Fly
   button (all are custom experiences) — if that regression test class
   matters going forward, consider publishing one plain `entryView:
