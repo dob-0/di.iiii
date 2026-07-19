@@ -10,11 +10,50 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-`dev` at `c0d33af5` — pushed, matches `origin/dev` exactly (verified via
-`git fetch` + `git log HEAD..origin/dev` / `origin/dev..HEAD`, both empty).
-Staging deploy green and health-checked live. `main` still at `f656bc63`.
+`dev` at `40d96c0d` — **local, not yet pushed** (1 commit ahead of
+`origin/dev`, which is still at `c0d33af5`). Staging deploy green/health-
+checked as of `c0d33af5`. `main` still at `f656bc63`.
 
-## Session (2026-07-19 — vanity space/project links + a real concurrent-edit incident)
+## Session (2026-07-19 — live-verified `src/seed/`, found + fixed a real World-nesting bug)
+
+Did the manual live click-through of `/open/seed` that the previous two
+sessions had shipped but never actually run (browser extension wasn't
+connected until this session). Found the free-nesting/active-marker/code-
+panel work all genuinely works as designed — verified by placing all 49
+registered node types in one project (zero crashes, zero console errors)
+and by diffing raw `parentId` values from `/api/projects/:id/document`
+rather than trusting the UI.
+
+That same API-diffing turned up a real bug the UI was actively lying
+about: nesting anything **inside** a `universe.world` node — the entire
+point of the previous sessions' redesign — silently landed the new node
+as a **sibling** of World instead of its child, at any depth. I initially
+reported this as working (trusted a UI element that looked like scope
+navigation but wasn't); only caught by fetching the live document and
+reading `parentId` directly. Root cause: `universe.world` (and every
+other `panel-2d`-render type — Text/Image/Browser/stream panels) is
+deliberately excluded from the graph canvas's card list, which was the
+*only* thing wired to the scope-navigation handler — so there was no
+reachable way to enter such a node's own scope at all. Fixed by adding an
+`Enter ›` button to `DesktopWindow.jsx`'s per-node window header, wired to
+the pre-existing `handleEnterNode` (which already handled `universe.world`
+correctly — it just had no caller). Verified live at 1 and 4 levels of
+nesting: children now get the correct `parentId` and render in the 3D
+viewport (a cube/sphere genuinely appears on the grid). Full writeup:
+`docs/ai/known-fixes.md` (last row).
+
+**Separately confirmed and NOT yet fixed**: opening a nested World's live
+3D viewport while an ancestor scope's World viewport is also mounted can
+trigger `THREE.WebGLRenderer: Context Lost.` and freeze the tab's paint
+pipeline (data survives — confirmed via reload — only the render/compositor
+hangs). Reproduced twice in independent tabs. Likely simultaneous WebGL
+context exhaustion (browsers cap concurrent contexts, ~16). Not touched
+this session — flagged for whoever picks up World-viewport work next.
+
+Committed `40d96c0d` (code + tests, 4 new tests, 891/891 suite green,
+lint clean). **Not pushed** — only explicitly asked to commit.
+
+## Previous session (2026-07-19 — vanity space/project links + a real concurrent-edit incident)
 
 Shipped clean public links: spaces/projects get a `slug` independently
 renameable from their immutable id, enabling `/wcc/artistplace`-style short
@@ -198,18 +237,23 @@ click-through of `/open/seed`.
 - Production + staging both live on VPS, deploy via `git push origin main`/`dev`
 - Nightly VPS backups + validated restore path
 - Studio dev-only panes: read-only node-graph ("N" split) and live-world 3D ("W" split)
-- `src/seed/` (dev-only, `/open/seed`): free-form node nesting, active
-  markers for World/Light/Background/Grid, universal code panel — pushed,
-  not yet manually click-verified live.
+- `src/seed/` (dev-only, `/open/seed`): free-form node nesting (all 49
+  node types verified live, no crashes), active markers for
+  World/Light/Background/Grid, universal code panel, and now (`40d96c0d`,
+  not pushed) actually entering a World/panel-2d node's own scope to place
+  real children — verified live at 1 and 4 nesting levels.
 - Vanity space/project links (`/wcc/artistplace`-style) — pushed, backend
   flow manually smoke-tested end-to-end (create/patch/collision/resolve),
   not yet click-verified through the actual admin UI in a live browser.
 
 ## Open
 
-- `seed` lane + vanity links: both pushed and building clean, neither has
-  had a manual live click-through yet — next step for whoever picks this
-  back up.
+- `40d96c0d` (World-nesting scope-entry fix) needs a push when asked.
+- Nested-World WebGL context-loss/tab-freeze bug (see session entry above)
+  — reproduced twice, not yet fixed. Likely simultaneous-context exhaustion
+  from multiple live 3D viewports mounted at once.
+- vanity links: pushed and building clean, still no manual live click-
+  through through the actual admin UI.
 - Hardening plan deferred items: recover/re-list the ~23 untriaged
   findings below, decide on test-gating `deploy-space-code.yml`, rotate
   the stale GitHub App key, a speculative periodic memory-self-audit.
