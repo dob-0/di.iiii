@@ -22,16 +22,19 @@ import {
 import AdminManageSection from './preferences/AdminManageSection.jsx'
 import OpenCallSection from './preferences/OpenCallSection.jsx'
 
+// Two groups: "admin" is real access-control (who can see/publish what),
+// "diagnostics" is live operator/debug telemetry — same nav, visually
+// separated so it's clear which screens change permissions vs just observe.
 const SECTIONS = [
-    { key: 'manage', label: 'Manage', glyph: '▸' },
-    { key: 'opencall', label: 'Open Call', glyph: '✉' },
-    { key: 'overview', label: 'Overview', glyph: '◆' },
-    { key: 'topology', label: 'Topology', glyph: '◇' },
-    { key: 'objects', label: 'Objects', glyph: '▦' },
-    { key: 'session', label: 'Session', glyph: '◎' },
-    { key: 'console', label: 'Console', glyph: '▤' },
-    { key: 'controls', label: 'Controls', glyph: '▣' },
-    { key: 'system', label: 'System', glyph: '▥' }
+    { key: 'manage', label: 'Manage', glyph: '▸', group: 'admin' },
+    { key: 'opencall', label: 'Open Call', glyph: '✉', group: 'admin' },
+    { key: 'overview', label: 'Overview', glyph: '◆', group: 'diagnostics' },
+    { key: 'topology', label: 'Topology', glyph: '◇', group: 'diagnostics' },
+    { key: 'objects', label: 'Objects', glyph: '▦', group: 'diagnostics' },
+    { key: 'session', label: 'Session', glyph: '◎', group: 'diagnostics' },
+    { key: 'console', label: 'Console', glyph: '▤', group: 'diagnostics' },
+    { key: 'controls', label: 'Controls', glyph: '▣', group: 'diagnostics' },
+    { key: 'system', label: 'System', glyph: '▥', group: 'diagnostics' }
 ]
 
 // The 4 management toggles operators flip most often — surfaced on Overview so the

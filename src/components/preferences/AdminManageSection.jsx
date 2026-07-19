@@ -476,12 +476,6 @@ function SpaceDetail({
                         <button type="button" className={`toggle-button ${space.isPublic ? 'active success-button' : ''}`} onClick={() => onPatch({ isPublic: !space.isPublic })}>
                             {space.isPublic ? 'Public ✓' : 'Private'}
                         </button>
-                        <button type="button" className={`toggle-button ${space.isPermanent ? 'active' : ''}`} onClick={() => onPatch({ isPermanent: !space.isPermanent })}>
-                            {space.isPermanent ? 'Permanent ✓' : 'Temporary'}
-                        </button>
-                        <button type="button" className={`toggle-button ${space.allowEdits !== false ? 'active' : ''}`} onClick={() => onPatch({ allowEdits: space.allowEdits === false })}>
-                            {space.allowEdits !== false ? 'Editing on' : 'Locked'}
-                        </button>
                         <button type="button" className={`toggle-button ${isDefault ? 'active' : ''}`} onClick={onSetDefault} disabled={isDefault} title="Also what the landing page's 'Enter Space' button opens">
                             {isDefault ? 'Main space ✓' : 'Set as main'}
                         </button>
@@ -490,6 +484,17 @@ function SpaceDetail({
                         </button>
                     </div>
                 )}
+            </ModuleSection>
+
+            <ModuleSection title="Storage & sync" subtitle="Backend/infra state — not audience-facing">
+                <div className="preferences-command-grid">
+                    <button type="button" className={`toggle-button ${space.isPermanent ? 'active' : ''}`} onClick={() => onPatch({ isPermanent: !space.isPermanent })}>
+                        {space.isPermanent ? 'Permanent ✓' : 'Temporary'}
+                    </button>
+                    <button type="button" className={`toggle-button ${space.allowEdits !== false ? 'active' : ''}`} onClick={() => onPatch({ allowEdits: space.allowEdits === false })}>
+                        {space.allowEdits !== false ? 'Editing on' : 'Locked'}
+                    </button>
+                </div>
             </ModuleSection>
 
             <ModuleSection
@@ -649,49 +654,54 @@ function CommonsModerationSection() {
 function ProjectDetail({ space, project, isPublished, editing, startEdit, submitEdit, setEditing, onPublish, onUnpublish, onDelete }) {
     const isEditing = editing?.id === project.id && (editing.type === 'project' || editing.type === 'project-slug')
     return (
-        <ModuleSection
-            title={project.title || 'Untitled'}
-            subtitle={`Project · ${space?.label || space?.id || ''}`}
-            actions={
-                <div className="preferences-module-actions">
-                    <button type="button" className="preferences-inline-action" onClick={() => navigateToStudioPath(buildStudioProjectPath(project.id, project.spaceId))}>Open in Studio</button>
-                    <button type="button" className="preferences-inline-action warning" onClick={onDelete}>Delete</button>
-                </div>
-            }
-        >
-            <InfoPair label="Project ID" value={project.id} mono />
-            <InfoPair
-                label="Public link"
-                value={buildVanityProjectPath(space?.slug || project.spaceId, project.slug || project.id)}
-                mono
-            />
-            <InfoPair label="Source" value={project.source || 'project'} />
-            <InfoPair label="Published" value={isPublished ? 'Yes — live for this space' : 'No'} />
+        <>
+            <ModuleSection
+                title={project.title || 'Untitled'}
+                subtitle="Audience & publishing"
+                actions={
+                    <div className="preferences-module-actions">
+                        <button type="button" className="preferences-inline-action" onClick={() => navigateToStudioPath(buildStudioProjectPath(project.id, project.spaceId))}>Open in Studio</button>
+                        <button type="button" className="preferences-inline-action warning" onClick={onDelete}>Delete</button>
+                    </div>
+                }
+            >
+                <InfoPair
+                    label="Public link"
+                    value={buildVanityProjectPath(space?.slug || project.spaceId, project.slug || project.id)}
+                    mono
+                />
+                <InfoPair label="Published" value={isPublished ? 'Yes — live for this space' : 'No'} />
 
-            {isEditing ? (
-                <form className="preferences-inline-form" onSubmit={(e) => { e.preventDefault(); submitEdit() }}>
-                    <input
-                        className="preferences-input"
-                        ref={(el) => el?.focus()}
-                        value={editing.value}
-                        placeholder={editing.type === 'project-slug' ? 'Leave empty to clear (falls back to id)' : ''}
-                        onChange={(e) => setEditing({ ...editing, value: e.target.value })}
-                        onKeyDown={(e) => e.key === 'Escape' && setEditing(null)}
-                    />
-                    <button type="submit" className="toggle-button">Save</button>
-                    <button type="button" className="toggle-button" onClick={() => setEditing(null)}>Cancel</button>
-                </form>
-            ) : (
-                <div className="preferences-command-grid">
-                    <button type="button" className="toggle-button" onClick={() => startEdit('project', project.id, project.title || '')}>Rename</button>
-                    <button type="button" className="toggle-button" onClick={() => startEdit('project-slug', project.id, project.slug || '')} title="Independently renameable from id — old links to the id keep working forever">Edit public link</button>
-                    {isPublished ? (
-                        <button type="button" className="toggle-button active success-button" onClick={onUnpublish}>Unpublish</button>
-                    ) : (
-                        <button type="button" className="toggle-button" onClick={onPublish}>Set as published</button>
-                    )}
-                </div>
-            )}
-        </ModuleSection>
+                {isEditing ? (
+                    <form className="preferences-inline-form" onSubmit={(e) => { e.preventDefault(); submitEdit() }}>
+                        <input
+                            className="preferences-input"
+                            ref={(el) => el?.focus()}
+                            value={editing.value}
+                            placeholder={editing.type === 'project-slug' ? 'Leave empty to clear (falls back to id)' : ''}
+                            onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+                            onKeyDown={(e) => e.key === 'Escape' && setEditing(null)}
+                        />
+                        <button type="submit" className="toggle-button">Save</button>
+                        <button type="button" className="toggle-button" onClick={() => setEditing(null)}>Cancel</button>
+                    </form>
+                ) : (
+                    <div className="preferences-command-grid">
+                        <button type="button" className="toggle-button" onClick={() => startEdit('project', project.id, project.title || '')}>Rename</button>
+                        <button type="button" className="toggle-button" onClick={() => startEdit('project-slug', project.id, project.slug || '')} title="Independently renameable from id — old links to the id keep working forever">Edit public link</button>
+                        {isPublished ? (
+                            <button type="button" className="toggle-button active success-button" onClick={onUnpublish}>Unpublish</button>
+                        ) : (
+                            <button type="button" className="toggle-button" onClick={onPublish}>Set as published</button>
+                        )}
+                    </div>
+                )}
+            </ModuleSection>
+
+            <ModuleSection title="Details" subtitle="Backend/infra state — not audience-facing">
+                <InfoPair label="Project ID" value={project.id} mono />
+                <InfoPair label="Source" value={project.source || 'project'} />
+            </ModuleSection>
+        </>
     )
 }

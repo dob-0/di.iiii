@@ -119,23 +119,32 @@ export const getActionButtonClassName = (button = {}) => {
 }
 
 export function SectionNav({ sections = [], activeKey, onSelect }) {
+    let lastGroup = null
     return (
         <nav className="preferences-nav" aria-label="Admin sections">
-            {sections.map((section) => (
-                <button
-                    key={section.key}
-                    type="button"
-                    className={`preferences-nav-item ${activeKey === section.key ? 'is-active' : ''}`}
-                    onClick={() => onSelect?.(section.key)}
-                    aria-current={activeKey === section.key ? 'page' : undefined}
-                >
-                    <span className="preferences-nav-glyph" aria-hidden="true">{section.glyph}</span>
-                    <span className="preferences-nav-label">{section.label}</span>
-                    {section.badge != null && section.badge !== '' ? (
-                        <span className="preferences-nav-badge">{section.badge}</span>
-                    ) : null}
-                </button>
-            ))}
+            {sections.map((section) => {
+                const showGroupLabel = section.group && section.group !== lastGroup
+                lastGroup = section.group ?? lastGroup
+                return (
+                    <div key={section.key} className="preferences-nav-entry">
+                        {showGroupLabel ? (
+                            <div className="preferences-nav-group-label">{section.group}</div>
+                        ) : null}
+                        <button
+                            type="button"
+                            className={`preferences-nav-item ${activeKey === section.key ? 'is-active' : ''}`}
+                            onClick={() => onSelect?.(section.key)}
+                            aria-current={activeKey === section.key ? 'page' : undefined}
+                        >
+                            <span className="preferences-nav-glyph" aria-hidden="true">{section.glyph}</span>
+                            <span className="preferences-nav-label">{section.label}</span>
+                            {section.badge != null && section.badge !== '' ? (
+                                <span className="preferences-nav-badge">{section.badge}</span>
+                            ) : null}
+                        </button>
+                    </div>
+                )
+            })}
         </nav>
     )
 }
