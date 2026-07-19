@@ -14,7 +14,9 @@
 - public unit: `space`
 - editable document inside a space: `project`
 - live public route for a space: `publishedProjectId`
-- normal branch flow: `dev -> main` (staging is a GitHub Actions deploy environment, not a branch)
+- where things run — two lanes, four names, one rule:
+  - `dev` branch → **staging.di-studio.xyz** (rehearsal — work and verify here)
+  - `main` branch → **di-studio.xyz** (live — promote `dev -> main` only after staging is verified)
 - runtime baseline: Node `22.x`, npm `10.x`
 
 Project links:

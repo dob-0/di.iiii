@@ -27,10 +27,11 @@ end-to-end (both environments, real runs) on 2026-07-16.
   automatically, not just image updates
 - full detail, GitHub secrets/variables reference: [VPS_DOCKER_DEPLOY.md](VPS_DOCKER_DEPLOY.md)
 
-There's still no `release.json`/git-commit stamp in the build, so
-`/api/health`'s `release` field stays null — can't yet verify what's running
-purely from that endpoint. Cross-check with `gh run list --workflow=deploy-vps.yml`
-(or `-staging`) and the run's `head_sha` if you need to confirm.
+The build stamps the deployed commit into `/serverXR/api/health`'s
+`release.gitCommit` field — `curl -s <host>/serverXR/api/health` is the
+fastest way to verify exactly what's running (verified live on both
+environments 2026-07-19). `gh run list --workflow=deploy-vps.yml` (or
+`-staging`) remains the cross-check for run status.
 
 Do not start routine feature work on `main`.
 Use `main` as a starting point only for an emergency production hotfix.

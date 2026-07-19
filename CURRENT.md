@@ -4,6 +4,7 @@
 Updated at the end of every session. Replace content — do not append.
 
 active_branch: dev
+lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (live) — promote only after staging verify
 
 ---
 
