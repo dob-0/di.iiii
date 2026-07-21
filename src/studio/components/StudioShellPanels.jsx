@@ -116,6 +116,50 @@ export function LibraryPanel({ onCreateEntity, primitives = PRIMITIVES, lights =
     )
 }
 
+// Jam mode's whole inspector: the two edits a first-timer actually wants —
+// their text and its color — plus Remove. Everything routes through the same
+// updateComponent patch pipeline as the full inspector (merge semantics), so
+// flipping to "All tools" later shows the exact same values.
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
+export function JamEditPanel({ entity, onInspectorChange, onDeleteSelected }) {
+    if (!entity) {
+        return <p className="sfp-empty">Tap an object in the scene to edit it.</p>
+    }
+    const textValue = entity.components?.text?.value ?? ''
+    const appearance = entity.components?.appearance
+    const colorValue = HEX_COLOR.test(appearance?.color || '') ? appearance.color : '#ffffff'
+    return (
+        <>
+            {entity.type === 'text' && (
+                <div className="insp-field">
+                    <label className="insp-label" htmlFor={`jam-text-${entity.id}`}>Your text</label>
+                    <textarea
+                        id={`jam-text-${entity.id}`}
+                        className="insp-input"
+                        rows={3}
+                        value={textValue}
+                        onChange={(event) => onInspectorChange?.('text', { value: event.target.value })}
+                    />
+                </div>
+            )}
+            {appearance && (
+                <ColorField
+                    label="Color"
+                    value={colorValue}
+                    onChange={(next) => onInspectorChange?.('appearance', { color: next })}
+                />
+            )}
+            {onDeleteSelected && (
+                <div className="scc-section">
+                    <div className="scc-buttons">
+                        <button className="scc-btn" onClick={onDeleteSelected}>✕ Remove</button>
+                    </div>
+                </div>
+            )}
+        </>
+    )
+}
+
 function DriveImportSection({ onDriveImportUrl, onDriveImportSelection }) {
     const drive = useDriveImport({
         importByUrl: onDriveImportUrl,

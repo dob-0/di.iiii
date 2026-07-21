@@ -19,6 +19,7 @@ import {
     AssetsPanel,
     FilesPanel,
     HistoryPanel,
+    JamEditPanel,
     LibraryPanel,
     ProjectPanel,
     PublishPanel,
@@ -64,6 +65,7 @@ const DEFAULT_POSITIONS = () => {
     return {
         create:  { x: 16,                    y: 90 },
         scene:   { x: rightX,                y: 90 },
+        jamedit: { x: rightX,                y: 90 },
         world:   { x: rightX,                y: midY + 30 },
         publish: { x: Math.round(vw * 0.55), y: midY },
         files:   { x: Math.round(vw * 0.3),  y: 90 },
@@ -242,7 +244,11 @@ export default function StudioShell({
             return next
         })
     }, [])
-    const mobilePanels = jamMinimal ? MOBILE_PANELS.filter(([id]) => id === 'create') : MOBILE_PANELS
+    // Jam phones get Create plus a tiny Edit tab (text/color/remove) — the
+    // full Scene sheet stays hidden.
+    const mobilePanels = jamMinimal
+        ? [...MOBILE_PANELS.filter(([id]) => id === 'create'), ['jamedit', 'Edit']]
+        : MOBILE_PANELS
 
     // Guest first-run guidance is the action-completed coach pill
     // (StudioCoachMarks, rendered below) — the help dialog no longer
@@ -461,6 +467,9 @@ export default function StudioShell({
                             <AssetsPanel libraryItems={libraryItems} onAssetFilesSelected={onAssetFilesSelected} onCreateFromAsset={onCreateFromAsset} onDriveImportUrl={onDriveImportUrl} onDriveImportSelection={onDriveImportSelection} onToggleAssetShared={onToggleAssetShared} onCommonsImport={onCommonsImport} onDeleteLibraryItem={onDeleteLibraryItem} />
             </>
         ),
+        jamedit: (
+            <JamEditPanel entity={selectedEntity} onInspectorChange={onInspectorChange} onDeleteSelected={selectedEntity ? onDeleteSelected : null} />
+        ),
         scene: (
             <>
                             <StructurePanel
@@ -540,6 +549,11 @@ export default function StudioShell({
                     {isOpen('create') && (
                         <StudioFloatingPanel key={`create-${layoutKey}`} title="Create" onClose={() => toggle('create')} initialWidth={280} {...panelChrome('create')}>
                             {panelBodies.create}
+                        </StudioFloatingPanel>
+                    )}
+                    {jamMinimal && selectedEntity && (
+                        <StudioFloatingPanel key={`jamedit-${layoutKey}`} title={selectedEntity.name || 'Edit'} onClose={() => onSelectEntity?.(null)} initialWidth={240} {...panelChrome('jamedit')}>
+                            {panelBodies.jamedit}
                         </StudioFloatingPanel>
                     )}
                     {!jamMinimal && isOpen('scene') && (

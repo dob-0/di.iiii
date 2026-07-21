@@ -2,7 +2,7 @@ import React from 'react'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import StudioControlCluster from './StudioControlCluster.jsx'
-import { LibraryPanel } from './StudioShellPanels.jsx'
+import { JamEditPanel, LibraryPanel } from './StudioShellPanels.jsx'
 import { JAM_PRIMITIVES, PRIMITIVES } from '../utils/entityPalette.js'
 import { JAM_ALL_TOOLS_KEY, isJamProject, loadJamAllTools, saveJamAllTools } from '../utils/jamMode.js'
 
@@ -95,6 +95,55 @@ describe('minimal jam mode', () => {
             render(<LibraryPanel onCreateEntity={vi.fn()} />)
             expect(screen.getAllByRole('button').length).toBeGreaterThanOrEqual(PRIMITIVES.length)
             expect(screen.getByText('Lights')).toBeTruthy()
+        })
+    })
+
+    describe('JamEditPanel', () => {
+        const textEntity = {
+            id: 'e1',
+            type: 'text',
+            name: 'my text',
+            components: {
+                text: { value: 'hello' },
+                appearance: { color: '#ff0000' }
+            }
+        }
+
+        it('lets a first-timer change their text through the normal patch pipeline', () => {
+            const onInspectorChange = vi.fn()
+            render(<JamEditPanel entity={textEntity} onInspectorChange={onInspectorChange} onDeleteSelected={vi.fn()} />)
+            const area = screen.getByLabelText('Your text')
+            expect(area.value).toBe('hello')
+            fireEvent.change(area, { target: { value: 'hi jam' } })
+            expect(onInspectorChange).toHaveBeenCalledWith('text', { value: 'hi jam' })
+        })
+
+        it('changes color via the appearance component and removes via the delete handler', () => {
+            const onInspectorChange = vi.fn()
+            const onDeleteSelected = vi.fn()
+            render(<JamEditPanel entity={textEntity} onInspectorChange={onInspectorChange} onDeleteSelected={onDeleteSelected} />)
+            fireEvent.change(screen.getByLabelText('Color'), { target: { value: '#00ff00' } })
+            expect(onInspectorChange).toHaveBeenCalledWith('appearance', { color: '#00ff00' })
+            fireEvent.click(screen.getByRole('button', { name: /Remove/ }))
+            expect(onDeleteSelected).toHaveBeenCalledTimes(1)
+        })
+
+        it('non-text entities get color + remove but no text field; no appearance means no color', () => {
+            const box = { id: 'e2', type: 'box', components: { appearance: { color: '#123456' } } }
+            const { unmount } = render(<JamEditPanel entity={box} onInspectorChange={vi.fn()} onDeleteSelected={vi.fn()} />)
+            expect(screen.queryByLabelText('Your text')).toBeNull()
+            expect(screen.getByLabelText('Color')).toBeTruthy()
+            unmount()
+
+            const media = { id: 'e3', type: 'image', components: { media: {} } }
+            render(<JamEditPanel entity={media} onInspectorChange={vi.fn()} onDeleteSelected={vi.fn()} />)
+            expect(screen.queryByLabelText('Color')).toBeNull()
+            expect(screen.getByRole('button', { name: /Remove/ })).toBeTruthy()
+        })
+
+        it('shows a tap hint when nothing is selected', () => {
+            render(<JamEditPanel entity={null} onInspectorChange={vi.fn()} onDeleteSelected={null} />)
+            expect(screen.getByText(/Tap an object/)).toBeTruthy()
         })
     })
 

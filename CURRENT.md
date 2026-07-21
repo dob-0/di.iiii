@@ -21,6 +21,18 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
   prop-gating in `StudioControlCluster`/`LibraryPanel`/`StudioQuickInsert`;
   wiring in `StudioShell.jsx`. Tests: `StudioJamMode.test.jsx` (7 cases).
   Wiki article updated. lint/build/902 tests/wiki check all pass.
+- Follow-up (user tested staging: "can't change text"): added `JamEditPanel` —
+  jam mode's whole inspector. Desktop: floating Edit window auto-appears on
+  selection; mobile: an "Edit" tab next to Create. Text content ("Your text"),
+  appearance color, "✕ Remove" — all through the normal `updateComponent`
+  patch pipeline, so "All tools" sees identical values. +4 tests (11 jam total).
+- **Concurrent-session incident, again**: mid-work, `git status` showed fresh
+  edits in `src/seed/`, `src/project/graph/`, `nodeRegistry` + a new
+  `useDeviceEgress.js` — another live session in this same working tree (the
+  parallel-agents pattern; their in-progress `FaderControl.jsx` briefly failed
+  repo-wide lint). Followed the documented rule: staged/committed ONLY own
+  files after diffing each, validated per-file lint + targeted tests + build,
+  left their work untouched.
 - Earlier today: `/open_jam` short link + jam welcome shipped to production
   (see below).
 
