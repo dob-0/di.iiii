@@ -8,7 +8,23 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ---
 
-## This session (2026-07-21 — open-jam short link + minimal jam welcome)
+## This session (2026-07-21 later — minimal jam mode UI)
+
+- User feedback: the full Studio editor overwhelms QR newbies at `/open_jam`.
+  Shipped **minimal jam mode** — same floating-window UI, auto-on at the
+  open-jam project only: one Create window (file upload + 5 simple shapes,
+  no lights/Drive/Commons/share/delete), no Scene/World/Share/Code/Projects
+  windows, no Arrange/Hub/View-live chrome, mobile nav = Create only,
+  QuickInsert uses the same reduced palette. "⚒ All tools" ⇄ "◱ Simple"
+  toggle in the cluster (persisted per device, `di.studio.jamAllTools`).
+- New `src/studio/utils/jamMode.js` (+ `JAM_PRIMITIVES` in `entityPalette.js`);
+  prop-gating in `StudioControlCluster`/`LibraryPanel`/`StudioQuickInsert`;
+  wiring in `StudioShell.jsx`. Tests: `StudioJamMode.test.jsx` (7 cases).
+  Wiki article updated. lint/build/902 tests/wiki check all pass.
+- Earlier today: `/open_jam` short link + jam welcome shipped to production
+  (see below).
+
+## Earlier session (2026-07-21 — open-jam short link + minimal jam welcome)
 
 - Goal: a minimalist, QR-friendly way for non-technical people to join the
   communal jam and add their own visuals. Backend/auth already supported it

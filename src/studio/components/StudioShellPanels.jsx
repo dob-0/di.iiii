@@ -87,29 +87,31 @@ export function PanelHeader({ title, onClose, action = null }) {
     )
 }
 
-export function LibraryPanel({ onCreateEntity }) {
+export function LibraryPanel({ onCreateEntity, primitives = PRIMITIVES, lights = LIGHTS }) {
     return (
         <>
             <div className="scc-section">
                 <div className="scc-section-label">Primitives</div>
                 <div className="scc-buttons">
-                    {PRIMITIVES.map(({ key, label }) => (
+                    {primitives.map(({ key, label }) => (
                         <button key={key} className="scc-btn" onClick={() => onCreateEntity(key)}>
                             {label}
                         </button>
                     ))}
                 </div>
             </div>
-            <div className="scc-section">
-                <div className="scc-section-label">Lights</div>
-                <div className="scc-buttons">
-                    {LIGHTS.map(({ key, label }) => (
-                        <button key={key} className="scc-btn" onClick={() => onCreateEntity(key)}>
-                            {label}
-                        </button>
-                    ))}
+            {lights.length > 0 && (
+                <div className="scc-section">
+                    <div className="scc-section-label">Lights</div>
+                    <div className="scc-buttons">
+                        {lights.map(({ key, label }) => (
+                            <button key={key} className="scc-btn" onClick={() => onCreateEntity(key)}>
+                                {label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
         </>
     )
 }

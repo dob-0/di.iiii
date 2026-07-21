@@ -13,6 +13,8 @@ import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspa
 import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
+import { isJamProject, loadJamAllTools, saveJamAllTools } from '../utils/jamMode.js'
+import { JAM_PRIMITIVES } from '../utils/entityPalette.js'
 import {
     AssetsPanel,
     FilesPanel,
@@ -227,6 +229,21 @@ export default function StudioShell({
     const [mobileSheet, setMobileSheet] = useState(null)
     const { type: authType } = useAuthSession()
 
+    // Minimal jam mode (see utils/jamMode.js): at the communal open-jam
+    // project, strip the editor down to the common tools — unless this device
+    // opted back into the full editor via the "All tools" toggle.
+    const isJam = isJamProject(document?.projectMeta?.id)
+    const [jamAllTools, setJamAllTools] = useState(loadJamAllTools)
+    const jamMinimal = isJam && !jamAllTools
+    const handleToggleJamTools = useCallback(() => {
+        setJamAllTools((prev) => {
+            const next = !prev
+            saveJamAllTools(next)
+            return next
+        })
+    }, [])
+    const mobilePanels = jamMinimal ? MOBILE_PANELS.filter(([id]) => id === 'create') : MOBILE_PANELS
+
     // Guest first-run guidance is the action-completed coach pill
     // (StudioCoachMarks, rendered below) — the help dialog no longer
     // auto-opens over the scene; it stays behind ?.
@@ -431,7 +448,14 @@ export default function StudioShell({
     // One source of truth for each window's content, shared by the desktop
     // floating panels and the mobile bottom sheet (slice 7: Studio on phones).
     const panelBodies = {
-        create: (
+        // Jam mode: upload + a few simple shapes only — no lights, no Drive/
+        // Commons imports, no share/delete controls (all prop-gated away).
+        create: jamMinimal ? (
+            <>
+                            <LibraryPanel onCreateEntity={onCreateEntity} primitives={JAM_PRIMITIVES} lights={[]} />
+                            <AssetsPanel libraryItems={libraryItems} onAssetFilesSelected={onAssetFilesSelected} onCreateFromAsset={onCreateFromAsset} />
+            </>
+        ) : (
             <>
                             <LibraryPanel onCreateEntity={onCreateEntity} />
                             <AssetsPanel libraryItems={libraryItems} onAssetFilesSelected={onAssetFilesSelected} onCreateFromAsset={onCreateFromAsset} onDriveImportUrl={onDriveImportUrl} onDriveImportSelection={onDriveImportSelection} onToggleAssetShared={onToggleAssetShared} onCommonsImport={onCommonsImport} onDeleteLibraryItem={onDeleteLibraryItem} />
@@ -518,27 +542,27 @@ export default function StudioShell({
                             {panelBodies.create}
                         </StudioFloatingPanel>
                     )}
-                    {isOpen('scene') && (
+                    {!jamMinimal && isOpen('scene') && (
                         <StudioFloatingPanel key={`scene-${layoutKey}`} title="Scene" onClose={() => toggle('scene')} initialWidth={300} {...panelChrome('scene')}>
                             {panelBodies.scene}
                         </StudioFloatingPanel>
                     )}
-                    {isOpen('files') && (
+                    {!jamMinimal && isOpen('files') && (
                         <StudioFloatingPanel key={`files-${layoutKey}`} title="Code" onClose={() => toggle('files')} initialWidth={480} minWidth={320} maxWidth={800} {...panelChrome('files')}>
                             {panelBodies.files}
                         </StudioFloatingPanel>
                     )}
-                    {isOpen('publish') && (
+                    {!jamMinimal && isOpen('publish') && (
                         <StudioFloatingPanel key={`publish-${layoutKey}`} title="Share" onClose={() => toggle('publish')} initialWidth={360} minWidth={300} {...panelChrome('publish')}>
                             {panelBodies.publish}
                         </StudioFloatingPanel>
                     )}
-                    {isOpen('world') && (
+                    {!jamMinimal && isOpen('world') && (
                         <StudioFloatingPanel key={`world-${layoutKey}`} title="World" onClose={() => toggle('world')} initialWidth={280} {...panelChrome('world')}>
                             {panelBodies.world}
                         </StudioFloatingPanel>
                     )}
-                    {isOpen('projects') && (
+                    {!jamMinimal && isOpen('projects') && (
                         <StudioFloatingPanel key={`projects-${layoutKey}`} title="Projects" onClose={() => toggle('projects')} initialWidth={260} {...panelChrome('projects')}>
                             <StudioProjectsPanel
                                 spaceId={document?.projectMeta?.spaceId}
@@ -571,6 +595,10 @@ export default function StudioShell({
                         onStackRight={stackRight}
                         onResetLayout={resetLayout}
                         onShowHelp={() => setShowHelp(true)}
+                        panelKeys={jamMinimal ? ['create'] : null}
+                        minimal={jamMinimal}
+                        allTools={jamAllTools}
+                        onToggleAllTools={isJam ? handleToggleJamTools : null}
                     />
                 </>
             )}
@@ -578,7 +606,9 @@ export default function StudioShell({
             {!uiHidden && isMobile && (
                 <>
                     <div className="smb-topbar">
-                        <button type="button" className="smb-top-btn" onClick={onBackToHub} aria-label="Back to projects">←</button>
+                        {!jamMinimal && (
+                            <button type="button" className="smb-top-btn" onClick={onBackToHub} aria-label="Back to projects">←</button>
+                        )}
                         <span className="smb-title">{document?.projectMeta?.title || liveProjectState?.spaceLabel || 'Project'}</span>
                         <button
                             type="button"
@@ -591,14 +621,14 @@ export default function StudioShell({
                     {mobileSheet && (
                         <div className="smb-sheet">
                             <div className="smb-sheet-head">
-                                <span>{MOBILE_PANELS.find(([id]) => id === mobileSheet)?.[1]}</span>
+                                <span>{mobilePanels.find(([id]) => id === mobileSheet)?.[1]}</span>
                                 <button type="button" onClick={() => setMobileSheet(null)} aria-label="Close panel">×</button>
                             </div>
                             <div className="smb-sheet-body">{panelBodies[mobileSheet]}</div>
                         </div>
                     )}
                     <nav className="smb-nav" aria-label="Studio windows">
-                        {MOBILE_PANELS.map(([id, label]) => (
+                        {mobilePanels.map(([id, label]) => (
                             <button
                                 key={id}
                                 type="button"
@@ -627,6 +657,8 @@ export default function StudioShell({
                     onCreateFromAsset={onCreateFromAsset}
                     assets={libraryItems.filter(canPlaceInScene)}
                     onOpenCreate={() => { if (!isOpen('create')) handleTogglePanel('create') }}
+                    palette={jamMinimal ? JAM_PRIMITIVES : null}
+                    moreLabel={jamMinimal ? 'More ▸' : undefined}
                 />
             )}
 
@@ -636,7 +668,7 @@ export default function StudioShell({
                     entityCount={entities?.length || 0}
                     hasSelection={(selectedEntityIds?.length || 0) > 0 || Boolean(selectedEntityId)}
                     shareOpen={isOpen('publish') || mobileSheet === 'publish'}
-                    isOpenJam={document?.projectMeta?.id === 'open-jam'}
+                    isOpenJam={isJam}
                 />
             )}
         </div>

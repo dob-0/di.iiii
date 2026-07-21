@@ -22,3 +22,8 @@ export const LIGHTS = [
     { key: 'directionalLight', label: 'Directional', icon: '↘' },
     { key: 'ambientLight', label: 'Ambient', icon: '☀' },
 ]
+
+// Jam mode's reduced palette (see utils/jamMode.js): the shapes a first-timer
+// recognizes instantly. Derived from PRIMITIVES so labels/icons never drift.
+const JAM_PRIMITIVE_KEYS = ['box', 'sphere', 'cone', 'torus', 'text']
+export const JAM_PRIMITIVES = PRIMITIVES.filter(({ key }) => JAM_PRIMITIVE_KEYS.includes(key))

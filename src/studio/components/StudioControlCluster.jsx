@@ -37,11 +37,22 @@ export default function StudioControlCluster({
     onStackRight,
     onResetLayout,
     onShowHelp,
+    // Jam mode (communal open-jam project): `panelKeys` narrows the Windows
+    // row, `minimal` trims power-user chrome (Arrange, Hub, View live), and
+    // `onToggleAllTools` renders the escape hatch between Simple ⇄ All tools.
+    panelKeys = null,
+    minimal = false,
+    allTools = false,
+    onToggleAllTools = null,
 }) {
     const [collapsed, setCollapsed] = useState(false)
 
     const initialPos = { x: typeof window !== 'undefined' ? window.innerWidth - 400 : 880, y: 90 }
     const { panelRef, dragProps, dragStyle, panelPointerProps } = usePanelDrag(initialPos, { baseZ: 1500, snapEdges })
+
+    const panelButtons = panelKeys
+        ? PANEL_BUTTONS.filter(({ key }) => panelKeys.includes(key))
+        : PANEL_BUTTONS
 
     const canVr = xrState?.canEnterVr
     const canAr = xrState?.canEnterAr
@@ -99,7 +110,7 @@ export default function StudioControlCluster({
                         <div className="scc-section">
                             <div className="scc-section-label">Windows</div>
                             <div className="scc-buttons">
-                                {PANEL_BUTTONS.map(({ key, label }) => (
+                                {panelButtons.map(({ key, label }) => (
                                     <button
                                         key={key}
                                         className={`scc-btn ${openPanels.has(key) ? 'active' : ''}`}
@@ -117,9 +128,20 @@ export default function StudioControlCluster({
                                 <button className="scc-btn" onClick={onFullscreen} title="Toggle fullscreen">⛶ Fullscreen</button>
                                 <button className="scc-btn" onClick={onHideUI} title="Hide UI (H)">Hide UI</button>
                                 <button className="scc-btn" onClick={onShowHelp} title="Keyboard shortcuts (Shift+?)">? Help</button>
-                                <button className="scc-btn" onClick={onBackToHub} title="Back to hub">← Hub</button>
-                                {canViewLive && (
+                                {!minimal && (
+                                    <button className="scc-btn" onClick={onBackToHub} title="Back to hub">← Hub</button>
+                                )}
+                                {!minimal && canViewLive && (
                                     <button className="scc-btn" onClick={onViewLive} title="Open the public space URL in a new tab">↗ View live</button>
+                                )}
+                                {onToggleAllTools && (
+                                    <button
+                                        className="scc-btn"
+                                        onClick={onToggleAllTools}
+                                        title={allTools ? 'Back to the simple jam view' : 'Show the full editor'}
+                                    >
+                                        {allTools ? '◱ Simple' : '⚒ All tools'}
+                                    </button>
                                 )}
                             </div>
                         </div>
@@ -148,16 +170,18 @@ export default function StudioControlCluster({
                             </div>
                         )}
 
-                        <div className="scc-section">
-                            <div className="scc-section-label">Arrange</div>
-                            <div className="scc-buttons">
-                                <button className="scc-btn" onClick={onTileLayout} title="Auto-tile open panels (Shift+A)">⊞ Tile</button>
-                                <button className="scc-btn" onClick={onResetLayout} title="Reset panel positions (Shift+R)">↺ Reset</button>
-                                <button className="scc-btn" onClick={onStackLeft} title="Stack panels left">← Stack</button>
-                                <button className="scc-btn" onClick={onStackRight} title="Stack panels right">Stack →</button>
-                                <button className={`scc-btn ${snapEdges ? 'active' : ''}`} onClick={onToggleSnap} title="Snap to screen edges">⌖ Snap</button>
+                        {!minimal && (
+                            <div className="scc-section">
+                                <div className="scc-section-label">Arrange</div>
+                                <div className="scc-buttons">
+                                    <button className="scc-btn" onClick={onTileLayout} title="Auto-tile open panels (Shift+A)">⊞ Tile</button>
+                                    <button className="scc-btn" onClick={onResetLayout} title="Reset panel positions (Shift+R)">↺ Reset</button>
+                                    <button className="scc-btn" onClick={onStackLeft} title="Stack panels left">← Stack</button>
+                                    <button className="scc-btn" onClick={onStackRight} title="Stack panels right">Stack →</button>
+                                    <button className={`scc-btn ${snapEdges ? 'active' : ''}`} onClick={onToggleSnap} title="Snap to screen edges">⌖ Snap</button>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {presence?.users?.length > 0 && (
                             <div className="scc-presence">

@@ -4,7 +4,7 @@ import { LIGHTS, PRIMITIVES } from '../utils/entityPalette.js'
 // Double-click popup: the fast subset of the Create window. Same palette, same
 // create pipeline (onCreateFromAsset adopts space assets / converts PDFs), plus
 // a jump to the full Create window for Drive/Commons.
-export default function StudioQuickInsert({ position, worldPos = null, onClose, onCreateEntity, onCreateFromAsset, assets = [], onOpenCreate }) {
+export default function StudioQuickInsert({ position, worldPos = null, onClose, onCreateEntity, onCreateFromAsset, assets = [], onOpenCreate, palette = null, moreLabel = 'More — imports, Drive, Commons ▸' }) {
     useEffect(() => {
         const handler = (e) => { if (e.key === 'Escape') onClose() }
         window.addEventListener('keydown', handler)
@@ -23,7 +23,7 @@ export default function StudioQuickInsert({ position, worldPos = null, onClose, 
             <div className="sqi-popup" style={{ left, top }} onClick={(e) => e.stopPropagation()} role="none">
                 <div className="sqi-section-label">Add entity</div>
                 <div className="sqi-grid">
-                    {[...PRIMITIVES, ...LIGHTS].map(({ key, label, icon }) => (
+                    {(palette || [...PRIMITIVES, ...LIGHTS]).map(({ key, label, icon }) => (
                         <button
                             key={key}
                             className="sqi-btn"
@@ -63,7 +63,7 @@ export default function StudioQuickInsert({ position, worldPos = null, onClose, 
                         className="sqi-btn sqi-btn--more"
                         onClick={() => { onOpenCreate(); onClose() }}
                     >
-                        More — imports, Drive, Commons ▸
+                        {moreLabel}
                     </button>
                 )}
             </div>
