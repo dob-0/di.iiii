@@ -42,6 +42,29 @@ describe('studioRouting', () => {
         expect(state.spaceId).toBeNull()
     })
 
+    it('resolves the /open_jam short alias to the communal open-jam project', () => {
+        // QR-/flyer-friendly entry point: `/open_jam` must open the exact same
+        // editor state as the full `/open/studio/projects/open-jam` path, so a
+        // stranger scanning the code lands straight in the shared jam.
+        const alias = getStudioLocationState(new URL('https://example.com/open_jam'))
+        expect(alias).toEqual({
+            isStudio: true,
+            page: STUDIO_PAGE_PROJECT,
+            projectId: 'open-jam',
+            spaceId: 'open'
+        })
+        const canonical = getStudioLocationState(
+            new URL('https://example.com/open/studio/projects/open-jam')
+        )
+        expect(alias.projectId).toBe(canonical.projectId)
+        expect(alias.spaceId).toBe(canonical.spaceId)
+
+        // A trailing slash is the same door.
+        expect(
+            getStudioLocationState(new URL('https://example.com/open_jam/'))
+        ).toEqual(alias)
+    })
+
     it('parses space-scoped Studio routes', () => {
         expect(getStudioLocationState(new URL('https://example.com/gallery/studio'))).toEqual({
             isStudio: true,

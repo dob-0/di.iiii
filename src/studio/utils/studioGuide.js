@@ -157,3 +157,25 @@ export function markStudioCoachDone() {
         // storage unavailable (private mode) — coach may show again, harmless
     }
 }
+
+// The communal `/open_jam` space has its own single-beat welcome (someone who
+// scanned a QR at an event, not a returning author): one hint that dies when
+// they add their first visual. Separate key + no auth gate on purpose — every
+// visitor to the jam gets it once per device, whether guest or signed in.
+export const STUDIO_JAM_COACH_DONE_KEY = 'di.studio.jamCoachDone'
+
+export function shouldShowJamCoach() {
+    try {
+        return !window.localStorage.getItem(STUDIO_JAM_COACH_DONE_KEY)
+    } catch {
+        return false
+    }
+}
+
+export function markJamCoachDone() {
+    try {
+        window.localStorage.setItem(STUDIO_JAM_COACH_DONE_KEY, '1')
+    } catch {
+        // storage unavailable (private mode) — jam hint may show again, harmless
+    }
+}

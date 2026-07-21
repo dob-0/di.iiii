@@ -1,5 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { shouldShowStudioCoach, markStudioCoachDone } from '../utils/studioGuide.js'
+import {
+    shouldShowStudioCoach,
+    markStudioCoachDone,
+    shouldShowJamCoach,
+    markJamCoachDone
+} from '../utils/studioGuide.js'
 import '../styles/studio-coach.css'
 
 // Guest first-run coach: one hint on screen at a time, each completed by the
@@ -14,7 +19,62 @@ const STEPS = [
 const IDLE = -1
 const DONE = STEPS.length
 
-export default function StudioCoachMarks({ authType, entityCount, hasSelection, shareOpen }) {
+// Single-beat welcome for the communal `/open_jam` space. Someone scanned a QR
+// at an event — no accounts, no learning curve: one hint that dies the moment
+// they add their first visual, then a brief "you did it" that fades on its own.
+const JAM_WELCOME = 'Open Create to add your visual to the jam ✨'
+const JAM_DONE = 'Nice! ✨ Add as many as you like'
+const JAM_IDLE = 'idle'
+const JAM_WELCOMING = 'welcoming'
+const JAM_DONE_STATE = 'done'
+
+function JamCoach({ entityCount }) {
+    const [phase, setPhase] = useState(JAM_IDLE)
+    // Baseline = objects already in the jam when the hint arms. The coach only
+    // mounts after the document has loaded (StudioShell gates on !loading), so
+    // existing visuals are already counted and any increase is a real add.
+    const baseline = useRef(null)
+
+    useEffect(() => {
+        if (phase !== JAM_IDLE) return
+        if (shouldShowJamCoach()) {
+            baseline.current = entityCount
+            setPhase(JAM_WELCOMING)
+        }
+    }, [phase, entityCount])
+
+    useEffect(() => {
+        if (phase === JAM_WELCOMING && baseline.current !== null && entityCount > baseline.current) {
+            markJamCoachDone()
+            setPhase(JAM_DONE_STATE)
+        }
+    }, [phase, entityCount])
+
+    useEffect(() => {
+        if (phase !== JAM_DONE_STATE) return
+        const t = setTimeout(() => setPhase(JAM_IDLE), 4000)
+        return () => clearTimeout(t)
+    }, [phase])
+
+    if (phase === JAM_IDLE) return null
+
+    const dismiss = () => {
+        markJamCoachDone()
+        setPhase(JAM_IDLE)
+    }
+
+    return (
+        <div className="studio-coach" role="status">
+            <span className="studio-coach-label">
+                {phase === JAM_DONE_STATE ? JAM_DONE : JAM_WELCOME}
+            </span>
+            <button className="studio-coach-close" onClick={dismiss} aria-label="Dismiss guide">✕</button>
+        </div>
+    )
+}
+
+function GuestCoach({ authType, entityCount, hasSelection, shareOpen }) {
+
     const [stepIndex, setStepIndex] = useState(IDLE)
     // Entity count when the add step arms — the document loads objects
     // asynchronously, so a mount-time baseline would complete it falsely.
@@ -75,4 +135,12 @@ export default function StudioCoachMarks({ authType, entityCount, hasSelection, 
             <button className="studio-coach-close" onClick={dismiss} aria-label="Dismiss guide">✕</button>
         </div>
     )
+}
+
+// Thin dispatcher (no hooks of its own, so the branch is rules-of-hooks safe):
+// the communal jam gets its single-beat welcome, everywhere else the guest
+// first-run walkthrough.
+export default function StudioCoachMarks({ isOpenJam = false, ...props }) {
+    if (isOpenJam) return <JamCoach entityCount={props.entityCount} />
+    return <GuestCoach {...props} />
 }

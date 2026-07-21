@@ -6,6 +6,14 @@ export const STUDIO_PAGE_PROJECT = 'project'
 export const STUDIO_RESERVED_SEGMENT = 'studio'
 export const DEFAULT_STUDIO_SPACE_ID = 'main'
 
+// Friendly short entry for the communal jam. `/open_jam` is a QR-/flyer-sized
+// alias for the full `/open/studio/projects/open-jam` path; it resolves to the
+// same editor state without a redirect, so the short URL stays in the bar.
+// Kept in sync with the server's OPEN_SPACE_ID ('open') + OPEN_JAM_PROJECT_ID.
+export const OPEN_JAM_ALIAS_SEGMENT = 'open_jam'
+export const OPEN_JAM_SPACE_ID = 'open'
+export const OPEN_JAM_PROJECT_ID = 'open-jam'
+
 const { getBasePrefix, stripBasePath } = createBasePathHelpers(import.meta.env.BASE_URL || '/')
 
 export const buildStudioSpacesPath = () => {
@@ -45,6 +53,16 @@ export const getStudioLocationState = (
         .replace(/^\/+/g, '')
         .replace(/\/+$/g, '')
     const segments = relative ? relative.split('/') : []
+
+    // Short public alias: `/open_jam` -> the communal open-jam project editor.
+    if (segments.length === 1 && segments[0] === OPEN_JAM_ALIAS_SEGMENT) {
+        return {
+            isStudio: true,
+            page: STUDIO_PAGE_PROJECT,
+            projectId: OPEN_JAM_PROJECT_ID,
+            spaceId: OPEN_JAM_SPACE_ID
+        }
+    }
 
     if (segments[0] !== STUDIO_RESERVED_SEGMENT) {
         if (segments[1] !== STUDIO_RESERVED_SEGMENT || !segments[0]) {

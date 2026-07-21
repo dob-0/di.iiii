@@ -64,11 +64,12 @@ export const WIKI_ARTICLES = [
             'A sandbox only comes into existence when you actually enter it — just viewing a published space never creates one. Guest sandboxes are cleaned up after about a week of inactivity. Account sandboxes are yours for good: one untouched for about six months is folded down to a scene snapshot to keep the system lean, and your next visit restores it exactly as you left it. A sandbox holding Studio projects is never archived.',
             'Guests cannot create their own named spaces — sign in with GitHub or Google to get spaces that are yours and stay.',
             'Opening the Share window as a guest offers the two ways to keep your work: sign in (GitHub / Google) — the room comes with you: your whole sandbox, scene, projects and assets, moves onto your account automatically — or Export the project as a file you can import into any space later. The sign-in confirmation says when your sandbox came along. Existing account work is never overwritten by a later guest session.',
+            'For a live jam — an event, a workshop, a projected wall — share the short link di-studio.xyz/open_jam (or turn it into a QR code). It opens the shared Open Jam directly, and a one-line welcome shows first-timers how to add their visual. Anyone who scans can drop in an image, video or 3D model on the spot, no account needed.',
             'For admins: /admin → Manage can repoint the communal space (the guest entry), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.',
             'The landing page’s “Enter Space” button (distinct from “Step inside”) opens whichever space is set as "Main" under /admin → Manage → a space → “Set as main”. That space needs a published project to show anything; until one is set as Main, “Enter Space” falls back to a decorative walkable preview instead.'
         ],
-        tags: ['guest', 'sandbox', 'open space', 'access'],
-        updated: '2026-07-17'
+        tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr'],
+        updated: '2026-07-21'
     },
     {
         id: 'free-spaces',

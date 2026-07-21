@@ -8,6 +8,33 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ---
 
+## This session (2026-07-21 — open-jam short link + minimal jam welcome)
+
+- Goal: a minimalist, QR-friendly way for non-technical people to join the
+  communal jam and add their own visuals. Backend/auth already supported it
+  (guests get an `editor` grant on the `open` space; `open-jam` uploads work) —
+  the gap was purely UX/entry.
+- Shipped (frontend only, landed on `dev` → staging):
+  - **Short link `/open_jam`** — a QR-/flyer-sized alias resolving to the same
+    editor state as `/open/studio/projects/open-jam`, no redirect (URL stays
+    short). Added in `src/studio/utils/studioRouting.js`
+    (`OPEN_JAM_ALIAS_SEGMENT`/`_SPACE_ID`/`_PROJECT_ID`); SPA fallback in
+    `nginx.conf` already serves it. Regression test in `studioRouting.test.js`.
+  - **Minimal jam welcome** — single-beat coach at `/open_jam` only
+    ("Open Create to add your visual to the jam ✨" → "Nice! ✨ Add as many as
+    you like" on first add, then fades). Shows once per device for everyone
+    (guest or signed-in), separate from the guest walkthrough. `StudioCoachMarks.jsx`
+    refactored into a hookless dispatcher + `GuestCoach`/`JamCoach`; helpers in
+    `studioGuide.js` (`STUDIO_JAM_COACH_DONE_KEY`, `shouldShowJamCoach`,
+    `markJamCoachDone`); flag wired from `StudioShell.jsx`
+    (`document.projectMeta.id === 'open-jam'`). Tests in `StudioCoachMarks.test.jsx`.
+  - Wiki updated (`wikiContent.js`, `guest-and-sandbox-modes` article).
+- Validation (Node 22 via `brew node@22` — this Mac's default Node 25 breaks
+  jsdom's localStorage, an env-only issue): lint clean, build passes, 794/794
+  tests, wiki check passes.
+- Not done: live click-through on staging (owed after the push's deploy
+  settles); not promoted to `main`/production — user has only asked for `dev`.
+
 ## Last commit
 
 `dev` at `a6f4b20d` — pushed, matches `origin/dev`. Staging deploy

@@ -636,6 +636,7 @@ export default function StudioShell({
                     entityCount={entities?.length || 0}
                     hasSelection={(selectedEntityIds?.length || 0) > 0 || Boolean(selectedEntityId)}
                     shareOpen={isOpen('publish') || mobileSheet === 'publish'}
+                    isOpenJam={document?.projectMeta?.id === 'open-jam'}
                 />
             )}
         </div>

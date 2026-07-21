@@ -2,7 +2,7 @@ import React from 'react'
 import { act, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import StudioCoachMarks from './StudioCoachMarks.jsx'
-import { STUDIO_COACH_DONE_KEY } from '../utils/studioGuide.js'
+import { STUDIO_COACH_DONE_KEY, STUDIO_JAM_COACH_DONE_KEY } from '../utils/studioGuide.js'
 
 const baseProps = {
     authType: 'guest',
@@ -57,5 +57,45 @@ describe('StudioCoachMarks', () => {
         render(<StudioCoachMarks {...baseProps} />)
         screen.getByLabelText('Dismiss guide').click()
         expect(window.localStorage.getItem(STUDIO_COACH_DONE_KEY)).toBe('1')
+    })
+
+    describe('open-jam welcome', () => {
+        beforeEach(() => {
+            window.localStorage.removeItem(STUDIO_JAM_COACH_DONE_KEY)
+        })
+
+        it('shows a single welcome, then celebrates the first add and fades', () => {
+            vi.useFakeTimers()
+            try {
+                // Jam welcome shows for anyone (even signed-in), unlike the guest coach.
+                const { rerender } = render(
+                    <StudioCoachMarks {...baseProps} authType="session" entityCount={5} isOpenJam />
+                )
+                expect(screen.getByText(/Open Create to add your visual/)).toBeTruthy()
+
+                // Adding a visual (count above the arm-time baseline) completes it.
+                rerender(<StudioCoachMarks {...baseProps} authType="session" entityCount={6} isOpenJam />)
+                expect(screen.getByText(/Add as many as you like/)).toBeTruthy()
+                expect(window.localStorage.getItem(STUDIO_JAM_COACH_DONE_KEY)).toBe('1')
+
+                act(() => { vi.advanceTimersByTime(4500) })
+                expect(screen.queryByRole('status')).toBeNull()
+            } finally {
+                vi.useRealTimers()
+            }
+        })
+
+        it('existing jam visuals loading in do not falsely complete the welcome', () => {
+            const { rerender } = render(<StudioCoachMarks {...baseProps} entityCount={2} isOpenJam />)
+            // The count arms at 2; it never grows past that baseline here.
+            rerender(<StudioCoachMarks {...baseProps} entityCount={2} isOpenJam />)
+            expect(screen.getByText(/Open Create to add your visual/)).toBeTruthy()
+        })
+
+        it('does not show once dismissed on this device', () => {
+            window.localStorage.setItem(STUDIO_JAM_COACH_DONE_KEY, '1')
+            render(<StudioCoachMarks {...baseProps} entityCount={0} isOpenJam />)
+            expect(screen.queryByRole('status')).toBeNull()
+        })
     })
 })
