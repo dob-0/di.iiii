@@ -65,7 +65,9 @@ describe('StudioHub', () => {
         vi.spyOn(window, 'confirm').mockImplementation(() => true)
     })
 
-    it('forwards the open-space hub straight into the shared jam project', async () => {
+    // The replace matters as much as the forward: pushing left /open/studio in
+    // history, so Back re-entered the door and bounced forward again — a trap.
+    it('forwards the open-space hub straight into the shared jam project, replacing history', async () => {
         authState = { role: null, openSpaceId: 'open' }
         listProjects.mockResolvedValue([
             { id: 'open-jam', title: 'Open Jam', updatedAt: Date.now(), source: 'studio-v3' }
@@ -74,7 +76,10 @@ describe('StudioHub', () => {
         render(<StudioHub spaceId="open" />)
 
         await waitFor(() =>
-            expect(navigateToStudioPath).toHaveBeenCalledWith('/open/studio/projects/open-jam')
+            expect(navigateToStudioPath).toHaveBeenCalledWith(
+                '/open/studio/projects/open-jam',
+                { replace: true }
+            )
         )
     })
 

@@ -82,11 +82,14 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     // The open space is a door, not a lobby: forward straight into the shared
     // jam project so "step inside" lands in 3D. ?browse=1 keeps the project
     // list reachable for management.
+    // The forward REPLACES its history entry — pushing left the door itself in
+    // history, so browser Back returned to /open/studio, which immediately
+    // re-forwarded: visitors could never get back to where they came from.
     useEffect(() => {
         if (!openSpaceId || spaceId !== openSpaceId) return
         if (new URLSearchParams(window.location.search).has('browse')) return
         const jam = projects.find(p => p.id === 'open-jam') || projects[0]
-        if (jam) navigateToStudioPath(buildStudioProjectPath(jam.id, spaceId))
+        if (jam) navigateToStudioPath(buildStudioProjectPath(jam.id, spaceId), { replace: true })
     }, [projects, spaceId, openSpaceId])
 
     const openProject = (projectId) =>
