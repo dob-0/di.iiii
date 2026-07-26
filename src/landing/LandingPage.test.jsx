@@ -4,6 +4,9 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('../components/GridFloorBackground.jsx', () => ({ default: () => <div data-testid="mock-grid-bg" /> }))
 vi.mock('../services/serverSpaces.js', () => ({ getServerConfig: () => Promise.resolve({}) }))
 
+const sessionState = { authenticated: false, type: null }
+vi.mock('../hooks/useAuthSession.js', () => ({ default: () => ({ ...sessionState }) }))
+
 window.matchMedia = window.matchMedia || (() => ({
     matches: false,
     addEventListener: () => {},
@@ -26,7 +29,8 @@ describe('LandingPage CTA routing', () => {
         }
     })
 
-    it('points every Studio/"Open Studio" link at the browsable open-space hub, not the jam-forwarding door', () => {
+    it('points Studio/"Open Studio" links at the browsable open-space hub for guests, not the jam-forwarding door', () => {
+        Object.assign(sessionState, { authenticated: false, type: null })
         render(<LandingPage />)
         const studioLinks = [
             ...screen.getAllByRole('link', { name: 'Studio' }),
@@ -38,7 +42,23 @@ describe('LandingPage CTA routing', () => {
         }
     })
 
+    it('sends signed-in (non-guest) sessions to their own Spaces hub, but keeps guest sessions on the sandbox', () => {
+        Object.assign(sessionState, { authenticated: true, type: 'user' })
+        const { unmount } = render(<LandingPage />)
+        for (const link of screen.getAllByRole('link', { name: 'Open Studio' })) {
+            expect(link.getAttribute('href')).toBe('/studio')
+        }
+        unmount()
+
+        Object.assign(sessionState, { authenticated: true, type: 'guest' })
+        render(<LandingPage />)
+        for (const link of screen.getAllByRole('link', { name: 'Open Studio' })) {
+            expect(link.getAttribute('href')).toBe('/open/studio?browse=1')
+        }
+    })
+
     it('keeps "Step inside" pointing at the plain open-space door (jam forward stays active)', () => {
+        Object.assign(sessionState, { authenticated: true, type: 'user' })
         render(<LandingPage />)
         const doors = screen.getAllByRole('link', { name: 'Step inside' })
         expect(doors.length).toBeGreaterThan(0)

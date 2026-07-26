@@ -5,7 +5,8 @@ import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { buildBetaHubPath } from '../beta/utils/betaRouting.js'
-import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
+import { buildStudioHubPath, buildStudioSpacesPath } from '../studio/utils/studioRouting.js'
+import useAuthSession from '../hooks/useAuthSession.js'
 
 // "Try Beta"/"Open Studio" must land guests somewhere they can actually edit.
 // The bare '/beta'/'/studio' routes default to the 'main' space — di.iiii's
@@ -118,6 +119,12 @@ const CAPABILITIES = [
 ]
 
 export default function LandingPage() {
+    // "Open Studio" means different things to different visitors: someone
+    // signed in expects their own spaces, a guest needs the communal sandbox
+    // (the only place a guest session can edit). Guests and the pre-fetch
+    // default share the sandbox href, so nothing jumps while the session loads.
+    const { authenticated, type } = useAuthSession()
+    const studioHref = authenticated && type !== 'guest' ? buildStudioSpacesPath() : OPEN_STUDIO_HREF
     const [entered, setEntered] = useState(false)
     // Walk/fly and the calm orbiting view are both rendered by the same
     // GridFloorBackground while "entered" -- previously the only way back to
@@ -187,12 +194,12 @@ export default function LandingPage() {
                 <nav className="lp-nav">
                     <a href="/" className="lp-nav-logo">di<span className="lp-dot">.</span>iiii</a>
                     <div className="lp-nav-links">
-                        <a href={OPEN_STUDIO_HREF} className="lp-nav-link">Studio</a>
+                        <a href={studioHref} className="lp-nav-link">Studio</a>
                         <a href={TRY_BETA_HREF} className="lp-nav-link">Beta</a>
                         <a href={buildWikiPath()} className="lp-nav-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
                     </div>
-                    <a href={OPEN_STUDIO_HREF} className="lp-nav-cta">Open Studio</a>
+                    <a href={studioHref} className="lp-nav-cta">Open Studio</a>
                 </nav>
             )}
 
@@ -220,7 +227,7 @@ export default function LandingPage() {
                         <Button className="landing-cta-primary" variant="contained" size="large" href="/open/studio">
                             Step inside
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={OPEN_STUDIO_HREF}>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref}>
                             Open Studio
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={TRY_BETA_HREF}>
@@ -506,7 +513,7 @@ export default function LandingPage() {
                         <Button className="landing-cta-primary" variant="contained" size="large" href="/open/studio">
                             Step inside
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={OPEN_STUDIO_HREF}>
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref}>
                             Open Studio
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={TRY_BETA_HREF}>
@@ -530,7 +537,7 @@ export default function LandingPage() {
                 <div className="lp-footer-inner">
                     <span className="lp-footer-brand">di<span className="lp-dot">.</span>iiii</span>
                     <nav className="lp-footer-nav" aria-label="Footer navigation">
-                        <a href={OPEN_STUDIO_HREF} className="lp-footer-link">Studio</a>
+                        <a href={studioHref} className="lp-footer-link">Studio</a>
                         <a href={TRY_BETA_HREF} className="lp-footer-link">Beta</a>
                         <a href={buildWikiPath()} className="lp-footer-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
