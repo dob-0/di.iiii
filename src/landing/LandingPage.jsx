@@ -15,7 +15,10 @@ import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
 // the separate "Enter Space" button. Point both at the communal 'open' space
 // instead, which every session (guest included) already has implicit access to.
 const TRY_BETA_HREF = buildBetaHubPath('open')
-const OPEN_STUDIO_HREF = buildStudioHubPath('open')
+// The open-space hub is a door, not a lobby: it forwards straight into the
+// communal jam project. "Step inside" wants exactly that; "Open Studio"
+// promises the actual editor hub, so it opts out via ?browse=1.
+const OPEN_STUDIO_HREF = `${buildStudioHubPath('open')}?browse=1`
 import './landing.css'
 
 const FEATURED_SPACES = [

@@ -26,7 +26,7 @@ describe('LandingPage CTA routing', () => {
         }
     })
 
-    it('points every Studio/"Open Studio" link at the open sandbox space, not the bare /studio route', () => {
+    it('points every Studio/"Open Studio" link at the browsable open-space hub, not the jam-forwarding door', () => {
         render(<LandingPage />)
         const studioLinks = [
             ...screen.getAllByRole('link', { name: 'Studio' }),
@@ -34,6 +34,15 @@ describe('LandingPage CTA routing', () => {
         ]
         expect(studioLinks.length).toBeGreaterThan(0)
         for (const link of studioLinks) {
+            expect(link.getAttribute('href')).toBe('/open/studio?browse=1')
+        }
+    })
+
+    it('keeps "Step inside" pointing at the plain open-space door (jam forward stays active)', () => {
+        render(<LandingPage />)
+        const doors = screen.getAllByRole('link', { name: 'Step inside' })
+        expect(doors.length).toBeGreaterThan(0)
+        for (const link of doors) {
             expect(link.getAttribute('href')).toBe('/open/studio')
         }
     })
