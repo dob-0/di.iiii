@@ -10,24 +10,22 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-`dev` = `main` = prod = staging = `bada1cbd` — all pushed, both deploys
-green, both envs live-verified 2026-07-26. Production hold is lifted:
-everything through the open-jam feature set is live.
+`dev` = staging = `46e3f62b`, deploy green and live-verified. `main` = prod
+= `bada1cbd` — **3 commits behind `dev`**, ready to promote on request.
+Everything through the open-jam feature set is live on prod.
 
-## Last session (2026-07-26 — Open Studio un-hijacked, CI audit unblocked, dev→main)
+## Last session (2026-07-26 pm — staging verify, open-space back-trap fixed)
 
-- Fixed user-reported bug: logged-out landing "Open Studio" dumped visitors
-  into the stripped-down jam editor (`StudioHub`'s open-space auto-forward
-  caught the CTA). Landing "Open Studio"/"Studio" now use `?browse=1`;
-  "Step inside" keeps the plain jam door. Tests lock both (`6c795fce`).
-- Staging deploy then failed on CI's `npm audit --audit-level=high` gate:
-  new libvips CVEs in transitive `sharp@0.34.5`. Root `overrides` now forces
-  `sharp@^0.35.3` (`bada1cbd`). 2 moderate react-router advisories remain —
-  fix is a breaking v7 upgrade, deliberately deferred; they don't gate.
-- Rebased a diverged local `dev` (concurrent-session recap vs pushed
-  open-jam work); moved all Jul 16–21 session detail into PROGRESS.md.
-- Promoted `dev → main` on user request; verified live headlessly on both
-  envs (hrefs correct, zero page errors).
+- Verified the unshipped `dev` delta live on staging headlessly: landing
+  Studio/"Open Studio" → `/open/studio?browse=1` (browsable hub), "Step
+  inside" → `/open/studio` (jam door), zero page errors; lint clean,
+  908/908 tests pass.
+- Fixed user-reported bug: browser Back was dead after "Step inside" — the
+  open-space auto-forward *pushed*, so Back popped to `/open/studio` and its
+  forward effect immediately re-entered. Now forwards with `{ replace: true }`
+  (`46e3f62b`); test asserts the option, known-fixes records the trap shape.
+- Staging deploy green; verified live: landing → "Step inside" → jam editor
+  → Back returns to the landing page.
 
 ## What works
 
@@ -40,8 +38,12 @@ everything through the open-jam feature set is live.
 
 ## Open
 
-- Owner-logged-in click-throughs still owed: admin slug-edit UI,
-  ProjectSwitcher "Copy link", admin/preferences reorg visual check.
+- Promote `dev → main` (3 commits: session-aware Studio links, back-trap
+  fix, recap) — staging-verified, awaiting the go-ahead.
+- Owner-logged-in click-throughs still owed, and they need your login on
+  staging: signed-in landing → `/studio` branch (unit-tested only), admin
+  slug-edit UI, ProjectSwitcher "Copy link", admin/preferences reorg.
+- Dependabot `@react-three/drei` 9→10 PR fails CI in 19s (major bump).
 - Nested-World WebGL context-loss/tab-freeze bug — reproduced, unfixed.
 - react-router v7 upgrade (2 moderate advisories); ~23 untriaged audit
   findings; stale GitHub App key; off-box backup copy missing.
