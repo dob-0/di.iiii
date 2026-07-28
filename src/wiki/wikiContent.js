@@ -301,6 +301,24 @@ export const WIKI_ARTICLES = [
         updated: '2026-07-02'
     },
     {
+        id: 'upload-privacy',
+        category: 'Editing',
+        title: 'What happens to a photo you upload',
+        summary: 'Uploaded images have their embedded camera metadata — including GPS location — removed before they are stored.',
+        body: [
+            'Photos carry hidden EXIF metadata: the GPS coordinates where the shot was taken, the device model, the exact timestamp. Because published spaces are public, anyone who could see the image could read that data too.',
+            { list: [
+                'Images (JPEG, PNG, WebP, TIFF, AVIF, GIF) are re-encoded on upload and stored without EXIF, IPTC or XMP metadata.',
+                'Rotation is preserved: the orientation is applied to the pixels before the tag is discarded, so portrait photos stay upright.',
+                'SVG files are left untouched — re-encoding would turn a vector into a bitmap.',
+                'Video, audio, 3D models and archives are stored as uploaded; their metadata is not stripped.',
+                'This applies to new uploads. Images uploaded before this change keep the metadata they arrived with.'
+            ] }
+        ],
+        tags: ['assets', 'uploads', 'privacy', 'exif', 'photos'],
+        updated: '2026-07-29'
+    },
+    {
         id: 'open-call-applications',
         category: 'Spaces & access',
         title: 'Open-call applications',

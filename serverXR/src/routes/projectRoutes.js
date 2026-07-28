@@ -2,6 +2,7 @@ const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
+const { scrubImageMetadata } = require('../assetScrub')
 const { getSpaceBlobPaths, storeBlobFromFile } = require('../blobStore')
 const { createKeyedLock } = require('../asyncLock')
 
@@ -386,7 +387,17 @@ function registerProjectRoutes(router, {
       await ensureSpaceWritable(project.spaceId)
       const { assetsDir } = getProjectPaths(spacesDir, project.spaceId, project.projectId)
       await fsp.mkdir(assetsDir, { recursive: true })
-      let assetId = req.body?.assetId ? String(req.body.assetId).trim() : ''
+      // Strip EXIF/GPS before anything hashes the file — the id must address
+      // the bytes we actually store and serve.
+      const scrub = await scrubImageMetadata(req.file.path)
+      // multer's recorded size is stale once scrubbing rewrites the file, and
+      // the upload is moved into the blob store below — stat it while it's here
+      const scrubbedSize = await fsp.stat(req.file.path).then((s) => s.size).catch(() => req.file.size)
+      // A scrubbed file no longer hashes to the id the client computed from the
+      // original, so its requested id is dropped and the content address is
+      // recomputed below. Callers already remap ids from the response (bundle
+      // import in StudioEditor/BetaHub). Un-rewritten files keep the strict check.
+      let assetId = (req.body?.assetId && !scrub.scrubbed) ? String(req.body.assetId).trim() : ''
       if (assetId) {
         if (!isValidAssetId(assetId)) {
           await fsp.rm(req.file.path, { force: true }).catch(() => {})
@@ -428,7 +439,11 @@ function registerProjectRoutes(router, {
         await fsp.rm(finalPath, { force: true })
         await fsp.rename(req.file.path, finalPath)
       }
-      const assetMeta = buildProjectAssetMeta({ assetId, file: req.file, source: 'server' })
+      const assetMeta = buildProjectAssetMeta({
+        assetId,
+        file: { ...req.file, size: scrubbedSize },
+        source: 'server'
+      })
       await writeJson(metaPath, assetMeta)
       const url = `${req.baseUrl || ''}/api/projects/${project.projectId}/assets/${assetId}`
       await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, { touch: true })

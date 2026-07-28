@@ -2,6 +2,7 @@ const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
+const { scrubImageMetadata } = require('../assetScrub')
 const defaultGoogleDrive = require('../googleDrive')
 const { getOwnSandboxSpaceId, isGuestSubject } = require('../authAccess')
 const driveAccount = require('../googleDriveAccount')
@@ -566,8 +567,16 @@ function registerSpaceRoutes(router, {
       await ensureSpaceWritable(spaceId)
       const { assetsDir } = getSpacePaths(spaceId)
       await fsp.mkdir(assetsDir, { recursive: true })
+      // Strip EXIF/GPS before anything hashes the file — the id must address
+      // the bytes we actually store and serve.
+      const scrub = await scrubImageMetadata(req.file.path)
       let assetId = ''
-      if (req.body?.assetId) {
+      // A scrubbed file no longer hashes to the id the client computed from the
+      // original, so its requested id is moot — the content address is
+      // recomputed below and returned. Callers already remap ids from the
+      // response (bundle import in StudioEditor/BetaHub does exactly this).
+      // Anything we did NOT rewrite keeps the strict check unchanged.
+      if (req.body?.assetId && !scrub.scrubbed) {
         const requested = String(req.body.assetId).trim()
         if (!isValidAssetId(requested)) {
           await fsp.rm(req.file.path, { force: true }).catch(() => {})
@@ -607,7 +616,9 @@ function registerSpaceRoutes(router, {
         id: assetId,
         name: req.file.originalname || assetId,
         mimeType: req.file.mimetype || 'application/octet-stream',
-        size: req.file.size || 0,
+        // re-stat rather than trusting req.file.size — scrubbing rewrites the
+        // file, so multer's recorded size is stale for every scrubbed image
+        size: (await fsp.stat(finalPath).then((s) => s.size).catch(() => req.file.size)) || 0,
         createdAt: Date.now()
       }
       await writeJson(metaPath, meta)
