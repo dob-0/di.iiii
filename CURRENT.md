@@ -10,53 +10,45 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-`dev` = `535365c9`, **1 commit unpushed**; staging = `46e3f62b`, deploy green
-and live-verified. `main` = prod = `bada1cbd` — **4 commits behind `dev`**,
-ready to promote on request. Open-jam feature set is live on prod.
+`origin/dev` = `origin/main` = prod = staging = `9c63b76f`, deploys green, prod
+health 200. Local `dev` is **3 ahead, unpushed** (EXIF stripping + two docs).
+Several agents share this tree: re-check `git log` before assuming your commits
+are still local, and **stage explicit paths, never `git add -A`**.
 
-## Last session (2026-07-26 — back-trap fix, then URL architecture spec)
+## Last session (2026-07-28/29 — bug fixes, then a privacy audit)
 
-- Fixed: Back was dead after "Step inside" — the open-space forward *pushed*,
-  so Back re-entered the jam door. Now `{ replace: true }` (`46e3f62b`),
-  verified live; test + known-fixes row shipped.
-- Routing defects named: editor is a path but admin a query param; app words
-  and user slugs share one namespace (reserved list holds two typos);
-  `RootApp.jsx` dispatch order is the real spec; no mode axis.
-- Product decision: **space contents nest to arbitrary depth** — kills
-  mode-as-suffix (`/{space}/{path}/edit` is indistinguishable from a child
-  named `edit`) and forces a namespace split.
-- Chose host split: `di-studio.xyz` = the work, `studio.di-studio.xyz` = the
-  platform, identical paths on both, `-` the only reserved token anywhere.
-  Rejected GitLab's `/-/` infix — scars every creator URL.
-- Wrote `docs/architecture/SPEC_url_architecture_and_tree_addressing.md`
-  (draft, no code): route tables, 4 stages, redirect map, cookie/CORS/Caddy
-  surface, security review, done criteria, 9 test contracts.
+- Seed nested worlds froze the tab: panel windows filtered the *whole document*,
+  so every `universe.world` at any depth held a live `<Canvas>` past the
+  browser's ~16-context cap. Now scoped via `selectMountedPanelNodes`.
+  **Live on prod, never checked in a browser.**
+- `syncRoutes` pull test made a *real* network call (8s timeout inside a 5s
+  test timeout) — passed only where DNS failed fast. Suite now 923/923.
+- Uploads leaked EXIF/GPS; `serverXR/src/assetScrub.js` now strips on ingest.
+  **Not retroactive** — existing assets keep their metadata.
+- Read `docs/ai/dependency-decisions.md` and `docs/ai/privacy-data-inventory.md`
+  *before* touching deps or writing `/privacy`.
 
 ## What works
 
-- Studio (six desktop panels + phone layout), Beta, WCC, viewer; auth
-  (session-cookie, roles, OAuth-first) + open-space/sandbox grants
-- Open Jam live on prod: `/open_jam`, minimal jam mode + JamEditPanel
-- Vanity links live; deploy via `git push origin dev|main`; nightly VPS
-  backups; `src/seed/` dev lane (free nesting, verified live)
+Studio (six panels + phone), Beta, Seed, WCC, viewer; auth (session-cookie,
+roles, OAuth-first) + open-space/sandbox grants; Open Jam and vanity links live;
+deploy via `git push origin dev|main`; nightly VPS backups (local only).
 
 ## Open
 
-- Push `dev` (1 ahead), then promote `dev → main` (4) — staging-verified,
-  awaiting the go-ahead.
-- URL spec needs sign-off; its §7 blocks Stage 2 and needs product calls:
-  `entities[]` vs `nodes[]` for one addressable tree, what a node's URL does
-  when it *moves* (rename solved, reparent isn't), slug uniqueness scope,
-  single-host fallback for self-host. Nodes have no `slug` — Stage 2 is a
-  schema change. Supersedes the routing half of `SPEC_space_urls_*`.
-- Owner-logged-in click-throughs owed, need your login on staging: signed-in
-  landing → `/studio`, admin slug-edit UI, "Copy link", reorg.
-- Nested-World WebGL context-loss/tab-freeze bug — reproduced, unfixed.
-- `@react-three/drei` 9→10 fails CI; react-router v7 (2 moderate advisories);
-  ~23 untriaged audit findings; stale GitHub App key; no off-box backup;
-  `main` branch protection bypassable; `/privacy` unwired.
-- Promo/licensing: demo recording, warm contacts, outbound approvals owed.
-  `docs/ai/INBOX.md`: sound-in-spaces parked.
+- **Owed browser tests:** Seed deep nesting (fullscreen + back edges); EXIF
+  round-trip on a real sideways portrait.
+- 13 dependabot PRs, 0 issues. #78 drei 10, #76 express 5, #79 jsdom 29 are
+  majors — check `dependency-decisions.md` first.
+- Privacy, product calls owed: no account-deletion path, no export, no session
+  revocation. WCC still loads Google Fonts from Google (visitor IP leak).
+- URL spec §7 needs sign-off; blocks Stage 2 (a schema change — nodes have no
+  slug). `docs/architecture/SPEC_url_architecture_and_tree_addressing.md`.
+- Owner-logged-in click-throughs owed on staging.
+- **No off-box backup** — one Hetzner box, 14-day retention. Largest risk. Also
+  stale GitHub App key, `main` protection bypassable.
+- A `main` deploy failed 2026-07-28 12:45 on a docs-only commit — unexplained.
+- `docs/ai/INBOX.md`: sound-in-spaces. Promo/licensing outbound owed.
 
 ## Known fixes → [docs/ai/known-fixes.md](docs/ai/known-fixes.md) — check before any bug hunt.
 
