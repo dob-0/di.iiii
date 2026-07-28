@@ -1,6 +1,7 @@
 // @vitest-environment node
 
 import http from 'node:http'
+import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
@@ -164,5 +165,33 @@ describe('mesh hub coexists with Socket.IO and speaks the co-presence protocol',
       })
     })
     expect(outcome).not.toBe('opened')
+  })
+})
+
+// The hub is only ever reached through the client container's nginx. The VPS
+// migration (2026-07-15) rebuilt that config and carried over the socket.io
+// upgrade rule but not the mesh one, so nginx stripped the hop-by-hop Upgrade
+// headers and the hub answered 404 in production while every test here — which
+// talks to the Node server directly — stayed green.
+describe('nginx proxies the mesh path as a websocket', () => {
+  const conf = readFileSync(new URL('../../nginx.conf', import.meta.url), 'utf8')
+  const meshPath = getMeshPath('/serverXR')
+
+  const meshBlock = conf.match(
+    new RegExp(`location\\s+${meshPath}\\b[^{]*\\{([\\s\\S]*?)\\n\\s*\\}`)
+  )?.[1]
+
+  it('has a location block for the mesh path', () => {
+    expect(meshBlock, `nginx.conf has no "location ${meshPath}" block`).toBeTruthy()
+  })
+
+  it('forwards the upgrade handshake', () => {
+    expect(meshBlock).toMatch(/proxy_http_version\s+1\.1/)
+    expect(meshBlock).toMatch(/proxy_set_header\s+Upgrade\s+\$http_upgrade/)
+    expect(meshBlock).toMatch(/proxy_set_header\s+Connection\s+"upgrade"/)
+  })
+
+  it('preserves the /serverXR prefix — the hub matches the full path', () => {
+    expect(meshBlock).toMatch(new RegExp(`proxy_pass\\s+http://server:4000${meshPath}\\s*;`))
   })
 })
