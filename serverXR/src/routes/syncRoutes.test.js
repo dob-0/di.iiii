@@ -74,7 +74,15 @@ describe('registerSyncRoutes space id validation', () => {
 // space explicitly marked read-only (allowEdits: false) could still be
 // overwritten via sync.
 describe('registerSyncRoutes read-only enforcement', () => {
-  const setup = (ensureSpaceWritable, replaceSceneAndBroadcast = vi.fn().mockResolvedValue({ newVersion: 1 })) => {
+  // httpRequest is always injected: the default reaches node:https for real,
+  // and `https://live.example` is a resolvable-looking host with an 8s client
+  // timeout — inside a 5s test timeout that's a hang, not a failure, so the
+  // suite passed only where DNS happened to reject fast.
+  const setup = (
+    ensureSpaceWritable,
+    replaceSceneAndBroadcast = vi.fn().mockResolvedValue({ newVersion: 1 }),
+    httpRequest = vi.fn().mockRejectedValue(new Error('live server unreachable'))
+  ) => {
     const router = makeFakeRouter()
     registerSyncRoutes(router, {
       config: { liveSync: { url: 'https://live.example', token: '' }, directories: { root: '/data/spaces' } },
@@ -82,7 +90,8 @@ describe('registerSyncRoutes read-only enforcement', () => {
       readJson: vi.fn(),
       normalizeSpaceId,
       ensureSpaceWritable,
-      replaceSceneAndBroadcast
+      replaceSceneAndBroadcast,
+      httpRequest
     })
     return router
   }
@@ -106,7 +115,9 @@ describe('registerSyncRoutes read-only enforcement', () => {
 
   it('pull proceeds to fetch the live scene when the space is writable', async () => {
     const ensureSpaceWritable = vi.fn().mockResolvedValue({ allowEdits: true })
-    const router = setup(ensureSpaceWritable)
+    const unreachable = new Error('live server unreachable')
+    const httpRequest = vi.fn().mockRejectedValue(unreachable)
+    const router = setup(ensureSpaceWritable, undefined, httpRequest)
     const [handler] = router.routes['post /api/sync/spaces/:spaceId/pull']
 
     const req = { params: { spaceId: 'open-space' } }
@@ -115,11 +126,11 @@ describe('registerSyncRoutes read-only enforcement', () => {
     await handler(req, res, next)
 
     expect(ensureSpaceWritable).toHaveBeenCalledWith('open-space')
-    // With no real live server reachable, this fails downstream (next
-    // called with the network error) rather than being blocked up front —
-    // proving ensureSpaceWritable isn't what stopped it.
-    expect(next).toHaveBeenCalled()
-    expect(next.mock.calls[0][0]).not.toBe(undefined)
+    // Reaching the live fetch at all is the point: the writable check let it
+    // through. It then fails downstream on the unreachable server (next with
+    // the network error), never blocked up front.
+    expect(httpRequest).toHaveBeenCalled()
+    expect(next).toHaveBeenCalledWith(unreachable)
   })
 })
 
