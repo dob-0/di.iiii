@@ -1,8 +1,53 @@
 import { describe, expect, it } from 'vitest'
 import {
     clampWindowFrame,
-    getWorkspaceTopInset
+    getWorkspaceTopInset,
+    selectMountedPanelNodes
 } from './windowLayout.js'
+
+describe('selectMountedPanelNodes', () => {
+    const isPanel = (node) => node.panel === true
+    const world = (id, parentId) => ({ id, parentId, panel: true })
+    const deepChain = Array.from({ length: 24 }, (_, i) => world(`w${i}`, i === 0 ? null : `w${i - 1}`))
+
+    it('mounts only panels whose parent is the current scope', () => {
+        expect(selectMountedPanelNodes({ nodes: deepChain, isPanel, currentScopeId: null })
+            .map((node) => node.id)).toEqual(['w0'])
+        expect(selectMountedPanelNodes({ nodes: deepChain, isPanel, currentScopeId: 'w7' })
+            .map((node) => node.id)).toEqual(['w8'])
+    })
+
+    it('never mounts a whole nested chain at once — the WebGL context cap is ~16', () => {
+        const mounted = selectMountedPanelNodes({ nodes: deepChain, isPanel, currentScopeId: null })
+        expect(mounted.length).toBeLessThan(16)
+    })
+
+    it('mounts nothing behind a fullscreen world', () => {
+        expect(selectMountedPanelNodes({
+            nodes: deepChain,
+            isPanel,
+            currentScopeId: null,
+            isWorldFullscreen: true
+        })).toEqual([])
+    })
+
+    it('skips non-panel nodes and explicitly hidden frames', () => {
+        const nodes = [
+            { id: 'a', parentId: null, panel: true },
+            { id: 'b', parentId: null, panel: false },
+            { id: 'c', parentId: null, panel: true, values: { frame: { visible: false } } },
+            { id: 'd', parentId: null, panel: true, values: { frame: { visible: true } } }
+        ]
+        expect(selectMountedPanelNodes({ nodes, isPanel, currentScopeId: null })
+            .map((node) => node.id)).toEqual(['a', 'd'])
+    })
+
+    it('treats undefined parentId and null scope as the same root', () => {
+        const nodes = [{ id: 'root-child', panel: true }]
+        expect(selectMountedPanelNodes({ nodes, isPanel, currentScopeId: undefined })
+            .map((node) => node.id)).toEqual(['root-child'])
+    })
+})
 
 describe('windowLayout', () => {
     it('computes a workspace inset from the topbar bottom edge', () => {

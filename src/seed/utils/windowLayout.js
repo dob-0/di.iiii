@@ -9,6 +9,25 @@ export function getWorkspaceTopInset({ topbarRect = null, padding = 8 } = {}) {
     return bottom > 0 ? bottom + padding : DEFAULT_SEED_WORKSPACE_TOP
 }
 
+// Which panel windows actually get mounted. Every mounted world panel holds a
+// live WebGL context, and browsers cap concurrent contexts (~16) — past that
+// they start killing the oldest, which the context guard answers by remounting,
+// which kills another, and the tab freezes. So: only panels in the current
+// scope, and none at all behind a fullscreen world that covers them anyway.
+export function selectMountedPanelNodes({
+    nodes = [],
+    isPanel = () => false,
+    currentScopeId = null,
+    isWorldFullscreen = false
+} = {}) {
+    if (isWorldFullscreen) return []
+    return nodes.filter((node) => (
+        isPanel(node)
+        && (node.parentId || null) === (currentScopeId || null)
+        && node.values?.frame?.visible !== false
+    ))
+}
+
 export function clampWindowFrame(frame = {}, bounds = {}) {
     const minTop = Number.isFinite(bounds.minTop) ? bounds.minTop : DEFAULT_SEED_WORKSPACE_TOP
     const allowOverflowLeft = bounds.allowOverflowLeft === true

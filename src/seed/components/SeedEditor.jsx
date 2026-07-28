@@ -28,7 +28,7 @@ const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 
 import { buildSeedProjectsPath, navigateToSeedPath } from '../utils/seedRouting.js'
 import { DEFAULT_PROJECT_SPACE_ID } from '../../project/services/projectsApi.js'
-import { getWorkspaceTopInset } from '../utils/windowLayout.js'
+import { getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import {
     clearLocalWorkspaceDocument,
     readLocalWorkspaceDocument,
@@ -177,15 +177,26 @@ export default function SeedEditor({
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
     const selectedNode = nodes.find((node) => node.id === workspaceState.selectedNodeId) || null
     const authoredNodes = nodes
-    const viewNodes = useMemo(
-        () => nodes.filter(isPanelNode),
-        [nodes]
-    )
+    // Node-graph scope has no forced root type — the true document root
+    // (currentScopeId === null) is a plain, always-available scope you can
+    // place any node type directly into, same as any node's interior. Node 0
+    // is an ordinary node, not an auto-created/auto-entered singleton (product
+    // decision 2026-07-17 — see nodeRegistry.js/projectSchema.js comments).
+    const scope = useNodeGraphScope({ nodes: authoredNodes })
+    const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, reset: scopeReset } = scope
     const activeSurface = workspaceState.activeSurface || 'graph'
     const workflow = getSurfaceWorkflow(activeSurface)
+    // Panel windows are scoped exactly like graph cards. Before, this filtered
+    // the whole document, so every universe.world node at any depth kept a live
+    // <Canvas> mounted in every scope — see selectMountedPanelNodes.
     const visibleViewNodes = useMemo(
-        () => viewNodes.filter((node) => node.values?.frame?.visible !== false),
-        [viewNodes]
+        () => selectMountedPanelNodes({
+            nodes,
+            isPanel: isPanelNode,
+            currentScopeId,
+            isWorldFullscreen
+        }),
+        [nodes, currentScopeId, isWorldFullscreen]
     )
     const topZIndex = useMemo(
         () => Math.max(6, ...visibleViewNodes.map((node) => node.values?.frame?.zIndex || 1)),
@@ -201,13 +212,6 @@ export default function SeedEditor({
         () => authoredNodes.filter((node) => matchesNodeTypeSurface(getNodeType(node.typeId), activeSurface)),
         [activeSurface, authoredNodes]
     )
-    // Node-graph scope has no forced root type — the true document root
-    // (currentScopeId === null) is a plain, always-available scope you can
-    // place any node type directly into, same as any node's interior. Node 0
-    // is an ordinary node, not an auto-created/auto-entered singleton (product
-    // decision 2026-07-17 — see nodeRegistry.js/projectSchema.js comments).
-    const scope = useNodeGraphScope({ nodes: authoredNodes })
-    const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, reset: scopeReset } = scope
     // Panel nodes float as windows; graph cards are non-panel nodes in the current scope
     const graphCardNodes = useMemo(
         () => nodes.filter((node) => {
