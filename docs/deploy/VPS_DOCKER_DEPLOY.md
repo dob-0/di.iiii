@@ -167,11 +167,11 @@ itself, and the script was never committed here. It now is:
 change either script, `scp` it to `/root/` on the VPS by hand
 (`scp deploy/vps-backup.sh dii-vps:/root/vps-backup.sh`) and `chmod +x`.
 
-**Known gap, not yet addressed**: backups are local to the VPS only. A
-host-level disaster (not just a lost Docker volume) takes the backups down
-with it. An off-box copy (object storage, another host) would close this,
-but needs a destination + credentials someone has to choose — ask before
-picking one.
+**Off-box copy (closed 2026-07-29)**: backups used to live only on the VPS, so a
+host-level disaster took them with it. `scripts/backup-pull.sh` now copies the
+archives onto a second machine — **pull, not push**, so the VPS holds no
+credential to the backup store and owning the box does not get you the backups.
+Full setup, systemd timer and restore notes: [OFFBOX_BACKUP.md](OFFBOX_BACKUP.md).
 
 ## Base Image Pinning (audit #26, 2026-07-17)
 
