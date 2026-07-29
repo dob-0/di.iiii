@@ -99,9 +99,15 @@ decision, and several need code before a policy could truthfully describe them.
    are sharp derivatives and drop metadata, but **the full-size original — with GPS
    coordinates intact — is what a public visitor downloads.** Note that naive
    stripping breaks orientation; any fix must preserve the EXIF orientation tag.
-6. **Google Fonts on WCC leaks visitor IP + user agent to Google** on page load,
-   with no consent. This is the exact pattern German courts have ruled on.
-   Self-hosting the two families would remove it with no visual change.
+6. ~~**Google Fonts on WCC leaks visitor IP + user agent to Google**~~ — **fixed
+   2026-07-29** for the React WCC surface: DM Sans and Noto Sans Armenian are
+   self-hosted in `src/wcc/landing/fonts/` (OFL, license texts included) and
+   `src/wcc/landing/fonts.css` replaces the two `@import`s. Verified with
+   Playwright: zero external requests, both faces load with metrics distinct
+   from the fallback. **Still open:** the legacy static bundle
+   `public/wcc/artist-works-land/` loads Google Fonts *and* three `unpkg.com`
+   scripts (`support.js:988,1423,1425`) — a separate published-project artifact,
+   not covered by this fix.
 7. **Backup restore can resurrect deleted data** — no exclusion mechanism
    (`deploy/vps-restore.sh`).
 8. **Anonymous inscriptions are append-only by design** and cannot be edited or
