@@ -20,12 +20,14 @@ import LandingPage from './LandingPage.jsx'
 // silently bounces them to the read-only live viewer instead of the editor
 // they clicked for (see docs/ai/known-fixes.md, 2026-07-17).
 describe('LandingPage CTA routing', () => {
-    it('points every Beta link at the open sandbox space, not the bare /beta route', () => {
+    it('points every Raw link at the open sandbox space, not the bare /raw route', () => {
+        // Bare lane routes default to the restricted 'main' space, where a guest
+        // has no write scope and gets bounced to the read-only viewer.
         render(<LandingPage />)
-        const betaLinks = screen.getAllByRole('link', { name: 'Beta' })
-        expect(betaLinks.length).toBeGreaterThan(0)
-        for (const link of betaLinks) {
-            expect(link.getAttribute('href')).toBe('/open/beta')
+        const rawLinks = screen.getAllByRole('link', { name: 'Raw v.0' })
+        expect(rawLinks.length).toBeGreaterThan(0)
+        for (const link of rawLinks) {
+            expect(link.getAttribute('href')).toBe('/open/raw')
         }
     })
 

@@ -3,7 +3,7 @@ import { Box, Button, Stack, Typography } from '@mui/material'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
-import { buildBetaHubPath } from '../beta/utils/betaRouting.js'
+import { buildRawHubPath } from '../raw/utils/rawRouting.js'
 import { buildStudioSpacesPath } from '../studio/utils/studioRouting.js'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
@@ -13,14 +13,16 @@ import { buildStudioSpacesPath } from '../studio/utils/studioRouting.js'
 // after to confirm.
 const GridFloorBackground = lazy(() => import('../components/GridFloorBackground.jsx'))
 
-// "Try Beta"/"Open Studio" must land guests somewhere they can actually edit.
-// The bare '/beta'/'/studio' routes default to the 'main' space — di.iiii's
-// restricted flagship space, not a sandbox — so a guest session (which has no
-// write scope there) gets silently bounced by AuthGate's out-of-scope-but-
-// public redirect straight to the read-only live viewer, same destination as
-// the separate "Enter Space" button. Point both at the communal 'open' space
-// instead, which every session (guest included) already has implicit access to.
-const TRY_BETA_HREF = buildBetaHubPath('open')
+// The landing page promotes one experimental lane, and that is Raw (formerly
+// Seed) — Beta is still routed and still listed in ROUTES below, just no longer
+// the thing the front door advertises.
+//
+// Pointed at the communal 'open' space, not the bare '/raw' route: bare lane
+// routes default to the 'main' space — di.iiii's restricted flagship, not a
+// sandbox — so a guest session has no write scope there and AuthGate sends it
+// to the read-only viewer instead of the editor it clicked for. Every session,
+// guest included, already has implicit access to 'open'.
+const RAW_LANE_HREF = buildRawHubPath('open')
 // "Open Studio" goes to the spaces hub (`/studio`) for everyone. Two earlier
 // passes landed one level too deep: `/open/studio?browse=1` is StudioHub, which
 // despite the name is a *single space's project list* — the open space's — so
@@ -215,7 +217,7 @@ export default function LandingPage() {
                     <a href="/" className="lp-nav-logo">di<span className="lp-dot">.</span>iiii</a>
                     <div className="lp-nav-links">
                         <a href={studioHref} className="lp-nav-link">Studio</a>
-                        <a href={TRY_BETA_HREF} className="lp-nav-link">Beta</a>
+                        <a href={RAW_LANE_HREF} className="lp-nav-link">Raw v.0</a>
                         <a href={buildWikiPath()} className="lp-nav-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
                     </div>
@@ -254,8 +256,8 @@ export default function LandingPage() {
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref}>
                             Open Studio
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={TRY_BETA_HREF}>
-                            Try Beta
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={RAW_LANE_HREF}>
+                            Raw v.0
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
                             Enter Space
@@ -540,8 +542,8 @@ export default function LandingPage() {
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref}>
                             Open Studio
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={TRY_BETA_HREF}>
-                            Try Beta
+                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={RAW_LANE_HREF}>
+                            Raw v.0
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
                             Enter Space
@@ -562,7 +564,7 @@ export default function LandingPage() {
                     <span className="lp-footer-brand">di<span className="lp-dot">.</span>iiii</span>
                     <nav className="lp-footer-nav" aria-label="Footer navigation">
                         <a href={studioHref} className="lp-footer-link">Studio</a>
-                        <a href={TRY_BETA_HREF} className="lp-footer-link">Beta</a>
+                        <a href={RAW_LANE_HREF} className="lp-footer-link">Raw v.0</a>
                         <a href={buildWikiPath()} className="lp-footer-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
                         <a href="/serverXR/api/health" className="lp-footer-link">API</a>
