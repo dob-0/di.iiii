@@ -43,7 +43,7 @@ const LEGACY_ROOT_TYPE_IDS = new Set(['core.project', 'world.root', 'view.root']
 // (2026-07-17); this generalizes it to every remaining former singleton.
 // For scope-repeatable types where exactly one "active" result is wanted
 // (e.g. a World's active Light/Background/Grid), see
-// workspaceState.activeNodeIdByTypeScope in src/seed's editor — a hierarchy-
+// workspaceState.activeNodeIdByTypeScope in src/raw's editor — a hierarchy-
 // as-connection picker, not a schema-level restriction.
 
 const cloneValue = (value) => {

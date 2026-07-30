@@ -20,6 +20,20 @@ never `git add -A`**.
 - **The Seed lane is now Raw.** `src/raw/`, `Raw*` components, `raw-*` CSS,
   route `/raw`. Old `/seed` links still resolve and RootApp rewrites them.
   Renamed by identifier, not substring — "seed" is also a verb here.
+  Second pass 2026-07-30 finished the user-visible remainder: hub title/status
+  copy, `Space → Raw → Studio`, the `rawTopbarReveal` keyframe, and
+  `dii.seed.*` → `dii.raw.*` storage keys (with a one-time migration so nobody
+  loses their display name). Every remaining "seed" in the tree is the verb.
+- **Two wrong paths fixed.** Raw's help dialog linked `docs/raw/USER_MANUAL.md`,
+  which never existed (the rename renamed the string, not the file) — written,
+  and `src/docPaths.test.js` now fails if any `docs/*.md` shown to a user
+  doesn't resolve. The landing's route map advertised bare `/beta` and `/raw`,
+  which default to restricted `main` and dead-ended every guest at "sign in to
+  open the editor"; now `/open/beta` and `/open/raw`, matching the CTA.
+- **Memory collection was never wired up** — no hook drove it, so it only
+  happened when an agent thought of it. Fixed: `meta_memory_sync.md` is the
+  single contract, `un-di/templates/hooks/memory-sync-check.sh` reports drift
+  on Stop, and there's a golden rule for recapping at every compaction.
 - **22 of 49 node types were declarations with nothing behind them** (no
   getUserMedia / requestMIDIAccess / RTCPeerConnection anywhere). Withheld from
   the palette via `UNIMPLEMENTED_NODE_TYPES`; queue in

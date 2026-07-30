@@ -1,7 +1,7 @@
 # Recursive Node Core
 
 Ground truth as of 2026-07-19 (updated when the singleton system was removed
-and the `seed` lane forked from Beta; originally written after this file was
+and the `raw` lane forked from Beta; originally written after this file was
 found to be a dead link from `AGENTS.md`/`README.md`/`ORIENTATION_MAP.md` for
 an unknown period — see `docs/ai/audit-2026-07-17.md`). Source of truth is
 always the code below, not this doc; re-verify before trusting a specific
@@ -71,11 +71,11 @@ explicit **active marker**, stored in `workspaceState`:
 
 - `liveWorldNodeIdByScope` — pre-existing, `universe.world`-specific, keyed by
   scopeId. Set via the World panel's own live toggle; read by
-  `StudioWorldSurface.jsx` and (in the `seed` lane) `RawEditor.jsx`'s
+  `StudioWorldSurface.jsx` and (in the `raw` lane) `RawEditor.jsx`'s
   `worldNode` lookup.
 - `activeNodeIdByTypeScope` — added 2026-07-19, generalizes the same idea to
   `world.light`/`world.background`/`world.grid`. Keyed by `` `${typeId}::${scopeId}` ``.
-  Set via a small ● toggle on the node's graph card (`seed`'s
+  Set via a small ● toggle on the node's graph card (`raw`'s
   `RawGraphSurface.jsx`); read by `RawViewport.jsx` and
   `viewportWorldState.js`'s `pickActiveTypeNode` helper. Both maps default to
   the first-created candidate when nothing's been explicitly marked.
@@ -108,7 +108,7 @@ than infinite-looping.
 Consumers of this runtime today: `src/beta/*`
 (`BetaViewport`/`BetaEditor`/`viewportWorldState`) and, since 2026-07-19,
 `src/raw/*` (`RawViewport`/`RawEditor`/`viewportWorldState`) — a lane
-forked from Beta, see "The `seed` lane" below. Studio's own viewport does
+forked from Beta, see "The `raw` lane" below. Studio's own viewport does
 not evaluate the graph — Studio's dev-only graph/world preview panes
 (`StudioGraphSurface.jsx`/`StudioWorldSurface.jsx`) reuse Beta's components
 read-only, gated off in production builds.
@@ -156,7 +156,7 @@ otherwise:
   'values'` on the section and its field — the same mechanism the
   `worldState` inspector section already used for its own fields.
 
-## The `seed` lane
+## The `raw` lane
 
 `src/raw/` (routes at `/open/raw`) is a fork of Beta, added 2026-07-19 —
 the first lane forked from Beta rather than built from scratch (no prior
@@ -167,7 +167,7 @@ differences: no singleton/blocked-create warning (nothing left to block, see
 "Nesting" above), the active-marker mechanism for World/Light/Background/Grid
 (see "Nesting" above), and a scope-filtered edge list passed to its graph
 surface (Beta passes the document's full, unfiltered edge list — a latent
-inconsistency `seed` doesn't carry forward). Everything else — window
+inconsistency `raw` doesn't carry forward). Everything else — window
 management, palette, presence, op history — is an unmodified fork.
 
 ## CJS/ESM mirror status

@@ -41,8 +41,23 @@ import {
     getAvailableScales
 } from '../utils/deviceDetection.js'
 
-const DISPLAY_NAME_KEY = 'dii.seed.displayName'
-const NODE_SCALE_KEY = 'dii.seed.nodeScale'
+const DISPLAY_NAME_KEY = 'dii.raw.displayName'
+const NODE_SCALE_KEY = 'dii.raw.nodeScale'
+const USER_ID_KEY = 'dii.raw.userId'
+
+// The lane was called Seed until 2026-07-30, so anyone who used it before then
+// has their display name, scale and stable presence id under `dii.seed.*`.
+// Carry them over once instead of silently resetting the identity they picked.
+const LEGACY_KEY_PREFIX = 'dii.seed.'
+function migrateLegacyRawStorage() {
+    if (typeof window === 'undefined' || !window.localStorage) return
+    for (const key of [DISPLAY_NAME_KEY, NODE_SCALE_KEY, USER_ID_KEY]) {
+        if (window.localStorage.getItem(key) !== null) continue
+        const legacy = window.localStorage.getItem(LEGACY_KEY_PREFIX + key.slice('dii.raw.'.length))
+        if (legacy !== null) window.localStorage.setItem(key, legacy)
+    }
+}
+migrateLegacyRawStorage()
 const ROOT_WORLD_CARD_WIDTH = 160
 const ROOT_WORLD_CARD_HEIGHT = 120
 const WINDOW_DEFAULT_POSITIONS = {
@@ -139,8 +154,8 @@ export default function RawEditor({
     const presence = useProjectPresence({
         projectId,
         displayName,
-        displayNameStorageKey: 'dii.seed.displayName',
-        userIdStorageKey: 'dii.seed.userId',
+        displayNameStorageKey: DISPLAY_NAME_KEY,
+        userIdStorageKey: USER_ID_KEY,
         anonymousLabel: 'Raw',
         userIdPrefix: 'raw-user'
     })

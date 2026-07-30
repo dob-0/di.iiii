@@ -110,8 +110,13 @@ const FEATURES = [
 const ROUTES = [
     { path: '/', label: 'Landing — this page' },
     { path: '/studio', label: 'Studio — main authoring editor' },
-    { path: '/beta', label: 'Beta — experimental node editor' },
-    { path: '/raw', label: 'Raw — experimental node-first editor' },
+    // Space-scoped, not the bare /beta and /raw these used to list. A bare lane
+    // route defaults to the restricted 'main' space, where a guest session has
+    // no write scope, so every visitor who clicked one of these from the route
+    // map landed on "sign in to open the editor" instead of an editor. Same
+    // reasoning as the Raw CTA above, which was already pointed at 'open'.
+    { path: '/open/beta', label: 'Beta — experimental node editor' },
+    { path: '/open/raw', label: 'Raw — experimental node-first editor' },
     { path: '/:spaceId', label: 'Public space viewer' },
     { path: '/serverXR/api/health', label: 'Backend health (JSON)' },
     { path: '/serverXR/api/auth/session', label: 'Auth session state (JSON)' },

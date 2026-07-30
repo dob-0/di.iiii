@@ -866,10 +866,10 @@
     border-bottom: 1px solid var(--di-cyan-border);
     pointer-events: auto;
     overflow: visible;
-    animation: seedTopbarReveal 0.35s ease both;
+    animation: rawTopbarReveal 0.35s ease both;
 }
 
-@keyframes seedTopbarReveal {
+@keyframes rawTopbarReveal {
     from { opacity: 0; }
     to   { opacity: 1; }
 }

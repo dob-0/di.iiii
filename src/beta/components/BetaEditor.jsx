@@ -222,7 +222,7 @@ export default function BetaEditor({
     const hasGraphNodes = hasAnyNodes
     // universe.world is not a singleton (product decision 2026-07-19) — a scope
     // can hold more than one. Beta (kept as the original sketch) just picks the
-    // first sibling of the current scope; the seed lane's equivalent lookup
+    // first sibling of the current scope; the raw lane's equivalent lookup
     // instead reads an explicit "active" marker (see RawEditor.jsx).
     const worldNode = useMemo(
         () => authoredNodes.find((node) => node.typeId === 'universe.world' && (node.parentId || null) === currentScopeId) || null,

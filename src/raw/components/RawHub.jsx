@@ -22,25 +22,25 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const { role } = useAuthSession()
     const [projects, setProjects] = useState([])
     const [title, setTitle] = useState('Untitled Project')
-    const [status, setStatus] = useState('Loading seed projects...')
+    const [status, setStatus] = useState('Loading raw projects...')
     const [isBusy, setIsBusy] = useState(false)
     const [importWarnings, setImportWarnings] = useState([])
     const titleInputRef = useRef(null)
     const workflowSteps = [
         'Create or open the space from the admin surface or spaces panel.',
-        'Start a seed project or import a legacy scene for experimental work.',
+        'Start a raw project or import a legacy scene for experimental work.',
         'Keep the node-first iteration here while you test layout, routing, and sync.',
         'Move stable work into Studio and publish it to the public space route.'
     ]
 
     const loadProjects = useCallback(async () => {
-        setStatus('Loading seed projects...')
+        setStatus('Loading raw projects...')
         try {
             const nextProjects = await listProjects(spaceId)
             setProjects(nextProjects)
-            setStatus(nextProjects.length ? '' : 'No seed projects in this space yet.')
+            setStatus(nextProjects.length ? '' : 'No raw projects in this space yet.')
         } catch (error) {
-            setStatus(error.message || 'Unable to load seed projects.')
+            setStatus(error.message || 'Unable to load raw projects.')
         }
     }, [spaceId])
 
@@ -54,7 +54,7 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
 
     const handleCreate = async () => {
         setIsBusy(true)
-        setStatus('Creating seed project...')
+        setStatus('Creating raw project...')
         try {
             const response = await createProject(spaceId, {
                 title,
@@ -150,11 +150,11 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         <span className="raw-hub-di-sq" />
                         <span className="raw-hub-di-sq" />
                     </div>
-                    <h1 className="raw-hub-title">di.iiii seed</h1>
+                    <h1 className="raw-hub-title">di.iiii raw</h1>
                     <p className="raw-hub-tagline">space · {spaceId}</p>
                 </header>
 
-                <section className="raw-hub-onboarding" aria-label="Seed onboarding">
+                <section className="raw-hub-onboarding" aria-label="Raw onboarding">
                     <div className="raw-hub-onboarding-copy">
                         <span className="raw-window-kicker">First Landing</span>
                         <h2>Choose a path.</h2>
@@ -188,7 +188,7 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                 <span>↔</span>
                             </div>
                             <span className="raw-window-kicker">Workflow</span>
-                            <h3>Space → Seed → Studio</h3>
+                            <h3>Space → Raw → Studio</h3>
                             <div className="raw-hub-onboarding-chip-row">
                                 <span className="raw-hub-onboarding-chip">space</span>
                                 <span className="raw-hub-onboarding-chip">project</span>
