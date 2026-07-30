@@ -254,12 +254,6 @@ body.is-landing .account-btn-wrapper {
     );
 }
 
-.lp-hero-canvas {
-    position: absolute;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-}
 
 .lp-hero-overlay {
     position: absolute;
@@ -286,6 +280,13 @@ body.is-landing .account-btn-wrapper {
 .lp-hero-inner--hidden {
     opacity: 0;
     pointer-events: none;
+    /* opacity + pointer-events hide it from sight and mouse but leave every
+       control in the tab order. In walk mode a keyboard user tabbed through
+       seven invisible buttons — "Step inside", "Open Studio", "Try Beta",
+       "Enter Space", the three space links — with no visible focus and no way
+       to reach them by pointer. visibility takes them out of the focus tree
+       while keeping the opacity transition. */
+    visibility: hidden;
 }
 
 .lp-enter-exit {
@@ -365,13 +366,6 @@ body.is-landing .account-btn-wrapper {
 }
 
 /* ─── HERO SCENE VISUALISER ───────────────────────────────── */
-.lp-scene-vis {
-    position: relative;
-    width: 320px;
-    height: 140px;
-    margin-bottom: 48px;
-    border: 1px solid var(--di-cyan-border);
-}
 
 .lp-scene-grid {
     position: absolute;
@@ -940,10 +934,6 @@ body.is-landing .account-btn-wrapper {
     .lp-caps-grid {
         grid-template-columns: 1fr;
     }
-
-    .lp-scene-vis {
-        width: 260px;
-    }
 }
 
 @media (max-width: 640px) {
@@ -952,7 +942,6 @@ body.is-landing .account-btn-wrapper {
 }
 
 @media (max-width: 520px) {
-    .lp-hero-canvas { display: none; }
 
     .lp-section {
         padding: 64px 20px;
@@ -969,10 +958,6 @@ body.is-landing .account-btn-wrapper {
 
     .lp-feature-grid {
         grid-template-columns: 1fr;
-    }
-
-    .lp-scene-vis {
-        display: none;
     }
 }
 
@@ -1025,4 +1010,12 @@ body.is-landing .account-btn-wrapper {
     font-family: var(--di-mono);
     letter-spacing: 0.06em;
     text-transform: uppercase;
+}
+
+/* base.css turns selection off globally — right for the editor shell, wrong for
+   the front door. This page exists to be read, and its machine-readable block
+   lists API endpoints for the express purpose of being copied. */
+.lp-root {
+    -webkit-user-select: text;
+    user-select: text;
 }

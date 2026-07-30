@@ -1,11 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, Typography } from '@mui/material'
-import GridFloorBackground from '../components/GridFloorBackground.jsx'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { buildBetaHubPath } from '../beta/utils/betaRouting.js'
 import { buildStudioSpacesPath } from '../studio/utils/studioRouting.js'
+
+// Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
+// LiveProjectScene into the landing chunk for every visitor — including phones,
+// which never render it. Gating the mount alone did nothing: a static import
+// ships whether or not the component is used. Measured phone load before and
+// after to confirm.
+const GridFloorBackground = lazy(() => import('../components/GridFloorBackground.jsx'))
 
 // "Try Beta"/"Open Studio" must land guests somewhere they can actually edit.
 // The bare '/beta'/'/studio' routes default to the 'main' space — di.iiii's
@@ -103,6 +109,7 @@ const ROUTES = [
     { path: '/', label: 'Landing — this page' },
     { path: '/studio', label: 'Studio — main authoring editor' },
     { path: '/beta', label: 'Beta — experimental node editor' },
+    { path: '/raw', label: 'Raw — experimental node-first editor' },
     { path: '/:spaceId', label: 'Public space viewer' },
     { path: '/serverXR/api/health', label: 'Backend health (JSON)' },
     { path: '/serverXR/api/auth/session', label: 'Auth session state (JSON)' },
@@ -139,7 +146,16 @@ export default function LandingPage() {
     // populated space instead of the decorative walkable void this page's
     // own background renders.
     const [mainSpaceId, setMainSpaceId] = useState(null)
-    const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
+    const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches)
+    // Phones do not get the decorative WebGL hero. landing.css has tried to
+    // disable it below 520px since the hero was built, but the rule targets
+    // `.lp-hero-canvas`, a class that no longer exists — the element is
+    // `.lp-hero-bg`. Renaming the rule would not have helped either: this is a
+    // *mount* problem, not a paint one. GridFloorBackground was rendered
+    // unconditionally and the wrapper only toggled `display`, so every phone
+    // visitor downloaded the 1.47 MB three-vendor chunk to look at something
+    // CSS then hid. Gating the mount is what actually saves the bytes.
+    const [isSmallScreen] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 520px)').matches)
     const heroRef = useRef(null)
 
     useEffect(() => {
@@ -185,7 +201,10 @@ export default function LandingPage() {
         return () => window.removeEventListener('keydown', onKey)
     }, [entered])
 
-    const showBackground = entered || heroInView
+    // `entered` is exempt from the small-screen gate: "Step inside" *is* the
+    // walkable scene, so a phone visitor who taps it has asked for three.js
+    // and gets it then — on demand, rather than on every passive page view.
+    const showBackground = entered || (heroInView && !isSmallScreen)
 
     return (
         <Box className="lp-root" data-page="landing">
@@ -206,9 +225,13 @@ export default function LandingPage() {
 
             {/* ── HERO ─────────────────────────────────────────── */}
             <Box className="lp-hero" component="section" ref={heroRef}>
-                <Box className="lp-hero-bg" sx={{ display: showBackground ? 'block' : 'none' }}>
-                    <GridFloorBackground aria-hidden="true" interactive={entered && !viewMode} />
-                </Box>
+                {showBackground && (
+                    <Box className="lp-hero-bg" aria-hidden="true">
+                        <Suspense fallback={null}>
+                            <GridFloorBackground interactive={entered && !viewMode} />
+                        </Suspense>
+                    </Box>
+                )}
 
                 <Stack className={`lp-hero-inner${entered ? ' lp-hero-inner--hidden' : ''}`} alignItems="center" spacing={0}>
                     <Typography className="lp-eyebrow">
@@ -362,7 +385,7 @@ export default function LandingPage() {
                     <Box className="lp-tip">
                         <Typography className="lp-tip-icon" component="span" aria-hidden="true">→</Typography>
                         <Typography className="lp-tip-text" component="span">
-                            Keyboard shortcuts: <kbd>H</kbd> toggles the UI, <kbd>F</kbd> frames the scene, <kbd>Z</kbd> undoes the last action.
+                            Keyboard shortcuts: <kbd>H</kbd> toggles the UI, <kbd>F</kbd> frames the scene, <kbd>Ctrl/⌘</kbd>+<kbd>Z</kbd> undoes the last action.
                         </Typography>
                     </Box>
                 </Box>
