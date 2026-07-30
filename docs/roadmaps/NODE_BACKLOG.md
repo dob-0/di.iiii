@@ -94,7 +94,7 @@ protocol, no permissions — and the one most likely to be **cut rather than
 built**. Decide intent before writing code:
 
 - `universe.node0` predates the 2026-07-17 decision that the document root is an
-  ordinary scope with no forced root type (see the comment in `SeedEditor.jsx`).
+  ordinary scope with no forced root type (see the comment in `RawEditor.jsx`).
   It probably no longer has a meaning. Likely delete.
 - `universe.desk.2d` is the flat sibling of `universe.desk.3d`, which does work.
 - `universe.link` overlaps the URL/tree addressing work in
@@ -107,7 +107,7 @@ built**. Decide intent before writing code:
 
 ## Known trap: dead panel nodes become text boxes
 
-`SeedEditor.jsx`'s panel switch handles `universe.world`, `view.browser` and
+`RawEditor.jsx`'s panel switch handles `universe.world`, `view.browser` and
 `view.image`, and **everything else falls through to `TextPanelWindow`**. So an
 unimplemented `panel-2d` node — `stream.monitor`, `stream.controller`,
 `universe.desk.2d` — opened looking like a deliberate feature and quietly showed
@@ -118,7 +118,7 @@ un-gated before its panel exists, it returns.
 
 ## Note on the demo preset
 
-`SeedEditor.jsx:551-611` builds a canned studio graph — Insta360, stereo, mic,
+`RawEditor.jsx:551-611` builds a canned studio graph — Insta360, stereo, mic,
 PTZ, controller, compositor, output, monitor. It lays out the cards; nothing
 drives them. It is a layout fixture, not evidence any of those types work.
 

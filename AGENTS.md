@@ -64,10 +64,10 @@ Full routing guide: [docs/ai/roles/model-routing.md](docs/ai/roles/model-routing
 ## Repo Map
 
 - public repo `dob-0/di.iiii` (legacy mirror `dob-0/di.i`, inactive). `serverXR` is authoritative for auth, persistence, publish state, realtime.
-- lanes: `Studio` (main shipped editor) · `Beta` (experimental node-first) · `Seed` (experimental, forked from Beta 2026-07-19 — free-form node nesting, no singletons) · `V1` (compatibility).
-- work targets: `src/studio/` (main) · `src/project/` (shared doc/collab logic) · `src/beta/` (experimental) · `src/seed/` (experimental, Beta fork) · `src/shared/` + `shared/` (schema/runtime contracts) · `serverXR/` (backend) · `scripts/` (automation) · `deploy/` (deploy docs).
+- lanes: `Studio` (main shipped editor) · `Beta` (experimental node-first) · `Raw` (experimental, forked from Beta 2026-07-19 — free-form node nesting, no singletons) · `V1` (compatibility).
+- work targets: `src/studio/` (main) · `src/project/` (shared doc/collab logic) · `src/beta/` (experimental) · `src/raw/` (experimental, Beta fork) · `src/shared/` + `shared/` (schema/runtime contracts) · `serverXR/` (backend) · `scripts/` (automation) · `deploy/` (deploy docs).
 - defaults: prefer `Studio` unless explicitly experimental; `src/project/` for shared logic; node-first over growing legacy. Treat `worldState`/`windowLayout`/old entity structures and `V1` edits as compatibility work unless told otherwise.
-- do not assume: `Beta` or `Seed` is the shipped lane, physical/hardware sync is productized, old orchestration files are the right home for new logic, the public repo is the deploy source of truth, or that Beta/Seed share components (they're independent forks).
+- do not assume: `Beta` or `Raw` is the shipped lane, physical/hardware sync is productized, old orchestration files are the right home for new logic, the public repo is the deploy source of truth, or that Beta/Raw share components (they're independent forks).
 
 ## Validation
 
@@ -91,7 +91,7 @@ npm run docs:ai:check
 ## Read Next
 
 - [README.md](README.md) · AI knowledge base: [docs/ai/index.md](docs/ai/index.md) · operating contract: [docs/ai/agent-operating-contract.md](docs/ai/agent-operating-contract.md)
-- scoped guides: [src/project/AGENTS.md](src/project/AGENTS.md) · [src/studio/AGENTS.md](src/studio/AGENTS.md) · [src/shared/AGENTS.md](src/shared/AGENTS.md) · [src/beta/AGENTS.md](src/beta/AGENTS.md) · [src/seed/AGENTS.md](src/seed/AGENTS.md) · [serverXR/src/AGENTS.md](serverXR/src/AGENTS.md) · [scripts/AGENTS.md](scripts/AGENTS.md) · [deploy/AGENTS.md](deploy/AGENTS.md)
+- scoped guides: [src/project/AGENTS.md](src/project/AGENTS.md) · [src/studio/AGENTS.md](src/studio/AGENTS.md) · [src/shared/AGENTS.md](src/shared/AGENTS.md) · [src/beta/AGENTS.md](src/beta/AGENTS.md) · [src/raw/AGENTS.md](src/raw/AGENTS.md) · [serverXR/src/AGENTS.md](serverXR/src/AGENTS.md) · [scripts/AGENTS.md](scripts/AGENTS.md) · [deploy/AGENTS.md](deploy/AGENTS.md)
 - backend contract: [serverXR/README.md](serverXR/README.md)
 - architecture: [docs/architecture/PROJECT_SURFACES.md](docs/architecture/PROJECT_SURFACES.md) · [docs/architecture/RECURSIVE_NODE_CORE.md](docs/architecture/RECURSIVE_NODE_CORE.md) · deploy truth: [docs/deploy/LIVE_DEPLOY.md](docs/deploy/LIVE_DEPLOY.md)
 

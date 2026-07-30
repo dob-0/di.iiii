@@ -71,12 +71,12 @@ explicit **active marker**, stored in `workspaceState`:
 
 - `liveWorldNodeIdByScope` — pre-existing, `universe.world`-specific, keyed by
   scopeId. Set via the World panel's own live toggle; read by
-  `StudioWorldSurface.jsx` and (in the `seed` lane) `SeedEditor.jsx`'s
+  `StudioWorldSurface.jsx` and (in the `seed` lane) `RawEditor.jsx`'s
   `worldNode` lookup.
 - `activeNodeIdByTypeScope` — added 2026-07-19, generalizes the same idea to
   `world.light`/`world.background`/`world.grid`. Keyed by `` `${typeId}::${scopeId}` ``.
   Set via a small ● toggle on the node's graph card (`seed`'s
-  `SeedGraphSurface.jsx`); read by `SeedViewport.jsx` and
+  `RawGraphSurface.jsx`); read by `RawViewport.jsx` and
   `viewportWorldState.js`'s `pickActiveTypeNode` helper. Both maps default to
   the first-created candidate when nothing's been explicitly marked.
 
@@ -107,7 +107,7 @@ than infinite-looping.
 
 Consumers of this runtime today: `src/beta/*`
 (`BetaViewport`/`BetaEditor`/`viewportWorldState`) and, since 2026-07-19,
-`src/seed/*` (`SeedViewport`/`SeedEditor`/`viewportWorldState`) — a lane
+`src/raw/*` (`RawViewport`/`RawEditor`/`viewportWorldState`) — a lane
 forked from Beta, see "The `seed` lane" below. Studio's own viewport does
 not evaluate the graph — Studio's dev-only graph/world preview panes
 (`StudioGraphSurface.jsx`/`StudioWorldSurface.jsx`) reuse Beta's components
@@ -158,7 +158,7 @@ otherwise:
 
 ## The `seed` lane
 
-`src/seed/` (routes at `/open/seed`) is a fork of Beta, added 2026-07-19 —
+`src/raw/` (routes at `/open/raw`) is a fork of Beta, added 2026-07-19 —
 the first lane forked from Beta rather than built from scratch (no prior
 graduation/retirement policy existed for experimental lanes before this; see
 `docs/architecture/PROJECT_SURFACES.md`). It carries the same node registry,

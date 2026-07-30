@@ -1,15 +1,15 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PropertyInspector from './PropertyInspector.jsx'
 import DesktopWindow from './DesktopWindow.jsx'
-import BetaViewport from './BetaViewport.jsx'
-import BetaGraphSurface from './BetaGraphSurface.jsx'
+import RawViewport from './RawViewport.jsx'
+import RawGraphSurface from './RawGraphSurface.jsx'
 import NodePalette from './NodePalette.jsx'
 import TextPanelWindow from './TextPanelWindow.jsx'
 import ImagePanelWindow from './ImagePanelWindow.jsx'
 import WorldPanelWindow from './WorldPanelWindow.jsx'
 import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
 import ChatPanelWindow from './ChatPanelWindow.jsx'
-import BetaHelpDialog from './BetaHelpDialog.jsx'
+import RawHelpDialog from './RawHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
@@ -27,9 +27,9 @@ import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.j
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 
-import { buildBetaProjectsPath, navigateToBetaPath } from '../utils/betaRouting.js'
+import { buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
 import { DEFAULT_PROJECT_SPACE_ID } from '../../project/services/projectsApi.js'
-import { getWorkspaceTopInset } from '../utils/windowLayout.js'
+import { getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import {
     clearLocalWorkspaceDocument,
     readLocalWorkspaceDocument,
@@ -41,8 +41,8 @@ import {
     getAvailableScales
 } from '../utils/deviceDetection.js'
 
-const DISPLAY_NAME_KEY = 'dii.beta.displayName'
-const NODE_SCALE_KEY = 'dii.beta.nodeScale'
+const DISPLAY_NAME_KEY = 'dii.seed.displayName'
+const NODE_SCALE_KEY = 'dii.seed.nodeScale'
 const ROOT_WORLD_CARD_WIDTH = 160
 const ROOT_WORLD_CARD_HEIGHT = 120
 const WINDOW_DEFAULT_POSITIONS = {
@@ -80,8 +80,8 @@ function BrowserPanelWindow({ node }) {
     const title = node.values?.title || node.label
     const url = node.values?.url || 'https://example.com'
     return (
-        <div className="beta-browser-panel-window">
-            <div className="beta-browser-panel-bar">
+        <div className="raw-browser-panel-window">
+            <div className="raw-browser-panel-bar">
                 <strong>{title}</strong>
                 <span>{url}</span>
             </div>
@@ -94,7 +94,7 @@ function BrowserPanelWindow({ node }) {
     )
 }
 
-export default function BetaEditor({
+export default function RawEditor({
     projectId,
     spaceId = DEFAULT_PROJECT_SPACE_ID,
     localStorageKey = ''
@@ -132,17 +132,17 @@ export default function BetaEditor({
     const projectSync = useProjectDocumentSync({
         projectId,
         store,
-        clientIdPrefix: 'beta-client',
-        opIdPrefix: 'beta-op'
+        clientIdPrefix: 'raw-client',
+        opIdPrefix: 'raw-op'
     })
     const { applyLocalOps: _applyLocalOps } = projectSync
     const presence = useProjectPresence({
         projectId,
         displayName,
-        displayNameStorageKey: 'dii.beta.displayName',
-        userIdStorageKey: 'dii.beta.userId',
-        anonymousLabel: 'Beta',
-        userIdPrefix: 'beta-user'
+        displayNameStorageKey: 'dii.seed.displayName',
+        userIdStorageKey: 'dii.seed.userId',
+        anonymousLabel: 'Raw',
+        userIdPrefix: 'raw-user'
     })
     useEffect(() => {
         if (chatOpen) setReadChatCount(presence.messages.length)
@@ -178,15 +178,26 @@ export default function BetaEditor({
     const selectedEntity = entities.find((entity) => entity.id === state.selectedEntityId) || null
     const selectedNode = nodes.find((node) => node.id === workspaceState.selectedNodeId) || null
     const authoredNodes = nodes
-    const viewNodes = useMemo(
-        () => nodes.filter(isPanelNode),
-        [nodes]
-    )
+    // Node-graph scope has no forced root type — the true document root
+    // (currentScopeId === null) is a plain, always-available scope you can
+    // place any node type directly into, same as any node's interior. Node 0
+    // is an ordinary node, not an auto-created/auto-entered singleton (product
+    // decision 2026-07-17 — see nodeRegistry.js/projectSchema.js comments).
+    const scope = useNodeGraphScope({ nodes: authoredNodes })
+    const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, reset: scopeReset } = scope
     const activeSurface = workspaceState.activeSurface || 'graph'
     const workflow = getSurfaceWorkflow(activeSurface)
+    // Panel windows are scoped exactly like graph cards. Before, this filtered
+    // the whole document, so every universe.world node at any depth kept a live
+    // <Canvas> mounted in every scope — see selectMountedPanelNodes.
     const visibleViewNodes = useMemo(
-        () => viewNodes.filter((node) => node.values?.frame?.visible !== false),
-        [viewNodes]
+        () => selectMountedPanelNodes({
+            nodes,
+            isPanel: isPanelNode,
+            currentScopeId,
+            isWorldFullscreen
+        }),
+        [nodes, currentScopeId, isWorldFullscreen]
     )
     const topZIndex = useMemo(
         () => Math.max(6, ...visibleViewNodes.map((node) => node.values?.frame?.zIndex || 1)),
@@ -202,13 +213,6 @@ export default function BetaEditor({
         () => authoredNodes.filter((node) => matchesNodeTypeSurface(getNodeType(node.typeId), activeSurface)),
         [activeSurface, authoredNodes]
     )
-    // Node-graph scope has no forced root type — the true document root
-    // (currentScopeId === null) is a plain, always-available scope you can
-    // place any node type directly into, same as any node's interior. Node 0
-    // is an ordinary node, not an auto-created/auto-entered singleton (product
-    // decision 2026-07-17 — see nodeRegistry.js/projectSchema.js comments).
-    const scope = useNodeGraphScope({ nodes: authoredNodes })
-    const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, reset: scopeReset } = scope
     // Panel nodes float as windows; graph cards are non-panel nodes in the current scope
     const graphCardNodes = useMemo(
         () => nodes.filter((node) => {
@@ -217,18 +221,53 @@ export default function BetaEditor({
         }),
         [nodes, currentScopeId]
     )
+    // Edges are scoped along with nodes — an edge whose endpoints aren't both
+    // in the current scope's card set has no business rendering here (Beta
+    // passes the document's full, unfiltered edge list to its graph surface;
+    // this is a deliberate fix, not a carried-over behavior).
+    const graphCardEdges = useMemo(() => {
+        const cardIds = new Set(graphCardNodes.map((node) => node.id))
+        return (document.edges || []).filter((edge) => cardIds.has(edge.fromNodeId) && cardIds.has(edge.toNodeId))
+    }, [document.edges, graphCardNodes])
     const surfaceNodeCount = authoredNodes.length
     const hasAnyNodes = surfaceNodeCount > 0
     const hasGraphNodes = hasAnyNodes
     // universe.world is not a singleton (product decision 2026-07-19) — a scope
-    // can hold more than one. Beta (kept as the original sketch) just picks the
-    // first sibling of the current scope; the seed lane's equivalent lookup
-    // instead reads an explicit "active" marker (see RawEditor.jsx).
-    const worldNode = useMemo(
-        () => authoredNodes.find((node) => node.typeId === 'universe.world' && (node.parentId || null) === currentScopeId) || null,
-        [authoredNodes, currentScopeId]
-    )
+    // can hold more than one. Hierarchy-as-connection (Kantan Mapper pattern):
+    // being a sibling of the current scope is the only "connection" needed, no
+    // wire — but exactly one World needs to be "the" one for viewport/panel
+    // purposes, so pick the explicitly-marked-live one (workspaceState.
+    // liveWorldNodeIdByScope, set via the World panel's own live toggle — see
+    // WorldPanelWindow's onSetLive below), defaulting to first-created when
+    // nothing's been marked yet.
+    const worldNode = useMemo(() => {
+        const candidates = authoredNodes.filter((node) => node.typeId === 'universe.world' && (node.parentId || null) === currentScopeId)
+        if (!candidates.length) return null
+        const liveId = (document.workspaceState?.liveWorldNodeIdByScope || {})[currentScopeId || '']
+        return candidates.find((node) => node.id === liveId) || candidates[0]
+    }, [authoredNodes, currentScopeId, document.workspaceState?.liveWorldNodeIdByScope])
     const hasWorldNode = Boolean(worldNode)
+    // Generalizes the World live-toggle above to any scope-repeatable type
+    // where exactly one "active" result is wanted (world.light/world.
+    // background/world.grid) — same hierarchy-as-connection idea, same
+    // workspaceState side-channel, just keyed by type as well as scope since
+    // there's no dedicated map per type the way World has its own.
+    const activeMarkerTypeIds = ['world.light', 'world.background', 'world.grid']
+    const getActiveNodeId = useCallback((typeId, scopeId) => {
+        const candidates = authoredNodes.filter((node) => node.typeId === typeId && (node.parentId || null) === scopeId)
+        if (!candidates.length) return null
+        const key = `${typeId}::${scopeId || ''}`
+        const markedId = (document.workspaceState?.activeNodeIdByTypeScope || {})[key]
+        const marked = candidates.find((node) => node.id === markedId)
+        return (marked || candidates[0]).id
+    }, [authoredNodes, document.workspaceState?.activeNodeIdByTypeScope])
+    const setActiveNodeId = useCallback((typeId, scopeId, nodeId) => {
+        const key = `${typeId}::${scopeId || ''}`
+        applyLocalOps({
+            type: 'setWorkspaceState',
+            payload: { patch: { activeNodeIdByTypeScope: { [key]: nodeId } } }
+        })
+    }, [applyLocalOps])
     // Per-universe chrome control (product decision 2026-07-17): walk up from
     // the current scope to the nearest ancestor universe.space node and read
     // its showChrome value — lets one universe be a normal authoring space
@@ -625,7 +664,7 @@ export default function BetaEditor({
     }
 
     const hostInspector = (
-        <aside className="beta-selection-scaffold" style={{ top: workflowHeight + 'px' }}>
+        <aside className="raw-selection-scaffold" style={{ top: workflowHeight + 'px' }}>
             <PropertyInspector
                 title={inspectorTitle}
                 subtitle={inspectorSubtitle}
@@ -744,36 +783,36 @@ export default function BetaEditor({
         })
     }
 
-    const workspaceTitle = isLocalWorkspace ? 'Blank White Workspace' : (document.projectMeta?.title || 'Beta Project')
+    const workspaceTitle = isLocalWorkspace ? 'Blank White Workspace' : (document.projectMeta?.title || 'Raw Project')
     const graphTopInset = chromeVisible ? workspaceTop : 0
 
     return (
-        <main className="beta-editor-shell">
-            <header className={`beta-topbar${chromeVisible ? ' is-seeded' : ''}`} ref={topbarRef}>
+        <main className="raw-editor-shell">
+            <header className={`raw-topbar${chromeVisible ? ' is-seeded' : ''}`} ref={topbarRef}>
                 {chromeVisible && (
                     <>
-                        <div className="beta-topbar-left">
-                            <button type="button" className="beta-topbar-back" onClick={() => {
-                                navigateToBetaPath(buildBetaProjectsPath(resolvedSpaceId))
+                        <div className="raw-topbar-left">
+                            <button type="button" className="raw-topbar-back" onClick={() => {
+                                navigateToRawPath(buildRawProjectsPath(resolvedSpaceId))
                             }}>
                                 ← {isLocalWorkspace ? 'Projects' : 'Hub'}
                             </button>
-                            <span className="beta-topbar-name" title={workspaceTitle}>{workspaceTitle}</span>
+                            <span className="raw-topbar-name" title={workspaceTitle}>{workspaceTitle}</span>
                         </div>
-                        <div className="beta-topbar-center">
+                        <div className="raw-topbar-center">
                             {navStack.length > 1 ? (
-                                <nav className="beta-topbar-breadcrumb" aria-label="Node scope">
-                                    <button type="button" className="beta-topbar-crumb" onClick={() => handleNavigateToScope(0)}>◈</button>
+                                <nav className="raw-topbar-breadcrumb" aria-label="Node scope">
+                                    <button type="button" className="raw-topbar-crumb" onClick={() => handleNavigateToScope(0)}>◈</button>
                                     {navStack.slice(1).map((scopeId, i) => {
                                         const crumbNode = authoredNodes.find((n) => n.id === scopeId)
                                         const stackIndex = i + 1
                                         const isLast = stackIndex === navStack.length - 1
                                         return (
-                                            <span key={scopeId} className="beta-topbar-crumb-group">
-                                                <span className="beta-topbar-crumb-sep">›</span>
+                                            <span key={scopeId} className="raw-topbar-crumb-group">
+                                                <span className="raw-topbar-crumb-sep">›</span>
                                                 <button
                                                     type="button"
-                                                    className={`beta-topbar-crumb${isLast ? ' is-current' : ''}`}
+                                                    className={`raw-topbar-crumb${isLast ? ' is-current' : ''}`}
                                                     onClick={() => handleNavigateToScope(stackIndex)}
                                                 >
                                                     {crumbNode?.label || 'Node'}
@@ -783,10 +822,10 @@ export default function BetaEditor({
                                     })}
                                 </nav>
                             ) : (
-                                <span className="beta-topbar-location" aria-live="polite">{topbarLocationText}</span>
+                                <span className="raw-topbar-location" aria-live="polite">{topbarLocationText}</span>
                             )}
                             {hasWorldNode && (
-                                <div className="beta-topbar-windows">
+                                <div className="raw-topbar-windows">
                                     <button
                                         type="button"
                                         className={isWorldOverlay || isWorldFullscreen ? 'is-active' : ''}
@@ -808,11 +847,11 @@ export default function BetaEditor({
                                 </div>
                             )}
                         </div>
-                        <div className="beta-topbar-right">
-                            <button type="button" className="beta-topbar-help-action" onClick={() => setHelpOpen(true)}>
+                        <div className="raw-topbar-right">
+                            <button type="button" className="raw-topbar-help-action" onClick={() => setHelpOpen(true)}>
                                 Help
                             </button>
-                            <div className="beta-topbar-scale-control">
+                            <div className="raw-topbar-scale-control">
                                 <label htmlFor="node-scale-select">Size:</label>
                                 <select
                                     id="node-scale-select"
@@ -830,7 +869,7 @@ export default function BetaEditor({
                             {surfaceNodeCount > 0 && (
                                 <button
                                     type="button"
-                                    className={`beta-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
+                                    className={`raw-topbar-node-count${outlinerOpen ? ' is-active' : ''}`}
                                     onClick={() => setOutlinerOpen((v) => !v)}
                                     title="Toggle outliner"
                                     aria-label={`${surfaceNodeCount} nodes`}
@@ -840,24 +879,24 @@ export default function BetaEditor({
                             )}
                             <button
                                 type="button"
-                                className={`beta-topbar-node-count${chatOpen ? ' is-active' : ''}`}
+                                className={`raw-topbar-node-count${chatOpen ? ' is-active' : ''}`}
                                 onClick={() => setChatOpen((v) => !v)}
                                 title="Toggle chat"
                                 aria-label="Toggle chat"
                             >
                                 Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
                             </button>
-                            <div className="beta-topbar-overflow">
-                                <button type="button" className="beta-topbar-overflow-btn" onClick={() => setOverflowOpen((v) => !v)}>⋯</button>
+                            <div className="raw-topbar-overflow">
+                                <button type="button" className="raw-topbar-overflow-btn" onClick={() => setOverflowOpen((v) => !v)}>⋯</button>
                                 {overflowOpen && (
-                                    <div className="beta-topbar-overflow-menu">
+                                    <div className="raw-topbar-overflow-menu">
                                         <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
                                         <button type="button" onClick={() => { handleCreateStreamingPrototype(); setOverflowOpen(false) }}>Streaming Prototype</button>
                                         {isLocalWorkspace && (
                                             <button type="button" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Reset Workspace</button>
                                         )}
                                         {presence.users.length > 0 && presence.users.map((user) => (
-                                            <span key={user.socketId || user.userId} className="beta-user-pill">
+                                            <span key={user.socketId || user.userId} className="raw-user-pill">
                                                 {user.userName}
                                             </span>
                                         ))}
@@ -869,22 +908,22 @@ export default function BetaEditor({
                 )}
             </header>
 
-            {state.loading ? <div className="beta-overlay-message">Loading project…</div> : null}
-            {state.loadError ? <div className="beta-overlay-message is-error">{state.loadError}</div> : null}
+            {state.loading ? <div className="raw-overlay-message">Loading project…</div> : null}
+            {state.loadError ? <div className="raw-overlay-message is-error">{state.loadError}</div> : null}
             {visibleSelection && (
-                <button type="button" className="beta-delete-fab" onClick={handleDeleteSelected}>
+                <button type="button" className="raw-delete-fab" onClick={handleDeleteSelected}>
                     Delete
                 </button>
             )}
 
-            <section className={`beta-surface-shell${isWorldOverlay && !isWorldFullscreen ? ' is-world-overlay' : ''}${navStack.length > 1 ? ' is-inside-node' : ''}`}>
+            <section className={`raw-surface-shell${isWorldOverlay && !isWorldFullscreen ? ' is-world-overlay' : ''}${navStack.length > 1 ? ' is-inside-node' : ''}`}>
                 {/* Graph is the primary surface — always visible */}
-                <BetaGraphSurface
+                <RawGraphSurface
                     key={currentScopeId || 'root'}
                     topInset={graphTopInset}
                     nodes={graphCardNodes}
                     emptyHint="Double-click to place your first node."
-                    edges={document.edges || []}
+                    edges={graphCardEdges}
                     selectedNodeId={workspaceState.selectedNodeId}
                     onEnterNode={handleEnterNode}
                     onSelectNode={selectNode}
@@ -907,6 +946,12 @@ export default function BetaEditor({
                         payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
                     })}
                     onDoubleClick={(placement) => openPalette('graph', placement)}
+                    isNodeActive={(node) =>
+                        activeMarkerTypeIds.includes(node.typeId)
+                        && getActiveNodeId(node.typeId, node.parentId || null) === node.id
+                    }
+                    onSetActive={(node) => setActiveNodeId(node.typeId, node.parentId || null, node.id)}
+                    activeMarkerTypeIds={activeMarkerTypeIds}
                 />
                 {/* Panel nodes float above the graph as viewport-fixed windows */}
                 {visibleViewNodes.map((node, index) => {
@@ -957,6 +1002,7 @@ export default function BetaEditor({
                                     patch: { values: { frame: { ...(node.values?.frame || {}), pinned: !node.values?.frame?.pinned } } }
                                 }
                             })}
+                            onEnter={() => handleEnterNode(node.id)}
                         >
                             {renderViewNodeContent(node)}
                         </DesktopWindow>
@@ -966,8 +1012,8 @@ export default function BetaEditor({
 
             {/* Fullscreen world — takes over the full viewport */}
             {hasWorldNode && isWorldFullscreen && (
-                <div className="beta-world-fullscreen" style={{ top: `${workspaceTop}px` }}>
-                    <BetaViewport
+                <div className="raw-world-fullscreen" style={{ top: `${workspaceTop}px` }}>
+                    <RawViewport
                         topInset={0}
                         document={document}
                         selectedEntityId={surfaceSelectedEntity?.id || null}
@@ -990,8 +1036,8 @@ export default function BetaEditor({
 
             {/* Overlay world — 3D scene renders behind the graph */}
             {hasWorldNode && isWorldOverlay && !isWorldFullscreen && (
-                <div className="beta-world-overlay">
-                    <BetaViewport
+                <div className="raw-world-overlay">
+                    <RawViewport
                         topInset={workspaceTop}
                         document={document}
                         selectedEntityId={surfaceSelectedEntity?.id || null}
@@ -1051,7 +1097,7 @@ export default function BetaEditor({
                 </DesktopWindow>
             )}
 
-            <BetaHelpDialog
+            <RawHelpDialog
                 open={helpOpen}
                 surface={activeSurface}
                 onClose={() => setHelpOpen(false)}

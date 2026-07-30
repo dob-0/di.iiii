@@ -2,7 +2,15 @@ import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom'
 import { setAppNavigate } from './utils/appNavigate.js'
 import { getBetaLocationState, isBetaLocation } from './beta/utils/betaRouting.js'
-import { getSeedLocationState, isSeedLocation } from './seed/utils/seedRouting.js'
+import {
+    buildRawHubPath,
+    buildRawProjectPath,
+    buildRawProjectsPath,
+    getRawLocationState,
+    isRawLocation,
+    RAW_PAGE_PROJECT,
+    RAW_PAGE_PROJECTS
+} from './raw/utils/rawRouting.js'
 import AuthReturnNotice from './components/AuthReturnNotice.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
@@ -12,7 +20,7 @@ import { getStudioLocationState, isStudioLocation } from './studio/utils/studioR
 import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_WIKI, getAppLocationState } from './utils/spaceRouting.js'
 
 const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
-const SeedApp = lazy(() => import('./seed/SeedApp.jsx'))
+const RawApp = lazy(() => import('./raw/RawApp.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 const WccExperience = lazy(() => import('./wcc/WccExperience.jsx'))
@@ -105,9 +113,27 @@ function AppRouter() {
     }, [rrNavigate])
     const location = useLocation()
     const betaState = getBetaLocationState(location)
-    const seedState = getSeedLocationState(location)
+    const rawState = getRawLocationState(location)
     const studioState = getStudioLocationState(location)
     const appState = getAppLocationState(location)
+
+    // The Raw lane was called Seed until 2026-07-30. Old /seed links still
+    // resolve; rewrite them to /raw so the address bar heals instead of keeping
+    // the retired name in circulation. replace() so Back skips the dead URL
+    // rather than bouncing the visitor straight back into the redirect.
+    const legacyRawPath = rawState.isRaw && rawState.isLegacyPath
+    useEffect(() => {
+        if (!legacyRawPath) return
+        const target = rawState.page === RAW_PAGE_PROJECT
+            ? buildRawProjectPath(rawState.projectId, rawState.spaceId)
+            : rawState.page === RAW_PAGE_PROJECTS
+                ? buildRawProjectsPath(rawState.spaceId)
+                : buildRawHubPath(rawState.spaceId)
+        rrNavigate(target, { replace: true })
+    }, [legacyRawPath, rawState.page, rawState.projectId, rawState.spaceId, rrNavigate])
+    if (legacyRawPath) {
+        return <RouteSurfaceFallback label="Loading Raw" detail="" />
+    }
 
     if (isStudioLocation(studioState)) {
         return (
@@ -143,18 +169,18 @@ function AppRouter() {
         )
     }
 
-    if (isSeedLocation(seedState)) {
+    if (isRawLocation(rawState)) {
         return (
-            <ProtectedSurface requiredSpaceId={seedState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
+            <ProtectedSurface requiredSpaceId={rawState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
                 <Suspense
                     fallback={
                         <RouteSurfaceFallback
-                            label="Loading Seed"
+                            label="Loading Raw"
                             detail="Preparing the node-graph workspace..."
                         />
                     }
                 >
-                    <SeedApp initialRoute={seedState} />
+                    <RawApp initialRoute={rawState} />
                 </Suspense>
             </ProtectedSurface>
         )

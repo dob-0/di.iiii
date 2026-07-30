@@ -53,7 +53,7 @@ the landing fix, and the sharp override.
   appearance color, "✕ Remove" — all through the normal `updateComponent`
   patch pipeline, so "All tools" sees identical values. +4 tests (11 jam total).
 - **Concurrent-session incident, again**: mid-work, `git status` showed fresh
-  edits in `src/seed/`, `src/project/graph/`, `nodeRegistry` + a new
+  edits in `src/raw/`, `src/project/graph/`, `nodeRegistry` + a new
   `useDeviceEgress.js` — another live session in this same working tree (the
   parallel-agents pattern; their in-progress `FaderControl.jsx` briefly failed
   repo-wide lint). Followed the documented rule: staged/committed ONLY own
@@ -98,7 +98,7 @@ real failure), then manually click-through tested on `staging.di-studio.xyz`
 via the Chrome extension: `/wcc` + `/wcc/scene` (untouched, still correct),
 a bogus vanity-link segment (hits `GET /api/resolve/...`, 404s, falls
 through cleanly to the plain space — no crash), `/open/studio` (not
-hijacked by the new 2-segment routing), and `/open/seed` (loads clean, no
+hijacked by the new 2-segment routing), and `/open/raw` (loads clean, no
 console errors). Confirmed auth gating works both directions (blocked from
 a space outside the guest session's scope, allowed into a public one).
 **Not verified**: the admin slug-edit UI and `ProjectSwitcher`'s "Copy
@@ -128,9 +128,9 @@ build clean, 887/887 tests green. **Not yet visually confirmed** — same
 no-admin-login gap as above; user was about to log in and check when this
 recap was written.
 
-## 2026-07-19 — live-verified `src/seed/`, found + fixed a real World-nesting bug
+## 2026-07-19 — live-verified `src/raw/`, found + fixed a real World-nesting bug
 
-Did the manual live click-through of `/open/seed` that the previous two
+Did the manual live click-through of `/open/raw` that the previous two
 sessions had shipped but never actually run (browser extension wasn't
 connected until this session). Found the free-nesting/active-marker/code-
 panel work all genuinely works as designed — verified by placing all 49
@@ -184,11 +184,11 @@ SPEC_space_urls_and_portability.md`. Committed `26452eb3`.
 **Real incident, now resolved**: this repo runs multiple concurrent Claude
 sessions sharing the same on-disk working tree (see `docs/ai/parallel-
 agents.md`). Editing `src/RootApp.jsx` landed a stray import from another
-session's in-progress, uncommitted `src/seed/` lane — `src/RootApp.jsx` on
+session's in-progress, uncommitted `src/raw/` lane — `src/RootApp.jsx` on
 disk already had their edits when mine were applied, and the whole file got
 committed together, breaking the pushed build (`f7306204` attempted a fix
 by stripping the import; that raced with the other session's own fix,
-`9c70e534`, which committed the real `src/seed/` files instead — `d908bcd3`
+`9c70e534`, which committed the real `src/raw/` files instead — `d908bcd3`
 reverted `f7306204` once the actual fix was confirmed). Net effect after
 all three commits: both features are intact, correctly wired, and verified
 live. **Lesson for next session**: when a shared file was very likely
@@ -198,10 +198,10 @@ sessions), diff the actual staged change before committing — don't assume
 
 ## 2026-07-19 — kill node-type singletons, universal code panel; committed `fe30ea53`, pushed
 
-The `src/seed/` lane itself (fork of Beta, hierarchy-as-connection active
+The `src/raw/` lane itself (fork of Beta, hierarchy-as-connection active
 markers) was committed separately by a concurrent session (`9c70e534`,
 after `26452eb3` shipped RootApp's seed import without the untracked
-`src/seed/` directory — a real CI-breaking near-miss, now fixed). This
+`src/raw/` directory — a real CI-breaking near-miss, now fixed). This
 session's own commit (`fe30ea53`) covers the schema/registry/Beta/docs
 side of the same work — the two commits together are the full picture.
 
@@ -219,9 +219,9 @@ Shipped (lint/build/887 tests green throughout):
    unused — actually gone). Stripped `singleton:true` from the 6 affected
    `nodeRegistry.js` types. Removed Beta's same-day blocked-create warning
    (`getPaletteBlockReason`, `NodePalette.jsx`'s `getBlockReason` prop/CSS).
-2. **New lane `src/seed/`** — full fork of `src/beta/` (first lane-forked-
+2. **New lane `src/raw/`** — full fork of `src/beta/` (first lane-forked-
    from-another-lane in the project; see `PROJECT_SURFACES.md`'s "On forking
-   a new lane from Beta"), routed at `/open/seed`, wired into `RootApp.jsx`.
+   a new lane from Beta"), routed at `/open/raw`, wired into `RootApp.jsx`.
    Own localStorage namespace (`dii.seed.*`). Fixed one opportunistic bug
    while forking: edges are now scope-filtered before rendering.
 3. **Hierarchy-as-connection active markers** (Kantan Mapper pattern) — new
@@ -245,7 +245,7 @@ separate performance-safe surface): plan file above,
 session's `f7306204` had dropped the seed import from `RootApp.jsx`,
 already reverted by `d908bcd3` before this — see "Last commit" above
 before assuming that's still broken). Next: push (when asked) + a live
-click-through of `/open/seed`.
+click-through of `/open/raw`.
 
 ## 2026-07-19 — audience/promotion/licensing
 
@@ -269,7 +269,7 @@ click-through of `/open/seed`.
   (docs/ai/golden_rules.md, Agent Behavior Rules).
 - **Later same session**: pushed to dev + staging live-verified (landing/
   wiki/wcc/beyond-form, zero JS errors); unbricked CI by committing the
-  missing `src/seed/` lane (`9c70e534`); golden rule split into two
+  missing `src/raw/` lane (`9c70e534`); golden rule split into two
   (budget sizing vs same-session perk capture, `44d12e1b`); docs IA fix —
   one canonical lane map in README/CURRENT.md/AGENTS.md (`7753699c`);
   new **Producer role** (`docs/ai/roles/producer.md`, `6892b005`) —

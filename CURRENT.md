@@ -17,7 +17,7 @@ are still local, and **stage explicit paths, never `git add -A`**.
 
 ## Last session (2026-07-28/29 — bug fixes, then a privacy audit)
 
-- Seed nested worlds froze the tab: panel windows filtered the *whole document*,
+- Raw nested worlds froze the tab: panel windows filtered the *whole document*,
   so every `universe.world` at any depth held a live `<Canvas>` past the
   browser's ~16-context cap. Now scoped via `selectMountedPanelNodes`.
   **Live on prod, never checked in a browser.**
@@ -30,13 +30,13 @@ are still local, and **stage explicit paths, never `git add -A`**.
 
 ## What works
 
-Studio (six panels + phone), Beta, Seed, WCC, viewer; auth (session-cookie,
+Studio (six panels + phone), Beta, Raw, WCC, viewer; auth (session-cookie,
 roles, OAuth-first) + open-space/sandbox grants; Open Jam and vanity links live;
 deploy via `git push origin dev|main`; nightly VPS backups (local only).
 
 ## Open
 
-- **Owed browser tests:** Seed deep nesting (fullscreen + back edges); EXIF
+- **Owed browser tests:** Raw deep nesting (fullscreen + back edges); EXIF
   round-trip on a real sideways portrait.
 - 13 dependabot PRs, 0 issues. #78 drei 10, #76 express 5, #79 jsdom 29 are
   majors — check `dependency-decisions.md` first.
