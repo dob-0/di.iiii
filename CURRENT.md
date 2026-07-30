@@ -20,7 +20,7 @@ never `git add -A`**.
 - **The Seed lane is now Raw.** `src/raw/`, `Raw*` components, `raw-*` CSS,
   route `/raw`. Old `/seed` links still resolve and RootApp rewrites them.
   Renamed by identifier, not substring — "seed" is also a verb here.
-- **23 of 49 node types were declarations with nothing behind them** (no
+- **22 of 49 node types were declarations with nothing behind them** (no
   getUserMedia / requestMIDIAccess / RTCPeerConnection anywhere). Withheld from
   the palette via `UNIMPLEMENTED_NODE_TYPES`; queue in
   `docs/roadmaps/NODE_BACKLOG.md`. Implementing one = deleting its line.

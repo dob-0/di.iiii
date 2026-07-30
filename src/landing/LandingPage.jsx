@@ -5,8 +5,7 @@ import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { buildBetaHubPath } from '../beta/utils/betaRouting.js'
-import { buildStudioHubPath, buildStudioSpacesPath } from '../studio/utils/studioRouting.js'
-import useAuthSession from '../hooks/useAuthSession.js'
+import { buildStudioSpacesPath } from '../studio/utils/studioRouting.js'
 
 // "Try Beta"/"Open Studio" must land guests somewhere they can actually edit.
 // The bare '/beta'/'/studio' routes default to the 'main' space — di.iiii's
@@ -16,10 +15,13 @@ import useAuthSession from '../hooks/useAuthSession.js'
 // the separate "Enter Space" button. Point both at the communal 'open' space
 // instead, which every session (guest included) already has implicit access to.
 const TRY_BETA_HREF = buildBetaHubPath('open')
-// The open-space hub is a door, not a lobby: it forwards straight into the
-// communal jam project. "Step inside" wants exactly that; "Open Studio"
-// promises the actual editor hub, so it opts out via ?browse=1.
-const OPEN_STUDIO_HREF = `${buildStudioHubPath('open')}?browse=1`
+// "Open Studio" goes to the spaces hub (`/studio`) for everyone. Two earlier
+// passes landed one level too deep: `/open/studio?browse=1` is StudioHub, which
+// despite the name is a *single space's project list* — the open space's — so
+// the label promised the top level and delivered one room inside it. SpaceHub
+// is guest-viewable (it renders the Open Space, the private sandbox and a
+// "Sign in to create" affordance), so there is no session for which the
+// narrower destination was the better one.
 import './landing.css'
 
 const FEATURED_SPACES = [
@@ -119,12 +121,11 @@ const CAPABILITIES = [
 ]
 
 export default function LandingPage() {
-    // "Open Studio" means different things to different visitors: someone
-    // signed in expects their own spaces, a guest needs the communal sandbox
-    // (the only place a guest session can edit). Guests and the pre-fetch
-    // default share the sandbox href, so nothing jumps while the session loads.
-    const { authenticated, type } = useAuthSession()
-    const studioHref = authenticated && type !== 'guest' ? buildStudioSpacesPath() : OPEN_STUDIO_HREF
+    // One destination for every session. It used to branch on the session,
+    // which also meant these static hrefs pointed at the guest destination
+    // during the tick before getApiSession resolved — click fast enough as a
+    // signed-in owner and you got sent somewhere else entirely.
+    const studioHref = buildStudioSpacesPath()
     const [entered, setEntered] = useState(false)
     // Walk/fly and the calm orbiting view are both rendered by the same
     // GridFloorBackground while "entered" -- previously the only way back to

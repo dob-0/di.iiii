@@ -29,7 +29,10 @@ describe('LandingPage CTA routing', () => {
         }
     })
 
-    it('points Studio/"Open Studio" links at the browsable open-space hub for guests, not the jam-forwarding door', () => {
+    it('points every Studio link at the spaces hub, not one space\'s project list', () => {
+        // Regression: these used to go to /open/studio?browse=1, which is
+        // StudioHub — the *open space's project list*, one level below the
+        // top. The label promises the hub; deliver the hub.
         Object.assign(sessionState, { authenticated: false, type: null })
         render(<LandingPage />)
         const studioLinks = [
@@ -38,22 +41,25 @@ describe('LandingPage CTA routing', () => {
         ]
         expect(studioLinks.length).toBeGreaterThan(0)
         for (const link of studioLinks) {
-            expect(link.getAttribute('href')).toBe('/open/studio?browse=1')
+            expect(link.getAttribute('href')).toBe('/studio')
         }
     })
 
-    it('sends signed-in (non-guest) sessions to their own Spaces hub, but keeps guest sessions on the sandbox', () => {
-        Object.assign(sessionState, { authenticated: true, type: 'user' })
-        const { unmount } = render(<LandingPage />)
-        for (const link of screen.getAllByRole('link', { name: 'Open Studio' })) {
-            expect(link.getAttribute('href')).toBe('/studio')
-        }
-        unmount()
-
-        Object.assign(sessionState, { authenticated: true, type: 'guest' })
-        render(<LandingPage />)
-        for (const link of screen.getAllByRole('link', { name: 'Open Studio' })) {
-            expect(link.getAttribute('href')).toBe('/open/studio?browse=1')
+    it('uses the same destination for every session state', () => {
+        // Branching on the session also meant these static hrefs pointed at the
+        // guest destination during the tick before the session resolved — an
+        // owner clicking fast enough was sent somewhere else entirely.
+        for (const session of [
+            { authenticated: false, type: null },
+            { authenticated: true, type: 'guest' },
+            { authenticated: true, type: 'user' }
+        ]) {
+            Object.assign(sessionState, session)
+            const { unmount } = render(<LandingPage />)
+            for (const link of screen.getAllByRole('link', { name: 'Open Studio' })) {
+                expect(link.getAttribute('href')).toBe('/studio')
+            }
+            unmount()
         }
     })
 

@@ -1,7 +1,7 @@
 # Node backlog
 
-The node registry declared 49 types. An audit on 2026-07-30 found **26 that do
-something and 23 that were declarations with nothing behind them** — no case in
+The node registry declared 49 types. An audit on 2026-07-30 found **27 that do
+something and 22 that were declarations with nothing behind them** — no case in
 `nodeGraphRuntime.js`, no renderer, no capability code.
 
 Nothing is deleted. Each dead definition is the **port contract to build
@@ -17,7 +17,7 @@ anything already placed still loads and renders.
 
 ---
 
-## Works today (26)
+## Works today (27)
 
 | Group | Types |
 | --- | --- |
@@ -30,7 +30,7 @@ anything already placed still loads and renders.
 
 ---
 
-## The queue (23)
+## The queue (22)
 
 Ordered by leverage per unit of work. Take them top-down.
 
@@ -126,5 +126,5 @@ drives them. It is a layout fixture, not evidence any of those types work.
 
 Static analysis: call-graph and reference tracing, not clicking through the app.
 Strong evidence for absence — you cannot capture a webcam without `getUserMedia`
-— and weaker evidence that the 26 "working" types are bug-free. A runtime pass
+— and weaker evidence that the 27 "working" types are bug-free. A runtime pass
 over the working set is worth doing separately.
