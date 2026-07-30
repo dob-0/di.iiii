@@ -20,12 +20,13 @@ const WikiPage = lazy(() => import('./wiki/WikiPage.jsx'))
 // AuthGate pulls in MUI + AccountButton -- lazy so public routes (landing,
 // wiki, any public space) that never render a gate don't pay for MUI in
 // their eager bundle (2026-07-17 perf audit).
+import { OUT_OF_SCOPE_EXPLAIN } from './components/authGateScope.js'
 const AuthGate = lazy(() => import('./components/AuthGate.jsx'))
 
-function ProtectedSurface({ children, requiredSpaceId = null, showAccountButton = true }) {
+function ProtectedSurface({ children, requiredSpaceId = null, showAccountButton = true, outOfScopeBehavior }) {
     return (
         <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
-            <AuthGate requiredSpaceId={requiredSpaceId} showAccountButton={showAccountButton}>{children}</AuthGate>
+            <AuthGate requiredSpaceId={requiredSpaceId} showAccountButton={showAccountButton} outOfScopeBehavior={outOfScopeBehavior}>{children}</AuthGate>
         </Suspense>
     )
 }
@@ -110,7 +111,7 @@ function AppRouter() {
 
     if (isStudioLocation(studioState)) {
         return (
-            <ProtectedSurface requiredSpaceId={studioState.spaceId}>
+            <ProtectedSurface requiredSpaceId={studioState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
                 <Suspense
                     fallback={
                         <RouteSurfaceFallback
@@ -127,7 +128,7 @@ function AppRouter() {
 
     if (isBetaLocation(betaState)) {
         return (
-            <ProtectedSurface requiredSpaceId={betaState.spaceId}>
+            <ProtectedSurface requiredSpaceId={betaState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
                 <Suspense
                     fallback={
                         <RouteSurfaceFallback
@@ -144,7 +145,7 @@ function AppRouter() {
 
     if (isSeedLocation(seedState)) {
         return (
-            <ProtectedSurface requiredSpaceId={seedState.spaceId}>
+            <ProtectedSurface requiredSpaceId={seedState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
                 <Suspense
                     fallback={
                         <RouteSurfaceFallback

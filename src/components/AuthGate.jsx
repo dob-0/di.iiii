@@ -7,6 +7,7 @@ import { redeemSpaceInvite } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { buildAppSpacePath } from '../utils/spaceRouting.js'
 import AccountButton from './AccountButton.jsx'
+import { OUT_OF_SCOPE_EXPLAIN, OUT_OF_SCOPE_REDIRECT } from './authGateScope.js'
 
 const readInviteTokenFromUrl = () => {
     if (typeof window === 'undefined') return null
@@ -21,7 +22,12 @@ const stripInviteFromUrl = () => {
     } catch { /* cosmetic — the param only matters on first load */ }
 }
 
-export default function AuthGate({ children, requiredSpaceId = null, showAccountButton = true }) {
+export default function AuthGate({
+    children,
+    requiredSpaceId = null,
+    showAccountButton = true,
+    outOfScopeBehavior = OUT_OF_SCOPE_REDIRECT
+}) {
     const authSession = useAuthSession()
     const { requireAuth, authenticated, loading, error, refresh, login } = authSession
     const [token, setToken] = useState('')
@@ -77,13 +83,16 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
         return () => { cancelled = true }
     }, [inviteToken, inviteStatus, authenticated, outOfScope, refresh])
 
+    const explainOutOfScope = outOfScope && liveIsPublic && !invitePending
+        && outOfScopeBehavior === OUT_OF_SCOPE_EXPLAIN
+
     useEffect(() => {
         // An unredeemed invite wins over the public-view redirect: an invite to
         // a public space still grants scope (e.g. to edit), so let it resolve.
-        if (outOfScope && liveIsPublic && !invitePending) {
+        if (outOfScope && liveIsPublic && !invitePending && !explainOutOfScope) {
             appNavigate(buildAppSpacePath(requiredSpaceId), { replace: true })
         }
-    }, [outOfScope, liveIsPublic, requiredSpaceId, invitePending])
+    }, [outOfScope, liveIsPublic, requiredSpaceId, invitePending, explainOutOfScope])
 
     if (loading) {
         return (
@@ -127,6 +136,35 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
         const { spaces } = authSession
         const inScope = !requiredSpaceId || !Array.isArray(spaces) || spaces.includes(requiredSpaceId)
         if (!inScope) {
+            // Editor lanes stop here and say why. The redirect below is right for
+            // a visitor following a shared link, but on an editor it fires as a
+            // replace() before anything paints — the surface simply becomes a
+            // different page, and Back cannot undo it. Reuses the same panel as
+            // the access-restricted case rather than introducing new chrome.
+            if (explainOutOfScope) {
+                return (
+                    <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
+                        <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
+                            <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
+                                di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                                Sign in to open the editor for &ldquo;{requiredSpaceId}&rdquo;. Your current
+                                session can view this space, but not edit it.
+                            </Typography>
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => appNavigate(buildAppSpacePath(requiredSpaceId))}
+                                sx={{ textTransform: 'none', borderColor: 'var(--ui-border)', color: 'var(--ui-text-primary)' }}
+                            >
+                                Open the public view
+                            </Button>
+                            <AccountButton authState={authSession} onLogout={refresh} />
+                        </Stack>
+                    </Box>
+                )
+            }
             if (invitePending || liveLoading || liveIsPublic) {
                 return (
                     <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
