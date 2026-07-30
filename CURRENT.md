@@ -10,10 +10,11 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-`dev` pushed to staging 2026-07-30 (9 commits). `main` = prod is **9 behind** —
-promote only after a staging pass. Several agents share this tree: re-check
-`git log` before assuming your commits are local, and **stage explicit paths,
-never `git add -A`**.
+**All three tiers are in sync at `09bc8a07`** (2026-07-30) — local `dev`,
+staging and prod. 16 commits promoted `dev -> main` after a staging pass;
+both deploys green, prod verified live. Several agents share this tree:
+re-check `git log` before assuming your commits are local, and **stage
+explicit paths, never `git add -A`**.
 
 ## Last session (2026-07-28/30)
 
@@ -60,7 +61,6 @@ deploy via `git push origin dev|main`; nightly VPS backups (local only).
 
 - **Owed browser tests:** Raw deep nesting (fullscreen + back edges); EXIF
   round-trip on a real sideways portrait; a Time node actually ticking.
-- Promote `dev -> main` once staging passes (prod is 9 behind).
 - 11 dependabot PRs, 0 issues. #78 drei 10, #76 express 5, #79 jsdom 29 are
   majors — check `dependency-decisions.md` first.
 - Privacy, product calls owed: no account-deletion path, no export, no session
