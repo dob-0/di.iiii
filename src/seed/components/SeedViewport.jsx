@@ -8,6 +8,7 @@ import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
 import { getSeedWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewportWorldState.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
@@ -167,7 +168,13 @@ function SceneContent({
     // not on every document identity change from a sync tick.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     const assetMap = useMemo(() => buildAssetMap(document), [document.assets, document.projectMeta?.id])
-    const graphContext = useMemo(() => createNodeGraphContext(document), [document])
+    // Rebuilt every frame while a Time node exists — the per-pass outputCache
+    // must not survive a tick or the clock would freeze at its first sample.
+    const clockNow = useGraphClock(hasClockNode(document.nodes))
+    const graphContext = useMemo(
+        () => createNodeGraphContext(document, { now: clockNow }),
+        [document, clockNow]
+    )
     // scopeId undefined = unscoped, matches the old document-wide behavior; a real
     // scope (including root, `null`) only renders/uses siblings of that scope — see
     // the identical comment in viewportWorldState.js.

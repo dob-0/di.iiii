@@ -5,7 +5,9 @@ import {
     createNode,
     createEdge,
     listNodeTypes,
+    UNIMPLEMENTED_NODE_TYPES,
     arePortsCompatible,
+    getNodeType,
     getNodeInputs,
     getNodeOutputs,
 } from './nodeRegistry.js'
@@ -170,9 +172,11 @@ describe('createEdge', () => {
 })
 
 describe('listNodeTypes', () => {
-    it('returns all types when no filter given', () => {
+    it('returns every implemented type when no filter given', () => {
+        // Not every declared type: unimplemented ones are withheld from the
+        // palette so the editor stops offering nodes that do nothing.
         const all = listNodeTypes()
-        expect(all.length).toBe(Object.keys(NODE_TYPES).length)
+        expect(all.length).toBe(Object.keys(NODE_TYPES).length - UNIMPLEMENTED_NODE_TYPES.size)
     })
 
     it('filters by category', () => {
@@ -188,19 +192,22 @@ describe('listNodeTypes', () => {
     })
 
     it('returns all nodes including web-only when runtime filter is any (no filter)', () => {
-        const all = listNodeTypes({ runtime: 'any' })
+        const all = listNodeTypes({ runtime: 'any', includeUnimplemented: true })
         expect(all.length).toBe(Object.keys(NODE_TYPES).length)
     })
 
     it('includes only any+web nodes when runtime is web', () => {
-        const web = listNodeTypes({ runtime: 'web' })
+        // includeUnimplemented: source.ar/webcam are the web-runtime examples and
+        // are both still on the backlog — this asserts the runtime filter, not
+        // the palette gate.
+        const web = listNodeTypes({ runtime: 'web', includeUnimplemented: true })
         expect(web.map(t => t.id)).toContain('source.ar')
         expect(web.map(t => t.id)).toContain('source.webcam')
         expect(web.map(t => t.id)).toContain('geom.cube') // runtime: 'any' always included
     })
 
     it('excludes web-only nodes when runtime is local', () => {
-        const local = listNodeTypes({ runtime: 'local' })
+        const local = listNodeTypes({ runtime: 'local', includeUnimplemented: true })
         expect(local.map(t => t.id)).not.toContain('source.ar')
         expect(local.map(t => t.id)).toContain('geom.cube') // runtime: 'any' always included
     })
@@ -247,5 +254,43 @@ describe('getNodeInputs / getNodeOutputs', () => {
         })
         expect(getNodeInputs(node).map(p => p.id)).toContain('value')
         expect(getNodeOutputs(node).map(p => p.id)).toContain('result')
+    })
+})
+
+describe('unimplemented node types', () => {
+    it('withholds types with nothing behind them from the palette', () => {
+        const offered = listNodeTypes().map((type) => type.id)
+        for (const id of ['source.webcam', 'device.midi.in', 'stream.compositor', 'universe.link']) {
+            expect(offered).not.toContain(id)
+        }
+    })
+
+    it('still offers everything that actually works', () => {
+        const offered = listNodeTypes().map((type) => type.id)
+        for (const id of [
+            'value.number', 'math.add', 'geom.cube', 'world.light',
+            'universe.world', 'view.image', 'view.browser', 'time'
+        ]) {
+            expect(offered).toContain(id)
+        }
+    })
+
+    it('keeps the definitions resolvable so existing documents still load', () => {
+        // Gating creation must never break a document that already contains one.
+        for (const id of UNIMPLEMENTED_NODE_TYPES) {
+            expect(getNodeType(id)).toBeTruthy()
+        }
+    })
+
+    it('can list them explicitly, for the backlog', () => {
+        const all = listNodeTypes({ includeUnimplemented: true }).map((type) => type.id)
+        expect(all).toContain('source.webcam')
+        expect(all.length).toBeGreaterThan(listNodeTypes().length)
+    })
+
+    it('names only types that really exist — a typo here would silently hide nothing', () => {
+        for (const id of UNIMPLEMENTED_NODE_TYPES) {
+            expect(getNodeType(id), `${id} is listed as unimplemented but is not a real type`).toBeTruthy()
+        }
     })
 })

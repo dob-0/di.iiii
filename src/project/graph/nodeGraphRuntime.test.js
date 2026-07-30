@@ -150,3 +150,66 @@ describe('nodeGraphRuntime', () => {
         sinSpy.mockRestore()
     })
 })
+
+describe('time node', () => {
+    const timeNode = { id: 't1', typeId: 'time', values: {} }
+
+    it('outputs elapsed seconds from the injected clock', () => {
+        const ctx = createNodeGraphContext({ nodes: [timeNode], edges: [] }, { now: 2500 })
+        expect(evaluateNodeOutput(timeNode, 'elapsed', ctx)).toBe(2.5)
+    })
+
+    it('is a stopped clock, not undefined, when no clock is injected', () => {
+        // Regression: `time` used to have no case at all and fell through to
+        // `default`, returning undefined and poisoning every downstream math node.
+        const ctx = createNodeGraphContext({ nodes: [timeNode], edges: [] })
+        expect(evaluateNodeOutput(timeNode, 'elapsed', ctx)).toBe(0)
+        expect(evaluateNodeOutput(timeNode, 'sin', ctx)).toBe(0)
+        expect(evaluateNodeOutput(timeNode, 'beat', ctx)).toBe(0)
+    })
+
+    it('sin/cos trace a full cycle per beat at the given bpm', () => {
+        // 60 bpm = 1 beat/sec, so t=0.25s is a quarter turn.
+        const node = { ...timeNode, values: { bpm: 60 } }
+        const at = (ms) => createNodeGraphContext({ nodes: [node], edges: [] }, { now: ms })
+        expect(evaluateNodeOutput(node, 'sin', at(0))).toBeCloseTo(0, 6)
+        expect(evaluateNodeOutput(node, 'cos', at(0))).toBeCloseTo(1, 6)
+        expect(evaluateNodeOutput(node, 'sin', at(250))).toBeCloseTo(1, 6)
+        expect(evaluateNodeOutput(node, 'sin', at(1000))).toBeCloseTo(0, 6)
+    })
+
+    it('beat counts up once per beat and never goes backwards', () => {
+        const node = { ...timeNode, values: { bpm: 120 } }  // 2 beats/sec
+        const beatAt = (ms) => evaluateNodeOutput(
+            node, 'beat', createNodeGraphContext({ nodes: [node], edges: [] }, { now: ms })
+        )
+        expect(beatAt(0)).toBe(0)
+        expect(beatAt(499)).toBe(0)
+        expect(beatAt(500)).toBe(1)
+        expect(beatAt(2000)).toBe(4)
+    })
+
+    it('clamps a zero or negative bpm instead of freezing or running backwards', () => {
+        for (const bpm of [0, -120]) {
+            const node = { ...timeNode, values: { bpm } }
+            const ctx = createNodeGraphContext({ nodes: [node], edges: [] }, { now: 60000 })
+            const beat = evaluateNodeOutput(node, 'beat', ctx)
+            expect(Number.isFinite(beat)).toBe(true)
+            expect(beat).toBeGreaterThanOrEqual(0)
+        }
+    })
+
+    it('holds one value for the whole pass so two readers cannot disagree', () => {
+        const ctx = createNodeGraphContext({ nodes: [timeNode], edges: [] }, { now: 1234 })
+        expect(evaluateNodeOutput(timeNode, 'elapsed', ctx))
+            .toBe(evaluateNodeOutput(timeNode, 'elapsed', ctx))
+    })
+
+    it('drives a downstream math node — the point of having a clock', () => {
+        const time = { id: 't', typeId: 'time', values: { bpm: 60 } }
+        const add = { id: 'a', typeId: 'math.add', values: { b: 10 } }
+        const edge = { fromNodeId: 't', fromPort: 'elapsed', toNodeId: 'a', toPort: 'a' }
+        const ctx = createNodeGraphContext({ nodes: [time, add], edges: [edge] }, { now: 3000 })
+        expect(evaluateNodeOutput(add, 'out', ctx)).toBe(13)
+    })
+})

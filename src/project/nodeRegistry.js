@@ -1113,9 +1113,55 @@ export const createEdge = (fromNodeId, fromPort, toNodeId, toPort, options = {})
 })
 
 // List node types, optionally filtered by category, runtime context, or search query.
-export const listNodeTypes = ({ category = 'all', query = '', runtime = 'any' } = {}) => {
+// Node types that are DECLARED here but have nothing behind them: no case in
+// nodeGraphRuntime.js, no renderer, no capability code. Audited 2026-07-30 —
+// `getUserMedia`, `requestMIDIAccess` and `RTCPeerConnection` appear zero times
+// in src/, so nothing in the capture/device/streaming families can possibly
+// function. Placing one used to yield either silence or, for panel-2d types, a
+// generic text box that looked like a deliberate feature.
+//
+// They stay declared on purpose: each definition is the port contract to build
+// against. They are withheld from the palette so the editor stops advertising
+// work that does not exist. **Implementing one means deleting its line here** —
+// that is the whole workflow. Backlog and order: docs/roadmaps/NODE_BACKLOG.md.
+//
+// Existing documents are untouched: nodes already placed still load and render.
+// This gates creation, not existing content.
+export const UNIMPLEMENTED_NODE_TYPES = new Set([
+    // capture — no getUserMedia anywhere
+    'source.ar',
+    'source.webcam',
+    'source.mic',
+    'source.insta360',
+    'source.stereo',
+    'source.realsense.d405',
+    // devices — no OSC client, no WebMIDI
+    'device.ptz.osc',
+    'device.osc.in',
+    'device.osc.out',
+    'device.midi.in',
+    'device.midi.out',
+    // streaming — no compositor, no transport
+    'stream.compositor',
+    'stream.switcher',
+    'stream.output',
+    'stream.recorder',
+    'stream.monitor',
+    'stream.controller',
+    // structure — zero consumers outside this file
+    'universe.node0',
+    'universe.desk.2d',
+    'universe.activate',
+    'universe.link',
+    'node.null'
+])
+
+export const isNodeTypeImplemented = (typeId) => !UNIMPLEMENTED_NODE_TYPES.has(typeId)
+
+export const listNodeTypes = ({ category = 'all', query = '', runtime = 'any', includeUnimplemented = false } = {}) => {
     const q = String(query || '').trim().toLowerCase()
     return Object.values(NODE_TYPES).filter(type => {
+        if (!includeUnimplemented && !isNodeTypeImplemented(type.id)) return false
         if (category !== 'all' && type.category !== category) return false
         if (runtime !== 'any' && type.runtime !== 'any' && type.runtime !== runtime) return false
         if (!q) return true

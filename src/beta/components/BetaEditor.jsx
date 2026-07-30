@@ -18,6 +18,7 @@ import { getInspectorSections } from '../../project/entityRegistry.js'
 import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
@@ -638,7 +639,13 @@ export default function BetaEditor({
     )
 
     const assetMap = useMemo(() => new Map((document.assets || []).map((asset) => [asset.id, asset])), [document.assets])
-    const graphContext = useMemo(() => createNodeGraphContext(document), [document])
+    // Rebuilt every frame while a Time node exists — the per-pass outputCache
+    // must not survive a tick or the clock would freeze at its first sample.
+    const clockNow = useGraphClock(hasClockNode(document.nodes))
+    const graphContext = useMemo(
+        () => createNodeGraphContext(document, { now: clockNow }),
+        [document, clockNow]
+    )
 
     const renderViewNodeContent = (node) => {
         const resolvedValues = evaluateNodeInputs(node, graphContext)

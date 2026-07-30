@@ -44,13 +44,20 @@ const buildEdgesByTarget = (edges) => {
     return map
 }
 
-export const createNodeGraphContext = (document = {}) => {
+// `now` is milliseconds on any monotonic clock the caller likes (performance.now()
+// in the app, a fixed number in tests). It is injected rather than read inside the
+// evaluator so evaluation stays pure and reproducible: same document + same `now`
+// always yields the same outputs. outputCache already holds results for the
+// lifetime of one pass, which is exactly right here — time must not advance
+// midway through a pass or two nodes reading the same clock would disagree.
+export const createNodeGraphContext = (document = {}, { now = 0 } = {}) => {
     const edges = document.edges || []
     return {
         nodesById: new Map((document.nodes || []).map((node) => [node.id, node])),
         edges,
         edgesByTarget: buildEdgesByTarget(edges),
-        outputCache: new Map()
+        outputCache: new Map(),
+        now: Number.isFinite(now) ? now : 0
     }
 }
 
@@ -80,8 +87,28 @@ export const evaluateNodeOutput = (node, portId, context, stack = new Set()) => 
     return result
 }
 
+const TAU = Math.PI * 2
+
 const computeNodeOutput = (node, portId, context, nextStack) => {
     switch (node.typeId) {
+        case 'time': {
+            // Declared four outputs and evaluated none — it fell through to
+            // `default` and returned undefined, so the clock never ticked and
+            // every math node downstream of it was dead too.
+            const seconds = asNumber(context?.now, 0) / 1000
+            if (portId === 'elapsed') return seconds
+            // bpm drives the musical outputs; 0 or negative would run the phase
+            // backwards or freeze it, so clamp to something that still advances.
+            const bpm = Math.max(1, asNumber(evaluateNodeInput(node, 'bpm', context, nextStack), 120))
+            const beats = seconds * (bpm / 60)
+            if (portId === 'sin') return Math.sin(beats * TAU)
+            if (portId === 'cos') return Math.cos(beats * TAU)
+            // 'beat' is a signal: a monotonically rising count, so consumers
+            // detect a new beat by the value changing rather than by sampling a
+            // pulse they could miss between frames.
+            if (portId === 'beat') return Math.floor(beats)
+            break
+        }
         case 'value.number':
         case 'value.color':
         case 'value.vec3':
