@@ -81,7 +81,7 @@
         "@gltf-transform/functions": "^4.4.0",
         "@mui/icons-material": "^7.3.9",
         "@mui/material": "^7.3.9",
-        "@react-three/drei": "^9.108.1",
+        "@react-three/drei": "^10.7.7",
         "@react-three/fiber": "^8.16.8",
         "@react-three/xr": "^6.6.27",
         "@testing-library/dom": "^10.4.1",
