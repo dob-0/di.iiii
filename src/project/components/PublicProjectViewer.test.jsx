@@ -128,6 +128,9 @@ describe('PublicProjectViewer', () => {
             expect(iframe).not.toBeNull()
             expect(iframe?.getAttribute('srcdoc')).toContain('Live code')
             expect(iframe?.getAttribute('srcdoc')).toContain(PREVIEW_HOST_MESSAGE_TYPE)
+            // published pages run getUserMedia (e.g. br_id_ge rite); without
+            // delegation the sandboxed iframe hard-denies camera on mobile
+            expect(iframe?.getAttribute('allow')).toContain('camera')
         })
     })
 

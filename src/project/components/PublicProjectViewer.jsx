@@ -283,6 +283,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         src={presentationState.codeUrl.trim()}
                         loading="lazy"
                         sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals"
+                        allow="camera; microphone; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
                         referrerPolicy="strict-origin-when-cross-origin"
                         style={{
                             border: 0,
@@ -297,6 +298,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         title={viewerTitle}
                         srcDoc={previewDocument}
                         sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals"
+                        allow="camera; microphone; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
                         style={{
                             border: 0,
                             width: '100%',

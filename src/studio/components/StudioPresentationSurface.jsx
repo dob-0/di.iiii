@@ -87,6 +87,7 @@ export default function StudioPresentationSurface({
                     src={codeUrl}
                     loading="lazy"
                     sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals"
+                    allow="camera; microphone; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
                     referrerPolicy="strict-origin-when-cross-origin"
                     style={{
                         border: 0,
@@ -114,6 +115,7 @@ export default function StudioPresentationSurface({
                 title={document.projectMeta?.title || document.projectMeta?.id || 'Studio code preview'}
                 srcDoc={previewDocument}
                 sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals"
+                    allow="camera; microphone; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
                 style={{
                     border: 0,
                     width: '100%',
