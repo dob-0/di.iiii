@@ -80,7 +80,7 @@
         "@gltf-transform/extensions": "^4.4.0",
         "@gltf-transform/functions": "^4.4.0",
         "@mui/icons-material": "^7.3.9",
-        "@mui/material": "^7.3.9",
+        "@mui/material": "^9.2.0",
         "@react-three/drei": "^9.108.1",
         "@react-three/fiber": "^8.16.8",
         "@react-three/xr": "^6.6.27",
