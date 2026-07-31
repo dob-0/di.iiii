@@ -20,6 +20,25 @@ export function pickActiveTypeNode(nodes, typeId, { scopeId, activeMap } = {}) {
     return candidates.find((node) => node.id === markedId) || candidates[0]
 }
 
+// Which world node is "the" world for viewport/panel purposes in a scope:
+// standing *inside* a world node, the world is the scope itself (regression
+// 2026-08-01: without this, entering a world via "Enter ›" left no world in
+// scope and RawEditor's no-world effect instantly cancelled the fullscreen
+// the enter handler had just requested). Otherwise pick among the scope's
+// world children — the one marked live (workspaceState.liveWorldNodeIdByScope,
+// set via the World panel's live toggle), defaulting to first-created.
+export function resolveScopeWorldNode(nodes, scopeId, liveWorldNodeIdByScope) {
+    const list = nodes || []
+    const scopeNode = scopeId ? list.find((node) => node?.id === scopeId) : null
+    if (scopeNode?.typeId === 'universe.world') return scopeNode
+    const candidates = list.filter((node) =>
+        node?.typeId === 'universe.world' && (node.parentId || null) === (scopeId || null)
+    )
+    if (!candidates.length) return null
+    const liveId = (liveWorldNodeIdByScope || {})[scopeId || '']
+    return candidates.find((node) => node.id === liveId) || candidates[0]
+}
+
 // scopeId undefined = unscoped (old behavior, matches any world.background node
 // anywhere). scopeId null or a real id = only match a world.background node that's
 // a sibling of the given scope (parentId === scopeId) — root scope is `null`, not

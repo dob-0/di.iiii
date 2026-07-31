@@ -369,6 +369,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-07-15'
     },
     {
+        id: 'raw-lane',
+        category: 'Editing',
+        title: 'Raw: free-form node nesting',
+        summary: 'Raw is the experimental editor lane at /<space>/raw — forked from Beta, with free-form nesting: any node can contain a graph, and worlds open fullscreen.',
+        body: [
+            'Raw is the newest experimental lane, forked from Beta in July 2026 and now the one promoted from the landing page (/open/raw to try it as a guest). Its core idea is free-form nesting: no node type is a singleton, and any node can be entered to author a graph inside it.',
+            { list: [
+                'Reached from a space at /<space>/raw (same sign-in rules as Studio); /open/raw opens it on the communal open space.',
+                'Enter any node with its “Enter ›” button; the breadcrumb tracks your depth and Escape steps back out one level at a time.',
+                'Entering a World node opens its 3D viewport fullscreen; the ← World button in the topbar drops back to the graph.',
+                'The palette only lists node types that actually compute or render — anything still marked “authoring only” is a declared-but-unbuilt placeholder.'
+            ] }
+        ],
+        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting'],
+        updated: '2026-08-01'
+    },
+    {
         id: 'wcc-exhibition',
         category: 'Spaces & access',
         title: 'WCC: Women Creating Change — a virtual exhibition space',

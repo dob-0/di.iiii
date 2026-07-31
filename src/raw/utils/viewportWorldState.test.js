@@ -1,7 +1,36 @@
 import { describe, expect, it } from 'vitest'
 import { createEdge, createNode } from '../../project/nodeRegistry.js'
 import { createNodeGraphContext } from '../../project/graph/nodeGraphRuntime.js'
-import { getRawWorldBackgroundColor, pickActiveTypeNode } from './viewportWorldState.js'
+import { getRawWorldBackgroundColor, pickActiveTypeNode, resolveScopeWorldNode } from './viewportWorldState.js'
+
+describe('resolveScopeWorldNode', () => {
+    const nodes = [
+        { id: 'root-child', typeId: 'math.add', parentId: null, values: {} },
+        { id: 'world-1', typeId: 'universe.world', parentId: null, values: {} },
+        { id: 'world-2', typeId: 'universe.world', parentId: null, values: {} },
+        { id: 'inner-sphere', typeId: 'geometry.sphere', parentId: 'world-1', values: {} }
+    ]
+
+    it('picks the first world sibling of the scope by default', () => {
+        expect(resolveScopeWorldNode(nodes, null, {}).id).toBe('world-1')
+    })
+
+    it('honors the live marker over creation order', () => {
+        expect(resolveScopeWorldNode(nodes, null, { '': 'world-2' }).id).toBe('world-2')
+    })
+
+    // Regression (2026-08-01): entering a world node via "Enter ›" made the
+    // scope the world itself, so the sibling-only lookup returned null and
+    // RawEditor's no-world effect cancelled the just-requested fullscreen.
+    // Inside a world scope, the world is the scope node.
+    it('resolves the scope node itself when the scope is a world', () => {
+        expect(resolveScopeWorldNode(nodes, 'world-1', {}).id).toBe('world-1')
+    })
+
+    it('returns null in a non-world scope with no world children', () => {
+        expect(resolveScopeWorldNode(nodes, 'root-child', {})).toBeNull()
+    })
+})
 
 describe('pickActiveTypeNode', () => {
     const nodes = [

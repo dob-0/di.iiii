@@ -18,6 +18,7 @@ import { getInspectorSections } from '../../project/entityRegistry.js'
 import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
@@ -255,12 +256,10 @@ export default function RawEditor({
     // liveWorldNodeIdByScope, set via the World panel's own live toggle — see
     // WorldPanelWindow's onSetLive below), defaulting to first-created when
     // nothing's been marked yet.
-    const worldNode = useMemo(() => {
-        const candidates = authoredNodes.filter((node) => node.typeId === 'universe.world' && (node.parentId || null) === currentScopeId)
-        if (!candidates.length) return null
-        const liveId = (document.workspaceState?.liveWorldNodeIdByScope || {})[currentScopeId || '']
-        return candidates.find((node) => node.id === liveId) || candidates[0]
-    }, [authoredNodes, currentScopeId, document.workspaceState?.liveWorldNodeIdByScope])
+    const worldNode = useMemo(
+        () => resolveScopeWorldNode(authoredNodes, currentScopeId, document.workspaceState?.liveWorldNodeIdByScope),
+        [authoredNodes, currentScopeId, document.workspaceState?.liveWorldNodeIdByScope]
+    )
     const hasWorldNode = Boolean(worldNode)
     // Generalizes the World live-toggle above to any scope-repeatable type
     // where exactly one "active" result is wanted (world.light/world.
