@@ -104,3 +104,29 @@ Verdict: **accept.** Do not add `--legacy-peer-deps`, and do not add an
 
 **Re-check when:** `eslint-plugin-react` and `eslint-plugin-jsx-a11y` both
 declare an eslint 10 peer. Then upgrade all three together in one commit.
+
+---
+
+## MUI 7 → 9 (#87/#85) — a styling-engine migration, not a bump
+
+MUI 9 *does* accept React 18 (peer `^17 || ^18 || ^19`), so it is not blocked
+the way drei is. What blocks it: v9 adds a **required peer
+`@mui/material-pigment-css`** — the Emotion → Pigment CSS build-time styling
+migration. MUI is used across the whole Studio shell (StudioApp, StudioEditor,
+SpaceHub, LandingPage, auth surfaces…), and the golden rule is *preserve
+existing UI exactly*. A styling-engine swap under every surface needs its own
+visual-regression pass, not a dependabot merge. No security advisory on MUI 7.
+
+**Re-check when:** scheduled deliberately, ideally together with the React 19
+migration (see drei above) since both rewire the same component surface.
+
+---
+
+## node 22-alpine → 26-alpine (#66/#67) — wait for 26 LTS
+
+CI is green on both, but Node 26 is **Current, not LTS** until ~Oct 2026, and
+node 22 is in maintenance until April 2027 — urgency is zero. Prod runtime
+stays on even-LTS.
+
+**Re-check when:** Node 26 enters Active LTS (Oct 2026) — then take both PRs
+together (root + serverXR images must move in the same deploy).
