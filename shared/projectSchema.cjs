@@ -155,7 +155,8 @@ const defaultPresentationState = {
   codeSourceType: 'html',
   codeUrl: '',
   codeFiles: [],
-  entryView: 'scene'
+  entryView: 'scene',
+  deviceAccess: false
 }
 
 const defaultPublishState = {
@@ -562,7 +563,8 @@ const normalizePresentationState = (presentation = {}, worldState = defaultWorld
           .filter((f) => f && typeof f.name === 'string' && typeof f.content === 'string')
           .map((f) => ({ name: f.name.trim(), content: f.content }))
       : defaultPresentationState.codeFiles,
-    entryView: ['scene', 'fixed-camera', 'code'].includes(entryView) ? entryView : defaultPresentationState.entryView
+    entryView: ['scene', 'fixed-camera', 'code'].includes(entryView) ? entryView : defaultPresentationState.entryView,
+    deviceAccess: source.deviceAccess === true
   }
 }
 

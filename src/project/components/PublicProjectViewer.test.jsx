@@ -131,6 +131,38 @@ describe('PublicProjectViewer', () => {
             // published pages run getUserMedia (e.g. br_id_ge rite); without
             // delegation the sandboxed iframe hard-denies camera on mobile
             expect(iframe?.getAttribute('allow')).toContain('camera')
+            // no deviceAccess opt-in → the page must stay origin-isolated
+            expect(iframe?.getAttribute('sandbox')).not.toContain('allow-same-origin')
+        })
+    })
+
+    it('grants a real origin (allow-same-origin) only when the owner opts into deviceAccess', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'rite', title: 'the rite' },
+                presentationState: {
+                    mode: 'code',
+                    entryView: 'code',
+                    codeHtml: '<main>the lamp</main>',
+                    deviceAccess: true
+                },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        const { container } = render(
+            <PublicProjectViewer spaceId="br-id-ge" projectId="rite" spaceLabel="br_id_ge" />
+        )
+
+        await waitFor(() => {
+            const iframe = container.querySelector('iframe')
+            expect(iframe).not.toBeNull()
+            // getUserMedia is impossible in an opaque origin: opted-in pages need both
+            // the permission delegation and a real origin
+            expect(iframe?.getAttribute('allow')).toContain('camera')
+            expect(iframe?.getAttribute('sandbox')).toContain('allow-same-origin')
         })
     })
 

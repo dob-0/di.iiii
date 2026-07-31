@@ -160,7 +160,10 @@ export const defaultPresentationState = {
     codeSourceType: 'html',
     codeUrl: '',
     codeFiles: [],
-    entryView: 'scene'
+    entryView: 'scene',
+    // owner opt-in: render the published page without origin-isolating sandbox so
+    // getUserMedia/device APIs work — the page then runs with the site's origin
+    deviceAccess: false
 }
 
 export const defaultPublishState = {
@@ -571,7 +574,8 @@ export const normalizePresentationState = (presentation = {}, worldState = defau
                 .filter((f) => f && typeof f.name === 'string' && typeof f.content === 'string')
                 .map((f) => ({ name: f.name.trim(), content: f.content }))
             : defaultPresentationState.codeFiles,
-        entryView: ['scene', 'fixed-camera', 'code'].includes(entryView) ? entryView : defaultPresentationState.entryView
+        entryView: ['scene', 'fixed-camera', 'code'].includes(entryView) ? entryView : defaultPresentationState.entryView,
+        deviceAccess: source.deviceAccess === true
     }
 }
 

@@ -55,6 +55,10 @@ const overlayCardStyle = {
 // enabled outside fixed-camera mode) cover the rest.
 const AUTO_FRAME_MAX_DISTANCE = 25
 
+// deviceAccess (owner opt-in in presentationState) adds allow-same-origin so the
+// page has a real security origin — getUserMedia is impossible in an opaque one
+const PAGE_SANDBOX = 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals'
+
 const computeAutoFrameCamera = (document) => {
     const points = (document.entities || [])
         .map((entity) => entity?.components?.transform?.position)
@@ -282,7 +286,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         title={viewerTitle}
                         src={presentationState.codeUrl.trim()}
                         loading="lazy"
-                        sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals"
+                        sandbox={presentationState.deviceAccess ? `${PAGE_SANDBOX} allow-same-origin` : PAGE_SANDBOX}
                         allow="camera; microphone; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
                         referrerPolicy="strict-origin-when-cross-origin"
                         style={{
@@ -297,7 +301,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         ref={iframeRef}
                         title={viewerTitle}
                         srcDoc={previewDocument}
-                        sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals"
+                        sandbox={presentationState.deviceAccess ? `${PAGE_SANDBOX} allow-same-origin` : PAGE_SANDBOX}
                         allow="camera; microphone; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
                         style={{
                             border: 0,
