@@ -5,6 +5,43 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-01 — Dependency batch, owed verifications all pass, two Raw/registry fixes, off-box backup scheduled
+
+**Who:** Claude ("go fix all" session). Dev is ahead of prod at `a45d1d6a`,
+staging-verified, awaiting owner click-through before promoting `main`.
+
+- **Dependabot queue 15 → 2.** Merged into dev: express 5 (contracts 64/64),
+  three 0.185 (verified rendering live on staging), jsdom 30 (its PR's CI
+  failure was a stale July 28 base; suite green on current dev), dotenv 17,
+  six actions/docker bumps. Deferred with written verdicts in
+  `docs/ai/dependency-decisions.md`: MUI 9 (required `@mui/material-pigment-css`
+  peer = styling-engine migration, pair with React 19), drei 10 (React 19),
+  node 26 (Current not LTS until ~Oct 2026 — the 2 open PRs are deliberate).
+  drei/MUI majors told `@dependabot ignore this major version`.
+- **The three owed browser verifications PASS** on staging (headless
+  Playwright): Raw deep nesting, EXIF round-trip on a real sideways-portrait
+  upload (served asset: orientation baked, zero EXIF/GPS, assetId = sha256 of
+  scrubbed bytes), Time node ticking (pixel-diff; rAF gated on Time existing).
+- **Two bugs found by those verifications, fixed with guards + known-fixes
+  rows:** (1) Raw "Enter ›" into a world never engaged fullscreen —
+  worldNode was resolved among scope *children* only, so the no-world effect
+  cancelled the just-requested fullscreen; extracted `resolveScopeWorldNode`
+  (scope-is-world case) into `viewportWorldState.js`, verified live on
+  staging. (2) `time` still carried `authoringOnly: true` after being
+  implemented; guard test parses the runtime evaluator's `case` list so no
+  evaluated type can carry the flag. Also added the missing Raw wiki article.
+- **Legacy WCC page self-hosted** (`public/wcc/artist-works-land/`): Google
+  Fonts → local `fonts.css` + woff2, 3 unpkg scripts → `vendor/` (SRI hashes
+  match); staging probe shows zero third-party requests, fonts loaded. The
+  product now makes no external requests anywhere.
+- **Off-box backup scheduled**: systemd user timer `di-backup-pull` daily
+  09:00 local + linger on the laptop; first run pulled 1.4 GB, integrity ok,
+  18 archives / 11 G held. Archives still unencrypted at rest.
+- Hygiene: local `main` fast-forwarded, stale probe scripts (`.detect.mjs`/
+  `.fin.mjs`) removed, temp worktrees pruned. Known flakes (pre-existing,
+  pass on rerun): SpaceHub preview test under load, contracts 429-throttle
+  timing.
+
 ## 2026-07-26 — Landing "Open Studio" un-hijacked from jam mode; CI audit gate unblocked; dev→main promoted
 
 **Who:** Claude. User-reported bug: logged-out "Open Studio" on the landing

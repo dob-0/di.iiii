@@ -333,6 +333,22 @@ A good task size for a single agent session: one file split, one bug fix, one in
 
 ---
 
+### Playwright probe scripts stay out of the repo — import by absolute path
+
+**Rule:** One-off browser probes (verification scripts, screenshot checks) live in
+the session scratchpad, never the repo root, and import the repo's Playwright by
+absolute path: `import { chromium } from '/home/nooo/di.iiii/node_modules/playwright/index.mjs'`.
+
+**Why:** a bare `import 'playwright'` only resolves from inside the repo (ESM
+ignores `NODE_PATH`), which is exactly why past sessions left `.detect.mjs`/
+`.fin.mjs` littered in the repo root — the script had to live there to run.
+The absolute import removes that excuse. Also: probe pages that hold SSE/WebSocket
+connections never reach Playwright's `networkidle` — use `domcontentloaded` plus
+an explicit wait, and avoid `page.screenshot()`'s font wait on pages with
+`font-display: swap` (assert `document.fonts.status` instead).
+
+---
+
 ### Vite manualChunks: include every package that imports `three`
 
 **Rule:** Every npm package that directly or transitively imports `three` must be listed in the `three-vendor` manualChunks group. Missing even one causes a circular chunk initialisation order that crashes the app in production (TDZ: `Cannot access 'X' before initialization`).
