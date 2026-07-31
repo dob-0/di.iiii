@@ -25,7 +25,7 @@ RUN npm run build
 # (an unprivileged port a non-root process can actually bind), instead of
 # hand-patching the regular nginx:alpine image's root-owned cache/pid dirs
 # and permissions ourselves with no way to test the result before deploy.
-FROM nginxinc/nginx-unprivileged:alpine@sha256:a718212f9cf21e241f14067333000a3f0930292f5354fe0db269e9a2a2596b9e
+FROM nginxinc/nginx-unprivileged:alpine@sha256:59ccf0943b0b8e8d9e6ea9039a39555730f544701a655c596f7df7d096c593f5
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 8080
