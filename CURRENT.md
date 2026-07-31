@@ -10,11 +10,13 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-**All three tiers are in sync at `09bc8a07`** (2026-07-30) — local `dev`,
-staging and prod. 16 commits promoted `dev -> main` after a staging pass;
-both deploys green, prod verified live. Several agents share this tree:
-re-check `git log` before assuming your commits are local, and **stage
-explicit paths, never `git add -A`**.
+**All three tiers are in sync at `0c568c02`** (2026-07-31) — local `dev`,
+staging and prod. Shipped: published-page camera fix (iframe `allow` +
+owner opt-in `presentationState.deviceAccess` for a real origin — see the
+two-cause known-fixes row); verified live on prod via Playwright
+fake-camera probe (br_id_ge rite: lamp opens). Several agents share this
+tree: re-check `git log` before assuming your commits are local, and
+**stage explicit paths, never `git add -A`**.
 
 ## Last session (2026-07-28/30)
 
