@@ -137,7 +137,6 @@ export const NODE_TYPES = {
         label: 'Time',
         category: 'source',
         runtime: 'any',
-        authoringOnly: true,
         inputs: [
             { id: 'bpm', type: 'number', label: 'BPM', default: 120 },
         ],

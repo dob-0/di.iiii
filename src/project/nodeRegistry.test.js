@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { cwd } from 'node:process'
 import { describe, expect, it } from 'vitest'
 import {
     NODE_TYPES,
@@ -75,6 +78,24 @@ describe('NODE_TYPES', () => {
         expect(NODE_TYPES['universe.world'].singleton).toBeFalsy()
         expect(NODE_TYPES['time'].singleton).toBeFalsy()
         expect(NODE_TYPES['source.ar'].singleton).toBeFalsy()
+    })
+
+    // Regression (2026-08-01): `time` was implemented (removed from
+    // UNIMPLEMENTED_NODE_TYPES, evaluator added in nodeGraphRuntime) but kept
+    // its stale authoringOnly flag, so the palette still said "doesn't compute
+    // or render anything yet". Any type the runtime evaluates must not carry
+    // the flag — extracted from the evaluator source so a new implementation
+    // that forgets the flag fails here, not in the palette.
+    it('no runtime-evaluated node type is marked authoringOnly', () => {
+        const runtimePath = ['project/graph/nodeGraphRuntime.js', 'src/project/graph/nodeGraphRuntime.js']
+            .map((p) => resolve(cwd(), p)).find(existsSync)
+        const runtimeSource = readFileSync(runtimePath, 'utf8')
+        const evaluatedTypeIds = [...runtimeSource.matchAll(/case '([^']+)':/g)].map((m) => m[1])
+        expect(evaluatedTypeIds).toContain('time')
+        for (const typeId of evaluatedTypeIds) {
+            if (!NODE_TYPES[typeId]) continue
+            expect(NODE_TYPES[typeId].authoringOnly, `${typeId} is evaluated but flagged authoringOnly`).toBeFalsy()
+        }
     })
 
     it('universe.node0 is an ordinary node type', () => {
