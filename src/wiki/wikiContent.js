@@ -364,6 +364,30 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['wcc', 'exhibition', 'linked-space', 'art'],
         updated: '2026-07-15'
+    },
+    {
+        id: 'algovrithm',
+        category: 'Spaces & access',
+        title: 'algovrithm — a code-authored VR space',
+        summary: 'algovrithm at /algovrithm is a linked space whose scene is written in three.js/R3F code rather than authored in Studio.',
+        body: [
+            'algovrithm is a WebXR experience built the way br_id_ge and WCC are linked spaces — a real space, routed through the same server-verified public/private check — but with one difference that matters: its scene is not a project document you edit in Studio. The scene is code, living in src/algoVrithm/, so it can do things the entity model does not express (generative geometry, per-frame math, custom shaders).',
+            { list: [
+                '/algovrithm — the experience. The name is spelled lowercase and unpunctuated so that it is a legal space id exactly as written: unlike br_id_ge, whose URL keeps a styled name that has to be slugified down to the br-id-ge space, here the id, the URL and the label are one string with no seam between them.',
+                'It plays itself — seven scenes in 47 seconds, no controls to learn — and loops continuously, so it can be left running for a whole exhibition day and a visitor who walks up halfway through only has to keep standing there to see the opening. “Enter VR” / “Enter AR” appear only when the headset or phone actually reports support for that mode, and entering VR restarts the piece from the top.',
+                'Scene changes are glitch transitions, not fades: at each handover the view tears into horizontal strips of signal noise — sparse at the edges, a full wall of static at the crossing — then clears into the next scene. The noise re-rolls below the photosensitive flicker band (test-guarded), and its brightness swings around the current room’s own colour so it reads as this world failing rather than an overlay.',
+                'The piece carries a synthesized spatial score: every beat has sound placed in the room around the visitor (the scan beat’s machine tick circles the head, the metaball hums sit on the blobs’ own orbit ring and close in with them, the reel globe plays 31 positional reel tracks from their places on the shell, and the closing sphere’s colonnade flashes are heard stepping away from you column by column), and the glitch transitions are heard as bursts of static on the same pulse as the visuals. No audio files — everything is generated, driven by the same playhead as the picture, and browsers require one touch, click or key before any sound is allowed to start.',
+                'Because the scene is code, editing it means editing the files in src/algoVrithm/ — the Studio editor has nothing to open for this space.',
+                'The authoring tools start hidden and open on H. Everything an author needs — the timeline, the world and light controls, the placement handles, the “why is there no Enter VR button” message — is behind that one key, so the piece can be watched as an audience sees it without turning anything off. On a phone or tablet there is no keyboard to press, which is exactly the intent: what is left on screen is Enter AR and Full screen and nothing else.',
+                'With the tools open the screen splits — the piece keeps the top 55%, the editor takes the bottom 45%, and neither sits on top of the other, so the part being worked on is never behind the controls working on it. Ctrl+Z (Cmd+Z on a Mac) undoes edits and Ctrl+Shift+Z redoes them; a whole drag of a handle or a clip edge counts as one undo rather than one per frame.'
+            ] },
+            'It is built as a timeline rather than one scene: a single playhead runs 0→1, and each sequence claims an in/out window on it in src/algoVrithm/sequences/index.js. Windows overlap on purpose so handovers cross-fade instead of cutting, and each sequence declares its own backdrop colour and fog range which the room blends between — without that, the near-white opening would hard-cut to the near-black scene after it, which in a headset is genuinely unpleasant.',
+            'The playhead is advanced from the render loop rather than from a timer of its own. This matters in a headset: once an immersive session starts, the browser stops driving the flat page and the scene is drawn from the headset’s own frame callback instead, so a clock running on a page timer simply stops — the piece would render at full frame rate showing one frozen moment. Ticking it inside the scene means one clock, running at whatever the display in front of you actually refreshes at.',
+            'The room and its lighting are edit-list data too, not code. A row carries a world — colour, fog range, and an ambient fill level saying how much unlit air you can see — plus an optional list of lights: point lamps, or “glow” lamps that also show the lit air around the source. Both are editable from the author-only director panel, with swatch grids drawn from the piece’s own palette, a custom colour picker that reports what a choice breaks without ever blocking it, and drag handles for placing a light in the room. Lights fade in and out with the row that owns them and the ambient level blends across a handover on exactly the same curve as the colour and fog, so nothing switches on at a cut.',
+            'Nothing the panel does is saved. It edits a draft, the piece renders from that draft live, and “Copy edit list” hands back source to paste into src/algoVrithm/sequences/index.js — which stays the single source of truth: git-tracked, reviewable, and what actually deploys.'
+        ],
+        tags: ['algovrithm', 'vr', 'webxr', 'three.js', 'linked-space', 'code', 'lighting', 'spatial-audio'],
+        updated: '2026-08-01'
     }
 ]
 
