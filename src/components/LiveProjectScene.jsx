@@ -10,14 +10,13 @@ import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGua
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
-    buildProjectAssetUrl,
     buildProjectEventsUrl,
     getProjectDocument,
     listProjectOps
 } from '../project/services/projectsApi.js'
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
 import { getApiSession } from '../services/apiClient.js'
-import { mountRelativeApiUrl } from '../services/assetSources.js'
+import { buildAssetMap } from '../project/viewport/buildAssetMap.js'
 import BoxObject from '../objectComponents/BoxObject.jsx'
 import PlaneObject from '../objectComponents/PlaneObject.jsx'
 import TorusObject from '../objectComponents/TorusObject.jsx'
@@ -1334,11 +1333,7 @@ export default function LiveProjectScene({
     // inside the Studio editor's useAssetRestore hook, never here). Fall back
     // to the direct per-project asset endpoint so media actually streams for
     // any public/live viewer (landing page, WCC, etc.), not just Studio.
-    const assetMap = useMemo(() => new Map((doc?.assets || []).map((asset) => {
-        const mountedUrl = asset.url ? mountRelativeApiUrl(asset.url) : null
-        const url = mountedUrl || asset.url || buildProjectAssetUrl(projectId, asset.id)
-        return [asset.id, url === asset.url ? asset : { ...asset, url }]
-    })), [doc?.assets, projectId])
+    const assetMap = useMemo(() => buildAssetMap(doc, projectId), [doc, projectId])
     const gateEntity = useMemo(() => entities.find(isGateEntity) || null, [entities])
     // Grouped children carry parent-relative transforms — render the hierarchy
     // (roots only at the top level), matching the editor and portal embeds.
