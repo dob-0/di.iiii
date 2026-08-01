@@ -268,6 +268,13 @@ function registerSpaceRoutes(router, {
             if (existing && existing.id !== spaceId) {
               return res.status(409).json({ error: 'That slug is already taken.' })
             }
+            // Slug resolution wins over id (index.js resolves segment via
+            // findSpaceBySlug first), so a slug equal to ANOTHER space's id
+            // would hijack that space's public link.
+            const shadowedSpace = await loadSpaceMeta(normalized)
+            if (shadowedSpace) {
+              return res.status(409).json({ error: 'That slug is already taken.' })
+            }
           }
         }
         nextSlug = normalized
@@ -833,9 +840,17 @@ function registerSpaceRoutes(router, {
         return res.json({ ok: true, shared: false })
       }
 
-      // Publishing to the commons needs an accountable identity — anonymous
-      // guest sessions can edit their sandbox but not the public index.
-      if (config.requireAuth && req.authState?.type !== 'session') {
+      // Publishing to the commons needs an accountable account. Guests carry
+      // ordinary session cookies (internal type 'session', subject 'guest:…')
+      // and anonymous visitors are { type: 'session', authenticated: false },
+      // so type alone identifies nobody — the old type-only check let both
+      // publish to the public index.
+      const sharerState = req.authState || {}
+      const isAccountSharer = sharerState.type === 'session'
+        && sharerState.authenticated === true
+        && sharerState.subject
+        && !isGuestSubject(sharerState.subject)
+      if (config.requireAuth && !isAccountSharer) {
         return res.status(403).json({ error: 'Sign in with an account to share assets publicly.', code: 'auth_required' })
       }
 

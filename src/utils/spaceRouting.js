@@ -13,6 +13,9 @@ export const RESERVED_APP_SEGMENTS = [
     ...APP_PAGE_PREFERENCES_ALIASES,
     APP_PAGE_WIKI,
     'beta',
+    'raw',
+    'seed',
+    'open_jam',
     'studio'
 ]
 

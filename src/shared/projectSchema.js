@@ -767,7 +767,10 @@ export const applyProjectOps = (document, ops = []) => {
             case 'updateEntity': {
                 const entityId = ensureString(payload.entityId)
                 if (!entityId || !entities.has(entityId)) break
-                entities.set(entityId, normalizeEntity(mergePatch(entities.get(entityId), payload.patch || {})))
+                // Pin the id: a patch carrying `id` would otherwise store an
+                // entity whose id differs from its map key — serialized out
+                // as a duplicate/orphan id and silently lost on next apply.
+                entities.set(entityId, normalizeEntity({ ...mergePatch(entities.get(entityId), payload.patch || {}), id: entityId }))
                 break
             }
             case 'updateComponent': {
@@ -789,6 +792,10 @@ export const applyProjectOps = (document, ops = []) => {
                 if (!entityId) break
                 const toDelete = new Set()
                 const collect = (id) => {
+                    // parentId is patchable to anything, so cycles can exist —
+                    // without this guard a cycle recurses to RangeError and the
+                    // involved entities become permanently undeletable.
+                    if (toDelete.has(id)) return
                     toDelete.add(id)
                     for (const [, child] of entities) {
                         if (child.parentId === id) collect(child.id)
@@ -869,7 +876,7 @@ export const applyProjectOps = (document, ops = []) => {
             case 'updateEdge': {
                 const edgeId = ensureString(payload.edgeId)
                 if (!edgeId || !edges.has(edgeId)) break
-                const merged = normalizeProjectEdge(mergePatch(edges.get(edgeId), payload.patch || {}))
+                const merged = normalizeProjectEdge({ ...mergePatch(edges.get(edgeId), payload.patch || {}), id: edgeId })
                 if (!merged) break
                 edges.set(edgeId, merged)
                 break

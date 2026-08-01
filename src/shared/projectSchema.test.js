@@ -298,6 +298,43 @@ describe('projectSchema', () => {
         ])
         expect(afterDifferentScope.nodes.filter((n) => n.typeId === 'universe.world')).toHaveLength(2)
     })
+
+    it('updateEntity cannot smuggle a new id through the patch', () => {
+        const base = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createEntity', payload: { entity: { id: 'ent-a', type: 'box' } } },
+            { type: 'createEntity', payload: { entity: { id: 'ent-b', type: 'box' } } }
+        ])
+        const after = applyProjectOps(base, [
+            { type: 'updateEntity', payload: { entityId: 'ent-a', patch: { id: 'ent-b', name: 'renamed' } } }
+        ])
+        expect(after.entities.map((e) => e.id).sort()).toEqual(['ent-a', 'ent-b'])
+        expect(after.entities.find((e) => e.id === 'ent-a').name).toBe('renamed')
+    })
+
+    it('updateEdge cannot smuggle a new id through the patch', () => {
+        const base = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'n1', typeId: 'geom.cube' } } },
+            { type: 'createNode', payload: { node: { id: 'n2', typeId: 'geom.cube' } } },
+            { type: 'createEdge', payload: { edge: { id: 'edge-1', fromNodeId: 'n1', toNodeId: 'n2' } } }
+        ])
+        const after = applyProjectOps(base, [
+            { type: 'updateEdge', payload: { edgeId: 'edge-1', patch: { id: 'edge-2' } } }
+        ])
+        expect(after.edges.map((e) => e.id)).toEqual(['edge-1'])
+    })
+
+    it('deleteEntity survives a parentId cycle instead of recursing forever', () => {
+        const base = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createEntity', payload: { entity: { id: 'cyc-a', type: 'box' } } },
+            { type: 'createEntity', payload: { entity: { id: 'cyc-b', type: 'box' } } },
+            { type: 'updateEntity', payload: { entityId: 'cyc-a', patch: { parentId: 'cyc-b' } } },
+            { type: 'updateEntity', payload: { entityId: 'cyc-b', patch: { parentId: 'cyc-a' } } }
+        ])
+        const after = applyProjectOps(base, [
+            { type: 'deleteEntity', payload: { entityId: 'cyc-a' } }
+        ])
+        expect(after.entities).toHaveLength(0)
+    })
 })
 
 describe('invertProjectOps', () => {

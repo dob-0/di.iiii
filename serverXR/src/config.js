@@ -284,7 +284,10 @@ const config = {
   openSpaceId: String(process.env.OPEN_SPACE_ID || 'open').trim().toLowerCase(),
   freeSpaceLimit: Number(process.env.FREE_SPACE_LIMIT) || 3,
   liveSync: {
-    url: (process.env.LIVE_API_URL || 'https://di-studio.xyz/serverXR').replace(/\/+$/, ''),
+    // No implicit default: an unset LIVE_API_URL must surface as "not
+    // configured" (syncRoutes 503s), never silently target production —
+    // a dev/staging server with the old prod fallback would push there.
+    url: (process.env.LIVE_API_URL || '').replace(/\/+$/, ''),
     token: (process.env.LIVE_API_TOKEN || '').trim()
   },
   googleDrive: {
