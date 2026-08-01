@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
 import { registerInscriptionRoutes } from './inscriptionRoutes.js'
 import { createKeyedLock } from '../asyncLock.js'
@@ -7,14 +8,20 @@ function makeFakeRouter() {
   const record = (method) => (path, ...handlers) => {
     routes[`${method} ${path}`] = handlers
   }
-  return { routes, get: record('get'), post: record('post'), use: () => {} }
+  return { routes, get: record('get'), post: record('post'), delete: record('delete'), use: () => {} }
 }
 
-const setup = (withSpaceOpsLock) => {
+const setup = (withSpaceOpsLock, overrides = {}) => {
   const router = makeFakeRouter()
-  registerInscriptionRoutes(router, {
+  const deps = {
     appendOpsHistory: vi.fn(),
-    applySceneOps: vi.fn((scene, ops) => ({ ...scene, objects: [...(scene.objects || []), ops[0].payload.object] })),
+    applySceneOps: vi.fn((scene, ops) => {
+      const op = ops[0]
+      if (op.type === 'deleteObject') {
+        return { ...scene, objects: (scene.objects || []).filter((obj) => obj.id !== op.payload.objectId) }
+      }
+      return { ...scene, objects: [...(scene.objects || []), op.payload.object] }
+    }),
     blankScene: { objects: [] },
     broadcastLiveEvent: vi.fn(),
     ensureSpaceScene: vi.fn(),
@@ -26,23 +33,33 @@ const setup = (withSpaceOpsLock) => {
     readJson: vi.fn().mockResolvedValue({ objects: [] }),
     upsertSpaceMeta: vi.fn().mockResolvedValue({}),
     writeJson: vi.fn().mockResolvedValue(undefined),
-    ...(withSpaceOpsLock ? { withSpaceOpsLock } : {})
-  })
-  return router
+    ...(withSpaceOpsLock ? { withSpaceOpsLock } : {}),
+    ...overrides
+  }
+  registerInscriptionRoutes(router, deps)
+  return { router, deps }
 }
 
-const makeReqRes = (body) => ({
-  req: { params: { spaceId: 'open' }, body },
-  res: { json: vi.fn(), status: vi.fn(function status() { return this }) },
+const makeReqRes = (body, params = {}) => ({
+  req: { params: { spaceId: 'open', ...params }, body },
+  res: {
+    json: vi.fn(),
+    statusCode: null,
+    status: vi.fn(function status(code) { this.statusCode = code; return this })
+  },
   next: vi.fn()
 })
+
+const lastHandler = (router, key) => {
+  const handlers = router.routes[key]
+  return handlers[handlers.length - 1]
+}
 
 describe('inscriptionRoutes uses an injected shared lock, not its own separate one', () => {
   it('accepts an externally-provided withSpaceOpsLock and actually calls through it', async () => {
     const withSpaceOpsLock = vi.fn((spaceId, fn) => fn())
-    const router = setup(withSpaceOpsLock)
-    const handlers = router.routes['post /api/spaces/:spaceId/inscriptions']
-    const handler = handlers[handlers.length - 1]
+    const { router } = setup(withSpaceOpsLock)
+    const handler = lastHandler(router, 'post /api/spaces/:spaceId/inscriptions')
     const { req, res, next } = makeReqRes({ name: 'Ada', word: 'hello' })
 
     await handler(req, res, next)
@@ -71,9 +88,8 @@ describe('inscriptionRoutes uses an injected shared lock, not its own separate o
       })
     })
 
-    const router = setup(sharedLock)
-    const handlers = router.routes['post /api/spaces/:spaceId/inscriptions']
-    const handler = handlers[handlers.length - 1]
+    const { router } = setup(sharedLock)
+    const handler = lastHandler(router, 'post /api/spaces/:spaceId/inscriptions')
     const { req, res, next } = makeReqRes({ name: 'Ada', word: 'hello' })
 
     await firstHolderStarted
@@ -87,5 +103,100 @@ describe('inscriptionRoutes uses an injected shared lock, not its own separate o
     releaseFirstHolder()
     await inscriptionDone
     expect(order).toEqual(['first-holder-start', 'inscription-done'])
+  })
+})
+
+describe('proof of authorship + self-unmake', () => {
+  const sha256Hex = (value) => createHash('sha256').update(value, 'utf8').digest('hex')
+
+  const createOne = async () => {
+    const ctx = setup()
+    const post = lastHandler(ctx.router, 'post /api/spaces/:spaceId/inscriptions')
+    const { req, res, next } = makeReqRes({ name: 'Ada', word: 'hello' })
+    await post(req, res, next)
+    const body = res.json.mock.calls[0][0]
+    const storedScene = ctx.deps.writeJson.mock.calls[0][1]
+    const storedObject = storedScene.objects.find((obj) => obj.id === body.id)
+    return { ctx, body, storedObject }
+  }
+
+  it('returns a one-time raw proof on create and stores only its sha256 on the object', async () => {
+    const { body, storedObject } = await createOne()
+    expect(typeof body.proof).toBe('string')
+    expect(body.proof.length).toBeGreaterThanOrEqual(24)
+    expect(storedObject.proofHash).toBe(sha256Hex(body.proof))
+    // never the raw proof on the publicly readable object
+    expect(JSON.stringify(storedObject)).not.toContain(body.proof)
+  })
+
+  const setupDelete = (sceneObjects, metaVersion = 1) => {
+    const ctx = setup(undefined, {
+      readJson: vi.fn().mockResolvedValue({ objects: sceneObjects }),
+      loadSpaceMeta: vi.fn().mockResolvedValue({ openInscriptions: true, isPublic: true, sceneVersion: metaVersion })
+    })
+    return { ctx, del: lastHandler(ctx.router, 'delete /api/spaces/:spaceId/inscriptions/:id') }
+  }
+
+  it('deletes the object and bumps sceneVersion when the proof matches', async () => {
+    const proof = 'the-raw-proof'
+    const stone = { id: 'insc-abc', type: 'text-2d', proofHash: sha256Hex(proof) }
+    const { ctx, del } = setupDelete([stone], 4)
+    const { req, res, next } = makeReqRes({ proof }, { id: 'insc-abc' })
+
+    await del(req, res, next)
+
+    expect(res.json).toHaveBeenCalledWith({ ok: true, id: 'insc-abc', total: 0 })
+    const writtenScene = ctx.deps.writeJson.mock.calls[0][1]
+    expect(writtenScene.objects).toEqual([])
+    const [op] = ctx.deps.appendOpsHistory.mock.calls[0][1]
+    expect(op.type).toBe('deleteObject')
+    expect(op.payload).toEqual({ objectId: 'insc-abc' })
+    expect(op.version).toBe(5)
+    expect(ctx.deps.upsertSpaceMeta).toHaveBeenCalledWith('open', { touch: true, sceneVersion: 5 })
+    expect(ctx.deps.broadcastLiveEvent).toHaveBeenCalledWith('open', 'scene-op', expect.objectContaining({ version: 5 }))
+  })
+
+  it('403s on a wrong proof without touching the scene', async () => {
+    const stone = { id: 'insc-abc', type: 'text-2d', proofHash: sha256Hex('right') }
+    const { ctx, del } = setupDelete([stone])
+    const { req, res, next } = makeReqRes({ proof: 'wrong' }, { id: 'insc-abc' })
+
+    await del(req, res, next)
+
+    expect(res.statusCode).toBe(403)
+    expect(ctx.deps.writeJson).not.toHaveBeenCalled()
+  })
+
+  it('403s with the distinct legacy message when the object predates proofHash', async () => {
+    const stone = { id: 'insc-legacy', type: 'text-2d' }
+    const { ctx, del } = setupDelete([stone])
+    const { req, res, next } = makeReqRes({ proof: 'anything' }, { id: 'insc-legacy' })
+
+    await del(req, res, next)
+
+    expect(res.statusCode).toBe(403)
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'This crossing predates proof of authorship and cannot be unmade.'
+    })
+    expect(ctx.deps.writeJson).not.toHaveBeenCalled()
+  })
+
+  it('404s on an unknown id', async () => {
+    const { del } = setupDelete([])
+    const { req, res, next } = makeReqRes({ proof: 'anything' }, { id: 'insc-nope' })
+    await del(req, res, next)
+    expect(res.statusCode).toBe(404)
+  })
+
+  it('400s on a non-inscription id or a missing proof', async () => {
+    const { del } = setupDelete([])
+
+    const bad = makeReqRes({ proof: 'x' }, { id: 'not-an-inscription' })
+    await del(bad.req, bad.res, bad.next)
+    expect(bad.res.statusCode).toBe(400)
+
+    const noProof = makeReqRes({}, { id: 'insc-abc' })
+    await del(noProof.req, noProof.res, noProof.next)
+    expect(noProof.res.statusCode).toBe(400)
   })
 })

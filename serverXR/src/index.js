@@ -320,6 +320,8 @@ const PUBLIC_CORS_ROUTES = [
   // open inscriptions (anonymous, append-only, opt-in per space — see inscriptionRoutes)
   // slug patterns accept underscores: routes normalize them, but this shim sees the raw path
   { pattern: /\/api\/spaces\/[a-z0-9_-]+\/inscriptions\/?$/, methods: 'POST, OPTIONS' },
+  // self-unmake of a single inscription (proof-gated DELETE — see inscriptionRoutes)
+  { pattern: /\/api\/spaces\/[a-z0-9_-]+\/inscriptions\/insc-[A-Za-z0-9-]+\/?$/, methods: 'DELETE, OPTIONS' },
   // space scene reads — the field viewer fetches its own space's scene from
   // inside the sandboxed preview (opaque origin); private spaces still 401
   { pattern: /\/api\/spaces\/[a-z0-9_-]+\/scene\/?$/, methods: 'GET, HEAD, OPTIONS' }

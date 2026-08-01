@@ -2181,6 +2181,9 @@ describe('open inscriptions (append-only portal writes)', () => {
         expect(inscribed.ok).toBe(true)
         expect(inscribed.id.startsWith('insc-')).toBe(true)
         expect(inscribed.total).toBe(1)
+        // one-time proof of authorship comes back raw, exactly once
+        expect(typeof inscribed.proof).toBe('string')
+        expect(inscribed.proof.length).toBeGreaterThanOrEqual(24)
 
         const sceneRes = await fetch(`${server.baseUrl}/api/spaces/vi-field/scene`)
         expect(sceneRes.status).toBe(200)
@@ -2189,6 +2192,43 @@ describe('open inscriptions (append-only portal writes)', () => {
         expect(stones.length).toBe(1)
         expect(stones[0].type).toBe('text-2d')
         expect(stones[0].data).toBe('anna · thread across')
+        // the publicly readable object carries only the sha256, never the raw proof
+        const { createHash } = await import('node:crypto')
+        expect(stones[0].proofHash).toBe(createHash('sha256').update(inscribed.proof, 'utf8').digest('hex'))
+        expect(JSON.stringify(scenePayload)).not.toContain(inscribed.proof)
+
+        // self-unmake: wrong proof 403, unknown id 404, right proof removes the stone
+        const wrongProof = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions/${inscribed.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ proof: 'not-the-proof' })
+        })
+        expect(wrongProof.status).toBe(403)
+        const unknownId = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions/insc-does-not-exist`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ proof: inscribed.proof })
+        })
+        expect(unknownId.status).toBe(404)
+        const deletePreflight = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions/${inscribed.id}`, {
+            method: 'OPTIONS',
+            headers: { Origin: 'null', 'Access-Control-Request-Method': 'DELETE', 'Access-Control-Request-Headers': 'Content-Type' }
+        })
+        expect(deletePreflight.status).toBe(204)
+        expect(deletePreflight.headers.get('access-control-allow-origin')).toBe('*')
+        const versionBefore = (await (await fetch(`${server.baseUrl}/api/spaces/vi-field`, { headers: withAuth(server.apiToken) })).json()).space.sceneVersion
+        const unmade = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions/${inscribed.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ proof: inscribed.proof })
+        })
+        expect(unmade.status).toBe(200)
+        const unmadeBody = await unmade.json()
+        expect(unmadeBody).toEqual({ ok: true, id: inscribed.id, total: 0 })
+        const sceneAfter = await (await fetch(`${server.baseUrl}/api/spaces/vi-field/scene`)).json()
+        expect((sceneAfter.scene?.objects || []).filter((obj) => obj.id.startsWith('insc-')).length).toBe(0)
+        const versionAfter = (await (await fetch(`${server.baseUrl}/api/spaces/vi-field`, { headers: withAuth(server.apiToken) })).json()).space.sceneVersion
+        expect(versionAfter).toBe(versionBefore + 1)
 
         // a word is required
         const empty = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions`, {
