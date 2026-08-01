@@ -10,35 +10,30 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-**dev is ahead of prod (2026-08-01): dependency batch + fixes, staging-verified,
-awaiting owner click-through before promoting `main` (prod still at `0c568c02`).**
-Landed on dev since the batch: **blank-prod-images fix** (stored `/api/…` asset
-urls remounted onto `/serverXR` in shared `buildAssetMap` — see known-fixes;
-staging-verified headlessly, also fixes platform-recordar), **hub/admin links
-now promote Raw over Beta**, br_id_ge Notations #2 landing button (parallel
-agent). Earlier: express 5, three 0.185, jsdom 30, dotenv 17, six
-actions/docker bumps, WCC self-hosted, Raw fullscreen + `time` fixes. Several
-agents share this tree: re-check `git log`, and **stage explicit paths, never
-`git add -A`**.
+**All three tiers were in sync at `7466e41c` (2026-08-01) — the big dev→main
+promotion shipped: express 5, three 0.185, dep batch, blank-images fix, Raw
+promoted over Beta.** dev has since moved ahead again (audit batch 1 +
+inscription proofs) and is NOT yet on main. Several agents share this tree:
+re-check `git log`, and **stage explicit paths, never `git add -A`**.
 
 ## Last session (2026-08-01)
 
-- **The three owed browser verifications all PASS** (headless Playwright on
-  staging): Raw deep nesting (3 levels, scoped edges, Esc unwind, fullscreen
-  round-trip), EXIF round-trip (real sideways portrait: orientation baked in,
-  zero EXIF/GPS in served asset, assetId = sha256 of scrubbed bytes), Time node
-  ticking (pixel-diff proof; rAF gated on Time node existing). Two bugs found
-  and fixed, rows in known-fixes: Raw "Enter ›" fullscreen race
-  (`resolveScopeWorldNode` in `viewportWorldState.js`), stale `authoringOnly`
-  on `time` (guard: registry test parses the runtime evaluator's case list).
-- **Dependency verdicts** recorded in `docs/ai/dependency-decisions.md`:
-  MUI 9 = pigment-css styling-engine migration (deferred, with React 19);
-  node 26 = wait for LTS (~Oct 2026; the 2 open PRs are deliberate);
-  drei 10/MUI told `@dependabot ignore this major version`.
-  jsdom 30's PR "failure" was a stale base — suite green on current dev.
-- **Off-box backup is now scheduled**: systemd user timer `di-backup-pull`
-  daily 09:00 local + linger, first run verified (18 archives, 11G). Still
-  unencrypted at rest.
+- **Blank images on prod `/main` — root-caused and fixed.** Documents store
+  `assets[].url` as site-root `/api/…`; only `/serverXR/api/…` reaches the
+  backend, so images silently got the SPA's HTML at status 200. Fix is in the
+  shared `buildAssetMap` (patching LiveProjectScene alone did nothing —
+  `/main` renders via PublicProjectViewer's orbit path). Row in known-fixes.
+- **Promoted dev → main** (24 commits) and verified prod headlessly: images
+  render, platform-recordar clean, no `/api` fetches remain.
+- **Raw now promoted over Beta** in the Studio hub link and admin space
+  rows/snapshot; Beta stays reachable by URL. Wiki updated.
+- **Ultracode audit ran**: 8 finders returned 38 candidate findings; the
+  verify+fix phase died on the session limit and was resumed after reset.
+- **Audit batch 1 landed** (`314bb1a8`): vanity-slug hijack (slug equal to
+  another space's id), commons publish open to guests/anonymous (every cookie
+  session is type `session`), `LIVE_API_URL` prod fallback, schema
+  id-smuggling via update patches, `deleteEntity` parentId-cycle recursion —
+  each with a regression test, ESM+CJS twins both patched.
 
 ## What works
 
@@ -48,9 +43,14 @@ deploy via `git push origin dev|main`; nightly VPS backups + daily off-box pull.
 
 ## Open
 
-- **Promote dev → main after owner click-through on staging** (express 5 +
-  three 0.185 are the risk surface; automated checks green).
-- Privacy, product calls owed: no account-deletion path, no export, no session
+- **Audit batches 2+ are mid-flight** — the resumed workflow's fixes are not
+  yet reviewed/committed; ~32 unverified findings remain in the run journal
+  (`subagents/workflows/wf_29dddb4e-571/journal.jsonl`). Highlights not yet
+  addressed: Beta's copy of the Raw enter-world fullscreen race, 409
+  catch-up dropping op batches, staging compose falling back to `:latest`
+  prod images, more silent-fallback asset fetches (export, archive, PDF).
+- **dev → main promotion owed again** once those land and staging verifies.
+- Privacy/product calls owed: no account-deletion path, no export, no session
   revocation. Backup archives unencrypted at rest.
 - URL spec §7 needs sign-off; blocks Stage 2. Stale GitHub App key; `main`
   protection bypassable. `docs/ai/INBOX.md`: sound-in-spaces; promo outbound.
