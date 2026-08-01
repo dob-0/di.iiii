@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Box, Container } from '@mui/material'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath, buildPreferencesPath } from '../../utils/spaceRouting.js'
-import { buildBetaHubPath } from '../../beta/utils/betaRouting.js'
+import { buildRawHubPath } from '../../raw/utils/rawRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
 import GridFloorBackground from '../../components/GridFloorBackground.jsx'
 import useAuthSession from '../../hooks/useAuthSession.js'
@@ -251,7 +251,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         </>
                     )}
                     <span className="sh-sep">·</span>
-                    <button className="sh-link" onClick={() => appNavigate(buildBetaHubPath(spaceId))}>Beta</button>
+                    <button className="sh-link" onClick={() => appNavigate(buildRawHubPath(spaceId))}>Raw</button>
                     {/* /admin gates non-admins out — showing this to everyone
                         was the audit's "Settings dead-end" (labeled Settings, led
                         to an admin wall, bounced the user back). Admin-only now. */}

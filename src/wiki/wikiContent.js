@@ -360,13 +360,13 @@ export const WIKI_ARTICLES = [
         body: [
             'Studio is the main, stable editor. Beta is a separate lane at /<space>/beta for the same space’s projects, built around a recursive, node-first document model instead of Studio’s window/entity model — it’s where node-based and research-style editor work happens.',
             { list: [
-                'Reached from a space at /<space>/beta (protected the same way as Studio — sign-in required for non-public spaces).',
+                'Reached directly by URL at /<space>/beta (protected the same way as Studio — sign-in required for non-public spaces). The Studio hub and admin views now link to Raw instead — Beta stays reachable but is no longer promoted.',
                 'Beta and Studio share the same underlying projects and persistence, but the two editors are not drop-in equivalents — a project built with one lane’s assumptions may not look or behave identically in the other.',
                 'Expect it to be less polished and to change more often than Studio: it is where new node-first ideas get tried before (if ever) they inform Studio.'
             ] }
         ],
         tags: ['beta', 'nodes', 'editor', 'experimental'],
-        updated: '2026-07-15'
+        updated: '2026-08-01'
     },
     {
         id: 'raw-lane',
@@ -383,6 +383,22 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting'],
+        updated: '2026-08-01'
+    },
+    {
+        id: 'br-id-ge',
+        category: 'Spaces & access',
+        title: 'br_id_ge (կամուրջ): an Armenian XR rite — live at Notations #2',
+        summary: 'br_id_ge is a linked-space rite at /br_id_ge — cross the bridge, be read into Armenian letters, leave a chrome core. Showing at Notations #2, Jul 20 – Aug 2 2026, State Philharmonia of Armenia.',
+        body: [
+            'br_id_ge (կամուրջ, "bridge") is an Armenian XR rite that lives in di.iiii as a linked space — same pattern as WCC and Beyond Form, a real space routed through the normal public/private check. It is showing at Notations #2 (theme: "Rituals"), hosted by hosq at the State Philharmonia of Armenia, Jul 20 – Aug 2 2026, with festival days Aug 1–2.',
+            { list: [
+                '/br_id_ge — the door: the entry page for the rite.',
+                '/br_id_ge/rite — cross the bridge: your silhouette is read into Armenian letters, you answer one question, and you leave a permanent chrome core.',
+                '/br_id_ge/field — the field: every core is one crossing, accumulated as a persistent record in the space.'
+            ] }
+        ],
+        tags: ['br_id_ge', 'exhibition', 'linked-space', 'rite', 'notations'],
         updated: '2026-08-01'
     },
     {
@@ -405,7 +421,7 @@ export const WIKI_ARTICLES = [
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['br-id-ge', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

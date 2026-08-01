@@ -22,8 +22,8 @@ describe('SpacePreviewRow', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Studio' }))
         expect(onOpenRoute).toHaveBeenCalledWith('/alpha/studio')
 
-        fireEvent.click(screen.getByRole('button', { name: 'Beta' }))
-        expect(onOpenRoute).toHaveBeenCalledWith('/alpha/beta')
+        fireEvent.click(screen.getByRole('button', { name: 'Raw' }))
+        expect(onOpenRoute).toHaveBeenCalledWith('/alpha/raw')
 
         fireEvent.click(screen.getByRole('button', { name: 'Admin' }))
         expect(onOpenRoute).toHaveBeenCalledWith('/admin?space=alpha')

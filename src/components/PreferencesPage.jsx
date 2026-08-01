@@ -535,7 +535,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                             <ModuleSection title="Project Snapshot" subtitle={sync?.spaceId || 'main'}>
                                 <InfoPair label="Public Path" value={currentSpaceRoutes.publicPath} mono />
                                 <InfoPair label="Studio Path" value={currentSpaceRoutes.studioPath} mono />
-                                <InfoPair label="Beta Path" value={currentSpaceRoutes.betaPath} mono />
+                                <InfoPair label="Raw Path" value={currentSpaceRoutes.rawPath} mono />
                                 <InfoPair label="Admin Path" value={currentSpaceRoutes.adminPath || 'n/a'} mono />
                                 <InfoPair label="Scene Version" value={String(projectSnapshot.scene?.version ?? 'n/a')} />
                                 <InfoPair label="Display Name" value={sync?.effectiveDisplayName || 'n/a'} />

@@ -206,7 +206,7 @@ describe('PreferencesPage', () => {
         const snapshotSection = screen.getByText('Project Snapshot').closest('section')
         expect(snapshotSection).toBeTruthy()
         expect(within(snapshotSection).getByText('/main/studio')).toBeInTheDocument()
-        expect(within(snapshotSection).getByText('/main/beta')).toBeInTheDocument()
+        expect(within(snapshotSection).getByText('/main/raw')).toBeInTheDocument()
 
         // Topology section — clicking a node in the architecture map updates the
         // inline Node Inspector ("Node Inspector — <label>" after selection).
@@ -241,7 +241,7 @@ describe('PreferencesPage', () => {
         expect(spacesSection).toBeTruthy()
         expect(within(spacesSection).getByRole('button', { name: 'Public' })).toBeInTheDocument()
         expect(within(spacesSection).getByRole('button', { name: 'Studio' })).toBeInTheDocument()
-        expect(within(spacesSection).getByRole('button', { name: 'Beta' })).toBeInTheDocument()
+        expect(within(spacesSection).getByRole('button', { name: 'Raw' })).toBeInTheDocument()
         expect(within(spacesSection).getByRole('button', { name: 'Admin' })).toBeInTheDocument()
     })
 
