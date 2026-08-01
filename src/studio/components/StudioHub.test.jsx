@@ -1,7 +1,8 @@
 import React from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import StudioHub from './StudioHub.jsx'
+import { setAppNavigate } from '../../utils/appNavigate.js'
 
 const createProject = vi.fn()
 const deleteProject = vi.fn()
@@ -101,6 +102,62 @@ describe('StudioHub', () => {
         await waitFor(() => {
             expect(updateServerSpace).toHaveBeenCalledWith('gallery', { publishedProjectId: null })
             expect(deleteProject).toHaveBeenCalledWith('live-project')
+        })
+    })
+
+    describe('code spaces', () => {
+        // algovrithm's scene is a React route, not a project document, so the
+        // server correctly reports zero projects for it. Without the registry
+        // Studio then tells the author their finished installation is an empty
+        // space and offers to create a project that could never render it.
+        const navigate = vi.fn()
+
+        beforeEach(() => {
+            navigate.mockReset()
+            setAppNavigate(navigate)
+        })
+
+        afterEach(() => setAppNavigate(null))
+
+        it('lists the code space instead of the empty state', async () => {
+            listProjects.mockResolvedValue([])
+
+            render(<StudioHub spaceId="algovrithm" />)
+
+            expect(await screen.findByText('algovrithm')).toBeTruthy()
+            expect(screen.getByText('code space')).toBeTruthy()
+            expect(screen.queryByText('No projects yet')).toBeNull()
+            expect(screen.queryByRole('button', { name: '+ Create your first project' })).toBeNull()
+        })
+
+        it('opens the piece from the card', async () => {
+            listProjects.mockResolvedValue([])
+
+            render(<StudioHub spaceId="algovrithm" />)
+
+            fireEvent.click(await screen.findByRole('button', { name: 'Open' }))
+            expect(navigate).toHaveBeenCalledWith('/algovrithm', { replace: false })
+        })
+
+        it('opens the director without also firing the card underneath', async () => {
+            // The action sits inside a clickable card; without stopPropagation
+            // the click would navigate twice and the last one would win.
+            listProjects.mockResolvedValue([])
+
+            render(<StudioHub spaceId="algovrithm" />)
+
+            fireEvent.click(await screen.findByRole('button', { name: 'Director' }))
+            expect(navigate).toHaveBeenCalledTimes(1)
+            expect(navigate).toHaveBeenCalledWith('/algovrithm?director', { replace: false })
+        })
+
+        it('leaves an ordinary empty space alone', async () => {
+            listProjects.mockResolvedValue([])
+
+            render(<StudioHub spaceId="gallery" />)
+
+            expect(await screen.findByText('No projects yet')).toBeTruthy()
+            expect(screen.queryByText('code space')).toBeNull()
         })
     })
 

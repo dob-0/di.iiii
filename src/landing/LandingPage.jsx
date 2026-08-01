@@ -5,6 +5,7 @@ import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { buildBetaHubPath } from '../beta/utils/betaRouting.js'
+import { ALGO_VRITHM_LABEL, ALGO_VRITHM_PATH, ALGO_VRITHM_SPACE_ID } from '../algoVrithm/algoVrithmRouting.js'
 import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
 
 // "Try Beta"/"Open Studio" must land guests somewhere they can actually edit.
@@ -21,7 +22,8 @@ import './landing.css'
 const FEATURED_SPACES = [
     { id: 'wcc', label: 'WCC Exhibition', href: '/wcc', className: 'landing-cta-wcc' },
     { id: 'br-id-ge', label: 'br_id_ge', href: '/br_id_ge', className: 'landing-cta-br-id-ge' },
-    { id: 'beyond-form', label: 'beyond_form', href: '/beyond-form', className: 'landing-cta-beyond-form' }
+    { id: 'beyond-form', label: 'beyond_form', href: '/beyond-form', className: 'landing-cta-beyond-form' },
+    { id: ALGO_VRITHM_SPACE_ID, label: ALGO_VRITHM_LABEL, href: ALGO_VRITHM_PATH, className: 'landing-cta-algo-vrithm' }
 ]
 
 const STEPS = [
