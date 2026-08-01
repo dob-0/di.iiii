@@ -128,6 +128,19 @@ const buildApiMountedUrl = (value = '') => {
     return `${base}${apiPath}`
 }
 
+// Documents can carry asset URLs recorded as server-relative `/api/...` paths
+// (written when the API was mounted at the site root). The deployed API mount
+// is `apiBaseUrl` (`/serverXR` on the VPS), where a bare `/api/...` request
+// falls through nginx to the SPA shell — a 200 text/html response that
+// silently blanks every image. Remount such paths; absolute URLs (external
+// hosts) are left alone.
+export const mountRelativeApiUrl = (value = '') => {
+    if (!value || isAbsolute(value)) {
+        return null
+    }
+    return buildApiMountedUrl(value)
+}
+
 const processQueue = () => {
     if (!streamQueue.length || activeStreams >= MAX_CONCURRENT_STREAMS) return
     const { task } = streamQueue.shift()
