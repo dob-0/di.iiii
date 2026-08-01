@@ -10,6 +10,16 @@ const XR_EMULATE_STUB = path.resolve(ROOT_DIR, 'src/xr/emulateStub.js')
 const DEV_PROXY_API_TARGET = (process.env.VITE_PROXY_API_TARGET || 'http://localhost:4000').trim()
 const APP_PACKAGE = JSON.parse(fs.readFileSync(path.resolve(ROOT_DIR, 'package.json'), 'utf8'))
 
+// Headset-reachable HTTPS, opt-in. Guarded on the files existing as well as the
+// flag so a stale env var cannot crash `npm run dev` with ENOENT — the failure
+// mode would be a dev server that refuses to start for a reason nowhere near
+// where you would look.
+const XR_KEY_PATH = path.resolve(ROOT_DIR, '.dev-certs/dev.key')
+const XR_CERT_PATH = path.resolve(ROOT_DIR, '.dev-certs/dev.crt')
+const DEV_XR_HTTPS = process.env.DEV_XR_HTTPS === '1'
+    && fs.existsSync(XR_KEY_PATH)
+    && fs.existsSync(XR_CERT_PATH)
+
 const readGitValue = (args) => {
     try {
         return execSync(`git ${args}`, {
@@ -116,6 +126,21 @@ export default {
     server:
     {
         host: true, // Open to local network and display URL
+        // HTTPS, opt-in via `npm run dev:xr`. Only needed to reach the dev
+        // server from a VR HEADSET: WebXR requires a secure context, so a
+        // standalone headset cannot use the plain-http LAN address — WebXR is
+        // switched off there and no Enter VR button can exist. Plain `npm run
+        // dev` is unchanged and stays on http.
+        // See scripts/dev-xr-cert.mjs for why this rather than a tunnel.
+        https: DEV_XR_HTTPS ? { key: fs.readFileSync(XR_KEY_PATH), cert: fs.readFileSync(XR_CERT_PATH) } : undefined,
+        // Vite rejects requests whose Host header it does not recognise, which
+        // a tunnel's hostname is. Needed to reach the dev server from a VR
+        // headset: WebXR requires a secure context, so a headset browser cannot
+        // use the LAN IP over plain http and has to come in over https.
+        //
+        // Scoped to the tunnel domain rather than `true` — allowing any host
+        // re-opens the DNS-rebinding hole this check exists to close.
+        allowedHosts: ['.trycloudflare.com'],
         // Headless by default (`npm run dev`). DEV_BROWSER=1 hands browser-opening to
         // dev-stack.mjs (a wiped Chromium profile) instead; VITE_OPEN_SPACE/VITE_OPEN_PATH
         // opt in to Vite's own auto-open for a plain `npm run dev`.
@@ -256,7 +281,12 @@ export default {
     {
         include: [
             '**/*.{test,spec}.{js,jsx}',
-            '../serverXR/src/**/*.{test,spec}.js'
+            '../serverXR/src/**/*.{test,spec}.js',
+            // Vitest's root is src/, so anything outside it needs naming
+            // explicitly — same reason serverXR is listed above. Without this a
+            // test file under scripts/ is silently never collected, which is
+            // worse than having no test at all: it looks covered and is not.
+            '../scripts/**/*.{test,spec}.{js,mjs}'
         ],
         environment: 'jsdom',
         setupFiles: './setupTests.js',
