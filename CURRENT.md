@@ -12,11 +12,14 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 **dev is ahead of prod (2026-08-01): dependency batch + fixes, staging-verified,
 awaiting owner click-through before promoting `main` (prod still at `0c568c02`).**
-Landed on dev: express 5, three 0.185, jsdom 30, dotenv 17, six actions/docker
-bumps (dependabot queue 15 → 2), legacy WCC page self-hosted (zero third-party
-requests anywhere now), Raw enter-world fullscreen fix, `time` palette-label fix,
-Raw wiki article. Several agents share this tree: re-check `git log`, and
-**stage explicit paths, never `git add -A`**.
+Landed on dev since the batch: **blank-prod-images fix** (stored `/api/…` asset
+urls remounted onto `/serverXR` in shared `buildAssetMap` — see known-fixes;
+staging-verified headlessly, also fixes platform-recordar), **hub/admin links
+now promote Raw over Beta**, br_id_ge Notations #2 landing button (parallel
+agent). Earlier: express 5, three 0.185, jsdom 30, dotenv 17, six
+actions/docker bumps, WCC self-hosted, Raw fullscreen + `time` fixes. Several
+agents share this tree: re-check `git log`, and **stage explicit paths, never
+`git add -A`**.
 
 ## Last session (2026-08-01)
 
