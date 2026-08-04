@@ -219,13 +219,6 @@
     color: var(--avl-ink);
 }
 
-/* On a phone the track is ~350px, so a 5.6s clip is 37px wide and the name is
-   71px of text. The clip already hides the overflow, which cut the names mid
-   word — "White tunnel" read as "White", "Metaball field" as "Metaball", and
-   both are plausible enough to be taken for the real beat name. The ellipsis
-   costs a character and says the name is longer than the box. Labels that DO
-   fit at that size (Halo, Scan) are untouched, which is why this is an
-   ellipsis and not a width threshold that hides them. */
 .avl-clip-label {
     pointer-events: none;
 }
@@ -341,35 +334,10 @@
     line-height: 1.68;
 }
 
-.avl-why {
-    max-width: 42rem;
-    margin: 3.2rem auto 0;
-    color: var(--avl-dim);
-    font-size: 0.84rem;
-    line-height: 1.75;
-}
 
-.avl-why-title {
-    margin: 0 0 0.9rem;
-    color: var(--avl-ink);
-    font-size: 0.78rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-}
 
-.avl-why p {
-    margin: 0 0 1rem;
-}
 
-.avl-why code {
-    color: var(--avl-ink);
-    font-size: 0.92em;
-}
 
-.avl-why-foot {
-    padding-top: 0.9rem;
-    border-top: 1px solid var(--avl-rule);
-}
 
 @media (max-width: 640px) {
     /* 0.4rem each side is 13px of a 33px clip. Halving it is the difference

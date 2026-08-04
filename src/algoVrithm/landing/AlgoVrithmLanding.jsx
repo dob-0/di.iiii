@@ -168,12 +168,11 @@ export default function AlgoVrithmLanding() {
     return (
         <main className="avl-root">
             <header className="avl-head">
-                <p className="avl-eyebrow">di.iiii · a code-authored space</p>
+                <p className="avl-eyebrow">di.iiii · a virtual installation</p>
                 <h1 className="avl-title">algovrithm</h1>
                 <p className="avl-lede">
-                    A virtual installation on hyperreality: pixels and code becoming reality.
-                    {' '}{BEAT_CARDS.length} beats, {formatSec(RUN_TIME_SEC)} end to end, cross-fading rather
-                    than cutting. For an audience it plays itself — there is nothing to operate.
+                    On hyperreality: a reality composed through pixels, code, algorithms.
+                    {' '}{formatSec(RUN_TIME_SEC)}, looping. It plays itself — there is nothing to operate.
                 </p>
                 <div className="avl-actions">
                     <button type="button" className="avl-enter" onClick={enter}>Enter the piece</button>
@@ -181,15 +180,15 @@ export default function AlgoVrithmLanding() {
                 </div>
             </header>
 
-            <section className="avl-stage" aria-label="Preview of the cut">
+            <section className="avl-stage" aria-label="Preview of the piece">
                 <canvas ref={canvasRef} className="avl-canvas" aria-hidden="true" />
                 <div className="avl-stage-caption">
                     <span className="avl-stage-beat">{lead.title}</span>
                     <span className="avl-stage-clock">{formatSec(playheadSec)} / {formatSec(RUN_TIME_SEC)}</span>
                 </div>
                 <p className="avl-stage-disclaimer">
-                    A 2D stand-in, drawn from the same edit list the piece runs on. The work itself is
-                    raymarched, in stereo, and all the way around you — none of which survives a rectangle.
+                    A flat stand-in. The work itself is in stereo and all the way around you —
+                    neither of which survives a rectangle.
                 </p>
                 <p className="avl-live" role="status" aria-live="polite">
                     {formatSec(playheadSec)} — {live.map((entry) => entry.beat.title).join(' over ')}
@@ -210,7 +209,7 @@ export default function AlgoVrithmLanding() {
                     className="avl-track"
                     role="slider"
                     tabIndex={0}
-                    aria-label="Scrub the edit list"
+                    aria-label="Scrub the piece"
                     aria-valuemin={0}
                     aria-valuemax={RUN_TIME_SEC}
                     aria-valuenow={Number(playheadSec.toFixed(1))}
@@ -302,21 +301,12 @@ export default function AlgoVrithmLanding() {
                 ))}
             </section>
 
-            <section className="avl-why">
-                <h2 className="avl-why-title">Why this space has no editor</h2>
-                <p>
-                    Every other space on di.iiii is a project document you open in Studio. algovrithm is
-                    code: its scene lives in <code>src/algoVrithm/</code> and its media is committed
-                    beside it, so cloning the branch gives you the complete piece with nothing to fetch.
-                    Retiming happens in an edit list — <code>startSec</code>/<code>endSec</code> rows,
-                    the same thing the timeline above is drawn from — and a new beat is a new file.
-                </p>
-                <p className="avl-why-foot">
-                    Windows overlap by 1.2 seconds on purpose. Where two overlap, both are mounted and
-                    each fades on its own envelope: hold an arrow key across a seam above and you can
-                    watch one beat carry the other.
-                </p>
-            </section>
+            {/* No "why this space has no editor" section here any more. It was
+                the only developer voice on the page and it had the last word on
+                it: src/algoVrithm/, startSec/endSec, cloning the branch. The
+                front door is for a visitor, and it now ends on the work. All of
+                that survives in the wiki article, which is where somebody
+                looking for it goes. */}
         </main>
     )
 }
