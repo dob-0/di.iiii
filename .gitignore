@@ -1,5 +1,9 @@
 # Node / build output
 node_modules/
+# ...and node_modules as a symlink (git worktrees commonly link it back to the
+# main checkout). The trailing-slash pattern above matches directories only, so
+# a symlink slipped through and got committed once.
+node_modules
 dist/
 .vite/
 .cache/
