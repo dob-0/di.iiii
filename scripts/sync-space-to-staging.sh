@@ -65,6 +65,16 @@ for id in "$@"; do
   echo "== importing '$id' into staging =="
   docker exec -u root "$STAGING_CONTAINER" node /app/scripts/space-bundle.mjs import "/tmp/$id.space-bundle.tar.gz" --data-root /data $FORCE
 
+  # The import runs as root (it needs to write into /app), so everything it
+  # created under /data is root-owned -- and the server runs as `app`. Left
+  # that way the space LOOKS synced and reads fine, then every write fails
+  # with `EACCES ... document.json.tmp` and a 500. That is how a fresh sync
+  # broke staging's br_id_ge CI on 2026-08-04: it authenticated, read the
+  # space, and 500'd on PUT. Hand the files back to whoever the server is.
+  APP_UID_GID=$(docker exec "$STAGING_CONTAINER" sh -c 'printf "%s:%s" "$(id -u)" "$(id -g)"')
+  echo "== restoring ownership of '$id' to ${APP_UID_GID} (the server's user) =="
+  docker exec -u root "$STAGING_CONTAINER" chown -R "$APP_UID_GID" "/data/spaces/$id"
+
   docker exec "$PROD_CONTAINER" rm -f "/tmp/$id.space-bundle.tar.gz"
   docker exec -u root "$STAGING_CONTAINER" rm -f "/tmp/$id.space-bundle.tar.gz"
 done
