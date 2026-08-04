@@ -53,6 +53,7 @@
         "verify:surfaces": "node scripts/verify-surfaces.mjs",
         "verify:surfaces:mobile": "node scripts/verify-surfaces.mjs --mobile-only",
         "verify:algovrithm": "node scripts/verify-algovrithm.mjs",
+        "verify:algovrithm:remote": "node scripts/verify-algovrithm-remote.mjs",
         "test:schema-sync": "vitest run serverXR/src/schemaSync.test.js",
         "test:ui": "vitest",
         "check:three-vendor": "node scripts/check-three-vendor.mjs",
