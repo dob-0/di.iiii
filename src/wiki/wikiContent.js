@@ -398,11 +398,12 @@ export const WIKI_ARTICLES = [
                 'Reached from a space at /<space>/raw (same sign-in rules as Studio); /open/raw opens it on the communal open space.',
                 'Enter any node with its “Enter ›” button; the breadcrumb tracks your depth and Escape steps back out one level at a time.',
                 'Entering a World node opens its 3D viewport fullscreen; the ← World button in the topbar drops back to the graph.',
-                'The palette only lists node types that actually compute or render — anything still marked “authoring only” is a declared-but-unbuilt placeholder.'
+                'The palette only lists node types that actually compute or render — anything still marked “authoring only” is a declared-but-unbuilt placeholder.',
+                'A Timeline node (view.timeline) cuts clips on a frame-exact timeline: drag to move, drag an edge to trim, razor at the playhead, ripple later clips, retime a clip from 0.1x to 4x. Gaps are drawn as red hatching and cross-fades in amber, so an accidental hole in a cut is visible rather than silent.'
             ] }
         ],
-        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting'],
-        updated: '2026-08-01'
+        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'timeline'],
+        updated: '2026-08-04'
     },
     {
         id: 'br-id-ge',
