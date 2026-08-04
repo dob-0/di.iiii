@@ -847,6 +847,10 @@ export const applyProjectOps = (document, ops = []) => {
                 // Collect the node and all descendants
                 const toDelete = new Set()
                 const collect = (id) => {
+                    // parentId is patchable to anything, so cycles can exist —
+                    // without this guard a cycle recurses to RangeError and the
+                    // involved nodes become permanently undeletable.
+                    if (toDelete.has(id)) return
                     toDelete.add(id)
                     for (const [, child] of nodes) {
                         if (child.parentId === id) collect(child.id)

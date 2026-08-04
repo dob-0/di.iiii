@@ -335,6 +335,24 @@ describe('projectSchema', () => {
         ])
         expect(after.entities).toHaveLength(0)
     })
+
+    it('deleteNode survives a self-parent and a mutual parentId cycle', () => {
+        const selfParent = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'sp', typeId: 'universe.world', parentId: 'sp' } } }
+        ])
+        expect(applyProjectOps(selfParent, [
+            { type: 'deleteNode', payload: { nodeId: 'sp' } }
+        ]).nodes).toHaveLength(0)
+
+        const mutual = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'cyc-a', typeId: 'universe.world' } } },
+            { type: 'createNode', payload: { node: { id: 'cyc-b', typeId: 'universe.world', parentId: 'cyc-a' } } },
+            { type: 'updateNode', payload: { nodeId: 'cyc-a', patch: { parentId: 'cyc-b' } } }
+        ])
+        expect(applyProjectOps(mutual, [
+            { type: 'deleteNode', payload: { nodeId: 'cyc-a' } }
+        ]).nodes).toHaveLength(0)
+    })
 })
 
 describe('invertProjectOps', () => {

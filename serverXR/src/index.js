@@ -1053,21 +1053,27 @@ async function syncLinkedSpace(link) {
   }
 
   const docUrl = `${base}/api/projects/${link.projectId}/document`
-  const cur = await httpRequest(docUrl, { headers: internalHeaders() }).then((r) => r.json()).catch(() => ({}))
-  const doc = cur.document || {}
+  // The PUT below is a full no-baseVersion replace, so `doc` MUST be the real
+  // current document. Swallowing a failed GET into {} used to publish an empty
+  // base -- assets, projectMeta and owner opt-ins (deviceAccess) wiped, sync
+  // still reporting success. Fail the sync run instead.
+  const curRes = await httpRequest(docUrl, { headers: internalHeaders() })
+    .catch((error) => { throw new Error(`internal document GET failed (${error.message})`) })
+  if (!curRes.ok) throw new Error(`internal document GET failed (${curRes.status})`)
   const put = await httpRequest(docUrl, {
     method: 'PUT', headers: internalHeaders(),
-    body: JSON.stringify({
-      ...doc,
-      presentationState: { ...(doc.presentationState || {}), mode: 'code', entryView: 'code', codeFiles },
-      publishState: { ...(doc.publishState || {}), shareEnabled: true }
-    })
+    body: JSON.stringify(spaceSyncPlan.buildSyncedDocumentBody({ current: await curRes.json(), codeFiles }))
   })
   if (!put.ok) throw new Error(`internal document PUT failed (${put.status})`)
-  await httpRequest(`${base}/api/spaces/${link.spaceId}`, {
+  // Non-fatal (the document is already published) but never silent: a dropped
+  // publishedProjectId leaves the space pointing at the wrong project.
+  const patch = await httpRequest(`${base}/api/spaces/${link.spaceId}`, {
     method: 'PATCH', headers: internalHeaders(),
     body: JSON.stringify({ publishedProjectId: link.projectId })
-  }).catch(() => {})
+  }).catch((error) => ({ ok: false, status: error.message }))
+  if (!patch.ok) {
+    console.warn(`[github-sync] publishedProjectId PATCH failed for ${link.spaceId} (${patch.status})`)
+  }
   return {
     ref,
     bytes: entryHtml.length,

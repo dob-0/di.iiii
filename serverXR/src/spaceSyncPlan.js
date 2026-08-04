@@ -46,4 +46,30 @@ const planSync = ({ manifest = {}, repoPaths = [], entryPath = '', entryHtml = '
 const rewriteAssetUrl = (html, rel, url) =>
   html.split(rel).join(url).split(path.basename(rel)).join(url)
 
-module.exports = { CODE_EXTENSIONS, MIME, globToRe, matchGlobs, mimeFor, planSync, rewriteAssetUrl }
+// The sync PUT is a full no-baseVersion document replace, so the merge base
+// must be the real current document. A swallowed GET failure used to yield {}
+// here and publish an empty base — assets, projectMeta and owner opt-ins like
+// presentationState.deviceAccess wiped, with the sync still reporting success.
+// Fail loudly instead; the caller turns this into a failed sync run.
+const buildSyncedDocumentBody = ({ current, codeFiles = [] }) => {
+  const doc = current && typeof current === 'object' ? current.document : null
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc)) {
+    throw new Error('internal document GET returned no document — refusing to publish an empty base')
+  }
+  return {
+    ...doc,
+    presentationState: { ...(doc.presentationState || {}), mode: 'code', entryView: 'code', codeFiles },
+    publishState: { ...(doc.publishState || {}), shareEnabled: true }
+  }
+}
+
+module.exports = {
+  CODE_EXTENSIONS,
+  MIME,
+  buildSyncedDocumentBody,
+  globToRe,
+  matchGlobs,
+  mimeFor,
+  planSync,
+  rewriteAssetUrl
+}

@@ -70,6 +70,24 @@ export function useProjectDocumentSync({
         })
     }, [dispatch])
 
+    // The editors are rendered without a key, so switching projects reuses
+    // this hook instance. Everything below is per-project state: left alone,
+    // the previous project's version blocks the new document forever behind
+    // the stale-version guard (permanent "Loading project…"), and ops still
+    // queued for the old project get POSTed into the new one.
+    useEffect(() => {
+        versionRef.current = 0
+        pendingQueueRef.current = []
+        seenOpIdsRef.current = new Set()
+        seenOpOrderRef.current = []
+        isFlushingRef.current = false
+        clearTimeout(retryTimerRef.current)
+        if (flushThrottleTimerRef.current !== null) {
+            clearTimeout(flushThrottleTimerRef.current)
+            flushThrottleTimerRef.current = null
+        }
+    }, [projectId])
+
     const reloadDocument = useCallback(async () => {
         if (!projectId) return
         dispatch?.({ type: 'load-start' })
@@ -195,13 +213,31 @@ export function useProjectDocumentSync({
                         if (Number.isFinite(latestVersion)) {
                             versionRef.current = latestVersion
                         }
+                        // Re-queue BEFORE the catch-up await: the batch is
+                        // already spliced off the queue, so a throw inside
+                        // listProjectOps would unwind past the unshift and
+                        // silently drop ops the UI has already applied
+                        // optimistically ("never drop an edit", above).
+                        pendingQueueRef.current.unshift(...batch)
                         if (pendingOps.length) {
                             applyRemoteOps(pendingOps, latestVersion)
                         } else {
-                            const catchUp = await listProjectOps(projectId, versionRef.current)
-                            applyRemoteOps(catchUp.ops || [], catchUp.latestVersion)
+                            try {
+                                const catchUp = await listProjectOps(projectId, versionRef.current)
+                                applyRemoteOps(catchUp.ops || [], catchUp.latestVersion)
+                            } catch (catchUpError) {
+                                pushActivity(`Project sync failed: ${catchUpError.message || 'catch-up failed'}`, 'error')
+                                dispatch?.({
+                                    type: 'pending-sync-error',
+                                    error: catchUpError.message || 'Project sync failed.'
+                                })
+                                clearTimeout(retryTimerRef.current)
+                                retryTimerRef.current = setTimeout(() => {
+                                    void flushQueue()
+                                }, SYNC_RETRY_DELAY_MS)
+                                break
+                            }
                         }
-                        pendingQueueRef.current.unshift(...batch)
                         continue
                     }
                     // Never drop an edit: a network blip, 5xx, or expired auth

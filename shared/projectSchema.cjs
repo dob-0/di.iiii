@@ -850,6 +850,10 @@ const applyProjectOps = (document, ops = []) => {
         if (!nodeId) break
         const toDelete = new Set()
         const collect = (id) => {
+          // parentId is patchable to anything, so cycles can exist — without
+          // this guard a cycle recurses to RangeError and the involved nodes
+          // become permanently undeletable.
+          if (toDelete.has(id)) return
           toDelete.add(id)
           for (const [, child] of nodes) {
             if (child.parentId === id) collect(child.id)

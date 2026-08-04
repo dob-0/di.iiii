@@ -337,4 +337,112 @@ describe('useProjectDocumentSync', () => {
         expect(result.current.store.state.version).toBe(2)
         expect(result.current.store.state.document.presentationState.codeHtml).toContain('Keep me')
     }, 10000)
+
+    // Regression test for audit batch 2: on a 409 with no pendingOps the batch
+    // is already spliced off the queue when the catch-up GET runs. If that GET
+    // threw, the exception unwound past the re-queue and the edit was gone —
+    // the exact failure the "never drop an edit" contract exists to prevent.
+    it('never drops the batch when the 409 catch-up request itself fails', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'studio-project', title: 'Studio Project' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        let conflicts = 0
+        submitProjectOpsMock.mockImplementation(async (_projectId, _baseVersion, ops) => {
+            conflicts += 1
+            if (conflicts === 1) {
+                const error = new Error('Version conflict')
+                error.status = 409
+                error.data = { latestVersion: 1, pendingOps: [] }
+                throw error
+            }
+            return { newVersion: 2, ops }
+        })
+
+        const { result } = renderHook(() => {
+            const store = useProjectStore()
+            const sync = useProjectDocumentSync({ projectId: 'studio-project', store })
+            return { store, sync }
+        })
+
+        await waitFor(() => {
+            expect(result.current.store.state.document.projectMeta.id).toBe('studio-project')
+        })
+
+        // The catch-up GET fails exactly once — the conditions that produce
+        // sustained 409s (backend flapping) are the same ones that break it.
+        listProjectOpsMock.mockRejectedValueOnce(new Error('Catch-up failed'))
+
+        act(() => {
+            result.current.sync.applyLocalOps({
+                type: 'setPresentationState',
+                payload: { patch: { mode: 'code', codeHtml: '<main>Survive me</main>' } }
+            })
+        })
+
+        await waitFor(() => {
+            expect(result.current.store.state.pendingSyncError).toBeTruthy()
+        })
+        expect(result.current.store.state.document.presentationState.codeHtml).toContain('Survive me')
+
+        // The queued batch survives and the delayed retry persists it.
+        await waitFor(() => {
+            expect(result.current.store.state.version).toBe(2)
+        }, { timeout: 8000 })
+        expect(result.current.store.state.pendingSyncError).toBeNull()
+        expect(result.current.store.state.document.presentationState.codeHtml).toContain('Survive me')
+    }, 12000)
+
+    // Regression test for audit batch 2: the editors render this hook without
+    // a key, so switching projects reuses the instance. The previous project's
+    // version used to survive in versionRef and the stale-version guard then
+    // rejected the new project's document forever — a permanent "Loading
+    // project…" with no terminal dispatch.
+    it('loads a second project whose version is lower than the first project\'s', async () => {
+        getProjectDocumentMock.mockImplementation(async (projectId) => (
+            projectId === 'high-version-project'
+                ? {
+                    version: 500,
+                    document: {
+                        projectMeta: { id: 'high-version-project', title: 'High' },
+                        presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                        entities: []
+                    }
+                }
+                : {
+                    version: 3,
+                    document: {
+                        projectMeta: { id: 'fresh-project', title: 'Fresh' },
+                        presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                        entities: []
+                    }
+                }
+        ))
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 0 })
+
+        const { result, rerender } = renderHook(({ projectId }) => {
+            const store = useProjectStore()
+            const sync = useProjectDocumentSync({ projectId, store })
+            return { store, sync }
+        }, { initialProps: { projectId: 'high-version-project' } })
+
+        await waitFor(() => {
+            expect(result.current.store.state.document.projectMeta.id).toBe('high-version-project')
+        })
+        expect(result.current.store.state.version).toBe(500)
+
+        rerender({ projectId: 'fresh-project' })
+
+        await waitFor(() => {
+            expect(result.current.store.state.document.projectMeta.id).toBe('fresh-project')
+        })
+        expect(result.current.store.state.version).toBe(3)
+        expect(result.current.store.state.loading).toBe(false)
+    }, 10000)
 })
