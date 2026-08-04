@@ -806,6 +806,9 @@ export const NODE_TYPES = {
         defaultValues: {
             piece: 'algovrithm',
         },
+        // A timeline is read left-to-right across its whole duration; the
+        // generic panel card crops it into uselessness.
+        defaultFrame: { width: 1080, height: 640 },
         render: 'panel-2d',
     },
 
@@ -829,6 +832,7 @@ export const NODE_TYPES = {
             fps: 60,
             clips: [],
         },
+        defaultFrame: { width: 900, height: 260 },
         render: 'panel-2d',
     },
 
