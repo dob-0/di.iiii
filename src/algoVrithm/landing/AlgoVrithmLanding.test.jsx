@@ -91,4 +91,23 @@ describe('AlgoVrithmLanding', () => {
         expect(rootBlock).toMatch(/height:\s*100vh/)
         expect(rootBlock).toMatch(/overflow-y:\s*auto/)
     })
+    // The stylesheet's header claims every colour on this page is legal in the
+    // piece. It said that while --avl-void was #05060f (hue 234, the purple gap
+    // the palette exists to exclude) and --avl-ink was #f2f5f7 (lighter than the
+    // strobe). An asserted claim is not a checked one, so it is checked here
+    // against the piece's own validator.
+    it('uses no colour the piece would reject', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const { paletteWarning } = await import('../palette.js')
+        const cssPath = ['src/algoVrithm/landing/algoVrithmLanding.css', 'algoVrithm/landing/algoVrithmLanding.css']
+            .map((p) => path.join(cwd(), p))
+            .find((p) => fs.existsSync(p))
+        const css = fs.readFileSync(cssPath, 'utf8')
+        const tokens = [...css.matchAll(/--avl-[a-z]+:\s*(#[0-9a-fA-F]{6})/g)].map((m) => m[1])
+        expect(tokens.length).toBeGreaterThan(2)
+        const rejected = tokens.filter((hex) => paletteWarning(hex))
+        expect(rejected).toEqual([])
+    })
 })

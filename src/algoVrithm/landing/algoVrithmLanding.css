@@ -1,7 +1,10 @@
 @import url("./fonts.css");
 
 /* Every colour here is legal in the piece — run palette.js's own paletteWarning()
-   over them and they pass. That was not true before: the accent was #4df9ff,
+   over them and they pass. That claim has now been CHECKED rather than asserted,
+   and when it was first written it was false twice over: --avl-void was #05060f
+   (hue 234, the purple gap) and --avl-ink was #f2f5f7 (lighter than the strobe).
+   The accent was worse still — #4df9ff,
    which is the DIRECTOR PANEL's chrome (algoVrithm.css), and the piece's palette
    file rejects it outright — "Hue 182 sits in the green/yellow gap. The piece
    only uses 195-215 and 350-40." The front door was wearing the tool's colours,
@@ -14,12 +17,18 @@
    white, and hue arrives exactly once, in the last beat. No card chrome, no
    gradients: the work is white light in black air. */
 .avl-root {
-    --avl-void: #05060f;
-    --avl-ink: #f2f5f7;
+    /* PALETTE.void. Was #05060f, which palette.js rejects outright — "Hue 234
+       sits in the purple gap" — so the page's ground was the one hue family the
+       whole work is built to exclude, under a comment claiming it passed. */
+    --avl-void: #0d1114;
+    /* PALETTE.offWhite. Was #f2f5f7, which fails as "lighter than the strobe":
+       in this work white is a highlight, not a brightener, and the reading
+       colour must not out-glare the one white the piece opens and closes on. */
+    --avl-ink: #f2efea;
     --avl-dim: #7d8894;
-    /* iceBlue. The clip and card tints below are deepSky #5F92B8 at alpha. */
+    /* iceBlue. */
     --avl-lit: #cfe3ec;
-    --avl-rule: rgba(255, 255, 255, 0.14);
+    --avl-rule: rgba(207, 227, 236, 0.14);
 
     /* html/body/#root are position:fixed (base.css), so the document never
        scrolls and a page root that only sets min-height silently overflows:
@@ -58,8 +67,12 @@
 }
 
 .avl-head {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: min(78vh, 44rem);
     max-width: 54rem;
-    margin: 0 auto clamp(2rem, 5vw, 3rem);
+    margin: 0 auto clamp(3rem, 8vw, 6rem);
 }
 
 .avl-title {
@@ -82,7 +95,8 @@
     padding: 0.85rem 2.1rem;
     border: 2px solid var(--avl-lit);
     border-radius: 0;
-    background: rgba(207, 227, 236, 0.08);
+    /* Its own ground, so its contrast does not move with the scrim. */
+    background: rgba(13, 17, 20, 0.72);
     color: var(--avl-lit);
     font: inherit;
     font-weight: 700;
@@ -97,46 +111,69 @@
     color: var(--avl-void);
 }
 
-/* 16:9 and not the headset's aspect: this is a poster frame, and pretending to
-   a stereo field ratio would be the same lie the caption is there to prevent. */
-.avl-stage {
-    position: relative;
-    max-width: 54rem;
-    margin: 0 auto;
-}
-
+/* The piece is the page's ground. Fixed and full-viewport rather than a boxed
+   16:9 frame: a rectangle made the work an illustration of itself, and the
+   statement it sits under is about living inside a composed environment rather
+   than looking at one. */
 .avl-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
     display: block;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    border: 1px solid var(--avl-rule);
+    width: 100vw;
+    height: 100vh;
     background: #000;
+    pointer-events: none;
 }
 
-/* Off-screen but in the accessibility tree — the two section headings and the
-   live region. role="status" is announced whether or not it is painted, and the
-   movement names it carries are already set visibly, and at leisure, in the
-   score. It is not decoration and must not be display:none'd. */
-.avl-sr {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: -1px;
-    padding: 0;
-    border: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
+/* Legibility, not decoration. Two of the seven beats declare a WHITE world and
+   fill the frame with it for seconds at a time, so text over a raw canvas
+   vanishes completely — and a full-viewport luminance flip is a far harsher
+   thing to sit in front of than the same flip inside a small rectangle.
+   Both values are measured, not chosen.
+
+   It has two strengths because the page has two jobs. On arrival there is one
+   line of 96px type on the screen and the piece should be the loudest thing
+   there: 0.62 holds the title above the 3:1 large-text floor and lets the work
+   through. Once the statement is on screen it becomes five paragraphs of body
+   prose, and 0.9 is what keeps the worst white frame — compositing to about
+   #1b1c24 — above 4.5:1. The field receding as you begin to read is also the
+   right gesture for the sentence you are reading it under. */
+.avl-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: rgba(13, 17, 20, 0.62);
+    transition: background 700ms ease;
+    pointer-events: none;
 }
 
-/* The only control on the page, and it is an obligation rather than a feature:
-   motion that starts by itself has to be stoppable, and under reduced motion
-   this is the only way in to the motion at all. Sized as a footnote to the
-   frame, not as a transport. */
+.avl-root.is-reading .avl-scrim {
+    background: rgba(13, 17, 20, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .avl-scrim {
+        transition: none;
+    }
+}
+
+/* Everything readable sits above both. */
+.avl-head,
+.avl-statement,
 .avl-hold {
-    display: block;
-    margin: 0.9rem 0 0;
-    padding: 0;
+    position: relative;
+    z-index: 1;
+}
+
+/* The only control, kept out of the reading column: an obligation rather than
+   part of the page. */
+.avl-hold {
+    position: fixed;
+    left: clamp(1.1rem, 5vw, 4rem);
+    bottom: clamp(1.1rem, 3vw, 2rem);
+    z-index: 2;
+    padding: 0.4rem 0;
     border: 0;
     background: none;
     color: var(--avl-dim);
@@ -155,6 +192,22 @@
 .avl-hold:focus-visible {
     outline: 2px solid var(--avl-lit);
     outline-offset: 4px;
+}
+
+/* Off-screen but in the accessibility tree — the two section headings and the
+   live region. role="status" is announced whether or not it is painted, and the
+   movement names it carries are already set visibly, and at leisure, in the
+   score. It is not decoration and must not be display:none'd. */
+.avl-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
 }
 
 /* The statement is the only long-form voice on the page and the only place a

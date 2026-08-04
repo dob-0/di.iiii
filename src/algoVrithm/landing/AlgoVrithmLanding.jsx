@@ -39,18 +39,31 @@ const prefersReducedMotion = () => {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches
 }
 
+// The frame a reduced-motion visitor is held on. NOT zero, which is where this
+// opened for as long as the page has existed: at t=0 the corridor's own fade-in
+// is still at zero, so the whole background was black — mean luminance 1.8 out
+// of 255 — with a Play button under it. Anyone who asks their system for less
+// motion was shown nothing at all.
+//
+// 11.5s is chosen by measurement rather than taste: scoring every frame of the
+// loop for mean luminance and range, the scan beat between 9s and 13.5s is the
+// only stretch that is a real image — mean about 65 of 255, with the full range
+// inside it. The corridor is near-black wherever you stop it, and the test
+// pattern past 14s means 214, which is a white wall to read a statement over.
+const HOLD_FRAME_SEC = 11.5
+
 export default function AlgoVrithmLanding() {
-    const [playheadSec, setPlayheadSec] = useState(0)
+    const [playheadSec, setPlayheadSec] = useState(() => (prefersReducedMotion() ? HOLD_FRAME_SEC : 0))
     const [reducedMotion] = useState(prefersReducedMotion)
     const [playing, setPlaying] = useState(() => !prefersReducedMotion())
     const [stageVisible, setStageVisible] = useState(true)
     const canvasRef = useRef(null)
     const rootRef = useRef(null)
-    const stageRef = useRef(null)
+    const statementRef = useRef(null)
     // The playhead lives in a ref as well as in state: the rAF loop reads and
     // advances it every frame, and closing over the state value would pin it to
     // whatever it was when the effect last ran.
-    const playheadRef = useRef(0)
+    const playheadRef = useRef(prefersReducedMotion() ? HOLD_FRAME_SEC : 0)
 
     const paint = useCallback(() => {
         const canvas = canvasRef.current
@@ -74,20 +87,27 @@ export default function AlgoVrithmLanding() {
         })
     }, [])
 
-    // The loop ran forever, including while the visitor was a thousand pixels
-    // down reading the statement with the frame entirely off screen — a
-    // strobing, device-pixel-ratio-scaled repaint every frame, for nobody, on
-    // whatever battery they are holding. Same mount-gate the landing page uses
-    // for its background scene.
+    // The scrim goes from 0.62 to 0.9 once the statement is on screen: the
+    // piece is the loudest thing on arrival and recedes behind the reading.
     useEffect(() => {
-        const stage = stageRef.current
-        if (!stage || typeof IntersectionObserver === 'undefined') return undefined
+        const statement = statementRef.current
+        const root = rootRef.current
+        if (!statement || !root || typeof IntersectionObserver === 'undefined') return undefined
         const observer = new IntersectionObserver(
-            ([entry]) => setStageVisible(entry.isIntersecting),
-            { threshold: 0 }
+            ([entry]) => root.classList.toggle('is-reading', entry.isIntersecting),
+            { threshold: 0, rootMargin: '-25% 0px 0px 0px' }
         )
-        observer.observe(stage)
+        observer.observe(statement)
         return () => observer.disconnect()
+    }, [])
+
+    // The canvas is the background now, so it is never scrolled out of view —
+    // but it should still not strobe a full-viewport DPR-scaled repaint in a
+    // tab nobody is looking at.
+    useEffect(() => {
+        const onVisibility = () => setStageVisible(!document.hidden)
+        document.addEventListener('visibilitychange', onVisibility)
+        return () => document.removeEventListener('visibilitychange', onVisibility)
     }, [])
 
     // A paused frame still animates by default, because half the beats (the
@@ -179,27 +199,22 @@ export default function AlgoVrithmLanding() {
                 </div>
             </header>
 
-            <section className="avl-stage" aria-label="The piece" ref={stageRef}>
-                <canvas ref={canvasRef} className="avl-canvas" aria-hidden="true" />
+            {/* The piece is the page's ground, not a picture on it — fixed,
+                full-viewport, behind everything, with the text reading over it.
+                A boxed 16:9 frame made the work an illustration of itself; this
+                way the visitor is inside the field while they read the sentence
+                about living inside one.
 
-                {/* Not a transport. This canvas starts by itself and strobes for
-                    the whole loop, so it has to be stoppable — and under reduced
-                    motion it is the only way IN to the motion, which is why the
-                    control survived when the timeline did not. The label changes
-                    rather than carrying aria-pressed: both together make some
-                    screen readers announce "Pause, pressed" for a thing that is
-                    playing. */}
-                <button
-                    type="button"
-                    className="avl-hold"
-                    onClick={() => setPlaying((was) => !was)}
-                >
-                    {playing ? 'Pause' : 'Play'}
-                </button>
-            </section>
+                The scrim is not decoration. Two of the seven beats have a WHITE
+                world and fill the frame with it, so ink-on-void text over a raw
+                canvas would disappear entirely for several seconds at a time.
+                Its opacity is set from a measured worst case — see the note in
+                the stylesheet. */}
+            <canvas ref={canvasRef} className="avl-canvas" aria-hidden="true" />
+            <div className="avl-scrim" aria-hidden="true" />
 
             {/* The artist's statement, as written. Nothing here is paraphrased. */}
-            <section className="avl-statement" aria-labelledby="avl-statement-h">
+            <section className="avl-statement" aria-labelledby="avl-statement-h" ref={statementRef}>
                 <h2 className="avl-sr" id="avl-statement-h">The concept</h2>
                 <p>
                     I belong to a generation that never had to cross the boundary between the
@@ -239,6 +254,19 @@ export default function AlgoVrithmLanding() {
                 </p>
             </section>
 
+
+            {/* Not a transport. The canvas starts by itself and strobes for the
+                whole loop, so it has to be stoppable — and under reduced motion
+                it is the only way IN to the motion. In the corner, out of the
+                reading column, because it is an obligation rather than part of
+                the page. */}
+            <button
+                type="button"
+                className="avl-hold"
+                onClick={() => setPlaying((was) => !was)}
+            >
+                {playing ? 'Pause' : 'Play'}
+            </button>
         </main>
     )
 }
