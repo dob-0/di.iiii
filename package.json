@@ -39,6 +39,7 @@
         "space:push": "node scripts/space-push.mjs",
         "space:code-push": "node scripts/space-code-push.mjs",
         "space:sync": "node scripts/space-sync.mjs",
+        "space:sync:vendor": "node scripts/space-sync-vendor.mjs",
         "space:export": "node scripts/space-bundle.mjs export",
         "space:import": "node scripts/space-bundle.mjs import",
         "install:export": "node scripts/install-bundle.mjs export",
