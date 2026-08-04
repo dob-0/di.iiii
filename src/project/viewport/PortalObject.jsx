@@ -61,7 +61,11 @@ function EmbeddedScene({ projectId }) {
         return () => { alive = false }
     }, [projectId, blocked])
 
-    const assetMap = useMemo(() => (doc ? buildAssetMap(doc) : new Map()), [doc])
+    // Pass projectId: an embedded document whose assets were written without a
+    // url (the legacy import gap) has no projectMeta.id to fall back on either,
+    // so without this the portal renders blank tiles where the host scene shows
+    // the same assets fine.
+    const assetMap = useMemo(() => (doc ? buildAssetMap(doc, projectId) : new Map()), [doc, projectId])
     const { roots, childMap } = useMemo(() => {
         const cm = new Map()
         const rs = []
