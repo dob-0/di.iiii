@@ -206,7 +206,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const showCodeView = entryView === 'code'
     const hasFiles = Array.isArray(presentationState.codeFiles) && presentationState.codeFiles.length > 0
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
-    const previewDocument = buildPresentationPreviewDocument(rawHtml)
+    // the shell's query belongs to the page it is showing — a published page
+    // hands over to a sibling with ?param=…, and srcdoc would otherwise drop it
+    const previewDocument = buildPresentationPreviewDocument(rawHtml, typeof window !== 'undefined' ? window.location.search : '')
     const xrDefaultMode = publishState.xrDefaultMode || 'none'
     const xr = useXrAr({
         default3DView: cameraView || resolveViewerCamera(document || {}),

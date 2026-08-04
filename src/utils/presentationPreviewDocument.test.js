@@ -32,6 +32,25 @@ describe('presentationPreviewDocument', () => {
         expect(result).toContain('scrollIntoView')
     })
 
+    it('hands the shell query down to the srcdoc page, which has no URL of its own', () => {
+        const result = buildPresentationPreviewDocument('<main>Field</main>', '?just=bkyi')
+
+        expect(result).toContain('window.diiPageQuery = "?just=bkyi"')
+        expect(result).toContain('window.diiPageParams = new URLSearchParams(window.diiPageQuery)')
+    })
+
+    it('escapes the shell query so it cannot break out of the bootstrap script', () => {
+        const result = buildPresentationPreviewDocument('<main>Field</main>', '?x=</script><script>alert(1)</script>')
+
+        expect(result).not.toContain('<script>alert(1)</script>')
+    })
+
+    it('defaults the page query to an empty string when the host passes none', () => {
+        const result = buildPresentationPreviewDocument('<main>Field</main>')
+
+        expect(result).toContain('window.diiPageQuery = ""')
+    })
+
     it('maps known issue codes to concise host messages', () => {
         expect(getPreviewIssueMessage(PREVIEW_ISSUE_CODES.storageUnavailable)).toContain('Storage unavailable')
         expect(getPreviewIssueMessage(PREVIEW_ISSUE_CODES.sandboxApiDenied)).toContain('sandboxed browser API')
