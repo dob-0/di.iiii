@@ -60,6 +60,20 @@ services:
       # https://github.com/settings/developers
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+
+      # GitHub App `dii-space-sync` (optional): one-click repo→space sync and
+      # its push webhook. Distinct from the OAuth App above -- that one only
+      # signs people in. Absent, `githubApp.isConfigured()` is false and the
+      # whole feature reports `{configured: false}` instead of failing, which
+      # is exactly how it went unnoticed for three weeks after the cPanel→VPS
+      # move: the compose file that replaced the cPanel env never carried
+      # these three vars over. The key is base64 (`base64 -w0 <key>.pem`) so
+      # no loose .pem has to live on the host; _PATH is deliberately NOT
+      # passed here, because getPrivateKey() prefers it and an empty one
+      # would shadow the B64 value.
+      GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+      GITHUB_APP_PRIVATE_KEY_B64: ${GITHUB_APP_PRIVATE_KEY_B64:-}
+      GITHUB_APP_WEBHOOK_SECRET: ${GITHUB_APP_WEBHOOK_SECRET:-}
     restart: unless-stopped
     healthcheck:
       # 127.0.0.1, not localhost: busybox wget resolves localhost to the

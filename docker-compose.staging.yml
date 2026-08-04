@@ -42,6 +42,12 @@ services:
       OAUTH_CALLBACK_BASE_URL: ${STAGING_OAUTH_CALLBACK_BASE_URL:-}
       GITHUB_CLIENT_ID: ${STAGING_GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${STAGING_GITHUB_CLIENT_SECRET:-}
+      # Same App, separate installation/webhook secret per environment -- the
+      # webhook only ever reaches prod, so staging uses these for the App JWT
+      # (Disconnect/Connect forces a sync there). See docker-compose.yml.
+      GITHUB_APP_ID: ${STAGING_GITHUB_APP_ID:-}
+      GITHUB_APP_PRIVATE_KEY_B64: ${STAGING_GITHUB_APP_PRIVATE_KEY_B64:-}
+      GITHUB_APP_WEBHOOK_SECRET: ${STAGING_GITHUB_APP_WEBHOOK_SECRET:-}
     # Small ceiling: staging only ever serves one person clicking through at
     # a time, it must not be able to meaningfully compete with production
     # for the VPS's 2 vCPU / 3.7GB (confirmed via `nproc`/`free -h` on the

@@ -90,6 +90,68 @@ describe('deploy workflow hardening', () => {
     })
 })
 
+// The GitHub App's three secrets were configured on cPanel and never carried
+// into the compose file that replaced it, so from the 2026-07-15 VPS move
+// `githubApp.isConfigured()` was false on both hosts: one-click repo→space sync
+// reported "not configured" and every push webhook was rejected, for three
+// weeks, with nothing in the logs — the feature is designed to stay quiet when
+// unconfigured. Same silent-fallback class as the staging `:latest` tag above,
+// applied to a feature's secrets. This derives the required names from the code
+// that reads them, so a NEW env var can't be added to githubApp.js and left out
+// of compose the same way.
+describe('the server container receives the GitHub App secrets', () => {
+    const base = read('docker-compose.yml')
+    const staging = read('docker-compose.staging.yml')
+
+    // getPrivateKey() accepts any one of these, in this order.
+    const PRIVATE_KEY_VARS = [
+        'GITHUB_APP_PRIVATE_KEY_PATH',
+        'GITHUB_APP_PRIVATE_KEY_B64',
+        'GITHUB_APP_PRIVATE_KEY'
+    ]
+
+    const envNamesReadBy = (rel) => [
+        ...new Set(
+            (read(rel).match(/process\.env\.GITHUB_APP_[A-Z0-9_]+/g) || [])
+                .map((hit) => hit.replace('process.env.', ''))
+        )
+    ]
+
+    it.each([
+        ['docker-compose.yml', base, ''],
+        ['docker-compose.staging.yml', staging, 'STAGING_']
+    ])('%s passes the id and the webhook secret', (_name, source, prefix) => {
+        for (const key of ['GITHUB_APP_ID', 'GITHUB_APP_WEBHOOK_SECRET']) {
+            expect(source).toContain(`${key}: \${${prefix}${key}:-}`)
+        }
+    })
+
+    it.each([
+        ['docker-compose.yml', base],
+        ['docker-compose.staging.yml', staging]
+    ])('%s passes exactly one private-key channel', (_name, source) => {
+        const passed = PRIVATE_KEY_VARS.filter((key) => source.includes(`${key}:`))
+        // More than one is worse than none: getPrivateKey() prefers _PATH, so an
+        // empty _PATH silently shadows a good _B64 value.
+        expect(passed).toEqual(['GITHUB_APP_PRIVATE_KEY_B64'])
+    })
+
+    it('covers every GITHUB_APP_* var githubApp.js actually reads', () => {
+        const uncovered = envNamesReadBy('serverXR/src/githubApp.js')
+            .filter((key) => !PRIVATE_KEY_VARS.includes(key))
+            .filter((key) => !base.includes(`${key}:`))
+        expect(uncovered).toEqual([])
+    })
+
+    it('documents all three in .env.example, for prod and staging', () => {
+        const example = read('.env.example')
+        for (const key of ['GITHUB_APP_ID', 'GITHUB_APP_PRIVATE_KEY_B64', 'GITHUB_APP_WEBHOOK_SECRET']) {
+            expect(example).toContain(`${key}=`)
+            expect(example).toContain(`STAGING_${key}=`)
+        }
+    })
+})
+
 // Regression guard for audit batch 2: the SSE endpoints fall into nginx's
 // generic /serverXR/ block, which keeps proxy_buffering on — the same class of
 // miss as the mesh websocket upgrade. Without this header nginx may hold small
