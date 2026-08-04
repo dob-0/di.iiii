@@ -1,3 +1,5 @@
+import REEL_ATLAS_URL from './reelAtlas.webp?url'
+
 // The front door's picture: the piece's own shaders, on a bare WebGL context.
 //
 // Not three.js and not @react-three/fiber. This page is the door to a lazy
@@ -90,6 +92,14 @@ const SPHERE_PITCH = 0.28
 
 // AlgoVrithmExperience.jsx. The door looks through the piece's own lens.
 const FOV_DEG = 72
+
+// The reel atlas, built by scripts/build-reel-atlas.mjs — one still out of every
+// clip in src/algoVrithm/assets/. Kept in step with reelAtlas.json by a test,
+// because a shader that reads a 4-row atlas as though it had 5 samples half a
+// frame of the wrong reel and looks merely odd rather than broken.
+const ATLAS_COLS = 8
+const ATLAS_ROWS = 4
+const ATLAS_COUNT = 31
 
 const MAX_STEP_SEC = 0.25
 
@@ -560,6 +570,8 @@ uniform float uSlot;
 uniform float uHold;
 uniform float uChaos;
 uniform float uExit;
+uniform sampler2D uReels;
+uniform float uHasReels;
 
 void main() {
     setupRay();
@@ -599,15 +611,47 @@ void main() {
     float cellPix = gPix * 28.0 / (2.0 * PI) / max(sin(polar), 0.15);
     float seam = 1.0 - smoothstep(cellPix, cellPix * 3.0, min(min(u, 1.0 - u), min(vIn, 1.0 - vIn)));
 
-    // A flat grey per frame renders the beat as tiling — 24 plain squares, a
-    // tiled wall and not a feed. Each plate carries a vertical gradient with its
-    // own direction and one bright band across it, which is the least that reads
-    // as an image inside a frame without inventing footage the piece has not
-    // got. The band is where a face or a horizon lands in almost every reel.
+    // THE FRAMES CARRY THE REAL REELS. A flat grey per frame rendered the beat
+    // as tiling — plain squares, a tiled wall and not a feed. What is sampled
+    // here is one still out of every clip in src/algoVrithm/assets/, packed by
+    // scripts/build-reel-atlas.mjs into an 8x4 atlas of 31 frames, ~84 KB.
+    //
+    // Not the video. The reels are 197 MB and one of them alone is 27 MB; the
+    // door exists precisely so a visitor who followed a link does not pay for
+    // the piece before deciding to enter it, and shipping the footage to that
+    // visitor would be a far bigger version of the thing the door prevents.
+    //
+    // 31 stills across 224 frames is not a shortfall either — it is what the
+    // globe already looks like. reelPlayers.js shares a pool of decoders across
+    // the panels on purpose: "a feed IS the same clip arriving again from
+    // twelve accounts."
+    //
+    // The reel a frame shows is picked by the SAME hash the plate used, so a
+    // swipe still lands on a different clip and the fallback below stays in
+    // step with the atlas.
     float grain = hash(vec3(slot + floor(pos), 19.0, 5.0));
-    float lean = mix(vIn, 1.0 - vIn, step(0.5, grain));
-    float band = smoothstep(0.08, 0.42, vIn) * (1.0 - smoothstep(0.52, 0.92, vIn));
-    float image = plate * (0.5 + 0.5 * lean) + band * 0.22 * grain;
+    float image;
+    if (uHasReels > 0.5) {
+        float pick = floor(plate * ${ATLAS_COUNT}.0);
+        vec2 cell = vec2(mod(pick, ${ATLAS_COLS}.0), floor(pick / ${ATLAS_COLS}.0));
+        // Inset by half a texel: the atlas has no gutters, and sampling the
+        // exact cell edge with LINEAR bleeds the neighbouring reel in.
+        vec2 inset = vec2(0.5 / ${(ATLAS_COLS * 108).toFixed(1)}, 0.5 / ${(ATLAS_ROWS * 192).toFixed(1)});
+        // 1.0 - u, not u. The visitor is INSIDE the shell looking at its inner
+        // face, so the frames are seen from behind and every one of them read
+        // mirrored — legible enough that the text in two of the reels came out
+        // backwards, which is how it was caught.
+        vec2 uv = (cell + clamp(vec2(1.0 - u, 1.0 - vIn), inset, 1.0 - inset)) / vec2(${ATLAS_COLS}.0, ${ATLAS_ROWS}.0);
+        // The stills are greyscale phone captures and land in a narrow mid band;
+        // straight through, the wall reads as haze rather than as pictures.
+        image = clamp((texture2D(uReels, uv).r - 0.5) * 1.32 + 0.46, 0.0, 1.0);
+    } else {
+        // Until the atlas has decoded — and on any build without it — the old
+        // gradient plate. The beat must never be blank waiting for an image.
+        float lean = mix(vIn, 1.0 - vIn, step(0.5, grain));
+        float band = smoothstep(0.08, 0.42, vIn) * (1.0 - smoothstep(0.52, 0.92, vIn));
+        image = plate * (0.5 + 0.5 * lean) + band * 0.22 * grain;
+    }
 
     // The shell is a shell. The poles sit further from the eye than the equator
     // does, and without that the curvature is carried by the seams alone.
@@ -923,8 +967,32 @@ export const createHeroField = (canvas) => {
         ballA: new Float32Array(PAIR_COUNT * 4),
         ballB: new Float32Array(PAIR_COUNT * 4),
         columns: new Float32Array(COLUMN_COUNT),
-        lamp: new Float32Array(3)
+        lamp: new Float32Array(3),
+        reels: null
     }
+
+    // The reel stills, decoded off the critical path. Deliberately fire-and-
+    // forget: the globe draws its gradient plates until this lands and simply
+    // starts showing footage when it does, so a slow connection costs a visitor
+    // nothing and a failed one costs them nothing either.
+    //
+    // NPOT — 864x768 is not a power of two — so CLAMP_TO_EDGE and LINEAR with
+    // no mipmaps, which is the only combination WebGL 1 will sample from a NPOT
+    // texture. Get it wrong and every frame samples black, silently.
+    const image = new Image()
+    image.decoding = 'async'
+    image.onload = () => {
+        const texture = gl.createTexture()
+        gl.bindTexture(gl.TEXTURE_2D, texture)
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false)
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+        state.reels = texture
+    }
+    image.src = REEL_ATLAS_URL
 
     const uniform = (entry, name) => {
         if (!entry.uniforms.has(name)) {
@@ -1103,6 +1171,12 @@ export const createHeroField = (canvas) => {
             gl.uniform1f(uniform(entry, 'uHold'), extra.hold)
             gl.uniform1f(uniform(entry, 'uChaos'), extra.chaos)
             gl.uniform1f(uniform(entry, 'uExit'), extra.exit)
+            gl.uniform1f(uniform(entry, 'uHasReels'), state.reels ? 1 : 0)
+            if (state.reels) {
+                gl.activeTexture(gl.TEXTURE0)
+                gl.bindTexture(gl.TEXTURE_2D, state.reels)
+                gl.uniform1i(uniform(entry, 'uReels'), 0)
+            }
         } else if (name === 'sphere') {
             gl.uniform3fv(uniform(entry, 'uSourceA'), extra.sourceA)
             gl.uniform3fv(uniform(entry, 'uSourceB'), extra.sourceB)

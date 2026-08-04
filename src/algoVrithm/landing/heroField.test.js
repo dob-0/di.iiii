@@ -146,6 +146,26 @@ describe('the pause control is not transparent to the text under it', () => {
     })
 })
 
+// The atlas is built by scripts/build-reel-atlas.mjs and its grid is baked into
+// the shader as literals. If someone drops a reel into src/algoVrithm/assets/
+// and rebuilds, the atlas grows a row and the shader keeps reading four — which
+// samples the wrong reel for half the frames and looks merely odd, not broken.
+describe('the reel atlas and the shader agree', () => {
+    const here = dirname(fileURLToPath(import.meta.url))
+    const meta = JSON.parse(readFileSync(join(here, 'reelAtlas.json'), 'utf8'))
+    const hero = readFileSync(join(here, 'heroField.js'), 'utf8')
+    const constant = (name) => Number(hero.match(new RegExp(`^const ${name} = (\\d+)$`, 'm'))[1])
+
+    it.each([['ATLAS_COLS', 'cols'], ['ATLAS_ROWS', 'rows'], ['ATLAS_COUNT', 'count']])(
+        '%s matches the built atlas',
+        (name, key) => expect(constant(name)).toBe(meta[key])
+    )
+
+    it('has room for every reel in the grid', () => {
+        expect(meta.count).toBeLessThanOrEqual(meta.cols * meta.rows)
+    })
+})
+
 describe('the metaball oscillator', () => {
     it('never lets a pair pass through itself', () => {
         let state = { separation: 1.15, velocity: 0 }

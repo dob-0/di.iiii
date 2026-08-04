@@ -1,6 +1,7 @@
 import {
     ALGO_VRITHM_LABEL,
     ALGO_VRITHM_PATH,
+    ALGO_VRITHM_SCENE_PATH,
     ALGO_VRITHM_SPACE_ID
 } from '../../algoVrithm/algoVrithmRouting.js'
 
@@ -29,7 +30,12 @@ export const CODE_SPACES = [
         // The authoring surface for a code space. Not a Studio project editor —
         // the piece's own timeline panel, which is where its edit actually
         // gets made.
-        directorPath: `${ALGO_VRITHM_PATH}?director`,
+        // The SCENE path, not the space path. This pointed at ALGO_VRITHM_PATH,
+        // which since the front door was split off is the landing page — a
+        // page with no director on it and no way to reach one. The button has
+        // been opening the wrong thing ever since the split, silently, because
+        // the landing simply ignores an unknown query param.
+        directorPath: `${ALGO_VRITHM_SCENE_PATH}?director`,
         directorLabel: 'Director'
     }
 ]
