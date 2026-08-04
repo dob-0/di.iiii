@@ -10,7 +10,15 @@
     --avl-cyan: #4df9ff;
     --avl-rule: rgba(255, 255, 255, 0.14);
 
-    min-height: 100vh;
+    /* html/body/#root are position:fixed (base.css), so the document never
+       scrolls and a page root that only sets min-height silently overflows:
+       the head and the poster were the whole visible page and the timeline,
+       the beats and the note below them could not be reached at all. This
+       root owns its scroll, same as .wcc-landing and .ssh-root. */
+    height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     box-sizing: border-box;
     padding: clamp(2rem, 6vw, 5rem) clamp(1.1rem, 5vw, 4rem) 5rem;
     background: var(--avl-void);

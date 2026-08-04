@@ -79,4 +79,21 @@ describe('AlgoVrithmLanding', () => {
         expect(clips[0].style.left).toBe('0%')
         expect(parseFloat(clips[0].style.width)).toBeCloseTo((5.6 / 53) * 100, 3)
     })
+
+    // Same guard as SpaceHub's, for the same bug: html/body/#root are
+    // position:fixed in base.css, so a page root that only sets min-height
+    // overflows into nothing and everything below the fold is unreachable —
+    // which is what shipped here. jsdom loads no stylesheet and lays nothing
+    // out, so the file itself is the only thing there is to assert against.
+    it('the landing root owns its own scroll — the document never scrolls', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const cssPath = ['src/algoVrithm/landing/algoVrithmLanding.css', 'algoVrithm/landing/algoVrithmLanding.css']
+            .map((p) => path.join(cwd(), p))
+            .find((p) => fs.existsSync(p))
+        const rootBlock = fs.readFileSync(cssPath, 'utf8').match(/\.avl-root\s*\{[^}]*\}/)?.[0] ?? ''
+        expect(rootBlock).toMatch(/height:\s*100vh/)
+        expect(rootBlock).toMatch(/overflow-y:\s*auto/)
+    })
 })
