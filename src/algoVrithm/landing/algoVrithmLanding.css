@@ -201,6 +201,15 @@
     text-align: left;
     white-space: nowrap;
     overflow: hidden;
+    /* On a phone the track is ~350px, so a 5.6s clip is 37px wide holding a
+       71px name. The overflow was already hidden, so the cut was silent and
+       mid-word: "White tunnel" read as "White" and "Metaball field" as
+       "Metaball", both plausible enough to be taken for the real beat name.
+       The ellipsis costs one character and says the name is longer than the
+       box. It goes on the clip, not on the label: making the label a block
+       would measure it against the PADDED width, and Halo — 24px of text —
+       would start truncating inside a 33px clip that fits it. */
+    text-overflow: ellipsis;
     cursor: pointer;
 }
 
@@ -218,9 +227,6 @@
    fit at that size (Halo, Scan) are untouched, which is why this is an
    ellipsis and not a width threshold that hides them. */
 .avl-clip-label {
-    display: block;
-    overflow: hidden;
-    text-overflow: ellipsis;
     pointer-events: none;
 }
 
@@ -366,6 +372,12 @@
 }
 
 @media (max-width: 640px) {
+    /* 0.4rem each side is 13px of a 33px clip. Halving it is the difference
+       between "Halo" fitting and "Ha…". */
+    .avl-clip {
+        padding: 0 0.2rem;
+    }
+
     .avl-transport {
         flex-direction: column;
     }

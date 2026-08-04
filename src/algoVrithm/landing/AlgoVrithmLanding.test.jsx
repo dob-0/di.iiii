@@ -107,8 +107,12 @@ describe('AlgoVrithmLanding', () => {
         const cssPath = ['src/algoVrithm/landing/algoVrithmLanding.css', 'algoVrithm/landing/algoVrithmLanding.css']
             .map((p) => path.join(cwd(), p))
             .find((p) => fs.existsSync(p))
+        const clipBlock = fs.readFileSync(cssPath, 'utf8').match(/\.avl-clip\s*\{[^}]*\}/)?.[0] ?? ''
+        expect(clipBlock).toMatch(/text-overflow:\s*ellipsis/)
+        expect(clipBlock).toMatch(/overflow:\s*hidden/)
+        // On the clip, never on the label: a block label is measured against
+        // the padded width and starts truncating names that fit.
         const labelBlock = fs.readFileSync(cssPath, 'utf8').match(/\.avl-clip-label\s*\{[^}]*\}/)?.[0] ?? ''
-        expect(labelBlock).toMatch(/text-overflow:\s*ellipsis/)
-        expect(labelBlock).toMatch(/overflow:\s*hidden/)
+        expect(labelBlock).not.toMatch(/display:\s*block/)
     })
 })
