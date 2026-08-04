@@ -94,12 +94,32 @@ curl -s https://staging.di-studio.xyz/serverXR/api/github/app
 re-check that compose lists the vars (guarded by `src/deploy-compose.test.js`)
 before touching App settings again.
 
-Then the canary: push a commit to **`dob-0/di-sync-webhook-test`** (private repo,
-linked to prod space `webhook-test` since 2026-07-08) → the space auto-syncs and
-"Last push synced" in `/admin → Manage → webhook-test → GitHub sync` shows the new
-SHA. A stale webhook secret logs an HMAC signature mismatch and 401s the webhook;
-a bad key fails App JWT auth (no installation token). Both surface in
-`docker compose logs server`.
+Then the canary: push a commit to **`dob-0/di-sync-webhook-test`** (private repo)
+and watch prod's server log:
+
+```bash
+docker compose … logs --since 5m server | grep github/webhook
+```
+
+- **`200`** — the signature verified. This is the whole point of the canary: a
+  wrong secret is rejected by `verifyWebhookSignature` *before* any other work.
+- **`401`** — the secret in `.env` and the one in App settings differ.
+- A bad private key fails App JWT auth instead (no installation token), which
+  shows up as `isConfigured: true` but `appInfo()` throwing.
+
+> **The prod space `webhook-test` no longer exists** (checked 2026-08-04: the
+> nine prod spaces are main, platform-recordar, br-id-ge, azd, wcc, beyond-form,
+> open, and two sandboxes), and `space_links` is **empty** — no space is linked
+> to any repo at all. So the webhook answers `{ok: true, linked: false}` and
+> syncs nothing. That is enough to prove the secret, which is what this step is
+> for. To also prove the sync path you must first link a space in
+> `/admin → Manage → <space> → GitHub sync`.
+
+**Think before re-linking anything.** `syncLinkedSpace` replaces the space's
+document with the repo's content. `landing`, `newww` and `v-oooooo` are
+repo-authoritative; `br-id-ge-hosq` is Studio-authoritative *by design* and has
+no repo file — linking it would push older repo content over live Studio work.
+The current br_id_ge workflow syncs by script/CI push, not through App links.
 
 Do **not** verify via `br_id_ge` — its `sync-space.yml` CI sync would race the
 webhook.
