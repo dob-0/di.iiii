@@ -79,6 +79,26 @@ describe('deploy workflow hardening', () => {
         }
     })
 
+    // The compose defaults (`:latest` for prod, `:staging` for staging) only
+    // decide what a MANUAL `docker compose up -d` runs -- and they resolve
+    // against the host's LOCAL image cache. Each host only ever pulls its
+    // namespaced `prod-<sha>`/`staging-<sha>` tag, so its copy of the floating
+    // tag is whatever was pulled the last time that tag was used. On
+    // 2026-08-04 both hosts' `latest` was two weeks old, and a manual restart
+    // silently ran that instead of the deployed build -- production included,
+    // reporting a two-week-old release.json and nothing else amiss. Staging's
+    // `${IMAGE_TAG:-staging}` default didn't save it either: its .env carried
+    // an explicit `IMAGE_TAG=latest`, which wins over the default.
+    // So the deploy must WRITE the tag it ran into the host's .env.
+    it('persists the deployed image tag to the host .env', () => {
+        for (const wf of [prod, staging]) {
+            expect(wf).toMatch(/sed -i "s\|\^IMAGE_TAG=\.\*\|IMAGE_TAG=\$\{IMAGE_TAG\}\|" \.env/)
+            expect(wf).toMatch(/echo "IMAGE_TAG=\$\{IMAGE_TAG\}" >> \.env/)
+            // must happen after the containers are actually up, not before
+            expect(wf.indexOf('up -d')).toBeLessThan(wf.indexOf('IMAGE_TAG=${IMAGE_TAG}" >> .env'))
+        }
+    })
+
     // ssh-keyscan seconds before connecting made StrictHostKeyChecking=yes
     // decorative: trust-on-first-use, repeated every single deploy.
     it('prefers a pinned host key over ssh-keyscan', () => {

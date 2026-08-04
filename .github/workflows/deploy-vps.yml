@@ -167,6 +167,20 @@ jobs:
           fi
           docker compose --profile https "${COMPOSE_FILES[@]}" pull
           docker compose --profile https "${COMPOSE_FILES[@]}" up -d
+
+          # Persist the tag this deploy actually ran, so a LATER manual
+          # `docker compose up -d` in this directory reproduces this exact
+          # image. Without it the host falls back to `${IMAGE_TAG:-latest}`
+          # and resolves it from the LOCAL cache -- and the host only ever
+          # pulls `prod-<sha>`, so its `latest` is whatever was pulled when
+          # the tag was last used, months stale. That silently downgraded
+          # production by two weeks during a manual restart on 2026-08-04.
+          # (The registry's `latest` is current; the host's copy is not.)
+          if grep -q '^IMAGE_TAG=' .env 2>/dev/null; then
+            sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${IMAGE_TAG}|" .env
+          else
+            echo "IMAGE_TAG=${IMAGE_TAG}" >> .env
+          fi
           # Caddyfile is a read-only bind mount -- content-only edits don't
           # trigger a recreate on their own, so reload it explicitly.
           docker compose --profile https "${COMPOSE_FILES[@]}" exec -T caddy caddy reload --config /etc/caddy/Caddyfile --force || \

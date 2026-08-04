@@ -64,6 +64,14 @@ term expires. Do not delete it as part of adopting this path.
      locally (defaults: `REGISTRY_USER=youruser`, `IMAGE_TAG=latest` — see
      `.env.example`); `docker-compose.caddy-hardened.yml` is added only if
      present in the checkout.
+   - Writes `IMAGE_TAG=<the tag it just ran>` into the host's `.env`, so a
+     later **manual** `docker compose up -d` in that directory reproduces the
+     deployed image. Without this the manual op falls back to
+     `${IMAGE_TAG:-latest}` and resolves it from the host's **local** image
+     cache — and the host only ever pulls its namespaced `prod-<sha>` tag, so
+     its `latest` is whatever was pulled the last time that tag was used. On
+     2026-08-04 both hosts' `latest` was two weeks old and a manual restart
+     silently ran it, production included. See the known-fixes row.
    - Reloads Caddy afterward (`caddy reload`, falling back to `restart` if
      that fails) — its Caddyfile is a read-only bind mount, so a content-only
      change doesn't trigger a container recreate on its own.

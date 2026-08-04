@@ -164,6 +164,18 @@ jobs:
           # service of its own, production's Caddy fronts it instead.
           docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.staging.yml pull
           docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.staging.yml up -d
+
+          # Persist the tag this deploy actually ran -- see the identical
+          # comment in deploy-vps.yml. The `${IMAGE_TAG:-staging}` default this
+          # file's compose override added is NOT enough on its own: an explicit
+          # IMAGE_TAG in the host .env overrides it, and this host's said
+          # `latest`, so a manual restart here ran a two-week-old production
+          # image while reporting nothing unusual.
+          if grep -q '^IMAGE_TAG=' .env 2>/dev/null; then
+            sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${IMAGE_TAG}|" .env
+          else
+            echo "IMAGE_TAG=${IMAGE_TAG}" >> .env
+          fi
           REMOTE_SCRIPT
 
       - name: Smoke check
