@@ -96,4 +96,19 @@ describe('AlgoVrithmLanding', () => {
         expect(rootBlock).toMatch(/height:\s*100vh/)
         expect(rootBlock).toMatch(/overflow-y:\s*auto/)
     })
+
+    // A phone's track is ~350px, so most clips are narrower than their own
+    // name. The clip hides its overflow, so without this the cut is silent and
+    // "Metaball field" reads as "Metaball".
+    it('a clip too narrow for its name ellipsises rather than cutting mid-word', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const cssPath = ['src/algoVrithm/landing/algoVrithmLanding.css', 'algoVrithm/landing/algoVrithmLanding.css']
+            .map((p) => path.join(cwd(), p))
+            .find((p) => fs.existsSync(p))
+        const labelBlock = fs.readFileSync(cssPath, 'utf8').match(/\.avl-clip-label\s*\{[^}]*\}/)?.[0] ?? ''
+        expect(labelBlock).toMatch(/text-overflow:\s*ellipsis/)
+        expect(labelBlock).toMatch(/overflow:\s*hidden/)
+    })
 })

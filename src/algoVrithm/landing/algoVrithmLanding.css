@@ -210,7 +210,17 @@
     color: var(--avl-ink);
 }
 
+/* On a phone the track is ~350px, so a 5.6s clip is 37px wide and the name is
+   71px of text. The clip already hides the overflow, which cut the names mid
+   word — "White tunnel" read as "White", "Metaball field" as "Metaball", and
+   both are plausible enough to be taken for the real beat name. The ellipsis
+   costs a character and says the name is longer than the box. Labels that DO
+   fit at that size (Halo, Scan) are untouched, which is why this is an
+   ellipsis and not a width threshold that hides them. */
 .avl-clip-label {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
     pointer-events: none;
 }
 
@@ -222,6 +232,41 @@
     background: #fff;
     box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
     pointer-events: none;
+}
+
+/* The statement is the only long-form voice on the page and the only place a
+   first person speaks, so it gets the page's reading measure and no card, no
+   panel, no accent — the same bare column the closing note uses. */
+.avl-statement {
+    max-width: 42rem;
+    margin: clamp(2.4rem, 5vw, 3.4rem) auto clamp(2.4rem, 5vw, 3.4rem);
+    padding-top: clamp(1.4rem, 3vw, 2rem);
+    border-top: 1px solid var(--avl-rule);
+    color: var(--avl-dim);
+    font-size: 0.88rem;
+    line-height: 1.85;
+}
+
+.avl-statement-title {
+    margin: 0 0 1.2rem;
+    color: var(--avl-ink);
+    font-size: 0.78rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+}
+
+.avl-statement p {
+    margin: 0 0 1.1rem;
+}
+
+/* The six gestures are the piece's subject, so they are the one line here that
+   is set rather than merely typed: full ink, and given the room the repetition
+   needs to land as repetition. */
+.avl-gestures {
+    color: var(--avl-ink);
+    font-size: clamp(1rem, 2.6vw, 1.24rem);
+    line-height: 1.6;
+    letter-spacing: 0.01em;
 }
 
 .avl-beats {

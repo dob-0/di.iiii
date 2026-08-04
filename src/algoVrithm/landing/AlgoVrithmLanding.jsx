@@ -247,6 +247,44 @@ export default function AlgoVrithmLanding() {
                 </div>
             </section>
 
+            {/* The artist's statement, as written. It sits between the picture
+                and the breakdown on purpose: the beats below read as craft
+                (strobe rings, hairline bars, 288 reels) until you have been
+                told they are gestures, and after that they read as the six
+                the statement names. Nothing here is paraphrased. */}
+            <section className="avl-statement" aria-label="The concept">
+                <h2 className="avl-statement-title">The concept</h2>
+                <p>
+                    I belong to a generation that never had to cross the boundary between the
+                    physical and the digital. I grew up inside both at once. My friendships,
+                    memories, work, desires, and anxieties exist across these spaces so seamlessly
+                    that I no longer experience the digital world as separate from reality. It is
+                    simply one of the environments in which my life unfolds.
+                </p>
+                <p>Every day I perform the same gestures:</p>
+                <p className="avl-gestures">
+                    I scroll. I swipe. I refresh. I wait. I record. I repeat.
+                </p>
+                <p>
+                    These actions seem ordinary, almost invisible, yet they quietly organize my
+                    attention, emotions, relationships, and sense of time. I began to wonder whether
+                    these repetitive digital behaviors are more than habits. What if they are the
+                    rituals of my generation?
+                </p>
+                <p>
+                    The algorithm is never seen, yet it continuously composes the reality I
+                    experience. It determines what becomes visible, what disappears, what deserves
+                    attention, and what remains in memory. My reality is increasingly assembled
+                    through pixels, code, and computational decisions.
+                </p>
+                <p>
+                    “Hyperreality” as a condition in which simulations become more influential than
+                    the physical world they represent. I don’t experience this as a future scenario
+                    or a warning. It is simply the condition in which I have learned to live—a
+                    reality continuously composed through pixels, code, algorithms.
+                </p>
+            </section>
+
             <section className="avl-beats" aria-label="The beats">
                 {BEAT_CARDS.map((beat) => (
                     <article
