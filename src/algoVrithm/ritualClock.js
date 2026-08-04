@@ -192,9 +192,16 @@ export const useRitualClock = ({
         // time round, and on a loop that runs all day a visitor eventually
         // watches it happen.
         //
-        // The seam needs no transition of its own: bookendAmount holds the veil
-        // at full opacity across both t=0 and t=durationSec, so the wrap
-        // happens behind a surface that is already there. See transitions.js.
+        // The seam needs no transition of its own, though the reason changed on
+        // 2026-08-04 when the veil left the render tree. It used to wrap behind
+        // bookendAmount, which held the veil up across both t=0 and
+        // t=durationSec. Now it survives on the sequences' own envelopes: the
+        // last row fades to nothing over the tail of its window (the sphere,
+        // `1 - smoothstep(0.9, 1, progress)`) and the tunnel fades up from
+        // nothing at t=0, so the piece is dark on both sides of the seam and
+        // there is nothing to cut between. That is a property of the FIRST and
+        // LAST rows, not of the clock — reorder the edit list and check it
+        // still holds. bookendAmount itself is still in transitions.js.
         const wrapped = loopRef.current ? next % duration : duration
         playheadRef.current = wrapped
         setPlayheadSec(wrapped)

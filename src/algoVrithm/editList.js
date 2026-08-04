@@ -3,9 +3,12 @@
 // without mounting a canvas.
 //
 // The panel edits a draft copy of the edit list and the piece renders from it
-// live. Nothing here persists: the author tunes, then copies the formatted
-// source back into sequences/index.js, which stays the single source of truth
-// (git-tracked, reviewable, and what actually deploys).
+// live. sequences/index.js stays the single source of truth (git-tracked,
+// reviewable, and what actually deploys), and the draft reaches it two ways:
+// "Save to source" patches the file in place through a dev-server endpoint
+// (editListSource.js), and formatEditListSource below regenerates the whole
+// array for "Copy edit list". Save is the one to reach for — the formatter is
+// lossy by design, see its own note.
 
 // Smallest editable step. Fine enough to place a cut precisely, coarse enough
 // that dragging produces round numbers instead of 7.203041s.

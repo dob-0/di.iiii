@@ -23,6 +23,7 @@ import {
 } from './editList.js'
 import { ASSET_FOLDER, ASSET_LIBRARY } from './assetLibrary.js'
 import AssetClip, { resolvePlacement } from './sequences/AssetClip.jsx'
+import { SEQUENCES } from './sequences/index.js'
 import { PLAYBACK_RATES } from './ritualClock.js'
 import {
     LIGHT_INTENSITIES,
@@ -51,9 +52,11 @@ import {
 // panel makes the edit list directly manipulable: drag a clip to move it, drag
 // an edge to trim, click to jump the playhead there.
 //
-// Edits are live but not persisted. The piece renders from this draft, and
-// "Copy edit list" hands back source to paste into sequences/index.js, which
-// stays the source of truth — git-tracked, reviewable, and what deploys.
+// Edits are live on a draft. The piece renders from that draft, and
+// sequences/index.js stays the source of truth — git-tracked, reviewable, and
+// what deploys. "Save to source" writes the draft into that file in place;
+// "Copy edit list" regenerates the array to paste by hand. See the note above
+// handleSave for which to reach for and why.
 
 // Empty timeline past the last clip, so a clip can be dragged beyond the
 // current end to make the piece longer.
@@ -367,6 +370,47 @@ export default function DirectorPanel({ sequences, onChange, clock, selectedId, 
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
     }, [clock])
+
+    // ---- save back to code -----------------------------------------------
+    //
+    // "Copy edit list" regenerates the whole SEQUENCES array, which is correct
+    // and lossy in the two ways that matter: it drops fields it was never
+    // taught about (`veil: false`, on the two rows whose arrival IS their own
+    // transition) and it replaces every comment in the file. Save goes the
+    // other way — the dev server patches the changed fields in place and
+    // leaves the rest of the file alone. Copy stays for the cases save cannot
+    // do: rows added in the panel, and any machine that is not this one.
+    //
+    // SEQUENCES imported directly, not from props, on purpose: this is the
+    // pristine edit list as the FILE currently declares it, and the patcher
+    // needs it to tell an edited field from an untouched one. `sequences` is
+    // the draft and would report everything as unchanged.
+    const [saveState, setSaveState] = useState(null)
+
+    const handleSave = async () => {
+        setSaveState({ kind: 'saving' })
+        try {
+            const response = await fetch('/__algovrithm/edit-list', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                // Component is a function and JSON drops it — which is what we
+                // want, since the patcher never touches that field.
+                body: JSON.stringify({ sequences, baseline: SEQUENCES })
+            })
+            const result = await response.json()
+
+            if (!result.ok) {
+                setSaveState({ kind: 'error', reason: result.reason ?? 'refused' })
+                return
+            }
+            setSaveState({ kind: 'saved', changed: result.changed })
+            window.setTimeout(() => setSaveState(null), 2400)
+        } catch (error) {
+            // No endpoint — a production build, or the dev server has died.
+            // Copy still works, so say which one to reach for.
+            setSaveState({ kind: 'error', reason: `no dev server (${error?.message ?? 'unreachable'}) — use Copy` })
+        }
+    }
 
     // ---- copy back to code ----------------------------------------------
 
@@ -754,8 +798,8 @@ export default function DirectorPanel({ sequences, onChange, clock, selectedId, 
 
                         {/* The room this beat happens in, and the lamps in it.
                             Both are edit-list data (see worldLights.js), so
-                            everything here ends up in "Copy edit list" — the
-                            panel is still a cutting room, not a save file. */}
+                            everything here is written back by Save and by Copy
+                            alike. */}
                         <div className="algo-vrithm-director-sections">
                             <Section
                                 title="world"
@@ -982,11 +1026,23 @@ export default function DirectorPanel({ sequences, onChange, clock, selectedId, 
                         clips to cross-fade instead
                     </span>
                 )}
+                <button
+                    type="button"
+                    className="algo-vrithm-director-save"
+                    onClick={handleSave}
+                    disabled={saveState?.kind === 'saving'}
+                >
+                    {saveState?.kind === 'saving' ? 'saving…' : null}
+                    {saveState?.kind === 'saved' ? (saveState.changed ? 'saved ✓' : 'no changes') : null}
+                    {!saveState || saveState.kind === 'error' ? 'Save to source' : null}
+                </button>
                 <button type="button" className="algo-vrithm-director-copy" onClick={handleCopy}>
                     {copied ? 'copied ✓' : 'Copy edit list'}
                 </button>
                 <span className="algo-vrithm-director-note">
-                    paste into src/algoVrithm/sequences/index.js — nothing here is saved
+                    {saveState?.kind === 'error'
+                        ? saveState.reason
+                        : 'Save writes src/algoVrithm/sequences/index.js in place, comments intact. Copy regenerates the array instead — use it for rows added here.'}
                 </span>
             </footer>
 

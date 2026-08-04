@@ -13,7 +13,6 @@ import SplitHandle from './SplitHandle.jsx'
 import Standpoint from './Standpoint.jsx'
 import ViewerDolly from './ViewerDolly.jsx'
 import TransformGizmo, { GIZMO_MODES, gizmoModesFor } from './TransformGizmo.jsx'
-import TransitionVeil from './TransitionVeil.jsx'
 import SpatialScore from './SpatialScore.jsx'
 import { isDirectorEnabled } from './directorFlag.js'
 import { reelPlayers } from './reelPlayers.js'
@@ -247,14 +246,30 @@ function Stage({
                 playheadSec={playheadSec}
                 durationSec={durationSec}
             />
-            {/* Last, and parented to the camera: it covers everything above
-                during a handover. See transitions.js for why a cross-fade on
-                its own is not enough in a headset. */}
-            <TransitionVeil
-                sequences={sequences}
-                playheadSec={playheadSec}
-                durationSec={durationSec}
-            />
+            {/* THE GLITCH VEIL IS OUT (2026-08-04, her call: "remove this,
+                noisy, it's in every scene, i don't like it").
+
+                It was doing two jobs and the second one is the reason this is
+                a comment rather than a deletion. Job one was style — the feed
+                breaking up between beats. Job two was covering the handover:
+                two overlapping sequences cross-fading in stereo is a double
+                exposure, two worlds at two depths that the eyes cannot
+                converge on at once (the long argument is at the top of
+                transitions.js, and it is about a headset, not a monitor).
+
+                So handovers now dissolve raw. On the flat page that is fine
+                and quieter, which is what she asked for. In the headset it is
+                the thing the veil existed to prevent — judge it there before
+                calling this settled, and if the crossings feel like a smear,
+                the fix is NOT to bring the noise back at full strength: put
+                <TransitionVeil> back (import + these four lines, both still in
+                the tree) and drop VEIL_PEAK from 0.72 toward ~0.25, which is a
+                thin scatter rather than the wall in her screenshot.
+
+                Everything the veil drove is still wired: transitions.js is
+                untouched and SpatialScore still reads totalVeil — its glitch
+                voice is gated to zero alongside this so the piece is not left
+                hissing at a handover with nothing on screen to explain it. */}
         </>
     )
 }
@@ -402,9 +417,10 @@ export default function AlgoVrithmExperience() {
     }, [])
 
     // The live edit list. Starts as the committed one and is only ever changed
-    // by the director panel — the audience path never touches it. Edits are
-    // not persisted: "Copy edit list" hands back source for sequences/index.js,
-    // which stays the source of truth.
+    // by the director panel — the audience path never touches it. Edits reach
+    // sequences/index.js, which stays the source of truth, via the panel's
+    // "Save to source" (patches the file in place, dev only) or "Copy edit
+    // list" (regenerates the array to paste).
     //
     // Behind an undo stack (Ctrl/Cmd+Z, Shift to redo). Only mounted for the
     // author: the audience has nothing to undo and should not carry a listener

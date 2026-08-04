@@ -198,10 +198,19 @@ const AUDIO_ROLLOFF = 1.8
 // through the folder and no extra decoder is ever created.
 
 // When the first swipe happens, as a fraction of this row's window. The row is
-// 16.2s (15s of screen time plus the 1.2s handover), so 0.31 is five seconds in
-// — the globe closes, holds still long enough to be read as a room, and only
+// 22.2s (21s of screen time plus the 1.2s handover), so 0.225 is five seconds
+// in — the globe closes, holds still long enough to be read as a room, and only
 // then starts moving. On direction.
-const SWIPE_START = 0.31
+//
+// RETIMED 2026-08-02 (her ask: make the reels beat longer to watch) from a
+// 16.2s window. Every constant below is a fraction, so a naive retime would
+// have stretched the whole beat proportionally — including the runaway and the
+// step out, which are the two parts that were already the right length. So all
+// four event fractions were recomputed to hold their ABSOLUTE seconds, and the
+// six new seconds land entirely in the calm feed between the first swipe and
+// the acceleration: 5s of readable scrolling became 11s. That is the part she
+// asked for more of. Divide by the window when retiming this row again.
+const SWIPE_START = 0.225
 
 // How long one swipe takes, in seconds. 0.42 is about the length of a real
 // thumb flick; much slower and it is a dissolve, much faster and the incoming
@@ -242,13 +251,23 @@ const HOLD_FRACTION = SWIPE_HOLD / SWIPE_CYCLE
 // that is worth a sign at the door. Nothing in the code can make an accelerating
 // full-surround feed a neutral thing to look at.
 
-// When it begins, as a fraction of this row's window — 10s into a 16.2s row.
-const ACCEL_START = 0.617
+// When it begins, as a fraction of this row's window — 16.0s into a 22.2s row.
+// Anchored to the END of the beat, not the start: the runaway needs a fixed
+// number of seconds to halve its way down to the floor, so it keeps the 6.2s
+// it had before the row was lengthened. Moving it later is the whole point of
+// the retime — the calm feed now runs for eleven seconds before this fires.
+const ACCEL_START = 0.721
 
-// Seconds for the cycle to halve. Over the five seconds between the tenth
-// second and the end of the beat this takes 1.57s per reel down to about 0.03s
-// — from one flick a second to a blur.
+// Seconds for the cycle to halve. Over the six seconds between ACCEL_START and
+// the end of the beat this takes 1.57s per reel down to about 0.03s — from one
+// flick a second to a blur.
 const ACCEL_HALVING = 0.9
+
+// How long the runaway takes to reach full incoherence, as a fraction of the
+// window — 3.24s, scaled with ACCEL_START so full chaos still lands just after
+// the step out begins rather than drifting toward the end of the beat. Was an
+// inline 0.2 against the old window.
+const ACCEL_CHAOS_SPAN = 0.146
 
 // Floor on the cycle, so it cannot divide toward zero and start skipping whole
 // clips per frame. At 0.03s the feed is already unreadable; below it the maths
@@ -265,7 +284,7 @@ const CHAOS_SPREAD = 1
 // can be written in seconds. `progress` only ever gives a 0..1, and "after 10
 // sec" has to mean ten seconds — see the note on the row in sequences/index.js
 // about why the pace of this beat must not scale with its window.
-const REEL_WINDOW_SEC = 16.2
+const REEL_WINDOW_SEC = 22.2
 
 // ---- the step out -----------------------------------------------------------
 //
@@ -289,7 +308,13 @@ const REEL_WINDOW_SEC = 16.2
 // then changes in absolute seconds, and it overlaps the sphere row's fade-in
 // by design: the handover carries `veil: false`, this movement IS the
 // transition.
-const EXIT_START = 0.8
+// 0.854 of a 22.2s window — the last 3.24s, which is exactly the number of
+// seconds the step out took at 0.8 of the old 16.2s row. Held absolute rather
+// than proportional on purpose: this is a coherent visual surround translating,
+// which the inner ear reads as self-motion, and stretching it to four seconds
+// would have been a slower, longer dose of the one moment in the piece with a
+// real vection budget. The exit is finished; the retime is not about it.
+const EXIT_START = 0.854
 const EXIT_SEAT = { x: 0, y: 7.875, z: -15 }
 const EXIT_SCALE = 5.5 / 7
 
@@ -726,7 +751,7 @@ export default function ReelGlobe({ progress }) {
         // How much of the cycle is a hold. Driven to zero as the pace runs away,
         // so flick-and-snap becomes one continuous slide — see THE ACCELERATION
         // for why that is a safety property and not just a look.
-        const chaos = smoothstep(ACCEL_START, Math.min(1, ACCEL_START + 0.2), local)
+        const chaos = smoothstep(ACCEL_START, Math.min(1, ACCEL_START + ACCEL_CHAOS_SPAN), local)
         const holdFraction = HOLD_FRACTION * (1 - chaos)
 
         const step = Math.floor(feedRef.current)
@@ -758,13 +783,20 @@ export default function ReelGlobe({ progress }) {
         // shell fading up at once is what says it is a single thing that has
         // closed around the visitor.
         //
-        // Full strength by local 0.12 — 29.3s on the shipped row — because the
+        // Full strength by local 0.12 — 25.9s on the 22.2s row — because the
         // metaball portal starts opening at 28.8s and the first thing seen
         // through the hole has to be footage, not footage still fading up.
         // 0.22 looked fine on a monitor and wrong through the portal: the hole
         // opened onto cells at a third of their brightness against near-black,
-        // which read as a dim room rather than a reveal.
-        const envelope = smoothstep(0.02, 0.12, local) * smoothstep(1, 0.86, local)
+        // which read as a dim room rather than a reveal. The longer window only
+        // buys more margin here, so the fraction is left alone.
+        //
+        // The fade OUT is not left alone: 0.898 keeps it 2.27s long, the length
+        // it was at 0.86 of the old window, and therefore still starting about
+        // a third of the way into the step out. Left at 0.86 it would have
+        // begun dissolving the globe almost the instant it started moving, and
+        // the whole point of the exit is watching it land on the sphere's seat.
+        const envelope = smoothstep(0.02, 0.12, local) * smoothstep(1, 0.898, local)
 
         // Sound rides the same envelope as the picture, so the room does not
         // arrive silent or leave still talking. Every source comes up together —

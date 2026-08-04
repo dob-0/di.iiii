@@ -96,10 +96,16 @@ import { WORLD_PRESETS } from '../palette.js'
 // shortening a window shortens every event inside it:
 //   - the tunnel keeps its original 5.6s because its ending is choreographed
 //     against that window, contact at 86%.
-//   - the reel globe gets 16.2s because its acceleration is written in real
+//   - the reel globe gets 22.2s because its acceleration is written in real
 //     seconds ("after 10 sec") and read from a constant in its own file. That
 //     one does NOT scale with the row — see REEL_WINDOW_SEC in ReelGlobe.jsx,
-//     and retime this row only together with it.
+//     and retime this row only together with it. It was 16.2s until 2026-08-02
+//     ("make the reels scene longer to watch"), and lengthening it meant
+//     recomputing four fractions inside that file, not dragging this edge:
+//     every event in the sequence is a fraction of the window, so the naive
+//     retime would have stretched the runaway and the step out too. Both were
+//     already the right length and were pinned to their absolute seconds, so
+//     the whole +6s landed in the calm feed. Do the same next time.
 //
 // This is the same class of mistake as Assembly's `travel` was, and that one
 // could actually hurt somebody: a distance tuned against a long window becomes
@@ -262,12 +268,13 @@ export const SEQUENCES = [
         // than the swarm ever was, because the footage encloses the visitor
         // instead of passing them.
         //
-        // FIFTEEN seconds of screen time on a 16.2s window, on direction, and
-        // three times the length of any abstract beat. Two reasons it earns it:
-        // this is the only sequence with anything to READ in it, and the scroll
-        // does not begin until five seconds in — so a shorter row would be a
-        // still globe with a scroll bolted onto its exit rather than a room that
-        // holds, then moves.
+        // TWENTY-ONE seconds of screen time on a 22.2s window, on direction
+        // (2026-08-02: "make the reels scene longer to watch"), and four times
+        // the length of any abstract beat. Two reasons it earns it: this is the
+        // only sequence with anything to READ in it, and the scroll does not
+        // begin until five seconds in — so a shorter row would be a still globe
+        // with a scroll bolted onto its exit rather than a room that holds,
+        // then moves.
         //
         // THE SCROLL RATE DOES NOT SCALE WITH THIS NUMBER. It is integrated per
         // second inside the sequence, deliberately, because it is a velocity the
@@ -275,8 +282,16 @@ export const SEQUENCES = [
         // this row shortens how far the globe travels; it does not speed it up.
         // That is the opposite of how every other beat behaves and it is the
         // safe direction for the exception to run in.
+        //
+        // Which is also why the +6s was not a drag of this edge alone. Every
+        // event INSIDE the sequence is a fraction of the window, so the naive
+        // retime would have stretched the runaway and the step out too — both
+        // already the right length. ReelGlobe's four event fractions were
+        // recomputed to hold their absolute seconds, so all six seconds land in
+        // the calm readable feed (5s of scrolling became 11s) and nothing else
+        // in the beat moved. Retiming this row again means redoing that.
         startSec: 23.2,
-        endSec: 39.4,
+        endSec: 45.4,
         // Near-black, and the fog values do not matter to the globe itself —
         // ReelGlobe turns fog off, because every cell sits at exactly the same
         // radius and fog would apply one flat grey wash to the whole shell
@@ -310,8 +325,12 @@ export const SEQUENCES = [
         // The globe is still the answer to the abstract beats; the sphere is
         // now the epilogue after it — the noise ends and something monumental
         // and indifferent is still there.
-        startSec: 38.2,
-        endSec: 47.0,
+        //
+        // Rippled +6.0s on 2026-08-02 when the globe was lengthened. The WIDTH
+        // is untouched and the 1.2s overlap with the globe is preserved — shift
+        // both numbers by the delta, never butt the rows together.
+        startSec: 44.2,
+        endSec: 53.0,
         // Authored fresh — the old row did not survive the extraction. Values
         // derived from the scene's own geometry: near-black with a slight cool
         // cast (the colonnade is lit stone, so unlike the emissive beats a

@@ -46,6 +46,38 @@ const RADIUS = 0.25
 // scene rather than being sorted into it.
 const RENDER_ORDER = 999
 
+/**
+ * Put the veil on the camera, and the camera somewhere it will actually be
+ * drawn.
+ *
+ * Parenting to the camera is the whole design (see the note above): the strips
+ * have to be locked to the VIEW. What that quietly depends on is the camera
+ * being reachable from the scene root, because the renderer draws by walking
+ * the SCENE — `renderer.render(scene, camera)` projects `scene`'s descendants
+ * and the camera is merely the point of view. A camera with no parent is not in
+ * that walk, so anything hanging off it is skipped.
+ *
+ * In XR that is already handled: the session's camera lives inside the rig
+ * XROrigin mounts, which is in the scene, so the veil drew in the headset from
+ * the day it was written. On the flat page R3F's default camera is a standalone
+ * object with `parent === null`, so the veil attached itself to the camera on
+ * frame one and was never rendered again — the glitch transitions were missing
+ * on the desktop and present in the headset, with nothing logged either way.
+ *
+ * `if (!camera.parent)` is the whole fix, and it is deliberately conditional:
+ * an unconditional `scene.add(camera)` would REPARENT the XR camera out of its
+ * rig and break head tracking, which is a far worse bug than the one being
+ * fixed. Only a camera that belongs to nothing gets adopted.
+ *
+ * This is the same class as the PositionalAudio bug in the reel globe — an
+ * Object3D that is only constructed and never made reachable is inert, and
+ * nothing throws or warns.
+ */
+export const attachVeil = (mesh, camera, scene) => {
+    if (mesh.parent !== camera) camera.add(mesh)
+    if (!camera.parent && scene) scene.add(camera)
+}
+
 // How often the noise re-rolls, in Hz. BELOW the 15-25Hz photosensitive band
 // on purpose — raise this past 14 and you are building a seizure trigger into
 // an installation. Exported for the test that pins it there.
@@ -160,7 +192,7 @@ export default function TransitionVeil({ sequences, playheadSec, durationSec }) 
         // Parent to the camera on the first frame we have both. Doing it here
         // rather than declaratively keeps it correct across an XR session
         // starting, which swaps the camera out from under the scene.
-        if (mesh.parent !== camera) camera.add(mesh)
+        attachVeil(mesh, camera, scene)
 
         const amount = totalVeil(sequences, playheadSec, durationSec)
 

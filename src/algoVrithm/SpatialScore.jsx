@@ -70,14 +70,21 @@ import { DISPERSION_DEFAULTS } from './dispersionControls.js'
 //     the whole choir, not soloed — and both listener paths end in a limiter
 //     (audioBus.js) for the peaks levels cannot promise anything about.
 
-// Per-voice levels. The glitch is the loudest thing in the score on purpose
-// — it is the transition, and she asked for it to bite.
+// Per-voice levels. The glitch was the loudest thing in the score on purpose
+// — it was the transition, and she asked for it to bite.
 const TUNNEL_LEVEL = 0.3
 const SCAN_LEVEL = 0.28
 const PATTERN_LEVEL = 0.18
 const HUM_LEVEL = 0.14
 const BUBBLE_LEVEL = 0.2
-const GLITCH_LEVEL = 0.55
+// Zero since 2026-08-04, because the strips it belonged to are out of the
+// render tree (see AlgoVrithmExperience.jsx). The number is what to restore —
+// it was 0.55 — and this stays a level rather than a deleted voice so the
+// sound comes back with the picture in one edit. Silencing it is not optional
+// tidiness: this voice is head-locked digital garbage that says "the display
+// is failing", and with nothing failing on screen it is the loudest sound in
+// the piece attached to nothing the visitor can see.
+const GLITCH_LEVEL = 0
 const HALO_LEVEL = 0.16
 const RAIN_LEVEL = 0.13
 const SPHERE_LEVEL = 0.12

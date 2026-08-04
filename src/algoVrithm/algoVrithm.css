@@ -524,8 +524,18 @@
     color: rgba(255, 255, 255, 0.32);
 }
 
-.algo-vrithm-director-copy {
+/* Save and Copy sit together at the right end of the footer, save first: it is
+   the one to reach for, and Copy is the fallback for what it cannot do. The
+   `margin-left: auto` that used to push Copy over now pushes the pair. */
+.algo-vrithm-director-save {
     margin-left: auto;
+    border-color: rgba(77, 249, 255, 0.55) !important;
+    color: #cfefff !important;
+}
+
+.algo-vrithm-director-save:disabled {
+    opacity: 0.5;
+    cursor: progress;
 }
 
 .algo-vrithm-director-source {

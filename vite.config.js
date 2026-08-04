@@ -73,6 +73,74 @@ const stubXrEmulatorPlugin = () => ({
     }
 })
 
+// Let the algovrithm director panel write its edits back into
+// src/algoVrithm/sequences/index.js, which is that space's source of truth.
+//
+// The panel has always been a cutting room with no save: it edits a draft, the
+// piece renders from the draft, and the author copies formatted source back
+// into the file by hand. That was fine while the edit list was short and it is
+// not fine now — the array carries a couple of hundred lines of reasoning about
+// why each number is what it is, so the generated-source route means choosing
+// between saving your edits and keeping the notes.
+//
+// So this writes IN PLACE, via patchEditListSource: fields that changed are
+// rewritten, every other byte in the file is left alone. See that module for
+// why it compares values rather than regenerating text.
+//
+// DEV ONLY, and structurally so rather than by a runtime check — `apply:
+// 'serve'` means the plugin is not part of a production build at all, so there
+// is no endpoint to reach in anything that ships. It also writes exactly one
+// path, computed here and never taken from the request.
+const algoVrithmSavePlugin = () => {
+    const EDIT_LIST_PATH = path.resolve(ROOT_DIR, 'src/algoVrithm/sequences/index.js')
+
+    return {
+        name: 'algovrithm-save-edit-list',
+        apply: 'serve',
+        configureServer(server) {
+            server.middlewares.use('/__algovrithm/edit-list', (request, response, next) => {
+                if (request.method !== 'POST') return next()
+
+                const reply = (status, body) => {
+                    response.statusCode = status
+                    response.setHeader('Content-Type', 'application/json')
+                    response.end(JSON.stringify(body))
+                }
+
+                let body = ''
+                request.on('data', (chunk) => { body += chunk })
+                request.on('end', async () => {
+                    try {
+                        const { sequences, baseline } = JSON.parse(body)
+                        if (!Array.isArray(sequences)) {
+                            return reply(400, { ok: false, reason: 'no sequences in the request' })
+                        }
+
+                        // Imported through Vite rather than with a bare import so
+                        // the module resolves the same way it does in the app.
+                        const { patchEditListSource } = await server.ssrLoadModule(
+                            '/algoVrithm/editListSource.js'
+                        )
+
+                        const source = fs.readFileSync(EDIT_LIST_PATH, 'utf8')
+                        const result = patchEditListSource(source, sequences, baseline ?? [])
+                        if (!result.ok) return reply(422, result)
+
+                        if (result.source === source) {
+                            return reply(200, { ok: true, changed: false })
+                        }
+
+                        fs.writeFileSync(EDIT_LIST_PATH, result.source, 'utf8')
+                        return reply(200, { ok: true, changed: true })
+                    } catch (error) {
+                        return reply(500, { ok: false, reason: String(error?.message || error) })
+                    }
+                })
+            })
+        }
+    }
+}
+
 // Resolve a path to auto-open in the browser.
 // Opt in with VITE_OPEN_SPACE (e.g. "main" or your space slug) or VITE_OPEN_PATH (e.g. "/my-space").
 // Without either set, `npm run dev` stays headless — use `npm run dev:browser` to launch one.
@@ -104,6 +172,9 @@ export default {
         stubXrEmulatorPlugin(),
         // Restart server on static/public file change
         restartOnPublicChangePlugin(),
+
+        // Save from the algovrithm director panel (dev only)
+        algoVrithmSavePlugin(),
 
         // React support
         react(),
