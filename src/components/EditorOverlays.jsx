@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react'
+import LoadingScreen from './LoadingScreen.jsx'
 
 export default function EditorOverlays({
     isUiVisible,
@@ -28,14 +29,12 @@ export default function EditorOverlays({
 
     return (
         <>
-            {isLoading && (
-                <div className="loading-overlay">
-                    <div className="loading-panel">
-                        <div className="loading-spinner" aria-hidden="true" />
-                        <p>Loading scene...</p>
-                    </div>
-                </div>
-            )}
+            {/* Same black-and-a-spinner as every other wait in the app. The
+                raised panel and the "Loading scene..." caption are gone: this
+                sits over the editor for a second or two and a bordered card
+                announcing itself was the loudest thing on screen for the whole
+                time it was up. */}
+            {isLoading && <LoadingScreen label="Loading" detail="Preparing the scene" />}
 
             {isFileDragActive && (
                 <div className="drop-overlay">

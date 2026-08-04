@@ -8,6 +8,7 @@ import { appNavigate } from '../utils/appNavigate.js'
 import { buildAppSpacePath } from '../utils/spaceRouting.js'
 import AccountButton from './AccountButton.jsx'
 import { OUT_OF_SCOPE_EXPLAIN, OUT_OF_SCOPE_REDIRECT } from './authGateScope.js'
+import LoadingScreen from './LoadingScreen.jsx'
 
 const readInviteTokenFromUrl = () => {
     if (typeof window === 'undefined') return null
@@ -94,12 +95,11 @@ export default function AuthGate({
         }
     }, [outOfScope, liveIsPublic, requiredSpaceId, invitePending, explainOutOfScope])
 
+    // The session resolving. Sat on a transparent background before, so it
+    // inherited whatever was underneath and looked like a different app on
+    // every surface — see LoadingScreen.jsx.
     if (loading) {
-        return (
-            <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CircularProgress size={28} sx={{ color: 'var(--ui-accent)' }} />
-            </Box>
-        )
+        return <LoadingScreen label="Loading" detail="Checking your session" />
     }
 
     // Error screen must come before the requireAuth check: when the backend is
@@ -107,24 +107,33 @@ export default function AuthGate({
     // app render while every API call fails, producing a cascade of 100+ errors.
     if (error && hasServerApi) {
         return (
-            <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
-                <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
-                    <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
+            // Black like the loading screen, because it is the same moment
+            // seen from the other side — you were waiting, and now you are not.
+            // Not wordless though: a spinner says "keep waiting", and this is
+            // the state where waiting will never end. It has to say so, and it
+            // has to offer the retry.
+            <div className="loading-screen">
+                <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, alignItems: 'flex-start' }}>
+                    <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, letterSpacing: '-0.02em' }}>
                         di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.62)' }}>
                         Backend unavailable — {error}
                     </Typography>
                     <Button
                         variant="outlined"
                         size="small"
                         onClick={refresh}
-                        sx={{ textTransform: 'none', borderColor: 'var(--ui-border)', color: 'var(--ui-text-primary)' }}
+                        sx={{
+                            textTransform: 'none',
+                            borderColor: 'rgba(255, 255, 255, 0.24)',
+                            color: 'rgba(255, 255, 255, 0.92)'
+                        }}
                     >
                         Retry
                     </Button>
                 </Stack>
-            </Box>
+            </div>
         )
     }
 
@@ -166,11 +175,7 @@ export default function AuthGate({
                 )
             }
             if (invitePending || liveLoading || liveIsPublic) {
-                return (
-                    <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <CircularProgress size={28} sx={{ color: 'var(--ui-accent)' }} />
-                    </Box>
-                )
+                return <LoadingScreen label="Loading" detail="Checking access to this space" />
             }
             return (
                 <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>

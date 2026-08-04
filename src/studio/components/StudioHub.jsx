@@ -17,6 +17,7 @@ import {
 } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioProjectPath, buildStudioSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { getCodeSpace } from '../utils/codeSpaces.js'
 import '../styles/studio-hub.css'
 
 const formatRelativeDate = (iso) => {
@@ -51,6 +52,9 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [renamingId, setRenamingId] = useState(null)
     const [renameValue, setRenameValue] = useState('')
     const [showArchived, setShowArchived] = useState(false)
+
+    // Non-null when this space's scene is code rather than a project document.
+    const codeSpace = useMemo(() => getCodeSpace(spaceId), [spaceId])
 
     const mostRecentProject = useMemo(() => projects[0] || null, [projects])
     const archivedProjects = useMemo(() => projects.filter(p => isArchivedTitle(p.title)), [projects])
@@ -280,8 +284,11 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     </p>
                 )}
 
-                {/* Empty state — first visit to a fresh space */}
-                {projects.length === 0 && !status && creatingTitle === null && (
+                {/* Empty state — first visit to a fresh space. Suppressed for a
+                    code space: "No projects yet" beside a finished installation
+                    is simply untrue, and the invitation to create one leads
+                    nowhere useful. */}
+                {projects.length === 0 && !codeSpace && !status && creatingTitle === null && (
                     <div className="sh-empty-state">
                         <p className="sh-empty-title">No projects yet</p>
                         <p className="sh-empty-hint">
@@ -294,9 +301,42 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     </div>
                 )}
 
-                {/* Projects */}
-                {visibleProjects.length > 0 && (
+                {/* Projects. A space whose scene is code has content even with
+                    zero projects, and it shares the grid rather than sitting in
+                    one of its own — it is one of this space's things, not a
+                    separate category. See utils/codeSpaces.js. */}
+                {(codeSpace || visibleProjects.length > 0) && (
                     <div className="sh-projects-grid">
+                        {codeSpace && (
+                            <div
+                                className="sh-project-card sh-project-card--code"
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => appNavigate(codeSpace.path)}
+                                onKeyDown={e => e.key === 'Enter' && appNavigate(codeSpace.path)}
+                            >
+                                <p className="sh-project-title">{codeSpace.label}</p>
+                                <span className="sh-code-badge">code space</span>
+                                <p className="sh-code-blurb">{codeSpace.blurb}</p>
+                                <div className="sh-code-actions">
+                                    <button
+                                        className="sh-link"
+                                        type="button"
+                                        onClick={e => { e.stopPropagation(); appNavigate(codeSpace.path) }}
+                                    >
+                                        Open
+                                    </button>
+                                    <span className="sh-sep">·</span>
+                                    <button
+                                        className="sh-link"
+                                        type="button"
+                                        onClick={e => { e.stopPropagation(); appNavigate(codeSpace.directorPath) }}
+                                    >
+                                        {codeSpace.directorLabel}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         {visibleProjects.map((project) => {
                             const isRenaming = renamingId === project.id
                             return (

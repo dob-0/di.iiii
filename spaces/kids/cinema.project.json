@@ -1,0 +1,4708 @@
+{
+  "projectId": "cinema",
+  "spaceId": "kids",
+  "exportedFrom": "local dev server",
+  "document": {
+    "version": 4,
+    "projectMeta": {
+      "id": "cinema",
+      "spaceId": "kids",
+      "title": "360 Cinema",
+      "createdAt": 1785544355089,
+      "updatedAt": 1785578976185,
+      "source": "project"
+    },
+    "nodes": [],
+    "edges": [],
+    "templates": [],
+    "workspaceState": {
+      "activeSurface": "world",
+      "selectedNodeId": null,
+      "liveWorldNodeIdByScope": {},
+      "activeNodeIdByTypeScope": {}
+    },
+    "entities": [
+      {
+        "id": "cinema-floor",
+        "type": "cylinder",
+        "name": "Floor",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              -0.15,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#1a1d26",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.95,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 9.2,
+            "radiusBottom": 9.2,
+            "height": 0.15
+          }
+        }
+      },
+      {
+        "id": "tv-1",
+        "type": "group",
+        "name": "TV 1",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.52,
+              7.6
+            ],
+            "rotation": [
+              0,
+              0.06,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-1-body",
+        "type": "box",
+        "name": "TV 1 · body",
+        "parentId": "tv-1",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#41414c",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.75,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2.1,
+              1.7,
+              1.2
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-1-face",
+        "type": "box",
+        "name": "TV 1 · face",
+        "parentId": "tv-1",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.17,
+              -0.64
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#26262e",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.5,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2,
+              1.5,
+              0.07
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-1-ant-l",
+        "type": "cylinder",
+        "name": "TV 1 · antenna L",
+        "parentId": "tv-1",
+        "components": {
+          "transform": {
+            "position": [
+              -0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "tv-1-ant-r",
+        "type": "cylinder",
+        "name": "TV 1 · antenna R",
+        "parentId": "tv-1",
+        "components": {
+          "transform": {
+            "position": [
+              0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              -0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "screen-1-video",
+        "type": "video",
+        "name": "TV 1 · picture",
+        "parentId": "tv-1",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.92,
+              -0.7
+            ],
+            "rotation": [
+              1.5707963267948966,
+              0,
+              3.141592653589793
+            ],
+            "scale": [
+              0.343,
+              0.343,
+              0.343
+            ]
+          },
+          "appearance": {
+            "color": "#ffffff",
+            "opacity": 1
+          },
+          "media": {
+            "assetId": "3e46adadd3755d06a0968856dd338756695026e93b400f8aea2ef2a927c93ab0",
+            "fit": "cover",
+            "autoplay": true,
+            "loop": true,
+            "muted": true,
+            "volume": 0.8
+          },
+          "timeline": {
+            "duration": 5.73,
+            "loop": true,
+            "tracks": [
+              {
+                "property": "position",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.12,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.16,
+                    "value": [
+                      0.05,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.2,
+                    "value": [
+                      -0.045,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.24,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 4.641,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 4.691,
+                    "value": [
+                      0.03,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 4.741,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "scale",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.12,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.17,
+                    "value": [
+                      0.343,
+                      0.172,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.22,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "opacity",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.12,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.16,
+                    "value": 0.1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.24,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 4.641,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 4.691,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 4.781,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 4.821,
+                    "value": 1,
+                    "easing": "linear"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-2",
+        "type": "group",
+        "name": "TV 2",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              5.374,
+              0.52,
+              5.374
+            ],
+            "rotation": [
+              0,
+              0.695,
+              0
+            ],
+            "scale": [
+              0.94,
+              0.94,
+              0.94
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-2-body",
+        "type": "box",
+        "name": "TV 2 · body",
+        "parentId": "tv-2",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#41414c",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.75,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2.1,
+              1.7,
+              1.2
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-2-face",
+        "type": "box",
+        "name": "TV 2 · face",
+        "parentId": "tv-2",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.17,
+              -0.64
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#26262e",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.5,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2,
+              1.5,
+              0.07
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-2-ant-l",
+        "type": "cylinder",
+        "name": "TV 2 · antenna L",
+        "parentId": "tv-2",
+        "components": {
+          "transform": {
+            "position": [
+              -0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "tv-2-ant-r",
+        "type": "cylinder",
+        "name": "TV 2 · antenna R",
+        "parentId": "tv-2",
+        "components": {
+          "transform": {
+            "position": [
+              0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              -0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "screen-2-video",
+        "type": "video",
+        "name": "TV 2 · picture",
+        "parentId": "tv-2",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.92,
+              -0.7
+            ],
+            "rotation": [
+              1.5707963267948966,
+              0,
+              3.141592653589793
+            ],
+            "scale": [
+              0.407,
+              0.407,
+              0.407
+            ]
+          },
+          "appearance": {
+            "color": "#ffffff",
+            "opacity": 1
+          },
+          "media": {
+            "assetId": "e5f0dd335c73167ce2cfa21154530960f2eecd43f1948d25103d2d87a7bc346c",
+            "fit": "cover",
+            "autoplay": true,
+            "loop": true,
+            "muted": true,
+            "volume": 0.8
+          },
+          "timeline": {
+            "duration": 6.36,
+            "loop": true,
+            "tracks": [
+              {
+                "property": "position",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.353,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.393,
+                    "value": [
+                      0.05,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.433,
+                    "value": [
+                      -0.045,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.473,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.152,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.202,
+                    "value": [
+                      0.03,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.252,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "scale",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0.407,
+                      0.407,
+                      0.407
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.353,
+                    "value": [
+                      0.407,
+                      0.407,
+                      0.407
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.403,
+                    "value": [
+                      0.407,
+                      0.204,
+                      0.407
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.453,
+                    "value": [
+                      0.407,
+                      0.407,
+                      0.407
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "opacity",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.353,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.393,
+                    "value": 0.1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.473,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.152,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.202,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.292,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.332,
+                    "value": 1,
+                    "easing": "linear"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-3",
+        "type": "group",
+        "name": "TV 3",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              7.6,
+              0.52,
+              0
+            ],
+            "rotation": [
+              0,
+              1.611,
+              0
+            ],
+            "scale": [
+              1.08,
+              1.08,
+              1.08
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-3-body",
+        "type": "box",
+        "name": "TV 3 · body",
+        "parentId": "tv-3",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#41414c",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.75,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2.1,
+              1.7,
+              1.2
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-3-face",
+        "type": "box",
+        "name": "TV 3 · face",
+        "parentId": "tv-3",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.17,
+              -0.64
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#26262e",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.5,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2,
+              1.5,
+              0.07
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-3-ant-l",
+        "type": "cylinder",
+        "name": "TV 3 · antenna L",
+        "parentId": "tv-3",
+        "components": {
+          "transform": {
+            "position": [
+              -0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "tv-3-ant-r",
+        "type": "cylinder",
+        "name": "TV 3 · antenna R",
+        "parentId": "tv-3",
+        "components": {
+          "transform": {
+            "position": [
+              0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              -0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "screen-3-video",
+        "type": "video",
+        "name": "TV 3 · picture",
+        "parentId": "tv-3",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.92,
+              -0.7
+            ],
+            "rotation": [
+              1.5707963267948966,
+              0,
+              3.141592653589793
+            ],
+            "scale": [
+              0.343,
+              0.343,
+              0.343
+            ]
+          },
+          "appearance": {
+            "color": "#ffffff",
+            "opacity": 1
+          },
+          "media": {
+            "assetId": "ce2c439569db4fe8e35120910402270f925cb9fbc47e9f5b8b7edd6c7028a10b",
+            "fit": "cover",
+            "autoplay": true,
+            "loop": true,
+            "muted": true,
+            "volume": 0.8
+          },
+          "timeline": {
+            "duration": 6.99,
+            "loop": true,
+            "tracks": [
+              {
+                "property": "position",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.586,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.626,
+                    "value": [
+                      0.05,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.666,
+                    "value": [
+                      -0.045,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.706,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.662,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.712,
+                    "value": [
+                      0.03,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.762,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "scale",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.586,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.636,
+                    "value": [
+                      0.343,
+                      0.172,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.686,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "opacity",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.586,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.626,
+                    "value": 0.1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.706,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.662,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.712,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.802,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 5.842,
+                    "value": 1,
+                    "easing": "linear"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-4",
+        "type": "group",
+        "name": "TV 4",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              5.374,
+              0.52,
+              -5.374
+            ],
+            "rotation": [
+              0,
+              2.306,
+              0
+            ],
+            "scale": [
+              0.97,
+              0.97,
+              0.97
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-4-body",
+        "type": "box",
+        "name": "TV 4 · body",
+        "parentId": "tv-4",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#41414c",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.75,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2.1,
+              1.7,
+              1.2
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-4-face",
+        "type": "box",
+        "name": "TV 4 · face",
+        "parentId": "tv-4",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.17,
+              -0.64
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#26262e",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.5,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2,
+              1.5,
+              0.07
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-4-ant-l",
+        "type": "cylinder",
+        "name": "TV 4 · antenna L",
+        "parentId": "tv-4",
+        "components": {
+          "transform": {
+            "position": [
+              -0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "tv-4-ant-r",
+        "type": "cylinder",
+        "name": "TV 4 · antenna R",
+        "parentId": "tv-4",
+        "components": {
+          "transform": {
+            "position": [
+              0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              -0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "screen-4-video",
+        "type": "video",
+        "name": "TV 4 · picture",
+        "parentId": "tv-4",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.92,
+              -0.7
+            ],
+            "rotation": [
+              1.5707963267948966,
+              0,
+              3.141592653589793
+            ],
+            "scale": [
+              0.343,
+              0.343,
+              0.343
+            ]
+          },
+          "appearance": {
+            "color": "#ffffff",
+            "opacity": 1
+          },
+          "media": {
+            "assetId": "60ae92edabe423b0cbc05de791f9cec2541af2097e12ae368a86db2a0e61dc1b",
+            "fit": "cover",
+            "autoplay": true,
+            "loop": true,
+            "muted": true,
+            "volume": 0.8
+          },
+          "timeline": {
+            "duration": 7.62,
+            "loop": true,
+            "tracks": [
+              {
+                "property": "position",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.819,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.859,
+                    "value": [
+                      0.05,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.899,
+                    "value": [
+                      -0.045,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.939,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.172,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.222,
+                    "value": [
+                      0.03,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.272,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "scale",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.819,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.869,
+                    "value": [
+                      0.343,
+                      0.172,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.919,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "opacity",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.819,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.859,
+                    "value": 0.1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 2.939,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.172,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.222,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.312,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.352,
+                    "value": 1,
+                    "easing": "linear"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-5",
+        "type": "group",
+        "name": "TV 5",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.52,
+              -7.6
+            ],
+            "rotation": [
+              0,
+              3.222,
+              0
+            ],
+            "scale": [
+              1.03,
+              1.03,
+              1.03
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-5-body",
+        "type": "box",
+        "name": "TV 5 · body",
+        "parentId": "tv-5",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#41414c",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.75,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2.1,
+              1.7,
+              1.2
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-5-face",
+        "type": "box",
+        "name": "TV 5 · face",
+        "parentId": "tv-5",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.17,
+              -0.64
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#26262e",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.5,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2,
+              1.5,
+              0.07
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-5-ant-l",
+        "type": "cylinder",
+        "name": "TV 5 · antenna L",
+        "parentId": "tv-5",
+        "components": {
+          "transform": {
+            "position": [
+              -0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "tv-5-ant-r",
+        "type": "cylinder",
+        "name": "TV 5 · antenna R",
+        "parentId": "tv-5",
+        "components": {
+          "transform": {
+            "position": [
+              0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              -0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "screen-5-video",
+        "type": "video",
+        "name": "TV 5 · picture",
+        "parentId": "tv-5",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.92,
+              -0.7
+            ],
+            "rotation": [
+              1.5707963267948966,
+              0,
+              3.141592653589793
+            ],
+            "scale": [
+              0.343,
+              0.343,
+              0.343
+            ]
+          },
+          "appearance": {
+            "color": "#ffffff",
+            "opacity": 1
+          },
+          "media": {
+            "assetId": "70e5c56d3cd467eb401b3184fcbb00354d3f7f1a73cef43303918dd6301fca28",
+            "fit": "cover",
+            "autoplay": true,
+            "loop": true,
+            "muted": true,
+            "volume": 0.8
+          },
+          "timeline": {
+            "duration": 8.25,
+            "loop": true,
+            "tracks": [
+              {
+                "property": "position",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.052,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.092,
+                    "value": [
+                      0.05,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.132,
+                    "value": [
+                      -0.045,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.172,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.683,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.733,
+                    "value": [
+                      0.03,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.783,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "scale",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.052,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.102,
+                    "value": [
+                      0.343,
+                      0.172,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.152,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "opacity",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.052,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.092,
+                    "value": 0.1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.172,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.683,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.733,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.823,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.863,
+                    "value": 1,
+                    "easing": "linear"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-6",
+        "type": "group",
+        "name": "TV 6",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              -5.374,
+              0.52,
+              -5.374
+            ],
+            "rotation": [
+              0,
+              3.897,
+              0
+            ],
+            "scale": [
+              0.92,
+              0.92,
+              0.92
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-6-body",
+        "type": "box",
+        "name": "TV 6 · body",
+        "parentId": "tv-6",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#41414c",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.75,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2.1,
+              1.7,
+              1.2
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-6-face",
+        "type": "box",
+        "name": "TV 6 · face",
+        "parentId": "tv-6",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.17,
+              -0.64
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#26262e",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.5,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2,
+              1.5,
+              0.07
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-6-ant-l",
+        "type": "cylinder",
+        "name": "TV 6 · antenna L",
+        "parentId": "tv-6",
+        "components": {
+          "transform": {
+            "position": [
+              -0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "tv-6-ant-r",
+        "type": "cylinder",
+        "name": "TV 6 · antenna R",
+        "parentId": "tv-6",
+        "components": {
+          "transform": {
+            "position": [
+              0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              -0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "screen-6-video",
+        "type": "video",
+        "name": "TV 6 · picture",
+        "parentId": "tv-6",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.92,
+              -0.7
+            ],
+            "rotation": [
+              1.5707963267948966,
+              0,
+              3.141592653589793
+            ],
+            "scale": [
+              0.343,
+              0.343,
+              0.343
+            ]
+          },
+          "appearance": {
+            "color": "#ffffff",
+            "opacity": 1
+          },
+          "media": {
+            "assetId": "c331997f2c377ddb27e756d517e575f6a782a228faff5e6bb30b30be3f3c9b81",
+            "fit": "cover",
+            "autoplay": true,
+            "loop": true,
+            "muted": true,
+            "volume": 0.8
+          },
+          "timeline": {
+            "duration": 8.88,
+            "loop": true,
+            "tracks": [
+              {
+                "property": "position",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.286,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.326,
+                    "value": [
+                      0.05,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.366,
+                    "value": [
+                      -0.045,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.406,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.193,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.243,
+                    "value": [
+                      0.03,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.293,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "scale",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.286,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.336,
+                    "value": [
+                      0.343,
+                      0.172,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.386,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "opacity",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.286,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.326,
+                    "value": 0.1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.406,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.193,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.243,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.333,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.373,
+                    "value": 1,
+                    "easing": "linear"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-7",
+        "type": "group",
+        "name": "TV 7",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              -7.6,
+              0.52,
+              0
+            ],
+            "rotation": [
+              0,
+              4.782,
+              0
+            ],
+            "scale": [
+              1.06,
+              1.06,
+              1.06
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-7-body",
+        "type": "box",
+        "name": "TV 7 · body",
+        "parentId": "tv-7",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#41414c",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.75,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2.1,
+              1.7,
+              1.2
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-7-face",
+        "type": "box",
+        "name": "TV 7 · face",
+        "parentId": "tv-7",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.17,
+              -0.64
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#26262e",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.5,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2,
+              1.5,
+              0.07
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-7-ant-l",
+        "type": "cylinder",
+        "name": "TV 7 · antenna L",
+        "parentId": "tv-7",
+        "components": {
+          "transform": {
+            "position": [
+              -0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "tv-7-ant-r",
+        "type": "cylinder",
+        "name": "TV 7 · antenna R",
+        "parentId": "tv-7",
+        "components": {
+          "transform": {
+            "position": [
+              0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              -0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "screen-7-video",
+        "type": "video",
+        "name": "TV 7 · picture",
+        "parentId": "tv-7",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.92,
+              -0.7
+            ],
+            "rotation": [
+              1.5707963267948966,
+              0,
+              3.141592653589793
+            ],
+            "scale": [
+              0.343,
+              0.343,
+              0.343
+            ]
+          },
+          "appearance": {
+            "color": "#ffffff",
+            "opacity": 1
+          },
+          "media": {
+            "assetId": "9b93eb0393f9ab483eef1d6dbd476a3a862e7ea8f4b3fb5f13c28ec23bbadab8",
+            "fit": "cover",
+            "autoplay": true,
+            "loop": true,
+            "muted": true,
+            "volume": 0.8
+          },
+          "timeline": {
+            "duration": 9.51,
+            "loop": true,
+            "tracks": [
+              {
+                "property": "position",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.519,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.559,
+                    "value": [
+                      0.05,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.599,
+                    "value": [
+                      -0.045,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.639,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.703,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.753,
+                    "value": [
+                      0.03,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.803,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "scale",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.519,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.569,
+                    "value": [
+                      0.343,
+                      0.172,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.619,
+                    "value": [
+                      0.343,
+                      0.343,
+                      0.343
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "opacity",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.519,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.559,
+                    "value": 0.1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.639,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.703,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.753,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.843,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 7.883,
+                    "value": 1,
+                    "easing": "linear"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-8",
+        "type": "group",
+        "name": "TV 8",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              -5.374,
+              0.52,
+              5.374
+            ],
+            "rotation": [
+              0,
+              5.438,
+              0
+            ],
+            "scale": [
+              0.98,
+              0.98,
+              0.98
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-8-body",
+        "type": "box",
+        "name": "TV 8 · body",
+        "parentId": "tv-8",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#41414c",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.75,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2.1,
+              1.7,
+              1.2
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-8-face",
+        "type": "box",
+        "name": "TV 8 · face",
+        "parentId": "tv-8",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.17,
+              -0.64
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#26262e",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.5,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              2,
+              1.5,
+              0.07
+            ]
+          },
+          "runtime": {
+            "visible": true,
+            "locked": false
+          }
+        }
+      },
+      {
+        "id": "tv-8-ant-l",
+        "type": "cylinder",
+        "name": "TV 8 · antenna L",
+        "parentId": "tv-8",
+        "components": {
+          "transform": {
+            "position": [
+              -0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "tv-8-ant-r",
+        "type": "cylinder",
+        "name": "TV 8 · antenna R",
+        "parentId": "tv-8",
+        "components": {
+          "transform": {
+            "position": [
+              0.3,
+              1.7,
+              0.12
+            ],
+            "rotation": [
+              0,
+              0,
+              -0.45
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#8b8b98",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0.8,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.018,
+            "radiusBottom": 0.018,
+            "height": 1
+          }
+        }
+      },
+      {
+        "id": "screen-8-video",
+        "type": "video",
+        "name": "TV 8 · picture",
+        "parentId": "tv-8",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.92,
+              -0.7
+            ],
+            "rotation": [
+              1.5707963267948966,
+              0,
+              3.141592653589793
+            ],
+            "scale": [
+              0.407,
+              0.407,
+              0.407
+            ]
+          },
+          "appearance": {
+            "color": "#ffffff",
+            "opacity": 1
+          },
+          "media": {
+            "assetId": "0e6fe0317e5f3d0f3910f812889b689b6ea7ff4be998142ff22587351d7826e1",
+            "fit": "cover",
+            "autoplay": true,
+            "loop": true,
+            "muted": true,
+            "volume": 0.8
+          },
+          "timeline": {
+            "duration": 10.14,
+            "loop": true,
+            "tracks": [
+              {
+                "property": "position",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.752,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.792,
+                    "value": [
+                      0.05,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.832,
+                    "value": [
+                      -0.045,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.872,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 8.213,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 8.263,
+                    "value": [
+                      0.03,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 8.313,
+                    "value": [
+                      0,
+                      0.92,
+                      -0.7
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "scale",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0.407,
+                      0.407,
+                      0.407
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.752,
+                    "value": [
+                      0.407,
+                      0.407,
+                      0.407
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.802,
+                    "value": [
+                      0.407,
+                      0.204,
+                      0.407
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.852,
+                    "value": [
+                      0.407,
+                      0.407,
+                      0.407
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              },
+              {
+                "property": "opacity",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.752,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.792,
+                    "value": 0.1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.872,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 8.213,
+                    "value": 1,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 8.263,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 8.353,
+                    "value": 0,
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 8.393,
+                    "value": 1,
+                    "easing": "linear"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "lamp-cord",
+        "type": "cylinder",
+        "name": "Lamp · cord",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              2.99,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#2a2a31",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.85,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.015,
+            "radiusBottom": 0.015,
+            "height": 1.0099999999999998
+          }
+        }
+      },
+      {
+        "id": "lamp-shade",
+        "type": "cylinder",
+        "name": "Lamp · shade",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              2.65,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#33333c",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.5,
+            "metalness": 0.4,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "cylinder",
+            "radiusTop": 0.09,
+            "radiusBottom": 0.4,
+            "height": 0.34
+          }
+        }
+      },
+      {
+        "id": "lamp-bulb",
+        "type": "sphere",
+        "name": "Lamp · bulb",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              2.53,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#3a3a3f",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.3,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 0
+          },
+          "primitive": {
+            "shape": "sphere",
+            "radius": 0.09
+          }
+        }
+      },
+      {
+        "id": "lamp-light",
+        "type": "pointLight",
+        "name": "Lamp · light",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              2.62,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#ffd9a0",
+            "opacity": 1
+          },
+          "light": {
+            "color": "#ffd9a0",
+            "intensity": 0,
+            "distance": 24,
+            "decay": 1.6
+          }
+        }
+      },
+      {
+        "id": "tv-1-stand",
+        "type": "box",
+        "name": "TV 1 · stand",
+        "parentId": "tv-1",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              -0.52,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#2b2b33",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.9,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.5,
+              0.52,
+              0.9
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-2-stand",
+        "type": "box",
+        "name": "TV 2 · stand",
+        "parentId": "tv-2",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              -0.52,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#2b2b33",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.9,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.5,
+              0.52,
+              0.9
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-3-stand",
+        "type": "box",
+        "name": "TV 3 · stand",
+        "parentId": "tv-3",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              -0.52,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#2b2b33",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.9,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.5,
+              0.52,
+              0.9
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-4-stand",
+        "type": "box",
+        "name": "TV 4 · stand",
+        "parentId": "tv-4",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              -0.52,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#2b2b33",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.9,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.5,
+              0.52,
+              0.9
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-5-stand",
+        "type": "box",
+        "name": "TV 5 · stand",
+        "parentId": "tv-5",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              -0.52,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#2b2b33",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.9,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.5,
+              0.52,
+              0.9
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-6-stand",
+        "type": "box",
+        "name": "TV 6 · stand",
+        "parentId": "tv-6",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              -0.52,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#2b2b33",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.9,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.5,
+              0.52,
+              0.9
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-7-stand",
+        "type": "box",
+        "name": "TV 7 · stand",
+        "parentId": "tv-7",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              -0.52,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#2b2b33",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.9,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.5,
+              0.52,
+              0.9
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-8-stand",
+        "type": "box",
+        "name": "TV 8 · stand",
+        "parentId": "tv-8",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              -0.52,
+              0
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#2b2b33",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.9,
+            "metalness": 0,
+            "emissive": "#000000",
+            "emissiveIntensity": 1
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.5,
+              0.52,
+              0.9
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-1-screen",
+        "type": "box",
+        "name": "TV 1 · screen glow",
+        "parentId": "tv-1",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.38,
+              -0.68
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#080d14",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.35,
+            "metalness": 0,
+            "emissive": "#12283f",
+            "emissiveIntensity": 0.55
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.88,
+              1.079,
+              0.02
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-2-screen",
+        "type": "box",
+        "name": "TV 2 · screen glow",
+        "parentId": "tv-2",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.285,
+              -0.68
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#080d14",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.35,
+            "metalness": 0,
+            "emissive": "#12283f",
+            "emissiveIntensity": 0.55
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.27,
+              1.27,
+              0.02
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-3-screen",
+        "type": "box",
+        "name": "TV 3 · screen glow",
+        "parentId": "tv-3",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.38,
+              -0.68
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#080d14",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.35,
+            "metalness": 0,
+            "emissive": "#12283f",
+            "emissiveIntensity": 0.55
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.88,
+              1.079,
+              0.02
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-4-screen",
+        "type": "box",
+        "name": "TV 4 · screen glow",
+        "parentId": "tv-4",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.38,
+              -0.68
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#080d14",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.35,
+            "metalness": 0,
+            "emissive": "#12283f",
+            "emissiveIntensity": 0.55
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.88,
+              1.079,
+              0.02
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-5-screen",
+        "type": "box",
+        "name": "TV 5 · screen glow",
+        "parentId": "tv-5",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.38,
+              -0.68
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#080d14",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.35,
+            "metalness": 0,
+            "emissive": "#12283f",
+            "emissiveIntensity": 0.55
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.88,
+              1.079,
+              0.02
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-6-screen",
+        "type": "box",
+        "name": "TV 6 · screen glow",
+        "parentId": "tv-6",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.38,
+              -0.68
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#080d14",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.35,
+            "metalness": 0,
+            "emissive": "#12283f",
+            "emissiveIntensity": 0.55
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.88,
+              1.079,
+              0.02
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-7-screen",
+        "type": "box",
+        "name": "TV 7 · screen glow",
+        "parentId": "tv-7",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.38,
+              -0.68
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#080d14",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.35,
+            "metalness": 0,
+            "emissive": "#12283f",
+            "emissiveIntensity": 0.55
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.88,
+              1.079,
+              0.02
+            ]
+          }
+        }
+      },
+      {
+        "id": "tv-8-screen",
+        "type": "box",
+        "name": "TV 8 · screen glow",
+        "parentId": "tv-8",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0.285,
+              -0.68
+            ],
+            "rotation": [
+              0,
+              0,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          },
+          "appearance": {
+            "color": "#080d14",
+            "opacity": 1,
+            "textureAssetId": null,
+            "roughness": 0.35,
+            "metalness": 0,
+            "emissive": "#12283f",
+            "emissiveIntensity": 0.55
+          },
+          "primitive": {
+            "shape": "box",
+            "size": [
+              1.27,
+              1.27,
+              0.02
+            ]
+          }
+        }
+      },
+      {
+        "id": "intro-card",
+        "type": "group",
+        "name": "Intro · card",
+        "parentId": null,
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              3.6,
+              0
+            ],
+            "rotation": [
+              0,
+              3.817,
+              0
+            ],
+            "scale": [
+              1,
+              1,
+              1
+            ]
+          }
+        }
+      },
+      {
+        "id": "intro-title",
+        "type": "text",
+        "name": "Intro · title",
+        "parentId": "intro-card",
+        "components": {
+          "transform": {
+            "position": [
+              0,
+              0,
+              0
+            ],
+            "rotation": [
+              1.5707963267948966,
+              0,
+              3.141592653589793
+            ],
+            "scale": [
+              0.42,
+              0.42,
+              0.42
+            ]
+          },
+          "appearance": {
+            "color": "#ffffff",
+            "opacity": 1
+          },
+          "text": {
+            "value": "THIS INSTALLATION WAS CREATED BY THE\nNOTATIONS LABORATORY KIDS CAMP\nTO EXPLORE THE BOUNDARIES\nBETWEEN ART AND TECHNOLOGY",
+            "variant": "2d",
+            "billboard": false,
+            "fontFamily": "Inter, sans-serif",
+            "fontWeight": "700",
+            "fontStyle": "normal",
+            "align": "center",
+            "fontSize3D": 0.45,
+            "depth3D": 0.08,
+            "font3D": "helvetiker_regular",
+            "bevelEnabled3D": true,
+            "bevelThickness3D": 0.02,
+            "bevelSize3D": 0.01
+          },
+          "timeline": {
+            "duration": 11,
+            "loop": false,
+            "tracks": [
+              {
+                "property": "position",
+                "keys": [
+                  {
+                    "t": 0,
+                    "value": [
+                      0,
+                      -60,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 0.37,
+                    "value": [
+                      0,
+                      -60,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 0.4,
+                    "value": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 0.52,
+                    "value": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 0.55,
+                    "value": [
+                      0,
+                      -60,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 0.63,
+                    "value": [
+                      0,
+                      -60,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 0.66,
+                    "value": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.6,
+                    "value": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.63,
+                    "value": [
+                      0.5,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.66,
+                    "value": [
+                      0,
+                      -60,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.7,
+                    "value": [
+                      0,
+                      -60,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.73,
+                    "value": [
+                      -0.34,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 3.78,
+                    "value": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.2,
+                    "value": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.23,
+                    "value": [
+                      -0.6,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.26,
+                    "value": [
+                      0,
+                      -60,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.32,
+                    "value": [
+                      0,
+                      -60,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.35,
+                    "value": [
+                      0.4,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 6.4,
+                    "value": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 8.6,
+                    "value": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 8.63,
+                    "value": [
+                      0.3,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 8.68,
+                    "value": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 9.6,
+                    "value": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 9.63,
+                    "value": [
+                      0,
+                      -60,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 9.74,
+                    "value": [
+                      0,
+                      -60,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 9.77,
+                    "value": [
+                      -0.95,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 9.86,
+                    "value": [
+                      0,
+                      0,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 10,
+                    "value": [
+                      0,
+                      -60,
+                      0
+                    ],
+                    "easing": "linear"
+                  },
+                  {
+                    "t": 11,
+                    "value": [
+                      0,
+                      -60,
+                      0
+                    ],
+                    "easing": "linear"
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "worldState": {
+      "backgroundColor": "#0e1626",
+      "environmentAssetId": null,
+      "environmentIntensity": 1,
+      "atmosphereBlend": false,
+      "hubDecor": false,
+      "spawn": {
+        "x": 0,
+        "z": 0,
+        "yaw": 0,
+        "pitch": 0,
+        "altY": 1.6
+      },
+      "gridVisible": false,
+      "gridSize": 24,
+      "gridCellSize": 0.75,
+      "gridCellThickness": 0.3,
+      "gridCellColor": "#2a6e73",
+      "gridSectionSize": 6,
+      "gridSectionThickness": 0.65,
+      "gridSectionColor": "#4df9ff",
+      "gridFadeDistance": 80,
+      "gridFadeStrength": 1,
+      "gridOffset": 0.015,
+      "ambientLight": {
+        "color": "#8ea3c4",
+        "intensity": 0.34
+      },
+      "directionalLight": {
+        "color": "#7ba0d8",
+        "intensity": 0.45,
+        "position": [
+          7,
+          9,
+          -6
+        ]
+      },
+      "savedView": {
+        "mode": "perspective",
+        "position": [
+          0,
+          1.6,
+          0.01
+        ],
+        "target": [
+          0,
+          1.1,
+          -5.2
+        ],
+        "fov": 60,
+        "zoom": 1,
+        "near": 0.1,
+        "far": 1000
+      }
+    },
+    "renderSettings": {
+      "shadows": true,
+      "antialias": true,
+      "toneMapping": "ACESFilmic",
+      "toneMappingExposure": 1,
+      "dprMin": 1,
+      "dprMax": 2
+    },
+    "xrState": {
+      "mode": "none",
+      "debugVisible": false,
+      "vrSupported": false,
+      "arSupported": false
+    },
+    "presentationState": {
+      "mode": "scene",
+      "fixedCamera": {
+        "projection": "perspective",
+        "position": [
+          0,
+          2.4,
+          6.5
+        ],
+        "target": [
+          0,
+          0.75,
+          0
+        ],
+        "fov": 50,
+        "zoom": 1,
+        "near": 0.1,
+        "far": 200,
+        "locked": false
+      },
+      "codeHtml": "",
+      "codeSourceType": "html",
+      "codeUrl": "",
+      "codeFiles": [],
+      "entryView": "scene"
+    },
+    "publishState": {
+      "shareEnabled": false,
+      "xrDefaultMode": "none",
+      "lastExportAt": 0
+    },
+    "windowLayout": {
+      "activeWindowId": "viewport",
+      "windows": {
+        "viewport": {
+          "id": "viewport",
+          "title": "Viewport",
+          "visible": true,
+          "minimized": false,
+          "pinned": true,
+          "x": 24,
+          "y": 176,
+          "width": 860,
+          "height": 580,
+          "zIndex": 3
+        },
+        "assets": {
+          "id": "assets",
+          "title": "Assets",
+          "visible": false,
+          "minimized": false,
+          "pinned": false,
+          "x": 910,
+          "y": 176,
+          "width": 360,
+          "height": 360,
+          "zIndex": 4
+        },
+        "inspector": {
+          "id": "inspector",
+          "title": "Inspector",
+          "visible": true,
+          "minimized": false,
+          "pinned": false,
+          "x": 910,
+          "y": 552,
+          "width": 360,
+          "height": 420,
+          "zIndex": 5
+        },
+        "outliner": {
+          "id": "outliner",
+          "title": "Outliner",
+          "visible": false,
+          "minimized": false,
+          "pinned": false,
+          "x": 24,
+          "y": 620,
+          "width": 280,
+          "height": 260,
+          "zIndex": 2
+        },
+        "activity": {
+          "id": "activity",
+          "title": "Activity",
+          "visible": false,
+          "minimized": false,
+          "pinned": false,
+          "x": 320,
+          "y": 620,
+          "width": 340,
+          "height": 260,
+          "zIndex": 1
+        },
+        "project": {
+          "id": "project",
+          "title": "Project",
+          "visible": false,
+          "minimized": false,
+          "pinned": false,
+          "x": 680,
+          "y": 620,
+          "width": 320,
+          "height": 260,
+          "zIndex": 1
+        }
+      }
+    },
+    "assets": [
+      {
+        "id": "3e46adadd3755d06a0968856dd338756695026e93b400f8aea2ef2a927c93ab0",
+        "name": "Timeline 1.mp4",
+        "mimeType": "video/mp4",
+        "size": 27084,
+        "createdAt": 1785570216088,
+        "url": "/serverXR/api/projects/cinema/assets/3e46adadd3755d06a0968856dd338756695026e93b400f8aea2ef2a927c93ab0",
+        "source": "import"
+      },
+      {
+        "id": "e5f0dd335c73167ce2cfa21154530960f2eecd43f1948d25103d2d87a7bc346c",
+        "name": "Hands loop.mp4",
+        "mimeType": "video/mp4",
+        "size": 454631,
+        "createdAt": 1785570216126,
+        "url": "/serverXR/api/projects/cinema/assets/e5f0dd335c73167ce2cfa21154530960f2eecd43f1948d25103d2d87a7bc346c",
+        "source": "import"
+      },
+      {
+        "id": "ce2c439569db4fe8e35120910402270f925cb9fbc47e9f5b8b7edd6c7028a10b",
+        "name": "Cleaning the camera.mp4",
+        "mimeType": "video/mp4",
+        "size": 291085,
+        "createdAt": 1785570216161,
+        "url": "/serverXR/api/projects/cinema/assets/ce2c439569db4fe8e35120910402270f925cb9fbc47e9f5b8b7edd6c7028a10b",
+        "source": "import"
+      },
+      {
+        "id": "60ae92edabe423b0cbc05de791f9cec2541af2097e12ae368a86db2a0e61dc1b",
+        "name": "Pizz.mp4",
+        "mimeType": "video/mp4",
+        "size": 305437,
+        "createdAt": 1785570216187,
+        "url": "/serverXR/api/projects/cinema/assets/60ae92edabe423b0cbc05de791f9cec2541af2097e12ae368a86db2a0e61dc1b",
+        "source": "import"
+      },
+      {
+        "id": "70e5c56d3cd467eb401b3184fcbb00354d3f7f1a73cef43303918dd6301fca28",
+        "name": "Pizzkakak.mp4",
+        "mimeType": "video/mp4",
+        "size": 26842,
+        "createdAt": 1785570216215,
+        "url": "/serverXR/api/projects/cinema/assets/70e5c56d3cd467eb401b3184fcbb00354d3f7f1a73cef43303918dd6301fca28",
+        "source": "import"
+      },
+      {
+        "id": "c331997f2c377ddb27e756d517e575f6a782a228faff5e6bb30b30be3f3c9b81",
+        "name": "Video.mp4",
+        "mimeType": "video/mp4",
+        "size": 304186,
+        "createdAt": 1785570216248,
+        "url": "/serverXR/api/projects/cinema/assets/c331997f2c377ddb27e756d517e575f6a782a228faff5e6bb30b30be3f3c9b81",
+        "source": "import"
+      },
+      {
+        "id": "9b93eb0393f9ab483eef1d6dbd476a3a862e7ea8f4b3fb5f13c28ec23bbadab8",
+        "name": "Xervv.mp4",
+        "mimeType": "video/mp4",
+        "size": 13028,
+        "createdAt": 1785570216268,
+        "url": "/serverXR/api/projects/cinema/assets/9b93eb0393f9ab483eef1d6dbd476a3a862e7ea8f4b3fb5f13c28ec23bbadab8",
+        "source": "import"
+      },
+      {
+        "id": "0e6fe0317e5f3d0f3910f812889b689b6ea7ff4be998142ff22587351d7826e1",
+        "name": "Notations zoom.mp4",
+        "mimeType": "video/mp4",
+        "size": 432274,
+        "createdAt": 1785570216301,
+        "url": "/serverXR/api/projects/cinema/assets/0e6fe0317e5f3d0f3910f812889b689b6ea7ff4be998142ff22587351d7826e1",
+        "source": "import"
+      }
+    ]
+  }
+}
