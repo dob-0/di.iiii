@@ -793,6 +793,29 @@ export const NODE_TYPES = {
         render: 'panel-2d',
     },
 
+    'view.timeline': {
+        id: 'view.timeline',
+        label: 'Timeline',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'playhead', type: 'number', label: 'Playhead', default: 0  },
+            { id: 'fps',      type: 'number', label: 'FPS',      default: 60 },
+        ],
+        outputs: [
+            { id: 'frame', type: 'number', label: 'Source Frame' },
+            { id: 'clip',  type: 'string', label: 'Live Clip'    },
+        ],
+        // Clips are integer frames throughout — see src/project/timeline/
+        // timelineCore.js for why seconds are not stored anywhere.
+        defaultValues: {
+            fps: 60,
+            clips: [],
+        },
+        render: 'panel-2d',
+    },
+
     'view.image': {
         id: 'view.image',
         label: 'Image',
