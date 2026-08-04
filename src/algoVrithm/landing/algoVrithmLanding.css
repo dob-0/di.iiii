@@ -1,3 +1,5 @@
+@import url("./fonts.css");
+
 /* Every colour here is legal in the piece — run palette.js's own paletteWarning()
    over them and they pass. That was not true before: the accent was #4df9ff,
    which is the DIRECTOR PANEL's chrome (algoVrithm.css), and the piece's palette
@@ -33,6 +35,12 @@
     background: var(--avl-void);
     color: var(--avl-ink);
     font-family: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* base.css sets user-select: none on html/body/#root, which is right for an
+       editor and wrong here: this page is one long quotation and none of it
+       could be selected or copied. Same opt-back-in the main landing does. */
+    -webkit-user-select: text;
+    user-select: text;
 }
 
 /* The root takes focus on mount so the reading keys work (see the note in the

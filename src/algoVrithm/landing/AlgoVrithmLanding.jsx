@@ -43,8 +43,10 @@ export default function AlgoVrithmLanding() {
     const [playheadSec, setPlayheadSec] = useState(0)
     const [reducedMotion] = useState(prefersReducedMotion)
     const [playing, setPlaying] = useState(() => !prefersReducedMotion())
+    const [stageVisible, setStageVisible] = useState(true)
     const canvasRef = useRef(null)
     const rootRef = useRef(null)
+    const stageRef = useRef(null)
     // The playhead lives in a ref as well as in state: the rAF loop reads and
     // advances it every frame, and closing over the state value would pin it to
     // whatever it was when the effect last ran.
@@ -72,12 +74,28 @@ export default function AlgoVrithmLanding() {
         })
     }, [])
 
+    // The loop ran forever, including while the visitor was a thousand pixels
+    // down reading the statement with the frame entirely off screen — a
+    // strobing, device-pixel-ratio-scaled repaint every frame, for nobody, on
+    // whatever battery they are holding. Same mount-gate the landing page uses
+    // for its background scene.
+    useEffect(() => {
+        const stage = stageRef.current
+        if (!stage || typeof IntersectionObserver === 'undefined') return undefined
+        const observer = new IntersectionObserver(
+            ([entry]) => setStageVisible(entry.isIntersecting),
+            { threshold: 0 }
+        )
+        observer.observe(stage)
+        return () => observer.disconnect()
+    }, [])
+
     // A paused frame still animates by default, because half the beats (the
     // strobes, the tick) are alive inside one and holding them still would show
     // something the beat never looks like. Under reduced motion that is exactly
     // the wrong call, so there the paint happens once per playhead position and
     // the rAF loop is not started at all.
-    const animating = playing || !reducedMotion
+    const animating = (playing || !reducedMotion) && stageVisible
 
     useEffect(() => {
         if (!animating) return undefined
@@ -161,7 +179,7 @@ export default function AlgoVrithmLanding() {
                 </div>
             </header>
 
-            <section className="avl-stage" aria-label="The piece">
+            <section className="avl-stage" aria-label="The piece" ref={stageRef}>
                 <canvas ref={canvasRef} className="avl-canvas" aria-hidden="true" />
 
                 {/* Not a transport. This canvas starts by itself and strobes for
