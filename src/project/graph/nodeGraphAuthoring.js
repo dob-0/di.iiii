@@ -20,8 +20,11 @@ export const buildNodeValues = (definitionId, params, place, { workspaceTop = 0,
     }
     if (render === 'panel-2d') {
         const isWorldNode = definitionId === 'universe.world'
-        const defaultW = isWorldNode ? 680 : 360
-        const defaultH = isWorldNode ? 480 : 280
+        // A type can declare the size it actually needs (`defaultFrame` in the
+        // registry). Without that every panel opened at one generic card size,
+        // which is fine for a text note and useless for a timeline.
+        const defaultW = type?.defaultFrame?.width ?? (isWorldNode ? 680 : 360)
+        const defaultH = type?.defaultFrame?.height ?? (isWorldNode ? 480 : 280)
         const defaultX = isWorldNode
             ? Math.max(16, (place?.clientX ?? 400) - 340)
             : ((place?.clientX ?? 280) - 180)
