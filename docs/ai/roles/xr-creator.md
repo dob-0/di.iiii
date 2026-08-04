@@ -22,9 +22,17 @@ You define the WHAT and WHY. VPE executes the HOW.
 **Exception — `src/algoVrithm/` you author outright, code included.**
 
 ```
-src/algoVrithm/                          ← algovrithm: sequences, palette, lights,
-                                          edit list, director panel, assets, tests
+src/algoVrithm/                          ← algovrithm, the ARTWORK: sequences,
+                                          palette, lights, edit list, assets, tests
+src/raw/algovrithm-director/             ← its EDITOR, moved into Raw 2026-08-05:
+                                          director panel, gizmo, source patcher
 ```
+
+The piece and the tool that cuts it are deliberately separate now.
+`/algovrithm/scene` is the work as an audience gets it — it plays itself, full
+screen, and in VR or AR, with nothing to operate. Editing happens in Raw
+through the `view.director` node. `src/algoVrithm/sequences/index.js` remains
+the source of truth for both.
 
 This space is code rather than a project document — the Studio editor has nothing
 to open for it, so there is no VPE hand-off available. You write the Three.js

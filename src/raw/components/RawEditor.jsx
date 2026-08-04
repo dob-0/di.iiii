@@ -10,6 +10,7 @@ import WorldPanelWindow from './WorldPanelWindow.jsx'
 import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
 import ChatPanelWindow from './ChatPanelWindow.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
+import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
@@ -744,6 +745,9 @@ export default function RawEditor({
         }
         if (node.typeId === 'view.image') {
             return <ImagePanelWindow node={node} values={resolvedValues} assetMap={assetMap} />
+        }
+        if (node.typeId === 'view.director') {
+            return <DirectorPanelWindow node={node} />
         }
         if (node.typeId === 'view.timeline') {
             return (

@@ -813,6 +813,22 @@ export const NODE_TYPES = {
         render: 'panel-2d',
     },
 
+    'view.director': {
+        id: 'view.director',
+        label: 'Director (algovrithm)',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        inputs: [],
+        outputs: [],
+        // The edit list itself is NOT stored here — its rows carry component
+        // references that cannot survive JSON. See DirectorPanelWindow.jsx.
+        defaultValues: {
+            piece: 'algovrithm',
+        },
+        render: 'panel-2d',
+    },
+
     'view.timeline': {
         id: 'view.timeline',
         label: 'Timeline',

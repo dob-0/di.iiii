@@ -20,18 +20,18 @@ import {
     splitClip,
     timelinePosition,
     trimClip
-} from './editList.js'
-import { ASSET_FOLDER, ASSET_LIBRARY } from './assetLibrary.js'
-import AssetClip, { resolvePlacement } from './sequences/AssetClip.jsx'
-import { SEQUENCES } from './sequences/index.js'
-import { PLAYBACK_RATES } from './ritualClock.js'
+} from '../../algoVrithm/editList.js'
+import { ASSET_FOLDER, ASSET_LIBRARY } from '../../algoVrithm/assetLibrary.js'
+import AssetClip, { resolvePlacement } from '../../algoVrithm/sequences/AssetClip.jsx'
+import { SEQUENCES } from '../../algoVrithm/sequences/index.js'
+import { PLAYBACK_RATES } from '../../algoVrithm/ritualClock.js'
 import {
     LIGHT_INTENSITIES,
     LIGHT_KINDS,
     LIGHT_SWATCHES,
     WORLD_SWATCHES,
     paletteWarning
-} from './palette.js'
+} from '../../algoVrithm/palette.js'
 import {
     DEFAULT_AMBIENT,
     addLight,
@@ -42,7 +42,7 @@ import {
     rowLights,
     setLightValue,
     setWorldValue
-} from './worldLights.js'
+} from '../../algoVrithm/worldLights.js'
 
 // The director panel — a video-editor timeline for the piece, for the author
 // only (see directorFlag.js). Nothing here ships to an audience.

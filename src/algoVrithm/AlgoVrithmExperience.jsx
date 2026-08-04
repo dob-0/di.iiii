@@ -1,44 +1,22 @@
-import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, Suspense, useEffect, useMemo, useRef } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { XR, XROrigin } from '@react-three/xr'
 import { useXrAr } from '../hooks/useXrAr.js'
 import Backdrop from './Backdrop.jsx'
-import DirectorPanel from './DirectorPanel.jsx'
 import LightHaze from './LightHaze.jsx'
 import LookAround from './LookAround.jsx'
-import OrbitView from './OrbitView.jsx'
 import RitualClockDriver from './RitualClockDriver.jsx'
 import SceneLights, { AmbientFill } from './SceneLights.jsx'
-import SplitHandle from './SplitHandle.jsx'
-import Standpoint from './Standpoint.jsx'
 import ViewerDolly from './ViewerDolly.jsx'
-import TransformGizmo, { GIZMO_MODES, gizmoModesFor } from './TransformGizmo.jsx'
 import SpatialScore from './SpatialScore.jsx'
-import { isDirectorEnabled } from './directorFlag.js'
 import { reelPlayers } from './reelPlayers.js'
-import { XR_AR_ONLY, xrAvailability } from './xrAvailability.js'
-import { describeEyeHeight } from './xrStandpoint.js'
 import { totalDurationSec } from './editList.js'
-import {
-    patchFromGizmo,
-    resolveGroupTransform,
-    setTransform
-} from './sequenceTransform.js'
-import {
-    OUTSIDE_FOG_SCALE,
-    STANDPOINT,
-    VIEW_INSIDE,
-    VIEW_OUTSIDE,
-    isOutside
-} from './stageView.js'
-import { formatSplit, readSplit, writeSplit } from './splitLayout.js'
+import { resolveGroupTransform } from './sequenceTransform.js'
+import { STANDPOINT } from './stageView.js'
 import { resolveTravel } from './viewerTravel.js'
-import { parseLightName, setLightValue } from './worldLights.js'
 import { clipProgress, sourceProgress, useRitualClock } from './ritualClock.js'
 import { SEQUENCES } from './sequences/index.js'
 import useAutoHideChrome from './useAutoHideChrome.js'
-import useEditHistory from './useEditHistory.js'
-import usePanelToggle from './usePanelToggle.js'
 import './algoVrithm.css'
 
 // algovrithm — a virtual installation on hyperreality: pixels and code
@@ -52,11 +30,18 @@ import './algoVrithm.css'
 //   sequences/index.js   the edit list — which sequence owns which seconds
 //   sequences/*.jsx      one file per beat, each gets local 0..1 progress
 //   editList.js          timeline maths (move/trim/ripple, gap detection)
-//   DirectorPanel.jsx    author-only timeline (see directorFlag.js)
 //
-// Add a beat by writing a sequence file and adding a row to the edit list —
-// the director panel can retime and reorder, but a new beat is real code and
-// so starts as a real file.
+// Add a beat by writing a sequence file and adding a row to the edit list.
+//
+// THE EDITOR IS NOT HERE ANY MORE (2026-08-05). The director panel, the
+// placement gizmo, the outside "see whole installation" view and the split
+// layout moved to the Raw lane — see src/raw/components/DirectorPanelWindow.
+// What is left is the piece as an audience gets it: it plays itself, full
+// screen, and in VR or AR. There is nothing here to operate, which is why
+// there is no longer a flag guarding whether the operating furniture appears.
+//
+// Retiming is now done in Raw against the same edit list, or by editing
+// sequences/index.js directly, which stays the source of truth either way.
 
 // Standing eye height. The viewer never moves — sequences travel past them
 // (see the VR rule in WhiteTunnel.jsx). Shared with stageView's STANDPOINT so
@@ -140,21 +125,7 @@ function Director({ playheadSec, sequences }) {
     )
 }
 
-function Stage({
-    playheadSec,
-    sequences,
-    durationSec,
-    view,
-    onEnterInside,
-    dragRef,
-    selectedId,
-    gizmoMode,
-    onTransformChange,
-    onTransformDragStart,
-    suppressOrbitRef,
-    onEyeHeight
-}) {
-    const outside = isOutside(view)
+function Stage({ playheadSec, sequences, durationSec }) {
     const originRef = useRef(null)
 
     // Where the viewer has been carried to. Recomputed per frame from the
@@ -171,43 +142,16 @@ function Stage({
                 the handover — see Backdrop.jsx. Fog far planes sit well short
                 of each scene's depth so it dissolves instead of ending on a
                 visible rim: the cue that sells "this keeps going". */}
-            <Backdrop
-                playheadSec={playheadSec}
-                sequences={sequences}
-                fogScale={outside ? OUTSIDE_FOG_SCALE : 1}
-            />
-            {/* One camera controller at a time. Both write camera.rotation
-                every frame, so mounting both would have them fight — see the
-                note in OrbitView.jsx. LookAround is flat-screen only and
-                no-ops during an XR session, where the headset already
-                provides the 360 view. */}
-            {outside
-                ? <OrbitView dragRef={dragRef} suppressRef={suppressOrbitRef} travel={travel} />
-                : <LookAround />}
-            {/* Passive locomotion. Mounted in both views: from outside you are
-                watching the standpoint itself glide through the installation,
-                which is the only way to judge a travel move without riding it. */}
-            <ViewerDolly offset={travel} originRef={originRef} onEyeHeight={onEyeHeight} />
-            {outside && (
-                <Standpoint
-                    onEnter={onEnterInside}
-                    dragRef={dragRef}
-                    suppressRef={suppressOrbitRef}
-                    travel={travel}
-                />
-            )}
-            {/* Placement handles. Outside only: the gizmo is a thing you look
-                AT, and from inside the piece it would be sitting in the middle
-                of the work you are trying to judge. */}
-            {outside && (
-                <TransformGizmo
-                    selectedId={selectedId}
-                    mode={gizmoMode}
-                    onChange={onTransformChange}
-                    onDragStart={onTransformDragStart}
-                    suppressOrbitRef={suppressOrbitRef}
-                />
-            )}
+            <Backdrop playheadSec={playheadSec} sequences={sequences} fogScale={1} />
+            {/* The viewer stands inside the piece and looks around. LookAround
+                is flat-screen only and no-ops during an XR session, where the
+                headset already provides the 360 view. The orbit camera that
+                used to be the other half of this choice was the author's
+                outside view and left with the editor. */}
+            <LookAround />
+            {/* Passive locomotion — sequences travel past a viewer who never
+                walks. */}
+            <ViewerDolly offset={travel} originRef={originRef} />
             {/* The play space. ViewerDolly moves THIS during an XR session rather
                 than the camera, which the headset owns outright. */}
             <XROrigin ref={originRef} position={[0, 0, 0]} />
@@ -284,12 +228,7 @@ const Chrome = memo(function Chrome({
     isFullscreenSupported,
     onToggleFullscreen,
     onEnterXr,
-    onExitXr,
-    directorEnabled,
-    panelsOpen,
-    xrAvailable,
-    onRecheckXr,
-    xrEye
+    onExitXr
 }) {
     const canEnterXr = (supportedXrModes.vr || supportedXrModes.ar) && !isXrPresenting
     const hidden = visible ? '' : ' is-hidden'
@@ -306,9 +245,6 @@ const Chrome = memo(function Chrome({
                         for the author. Without it the shortcut is unfindable —
                         a hidden panel and a broken one look identical, which is
                         the same mistake xrAvailability.js exists to undo. */}
-                    {directorEnabled && !panelsOpen && !isXrPresenting && (
-                        <em className="algo-vrithm-panel-hint"> · press H for the director</em>
-                    )}
                 </span>
             </header>
 
@@ -328,41 +264,6 @@ const Chrome = memo(function Chrome({
                 {canEnterXr && supportedXrModes.ar && (
                     <button type="button" onClick={() => onEnterXr('ar')}>Enter AR</button>
                 )}
-                {/* Author-only, and only when VR is NOT available. An absent
-                    Enter VR button is indistinguishable from a broken one, so
-                    where the audience gets clean chrome the author gets the
-                    actual reason and a way to retry — starting Link after the
-                    page loaded is the normal case, and it needs no reload.
-                    Behind the panel toggle because it is diagnostics, not a
-                    control: on a phone, where it would otherwise be permanent
-                    (no headset is ever going to appear), it would sit next to
-                    Enter AR forever. */}
-                {panelsOpen && !isXrPresenting && xrAvailable.state !== 'ready' && (
-                    <button
-                        type="button"
-                        className="algo-vrithm-xr-unavailable"
-                        onClick={onRecheckXr}
-                    >
-                        {/* Recheck only means something when re-asking could
-                            change the answer. On a phone it cannot — no headset
-                            is going to appear — so promising a retry there sends
-                            the author tapping a button forever. */}
-                        {xrAvailable.state === XR_AR_ONLY ? 'No VR on this device' : 'No VR · Recheck'}
-                        {/* Rendered, not a title tooltip. This message matters
-                            most on the device that cannot show one: a headset
-                            browser has no hover, and the whole point is to be
-                            readable while you are standing in the thing. */}
-                        <em>{`${xrAvailable.reason} — ${xrAvailable.fix}`}</em>
-                    </button>
-                )}
-                {/* What the last headset session reported about the floor.
-                    Author-only, and shown AFTER the session rather than during
-                    it: it is read by someone who has just taken the headset
-                    off, and a standalone headset browser is not somewhere you
-                    can open a console. Absent until a session has happened. */}
-                {panelsOpen && !isXrPresenting && xrEye && (
-                    <span className="algo-vrithm-xr-eye">{describeEyeHeight(xrEye)}</span>
-                )}
                 {isXrPresenting && (
                     <button type="button" onClick={onExitXr}>Exit</button>
                 )}
@@ -374,7 +275,6 @@ const Chrome = memo(function Chrome({
 export default function AlgoVrithmExperience() {
     const xr = useXrAr()
     const rootRef = useRef(null)
-    const directorEnabled = useMemo(() => isDirectorEnabled(), [])
 
     // ---- WARM THE FOOTAGE ---------------------------------------------------
     //
@@ -416,19 +316,9 @@ export default function AlgoVrithmExperience() {
         return () => window.clearTimeout(handle)
     }, [])
 
-    // The live edit list. Starts as the committed one and is only ever changed
-    // by the director panel — the audience path never touches it. Edits reach
-    // sequences/index.js, which stays the source of truth, via the panel's
-    // "Save to source" (patches the file in place, dev only) or "Copy edit
-    // list" (regenerates the array to paste).
-    //
-    // Behind an undo stack (Ctrl/Cmd+Z, Shift to redo). Only mounted for the
-    // author: the audience has nothing to undo and should not carry a listener
-    // for it. See useEditHistory.js for why continuous edits coalesce — without
-    // that, one gizmo drag would be a hundred separate undos.
-    const history = useEditHistory(SEQUENCES, { enabled: directorEnabled })
-    const editList = history.present
-    const setEditList = history.set
+    // The committed edit list, played as written. Nothing on this path mutates
+    // it: editing moved to Raw, and sequences/index.js is the source of truth.
+    const editList = SEQUENCES
     const durationSec = useMemo(() => totalDurationSec(editList), [editList])
 
     // Above the Canvas so the director panel can share the transport. Entering
@@ -454,157 +344,15 @@ export default function AlgoVrithmExperience() {
         loop: true
     })
 
-    // Inside or outside. Author-only, and forced back inside during an XR
-    // session — a headset owns its own pose, so "watch yourself from across the
-    // room" is not a thing that can exist there.
-    const [view, setView] = useState(VIEW_INSIDE)
-    const stageView = directorEnabled && !xr.isXrPresenting ? view : VIEW_INSIDE
+    // The header hides itself while the piece plays — there is no authoring
+    // furniture left to keep it pinned for.
+    const chrome = useAutoHideChrome({ targetRef: rootRef, autoHide: true })
 
-    // Shared between OrbitView (which writes it) and Standpoint (which reads
-    // it) so an orbit drag that happens to end over the marker is not also
-    // treated as a click on it. A ref, not state: it changes on every pointer
-    // move and must not re-render the Canvas.
-    const dragRef = useRef({ moved: false, travel: 0 })
-
-    // Set by the gizmo while a handle is being dragged, read by the orbit
-    // camera so it stands down. A ref for the same reason as dragRef: it flips
-    // on pointer events and must not re-render the Canvas.
-    const suppressOrbitRef = useRef(false)
-
-    // The row as it was when the current drag began. Only the scale handle
-    // needs it — see patchFromGizmo.
-    const dragBaselineRef = useRef(null)
-
-    // Which sequence the placement handles are attached to, and what they do.
-    // Where the author has put the seam between the piece and the editor.
-    // Read once, on mount: this is a preference rather than shared state, and
-    // re-reading it mid-session would fight the drag in progress.
-    const [split, setSplit] = useState(() =>
-        readSplit(typeof window === 'undefined' ? null : window.localStorage)
-    )
-
-    useEffect(() => {
-        if (typeof window === 'undefined') return undefined
-        // Deferred: a drag fires this on every pointer move and localStorage
-        // writes are synchronous. One write when the author stops moving.
-        const timer = window.setTimeout(() => writeSplit(window.localStorage, split), 250)
-        return () => window.clearTimeout(timer)
-    }, [split])
-
-    // Rebuilt only when the split actually changes — this file already pays
-    // attention to per-render style objects (see CANVAS_STYLE below).
-    const rootStyle = useMemo(() => ({ '--algo-vrithm-split': formatSplit(split) }), [split])
-
-    const [selectedId, setSelectedId] = useState(null)
-    const [gizmoMode, setGizmoMode] = useState(GIZMO_MODES[0].id)
-
-    // One handler, two destinations: an asset clip's drag writes back into the
-    // same four polar numbers the panel fields edit, so the handles and the
-    // fields stay one source of truth rather than two controls disagreeing.
-    const handleTransformChange = useCallback((dragged) => {
-        if (!selectedId) return
-
-        // A light is position-only, so the drag writes one field of one entry
-        // in the row's `lights` array and ignores the rotation and scale the
-        // gizmo also reports. The handles for those are suppressed anyway —
-        // see gizmoModesFor.
-        const light = parseLightName(selectedId)
-        if (light) {
-            setEditList((previous) => setLightValue(
-                previous, light.rowId, light.lightId, 'position', dragged.position
-            ))
-            return
-        }
-
-        setEditList((previous) => previous.map((sequence) => {
-            if (sequence.id !== selectedId) return sequence
-            const patch = patchFromGizmo(sequence, dragged, dragBaselineRef.current ?? sequence)
-            return patch.kind === 'placement'
-                ? { ...sequence, asset: patch.asset }
-                : setTransform([sequence], selectedId, patch.transform)[0]
-        }))
-        // `setEditList` is the history's `set`, which is stable for the hook's
-        // life — but it is no longer a useState setter, so the lint rule can no
-        // longer prove that and wants it declared.
-    }, [selectedId, setEditList])
-
-    const handleDragStart = useCallback(() => {
-        dragBaselineRef.current = editList.find((sequence) => sequence.id === selectedId) ?? null
-    }, [editList, selectedId])
-
-    // What the gizmo can attach to right now. Recomputed against the playhead,
-    // so a selection whose clip runs out simply stops being offered.
-    const liveSequences = useMemo(
-        () => editList.filter(
-            (sequence) => clipProgress(clock.playheadSec, sequence.startSec, sequence.endSec) !== null
-        ),
-        [editList, clock.playheadSec]
-    )
-
-    // "Place" on a light in the panel. It has to do three things at once
-    // because the handles only exist in one place: the gizmo is mounted from
-    // the OUTSIDE view only (from inside, it would sit in the middle of the
-    // work you are judging), so a place button that only set a selection would
-    // appear to do nothing at all from where the author usually is.
-    const placeTarget = useCallback((name) => {
-        if (selectedId === name) {
-            setSelectedId(null)
-            return
-        }
-        setSelectedId(name)
-        setGizmoMode('translate')
-        setView(VIEW_OUTSIDE)
-    }, [selectedId])
-
-    // Where the last headset session actually put the viewer's eyes, and what
-    // had to be done about it. Written once per session from inside the frame
-    // loop (see ViewerDolly), so this is not a per-frame setState.
-    const [xrEye, setXrEye] = useState(null)
-    const handleEyeHeight = useCallback((measurement) => setXrEye(measurement), [])
-
-    const enterInside = useCallback(() => setView(VIEW_INSIDE), [])
-    const toggleStageView = useCallback(
-        () => setView((previous) => (isOutside(previous) ? VIEW_INSIDE : VIEW_OUTSIDE)),
-        []
-    )
-
-    // All authoring furniture, behind one key. Closed by default — see
-    // usePanelToggle.js for why, and for why this is also the whole of the
-    // phone story.
-    const panels = usePanelToggle({ enabled: directorEnabled })
-
-    // Auto-hide follows the panels, not the flag. With the panel closed the
-    // author is watching the piece rather than working on it, and wants exactly
-    // what an audience gets; keeping the header pinned because a dev flag
-    // happens to be on would put furniture in shot.
-    const chrome = useAutoHideChrome({ targetRef: rootRef, autoHide: !panels.open })
-
-
-    // Read once: neither secure-context nor the presence of navigator.xr can
-    // change during a page's life. Only DEVICE support changes, which is what
-    // Recheck is for. Computed here rather than pulled from the diagnostics
-    // snapshot because that builds a fresh object per call, and Chrome is
-    // memoized — an unstable prop would re-render it on every frame.
-    const xrEnvironment = useMemo(() => ({
-        secureContext: typeof window !== 'undefined' ? window.isSecureContext : false,
-        hasNavigatorXr: typeof navigator !== 'undefined' && Boolean(navigator.xr),
-        hasIsSessionSupported: typeof navigator !== 'undefined' && Boolean(navigator.xr?.isSessionSupported)
-    }), [])
-
-    const xrAvailable = useMemo(
-        () => xrAvailability(xrEnvironment, xr.supportedXrModes),
-        [xrEnvironment, xr.supportedXrModes]
-    )
 
     return (
-        <div
-            className={`algo-vrithm-root${directorEnabled ? ' has-director' : ''}${panels.open ? ' is-split' : ''}`}
-            ref={rootRef}
-            style={rootStyle}
-        >
-            {/* The piece's own half of the split — the top 55% while the editor
-                is open, and the whole window when it is closed, which is the
-                audience layout at the aspect ratio they actually get.
+        <div className="algo-vrithm-root" ref={rootRef}>
+            {/* The whole window, always — the audience layout at the aspect
+                ratio they actually get.
                 Also the Canvas's positioning context: the canvas stays
                 `absolute; inset: 0` and simply fills this, which is what keeps
                 CANVAS_STYLE a module constant. A style object rebuilt per render
@@ -634,15 +382,6 @@ export default function AlgoVrithmExperience() {
                                 playheadSec={clock.playheadSec}
                                 sequences={editList}
                                 durationSec={durationSec}
-                                view={stageView}
-                                onEnterInside={enterInside}
-                                dragRef={dragRef}
-                                selectedId={selectedId}
-                                gizmoMode={gizmoMode}
-                                onTransformChange={handleTransformChange}
-                                onTransformDragStart={handleDragStart}
-                                suppressOrbitRef={suppressOrbitRef}
-                                onEyeHeight={handleEyeHeight}
                             />
                         </Suspense>
                     </XR>
@@ -658,90 +397,8 @@ export default function AlgoVrithmExperience() {
                 onToggleFullscreen={chrome.toggleFullscreen}
                 onEnterXr={xr.handleEnterXrSession}
                 onExitXr={xr.handleExitXrSession}
-                directorEnabled={directorEnabled}
-                panelsOpen={panels.open}
-                xrAvailable={xrAvailable}
-                onRecheckXr={xr.refreshXrSupport}
-                xrEye={xrEye}
             />
 
-            {/* Author-only, behind the H toggle, and hidden during an XR
-                session where a DOM panel is neither visible nor reachable
-                anyway. The view toggle sits directly above the panel rather
-                than floating over it — both are authoring furniture and they
-                share one bottom stack, so one condition hides all of it. */}
-            {/* Sits between the two halves, on the same condition as the
-                editor: with the panel closed there is no seam to move, and in
-                an XR session there is no DOM to move it with. */}
-            {panels.open && !xr.isXrPresenting && (
-                <SplitHandle split={split} onSplit={setSplit} />
-            )}
-
-            {panels.open && !xr.isXrPresenting && (
-                <div className="algo-vrithm-stage">
-                    {/* Placement handles attach to a mounted group, so only
-                        sequences currently on screen can be selected — pick a
-                        clip that has not started and there is nothing in the
-                        room to drag. Scrub to it first. */}
-                    {isOutside(stageView) && (
-                        <div className="algo-vrithm-stage-select">
-                            {liveSequences.length === 0 && (
-                                <span className="algo-vrithm-stage-empty">
-                                    nothing on screen — scrub to a clip to place it
-                                </span>
-                            )}
-                            {liveSequences.map((sequence) => (
-                                <button
-                                    type="button"
-                                    key={sequence.id}
-                                    className={sequence.id === selectedId ? 'is-selected' : ''}
-                                    onClick={() => setSelectedId(
-                                        sequence.id === selectedId ? null : sequence.id
-                                    )}
-                                >
-                                    {sequence.title}
-                                </button>
-                            ))}
-                            {selectedId && (
-                                <span className="algo-vrithm-stage-modes">
-                                    {/* A light gets "move" and nothing else —
-                                        it has no facing and no size. */}
-                                    {gizmoModesFor(selectedId).map((option) => (
-                                        <button
-                                            type="button"
-                                            key={option.id}
-                                            className={option.id === gizmoMode ? 'is-active' : ''}
-                                            onClick={() => setGizmoMode(option.id)}
-                                        >
-                                            {option.label}
-                                        </button>
-                                    ))}
-                                </span>
-                            )}
-                        </div>
-                    )}
-
-                    <div className="algo-vrithm-stage-view">
-                        <button
-                            type="button"
-                            className={isOutside(stageView) ? 'is-outside' : ''}
-                            onClick={toggleStageView}
-                        >
-                            {isOutside(stageView)
-                                ? '↧ step inside'
-                                : '⤢ see whole installation'}
-                        </button>
-                    </div>
-                    <DirectorPanel
-                        sequences={editList}
-                        onChange={setEditList}
-                        clock={clock}
-                        selectedId={selectedId}
-                        onSelect={setSelectedId}
-                        onPlace={placeTarget}
-                    />
-                </div>
-            )}
         </div>
     )
 }
