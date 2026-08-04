@@ -10,8 +10,9 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-**`dev` is AHEAD of `main`** — staging deployed and verified (`deployEnv:
-staging`, running the pushed sha, host key pinned); prod is on the earlier tier.
+**`dev` and `main` are LEVEL** at `b10c6e6d` — promoted 2026-08-05 on the
+owner's instruction, both deploys green, both hosts verified 12/12 by
+`npm run verify:algovrithm:remote -- <host>`.
 Several agents share this tree: re-check `git log`, **stage explicit paths**.
 
 ## Last session (2026-08-04, third — algovrithm front door)
@@ -55,7 +56,10 @@ deploy via `git push origin dev|main`; nightly VPS backups + daily off-box pull.
   staging for everyone (it sat two commits stale for ~30min today because one
   test asserted the same wrong literal the code used). Check
   `gh run list --branch dev --limit 1` after pushing rather than assuming.
-- **`main` promotion is the owner's call**, not a routine step.
+- **`main` promotion is the owner's call**, not a routine step. Done once, on
+  2026-08-05, when asked: `git push origin dev:main` (fast-forward), then the
+  `algovrithm` space created + `isPublic` on prod — it did not exist there at
+  all, which is why it was missing from the public listing.
 - R3F “Hooks can only be used within the Canvas component!” on a page you did
   not change means a dev server predating `593802ea` — restart it, do not debug
   the component. See known-fixes.
