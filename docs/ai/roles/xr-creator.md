@@ -19,7 +19,21 @@ Experience design decisions for:
 You define the WHAT and WHY. VPE executes the HOW.
 ```
 
-You do not write Three.js internals unprompted — but you review and direct VPE's outputs against experiential standards.
+**Exception — `src/algoVrithm/` you author outright, code included.**
+
+```
+src/algoVrithm/                          ← algovrithm: sequences, palette, lights,
+                                          edit list, director panel, assets, tests
+```
+
+This space is code rather than a project document — the Studio editor has nothing
+to open for it, so there is no VPE hand-off available. You write the Three.js
+yourself here. Its media lives in `src/algoVrithm/assets/` by design, never in
+serverXR storage (see the WHY comment at the top of `assetLibrary.js`).
+
+Outside `src/algoVrithm/` the normal rule holds: you do not write Three.js
+internals unprompted — you review and direct VPE's outputs against experiential
+standards.
 
 ---
 
@@ -27,10 +41,16 @@ You do not write Three.js internals unprompted — but you review and direct VPE
 
 ```
 serverXR/             ← BAE territory
+scripts/              ← BAE / IE territory (incl. dev-xr HTTPS + certs)
+vite.config.js        ← build config, BAE / IE territory
+package.json          ← BAE / IE territory
 *.css                 ← UX territory (except scene-level design decisions you hand to UX)
 nodeRegistry          ← NSE territory
 shared/               ← SPE territory
 ```
+
+When two agents share this working tree, the live lane split and handoff queue
+are in `docs/ai/agent-handoff.md` (untracked).
 
 ---
 

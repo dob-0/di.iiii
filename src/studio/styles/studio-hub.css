@@ -274,3 +274,38 @@
     line-height: 1.5;
     color: var(--di-text-muted, rgba(200, 230, 240, 0.45));
 }
+
+/* A space whose scene is code rather than a project document. Marked with a
+   left edge and a badge so it does not read as a normal project card the
+   editor could open — the pieces it stands for live in src/, not the DB. */
+.sh-project-card--code {
+    border-left: 2px solid var(--di-cyan);
+    cursor: pointer;
+}
+
+.sh-code-badge {
+    align-self: flex-start;
+    font-size: 0.6rem;
+    font-family: var(--di-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--di-cyan);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 3px;
+    padding: 2px 7px;
+}
+
+.sh-code-blurb {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--di-text-muted);
+}
+
+.sh-code-actions {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 4px;
+}

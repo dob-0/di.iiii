@@ -102,6 +102,19 @@
     border-color: #fff !important;
 }
 
+.landing-cta-algo-vrithm {
+    color: #4df9ff !important;
+    background: rgba(77, 249, 255, 0.08) !important;
+    border: 2px solid #4df9ff !important;
+    font-weight: 700 !important;
+}
+
+.landing-cta-algo-vrithm:hover {
+    color: #05060f !important;
+    background: #4df9ff !important;
+    border-color: #4df9ff !important;
+}
+
 .lp-btn-link {
     color: var(--di-text-muted) !important;
     font-size: 0.82rem !important;

@@ -41,6 +41,7 @@ CLAUDE.local.md
 docs/checkpoints/
 .cpanel.yml
 scratchpad/
+docs/ai/agent-handoff.md
 
 # Server data
 serverXR/data/
@@ -50,3 +51,7 @@ serverXR/.env.local
 
 # verify-surfaces.mjs screenshots + report (local artefact)
 .verify-surfaces/
+
+# Self-signed certs for `npm run dev:xr` (headset-reachable HTTPS). Machine-
+# specific and regenerated on demand — never commit them.
+.dev-certs/

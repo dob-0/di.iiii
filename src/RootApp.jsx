@@ -17,6 +17,7 @@ import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
 import { getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
+import { ALGO_VRITHM_SPACE_ID, isAlgoVrithmSegment } from './algoVrithm/algoVrithmRouting.js'
 import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_WIKI, getAppLocationState } from './utils/spaceRouting.js'
 
 const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
@@ -24,6 +25,11 @@ const RawApp = lazy(() => import('./raw/RawApp.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
 const WccExperience = lazy(() => import('./wcc/WccExperience.jsx'))
+const AlgoVrithmExperience = lazy(() => import('./algoVrithm/AlgoVrithmExperience.jsx'))
+// Its own chunk, and deliberately not part of the experience's: the landing
+// page draws on a 2D canvas and must never pull three.js for a visitor who has
+// not pressed Enter.
+const AlgoVrithmLanding = lazy(() => import('./algoVrithm/landing/AlgoVrithmLanding.jsx'))
 const WikiPage = lazy(() => import('./wiki/WikiPage.jsx'))
 // AuthGate pulls in MUI + AccountButton -- lazy so public routes (landing,
 // wiki, any public space) that never render a gate don't pay for MUI in
@@ -103,6 +109,29 @@ function WccSurfaceRoute({ mode }) {
     }
 
     return <ProtectedSurface requiredSpaceId="wcc">{content}</ProtectedSurface>
+}
+
+// Same shape as WccSurfaceRoute: algovrithm is a real space whose *contents*
+// happen to be code rather than a project document, so the public/private
+// decision still comes from the server, not from an assumption here.
+function AlgoVrithmSurfaceRoute({ mode }) {
+    const { isPublic, loading } = useSpacePublicFlag(ALGO_VRITHM_SPACE_ID)
+
+    if (loading) {
+        return <RouteSurfaceFallback label="Loading" detail="" />
+    }
+
+    const content = (
+        <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+            {mode === 'scene' ? <AlgoVrithmExperience /> : <AlgoVrithmLanding />}
+        </Suspense>
+    )
+
+    if (isPublic) {
+        return content
+    }
+
+    return <ProtectedSurface requiredSpaceId={ALGO_VRITHM_SPACE_ID}>{content}</ProtectedSurface>
 }
 
 function AppRouter() {
@@ -212,6 +241,16 @@ function AppRouter() {
         && (pathSegments.length === 1 || (pathSegments.length === 2 && pathSegments[1] === 'scene'))
     if (isWccSurface) {
         return <WccSurfaceRoute mode={pathSegments[1] === 'scene' ? 'scene' : 'landing'} />
+    }
+
+    // The bare segment is the landing page and `/scene` is the piece; deeper
+    // paths under the space (a project deep-link, /admin, …) still belong to
+    // the generic surfaces below.
+    const isAlgoVrithmSurface = isAlgoVrithmSegment(appState.spaceId)
+        && appState.page !== APP_PAGE_PREFERENCES
+        && (pathSegments.length === 1 || (pathSegments.length === 2 && pathSegments[1] === 'scene'))
+    if (isAlgoVrithmSurface) {
+        return <AlgoVrithmSurfaceRoute mode={pathSegments[1] === 'scene' ? 'scene' : 'landing'} />
     }
 
     if (appState.projectSlugSegment) {
