@@ -78,6 +78,18 @@ vi.mock('./wcc/WccExperience.jsx', () => ({
     }
 }))
 
+vi.mock('./algoVrithm/AlgoVrithmExperience.jsx', () => ({
+    default: function MockAlgoVrithmExperience() {
+        return <div>algovrithm-experience</div>
+    }
+}))
+
+vi.mock('./algoVrithm/landing/AlgoVrithmLanding.jsx', () => ({
+    default: function MockAlgoVrithmLanding() {
+        return <div>algovrithm-landing</div>
+    }
+}))
+
 describe('RootApp', () => {
     afterEach(() => {
         window.history.pushState({}, '', '/')
@@ -106,6 +118,20 @@ describe('RootApp', () => {
         window.history.pushState({}, '', '/wcc/scene')
         render(<RootApp />)
         expect(await screen.findByText('wcc-experience:scene')).toBeInTheDocument()
+    })
+
+    it('routes /algovrithm to the landing page and /algovrithm/scene to the piece', async () => {
+        // The split is load-bearing: entering costs three.js and a strobing
+        // piece, so the bare URL must never mount the experience.
+        window.history.pushState({}, '', '/algovrithm')
+        const { unmount } = render(<RootApp />)
+        expect(await screen.findByText('algovrithm-landing')).toBeInTheDocument()
+        expect(screen.queryByText('algovrithm-experience')).not.toBeInTheDocument()
+        unmount()
+
+        window.history.pushState({}, '', '/algovrithm/scene')
+        render(<RootApp />)
+        expect(await screen.findByText('algovrithm-experience')).toBeInTheDocument()
     })
 
     it('keeps beta and legacy routes intact', async () => {

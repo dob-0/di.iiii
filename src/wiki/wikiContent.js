@@ -104,10 +104,11 @@ export const WIKI_ARTICLES = [
             'Opening an editor URL (like /<space>/studio) with an account that isn’t scoped to that space no longer dead-ends: if the space is public you are taken to its live view; only private spaces show the access-restricted screen.',
             'Every public space carries a small “Made with di.iiii — build yours” badge, so visitors who like what they see have a way in. It never appears on hub-card preview thumbnails.',
             'Spaces and individual projects can each get a clean public link (a slug) that’s independent of their internal id — e.g. /wcc/artistplace instead of a longer id-based path. Set it from /admin → Manage (“Edit public link” next to Rename); old id-based links keep working forever, they’re never replaced. Every project link in a space’s floating project switcher has a one-click Copy link action that uses the slug when one is set.',
-            'Published code pages can use the visitor’s camera, microphone and motion sensors — but only if the project opts in by setting deviceAccess: true in its presentation state (repo-synced pages set it in their di-space manifest). Opted-in pages run without the usual origin isolation, so reserve it for pages you author yourself; everything else stays fully sandboxed. The visitor still gets the normal browser permission prompt either way.'
+            'Published code pages can use the visitor’s camera, microphone and motion sensors — but only if the project opts in by setting deviceAccess: true in its presentation state (repo-synced pages set it in their di-space manifest). Opted-in pages run without the usual origin isolation, so reserve it for pages you author yourself; everything else stays fully sandboxed. The visitor still gets the normal browser permission prompt either way.',
+            'Published code pages can read the URL’s query string — /<space>/<page>?just=bkyi — through window.diiPageQuery (already parsed for you as window.diiPageParams). A published page is rendered inside a frame with no URL of its own, so location.search there is always empty; read new URLSearchParams(window.diiPageQuery || location.search) and the same code keeps working when you open the file locally. This is what lets one published page hand over to another with state — “open the field, on the core I just made”.'
         ],
-        tags: ['publish', 'public', 'sharing', 'owner', 'live link', 'slug', 'custom link', 'camera', 'device access'],
-        updated: '2026-07-31'
+        tags: ['publish', 'public', 'sharing', 'owner', 'live link', 'slug', 'custom link', 'camera', 'device access', 'query', 'url parameters'],
+        updated: '2026-08-04'
     },
     {
         id: 'invite-links',
@@ -439,12 +440,13 @@ export const WIKI_ARTICLES = [
         id: 'algovrithm',
         category: 'Spaces & access',
         title: 'algovrithm — a code-authored VR space',
-        summary: 'algovrithm at /algovrithm is a linked space whose scene is written in three.js/R3F code rather than authored in Studio.',
+        summary: 'algovrithm is a linked space whose scene is written in three.js/R3F code rather than authored in Studio. /algovrithm introduces it; /algovrithm/scene is the piece.',
         body: [
             'algovrithm is a WebXR experience built the way br_id_ge and WCC are linked spaces — a real space, routed through the same server-verified public/private check — but with one difference that matters: its scene is not a project document you edit in Studio. The scene is code, living in src/algoVrithm/, so it can do things the entity model does not express (generative geometry, per-frame math, custom shaders).',
             { list: [
-                '/algovrithm — the experience. The name is spelled lowercase and unpunctuated so that it is a legal space id exactly as written: unlike br_id_ge, whose URL keeps a styled name that has to be slugified down to the br-id-ge space, here the id, the URL and the label are one string with no seam between them.',
-                'It plays itself — seven scenes in 47 seconds, no controls to learn — and loops continuously, so it can be left running for a whole exhibition day and a visitor who walks up halfway through only has to keep standing there to see the opening. “Enter VR” / “Enter AR” appear only when the headset or phone actually reports support for that mode, and entering VR restarts the piece from the top.',
+                '/algovrithm — the front door, and /algovrithm/scene — the piece, the same split as /wcc and /wcc/scene. The name is spelled lowercase and unpunctuated so that it is a legal space id exactly as written: unlike br_id_ge, whose URL keeps a styled name that has to be slugified down to the br-id-ge space, here the id, the URL and the label are one string with no seam between them.',
+                'The front door is a poster with the cut on it: the edit list drawn as a timeline you can drag, arrow-key a tenth of a second at a time, or play through, with each beat standing in as a 2D canvas sketch and a note on what it is. It is there because entering costs a 1.6 MB renderer and a strobing piece that carries a photosensitivity warning, and neither should be spent on somebody who has only followed a link. It loads no three.js at all, and it opens on a held frame when the visitor’s system asks for reduced motion.',
+                'It plays itself — seven scenes in 53 seconds, no controls to learn — and loops continuously, so it can be left running for a whole exhibition day and a visitor who walks up halfway through only has to keep standing there to see the opening. “Enter VR” / “Enter AR” appear only when the headset or phone actually reports support for that mode, and entering VR restarts the piece from the top.',
                 'Scene changes are cross-dissolves. Sequence windows overlap, each beat fades on its own envelope, and the room blends its backdrop colour and fog across the handover, so one scene becomes the next without anything being laid over the top of it. The glitch veil that used to cover every handover with a wall of horizontal signal noise was removed on 2026-08-04 — it read as an effect applied to the piece rather than something happening inside it. TransitionVeil.jsx and its maths are still in the folder, unmounted, for the case where a crossing needs covering again.',
                 'The piece carries a synthesized spatial score: every beat has sound placed in the room around the visitor (the scan beat’s machine tick circles the head, the metaball hums sit on the blobs’ own orbit ring and close in with them, the reel globe plays 31 positional reel tracks from their places on the shell, and the closing sphere’s colonnade flashes are heard stepping away from you column by column). The handover static went silent with the glitch veil it belonged to — a head-locked burst of digital garbage with nothing failing on screen is the loudest sound in the piece attached to nothing the visitor can see. No audio files — everything is generated, driven by the same playhead as the picture, and browsers require one touch, click or key before any sound is allowed to start.',
                 'Because the scene is code, editing it means editing the files in src/algoVrithm/ — the Studio editor has nothing to open for this space.',
@@ -458,7 +460,7 @@ export const WIKI_ARTICLES = [
             '“Copy edit list” is still there for what saving cannot do — rows added in the panel, which have no place in the file yet, and any machine that is not the one running the dev server. It regenerates the whole array, so it drops the file’s comments and any field it was not taught about; paste it over the file only when that is what you want.'
         ],
         tags: ['algovrithm', 'vr', 'webxr', 'three.js', 'linked-space', 'code', 'lighting', 'spatial-audio'],
-        updated: '2026-08-04'
+        updated: '2026-08-05'
     }
 ]
 

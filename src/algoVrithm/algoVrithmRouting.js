@@ -10,6 +10,12 @@ export const ALGO_VRITHM_SPACE_ID = 'algovrithm'
 
 export const ALGO_VRITHM_PATH = '/algovrithm'
 
+// The piece itself, one segment down — same split as /wcc and /wcc/scene. The
+// bare path is the landing page because entering costs 1.6 MB of renderer and
+// a photosensitivity warning, and neither should be spent on a visitor who has
+// only followed a link.
+export const ALGO_VRITHM_SCENE_PATH = '/algovrithm/scene'
+
 export const ALGO_VRITHM_LABEL = 'algovrithm'
 
 // getAppLocationState hands routing the raw path segment, so matching still
