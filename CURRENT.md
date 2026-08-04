@@ -10,34 +10,25 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-**`dev` is 7 commits ahead of `origin/dev` and NOT yet pushed** — audit batch 1
-(`314bb1a8`) never left this machine, and batches 2A–5 (`c88f4d13`…`de9010ec`)
-sit on top of it. `main` is further behind still. Several agents share this
-tree: re-check `git log`, and **stage explicit paths, never `git add -A`**.
+**All three tiers are in sync: `dev` = `main` = `origin` (`b2a5f2a3`), prod and
+staging both deployed and verified.** Audit batches 1–5 (31 defects) plus the
+verification standard are live. Several agents share this tree: re-check
+`git log`, and **stage explicit paths, never `git add -A`**.
 
 ## Last session (2026-08-04)
 
-- **Audit batches 2–5 landed: 31 verified defects fixed, 5 commits.** Re-triaged
-  the whole ultracode run journal (`wf_29dddb4e-571`) — 24 of the 38 findings
-  had verdicts (not "~32 unverified" as previously recorded); 17 were real, 7
-  already closed by batch 1. The remaining 14 were verified by hand: all real.
-- **2A** — five silent data-loss paths: GitHub sync PUTting an empty document
-  over the live one, `useLiveSync` dropping flush failures with no retry, the
-  409 catch-up losing its spliced-out batch, per-project refs never resetting
-  (permanent "Loading project…"), `deleteNode` parentId-cycle RangeError.
-- **2B** — gate effect orphaning Walker's look closure (mouse-look dead), Beta
-  mounting every world panel in every scope (WebGL cap → tab freeze),
-  ModalTransform leaving `transformOp` set forever, staging compose inheriting
-  prod's `:latest`.
-- **3** — closed the silent HTML-fallback asset class at its last four call
-  sites (export, scene archive, restore, PDF placement) + the guest-session
-  cache that made Retry permanently useless.
-- **4** — nine editor UX defects (select-all, Esc-cancels, Ctrl+F, out-of-scope
-  delete, selection pill, wrong fullscreen world, SSE gap, audio restart,
-  local-save silence). **5** — guest GitHub disclosure, id-less create ops,
-  SSE nginx buffering, per-env image tags, pinned SSH host key, admin link.
-- Every fix ships a regression guard **verified to fail without it** and a
-  known-fixes row. Wiki shortcuts article updated.
+- **Audit batches 2–5: 31 verified defects fixed and shipped to prod.** From the
+  ultracode journal (`wf_29dddb4e-571`): 17 confirmed real, 7 already closed by
+  batch 1, 14 more hand-verified. Data-loss paths, mouse-look death, Beta WebGL
+  exhaustion, the silent HTML-fallback asset class, nine editor UX defects,
+  schema/routing/deploy hardening. Every fix ships a guard **observed failing
+  without it** + a known-fixes row.
+- **F14 proven fixed in the wild**: prod had been running a staging-built image
+  (`deployEnv: staging`) for ~3 days. Now prod reports `production/main`.
+- **br_id_ge**: field cores now reveal on load (were built hidden, only shown by
+  ALL TOGETHER / `?just=`); rite draws an ink cursor (it hid the system one).
+- **Verification standard added** — `npm run verify:surfaces`, the charter, and
+  three agents. See below; this is now part of "done".
 
 ## What works
 
@@ -47,15 +38,20 @@ deploy via `git push origin dev|main`; nightly VPS backups + daily off-box pull.
 
 ## Open
 
-- **Nothing is pushed.** `git push origin dev` → staging, verify, then promote.
 - **Set the `VPS_HOST_KEY` repo variable** (`ssh-keyscan -p <port> <host>` from
   a trusted machine) — until then the deploy warns and falls back to keyscan.
-- Deploy tags changed to `:staging-<sha>`/`:prod-<sha>`; the first deploy after
-  this is the one to watch.
-- Privacy/product calls owed: no account-deletion path, no export, no session
-  revocation. Backup archives unencrypted at rest.
-- URL spec §7 needs sign-off; blocks Stage 2. Stale GitHub App key; `main`
-  protection bypassable. `docs/ai/INBOX.md`: sound-in-spaces; promo outbound.
+- **`LIVE_API_TOKEN` (staging) is stale** — staging rejects it with 401, so
+  staging's br_id_ge copies are older than prod's. Rotate it.
+- **The full suite is intermittently flaky under load** — 2 failures in ~6 runs
+  (`installBundleContracts`, `SpaceHub`), different file each time, both pass in
+  isolation and on a clean tree. Pre-existing; it erodes "green means good" and
+  should be chased.
+- **The `br_id_ge ▾` chip covers the field project's Armenian letter-row** on
+  every viewport (found by eye, now caught by `npm run verify:surfaces`). Also
+  on narrow phones the field's bottom links collide. Owner's call — it is
+  published-project layout, not platform code.
+- Privacy calls owed: no account-deletion, export or session revocation; backups
+  unencrypted. URL spec §7 blocks Stage 2. Stale GitHub App key. `docs/ai/INBOX.md`.
 
 ## Known fixes → [docs/ai/known-fixes.md](docs/ai/known-fixes.md) — check before any bug hunt.
 
