@@ -298,7 +298,13 @@ export const BEAT_SKETCHES = { tunnel, halo, scan, pattern, metaball, globe, sph
 // blended, which is a second canvas and a lot of machinery for a poster. The
 // honest cheap answer is to show one image at a time.
 export const paintFrame = (ctx, { width, height, elapsed, live }) => {
-    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    // Do NOT reset the transform here. The caller has already scaled it by the
+    // device pixel ratio, and this used to open with setTransform(1,0,0,1,0,0),
+    // which threw that scale away: every sketch then drew in CSS pixels into a
+    // buffer ratio times larger, so on a 1.5x display the frame was painted
+    // into the top-left 66% of itself and the rest stayed black — a hard
+    // rectangular edge through the middle of the picture. On a 2x display, 50%.
+    // Invisible at ratio 1, which is every default headless browser.
     ctx.globalAlpha = 1
 
     // Strongest wins, and on a tie the later one, so a seam reads as arriving

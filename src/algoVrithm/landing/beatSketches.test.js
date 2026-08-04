@@ -119,4 +119,16 @@ describe('paintFrame', () => {
         expect(num(sketch, 'STROBE_HZ')).toBe(num(piece, 'STROBE_HZ'))
         expect(num(sketch, 'STROBE_SHARPNESS')).toBe(num(piece, 'STROBE_SHARPNESS'))
     })
+    // The caller scales the context by the device pixel ratio before calling
+    // this. Resetting the transform here threw that away and every sketch drew
+    // in CSS pixels into a buffer `ratio` times larger, so a 1.5x display got
+    // the picture painted into the top-left 66% of the frame with a hard edge
+    // through the middle of it — and a 2x display got 50%. It shipped because
+    // ratio is 1 in a default headless browser and 1 on the machine it was
+    // written on.
+    it('never resets the transform — the caller owns the device pixel ratio', () => {
+        const ctx = fakeContext()
+        paintFrame(ctx, { width: 640, height: 360, elapsed: 2, live: beatsAtSec(2) })
+        expect(ctx.calls).not.toContain('setTransform')
+    })
 })
