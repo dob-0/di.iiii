@@ -261,8 +261,19 @@ export default function AlgoVrithmLanding() {
                     simply one of the environments in which my life unfolds.
                 </p>
                 <p>Every day I perform the same gestures:</p>
+                {/* One line per gesture, so the six I's stack on one x-axis.
+                    Set as prose they wrapped wherever the viewport happened to
+                    put them, which reads as a list of habits — the exact thing
+                    the sentence after it says they are not. The text is
+                    unchanged, so this is a shape, not an edit. */}
                 <p className="avl-gestures">
-                    I scroll. I swipe. I refresh. I wait. I record. I repeat.
+                    {/* The trailing space is inside the span and collapses at
+                        the end of a line, but it keeps textContent readable as
+                        a sentence — without it a copy-paste, or anything
+                        reading the text rather than the layout, gets
+                        "I scroll.I swipe.I refresh." */}
+                    {['I scroll.', 'I swipe.', 'I refresh.', 'I wait.', 'I record.', 'I repeat.']
+                        .map((gesture) => <span key={gesture}>{gesture}{' '}</span>)}
                 </p>
                 <p>
                     These actions seem ordinary, almost invisible, yet they quietly organize my

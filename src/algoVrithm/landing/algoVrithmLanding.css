@@ -262,10 +262,13 @@
    is set rather than merely typed: full ink, and given the room the repetition
    needs to land as repetition. */
 .avl-gestures {
+    display: grid;
+    gap: 0.1em;
+    margin: 0 0 1.6rem;
     color: var(--avl-ink);
-    font-size: clamp(1rem, 2.6vw, 1.24rem);
-    line-height: 1.6;
-    letter-spacing: 0.01em;
+    font-size: clamp(1.05rem, 3.4vw, 1.5rem);
+    line-height: 1.18;
+    letter-spacing: 0.02em;
 }
 
 .avl-beats {
