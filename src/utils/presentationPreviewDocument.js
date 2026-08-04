@@ -9,11 +9,25 @@ export const PREVIEW_ISSUE_CODES = {
 const STORAGE_ERROR_PATTERN = /(localstorage|sessionstorage|allow-same-origin|sandboxed document|securityerror|forbidden)/i
 const SANDBOX_ERROR_PATTERN = /(sandbox|denied|securityerror|not allowed|blocked)/i
 
-const PREVIEW_BOOTSTRAP_SCRIPT = `(() => {
+// the query comes off the address bar, so it is attacker-controllable: escaping
+// `<` keeps a `</script>` in it from closing the bootstrap tag
+const inlineJson = (value) => JSON.stringify(value ?? '').replace(/</g, '\\u003c')
+
+const buildBootstrapScript = (pageQuery) => `(() => {
     const MESSAGE_TYPE = ${JSON.stringify(PREVIEW_HOST_MESSAGE_TYPE)};
     const ENTER_EXHIBITION_KIND = ${JSON.stringify(PREVIEW_ENTER_EXHIBITION_KIND)};
     const ISSUE_CODES = ${JSON.stringify(PREVIEW_ISSUE_CODES)};
     const issueState = new Set();
+
+    // srcdoc documents have no URL of their own, so location.search is always
+    // empty inside a published page — a hand-over like /field?just=<word> would
+    // arrive stripped. Hand the shell's query down explicitly instead.
+    window.diiPageQuery = ${inlineJson(pageQuery)};
+    try {
+        window.diiPageParams = new URLSearchParams(window.diiPageQuery);
+    } catch {
+        window.diiPageParams = new URLSearchParams();
+    }
 
     window.diiEnterExhibition = () => {
         try {
@@ -157,8 +171,8 @@ const PREVIEW_BOOTSTRAP_SCRIPT = `(() => {
     sendIssues();
 })();`
 
-const injectBootstrap = (documentSource) => {
-    const bootstrapTag = `<script>${PREVIEW_BOOTSTRAP_SCRIPT}</script>`
+const injectBootstrap = (documentSource, pageQuery) => {
+    const bootstrapTag = `<script>${buildBootstrapScript(pageQuery)}</script>`
     const openHeadPattern = /<head(\s[^>]*)?>/i
     const openHtmlPattern = /<html(\s[^>]*)?>/i
 
@@ -183,8 +197,8 @@ ${documentSource}
 </html>`
 }
 
-export function buildPresentationPreviewDocument(html = '') {
-    return injectBootstrap(String(html || ''))
+export function buildPresentationPreviewDocument(html = '', pageQuery = '') {
+    return injectBootstrap(String(html || ''), String(pageQuery || ''))
 }
 
 export function getPreviewIssueMessage(code) {
