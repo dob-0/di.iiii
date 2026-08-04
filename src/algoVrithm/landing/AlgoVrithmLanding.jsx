@@ -3,6 +3,7 @@ import { appNavigate } from '../../utils/appNavigate.js'
 import { ALGO_VRITHM_SCENE_PATH } from '../algoVrithmRouting.js'
 import { RUN_TIME_SEC, beatsAtSec } from './beatCards.js'
 import { paintFrame } from './beatSketches.js'
+import { createHeroField } from './heroField.js'
 import './algoVrithmLanding.css'
 
 // The front door for algovrithm.
@@ -64,15 +65,51 @@ export default function AlgoVrithmLanding() {
     // advances it every frame, and closing over the state value would pin it to
     // whatever it was when the effect last ran.
     const playheadRef = useRef(prefersReducedMotion() ? HOLD_FRAME_SEC : 0)
+    const heroRef = useRef(null)
+
+    // The picture, or null on a machine that cannot draw it — no WebGL, a
+    // blocked context, a driver that refuses one of the seven programs. The 2D
+    // poster stays in the tree for exactly that, which is why beatSketches.js
+    // is not deleted: it is the fallback, not the previous version.
+    //
+    // A canvas can only ever have one kind of context, so this must run before
+    // anything asks it for a 2D one — the paint below checks heroRef first for
+    // that reason as well as the obvious one.
+    useEffect(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return undefined
+        heroRef.current = createHeroField(canvas)
+        return () => {
+            heroRef.current?.dispose()
+            heroRef.current = null
+        }
+    }, [])
 
     const paint = useCallback(() => {
         const canvas = canvasRef.current
         if (!canvas) return
-        const ctx = canvas.getContext('2d')
-        if (!ctx) return
         const width = canvas.clientWidth
         const height = canvas.clientHeight
         if (!width || !height) return
+
+        const hero = heroRef.current
+        if (hero) {
+            // 1.5x on top of the device ratio, capped at 2. Every edge in the
+            // shader is antialiased analytically, but the test pattern's far
+            // ranks are hard geometry in the piece and get MSAA there; a
+            // full-screen fragment shader has to supersample instead.
+            hero.draw({
+                width,
+                height,
+                ratio: Math.min(2, (window.devicePixelRatio || 1) * 1.5),
+                elapsed: playheadRef.current,
+                live: beatsAtSec(playheadRef.current)
+            })
+            return
+        }
+
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
         const ratio = Math.min(2, window.devicePixelRatio || 1)
         if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
             canvas.width = Math.round(width * ratio)
