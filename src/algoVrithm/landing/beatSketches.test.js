@@ -96,4 +96,22 @@ describe('paintFrame', () => {
             expect(ctx.calls.length).toBeGreaterThan(3)
         })
     })
+    // The sketch copies the piece's pulse rather than importing it (importing
+    // WhiteTunnel.jsx would pull three.js into a renderer-free page), so the
+    // copy is kept honest here. Retune the piece's heartbeat and this fails
+    // until the poster follows — drift is a red test, not a poster beating at
+    // the wrong rate.
+    it('breathes at the piece\'s own pulse, not one of its own', async () => {
+        const fs = await import('node:fs')
+        const path = await import('node:path')
+        const { cwd } = await import('node:process')
+        const find = (rel) => [`src/algoVrithm/${rel}`, `algoVrithm/${rel}`]
+            .map((p) => path.join(cwd(), p))
+            .find((p) => fs.existsSync(p))
+        const piece = fs.readFileSync(find('sequences/WhiteTunnel.jsx'), 'utf8')
+        const sketch = fs.readFileSync(find('landing/beatSketches.js'), 'utf8')
+        const num = (src, name) => Number(src.match(new RegExp(`${name}\\s*=\\s*([0-9.]+)`))?.[1])
+        expect(num(sketch, 'STROBE_HZ')).toBe(num(piece, 'STROBE_HZ'))
+        expect(num(sketch, 'STROBE_SHARPNESS')).toBe(num(piece, 'STROBE_SHARPNESS'))
+    })
 })

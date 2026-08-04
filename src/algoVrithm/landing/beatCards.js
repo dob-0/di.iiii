@@ -75,7 +75,7 @@ export const BEAT_CARDS = [
         startSec: 23.2,
         endSec: 45.4,
         world: '#04050A',
-        ink: '#4DF9FF',
+        ink: '#E9F1F5',
         sketch: 'globe'
     },
     {

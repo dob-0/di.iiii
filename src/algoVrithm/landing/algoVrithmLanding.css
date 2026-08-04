@@ -1,13 +1,22 @@
-/* The landing page borrows the piece's own two values and nothing else: the
-   near-black the experience mounts on (#05060f, see algoVrithm.css) and the
-   cyan the landing CTA already uses for this space. No card chrome, no
-   gradients — the work is white light in black air, and a page around it that
-   is busier than the work misrepresents it. */
+/* Every colour here is legal in the piece — run palette.js's own paletteWarning()
+   over them and they pass. That was not true before: the accent was #4df9ff,
+   which is the DIRECTOR PANEL's chrome (algoVrithm.css), and the piece's palette
+   file rejects it outright — "Hue 182 sits in the green/yellow gap. The piece
+   only uses 195-215 and 350-40." The front door was wearing the tool's colours,
+   not the work's.
+
+   The replacements are the piece's own: iceBlue #CFE3EC is what the closing
+   sphere's iris ramp opens on, deepSky #5F92B8 is the palette's named structure
+   colour, and both sit inside the cool band. Which is as much colour as this
+   page has any business showing — 44 of the work's 53 seconds are black and
+   white, and hue arrives exactly once, in the last beat. No card chrome, no
+   gradients: the work is white light in black air. */
 .avl-root {
     --avl-void: #05060f;
     --avl-ink: #f2f5f7;
     --avl-dim: #7d8894;
-    --avl-cyan: #4df9ff;
+    /* iceBlue. The clip and card tints below are deepSky #5F92B8 at alpha. */
+    --avl-lit: #cfe3ec;
     --avl-rule: rgba(255, 255, 255, 0.14);
 
     /* html/body/#root are position:fixed (base.css), so the document never
@@ -71,10 +80,10 @@
 
 .avl-enter {
     padding: 0.85rem 2.1rem;
-    border: 2px solid var(--avl-cyan);
+    border: 2px solid var(--avl-lit);
     border-radius: 0;
-    background: rgba(77, 249, 255, 0.08);
-    color: var(--avl-cyan);
+    background: rgba(207, 227, 236, 0.08);
+    color: var(--avl-lit);
     font: inherit;
     font-weight: 700;
     letter-spacing: 0.06em;
@@ -84,7 +93,7 @@
 
 .avl-enter:hover,
 .avl-enter:focus-visible {
-    background: var(--avl-cyan);
+    background: var(--avl-lit);
     color: var(--avl-void);
 }
 
@@ -120,7 +129,7 @@
 }
 
 .avl-stage-beat {
-    color: var(--avl-cyan);
+    color: var(--avl-lit);
 }
 
 .avl-stage-clock {
@@ -167,8 +176,8 @@
 
 .avl-play:hover,
 .avl-play:focus-visible {
-    border-color: var(--avl-cyan);
-    color: var(--avl-cyan);
+    border-color: var(--avl-lit);
+    color: var(--avl-lit);
 }
 
 .avl-track {
@@ -182,7 +191,7 @@
 }
 
 .avl-track:focus-visible {
-    outline: 2px solid var(--avl-cyan);
+    outline: 2px solid var(--avl-lit);
     outline-offset: 2px;
 }
 
@@ -190,11 +199,11 @@
     position: absolute;
     height: 50%;
     padding: 0 0.4rem;
-    border: 1px solid rgba(77, 249, 255, 0.35);
+    border: 1px solid rgba(95, 146, 184, 0.5);
     border-radius: 0;
     /* Translucent so an overlap reads as a doubled value rather than the later
        clip simply covering the earlier one. */
-    background: rgba(77, 249, 255, 0.1);
+    background: rgba(95, 146, 184, 0.14);
     color: var(--avl-dim);
     font: inherit;
     font-size: 0.62rem;
@@ -214,8 +223,8 @@
 }
 
 .avl-clip.is-lead {
-    border-color: var(--avl-cyan);
-    background: rgba(77, 249, 255, 0.24);
+    border-color: var(--avl-lit);
+    background: rgba(95, 146, 184, 0.32);
     color: var(--avl-ink);
 }
 
@@ -236,25 +245,33 @@
 /* The statement is the only long-form voice on the page and the only place a
    first person speaks, so it gets the page's reading measure and no card, no
    panel, no accent — the same bare column the closing note uses. */
+/* 54rem like every other section, with the reading measure nested inside it —
+   the pattern .avl-head/.avl-lede already use. Given `margin: auto` on a 42rem
+   section this block sat 96px inboard of the whole page, and its hairline ran
+   96px short of the canvas border directly above it.
+
+   The measure is in ch, not rem: 42rem was inherited from .avl-lede, where at
+   1.02rem it is 69 characters. At the smaller size used here the same token
+   silently became 80 — and the 1.85 leading was compensation for a measure
+   that should never have been that wide. */
 .avl-statement {
-    max-width: 42rem;
-    margin: clamp(2.4rem, 5vw, 3.4rem) auto clamp(2.4rem, 5vw, 3.4rem);
-    padding-top: clamp(1.4rem, 3vw, 2rem);
-    border-top: 1px solid var(--avl-rule);
-    color: var(--avl-dim);
-    font-size: 0.88rem;
-    line-height: 1.85;
+    max-width: 54rem;
+    margin: clamp(2.4rem, 5vw, 3.4rem) auto;
+    color: var(--avl-ink);
+    font-size: clamp(0.94rem, 2.2vw, 1.02rem);
+    line-height: 1.7;
 }
 
 .avl-statement-title {
     margin: 0 0 1.2rem;
-    color: var(--avl-ink);
+    color: var(--avl-dim);
     font-size: 0.78rem;
     letter-spacing: 0.16em;
     text-transform: uppercase;
 }
 
 .avl-statement p {
+    max-width: 66ch;
     margin: 0 0 1.1rem;
 }
 
@@ -264,7 +281,7 @@
 .avl-gestures {
     display: grid;
     gap: 0.1em;
-    margin: 0 0 1.6rem;
+    margin: 2rem 0;
     color: var(--avl-ink);
     font-size: clamp(1.05rem, 3.4vw, 1.5rem);
     line-height: 1.18;
@@ -290,7 +307,7 @@
 }
 
 .avl-card.is-lead {
-    background: rgba(77, 249, 255, 0.06);
+    background: rgba(95, 146, 184, 0.1);
 }
 
 .avl-card-hit {
@@ -307,7 +324,7 @@
 }
 
 .avl-card-hit:focus-visible {
-    outline: 2px solid var(--avl-cyan);
+    outline: 2px solid var(--avl-lit);
     outline-offset: -2px;
 }
 
@@ -320,7 +337,7 @@
 }
 
 .avl-card.is-lead .avl-card-time {
-    color: var(--avl-cyan);
+    color: var(--avl-lit);
 }
 
 .avl-card-title {

@@ -190,8 +190,16 @@ export default function AlgoVrithmLanding() {
                     A flat stand-in. The work itself is in stereo and all the way around you —
                     neither of which survives a rectangle.
                 </p>
+                {/* The clock used to be in here. It is rounded to tenths and the
+                    rAF loop sets it every frame, so this polite live region
+                    re-announced about ten times a second for the whole 53s loop
+                    — measured at 32 text changes in 3 seconds — which a screen
+                    reader either queues forever or throttles to noise. What the
+                    region is FOR changes 14 times in the piece: which beats are
+                    live. The clock is already on screen in .avl-stage-clock, so
+                    nothing is lost by taking it out of here. */}
                 <p className="avl-live" role="status" aria-live="polite">
-                    {formatSec(playheadSec)} — {live.map((entry) => entry.beat.title).join(' over ')}
+                    {live.map((entry) => entry.beat.title).join(' over ')}
                 </p>
             </section>
 

@@ -13,9 +13,20 @@
 // view = { width, height, progress (0..1 through the beat), elapsed (sec into
 // the piece), ink, world }
 
-const STROBE_HZ = 2.4
+// The piece's pulse, copied from WhiteTunnel.jsx — 0.85 Hz swelled by pow(,2),
+// which Halo and TestPattern also run on so the whole work has one heartbeat.
+// This was 2.4 Hz and flat, invented here: the poster breathed at nearly three
+// times the rate of the thing it is a poster for, and twice as bright, because
+// an unsquared sine averages 0.5 where the squared one averages 0.25.
+//
+// COPIED, not imported: WhiteTunnel.jsx pulls @react-three/fiber, and importing
+// it here would drag 1.6 MB of renderer into a page that deliberately has none.
+// Same trade as the edit list in beatCards.js, and kept honest the same way, by
+// a test that reads both files.
+const STROBE_HZ = 0.85
+const STROBE_SHARPNESS = 2
 
-const strobe = (elapsed) => 0.5 + 0.5 * Math.sin(elapsed * Math.PI * 2 * STROBE_HZ)
+const strobe = (elapsed) => Math.pow(0.5 + 0.5 * Math.sin(elapsed * Math.PI * 2 * STROBE_HZ), STROBE_SHARPNESS)
 
 const fill = (ctx, view, color) => {
     ctx.fillStyle = color
@@ -254,7 +265,7 @@ const sphere = (ctx, view) => {
         cy,
         r
     )
-    grad.addColorStop(0, '#7FE9FF')
+    grad.addColorStop(0, '#CFE3EC')
     grad.addColorStop(0.45, '#3B6C8F')
     grad.addColorStop(0.8, '#141C24')
     grad.addColorStop(1, '#0D1114')
