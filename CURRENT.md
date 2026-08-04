@@ -41,10 +41,29 @@ deploy via `git push origin dev|main`; nightly VPS backups + daily off-box pull.
 
 ## Open
 
-- **Generate the GitHub App secrets** (`docs/ops/ROTATE_GITHUB_APP_SECRETS.md`
-  1–3, App `4178187`). Wiring is live; the values are not, so sync stays off.
-- **`LIVE_API_TOKEN` (staging) is stale** — 401; staging's br_id_ge is older.
-- **`dev → main` promotion owed** — `/algovrithm` is live on staging only.
+### Handoff — read before you push (2026-08-05)
+
+- **The shared checkout `~/di.iiii` is NOT on `dev`.** It sits on
+  `feat/timeline-core`, 40 behind, with uncommitted work and an untracked
+  `spaces/algovrithm/`. Its dev server on **:5173** has therefore been serving a
+  fortnight-old algovrithm. Whoever owns that branch: land or rebase it, then
+  say so here. Do not switch that tree's branch under them.
+- **:5175 is a second dev server** on `.claude/worktrees/dev-preview`, pinned at
+  `dev`, for looking at the current app without touching :5173. Remove the
+  worktree when it stops being useful.
+- **Push when you finish.** `dev` deploys itself to staging; a red `dev` freezes
+  staging for everyone (it sat two commits stale for ~30min today because one
+  test asserted the same wrong literal the code used). Check
+  `gh run list --branch dev --limit 1` after pushing rather than assuming.
+- **`main` promotion is the owner's call**, not a routine step.
+- R3F “Hooks can only be used within the Canvas component!” on a page you did
+  not change means a dev server predating `593802ea` — restart it, do not debug
+  the component. See known-fixes.
+
+- **`LIVE_API_TOKEN` (staging, `serverXR/.env.local`) is still stale** — 401. It is
+  NOT what kept staging's br_id_ge old: that was a missing `DI_SPACE_TOKEN_STAGING`
+  CI secret, now set, and both tiers are content-identical. Use `PROD_API_TOKEN`
+  for prod. The GitHub App secrets are DONE — `configured: true` on both tiers.
 - **algovrithm's WebGL hero is written but never run** (`heroField.js`, ports
   the piece's shaders). One movement at a time at DPR 1.5; owner's go awaited.
 - **Reel globe's world `#04050A` fails the purple-gap check in the piece itself**
