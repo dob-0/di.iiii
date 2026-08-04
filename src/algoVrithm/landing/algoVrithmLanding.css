@@ -35,6 +35,14 @@
     font-family: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
+/* The root takes focus on mount so the reading keys work (see the note in the
+   component). It is not a control, so it shows no ring for that programmatic
+   focus — :focus-visible is left alone, so a keyboard user who deliberately
+   tabs here still gets one. */
+.avl-root:focus:not(:focus-visible) {
+    outline: none;
+}
+
 .avl-root *,
 .avl-root *::before,
 .avl-root *::after {
@@ -44,14 +52,6 @@
 .avl-head {
     max-width: 54rem;
     margin: 0 auto clamp(2rem, 5vw, 3rem);
-}
-
-.avl-eyebrow {
-    margin: 0 0 1.1rem;
-    color: var(--avl-dim);
-    font-size: 0.72rem;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
 }
 
 .avl-title {

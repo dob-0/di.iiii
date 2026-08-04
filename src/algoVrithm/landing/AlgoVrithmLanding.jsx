@@ -44,6 +44,7 @@ export default function AlgoVrithmLanding() {
     const [reducedMotion] = useState(prefersReducedMotion)
     const [playing, setPlaying] = useState(() => !prefersReducedMotion())
     const canvasRef = useRef(null)
+    const rootRef = useRef(null)
     // The playhead lives in a ref as well as in state: the rAF loop reads and
     // advances it every frame, and closing over the state value would pin it to
     // whatever it was when the effect last ran.
@@ -111,12 +112,22 @@ export default function AlgoVrithmLanding() {
         paint()
     }, [animating, paint, playheadSec])
 
+    // Space, PageDown, End and the arrow keys did nothing on this page. The
+    // reason is app-wide: html/body/#root are position:fixed (base.css), so the
+    // document never scrolls and this root owns the scroll instead — but a
+    // plain <main> cannot take focus, so the browser had no focused scrollable
+    // to act on and every reading key was dead. Making the root focusable and
+    // focusing it on mount hands those keys back. preventScroll because the
+    // point is to enable scrolling, not to perform one.
+    useEffect(() => {
+        rootRef.current?.focus({ preventScroll: true })
+    }, [])
+
     const enter = useCallback(() => appNavigate(ALGO_VRITHM_SCENE_PATH), [])
 
     return (
-        <main className="avl-root">
+        <main className="avl-root" ref={rootRef} tabIndex={-1}>
             <header className="avl-head">
-                <p className="avl-eyebrow">di.iiii · a virtual installation</p>
                 <h1 className="avl-title">algovrithm</h1>
                 <div className="avl-actions">
                     <button type="button" className="avl-enter" onClick={enter}>Enter the piece</button>

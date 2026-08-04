@@ -281,27 +281,47 @@ export const BEAT_SKETCHES = { tunnel, halo, scan, pattern, metaball, globe, sph
 // One frame of the preview: every live beat painted in edit order at its
 // cross-fade weight, over the lead beat's world colour so a seam never flashes
 // through to the page background.
+// One beat per frame, always the strongest — never two composited.
+//
+// This used to draw every live beat at its cross-fade weight, so a seam showed
+// the handover the way the piece does. On a 2D canvas it did not survive the
+// translation: each sketch opens by filling the frame with its own world
+// colour, so at a seam the second fill washes the first at half strength and
+// both beats land on the average of their two worlds. Two white-world beats
+// crossing turned the frame mid-grey and the black forms in it disappeared;
+// black-world beats crossing put one beat's rings behind the other's bars with
+// neither readable. It looked like a broken render, and the thing it was
+// faithfully reproducing — that windows overlap by 1.2s — was an editorial
+// fact this page no longer sets out to exhibit.
+//
+// A true dissolve needs each sketch composited opaquely offscreen and then
+// blended, which is a second canvas and a lot of machinery for a poster. The
+// honest cheap answer is to show one image at a time.
 export const paintFrame = (ctx, { width, height, elapsed, live }) => {
     ctx.setTransform(1, 0, 0, 1, 0, 0)
     ctx.globalAlpha = 1
-    ctx.fillStyle = live.length ? live[live.length - 1].beat.world : '#000000'
-    ctx.fillRect(0, 0, width, height)
 
-    live.forEach(({ beat, weight }) => {
-        const draw = BEAT_SKETCHES[beat.sketch]
-        if (!draw) return
-        const span = Math.max(0.001, beat.endSec - beat.startSec)
-        ctx.save()
-        ctx.globalAlpha = weight
-        draw(ctx, {
-            width,
-            height,
-            elapsed,
-            alpha: weight,
-            ink: beat.ink,
-            world: beat.world,
-            progress: Math.max(0, Math.min(1, (elapsed - beat.startSec) / span))
-        })
-        ctx.restore()
+    // Strongest wins, and on a tie the later one, so a seam reads as arriving
+    // somewhere rather than clinging on — the same rule leadBeatAtSec uses.
+    const lead = live.reduce((best, entry) => (best && best.weight > entry.weight ? best : entry), null)
+
+    ctx.fillStyle = lead ? lead.beat.world : '#000000'
+    ctx.fillRect(0, 0, width, height)
+    if (!lead) return
+
+    const draw = BEAT_SKETCHES[lead.beat.sketch]
+    if (!draw) return
+    const span = Math.max(0.001, lead.beat.endSec - lead.beat.startSec)
+    ctx.save()
+    ctx.globalAlpha = 1
+    draw(ctx, {
+        width,
+        height,
+        elapsed,
+        alpha: 1,
+        ink: lead.beat.ink,
+        world: lead.beat.world,
+        progress: Math.max(0, Math.min(1, (elapsed - lead.beat.startSec) / span))
     })
+    ctx.restore()
 }

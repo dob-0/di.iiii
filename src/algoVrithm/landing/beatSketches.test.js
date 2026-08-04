@@ -74,10 +74,15 @@ describe('paintFrame', () => {
         expect(ctx.calls.filter((name) => name === 'save')).toHaveLength(1)
     })
 
-    it('paints both beats inside a seam, so the handover cross-fades', () => {
+    // Was "paints both beats inside a seam". It painted both, and on a 2D
+    // canvas that produced mud: every sketch opens by filling the frame with
+    // its own world, so the second fill washed the first at half strength and
+    // both landed on the average of their worlds. One beat per frame now.
+    it('paints one beat inside a seam, never two composited', () => {
         const ctx = fakeContext()
+        expect(beatsAtSec(5).length).toBe(2)
         paintFrame(ctx, { width: 640, height: 360, elapsed: 5, live: beatsAtSec(5) })
-        expect(ctx.calls.filter((name) => name === 'save')).toHaveLength(2)
+        expect(ctx.calls.filter((name) => name === 'save')).toHaveLength(1)
     })
 
     it('survives every second of the piece', () => {
