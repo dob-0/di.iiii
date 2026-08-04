@@ -119,7 +119,7 @@ const algoVrithmSavePlugin = () => {
                         // Imported through Vite rather than with a bare import so
                         // the module resolves the same way it does in the app.
                         const { patchEditListSource } = await server.ssrLoadModule(
-                            '/algoVrithm/editListSource.js'
+                            '/raw/algovrithm-director/editListSource.js'
                         )
 
                         const source = fs.readFileSync(EDIT_LIST_PATH, 'utf8')

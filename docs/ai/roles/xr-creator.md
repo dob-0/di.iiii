@@ -22,9 +22,21 @@ You define the WHAT and WHY. VPE executes the HOW.
 **Exception — `src/algoVrithm/` you author outright, code included.**
 
 ```
-src/algoVrithm/                          ← algovrithm: sequences, palette, lights,
-                                          edit list, director panel, assets, tests
+src/algoVrithm/                          ← algovrithm, the ARTWORK: sequences,
+                                          palette, lights, edit list, assets, tests
+src/raw/algovrithm-director/             ← its EDITOR, moved into Raw 2026-08-05:
+                                          director panel, gizmo, source patcher
 ```
+
+The piece's files and the editor's files are physically separate now, but
+`AlgoVrithmExperience.jsx` still hosts the director panel itself when
+`director`/`embedded` are set — that is what Studio's code-space director page
+(`StudioCodeSpaceDirector.jsx`) mounts. Raw's `view.director` node
+(`DirectorPanelWindow.jsx`) is a second, independent way to reach the same
+`DirectorPanel` component. Both save through the same paths — "Save to
+source" patches `src/algoVrithm/sequences/index.js` in place (dev only), and
+"saved to this space" writes a timing overlay via `useSavedTiming.js` — so
+`sequences/index.js` remains the source of truth either way.
 
 This space is code rather than a project document — the Studio editor has nothing
 to open for it, so there is no VPE hand-off available. You write the Three.js
