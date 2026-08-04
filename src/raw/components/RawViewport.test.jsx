@@ -154,4 +154,29 @@ describe('RawViewport', () => {
         )
         expect(screen.getByText('Cursor is material.')).toBeTruthy()
     })
+
+    // Regression test for audit batch 2: the outer viewport component never
+    // accepted or forwarded selectedNodeId, so SceneContent compared every
+    // node against undefined and the in-scene selection pill never rendered —
+    // even though both editors and both WorldPanelWindows pass the prop.
+    it('renders the selection pill for the selected NODE, not just entities', () => {
+        const { container } = render(
+            <RawViewport
+                document={{
+                    worldState: {},
+                    entities: [],
+                    edges: [],
+                    nodes: [
+                        { id: 'cube-a', typeId: 'geom.cube', parentId: null, label: 'Chosen', values: {} },
+                        { id: 'cube-b', typeId: 'geom.cube', parentId: null, label: 'Other', values: {} }
+                    ]
+                }}
+                selectedNodeId="cube-a"
+                onWorldDoubleClick={() => {}}
+            />
+        )
+
+        const pills = [...container.querySelectorAll('.raw-selection-pill')].map((el) => el.textContent)
+        expect(pills).toEqual(['Chosen'])
+    })
 })

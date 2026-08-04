@@ -120,6 +120,10 @@ export default function BetaEditor({
     const [readChatCount, setReadChatCount] = useState(0)
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
     const [isWorldOverlay, setIsWorldOverlay] = useState(false)
+    // A scope can hold more than one universe.world, and the renders below
+    // otherwise always show `worldNode` (the first one) — so fullscreen from
+    // the second world's panel opened the first world instead.
+    const [requestedWorldNodeId, setRequestedWorldNodeId] = useState(null)
 
     const initialStoreState = useMemo(() => {
         if (projectId || !localStorageKey) return undefined
@@ -148,6 +152,7 @@ export default function BetaEditor({
         if (chatOpen) setReadChatCount(presence.messages.length)
     }, [chatOpen, presence.messages.length])
     const unreadChatCount = chatOpen ? 0 : Math.max(0, presence.messages.length - readChatCount)
+    const localSaveFailedRef = useRef(false)
     const topbarRef = useRef(null)
     const workflowRef = useRef(null)
     const [workspaceTop, setWorkspaceTop] = useState(168)
@@ -238,6 +243,16 @@ export default function BetaEditor({
         [authoredNodes, currentScopeId]
     )
     const hasWorldNode = Boolean(worldNode)
+    // Fullscreen/overlay show the world whose panel asked for them; everything
+    // else (the topbar World button) falls back to the scope's default world.
+    const displayedWorldNode = useMemo(() => {
+        if (!requestedWorldNodeId) return worldNode
+        return authoredNodes.find((node) => (
+            node.id === requestedWorldNodeId
+            && node.typeId === 'universe.world'
+            && (node.parentId || null) === currentScopeId
+        )) || worldNode
+    }, [requestedWorldNodeId, authoredNodes, currentScopeId, worldNode])
     // Per-universe chrome control (product decision 2026-07-17): walk up from
     // the current scope to the nearest ancestor universe.space node and read
     // its showChrome value — lets one universe be a normal authoring space
@@ -275,9 +290,24 @@ export default function BetaEditor({
         }
     }, [hasWorldNode])
 
+    // Once neither view is open, drop the panel's request so the topbar World
+    // button goes back to the scope's default world.
+    useEffect(() => {
+        if (!isWorldFullscreen && !isWorldOverlay) setRequestedWorldNodeId(null)
+    }, [isWorldFullscreen, isWorldOverlay])
+
     useEffect(() => {
         if (!isLocalWorkspace || !localStorageKey) return
-        writeLocalWorkspaceDocument(localStorageKey, document)
+        // The whole node document is stringified on every change, so quota
+        // exhaustion is realistic. Discarding the result meant saving stayed
+        // silently dead for the rest of the session and a reload reverted to
+        // the last successful write with no warning. Same one-time-alert
+        // shape as the asset-store quota path in useAssetRestore.
+        if (writeLocalWorkspaceDocument(localStorageKey, document)) return
+        if (localSaveFailedRef.current) return
+        localSaveFailedRef.current = true
+        console.error('[local-workspace] save failed — browser storage is full or unavailable')
+        alert('This workspace can no longer be saved to browser storage (it is full or unavailable). Export your work — reloading will lose changes made from now on.')
     }, [document, isLocalWorkspace, localStorageKey])
 
     useEffect(() => {
@@ -680,8 +710,12 @@ export default function BetaEditor({
                         type: 'setWorkspaceState',
                         payload: { patch: { liveWorldNodeIdByScope: { [node.parentId || '']: node.id } } }
                     })}
-                    onEnterFullscreen={() => setIsWorldFullscreen(true)}
+                    onEnterFullscreen={() => {
+                        setRequestedWorldNodeId(node.id)
+                        setIsWorldFullscreen(true)
+                    }}
                     onEnterOverlay={() => {
+                        setRequestedWorldNodeId(node.id)
                         setIsWorldOverlay(true)
                         applyLocalOps({
                             type: 'updateNode',
@@ -991,8 +1025,8 @@ export default function BetaEditor({
                         onCursorLeave={presence.clearCursor}
                         nodeScale={nodeScale}
                         showEmptyHint={false}
-                        scopeId={worldNode?.id}
-                        worldNode={worldNode}
+                        scopeId={displayedWorldNode?.id}
+                        worldNode={displayedWorldNode}
                     />
                 </div>
             )}
@@ -1015,8 +1049,8 @@ export default function BetaEditor({
                         onCursorLeave={presence.clearCursor}
                         nodeScale={nodeScale}
                         showEmptyHint={false}
-                        scopeId={worldNode?.id}
-                        worldNode={worldNode}
+                        scopeId={displayedWorldNode?.id}
+                        worldNode={displayedWorldNode}
                     />
                 </div>
             )}

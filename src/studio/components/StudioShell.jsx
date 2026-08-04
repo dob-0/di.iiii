@@ -346,16 +346,22 @@ export default function StudioShell({
                 if (modeForKey) {
                     e.preventDefault()
                     selectGizmoMode(modeForKey)
-                } else if (['x', 'y', 'z', 'a'].includes(e.key.toLowerCase()) && !transformOp) {
+                } else if (['x', 'y', 'z'].includes(e.key.toLowerCase()) && !transformOp) {
                     e.preventDefault()
                     e.stopImmediatePropagation()
-                    const key = e.key.toLowerCase()
-                    const axis = key === 'a' ? 'all' : key
+                    // Deliberately NOT 'a': this listener registers before
+                    // StudioEditor's (StudioShell is its child, and child
+                    // effects run first) and stopImmediatePropagation kills it
+                    // on the same window target — so arming on bare 'a' made
+                    // the documented "A — Select all" / "Alt+A — Deselect all"
+                    // unreachable. All-axes stays available inside
+                    // ModalTransform's own capture handler, where it belongs.
+                    const axis = e.key.toLowerCase()
                     if (selectedEntityIds.length > 0 && onStartTransform) {
                         // Arm the V1 modal using the current gizmo mode + this axis
                         onStartTransform(viewportGizmoMode, axis)
-                    } else if (axis !== 'all') {
-                        // No selection: just constrain the drag-handle gizmo axis (not meaningful for 'all')
+                    } else {
+                        // No selection: just constrain the drag-handle gizmo axis
                         setViewportGizmoAxis((current) => current === axis ? null : axis)
                         setViewportGizmoVisible(true)
                     }

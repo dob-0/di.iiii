@@ -116,6 +116,20 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
             session.moved = false
         }
 
+        // Esc is documented as "Cancel" in the shipped shortcuts help and is
+        // the Blender convention this operator is modeled on — it used to run
+        // the same finish() as Enter/Space, silently persisting (and
+        // broadcasting) the very transform the user was aborting.
+        const revertToBase = () => {
+            for (const e of session.entities) {
+                e.pos = [...e.base.pos]
+                e.rot = [...e.base.rot]
+                e.scale = [...e.base.scale]
+            }
+            cbRef.current.onPreview?.(buildPreviewMap())
+            session.moved = false
+        }
+
         const finish = () => {
             commitIfMoved()
             if (controls) controls.enabled = true
@@ -211,7 +225,11 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
                     : `${session.numeric}${event.key}`
                 applyNumericIfAny()
                 reportStatus()
-            } else if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+            } else if (event.key === 'Escape') {
+                event.preventDefault(); event.stopImmediatePropagation()
+                revertToBase()
+                finish()
+            } else if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault(); event.stopImmediatePropagation()
                 finish()
             }

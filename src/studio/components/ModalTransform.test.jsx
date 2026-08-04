@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import ModalTransform from './ModalTransform.jsx'
 
@@ -14,19 +14,27 @@ const entity = (id) => ({
 const setup = (props = {}) => {
     const onCancel = vi.fn()
     const onCommit = vi.fn()
+    const onPreview = vi.fn()
     const view = render(
         <ModalTransform
             op={{ mode: 'translate', seq: 1 }}
             selectedEntities={[entity('e1')]}
             controlsRef={{ current: null }}
-            onPreview={() => {}}
+            onPreview={onPreview}
             onCommit={onCommit}
             onCancel={onCancel}
             onStatus={() => {}}
             {...props}
         />
     )
-    return { ...view, onCancel, onCommit }
+    return { ...view, onCancel, onCommit, onPreview }
+}
+
+// Move the entity by locking an axis and typing an exact value, the way the
+// operator's own numeric-entry path works — no pointer movement needed.
+const moveBy = (amount) => {
+    fireEvent.keyDown(window, { key: 'x' })
+    for (const ch of String(amount)) fireEvent.keyDown(window, { key: ch })
 }
 
 describe('ModalTransform lifecycle', () => {
@@ -73,5 +81,37 @@ describe('ModalTransform lifecycle', () => {
         unmount()
 
         expect(onCancel).toHaveBeenCalledTimes(1)
+    })
+})
+
+// Regression test for audit batch 2: Escape ran the same finish() as
+// Enter/Space, so it COMMITTED the transform (persisted ops, broadcast to
+// collaborators) — while the shipped shortcuts help documents
+// "Click · Enter · Space: Confirm" and "Esc: Cancel" as distinct actions, and
+// Blender (which this operator is modeled on) reverts on Esc.
+describe('ModalTransform Esc cancels', () => {
+    it('reverts to the base transform and commits nothing', () => {
+        const { onCommit, onCancel, onPreview } = setup()
+
+        moveBy(5)
+        expect(onPreview).toHaveBeenCalled()
+
+        fireEvent.keyDown(window, { key: 'Escape' })
+
+        expect(onCommit).not.toHaveBeenCalled()
+        expect(onCancel).toHaveBeenCalledTimes(1)
+        // The last preview restores the original transform.
+        const finalPreview = onPreview.mock.calls.at(-1)[0]
+        expect(finalPreview.e1.position).toEqual([0, 0, 0])
+    })
+
+    it('Enter still commits the move', () => {
+        const { onCommit } = setup()
+
+        moveBy(5)
+        fireEvent.keyDown(window, { key: 'Enter' })
+
+        expect(onCommit).toHaveBeenCalledTimes(1)
+        expect(onCommit.mock.calls[0][0][0].transform.position).toEqual([5, 0, 0])
     })
 })

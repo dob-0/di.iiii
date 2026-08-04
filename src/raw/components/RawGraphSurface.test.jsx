@@ -263,4 +263,47 @@ describe('RawGraphSurface', () => {
         fireEvent.click(toggles[0])
         expect(onSetActive).toHaveBeenCalledWith(expect.objectContaining({ id: 'light-1' }))
     })
+
+    // Regression test for audit batch 2: the Delete/Backspace handler fired
+    // for any selectedNodeId without checking that the node is on THIS
+    // surface. Selection survives entering a card (pointerdown selects, then
+    // dblclick enters), so pressing Backspace inside a node's interior deleted
+    // the scope you were standing in — cascading over its whole subtree and
+    // dumping you back to the parent with everything gone.
+    it('ignores Delete for a selected node that is not on this surface', () => {
+        const insideNode = makeNode('geom.cube', { id: 'inside-1' })
+        const onDeleteNode = vi.fn()
+
+        render(
+            <RawGraphSurface
+                nodes={[insideNode]}
+                edges={[]}
+                selectedNodeId={'the-scope-i-am-inside'}
+                onDeleteNode={onDeleteNode}
+            />
+        )
+
+        fireEvent.keyDown(window, { key: 'Backspace' })
+        fireEvent.keyDown(window, { key: 'Delete' })
+
+        expect(onDeleteNode).not.toHaveBeenCalled()
+    })
+
+    it('still deletes a selected node that IS on this surface', () => {
+        const node = makeNode('geom.cube', { id: 'cube-1' })
+        const onDeleteNode = vi.fn()
+
+        render(
+            <RawGraphSurface
+                nodes={[node]}
+                edges={[]}
+                selectedNodeId={'cube-1'}
+                onDeleteNode={onDeleteNode}
+            />
+        )
+
+        fireEvent.keyDown(window, { key: 'Backspace' })
+
+        expect(onDeleteNode).toHaveBeenCalledWith('cube-1')
+    })
 })

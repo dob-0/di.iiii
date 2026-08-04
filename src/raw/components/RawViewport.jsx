@@ -304,6 +304,7 @@ export default function RawViewport({
     topInset = 0,
     document,
     selectedEntityId,
+    selectedNodeId,
     onSelectEntity,
     onSelectNode,
     onClearSelection,
@@ -407,12 +408,19 @@ export default function RawViewport({
                     near: 0.1,
                     far: 200
                 }}
-                onPointerMissed={() => onSelectEntity?.(null)}
+                onPointerMissed={() => {
+                    // A node selection lives in the shared workspace state, so
+                    // clearing it costs an op — only pay that when a node is
+                    // actually selected; otherwise keep the cheap local clear.
+                    if (selectedNodeId && onClearSelection) onClearSelection()
+                    else onSelectEntity?.(null)
+                }}
             >
                 <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />
                 <SceneContent
                     document={document}
                     selectedEntityId={selectedEntityId}
+                    selectedNodeId={selectedNodeId}
                     onSelectEntity={onSelectEntity}
                     onSelectNode={onSelectNode}
                     onWorldDoubleClick={onWorldDoubleClick}

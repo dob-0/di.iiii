@@ -239,4 +239,43 @@ describe('BetaGraphSurface', () => {
         rafSpy.mockRestore()
         fireEvent.pointerUp(window)
     })
+
+    // Regression test for audit batch 2 (twin of the RawGraphSurface case):
+    // Delete/Backspace fired for any selectedNodeId without checking it is on
+    // THIS surface, so pressing Backspace inside a node's interior deleted the
+    // scope you were standing in, subtree and all.
+    it('ignores Delete for a selected node that is not on this surface', () => {
+        const onDeleteNode = vi.fn()
+
+        render(
+            <BetaGraphSurface
+                nodes={[makeNode('geom.cube', { id: 'inside-1' })]}
+                edges={[]}
+                selectedNodeId={'the-scope-i-am-inside'}
+                onDeleteNode={onDeleteNode}
+            />
+        )
+
+        fireEvent.keyDown(window, { key: 'Backspace' })
+        fireEvent.keyDown(window, { key: 'Delete' })
+
+        expect(onDeleteNode).not.toHaveBeenCalled()
+    })
+
+    it('still deletes a selected node that IS on this surface', () => {
+        const onDeleteNode = vi.fn()
+
+        render(
+            <BetaGraphSurface
+                nodes={[makeNode('geom.cube', { id: 'cube-1' })]}
+                edges={[]}
+                selectedNodeId={'cube-1'}
+                onDeleteNode={onDeleteNode}
+            />
+        )
+
+        fireEvent.keyDown(window, { key: 'Backspace' })
+
+        expect(onDeleteNode).toHaveBeenCalledWith('cube-1')
+    })
 })

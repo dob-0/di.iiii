@@ -164,6 +164,7 @@ export default function RawEditor({
         if (chatOpen) setReadChatCount(presence.messages.length)
     }, [chatOpen, presence.messages.length])
     const unreadChatCount = chatOpen ? 0 : Math.max(0, presence.messages.length - readChatCount)
+    const localSaveFailedRef = useRef(false)
     const topbarRef = useRef(null)
     const workflowRef = useRef(null)
     const [workspaceTop, setWorkspaceTop] = useState(168)
@@ -321,7 +322,16 @@ export default function RawEditor({
 
     useEffect(() => {
         if (!isLocalWorkspace || !localStorageKey) return
-        writeLocalWorkspaceDocument(localStorageKey, document)
+        // The whole node document is stringified on every change, so quota
+        // exhaustion is realistic. Discarding the result meant saving stayed
+        // silently dead for the rest of the session and a reload reverted to
+        // the last successful write with no warning. Same one-time-alert
+        // shape as the asset-store quota path in useAssetRestore.
+        if (writeLocalWorkspaceDocument(localStorageKey, document)) return
+        if (localSaveFailedRef.current) return
+        localSaveFailedRef.current = true
+        console.error('[local-workspace] save failed — browser storage is full or unavailable')
+        alert('This workspace can no longer be saved to browser storage (it is full or unavailable). Export your work — reloading will lose changes made from now on.')
     }, [document, isLocalWorkspace, localStorageKey])
 
     useEffect(() => {
@@ -394,6 +404,17 @@ export default function RawEditor({
         applyLocalOps({
             type: 'setWorkspaceState',
             payload: { patch: { selectedNodeId: null } }
+        })
+    }
+
+    // universe.world is not a singleton, and the fullscreen/overlay renders
+    // always show the scope's live-marked world — so anything that opens a
+    // specific world must make that world the live one first.
+    const markWorldLive = (node) => {
+        if ((document.workspaceState?.liveWorldNodeIdByScope || {})[node.parentId || ''] === node.id) return
+        applyLocalOps({
+            type: 'setWorkspaceState',
+            payload: { patch: { liveWorldNodeIdByScope: { [node.parentId || '']: node.id } } }
         })
     }
 
@@ -720,12 +741,17 @@ export default function RawEditor({
                     scopeId={node.id}
                     worldNode={node}
                     isLive={(document.workspaceState?.liveWorldNodeIdByScope || {})[node.parentId || ''] === node.id}
-                    onSetLive={() => applyLocalOps({
-                        type: 'setWorkspaceState',
-                        payload: { patch: { liveWorldNodeIdByScope: { [node.parentId || '']: node.id } } }
-                    })}
-                    onEnterFullscreen={() => setIsWorldFullscreen(true)}
+                    onSetLive={() => markWorldLive(node)}
+                    onEnterFullscreen={() => {
+                        // The fullscreen/overlay renders always show `worldNode`
+                        // (the scope's live-marked world), so opening from a
+                        // second world's panel used to display a different
+                        // world than the one clicked. Mark it live first.
+                        markWorldLive(node)
+                        setIsWorldFullscreen(true)
+                    }}
                     onEnterOverlay={() => {
+                        markWorldLive(node)
                         setIsWorldOverlay(true)
                         applyLocalOps({
                             type: 'updateNode',

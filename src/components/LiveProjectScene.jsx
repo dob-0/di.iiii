@@ -1146,8 +1146,17 @@ function useLiveProjectDocument(projectId) {
                     applyIncomingOps(ops || [], Number(version))
                 },
                 onReady: async () => {
-                    const catchUp = await listProjectOps(projectId, versionRef.current)
-                    applyIncomingOps(catchUp.ops || [], Number(catchUp.latestVersion))
+                    // projectSyncService swallows a rejected onReady, so a
+                    // failed catch-up used to disappear with no retry: the
+                    // stream would then deliver op N+5 straight onto a
+                    // version-N document, permanently skipping N+1..N+4 with
+                    // zero output. Fall back to a full reload instead.
+                    try {
+                        const catchUp = await listProjectOps(projectId, versionRef.current)
+                        applyIncomingOps(catchUp.ops || [], Number(catchUp.latestVersion))
+                    } catch {
+                        void reloadDocument()
+                    }
                 },
                 onError: () => {
                     if (!documentRef.current) void reloadDocument()

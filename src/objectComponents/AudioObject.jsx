@@ -2,6 +2,16 @@ import React from 'react'
 import { PositionalAudio, Sphere } from '@react-three/drei'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
 
+// What HTMLMediaElement.src will read back for a given url — always absolute.
+export const resolveAudioSrc = (url = '') => {
+    if (!url) return ''
+    try {
+        return new URL(url, typeof window !== 'undefined' ? window.location.href : 'http://localhost').href
+    } catch {
+        return url
+    }
+}
+
 export default function AudioObject({
     assetRef,
     data,
@@ -90,7 +100,12 @@ export default function AudioObject({
         if (!audioEl) {
             audioEl = new Audio(sourceUrl)
             htmlAudioElRef.current = audioEl
-        } else if (audioEl.src !== sourceUrl) {
+        } else if (audioEl.src !== resolveAudioSrc(sourceUrl)) {
+            // HTMLMediaElement.src always reads back ABSOLUTE, while sourceUrl
+            // is a server-relative `/serverXR/api/…` path in every real
+            // document — so a raw comparison was always unequal and every
+            // effect re-run (a collaborator nudging volume, a loop toggle, an
+            // editor slider tick) reset playback to 0 and re-buffered the file.
             audioEl.pause()
             audioEl.src = sourceUrl
         }

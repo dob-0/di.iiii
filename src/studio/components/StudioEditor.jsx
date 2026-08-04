@@ -717,8 +717,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 handleDeleteSelected()
                 return
             }
-            // Frame selected — F (Maya/Unity) or "." (Blender numpad). Both supported.
-            if (event.key === 'f' || event.key === 'F' || event.key === '.') {
+            // Frame selected — F (Maya/Unity) or "." (Blender numpad). Both
+            // supported. The !meta guard matches the sibling Delete/A branches:
+            // without it, Ctrl/Cmd+F (find-in-page, preventable in Chrome and
+            // Firefox) was swallowed and the camera jumped instead.
+            if (!meta && (event.key === 'f' || event.key === 'F' || event.key === '.')) {
                 if (!selectedEntity) return
                 event.preventDefault()
                 handleFrameSelected()

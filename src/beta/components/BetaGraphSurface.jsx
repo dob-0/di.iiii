@@ -153,11 +153,17 @@ export default function BetaGraphSurface({
             const target = event.target
             const tag = target?.tagName?.toLowerCase?.()
             if (tag === 'input' || tag === 'textarea' || target?.isContentEditable) return
+            // Only nodes rendered on THIS surface. Selection survives entering
+            // a card (pointerdown selects, then dblclick enters), so without
+            // this guard Backspace deleted the scope you were standing inside
+            // — cascading over its whole subtree and dumping you back to the
+            // parent with everything gone.
+            if (!nodeById.has(selectedNodeId)) return
             onDeleteNode(selectedNodeId)
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [selectedNodeId, onDeleteNode])
+    }, [selectedNodeId, onDeleteNode, nodeById])
 
     const handleOutputPointerDown = (event, node, port) => {
         if (event.button !== 0) return

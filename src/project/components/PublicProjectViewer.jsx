@@ -246,8 +246,15 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 applyIncomingOps(ops || [], Number(version))
             },
             onReady: async () => {
-                const catchUp = await listProjectOps(projectId, versionRef.current)
-                applyIncomingOps(catchUp.ops || [], Number(catchUp.latestVersion))
+                // See LiveProjectScene: a swallowed catch-up failure lets the
+                // stream apply later ops over the gap, silently diverging the
+                // viewer until a full reload.
+                try {
+                    const catchUp = await listProjectOps(projectId, versionRef.current)
+                    applyIncomingOps(catchUp.ops || [], Number(catchUp.latestVersion))
+                } catch {
+                    void reloadDocument()
+                }
             },
             onError: () => {
                 if (!documentRef.current) {

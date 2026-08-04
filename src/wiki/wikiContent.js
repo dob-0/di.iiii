@@ -207,6 +207,8 @@ export const WIKI_ARTICLES = [
                 'Ctrl+Z — undo · Ctrl+Y or Ctrl+Shift+Z — redo (granular: reverts only your own last change, collaborator-safe)',
                 'Shift+D or Ctrl+D — duplicate · Delete/Backspace — remove',
                 'G / R / S — move, rotate, scale gizmo; X / Y / Z constrain the axis; hold Ctrl to snap or type an exact value (degrees for R, factor for S)',
+                'While moving/rotating/scaling: Enter, Space or click — confirm · Esc — cancel and put everything back',
+                'A — select all · Alt+A — deselect all',
                 'Mouse wheel — zoom (always; it never rotates the view)',
                 'WASD — walk when inside a space; click (or drag) to look with the mouse; scroll — step forward/back toward what you face',
                 'F — fly mode (Space / Q up, C / E down); on phones, up/down buttons appear while flying',
@@ -214,7 +216,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['shortcuts', 'controls', 'vr'],
-        updated: '2026-07-08'
+        updated: '2026-08-04'
     },
     {
         id: 'api-and-agents',
