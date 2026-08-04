@@ -43,7 +43,7 @@
 
 .avl-head {
     max-width: 54rem;
-    margin: 0 auto clamp(1.6rem, 4vw, 2.6rem);
+    margin: 0 auto clamp(2rem, 5vw, 3rem);
 }
 
 .avl-eyebrow {
@@ -60,14 +60,6 @@
     font-weight: 700;
     letter-spacing: -0.03em;
     line-height: 0.92;
-}
-
-.avl-lede {
-    margin: 0;
-    max-width: 42rem;
-    color: var(--avl-dim);
-    font-size: clamp(0.9rem, 2.1vw, 1.02rem);
-    line-height: 1.7;
 }
 
 .avl-actions {
@@ -95,11 +87,6 @@
 .avl-enter:focus-visible {
     background: var(--avl-lit);
     color: var(--avl-void);
-}
-
-.avl-actions-note {
-    color: var(--avl-dim);
-    font-size: 0.76rem;
 }
 
 /* 16:9 and not the headset's aspect: this is a poster frame, and pretending to
@@ -162,14 +149,6 @@
     outline-offset: 4px;
 }
 
-.avl-stage-note {
-    margin: 0.8rem 0 0;
-    max-width: 66ch;
-    color: var(--avl-dim);
-    font-size: 0.78rem;
-    line-height: 1.7;
-}
-
 /* The statement is the only long-form voice on the page and the only place a
    first person speaks. No card, no panel, no accent, and since the redesign no
    visible "The concept" label either — a paragraph that opens "I belong to a
@@ -216,51 +195,3 @@
    prefersReducedMotion() in AlgoVrithmLanding.jsx — the page opens paused and
    the rAF loop never starts. */
 
-/* The score: the seven movements in order. The cards were seven boxes with
-   hairlines, hover states and a click target each, and a box is chrome the work
-   does not have. Rules between the movements, nothing around them. */
-.avl-score {
-    max-width: 54rem;
-    margin: clamp(2.4rem, 5vw, 3.4rem) auto 0;
-}
-
-.avl-score-list {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    border-top: 1px solid var(--avl-rule);
-}
-
-.avl-score-line {
-    display: grid;
-    grid-template-columns: minmax(9rem, 13rem) 1fr;
-    gap: 0.4rem 1.8rem;
-    padding: 1.1rem 0;
-    border-bottom: 1px solid var(--avl-rule);
-}
-
-.avl-score-name {
-    color: var(--avl-ink);
-    font-size: 0.98rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-}
-
-/* The movement on screen, lit. This is what replaced the caption and the clock:
-   the page says WHICH movement is playing without saying what second it is. */
-.avl-score-line[aria-current='true'] .avl-score-name {
-    color: var(--avl-lit);
-}
-
-.avl-score-note {
-    color: var(--avl-dim);
-    font-size: 0.84rem;
-    line-height: 1.75;
-    max-width: 62ch;
-}
-
-@media (max-width: 640px) {
-    .avl-score-line {
-        grid-template-columns: 1fr;
-    }
-}

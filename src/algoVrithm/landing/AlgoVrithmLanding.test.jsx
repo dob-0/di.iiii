@@ -1,6 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { BEAT_CARDS } from './beatCards.js'
 
 const appNavigate = vi.fn()
 vi.mock('../../utils/appNavigate.js', () => ({ appNavigate: (...args) => appNavigate(...args) }))
@@ -26,12 +25,6 @@ describe('AlgoVrithmLanding', () => {
         HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue(null)
     })
 
-    it('lists every beat in the piece', async () => {
-        await renderLanding()
-        BEAT_CARDS.forEach((beat) => {
-            expect(screen.getAllByText(beat.title).length).toBeGreaterThan(0)
-        })
-    })
 
     it('sends Enter to the scene route, not the landing route', async () => {
         await renderLanding()
@@ -43,28 +36,43 @@ describe('AlgoVrithmLanding', () => {
         await renderLanding()
         // The timeline is gone; this button is what is left, and under reduced
         // motion it is the ONLY way a visitor reaches the moving preview.
-        expect(screen.getByRole('button', { name: 'Play the preview' })).toBeTruthy()
+        expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy()
     })
 
-    // The score replaced a slider nobody could discover without focusing it:
-    // the seven movements are now plain text in DOM order, and the one on
-    // screen is marked. This is the canvas's text equivalent, so it is the
-    // thing that must not quietly become decorative.
-    it('names the movement on screen without naming the second', async () => {
-        await renderLanding()
-        const score = screen.getByRole('region', { name: 'The score' })
-        const lit = within(score).getAllByRole('listitem').filter((li) => li.getAttribute('aria-current') === 'true')
-        expect(lit).toHaveLength(1)
-        expect(lit[0].textContent).toContain(BEAT_CARDS[0].title)
-        // No clock, no timecodes: nothing on this page reports a second.
-        expect(document.body.textContent).not.toMatch(/\d+\.\d\s*s/i)
-    })
 
     it('has nothing to operate but the way in and the pause', async () => {
         await renderLanding()
         expect(screen.queryByRole('slider')).toBeNull()
         expect(screen.getAllByRole('button').map((b) => b.textContent))
-            .toEqual(['Enter the piece', 'Play the preview'])
+            .toEqual(['Enter the piece', 'Play'])
+    })
+
+    // The page is built from the concept and nothing else. Three rounds of
+    // cutting removed three vocabularies — the repo's, the cutting room's, and
+    // the render pipeline's — and each one had looked like harmless description
+    // until it was read aloud. This is the guard that stops a fourth arriving:
+    // any production word that lands on the front door fails here.
+    it('speaks only the artist\'s vocabulary', async () => {
+        await renderLanding()
+        const text = document.body.textContent
+        const production = [
+            'metaball', 'test pattern', 'dispersion', 'raymarch', 'edit list',
+            'startSec', 'endSec', 'timeline', 'src/', 'three.js', 'shader',
+            'cross-fade', 'beat', 'clip', 'render'
+        ]
+        expect(production.filter((word) => text.toLowerCase().includes(word.toLowerCase()))).toEqual([])
+        // No timecode, no duration, no frequency: nothing here is a measurement.
+        expect(text).not.toMatch(/\d+\s*(s|sec|seconds|hz|m)\b/i)
+    })
+
+    it('carries the statement verbatim, and the six gestures as six lines', async () => {
+        await renderLanding()
+        const text = document.body.textContent.replace(/\s+/g, ' ')
+        expect(text).toContain('I belong to a generation that never had to cross the boundary')
+        expect(text).toContain('What if they are the rituals of my generation?')
+        expect(text).toContain('The algorithm is never seen, yet it continuously composes')
+        expect(text).toContain('I scroll. I swipe. I refresh. I wait. I record. I repeat.')
+        expect(document.querySelectorAll('.avl-gestures span')).toHaveLength(6)
     })
 
     // Same guard as SpaceHub's, for the same bug: html/body/#root are

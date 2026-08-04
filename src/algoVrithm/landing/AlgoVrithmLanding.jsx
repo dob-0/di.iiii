@@ -1,26 +1,29 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { ALGO_VRITHM_SCENE_PATH } from '../algoVrithmRouting.js'
-import { BEAT_CARDS, RUN_TIME_SEC, beatsAtSec, leadBeatAtSec } from './beatCards.js'
+import { RUN_TIME_SEC, beatsAtSec } from './beatCards.js'
 import { paintFrame } from './beatSketches.js'
 import './algoVrithmLanding.css'
 
 // The front door for algovrithm.
 //
-// A poster. It shows the piece moving, says why it exists, and opens the door.
-// It does not measure the piece.
+// The work's name, the way in, the work moving, and the artist's statement.
+// Nothing else. Every word of prose on this page is the artist's, verbatim.
 //
-// This page used to carry the edit on its face: a draggable timeline of the
-// seven clip windows, their 1.2s overlaps stacked on two rows, a playhead and a
-// running clock. That was a good exhibit and it is gone on purpose. It answered
-// a question about how the artefact was assembled, on the page of a work whose
-// subject is a system that composes without being seen — "the algorithm is
-// never seen, yet it continuously composes the reality I experience". Handing a
-// visitor a scrubber over the composition contradicts the sentence the page
-// exists to deliver, and it contradicted the lede directly above it, which
-// promises there is nothing to operate. The windows still live in
-// sequences/index.js and the director panel, which is where somebody who needs
-// them looks.
+// Three rounds of cutting got here, and each round removed a vocabulary rather
+// than a decoration. First the repo's: src/algoVrithm/, startSec/endSec, "a new
+// beat is a new file". Then the cutting room's: a draggable timeline of the
+// seven clip windows with their overlaps stacked on two rows, a playhead, a
+// running clock, timecodes on every beat. Then the render pipeline's: the beat
+// names themselves — "Metaball field", "Test pattern", "Dispersion sphere",
+// "Scan" are techniques, and a list of them is a spec sheet however well it is
+// set. None of that is in the concept, and the concept is what this page is
+// built from.
+//
+// What it costs is real and worth stating: a visitor can no longer find out
+// what the piece contains without entering it. That is the trade — the work is
+// 53 seconds long and the door is right there. The beats, their windows and
+// their overlaps live in sequences/index.js and the director panel.
 //
 // Deliberately three.js-free. The piece is a lazy route of its own
 // (/algovrithm/scene) and this page must not pull 1.6 MB of renderer for a
@@ -45,9 +48,6 @@ export default function AlgoVrithmLanding() {
     // advances it every frame, and closing over the state value would pin it to
     // whatever it was when the effect last ran.
     const playheadRef = useRef(0)
-
-    const live = useMemo(() => beatsAtSec(playheadSec), [playheadSec])
-    const lead = useMemo(() => leadBeatAtSec(playheadSec), [playheadSec])
 
     const paint = useCallback(() => {
         const canvas = canvasRef.current
@@ -118,13 +118,8 @@ export default function AlgoVrithmLanding() {
             <header className="avl-head">
                 <p className="avl-eyebrow">di.iiii · a virtual installation</p>
                 <h1 className="avl-title">algovrithm</h1>
-                <p className="avl-lede">
-                    On hyperreality: a reality composed through pixels, code, algorithms.
-                    Fifty-three seconds, looping. It plays itself — there is nothing to operate.
-                </p>
                 <div className="avl-actions">
                     <button type="button" className="avl-enter" onClick={enter}>Enter the piece</button>
-                    <span className="avl-actions-note">Best in a headset.</span>
                 </div>
             </header>
 
@@ -143,23 +138,8 @@ export default function AlgoVrithmLanding() {
                     className="avl-hold"
                     onClick={() => setPlaying((was) => !was)}
                 >
-                    {playing ? 'Pause the preview' : 'Play the preview'}
+                    {playing ? 'Pause' : 'Play'}
                 </button>
-
-                <p className="avl-stage-note">
-                    A flat stand-in. The work happens around you, and that is the part a
-                    rectangle cannot hold.
-                </p>
-
-                {/* The live region carries what the canvas carries, for anyone
-                    not getting the canvas: which movement is on, and where a
-                    seam holds two at once. It changes about fourteen times in
-                    the loop — the clock is not in here and there is no longer a
-                    clock anywhere to put back. Off-screen rather than dim: the
-                    same names are set visibly, and at leisure, in the score. */}
-                <p className="avl-live avl-sr" role="status" aria-live="polite">
-                    {live.map((entry) => entry.beat.title).join(' over ')}
-                </p>
             </section>
 
             {/* The artist's statement, as written. Nothing here is paraphrased. */}
@@ -203,32 +183,6 @@ export default function AlgoVrithmLanding() {
                 </p>
             </section>
 
-            {/* The score: seven movements in order, named, with no windows, no
-                timecodes and nothing to click. It is also the text equivalent of
-                the canvas for anyone not getting it — previously the only way to
-                discover what the piece contains was to find a slider and drive
-                it. role="list" is explicit because list-style:none drops list
-                semantics in Safari. */}
-            <section className="avl-score" aria-labelledby="avl-score-h">
-                <h2 className="avl-sr" id="avl-score-h">The score</h2>
-                {/* eslint-disable-next-line jsx-a11y/no-redundant-roles --
-                    redundant everywhere except Safari, which drops list
-                    semantics from any list carrying list-style:none. This one
-                    does, and it is the text equivalent of the canvas, so losing
-                    "list, 7 items" there is not a cosmetic loss. */}
-                <ol className="avl-score-list" role="list">
-                    {BEAT_CARDS.map((beat) => (
-                        <li
-                            key={beat.id}
-                            className="avl-score-line"
-                            aria-current={lead.id === beat.id ? 'true' : undefined}
-                        >
-                            <span className="avl-score-name">{beat.title}</span>
-                            <span className="avl-score-note">{beat.blurb}</span>
-                        </li>
-                    ))}
-                </ol>
-            </section>
         </main>
     )
 }
