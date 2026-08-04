@@ -29,7 +29,7 @@ const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 
 import { buildBetaProjectsPath, navigateToBetaPath } from '../utils/betaRouting.js'
 import { DEFAULT_PROJECT_SPACE_ID } from '../../project/services/projectsApi.js'
-import { getWorkspaceTopInset } from '../utils/windowLayout.js'
+import { getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import {
     clearLocalWorkspaceDocument,
     readLocalWorkspaceDocument,
@@ -184,14 +184,6 @@ export default function BetaEditor({
     )
     const activeSurface = workspaceState.activeSurface || 'graph'
     const workflow = getSurfaceWorkflow(activeSurface)
-    const visibleViewNodes = useMemo(
-        () => viewNodes.filter((node) => node.values?.frame?.visible !== false),
-        [viewNodes]
-    )
-    const topZIndex = useMemo(
-        () => Math.max(6, ...visibleViewNodes.map((node) => node.values?.frame?.zIndex || 1)),
-        [visibleViewNodes]
-    )
     const surfaceSelectedNode = useMemo(() => {
         if (!selectedNode) return null
         const selectedType = getNodeType(selectedNode.typeId)
@@ -209,6 +201,23 @@ export default function BetaEditor({
     // decision 2026-07-17 — see nodeRegistry.js/projectSchema.js comments).
     const scope = useNodeGraphScope({ nodes: authoredNodes })
     const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, reset: scopeReset } = scope
+    // Only the current scope's panels stay mounted, and none behind a
+    // fullscreen world: every mounted world panel holds a live WebGL context,
+    // and mounting them from every scope at once exhausts the browser's cap
+    // (and leaked one scope's windows over another's graph).
+    const visibleViewNodes = useMemo(
+        () => selectMountedPanelNodes({
+            nodes: viewNodes,
+            isPanel: () => true,
+            currentScopeId,
+            isWorldFullscreen
+        }),
+        [viewNodes, currentScopeId, isWorldFullscreen]
+    )
+    const topZIndex = useMemo(
+        () => Math.max(6, ...visibleViewNodes.map((node) => node.values?.frame?.zIndex || 1)),
+        [visibleViewNodes]
+    )
     // Panel nodes float as windows; graph cards are non-panel nodes in the current scope
     const graphCardNodes = useMemo(
         () => nodes.filter((node) => {

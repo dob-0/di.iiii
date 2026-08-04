@@ -18,6 +18,15 @@ name: dii-staging
 
 services:
   server:
+    # Override prod's `${IMAGE_TAG:-latest}` default. `:latest` is pushed ONLY
+    # by the production workflow (main branch), and the staging workflow pins
+    # IMAGE_TAG=<sha> inside its SSH session only -- it never writes it to this
+    # checkout's .env. So any manual compose op here (the very usage this
+    # file's header documents: reboot recovery, restart after an OOM) pulled
+    # production code and ran it at staging.di-studio.xyz, silently breaking
+    # the dev->staging->main verify contract. `:staging` is what the staging
+    # workflow already pushes.
+    image: ghcr.io/${REGISTRY_USER:-youruser}/dii-server:${IMAGE_TAG:-staging}
     environment:
       # Deliberately separate from production's secrets -- same signing
       # key across environments would let a staging session cookie be
@@ -44,6 +53,8 @@ services:
     mem_limit: 384m
 
   client:
+    # Same reason as the server image above -- never fall back to prod's tag.
+    image: ghcr.io/${REGISTRY_USER:-youruser}/dii-client:${IMAGE_TAG:-staging}
     # No `ports:` override here -- base docker-compose.yml's client port is
     # `${PORT:-80}:8080` (container side is 8080 since audit #27's non-root
     # nginx switch); the staging directory's .env sets the host-side PORT to

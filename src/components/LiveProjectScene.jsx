@@ -1388,7 +1388,11 @@ export default function LiveProjectScene({
         if (!gateEntity) return
         const pos = gateEntity.components?.transform?.position
         if (!Array.isArray(pos)) return
-        playerRef.current = { x: pos[0], z: pos[2] + 6, yaw: Math.PI, pitch: 0 }
+        // Mutate in place for the same reason as the spawn effect above:
+        // replacing playerRef.current orphans Walker's mount-time look
+        // closure (mouse/touch-look silently dead), and a plain object
+        // literal would also drop altY.
+        Object.assign(playerRef.current, { x: pos[0], z: pos[2] + 6, yaw: Math.PI, pitch: 0 })
     }, [gateEntity, interactive])
 
     const worldState = doc?.worldState || {}

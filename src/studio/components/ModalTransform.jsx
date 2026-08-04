@@ -240,6 +240,18 @@ export default function ModalTransform({ op, selectedEntities, controlsRef, onPr
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [op?.seq])
 
+    // Unmount only (NOT on an op.seq change, which would cancel the new op):
+    // a session still open here means we were unmounted without finish() —
+    // StudioSceneContent drops us as soon as the selection empties, which a
+    // collaborator's delete or a remote document replace can do mid-modal.
+    // Without this, transformOp stays set forever upstream and every keyboard
+    // shortcut plus the drag gizmo is dead until a full remount.
+    useEffect(() => () => {
+        if (!sessionRef.current) return
+        sessionRef.current = null
+        cbRef.current.onCancel?.()
+    }, [])
+
     return (
         <>
             {hudLines.length > 0 && (
