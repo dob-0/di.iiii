@@ -321,24 +321,94 @@ The most disruptive day-to-day cost, and the one most likely to be discovered la
 
 ## 7. Open questions — resolve before Stage 2
 
+Each question below carries a **recommendation** added 2026-08-04, re-verified
+against the code as it stands (`src/shared/projectSchema.js`,
+`src/studio/components/StudioViewport.jsx`, `StudioShellPanels.jsx`,
+`src/raw/components/RawViewport.jsx`, `src/raw/utils/viewportWorldState.js`).
+They are proposals, not decisions: **§7 is still unsigned.** Sign-off means
+striking through the recommendation you reject, not silence.
+
 1. **`entities[]` or `nodes[]`?** A single addressable tree must pick one type system
    or explicitly bridge them. This is the load-bearing unknown; Stage 2 cannot be
    estimated until it is answered. Studio's shipped viewport runs on `entities[]`;
    the nesting mechanism (`parentId`) lives on `nodes[]`.
+
+   > **Correction to the premise:** `parentId` is not exclusive to `nodes[]`.
+   > `normalizeEntity` has carried `parentId: … || null` since before this spec was
+   > written; `StudioViewport` builds a real parent→children map and renders only
+   > roots recursively; `StudioShellPanels` ships drag-to-reparent
+   > (`onReparentEntity`); `deleteEntity` cascades over descendants with the
+   > visited-set cycle guard from audit batch 1. **Entities already nest, in the
+   > shipped lane, with a UI for it.**
+   >
+   > **Recommendation: address `entities[]`. Add `slug` to the entity, not the node.**
+   > URLs are a public-surface contract, and the public surfaces
+   > (`PublicProjectViewer`, `LiveProjectScene`, the shared `buildAssetMap`) render
+   > entities. `nodes[]` lives in Beta and Raw — two independent experimental forks
+   > that AGENTS.md explicitly says are not the shipped lane; addressing them would
+   > freeze an experiment as a permanent public contract.
+   >
+   > **No bridge is needed, and none should be built.** `entity.parentId` only ever
+   > points at another entity, and node scoping (`node.parentId`) only ever points at
+   > another node — `RawViewport` renders the two as co-resident but unrelated sets.
+   > The entity tree is therefore closed, so it is addressable on its own. If a node
+   > lane ever ships publicly it gets `slug` by the same mechanism; a bridge is only
+   > required if one URL must cross from an entity into a node subtree, which nothing
+   > does today.
+   >
+   > Cost of this answer: one nullable field, added in **both** schema twins
+   > (`src/shared/projectSchema.js` and `shared/projectSchema.cjs` — they drift, see
+   > known-fixes) plus sibling-uniqueness validation on create/reparent.
+
 2. **Do spaces nest?** This spec assumes spaces are the flat top level — the tenancy
    and permission boundary — and only their contents nest. If spaces nest into
    spaces, the public grammar still holds (the path just gets deeper) but the
    permission model does not, and that needs its own pass.
+
+   > **Recommendation: no — spaces stay flat.** Every grant, role and read gate in
+   > `serverXR` keys on a single `spaceId`; nesting turns each of those into a walk
+   > up an ancestor chain with an inheritance rule to invent (does a child space
+   > inherit its parent's editors? can it be more private than its parent?). That is
+   > a second spec, and nothing shipped is asking for it. Revisit only when a real
+   > org/tenant hierarchy exists.
+
 3. **Slug uniqueness scope.** Sibling-unique is proposed. Sibling-unique means moving
    a node can force a rename; globally-unique-per-space avoids that but makes deep
    trees noisy. Product call.
+
+   > **Recommendation: sibling-unique**, as proposed — it matches how people name
+   > things inside folders, and it is the only rule that stays checkable locally as
+   > a tree grows. The forced-rename objection is answered by §7.4's fallback: a
+   > rename on move is rare, and it no longer breaks links when it happens.
+
 4. **What happens to a node's URL when it moves in the tree?** Renaming already has an
    answer (old slug keeps working via the shipped 3a behaviour). Reparenting does not.
    Without one, the tree's most natural operation silently breaks links.
+
+   > **Recommendation: never store a redirect history. Resolve, then fall back once.**
+   > `/api/resolve/:space/*path` walks the path segment by segment as specified. On a
+   > miss, it makes exactly one more attempt: look for that **last** segment's slug
+   > anywhere in the project. Unique hit → `301` to the current canonical path.
+   > Zero or ambiguous hits → `404`, never a partial resolve.
+   >
+   > This keeps reparenting free (no per-move bookkeeping, no alias table that grows
+   > forever and leaks the old tree shape), it degrades to the existing `404`
+   > contract rather than to a wrong page, and `/{space}/p/{id}` remains the
+   > guaranteed-stable path that never redirects — already the convention every
+   > raw-id link surface uses.
+
 5. **Single-host mode for self-hosters.** The split must degrade to one host for
    `npm run selfhost` installs. Simplest answer is a config flag that falls back to
    the `/-/`-infix scheme on a single host — which means both schemes must be
    implemented. Confirm this is wanted before assuming it.
+
+   > **Recommendation: yes, keep it — and make local dev run in single-host mode by
+   > default.** Self-hosting is a stated non-negotiable, and one host is what a
+   > self-hoster with one domain and one cert actually has. The real risk is not the
+   > implementation cost but rot: a second scheme nobody exercises is broken by the
+   > time it is needed. Running dev on the `/-/` infix means the fallback is
+   > exercised every day and the split-host path is what staging verifies —
+   > both stay alive, and neither becomes the untested one.
 
 ---
 
