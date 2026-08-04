@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createHeroField, stepSeparation } from './heroField.js'
 
 // jsdom has no WebGL, so the context is a stub. That is enough for the two
@@ -114,6 +116,33 @@ describe('heroField stays honest about the piece', () => {
         const dead = 20
         expect(born / height).toBeLessThan(halfFrame * 0.25)
         expect(dead / height).toBeGreaterThan(halfFrame)
+    })
+})
+
+// jsdom does no layout, so the overlap itself cannot be asserted here — it was
+// found and is re-checked by looking at the page at three viewport widths. What
+// a unit test CAN hold is the thing whose absence caused it: the fixed control
+// had no backing of any kind, so the statement scrolled straight under it.
+describe('the pause control is not transparent to the text under it', () => {
+    // NOT new URL('./x.css', import.meta.url): Vite rewrites that form into a
+    // resolved asset URL, and readFileSync is then handed an http one.
+    const css = readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'algoVrithmLanding.css'), 'utf8')
+    const backing = css.match(/\.avl-hold::before \{[^}]+\}/)
+
+    it('has a backing layer', () => {
+        expect(backing, '.avl-hold::before is gone — PAUSE will land on the statement again').not.toBeNull()
+    })
+
+    it('is fully opaque behind the control, not merely dimmed', () => {
+        // A partial fade let a line read THROUGH the word PAUSE, which is the
+        // same collision in a politer register. The first stop must be the
+        // solid token, held to a percentage above the control's cap height.
+        expect(backing[0]).toMatch(/var\(--avl-void\) 0 (\d+)%/)
+        expect(Number(backing[0].match(/var\(--avl-void\) 0 (\d+)%/)[1])).toBeGreaterThanOrEqual(40)
+    })
+
+    it('leaves room for the statement to be scrolled clear of it', () => {
+        expect(css).toMatch(/\.avl-statement \{[^}]*padding-bottom:/)
     })
 })
 

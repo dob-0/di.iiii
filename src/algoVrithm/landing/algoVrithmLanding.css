@@ -167,7 +167,38 @@
 }
 
 /* The only control, kept out of the reading column: an obligation rather than
-   part of the page. */
+   part of the page.
+
+   It is FIXED and the statement scrolls under it, and on desktop that is fine
+   because the reading column starts 288px in and the control sits in the left
+   margin. Every viewport without that gutter — phone, tablet — put PAUSE on top
+   of a line of the statement and made both unreadable.
+
+   So the page dims toward its bottom edge, and the control sits in the dim.
+   That is the same scrim vocabulary the reading state already uses rather than
+   a new bar or a new surface, and it fixes the general case too: text no longer
+   runs off the bottom edge mid-sentence on any viewport. */
+.avl-hold::before {
+    content: '';
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: clamp(5rem, 13vh, 7.5rem);
+    z-index: -1;
+    pointer-events: none;
+    /* Opaque up to 45%, which is above the control's own cap height at every
+       viewport in the sweep — a partial fade there still let a line of the
+       statement read THROUGH the word PAUSE, which is the same collision in a
+       politer register. Only the top half of the strip fades. */
+    background: linear-gradient(
+        to top,
+        var(--avl-void) 0 45%,
+        rgba(13, 17, 20, 0.9) 62%,
+        rgba(13, 17, 20, 0)
+    );
+}
+
 .avl-hold {
     position: fixed;
     left: clamp(1.1rem, 5vw, 4rem);
@@ -227,6 +258,9 @@
 .avl-statement {
     max-width: 54rem;
     margin: clamp(2.4rem, 5vw, 3.4rem) auto;
+    /* Clears the bottom fade, so the last sentence of the statement can be
+       scrolled fully out from under it rather than resting in the dim. */
+    padding-bottom: clamp(5.5rem, 14vh, 8rem);
     color: var(--avl-ink);
     font-size: clamp(0.94rem, 2.2vw, 1.02rem);
     line-height: 1.7;
