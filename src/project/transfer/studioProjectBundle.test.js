@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createStudioProjectBundle, readStudioProjectBundle } from './studioProjectBundle.js'
 
 const sourceDocument = {
@@ -70,5 +70,47 @@ describe('isFirstPartyAssetUrl', () => {
         const { isFirstPartyAssetUrl } = await import('./studioProjectBundle.js')
         expect(isFirstPartyAssetUrl('https://evil.example/asset.png')).toBe(false)
         expect(isFirstPartyAssetUrl('//evil.example/asset.png')).toBe(false)
+    })
+})
+
+// Regression guard for audit batch 2 (silent HTML-fallback class): stored
+// verbatim `/api/…` candidates hit nginx's SPA fallback on prod and answer
+// 200 text/html. Packing that wrote the HTML shell into the .studio.zip under
+// an image/model filename, and re-import uploaded the corrupt bytes.
+describe('bundle asset download HTML guard', () => {
+    const withFetch = (impl) => {
+        vi.stubGlobal('fetch', vi.fn(impl))
+        vi.stubGlobal('window', { location: { origin: 'https://di-studio.xyz' } })
+    }
+
+    afterEach(() => {
+        vi.unstubAllGlobals()
+    })
+
+    it('skips a 200 text/html candidate and uses the next real one', async () => {
+        withFetch(async (url) => (url.startsWith('/api/')
+            ? { ok: true, headers: { get: () => 'text/html' }, blob: async () => new Blob(['<!doctype html>']) }
+            : { ok: true, headers: { get: () => 'image/png' }, blob: async () => new Blob(['png-bytes']) }))
+
+        const bundle = await createStudioProjectBundle({
+            projectMeta: { id: 'project-1', spaceId: 'main', title: 'Portable' },
+            assets: [{ id: 'asset-1', name: 'texture.png', mimeType: 'image/png', size: 3, url: '/api/assets/asset-1' }]
+        })
+        const zip = await JSZip.loadAsync(await asArrayBuffer(bundle))
+        const project = JSON.parse(await zip.file('project.json').async('string'))
+        expect(await zip.file(project.assets[0].archivePath).async('string')).toBe('png-bytes')
+    })
+
+    it('fails the export rather than packing HTML when every candidate is the SPA shell', async () => {
+        withFetch(async () => ({
+            ok: true,
+            headers: { get: () => 'text/html' },
+            blob: async () => new Blob(['<!doctype html>'])
+        }))
+
+        await expect(createStudioProjectBundle({
+            projectMeta: { id: 'project-1', spaceId: 'main', title: 'Portable' },
+            assets: [{ id: 'asset-1', name: 'texture.png', mimeType: 'image/png', size: 3, url: '/api/assets/asset-1' }]
+        })).rejects.toThrow(/HTML instead of asset/)
     })
 })

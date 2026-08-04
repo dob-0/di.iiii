@@ -15,7 +15,7 @@ import {
     listProjectOps
 } from '../project/services/projectsApi.js'
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
-import { getApiSession } from '../services/apiClient.js'
+import { ensureGuestSession } from '../services/guestSession.js'
 import { buildAssetMap } from '../project/viewport/buildAssetMap.js'
 import BoxObject from '../objectComponents/BoxObject.jsx'
 import PlaneObject from '../objectComponents/PlaneObject.jsx'
@@ -60,15 +60,6 @@ const isGateEntity = (entity) => /gate|threshold|entrance/i.test(entity?.name ||
 const COARSE_POINTER = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
 const BILLBOARD_TEXT_SCALE = COARSE_POINTER ? 0.45 : 1
 
-// Same fix as GridFloorBackground: any page that renders a live scene
-// without going through AuthGate has no session cookie yet on first paint.
-let guestSessionPromise = null
-const ensureGuestSession = () => {
-    if (!guestSessionPromise) {
-        guestSessionPromise = getApiSession().catch(() => null)
-    }
-    return guestSessionPromise
-}
 
 function EntityVisual({ entity, assetMap }) {
     const media = entity.components?.media || {}

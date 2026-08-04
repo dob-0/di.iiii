@@ -1,6 +1,7 @@
 import JSZip from 'jszip'
 import { normalizeProjectDocument } from '../../shared/projectSchema.js'
 import { getAssetUrlCandidates } from '../../services/assetSources.js'
+import { isHtmlLikeMimeType } from '../../utils/assetContentType.js'
 import { apiBaseUrl } from '../../services/apiClient.js'
 
 const PROJECT_ENTRY = 'project.json'
@@ -57,6 +58,15 @@ const fetchAssetBlob = async (asset, projectId) => {
             const response = await fetch(url, { credentials, cache: 'no-store' })
             if (!response.ok) {
                 lastError = new Error(`${response.status} ${response.statusText}`.trim())
+                continue
+            }
+            // A stored verbatim `/api/…` candidate hits nginx's SPA fallback on
+            // prod and answers 200 text/html — packing that as the asset would
+            // write the HTML shell into the .studio.zip under an image/model
+            // filename and re-import it as the asset's bytes. Same guard the
+            // assetSources loader already applies.
+            if (isHtmlLikeMimeType(response.headers?.get?.('content-type') || '')) {
+                lastError = new Error(`URL returned HTML instead of asset: ${url}`)
                 continue
             }
             return response.blob()

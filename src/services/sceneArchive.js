@@ -1,4 +1,5 @@
 import JSZip from 'jszip'
+import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
 
 export const collectSceneAssetRefs = (objects = []) => {
     const refs = new Map()
@@ -49,6 +50,11 @@ export const resolveAssetEntries = async (
                 try {
                     const response = await fetch(url)
                     if (!response.ok) continue
+                    // A candidate that resolves to nginx's SPA fallback (or any
+                    // HTML error page served with 200) would be archived as the
+                    // asset's bytes and mark it resolved — bypassing the
+                    // onMissingAsset report that exists to surface bad assets.
+                    if (isHtmlLikeMimeType(response.headers?.get?.('content-type') || '')) continue
                     entries.push({ meta, blob: await response.blob(), source: 'remote', sourceUrl: url })
                     resolved = true
                     break

@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react'
 import { saveAssetBlob, dataUrlToBlob, blobToDataUrl, hasAssetStoreQuotaExceeded, resetAssetStoreQuotaExceeded } from '../storage/assetStore.js'
 import { registerAssetSources, clearAssetSources, setAssetSource } from '../services/assetSources.js'
 import { isContentAddressedAssetUrl } from '../utils/contentAddressedAsset.js'
+import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
 
 export function useAssetRestore({
     defaultSceneRemoteBase = '',
@@ -85,10 +86,15 @@ export function useAssetRestore({
                         // of force-bypassing it (2026-07-17 perf audit).
                         const cache = isContentAddressedAssetUrl(item.id) ? 'default' : 'no-store'
                         const response = await fetch(item.url, { cache })
-                        if (response.ok) {
+                        // A stored server-relative `/api/…` url answers 200
+                        // text/html through nginx's SPA fallback on prod;
+                        // writing that into local asset storage produces a
+                        // broken texture with no error anywhere. The sibling
+                        // loader in useSceneApply already skips text/html.
+                        if (response.ok && !isHtmlLikeMimeType(response.headers?.get?.('content-type') || '')) {
                             blob = await response.blob()
                         } else {
-                            // ignore
+                            // ignore — falls through to the fallback-asset path
                         }
                     } catch {
                         // ignore
