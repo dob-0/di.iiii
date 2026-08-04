@@ -101,7 +101,6 @@ const aiDocFilesForSafetyScan = [
 const rotScanFiles = [
   'AGENTS.md',
   'CHEATSHEET.md',
-  'AI_WORKFLOW.md',
   'ONBOARDING.md',
   ...canonicalScopeFiles,
   '.claude/agents',

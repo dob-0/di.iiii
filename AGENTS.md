@@ -34,10 +34,9 @@ Full company guide: [docs/ai/roles/README.md](docs/ai/roles/README.md).
 
 ## Model & Token Efficiency — Burn the Minimum
 
-Use the cheapest model that can do the job. Delegate analysis/docs/planning to Ollama first; escalate to Claude only when file edits are needed.
+Use the cheapest model that can do the job.
 
 ```text
-Free (Ollama):  bash scripts/ollama-task.sh fast|deep|coder "..."   (zero API credits)
 Haiku  → single-file edits, lint fixes, small tests
 Sonnet → feature work, layout bugs, multi-file changes   ← DEFAULT
 Opus   → architecture, auth/security, non-negotiables review

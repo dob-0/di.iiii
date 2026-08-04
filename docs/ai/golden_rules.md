@@ -58,8 +58,8 @@ Hetzner VPS on 2026-07-15 (`docs/deploy/LIVE_DEPLOY.md` — the doc `AGENTS.md` 
 truth"); an agent session afterward still cited the old `publish-cpanel-prebuilt-v2.yml` workflow
 from session memory instead of re-reading that doc. Before citing a deploy workflow name or infra
 topology fact, re-read `docs/deploy/LIVE_DEPLOY.md` rather than recalling it. Before citing a
-model/tool name (e.g. an Ollama tag), verify it still exists (`ollama list` or equivalent) rather
-than trusting cached knowledge of what used to be configured.
+model or tool name, verify it still exists rather than trusting cached knowledge of what used
+to be configured — the local-model lane was documented here for months after it was gone.
 
 ### Run lint and tests after every code change
 ```bash
@@ -194,7 +194,7 @@ If `git status` shows unstaged edits you didn't make, assume another agent is mi
 
 ### Size every large task against usage limits before starting — and never let a limit brick the process
 
-**Rule:** Before starting any large task (multi-hour, multi-file, or fan-out/multi-agent), size it against Claude usage limits — the 5-hour rolling session window and the weekly cap. If usage state is known (`/usage`, or the user says they're near a limit), factor it in; if unknown, assume mid-window and route to the cheapest adequate model per the existing model-routing rules (Ollama free lane first for analysis/docs/planning). If the task plausibly won't fit the remaining window, split it into checkpointable phases *before* starting — each phase must end in a state safe to stop at: tests pass, work committed locally, nothing half-edited.
+**Rule:** Before starting any large task (multi-hour, multi-file, or fan-out/multi-agent), size it against Claude usage limits — the 5-hour rolling session window and the weekly cap. If usage state is known (`/usage`, or the user says they're near a limit), factor it in; if unknown, assume mid-window and route to the cheapest adequate model per the existing model-routing rules. If the task plausibly won't fit the remaining window, split it into checkpointable phases *before* starting — each phase must end in a state safe to stop at: tests pass, work committed locally, nothing half-edited.
 
 **Why:** A limit hit mid-task with files half-edited, WIP only in chat context, and no resume notes bricks the process: the next window starts cold, re-investigates, and may discard or clobber the unfinished work. Planning against the budget up front costs one minute; recovering from an unplanned cutoff costs a session.
 
@@ -205,7 +205,7 @@ If `git status` shows unstaged edits you didn't make, assume another agent is mi
 4. Update CURRENT.md's Open section with exact resume state: what's done, what's next, which files are mid-flight.
 Resume the next window from CURRENT.md, not from memory.
 
-**Files:** `CURRENT.md` (Open section = resume state), `docs/ai/roles/model-routing.md` (cheapest-adequate-model routing), `scripts/ollama-task.sh` (free lane).
+**Files:** `CURRENT.md` (Open section = resume state), `docs/ai/roles/model-routing.md` (cheapest-adequate-model routing).
 
 ### Valuable perks and conventions get codified the same session they appear — never left only in chat
 

@@ -184,7 +184,7 @@ Every task has one primary owner. Match the file path to the role, read the role
 | \`scripts/\`, \`deploy/\`, \`.github/workflows/\`, \`Dockerfile\` | Infrastructure Engineer (IE) | \`docs/ai/roles/infrastructure-engineer.md\` | Haiku |
 | \`*.test.js\`, \`*.test.jsx\` | QA/Test Engineer (QA) | \`docs/ai/roles/qa-test-engineer.md\` | Haiku |
 | \`AGENTS.md\`, \`MANIFESTO.md\`, \`docs/architecture/\` | Technical Architect (TA) | \`docs/ai/roles/technical-architect.md\` | Opus |
-| \`docs/\`, \`PROGRESS.md\`, \`golden_rules.md\` | Documentation Engineer (DE) | \`docs/ai/roles/documentation-engineer.md\` | Ollama dob-fast |
+| \`docs/\`, \`PROGRESS.md\`, \`golden_rules.md\` | Documentation Engineer (DE) | \`docs/ai/roles/documentation-engineer.md\` | Haiku |
 
 Full guide: \`docs/ai/roles/README.md\` · Model routing: \`docs/ai/roles/model-routing.md\`
 
@@ -195,8 +195,7 @@ const TOKEN_EFFICIENCY_RULES = `## Token / Context Efficiency
 - Read \`AGENTS.md\`, \`PROGRESS.md\`, nearest scoped \`AGENTS.md\`, and your role card — then stop loading files.
 - Do not pre-read docs, architecture files, or tests "just in case". Read them only if blocked.
 - Use targeted grep over directory scans. Stop and summarize every 5 tool calls.
-- Free local analysis: \`bash scripts/ollama-task.sh fast "question"\` — burns zero API credits.
-- Model tiers: Ollama (free, analysis only) → Haiku (simple edits) → Sonnet (features) → Opus (arch/security only).`
+- Model tiers: Haiku (simple edits) → Sonnet (features) → Opus (arch/security only). There is no local tier.`
 
 const renderCopilotRepoInstructions = () => `# GitHub Copilot Repository Instructions
 
