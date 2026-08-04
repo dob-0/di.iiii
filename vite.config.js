@@ -156,6 +156,19 @@ export default {
     root: 'src/',
     publicDir: '../public/',
     envDir: '../',
+    // Keep the dep-optimizer cache in the WORKTREE, not in node_modules.
+    //
+    // Worktrees symlink node_modules back to the main checkout (cheap, no
+    // reinstall), so vite's default `node_modules/.vite` is one shared
+    // directory for every server on this machine. Two dev servers then
+    // re-optimize into each other: the second run rewrites the chunk files
+    // while the first still serves entry modules pointing at the old chunk
+    // names. `@react-three/fiber` resolved to the pre-swap chunk and
+    // `@react-three/xr` to the post-swap one - two live copies of R3F, two
+    // React contexts, and every Canvas died with "R3F: Hooks can only be
+    // used within the Canvas component!" on a page that had not changed.
+    // ROOT_DIR is this file's own directory, so each worktree gets its own.
+    cacheDir: path.resolve(ROOT_DIR, '.vite-cache'),
     define: {
         __APP_VERSION__: JSON.stringify(APP_VERSION),
         __APP_GIT_BRANCH__: JSON.stringify(APP_GIT_BRANCH),
