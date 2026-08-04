@@ -270,6 +270,61 @@ describe('vanity slugs: space + project public handles', () => {
         await expect(guestShare.json()).resolves.toMatchObject({ code: 'auth_required' })
     })
 
+    // Regression guard for audit batch 2, same shape as the commons case above:
+    // `requireSignedInUser` tested only `state.type === 'session'`, but anonymous
+    // guests carry the SAME signed session cookie and resolve to that type on
+    // every request after issuance. So the check meant to gate GitHub sync
+    // management was a no-op for guests, exposing the App's whole installed-repo
+    // list (including collaborators' private repos) to any visitor.
+    it('GitHub sync routes reject an anonymous guest — a session cookie is not an account', async () => {
+        const server = await startServer({
+            requireAuth: true,
+            extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false' }
+        })
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
+
+        for (const route of ['/api/github/repos', '/api/github/app']) {
+            const res = await fetch(`${server.baseUrl}${route}`, { headers: { Cookie: guestCookie } })
+            expect(res.status).toBe(403)
+            await expect(res.json()).resolves.toMatchObject({ error: expect.stringMatching(/sign in/i) })
+        }
+    })
+
+    // Regression guard for audit batch 2: a create op with no id was applied
+    // with a SERVER-minted id but broadcast verbatim, so every peer minted a
+    // different one and the documents forked silently until a full reload.
+    it('rejects a create op with no id instead of persisting a batch that cannot converge', async () => {
+        const server = await startServer()
+        await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Op Guard' })
+        })
+
+        const res = await fetch(`${server.baseUrl}/api/projects/op-guard/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [{ type: 'createEntity', payload: { entity: { type: 'box' } } }]
+            })
+        })
+        expect(res.status).toBe(400)
+        await expect(res.json()).resolves.toMatchObject({ code: 'op_missing_id' })
+
+        // The same op WITH an id is accepted, so the guard isn't just blanket-rejecting.
+        const ok = await fetch(`${server.baseUrl}/api/projects/op-guard/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [{ type: 'createEntity', payload: { entity: { id: 'e1', type: 'box' } } }]
+            })
+        })
+        expect(ok.status).toBe(200)
+    })
+
     it('scopes project slug uniqueness to the owning space only — the same slug is fine in two different spaces', async () => {
         const server = await startServer()
         for (const spaceId of ['space-a', 'space-b']) {

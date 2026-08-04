@@ -74,7 +74,7 @@ jobs:
           file: ${{ matrix.dockerfile }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:prod-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:latest
           # release.json is baked in by serverXR/Dockerfile only -- the client's Dockerfile
           # doesn't declare these ARGs, so build-push-action just passes them through unused.
@@ -95,6 +95,7 @@ jobs:
       VPS_SSH_USER: ${{ secrets.VPS_SSH_USER }}
       VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT }}
       VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_HOST_KEY: ${{ vars.VPS_HOST_KEY }}
       VPS_DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
       REGISTRY_USER: ${{ vars.REGISTRY_USER }}
     steps:
@@ -124,7 +125,19 @@ jobs:
           chmod 700 ~/.ssh
           printf '%s\n' "${VPS_SSH_KEY}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "${VPS_SSH_PORT:-22}" "${VPS_HOST}" >> ~/.ssh/known_hosts
+          # Pin the host key. ssh-keyscan here was trust-on-first-use repeated
+          # on EVERY deploy: it blessed whatever host answered seconds before
+          # connecting, which made StrictHostKeyChecking=yes decorative — an
+          # on-path attacker could take the deploy session (and the key it
+          # carries) while faking a successful run. Set VPS_HOST_KEY to the
+          # VPS's real public key ("ssh-keyscan -p <port> <host>" run once,
+          # from a trusted machine).
+          if [ -n "${VPS_HOST_KEY:-}" ]; then
+            printf '%s\n' "${VPS_HOST_KEY}" >> ~/.ssh/known_hosts
+          else
+            echo "::warning::VPS_HOST_KEY is not set — falling back to ssh-keyscan (trust-on-first-use). Set the VPS_HOST_KEY repository variable to pin it."
+            ssh-keyscan -p "${VPS_SSH_PORT:-22}" "${VPS_HOST}" >> ~/.ssh/known_hosts
+          fi
 
       - name: Pull and restart the stack on the VPS
         run: |
@@ -133,7 +146,10 @@ jobs:
           REMOTE="${VPS_SSH_USER}@${VPS_HOST}"
           SSH=(ssh -p "${SSH_PORT}" -o StrictHostKeyChecking=yes "${REMOTE}")
 
-          "${SSH[@]}" "REGISTRY_USER=$(printf '%q' "${REGISTRY_USER}") IMAGE_TAG=$(printf '%q' "${GITHUB_SHA}") DEPLOY_PATH=$(printf '%q' "${VPS_DEPLOY_PATH}") bash -s" <<'REMOTE_SCRIPT'
+          # IMAGE_TAG is the ENVIRONMENT-NAMESPACED image tag; GIT_SHA is the
+          # plain commit and is what `git checkout` below needs. See the staging
+          # workflow for why these had to stop being the same value.
+          "${SSH[@]}" "REGISTRY_USER=$(printf '%q' "${REGISTRY_USER}") IMAGE_TAG=$(printf '%q' "prod-${GITHUB_SHA}") GIT_SHA=$(printf '%q' "${GITHUB_SHA}") DEPLOY_PATH=$(printf '%q' "${VPS_DEPLOY_PATH}") bash -s" <<'REMOTE_SCRIPT'
           set -euo pipefail
           cd "${DEPLOY_PATH}"
           export REGISTRY_USER
@@ -143,7 +159,7 @@ jobs:
           # exact commit being deployed. Everything else on this checkout
           # (.env, data volumes, etc.) is untouched.
           git fetch --quiet origin
-          git checkout --quiet "${IMAGE_TAG}" -- docker-compose.yml docker-compose.prod.yml docker-compose.caddy-hardened.yml Caddyfile
+          git checkout --quiet "${GIT_SHA}" -- docker-compose.yml docker-compose.prod.yml docker-compose.caddy-hardened.yml Caddyfile
 
           COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.prod.yml)
           if [ -f docker-compose.caddy-hardened.yml ]; then

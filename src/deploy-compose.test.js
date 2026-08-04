@@ -50,3 +50,58 @@ describe('staging compose image tags', () => {
         }
     })
 })
+
+// Regression guards for audit batch 2's deploy-config findings.
+describe('deploy workflow hardening', () => {
+    const prod = read('.github/workflows/deploy-vps.yml')
+    const staging = read('.github/workflows/deploy-vps-staging.yml')
+
+    // Both workflows pushed dii-*:<sha>, but the images differ — DEPLOY_ENV is
+    // baked into release.json, which GET /api/health self-reports. On the
+    // normal dev→main promote the same sha is rebuilt and the tag overwritten,
+    // so a host could run an image claiming the wrong environment.
+    it('namespaces the per-commit image tag by environment', () => {
+        expect(staging).toContain(':staging-${{ github.sha }}')
+        expect(prod).toContain(':prod-${{ github.sha }}')
+        for (const wf of [prod, staging]) {
+            expect(wf).not.toMatch(/dii[^\n]*:\$\{\{ github\.sha \}\}/)
+        }
+    })
+
+    // IMAGE_TAG is now the namespaced image tag, so the remote `git checkout`
+    // (which needs a real commit) must use GIT_SHA instead — otherwise the
+    // deploy would try to check out a ref named "prod-<sha>" and fail.
+    it('checks out deploy config by commit, not by the image tag', () => {
+        for (const wf of [prod, staging]) {
+            expect(wf).toMatch(/GIT_SHA=/)
+            expect(wf).toMatch(/git checkout --quiet "\$\{GIT_SHA\}"/)
+            expect(wf).not.toMatch(/git checkout --quiet "\$\{IMAGE_TAG\}"/)
+        }
+    })
+
+    // ssh-keyscan seconds before connecting made StrictHostKeyChecking=yes
+    // decorative: trust-on-first-use, repeated every single deploy.
+    it('prefers a pinned host key over ssh-keyscan', () => {
+        for (const wf of [prod, staging]) {
+            expect(wf).toContain('VPS_HOST_KEY')
+            expect(wf).toMatch(/if \[ -n "\$\{VPS_HOST_KEY:-\}" \]/)
+            expect(wf).toContain('StrictHostKeyChecking=yes')
+        }
+    })
+})
+
+// Regression guard for audit batch 2: the SSE endpoints fall into nginx's
+// generic /serverXR/ block, which keeps proxy_buffering on — the same class of
+// miss as the mesh websocket upgrade. Without this header nginx may hold small
+// SSE writes, so collaborators' events arrive late or in bursts on the
+// Docker/VPS deploy while working perfectly under the Vite dev proxy.
+describe('SSE responses opt out of proxy buffering', () => {
+    it.each([
+        'serverXR/src/routes/projectRoutes.js',
+        'serverXR/src/routes/spaceRoutes.js'
+    ])('%s', (rel) => {
+        const source = read(rel)
+        expect(source).toContain("res.setHeader('Content-Type', 'text/event-stream')")
+        expect(source).toContain("res.setHeader('X-Accel-Buffering', 'no')")
+    })
+})

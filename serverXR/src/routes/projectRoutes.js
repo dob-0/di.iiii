@@ -5,6 +5,7 @@ const { hashFileSha256, isSha256AssetId } = require('../assetHash')
 const { scrubImageMetadata } = require('../assetScrub')
 const { getSpaceBlobPaths, storeBlobFromFile } = require('../blobStore')
 const { createKeyedLock } = require('../asyncLock')
+const { findIdlessCreateOp } = require('../opValidation')
 
 const withProjectLock = createKeyedLock()
 
@@ -291,6 +292,16 @@ function registerProjectRoutes(router, {
       if (!normalizedOps.length) {
         return res.status(400).json({ error: 'No operations provided.' })
       }
+      // An id-less create is applied with a server-minted id but broadcast
+      // verbatim, so every peer mints a different one and the documents fork
+      // silently. Reject rather than persist a batch that can't converge.
+      const idless = findIdlessCreateOp(normalizedOps)
+      if (idless) {
+        return res.status(400).json({
+          error: `Op "${idless.type}" is missing a stable id — create ops must carry one.`,
+          code: 'op_missing_id'
+        })
+      }
 
       // Serialized per project: the version check and the read-modify-write
       // it guards must be one atomic step, or two concurrent requests at the
@@ -571,6 +582,12 @@ function registerProjectRoutes(router, {
         return res.status(404).json({ error: 'Project not found.' })
       }
       res.setHeader('Content-Type', 'text/event-stream')
+      // nginx proxies this through the generic /serverXR/ block with
+      // proxy_buffering on, which is free to hold small SSE writes — the
+      // same class of miss as the mesh websocket upgrade. This header
+      // disables buffering per-response, so collaborators' events arrive
+      // immediately on the Docker/VPS deploy, not just under the Vite proxy.
+      res.setHeader('X-Accel-Buffering', 'no')
       res.setHeader('Cache-Control', 'no-cache')
       res.setHeader('Connection', 'keep-alive')
       res.flushHeaders?.()

@@ -1484,7 +1484,14 @@ router.post('/api/invites/redeem', inviteRedeemLimiter, async (req, res, next) =
 const requireSignedInUser = (req, res) => {
   const state = req.authState || {}
   if (!config.requireAuth) return true
-  if (state.authenticated && (state.type === 'session' || state.role === 'admin')) return true
+  // Anonymous guests carry the SAME signed session cookie as accounts and
+  // resolve to type 'session' on every request after issuance — so a type-only
+  // test is a no-op for them, and this route's "same audience that can see
+  // linked spaces in admin" scoping leaked the App's whole repo list to any
+  // visitor who had merely loaded a page. Identify by subject, as every other
+  // guest check in the codebase does.
+  const isGuest = state.type === 'guest' || isGuestSubject(state.subject)
+  if (state.authenticated && !isGuest && (state.type === 'session' || state.role === 'admin')) return true
   res.status(403).json({ error: 'Sign in to manage GitHub sync.' })
   return false
 }

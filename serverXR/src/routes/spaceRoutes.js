@@ -1061,6 +1061,12 @@ function registerSpaceRoutes(router, {
       return
     }
     res.setHeader('Content-Type', 'text/event-stream')
+    // nginx proxies this through the generic /serverXR/ block with
+    // proxy_buffering on, which is free to hold small SSE writes — the
+    // same class of miss as the mesh websocket upgrade. This header
+    // disables buffering per-response, so collaborators' events arrive
+    // immediately on the Docker/VPS deploy, not just under the Vite proxy.
+    res.setHeader('X-Accel-Buffering', 'no')
     res.setHeader('Cache-Control', 'no-cache')
     res.setHeader('Connection', 'keep-alive')
     res.flushHeaders?.()

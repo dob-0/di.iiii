@@ -94,6 +94,13 @@ Variables (repo or `production` Environment):
 - `VPS_BASE_URL` — base URL to smoke-check after deploy (e.g.
   `https://your-domain` or `http://<ip>:<port>`); the smoke-check step is
   skipped with a warning if unset
+- `VPS_HOST_KEY` — the VPS's **public** host key, pinned into the runner's
+  `known_hosts`. Capture it once from a trusted machine with
+  `ssh-keyscan -p <port> <host>` and paste the line verbatim. Without it the
+  workflow warns and falls back to running `ssh-keyscan` on the runner, which
+  is trust-on-first-use repeated on every deploy — it blesses whatever host
+  answers and makes `StrictHostKeyChecking=yes` decorative. Shared by both the
+  production and staging workflows.
 
 None of these are committed anywhere in this repo — configure them in the
 GitHub repo/environment settings before the workflow can run.
@@ -106,6 +113,13 @@ Environment variables:
   from step 1 above (not `VPS_DEPLOY_PATH`)
 - `VPS_STAGING_BASE_URL` — base URL to smoke-check (e.g.
   `https://staging.your-domain`); skipped with a warning if unset
+
+Image tags are namespaced per environment — staging pushes
+`dii-*:staging-<sha>` (plus the moving `:staging`), production pushes
+`dii-*:prod-<sha>` (plus `:latest`). They used to share a plain `:<sha>` tag,
+which the dev→main promote overwrote with a differently-built image: the
+`DEPLOY_ENV` baked into `release.json` (and reported by `/api/health`) could
+then disagree with the host actually running it.
 
 ### GHCR image authentication on the VPS
 

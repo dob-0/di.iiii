@@ -24,7 +24,7 @@ import {
     buildStudioProjectPath,
     navigateToStudioPath
 } from '../../studio/utils/studioRouting.js'
-import { buildAppSpacePath, buildVanityProjectPath } from '../../utils/spaceRouting.js'
+import { buildAppSpacePath, buildPublicProjectPath, buildVanityProjectPath } from '../../utils/spaceRouting.js'
 
 const ROLES = [
     { key: 'viewer', hint: 'Read-only access' },
@@ -665,9 +665,17 @@ function ProjectDetail({ space, project, isPublished, editing, startEdit, submit
                     </div>
                 }
             >
+                {/* Project ids are minted from the title with no reserved-word
+                    check, so an id like "studio"/"beta"/"raw" is legal — putting
+                    one in the vanity slot produced a link the router sends to
+                    that lane's hub, not the project. Only a real slug is safe
+                    there; otherwise use the guaranteed-stable /p/{id} form,
+                    same as ProjectSwitcher. */}
                 <InfoPair
                     label="Public link"
-                    value={buildVanityProjectPath(space?.slug || project.spaceId, project.slug || project.id)}
+                    value={project.slug
+                        ? buildVanityProjectPath(space?.slug || project.spaceId, project.slug)
+                        : buildPublicProjectPath(space?.slug || project.spaceId, project.id)}
                     mono
                 />
                 <InfoPair label="Published" value={isPublished ? 'Yes — live for this space' : 'No'} />

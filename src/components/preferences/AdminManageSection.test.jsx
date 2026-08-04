@@ -32,7 +32,8 @@ vi.mock('../../studio/utils/studioRouting.js', () => ({
 }))
 vi.mock('../../utils/spaceRouting.js', () => ({
     buildAppSpacePath: (s) => `/${s}`,
-    buildVanityProjectPath: (s, p) => `/${s}/${p}`
+    buildVanityProjectPath: (s, p) => `/${s}/${p}`,
+    buildPublicProjectPath: (s, p) => `/${s}/p/${p}`
 }))
 
 import AdminManageSection from './AdminManageSection.jsx'
@@ -133,5 +134,29 @@ describe('AdminManageSection', () => {
         await waitFor(() => expect(updateProject).toHaveBeenCalledWith('p1', { slug: 'artistplace' }))
         // Title must not have been touched by the slug-only edit.
         expect(updateProject).not.toHaveBeenCalledWith('p1', expect.objectContaining({ title: expect.anything() }))
+    })
+
+    // Regression test for audit batch 2: project ids are minted from the title
+    // with no reserved-word check, so a project titled "Studio" gets id
+    // "studio" — and putting a raw id in the vanity slot produced
+    // /demo/studio, which the router sends to the Studio hub, not the project.
+    // Only a real slug is safe there; ProjectSwitcher already did this.
+    it('uses the stable /p/{id} public link when a project has no slug', async () => {
+        listProjects.mockResolvedValue([{ id: 'studio', title: 'Studio', spaceId: 'demo' }])
+        render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+        fireEvent.click((await screen.findAllByText('Studio'))[0])
+
+        expect(await screen.findByText('/demo/p/studio')).toBeTruthy()
+        expect(screen.queryByText('/demo/studio')).toBeNull()
+    })
+
+    it('uses the vanity link once a slug is set', async () => {
+        listProjects.mockResolvedValue([{ id: 'studio', title: 'Studio', spaceId: 'demo', slug: 'artistplace' }])
+        render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+        fireEvent.click((await screen.findAllByText('Studio'))[0])
+
+        expect(await screen.findByText('/demo/artistplace')).toBeTruthy()
     })
 })
