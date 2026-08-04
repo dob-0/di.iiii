@@ -112,15 +112,42 @@ export default function AlgoVrithmLanding() {
         paint()
     }, [animating, paint, playheadSec])
 
-    // Space, PageDown, End and the arrow keys did nothing on this page. The
-    // reason is app-wide: html/body/#root are position:fixed (base.css), so the
-    // document never scrolls and this root owns the scroll instead — but a
-    // plain <main> cannot take focus, so the browser had no focused scrollable
-    // to act on and every reading key was dead. Making the root focusable and
-    // focusing it on mount hands those keys back. preventScroll because the
-    // point is to enable scrolling, not to perform one.
+    // Space, PageDown, End and the arrow keys do nothing on this page unless
+    // something makes them. html/body/#root are position:fixed (base.css), so
+    // the document never scrolls and this root owns the scroll — and the
+    // browser only drives a scroller that is FOCUSED. A plain <main> cannot
+    // take focus, so every reading key was dead.
+    //
+    // Focusing the root on mount fixed it until the first click: pressing Pause
+    // left focus on BODY, which is the unscrollable fixed element, and the keys
+    // died again. Anything that depends on where focus happens to be will keep
+    // finding a new way to be wrong, so the keys are handled outright.
     useEffect(() => {
-        rootRef.current?.focus({ preventScroll: true })
+        const onKey = (event) => {
+            const root = rootRef.current
+            if (!root || event.metaKey || event.ctrlKey || event.altKey) return
+            const el = document.activeElement
+            if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+            // Space on a button is that button being pressed, not a page turn.
+            // Left to the browser deliberately: preventDefault here stops the
+            // press as well, and the browser does not scroll for it anyway.
+            if (event.key === ' ' && el && (el.tagName === 'BUTTON' || el.tagName === 'A')) return
+            const page = root.clientHeight * 0.9
+            const step = {
+                ' ': event.shiftKey ? -page : page,
+                PageDown: page,
+                PageUp: -page,
+                ArrowDown: 64,
+                ArrowUp: -64,
+                End: root.scrollHeight,
+                Home: -root.scrollHeight
+            }[event.key]
+            if (step === undefined) return
+            event.preventDefault()
+            root.scrollBy({ top: step, behavior: 'smooth' })
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
     }, [])
 
     const enter = useCallback(() => appNavigate(ALGO_VRITHM_SCENE_PATH), [])
