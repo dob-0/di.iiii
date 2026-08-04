@@ -24,7 +24,7 @@ You define the WHAT and WHY. VPE executes the HOW.
 ```
 src/algoVrithm/                          ← algovrithm, the ARTWORK: sequences,
                                           palette, lights, edit list, assets, tests
-src/raw/algovrithm-director/             ← its EDITOR, moved into Raw 2026-08-05:
+src/raw/director/             ← its EDITOR, moved into Raw 2026-08-05:
                                           director panel, gizmo, source patcher
 ```
 

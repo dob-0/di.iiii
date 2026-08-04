@@ -3,18 +3,19 @@ import { Canvas } from '@react-three/fiber'
 import { XR, XROrigin } from '@react-three/xr'
 import { useXrAr } from '../hooks/useXrAr.js'
 import Backdrop from './Backdrop.jsx'
-import DirectorPanel from '../raw/algovrithm-director/DirectorPanel.jsx'
+import DirectorPanel from '../raw/director/DirectorPanel.jsx'
 import LightHaze from './LightHaze.jsx'
 import LookAround from './LookAround.jsx'
-import OrbitView from '../raw/algovrithm-director/OrbitView.jsx'
+import OrbitView from '../raw/director/OrbitView.jsx'
 import RitualClockDriver from './RitualClockDriver.jsx'
 import SceneLights, { AmbientFill } from './SceneLights.jsx'
-import SplitHandle from '../raw/algovrithm-director/SplitHandle.jsx'
-import Standpoint from '../raw/algovrithm-director/Standpoint.jsx'
+import SplitHandle from '../raw/director/SplitHandle.jsx'
+import Standpoint from '../raw/director/Standpoint.jsx'
 import ViewerDolly from './ViewerDolly.jsx'
-import TransformGizmo, { GIZMO_MODES, gizmoModesFor } from '../raw/algovrithm-director/TransformGizmo.jsx'
+import TransformGizmo, { GIZMO_MODES, gizmoModesFor } from '../raw/director/TransformGizmo.jsx'
 import SpatialScore from './SpatialScore.jsx'
-import { isDirectorEnabled } from '../raw/algovrithm-director/directorFlag.js'
+import { isDirectorEnabled } from '../raw/director/directorFlag.js'
+import { ALGOVRITHM_PIECE } from '../raw/director/pieces.js'
 import { reelPlayers } from './reelPlayers.js'
 import { XR_AR_ONLY, xrAvailability } from './xrAvailability.js'
 import { describeEyeHeight } from './xrStandpoint.js'
@@ -31,15 +32,15 @@ import {
     VIEW_OUTSIDE,
     isOutside
 } from './stageView.js'
-import { formatSplit, readSplit, writeSplit } from '../raw/algovrithm-director/splitLayout.js'
+import { formatSplit, readSplit, writeSplit } from '../raw/director/splitLayout.js'
 import { resolveTravel } from './viewerTravel.js'
 import { parseLightName, setLightValue } from './worldLights.js'
 import { clipProgress, sourceProgress, useRitualClock } from './ritualClock.js'
 import { SEQUENCES } from './sequences/index.js'
 import useSavedTiming from './useSavedTiming.js'
 import useAutoHideChrome from './useAutoHideChrome.js'
-import useEditHistory from '../raw/algovrithm-director/useEditHistory.js'
-import usePanelToggle from '../raw/algovrithm-director/usePanelToggle.js'
+import useEditHistory from '../raw/director/useEditHistory.js'
+import usePanelToggle from '../raw/director/usePanelToggle.js'
 import './algoVrithm.css'
 
 // algovrithm — a virtual installation on hyperreality: pixels and code
@@ -54,10 +55,11 @@ import './algoVrithm.css'
 //   sequences/*.jsx      one file per beat, each gets local 0..1 progress
 //   editList.js          timeline maths (move/trim/ripple, gap detection)
 //   DirectorPanel.jsx    author-only timeline (see directorFlag.js), now
-//                        living in src/raw/algovrithm-director/ — the same
-//                        component is shared by this file's embedded director
-//                        (Studio's code-space director page) and Raw's
-//                        standalone DirectorPanelWindow.
+//                        living in src/raw/director/ — a general tool that
+//                        takes a piece descriptor (pieces.js), shared by this
+//                        file's embedded director (Studio's code-space
+//                        director page) and Raw's standalone
+//                        DirectorPanelWindow.
 //
 // Add a beat by writing a sequence file and adding a row to the edit list —
 // the director panel can retime and reorder, but a new beat is real code and
@@ -818,6 +820,7 @@ function AlgoVrithmStage({
                         </button>
                     </div>
                     <DirectorPanel
+                        piece={ALGOVRITHM_PIECE}
                         sequences={editList}
                         onChange={setEditList}
                         clock={clock}
