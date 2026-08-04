@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import StudioHub from './StudioHub.jsx'
 import { setAppNavigate } from '../../utils/appNavigate.js'
+import { ALGO_VRITHM_PATH, ALGO_VRITHM_SCENE_PATH } from '../../algoVrithm/algoVrithmRouting.js'
 
 const createProject = vi.fn()
 const deleteProject = vi.fn()
@@ -141,7 +142,8 @@ describe('StudioHub', () => {
             render(<StudioHub spaceId="algovrithm" />)
 
             fireEvent.click(await screen.findByRole('button', { name: 'Open' }))
-            expect(navigate).toHaveBeenCalledWith('/algovrithm', { replace: false })
+            // Open goes to the front door; Director goes past it, to the scene.
+            expect(navigate).toHaveBeenCalledWith(ALGO_VRITHM_PATH, { replace: false })
         })
 
         it('opens the director without also firing the card underneath', async () => {
@@ -153,7 +155,14 @@ describe('StudioHub', () => {
 
             fireEvent.click(await screen.findByRole('button', { name: 'Director' }))
             expect(navigate).toHaveBeenCalledTimes(1)
-            expect(navigate).toHaveBeenCalledWith('/algovrithm?director', { replace: false })
+            // The SCENE, not the space's front door. This asserted the door
+            // for as long as the door existed, which is exactly how the button
+            // went on opening a page with no director on it: the landing
+            // ignores an unknown query param, so nothing failed. Built from
+            // the routing constant so a further move cannot leave it stale
+            // and green.
+            expect(navigate).toHaveBeenCalledWith(`${ALGO_VRITHM_SCENE_PATH}?director`, { replace: false })
+            expect(navigate).not.toHaveBeenCalledWith(`${ALGO_VRITHM_PATH}?director`, expect.anything())
         })
 
         it('leaves an ordinary empty space alone', async () => {
