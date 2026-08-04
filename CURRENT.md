@@ -10,25 +10,30 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-**All three tiers are in sync: `dev` = `main` = `origin` (`b2a5f2a3`), prod and
-staging both deployed and verified.** Audit batches 1–5 (31 defects) plus the
-verification standard are live. Several agents share this tree: re-check
-`git log`, and **stage explicit paths, never `git add -A`**.
+**`dev` is AHEAD of `main`** — staging deployed and verified (`deployEnv:
+staging`, running the pushed sha, host key pinned); prod is on the earlier tier.
+Several agents share this tree: re-check `git log`, **stage explicit paths**.
 
-## Last session (2026-08-04)
+## Last session (2026-08-04, second)
 
-- **Audit batches 2–5: 31 verified defects fixed and shipped to prod.** From the
-  ultracode journal (`wf_29dddb4e-571`): 17 confirmed real, 7 already closed by
-  batch 1, 14 more hand-verified. Data-loss paths, mouse-look death, Beta WebGL
-  exhaustion, the silent HTML-fallback asset class, nine editor UX defects,
-  schema/routing/deploy hardening. Every fix ships a guard **observed failing
-  without it** + a known-fixes row.
-- **F14 proven fixed in the wild**: prod had been running a staging-built image
-  (`deployEnv: staging`) for ~3 days. Now prod reports `production/main`.
-- **br_id_ge**: field cores now reveal on load (were built hidden, only shown by
-  ALL TOGETHER / `?just=`); rite draws an ink cursor (it hid the system one).
-- **Verification standard added** — `npm run verify:surfaces`, the charter, and
-  three agents. See below; this is now part of "done".
+- **The GitHub App was never wired into the VPS deploy.** Its secrets lived in
+  cPanel's deploy.env; the 2026-07-15 move replaced that with compose and
+  carried over only the OAuth vars, so `isConfigured()` was false on both hosts
+  for three weeks — silently, by design. Compose now passes all three (+
+  `STAGING_` twins), `.env.example` documents them, runbook rewritten for the
+  VPS, guard derives the names from `githubApp.js` itself.
+- **The flaky suite is fixed.** Reproduce deliberately: two full suites at once
+  → 5 of 6 runs failed, vs 8/8 sequential. Three defaults sized for an idle
+  machine (Vitest 5s vs server-spawning contracts, DTL's 1000ms `findBy`, one
+  synchronous read of SpaceHub's two-settle preview). After: 10 summaries under
+  the same load, 1561/1561 each.
+- **`VPS_HOST_KEY` is set** — deploy log confirms the pin branch, no keyscan.
+- **§7 now carries a recommendation per question** so it can be signed. It
+  corrects its own premise: entities already nest (`parentId`, recursive
+  render, drag-reparent) → address `entities[]`, build no bridge. Still unsigned.
+- **Workstation, not repo:** a hard crash left a zero-length commit object and
+  an unparseable `HEAD` (git doesn't fsync loose objects by default). Repaired;
+  `core.fsync` widened globally here.
 
 ## What works
 
@@ -38,20 +43,14 @@ deploy via `git push origin dev|main`; nightly VPS backups + daily off-box pull.
 
 ## Open
 
-- **Set the `VPS_HOST_KEY` repo variable** (`ssh-keyscan -p <port> <host>` from
-  a trusted machine) — until then the deploy warns and falls back to keyscan.
-- **`LIVE_API_TOKEN` (staging) is stale** — staging rejects it with 401, so
-  staging's br_id_ge copies are older than prod's. Rotate it.
-- **The full suite is intermittently flaky under load** — 2 failures in ~6 runs
-  (`installBundleContracts`, `SpaceHub`), different file each time, both pass in
-  isolation and on a clean tree. Pre-existing; it erodes "green means good" and
-  should be chased.
-- **The `br_id_ge ▾` chip covers the field project's Armenian letter-row** on
-  every viewport (found by eye, now caught by `npm run verify:surfaces`). Also
-  on narrow phones the field's bottom links collide. Owner's call — it is
-  published-project layout, not platform code.
+- **Generate the GitHub App secrets** (`docs/ops/ROTATE_GITHUB_APP_SECRETS.md`
+  1–3, App `4178187`). Wiring is live; the values are not, so sync stays off.
+- **`LIVE_API_TOKEN` (staging) is stale** — 401; staging's br_id_ge is older.
+- **`dev → main` promotion owed.**
+- **The `br_id_ge ▾` chip covers the field's Armenian letter-row**; narrow
+  phones also collide the bottom links. Owner's call — published-project layout.
 - Privacy calls owed: no account-deletion, export or session revocation; backups
-  unencrypted. URL spec §7 blocks Stage 2. Stale GitHub App key. `docs/ai/INBOX.md`.
+  unencrypted. §7 sign-off blocks Stage 2. `docs/ai/INBOX.md`.
 
 ## Known fixes → [docs/ai/known-fixes.md](docs/ai/known-fixes.md) — check before any bug hunt.
 

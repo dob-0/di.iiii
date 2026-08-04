@@ -5,6 +5,68 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-04 (second session) — A dead repo, a feature that was off for three weeks, and the flaky suite pinned down
+
+**Who:** Claude ("analyze it, look what's left" → "fix all things"). Pushed to
+`dev` as `fc30eaca` + `5b6257de`; both staging deploys green. Another agent was
+committing algovrithm work in the same tree throughout, so this session worked
+from a separate `git worktree` and rebased before each push.
+
+- **The repo would not open.** Every git command died on
+  `object file …2946550f… is empty`. A hard machine crash at 21:46 (previous
+  boot's journal ends mid-line, no shutdown target) had left the 21:25 commit
+  object zero-length. Repaired by re-pointing the branch at the last good
+  commit — no work lost, that commit's content was already on `origin/dev`.
+  **Root cause is a git default, not a repo problem:** `core.fsync=committed`
+  fsyncs packs but not loose objects, so btrfs kept the inode and lost the data
+  extent. Widened `core.fsync` globally on this workstation. All seven other
+  local repos scanned clean.
+- **`VPS_HOST_KEY` set** — the value was read from the VPS's own
+  `/etc/ssh/ssh_host_ed25519_key.pub` over an authenticated session and matched
+  against `known_hosts`, rather than keyscanned. Confirmed live in the deploy
+  log: pin branch taken, no `ssh-keyscan`, zero emitted warnings.
+- **"Stale GitHub App key" was a misdiagnosis — the App was never connected.**
+  `docker-compose.yml` passes the OAuth `GITHUB_CLIENT_*` vars but never
+  `GITHUB_APP_ID` / `_PRIVATE_KEY_B64` / `_WEBHOOK_SECRET`; the VPS `.env` has
+  no `GITHUB_APP_*` at all. They lived in cPanel's `deploy.env`, and the
+  2026-07-15 move replaced that mechanism without carrying them. So
+  `isConfigured()` had been false on both hosts since — one-click sync and
+  webhooks silently off for three weeks (`br_id_ge` kept syncing only because
+  it uses its own `sync-space.yml` CI path). Rotating the key would have fixed
+  nothing. Wired into both compose files, documented in `.env.example`, runbook
+  rewritten off cPanel. The guard derives the required names from the
+  `process.env.GITHUB_APP_*` reads in `githubApp.js`, so a new var can't be
+  added there and left out of compose the same way; verified with a real
+  `docker compose config` run on the VPS (staging substitutes its own twins and
+  does not inherit prod's webhook secret). **Secrets themselves still owed.**
+- **The flaky suite: reproduced, root-caused, fixed, re-verified.** Eight
+  sequential full runs were 8/8 clean — the report said "under load", so load
+  was applied deliberately: two full suites at once, which failed 5 of 6 runs.
+  Three independent causes, all defaults measuring the scheduler rather than
+  the behavior: (1) Vitest's 5s per-test budget applied to contract tests that
+  spawn a real serverXR process (failures at 5074ms/5095ms, while their own
+  `waitForHealth` allows 15s for the boot alone); (2) Testing Library's 1000ms
+  `findBy`/`waitFor` default (a button resolved at 1405ms); (3) `SpaceHub` read
+  the preview iframe synchronously though it is two settles behind the card
+  (IntersectionObserver → `visible`, then the next effect → `booted`). Same
+  reproduction after the fix: 10 run summaries, 1561/1561 every time. Noted in
+  known-fixes: the racy `getFreePort` (`listen(0)` → close → hand the port to a
+  child) is duplicated in all five contract files — not the cause here, but a
+  real TOCTOU if they ever run more parallel.
+- **URL spec §7 now has a recommendation under every question**, so sign-off is
+  a review rather than a design session. The load-bearing one corrects the
+  spec's own premise: it claims nesting lives on `nodes[]`, but
+  `normalizeEntity` has carried `parentId` all along, `StudioViewport` renders
+  the entity tree recursively and `StudioShellPanels` ships drag-to-reparent.
+  Entities already nest in the shipped lane → address `entities[]`, add `slug`
+  there, and build **no** bridge (entity and node parents never point at each
+  other, so the entity tree is closed). **Still unsigned — owner's call.**
+- **Rescued a local-only commit**: the other agent's hook-path fix
+  (`CLAUDE_PROJECT_DIR`) existed only on a local branch — without it the
+  pre-push gate and golden-rules check silently no-op in any session not rooted
+  at the repo. Cherry-picked onto `dev`; its only conflict was a known-fixes
+  row `dev` already had.
+
 ## 2026-08-01 — Dependency batch, owed verifications all pass, two Raw/registry fixes, off-box backup scheduled
 
 **Who:** Claude ("go fix all" session). Dev is ahead of prod at `a45d1d6a`,
