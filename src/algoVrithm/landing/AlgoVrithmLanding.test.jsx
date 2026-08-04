@@ -6,8 +6,9 @@ const appNavigate = vi.fn()
 vi.mock('../../utils/appNavigate.js', () => ({ appNavigate: (...args) => appNavigate(...args) }))
 
 // jsdom has no 2D context, so paint() bails on its own guard and every case
-// here is about the parts a visitor can operate: the transport, the clips and
-// the way in. The sketches are exercised through beatSketches, not the DOM.
+// here is about what a visitor meets: the way in, the one control, the score,
+// and what the page refuses to say. The sketches are exercised through
+// beatSketches, not the DOM.
 const renderLanding = async () => {
     const { default: AlgoVrithmLanding } = await import('./AlgoVrithmLanding.jsx')
     return render(<AlgoVrithmLanding />)
@@ -38,46 +39,32 @@ describe('AlgoVrithmLanding', () => {
         expect(appNavigate).toHaveBeenCalledWith('/algovrithm/scene')
     })
 
-    it('opens paused under reduced motion', async () => {
+    it('opens paused under reduced motion, with a way in to the motion', async () => {
         await renderLanding()
-        expect(screen.getByRole('button', { name: 'Play' })).toBeTruthy()
+        // The timeline is gone; this button is what is left, and under reduced
+        // motion it is the ONLY way a visitor reaches the moving preview.
+        expect(screen.getByRole('button', { name: 'Play the preview' })).toBeTruthy()
     })
 
-    it('scrubs to a beat when its card is clicked', async () => {
+    // The score replaced a slider nobody could discover without focusing it:
+    // the seven movements are now plain text in DOM order, and the one on
+    // screen is marked. This is the canvas's text equivalent, so it is the
+    // thing that must not quietly become decorative.
+    it('names the movement on screen without naming the second', async () => {
         await renderLanding()
-        const globe = BEAT_CARDS.find((beat) => beat.id === 's06-reel-globe')
-        // Scoped to the card list: the same title is also on the track clip,
-        // and either one jumping the playhead is correct behaviour.
-        const cards = screen.getByRole('region', { name: 'The beats' })
-        fireEvent.click(within(cards).getByRole('button', { name: new RegExp(globe.title) }))
-        expect(screen.getByRole('slider').getAttribute('aria-valuetext')).toContain(globe.title)
+        const score = screen.getByRole('region', { name: 'The score' })
+        const lit = within(score).getAllByRole('listitem').filter((li) => li.getAttribute('aria-current') === 'true')
+        expect(lit).toHaveLength(1)
+        expect(lit[0].textContent).toContain(BEAT_CARDS[0].title)
+        // No clock, no timecodes: nothing on this page reports a second.
+        expect(document.body.textContent).not.toMatch(/\d+\.\d\s*s/i)
     })
 
-    it('steps by a tenth on an arrow key, and reports both beats inside a seam', async () => {
+    it('has nothing to operate but the way in and the pause', async () => {
         await renderLanding()
-        const track = screen.getByRole('slider')
-        // 0.0 → 5.0, inside the 1.2s tunnel/halo overlap.
-        for (let i = 0; i < 50; i += 1) fireEvent.keyDown(track, { key: 'ArrowRight' })
-        expect(Number(track.getAttribute('aria-valuenow'))).toBeCloseTo(5, 1)
-        expect(screen.getByRole('status').textContent).toContain('White tunnel over Halo')
-    })
-
-    it('does not step past the end of the piece', async () => {
-        await renderLanding()
-        const track = screen.getByRole('slider')
-        for (let i = 0; i < 80; i += 1) fireEvent.keyDown(track, { key: 'ArrowRight', shiftKey: true })
-        expect(Number(track.getAttribute('aria-valuenow'))).toBe(53)
-    })
-
-    it('draws every clip on the track at its real position and width', async () => {
-        await renderLanding()
-        const track = screen.getByRole('slider')
-        const clips = within(track).getAllByRole('button')
-        expect(clips).toHaveLength(BEAT_CARDS.length)
-        // The tunnel starts the piece and is 5.6 of 53 seconds wide — the
-        // overlaps only read as overlaps if these are the true values.
-        expect(clips[0].style.left).toBe('0%')
-        expect(parseFloat(clips[0].style.width)).toBeCloseTo((5.6 / 53) * 100, 3)
+        expect(screen.queryByRole('slider')).toBeNull()
+        expect(screen.getAllByRole('button').map((b) => b.textContent))
+            .toEqual(['Enter the piece', 'Play the preview'])
     })
 
     // Same guard as SpaceHub's, for the same bug: html/body/#root are
@@ -95,24 +82,5 @@ describe('AlgoVrithmLanding', () => {
         const rootBlock = fs.readFileSync(cssPath, 'utf8').match(/\.avl-root\s*\{[^}]*\}/)?.[0] ?? ''
         expect(rootBlock).toMatch(/height:\s*100vh/)
         expect(rootBlock).toMatch(/overflow-y:\s*auto/)
-    })
-
-    // A phone's track is ~350px, so most clips are narrower than their own
-    // name. The clip hides its overflow, so without this the cut is silent and
-    // "Metaball field" reads as "Metaball".
-    it('a clip too narrow for its name ellipsises rather than cutting mid-word', async () => {
-        const fs = await import('node:fs')
-        const path = await import('node:path')
-        const { cwd } = await import('node:process')
-        const cssPath = ['src/algoVrithm/landing/algoVrithmLanding.css', 'algoVrithm/landing/algoVrithmLanding.css']
-            .map((p) => path.join(cwd(), p))
-            .find((p) => fs.existsSync(p))
-        const clipBlock = fs.readFileSync(cssPath, 'utf8').match(/\.avl-clip\s*\{[^}]*\}/)?.[0] ?? ''
-        expect(clipBlock).toMatch(/text-overflow:\s*ellipsis/)
-        expect(clipBlock).toMatch(/overflow:\s*hidden/)
-        // On the clip, never on the label: a block label is measured against
-        // the padded width and starts truncating names that fit.
-        const labelBlock = fs.readFileSync(cssPath, 'utf8').match(/\.avl-clip-label\s*\{[^}]*\}/)?.[0] ?? ''
-        expect(labelBlock).not.toMatch(/display:\s*block/)
     })
 })

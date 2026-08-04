@@ -118,134 +118,64 @@
     background: #000;
 }
 
-.avl-stage-caption {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    margin-top: 0.7rem;
-    font-size: 0.78rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.avl-stage-beat {
-    color: var(--avl-lit);
-}
-
-.avl-stage-clock {
-    color: var(--avl-dim);
-    font-variant-numeric: tabular-nums;
-}
-
-.avl-stage-disclaimer {
-    margin: 0.9rem 0 0;
-    color: var(--avl-dim);
-    font-size: 0.76rem;
-    line-height: 1.65;
-}
-
-/* The live region carries the same information the canvas does, for anyone who
-   is not getting the canvas. It is not decoration and must not be hidden. */
-.avl-live {
-    margin: 0.5rem 0 0;
-    color: var(--avl-dim);
-    font-size: 0.74rem;
-}
-
-.avl-transport {
-    display: flex;
-    align-items: stretch;
-    gap: 0.9rem;
-    max-width: 54rem;
-    margin: 1.8rem auto 0;
-}
-
-.avl-play {
-    flex: 0 0 auto;
-    min-width: 5.6rem;
-    padding: 0 1rem;
-    border: 1px solid var(--avl-rule);
-    background: transparent;
-    color: var(--avl-ink);
-    font: inherit;
-    font-size: 0.78rem;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    cursor: pointer;
-}
-
-.avl-play:hover,
-.avl-play:focus-visible {
-    border-color: var(--avl-lit);
-    color: var(--avl-lit);
-}
-
-.avl-track {
-    position: relative;
-    flex: 1 1 auto;
-    height: 4.4rem;
-    border: 1px solid var(--avl-rule);
-    background: rgba(255, 255, 255, 0.02);
-    cursor: ew-resize;
-    touch-action: none;
-}
-
-.avl-track:focus-visible {
-    outline: 2px solid var(--avl-lit);
-    outline-offset: 2px;
-}
-
-.avl-clip {
+/* Off-screen but in the accessibility tree — the two section headings and the
+   live region. role="status" is announced whether or not it is painted, and the
+   movement names it carries are already set visibly, and at leisure, in the
+   score. It is not decoration and must not be display:none'd. */
+.avl-sr {
     position: absolute;
-    height: 50%;
-    padding: 0 0.4rem;
-    border: 1px solid rgba(95, 146, 184, 0.5);
-    border-radius: 0;
-    /* Translucent so an overlap reads as a doubled value rather than the later
-       clip simply covering the earlier one. */
-    background: rgba(95, 146, 184, 0.14);
-    color: var(--avl-dim);
-    font: inherit;
-    font-size: 0.62rem;
-    text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-    /* On a phone the track is ~350px, so a 5.6s clip is 37px wide holding a
-       71px name. The overflow was already hidden, so the cut was silent and
-       mid-word: "White tunnel" read as "White" and "Metaball field" as
-       "Metaball", both plausible enough to be taken for the real beat name.
-       The ellipsis costs one character and says the name is longer than the
-       box. It goes on the clip, not on the label: making the label a block
-       would measure it against the PADDED width, and Halo — 24px of text —
-       would start truncating inside a 33px clip that fits it. */
-    text-overflow: ellipsis;
-    cursor: pointer;
-}
-
-.avl-clip.is-lead {
-    border-color: var(--avl-lit);
-    background: rgba(95, 146, 184, 0.32);
-    color: var(--avl-ink);
-}
-
-.avl-clip-label {
-    pointer-events: none;
-}
-
-.avl-playhead {
-    position: absolute;
-    top: 0;
-    bottom: 0;
     width: 1px;
-    background: #fff;
-    box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
-    pointer-events: none;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* The only control on the page, and it is an obligation rather than a feature:
+   motion that starts by itself has to be stoppable, and under reduced motion
+   this is the only way in to the motion at all. Sized as a footnote to the
+   frame, not as a transport. */
+.avl-hold {
+    display: block;
+    margin: 0.9rem 0 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--avl-dim);
+    font: inherit;
+    font-size: 0.74rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.avl-hold:hover,
+.avl-hold:focus-visible {
+    color: var(--avl-lit);
+}
+
+.avl-hold:focus-visible {
+    outline: 2px solid var(--avl-lit);
+    outline-offset: 4px;
+}
+
+.avl-stage-note {
+    margin: 0.8rem 0 0;
+    max-width: 66ch;
+    color: var(--avl-dim);
+    font-size: 0.78rem;
+    line-height: 1.7;
 }
 
 /* The statement is the only long-form voice on the page and the only place a
-   first person speaks, so it gets the page's reading measure and no card, no
-   panel, no accent — the same bare column the closing note uses. */
-/* 54rem like every other section, with the reading measure nested inside it —
+   first person speaks. No card, no panel, no accent, and since the redesign no
+   visible "The concept" label either — a paragraph that opens "I belong to a
+   generation..." does not need to be introduced.
+
+   54rem like every other section, with the reading measure nested inside it —
    the pattern .avl-head/.avl-lede already use. Given `margin: auto` on a 42rem
    section this block sat 96px inboard of the whole page, and its hairline ran
    96px short of the canvas border directly above it.
@@ -260,14 +190,6 @@
     color: var(--avl-ink);
     font-size: clamp(0.94rem, 2.2vw, 1.02rem);
     line-height: 1.7;
-}
-
-.avl-statement-title {
-    margin: 0 0 1.2rem;
-    color: var(--avl-dim);
-    font-size: 0.78rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
 }
 
 .avl-statement p {
@@ -288,94 +210,57 @@
     letter-spacing: 0.02em;
 }
 
-.avl-beats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-    gap: 1px;
-    max-width: 54rem;
-    margin: 2.6rem auto 0;
-    /* Void, not the rule colour. A 1px gap over a ruled background draws the
-       grid for free — but the last row is short, and the leftover cells then
-       read as one large empty card. The rules come from the cards instead, so
-       an absent card leaves nothing behind. */
-    background: var(--avl-void);
-}
-
-.avl-card {
-    background: var(--avl-void);
-    box-shadow: 0 0 0 1px var(--avl-rule);
-}
-
-.avl-card.is-lead {
-    background: rgba(95, 146, 184, 0.1);
-}
-
-.avl-card-hit {
-    display: block;
-    width: 100%;
-    height: 100%;
-    padding: 1.2rem 1.1rem 1.4rem;
-    border: 0;
-    background: transparent;
-    color: inherit;
-    font: inherit;
-    text-align: left;
-    cursor: pointer;
-}
-
-.avl-card-hit:focus-visible {
-    outline: 2px solid var(--avl-lit);
-    outline-offset: -2px;
-}
-
-.avl-card-time {
-    display: block;
-    color: var(--avl-dim);
-    font-size: 0.68rem;
-    letter-spacing: 0.1em;
-    font-variant-numeric: tabular-nums;
-}
-
-.avl-card.is-lead .avl-card-time {
-    color: var(--avl-lit);
-}
-
-.avl-card-title {
-    margin: 0.55rem 0 0.6rem;
-    font-size: 1.02rem;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-}
-
-.avl-card-blurb {
-    margin: 0;
-    color: var(--avl-dim);
-    font-size: 0.8rem;
-    line-height: 1.68;
-}
-
-
-
-
-
-
-@media (max-width: 640px) {
-    /* 0.4rem each side is 13px of a 33px clip. Halving it is the difference
-       between "Halo" fitting and "Ha…". */
-    .avl-clip {
-        padding: 0 0.2rem;
-    }
-
-    .avl-transport {
-        flex-direction: column;
-    }
-
-    .avl-play {
-        min-height: 2.6rem;
-    }
-}
 
 /* Reduced motion is handled in the component, not here: the frame is painted
    by canvas, so there is no animation for CSS to switch off. See
    prefersReducedMotion() in AlgoVrithmLanding.jsx — the page opens paused and
    the rAF loop never starts. */
+
+/* The score: the seven movements in order. The cards were seven boxes with
+   hairlines, hover states and a click target each, and a box is chrome the work
+   does not have. Rules between the movements, nothing around them. */
+.avl-score {
+    max-width: 54rem;
+    margin: clamp(2.4rem, 5vw, 3.4rem) auto 0;
+}
+
+.avl-score-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border-top: 1px solid var(--avl-rule);
+}
+
+.avl-score-line {
+    display: grid;
+    grid-template-columns: minmax(9rem, 13rem) 1fr;
+    gap: 0.4rem 1.8rem;
+    padding: 1.1rem 0;
+    border-bottom: 1px solid var(--avl-rule);
+}
+
+.avl-score-name {
+    color: var(--avl-ink);
+    font-size: 0.98rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
+/* The movement on screen, lit. This is what replaced the caption and the clock:
+   the page says WHICH movement is playing without saying what second it is. */
+.avl-score-line[aria-current='true'] .avl-score-name {
+    color: var(--avl-lit);
+}
+
+.avl-score-note {
+    color: var(--avl-dim);
+    font-size: 0.84rem;
+    line-height: 1.75;
+    max-width: 62ch;
+}
+
+@media (max-width: 640px) {
+    .avl-score-line {
+        grid-template-columns: 1fr;
+    }
+}

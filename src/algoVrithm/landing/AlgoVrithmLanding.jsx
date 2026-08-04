@@ -1,28 +1,36 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { ALGO_VRITHM_SCENE_PATH } from '../algoVrithmRouting.js'
-import { BEAT_CARDS, RUN_TIME_SEC, beatsAtSec, formatSec, leadBeatAtSec } from './beatCards.js'
+import { BEAT_CARDS, RUN_TIME_SEC, beatsAtSec, leadBeatAtSec } from './beatCards.js'
 import { paintFrame } from './beatSketches.js'
 import './algoVrithmLanding.css'
 
 // The front door for algovrithm.
 //
-// A poster with the cut on it. The one thing this page can show that a still
-// cannot is the SHAPE of the piece — seven beats, unequal, overlapping — so the
-// timeline is the page rather than an ornament on it: drag it, arrow-key it, or
-// press play and watch the same 53 seconds the headset gets, at 2D scale.
+// A poster. It shows the piece moving, says why it exists, and opens the door.
+// It does not measure the piece.
+//
+// This page used to carry the edit on its face: a draggable timeline of the
+// seven clip windows, their 1.2s overlaps stacked on two rows, a playhead and a
+// running clock. That was a good exhibit and it is gone on purpose. It answered
+// a question about how the artefact was assembled, on the page of a work whose
+// subject is a system that composes without being seen — "the algorithm is
+// never seen, yet it continuously composes the reality I experience". Handing a
+// visitor a scrubber over the composition contradicts the sentence the page
+// exists to deliver, and it contradicted the lede directly above it, which
+// promises there is nothing to operate. The windows still live in
+// sequences/index.js and the director panel, which is where somebody who needs
+// them looks.
 //
 // Deliberately three.js-free. The piece is a lazy route of its own
 // (/algovrithm/scene) and this page must not pull 1.6 MB of renderer for a
 // visitor who has not decided to enter yet — see the note at beatCards.js for
 // why the edit list is copied rather than imported.
 
-const clampSec = (seconds) => Math.max(0, Math.min(RUN_TIME_SEC, seconds))
-
-// The piece pulses at 2.4 Hz and carries a photosensitivity warning in the
-// headset. Nobody landing on a URL has consented to that, so the OS setting
-// decides whether this page moves at all: reduced motion means it opens on a
-// held frame and only ever moves when the visitor scrubs or presses play.
+// The piece pulses and carries a photosensitivity warning in the headset.
+// Nobody landing on a URL has consented to that, so the OS setting decides
+// whether this page moves at all: reduced motion means it opens on a held frame
+// and only ever moves if the visitor asks for it.
 const prefersReducedMotion = () => {
     if (typeof window === 'undefined' || !window.matchMedia) return false
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -32,14 +40,10 @@ export default function AlgoVrithmLanding() {
     const [playheadSec, setPlayheadSec] = useState(0)
     const [reducedMotion] = useState(prefersReducedMotion)
     const [playing, setPlaying] = useState(() => !prefersReducedMotion())
-    const [scrubbing, setScrubbing] = useState(false)
     const canvasRef = useRef(null)
-    const trackRef = useRef(null)
     // The playhead lives in a ref as well as in state: the rAF loop reads and
     // advances it every frame, and closing over the state value would pin it to
-    // whatever it was when the effect last ran. Every writer sets the ref FIRST
-    // and then the state — never mirrored during render, which is both a lint
-    // error and a way to lose a frame's worth of scrub.
+    // whatever it was when the effect last ran.
     const playheadRef = useRef(0)
 
     const live = useMemo(() => beatsAtSec(playheadSec), [playheadSec])
@@ -68,10 +72,10 @@ export default function AlgoVrithmLanding() {
     }, [])
 
     // A paused frame still animates by default, because half the beats (the
-    // strobes, the 6 Hz tick) are alive inside one and holding them still would
-    // show something the beat never looks like. Under reduced motion that is
-    // exactly the wrong call, so there the paint happens once per playhead
-    // position and the rAF loop is not started at all.
+    // strobes, the tick) are alive inside one and holding them still would show
+    // something the beat never looks like. Under reduced motion that is exactly
+    // the wrong call, so there the paint happens once per playhead position and
+    // the rAF loop is not started at all.
     const animating = playing || !reducedMotion
 
     useEffect(() => {
@@ -85,7 +89,7 @@ export default function AlgoVrithmLanding() {
             const deltaSec = last ? Math.min(0.1, (now - last) / 1000) : 0
             last = now
 
-            if (playing && !scrubbing) {
+            if (playing) {
                 const next = playheadRef.current + deltaSec
                 playheadRef.current = next >= RUN_TIME_SEC ? 0 : next
                 setPlayheadSec(playheadRef.current)
@@ -100,68 +104,12 @@ export default function AlgoVrithmLanding() {
             stopped = true
             window.cancelAnimationFrame(frame)
         }
-    }, [animating, paint, playing, scrubbing])
+    }, [animating, paint, playing])
 
     useEffect(() => {
         if (animating) return
         paint()
     }, [animating, paint, playheadSec])
-
-    const secondsAtClientX = useCallback((clientX) => {
-        const track = trackRef.current
-        if (!track) return 0
-        const rect = track.getBoundingClientRect()
-        if (!rect.width) return 0
-        return clampSec(((clientX - rect.left) / rect.width) * RUN_TIME_SEC)
-    }, [])
-
-    const scrubTo = useCallback((clientX) => {
-        const seconds = secondsAtClientX(clientX)
-        playheadRef.current = seconds
-        setPlayheadSec(seconds)
-    }, [secondsAtClientX])
-
-    const onPointerDown = useCallback((event) => {
-        event.currentTarget.setPointerCapture?.(event.pointerId)
-        setScrubbing(true)
-        scrubTo(event.clientX)
-    }, [scrubTo])
-
-    const onPointerMove = useCallback((event) => {
-        if (!scrubbing) return
-        scrubTo(event.clientX)
-    }, [scrubbing, scrubTo])
-
-    const endScrub = useCallback(() => setScrubbing(false), [])
-
-    // Keyboard is not a courtesy here: the seams are 1.2s wide and a pointer
-    // cannot reliably land inside one, so stepping by tenths is the only way to
-    // actually see a cross-fade hold both beats at once.
-    const onTrackKeyDown = useCallback((event) => {
-        const step = event.shiftKey ? 1 : 0.1
-        if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
-            event.preventDefault()
-            const next = clampSec(playheadRef.current + (event.key === 'ArrowRight' ? step : -step))
-            playheadRef.current = next
-            setPlayheadSec(next)
-            setPlaying(false)
-        } else if (event.key === 'Home') {
-            event.preventDefault()
-            playheadRef.current = 0
-            setPlayheadSec(0)
-        } else if (event.key === ' ' || event.key === 'Enter') {
-            event.preventDefault()
-            setPlaying((was) => !was)
-        }
-    }, [])
-
-    const jumpToBeat = useCallback((beat) => {
-        // Land just inside the beat, past its fade-in, so clicking a card shows
-        // that beat alone rather than the seam it starts in.
-        const inside = clampSec(beat.startSec + Math.min(1.4, (beat.endSec - beat.startSec) * 0.35))
-        playheadRef.current = inside
-        setPlayheadSec(inside)
-    }, [])
 
     const enter = useCallback(() => appNavigate(ALGO_VRITHM_SCENE_PATH), [])
 
@@ -172,95 +120,51 @@ export default function AlgoVrithmLanding() {
                 <h1 className="avl-title">algovrithm</h1>
                 <p className="avl-lede">
                     On hyperreality: a reality composed through pixels, code, algorithms.
-                    {' '}{formatSec(RUN_TIME_SEC)}, looping. It plays itself — there is nothing to operate.
+                    Fifty-three seconds, looping. It plays itself — there is nothing to operate.
                 </p>
                 <div className="avl-actions">
                     <button type="button" className="avl-enter" onClick={enter}>Enter the piece</button>
-                    <span className="avl-actions-note">Best in a headset. Works in a browser, and in VR where the device allows it.</span>
+                    <span className="avl-actions-note">Best in a headset.</span>
                 </div>
             </header>
 
-            <section className="avl-stage" aria-label="Preview of the piece">
+            <section className="avl-stage" aria-label="The piece">
                 <canvas ref={canvasRef} className="avl-canvas" aria-hidden="true" />
-                <div className="avl-stage-caption">
-                    <span className="avl-stage-beat">{lead.title}</span>
-                    <span className="avl-stage-clock">{formatSec(playheadSec)} / {formatSec(RUN_TIME_SEC)}</span>
-                </div>
-                <p className="avl-stage-disclaimer">
-                    A flat stand-in. The work itself is in stereo and all the way around you —
-                    neither of which survives a rectangle.
+
+                {/* Not a transport. This canvas starts by itself and strobes for
+                    the whole loop, so it has to be stoppable — and under reduced
+                    motion it is the only way IN to the motion, which is why the
+                    control survived when the timeline did not. The label changes
+                    rather than carrying aria-pressed: both together make some
+                    screen readers announce "Pause, pressed" for a thing that is
+                    playing. */}
+                <button
+                    type="button"
+                    className="avl-hold"
+                    onClick={() => setPlaying((was) => !was)}
+                >
+                    {playing ? 'Pause the preview' : 'Play the preview'}
+                </button>
+
+                <p className="avl-stage-note">
+                    A flat stand-in. The work happens around you, and that is the part a
+                    rectangle cannot hold.
                 </p>
-                {/* The clock used to be in here. It is rounded to tenths and the
-                    rAF loop sets it every frame, so this polite live region
-                    re-announced about ten times a second for the whole 53s loop
-                    — measured at 32 text changes in 3 seconds — which a screen
-                    reader either queues forever or throttles to noise. What the
-                    region is FOR changes 14 times in the piece: which beats are
-                    live. The clock is already on screen in .avl-stage-clock, so
-                    nothing is lost by taking it out of here. */}
-                <p className="avl-live" role="status" aria-live="polite">
+
+                {/* The live region carries what the canvas carries, for anyone
+                    not getting the canvas: which movement is on, and where a
+                    seam holds two at once. It changes about fourteen times in
+                    the loop — the clock is not in here and there is no longer a
+                    clock anywhere to put back. Off-screen rather than dim: the
+                    same names are set visibly, and at leisure, in the score. */}
+                <p className="avl-live avl-sr" role="status" aria-live="polite">
                     {live.map((entry) => entry.beat.title).join(' over ')}
                 </p>
             </section>
 
-            <section className="avl-transport">
-                <button
-                    type="button"
-                    className="avl-play"
-                    onClick={() => setPlaying((was) => !was)}
-                    aria-pressed={playing}
-                >
-                    {playing ? 'Pause' : 'Play'}
-                </button>
-                <div
-                    ref={trackRef}
-                    className="avl-track"
-                    role="slider"
-                    tabIndex={0}
-                    aria-label="Scrub the piece"
-                    aria-valuemin={0}
-                    aria-valuemax={RUN_TIME_SEC}
-                    aria-valuenow={Number(playheadSec.toFixed(1))}
-                    aria-valuetext={`${formatSec(playheadSec)}, ${lead.title}`}
-                    onPointerDown={onPointerDown}
-                    onPointerMove={onPointerMove}
-                    onPointerUp={endScrub}
-                    onPointerCancel={endScrub}
-                    onKeyDown={onTrackKeyDown}
-                >
-                    {BEAT_CARDS.map((beat, index) => (
-                        <button
-                            key={beat.id}
-                            type="button"
-                            className={`avl-clip${lead.id === beat.id ? ' is-lead' : ''}`}
-                            style={{
-                                left: `${(beat.startSec / RUN_TIME_SEC) * 100}%`,
-                                width: `${((beat.endSec - beat.startSec) / RUN_TIME_SEC) * 100}%`,
-                                // Stacked rows, not one lane: butt the clips into
-                                // a single line and the 1.2s overlaps — the whole
-                                // point of the picture — become invisible.
-                                top: `${(index % 2) * 50}%`
-                            }}
-                            onClick={(event) => {
-                                event.stopPropagation()
-                                jumpToBeat(beat)
-                            }}
-                            tabIndex={-1}
-                        >
-                            <span className="avl-clip-label">{beat.title}</span>
-                        </button>
-                    ))}
-                    <div className="avl-playhead" style={{ left: `${(playheadSec / RUN_TIME_SEC) * 100}%` }} />
-                </div>
-            </section>
-
-            {/* The artist's statement, as written. It sits between the picture
-                and the breakdown on purpose: the beats below read as craft
-                (strobe rings, hairline bars, 288 reels) until you have been
-                told they are gestures, and after that they read as the six
-                the statement names. Nothing here is paraphrased. */}
-            <section className="avl-statement" aria-label="The concept">
-                <h2 className="avl-statement-title">The concept</h2>
+            {/* The artist's statement, as written. Nothing here is paraphrased. */}
+            <section className="avl-statement" aria-labelledby="avl-statement-h">
+                <h2 className="avl-sr" id="avl-statement-h">The concept</h2>
                 <p>
                     I belong to a generation that never had to cross the boundary between the
                     physical and the digital. I grew up inside both at once. My friendships,
@@ -269,17 +173,13 @@ export default function AlgoVrithmLanding() {
                     simply one of the environments in which my life unfolds.
                 </p>
                 <p>Every day I perform the same gestures:</p>
-                {/* One line per gesture, so the six I's stack on one x-axis.
-                    Set as prose they wrapped wherever the viewport happened to
-                    put them, which reads as a list of habits — the exact thing
-                    the sentence after it says they are not. The text is
-                    unchanged, so this is a shape, not an edit. */}
+                {/* One line per gesture, so the six I's stack on one x-axis. Set
+                    as prose they wrapped wherever the viewport happened to put
+                    them, which reads as a list of habits — the exact thing the
+                    sentence after it says they are not. The trailing space is
+                    inside the span and collapses at the end of a line, but it
+                    keeps textContent readable as a sentence. */}
                 <p className="avl-gestures">
-                    {/* The trailing space is inside the span and collapses at
-                        the end of a line, but it keeps textContent readable as
-                        a sentence — without it a copy-paste, or anything
-                        reading the text rather than the layout, gets
-                        "I scroll.I swipe.I refresh." */}
                     {['I scroll.', 'I swipe.', 'I refresh.', 'I wait.', 'I record.', 'I repeat.']
                         .map((gesture) => <span key={gesture}>{gesture}{' '}</span>)}
                 </p>
@@ -303,29 +203,32 @@ export default function AlgoVrithmLanding() {
                 </p>
             </section>
 
-            <section className="avl-beats" aria-label="The beats">
-                {BEAT_CARDS.map((beat) => (
-                    <article
-                        key={beat.id}
-                        className={`avl-card${lead.id === beat.id ? ' is-lead' : ''}`}
-                    >
-                        <button type="button" className="avl-card-hit" onClick={() => jumpToBeat(beat)}>
-                            <span className="avl-card-time">
-                                {formatSec(beat.startSec)} → {formatSec(beat.endSec)}
-                            </span>
-                            <h2 className="avl-card-title">{beat.title}</h2>
-                            <p className="avl-card-blurb">{beat.blurb}</p>
-                        </button>
-                    </article>
-                ))}
+            {/* The score: seven movements in order, named, with no windows, no
+                timecodes and nothing to click. It is also the text equivalent of
+                the canvas for anyone not getting it — previously the only way to
+                discover what the piece contains was to find a slider and drive
+                it. role="list" is explicit because list-style:none drops list
+                semantics in Safari. */}
+            <section className="avl-score" aria-labelledby="avl-score-h">
+                <h2 className="avl-sr" id="avl-score-h">The score</h2>
+                {/* eslint-disable-next-line jsx-a11y/no-redundant-roles --
+                    redundant everywhere except Safari, which drops list
+                    semantics from any list carrying list-style:none. This one
+                    does, and it is the text equivalent of the canvas, so losing
+                    "list, 7 items" there is not a cosmetic loss. */}
+                <ol className="avl-score-list" role="list">
+                    {BEAT_CARDS.map((beat) => (
+                        <li
+                            key={beat.id}
+                            className="avl-score-line"
+                            aria-current={lead.id === beat.id ? 'true' : undefined}
+                        >
+                            <span className="avl-score-name">{beat.title}</span>
+                            <span className="avl-score-note">{beat.blurb}</span>
+                        </li>
+                    ))}
+                </ol>
             </section>
-
-            {/* No "why this space has no editor" section here any more. It was
-                the only developer voice on the page and it had the last word on
-                it: src/algoVrithm/, startSec/endSec, cloning the branch. The
-                front door is for a visitor, and it now ends on the work. All of
-                that survives in the wiki article, which is where somebody
-                looking for it goes. */}
         </main>
     )
 }

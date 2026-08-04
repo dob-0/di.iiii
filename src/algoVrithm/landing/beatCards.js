@@ -21,7 +21,7 @@ export const BEAT_CARDS = [
     {
         id: 's01-white-tunnel',
         title: 'White tunnel',
-        blurb: 'Light, and nothing in it yet — the medium before the message. Strobe rings rush the eye out of the dark, and the corridor ends by hitting you.',
+        blurb: 'Light, and nothing in it yet. A white corridor rushes past you and ends by arriving in your eye.',
         startSec: 0,
         endSec: 5.6,
         world: '#000000',
@@ -31,7 +31,7 @@ export const BEAT_CARDS = [
     {
         id: 's01b-halo',
         title: 'Halo',
-        blurb: 'The first breath. The corridor is crushed flat and its pulse survives it — one white ring per strobe swell, rippling out through the space where it stood.',
+        blurb: 'The corridor is gone; its pulse is not. Rings keep opening below you and overhead, widening out into the dark.',
         startSec: 4.4,
         endSec: 9.4,
         world: '#000000',
@@ -41,7 +41,7 @@ export const BEAT_CARDS = [
     {
         id: 's02-scan',
         title: 'Scan',
-        blurb: 'Code as measured material. Hairline bars quantised to three widths on four shells around you, switching on one 6 Hz machine tick while a plane reads the volume.',
+        blurb: 'Code as measured material. Fine white lines stand in the dark on exact rings around you, while something sweeps the space, reading it.',
         startSec: 8.2,
         endSec: 14.4,
         world: '#000000',
@@ -51,7 +51,7 @@ export const BEAT_CARDS = [
     {
         id: 's03-test-pattern',
         title: 'Test pattern',
-        blurb: 'The measurement becomes architecture and you walk through it — black slabs on a grid running 32 m ahead and 30 m behind, sliding into moiré. The only walk in the piece.',
+        blurb: 'The measurement stands up as architecture and you move through it: black bars in a white void, sliding into interference as they pass.',
         startSec: 13.2,
         endSec: 19.4,
         world: '#FFFFFF',
@@ -61,7 +61,7 @@ export const BEAT_CARDS = [
     {
         id: 's05-metaball-field',
         title: 'Metaball field',
-        blurb: 'The material goes fluid and surrounds you: nine pairs of black blobs fusing and parting on every side, then closing in, welding into one wall, and opening a portal in it.',
+        blurb: 'The material goes fluid and surrounds you. Black forms fuse and part on every side, then close in, seal, and open a way through.',
         startSec: 18.2,
         endSec: 26.4,
         world: '#FFFFFF',
@@ -71,7 +71,7 @@ export const BEAT_CARDS = [
     {
         id: 's06-reel-globe',
         title: 'Reel globe',
-        blurb: 'The footage, arriving through that portal — 288 reels tiled edge to edge into a closed shell with you at its centre. It does not rotate: you turn, the feed does not.',
+        blurb: 'What was on the other side: the feed, closed into a room with you inside it. It holds still, then begins to swipe.',
         startSec: 23.2,
         endSec: 45.4,
         world: '#04050A',
@@ -81,7 +81,7 @@ export const BEAT_CARDS = [
     {
         id: 's07-dispersion-sphere',
         title: 'Dispersion sphere',
-        blurb: 'The epilogue. The globe recedes and settles on this sphere’s exact seat — you step out of one sphere and find another, in a colonnade strobing the piece’s own white.',
+        blurb: 'The monument. A sphere hangs in a dark colonnade, colour welling across it, the columns firing in the white the piece opened on. You step out of one sphere and find another.',
         startSec: 44.2,
         endSec: 53.0,
         world: '#0D1114',
