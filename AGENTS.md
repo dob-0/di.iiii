@@ -60,6 +60,7 @@ Full routing guide: [docs/ai/roles/model-routing.md](docs/ai/roles/model-routing
 - End every task with: **summary** (2–4 lines), **changed files** (one-line reason each), **validation** (commands + pass/fail), **risks** (concrete only).
 - Shipped a user-facing feature or behavior change? Update the Wiki in the same change — add/edit the entry in `src/wiki/wikiContent.js` (bump `updated`; add to `WIKI_HIGHLIGHTS` if headline-worthy). Part of "done," same tier as CURRENT.md. See `docs/ai/golden_rules.md`.
 - Fixed a bug? The same change ships a `docs/ai/known-fixes.md` entry AND a regression guard (test or executable contract) — each bug class is paid for once. The fix alone is not "done".
+- Verified it? Not until you looked at it — real browser, desktop **and** phone. See the Validation section; `npm run verify:surfaces`. A regression guard you never saw fail is decoration, and a screenshot you never opened is not verification.
 
 ## Repo Map
 
@@ -79,6 +80,20 @@ npm run test:server-contracts
 npm run docs:ai:sync
 npm run docs:ai:check
 ```
+
+**A green run is not evidence that the product works.** Anything that can change
+what a person sees or does must also be verified in a real browser, on desktop
+AND on a phone, by looking at it:
+
+```bash
+npm run verify:surfaces -- --base https://staging.di-studio.xyz   # desktop + 5 devices
+npm run verify:surfaces:mobile -- --base https://di-studio.xyz    # phones/tablet only
+```
+
+Then **open the screenshots** in `.verify-surfaces/`. 43 of the 134 defects in
+known-fixes are silent failures and 29 are mobile-only — none of them fail a
+unit test. Full standard, and the techniques that do NOT work here:
+**[docs/ai/verification-charter.md](docs/ai/verification-charter.md)**.
 
 ## Release & Fork Sync
 

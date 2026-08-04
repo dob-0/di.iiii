@@ -47,3 +47,6 @@ serverXR/data/
 serverXR/uploads/
 serverXR/.env
 serverXR/.env.local
+
+# verify-surfaces.mjs screenshots + report (local artefact)
+.verify-surfaces/

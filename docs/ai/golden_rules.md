@@ -221,6 +221,33 @@ Resume the next window from CURRENT.md, not from memory.
 
 ## Core Solutions — Discovered in This Repo
 
+### Verify as a human — desktop and phone — or it is not done
+
+**Rule:** Any change that can alter what a person sees or does is verified in a
+real browser, on desktop **and** on a phone, by looking at it — before it is
+called done. `npm run verify:surfaces`, then open the screenshots.
+
+**Why:** `docs/ai/known-fixes.md` holds 134 defects. 43 are *silent failures*
+(swallowed catch, hardcoded fallback, a 200 carrying the SPA shell instead of
+the asset), 29 are mobile/touch-only, 24 are "renders but is blank, invisible or
+covered". None of these fail a unit test — that is the definition of the class.
+Two shipped examples: the field's cores were built `visible:false` and only
+revealed by a button most visitors never pressed (data loaded, count correct,
+screen empty), and the rite set `body{cursor:none}` with nothing drawn in its
+place, so the mouse simply disappeared. Both were green everywhere.
+
+**How to apply:** `docs/ai/verification-charter.md` is the standard, including
+the device matrix and the two detection techniques that do NOT work here
+(`elementFromPoint` for occlusion; filtering chrome by "positioned AND painted").
+Agents: `human-verifier`, `silent-failure-hunter`, `release-verifier`.
+
+**Trap:** Claude's Chrome extension drives a tab where `document.hidden` is
+true, so Chrome freezes `requestAnimationFrame` and CSS transitions — every
+WebGL surface and animated reveal renders blank whether or not it is broken.
+This produced a false "production is broken" report. Use Playwright for anything
+that animates or renders 3D.
+
+
 Architectural decisions validated through real work. Add to this list when a solution proves itself.
 
 ---

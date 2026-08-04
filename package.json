@@ -49,6 +49,8 @@
         "lint": "eslint src --ext .js,.jsx",
         "test": "vitest run",
         "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js serverXR/src/bundleContracts.test.js serverXR/src/installBundleContracts.test.js serverXR/src/fallbackContracts.test.js",
+        "verify:surfaces": "node scripts/verify-surfaces.mjs",
+        "verify:surfaces:mobile": "node scripts/verify-surfaces.mjs --mobile-only",
         "test:schema-sync": "vitest run serverXR/src/schemaSync.test.js",
         "test:ui": "vitest",
         "check:three-vendor": "node scripts/check-three-vendor.mjs",

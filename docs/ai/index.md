@@ -39,6 +39,7 @@ Every task has an owner. Route to the right role before starting work.
 
 - [golden_rules.md](golden_rules.md) — hard-won solutions + agent behavior rules (read this early)
 - [elite-debug.md](elite-debug.md) — investigation epistemology: how to think when debugging, DRY at architecture level, model-first investigation
+- [verification-charter.md](verification-charter.md) — what "done" means: verify as a human, desktop AND phone, before calling anything finished (evidence: 43/134 known defects are silent, 29 are mobile-only)
 - [ui-system.md](ui-system.md) — complete visual system: two surface families, all rgba values, radius scale, viewport corner layout, MUI override rules
 - [design-baseline.md](design-baseline.md) — landing page style reference (colors, typography, cyan grid scene); ui-system.md covers the editor
 - [parallel-agents.md](parallel-agents.md) — running more than one agent on this repo at once
