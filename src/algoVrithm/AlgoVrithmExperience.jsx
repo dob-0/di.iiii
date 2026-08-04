@@ -371,10 +371,20 @@ const Chrome = memo(function Chrome({
     )
 })
 
-export default function AlgoVrithmExperience() {
+/**
+ * @param embedded  true when this is mounted inside another surface — Studio's
+ *                  director page — rather than owning the window. The root is
+ *                  `position: fixed; inset: 0` by default, which would cover
+ *                  whatever it was placed under; `is-embedded` makes it absolute
+ *                  so it fills the box it is given instead. See algoVrithm.css.
+ * @param director  forces the panel on, for a route whose whole purpose is the
+ *                  panel. Left undefined the flag decides, as it always has.
+ */
+export default function AlgoVrithmExperience({ embedded = false, director = undefined } = {}) {
     const xr = useXrAr()
     const rootRef = useRef(null)
-    const directorEnabled = useMemo(() => isDirectorEnabled(), [])
+    const flagDirector = useMemo(() => isDirectorEnabled(), [])
+    const directorEnabled = director === undefined ? flagDirector : director
 
     // ---- WARM THE FOOTAGE ---------------------------------------------------
     //
@@ -571,7 +581,7 @@ export default function AlgoVrithmExperience() {
     // All authoring furniture, behind one key. Closed by default — see
     // usePanelToggle.js for why, and for why this is also the whole of the
     // phone story.
-    const panels = usePanelToggle({ enabled: directorEnabled })
+    const panels = usePanelToggle({ enabled: directorEnabled, initialOpen: embedded })
 
     // Auto-hide follows the panels, not the flag. With the panel closed the
     // author is watching the piece rather than working on it, and wants exactly
@@ -598,7 +608,7 @@ export default function AlgoVrithmExperience() {
 
     return (
         <div
-            className={`algo-vrithm-root${directorEnabled ? ' has-director' : ''}${panels.open ? ' is-split' : ''}`}
+            className={`algo-vrithm-root${embedded ? ' is-embedded' : ''}${directorEnabled ? ' has-director' : ''}${panels.open ? ' is-split' : ''}`}
             ref={rootRef}
             style={rootStyle}
         >

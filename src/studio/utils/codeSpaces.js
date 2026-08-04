@@ -4,6 +4,7 @@ import {
     ALGO_VRITHM_SCENE_PATH,
     ALGO_VRITHM_SPACE_ID
 } from '../../algoVrithm/algoVrithmRouting.js'
+import { buildStudioDirectorPath } from './studioRouting.js'
 
 // Spaces whose scene is CODE rather than a project document.
 //
@@ -27,16 +28,21 @@ export const CODE_SPACES = [
         path: ALGO_VRITHM_PATH,
         // Shown on the card. Say what the thing IS, not that it is unusual.
         blurb: 'A 30–60 second installation on hyperreality. Its scene is code, not a project document — open it to play, or open the director to retime the edit.',
-        // The authoring surface for a code space. Not a Studio project editor —
-        // the piece's own timeline panel, which is where its edit actually
-        // gets made.
-        // The SCENE path, not the space path. This pointed at ALGO_VRITHM_PATH,
-        // which since the front door was split off is the landing page — a
-        // page with no director on it and no way to reach one. The button has
-        // been opening the wrong thing ever since the split, silently, because
-        // the landing simply ignores an unknown query param.
-        directorPath: `${ALGO_VRITHM_SCENE_PATH}?director`,
-        directorLabel: 'Director'
+        // The authoring surface for a code space, inside Studio — the piece's
+        // own timeline panel, under Studio's chrome, reached from the Spaces
+        // list like any other editor.
+        //
+        // It used to point at ALGO_VRITHM_PATH, which since the front door was
+        // split off is the LANDING page: a page with no director on it and no
+        // way to reach one. Silent, because the landing simply ignores a query
+        // param it does not read, so the button did navigate — to the wrong half
+        // of a route that had been split under it.
+        directorPath: buildStudioDirectorPath(ALGO_VRITHM_SPACE_ID),
+        directorLabel: 'Director',
+        // The bare piece with no Studio around it. Still the right thing for
+        // judging timing on the headset the work runs on, where a header above
+        // the picture is meaningless and XR entry owns the whole window.
+        scenePath: `${ALGO_VRITHM_SCENE_PATH}?director`
     }
 ]
 

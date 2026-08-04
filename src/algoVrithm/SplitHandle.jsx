@@ -35,7 +35,16 @@ export default function SplitHandle({ split, onSplit }) {
         // Capture is the drag state — no ref needed, and no way for a stale
         // flag to leave the layout following the mouse after a lost pointerup.
         if (!event.currentTarget.hasPointerCapture?.(event.pointerId)) return
-        onSplit(splitFromPointer(event.clientY, window.innerHeight))
+        // Measured against the handle's OWN offsetParent, not the window. The
+        // two are the same thing while the piece owns the viewport, and are not
+        // when it is embedded in Studio's director page — there the root starts
+        // below a header, and using window.innerHeight would leave the seam
+        // tracking the cursor with a constant offset equal to that header.
+        const host = event.currentTarget.offsetParent
+        const box = host?.getBoundingClientRect()
+        onSplit(box
+            ? splitFromPointer(event.clientY - box.top, box.height)
+            : splitFromPointer(event.clientY, window.innerHeight))
     }, [onSplit])
 
     const onPointerUp = useCallback((event) => {

@@ -42,11 +42,17 @@ export const shouldTogglePanels = (event) => {
 }
 
 /**
- * @param enabled  false for the audience build, where there is nothing to
- *                 toggle and the listener should not exist at all
+ * @param enabled      false for the audience build, where there is nothing to
+ *                     toggle and the listener should not exist at all
+ * @param initialOpen  true where the panel IS the page. Closed-by-default is
+ *                     right when the piece is the thing on screen and the panel
+ *                     is furniture you summon; it is wrong on a route called
+ *                     "director", where arriving to an apparently ordinary
+ *                     playback and a hint about a keyboard shortcut is just a
+ *                     door that looks like a wall.
  */
-export const usePanelToggle = ({ enabled = true } = {}) => {
-    const [open, setOpen] = useState(false)
+export const usePanelToggle = ({ enabled = true, initialOpen = false } = {}) => {
+    const [open, setOpen] = useState(initialOpen)
 
     const toggle = useCallback(() => setOpen((previous) => !previous), [])
 

@@ -13,6 +13,18 @@
     overflow: hidden;
 }
 
+/* Mounted inside another surface — Studio's director page — instead of owning
+   the window. Fixed positioning ignores every ancestor, so the piece would sit
+   on top of whatever it was placed under, including the header naming the space
+   you are editing. Absolute makes it fill the box it is given.
+   The host must be a positioned element; StudioCodeSpaceDirector's page body is.
+
+   The split arithmetic follows: SplitHandle measures its own offsetParent
+   rather than the window, so the seam tracks the cursor here too. */
+.algo-vrithm-root.is-embedded {
+    position: absolute;
+}
+
 /* The piece's half of the split, and the Canvas's positioning context.
    An explicit fraction rather than a flex row that sizes to the panel's
    content: the panel's height would then change with the number of clips, so

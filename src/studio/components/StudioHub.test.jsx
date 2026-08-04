@@ -4,6 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import StudioHub from './StudioHub.jsx'
 import { setAppNavigate } from '../../utils/appNavigate.js'
 import { ALGO_VRITHM_PATH, ALGO_VRITHM_SCENE_PATH } from '../../algoVrithm/algoVrithmRouting.js'
+// Resolves to the mock declared below, which is the point: the assertion then
+// checks that the button and codeSpaces.js agree on a destination, rather than
+// restating a literal that both could drift away from together.
+import { buildStudioDirectorPath } from '../utils/studioRouting.js'
 
 const createProject = vi.fn()
 const deleteProject = vi.fn()
@@ -42,6 +46,13 @@ vi.mock('../../project/import/importLegacyScene.js', () => ({
 
 vi.mock('../utils/studioRouting.js', () => ({
     buildStudioProjectPath: (projectId, spaceId) => `/${spaceId}/studio/projects/${projectId}`,
+    // codeSpaces.js builds the Director destination from this, at module scope.
+    // A mock that omits it does not fail where it is missing — it fails the
+    // whole suite at import, which is why this list has to track the real
+    // module rather than only the calls the component makes directly.
+    buildStudioDirectorPath: (spaceId) => `/${spaceId}/studio/director`,
+    buildStudioSpacesPath: () => '/studio',
+    buildStudioHubPath: (spaceId) => `/${spaceId}/studio`,
     navigateToStudioPath: (...args) => navigateToStudioPath(...args)
 }))
 
@@ -155,14 +166,23 @@ describe('StudioHub', () => {
 
             fireEvent.click(await screen.findByRole('button', { name: 'Director' }))
             expect(navigate).toHaveBeenCalledTimes(1)
-            // The SCENE, not the space's front door. This asserted the door
-            // for as long as the door existed, which is exactly how the button
-            // went on opening a page with no director on it: the landing
-            // ignores an unknown query param, so nothing failed. Built from
-            // the routing constant so a further move cannot leave it stale
-            // and green.
-            expect(navigate).toHaveBeenCalledWith(`${ALGO_VRITHM_SCENE_PATH}?director`, { replace: false })
+            // Studio's OWN director page — `/algovrithm/studio/director`, which
+            // is Studio chrome around the piece's timeline panel.
+            //
+            // Two fixes landed on this line at once and both were right about
+            // the bug: it asserted `${ALGO_VRITHM_PATH}?director`, the front
+            // door, for as long as the door existed, which is exactly how the
+            // button went on opening a page with no director on it — the
+            // landing ignores an unknown query param, so nothing failed. The
+            // other fix pointed it at the scene; this one gives the director a
+            // home instead, and keeps the scene reachable from that page as
+            // "Open the piece".
+            //
+            // Built from the path builder, not a literal, so moving the route
+            // again cannot leave this stale and green.
+            expect(navigate).toHaveBeenCalledWith(buildStudioDirectorPath('algovrithm'), { replace: false })
             expect(navigate).not.toHaveBeenCalledWith(`${ALGO_VRITHM_PATH}?director`, expect.anything())
+            expect(navigate).not.toHaveBeenCalledWith(`${ALGO_VRITHM_SCENE_PATH}?director`, expect.anything())
         })
 
         it('leaves an ordinary empty space alone', async () => {

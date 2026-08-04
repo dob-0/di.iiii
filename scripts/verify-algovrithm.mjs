@@ -166,6 +166,52 @@ const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-un
     await ctx.close()
 }
 
+// The embedded layout, measured on a page that needs no authoring session.
+//
+// Studio's director page (`/<space>/studio/director`) sits behind the same
+// ProtectedSurface gate as every other editor, which is correct and which means
+// it cannot be reached here without an OAuth session. What CAN be checked
+// without one is the contract that page depends on: `.algo-vrithm-root` is
+// `position: fixed; inset: 0`, so embedding it under a header would cover the
+// header unless `.is-embedded` makes it absolute. So build that host here and
+// measure it.
+{
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1.5 })
+    const p = await ctx.newPage()
+    await p.goto(`${B}/algovrithm/scene?director`, { waitUntil: 'load' })
+    await p.waitForTimeout(8000)
+
+    const m = await p.evaluate(() => {
+        const root = document.querySelector('.algo-vrithm-root')
+        if (!root) return null
+        const page = document.createElement('div')
+        page.style.cssText = 'display:flex;flex-direction:column;height:100vh'
+        const head = document.createElement('div')
+        head.style.cssText = 'height:96px;flex:0 0 96px;background:#141c26'
+        const stage = document.createElement('div')
+        stage.style.cssText = 'position:relative;flex:1;min-height:0'
+        page.append(head, stage)
+        document.body.append(page)
+        stage.append(root)
+        root.classList.add('is-embedded')
+        const a = root.getBoundingClientRect()
+        const s = stage.getBoundingClientRect()
+        return {
+            position: getComputedStyle(root).position,
+            root: [Math.round(a.top), Math.round(a.height)],
+            host: [Math.round(s.top), Math.round(s.height)]
+        }
+    })
+
+    ok('is-embedded turns the root absolute', m?.position === 'absolute', m?.position ?? 'no root')
+    ok('the embedded root fills its host and clears the header',
+        m && m.root[0] === m.host[0] && m.root[1] === m.host[1], JSON.stringify(m))
+    // No screenshot here on purpose: capturing the full piece at this size under
+    // a software rasteriser reliably outruns Playwright's 30s timeout, and the
+    // numbers above are what this block is for.
+    await ctx.close()
+}
+
 await b.close()
 const bad = out.filter((r) => !r[1])
 console.log(`\n${out.length - bad.length}/${out.length} passed`)
