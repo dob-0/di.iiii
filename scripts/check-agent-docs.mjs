@@ -159,12 +159,26 @@ const ensureContains = (content, needle, filePath, errors) => {
   }
 }
 
+// CURRENT.md says of itself "≤50 lines. Read in full." — and its own limit was
+// the one rule in the whole contract that nothing checked. It went over three
+// times in a single session on 2026-08-06, each time caught only by a person
+// counting. A rule every agent is told to obey and no build can see is a
+// convention, not a protocol.
+const CURRENT_MD_MAX_LINES = 50
+
 const main = async () => {
   const errors = []
 
   for (const relativePath of requiredCanonicalFiles) {
     if (!await exists(relativePath)) {
       errors.push(`Missing required canonical file: ${relativePath}`)
+    }
+  }
+
+  if (await exists('CURRENT.md')) {
+    const lines = (await readFile('CURRENT.md')).replace(/\n$/, '').split('\n').length
+    if (lines > CURRENT_MD_MAX_LINES) {
+      errors.push(`CURRENT.md is ${lines} lines, limit ${CURRENT_MD_MAX_LINES}. It is read in full at the start of every session — cut the settled items or move them to PROGRESS.md.`)
     }
   }
 
