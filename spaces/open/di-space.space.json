@@ -1,0 +1,24 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.space.schema.json",
+  "spaceId": "open",
+  "label": "Open Space",
+  "isPublic": true,
+  "minEngine": 6,
+  "note": "The communal room every visitor can build in, and the target of the Open Jam link. Authored live by whoever is in it.",
+  "tiers": {
+    "prod": {
+      "url": "https://di-studio.xyz/serverXR",
+      "tokenEnv": "PROD_API_TOKEN"
+    },
+    "staging": {
+      "url": "https://staging.di-studio.xyz/serverXR",
+      "tokenEnv": "LIVE_API_TOKEN"
+    },
+    "local": {
+      "url": "http://localhost:4000/serverXR",
+      "tokenEnv": "API_TOKEN",
+      "governed": false
+    }
+  },
+  "projects": []
+}

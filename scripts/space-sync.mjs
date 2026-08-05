@@ -22,6 +22,14 @@
  * Fields in both are reconciled on EVERY run, because the recurring bug in this
  * file's history is a field that was only ever sent when something was created.
  *
+ * A space manifest whose `projects` list is EMPTY is a space-only declaration
+ * (v6): `--all` reconciles the space and touches no content. That is how a
+ * space authored in Studio, or one whose scene is React in `src/`, gets to be
+ * declared at all — see spaces/README.md.
+ *
+ *   node scripts/space-sync.mjs --space spaces/main/di-space.space.json --all --tier prod
+ *   npm run spaces:audit                                 # every space this repo declares
+ *
  * Auth: --token, else the tier's declared tokenEnv, else LIVE_API_TOKEN /
  * API_TOKEN — from env, the repo's .env.local, or di.iiii serverXR/.env.local.
  *
@@ -44,7 +52,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const ENGINE_VERSION = 5
+export const ENGINE_VERSION = 6
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const CODE_EXTENSIONS = new Set(['.html', '.htm', '.css', '.js', '.mjs', '.txt', '.svg', '.json', '.md'])
@@ -211,31 +219,19 @@ const referencesAsset = (text, rel, base) => refPattern(rel, base).test(text)
 const rewriteAssetRefs = (text, rel, base, url) =>
   text.replace(refPattern(rel, base), (_m, lead) => `${lead}${url}`)
 
-async function syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, tierName }) {
-  let manifest
-  try {
-    manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'))
-  } catch (e) {
-    console.error(`Cannot read manifest at ${manifestPath}: ${e.message}`)
-    process.exitCode = 1; return
-  }
-
-  const { spaceId, projectId, entry } = manifest
-  if (!spaceId || !projectId || !entry) {
-    console.error('Manifest must include spaceId, projectId, and entry.'); process.exitCode = 1; return
-  }
-  if (Number(manifest.minEngine || 0) > ENGINE_VERSION) {
-    console.error(`Error: ${path.basename(manifestPath)} needs engine v${manifest.minEngine}, this copy is v${ENGINE_VERSION}.`)
-    console.error('  Re-vendor from di.iiii: node scripts/space-sync-vendor.mjs --write')
-    process.exitCode = 1; return
-  }
-  if (!token) {
-    console.error('Error: editor token required (--token or LIVE_API_TOKEN / API_TOKEN).'); process.exitCode = 1; return
-  }
-
-  console.log(`[space-sync] ${spaceId} ← ${repoDir}`)
-  console.log(`  live: ${live}   dry-run: ${args.dryRun ? 'yes' : 'no'}`)
-
+/**
+ * Steps 1 and 1b — the SPACE, with no reference to any page in it.
+ *
+ * Split out of syncOne because most of di.iiii's spaces have no repo pages at
+ * all: `main`, `open`, `azd` and `wcc` are authored in Studio, and
+ * `algovrithm`'s scene is React in `src/`. Before this they could not be
+ * declared, only remembered — which is the exact condition that let three
+ * tiers of br_id_ge answer to three different names. A declaration you cannot
+ * apply is a comment.
+ *
+ * Returns the canonical space id, or null if it could not be reached.
+ */
+async function reconcileSpace({ spaceId, live, token, args, spaceDecl, tierName }) {
   // 1. ensure space (idempotent create)
   let space = (await api(`${live}/api/spaces/${spaceId}`, { headers: buildHeaders(token) })).body?.space
   if (!space) {
@@ -283,6 +279,35 @@ async function syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, ti
       else throw new Error(`HTTP ${r.status} setting space fields: ${r.body?.error || ''}`)
     }
   }
+  return canonicalSpace
+}
+
+async function syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, tierName }) {
+  let manifest
+  try {
+    manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'))
+  } catch (e) {
+    console.error(`Cannot read manifest at ${manifestPath}: ${e.message}`)
+    process.exitCode = 1; return
+  }
+
+  const { spaceId, projectId, entry } = manifest
+  if (!spaceId || !projectId || !entry) {
+    console.error('Manifest must include spaceId, projectId, and entry.'); process.exitCode = 1; return
+  }
+  if (Number(manifest.minEngine || 0) > ENGINE_VERSION) {
+    console.error(`Error: ${path.basename(manifestPath)} needs engine v${manifest.minEngine}, this copy is v${ENGINE_VERSION}.`)
+    console.error('  Re-vendor from di.iiii: node scripts/space-sync-vendor.mjs --write')
+    process.exitCode = 1; return
+  }
+  if (!token) {
+    console.error('Error: editor token required (--token or LIVE_API_TOKEN / API_TOKEN).'); process.exitCode = 1; return
+  }
+
+  console.log(`[space-sync] ${spaceId} ← ${repoDir}`)
+  console.log(`  live: ${live}   dry-run: ${args.dryRun ? 'yes' : 'no'}`)
+
+  const canonicalSpace = await reconcileSpace({ spaceId, live, token, args, spaceDecl, tierName })
 
   // 2. ensure project (idempotent create)
   const projects = (await api(`${live}/api/spaces/${canonicalSpace}/projects`, { headers: buildHeaders(token) })).body?.projects || []
@@ -455,6 +480,7 @@ async function audit({ repoDir, spaceDecl, spaceManifestPath, getEnv, args }) {
 
   console.log(`[space-audit] ${spaceId} ← ${repoDir}\n`)
 
+  const spaceOnlyDecl = !(spaceDecl.projects || []).length
   const wantProjects = []
   for (const rel of spaceDecl.projects || []) {
     try {
@@ -514,7 +540,7 @@ async function audit({ repoDir, spaceDecl, spaceManifestPath, getEnv, args }) {
       return pad(`${ok ? ' ' : '✗'} ${JSON.stringify(v)}${want === undefined ? ' (undeclared)' : ''}`, W)
     }).join('')}`)
   }
-  console.log(`  ${pad('projects', 22)}${seen.map((r) => pad(r.error ? '—' : r.projects.length, W)).join('')}  want ${wantProjects.length}`)
+  console.log(`  ${pad('projects', 22)}${seen.map((r) => pad(r.error ? '—' : r.projects.length, W)).join('')}${spaceOnlyDecl ? '  (not declared here)' : `  want ${wantProjects.length}`}`)
   console.log('')
 
   for (const w of wantProjects) {
@@ -534,13 +560,19 @@ async function audit({ repoDir, spaceDecl, spaceManifestPath, getEnv, args }) {
   // Extras are REPORTED, never removed. Deleting a project is the one operation
   // here that can destroy work nobody has a copy of, so it stays a thing a human
   // types on purpose — this only makes sure they can see it.
+  //
+  // A space-only declaration changes what "extra" MEANS. `wcc` holds eleven
+  // Studio-authored projects and is supposed to; calling them "not in the repo"
+  // reads as eleven faults and would push someone toward deleting the show.
   const declared = new Set(wantProjects.map((w) => w.id))
   for (const r of seen) {
     const extra = r.projects.filter((p) => !declared.has(p.id)).map((p) => p.id)
     if (!extra.length) continue
-    const head = `  ${r.name}: ${extra.length} project(s) not in the repo`
+    const head = spaceOnlyDecl
+      ? `  ${r.name}: ${extra.length} project(s), authored in Studio — this repo declares the space, not its pages`
+      : `  ${r.name}: ${extra.length} project(s) not in the repo`
     console.log(`\n${head}\n    ${extra.slice(0, 12).join(', ')}${extra.length > 12 ? `, … +${extra.length - 12}` : ''}`)
-    if (r.governed) console.log('    (reported only — removal is a deliberate act, never a sync)')
+    if (r.governed && !spaceOnlyDecl) console.log('    (reported only — removal is a deliberate act, never a sync)')
   }
 
   const ungoverned = seen.filter((r) => !r.governed).map((r) => r.name)
@@ -600,9 +632,13 @@ async function main() {
   const manifests = args.all
     ? (spaceDecl.projects || []).map((rel) => path.resolve(repoDir, rel))
     : [args.manifest ? path.resolve(args.manifest) : path.join(repoDir, 'di-space.json')]
-  if (args.all && !manifests.length) {
-    console.error(`Error: ${SPACE_MANIFEST} lists no projects.`); process.exitCode = 1; return
-  }
+  // An empty page list is a SPACE-ONLY declaration, not a mistake (v6). Most of
+  // di.iiii's own spaces are authored in Studio or are React routes, so they
+  // have nothing a manifest could push — but they still have a name and a
+  // public flag that drifted per tier with nothing to compare against. This is
+  // the only mode that can apply such a declaration; --audit could always read
+  // one, and a declaration that can only be read is a comment.
+  const spaceOnly = args.all && !manifests.length
 
   // A single manifest may still pin its own tier (beyond_form and
   // platform_recordar both do). Under --all the space manifest names the tier,
@@ -627,6 +663,17 @@ async function main() {
     || getEnv('LIVE_API_TOKEN') || getEnv('API_TOKEN') || ''
   if (!token) {
     console.error('Error: editor token required (--token or LIVE_API_TOKEN / API_TOKEN).'); process.exitCode = 1; return
+  }
+
+  if (spaceOnly) {
+    if (!spaceDecl.spaceId) {
+      console.error(`Error: ${path.basename(spaceManifestPath)} declares no pages and no spaceId — nothing to sync.`)
+      process.exitCode = 1; return
+    }
+    console.log(`[space-sync] ${spaceDecl.spaceId} ← ${path.basename(spaceManifestPath)} (space only, no pages)`)
+    console.log(`  live: ${live}   dry-run: ${args.dryRun ? 'yes' : 'no'}`)
+    await reconcileSpace({ spaceId: spaceDecl.spaceId, live, token, args, spaceDecl, tierName })
+    return
   }
 
   for (const manifestPath of manifests) {

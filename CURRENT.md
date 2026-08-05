@@ -21,6 +21,8 @@ at 390px. Several agents share this tree: re-check `git log`, **stage explicit p
 - The algovrithm Director now saves from the live site — new `GET/PUT /api/spaces/:id/settings` (opaque JSON, 64 KB cap) plus a timing overlay resolved before the clock is built; **seen** on a production build with no dev server, 5.6s→8s survived a cold reload (`4e91cbc4`).
 - "Invite carries its role" was **dropped after measuring**: new accounts already default to `editor` and a redeeming guest can `PUT` a scene — there was no bug.
 - Public-repo audit: no tracked credentials, but `docs/promo/` holds the grant calendar, amounts, a named stakeholder tracker and unsent announcements.
+- An invited collaborator got a door of their own — `joining-a-space` in the wiki is the browser-only path, `README`/`ONBOARDING` fork into two doors, and both AuthGate cards link to it when an invite is in hand (`066a84bc`).
+- **All 8 prod spaces are now declared.** Engine v6 reads an empty `projects` list as a space-only declaration, so Studio-authored and code spaces can be declared at all; `npm run spaces:audit` walks every one, read-only. Prod and staging agree on every declared field.
 
 ## What works
 
@@ -30,15 +32,13 @@ staging's `LIVE_API_TOKEN` (a real `PATCH` returned 200 on 2026-08-05).
 
 ## Open
 
-- **`feat/space-declared` is UNPUSHED** (2 commits ahead of `bdaa3152`); nothing has touched staging or prod.
+- **`feat/space-declared` is UNPUSHED**; nothing has touched staging or prod. The three linked repos (`br_id_ge`, `beyond_form`, `platform_recordar`) hold **uncommitted** v6 engine copies + new space manifests — vendoring locally changes nothing CI runs.
 - Waiting on a call: move `docs/promo/**` + ops runbooks + host identifiers into a private `dob-0/di.iiii-ops` (the `br_id_ge-ops` pattern) — `git rm` does not remove history, so treat the stakeholder list as already seen.
-- The 8 prod spaces are still **ownerless** — the button exists now, the decision doesn't. Then: a collaborator onboarding page, and declare the other 7 spaces + mark the lane.
+- The 8 prod spaces are still **ownerless** — the button exists now, the decision doesn't. `platform-recordar`'s label is its own id (declared as-is; renaming is live and the owner's call).
 - **Trees:** `~/di.iiii` drifts under whoever is working — today it is on `fix/audit-2026-08-05`, and **:5173** (the only server up) serves whatever is on its disk, so name the branch before you say "go look". `~/di.iiii-algomerge` is on `dev`; `dev-preview` is detached at `5f4cd3a9`, stale.
-- **Push when you finish** — `dev` self-deploys; a red `dev` freezes staging for everyone. Check `gh run list --branch dev --limit 1`.
-- The `open` space's card is blank — no `publishedProjectId` of its own; same hole algovrithm was in.
-- Studio's director page has never been seen with a real session — `/algovrithm/studio/director` is OAuth-gated; geometry verified, picture not.
-- Reel globe's world `#04050A` fails the piece's own purple-gap check (`sequences/index.js`) — artist's call. Keyboard scroll is dead app-wide (`/wcc` too); only `/algovrithm` was fixed.
-- The `br_id_ge ▾` chip covers the field's Armenian letter-row; narrow phones also collide the bottom links — owner's call.
+  **Push when you finish** — `dev` self-deploys; a red `dev` freezes staging. Check `gh run list --branch dev --limit 1`.
+- The `open` space's card is blank (no `publishedProjectId` of its own). Studio's director page has never been seen with a real session — `/algovrithm/studio/director` is OAuth-gated; geometry verified, picture not.
+- Owner's/artist's calls: reel globe's world `#04050A` fails the piece's own purple-gap check; the `br_id_ge ▾` chip covers the field's Armenian letter-row and narrow phones collide the bottom links. Keyboard scroll is dead app-wide (`/wcc` too); only `/algovrithm` was fixed.
 - Privacy calls owed: no account-deletion, export or session revocation; backups unencrypted. §7 blocks Stage 2 — `docs/ai/INBOX.md`.
 - **`feat/timeline-core` is UNPUSHED and checked out nowhere** (5 ahead of `dev`, 51 behind it): it moves the director to `src/raw/director/`, adds `view.director`/`view.timeline` nodes and `src/project/timeline/timelineCore.js` — so the Raw representation exists, but not on `dev`. It branched **before** the phone fix and still carries the old two-corner chrome, so a careless merge re-introduces the overlap; `chromeLayout.test.js` is what catches that. Land it deliberately.
 

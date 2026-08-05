@@ -1,0 +1,24 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.space.schema.json",
+  "spaceId": "azd",
+  "label": "azd",
+  "isPublic": true,
+  "minEngine": 6,
+  "note": "Authored in Studio.",
+  "tiers": {
+    "prod": {
+      "url": "https://di-studio.xyz/serverXR",
+      "tokenEnv": "PROD_API_TOKEN"
+    },
+    "staging": {
+      "url": "https://staging.di-studio.xyz/serverXR",
+      "tokenEnv": "LIVE_API_TOKEN"
+    },
+    "local": {
+      "url": "http://localhost:4000/serverXR",
+      "tokenEnv": "API_TOKEN",
+      "governed": false
+    }
+  },
+  "projects": []
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://di-studio.xyz/schemas/di-space.space.schema.json",
+  "spaceId": "algovrithm",
+  "label": "algovrithm",
+  "isPublic": true,
+  "minEngine": 6,
+  "note": "A code space: its scene is React in src/algoVrithm/, not a project document, so it holds no projects at all and never will.",
+  "tiers": {
+    "prod": {
+      "url": "https://di-studio.xyz/serverXR",
+      "tokenEnv": "PROD_API_TOKEN"
+    },
+    "staging": {
+      "url": "https://staging.di-studio.xyz/serverXR",
+      "tokenEnv": "LIVE_API_TOKEN"
+    },
+    "local": {
+      "url": "http://localhost:4000/serverXR",
+      "tokenEnv": "API_TOKEN",
+      "governed": false
+    }
+  },
+  "projects": []
+}

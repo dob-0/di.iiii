@@ -1,4 +1,7 @@
+import { spawn } from 'node:child_process'
 import fs from 'node:fs'
+import http from 'node:http'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -97,6 +100,77 @@ describe('space-sync engine', () => {
         // an unknown host must NOT silently answer "prod"
         expect(tierOf('http://localhost:4000/serverXR', tiers)).toBe('localhost:4000')
         expect(parseArgs(['--all']).all).toBe(true)
+    })
+
+    it('treats an empty page list as a space-only declaration, not an error', async () => {
+        // v5 refused: "di-space.space.json lists no projects." That refusal is
+        // why most of di.iiii's own spaces could not be declared at all — main,
+        // open, azd and wcc are authored in Studio and algovrithm's scene is
+        // React, so none of them has a page a manifest could push. They still
+        // have a name and a public flag, and those are exactly the fields whose
+        // silent per-tier drift this engine exists to catch.
+        const calls = []
+        const server = http.createServer((req, res) => {
+            calls.push(`${req.method} ${req.url}`)
+            let body = ''
+            req.on('data', (c) => { body += c })
+            req.on('end', () => {
+                if (req.method === 'PATCH') calls.push(`body ${body}`)
+                res.setHeader('Content-Type', 'application/json')
+                res.end(JSON.stringify(req.method === 'GET'
+                    ? { space: { id: 'probe', label: 'stale name', isPublic: true } }
+                    : { ok: true }))
+            })
+        })
+        await new Promise((r) => server.listen(0, '127.0.0.1', r))
+        const url = `http://127.0.0.1:${server.address().port}`
+
+        const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'space-only-'))
+        const manifest = path.join(dir, 'di-space.space.json')
+        fs.writeFileSync(manifest, JSON.stringify({
+            spaceId: 'probe', label: 'the declared name', isPublic: true,
+            minEngine: ENGINE_VERSION, tiers: { prod: { url, tokenEnv: 'PROBE_TOKEN' } }, projects: []
+        }))
+
+        const out = await new Promise((resolve) => {
+            const child = spawn(process.execPath, [ENGINE, '--space', manifest, '--all', '--tier', 'prod'],
+                { cwd: dir, env: { ...process.env, PROBE_TOKEN: 'probe-token' } })
+            let text = ''
+            child.stdout.on('data', (c) => { text += c })
+            child.stderr.on('data', (c) => { text += c })
+            child.on('close', (code) => resolve({ code, text }))
+        })
+        server.close()
+
+        expect(out.text).not.toMatch(/lists no projects/)
+        expect(out.code).toBe(0)
+        // The whole point: the declared label is PUSHED, on a space with no pages.
+        expect(calls).toContain('PATCH /api/spaces/probe')
+        expect(calls).toContain('body {"label":"the declared name"}')
+        // …and it asked for no project anywhere.
+        expect(calls.some((c) => c.includes('/projects'))).toBe(false)
+    })
+
+    it('declares every space this repo is master for, readably', () => {
+        // The declarations are hand-edited JSON. A typo in one of them is
+        // silent until a tier drifts and the audit cannot say what it wanted.
+        const dir = path.join(ROOT_DIR, 'spaces')
+        const declared = fs.readdirSync(dir, { withFileTypes: true })
+            .filter((e) => e.isDirectory())
+            .map((e) => path.join(dir, e.name, 'di-space.space.json'))
+            .filter((p) => fs.existsSync(p))
+        expect(declared.length).toBeGreaterThanOrEqual(5)
+        for (const file of declared) {
+            const decl = JSON.parse(fs.readFileSync(file, 'utf8'))
+            expect(decl.spaceId, file).toBeTruthy()
+            expect(decl.label, file).toBeTruthy()
+            expect(Number(decl.minEngine || 0), file).toBeLessThanOrEqual(ENGINE_VERSION)
+            // Both deploy tiers, or the audit compares against nothing.
+            expect(Object.keys(decl.tiers || {}), file).toEqual(expect.arrayContaining(['prod', 'staging']))
+            // The dev box is shown and never enforced — it holds 70 undeclared
+            // projects and failing on it would make the audit useless.
+            expect(decl.tiers.local?.governed, file).toBe(false)
+        }
     })
 
     it('still translates globs the way the manifests expect', () => {
