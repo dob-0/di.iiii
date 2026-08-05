@@ -48,4 +48,24 @@ describe('spaceStore ownership + quota counting', () => {
         expect(meta.ownerUserId).toBe('u1')
         expect(store.countSpacesOwnedBy('u1')).toBe(1)
     })
+
+    // Ownership was only ever written at creation, so a space provisioned by an
+    // API token (no session, no owner) could never be adopted afterwards.
+    it('reassigns and clears ownership after creation, and moves the quota with it', async () => {
+        const store = await makeStore()
+        await store.saveSpaceMeta('orphan', store.buildMeta('orphan'))
+        expect((await store.loadSpaceMeta('orphan')).ownerUserId).toBe(null)
+
+        await store.upsertSpaceMeta('orphan', { ownerUserId: 'u1' })
+        expect((await store.loadSpaceMeta('orphan')).ownerUserId).toBe('u1')
+        expect(store.countSpacesOwnedBy('u1')).toBe(1)
+
+        await store.upsertSpaceMeta('orphan', { ownerUserId: 'u2' })
+        expect(store.countSpacesOwnedBy('u1')).toBe(0)
+        expect(store.countSpacesOwnedBy('u2')).toBe(1)
+
+        await store.upsertSpaceMeta('orphan', { ownerUserId: null })
+        expect((await store.loadSpaceMeta('orphan')).ownerUserId).toBe(null)
+        expect(store.countSpacesOwnedBy('u2')).toBe(0)
+    })
 })

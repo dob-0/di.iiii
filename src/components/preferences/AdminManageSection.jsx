@@ -438,6 +438,10 @@ function SpaceDetail({
 }) {
     const isEditing = editing?.id === space.id && (editing.type === 'space' || editing.type === 'space-slug')
     const projects = projectsBucket?.items || []
+    const ownerUser = Array.isArray(users) ? users.find((u) => u.id === space.ownerUserId) || null : null
+    const ownerLabel = space.ownerUserId
+        ? (ownerUser ? (ownerUser.displayName || ownerUser.email || ownerUser.id) : space.ownerUserId)
+        : 'No owner — only an admin can manage this space'
     return (
         <>
             <ModuleSection
@@ -533,7 +537,16 @@ function SpaceDetail({
 
             <GithubSyncSection space={space} projects={projects} />
 
-            <ModuleSection title="Who can access" subtitle="Per-account grant for this space">
+            <ModuleSection title="Owner &amp; access" subtitle="Who holds this space, and who can reach it">
+                {/* A space with no owner still works, but every owner-gated
+                    action in it (publish, invite, rename, delete) can only be
+                    done by a platform admin. Spaces provisioned over the API —
+                    every repo-synced one — arrive here. */}
+                <InfoPair
+                    label="Owner"
+                    value={ownerLabel}
+                    mono={!ownerUser}
+                />
                 {users === null && <div className="preferences-empty">Loading accounts…</div>}
                 {Array.isArray(users) && users.length === 0 && (
                     <div className="preferences-empty">No accounts to manage (admin sign-in required).</div>
@@ -541,6 +554,7 @@ function SpaceDetail({
                 <div className="preferences-collaborator-list">
                     {Array.isArray(users) && users.map((u) => {
                         const has = u.isUnrestricted || u.spaces?.includes(space.id)
+                        const owns = space.ownerUserId === u.id
                         return (
                             <div key={u.id} className="preferences-collaborator-card">
                                 <div className="preferences-collaborator-top">
@@ -548,15 +562,29 @@ function SpaceDetail({
                                         <div className="preferences-collaborator-name">{u.displayName || u.email || u.id}</div>
                                         <div className="preferences-collaborator-meta mono">{u.role}{u.isUnrestricted ? ' · all spaces' : ''}</div>
                                     </div>
-                                    <button
-                                        type="button"
-                                        className={`toggle-button ${has ? 'active success-button' : ''}`}
-                                        onClick={() => onToggleUserSpace(u, space.id)}
-                                        disabled={u.isUnrestricted}
-                                        title={u.isUnrestricted ? 'Already has access to every space' : `Toggle access to ${space.id}`}
-                                    >
-                                        {has ? 'Has access ✓' : 'Grant access'}
-                                    </button>
+                                    <div className="preferences-command-grid">
+                                        <button
+                                            type="button"
+                                            className={`toggle-button ${owns ? 'active success-button' : ''}`}
+                                            onClick={() => onPatch({ ownerUserId: owns ? null : u.id })}
+                                            title={owns
+                                                ? 'Release this space back to the platform (admins keep full control)'
+                                                : 'Hand this space over — they get owner rights and access in one move'}
+                                        >
+                                            {owns ? 'Owner ✓' : 'Make owner'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`toggle-button ${has ? 'active success-button' : ''}`}
+                                            onClick={() => onToggleUserSpace(u, space.id)}
+                                            disabled={u.isUnrestricted || owns}
+                                            title={u.isUnrestricted
+                                                ? 'Already has access to every space'
+                                                : owns ? 'The owner always has access' : `Toggle access to ${space.id}`}
+                                        >
+                                            {has ? 'Has access ✓' : 'Grant access'}
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )

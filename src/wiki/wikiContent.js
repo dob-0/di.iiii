@@ -126,6 +126,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-07-12'
     },
     {
+        id: 'space-ownership',
+        category: 'Spaces & access',
+        title: 'Who owns a space, and how to hand one over',
+        summary: 'Every space should have an owner — they manage it without needing an admin. Admins can assign or release ownership at any time.',
+        body: [
+            'The owner of a space is whoever created it. Ownership is what makes a space self-service: the owner publishes, mints invites, renames, changes the public link, and can delete it — none of which needs an admin.',
+            'A space can also have no owner. That happens when it was provisioned over the API rather than created in the browser — every space linked to a GitHub repo starts this way. Such a space works normally, but every management action in it falls to a platform admin, which quietly makes one person the bottleneck.',
+            'Admins assign the owner in /admin → Manage → pick the space → Owner & access. The panel names the current owner, or says plainly that there is none. "Make owner" hands the space over and grants that account access in the same move; clicking it again on the current owner releases the space back to the platform.',
+            'Only admins can change ownership — an owner cannot give their own space away. Granting access is a separate, smaller thing: it lets someone into the space without making them its owner (that is also what an invite link does).'
+        ],
+        tags: ['owner', 'ownership', 'access', 'admin', 'handover', 'collaboration', 'spaces'],
+        updated: '2026-08-05'
+    },
+    {
         id: 'studio-basics',
         category: 'Editing',
         title: 'Studio editor basics',

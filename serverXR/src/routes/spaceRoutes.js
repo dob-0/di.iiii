@@ -27,6 +27,8 @@ function registerSpaceRoutes(router, {
   ensureSpaceWritable,
   findProjectById,
   findSpaceBySlug,
+  findUserById = null,
+  setUserSpaces = null,
   getLiveBucket,
   getPublicAuthState = () => ({ spaces: null }),
   isAllowedUpload = () => true,
@@ -251,7 +253,7 @@ function registerSpaceRoutes(router, {
       if (!(await spaceExists(spaceId))) {
         return res.status(404).json({ error: 'Space not found.' })
       }
-      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId, openInscriptions, slug } = req.body || {}
+      const { label, permanent, allowEdits, isPublic, kind, publishedProjectId, previewImageAssetId, openInscriptions, slug, ownerUserId } = req.body || {}
       if (kind !== undefined && !['normal', 'global', 'sandbox'].includes(kind)) {
         return res.status(400).json({ error: 'kind must be one of: normal, global, sandbox.' })
       }
@@ -291,6 +293,32 @@ function registerSpaceRoutes(router, {
       const isAdminCaller = !config.requireAuth || (req.authState?.role === 'admin')
       if (!isAdminCaller && (kind !== undefined || permanent !== undefined)) {
         return res.status(403).json({ error: 'Only an admin can change kind or permanent.' })
+      }
+      // Ownership was write-once: set from the session that created the space
+      // and reachable by no other path. Every space provisioned by an API token
+      // (which is how the linked repos sync theirs) was therefore born ownerless
+      // and stayed that way, so every owner-gated action fell through to global
+      // admin. Admin-only, because handing someone a space is a grant, not a
+      // preference.
+      let nextOwnerUserId
+      if (ownerUserId !== undefined) {
+        if (!isAdminCaller) {
+          return res.status(403).json({ error: 'Only an admin can change the owner of a space.' })
+        }
+        if (ownerUserId === null || ownerUserId === '') {
+          nextOwnerUserId = null
+        } else {
+          const requested = String(ownerUserId).trim()
+          // A guest subject is a cookie, not an account — it cannot hold a space.
+          if (isGuestSubject(requested)) {
+            return res.status(400).json({ error: 'A guest identity cannot own a space.' })
+          }
+          const user = findUserById ? findUserById(requested) : null
+          if (!user) {
+            return res.status(404).json({ error: 'Owner account not found.' })
+          }
+          nextOwnerUserId = requested
+        }
       }
       let nextPublishedProjectId
       if (publishedProjectId !== undefined) {
@@ -337,8 +365,23 @@ function registerSpaceRoutes(router, {
         ...(publishedProjectId !== undefined ? { publishedProjectId: nextPublishedProjectId } : {}),
         ...(previewImageAssetId !== undefined ? { previewImageAssetId: nextPreviewImageAssetId } : {}),
         ...(openInscriptions !== undefined ? { openInscriptions: Boolean(openInscriptions) } : {}),
-        ...(slug !== undefined ? { slug: nextSlug } : {})
+        ...(slug !== undefined ? { slug: nextSlug } : {}),
+        ...(ownerUserId !== undefined ? { ownerUserId: nextOwnerUserId } : {})
       })
+      // An owner who cannot reach the space is not an owner. Scope and
+      // ownership were separate grants, so assigning one without the other left
+      // the new owner staring at a space they were not allowed to open.
+      if (nextOwnerUserId && findUserById && setUserSpaces) {
+        try {
+          const user = findUserById(nextOwnerUserId)
+          if (user && Array.isArray(user.spaces) && !user.spaces.includes(spaceId)) {
+            setUserSpaces(nextOwnerUserId, [...user.spaces, spaceId])
+          }
+        } catch {
+          // Scope is a convenience here; the ownership write already landed and
+          // an admin can grant scope directly. Never fail the PATCH over it.
+        }
+      }
       res.json({ space: meta })
     } catch (error) {
       next(error)

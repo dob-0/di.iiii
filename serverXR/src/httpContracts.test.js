@@ -637,6 +637,96 @@ describe('server write contracts', () => {
         await expect(deletedSpace.json()).resolves.toMatchObject({ ok: true })
     })
 
+    // Ownership used to be write-once — set from the creating session and
+    // reachable by no other route. Every space provisioned by an API token (how
+    // the linked repos sync theirs) was born ownerless and could never be
+    // adopted, so owner-gated actions all fell through to global admin.
+    it('lets an admin assign and clear the owner of an already-created space', async () => {
+        const editorToken = 'adopt-editor-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                EDITOR_API_TOKEN: editorToken,
+                EDITOR_ALLOWED_SPACES: 'orphan-space,mine-space'
+            }
+        })
+
+        // Provisioned by an API token: no session, therefore no owner.
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ label: 'Orphan', slug: 'orphan-space' })
+        })
+        expect(created.status).toBe(201)
+        await expect(created.json()).resolves.toMatchObject({ space: { ownerUserId: null } })
+
+        // Handing someone a space is a grant, not a preference — editors can't.
+        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: editorToken })
+        })
+        const cookie = (login.headers.get('set-cookie') || '').split(';')[0]
+        const mine = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ label: 'Mine', slug: 'mine-space' })
+        })
+        expect(mine.status).toBe(201)
+        // Owning a space does not let you give it away.
+        const denied = await fetch(`${server.baseUrl}/api/spaces/mine-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ ownerUserId: 'somebody' })
+        })
+        expect(denied.status).toBe(403)
+        await expect(denied.json()).resolves.toMatchObject({
+            error: 'Only an admin can change the owner of a space.'
+        })
+
+        // An id that belongs to no account is a typo, not a new owner.
+        const unknown = await fetch(`${server.baseUrl}/api/spaces/orphan-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ ownerUserId: 'no-such-user' })
+        })
+        expect(unknown.status).toBe(404)
+        await expect(unknown.json()).resolves.toMatchObject({ error: 'Owner account not found.' })
+
+        // A guest subject is a cookie, not an account.
+        const guestOwner = await fetch(`${server.baseUrl}/api/spaces/orphan-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ ownerUserId: 'guest:abc123' })
+        })
+        expect(guestOwner.status).toBe(400)
+        await expect(guestOwner.json()).resolves.toMatchObject({
+            error: 'A guest identity cannot own a space.'
+        })
+
+        // Explicit null is the release valve: a space can be returned to the
+        // platform without deleting it.
+        const cleared = await fetch(`${server.baseUrl}/api/spaces/orphan-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ ownerUserId: null })
+        })
+        expect(cleared.status).toBe(200)
+        await expect(cleared.json()).resolves.toMatchObject({ space: { ownerUserId: null } })
+
+        // An unrelated PATCH must not clear ownership as a side effect.
+        const renamed = await fetch(`${server.baseUrl}/api/spaces/orphan-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ label: 'Still Orphan' })
+        })
+        expect(renamed.status).toBe(200)
+        await expect(renamed.json()).resolves.toMatchObject({
+            space: { label: 'Still Orphan', ownerUserId: null }
+        })
+    })
+
     it('gives every session the communal open space plus one private sandbox', async () => {
         const server = await startServer({
             nodeEnv: 'production',

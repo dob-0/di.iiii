@@ -59,7 +59,14 @@ export const updateServerSpace = async (spaceId, updates = {}) => {
             isPublic: updates.isPublic,
             kind: updates.kind,
             publishedProjectId: updates.publishedProjectId,
-            previewImageAssetId: updates.previewImageAssetId
+            previewImageAssetId: updates.previewImageAssetId,
+            // Forwarded explicitly because both are meaningfully null: a null
+            // slug clears the public handle back to id-only addressing, and a
+            // null owner returns the space to the platform. undefined (the key
+            // absent) still means "don't touch" — JSON.stringify drops it.
+            ...(updates.slug !== undefined ? { slug: updates.slug } : {}),
+            ...(updates.ownerUserId !== undefined ? { ownerUserId: updates.ownerUserId } : {}),
+            ...(updates.openInscriptions !== undefined ? { openInscriptions: updates.openInscriptions } : {})
         }
     })
     return data.space
