@@ -1533,6 +1533,15 @@ router.post('/api/spaces/:spaceId/github-link', async (req, res, next) => {
     if (!ctx) return
     const { owner, repo, ref = null, projectId, entry = 'index.html' } = req.body || {}
     if (!owner || !repo || !projectId) return res.status(400).json({ error: 'owner, repo, projectId are required.' })
+    // requireSpaceOwnerOrAdmin above proves the caller owns the space in the
+    // URL — it says nothing about the projectId in the BODY. Without this
+    // check any signed-in account could point their own space's link at a
+    // stranger's project, and syncLinkedSpace (below) then writes that repo's
+    // contents into it using the server's own credentials. Scope the lookup to
+    // the space: loadProjectMeta selects on (id AND space_id), so a project
+    // belonging to anyone else simply is not found.
+    const linkedProject = await loadProjectMeta(SPACES_DIR, ctx.spaceId, normalizeProjectId(projectId) || projectId)
+    if (!linkedProject) return res.status(404).json({ error: 'Project not found in this space.' })
     let installationId = null
     try { installationId = (await githubApp.getInstallationForRepo(owner, repo))?.installationId || null } catch {}
     const link = spaceLinkStore.upsertLink({ spaceId: ctx.spaceId, owner, repo, ref, projectId, entry, installationId })

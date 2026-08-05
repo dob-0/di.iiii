@@ -187,3 +187,60 @@ describe('SSE responses opt out of proxy buffering', () => {
         expect(source).toContain("res.setHeader('X-Accel-Buffering', 'no')")
     })
 })
+
+// Regression guard: nginx's gzip_proxied defaults to `off`, and Caddy fronts
+// the client container with a `Via` header — which is exactly how nginx decides
+// a request is proxied. So `gzip on` was live and every HTML/JS/CSS response
+// still went out uncompressed in production (three-vendor.js: 1,614,468 B on
+// the wire instead of 459,321 B). The whole gzip block is inert without this
+// one directive, and nothing about the config looks wrong from the outside.
+describe('nginx actually compresses through the Caddy front', () => {
+    const conf = read('nginx.conf')
+
+    it('sets gzip_proxied, without which the gzip block is dead behind a proxy', () => {
+        expect(conf).toMatch(/^\s*gzip\s+on;/m)
+        expect(conf).toMatch(/^\s*gzip_proxied\s+any;/m)
+    })
+
+    it('sets gzip_vary so caches key on Accept-Encoding', () => {
+        expect(conf).toMatch(/^\s*gzip_vary\s+on;/m)
+    })
+
+    it('still compresses the types that dominate first paint', () => {
+        for (const type of ['text/css', 'application/javascript', 'application/json']) {
+            expect(conf).toContain(type)
+        }
+    })
+})
+
+// Regression guard: vps-restore.sh used to run
+//   rm -rf <live data> && tar xzf <archive>
+// in a single shell, so a truncated or corrupt archive deleted production and
+// restored nothing. The archive must be checked before anything is stopped or
+// moved, and the swap must preserve the previous data rather than delete it.
+describe('vps-restore.sh cannot destroy live data with a bad archive', () => {
+    const script = read('deploy/vps-restore.sh')
+
+    it('verifies archive integrity and contents before the confirmation prompt', () => {
+        const verifyAt = script.indexOf('gzip -t')
+        const promptAt = script.indexOf("Type 'restore' to continue")
+        const stopAt = script.indexOf('docker stop')
+        expect(verifyAt).toBeGreaterThan(-1)
+        expect(script).toContain('.backup-snapshot.db')
+        expect(verifyAt).toBeLessThan(promptAt)
+        expect(verifyAt).toBeLessThan(stopAt)
+    })
+
+    it('never deletes the live data — it stages the extract and moves the old aside', () => {
+        expect(script).not.toMatch(/rm -rf\s+uploads/)
+        expect(script).toContain('.restore-stage-')
+        expect(script).toContain('.pre-restore-')
+        // Extraction into staging must precede the move of anything live: the
+        // move-aside loop is the first line that writes into $KEEP.
+        const extractAt = script.indexOf('tar xzf')
+        const moveAsideAt = script.indexOf('KEEP/')
+        expect(extractAt).toBeGreaterThan(-1)
+        expect(moveAsideAt).toBeGreaterThan(-1)
+        expect(extractAt).toBeLessThan(moveAsideAt)
+    })
+})

@@ -258,6 +258,78 @@ describe('vanity slugs: space + project public handles', () => {
         }
     })
 
+    it('rejects a reserved word as a new space id, not just as a PATCHed slug', async () => {
+        const server = await startServer()
+
+        // PATCH has rejected these since the slug-hijack fix, but creation did
+        // not — so the same word was still claimable as a space *id*, which
+        // resolves on the same URL segment. The space would then be permanently
+        // unreachable (the app route wins) and the word burned for everyone.
+        for (const reserved of ['studio', 'beta', 'raw', 'seed', 'admin', 'wiki', 'p']) {
+            const created = await fetch(`${server.baseUrl}/api/spaces`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label: 'Reserved', slug: reserved })
+            })
+            expect(created.status).toBe(400)
+
+            // and nothing was persisted under that id. Not 404 specifically:
+            // 'p' is below the 3-character slug minimum, so it is rejected on
+            // format before the reserved-word guard is reached and reads 400.
+            // The invariant that matters is that it does not resolve.
+            const probe = await fetch(`${server.baseUrl}/api/spaces/${reserved}`)
+            expect(probe.status).not.toBe(200)
+        }
+
+        // A non-reserved id on the same route still works, so the guard is not
+        // simply rejecting everything.
+        const ok = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'Fine', slug: 'not-reserved' })
+        })
+        expect(ok.status).toBe(201)
+    })
+
+    it('github-link will not bind a space to a project from a different space', async () => {
+        const server = await startServer()
+
+        // Two spaces, each with its own project.
+        for (const spaceId of ['link-mine', 'link-theirs']) {
+            await fetch(`${server.baseUrl}/api/spaces`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label: spaceId, slug: spaceId })
+            })
+            const created = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: 'p', slug: `${spaceId}-project` })
+            })
+            expect(created.status).toBe(201)
+        }
+
+        // Owning 'link-mine' says nothing about 'link-theirs'-project. The link
+        // is what syncLinkedSpace later writes into using the server's own
+        // credentials, so accepting a foreign projectId here is a cross-tenant
+        // write primitive.
+        const crossTenant = await fetch(`${server.baseUrl}/api/spaces/link-mine/github-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'o', repo: 'r', projectId: 'link-theirs-project' })
+        })
+        expect(crossTenant.status).toBe(404)
+
+        // And the rejection is about ownership, not about the route being dead:
+        // the space's OWN project gets past this guard.
+        const ownProject = await fetch(`${server.baseUrl}/api/spaces/link-mine/github-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'o', repo: 'r', projectId: 'link-mine-project' })
+        })
+        expect(ownProject.status).not.toBe(404)
+    })
+
     it('commons share requires an accountable account — guest and anonymous sessions get 403', async () => {
         const server = await startServer({
             requireAuth: true,

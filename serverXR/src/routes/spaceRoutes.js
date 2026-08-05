@@ -183,6 +183,13 @@ function registerSpaceRoutes(router, {
       if (!spaceId) {
         return res.status(400).json({ error: 'Invalid slug. Use lowercase letters, numbers, or dashes (min 3 characters).' })
       }
+      // PATCH has rejected reserved words as slugs since the slug-hijack fix,
+      // but creation never did — so the same words were still claimable as a
+      // space *id*, which resolves on the same URL segment. The space is then
+      // permanently unreachable (the app route wins) and the word is burned.
+      if (isReservedSpaceSlug(spaceId)) {
+        return res.status(400).json({ error: `"${spaceId}" is a reserved word and can't be used as a space id.` })
+      }
       if (await spaceExists(spaceId)) {
         return res.status(409).json({ error: 'Space already exists.' })
       }
