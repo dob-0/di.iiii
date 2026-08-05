@@ -43,8 +43,11 @@ const getSocketAuthState = (socket, config) => {
     socket?.handshake?.headers?.cookie || '',
     config.authSession?.cookieName
   )
+  // Same revocation check the HTTP path runs — without it a logged-out cookie
+  // could still open a realtime connection and keep writing.
   const result = verifyAuthSessionValue(sessionValue, {
-    secret: config?.auth?.sessionSecret || config.apiToken
+    secret: config?.auth?.sessionSecret || config.apiToken,
+    lookupTokenVersion: config?.lookupTokenVersion || null
   })
   if (!result.valid) {
     return {

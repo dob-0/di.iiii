@@ -228,3 +228,105 @@ describe('nginx proxies the mesh path as a websocket', () => {
     expect(meshBlock).toMatch(new RegExp(`proxy_pass\\s+http://server:4000${meshPath}\\s*;`))
   })
 })
+
+describe('the mesh gates reserved node ids without gating visitors', () => {
+  const BASE = '/serverXR'
+  const SECRET = 'test-mesh-secret'
+  let httpServer
+  let port
+  let wsBase
+
+  const closedWith = (ws) => new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('socket was never closed')), 3000)
+    ws.on('close', (code) => { clearTimeout(t); resolve(code) })
+    ws.on('error', () => { /* a 401 upgrade surfaces as an error then a close */ })
+  })
+
+  beforeAll(async () => {
+    httpServer = http.createServer((req, res) => { res.writeHead(200); res.end('ok') })
+    initializeMesh(httpServer, { basePath: BASE, meshRoomSecret: SECRET })
+    await new Promise((r) => httpServer.listen(0, '127.0.0.1', r))
+    port = httpServer.address().port
+    wsBase = `ws://127.0.0.1:${port}${BASE}/mesh`
+  })
+
+  afterAll(async () => {
+    await new Promise((r) => httpServer.close(r))
+  })
+
+  // The point of the asymmetry: br_id_ge's public index.html/field.html embed
+  // the relay URL, so visitors must keep connecting with no secret at all --
+  // otherwise co-presence dies, or the secret ships in public HTML.
+  it('lets an anonymous visitor join with no secret while a secret is configured', async () => {
+    const visitor = new WebSocket(`${wsBase}?room=g1&node=visitor-1`)
+    await new Promise((r, reject) => {
+      visitor.on('open', r)
+      visitor.on('error', reject)
+    })
+    expect(visitor.readyState).toBe(WebSocket.OPEN)
+    visitor.close()
+    await wait(50)
+  })
+
+  it('refuses a keeper-* claim that does not present the secret', async () => {
+    const impostor = new WebSocket(`${wsBase}?room=g2&node=keeper-bridge`)
+    let opened = false
+    impostor.on('open', () => { opened = true })
+    await closedWith(impostor)
+    expect(opened).toBe(false)
+  })
+
+  it('admits a keeper-* claim that presents the secret', async () => {
+    const keeper = new WebSocket(`${wsBase}?room=g3&node=keeper-bridge&secret=${SECRET}`)
+    await new Promise((r, reject) => {
+      keeper.on('open', r)
+      keeper.on('error', reject)
+    })
+    expect(keeper.readyState).toBe(WebSocket.OPEN)
+    keeper.close()
+    await wait(50)
+  })
+
+  it('refuses a keeper-* claim presenting the wrong secret', async () => {
+    const impostor = new WebSocket(`${wsBase}?room=g4&node=keeper-bridge&secret=wrong`)
+    let opened = false
+    impostor.on('open', () => { opened = true })
+    await closedWith(impostor)
+    expect(opened).toBe(false)
+  })
+
+  // Reconnect: the keeper's replacement socket must be able to take the id back
+  // from a holder the server still believes is live, or a dropped keeper locks
+  // itself out until TCP reaps the old socket.
+  it('lets an authenticated keeper reclaim its own live id', async () => {
+    const first = new WebSocket(`${wsBase}?room=g5&node=keeper-bridge&secret=${SECRET}`)
+    await new Promise((r) => first.on('open', r))
+    const firstClose = closedWith(first)
+
+    const second = new WebSocket(`${wsBase}?room=g5&node=keeper-bridge&secret=${SECRET}`)
+    await new Promise((r, reject) => {
+      second.on('open', r)
+      second.on('error', reject)
+    })
+
+    expect(await firstClose).toBe(4000)
+    expect(second.readyState).toBe(WebSocket.OPEN)
+    second.close()
+    await wait(50)
+  })
+
+  it('still refuses an unauthenticated duplicate of an ordinary live id', async () => {
+    const holder = new WebSocket(`${wsBase}?room=g6&node=visitor-9`)
+    await new Promise((r) => holder.on('open', r))
+    let holderClosed = null
+    holder.on('close', (code) => { holderClosed = code })
+
+    const impostor = new WebSocket(`${wsBase}?room=g6&node=visitor-9`)
+    expect(await closedWith(impostor)).toBe(4409)
+    expect(holderClosed).toBe(null)
+    expect(holder.readyState).toBe(WebSocket.OPEN)
+
+    holder.close()
+    await wait(50)
+  })
+})

@@ -168,13 +168,24 @@ export function useServerPublishing({
                 const meta = entry.meta
                 const blob = entry.blob
                 if (!blob || !meta?.id) continue
-                await uploadAssetToServer?.({
+                const uploaded = await uploadAssetToServer?.({
                     file: blob,
                     assetId: meta.id,
                     name: meta.name,
                     mimeType: meta.mimeType,
                     trackPending: false
                 })
+                // uploadAssetToServer throws on a failed upload now, but it
+                // still returns null without throwing on its guard clause
+                // (no spaceId, no file). Ignoring the result entirely is what
+                // let a wholly failed asset sync end in "Scene synced to
+                // server." — so check it too, rather than relying on the
+                // throw alone staying true.
+                if (!uploaded?.id) {
+                    throw new Error(
+                        `Asset "${meta.name || meta.id}" did not upload, so the scene was not published.`
+                    )
+                }
                 completed += 1
                 setServerAssetSyncProgress?.(prev => ({
                     ...prev,

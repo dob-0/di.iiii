@@ -313,7 +313,12 @@ function registerProjectRoutes(router, {
         if (!fresh) return { notFound: true }
         const currentVersion = Number(fresh.meta?.documentVersion) || 0
         if (baseVersion !== currentVersion) {
-          const pendingOps = await readProjectOps(spacesDir, project.spaceId, project.projectId)
+          // Read only the ops the client is actually behind by. The response
+          // was always filtered to `> baseVersion`, but reading via
+          // readProjectOps pulled the whole retained window (up to 500 ops)
+          // out of storage on every conflict just to throw most of it away —
+          // and conflicts are exactly when the editor is busiest.
+          const pendingOps = await readProjectOpsSince(spacesDir, project.spaceId, project.projectId, baseVersion)
           return {
             conflict: true,
             latestVersion: currentVersion,

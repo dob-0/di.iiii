@@ -23,6 +23,20 @@ const { WebSocketServer } = require('ws')
 const { URL } = require('url')
 const logger = require('./logger')
 
+// Node ids reserved for the rite's own machines (the di_bot keeper, di-bo, the
+// br_id_ge presence script). Visitors' browsers are mesh clients too — the
+// public index.html/field.html embed the relay URL — so a blanket secret would
+// either break co-presence or ship the secret in public HTML, where it is not a
+// secret at all. Gate only the ids worth impersonating: anyone may join
+// anonymously, nobody may claim `keeper-*` without proving MESH_ROOM_SECRET.
+const DEFAULT_PROTECTED_NODE_PREFIXES = ['keeper']
+
+const parseProtectedPrefixes = (value) =>
+  String(value || '')
+    .split(',')
+    .map(entry => entry.trim().toLowerCase())
+    .filter(Boolean)
+
 // Abuse caps — this hub is public and unauthenticated by default, so bound it.
 const MAX_ROOMS = 200
 const MAX_MEMBERS_PER_ROOM = 64
@@ -176,6 +190,16 @@ function initializeMesh(httpServer, config = {}) {
   const roomSecret = String(
     config.meshRoomSecret || process.env.MESH_ROOM_SECRET || ''
   ).trim()
+  const protectedPrefixes = (() => {
+    const configured = parseProtectedPrefixes(
+      config.meshProtectedNodePrefixes ?? process.env.MESH_PROTECTED_NODE_PREFIXES
+    )
+    return configured.length ? configured : DEFAULT_PROTECTED_NODE_PREFIXES
+  })()
+  const isProtectedNodeId = (nodeId) => {
+    const value = String(nodeId || '').toLowerCase()
+    return protectedPrefixes.some(prefix => value === prefix || value.startsWith(`${prefix}-`))
+  }
   const state = createMeshState()
   const wss = new WebSocketServer({ noServer: true, maxPayload: MAX_PAYLOAD_BYTES })
 
@@ -197,18 +221,22 @@ function initializeMesh(httpServer, config = {}) {
       }
     })()
 
-    if (roomSecret && query.get('secret') !== roomSecret) {
+    // Same truncation the connection handler applies, so the id checked here is
+    // the id actually claimed below.
+    const claimedNodeId = (query.get('node') || '').slice(0, 64)
+    const authenticated = Boolean(roomSecret) && query.get('secret') === roomSecret
+    if (roomSecret && isProtectedNodeId(claimedNodeId) && !authenticated) {
       socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
       socket.destroy()
       return
     }
 
     wss.handleUpgrade(req, socket, head, (ws) => {
-      wss.emit('connection', ws, req, query)
+      wss.emit('connection', ws, req, query, authenticated)
     })
   })
 
-  wss.on('connection', (ws, req, query) => {
+  wss.on('connection', (ws, req, query, authenticated = false) => {
     const roomId = (query.get('room') || 'default').slice(0, 64)
     const nodeId =
       (query.get('node') || '').slice(0, 64) || `node-${Math.random().toString(36).slice(2, 8)}`
@@ -227,16 +255,16 @@ function initializeMesh(httpServer, config = {}) {
       return
     }
     // Duplicate id: replace a socket that is already gone (the reconnect case
-    // this exists for), but never evict a LIVE holder on an open relay —
-    // `node=` is caller-supplied, so that let any visitor kick the keeper off
-    // and publish under its identity. The newcomer is rejected instead. A
-    // secret-gated room has no such asymmetry (every claimant proved the same
-    // secret), so there the newest claim still wins.
+    // this exists for), but never evict a LIVE holder — `node=` is
+    // caller-supplied, so that let any visitor kick the keeper off and publish
+    // under its identity. The newcomer is rejected instead. Only a claimant who
+    // proved the secret may take a live id from under its holder, which is what
+    // keeps the keeper's own reconnect working.
     const existing = room.get(nodeId)
     if (existing && existing !== ws) {
       const holderIsLive =
         existing.readyState === existing.OPEN || existing.readyState === existing.CONNECTING
-      if (holderIsLive && !roomSecret) {
+      if (holderIsLive && !authenticated) {
         ws.close(4409, 'Node id in use')
         return
       }
@@ -271,7 +299,10 @@ function initializeMesh(httpServer, config = {}) {
     })
   })
 
-  logger.info(`[Mesh] Live co-presence hub on ${meshPath}${roomSecret ? ' (secret-gated)' : ''}`)
+  logger.info(
+    `[Mesh] Live co-presence hub on ${meshPath}` +
+    (roomSecret ? ` (open; ${protectedPrefixes.map(p => `${p}-*`).join(', ')} secret-gated)` : ' (open; no secret set)')
+  )
   return { wss, state, meshPath }
 }
 

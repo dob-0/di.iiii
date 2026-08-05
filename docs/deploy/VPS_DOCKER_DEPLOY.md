@@ -37,6 +37,57 @@ term expires. Do not delete it as part of adopting this path.
    and fill in the `STAGING_*` vars documented in `.env.example`
    (`STAGING_AUTH_SESSION_SECRET` especially — generate a fresh one, do not
    reuse production's).
+
+   **`STAGING_BIND_ADDR`** — optional, defaults to `172.17.0.1`. Staging's
+   client port is published to *this address only*, never `0.0.0.0`. It must be
+   the address `host.docker.internal` resolves to from inside production's
+   `caddy` container, because that is how Caddy reaches staging. On this VPS
+   that is `docker0` = `172.17.0.1`; check yours with:
+
+   ```bash
+   docker exec dii-caddy-1 getent hosts host.docker.internal
+   ip -4 addr show docker0
+   ```
+
+   Until 2026-08-05 there was no bind address and staging answered the public
+   internet in cleartext on `http://<vps-ip>:8081/` — the whole SPA plus
+   `/serverXR/api/health`, which returns an unauthenticated host fingerprint.
+   A wrong `STAGING_BIND_ADDR` fails at container start rather than silently
+   re-exposing the port, so it is safe to get wrong; it is not safe to omit
+   the override entirely (Compose *concatenates* `ports:` across `-f` files, so
+   the mapping in `docker-compose.staging.yml` uses `!override` — a plain
+   `ports:` there would ADD a binding and leave the wide one live).
+
+   **`MESH_ROOM_SECRET`** (staging: `STAGING_MESH_ROOM_SECRET`) — optional,
+   unset by default. The live co-presence relay at `/serverXR/mesh` is
+   deliberately **open**: visitors' browsers are mesh clients (the public
+   `br_id_ge` `index.html`/`field.html` embed the relay URL), so a blanket
+   secret would either kill co-presence or ship the secret in public HTML.
+   What this gates is the *reserved node ids* — by default anything matching
+   `keeper` or `keeper-*`, configurable via `MESH_PROTECTED_NODE_PREFIXES` as a
+   comma-separated list. Claiming one without the secret gets a 401 at the
+   upgrade; proving it also allows reclaiming a still-live id, which is what
+   makes the keeper's own reconnect work.
+
+   Generate with `openssl rand -hex 32`, and use a **different value per
+   tier** — one shared value would let a staging client claim the keeper
+   identity on production. Every keeper client must then send it as the
+   `secret=` query parameter: `dibot/deploy/scripts/keeper_agent.py`,
+   `di-bo/keeper.mjs`, and `br_id_ge/scripts/keeper-presence.mjs`. Leaving it
+   unset keeps today's behaviour (reserved ids ungated), so it is safe to
+   deploy this before the clients are updated — but the gate does nothing
+   until it is set.
+
+   Verify after deploy:
+   ```bash
+   # a reserved id without the secret must be refused
+   curl -sS -o /dev/null -w '%{http_code}\n' \
+     --http1.1 -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
+     -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: AAAAAAAAAAAAAAAAAAAAAA==' \
+     'https://di-studio.xyz/serverXR/mesh?room=bridge&node=keeper-probe'   # -> 401
+   ```
+   An ordinary visitor id on the same URL must still return `101`. Never probe
+   this over HTTP/2 — that reports false 404s for websocket paths.
 3. In `/opt/dii` (production)'s `.env`: set `STAGING_DOMAIN` (a subdomain
    DNS already points at this same host, e.g. `staging.your-domain`) and
    `STAGING_PORT` to match step 2's port. Restart production's `caddy`
@@ -188,6 +239,16 @@ itself, and the script was never committed here. It now is:
 **No deploy step keeps the VPS copies and these files in sync** — if you
 change either script, `scp` it to `/root/` on the VPS by hand
 (`scp deploy/vps-backup.sh dii-vps:/root/vps-backup.sh`) and `chmod +x`.
+This is the whole reason a committed change to these two files means nothing
+until someone copies it: check `grep -c BACKUP-FAILED /root/vps-backup.sh` on
+the VPS before believing a backup fix is live.
+
+**`BACKUP_ALERT_WEBHOOK_URL`** — optional, read by `vps-backup.sh` from root's
+environment (set it in the crontab line or `/root/.backup-env`). On failure the
+script exits non-zero, writes `/root/backups/BACKUP-FAILED`, and POSTs the
+failure to this URL when one is configured. With no URL set, the marker file
+and cron's own mail are the only signal — which is why a backup that stopped
+running was previously invisible.
 
 **Off-box copy (closed 2026-07-29)**: backups used to live only on the VPS, so a
 host-level disaster took them with it. `scripts/backup-pull.sh` now copies the
