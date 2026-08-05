@@ -11,10 +11,19 @@
  * Re-runnable: the first run creates, every later run updates.
  *
  * Usage:
+ *   node scripts/space-sync.mjs --all --tier staging     # every page the space declares
+ *   node scripts/space-sync.mjs --audit                  # compare all tiers, exit 1 on drift
  *   node scripts/space-sync.mjs --repo <dir> [--manifest <path>] [--to <url>] [--token <tok>] [--dry-run]
  *   (defaults: --repo = manifest dir or cwd; --manifest = <repo>/di-space.json)
  *
- * Auth: --token, else LIVE_API_TOKEN / API_TOKEN from env or serverXR/.env.local.
+ * Two manifests, two jobs. `di-space.<page>.json` owns ONE project — its entry
+ * file, slug, title, assets. `di-space.space.json` owns the SPACE — its label,
+ * visibility, the tier map, and the list of pages that are supposed to exist.
+ * Fields in both are reconciled on EVERY run, because the recurring bug in this
+ * file's history is a field that was only ever sent when something was created.
+ *
+ * Auth: --token, else the tier's declared tokenEnv, else LIVE_API_TOKEN /
+ * API_TOKEN — from env, the repo's .env.local, or di.iiii serverXR/.env.local.
  *
  * THIS FILE IS THE UPSTREAM COPY. The linked repos (br_id_ge, beyond_form,
  * platform_recordar) vendor it as scripts/sync-space.mjs so their CI can run
@@ -35,7 +44,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-export const ENGINE_VERSION = 4
+export const ENGINE_VERSION = 5
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const CODE_EXTENSIONS = new Set(['.html', '.htm', '.css', '.js', '.mjs', '.txt', '.svg', '.json', '.md'])
@@ -44,17 +53,53 @@ const MIME = { '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quickt
   '.webp': 'image/webp', '.svg': 'image/svg+xml', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.glb': 'model/gltf-binary' }
 
 const parseArgs = (argv) => {
-  const args = { repo: null, manifest: null, to: null, token: null, dryRun: false }
+  const args = { repo: null, manifest: null, space: null, tier: null, to: null, token: null,
+    dryRun: false, all: false, audit: false }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--repo') { args.repo = argv[++i]; continue }
     if (a === '--manifest') { args.manifest = argv[++i]; continue }
+    if (a === '--space') { args.space = argv[++i]; continue }
+    if (a === '--tier') { args.tier = argv[++i]; continue }
     if (a === '--to') { args.to = argv[++i]; continue }
     if (a === '--token') { args.token = argv[++i]; continue }
     if (a === '--dry-run') { args.dryRun = true; continue }
+    if (a === '--all') { args.all = true; continue }
+    if (a === '--audit') { args.audit = true; continue }
   }
   return args
 }
+
+/**
+ * The space manifest — `di-space.space.json`, one per repo. The project
+ * manifests own a page each; this one owns the SPACE, and the list of pages
+ * that are supposed to exist in it.
+ *
+ * It exists because every field that was only ever sent when something was
+ * CREATED has since drifted: the project slug (fixed in v3), the project title
+ * (v4), and — still, until v5 — the space's own label. Three tiers of br_id_ge
+ * carried three different answers for what the space is called, and the only
+ * thing that ever noticed was a human with three browser windows open.
+ *
+ * `tiers` is the other half. A tier is allowed to differ from its siblings only
+ * where this file says so (staging's `openInscriptions:false` is intent, not
+ * drift). Anything else that differs is a fault the audit reports. A tier with
+ * `governed:false` — the dev box — is shown and never enforced or failed on.
+ */
+const SPACE_MANIFEST = 'di-space.space.json'
+
+const tierOf = (liveUrl, tiers) => {
+  const host = (() => { try { return new URL(liveUrl).host } catch { return '' } })()
+  for (const [name, t] of Object.entries(tiers || {})) {
+    try { if (new URL(t.url).host === host) return name } catch { /* unparseable tier url */ }
+  }
+  return host || 'unknown'
+}
+
+// Fields the repo is master for. Kept in one list so the reconcile, the audit
+// and the docs cannot disagree about what "declared" means.
+const SPACE_FIELDS = ['label', 'slug', 'isPublic']
+const TIER_FIELDS = ['openInscriptions']
 
 const loadEnvFile = async (filePath) => {
   try {
@@ -166,13 +211,7 @@ const referencesAsset = (text, rel, base) => refPattern(rel, base).test(text)
 const rewriteAssetRefs = (text, rel, base, url) =>
   text.replace(refPattern(rel, base), (_m, lead) => `${lead}${url}`)
 
-async function main() {
-  const args = parseArgs(process.argv.slice(2))
-  const manifestPath = args.manifest
-    ? path.resolve(args.manifest)
-    : path.resolve(args.repo || process.cwd(), 'di-space.json')
-  const repoDir = args.repo ? path.resolve(args.repo) : path.dirname(manifestPath)
-
+async function syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, tierName }) {
   let manifest
   try {
     manifest = JSON.parse(await fs.readFile(manifestPath, 'utf8'))
@@ -180,24 +219,6 @@ async function main() {
     console.error(`Cannot read manifest at ${manifestPath}: ${e.message}`)
     process.exitCode = 1; return
   }
-
-  const env = {
-    ...(await loadEnvFile(path.join(ROOT_DIR, '.env'))),
-    ...(await loadEnvFile(path.join(ROOT_DIR, '.env.local'))),
-    ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
-  }
-  const getEnv = (k) => process.env[k] || env[k] || ''
-  // No default target. This used to fall back to production, so a run that
-  // simply forgot --to wrote to the live space while reading like a rehearsal.
-  const target = args.to || manifest.live || getEnv('LIVE_API_URL')
-  if (!target) {
-    console.error('Error: no target. Pass --to <url>, set LIVE_API_URL, or put "live" in the manifest.')
-    console.error('  staging: https://staging.di-studio.xyz/serverXR')
-    console.error('  prod:    https://di-studio.xyz/serverXR')
-    process.exitCode = 1; return
-  }
-  const live = target.replace(/\/+$/, '')
-  const token = args.token || getEnv('LIVE_API_TOKEN') || getEnv('API_TOKEN') || ''
 
   const { spaceId, projectId, entry } = manifest
   if (!spaceId || !projectId || !entry) {
@@ -220,9 +241,13 @@ async function main() {
   if (!space) {
     if (args.dryRun) { console.log(`  would CREATE space ${spaceId}`) }
     else {
+      // The space's name comes from the SPACE manifest, never from a page's.
+      // `manifest.label` is the label of one project — provisioning a fresh
+      // tier from di-space.landing.json used to name the whole space "the
+      // landing — the door".
       space = (await apiOrThrow(`${live}/api/spaces`, {
         method: 'POST', headers: buildHeaders(token),
-        body: JSON.stringify({ label: manifest.label || spaceId, slug: spaceId }),
+        body: JSON.stringify({ label: spaceDecl?.label || spaceId, slug: spaceDecl?.slug ?? spaceId }),
       })).space
       console.log(`  + created space ${space.id}`)
     }
@@ -230,6 +255,34 @@ async function main() {
     console.log(`  · space ${space.id} exists`)
   }
   const canonicalSpace = space?.id || spaceId
+
+  // 1b. Reconcile the space itself, on EVERY run — the same lesson as the
+  // project slug and the project title, one level up. These were sent in the
+  // CREATE POST and nowhere else, so the three tiers of br_id_ge answered
+  // `br_id_ge`, `br_id_ge` and `br_id_ge XR_ Notations:vi.ritual` and nothing
+  // in the system could tell that was wrong. A field only written at creation
+  // is a field that will drift.
+  if (space && spaceDecl) {
+    const want = {}
+    for (const f of SPACE_FIELDS) if (spaceDecl[f] !== undefined) want[f] = spaceDecl[f]
+    // Per-tier intent is declared, never remembered: staging keeps
+    // openInscriptions:false so a rehearsal crossing leaves no permanent stone.
+    const tierDecl = spaceDecl.tiers?.[tierName] || {}
+    for (const f of TIER_FIELDS) if (tierDecl[f] !== undefined) want[f] = tierDecl[f]
+
+    const drift = Object.entries(want).filter(([k, v]) => space[k] !== v)
+    if (drift.length && args.dryRun) {
+      for (const [k, v] of drift) console.log(`  would SET space ${k} ${JSON.stringify(space[k])} → ${JSON.stringify(v)}`)
+    } else if (drift.length) {
+      const r = await api(`${live}/api/spaces/${canonicalSpace}`, {
+        method: 'PATCH', headers: buildHeaders(token),
+        body: JSON.stringify(Object.fromEntries(drift)),
+      })
+      if (r.ok) for (const [k, v] of drift) console.log(`  ✓ space ${k} ${JSON.stringify(space[k])} → ${JSON.stringify(v)}`)
+      else if (r.status === 403) console.log('  ⚠ space fields skipped (owner/admin only)')
+      else throw new Error(`HTTP ${r.status} setting space fields: ${r.body?.error || ''}`)
+    }
+  }
 
   // 2. ensure project (idempotent create)
   const projects = (await api(`${live}/api/spaces/${canonicalSpace}/projects`, { headers: buildHeaders(token) })).body?.projects || []
@@ -378,7 +431,212 @@ async function main() {
   console.log(`\n  live → ${live.replace(/\/serverXR$/, '')}/${spaceId}`)
 }
 
-export { referencesAsset, rewriteAssetRefs, matchGlobs, globToRe }
+/**
+ * --audit — read every tier and print one table.
+ *
+ * This is the mode the whole v5 change exists for. Every drift the engine has
+ * ever grown a fix for was found the same way: a person opened prod, staging
+ * and localhost side by side and noticed the names disagreed. That is not a
+ * process, it is luck, and it only works for the surfaces someone happens to
+ * look at. Reads only — it never writes, so it is safe to run against prod.
+ *
+ * Exit 1 on undeclared difference, so CI fails on drift instead of a human
+ * catching it a month later.
+ */
+async function audit({ repoDir, spaceDecl, spaceManifestPath, getEnv, args }) {
+  if (!spaceDecl) {
+    console.error(`Error: --audit needs a space manifest at ${spaceManifestPath}`)
+    process.exitCode = 1; return
+  }
+  const spaceId = spaceDecl.spaceId
+  const tiers = Object.entries(spaceDecl.tiers || {})
+    .filter(([name]) => !args.tier || args.tier === name)
+  if (!tiers.length) { console.error('Error: no tiers to audit.'); process.exitCode = 1; return }
+
+  console.log(`[space-audit] ${spaceId} ← ${repoDir}\n`)
+
+  const wantProjects = []
+  for (const rel of spaceDecl.projects || []) {
+    try {
+      const m = JSON.parse(await fs.readFile(path.join(repoDir, rel), 'utf8'))
+      wantProjects.push({ id: m.projectId, slug: m.slug ?? null, title: m.label ?? null, from: rel })
+    } catch (e) { console.error(`  ⚠ cannot read ${rel}: ${e.message}`) }
+  }
+
+  const seen = []
+  for (const [name, t] of tiers) {
+    const token = args.token || getEnv(t.tokenEnv || '') || getEnv('LIVE_API_TOKEN') || getEnv('API_TOKEN') || ''
+    const live = String(t.url || '').replace(/\/+$/, '')
+    const row = { name, live, governed: t.governed !== false, space: null, projects: [], error: null }
+    try {
+      const r = await api(`${live}/api/spaces/${spaceId}`, { headers: buildHeaders(token) }, 1)
+      row.space = r.body?.space || null
+      if (!row.space) row.error = `no space (HTTP ${r.status})`
+      else row.projects = (await api(`${live}/api/spaces/${row.space.id}/projects`,
+        { headers: buildHeaders(token) }, 1)).body?.projects || []
+    } catch (e) { row.error = e.message }
+    seen.push(row)
+  }
+
+  const faults = []
+  const note = (row, msg) => { if (row.governed) faults.push(`${row.name}: ${msg}`) }
+  const pad = (s, n) => String(s).padEnd(n)
+  const W = 34
+
+  console.log(`  ${pad('field', 22)}${seen.map((r) => pad(r.name, W)).join('')}`)
+  console.log(`  ${'─'.repeat(22 + W * seen.length)}`)
+
+  const line = (label, pick, want) => {
+    const vals = seen.map((r) => (r.error ? '—' : pick(r)))
+    console.log(`  ${pad(label, 22)}${vals.map((v, i) => {
+      const ok = want === undefined || v === want || !seen[i].governed || seen[i].error
+      return pad(`${ok ? ' ' : '✗'} ${JSON.stringify(v)}`, W)
+    }).join('')}${want === undefined ? '' : `  want ${JSON.stringify(want)}`}`)
+    vals.forEach((v, i) => {
+      if (want !== undefined && v !== want && !seen[i].error) note(seen[i], `${label} is ${JSON.stringify(v)}, declared ${JSON.stringify(want)}`)
+    })
+  }
+
+  for (const r of seen) if (r.error) note(r, r.error)
+
+  for (const f of SPACE_FIELDS) {
+    if (spaceDecl[f] === undefined) continue
+    line(`space.${f}`, (r) => r.space?.[f] ?? null, spaceDecl[f])
+  }
+  // Per-tier fields have a different want per column, so they cannot use line().
+  for (const f of TIER_FIELDS) {
+    console.log(`  ${pad(`space.${f}`, 22)}${seen.map((r) => {
+      if (r.error) return pad('—', W)
+      const want = spaceDecl.tiers?.[r.name]?.[f]
+      const v = r.space?.[f] ?? null
+      const ok = want === undefined || v === want || !r.governed
+      if (!ok) note(r, `${f} is ${JSON.stringify(v)}, declared ${JSON.stringify(want)}`)
+      return pad(`${ok ? ' ' : '✗'} ${JSON.stringify(v)}${want === undefined ? ' (undeclared)' : ''}`, W)
+    }).join('')}`)
+  }
+  console.log(`  ${pad('projects', 22)}${seen.map((r) => pad(r.error ? '—' : r.projects.length, W)).join('')}  want ${wantProjects.length}`)
+  console.log('')
+
+  for (const w of wantProjects) {
+    const cells = seen.map((r) => {
+      if (r.error) return pad('—', W)
+      const p = r.projects.find((x) => x.id === w.id)
+      if (!p) { note(r, `project ${w.id} missing`); return pad('✗ missing', W) }
+      const bad = []
+      if (w.slug !== null && (p.slug ?? null) !== w.slug) bad.push(`slug=${JSON.stringify(p.slug ?? null)}`)
+      if (w.title !== null && p.title !== w.title) bad.push(`title=${JSON.stringify(p.title)}`)
+      if (bad.length) note(r, `project ${w.id} ${bad.join(' ')}`)
+      return pad(bad.length ? `✗ ${bad.join(' ')}` : '  ok', W)
+    })
+    console.log(`  ${pad(w.id, 22)}${cells.join('')}`)
+  }
+
+  // Extras are REPORTED, never removed. Deleting a project is the one operation
+  // here that can destroy work nobody has a copy of, so it stays a thing a human
+  // types on purpose — this only makes sure they can see it.
+  const declared = new Set(wantProjects.map((w) => w.id))
+  for (const r of seen) {
+    const extra = r.projects.filter((p) => !declared.has(p.id)).map((p) => p.id)
+    if (!extra.length) continue
+    const head = `  ${r.name}: ${extra.length} project(s) not in the repo`
+    console.log(`\n${head}\n    ${extra.slice(0, 12).join(', ')}${extra.length > 12 ? `, … +${extra.length - 12}` : ''}`)
+    if (r.governed) console.log('    (reported only — removal is a deliberate act, never a sync)')
+  }
+
+  const ungoverned = seen.filter((r) => !r.governed).map((r) => r.name)
+  if (ungoverned.length) console.log(`\n  not governed (shown, never enforced): ${ungoverned.join(', ')}`)
+
+  if (faults.length) {
+    console.log(`\n  ✗ ${faults.length} undeclared difference(s):`)
+    for (const f of faults) console.log(`    · ${f}`)
+    console.log('\n  fix: node scripts/space-sync.mjs --all --to <tier url>')
+    process.exitCode = 1
+  } else {
+    console.log('\n  ✓ every governed tier matches the repo.')
+  }
+}
+
+async function main() {
+  const args = parseArgs(process.argv.slice(2))
+  const repoDir = path.resolve(args.repo
+    || (args.manifest ? path.dirname(args.manifest) : process.cwd()))
+
+  const env = {
+    ...(await loadEnvFile(path.join(ROOT_DIR, '.env'))),
+    ...(await loadEnvFile(path.join(ROOT_DIR, '.env.local'))),
+    ...(await loadEnvFile(path.join(ROOT_DIR, 'serverXR', '.env.local'))),
+    ...(await loadEnvFile(path.join(repoDir, '.env.local'))),
+  }
+  const getEnv = (k) => process.env[k] || env[k] || ''
+
+  const spaceManifestPath = path.resolve(args.space || path.join(repoDir, SPACE_MANIFEST))
+  let spaceDecl = null
+  try { spaceDecl = JSON.parse(await fs.readFile(spaceManifestPath, 'utf8')) }
+  catch (e) {
+    if (args.all || args.audit || args.space) {
+      console.error(`Cannot read space manifest at ${spaceManifestPath}: ${e.message}`)
+      process.exitCode = 1; return
+    }
+  }
+
+  if (Number(spaceDecl?.minEngine || 0) > ENGINE_VERSION) {
+    console.error(`Error: ${SPACE_MANIFEST} needs engine v${spaceDecl.minEngine}, this copy is v${ENGINE_VERSION}.`)
+    console.error('  Re-vendor from di.iiii: node scripts/space-sync-vendor.mjs --write')
+    process.exitCode = 1; return
+  }
+
+  if (args.audit) return audit({ repoDir, spaceDecl, spaceManifestPath, getEnv, args })
+
+  // A tier can be named instead of spelled out, once the space manifest knows
+  // the map: --tier staging beats pasting a serverXR URL from memory.
+  const named = args.tier ? spaceDecl?.tiers?.[args.tier] : null
+  if (args.tier && !named) {
+    console.error(`Error: unknown tier "${args.tier}". Known: ${Object.keys(spaceDecl?.tiers || {}).join(', ') || '(none)'}`)
+    process.exitCode = 1; return
+  }
+  // --all is the everyday command: one space, every page it declares, in the
+  // order the repo lists them. Four hand-typed invocations is three chances to
+  // sync three surfaces and forget the fourth.
+  const manifests = args.all
+    ? (spaceDecl.projects || []).map((rel) => path.resolve(repoDir, rel))
+    : [args.manifest ? path.resolve(args.manifest) : path.join(repoDir, 'di-space.json')]
+  if (args.all && !manifests.length) {
+    console.error(`Error: ${SPACE_MANIFEST} lists no projects.`); process.exitCode = 1; return
+  }
+
+  // A single manifest may still pin its own tier (beyond_form and
+  // platform_recordar both do). Under --all the space manifest names the tier,
+  // and a page pinning one would be a page overriding the space.
+  let pinned = null
+  if (!args.all && !args.to && !named) {
+    try { pinned = JSON.parse(await fs.readFile(manifests[0], 'utf8')).live || null } catch { /* reported by syncOne */ }
+  }
+
+  // No default target. This used to fall back to production, so a run that
+  // simply forgot --to wrote to the live space while reading like a rehearsal.
+  const target = args.to || named?.url || pinned || getEnv('LIVE_API_URL')
+  if (!target) {
+    console.error('Error: no target. Pass --to <url> or --tier <name>, or set LIVE_API_URL.')
+    console.error('  staging: https://staging.di-studio.xyz/serverXR')
+    console.error('  prod:    https://di-studio.xyz/serverXR')
+    process.exitCode = 1; return
+  }
+  const live = target.replace(/\/+$/, '')
+  const tierName = tierOf(live, spaceDecl?.tiers)
+  const token = args.token || getEnv(spaceDecl?.tiers?.[tierName]?.tokenEnv || '')
+    || getEnv('LIVE_API_TOKEN') || getEnv('API_TOKEN') || ''
+  if (!token) {
+    console.error('Error: editor token required (--token or LIVE_API_TOKEN / API_TOKEN).'); process.exitCode = 1; return
+  }
+
+  for (const manifestPath of manifests) {
+    if (manifests.length > 1) console.log('')
+    await syncOne({ manifestPath, repoDir, live, token, args, spaceDecl, tierName })
+    if (process.exitCode) return
+  }
+}
+
+export { referencesAsset, rewriteAssetRefs, matchGlobs, globToRe, tierOf, parseArgs, SPACE_FIELDS, TIER_FIELDS, SPACE_MANIFEST }
 
 // Only run when invoked as a script, so the helpers above can be unit-tested.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
