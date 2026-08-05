@@ -8,7 +8,14 @@ function makeFakeRouter() {
   const record = (method) => (path, ...handlers) => {
     routes[`${method} ${path}`] = handlers
   }
-  return { routes, get: record('get'), post: record('post'), delete: record('delete'), use: () => {} }
+  return {
+    routes,
+    get: record('get'),
+    post: record('post'),
+    put: record('put'),
+    delete: record('delete'),
+    use: () => {}
+  }
 }
 
 const setup = (withSpaceOpsLock, overrides = {}) => {
@@ -19,6 +26,14 @@ const setup = (withSpaceOpsLock, overrides = {}) => {
       const op = ops[0]
       if (op.type === 'deleteObject') {
         return { ...scene, objects: (scene.objects || []).filter((obj) => obj.id !== op.payload.objectId) }
+      }
+      if (op.type === 'updateObject') {
+        return {
+          ...scene,
+          objects: (scene.objects || []).map((obj) => (
+            obj.id === op.payload.objectId ? { ...obj, ...op.payload.patch } : obj
+          ))
+        }
       }
       return { ...scene, objects: [...(scene.objects || []), op.payload.object] }
     }),
@@ -198,5 +213,153 @@ describe('proof of authorship + self-unmake', () => {
     const noProof = makeReqRes({}, { id: 'insc-abc' })
     await del(noProof.req, noProof.res, noProof.next)
     expect(noProof.res.statusCode).toBe(400)
+  })
+})
+
+// ── THE MARK ──────────────────────────────────────────────────────────────
+// The drawing a visitor actually made, as opposed to every other property of a
+// core, which is measured or hashed. Two rules carry the whole design: a mark is
+// validated by SHAPE and never parsed here, and a bad one can never cost anyone
+// the crossing.
+const GOOD_MARK = `m1.${'A'.repeat(64)}`
+const MARK_POST = 'post /api/spaces/:spaceId/inscriptions'
+const MARK_PUT = 'put /api/spaces/:spaceId/inscriptions/:id/mark'
+const proofHashOf = (proof) => createHash('sha256').update(proof, 'utf8').digest('hex')
+
+const sceneWith = (extra = {}) => ({
+  objects: [{ id: 'insc-1', proofHash: proofHashOf('right'), data: 'Ada · hello', ...extra }]
+})
+
+describe('a crossing can carry the mark that was drawn for it', () => {
+  it('stores a well-formed mark on the object', async () => {
+    const { router, deps } = setup(vi.fn((spaceId, fn) => fn()))
+    const { req, res, next } = makeReqRes({ name: 'Ada', word: 'hello', mark: GOOD_MARK })
+
+    await lastHandler(router, MARK_POST)(req, res, next)
+
+    const written = deps.writeJson.mock.calls[0][1]
+    expect(written.objects[0].mark).toBe(GOOD_MARK)
+  })
+
+  it.each([
+    ['a foreign prefix', 'm2.AAAAAAAAAAAAAAAA'],
+    ['characters outside the alphabet', 'm1.<script>alert(1)</script>'],
+    ['a url', 'm1.https://evil.example/x'],
+    ['too short to be a drawing', 'm1.AAA'],
+    ['longer than the cap', `m1.${'A'.repeat(4000)}`],
+    ['not a string at all', { toString: () => GOOD_MARK }]
+  ])('drops %s and still makes the crossing', async (_label, mark) => {
+    const { router, deps } = setup(vi.fn((spaceId, fn) => fn()))
+    const { req, res, next } = makeReqRes({ name: 'Ada', word: 'hello', mark })
+
+    await lastHandler(router, MARK_POST)(req, res, next)
+
+    // the drawing is refused; the bridge is not
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ ok: true }))
+    expect(deps.writeJson.mock.calls[0][1].objects[0]).not.toHaveProperty('mark')
+  })
+
+  it('leaves the property off entirely when no mark was drawn', async () => {
+    const { router, deps } = setup(vi.fn((spaceId, fn) => fn()))
+    const { req, res, next } = makeReqRes({ name: 'Ada', word: 'hello' })
+
+    await lastHandler(router, MARK_POST)(req, res, next)
+
+    expect(deps.writeJson.mock.calls[0][1].objects[0]).not.toHaveProperty('mark')
+  })
+})
+
+describe('a mark can be changed afterwards, by exactly the person who made it', () => {
+  const putSetup = (scene = sceneWith()) => setup(
+    vi.fn((spaceId, fn) => fn()),
+    { readJson: vi.fn().mockResolvedValue(scene) }
+  )
+
+  it('writes the new mark when the proof matches', async () => {
+    const { router, deps } = putSetup()
+    const { req, res, next } = makeReqRes({ proof: 'right', mark: GOOD_MARK }, { id: 'insc-1' })
+
+    await lastHandler(router, MARK_PUT)(req, res, next)
+
+    expect(res.json).toHaveBeenCalledWith({ ok: true, id: 'insc-1' })
+    expect(deps.writeJson.mock.calls[0][1].objects[0].mark).toBe(GOOD_MARK)
+  })
+
+  it('touches nothing but the mark', async () => {
+    const { router, deps } = putSetup()
+    const { req, res, next } = makeReqRes({ proof: 'right', mark: GOOD_MARK }, { id: 'insc-1' })
+
+    await lastHandler(router, MARK_PUT)(req, res, next)
+
+    const op = deps.appendOpsHistory.mock.calls[0][1][0]
+    expect(op.type).toBe('updateObject')
+    expect(Object.keys(op.payload.patch)).toEqual(['mark'])
+    expect(deps.writeJson.mock.calls[0][1].objects[0].data).toBe('Ada · hello')
+  })
+
+  it('refuses a proof that does not match', async () => {
+    const { router, deps } = putSetup()
+    const { req, res, next } = makeReqRes({ proof: 'wrong', mark: GOOD_MARK }, { id: 'insc-1' })
+
+    await lastHandler(router, MARK_PUT)(req, res, next)
+
+    expect(res.statusCode).toBe(403)
+    expect(deps.writeJson).not.toHaveBeenCalled()
+  })
+
+  it('refuses a crossing made before proofs existed', async () => {
+    const { router, deps } = putSetup({ objects: [{ id: 'insc-1', data: 'Ada · hello' }] })
+    const { req, res, next } = makeReqRes({ proof: 'right', mark: GOOD_MARK }, { id: 'insc-1' })
+
+    await lastHandler(router, MARK_PUT)(req, res, next)
+
+    expect(res.statusCode).toBe(403)
+    expect(deps.writeJson).not.toHaveBeenCalled()
+  })
+
+  it('refuses an id that is not an inscription at all', async () => {
+    const { router, deps } = putSetup()
+    const { req, res, next } = makeReqRes({ proof: 'right', mark: GOOD_MARK }, { id: 'obj-someone-elses' })
+
+    await lastHandler(router, MARK_PUT)(req, res, next)
+
+    expect(res.statusCode).toBe(400)
+    expect(deps.writeJson).not.toHaveBeenCalled()
+  })
+
+  it('refuses a malformed mark rather than storing it', async () => {
+    const { router, deps } = putSetup()
+    const { req, res, next } = makeReqRes({ proof: 'right', mark: 'javascript:alert(1)' }, { id: 'insc-1' })
+
+    await lastHandler(router, MARK_PUT)(req, res, next)
+
+    expect(res.statusCode).toBe(400)
+    expect(deps.writeJson).not.toHaveBeenCalled()
+  })
+
+  it('refuses when the space does not accept inscriptions', async () => {
+    const { router, deps } = setup(
+      vi.fn((spaceId, fn) => fn()),
+      {
+        readJson: vi.fn().mockResolvedValue(sceneWith()),
+        loadSpaceMeta: vi.fn().mockResolvedValue({ openInscriptions: false, isPublic: true })
+      }
+    )
+    const { req, res, next } = makeReqRes({ proof: 'right', mark: GOOD_MARK }, { id: 'insc-1' })
+
+    await lastHandler(router, MARK_PUT)(req, res, next)
+
+    expect(res.statusCode).toBe(403)
+    expect(deps.writeJson).not.toHaveBeenCalled()
+  })
+
+  it('takes the same per-space lock the other writers take', async () => {
+    const withSpaceOpsLock = vi.fn((spaceId, fn) => fn())
+    const { router } = setup(withSpaceOpsLock, { readJson: vi.fn().mockResolvedValue(sceneWith()) })
+    const { req, res, next } = makeReqRes({ proof: 'right', mark: GOOD_MARK }, { id: 'insc-1' })
+
+    await lastHandler(router, MARK_PUT)(req, res, next)
+
+    expect(withSpaceOpsLock).toHaveBeenCalledWith('open', expect.any(Function))
   })
 })
