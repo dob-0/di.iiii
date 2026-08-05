@@ -578,6 +578,70 @@ function registerSpaceRoutes(router, {
     return { newVersion: nextVersion }
   })
 
+  // ── space settings ───────────────────────────────────────────────────────
+  //
+  // One small JSON object per space, beside its scene. It exists for CODE
+  // spaces: their piece is React in src/, so they have no project document,
+  // and anything their author tunes had nowhere on the server to live. The
+  // algovrithm Director is the first case — it could write its edit list only
+  // through a Vite dev-server middleware, so the timeline was openable on the
+  // live site and could not be saved from it.
+  //
+  // Deliberately opaque: the server stores and returns whatever object it is
+  // given. What the keys mean belongs to the piece, not to the platform, and
+  // a schema here would have to be edited every time a piece grew a knob.
+  // Bounded instead by size, because "arbitrary JSON" without a ceiling is a
+  // way to fill a disk. Gating is the space's own — reads follow the space's
+  // visibility, writes need editor + scope, both applied upstream via
+  // req.requiredSpaceId, exactly as the scene routes are.
+  const MAX_SPACE_SETTINGS_BYTES = 64 * 1024
+
+  router.get('/api/spaces/:spaceId/settings', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      if (!(await spaceExists(spaceId))) {
+        return res.status(404).json({ error: 'Space not found.' })
+      }
+      const { settingsPath } = getSpacePaths(spaceId)
+      // Absent is a normal state, not an error: a space that has never been
+      // tuned reads as {} so callers need no special case for "not yet".
+      const settings = await readJson(settingsPath, {})
+      res.json({ settings: settings && typeof settings === 'object' ? settings : {} })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  router.put('/api/spaces/:spaceId/settings', async (req, res, next) => {
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      if (!(await spaceExists(spaceId))) {
+        return res.status(404).json({ error: 'Space not found.' })
+      }
+      const settings = req.body?.settings
+      // Arrays are objects to typeof and would round-trip as a shape no
+      // reader expects; reject rather than coerce.
+      if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+        return res.status(400).json({ error: 'settings must be an object.' })
+      }
+      const serialized = JSON.stringify(settings)
+      if (Buffer.byteLength(serialized, 'utf8') > MAX_SPACE_SETTINGS_BYTES) {
+        return res.status(413).json({
+          error: `Settings are limited to ${MAX_SPACE_SETTINGS_BYTES} bytes.`
+        })
+      }
+      await ensureSpaceWritable(spaceId)
+      const { spaceDir, settingsPath } = getSpacePaths(spaceId)
+      await fsp.mkdir(spaceDir, { recursive: true })
+      await writeJson(settingsPath, settings)
+      res.json({ ok: true, settings })
+    } catch (error) {
+      next(error)
+    }
+  })
+
   router.put('/api/spaces/:spaceId/scene', async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)

@@ -221,7 +221,7 @@ function Section({ title, open, onToggle, children }) {
     )
 }
 
-export default function DirectorPanel({ sequences, onChange, clock, selectedId, onSelect, onPlace }) {
+export default function DirectorPanel({ sequences, onChange, clock, selectedId, onSelect, onPlace, onSaveTiming = null }) {
     const trackRef = useRef(null)
     const dragRef = useRef(null)
     const [trackWidth, setTrackWidth] = useState(0)
@@ -403,12 +403,30 @@ export default function DirectorPanel({ sequences, onChange, clock, selectedId, 
                 setSaveState({ kind: 'error', reason: result.reason ?? 'refused' })
                 return
             }
-            setSaveState({ kind: 'saved', changed: result.changed })
+            setSaveState({ kind: 'saved', where: 'source', changed: result.changed })
             window.setTimeout(() => setSaveState(null), 2400)
         } catch (error) {
             // No endpoint — a production build, or the dev server has died.
-            // Copy still works, so say which one to reach for.
-            setSaveState({ kind: 'error', reason: `no dev server (${error?.message ?? 'unreachable'}) — use Copy` })
+            // This used to be the end of the road, and it is the whole reason
+            // the piece could be retimed only on the machine running `npm run
+            // dev`: the timeline opened perfectly well on di-studio.xyz and had
+            // nowhere to put an edit. Fall through to the live space, which
+            // keeps a timing overlay in its settings — the file stays the
+            // source of truth and the overlay says how this space differs.
+            if (!onSaveTiming) {
+                setSaveState({ kind: 'error', reason: `no dev server (${error?.message ?? 'unreachable'}) — use Copy` })
+                return
+            }
+            try {
+                const { changed } = await onSaveTiming(sequences)
+                setSaveState({ kind: 'saved', where: 'space', changed })
+                window.setTimeout(() => setSaveState(null), 2400)
+            } catch (spaceError) {
+                setSaveState({
+                    kind: 'error',
+                    reason: `could not save to this space (${spaceError?.message ?? 'unreachable'}) — use Copy`
+                })
+            }
         }
     }
 
@@ -1033,8 +1051,17 @@ export default function DirectorPanel({ sequences, onChange, clock, selectedId, 
                     disabled={saveState?.kind === 'saving'}
                 >
                     {saveState?.kind === 'saving' ? 'saving…' : null}
-                    {saveState?.kind === 'saved' ? (saveState.changed ? 'saved ✓' : 'no changes') : null}
-                    {!saveState || saveState.kind === 'error' ? 'Save to source' : null}
+                    {/* Which of the two places it landed in matters: the source
+                        file travels with the repo, the space's overlay does not
+                        leave this tier. Saying "saved ✓" for both would hide
+                        the difference at exactly the moment it decides whether
+                        the work survives a deploy. */}
+                    {saveState?.kind === 'saved'
+                        ? (saveState.changed
+                            ? (saveState.where === 'space' ? 'saved to this space ✓' : 'saved ✓')
+                            : 'no changes')
+                        : null}
+                    {!saveState || saveState.kind === 'error' ? 'Save' : null}
                 </button>
                 <button type="button" className="algo-vrithm-director-copy" onClick={handleCopy}>
                     {copied ? 'copied ✓' : 'Copy edit list'}
@@ -1042,7 +1069,11 @@ export default function DirectorPanel({ sequences, onChange, clock, selectedId, 
                 <span className="algo-vrithm-director-note">
                     {saveState?.kind === 'error'
                         ? saveState.reason
-                        : 'Save writes src/algoVrithm/sequences/index.js in place, comments intact. Copy regenerates the array instead — use it for rows added here.'}
+                        : saveState?.where === 'space'
+                            ? 'Timing saved to this space — it plays here for everyone. It does not reach the repo: send it on with Copy when it should become the piece everywhere.'
+                            : onSaveTiming
+                                ? 'Save writes src/algoVrithm/sequences/index.js in place when the dev server is there, and this space\'s timing when it is not. Copy regenerates the array instead — use it for rows added here.'
+                                : 'Save writes src/algoVrithm/sequences/index.js in place, comments intact. Copy regenerates the array instead — use it for rows added here.'}
                 </span>
             </footer>
 

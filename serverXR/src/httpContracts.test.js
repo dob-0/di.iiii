@@ -727,6 +727,53 @@ describe('server write contracts', () => {
         })
     })
 
+    // A CODE space's piece is React in src/, so it has no project document and
+    // nowhere on the server to keep what its author tunes. The algovrithm
+    // Director could save only through a Vite dev-server middleware: openable
+    // on the live site, unsavable from it.
+    it('keeps a small settings blob per space, bounded and shaped', async () => {
+        const server = await startServer({ nodeEnv: 'production' })
+        const auth = { 'Content-Type': 'application/json', ...withAuth(server.apiToken) }
+
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST', headers: auth,
+            body: JSON.stringify({ label: 'Code Space', slug: 'code-space' })
+        })
+
+        // Never tuned reads as {}, not 404 — callers need no "not yet" case.
+        const empty = await fetch(`${server.baseUrl}/api/spaces/code-space/settings`, { headers: withAuth(server.apiToken) })
+        expect(empty.status).toBe(200)
+        await expect(empty.json()).resolves.toEqual({ settings: {} })
+
+        const timing = { algovrithm: { timing: { 's01-white-tunnel': { startSec: 0, endSec: 6.2 } } } }
+        const saved = await fetch(`${server.baseUrl}/api/spaces/code-space/settings`, {
+            method: 'PUT', headers: auth, body: JSON.stringify({ settings: timing })
+        })
+        expect(saved.status).toBe(200)
+        const read = await fetch(`${server.baseUrl}/api/spaces/code-space/settings`, { headers: withAuth(server.apiToken) })
+        await expect(read.json()).resolves.toEqual({ settings: timing })
+
+        // An array is an object to typeof and would round-trip as a shape no
+        // reader expects.
+        const asArray = await fetch(`${server.baseUrl}/api/spaces/code-space/settings`, {
+            method: 'PUT', headers: auth, body: JSON.stringify({ settings: [1, 2, 3] })
+        })
+        expect(asArray.status).toBe(400)
+
+        // Arbitrary JSON with no ceiling is a way to fill a disk.
+        const huge = await fetch(`${server.baseUrl}/api/spaces/code-space/settings`, {
+            method: 'PUT', headers: auth, body: JSON.stringify({ settings: { blob: 'x'.repeat(70_000) } })
+        })
+        expect(huge.status).toBe(413)
+
+        // The rejected writes changed nothing.
+        const after = await fetch(`${server.baseUrl}/api/spaces/code-space/settings`, { headers: withAuth(server.apiToken) })
+        await expect(after.json()).resolves.toEqual({ settings: timing })
+
+        const missing = await fetch(`${server.baseUrl}/api/spaces/no-such-space/settings`, { headers: withAuth(server.apiToken) })
+        expect(missing.status).toBe(404)
+    })
+
     it('gives every session the communal open space plus one private sandbox', async () => {
         const server = await startServer({
             nodeEnv: 'production',

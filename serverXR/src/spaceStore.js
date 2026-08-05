@@ -97,6 +97,11 @@ function createSpaceStore({
     return {
       spaceDir,
       scenePath: path.join(spaceDir, 'scene.json'),
+      // Small JSON blob a space carries alongside its scene. A CODE space —
+      // one whose piece is React in src/, not a project document — has no
+      // other place to keep the settings its author tunes, so before this it
+      // could only be tuned on a laptop running the dev server.
+      settingsPath: path.join(spaceDir, 'settings.json'),
       assetsDir: path.join(spaceDir, 'assets'),
       metaPath: path.join(spaceDir, 'meta.json'),
       opsPath: path.join(spaceDir, 'ops.json')

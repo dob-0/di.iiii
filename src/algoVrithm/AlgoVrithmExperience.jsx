@@ -36,6 +36,7 @@ import { resolveTravel } from './viewerTravel.js'
 import { parseLightName, setLightValue } from './worldLights.js'
 import { clipProgress, sourceProgress, useRitualClock } from './ritualClock.js'
 import { SEQUENCES } from './sequences/index.js'
+import useSavedTiming from './useSavedTiming.js'
 import useAutoHideChrome from './useAutoHideChrome.js'
 import useEditHistory from './useEditHistory.js'
 import usePanelToggle from './usePanelToggle.js'
@@ -412,8 +413,42 @@ function XrDiagnostics({ xrAvailable, onRecheckXr, xrEye }) {
  *                  so it fills the box it is given instead. See algoVrithm.css.
  * @param director  forces the panel on, for a route whose whole purpose is the
  *                  panel. Left undefined the flag decides, as it always has.
+ * @param initialSequences
+ *                  the edit list to open on. Defaults to the one the file
+ *                  declares; the mounts pass in the file's list with the live
+ *                  space's saved timing applied (see useSavedTiming.js), which
+ *                  is what lets the piece be retimed from a browser instead of
+ *                  only from a laptop running the dev server. Passed in rather
+ *                  than fetched here so the resolved list is the FIRST value
+ *                  the clock ever sees — an overlay dropped in later would
+ *                  jump the playhead mid-beat.
  */
 export default function AlgoVrithmExperience({ embedded = false, director = undefined } = {}) {
+    // Resolve the live space's timing BEFORE the piece is built, never after.
+    // The edit list is the clock's first value, and dropping an overlay in
+    // later would jump the playhead mid-beat in front of an audience. The wait
+    // is bounded (see useSavedTiming) and the placeholder is the same void the
+    // piece opens on, so a slow or dead backend costs frames, not the show.
+    const timing = useSavedTiming()
+    if (!timing.ready) {
+        return <div className={`algo-vrithm-root${embedded ? ' is-embedded' : ''}`} aria-hidden="true" />
+    }
+    return (
+        <AlgoVrithmStage
+            embedded={embedded}
+            director={director}
+            initialSequences={timing.sequences}
+            onSaveTiming={timing.save}
+        />
+    )
+}
+
+function AlgoVrithmStage({
+    embedded = false,
+    director = undefined,
+    initialSequences = SEQUENCES,
+    onSaveTiming = null
+} = {}) {
     const xr = useXrAr()
     const rootRef = useRef(null)
     const flagDirector = useMemo(() => isDirectorEnabled(), [])
@@ -469,7 +504,7 @@ export default function AlgoVrithmExperience({ embedded = false, director = unde
     // author: the audience has nothing to undo and should not carry a listener
     // for it. See useEditHistory.js for why continuous edits coalesce — without
     // that, one gizmo drag would be a hundred separate undos.
-    const history = useEditHistory(SEQUENCES, { enabled: directorEnabled })
+    const history = useEditHistory(initialSequences, { enabled: directorEnabled })
     const editList = history.present
     const setEditList = history.set
     const durationSec = useMemo(() => totalDurationSec(editList), [editList])
@@ -785,6 +820,7 @@ export default function AlgoVrithmExperience({ embedded = false, director = unde
                         selectedId={selectedId}
                         onSelect={setSelectedId}
                         onPlace={placeTarget}
+                        onSaveTiming={onSaveTiming}
                     />
                 </div>
             )}
