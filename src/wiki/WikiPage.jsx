@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import GridFloorBackground from '../components/GridFloorBackground.jsx'
+import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { WIKI_ARTICLES, WIKI_CATEGORIES } from './wikiContent.js'
 import './wiki.css'
 
@@ -23,6 +24,11 @@ export default function WikiPage() {
         document.body.classList.add('is-landing')
         return () => document.body.classList.remove('is-landing')
     }, [])
+
+    // .wiki-root cannot take focus, so without this the reading keys are dead
+    // on a page that is nothing but reading.
+    const rootRef = useRef(null)
+    useKeyboardPageScroll(rootRef)
 
     // The page scrolls inside .wiki-root (not the document), so native #hash
     // anchors don't work — scroll the target into view explicitly. Also handles
@@ -55,7 +61,7 @@ export default function WikiPage() {
     ), [filtered])
 
     return (
-        <div className="wiki-root" data-page="wiki">
+        <div className="wiki-root" data-page="wiki" ref={rootRef}>
             <GridFloorBackground aria-hidden="true" interactive={false} />
 
             <nav className="wiki-nav">

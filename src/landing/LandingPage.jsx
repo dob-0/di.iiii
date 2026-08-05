@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, Typography } from '@mui/material'
+import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
@@ -166,6 +167,11 @@ export default function LandingPage() {
     // CSS then hid. Gating the mount is what actually saves the bytes.
     const [isSmallScreen] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 520px)').matches)
     const heroRef = useRef(null)
+    const rootRef = useRef(null)
+
+    // The page root is the only scroller (base.css fixes html/body/#root), and it
+    // cannot take focus, so the reading keys need driving by hand.
+    useKeyboardPageScroll(rootRef)
 
     useEffect(() => {
         let cancelled = false
@@ -216,7 +222,7 @@ export default function LandingPage() {
     const showBackground = entered || (heroInView && !isSmallScreen)
 
     return (
-        <Box className="lp-root" data-page="landing">
+        <Box className="lp-root" data-page="landing" ref={rootRef}>
 
             {/* ── NAV ──────────────────────────────────────────── */}
             {!entered && (
