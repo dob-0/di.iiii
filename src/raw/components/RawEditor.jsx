@@ -24,6 +24,7 @@ import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
+import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
 import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
 
@@ -569,6 +570,164 @@ export default function RawEditor({
         openPalette('world', placement)
     }
 
+    // Every palette-creatable node type in one graph, with the maths chain
+    // actually driving the geometry. Unlike the streaming preset below, this one
+    // builds nothing that isn't implemented — see the module for which ports are
+    // deliberately left unwired and why.
+    const handleCreateAllNodesExample = () => {
+        const { nodes: exampleNodes, edges: exampleEdges } = buildAllNodesExample({
+            parentId: currentScopeId || null,
+            workspaceTop
+        })
+        if (!exampleNodes.length) return
+
+        dispatch({ type: 'select-entity', entityId: null })
+        applyLocalOps([
+            ...exampleNodes.map((node) => ({ type: 'createNode', payload: { node } })),
+            ...exampleEdges.map((edge) => ({ type: 'createEdge', payload: { edge } })),
+            {
+                type: 'setWorkspaceState',
+                payload: { patch: { activeSurface: 'graph', selectedNodeId: null } }
+            }
+        ], {
+            activityMessage: `Created the all-nodes example (${exampleNodes.length} nodes, ${exampleEdges.length} edges).`
+        })
+    }
+
+    const handleCreateStreamingPrototype = () => {
+        const startX = 80
+        const startY = workspaceTop + 72
+        const mkNode = ({ typeId, label, graphX, graphY, hostHint = '', values = {} }) => {
+            const seededValues = buildNodeValues(typeId, {
+                ...values,
+                ...(hostHint ? { hostHint } : {})
+            }, {
+                clientX: graphX + 180,
+                clientY: graphY + 48
+            })
+            return createNode(typeId, {
+                label,
+                graphX,
+                graphY,
+                values: seededValues
+            })
+        }
+
+        const instaNode = mkNode({
+            typeId: 'source.insta360',
+            label: 'Insta360 [mac]',
+            graphX: startX,
+            graphY: startY,
+            hostHint: 'mac'
+        })
+        const stereoNode = mkNode({
+            typeId: 'source.stereo',
+            label: 'Stereo Cam [linux]',
+            graphX: startX,
+            graphY: startY + 150,
+            hostHint: 'linux'
+        })
+        const micNode = mkNode({
+            typeId: 'source.mic',
+            label: 'Mic [mac]',
+            graphX: startX,
+            graphY: startY + 300,
+            hostHint: 'mac'
+        })
+        const ptzANode = mkNode({
+            typeId: 'device.ptz.osc',
+            label: 'PTZ A [windows]',
+            graphX: startX + 260,
+            graphY: startY,
+            hostHint: 'windows',
+            values: { oscAddress: '/ptz/a' }
+        })
+        const ptzBNode = mkNode({
+            typeId: 'device.ptz.osc',
+            label: 'PTZ B [windows]',
+            graphX: startX + 260,
+            graphY: startY + 150,
+            hostHint: 'windows',
+            values: { oscAddress: '/ptz/b' }
+        })
+        const controllerNode = mkNode({
+            typeId: 'stream.controller',
+            label: 'Controller [mobile]',
+            graphX: startX + 260,
+            graphY: startY + 300,
+            hostHint: 'mobile',
+            values: { title: 'Mobile Control Desk' }
+        })
+        const compositorNode = mkNode({
+            typeId: 'stream.compositor',
+            label: 'Compositor [linux]',
+            graphX: startX + 560,
+            graphY: startY + 120,
+            hostHint: 'linux'
+        })
+        const outputNode = mkNode({
+            typeId: 'stream.output',
+            label: 'Stream Output [windows]',
+            graphX: startX + 880,
+            graphY: startY + 80,
+            hostHint: 'windows',
+            values: { target: 'rtmp://localhost/live/main' }
+        })
+        const monitorNode = mkNode({
+            typeId: 'stream.monitor',
+            label: 'Program Monitor [mac]',
+            graphX: startX + 880,
+            graphY: startY + 240,
+            hostHint: 'mac',
+            values: { title: 'Program Monitor' }
+        })
+
+        const nodesToCreate = [
+            instaNode,
+            stereoNode,
+            micNode,
+            ptzANode,
+            ptzBNode,
+            controllerNode,
+            compositorNode,
+            outputNode,
+            monitorNode
+        ].filter(Boolean)
+
+        if (!nodesToCreate.length) return
+
+        const id = (node) => node?.id || ''
+        const edgesToCreate = [
+            createEdge(id(instaNode), 'frame', id(compositorNode), 'primary'),
+            createEdge(id(ptzANode), 'frame', id(compositorNode), 'altA'),
+            createEdge(id(ptzBNode), 'frame', id(compositorNode), 'altB'),
+            createEdge(id(stereoNode), 'depth', id(compositorNode), 'depth'),
+            createEdge(id(controllerNode), 'mix', id(compositorNode), 'mix'),
+            createEdge(id(compositorNode), 'program', id(outputNode), 'video'),
+            createEdge(id(micNode), 'frequency', id(outputNode), 'audio'),
+            createEdge(id(compositorNode), 'program', id(monitorNode), 'src')
+        ].filter((edge) => edge.fromNodeId && edge.toNodeId)
+
+        const ops = [
+            ...nodesToCreate.map((node) => ({ type: 'createNode', payload: { node } })),
+            ...edgesToCreate.map((edge) => ({ type: 'createEdge', payload: { edge } })),
+            {
+                type: 'setWorkspaceState',
+                payload: {
+                    patch: {
+                        activeSurface: 'graph',
+                        selectedNodeId: compositorNode?.id || null
+                    }
+                }
+            }
+        ]
+
+        dispatch({ type: 'select-entity', entityId: null })
+        applyLocalOps(ops, {
+            activityMessage: 'Created streaming prototype graph (linux + mac + windows + mobile).'
+        })
+    }
+
     const hostInspector = (
         <aside className="raw-selection-scaffold" style={{ top: workflowHeight + 'px' }}>
             <PropertyInspector
@@ -834,6 +993,8 @@ export default function RawEditor({
                                 {overflowOpen && (
                                     <div className="raw-topbar-overflow-menu">
                                         <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
+                                        <button type="button" onClick={() => { handleCreateAllNodesExample(); setOverflowOpen(false) }}>All Nodes Example</button>
+                                        <button type="button" onClick={() => { handleCreateStreamingPrototype(); setOverflowOpen(false) }}>Streaming Prototype</button>
                                         {isLocalWorkspace && (
                                             <button type="button" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Reset Workspace</button>
                                         )}

@@ -429,6 +429,25 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-06'
     },
     {
+        id: 'raw-on-a-phone',
+        category: 'Editing',
+        title: 'Raw on a phone: wiring nodes with a finger',
+        summary: 'The Raw graph editor is usable on touch — pinch to zoom, drag between ports to wire, and an All Nodes Example that puts the whole palette in one graph.',
+        body: [
+            'The graph editor was previously mouse-only in a way no amount of zooming could work around: starting a wire on an output port captured the pointer, so the release never reached the input port under your finger and no connection could be made. Dragging between ports now works the same way on a phone as on a desktop.',
+            { list: [
+                'Drag from an output port to an input port to wire them. You do not have to land exactly on the dot — the drop snaps to the nearest port that accepts that type, within a finger’s width, so a small miss still connects.',
+                'Pinch with two fingers to zoom and pan the canvas at the same time. The zoom buttons in the bottom-left corner do the same thing in steps.',
+                'Opening a graph fits it to the screen instead of dropping you at 100% somewhere inside it, so you can see the whole patch before choosing where to work.',
+                'Tap a wire to delete it — the tap area is much wider than the line you see.',
+                'Panel windows (World, Text, Browser, Image) shrink to fit the screen rather than running off the edge.'
+            ] },
+            'The overflow menu (⋯) has an All Nodes Example: one graph containing every node type the palette can create, with a clock driving a chain of maths into a pulsing sphere, a colour crossfade on a cube, and a breathing light. It is the quickest way to see what the node system can currently do — and it is deliberately honest about what it cannot: geometry, texture and signal outputs are declared on several node types but are not computed yet, so those ports are left unwired rather than connected to look complete.'
+        ],
+        tags: ['raw', 'nodes', 'mobile', 'touch', 'phone', 'example', 'editor'],
+        updated: '2026-08-06'
+    },
+    {
         id: 'br-id-ge',
         category: 'Spaces & access',
         title: 'br_id_ge (կամուրջ): an Armenian XR rite — live at Notations #2',
