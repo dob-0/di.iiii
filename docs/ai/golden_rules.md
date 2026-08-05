@@ -345,6 +345,55 @@ docker build -f serverXR/Dockerfile -t dii-server .
 
 ---
 
+### Every space shows a preview by default, and the owner can always override it
+
+**Rule:** A space card is never blank. Every space gets an automatic preview with no
+action from anyone, and the owner can replace that automatic preview with an image
+they choose — and take it back off again. Automatic is the floor, not the ceiling:
+never ship a space kind whose only route to a preview is "the owner uploads one",
+and never make an uploaded image un-removable.
+
+**Why:** `algovrithm` shipped to production with a blank card while every other space
+had a picture, and the reason was structural rather than a missed step. The card falls
+back in a fixed order — a custom image, else a live miniature of the published project,
+else nothing — and that middle branch needs `isPublic && publishedProjectId`. A CODE
+space has no project document at all (its scene is React, in `src/`), so it can never
+reach the automatic branch and lands on `nothing`. The audit that found it also found
+`open` in the same hole for a different reason: it forwards into a shared jam project
+and so has no `publishedProjectId` of its own either. Two spaces, one missing floor.
+
+The override half is not decoration. The automatic miniature renders the published
+project, which for a timed piece is whatever moment the renderer happens to catch —
+for `algovrithm` that is frequently a black frame, since two of its beats are near-
+black by design. The owner has to be able to say "this frame, not that one", and to
+undo it later without an administrator.
+
+**How:** The order is in `SpaceHub.jsx` and is correct as written — keep it, and keep
+`handleUseLivePreview` (which clears `previewImageAssetId` back to `null`) as the way
+back to automatic. What must be added for any new space kind is a way to REACH the
+automatic branch. For a code space that means a captured frame of the piece itself,
+not a logo and not a placeholder: the card's job is to show what the visitor will get.
+
+Audit it from outside, against the deployed host, rather than trusting the local build —
+a space row can exist on one tier and not the other, which is how this one hid:
+
+```bash
+curl -s https://di-studio.xyz/serverXR/api/spaces | python3 -c "
+import json,sys
+for s in json.load(sys.stdin)['spaces']:
+    auto = s['isPublic'] and bool(s['publishedProjectId'])
+    print(s['id'], 'custom' if s['previewImageAssetId'] else ('auto' if auto else 'BLANK'))"
+```
+
+Anything printing `BLANK` is a bug in this rule, not a space waiting for its owner.
+
+**Files:** `src/studio/components/SpaceHub.jsx` (fallback order, upload, and the
+"use live preview" reset), `src/services/serverSpaces.js` (`getServerSpaceAssetUrl`,
+`uploadServerAsset`), `serverXR/src/routes/spaceRoutes.js` and `serverXR/src/spaceStore.js`
+(`previewImageAssetId`).
+
+---
+
 ## Context / Credit Awareness
 
 When context is running low:

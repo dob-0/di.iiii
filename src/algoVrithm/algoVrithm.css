@@ -44,16 +44,35 @@
     bottom: var(--algo-vrithm-split, 45%);
 }
 
+/* One bar across the top: the words on the left, the buttons on the right, and
+   a gap between them that cannot be crossed.
+   They used to be two absolutely-positioned corners that knew nothing about
+   each other, so a subtitle long enough to reach the right-hand corner ran
+   underneath the Full screen pill — grey text on a translucent button, and
+   invisible to any test that only asks whether the words are in the DOM. */
 .algo-vrithm-chrome {
     position: absolute;
     top: 0;
     left: 0;
+    right: 0;
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
     padding: 18px 22px;
     pointer-events: none;
     z-index: 2;
+}
+
+/* Shrinkable, and the one that gives way: the buttons are fixed-size targets
+   and the sentence is the thing that can wrap. `min-width: 0` because a flex
+   item refuses to shrink below its content otherwise, which would push the
+   buttons off the right edge instead of wrapping the text. */
+.algo-vrithm-chrome-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
 }
 
 .algo-vrithm-title {
@@ -72,13 +91,15 @@
     color: rgba(255, 255, 255, 0.45);
 }
 
+/* In the flow of the bar now, not floating over it. `flex-shrink: 0` is what
+   holds the guarantee: the buttons keep their size and the sentence beside them
+   wraps, rather than the pills squashing into two-line circles — which is
+   exactly what a phone did when a long author-only message was in here. */
 .algo-vrithm-actions {
-    position: absolute;
-    right: 20px;
-    top: 18px;
+    flex: 0 0 auto;
     display: flex;
     gap: 6px;
-    z-index: 2;
+    pointer-events: auto;
 }
 
 .algo-vrithm-actions button {
@@ -103,9 +124,12 @@
    one place where "smaller" and "unusable" are the same edit, and the pill can
    look small without being small to hit. */
 @media (pointer: coarse), (max-width: 640px) {
+    .algo-vrithm-chrome {
+        padding: 12px 14px;
+        gap: 10px;
+    }
+
     .algo-vrithm-actions {
-        right: 12px;
-        top: 12px;
         gap: 5px;
     }
 
@@ -126,6 +150,19 @@
     opacity: 0.5;
 }
 
+/* No keyboard, no keyboard hint.
+   usePanelToggle is explicit that the absence of a keyboard IS the device
+   check — a phone therefore cannot open the director at all, by design. Which
+   makes this line, on a phone, an instruction that cannot be followed AND the
+   longest string in the header, wrapping the subtitle onto a second row for
+   nothing. `pointer: coarse` rather than a width test, for the same reason the
+   hook gives: a tablet with a case keyboard must keep it. */
+@media (pointer: coarse) and (hover: none) {
+    .algo-vrithm-panel-hint {
+        display: none;
+    }
+}
+
 .algo-vrithm-actions button:hover {
     color: #05060f;
     background: #4df9ff;
@@ -138,16 +175,24 @@
 
 /* Idle fade. The piece's rule is that there is nothing to operate, so the
    chrome that has to exist gets out of the way and returns on the first
-   pointer move. Kept in the layout (not display:none) so it fades. */
-.algo-vrithm-chrome,
-.algo-vrithm-actions {
+   pointer move. Kept in the layout (not display:none) so it fades.
+   One rule now the buttons live inside the bar — they fade with it. */
+.algo-vrithm-chrome {
     opacity: 1;
     transition: opacity 420ms ease;
 }
 
-.algo-vrithm-chrome.is-hidden,
-.algo-vrithm-actions.is-hidden {
+.algo-vrithm-chrome.is-hidden {
     opacity: 0;
+    pointer-events: none;
+}
+
+/* The buttons are the only interactive thing inside a bar that is otherwise
+   pass-through, so they have to be switched off explicitly when it fades —
+   `pointer-events: none` on the parent is overridden by the `auto` that makes
+   them clickable in the first place, and an invisible button that still takes
+   taps is worse than a visible one. */
+.algo-vrithm-chrome.is-hidden .algo-vrithm-actions {
     pointer-events: none;
 }
 
@@ -777,35 +822,65 @@
     outline-offset: 2px;
 }
 
-/* Author-only: shown in place of Enter VR when WebXR is unavailable, because
-   an absent button is indistinguishable from a broken one. Deliberately styled
-   DOWN from the real actions — it is a diagnosis, not something to press for
-   its own sake. */
-.algo-vrithm-actions button.algo-vrithm-xr-unavailable {
-    color: rgba(255, 255, 255, 0.5);
-    border-color: rgba(255, 255, 255, 0.25);
-    background: rgba(5, 6, 15, 0.6);
+/* ---- author-only headset read-outs ----
+ *
+ * In the bottom authoring stack, above the stage-view toggle. They were in the
+ * top-right actions cluster until a phone showed what that costs: the reason
+ * text is a paragraph, and a paragraph in a flex row pinned to the right corner
+ * grows leftwards until it is lying across the title. See XrDiagnostics.
+ *
+ * Left-aligned here, unlike in the corner they came from — they are read as
+ * text now rather than as a label hanging off a button.
+ */
+.algo-vrithm-diagnostics {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    padding: 0 18px 8px;
+    pointer-events: none;
 }
 
-.algo-vrithm-actions button.algo-vrithm-xr-unavailable:hover {
+/* Shown in place of Enter VR when WebXR is unavailable, because an absent
+   button is indistinguishable from a broken one. Deliberately styled DOWN from
+   the real actions — it is a diagnosis, not something to press for its own
+   sake. */
+.algo-vrithm-diagnostics .algo-vrithm-xr-unavailable {
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    /* Wraps inside the stack instead of pushing it wide. The stack is the full
+       width of the window, so there is room for the sentence to simply be a
+       sentence. */
+    max-width: min(420px, 100%);
+    text-align: left;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    border-radius: 14px;
+    padding: 8px 14px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(5, 6, 15, 0.6);
+    transition: color 120ms ease, background 120ms ease;
+}
+
+.algo-vrithm-diagnostics .algo-vrithm-xr-unavailable:hover {
     color: #05060f;
     background: rgba(255, 255, 255, 0.7);
 }
 
-/* The reason, rendered rather than hidden in a tooltip — a headset browser has
-   no hover, and that is exactly where this needs reading. */
-.algo-vrithm-actions button.algo-vrithm-xr-unavailable {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 3px;
-    text-align: right;
-    max-width: 340px;
-    border-radius: 14px;
-    padding: 8px 14px;
+.algo-vrithm-diagnostics .algo-vrithm-xr-unavailable strong {
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
-.algo-vrithm-actions button.algo-vrithm-xr-unavailable em {
+/* The reason, rendered rather than hidden in a tooltip — a headset browser has
+   no hover, and that is exactly where this needs reading. */
+.algo-vrithm-diagnostics .algo-vrithm-xr-unavailable em {
     font-style: normal;
     font-size: 10px;
     letter-spacing: 0.02em;
@@ -817,8 +892,8 @@
 
 /* Floor reading from the last headset session. Sits with the other author-only
    diagnostics, quieter than a button because there is nothing to press. */
-.algo-vrithm-actions .algo-vrithm-xr-eye {
-    align-self: center;
+.algo-vrithm-diagnostics .algo-vrithm-xr-eye {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
     font-size: 10px;
     letter-spacing: 0.02em;
     line-height: 1.35;

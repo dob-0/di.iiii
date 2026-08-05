@@ -153,7 +153,11 @@ const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-un
     const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } })
     const p = await ctx.newPage()
     const mod = readFileSync('src/studio/utils/codeSpaces.js', 'utf8')
-    ok('codeSpaces points Director at the scene', /directorPath: `\$\{ALGO_VRITHM_SCENE_PATH\}\?director`/.test(mod))
+    // Studio's OWN director page, built from the path builder rather than a
+    // literal — the destination moved once already and this line asserted the
+    // old one for as long as the old one still resolved to something.
+    ok('codeSpaces points Director at the Studio director page',
+        /directorPath: buildStudioDirectorPath\(/.test(mod))
     await p.goto(`${B}/algovrithm/scene?director`, { waitUntil: 'load' })
     await p.waitForTimeout(7000)
     const open = await p.evaluate(() => {
@@ -209,6 +213,77 @@ const b = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-un
     // No screenshot here on purpose: capturing the full piece at this size under
     // a software rasteriser reliably outruns Playwright's 30s timeout, and the
     // numbers above are what this block is for.
+    await ctx.close()
+}
+
+// The top bar on a phone, measured rather than eyeballed.
+//
+// This is the one place a box test is the RIGHT tool, against the warning at
+// the top of this file. That warning is about the STATEMENT, which scrolls
+// under a fixed control by design and whose boxes legitimately overlap. The top
+// bar is the opposite case: the title, the subtitle and the buttons are all
+// pinned, all opaque, and none of them is ever supposed to touch another. Two
+// pinned boxes intersecting here is always a defect.
+//
+// It shipped as one: at 390px the subtitle ran under the Full screen pill, and
+// with the author-only XR paragraph in the cluster the pill wrapped into a
+// two-line circle sitting on the word "algovrithm". Every string was present,
+// every element visible, every test green.
+for (const device of [{ w: 375, h: 667, dsf: 2 }, { w: 390, h: 844, dsf: 3 }]) {
+    const ctx = await b.newContext({
+        viewport: { width: device.w, height: device.h },
+        deviceScaleFactor: device.dsf,
+        isMobile: true,
+        hasTouch: true
+    })
+    const p = await ctx.newPage()
+    // `?director` is the harder case and the one that broke: it is what puts the
+    // author-only diagnostics on screen at all.
+    await p.goto(`${B}/algovrithm/scene?director`, { waitUntil: 'load' })
+    await p.waitForTimeout(9000)
+    // Wake the chrome — it fades on idle, and a faded bar cannot overlap
+    // anything, which would pass this check for the wrong reason.
+    await p.mouse.move(device.w / 2, device.h / 2)
+    await p.mouse.move(device.w / 2 + 4, device.h / 2 + 4)
+    await p.waitForTimeout(600)
+
+    const probe = () => {
+        const bar = document.querySelector('.algo-vrithm-chrome')
+        if (!bar) return 'no chrome'
+        const parts = ['.algo-vrithm-title', '.algo-vrithm-sub', '.algo-vrithm-actions']
+            .map((s) => [s, bar.querySelector(s)?.getBoundingClientRect()])
+            .filter(([, r]) => r && r.width > 0)
+        const hits = []
+        for (let i = 0; i < parts.length; i += 1) {
+            for (let j = i + 1; j < parts.length; j += 1) {
+                const [an, a] = parts[i]
+                const [bn, bb] = parts[j]
+                const ox = Math.min(a.right, bb.right) - Math.max(a.left, bb.left)
+                const oy = Math.min(a.bottom, bb.bottom) - Math.max(a.top, bb.top)
+                if (ox > 1 && oy > 1) hits.push(`${an} >< ${bn} (${Math.round(ox)}x${Math.round(oy)}px)`)
+            }
+        }
+        // Off the right edge is the same defect wearing the other mask: the
+        // sentence refusing to shrink pushes the buttons out of the window.
+        const actions = bar.querySelector('.algo-vrithm-actions')?.getBoundingClientRect()
+        if (actions && actions.right > window.innerWidth + 1) hits.push('actions off the right edge')
+        return hits.join(' | ')
+    }
+
+    // BOTH panel states, and this is not belt-and-braces — it is the hole this
+    // check shipped with. The keyboard hint only renders while the panel is
+    // CLOSED, so pressing H before measuring deleted the longest string in the
+    // header and the guard passed on a build that visibly overlapped. Measure
+    // closed first, then open, and fail on either.
+    const closed = await p.evaluate(probe)
+    await p.keyboard.press('h')
+    await p.waitForTimeout(600)
+    const opened = await p.evaluate(probe)
+
+    const clash = [closed && `panel closed: ${closed}`, opened && `panel open: ${opened}`]
+        .filter(Boolean)
+        .join(' | ')
+    ok(`nothing in the top bar overlaps at ${device.w}px`, clash === '', clash)
     await ctx.close()
 }
 

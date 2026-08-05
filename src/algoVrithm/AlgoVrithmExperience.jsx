@@ -286,17 +286,27 @@ const Chrome = memo(function Chrome({
     onEnterXr,
     onExitXr,
     directorEnabled,
-    panelsOpen,
-    xrAvailable,
-    onRecheckXr,
-    xrEye
+    panelsOpen
 }) {
     const canEnterXr = (supportedXrModes.vr || supportedXrModes.ar) && !isXrPresenting
     const hidden = visible ? '' : ' is-hidden'
 
+    // ONE bar, not two overlapping ones.
+    //
+    // The words and the buttons used to be siblings, each absolutely positioned
+    // into its own top corner, which means nothing ever told them about each
+    // other: they only looked separate as long as the left one stayed short
+    // enough. Reserving a fixed gutter for the right corner is not a fix either
+    // — the corner holds one pill or three depending on what the device
+    // supports, so any number picked here is wrong on some device.
+    //
+    // A flex row with the buttons as a non-shrinking sibling makes the collision
+    // structurally impossible at every width and every combination of buttons,
+    // which is the same reasoning as the split layout at the top of this file:
+    // give each thing its own space instead of stacking them and hoping.
     return (
-        <>
-            <header className={`algo-vrithm-chrome${hidden}`}>
+        <header className={`algo-vrithm-chrome${hidden}`}>
+            <div className="algo-vrithm-chrome-text">
                 <span className="algo-vrithm-title">algovrithm</span>
                 {/* Non-VR-literate visitors will not discover look-around on
                     their own. One line, no interface. */}
@@ -305,14 +315,18 @@ const Chrome = memo(function Chrome({
                     {/* The only trace the panel leaves when closed, and only
                         for the author. Without it the shortcut is unfindable —
                         a hidden panel and a broken one look identical, which is
-                        the same mistake xrAvailability.js exists to undo. */}
+                        the same mistake xrAvailability.js exists to undo.
+                        Hidden where there is no keyboard to press — see the CSS.
+                        The panel's own rule is that a phone cannot open it, so
+                        on a phone this line is an instruction that cannot be
+                        followed, and it is the longest thing in the header. */}
                     {directorEnabled && !panelsOpen && !isXrPresenting && (
                         <em className="algo-vrithm-panel-hint"> · press H for the director</em>
                     )}
                 </span>
-            </header>
+            </div>
 
-            <div className={`algo-vrithm-actions${hidden}`}>
+            <div className="algo-vrithm-actions">
                 {/* Fullscreen is not a VR control — a WebXR session owns the
                     headset display and ignores the window entirely. This is for
                     the flat-screen showing: a laptop or projector where browser
@@ -328,48 +342,67 @@ const Chrome = memo(function Chrome({
                 {canEnterXr && supportedXrModes.ar && (
                     <button type="button" onClick={() => onEnterXr('ar')}>Enter AR</button>
                 )}
-                {/* Author-only, and only when VR is NOT available. An absent
-                    Enter VR button is indistinguishable from a broken one, so
-                    where the audience gets clean chrome the author gets the
-                    actual reason and a way to retry — starting Link after the
-                    page loaded is the normal case, and it needs no reload.
-                    Behind the panel toggle because it is diagnostics, not a
-                    control: on a phone, where it would otherwise be permanent
-                    (no headset is ever going to appear), it would sit next to
-                    Enter AR forever. */}
-                {panelsOpen && !isXrPresenting && xrAvailable.state !== 'ready' && (
-                    <button
-                        type="button"
-                        className="algo-vrithm-xr-unavailable"
-                        onClick={onRecheckXr}
-                    >
-                        {/* Recheck only means something when re-asking could
-                            change the answer. On a phone it cannot — no headset
-                            is going to appear — so promising a retry there sends
-                            the author tapping a button forever. */}
-                        {xrAvailable.state === XR_AR_ONLY ? 'No VR on this device' : 'No VR · Recheck'}
-                        {/* Rendered, not a title tooltip. This message matters
-                            most on the device that cannot show one: a headset
-                            browser has no hover, and the whole point is to be
-                            readable while you are standing in the thing. */}
-                        <em>{`${xrAvailable.reason} — ${xrAvailable.fix}`}</em>
-                    </button>
-                )}
-                {/* What the last headset session reported about the floor.
-                    Author-only, and shown AFTER the session rather than during
-                    it: it is read by someone who has just taken the headset
-                    off, and a standalone headset browser is not somewhere you
-                    can open a console. Absent until a session has happened. */}
-                {panelsOpen && !isXrPresenting && xrEye && (
-                    <span className="algo-vrithm-xr-eye">{describeEyeHeight(xrEye)}</span>
-                )}
                 {isXrPresenting && (
                     <button type="button" onClick={onExitXr}>Exit</button>
                 )}
             </div>
-        </>
+        </header>
     )
 })
+
+// The author's read-outs about the headset. Not chrome.
+//
+// These used to live in the top-right cluster beside Full screen, and on a
+// phone that cluster is only ~370px wide: the reason text is a paragraph, so
+// the flex row overflowed LEFTWARDS until the Full screen pill wrapped into a
+// two-line circle sitting on top of the word "algovrithm", with the paragraph
+// laid across the subtitle. Widening the cluster cannot fix that — a sentence
+// and a title cannot share one line on a phone at any breakpoint.
+//
+// So they moved to where they always belonged. Both were already gated on the
+// panel being open, which means they were never audience-facing and never
+// belonged in the audience's header; the bottom stack IS the authoring
+// furniture, it spans the full width, and it scrolls. No media query.
+function XrDiagnostics({ xrAvailable, onRecheckXr, xrEye }) {
+    const showAvailability = xrAvailable.state !== 'ready'
+    if (!showAvailability && !xrEye) return null
+
+    return (
+        <div className="algo-vrithm-diagnostics">
+            {/* Author-only, and only when VR is NOT available. An absent Enter
+                VR button is indistinguishable from a broken one, so where the
+                audience gets clean chrome the author gets the actual reason and
+                a way to retry — starting Link after the page loaded is the
+                normal case, and it needs no reload. */}
+            {showAvailability && (
+                <button
+                    type="button"
+                    className="algo-vrithm-xr-unavailable"
+                    onClick={onRecheckXr}
+                >
+                    {/* Recheck only means something when re-asking could change
+                        the answer. On a phone it cannot — no headset is going to
+                        appear — so promising a retry there sends the author
+                        tapping a button forever. */}
+                    <strong>{xrAvailable.state === XR_AR_ONLY ? 'No VR on this device' : 'No VR · Recheck'}</strong>
+                    {/* Rendered, not a title tooltip. This message matters most
+                        on the device that cannot show one: a headset browser has
+                        no hover, and the whole point is to be readable while you
+                        are standing in the thing. */}
+                    <em>{`${xrAvailable.reason} — ${xrAvailable.fix}`}</em>
+                </button>
+            )}
+            {/* What the last headset session reported about the floor. Shown
+                AFTER the session rather than during it: it is read by someone
+                who has just taken the headset off, and a standalone headset
+                browser is not somewhere you can open a console. Absent until a
+                session has happened. */}
+            {xrEye && (
+                <span className="algo-vrithm-xr-eye">{describeEyeHeight(xrEye)}</span>
+            )}
+        </div>
+    )
+}
 
 /**
  * @param embedded  true when this is mounted inside another surface — Studio's
@@ -670,9 +703,6 @@ export default function AlgoVrithmExperience({ embedded = false, director = unde
                 onExitXr={xr.handleExitXrSession}
                 directorEnabled={directorEnabled}
                 panelsOpen={panels.open}
-                xrAvailable={xrAvailable}
-                onRecheckXr={xr.refreshXrSupport}
-                xrEye={xrEye}
             />
 
             {/* Author-only, behind the H toggle, and hidden during an XR
@@ -730,6 +760,12 @@ export default function AlgoVrithmExperience({ embedded = false, director = unde
                             )}
                         </div>
                     )}
+
+                    <XrDiagnostics
+                        xrAvailable={xrAvailable}
+                        onRecheckXr={xr.refreshXrSupport}
+                        xrEye={xrEye}
+                    />
 
                     <div className="algo-vrithm-stage-view">
                         <button
