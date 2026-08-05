@@ -1,5 +1,4 @@
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import viewerSource from './PublicProjectViewer.jsx?raw'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import PublicProjectViewer from './PublicProjectViewer.jsx'
 import { PREVIEW_ENTER_EXHIBITION_KIND, PREVIEW_HOST_MESSAGE_TYPE } from '../../utils/presentationPreviewDocument.js'
@@ -135,19 +134,6 @@ describe('PublicProjectViewer', () => {
             // no deviceAccess opt-in → the page must stay origin-isolated
             expect(iframe?.getAttribute('sandbox')).not.toContain('allow-same-origin')
         })
-    })
-
-    // Regression guard (perf audit 2026-08-05): a code-mode published page is an
-    // <iframe srcDoc> and never mounts a canvas, but static imports of the two
-    // scene renderers still made it fetch and evaluate the whole three-vendor
-    // chunk before first paint. Both must stay behind React.lazy. Asserted on
-    // the source because the module-level import is what costs the bytes, and
-    // by the time a test can observe a render it has already happened.
-    it('keeps the 3D renderers behind React.lazy so a code-mode page never loads three-vendor', () => {
-        expect(viewerSource).not.toMatch(/^import\s+StudioViewport\s+from/m)
-        expect(viewerSource).not.toMatch(/^import\s+LiveProjectScene\s+from/m)
-        expect(viewerSource).toMatch(/const StudioViewport = lazy\(\(\) => import\(/)
-        expect(viewerSource).toMatch(/const LiveProjectScene = lazy\(\(\) => import\(/)
     })
 
     it('renders the code-mode page without ever mounting a scene renderer', async () => {

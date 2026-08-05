@@ -48,6 +48,8 @@ services:
       GITHUB_APP_ID: ${STAGING_GITHUB_APP_ID:-}
       GITHUB_APP_PRIVATE_KEY_B64: ${STAGING_GITHUB_APP_PRIVATE_KEY_B64:-}
       GITHUB_APP_WEBHOOK_SECRET: ${STAGING_GITHUB_APP_WEBHOOK_SECRET:-}
+      MESH_ROOM_SECRET: ${STAGING_MESH_ROOM_SECRET:-}
+      MESH_PROTECTED_NODE_PREFIXES: ${STAGING_MESH_PROTECTED_NODE_PREFIXES:-}
     # Small ceiling: staging only ever serves one person clicking through at
     # a time, it must not be able to meaningfully compete with production
     # for the VPS's 2 vCPU / 3.7GB (confirmed via `nproc`/`free -h` on the

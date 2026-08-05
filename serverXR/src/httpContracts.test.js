@@ -4,10 +4,16 @@ import { spawn } from 'node:child_process'
 import { mkdtemp, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import fs from 'node:fs'
 import net from 'node:net'
+import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+
+const require = createRequire(import.meta.url)
+const { createAuthSessionValue } = require('./authSession.js')
+const { io: ioClient } = require('socket.io-client')
 
 // Every test in this file boots a real serverXR process and talks to it over
 // the loopback. Vitest's default 5s per-test budget covers the *machine*, not
@@ -203,6 +209,57 @@ const createSpaceWithScene = async (server, {
         expect(sceneRes.status).toBe(200)
     }
     return spaceId
+}
+
+// Accounts only ever come from an OAuth callback, which a spawned fixture can't
+// perform — seed the row straight into the server's DB and mint the cookie its
+// own signer would have produced (startServer pins AUTH_SESSION_SECRET).
+const SESSION_SECRET = 'test-session-secret'
+
+const seedAccount = (server, id) => {
+    const db = new DatabaseSync(path.join(server.dataRoot, 'di.db'))
+    const now = Date.now()
+    db.prepare(`
+        INSERT INTO users (id, provider, provider_id, email, display_name, role, spaces, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, 'github', id, `${id}@example.com`, id, 'editor', '[]', now, now)
+    db.close()
+}
+
+const mintSessionCookie = (subject) => {
+    const { value } = createAuthSessionValue({
+        secret: SESSION_SECRET,
+        session: { subject, label: subject, role: 'editor', spaces: [], tokenVersion: 0 }
+    })
+    return `dii_serverxr_session=${value}`
+}
+
+// Socket.IO carries the same session cookie as the HTTP routes, so it needs the
+// same revocation check — the client half follows meshHub.test.js, the server
+// half is the real spawned process, which is what makes the wiring at the
+// initializeSocket call site part of what this exercises.
+const connectSocket = (server, cookie) => new Promise((resolve) => {
+    const url = new URL(server.baseUrl)
+    const socket = ioClient(url.origin, {
+        path: `${url.pathname}/socket.io`,
+        transports: ['websocket'],
+        reconnection: false,
+        extraHeaders: { Cookie: cookie }
+    })
+    const settle = (outcome) => {
+        clearTimeout(timer)
+        socket.close()
+        resolve(outcome)
+    }
+    const timer = setTimeout(() => settle({ connected: false, error: 'timeout' }), 5000)
+    socket.on('connect', () => settle({ connected: true, error: null }))
+    socket.on('connect_error', (error) => settle({ connected: false, error: error.message }))
+})
+
+const readSession = async (server, cookie) => {
+    const response = await fetch(`${server.baseUrl}/api/auth/session`, { headers: { Cookie: cookie } })
+    expect(response.status).toBe(200)
+    return response.json()
 }
 
 afterEach(async () => {
@@ -2392,5 +2449,97 @@ describe('open inscriptions (append-only portal writes)', () => {
             body: JSON.stringify({ name: 'b', word: 'later' })
         })
         expect(killed.status).toBe(403)
+    })
+})
+
+describe('session revocation (logout)', () => {
+    it('rejects a session that was issued before logout', async () => {
+        const server = await startServer({ requireAuth: true })
+        seedAccount(server, 'revoke-one')
+        const cookie = mintSessionCookie('revoke-one')
+
+        await expect(readSession(server, cookie)).resolves.toMatchObject({
+            authenticated: true,
+            type: 'session',
+            subject: 'revoke-one'
+        })
+
+        const logout = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'DELETE',
+            headers: { Cookie: cookie }
+        })
+        expect(logout.status).toBe(204)
+
+        const after = await readSession(server, cookie)
+        expect(after.subject).not.toBe('revoke-one')
+        expect(after.type).toBe('guest')
+    })
+
+    it('rejects a second device holding a session for the same account', async () => {
+        const server = await startServer({ requireAuth: true })
+        seedAccount(server, 'revoke-two')
+        const phone = mintSessionCookie('revoke-two')
+        const laptop = mintSessionCookie('revoke-two')
+
+        await expect(readSession(server, laptop)).resolves.toMatchObject({ subject: 'revoke-two' })
+
+        const logout = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'DELETE',
+            headers: { Cookie: phone }
+        })
+        expect(logout.status).toBe(204)
+
+        const after = await readSession(server, laptop)
+        expect(after.subject).not.toBe('revoke-two')
+        expect(after.type).toBe('guest')
+    })
+
+    it('keeps verifying a session whose subject has no user row, and logs it out without error', async () => {
+        const server = await startServer({ requireAuth: true })
+        const cookie = mintSessionCookie('sandbox-only-subject')
+
+        await expect(readSession(server, cookie)).resolves.toMatchObject({
+            authenticated: true,
+            type: 'session',
+            subject: 'sandbox-only-subject'
+        })
+
+        const logout = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'DELETE',
+            headers: { Cookie: cookie }
+        })
+        expect(logout.status).toBe(204)
+
+        // Nothing to revoke without a user row: the same cookie still verifies,
+        // exactly as it did before token_version existed.
+        await expect(readSession(server, cookie)).resolves.toMatchObject({
+            authenticated: true,
+            subject: 'sandbox-only-subject'
+        })
+    })
+})
+
+describe('session revocation reaches the realtime layer', () => {
+    it('refuses a Socket.IO connection made with a cookie that was revoked by logout', async () => {
+        const server = await startServer({ requireAuth: true })
+        seedAccount(server, 'revoke-socket')
+        const cookie = mintSessionCookie('revoke-socket')
+
+        // Positive case first, so a suite that simply broke sockets cannot pass.
+        await expect(connectSocket(server, cookie)).resolves.toMatchObject({ connected: true })
+
+        const logout = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'DELETE',
+            headers: { Cookie: cookie }
+        })
+        expect(logout.status).toBe(204)
+
+        // The cookie is still signature-valid and unexpired — only token_version
+        // has moved. Without the check on the socket entry point a logged-out
+        // cookie could still open a realtime connection and keep writing.
+        await expect(connectSocket(server, cookie)).resolves.toMatchObject({
+            connected: false,
+            error: 'Unauthorized'
+        })
     })
 })

@@ -57,6 +57,37 @@ term expires. Do not delete it as part of adopting this path.
    the override entirely (Compose *concatenates* `ports:` across `-f` files, so
    the mapping in `docker-compose.staging.yml` uses `!override` — a plain
    `ports:` there would ADD a binding and leave the wide one live).
+
+   **`MESH_ROOM_SECRET`** (staging: `STAGING_MESH_ROOM_SECRET`) — optional,
+   unset by default. The live co-presence relay at `/serverXR/mesh` is
+   deliberately **open**: visitors' browsers are mesh clients (the public
+   `br_id_ge` `index.html`/`field.html` embed the relay URL), so a blanket
+   secret would either kill co-presence or ship the secret in public HTML.
+   What this gates is the *reserved node ids* — by default anything matching
+   `keeper` or `keeper-*`, configurable via `MESH_PROTECTED_NODE_PREFIXES` as a
+   comma-separated list. Claiming one without the secret gets a 401 at the
+   upgrade; proving it also allows reclaiming a still-live id, which is what
+   makes the keeper's own reconnect work.
+
+   Generate with `openssl rand -hex 32`, and use a **different value per
+   tier** — one shared value would let a staging client claim the keeper
+   identity on production. Every keeper client must then send it as the
+   `secret=` query parameter: `dibot/deploy/scripts/keeper_agent.py`,
+   `di-bo/keeper.mjs`, and `br_id_ge/scripts/keeper-presence.mjs`. Leaving it
+   unset keeps today's behaviour (reserved ids ungated), so it is safe to
+   deploy this before the clients are updated — but the gate does nothing
+   until it is set.
+
+   Verify after deploy:
+   ```bash
+   # a reserved id without the secret must be refused
+   curl -sS -o /dev/null -w '%{http_code}\n' \
+     --http1.1 -H 'Connection: Upgrade' -H 'Upgrade: websocket' \
+     -H 'Sec-WebSocket-Version: 13' -H 'Sec-WebSocket-Key: AAAAAAAAAAAAAAAAAAAAAA==' \
+     'https://di-studio.xyz/serverXR/mesh?room=bridge&node=keeper-probe'   # -> 401
+   ```
+   An ordinary visitor id on the same URL must still return `101`. Never probe
+   this over HTTP/2 — that reports false 404s for websocket paths.
 3. In `/opt/dii` (production)'s `.env`: set `STAGING_DOMAIN` (a subdomain
    DNS already points at this same host, e.g. `staging.your-domain`) and
    `STAGING_PORT` to match step 2's port. Restart production's `caddy`

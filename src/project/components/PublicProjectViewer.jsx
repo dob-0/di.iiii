@@ -9,44 +9,21 @@ import {
     listProjectOps
 } from '../services/projectsApi.js'
 import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectSchema.js'
-import useXrAr from '../../hooks/useXrAr.js'
 import {
     buildPresentationPreviewDocument,
     PREVIEW_ENTER_EXHIBITION_KIND,
     PREVIEW_HOST_MESSAGE_TYPE
 } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
-import { computeFramingCamera, getPointsBoundingSphere } from '../../utils/cameraFraming.js'
+import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 
 // A code-mode published page is an <iframe srcDoc> and nothing else -- it never
-// mounts a canvas. Statically importing the two scene renderers made it fetch
-// and evaluate the whole three/fiber/drei/xr chunk anyway (~1.6MB raw, measured
-// against first paint on /br_id_ge), so they load only when a scene renders.
-const LiveProjectScene = lazy(() => import('../../components/LiveProjectScene.jsx'))
-const StudioViewport = lazy(() => import('../../studio/components/StudioViewport.jsx'))
-
-const overlayButtonStyle = {
-    appearance: 'none',
-    border: '1px solid rgba(255,255,255,0.14)',
-    background: 'rgba(10, 16, 24, 0.82)',
-    color: '#f5f7fa',
-    borderRadius: '999px',
-    padding: '0.7rem 1rem',
-    fontSize: '0.95rem',
-    cursor: 'pointer',
-    backdropFilter: 'blur(12px)'
-}
-
-const overlayCardStyle = {
-    background: 'rgba(6, 9, 13, 0.78)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    color: '#f5f7fa',
-    borderRadius: '18px',
-    padding: '1rem 1.1rem',
-    maxWidth: '28rem',
-    boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
-    backdropFilter: 'blur(12px)'
-}
+// mounts a canvas. Everything that touches three (both scene renderers, the XR
+// store, the camera framing math) lives behind this one lazy boundary, because
+// a single static import of any of them -- even one only used to render a scene
+// -- makes the code-mode page fetch and evaluate the whole three/fiber/drei/xr
+// chunk (~1.6MB raw, measured against first paint on /br_id_ge).
+const PublicProjectSceneSurface = lazy(() => import('./PublicProjectSceneSurface.jsx'))
 
 const loadingOverlay = (
     <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '2rem' }}>
@@ -56,45 +33,9 @@ const loadingOverlay = (
     </div>
 )
 
-// A scene's saved camera can go stale (e.g. left pointed off into empty
-// space mid-edit) — that's invisible to editors, who interactively orbit
-// away from it, but it strands a fresh public viewer with nothing in view.
-// Auto-frame from the actual entity positions instead of trusting it blindly,
-// unless the project owner explicitly locked a presentation camera.
-// Cap how far back the initial shot pulls: a scene can sprawl across a wide
-// area (e.g. a gallery of many small image planes), and fitting the *entire*
-// spread edge-to-edge shrinks individual content to unreadable specks. Start
-// at a normal walk-around distance instead and let free navigation (already
-// enabled outside fixed-camera mode) cover the rest.
-const AUTO_FRAME_MAX_DISTANCE = 25
-
 // deviceAccess (owner opt-in in presentationState) adds allow-same-origin so the
 // page has a real security origin — getUserMedia is impossible in an opaque one
 const PAGE_SANDBOX = 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals'
-
-const computeAutoFrameCamera = (document) => {
-    const points = (document.entities || [])
-        .map((entity) => entity?.components?.transform?.position)
-        .filter(Boolean)
-    const sphere = getPointsBoundingSphere(points)
-    if (!sphere) return null
-    return computeFramingCamera(sphere, {
-        fov: document.worldState?.savedView?.fov,
-        maxDistance: AUTO_FRAME_MAX_DISTANCE
-    })
-}
-
-const resolveViewerCamera = (document) => {
-    const entryView = document.presentationState?.entryView || 'scene'
-    const fixedCamera = document.presentationState?.fixedCamera
-    if (entryView === 'fixed-camera' && fixedCamera?.locked) {
-        return fixedCamera
-    }
-    if (entryView === 'fixed-camera') {
-        return fixedCamera || document.worldState?.savedView || null
-    }
-    return computeAutoFrameCamera(document) || document.worldState?.savedView || null
-}
 
 export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '', initialCameraView = null, showProjectSwitcher = false }) {
     const [state, setState] = useState({
@@ -102,10 +43,6 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         document: null,
         error: ''
     })
-    // Seed the camera so the first paint can frame a custom entry view. For
-    // 'scene' entryView this seed is preserved (the viewer only resets the
-    // camera for fixed-camera/code modes or when none is set yet).
-    const [cameraView, setCameraView] = useState(initialCameraView || null)
     const [viewMode, setViewMode] = useState(null)
     // 'scene' entry view only -- fixed-camera and code/iframe presentations
     // are a deliberate per-project choice and stay exactly as authored.
@@ -117,16 +54,10 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         typeof window !== 'undefined'
         && new URLSearchParams(window.location.search).get('preview') === '1'
     ))
-    const controlsRef = useRef(null)
     const iframeRef = useRef(null)
     const syncServiceRef = useRef(createProjectSyncService())
     const versionRef = useRef(0)
-    const cameraViewRef = useRef(null)
     const documentRef = useRef(null)
-
-    useEffect(() => {
-        cameraViewRef.current = cameraView
-    }, [cameraView])
 
     useEffect(() => {
         documentRef.current = state.document
@@ -144,19 +75,12 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             }
         })
         documentRef.current = normalized
-        const nextEntryView = normalized.presentationState?.entryView || 'scene'
         setState((current) => ({
             ...current,
             status: 'ready',
             document: normalized,
             error: ''
         }))
-        setCameraView((currentCamera) => {
-            if (!currentCamera || nextEntryView === 'fixed-camera' || nextEntryView === 'code') {
-                return resolveViewerCamera(normalized)
-            }
-            return currentCamera
-        })
     }, [projectId, resolvedRouteSpaceId])
 
     const applyIncomingOps = useCallback((ops = [], version = null) => {
@@ -166,11 +90,6 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             }
             const nextDocument = applyProjectOps(current.document, ops || [])
             documentRef.current = nextDocument
-            const previousEntryView = current.document.presentationState?.entryView || 'scene'
-            const nextEntryView = nextDocument.presentationState?.entryView || 'scene'
-            if (!cameraViewRef.current || previousEntryView !== nextEntryView || nextEntryView === 'fixed-camera' || nextEntryView === 'code') {
-                setCameraView(resolveViewerCamera(nextDocument))
-            }
             return {
                 ...current,
                 status: 'ready',
@@ -223,12 +142,6 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     // hands over to a sibling with ?param=…, and srcdoc would otherwise drop it
     const previewDocument = buildPresentationPreviewDocument(rawHtml, typeof window !== 'undefined' ? window.location.search : '')
     const xrDefaultMode = publishState.xrDefaultMode || 'none'
-    const xr = useXrAr({
-        default3DView: cameraView || resolveViewerCamera(document || {}),
-        controlsRef,
-        setCameraPosition: (position) => setCameraView((current) => ({ ...(current || {}), position })),
-        setCameraTarget: (target) => setCameraView((current) => ({ ...(current || {}), target }))
-    })
 
     useEffect(() => {
         setViewMode(null)
@@ -339,36 +252,25 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                         </div>
                     </div>
                 )
-            ) : document && navMode === 'walk' ? (
-                <Suspense fallback={loadingOverlay}>
-                    <LiveProjectScene
-                        projectId={projectId}
-                        interactive
-                        showChrome
-                        title={viewerTitle}
-                        onExit={() => setNavMode('orbit')}
-                        exitLabel="← View mode"
-                    />
-                </Suspense>
             ) : document ? (
                 <Suspense fallback={loadingOverlay}>
-                    <StudioViewport
+                    <PublicProjectSceneSurface
+                        projectId={projectId}
                         document={document}
-                        selectedEntityId={null}
-                        onSelectEntity={null}
-                        cursors={{}}
-                        onCursorMove={null}
-                        onCursorLeave={null}
-                        cameraView={cameraView || resolveViewerCamera(document)}
-                        controlsRef={controlsRef}
-                        xrStore={xr.xrStore}
-                        onCameraChange={(nextView) => {
-                            if (entryView === 'fixed-camera') return
-                            setCameraView(nextView)
-                        }}
-                        enableNavigation={entryView !== 'fixed-camera' && !isPreview}
-                        showChrome={!isPreview}
-                        lowPower={isPreview}
+                        title={viewerTitle}
+                        entryView={entryView}
+                        navMode={navMode}
+                        onNavModeChange={setNavMode}
+                        isPreview={isPreview}
+                        initialCameraView={initialCameraView}
+                        xrDefaultMode={xrDefaultMode}
+                        canOfferXrEntry={
+                            state.status === 'ready'
+                            && navMode === 'orbit'
+                            && entryView === 'scene'
+                            && !isPreview
+                            && xrDefaultMode !== 'off'
+                        }
                     />
                 </Suspense>
             ) : null}
@@ -406,46 +308,6 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     </div>
                 </div>
             ) : null}
-
-            {/* AR is offered on every space by default (device permitting). The
-                project's `xrDefaultMode` only *modifies* this: 'vr' switches the
-                offer to VR, 'off' hides it; legacy 'none' and 'ar' both mean AR.
-                Only render when the device actually supports the chosen mode so
-                non-XR desktops aren't shown a dead button.
-
-                Orbit mode renders StudioViewport, whose <XR> session has no
-                XROrigin/locomotion -- entering there leaves you frozen at origin.
-                So this routes immersive entry through walk mode (LiveProjectScene),
-                which owns the locomotion + its own Enter AR/VR + Exit XR buttons.
-                Hidden in walk mode to avoid duplicating those buttons. */}
-            {(() => {
-                if (isPreview) return null
-                if (!(state.status === 'ready' && navMode === 'orbit' && entryView === 'scene')) return null
-                if (xrDefaultMode === 'off') return null
-                const wantsVr = xrDefaultMode === 'vr'
-                const supported = wantsVr ? xr.supportedXrModes.vr : xr.supportedXrModes.ar
-                if (!supported) return null
-                return (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            right: '1rem',
-                            bottom: '1rem',
-                            display: 'flex',
-                            gap: '0.75rem',
-                            zIndex: 20
-                        }}
-                    >
-                        <button
-                            type="button"
-                            style={overlayButtonStyle}
-                            onClick={() => setNavMode('walk')}
-                        >
-                            {wantsVr ? 'Enter VR' : 'Enter AR'}
-                        </button>
-                    </div>
-                )
-            })()}
         </main>
     )
 }

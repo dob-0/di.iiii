@@ -244,6 +244,10 @@ function initDb(dbPath) {
   ensureColumn(db, 'projects', 'slug', 'TEXT')
   ensureColumn(db, 'users', 'spaces', 'TEXT')
   ensureColumn(db, 'users', 'is_unrestricted', 'INTEGER NOT NULL DEFAULT 0')
+  // Bumped on logout so already-issued session cookies stop verifying — they
+  // are self-contained and signature-valid until their TTL, so without this a
+  // cookie copied before logout still worked on every other device.
+  ensureColumn(db, 'users', 'token_version', 'INTEGER NOT NULL DEFAULT 0')
   backfillUserUnrestricted(db)
   backfillGlobalSpace(db)
   dedupeAndUniqueOps(db)

@@ -45,7 +45,15 @@ const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
 const openCallStore = require('./openCallStore')
-const { listUsers, findUserById, setUserSpaces, setUserUnrestricted, setUserRole } = require('./userStore')
+const {
+  listUsers,
+  findUserById,
+  setUserSpaces,
+  setUserUnrestricted,
+  setUserRole,
+  getUserTokenVersion,
+  bumpUserTokenVersion
+} = require('./userStore')
 const { mintSyncKey, resolveSyncKey, listSyncKeys, revokeSyncKey, PREFIX: syncKeyPrefix } = require('./syncKeyStore')
 const { mintInvite, resolveInvite, markInviteUsed, listInvites, revokeInvite } = require('./inviteStore')
 const githubApp = require('./githubApp')
@@ -402,9 +410,23 @@ const normalizeAuthToken = (value = '') => String(value || '').trim().replace(/^
 
 const { getFreshDbIdentity } = createSessionDbSync({ findUserById, normalizeAuthRole })
 
+// Guest subjects never have a user row, so skip the query for them entirely —
+// this runs on every request that carries a session cookie.
+const lookupSessionTokenVersion = (subject) => {
+  if (!subject || isGuestSubject(subject)) return null
+  try {
+    return getUserTokenVersion(subject)
+  } catch {
+    return null
+  }
+}
+
 const readAuthSession = (req) => {
   const value = readCookie(req.get('cookie') || '', config.authSession.cookieName)
-  const result = verifyAuthSessionValue(value, { secret: config.auth.sessionSecret })
+  const result = verifyAuthSessionValue(value, {
+    secret: config.auth.sessionSecret,
+    lookupTokenVersion: lookupSessionTokenVersion
+  })
   if (!result.valid) {
     return buildAuthState({ authenticated: false, type: 'session', reason: result.reason })
   }
@@ -524,7 +546,8 @@ const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
           label: req.authState.label,
           role: user.role,
           spaces: nextSpaces,
-          isUnrestricted: Boolean(user.isUnrestricted)
+          isUnrestricted: Boolean(user.isUnrestricted),
+          tokenVersion: user.tokenVersion
         }
       })
       setAuthSessionCookie(res, session.value)
@@ -722,7 +745,7 @@ router.get('/api/auth/session', async (req, res, next) => {
             const fresh = createAuthSessionValue({
               secret: config.auth.sessionSecret,
               ttlMs: config.authSession.ttlMs,
-              session: { subject: state.subject, label: state.label, role: dbRole, spaces: dbSpaces, isUnrestricted: dbUnrestricted }
+              session: { subject: state.subject, label: state.label, role: dbRole, spaces: dbSpaces, isUnrestricted: dbUnrestricted, tokenVersion: dbUser.tokenVersion }
             })
             setAuthSessionCookie(res, fresh.value)
             state = buildAuthState({
@@ -841,6 +864,15 @@ router.post('/api/auth/session', authAttemptLimiter, async (req, res) => {
 })
 
 router.delete('/api/auth/session', (req, res) => {
+  // Clearing the cookie only ends the session on this browser; the signed
+  // payload stays valid until its TTL, so a copy of it kept anywhere else
+  // survived logout. Bumping the account's token_version is what actually
+  // revokes it — on every device at once. Subjects with no user row (guests,
+  // API-token identities) have nothing to bump and just lose the cookie.
+  const state = readAuthSession(req)
+  if (state.authenticated && state.subject && !isGuestSubject(state.subject)) {
+    try { bumpUserTokenVersion(state.subject) } catch { /* no user row — clearing the cookie is the whole logout */ }
+  }
   clearAuthSessionCookie(res)
   res.status(204).end()
 })
@@ -1704,6 +1736,7 @@ initStorage()
 
     initializeSocket(httpServer, {
       ...config,
+      lookupTokenVersion: lookupSessionTokenVersion,
       canEditSpace: async (spaceId) => {
         const normalized = normalizeSpaceId(spaceId)
         if (!normalized) return false

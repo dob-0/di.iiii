@@ -74,6 +74,14 @@ services:
       GITHUB_APP_ID: ${GITHUB_APP_ID:-}
       GITHUB_APP_PRIVATE_KEY_B64: ${GITHUB_APP_PRIVATE_KEY_B64:-}
       GITHUB_APP_WEBHOOK_SECRET: ${GITHUB_APP_WEBHOOK_SECRET:-}
+
+      # Live co-presence mesh. The relay stays open -- visitors' browsers are
+      # clients, so anything embedded in the public page is not a secret. This
+      # only gates the reserved node ids (keeper-*), which is what stopped
+      # anyone claiming the rite's keeper identity. Unset means those ids are
+      # ungated, which is how it shipped; set a DIFFERENT value per tier.
+      MESH_ROOM_SECRET: ${MESH_ROOM_SECRET:-}
+      MESH_PROTECTED_NODE_PREFIXES: ${MESH_PROTECTED_NODE_PREFIXES:-}
     restart: unless-stopped
     healthcheck:
       # 127.0.0.1, not localhost: busybox wget resolves localhost to the

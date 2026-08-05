@@ -284,3 +284,35 @@ describe('vps-restore.sh cannot destroy live data with a bad archive', () => {
         expect(extractAt).toBeLessThan(moveAsideAt)
     })
 })
+
+// The mesh relay shipped with no way to set MESH_ROOM_SECRET in the Docker
+// deployment at all -- meshHub.js read it, no compose file passed it -- so the
+// reserved keeper-* node ids were ungated on both tiers no matter what the .env
+// said. A secret the deployment cannot deliver is not a secret it has.
+describe('the server container can actually receive the mesh secret', () => {
+    const MESH_VARS = ['MESH_ROOM_SECRET', 'MESH_PROTECTED_NODE_PREFIXES']
+
+    it.each([
+        ['docker-compose.yml', ''],
+        ['docker-compose.staging.yml', 'STAGING_']
+    ])('%s passes the mesh vars through to the server', (name, prefix) => {
+        const source = read(name)
+        for (const key of MESH_VARS) {
+            expect(source).toContain(`${key}: \${${prefix}${key}:-}`)
+        }
+    })
+
+    it('gives staging its own value, never production\'s', () => {
+        // Same reasoning as AUTH_SESSION_SECRET above: one shared value would
+        // let a staging client claim the keeper id on production.
+        expect(read('docker-compose.staging.yml')).toContain('${STAGING_MESH_ROOM_SECRET:-}')
+        expect(read('docker-compose.staging.yml')).not.toContain('${MESH_ROOM_SECRET:-}')
+    })
+
+    it('is the env name meshHub.js actually reads', () => {
+        const hub = read('serverXR/src/meshHub.js')
+        for (const key of MESH_VARS) {
+            expect(hub).toContain(`process.env.${key}`)
+        }
+    })
+})

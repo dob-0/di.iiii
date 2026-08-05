@@ -16,7 +16,12 @@ const parseSpaces = (value) => {
 }
 
 const rowToUser = (row) => row
-  ? { ...row, spaces: parseSpaces(row.spaces), isUnrestricted: Boolean(row.is_unrestricted) }
+  ? {
+      ...row,
+      spaces: parseSpaces(row.spaces),
+      isUnrestricted: Boolean(row.is_unrestricted),
+      tokenVersion: Number(row.token_version) || 0
+    }
   : null
 
 const upsertUser = ({ provider, providerId, email, displayName, avatarUrl, role = 'editor' }) => {
@@ -79,4 +84,27 @@ const setUserRole = (id, role) => {
   return findUserById(id)
 }
 
-module.exports = { upsertUser, findUserById, listUsers, setUserSpaces, setUserUnrestricted, setUserRole }
+// null (not 0) for a subject with no user row: guests, API-token identities and
+// sandbox subjects have no stored version, and their sessions must keep
+// verifying exactly as before.
+const getUserTokenVersion = (id) => {
+  const row = getDb().prepare('SELECT token_version FROM users WHERE id = ?').get(id)
+  return row ? Number(row.token_version) || 0 : null
+}
+
+const bumpUserTokenVersion = (id) => {
+  const db = getDb()
+  db.prepare('UPDATE users SET token_version = token_version + 1, updated_at = ? WHERE id = ?').run(Date.now(), id)
+  return getUserTokenVersion(id)
+}
+
+module.exports = {
+  upsertUser,
+  findUserById,
+  listUsers,
+  setUserSpaces,
+  setUserUnrestricted,
+  setUserRole,
+  getUserTokenVersion,
+  bumpUserTokenVersion
+}
