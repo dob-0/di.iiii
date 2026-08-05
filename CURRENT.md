@@ -34,7 +34,7 @@ staging's `LIVE_API_TOKEN` (a real `PATCH` returned 200 on 2026-08-05).
 
 - **`feat/space-declared` is UNPUSHED**; nothing has touched staging or prod. The three linked repos (`br_id_ge`, `beyond_form`, `platform_recordar`) hold **uncommitted** v6 engine copies + new space manifests — vendoring locally changes nothing CI runs.
 - **`/home/nooo/di.iiii-ops` exists locally, one commit on `main`, no remote.** Create `dob-0/di.iiii-ops` **private** and push it — the grant calendar is out of `HEAD` here but `git rm` does not remove history, so treat it as already seen.
-- The 8 prod spaces are still **ownerless** — the button exists now, the decision doesn't. `platform-recordar`'s label is its own id (declared as-is; renaming is live and the owner's call).
+- The 8 prod spaces are still **ownerless**, and cannot be adopted until this branch ships: a `PATCH` with `ownerUserId` against the deployed build returns **200 and ignores it** (measured on staging). Three admins exist — `ginsyuz`, `dob-0`, `gevorg_aram1@thedi.studio` — so who adopts what is still a call. Recipe in `spaces/README.md`.
 - **Trees:** `~/di.iiii` drifts under whoever is working — today it is on `fix/audit-2026-08-05`, and **:5173** (the only server up) serves whatever is on its disk, so name the branch before you say "go look". `~/di.iiii-algomerge` is on `dev`; `dev-preview` is detached at `5f4cd3a9`, stale.
   **Push when you finish** — `dev` self-deploys; a red `dev` freezes staging. Check `gh run list --branch dev --limit 1`.
 - The `open` space's card is blank (no `publishedProjectId` of its own). Studio's director page has never been seen with a real session — `/algovrithm/studio/director` is OAuth-gated; geometry verified, picture not.

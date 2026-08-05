@@ -50,6 +50,30 @@ Tokens come from the tier's declared `tokenEnv` — `PROD_API_TOKEN`,
 `serverXR/.env.local`. The `local` tier is `governed: false`: shown in the
 table, never enforced, because the dev box holds 70 projects nobody declared.
 
+## Ownership is not declared here
+
+A space's owner is deliberately **not** a declared field. Handing someone a
+space is a grant, and a grant that a file can silently re-apply on every sync is
+not a grant. Ownership is set once, by an admin, in Preferences → Manage → a
+space → Owner & access — or over the API:
+
+```bash
+# who owns what, and which accounts exist
+curl -s -H "Authorization: Bearer $PROD_API_TOKEN" https://di-studio.xyz/serverXR/api/spaces
+curl -s -H "Authorization: Bearer $PROD_API_TOKEN" https://di-studio.xyz/serverXR/api/users
+
+# adopt one space (admin only; null releases it back to the platform)
+curl -X PATCH -H "Authorization: Bearer $PROD_API_TOKEN" -H 'Content-Type: application/json' \
+  -d '{"ownerUserId":"<account-id>"}' https://di-studio.xyz/serverXR/api/spaces/<spaceId>
+```
+
+As of 2026-08-06 all 8 production spaces are `ownerUserId: null`, so every
+publish, invite, rename and delete falls through to a platform admin. The route
+that fixes it is on `feat/space-declared` and **is not deployed** — a PATCH
+carrying `ownerUserId` against the current staging or production build is
+accepted with a 200 and silently ignored, which is what "not deployed" looks
+like from the outside. Ship the branch first, then adopt.
+
 ## Adding a space
 
 1. `mkdir spaces/<id>` and copy a neighbour's `di-space.space.json`.
