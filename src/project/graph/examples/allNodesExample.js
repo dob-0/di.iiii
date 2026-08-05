@@ -88,12 +88,9 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
             // four buttons, and four of those still stack over most of the
             // canvas. They start hidden instead; the Windows menu opens them.
             //
-            // Worth knowing when reading this example: panel nodes never appear
-            // as graph cards at all. RawEditor's graphCardNodes explicitly drops
-            // `render === 'panel-2d'`, and graphCardEdges then drops any edge
-            // touching one. So the four panel nodes here are real, wired members
-            // of the document that the canvas cannot draw — which is why the
-            // card count is 26 while the node count is 30.
+            // Panel nodes DO appear as graph cards (they did not until
+            // 2026-08-06 — see graphCardNodes in RawEditor). The card is the
+            // node, the window is the panel; hiding the window leaves the card.
             if (node.values?.frame) node.values.frame.visible = false
             made.set(key, node)
         }
@@ -139,6 +136,15 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('text', 'view.text', { label: 'Text panel', col: 4, row: 3, values: { content: 'Every node type, one graph.' } })
     add('browser', 'view.browser', { label: 'Browser panel', col: 4, row: 4, values: { url: 'https://di-studio.xyz' } })
     add('image', 'view.image', { label: 'Image panel', col: 4, row: 5 })
+
+    // --- column 5: the editor's own chrome, as nodes ---------------------------
+    // `studio` is a container: on the canvas it is a card you enter, and its
+    // real contents are built by buildStudioInterior when it is placed from the
+    // palette. Here it stands for the type, empty — the example's job is
+    // coverage of the registry, not a second copy of the Studio interior.
+    add('studio', 'studio', { label: 'Studio', col: 5, row: 0, values: { title: 'Studio' } })
+    add('outliner', 'view.outliner', { label: 'Outliner panel', col: 5, row: 1 })
+    add('inspector', 'view.inspector', { label: 'Inspector panel', col: 5, row: 2 })
 
     const id = (key) => made.get(key)?.id || ''
     const wire = (fromKey, fromPort, toKey, toPort) => {
@@ -211,7 +217,8 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('vec', 'out', 'desk', 'position'),
         wire('colorA', 'out', 'desk', 'bgColor'),
         wire('bool', 'out', 'desk', 'gridVisible'),
-        wire('str', 'out', 'text', 'content')
+        wire('str', 'out', 'text', 'content'),
+        wire('str', 'out', 'studio', 'title')
     ].filter(Boolean)
 
     return { nodes: [...made.values()], edges }

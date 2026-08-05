@@ -23,6 +23,12 @@ const GRAPH_ZOOM_STEP = 0.1
 const PORT_DROP_RADIUS_PX = 36
 // Breathing room left around the graph when it is first fitted to the viewport.
 const GRAPH_FIT_PADDING_PX = 24
+// Below this zoom a whole card is a few pixels across, so every control on it
+// lands under the same fingertip. The enter control is hidden there: it is a
+// single tap and it changes scope, so a mis-hit while reaching for a port sent
+// you inside a node instead of starting a wire. Fitting a large graph to a
+// phone lands around 0.2, well inside this.
+const CARD_CONTROL_MIN_ZOOM = 0.5
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
@@ -629,7 +635,25 @@ export default function RawGraphSurface({
                                     <span className="raw-graph-node-icon" />
                                     <span className="raw-graph-node-label">{node.label}</span>
                                     <span className="raw-graph-node-category">{typeDef?.category || ''}</span>
-                                    <span className="raw-graph-node-enter-hint" title="Double-click to enter">›</span>
+                                    {/* Entering a node used to be double-click only, cued by a
+                                        hover-revealed chevron — so on a phone there was no
+                                        affordance at all and no gesture that reliably worked.
+                                        Containers make that fatal rather than annoying: a
+                                        `studio` node you cannot enter is an empty box. This is
+                                        a real button now, always visible on coarse pointers —
+                                        but not when the card is too small to aim at. */}
+                                    {zoom >= CARD_CONTROL_MIN_ZOOM ? (
+                                        <button
+                                            type="button"
+                                            className="raw-graph-node-enter-hint"
+                                            title={`Enter ${node.label}`}
+                                            aria-label={`Enter ${node.label}`}
+                                            onPointerDown={(event) => event.stopPropagation()}
+                                            onClick={(event) => { event.stopPropagation(); onEnterNode?.(node.id) }}
+                                        >
+                                            ›
+                                        </button>
+                                    ) : null}
                                 </header>
                                 <div style={{ position: 'relative', height: h - HEADER_HEIGHT }}>
                                     {inputs.map((port, idx) => (

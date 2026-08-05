@@ -2094,7 +2094,11 @@
 
 .raw-selection-scaffold {
     position: fixed;
-    top: 64px;
+    /* RawEditor supplies the measured workflow-strip height as a custom
+       property instead of an inline `top`, so the phone bottom-sheet rule
+       below can actually win. An inline declaration cannot be overridden by a
+       media query. */
+    top: var(--raw-scaffold-top, 64px);
     right: 24px;
     width: min(320px, calc(100vw - 48px));
     max-height: calc(100vh - 88px);
@@ -2265,16 +2269,41 @@
 }
 
 .raw-graph-node-enter-hint {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    background: transparent;
+    padding: 0 4px;
+    margin: -8px -4px -8px 0;
     font-size: 13px;
+    font-family: inherit;
     color: rgba(244, 247, 251, 0.2);
     flex-shrink: 0;
     line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
     transition: color 0.15s;
 }
 
 .raw-graph-node-card:hover .raw-graph-node-enter-hint,
-.raw-graph-node-card.is-selected .raw-graph-node-enter-hint {
+.raw-graph-node-card.is-selected .raw-graph-node-enter-hint,
+.raw-graph-node-enter-hint:focus-visible {
     color: rgba(77, 249, 255, 0.7);
+}
+
+/* Coarse pointers get no hover, so the chevron was invisible and entering a
+   node had no affordance at all — fatal for container nodes, whose entire
+   purpose is being entered. Show it always, and give it a real tap target. */
+@media (hover: none) {
+    .raw-graph-node-enter-hint {
+        color: rgba(77, 249, 255, 0.7);
+        min-width: 32px;
+        min-height: 32px;
+        margin: -10px -8px -10px 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
 }
 
 .raw-graph-port-row {
@@ -3155,8 +3184,35 @@
         white-space: nowrap;
     }
 
+    /* Bottom sheet, not a floating panel. At 320-412px `width: min(320px,
+       100vw - 48px)` is effectively the whole screen and the panel is pinned
+       to the top, so selecting a node covered the node it was inspecting —
+       its header, its enter control and its ports all sat underneath, and the
+       panel swallowed the taps aimed at them. Selecting something must not
+       hide the thing you selected. Same shape Studio already uses for phones
+       (studio-mobile.css), so this is the existing pattern, not new chrome. */
     .raw-selection-scaffold {
-        top: calc(64px + env(safe-area-inset-top));
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: auto;
+        max-height: 38dvh;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* The Delete FAB lives in the bottom-right corner, which the sheet now
+       occupies — and the sheet is only ever up when something is selected,
+       i.e. exactly when Delete is the button you want. Move it above the
+       sheet's reach. Pinch still zooms the canvas that stays visible, so the
+       zoom controls being covered while a node is selected is survivable;
+       losing Delete is not. */
+    .raw-delete-fab {
+        top: calc(58px + env(safe-area-inset-top));
+        bottom: auto;
         right: calc(12px + env(safe-area-inset-right));
     }
 }
