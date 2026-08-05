@@ -1,11 +1,11 @@
-import { Box, Button, CircularProgress, Divider, Stack, TextField, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, Divider, Link, Stack, TextField, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useSpacePublicFlag from '../hooks/useSpacePublicFlag.js'
 import { getApiAuthProviders, getOAuthUrl, hasServerApi } from '../services/apiClient.js'
 import { redeemSpaceInvite } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
-import { buildAppSpacePath } from '../utils/spaceRouting.js'
+import { buildAppSpacePath, buildWikiPath } from '../utils/spaceRouting.js'
 import AccountButton from './AccountButton.jsx'
 import { OUT_OF_SCOPE_EXPLAIN, OUT_OF_SCOPE_REDIRECT } from './authGateScope.js'
 import LoadingScreen from './LoadingScreen.jsx'
@@ -192,6 +192,17 @@ export default function AuthGate({
                                 The invite link you followed is invalid or has expired — ask the owner for a fresh one.
                             </Typography>
                         )}
+                        {/* This card is where an invitee actually gets stuck — a
+                            guest session exists, so the sign-in card never
+                            shows. Give the browser-only path a door from here. */}
+                        {inviteToken && (
+                            <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                                <Link href={`${buildWikiPath()}#joining-a-space`} sx={{ color: 'var(--ui-accent)' }}>
+                                    What a collaborator can do
+                                </Link>
+                                {' '}&mdash; how an invite works, and what to ask for.
+                            </Typography>
+                        )}
                         <AccountButton authState={authSession} onLogout={refresh} />
                     </Stack>
                 </Box>
@@ -245,9 +256,25 @@ export default function AuthGate({
                 <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
                     di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
                 </Typography>
+                {/* An invite link lands here first, and the panel used to say
+                    only "Sign in to continue" — nothing told the person that the
+                    invite was still in hand and would be spent on whichever
+                    account they picked. Say what is being accepted, and give the
+                    browser-only path a door. */}
                 <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
-                    Sign in to continue.
+                    {inviteToken
+                        ? <>You&rsquo;ve been invited to {requiredSpaceId ? <>&ldquo;{requiredSpaceId}&rdquo;</> : 'a space'}. Sign in to accept &mdash; the invite is granted to the account you choose.</>
+                        : 'Sign in to continue.'}
                 </Typography>
+                {inviteToken && (
+                    <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                        First time here?{' '}
+                        <Link href={`${buildWikiPath()}#joining-a-space`} sx={{ color: 'var(--ui-accent)' }}>
+                            What a collaborator can do
+                        </Link>
+                        {' '}&mdash; nothing to install.
+                    </Typography>
+                )}
                 {providers === null ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
                         <CircularProgress size={18} sx={{ color: 'var(--ui-accent)' }} />

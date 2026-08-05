@@ -73,6 +73,28 @@ export const WIKI_ARTICLES = [
         updated: '2026-07-21'
     },
     {
+        id: 'joining-a-space',
+        category: 'Getting started',
+        title: 'Invited to collaborate? Start here',
+        summary: 'The whole path from an invite link to your first saved edit — in a browser tab, with nothing to install.',
+        body: [
+            'Someone sent you a link to a space. You do not need to install anything, clone anything, or open a terminal: a browser is the entire toolchain. (The repo has a developer setup guide as well — that is a different door, for people who want to run the platform itself, and you can ignore it.)',
+            { list: [
+                '1 — Open the link. It carries the invite; the space opens as soon as access is granted.',
+                '2 — Sign in with GitHub or Google when asked. You can accept an invite as a guest, but a guest session lasts about 30 days and lives in one browser; signing in makes the access permanent and carries any work you already did onto your account.',
+                '3 — You land in the space. /<space>/studio is its project hub: every project in the space, plus ＋ New to start one.',
+                '4 — Open a project and build. There is no Save button — every change is written as you make it, and anyone else in the same project sees it live.',
+                '5 — Stuck? The ? button in the Studio (or Shift+?) opens the illustrated guides and the full shortcut list.'
+            ] },
+            'What an invite gives you is access to that one space, as an editor. You can open and edit its projects, create new ones, upload files, and use every tool in the Studio.',
+            'What it does not give you is the space itself. Publishing (setting which project is live), renaming, changing the public link, making the space public or private, minting further invites, and deleting are the owner’s — see "Who owns a space". If you need one of those, ask whoever invited you; if the space has no owner at all, a platform admin has to assign one first.',
+            'Your own work is separate from all of this and always there: every visitor gets a private sandbox, and a signed-in account can create its own spaces. Being a collaborator in someone else’s space does not spend any of that.',
+            'If the link says it is invalid or has expired, it is not you — invites last 7 days. Ask for a fresh one.'
+        ],
+        tags: ['invite', 'collaboration', 'onboarding', 'getting started', 'no install', 'editor', 'access'],
+        updated: '2026-08-06'
+    },
+    {
         id: 'free-spaces',
         category: 'Spaces & access',
         title: '3 free spaces per account',
@@ -485,7 +507,7 @@ export const WIKI_ARTICLES = [
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['br-id-ge', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['br-id-ge', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

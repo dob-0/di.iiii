@@ -14,15 +14,13 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 both hosts 12/12 (`npm run verify:algovrithm:remote -- <host>`), prod phone header seen
 at 390px. Several agents share this tree: re-check `git log`, **stage explicit paths**.
 
-## Last session (2026-08-05 — algovrithm on a phone, then shipped)
+## Last session (2026-08-05/06 — `feat/space-declared`, UNPUSHED)
 
-- Top bar overlapped itself on a phone — title and buttons were siblings in separate corners, so FULL SCREEN wrapped into a circle over the word "algovrithm"; one flex row now, and desktop was always clean, which is why it survived being looked at.
-- Author-only furniture left the audience's header: WebXR diagnostic moved to the bottom authoring stack, "press H" hint hidden where there is no keyboard.
-- My own browser guard shipped with a hole — it pressed H before measuring, which deletes the hint, so it passed on a build that visibly overlapped; it measures both panel states now, and I reproduced the bug to watch it fail.
-- algovrithm's prod card has a preview (the reel-globe frame) — a code space has no `publishedProjectId`, so it can never reach the automatic branch; rule written in `golden_rules.md` (auto preview always, owner can override and get back), with a host-audit one-liner.
-- Promoted `dev` → `main` on the owner's word: both deploys green, both hosts 12/12, and the prod phone header measured **and looked at** at 390px — the promotion also carried the sync-engine work to live.
-- **Parallel session — the sync engine:** `scripts/space-sync.mjs`, the file every doc calls upstream, was the **stale** copy (four months behind the repos vendoring from it, still defaulting a target-less sync to the **live site**); promoted to v4 in `aa2205f7`, all four copies byte-equal, `slug`/`title` now enforced every run.
-- It hid because `space-sync-vendor.mjs` (the check its own header named) **did not exist** and two NUL bytes made git call the engine **binary** — no diff, no grep; `scripts/space-sync.test.js` guards all three now, and br_id_ge was re-synced and **seen** on a Pixel 7 at prod.
+- A space can be given an owner **after** creation — `PATCH /api/spaces/:id` takes `ownerUserId` (admin-only, `null` releases) and grants scope in the same call; Preferences → Manage grew an "Owner & access" section (`05e46fab`). Fourth instance of the create-only-field bug; the rule is now in `golden_rules.md`.
+- Found alongside it: `serverSpaces.js` never forwarded `slug`, so "Edit public link" in Manage had **never** done anything.
+- The algovrithm Director now saves from the live site — new `GET/PUT /api/spaces/:id/settings` (opaque JSON, 64 KB cap) plus a timing overlay resolved before the clock is built; **seen** on a production build with no dev server, 5.6s→8s survived a cold reload (`4e91cbc4`).
+- "Invite carries its role" was **dropped after measuring**: new accounts already default to `editor` and a redeeming guest can `PUT` a scene — there was no bug.
+- Public-repo audit: no tracked credentials, but `docs/promo/` holds the grant calendar, amounts, a named stakeholder tracker and unsent announcements.
 
 ## What works
 
@@ -32,6 +30,9 @@ staging's `LIVE_API_TOKEN` (a real `PATCH` returned 200 on 2026-08-05).
 
 ## Open
 
+- **`feat/space-declared` is UNPUSHED** (2 commits ahead of `bdaa3152`); nothing has touched staging or prod.
+- Waiting on a call: move `docs/promo/**` + ops runbooks + host identifiers into a private `dob-0/di.iiii-ops` (the `br_id_ge-ops` pattern) — `git rm` does not remove history, so treat the stakeholder list as already seen.
+- The 8 prod spaces are still **ownerless** — the button exists now, the decision doesn't. Then: a collaborator onboarding page, and declare the other 7 spaces + mark the lane.
 - **Trees:** `~/di.iiii` drifts under whoever is working — today it is on `fix/audit-2026-08-05`, and **:5173** (the only server up) serves whatever is on its disk, so name the branch before you say "go look". `~/di.iiii-algomerge` is on `dev`; `dev-preview` is detached at `5f4cd3a9`, stale.
 - **Push when you finish** — `dev` self-deploys; a red `dev` freezes staging for everyone. Check `gh run list --branch dev --limit 1`.
 - The `open` space's card is blank — no `publishedProjectId` of its own; same hole algovrithm was in.

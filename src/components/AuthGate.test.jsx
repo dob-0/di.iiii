@@ -115,3 +115,30 @@ describe('AuthGate sign-in card priority', () => {
         expect(screen.queryByRole('button', { name: /Continue with/ })).not.toBeInTheDocument()
     })
 })
+
+// An invite link lands on this card before it can be redeemed. It used to say
+// only "Sign in to continue" — the invitee was never told what they were
+// accepting, nor that the grant follows whichever account they pick.
+describe('AuthGate invite arrival', () => {
+    afterEach(() => {
+        window.history.replaceState({}, '', '/')
+    })
+
+    it('names the space and points at the collaborator guide', async () => {
+        window.history.replaceState({}, '', '/?invite=dii_invite_x.y')
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
+
+        expect(await screen.findByText(/You’ve been invited to “secret”/)).toBeInTheDocument()
+        expect(screen.getByRole('link', { name: /What a collaborator can do/ }))
+            .toHaveAttribute('href', expect.stringContaining('#joining-a-space'))
+    })
+
+    it('says nothing extra when there is no invite in the URL', async () => {
+        mockUseAuthSession.mockReturnValue(signedOutSession())
+        render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
+
+        expect(await screen.findByText('Sign in to continue.')).toBeInTheDocument()
+        expect(screen.queryByRole('link', { name: /What a collaborator can do/ })).not.toBeInTheDocument()
+    })
+})
