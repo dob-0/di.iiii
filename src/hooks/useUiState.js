@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { isPreviewRequest } from '../utils/previewMode.js'
 
 const UI_DEFAULT_STORAGE_KEY = 'ui-default-visible'
 const UI_VISIBLE_STORAGE_PREFIX = 'ui-visible'
@@ -94,6 +95,10 @@ export function useUiState({
     const [isUiVisible, setIsUiVisible] = useState(() => {
         if (uiVisibilityQuery === 'show') return true
         if (uiVisibilityQuery === 'hide') return false
+        // A thumbnail iframe shares localStorage with the Studio owner who is
+        // looking at it, so a stored `true` from their own editing session would
+        // otherwise open the full toolbar inside the card.
+        if (isPreviewRequest()) return false
         const stored = readStoredUiVisible()
         if (stored !== null) return stored
         return readUiDefaultVisible()
