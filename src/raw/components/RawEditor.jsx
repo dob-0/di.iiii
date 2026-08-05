@@ -25,6 +25,7 @@ import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.j
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
+import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
 import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
 
@@ -233,12 +234,22 @@ export default function RawEditor({
         () => authoredNodes.filter((node) => matchesNodeTypeSurface(getNodeType(node.typeId), activeSurface)),
         [activeSurface, authoredNodes]
     )
-    // Panel nodes float as windows; graph cards are non-panel nodes in the current scope
+    // Every node in the current scope gets a card, panel types included.
+    //
+    // Panel nodes used to be excluded here, which meant they had NO
+    // representation on the canvas: they could not be selected, wired, moved or
+    // deleted from the graph, and because graphCardEdges below drops any edge
+    // whose endpoints are not both cards, a wire into `view.text`'s content was
+    // invisible even though it was real and carrying a value. A node the graph
+    // cannot draw is not really in the graph.
+    //
+    // It also made containers impossible: entering a node whose contents are
+    // all panels showed an empty scope. The window and the card are two views
+    // of one node — the window is the panel, the card is the node — which is
+    // the same split TouchDesigner draws between a Panel COMP in the network
+    // editor and the panel it renders.
     const graphCardNodes = useMemo(
-        () => nodes.filter((node) => {
-            if (getNodeType(node.typeId)?.render === 'panel-2d') return false
-            return (node.parentId || null) === currentScopeId
-        }),
+        () => nodes.filter((node) => (node.parentId || null) === currentScopeId),
         [nodes, currentScopeId]
     )
     // Edges are scoped along with nodes — an edge whose endpoints aren't both
@@ -558,11 +569,24 @@ export default function RawEditor({
         const nodeRender = getNodeType(definition.id)?.render || 'hidden'
         const workspacePatch = { selectedNodeId: nextNode.id }
         if (nodeRender === 'hidden') workspacePatch.activeSurface = 'graph'
+        // A container arrives with its contents. `studio` is one palette entry;
+        // entering it has to reveal the subgraph it is made of, so the interior
+        // is created in the SAME op batch — otherwise a single undo would leave
+        // an empty container behind, and entering a freshly-placed Studio would
+        // show nothing.
+        const interior = definition.id === STUDIO_TYPE_ID
+            ? buildStudioInterior({ studioNodeId: nextNode.id, workspaceTop })
+            : []
         dispatch({ type: 'select-entity', entityId: null })
         applyLocalOps([
             { type: 'createNode', payload: { node: nextNode } },
+            ...interior.map((node) => ({ type: 'createNode', payload: { node } })),
             { type: 'setWorkspaceState', payload: { patch: workspacePatch } }
-        ], { activityMessage: `Created ${definition.label}.` })
+        ], {
+            activityMessage: interior.length
+                ? `Created ${definition.label} with ${interior.length} panels inside.`
+                : `Created ${definition.label}.`
+        })
         setPaletteState({ open: false, surface: paletteState.surface, placement: null })
     }
 
@@ -728,8 +752,13 @@ export default function RawEditor({
         })
     }
 
+    // The scaffold's offset is published as a custom property rather than an
+    // inline `top`, because an inline declaration outranks every media query:
+    // the phone bottom-sheet rule in raw.css could not override it, so the
+    // panel stayed pinned over the very node it was inspecting. CSS decides
+    // where this sits; JS only supplies the measured offset.
     const hostInspector = (
-        <aside className="raw-selection-scaffold" style={{ top: workflowHeight + 'px' }}>
+        <aside className="raw-selection-scaffold" style={{ '--raw-scaffold-top': workflowHeight + 'px' }}>
             <PropertyInspector
                 title={inspectorTitle}
                 subtitle={inspectorSubtitle}
@@ -832,6 +861,36 @@ export default function RawEditor({
                 />
             )
         }
+        // Studio chrome, as nodes. These render the SAME components as the
+        // hardcoded outliner and inspector below — the panel node supplies the
+        // window, the editor supplies the body, so neither has to thread the
+        // selection and document through the graph as ports.
+        if (node.typeId === 'view.outliner') {
+            return (
+                <OutlinerPanelWindow
+                    nodes={surfaceNodes}
+                    selectedNodeId={workspaceState.selectedNodeId || null}
+                    onSelectNode={(nodeId) => selectNode(nodeId)}
+                />
+            )
+        }
+        if (node.typeId === 'view.inspector') {
+            return (
+                <PropertyInspector
+                    title={inspectorTitle}
+                    subtitle={inspectorSubtitle}
+                    sections={inspectorSections}
+                    values={inspectorValues}
+                    assetOptions={document.assets || []}
+                    onSectionChange={handleInspectorChange}
+                    emptyMessage="Select a node to inspect it."
+                />
+            )
+        }
+        // Every unhandled panel-2d type falls through to a text box, which is
+        // how the streaming preset's stream.monitor/stream.controller ended up
+        // looking like working features. Anything added above this line must be
+        // real; anything below it is a text box wearing another name.
         return <TextPanelWindow node={node} values={resolvedValues} />
     }
 

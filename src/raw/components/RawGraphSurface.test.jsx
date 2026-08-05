@@ -270,6 +270,51 @@ describe('RawGraphSurface', () => {
         expect(visiblePath.getAttribute('stroke')).toBe(strokeBefore)
     })
 
+    // Entering a node was double-click only, cued by a hover-revealed chevron —
+    // so on a phone there was no affordance and no gesture that worked. That is
+    // fatal for container nodes like `studio`, whose whole purpose is to be
+    // entered: an unenterable container is an empty box.
+    it('enters a node from a single click on its enter control', () => {
+        const onEnterNode = vi.fn()
+        const node = makeNode('geom.cube', { id: 'cube-1' })
+        const { getByRole } = render(
+            <RawGraphSurface nodes={[node]} edges={[]} onEnterNode={onEnterNode} />
+        )
+
+        fireEvent.click(getByRole('button', { name: /^Enter / }))
+        expect(onEnterNode).toHaveBeenCalledWith('cube-1')
+    })
+
+    // At fit-zoom on a phone a whole card is a few pixels across, so a tap
+    // aimed at a port landed on the enter control and changed scope instead of
+    // starting a wire — you ended up inside an empty node.
+    it('hides the enter control when cards are too small to aim at', () => {
+        const node = makeNode('geom.cube', { id: 'cube-1' })
+        const { getByRole, queryByRole } = render(
+            <RawGraphSurface nodes={[node]} edges={[]} onEnterNode={vi.fn()} />
+        )
+
+        expect(queryByRole('button', { name: /^Enter / })).toBeTruthy()
+        // Six steps of 0.1 take 1.0 down to 0.4, below the 0.5 threshold.
+        for (let i = 0; i < 6; i += 1) {
+            fireEvent.click(getByRole('button', { name: 'Zoom out' }))
+        }
+        expect(queryByRole('button', { name: /^Enter / })).toBeNull()
+    })
+
+    it('does not start a node drag when the enter control is pressed', () => {
+        const onMoveNode = vi.fn()
+        const node = makeNode('geom.cube', { id: 'cube-1', graphX: 40, graphY: 30 })
+        const { getByRole } = render(
+            <RawGraphSurface nodes={[node]} edges={[]} onMoveNode={onMoveNode} onEnterNode={vi.fn()} />
+        )
+
+        fireEvent.pointerDown(getByRole('button', { name: /^Enter / }), { button: 0, pointerId: 1 })
+        fireEvent.pointerMove(window, { clientX: -80, clientY: -80 })
+        fireEvent.pointerUp(window)
+        expect(onMoveNode).not.toHaveBeenCalled()
+    })
+
     // Zooming out on a phone means tapping the zoom button repeatedly, and two
     // quick taps bubbled to the surface's onDoubleClick — so zooming out opened
     // the create palette on top of the graph.
