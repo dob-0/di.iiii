@@ -1,6 +1,7 @@
 .raw-editor-shell,
 .raw-hub {
     min-height: 100vh;
+    min-height: 100dvh;
     background: var(--di-black);
     color: var(--di-text);
     font-family: 'Inter', 'Segoe UI', sans-serif;
@@ -347,7 +348,9 @@
 
 .raw-hub {
     min-height: 100vh;
+    min-height: 100dvh;
     height: 100vh;
+    height: 100dvh;
     display: flex;
     align-items: flex-start;
     justify-content: center;
@@ -1244,8 +1247,8 @@
 
 .raw-delete-fab {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    right: calc(24px + env(safe-area-inset-right));
     z-index: 1300;
     -webkit-appearance: none;
     appearance: none;
@@ -1944,6 +1947,7 @@
 .raw-surface-shell {
     position: relative;
     min-height: 100vh;
+    min-height: 100dvh;
 }
 
 .raw-surface-workflow {
@@ -2094,6 +2098,7 @@
     right: 24px;
     width: min(320px, calc(100vw - 48px));
     max-height: calc(100vh - 88px);
+    max-height: calc(100dvh - 88px);
     z-index: 1350;
     border-radius: 0;
     background: #0a0a0a;
@@ -2129,8 +2134,10 @@
 
 .raw-graph-zoom-controls {
     position: absolute;
-    bottom: 16px;
-    right: 16px;
+    /* Bottom-LEFT: .raw-delete-fab is position:fixed at bottom/right 24px with
+       z-index 1300, so anything in the bottom-right corner sits underneath it. */
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    left: calc(16px + env(safe-area-inset-left));
     z-index: 2;
     width: fit-content;
     display: flex;
@@ -2142,8 +2149,8 @@
 }
 
 .raw-graph-zoom-controls button {
-    min-width: 28px;
-    height: 28px;
+    min-width: 44px;
+    height: 44px;
     border: 1px solid var(--di-cyan-border);
     background: var(--di-black);
     color: var(--di-text);
@@ -2296,6 +2303,22 @@
     border-radius: 0;
     border: 1.5px solid var(--di-black);
     pointer-events: auto;
+    touch-action: none;
+}
+
+/* The dot stays 8px because the graph should read as a diagram, but 8px is
+   unhittable with a finger. This pseudo-element widens the HIT box to 44px
+   horizontally without changing anything visible or shifting layout. Vertical
+   growth is capped at the 22px port-row pitch so adjacent ports never overlap
+   each other's targets — the remaining slack is covered by the nearest-port
+   drop resolution in RawGraphSurface.jsx (PORT_DROP_RADIUS_PX). */
+.raw-graph-port-dot::after {
+    content: '';
+    position: absolute;
+    top: -7px;
+    bottom: -7px;
+    left: -18px;
+    right: -18px;
 }
 
 .raw-graph-port-dot--out { cursor: crosshair; }
@@ -2334,6 +2357,7 @@
     position: relative;
     width: min(1080px, calc(100vw - 48px));
     max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
     display: grid;
     grid-template-rows: auto auto 1fr auto;
     overflow: hidden;
@@ -2453,6 +2477,7 @@
     position: relative;
     width: min(880px, calc(100vw - 48px));
     max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
     display: grid;
     grid-template-rows: auto auto 1fr auto;
     overflow: hidden;
@@ -3079,6 +3104,60 @@
 
     .raw-topbar-scale-control {
         display: none;
+    }
+}
+
+/* Phones. The topbar is a fixed-height single flex row holding the back button,
+   breadcrumb, surface toggles, window list, scale select, node count, chat and
+   overflow — at 390px that overflowed with no wrap and no collapse, and
+   `overflow: hidden` on the seeded state made the overflowing controls
+   unreachable rather than merely cramped. Nothing is removed here (the same
+   controls stay available); the row is simply allowed to scroll, and the fixed
+   chrome is pulled clear of the notch and the home indicator. */
+@media (max-width: 640px) {
+    .raw-topbar.is-seeded {
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        justify-content: flex-start;
+        padding-left: calc(12px + env(safe-area-inset-left));
+        padding-right: calc(12px + env(safe-area-inset-right));
+    }
+
+    .raw-topbar.is-seeded::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Every cluster keeps its intrinsic width so the row scrolls as one strip
+       instead of squashing the controls into unreadable slivers.
+       .raw-topbar-center needs the full `flex` shorthand, not just
+       flex-shrink: its base rule is `flex: 1`, i.e. flex-basis 0 — with the
+       right-hand cluster already 279px wide on a 393px screen there is no free
+       space to grow into, so the centre collapsed to width 0 while its 299px
+       location chip kept its intrinsic size and spilled to x:-51, painting on
+       top of the back button on one side and the Help/Size controls on the
+       other. Overflow scrolling cannot fix a child escaping a zero-width
+       parent; the parent has to be allowed to measure its content. */
+    .raw-topbar-left,
+    .raw-topbar-right {
+        flex-shrink: 0;
+    }
+
+    .raw-topbar-center {
+        flex: 0 0 auto;
+        justify-content: flex-start;
+    }
+
+    .raw-topbar-location {
+        max-width: 60vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .raw-selection-scaffold {
+        top: calc(64px + env(safe-area-inset-top));
+        right: calc(12px + env(safe-area-inset-right));
     }
 }
 

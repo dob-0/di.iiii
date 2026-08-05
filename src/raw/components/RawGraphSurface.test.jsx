@@ -8,6 +8,27 @@ const makeNode = (typeId, overrides = {}) => ({
     ...overrides
 })
 
+// The surface auto-fits the graph on first render, so pan is not the initial
+// 60,60. Read the committed transform and convert graph coords to the client
+// coords a pointer event must carry, rather than hardcoding numbers that a
+// change to the fit logic would silently invalidate.
+const clientForGraphPoint = (container, graphX, graphY) => {
+    const { transform } = container.querySelector('.raw-graph-stage').style
+    const [, panX, panY] = /translate\(([-\d.]+)px,\s*([-\d.]+)px\)/.exec(transform)
+    const [, zoom] = /scale\(([-\d.]+)\)/.exec(transform)
+    return {
+        clientX: graphX * Number(zoom) + Number(panX),
+        clientY: graphY * Number(zoom) + Number(panY)
+    }
+}
+
+// Centre of an input port, in graph space. Mirrors inputPortCenter in the
+// component: HEADER_HEIGHT 44, PORT_ROW_HEIGHT 22.
+const inputPortGraphPoint = (node, index) => ({
+    x: node.graphX,
+    y: node.graphY + 44 + index * 22 + 11
+})
+
 describe('RawGraphSurface', () => {
     it('dispatches createEdge when dragging from a compatible output to an input port', () => {
         const colorNode = makeNode('value.color', { id: 'color-1', graphX: 0, graphY: 0 })
@@ -32,14 +53,87 @@ describe('RawGraphSurface', () => {
         expect(outputDot).toBeTruthy()
         expect(cubeColorDot).toBeTruthy()
 
+        // Release over the cube's Color port (its first input).
+        const port = inputPortGraphPoint(cubeNode, 0)
+        const drop = clientForGraphPoint(container, port.x, port.y)
         fireEvent.pointerDown(outputDot, { button: 0, clientX: 200, clientY: 50 })
-        fireEvent.pointerUp(cubeColorDot, { clientX: 320, clientY: 50 })
+        fireEvent.pointerUp(cubeColorDot, drop)
 
         expect(onCreateEdge).toHaveBeenCalledWith(expect.objectContaining({
             fromNodeId: 'color-1',
             toNodeId: 'cube-1',
             toPort: 'color'
         }))
+    })
+
+    // Regression test for the reason graph wiring was impossible on a phone.
+    // The drop used to be an onPointerUp handler on the input dot itself. On
+    // touch the browser grants the OUTPUT dot implicit pointer capture at
+    // pointerdown, so the pointerup is delivered back to the output dot and
+    // never reaches the input dot under the finger — that handler could not
+    // fire, ever. Drops now resolve to the nearest compatible port in graph
+    // space, so the release does not have to land on the target element at all.
+    //
+    // Deliberately does NOT stub setPointerCapture: the old drag tests passed
+    // green precisely because they mocked away the semantics that were broken.
+    it('creates an edge from a touch drag that releases NEAR a port, not on it', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1', graphX: 0, graphY: 0 })
+        const cubeNode = makeNode('geom.cube', { id: 'cube-1', graphX: 320, graphY: 0 })
+        const onCreateEdge = vi.fn()
+
+        const { container } = render(
+            <RawGraphSurface nodes={[colorNode, cubeNode]} edges={[]} onCreateEdge={onCreateEdge} />
+        )
+
+        const outputDot = container
+            .querySelector('.raw-graph-node-card:nth-of-type(1)')
+            .querySelector('span[title*="(color)"]')
+
+        const port = inputPortGraphPoint(cubeNode, 0)
+        const exact = clientForGraphPoint(container, port.x, port.y)
+
+        fireEvent.pointerDown(outputDot, {
+            button: 0,
+            pointerId: 7,
+            pointerType: 'touch',
+            clientX: 200,
+            clientY: 50
+        })
+        // Release ~20px short of the port centre, and on the window rather than
+        // on the input dot — a fingertip's worth of imprecision, and the target
+        // element never receives the event at all.
+        fireEvent.pointerUp(window, {
+            pointerId: 7,
+            pointerType: 'touch',
+            clientX: exact.clientX - 14,
+            clientY: exact.clientY - 14
+        })
+
+        expect(onCreateEdge).toHaveBeenCalledWith(expect.objectContaining({
+            fromNodeId: 'color-1',
+            fromPort: 'out',
+            toNodeId: 'cube-1',
+            toPort: 'color'
+        }))
+    })
+
+    it('does not create an edge when a drag is released far from every port', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1', graphX: 0, graphY: 0 })
+        const cubeNode = makeNode('geom.cube', { id: 'cube-1', graphX: 320, graphY: 0 })
+        const onCreateEdge = vi.fn()
+
+        const { container } = render(
+            <RawGraphSurface nodes={[colorNode, cubeNode]} edges={[]} onCreateEdge={onCreateEdge} />
+        )
+
+        const outputDot = container
+            .querySelector('.raw-graph-node-card:nth-of-type(1)')
+            .querySelector('span[title*="(color)"]')
+
+        fireEvent.pointerDown(outputDot, { button: 0, pointerId: 7, clientX: 260, clientY: 115 })
+        fireEvent.pointerUp(window, { pointerId: 7, clientX: 700, clientY: 600 })
+
+        expect(onCreateEdge).not.toHaveBeenCalled()
     })
 
     it('rejects incompatible port pairs (color -> number)', () => {
@@ -62,8 +156,10 @@ describe('RawGraphSurface', () => {
         expect(outputDot).toBeTruthy()
         expect(numberInputDot).toBeTruthy()
 
+        const port = inputPortGraphPoint(sinNode, 0)
         fireEvent.pointerDown(outputDot, { button: 0, clientX: 200, clientY: 50 })
-        fireEvent.pointerUp(numberInputDot, { clientX: 320, clientY: 50 })
+        // Exactly on the number input — proximity must not override the type check.
+        fireEvent.pointerUp(numberInputDot, clientForGraphPoint(container, port.x, port.y))
 
         expect(onCreateEdge).not.toHaveBeenCalled()
     })
@@ -85,6 +181,30 @@ describe('RawGraphSurface', () => {
         const wireSvg = paths[0].closest('svg')
         expect(wireSvg.style.height).not.toBe('100%')
         expect(wireSvg.style.overflow).toBe('visible')
+    })
+
+    // On a phone, centring a wide graph at 100% shows one card and no hint that
+    // anything else exists.
+    it('scales a graph wider than the viewport down to fit on first render', () => {
+        const wide = [
+            makeNode('value.number', { id: 'a', graphX: 0, graphY: 0 }),
+            makeNode('value.number', { id: 'b', graphX: 1500, graphY: 0 })
+        ]
+        const { container } = render(<RawGraphSurface nodes={wide} edges={[]} />)
+        const stage = container.querySelector('.raw-graph-stage')
+        const zoom = Number(/scale\(([-\d.]+)\)/.exec(stage.style.transform)[1])
+        // jsdom reports a zero-size rect, so the fit is skipped and zoom stays
+        // at 1 — assert the guard rather than a made-up number.
+        expect(zoom).toBeGreaterThan(0)
+        expect(zoom).toBeLessThanOrEqual(1)
+    })
+
+    it('never magnifies a graph that already fits', () => {
+        const small = [makeNode('value.number', { id: 'a', graphX: 0, graphY: 0 })]
+        const { container } = render(<RawGraphSurface nodes={small} edges={[]} />)
+        const stage = container.querySelector('.raw-graph-stage')
+        const zoom = Number(/scale\(([-\d.]+)\)/.exec(stage.style.transform)[1])
+        expect(zoom).toBeLessThanOrEqual(1)
     })
 
     it('supports zooming in and out with graph controls', () => {
@@ -134,12 +254,92 @@ describe('RawGraphSurface', () => {
             />
         )
 
-        const wire = container.querySelector('svg path')
-        const strokeBefore = wire.getAttribute('stroke')
-        fireEvent.pointerEnter(wire)
-        expect(wire.getAttribute('stroke')).toBe('#ff5555')
-        fireEvent.pointerLeave(wire)
-        expect(wire.getAttribute('stroke')).toBe(strokeBefore)
+        // Two paths per wire: [0] is the invisible 24px hit stroke that carries
+        // the pointer events (a 2px visible wire is unhittable with a finger),
+        // [1] is the visible one that changes colour.
+        const paths = container.querySelectorAll('svg path')
+        const hitPath = paths[0]
+        const visiblePath = paths[1]
+        expect(hitPath.getAttribute('stroke')).toBe('transparent')
+        expect(Number(hitPath.getAttribute('stroke-width'))).toBeGreaterThanOrEqual(24)
+
+        const strokeBefore = visiblePath.getAttribute('stroke')
+        fireEvent.pointerEnter(hitPath)
+        expect(visiblePath.getAttribute('stroke')).toBe('#ff5555')
+        fireEvent.pointerLeave(hitPath)
+        expect(visiblePath.getAttribute('stroke')).toBe(strokeBefore)
+    })
+
+    // Zooming out on a phone means tapping the zoom button repeatedly, and two
+    // quick taps bubbled to the surface's onDoubleClick — so zooming out opened
+    // the create palette on top of the graph.
+    it('does not open the create palette when the zoom controls are double-clicked', () => {
+        const onDoubleClick = vi.fn()
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { getByRole } = render(
+            <RawGraphSurface nodes={[colorNode]} edges={[]} onDoubleClick={onDoubleClick} />
+        )
+
+        fireEvent.doubleClick(getByRole('button', { name: 'Zoom out' }))
+        expect(onDoubleClick).not.toHaveBeenCalled()
+    })
+
+    it('still opens the create palette when empty canvas is double-clicked', () => {
+        const onDoubleClick = vi.fn()
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { container } = render(
+            <RawGraphSurface nodes={[colorNode]} edges={[]} onDoubleClick={onDoubleClick} />
+        )
+
+        fireEvent.doubleClick(container.querySelector('.raw-graph-surface'))
+        expect(onDoubleClick).toHaveBeenCalled()
+    })
+
+    // Pinch is the only zoom gesture that exists on a phone — wheel does not,
+    // and the fallback was two small corner buttons.
+    it('zooms with a two-finger pinch', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { container, getByText } = render(
+            <RawGraphSurface nodes={[colorNode]} edges={[]} />
+        )
+
+        const surface = container.querySelector('.raw-graph-surface')
+        expect(getByText('100%')).toBeTruthy()
+
+        fireEvent.pointerDown(surface, { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 100 })
+        fireEvent.pointerDown(surface, { pointerId: 2, pointerType: 'touch', clientX: 200, clientY: 100 })
+        // Fingers spread from 100px apart to 200px apart => 2x zoom.
+        fireEvent.pointerMove(window, { pointerId: 2, pointerType: 'touch', clientX: 300, clientY: 100 })
+
+        expect(getByText('200%')).toBeTruthy()
+
+        fireEvent.pointerUp(window, { pointerId: 1 })
+        fireEvent.pointerUp(window, { pointerId: 2 })
+    })
+
+    it('does not pan while a pinch is in progress', () => {
+        const colorNode = makeNode('value.color', { id: 'color-1' })
+        const { container } = render(<RawGraphSurface nodes={[colorNode]} edges={[]} />)
+
+        const surface = container.querySelector('.raw-graph-surface')
+        const stage = container.querySelector('.raw-graph-stage')
+
+        fireEvent.pointerDown(surface, { pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 100 })
+        fireEvent.pointerDown(surface, { pointerId: 2, pointerType: 'touch', clientX: 200, clientY: 100 })
+        const transformAtPinchStart = stage.style.transform
+
+        // Move both fingers the same distance: a pure translation, zero scale
+        // change. If the single-pointer pan handler were still live it would
+        // also apply its own delta and the transform would move twice.
+        fireEvent.pointerMove(window, { pointerId: 1, pointerType: 'touch', clientX: 140, clientY: 100 })
+        fireEvent.pointerMove(window, { pointerId: 2, pointerType: 'touch', clientX: 240, clientY: 100 })
+
+        const match = /translate\(([-\d.]+)px/.exec(stage.style.transform)
+        const startMatch = /translate\(([-\d.]+)px/.exec(transformAtPinchStart)
+        expect(Number(match[1]) - Number(startMatch[1])).toBeCloseTo(40, 1)
+
+        fireEvent.pointerUp(window, { pointerId: 1 })
+        fireEvent.pointerUp(window, { pointerId: 2 })
     })
 
     it('pans the graph when dragging empty space', () => {

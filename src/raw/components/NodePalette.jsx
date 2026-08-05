@@ -3,7 +3,9 @@ import { listNodeTypes } from '../../project/nodeRegistry.js'
 import { filterNodeTypesForSurface } from '../../project/graph/nodeSurfaceFilters.js'
 
 const PALETTE_WIDTH = 280
-const PALETTE_MAX_HEIGHT = 320
+// Must match .raw-node-palette's max-height in raw.css — they disagreed by
+// 40px, so the placement maths reserved space the palette never used.
+const PALETTE_MAX_HEIGHT = 280
 const PALETTE_OFFSET = 12
 
 const toDefinitionShim = (type) => {
@@ -29,14 +31,20 @@ const toDefinitionShim = (type) => {
     }
 }
 
+const clamp = (min, value, max) => Math.min(Math.max(value, min), max)
+
 function getPalettePosition(clickX, clickY) {
     const vw = window.innerWidth
     const vh = window.innerHeight
+    // On a phone the palette is as wide as the screen, so flipping it to the
+    // other side of the tap point cannot help — pin it to the left margin and
+    // let the CSS width clamp do the rest.
+    const width = Math.min(PALETTE_WIDTH, vw - 32)
     let x = clickX + PALETTE_OFFSET
     let y = clickY + PALETTE_OFFSET
-    if (x + PALETTE_WIDTH > vw - 16) x = clickX - PALETTE_WIDTH - PALETTE_OFFSET
+    if (x + width > vw - 16) x = clickX - width - PALETTE_OFFSET
     if (y + PALETTE_MAX_HEIGHT > vh - 16) y = vh - PALETTE_MAX_HEIGHT - 16
-    return { x: Math.max(16, x), y: Math.max(16, y) }
+    return { x: clamp(16, x, Math.max(16, vw - width - 16)), y: Math.max(16, y) }
 }
 
 export default function NodePalette({
@@ -116,7 +124,7 @@ export default function NodePalette({
         <div
             className="raw-node-palette-backdrop"
             role="presentation"
-            onMouseDown={(event) => {
+            onPointerDown={(event) => {
                 if (event.target === event.currentTarget) onClose()
             }}
         >
@@ -146,9 +154,20 @@ export default function NodePalette({
                                 <button
                                     type="button"
                                     className={`raw-node-palette-item${index === activeIndex ? ' is-active' : ''}`}
-                                    onMouseEnter={() => setActiveIndex(index)}
-                                    onMouseDown={(event) => {
+                                    onPointerEnter={(event) => {
+                                        // Touch synthesises a pointerenter right
+                                        // before the tap; moving the active row
+                                        // then is harmless, but a stray one during
+                                        // a scroll should not steal the highlight.
+                                        if (event.pointerType === 'mouse') setActiveIndex(index)
+                                    }}
+                                    onPointerDown={(event) => {
+                                        // preventDefault keeps focus in the search
+                                        // input on mouse. It is a no-op for touch,
+                                        // which is why this used to be onMouseDown
+                                        // and why the row never committed on a tap.
                                         event.preventDefault()
+                                        setActiveIndex(index)
                                         handleConfirm(definition)
                                     }}
                                 >

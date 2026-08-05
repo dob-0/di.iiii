@@ -14,6 +14,15 @@ const PORT_DOT_RADIUS = 5
 const GRAPH_MIN_ZOOM = 0.05
 const GRAPH_MAX_ZOOM = 8
 const GRAPH_ZOOM_STEP = 0.1
+// Wire drops resolve to the nearest compatible input port within this many
+// SCREEN pixels of the release point, rather than requiring the pointerup to
+// land on the 10px dot itself. Two reasons: a finger cannot hit a 10px target,
+// and on touch the browser gives the output dot implicit pointer capture, so
+// the pointerup is delivered there and NEVER to the input dot underneath —
+// which made graph wiring impossible on a phone rather than merely fiddly.
+const PORT_DROP_RADIUS_PX = 36
+// Breathing room left around the graph when it is first fitted to the viewport.
+const GRAPH_FIT_PADDING_PX = 24
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
@@ -76,6 +85,11 @@ export default function RawGraphSurface({
     const [isPanMoving, setIsPanMoving] = useState(false)
     const [hoveredWireId, setHoveredWireId] = useState(null)
     const dragOffsetRef = useRef({ x: 0, y: 0 })
+    // pendingWire mirrored into a ref: the window-level pointerup handler is
+    // registered once per drag and would otherwise close over a stale value.
+    const pendingWireRef = useRef(null)
+    const pointersRef = useRef(new Map())
+    const pinchRef = useRef(null)
     const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
     const hasFitRef = useRef(false)
     const [panX, setPanX] = useState(60)
@@ -118,19 +132,33 @@ export default function RawGraphSurface({
         applyViewport(cx - (cx - vp.panX) * scale, cy - (cy - vp.panY) * scale, clamped)
     }
 
-    // Center nodes in viewport on first render
+    // Fit the graph into the viewport on first render — centre AND scale.
+    // Centring alone left the zoom at 100%, which is fine on a 1440px desktop
+    // and useless on a 393px phone: a graph a few columns wide opens showing
+    // one card, with no indication that anything else exists. Zoom is capped at
+    // 1 so a small graph is never magnified, only shrunk to fit.
     useEffect(() => {
         if (hasFitRef.current || !containerRef.current || nodes.length === 0) return
         const rect = containerRef.current.getBoundingClientRect()
+        if (!rect.width || !rect.height) return
         const minX = Math.min(...nodes.map((n) => n.graphX ?? 0))
         const minY = Math.min(...nodes.map((n) => n.graphY ?? 0))
         const maxX = Math.max(...nodes.map((n) => (n.graphX ?? 0) + CARD_WIDTH))
         const maxY = Math.max(...nodes.map((n) => (n.graphY ?? 0) + cardHeight(n)))
+        const contentWidth = Math.max(1, maxX - minX)
+        const contentHeight = Math.max(1, maxY - minY)
+        const nextZoom = clamp(
+            Math.min(
+                (rect.width - GRAPH_FIT_PADDING_PX * 2) / contentWidth,
+                (rect.height - GRAPH_FIT_PADDING_PX * 2) / contentHeight,
+                1
+            ),
+            GRAPH_MIN_ZOOM,
+            GRAPH_MAX_ZOOM
+        )
         const cx = (minX + maxX) / 2
         const cy = (minY + maxY) / 2
-        const px = rect.width / 2 - cx * viewportRef.current.zoom
-        const py = rect.height / 2 - cy * viewportRef.current.zoom
-        applyViewport(px, py, viewportRef.current.zoom)
+        applyViewport(rect.width / 2 - cx * nextZoom, rect.height / 2 - cy * nextZoom, nextZoom)
         hasFitRef.current = true
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nodes.length])
@@ -152,6 +180,86 @@ export default function RawGraphSurface({
         }
         container.addEventListener('wheel', handleWheel, { passive: false })
         return () => container.removeEventListener('wheel', handleWheel)
+    }, [])
+
+    // Two-finger pinch zoom + pan. Wheel is the desktop equivalent and does not
+    // exist on a phone, so without this the only way to zoom was two 28px
+    // buttons in the corner.
+    useEffect(() => {
+        const container = containerRef.current
+        if (!container) return undefined
+        const pointers = pointersRef.current
+
+        const midpointOf = (points) => {
+            const rect = container.getBoundingClientRect()
+            return {
+                x: (points[0].x + points[1].x) / 2 - rect.left,
+                y: (points[0].y + points[1].y) / 2 - rect.top
+            }
+        }
+        const distanceOf = (points) => Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y)
+
+        const beginPinch = () => {
+            const points = [...pointers.values()]
+            if (points.length !== 2) return
+            const vp = viewportRef.current
+            const mid = midpointOf(points)
+            pinchRef.current = {
+                startDistance: Math.max(distanceOf(points), 1),
+                startZoom: vp.zoom,
+                // The graph-space point sitting under the initial midpoint. Keep
+                // it pinned there for the whole gesture and both zoom anchoring
+                // and two-finger panning fall out of the same equation.
+                anchorX: (mid.x - vp.panX) / vp.zoom,
+                anchorY: (mid.y - vp.panY) / vp.zoom
+            }
+            // A pinch is never also a pan or a node drag.
+            setIsPanning(false)
+            setIsPanMoving(false)
+        }
+
+        const endPinch = () => { pinchRef.current = null }
+
+        const down = (event) => {
+            pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+            if (pointers.size === 2) beginPinch()
+            else if (pointers.size > 2) endPinch()
+        }
+
+        const move = (event) => {
+            if (!pointers.has(event.pointerId)) return
+            pointers.set(event.pointerId, { x: event.clientX, y: event.clientY })
+            const pinch = pinchRef.current
+            if (!pinch) return
+            const points = [...pointers.values()]
+            if (points.length !== 2) return
+            event.preventDefault?.()
+            const nextZoom = clamp(
+                pinch.startZoom * (distanceOf(points) / pinch.startDistance),
+                GRAPH_MIN_ZOOM,
+                GRAPH_MAX_ZOOM
+            )
+            const mid = midpointOf(points)
+            applyViewport(mid.x - pinch.anchorX * nextZoom, mid.y - pinch.anchorY * nextZoom, nextZoom)
+        }
+
+        const up = (event) => {
+            pointers.delete(event.pointerId)
+            if (pointers.size < 2) endPinch()
+        }
+
+        container.addEventListener('pointerdown', down)
+        window.addEventListener('pointermove', move, { passive: false })
+        window.addEventListener('pointerup', up)
+        window.addEventListener('pointercancel', up)
+        return () => {
+            container.removeEventListener('pointerdown', down)
+            window.removeEventListener('pointermove', move)
+            window.removeEventListener('pointerup', up)
+            window.removeEventListener('pointercancel', up)
+            pointers.clear()
+            endPinch()
+        }
     }, [])
 
     useEffect(() => {
@@ -177,14 +285,45 @@ export default function RawGraphSurface({
         if (event.button !== 0) return
         event.stopPropagation()
         event.preventDefault()
+        // Touch pointers get implicit capture on this dot, which would keep
+        // every later pointer event retargeted here. Release it so the drag
+        // reads as a normal move across the surface.
+        if (event.pointerType !== 'mouse') {
+            try { event.currentTarget.releasePointerCapture(event.pointerId) } catch { /* not captured */ }
+        }
         const point = clientPointToGraphPoint(event.clientX, event.clientY)
-        setPendingWire({
+        const wire = {
             fromNodeId: node.id,
             fromPort: port.id,
             fromPortType: port.type,
             cursorX: point.x,
             cursorY: point.y
-        })
+        }
+        pendingWireRef.current = wire
+        setPendingWire(wire)
+    }
+
+    // Nearest compatible input port to a release point, or null. Distance is
+    // measured in screen pixels so the tolerance stays constant as you zoom.
+    const resolveWireDrop = (clientX, clientY) => {
+        const wire = pendingWireRef.current
+        if (!wire) return null
+        const point = clientPointToGraphPoint(clientX, clientY)
+        const radius = PORT_DROP_RADIUS_PX / viewportRef.current.zoom
+        let best = null
+        let bestDistance = radius
+        for (const node of nodes) {
+            if (node.id === wire.fromNodeId) continue
+            for (const port of getNodeInputs(node)) {
+                if (!arePortsCompatible(wire.fromPortType, port.type)) continue
+                const center = inputPortCenter(node, port.id)
+                const distance = Math.hypot(center.x - point.x, center.y - point.y)
+                if (distance > bestDistance) continue
+                bestDistance = distance
+                best = { toNodeId: node.id, toPort: port.id }
+            }
+        }
+        return best
     }
 
     const isDraggingWire = Boolean(pendingWire)
@@ -201,6 +340,8 @@ export default function RawGraphSurface({
     const handleSurfacePointerDown = (event) => {
         if (!shouldStartPan(event) || isDraggingWire) return
         if (event.detail >= 2) return
+        // A second finger landing turns the gesture into a pinch, not a pan.
+        if (pointersRef.current.size > 1 || pinchRef.current) return
         event.preventDefault()
         const vp = viewportRef.current
         panStartRef.current = { x: event.clientX, y: event.clientY, panX: vp.panX, panY: vp.panY }
@@ -218,14 +359,33 @@ export default function RawGraphSurface({
                 cursorY: point.y
             } : current)
         }
-        const up = () => setPendingWire(null)
+        const up = (event) => {
+            const wire = pendingWireRef.current
+            const target = resolveWireDrop(event.clientX, event.clientY)
+            pendingWireRef.current = null
+            setPendingWire(null)
+            if (!wire || !target) return
+            onCreateEdge?.({
+                fromNodeId: wire.fromNodeId,
+                fromPort: wire.fromPort,
+                toNodeId: target.toNodeId,
+                toPort: target.toPort
+            })
+        }
+        const cancel = () => {
+            pendingWireRef.current = null
+            setPendingWire(null)
+        }
         window.addEventListener('pointermove', move)
         window.addEventListener('pointerup', up)
+        window.addEventListener('pointercancel', cancel)
         return () => {
             window.removeEventListener('pointermove', move)
             window.removeEventListener('pointerup', up)
+            window.removeEventListener('pointercancel', cancel)
         }
-    }, [isDraggingWire])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isDraggingWire, nodes, onCreateEdge])
 
     useEffect(() => {
         if (!isDraggingNode) return undefined
@@ -244,6 +404,7 @@ export default function RawGraphSurface({
             onMoveNode?.(draggingNodeId, nextX, nextY)
         }
         const move = (event) => {
+            if (pinchRef.current) return
             const node = nodeById.get(draggingNodeId)
             if (!node) return
             const point = clientPointToGraphPoint(event.clientX, event.clientY)
@@ -269,6 +430,7 @@ export default function RawGraphSurface({
     useEffect(() => {
         if (!isPanning) return undefined
         const move = (event) => {
+            if (pinchRef.current) return
             setIsPanMoving(true)
             const dx = event.clientX - panStartRef.current.x
             const dy = event.clientY - panStartRef.current.y
@@ -291,26 +453,6 @@ export default function RawGraphSurface({
         }
     }, [isPanning])
 
-    const handleInputPointerUp = (event, node, port) => {
-        if (!pendingWire) return
-        event.stopPropagation()
-        if (pendingWire.fromNodeId === node.id) {
-            setPendingWire(null)
-            return
-        }
-        if (!arePortsCompatible(pendingWire.fromPortType, port.type)) {
-            setPendingWire(null)
-            return
-        }
-        onCreateEdge?.({
-            fromNodeId: pendingWire.fromNodeId,
-            fromPort: pendingWire.fromPort,
-            toNodeId: node.id,
-            toPort: port.id
-        })
-        setPendingWire(null)
-    }
-
     const wires = useMemo(() => {
         const out = []
         for (const edge of edges) {
@@ -330,6 +472,13 @@ export default function RawGraphSurface({
 
     const handleSectionDoubleClick = (event) => {
         if (!onDoubleClick) return
+        // Chrome that sits ON the surface still bubbles its clicks to it, so
+        // two quick taps on the zoom buttons — an entirely reasonable way to
+        // zoom out on a phone, where there is no wheel — counted as a
+        // double-click on the canvas and opened the create palette over the
+        // graph. shouldStartPan already excludes these controls from panning;
+        // node creation needs the same exclusion.
+        if (event.target?.closest?.('.raw-graph-zoom-controls')) return
         const graphPoint = clientPointToGraphPoint(event.clientX, event.clientY)
         onDoubleClick({ clientX: event.clientX, clientY: event.clientY, graphX: graphPoint.x, graphY: graphPoint.y })
     }
@@ -391,19 +540,32 @@ export default function RawGraphSurface({
                     >
                         {wires.map((wire) => {
                             const isHovered = hoveredWireId === wire.id
+                            const path = buildWirePath(wire.from, wire.to)
                             return (
-                                <path
-                                    key={wire.id}
-                                    d={buildWirePath(wire.from, wire.to)}
-                                    stroke={isHovered ? '#ff5555' : wire.color}
-                                    strokeWidth={isHovered ? 4 : 2}
-                                    fill="none"
-                                    opacity={0.85}
-                                    style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
-                                    onPointerEnter={() => setHoveredWireId(wire.id)}
-                                    onPointerLeave={() => setHoveredWireId(null)}
-                                    onClick={(e) => { e.stopPropagation(); onDeleteEdge?.(wire.id) }}
-                                />
+                                <g key={wire.id}>
+                                    {/* Invisible fat stroke carries the hit test. The visible
+                                        wire is 2px, which a finger cannot land on and which
+                                        made deletion — the only way to remove an edge —
+                                        desktop-only. */}
+                                    <path
+                                        d={path}
+                                        stroke="transparent"
+                                        strokeWidth={24}
+                                        fill="none"
+                                        style={{ pointerEvents: 'stroke', cursor: 'pointer' }}
+                                        onPointerEnter={() => setHoveredWireId(wire.id)}
+                                        onPointerLeave={() => setHoveredWireId(null)}
+                                        onClick={(e) => { e.stopPropagation(); onDeleteEdge?.(wire.id) }}
+                                    />
+                                    <path
+                                        d={path}
+                                        stroke={isHovered ? '#ff5555' : wire.color}
+                                        strokeWidth={isHovered ? 4 : 2}
+                                        fill="none"
+                                        opacity={0.85}
+                                        style={{ pointerEvents: 'none' }}
+                                    />
+                                </g>
                             )
                         })}
                         {pendingWire && pendingFromPos ? (
@@ -478,7 +640,8 @@ export default function RawGraphSurface({
                                         >
                                             <span
                                                 className="raw-graph-port-dot raw-graph-port-dot--in"
-                                                onPointerUp={(event) => handleInputPointerUp(event, node, port)}
+                                                data-node-id={node.id}
+                                                data-port-id={port.id}
                                                 style={{ background: getPortType(port.type).color, left: -PORT_DOT_RADIUS }}
                                                 title={`${port.label || port.id} (${port.type})`}
                                             />
@@ -494,6 +657,8 @@ export default function RawGraphSurface({
                                             <span className="raw-graph-port-label">{port.label || port.id}</span>
                                             <span
                                                 className="raw-graph-port-dot raw-graph-port-dot--out"
+                                                data-node-id={node.id}
+                                                data-port-id={port.id}
                                                 onPointerDown={(event) => handleOutputPointerDown(event, node, port)}
                                                 style={{ background: getPortType(port.type).color, right: -PORT_DOT_RADIUS }}
                                                 title={`${port.label || port.id} (${port.type})`}
