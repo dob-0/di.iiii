@@ -10,9 +10,10 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-**`dev` `e9929440` is AHEAD of `main` `b10c6e6d`.** Staging green, verified 12/12
-(`npm run verify:algovrithm:remote -- <host>`). Promoting is the owner's call. Several
-agents share this tree: re-check `git log`, **stage explicit paths**.
+**`dev` and `main` are LEVEL at `543de840`** — promoted 2026-08-05 on the owner's
+instruction. Both deploys green, both hosts 12/12 (`npm run verify:algovrithm:remote
+-- <host>`), and the phone header seen on prod at 390px. Several agents share this
+tree: re-check `git log`, **stage explicit paths**.
 
 ## Last session (2026-08-05 — algovrithm on a phone)
 
