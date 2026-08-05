@@ -30,6 +30,34 @@ const isThumbnailableImage = (mimeType) =>
   !NON_THUMBNAILABLE_MIME_TYPES.has(mimeType)
 const thumbnailPath = (filePath, width) => `${filePath}.thumb-${width}.webp`
 
+// Uploaded assets are served from the app's own origin with a client-supplied
+// mimeType, so any type the browser renders as a *document* is stored XSS: an
+// SVG carrying inline <script> executes against the logged-in session that
+// opens its URL. The bytes can't be rewritten (SVG is a legitimate texture
+// format, see mediaAssetTypes.js), so the document context is taken away
+// instead. Subresource loads (<img>, TextureLoader) ignore Content-Disposition,
+// so scenes still render; only top-level navigation changes, and it downloads.
+// Nothing legitimately renders an uploaded text/html or xml asset, so those
+// also lose their content type.
+const NEVER_RENDERED_MIME_TYPES = new Set([
+  'text/html',
+  'application/xhtml+xml',
+  'text/xml',
+  'application/xml'
+])
+const applyAssetSafetyHeaders = (res, mimeType) => {
+  const mime = String(mimeType || '').toLowerCase().split(';')[0].trim()
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  if (NEVER_RENDERED_MIME_TYPES.has(mime)) {
+    res.setHeader('Content-Type', 'application/octet-stream')
+    res.setHeader('Content-Disposition', 'attachment')
+    return
+  }
+  if (mime === 'image/svg+xml') {
+    res.setHeader('Content-Disposition', 'attachment')
+  }
+}
+
 const SPACE_KINDS = ['normal', 'global', 'sandbox']
 const normalizeSpaceKind = (value) => SPACE_KINDS.includes(value) ? value : 'normal'
 
@@ -436,6 +464,7 @@ function createSpaceStore({
 
   const serveFile = (res, filePath, contentType) => {
     res.setHeader('Content-Type', contentType || 'application/octet-stream')
+    applyAssetSafetyHeaders(res, contentType)
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
     const stream = fs.createReadStream(filePath)
     stream.on('error', (error) => {
@@ -544,4 +573,4 @@ function createSpaceStore({
   }
 }
 
-module.exports = { createSpaceStore }
+module.exports = { createSpaceStore, applyAssetSafetyHeaders }

@@ -48,7 +48,7 @@
         "wcc:promote": "node scripts/promote-wcc-projects.mjs",
         "check:input": "node scripts/input-check.mjs",
         "preview": "vite preview",
-        "lint": "eslint src --ext .js,.jsx",
+        "lint": "eslint src serverXR scripts shared vite.config.js eslint.config.js",
         "test": "vitest run",
         "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js serverXR/src/bundleContracts.test.js serverXR/src/installBundleContracts.test.js serverXR/src/fallbackContracts.test.js",
         "verify:surfaces": "node scripts/verify-surfaces.mjs",

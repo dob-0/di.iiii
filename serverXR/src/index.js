@@ -908,7 +908,13 @@ const requireAdminWrite = requireWriteRole('admin')
 const isSpaceOwnerOrAdminState = (state, meta) => {
   if (!state) return false
   if (state.role === 'admin') return true
-  return state.type === 'session' && Boolean(meta?.ownerUserId) && meta.ownerUserId === state.subject
+  if (state.type !== 'session') return false
+  // A sandbox carries no ownerUserId on purpose (it must not count toward the
+  // owned-space quota — see ensureOwnSandbox), so ownership is derived from
+  // the id instead, or an account would be locked out of its own sandbox.
+  if (meta?.kind === 'sandbox' && meta.id && !isGuestSubject(state.subject) &&
+    meta.id === getOwnSandboxSpaceId(state.subject)) return true
+  return Boolean(meta?.ownerUserId) && meta.ownerUserId === state.subject
 }
 
 // Route-level gate for space management writes. Sits on top of

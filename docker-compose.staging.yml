@@ -61,12 +61,24 @@ services:
   client:
     # Same reason as the server image above -- never fall back to prod's tag.
     image: ghcr.io/${REGISTRY_USER:-youruser}/dii-client:${IMAGE_TAG:-staging}
-    # No `ports:` override here -- base docker-compose.yml's client port is
-    # `${PORT:-80}:8080` (container side is 8080 since audit #27's non-root
-    # nginx switch); the staging directory's .env sets the host-side PORT to
-    # a non-80 value (e.g. 8081) instead, so this list is never appended to (Compose
-    # concatenates list-type fields across -f files, it doesn't replace them
-    # -- an extra `ports:` entry here would try to bind 80 a second time and
-    # collide with production's Caddy).
+    # Published to the host-gateway address only, never 0.0.0.0. The base file
+    # publishes `${PORT:-80}:8080` on every interface, and nothing here used to
+    # narrow it: http://<vps-ip>:8081/ served the whole staging SPA in cleartext,
+    # /serverXR/api/health included -- an unauthenticated host fingerprint (node
+    # version, kernel, cpu count, uptime), verified answering live 2026-08-05.
+    # Production's Caddy still reaches this stack, because it proxies to
+    # host.docker.internal:${STAGING_PORT} and that name resolves to the
+    # host-gateway address (docker0, 172.17.0.1 on this VPS -- confirmed with
+    # `getent hosts host.docker.internal` inside dii-caddy-1). Override
+    # STAGING_BIND_ADDR in the staging .env if this host's docker0 differs; a
+    # wrong value fails loudly at bind time rather than re-exposing the port.
+    # `!override` is required: Compose concatenates list-type fields across -f
+    # files, so a plain `ports:` here would ADD a binding instead of replacing
+    # the base file's. (`!reset`, as in docker-compose.caddy-hardened.yml,
+    # empties the field -- it cannot carry a replacement value; verified with
+    # `docker compose config` on the VPS, which rendered the client with no
+    # ports at all.)
+    ports: !override
+      - "${STAGING_BIND_ADDR:-172.17.0.1}:${PORT:-8081}:8080"
     cpus: '0.1'
     mem_limit: 64m

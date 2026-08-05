@@ -124,7 +124,23 @@ tar tzf ~/di-backups/dii-backup-YYYY-MM-DD_HHMM.tar.gz | head
 - **Not encrypted at rest.** The archives contain the full `users` table,
   `open_call_applications` (names, emails, phone numbers), and encrypted Drive
   tokens. On an encrypted-disk laptop that is acceptable; copying them anywhere
-  else means adding `age`/`gpg` encryption first.
+  else means adding `age`/`gpg` encryption first. Worse, the Drive tokens are
+  encrypted with a key derived from `AUTH_SESSION_SECRET`
+  (`serverXR/src/driveTokenStore.js`), which lives in the VPS `.env` and is
+  *not* in the archive — restoring onto a fresh host with a new secret leaves
+  every stored Drive token undecryptable, after the exact disaster the archive
+  exists for.
+  **Open decision, not yet implemented:** encrypt on the pulling machine with
+  `age -R recipients.txt` (public key on the VPS side, private key held only
+  off-box, so the trust arrow of "why pull, not push" stays intact), and store
+  the Drive/session key material in a password manager rather than in the
+  archive. Encrypting on the VPS instead would put the key back on the box the
+  scheme assumes is compromised.
+- **A failed nightly run notifies nobody by default.** `deploy/vps-backup.sh`
+  now exits non-zero, leaves `/root/backups/BACKUP-FAILED`, and POSTs to
+  `$BACKUP_ALERT_WEBHOOK_URL` if one is set — but no channel is configured yet,
+  so today the marker plus this pull's staleness exit (4) are the whole signal.
+  Which channel it should be is still an open choice.
 - **Only advances while the pulling machine is on.** See the trade-off above.
 - **A restore can resurrect deleted data** — there is no exclusion mechanism.
   Relevant the moment an account-deletion path exists; see

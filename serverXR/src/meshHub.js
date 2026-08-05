@@ -226,9 +226,20 @@ function initializeMesh(httpServer, config = {}) {
       ws.close(4403, 'Room full')
       return
     }
-    // Evict a stale duplicate id rather than colliding.
+    // Duplicate id: replace a socket that is already gone (the reconnect case
+    // this exists for), but never evict a LIVE holder on an open relay —
+    // `node=` is caller-supplied, so that let any visitor kick the keeper off
+    // and publish under its identity. The newcomer is rejected instead. A
+    // secret-gated room has no such asymmetry (every claimant proved the same
+    // secret), so there the newest claim still wins.
     const existing = room.get(nodeId)
     if (existing && existing !== ws) {
+      const holderIsLive =
+        existing.readyState === existing.OPEN || existing.readyState === existing.CONNECTING
+      if (holderIsLive && !roomSecret) {
+        ws.close(4409, 'Node id in use')
+        return
+      }
       try {
         existing.close(4000, 'Replaced')
       } catch {

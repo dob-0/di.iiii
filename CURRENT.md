@@ -10,7 +10,7 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-**`dev` and `main` are LEVEL at `543de840`** — promoted 2026-08-05, both deploys green,
+**`dev` and `main` are LEVEL at `535c03e4`** — promoted 2026-08-05, both deploys green,
 both hosts 12/12 (`npm run verify:algovrithm:remote -- <host>`), prod phone header seen
 at 390px. Several agents share this tree: re-check `git log`, **stage explicit paths**.
 
@@ -32,14 +32,14 @@ staging's `LIVE_API_TOKEN` (a real `PATCH` returned 200 on 2026-08-05).
 
 ## Open
 
-- **Trees:** `~/di.iiii` is on `feat/timeline-core`, 47 behind, uncommitted — its **:5173** serves a stale algovrithm; don't switch it under its owner. **:5174** = `~/di.iiii-algomerge` on `dev`, the current one. **:5175** = `dev-preview`, detached at `5f4cd3a9`, stale.
+- **Trees:** `~/di.iiii` drifts under whoever is working — today it is on `fix/audit-2026-08-05`, and **:5173** (the only server up) serves whatever is on its disk, so name the branch before you say "go look". `~/di.iiii-algomerge` is on `dev`; `dev-preview` is detached at `5f4cd3a9`, stale.
 - **Push when you finish** — `dev` self-deploys; a red `dev` freezes staging for everyone. Check `gh run list --branch dev --limit 1`.
 - The `open` space's card is blank — no `publishedProjectId` of its own; same hole algovrithm was in.
 - Studio's director page has never been seen with a real session — `/algovrithm/studio/director` is OAuth-gated; geometry verified, picture not.
 - Reel globe's world `#04050A` fails the piece's own purple-gap check (`sequences/index.js`) — artist's call. Keyboard scroll is dead app-wide (`/wcc` too); only `/algovrithm` was fixed.
 - The `br_id_ge ▾` chip covers the field's Armenian letter-row; narrow phones also collide the bottom links — owner's call.
 - Privacy calls owed: no account-deletion, export or session revocation; backups unencrypted. §7 blocks Stage 2 — `docs/ai/INBOX.md`.
-- **`feat/timeline-core` collides with this session and is UNPUSHED** (5 commits ahead of `dev`, in `~/di.iiii`): it moves the director to `src/raw/director/`, adds `view.director`/`view.timeline` nodes and `src/project/timeline/timelineCore.js` — so the Raw representation exists, but not on `dev`. It branched **before** the phone fix and still carries the old two-corner chrome, so a careless merge re-introduces the overlap; `chromeLayout.test.js` is what catches that. Land it deliberately.
+- **`feat/timeline-core` is UNPUSHED and checked out nowhere** (5 ahead of `dev`, 51 behind it): it moves the director to `src/raw/director/`, adds `view.director`/`view.timeline` nodes and `src/project/timeline/timelineCore.js` — so the Raw representation exists, but not on `dev`. It branched **before** the phone fix and still carries the old two-corner chrome, so a careless merge re-introduces the overlap; `chromeLayout.test.js` is what catches that. Land it deliberately.
 
 ## Deploy & validation — known fixes: [docs/ai/known-fixes.md](docs/ai/known-fixes.md), check before any bug hunt
 

@@ -17,7 +17,8 @@ export function createProjectSyncService() {
         onProjectOp,
         onReady,
         onOpen,
-        onError
+        onError,
+        onReadyError
     } = {}) => {
         if (!eventsUrl) {
             disconnect()
@@ -44,7 +45,12 @@ export function createProjectSyncService() {
             } catch {
                 return
             }
-            Promise.resolve(onReady(parsed)).catch(() => {})
+            // A rejected onReady means the post-connect catch-up failed while
+            // the stream already reads 'connected'. Dropping it here made that
+            // invisible, so hand it back to the caller.
+            Promise.resolve(onReady(parsed)).catch((error) => {
+                onReadyError?.(error)
+            })
         }
 
         source.addEventListener('project-op', handleProjectOp)

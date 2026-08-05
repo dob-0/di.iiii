@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import LiveProjectScene from '../../components/LiveProjectScene.jsx'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MadeWithBadge from '../../components/MadeWithBadge.jsx'
 import ProjectSwitcher from './ProjectSwitcher.jsx'
 import { createProjectSyncService } from '../services/projectSyncService.js'
@@ -11,7 +10,6 @@ import {
 } from '../services/projectsApi.js'
 import { applyProjectOps, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import useXrAr from '../../hooks/useXrAr.js'
-import StudioViewport from '../../studio/components/StudioViewport.jsx'
 import {
     buildPresentationPreviewDocument,
     PREVIEW_ENTER_EXHIBITION_KIND,
@@ -19,6 +17,13 @@ import {
 } from '../../utils/presentationPreviewDocument.js'
 import { bundleCodeFiles } from '../../utils/codeFilesBundle.js'
 import { computeFramingCamera, getPointsBoundingSphere } from '../../utils/cameraFraming.js'
+
+// A code-mode published page is an <iframe srcDoc> and nothing else -- it never
+// mounts a canvas. Statically importing the two scene renderers made it fetch
+// and evaluate the whole three/fiber/drei/xr chunk anyway (~1.6MB raw, measured
+// against first paint on /br_id_ge), so they load only when a scene renders.
+const LiveProjectScene = lazy(() => import('../../components/LiveProjectScene.jsx'))
+const StudioViewport = lazy(() => import('../../studio/components/StudioViewport.jsx'))
 
 const overlayButtonStyle = {
     appearance: 'none',
@@ -42,6 +47,14 @@ const overlayCardStyle = {
     boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
     backdropFilter: 'blur(12px)'
 }
+
+const loadingOverlay = (
+    <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '2rem' }}>
+        <div style={overlayCardStyle}>
+            <strong>Loading live experience...</strong>
+        </div>
+    </div>
+)
 
 // A scene's saved camera can go stale (e.g. left pointed off into empty
 // space mid-edit) — that's invisible to editors, who interactively orbit
@@ -327,33 +340,37 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     </div>
                 )
             ) : document && navMode === 'walk' ? (
-                <LiveProjectScene
-                    projectId={projectId}
-                    interactive
-                    showChrome
-                    title={viewerTitle}
-                    onExit={() => setNavMode('orbit')}
-                    exitLabel="← View mode"
-                />
+                <Suspense fallback={loadingOverlay}>
+                    <LiveProjectScene
+                        projectId={projectId}
+                        interactive
+                        showChrome
+                        title={viewerTitle}
+                        onExit={() => setNavMode('orbit')}
+                        exitLabel="← View mode"
+                    />
+                </Suspense>
             ) : document ? (
-                <StudioViewport
-                    document={document}
-                    selectedEntityId={null}
-                    onSelectEntity={null}
-                    cursors={{}}
-                    onCursorMove={null}
-                    onCursorLeave={null}
-                    cameraView={cameraView || resolveViewerCamera(document)}
-                    controlsRef={controlsRef}
-                    xrStore={xr.xrStore}
-                    onCameraChange={(nextView) => {
-                        if (entryView === 'fixed-camera') return
-                        setCameraView(nextView)
-                    }}
-                    enableNavigation={entryView !== 'fixed-camera' && !isPreview}
-                    showChrome={!isPreview}
-                    lowPower={isPreview}
-                />
+                <Suspense fallback={loadingOverlay}>
+                    <StudioViewport
+                        document={document}
+                        selectedEntityId={null}
+                        onSelectEntity={null}
+                        cursors={{}}
+                        onCursorMove={null}
+                        onCursorLeave={null}
+                        cameraView={cameraView || resolveViewerCamera(document)}
+                        controlsRef={controlsRef}
+                        xrStore={xr.xrStore}
+                        onCameraChange={(nextView) => {
+                            if (entryView === 'fixed-camera') return
+                            setCameraView(nextView)
+                        }}
+                        enableNavigation={entryView !== 'fixed-camera' && !isPreview}
+                        showChrome={!isPreview}
+                        lowPower={isPreview}
+                    />
+                </Suspense>
             ) : null}
 
             {state.status === 'ready' && entryView === 'scene' && navMode === 'orbit' && !isPreview ? (
@@ -380,13 +397,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 <MadeWithBadge variant="floating" />
             ) : null}
 
-            {state.status === 'loading' ? (
-                <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '2rem' }}>
-                    <div style={overlayCardStyle}>
-                        <strong>Loading live experience...</strong>
-                    </div>
-                </div>
-            ) : null}
+            {state.status === 'loading' ? loadingOverlay : null}
 
             {state.status === 'error' ? (
                 <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '2rem' }}>

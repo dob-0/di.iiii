@@ -1909,6 +1909,120 @@ describe('server write contracts', () => {
         expect(secondBody.offset).toBe(2)
         expect(secondBody.spaces).toEqual(unpagedBody.spaces.slice(2, 4))
     })
+
+    // Stored XSS: uploads pass on filename extension alone, so an SVG (or an
+    // `.png` declared text/html) lands with a script-bearing body and a
+    // client-chosen mimeType, then gets served same-origin. Assets must never
+    // reach the browser as a document.
+    it('serves script-capable assets as downloads, never as same-origin documents', async () => {
+        const server = await startServer()
+        const spaceId = 'xss-space'
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ slug: spaceId, label: 'XSS Space', permanent: true })
+        })
+        expect(created.status).toBe(201)
+
+        const svgBody = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'
+        const uploadAsset = async (blob, filename) => {
+            const form = new FormData()
+            form.append('asset', blob, filename)
+            const res = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets`, {
+                method: 'POST',
+                headers: withAuth(server.apiToken),
+                body: form
+            })
+            expect(res.status).toBe(200)
+            return (await res.json()).assetId
+        }
+
+        const svgId = await uploadAsset(new Blob([svgBody], { type: 'image/svg+xml' }), 'poster.svg')
+        const svgRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${svgId}`)
+        expect(svgRes.status).toBe(200)
+        expect(svgRes.headers.get('x-content-type-options')).toBe('nosniff')
+        expect(svgRes.headers.get('content-disposition')).toBe('attachment')
+
+        // Extension-only acceptance: `.png` is on the allowlist, so a declared
+        // text/html sails through the filter and would be echoed back as HTML.
+        const htmlId = await uploadAsset(new Blob([svgBody], { type: 'text/html' }), 'looks-like.png')
+        const htmlRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${htmlId}`)
+        expect(htmlRes.status).toBe(200)
+        expect(htmlRes.headers.get('content-type')).toBe('application/octet-stream')
+        expect(htmlRes.headers.get('content-disposition')).toBe('attachment')
+
+        // A real image keeps its type (and renders) — only nosniff is added.
+        const pngId = await uploadAsset(new Blob(['png-bytes'], { type: 'image/png' }), 'flat.png')
+        const pngRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${pngId}`)
+        expect(pngRes.headers.get('content-type')).toContain('image/png')
+        expect(pngRes.headers.get('content-disposition')).toBe(null)
+        expect(pngRes.headers.get('x-content-type-options')).toBe('nosniff')
+
+        // The project asset route serves the same blob store and needs the
+        // same headers.
+        const project = await createServerProject(server, spaceId, { title: 'XSS Project', slug: 'xss-project' })
+        const projForm = new FormData()
+        projForm.append('asset', new Blob([svgBody], { type: 'image/svg+xml' }), 'poster.svg')
+        const projUpload = await fetch(`${server.baseUrl}/api/projects/${project.id}/assets`, {
+            method: 'POST',
+            headers: withAuth(server.apiToken),
+            body: projForm
+        })
+        expect(projUpload.status).toBe(200)
+        const projAssetId = (await projUpload.json()).asset.id
+        const projRes = await fetch(`${server.baseUrl}/api/projects/${project.id}/assets/${projAssetId}`)
+        expect(projRes.status).toBe(200)
+        expect(projRes.headers.get('x-content-type-options')).toBe('nosniff')
+        expect(projRes.headers.get('content-disposition')).toBe('attachment')
+    })
+
+    // Sandboxes are created with no ownerUserId (they must not count toward the
+    // owned-space quota), and owner gating keyed on ownerUserId alone — so an
+    // account was 403'd from managing its own sandbox.
+    it('lets a signed-in account manage its own sandbox space', async () => {
+        const editorToken = 'sandbox-owner-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                EDITOR_API_TOKEN: editorToken,
+                EDITOR_ALLOWED_SPACES: 'seed-space'
+            }
+        })
+
+        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: editorToken })
+        })
+        expect(login.status).toBe(200)
+        const cookie = (login.headers.get('set-cookie') || '').split(';')[0]
+        const status = await fetch(`${server.baseUrl}/api/auth/session`, { headers: { Cookie: cookie } })
+        const { sandboxSpaceId } = await status.json()
+        expect(sandboxSpaceId).toMatch(/^sandbox-/)
+
+        // First access provisions it.
+        const scene = await fetch(`${server.baseUrl}/api/spaces/${sandboxSpaceId}/scene`, { headers: { Cookie: cookie } })
+        expect(scene.status).toBe(200)
+
+        const renamed = await fetch(`${server.baseUrl}/api/spaces/${sandboxSpaceId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ label: 'My Sandbox' })
+        })
+        expect(renamed.status).toBe(200)
+        await expect(renamed.json()).resolves.toMatchObject({ space: { label: 'My Sandbox' } })
+
+        // Someone else's sandbox stays someone else's.
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guestSandboxId = (await guest.json()).sandboxSpaceId
+        const stranger = await fetch(`${server.baseUrl}/api/spaces/${guestSandboxId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ label: 'Not Mine' })
+        })
+        expect(stranger.status).toBe(403)
+    })
 })
 
 describe('open-call application contracts', () => {

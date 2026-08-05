@@ -5,6 +5,7 @@ const { hashFileSha256, isSha256AssetId } = require('../assetHash')
 const { scrubImageMetadata } = require('../assetScrub')
 const { getSpaceBlobPaths, storeBlobFromFile } = require('../blobStore')
 const { createKeyedLock } = require('../asyncLock')
+const { applyAssetSafetyHeaders } = require('../spaceStore')
 const { findIdlessCreateOp } = require('../opValidation')
 
 const withProjectLock = createKeyedLock()
@@ -535,6 +536,7 @@ function registerProjectRoutes(router, {
         await fsp.access(servePath)
       }
       res.setHeader('Content-Type', meta?.mimeType || 'application/octet-stream')
+      applyAssetSafetyHeaders(res, meta?.mimeType)
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
       res.sendFile(servePath)
     } catch (error) {

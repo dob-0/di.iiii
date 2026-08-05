@@ -22,6 +22,7 @@ const require = createRequire(import.meta.url)
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
 
 const schema = require(path.join(ROOT, 'shared/projectSchema.cjs'))
+const sceneSchema = require(path.join(ROOT, 'shared/sceneSchema.cjs'))
 
 const {
   PROJECT_DOCUMENT_VERSION,
@@ -350,6 +351,63 @@ describe('ESM/CJS mirror equivalence', () => {
       const fromCjs = schema.invertProjectOps(schema.cloneValue(fixture), ops)
       const fromEsm = esm.invertProjectOps(esm.cloneValue(fixture), ops)
       expect(stripDeep(fromCjs)).toEqual(stripDeep(fromEsm))
+    }
+  })
+})
+
+// --- sceneSchema ESM ↔ CJS equivalence ---
+// serverXR/src/index.js loads shared/sceneSchema.cjs at boot and applies scene
+// ops with it, but only projectSchema had a drift check — a hand-mirror edit
+// that skipped sceneSchema.cjs let the server and the client normalize the same
+// scene differently, silently.
+
+describe('sceneSchema ESM/CJS mirror equivalence', () => {
+  const loadSceneEsm = () => import('../../src/shared/sceneSchema.js')
+
+  it('exports the same scene constants and defaults', async () => {
+    const esm = await loadSceneEsm()
+    expect(sceneSchema.SCENE_DATA_VERSION).toBe(esm.SCENE_DATA_VERSION)
+    expect([...sceneSchema.SCENE_SETTINGS_KEYS].sort()).toEqual([...esm.SCENE_SETTINGS_KEYS].sort())
+    expect(sceneSchema.defaultPresentation).toEqual(esm.defaultPresentation)
+    expect(sceneSchema.defaultGridAppearance).toEqual(esm.defaultGridAppearance)
+    expect(sceneSchema.defaultScene).toEqual(esm.defaultScene)
+  })
+
+  const SCENE_FIXTURES = [
+    {},
+    {
+      objects: [
+        { id: 'o1', type: 'box', position: [1, 2, 3] },
+        { id: 'o2', type: 'video', scale: ['nope', 2], scaleExpressions: [' t ', '', 5] }
+      ],
+      backgroundColor: '#123456',
+      gridSize: 20
+    },
+    { presentation: { mode: 'page', sourceType: 'url', fixedCamera: { fov: 'x', position: [9] } } }
+  ]
+
+  it('normalizes representative objects and presentations identically', async () => {
+    const esm = await loadSceneEsm()
+    for (const fixture of SCENE_FIXTURES) {
+      expect(sceneSchema.normalizeObjects(fixture.objects || []))
+        .toEqual(esm.normalizeObjects(fixture.objects || []))
+      expect(sceneSchema.normalizePresentation(fixture.presentation))
+        .toEqual(esm.normalizePresentation(fixture.presentation))
+    }
+  })
+
+  it('applies representative scene op batches identically', async () => {
+    const esm = await loadSceneEsm()
+    const ops = [
+      { type: 'addObject', payload: { object: { id: 'o9', type: 'box' } } },
+      { type: 'updateObject', payload: { objectId: 'o9', patch: { id: 'hijack', position: [4, 5, 6] } } },
+      { type: 'deleteObject', payload: { objectId: 'o1' } },
+      { type: 'setSceneSettings', payload: { backgroundColor: '#0f0f0f', presentation: { mode: 'page' } } }
+    ]
+    for (const fixture of SCENE_FIXTURES) {
+      const fromCjs = sceneSchema.applySceneOps(sceneSchema.cloneSceneValue(fixture), ops)
+      const fromEsm = esm.applySceneOps(esm.cloneSceneValue(fixture), ops)
+      expect(fromCjs).toEqual(fromEsm)
     }
   })
 })

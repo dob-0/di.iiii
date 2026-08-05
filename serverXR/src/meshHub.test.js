@@ -147,6 +147,39 @@ describe('mesh hub coexists with Socket.IO and speaks the co-presence protocol',
     await wait(50)
   })
 
+  // `node=` is caller-supplied on a relay anyone can connect to: evicting the
+  // incumbent let a visitor kick the keeper off and publish as it.
+  it('rejects a second claim on a live nodeId instead of evicting the holder', async () => {
+    const keeper = new WebSocket(`${wsBase}?room=r4&node=keeper`)
+    await new Promise((r) => keeper.on('open', r))
+
+    let keeperClose = null
+    keeper.on('close', (code) => { keeperClose = code })
+
+    const impostor = new WebSocket(`${wsBase}?room=r4&node=keeper`)
+    const impostorClose = await new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('impostor was not closed')), 3000)
+      impostor.on('close', (code) => {
+        clearTimeout(t)
+        resolve(code)
+      })
+    })
+    expect(impostorClose).toBe(4409)
+    expect(keeperClose).toBe(null)
+    expect(keeper.readyState).toBe(WebSocket.OPEN)
+
+    // The keeper still owns the id: its own traffic keeps flowing.
+    const peer = new WebSocket(`${wsBase}?room=r4&node=peer`)
+    await new Promise((r) => peer.on('open', r))
+    const evtP = nextMsg(peer, (m) => m.type === 'mesh:event')
+    keeper.send(JSON.stringify({ type: 'publish', channel: 'env', payload: { ok: true } }))
+    expect((await evtP).from).toBe('keeper')
+
+    keeper.close()
+    peer.close()
+    await wait(50)
+  })
+
   it('does not hijack upgrades on unrelated paths', async () => {
     const stray = new WebSocket(`ws://127.0.0.1:${port}${BASE}/not-the-mesh`)
     const outcome = await new Promise((resolve) => {

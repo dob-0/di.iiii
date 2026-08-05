@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import { smoothstep } from '../ritualClock.js'
@@ -594,6 +594,27 @@ export default function DispersionSphere({ progress }) {
         emissive: new THREE.Color('#000000'),
         emissiveIntensity: 0
     })), [])
+
+    // Free the GPU-side buffers when the sequence is torn down. The edit list
+    // loops unattended, so this piece is remounted once every ~53s all day —
+    // without this every pass leaks another set of geometries and materials.
+    useEffect(() => () => {
+        sphereGeometry.dispose()
+        shellGeometry.dispose()
+        material.dispose()
+        shellMaterials.forEach((shellMaterial) => shellMaterial.dispose())
+        floorMaterial.dispose()
+        stoneMaterial.dispose()
+        columnMaterials.forEach((columnMaterial) => columnMaterial.dispose())
+    }, [
+        sphereGeometry,
+        shellGeometry,
+        material,
+        shellMaterials,
+        floorMaterial,
+        stoneMaterial,
+        columnMaterials
+    ])
 
     useFrame(({ clock }) => {
         const time = clock.getElapsedTime()

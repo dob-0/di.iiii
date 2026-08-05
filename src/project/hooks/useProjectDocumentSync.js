@@ -31,6 +31,18 @@ const MAX_CONSECUTIVE_CONFLICT_RETRIES = 5
 // once at the very end (2026-07-17 perf audit).
 const FLUSH_THROTTLE_MS = 50
 
+// The server keeps a bounded op window (maxOpHistory, 500 by default), so a
+// client that fell further behind than that window can never be caught up from
+// ops alone. Jumping versionRef to latestVersion anyway makes the client look
+// current while missing history — a silent fork. Detect it instead: the
+// returned window has to start at the very next version after ours.
+const hasOpGap = (ops = [], fromVersion = 0, latestVersion = null) => {
+    if (!Number.isFinite(latestVersion) || latestVersion <= fromVersion) return false
+    const versions = ops.map((op) => Number(op?.version)).filter((version) => Number.isFinite(version))
+    if (!versions.length) return true
+    return Math.min(...versions) > fromVersion + 1
+}
+
 export function useProjectDocumentSync({
     projectId,
     store,
@@ -48,6 +60,12 @@ export function useProjectDocumentSync({
     const localClientIdRef = useRef(generateId(clientIdPrefix))
     const seenOpIdsRef = useRef(new Set())
     const seenOpOrderRef = useRef([])
+    // Read by callbacks that must not re-create themselves on every document
+    // change (reloadDocument is an effect dependency).
+    const stateRef = useRef(state)
+    useEffect(() => {
+        stateRef.current = state
+    }, [state])
 
     const rememberSeenOps = useCallback((ops = []) => {
         ops.forEach((op) => {
@@ -97,7 +115,15 @@ export function useProjectDocumentSync({
             if (nextVersion < versionRef.current) {
                 // The realtime catch-up (onReady) already advanced past this
                 // snapshot while the GET was in flight — applying it now would
-                // silently revert the document to a stale state.
+                // silently revert the document to a stale state. The load is
+                // still over though: returning without a terminal dispatch
+                // left `loading` true forever ("Loading project…" with a
+                // perfectly good document underneath it).
+                dispatch?.({
+                    type: 'load-success',
+                    document: stateRef.current?.document,
+                    version: versionRef.current
+                })
                 return
             }
             versionRef.current = nextVersion
@@ -148,12 +174,55 @@ export function useProjectDocumentSync({
         }
     }, [dispatch, rememberSeenOps])
 
+    // Takes the server's document wholesale, without the load-start/loading
+    // flash of reloadDocument -- used when ops alone can no longer reconcile
+    // the client (retention gap, post-conflict divergence).
+    const resyncDocument = useCallback(async () => {
+        const response = await getProjectDocument(projectId)
+        const nextVersion = Number(response?.version) || 0
+        versionRef.current = nextVersion
+        dispatch?.({
+            type: 'replace-document',
+            document: response.document,
+            version: nextVersion
+        })
+        // The snapshot only holds what the server accepted; edits still queued
+        // locally were applied optimistically and would visually vanish if they
+        // weren't put back on top (they are resubmitted, not lost).
+        if (pendingQueueRef.current.length) {
+            dispatch?.({ type: 'apply-ops', ops: [...pendingQueueRef.current] })
+        }
+    }, [dispatch, projectId])
+
+    // Brings the client level with the server from `fromVersion`, either from
+    // ops the caller already has (a 409 body) or by fetching the window.
+    // Returns 'applied' when remote ops were replayed on top of local ones (an
+    // order the server does not share -- the caller has to reconcile),
+    // 'resynced' when the document was taken from the server instead, and
+    // 'level' when there was nothing to catch up on.
+    const catchUp = useCallback(async (fromVersion, providedOps = null, providedLatestVersion = null) => {
+        let ops = Array.isArray(providedOps) ? providedOps : []
+        let latestVersion = Number(providedLatestVersion)
+        if (!ops.length) {
+            const response = await listProjectOps(projectId, fromVersion)
+            ops = Array.isArray(response?.ops) ? response.ops : []
+            latestVersion = Number(response?.latestVersion)
+        }
+        if (hasOpGap(ops, fromVersion, latestVersion)) {
+            await resyncDocument()
+            return 'resynced'
+        }
+        applyRemoteOps(ops, latestVersion)
+        return ops.length ? 'applied' : 'level'
+    }, [applyRemoteOps, projectId, resyncDocument])
+
     const flushQueue = useCallback(async () => {
         if (isFlushingRef.current || !projectId || !pendingQueueRef.current.length) {
             return
         }
         isFlushingRef.current = true
         let consecutiveConflicts = 0
+        let resyncAfterConflict = false
 
         try {
             while (pendingQueueRef.current.length) {
@@ -169,6 +238,14 @@ export function useProjectDocumentSync({
                         version: versionRef.current
                     })
                     dispatch?.({ type: 'pending-sync-error', error: null, authExpired: false })
+                    if (resyncAfterConflict) {
+                        resyncAfterConflict = false
+                        try {
+                            await resyncDocument()
+                        } catch (resyncError) {
+                            pushActivity(`Project resync failed: ${resyncError.message || 'unknown error'}`, 'error')
+                        }
+                    }
                 } catch (error) {
                     if (error?.status === 401) {
                         // Session expired mid-edit: retrying with the same
@@ -209,34 +286,42 @@ export function useProjectDocumentSync({
                             break
                         }
                         const latestVersion = Number(error?.data?.latestVersion)
-                        const pendingOps = Array.isArray(error?.data?.pendingOps) ? error.data.pendingOps : []
-                        if (Number.isFinite(latestVersion)) {
-                            versionRef.current = latestVersion
-                        }
+                        const serverOps = Array.isArray(error?.data?.pendingOps) ? error.data.pendingOps : []
+                        const baseVersion = versionRef.current
                         // Re-queue BEFORE the catch-up await: the batch is
                         // already spliced off the queue, so a throw inside
                         // listProjectOps would unwind past the unshift and
                         // silently drop ops the UI has already applied
                         // optimistically ("never drop an edit", above).
                         pendingQueueRef.current.unshift(...batch)
-                        if (pendingOps.length) {
-                            applyRemoteOps(pendingOps, latestVersion)
-                        } else {
-                            try {
-                                const catchUp = await listProjectOps(projectId, versionRef.current)
-                                applyRemoteOps(catchUp.ops || [], catchUp.latestVersion)
-                            } catch (catchUpError) {
-                                pushActivity(`Project sync failed: ${catchUpError.message || 'catch-up failed'}`, 'error')
-                                dispatch?.({
-                                    type: 'pending-sync-error',
-                                    error: catchUpError.message || 'Project sync failed.'
-                                })
-                                clearTimeout(retryTimerRef.current)
-                                retryTimerRef.current = setTimeout(() => {
-                                    void flushQueue()
-                                }, SYNC_RETRY_DELAY_MS)
-                                break
+                        // The conflict body carries the server's whole retained
+                        // op window, not just what this client missed --
+                        // replaying ops already baked into the loaded snapshot
+                        // would apply them a second time.
+                        const missedOps = serverOps.filter((op) => {
+                            const version = Number(op?.version)
+                            return !Number.isFinite(version) || version > baseVersion
+                        })
+                        try {
+                            if (await catchUp(baseVersion, missedOps, latestVersion) === 'applied') {
+                                // Remote ops just landed on top of the local
+                                // ones, but the resubmit below puts the local
+                                // ones on top of the remote ones server-side.
+                                // Only the server's order is authoritative, so
+                                // take its document once the resubmit lands.
+                                resyncAfterConflict = true
                             }
+                        } catch (catchUpError) {
+                            pushActivity(`Project sync failed: ${catchUpError.message || 'catch-up failed'}`, 'error')
+                            dispatch?.({
+                                type: 'pending-sync-error',
+                                error: catchUpError.message || 'Project sync failed.'
+                            })
+                            clearTimeout(retryTimerRef.current)
+                            retryTimerRef.current = setTimeout(() => {
+                                void flushQueue()
+                            }, SYNC_RETRY_DELAY_MS)
+                            break
                         }
                         continue
                     }
@@ -261,7 +346,7 @@ export function useProjectDocumentSync({
         } finally {
             isFlushingRef.current = false
         }
-    }, [applyRemoteOps, dispatch, projectId, pushActivity, rememberSeenOps])
+    }, [catchUp, dispatch, projectId, pushActivity, rememberSeenOps, resyncDocument])
 
     // Coalesces bursts of applyLocalOps calls (see FLUSH_THROTTLE_MS above)
     // into one flushQueue() per window, instead of one per call.
@@ -325,8 +410,18 @@ export function useProjectDocumentSync({
             },
             onReady: async () => {
                 dispatch?.({ type: 'scene-stream-state', value: 'connected', error: null })
-                const catchUp = await listProjectOps(projectId, versionRef.current)
-                applyRemoteOps(catchUp.ops || [], Number(catchUp.latestVersion))
+                await catchUp(versionRef.current)
+            },
+            // A failed post-connect catch-up used to be swallowed, leaving the
+            // stream reading "connected" while the document sat silently
+            // behind the server.
+            onReadyError: (error) => {
+                dispatch?.({
+                    type: 'scene-stream-state',
+                    value: 'degraded',
+                    error: 'Project catch-up failed — reconnecting.'
+                })
+                pushActivity(`Project catch-up failed: ${error?.message || 'unknown error'}`, 'error')
             },
             onOpen: () => {
                 dispatch?.({ type: 'scene-stream-state', value: 'connecting', error: null })
@@ -343,7 +438,7 @@ export function useProjectDocumentSync({
         return () => {
             syncService.disconnect()
         }
-    }, [applyRemoteOps, dispatch, projectId])
+    }, [applyRemoteOps, catchUp, dispatch, projectId, pushActivity])
 
     const syncState = useMemo(() => ({
         presenceState: state?.presenceState || 'disconnected',

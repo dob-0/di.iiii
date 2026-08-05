@@ -75,6 +75,12 @@ jobs:
       - name: Check for silent hardcoded fallback patterns
         run: npm run check:fallback-patterns
 
+      # Guards the production white-screen/TDZ class: a package that imports
+      # three but sits outside the three-vendor manualChunks group is invisible
+      # in dev and fatal in the built bundle.
+      - name: Check three-vendor chunk allowlist
+        run: npm run check:three-vendor
+
       - name: Check AI docs
         run: npm run docs:ai:check
 
