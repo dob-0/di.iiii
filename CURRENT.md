@@ -10,10 +10,9 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-**`origin/dev` = `05efc4fd`** (staging green, self-reports that commit). **`origin/main`
-is still `535c03e4`** — NOT promoted. `f74b7184` is committed locally on
-`fix/audit-2026-08-05` and **unpushed**. Several agents share this tree: re-check
-`git log`, **stage explicit paths**.
+**`origin/dev` = `2db19c3f`** — pushed 2026-08-05, deploy 31041517118 green (5/5),
+staging self-reports that commit. **`origin/main` is still `535c03e4`** — NOT promoted.
+Several agents share this tree: re-check `git log`, **stage explicit paths**.
 
 ## Last session (2026-08-05 — full audit, then the six decisions)
 
