@@ -10,7 +10,7 @@ import jsxA11y from 'eslint-plugin-jsx-a11y'
 const nodeRules = {
     'no-unused-vars': ['warn', { args: 'none', ignoreRestSiblings: true }],
     'no-empty': ['error', { allowEmptyCatch: true }],
-    'no-extra-boolean-cast': 'off'
+    'no-extra-boolean-cast': 'error'
 }
 
 // vitest runs with `globals: true` (vite.config.js), so specs use these without importing.
@@ -137,7 +137,7 @@ export default [
             ...js.configs.recommended.rules,
             ...nodeRules,
             // NUL is matched deliberately when sanitizing path globs (space-sync.mjs).
-            'no-control-regex': 'off'
+            'no-control-regex': 'error'
         }
     },
     {

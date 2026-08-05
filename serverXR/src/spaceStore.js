@@ -220,16 +220,16 @@ function createSpaceStore({
       }
       const nextSlug      = 'slug'             in updates ? (updates.slug ?? null)                                                                    : row.slug
       const nextLabel     = 'label'            in updates ? (updates.label ?? '')                                                                    : row.label
-      const nextPermanent = 'permanent'        in updates ? (Boolean(updates.permanent) ? 1 : 0)                                                    : row.permanent
+      const nextPermanent = 'permanent'        in updates ? (updates.permanent ? 1 : 0)                                                             : row.permanent
       const nextEdits     = 'allowEdits'       in updates ? (updates.allowEdits !== false ? 1 : 0)                                                  : row.allow_edits
-      const nextPublic    = 'isPublic'         in updates ? (Boolean(updates.isPublic) ? 1 : 0)                                                      : row.is_public
+      const nextPublic    = 'isPublic'         in updates ? (updates.isPublic ? 1 : 0)                                                               : row.is_public
       const nextKind      = 'kind'             in updates ? normalizeSpaceKind(updates.kind)                                                          : normalizeSpaceKind(row.kind)
       const nextPublished = 'publishedProjectId' in updates ? (updates.publishedProjectId ?? null)                                                   : row.published_project_id
       const nextPreview   = 'previewImageAssetId' in updates ? (updates.previewImageAssetId ?? null)                                                 : row.preview_image_asset_id
       const nextVersion   = 'sceneVersion'     in updates ? (Number.isFinite(Number(updates.sceneVersion)) ? Number(updates.sceneVersion) : row.scene_version) : row.scene_version
       const nextTouched   = updates.touch !== false ? now : row.last_touched_at
       const nextOwner     = 'ownerUserId'      in updates ? (updates.ownerUserId ?? null)                                                            : row.owner_user_id
-      const nextInscribe  = 'openInscriptions' in updates ? (Boolean(updates.openInscriptions) ? 1 : 0)                                              : row.open_inscriptions
+      const nextInscribe  = 'openInscriptions' in updates ? (updates.openInscriptions ? 1 : 0)                                                       : row.open_inscriptions
       update.run(nextSlug, nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, nextInscribe, spaceId)
       return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe })
     })()

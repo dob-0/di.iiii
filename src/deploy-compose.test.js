@@ -213,6 +213,46 @@ describe('nginx actually compresses through the Caddy front', () => {
     })
 })
 
+// Regression guard: the base compose publishes the client as `${PORT:-80}:8080`
+// on every interface, and docker-compose.staging.yml used to leave that alone —
+// so http://<vps-ip>:8081/ served the entire staging SPA in cleartext, and
+// /serverXR/api/health answered an unauthenticated host fingerprint (node
+// version, kernel, cpu count, uptime). Verified answering live 2026-08-05, and
+// verified refusing after the fix. Caddy still reaches the stack because it
+// proxies to host.docker.internal, which resolves to the same host-gateway
+// address the port is now bound to.
+describe('staging is not published to the public internet', () => {
+    const staging = read('docker-compose.staging.yml')
+    const base = read('docker-compose.yml')
+
+    it('replaces the base port publish rather than appending to it', () => {
+        // Compose CONCATENATES list-type fields across -f files, so a plain
+        // `ports:` here would add a second binding and leave the wide one live.
+        // `!reset` cannot carry a replacement value; `!override` can.
+        expect(staging).toMatch(/ports:\s*!override/)
+        expect(staging).not.toMatch(/ports:\s*!reset/)
+    })
+
+    it('binds to a host-gateway address, never to every interface', () => {
+        const publish = staging.match(/ports:\s*!override\s*\n\s*-\s*"([^"]+)"/)
+        expect(publish).not.toBeNull()
+        // host_ip:host_port:container_port. Not a segment count — `${VAR:-x}`
+        // carries its own colon — so match the shape: a bind address that is a
+        // ${STAGING_BIND_ADDR} default, then a host port, then 8080.
+        expect(publish[1]).toMatch(/^\$\{STAGING_BIND_ADDR:-[\d.]+\}:/)
+        expect(publish[1]).not.toMatch(/^0\.0\.0\.0:/)
+        // Compose placeholders carry their own colons, so collapse them before
+        // counting. A two-segment publish (`"8081:8080"`) is the wide binding.
+        const shape = publish[1].replace(/\$\{[^}]*\}/g, 'X').split(':')
+        expect(shape).toHaveLength(3)
+        expect(shape[2]).toBe('8080')
+    })
+
+    it('leaves the base file publishing normally, since prod strips it elsewhere', () => {
+        expect(base).toMatch(/\$\{PORT:-80\}:8080/)
+    })
+})
+
 // Regression guard: vps-restore.sh used to run
 //   rm -rf <live data> && tar xzf <archive>
 // in a single shell, so a truncated or corrupt archive deleted production and

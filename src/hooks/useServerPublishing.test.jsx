@@ -18,7 +18,16 @@ const createProps = (overrides = {}) => ({
     }],
     getAssetBlob: vi.fn().mockResolvedValue(new Blob(['image'], { type: 'image/webp' })),
     getAssetSourceUrl: vi.fn().mockReturnValue('/serverXR/api/spaces/recordar-platform/assets/asset-1'),
-    uploadAssetToServer: vi.fn().mockResolvedValue({ assetId: 'asset-1' }),
+    // Shape matches what useAssetPipeline's uploadAssetToServer actually
+    // resolves to — an asset entry keyed `id`, not `assetId`. The stub said
+    // `assetId` and nothing noticed, because the result was thrown away.
+    uploadAssetToServer: vi.fn().mockResolvedValue({
+        id: 'asset-1',
+        name: 'poster.webp',
+        mimeType: 'image/webp',
+        size: 5,
+        url: '/serverXR/api/spaces/recordar-platform/assets/asset-1'
+    }),
     setServerAssetSyncProgress: vi.fn(),
     markServerSync: vi.fn(),
     applyRemoteScene: vi.fn(),
@@ -63,6 +72,23 @@ describe('useServerPublishing', () => {
             mimeType: 'image/webp',
             trackPending: false
         }))
+    })
+
+    it('refuses to publish when an upload resolves without an asset entry', async () => {
+        // uploadAssetToServer returns null on its guard clause (no spaceId, no
+        // file) WITHOUT throwing. syncAssetsForPublish used to ignore the
+        // result entirely, so a wholly failed asset sync still ended in
+        // "Scene synced to server." — publish must fail instead.
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+            ok: false,
+            headers: { get: () => 'text/html' }
+        }))
+        const props = createProps({
+            uploadAssetToServer: vi.fn().mockResolvedValue(null)
+        })
+        const { result } = renderHook(() => useServerPublishing(props))
+
+        await expect(result.current.syncAssetsForPublish()).rejects.toThrow(/did not upload/)
     })
 
     it('skips re-uploading when the current server copy is already available', async () => {

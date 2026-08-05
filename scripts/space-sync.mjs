@@ -136,6 +136,11 @@ const globToRe = (g) => new RegExp('^' + g
   .replace(/[.+^${}()|[\]\\]/g, '\\$&')
   .replace(/\*\*/g, '\u0000')
   .replace(/\*/g, '[^/]*')
+  // NUL is the placeholder set two lines up, so matching it here is the
+  // point. Disabled on this line only -- the rule stays on for the rest of
+  // the tree, where a control character in a regex is far likelier to be a
+  // mistake (see the header comment above about the literal-NUL incident).
+  // eslint-disable-next-line no-control-regex
   .replace(/\u0000/g, '.*') + '$')
 
 const matchGlobs = (files, patterns) => {
