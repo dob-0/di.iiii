@@ -4,103 +4,43 @@
 Updated at the end of every session. Replace content — do not append.
 
 active_branch: dev
-lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (live) — promote only after staging verify
+lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (live)
 
 ---
 
 ## Last commit
 
-**`dev` is AHEAD of `main`** — `main` sits at `b10c6e6d` (promoted 2026-08-05 on
-the owner's instruction; both hosts verified 12/12 by
-`npm run verify:algovrithm:remote -- <host>`). The phone-overlap fix is on `dev`
-and staging only; promoting it is the owner's call.
-Several agents share this tree: re-check `git log`, **stage explicit paths**.
+**`dev` `e1d26b16` is AHEAD of `main` `b10c6e6d`.** Staging green, verified 12/12
+(`npm run verify:algovrithm:remote -- <host>`). Promoting to `main` is the owner's
+call, not a routine step. Several agents share this tree: re-check `git log`,
+**stage explicit paths**.
 
 ## Last session (2026-08-05 — algovrithm on a phone)
 
-- **The top bar overlapped itself on a phone.** The title block and the buttons
-  were siblings in separate corners, so the FULL SCREEN pill wrapped into a
-  circle over the word "algovrithm". One flex row now; desktop was always clean,
-  which is why it survived.
-- **Author-only furniture left the audience's header** — the WebXR diagnostic
-  paragraph moved to the bottom authoring stack, and the "press H" hint is
-  hidden where there is no keyboard to press.
-- **The browser guard shipped with a hole and was fixed:** it pressed H before
-  measuring, which opens the panel and deletes the hint, so it passed on a build
-  that visibly overlapped. Measures both panel states now.
-- **algovrithm's prod card has a preview** (the reel-globe frame). It was blank
-  because a code space has no `publishedProjectId` and so can never reach the
-  automatic branch. `open` is still in that hole — see below.
-- **Rule written:** every space gets an automatic preview, the owner can
-  override it and get back to automatic — golden_rules.md, with a one-liner that
-  audits a deployed host.
-
-## Previous session (2026-08-04, third — algovrithm front door)
-
-- **`/algovrithm` is public and in Studio** — the space row didn't exist on
-  staging or prod; created, `isPublic`, and given a real captured frame as its
-  card preview.
-- **The page is the artist's statement and nothing else.** Three rounds of
-  cutting removed three vocabularies (repo paths → timeline/timecodes → the beat
-  names themselves, which are techniques). Costs stated in the file's header.
-- **The piece is now the page's ground** — canvas fixed full-viewport behind the
-  text, scrim 0.62 → 0.9 once the statement is on screen (two beats are WHITE);
-  measured ink 15.53:1, dim 4.71:1 across the whole 53s loop.
-- **Four defects only a human pass found:** the page never scrolled (`#root` is
-  `position: fixed`); the canvas painted into 66% of its frame at DPR 1.5
-  (`paintFrame` reset the transform); Space Mono had no `@font-face` anywhere,
-  so nobody had ever seen the page in its typeface; reduced-motion opened on a
-  black frame (hold now 11.5s, scored across every frame).
-- **Two `--avl-*` tokens failed the piece's own `paletteWarning()`** under a
-  comment claiming they passed. Fixed; a guard now reads every token through it.
+- Top bar overlapped itself on a phone — title and buttons were siblings in separate corners, so FULL SCREEN wrapped into a circle over the word "algovrithm"; one flex row now, and desktop was always clean, which is why it survived being looked at.
+- Author-only furniture left the audience's header: WebXR diagnostic moved to the bottom authoring stack, "press H" hint hidden where there is no keyboard.
+- My own browser guard shipped with a hole — it pressed H before measuring, which deletes the hint, so it passed on a build that visibly overlapped; it now measures both panel states, and I reproduced the bug to watch it fail.
+- algovrithm's prod card has a preview (the reel-globe frame) — a code space has no `publishedProjectId`, so it can never reach the automatic branch.
+- Rule written in golden_rules.md: every space gets an automatic preview, the owner can override it and get back to automatic; includes a host-audit one-liner.
 
 ## What works
 
-Studio (six panels + phone), Beta, Raw, WCC, viewer; auth (session-cookie,
-roles, OAuth-first) + open-space/sandbox grants; Open Jam and vanity links live;
-deploy via `git push origin dev|main`; nightly VPS backups + daily off-box pull.
+Studio (six panels + phone), Beta, Raw, WCC, viewer; auth (session-cookie, roles,
+OAuth-first) + open-space/sandbox grants; Open Jam and vanity links live; deploy
+via `git push origin dev|main`; nightly VPS backups + daily off-box pull.
 
 ## Open
 
-### Handoff — read before you push (2026-08-05)
-
-- **The shared checkout `~/di.iiii` is NOT on `dev`.** It sits on
-  `feat/timeline-core`, 40 behind, with uncommitted work and an untracked
-  `spaces/algovrithm/`. Its dev server on **:5173** has therefore been serving a
-  fortnight-old algovrithm. Whoever owns that branch: land or rebase it, then
-  say so here. Do not switch that tree's branch under them.
-- **:5175 is a second dev server** on `.claude/worktrees/dev-preview`, pinned at
-  `dev`, for looking at the current app without touching :5173. Remove the
-  worktree when it stops being useful.
-- **Push when you finish.** `dev` deploys itself to staging; a red `dev` freezes
-  staging for everyone (it sat two commits stale for ~30min today because one
-  test asserted the same wrong literal the code used). Check
-  `gh run list --branch dev --limit 1` after pushing rather than assuming.
-- **`main` promotion is the owner's call**, not a routine step. Done once, on
-  2026-08-05, when asked: `git push origin dev:main` (fast-forward), then the
-  `algovrithm` space created + `isPublic` on prod — it did not exist there at
-  all, which is why it was missing from the public listing.
-- R3F “Hooks can only be used within the Canvas component!” on a page you did
-  not change means a dev server predating `593802ea` — restart it, do not debug
-  the component. See known-fixes.
-
-- **`LIVE_API_TOKEN` (staging, `serverXR/.env.local`) is still stale** — 401. It is
-  NOT what kept staging's br_id_ge old: that was a missing `DI_SPACE_TOKEN_STAGING`
-  CI secret, now set, and both tiers are content-identical. Use `PROD_API_TOKEN`
-  for prod. The GitHub App secrets are DONE — `configured: true` on both tiers.
-- **algovrithm's WebGL hero is written but never run** (`heroField.js`, ports
-  the piece's shaders). One movement at a time at DPR 1.5; owner's go awaited.
-- **The `open` space's card is blank** — it forwards into a shared jam project
-  and so has no `publishedProjectId` of its own, which is the branch the
-  automatic preview needs. Same hole algovrithm was in. See the preview rule in
-  golden_rules.md.
-- **Reel globe's world `#04050A` fails the purple-gap check in the piece itself**
-  (`sequences/index.js`) — artist's call. Keyboard scroll is dead app-wide
-  (`/wcc` too); only `/algovrithm` was fixed.
-- **The `br_id_ge ▾` chip covers the field's Armenian letter-row**; narrow
-  phones also collide the bottom links. Owner's call — published-project layout.
-- Privacy calls owed: no account-deletion, export or session revocation; backups
-  unencrypted. §7 sign-off blocks Stage 2. `docs/ai/INBOX.md`.
+- **Trees:** `~/di.iiii` is on `feat/timeline-core`, 47 behind, uncommitted — its **:5173** serves a stale algovrithm; don't switch it under its owner. **:5174** = `~/di.iiii-algomerge` on `dev`, the current one. **:5175** = `dev-preview`, detached at `5f4cd3a9`, stale.
+- **Push when you finish** — `dev` self-deploys; a red `dev` freezes staging for everyone. Check `gh run list --branch dev --limit 1`.
+- The `open` space's card is blank — no `publishedProjectId` of its own; same hole algovrithm was in.
+- Studio's director page has never been seen with a real session — `/algovrithm/studio/director` is OAuth-gated; geometry verified, picture not.
+- `LIVE_API_TOKEN` (staging) is stale, 401 — use `PROD_API_TOKEN` for prod; GitHub App secrets are done on both tiers.
+- Reel globe's world `#04050A` fails the piece's own purple-gap check (`sequences/index.js`) — artist's call.
+- Keyboard scroll is dead app-wide (`/wcc` too); only `/algovrithm` was fixed.
+- The `br_id_ge ▾` chip covers the field's Armenian letter-row; narrow phones also collide the bottom links — owner's call.
+- Privacy calls owed: no account-deletion, export or session revocation; backups unencrypted. §7 blocks Stage 2 — `docs/ai/INBOX.md`.
+- **`feat/timeline-core` collides with this session and is UNPUSHED** (5 commits ahead of `dev`, in `~/di.iiii`): it moves the director to `src/raw/director/`, adds `view.director`/`view.timeline` nodes and `src/project/timeline/timelineCore.js` — so the Raw representation exists, but not on `dev`. It branched **before** the phone fix and still carries the old two-corner chrome, so a careless merge re-introduces the overlap; `chromeLayout.test.js` is what catches that. Land it deliberately.
 
 ## Known fixes → [docs/ai/known-fixes.md](docs/ai/known-fixes.md) — check before any bug hunt.
 
