@@ -10,9 +10,10 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-**`origin/dev` = `2db19c3f`** — pushed 2026-08-05, deploy 31041517118 green (5/5),
-staging self-reports that commit. **`origin/main` is still `535c03e4`** — NOT promoted.
-Several agents share this tree: re-check `git log`, **stage explicit paths**.
+**`dev` and `main` are LEVEL at `fed578f9`** — promoted 2026-08-05, both deploys green
+(5/5), both hosts self-report the commit. Prod verified after promotion: guest session
+issues (the new token_version path), mesh still open, code-mode fetches no `three-vendor`,
+scene + door **looked at**. Several agents share this tree: **stage explicit paths**.
 
 ## Last session (2026-08-05 — full audit, then the six decisions)
 
