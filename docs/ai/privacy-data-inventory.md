@@ -133,6 +133,6 @@ decision, and several need code before a policy could truthfully describe them.
 
 `docs/architecture/SPEC_url_architecture_and_tree_addressing.md:104` parks it at
 `/-/privacy` on the public host. Until that spec is signed off, wiring `/privacy`
-means minting a URL the spec intends to redirect. `docs/promo/SUSTAINABILITY.md:19`
+means minting a URL the spec intends to redirect. The sustainability doc (now private, `di.iiii-ops/promo/SUSTAINABILITY.md`)
 also owes a `/terms` page covering the licensing commitments — the two should ship
 together.

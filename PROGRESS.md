@@ -352,17 +352,12 @@ click-through of `/open/raw`.
   `"license": "AGPL-3.0-only"`) — makes the landing's "Open source"
   claim true. Direction user-confirmed: open like a library, revenue
   from services around it, never from closing the code.
-- **Promotion kit**: `docs/promo/` — PLAN.md (ranked audiences, phased
-  rollout), SUSTAINABILITY.md (AGPL code + CC-BY asset commons +
-  4 revenue lanes; Blender-fund model verified), drafts/ (Notations #2
-  post, Show HN, Three.js forum, Reddit, stakeholder mail template +
-  verified festival/grant list). 101-agent deep-research verified the
-  festival/funding claims 3-0; community-launch norms did NOT survive
-  verification — re-check forum rules manually before posting.
-- **Near-term calendar**: EMAP call opens 3 Sep 2026 (deadline 6 Nov);
-  Horizon HERITAGE deadline 23 Sep 2026 (needs heritage-institution
-  consortium partner); Jan 2027: Prix Ars Electronica + ECHOES call 3;
-  FIVARS next cycle = best WebXR fit. Submit works, not the platform.
+- **Promotion kit**: written this session, and since **moved out of this
+  public repo** into the private `di.iiii-ops` (`promo/`) — audience plan,
+  the sustainability/revenue model, the funding calendar and the unsent
+  announcement drafts. 101-agent deep-research verified the festival/funding
+  claims 3-0; community-launch norms did NOT survive verification — re-check
+  forum rules manually before posting.
 - Wiki: new "License & openness" article. Golden rule added:
   usage-limit sizing + never-brick checkpoint workflow
   (docs/ai/golden_rules.md, Agent Behavior Rules).
