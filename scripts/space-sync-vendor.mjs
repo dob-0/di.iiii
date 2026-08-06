@@ -18,11 +18,17 @@
  * was written. It did not exist until 2026-08-05 — which is the whole reason
  * nobody caught either drift.
  *
- *   node scripts/space-sync-vendor.mjs           # check; exit 1 on drift
- *   node scripts/space-sync-vendor.mjs --write   # copy upstream over the rest
+ *   node scripts/space-sync-vendor.mjs             # check; exit 1 on drift
+ *   node scripts/space-sync-vendor.mjs --write     # copy upstream over the rest
+ *   node scripts/space-sync-vendor.mjs --release   # write + bump minEngine + commit + push
+ *                                                   # each linked repo -- the one-command
+ *                                                   # fix for "vendored locally, never landed"
+ *   node scripts/space-sync-vendor.mjs --release --dry-run   # show what --release would do
  *   node scripts/space-sync-vendor.mjs --root /somewhere
  *
  * Missing repos are reported and skipped, never failed: CI checks out one repo.
+ * --write and --release both refuse from a stale/wrong location -- see
+ * checkSafeSource() below.
  *
  * checkSafeSource() below closes a THIRD hole found 2026-08-06: every git
  * worktree in this repo carries its own full copy of scripts/, including this
@@ -156,12 +162,57 @@ const gatherSafetyFacts = ({ upstream, upstreamVersion, targetVersions }) => {
 }
 
 const args = process.argv.slice(2)
-const write = args.includes('--write')
+const release = args.includes('--release')
+const write = release || args.includes('--write')
+const dryRun = args.includes('--dry-run')
 const allowDowngrade = args.includes('--allow-downgrade')
 const rootArg = args.indexOf('--root')
 const root = rootArg >= 0 ? args[rootArg + 1] : os.homedir()
 
 const hash = (buf) => crypto.createHash('sha256').update(buf).digest('hex').slice(0, 12)
+
+// Bumps "minEngine" in a di-space.space.json in place, preserving formatting as best
+// effort (JSON.stringify with the same 2-space indent this repo's manifests use).
+const bumpMinEngine = (manifestPath, version) => {
+  if (!fs.existsSync(manifestPath)) return false
+  const json = JSON.parse(fs.readFileSync(manifestPath, 'utf8'))
+  if (json.minEngine === version) return false
+  json.minEngine = version
+  fs.writeFileSync(manifestPath, JSON.stringify(json, null, 2) + '\n')
+  return true
+}
+
+// One commit+push per repo -- not atomic across repos (git can't do that), but one
+// invocation, and a partial failure names exactly which repo is behind instead of
+// staying silent for 15 hours the way the last manual upgrade did.
+const releaseOneRepo = (repoDir, repoName, upstreamVersion) => {
+  if (dryRun) {
+    console.log(`      (dry-run — would commit + push ${repoName})`)
+    return
+  }
+  const staged = execFileSync('git', ['diff', '--cached', '--name-only'], { encoding: 'utf8', cwd: repoDir }).trim()
+  if (staged) {
+    console.log(`      ✗ ${repoName} has other staged changes — refusing to commit over them, left as a working-tree write`)
+    return
+  }
+  execFileSync('git', ['add', VENDORED_PATH, 'di-space.space.json'], { cwd: repoDir })
+  execFileSync(
+    'git',
+    ['commit', '-m', `chore(sync): vendor space-sync engine v${upstreamVersion} from di.iiii@${git(['rev-parse', '--short', 'HEAD'], ROOT_DIR)}`],
+    { cwd: repoDir }
+  )
+  const hasRemote = git(['remote'], repoDir)
+  if (!hasRemote) {
+    console.log(`      ⚠ ${repoName} has NO REMOTE — this commit lives on one disk only`)
+    return
+  }
+  try {
+    execFileSync('git', ['push'], { cwd: repoDir, stdio: 'pipe' })
+    console.log(`      ✓ ${repoName} committed and pushed`)
+  } catch (e) {
+    console.log(`      ✗ ${repoName} committed but push failed: ${e.message.split('\n')[0]}`)
+  }
+}
 
 const main = () => {
   if (!fs.existsSync(UPSTREAM)) {
@@ -219,6 +270,12 @@ const main = () => {
       fs.mkdirSync(path.dirname(target), { recursive: true })
       fs.writeFileSync(target, upstream)
       console.log(`  ✎ ${repo.padEnd(18)} ${was} → ${hash(upstream)}  written`)
+      if (release) {
+        const manifestPath = path.join(root, repo, 'di-space.space.json')
+        const bumped = bumpMinEngine(manifestPath, upstreamVersion)
+        if (bumped) console.log(`      minEngine → ${upstreamVersion} in di-space.space.json`)
+        releaseOneRepo(path.join(root, repo), repo, upstreamVersion)
+      }
     } else {
       console.log(`  ✗ ${repo.padEnd(18)} ${was}  DRIFTED from upstream`)
     }
