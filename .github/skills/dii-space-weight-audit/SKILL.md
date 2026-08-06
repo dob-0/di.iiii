@@ -33,9 +33,11 @@ stored bytes with a ranged GET. Never quote a registry size as fact.
 
 ## Procedure
 
-1. **Snapshot first.** `node scripts/di-sync.mjs pull --commit` in `di-spaces`. That commit is
-   the only rollback. Confirm it says *verified unchanged* — if prod drifted from the snapshot,
-   stop and find out why before touching anything.
+Every command below runs from `~/di-spaces`.
+
+1. **Snapshot first.** `node scripts/di-sync.mjs pull --commit`. That commit is the only
+   rollback. Confirm it says *verified unchanged* — if prod drifted from the snapshot, stop and
+   find out why before touching anything.
 2. **Audit.** `node scripts/audit/audit-spaces.mjs --env prod --deep`. Structural pass plus the
    browser pass. Read the per-surface byte totals before the per-asset ones.
 3. **Mirror to staging.** `bash scripts/push-all.sh staging`, then re-audit staging and confirm
@@ -107,13 +109,12 @@ codec, keep the pixels.
   is someone else's workspace, and it is their call.
 
 ## Repo Anchors
-- Audit + optimize tools: `~/di-spaces/scripts/audit/`
-- Snapshot, mirror, drift: `~/di-spaces/scripts/di-sync.mjs`, `push-space.mjs`, `push-all.sh`
-- Env resolution and the `LIVE_*` = staging trap: `~/di-spaces/scripts/lib/dii.mjs`
-- Compression on the wire: `../../nginx.conf`
-- Asset routes: `../../serverXR/src/routes/projectRoutes.js`, `spaceRoutes.js`
-- Code-page rendering: `../../src/project/components/PublicProjectViewer.jsx`
-- Loader extension support: `../../src/objectComponents/ModelObject.jsx`
+Everything runs from `~/di-spaces`. Tools are in `scripts/audit/`; the token, the base URLs
+and the `LIVE_*` = staging trap are in `scripts/lib/dii.mjs`.
+
+Two files in `~/di.iiii` explain behaviour the tools cannot change:
+`serverXR/src/routes/spaceRoutes.js` and `projectRoutes.js` (upload, scrub, delete) and
+`nginx.conf` (gzip, immutable caching, the missing `/draco/` CORS header).
 
 ## Validation
 - `node scripts/audit/audit-spaces.mjs --env <tier>` exits non-zero while findings remain.
