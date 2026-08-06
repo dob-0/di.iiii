@@ -164,7 +164,13 @@ describe('space-sync engine', () => {
             const decl = JSON.parse(fs.readFileSync(file, 'utf8'))
             expect(decl.spaceId, file).toBeTruthy()
             expect(decl.label, file).toBeTruthy()
-            expect(Number(decl.minEngine || 0), file).toBeLessThanOrEqual(ENGINE_VERSION)
+            // Strict equality, not <=: these are di.iiii's OWN spaces, declared in the
+            // same repo as the engine itself, so there's no excuse for them lagging
+            // behind an ENGINE_VERSION bump the way a linked repo briefly can. Catches
+            // exactly the bug the golden rule "bump the version, forget the manifests"
+            // describes -- fails loudly in di.iiii's own CI, not silently in a repo
+            // three hops away.
+            expect(Number(decl.minEngine || 0), file).toBe(ENGINE_VERSION)
             // Both deploy tiers, or the audit compares against nothing.
             expect(Object.keys(decl.tiers || {}), file).toEqual(expect.arrayContaining(['prod', 'staging']))
             // The dev box is shown and never enforced — it holds 70 undeclared

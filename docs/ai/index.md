@@ -44,6 +44,7 @@ Every task has an owner. Route to the right role before starting work.
 - [design-baseline.md](design-baseline.md) — landing page style reference (colors, typography, cyan grid scene); ui-system.md covers the editor
 - [parallel-agents.md](parallel-agents.md) — running more than one agent on this repo at once
 - [sessions/README.md](sessions/README.md) — branch-local session notes; CURRENT.md is written only by `npm run land`
+- [space-sync-vendoring.md](space-sync-vendoring.md) — the sync engine, its vendoring guard, and where the drift check actually lives
 - [dependency-decisions.md](dependency-decisions.md) — standing verdicts on upgrades that look overdue but aren't (drei 10, react-router 7, eslint 10); read before bumping any of them
 - [privacy-data-inventory.md](privacy-data-inventory.md) — what the app actually collects/stores/transmits, code-traced; the gaps that block writing `/privacy`
 - [architecture.md](architecture.md)

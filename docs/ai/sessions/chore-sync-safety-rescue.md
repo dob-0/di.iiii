@@ -55,7 +55,31 @@ on PR #94's `repo-state.mjs` tooling rather than duplicating it.
   match — the worktree-location convention (`.claude/worktrees/`, not `../di.iiii-*`)
   is now stated as the rule, not "either is fine".
 
-**Still open:** CI self-checks in the 3 linked repos so engine drift can fail loudly
-instead of stalling silently (`space:sync:release` exists but hasn't run for real —
-waiting on this branch merging), and the `di-spaces` reconciliation. Consolidating to
-one canonical di.iiii checkout stays blocked on `di.iiii-algomerge`'s active work.
+## 2026-08-06 — Vendor drift gets a check that can actually fail
+
+- `scripts/space-sync-selfcheck.mjs` (vendored as `sync-space-check.mjs`): fetches
+  di.iiii's real upstream engine over HTTPS (public repo, no token), byte-compares,
+  asserts `minEngine` matches. Never skips on a fetch failure — that was the exact flaw
+  in the tool it replaces. Live-tested against br_id_ge's real current state: correctly
+  caught the actual `minEngine: 5` vs vendored `v6` drift that's been sitting there all
+  session, plus byte-mismatch and missing-file failure modes, all verified for real.
+- `docs/templates/vendor-check.yml`: the CI workflow that runs it, in the LINKED repo's
+  own CI (di.iiii's CI structurally can't see a linked repo's copy — that inversion is
+  the actual fix). `--release` now writes both alongside the engine.
+- Second real dry-run bug, same shape as `land`'s: `--release --dry-run` was calling the
+  new file-writer unconditionally before checking the flag, so a "preview" silently
+  wrote files to disk. Caught by actually running it against a scratch directory, not
+  by inspection. Fixed, regression-tested (3 cases: dry-run writes nothing, a real run
+  writes everything, a second real run is idempotent).
+- `space-sync.test.js`: di.iiii's own spaces' `minEngine` now asserted strictly equal
+  to `ENGINE_VERSION` (was `<=`) — these are declared in the same repo as the engine,
+  no excuse for lagging the way a linked repo briefly can.
+- `docs/ai/space-sync-vendoring.md` added (full reference); `golden_rules.md`'s
+  vendoring rule updated to `npm run space:sync:release` and a new rule on why a
+  checked-out worktree is a runnable copy of every tool, not just source code.
+
+**Still open:** actually running `--release` for real (needs this branch merged first —
+the guard correctly refuses from here), the 3 linked repos' own `AGENTS.md`/CI (in
+progress, separate commits in those repos), and the `di-spaces` reconciliation.
+Consolidating to one canonical di.iiii checkout stays blocked on `di.iiii-algomerge`'s
+active work.

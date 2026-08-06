@@ -1,6 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { checkSafeSource, parseEngineVersion } from './space-sync-vendor.mjs'
+import { checkSafeSource, parseEngineVersion, writeSelfCheckAndWorkflow } from './space-sync-vendor.mjs'
 
 // checkSafeSource exists because 8 runnable copies of this script existed on one
 // machine at once (2026-08-06), 2 of them next to a stale v4 engine — running
@@ -85,5 +88,42 @@ describe('parseEngineVersion', () => {
 
   it('returns null when there is no version marker (pre-versioning copies)', () => {
     expect(parseEngineVersion('// no version here at all')).toBeNull()
+  })
+})
+
+// A real dry-run bug lived here briefly: the first version called this function
+// unconditionally before checking the dryRun flag, so `--release --dry-run` was
+// silently writing files to disk despite promising to touch nothing. Caught by
+// actually running it, not by inspection — these tests pin the fix down.
+describe('writeSelfCheckAndWorkflow', () => {
+  let dir
+
+  beforeEach(() => {
+    dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vendor-selfcheck-test-'))
+  })
+
+  afterEach(() => {
+    fs.rmSync(dir, { recursive: true, force: true })
+  })
+
+  it('dry-run mode reports what would change but writes nothing to disk', () => {
+    const changed = writeSelfCheckAndWorkflow(dir, true)
+    expect(changed.length).toBeGreaterThan(0)
+    for (const relPath of changed) {
+      expect(fs.existsSync(path.join(dir, relPath))).toBe(false)
+    }
+  })
+
+  it('a real run writes every reported file', () => {
+    const changed = writeSelfCheckAndWorkflow(dir, false)
+    expect(changed.length).toBeGreaterThan(0)
+    for (const relPath of changed) {
+      expect(fs.existsSync(path.join(dir, relPath))).toBe(true)
+    }
+  })
+
+  it('is idempotent — a second real run against identical content reports nothing changed', () => {
+    writeSelfCheckAndWorkflow(dir, false)
+    expect(writeSelfCheckAndWorkflow(dir, false)).toEqual([])
   })
 })

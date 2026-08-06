@@ -54,6 +54,15 @@ const UPSTREAM = path.join(ROOT_DIR, 'scripts', 'space-sync.mjs')
 export const VENDORED_REPOS = ['br_id_ge', 'beyond_form', 'platform_recordar']
 export const VENDORED_PATH = path.join('scripts', 'sync-space.mjs')
 
+// --release also vendors the self-check + its CI workflow alongside the engine —
+// without these, a repo can carry the right engine and still have nothing watching
+// for the NEXT drift. Both are static (don't change with ENGINE_VERSION), so they're
+// written whenever missing or different, same as the engine itself.
+const SELFCHECK_SOURCE = path.join(ROOT_DIR, 'scripts', 'space-sync-selfcheck.mjs')
+const SELFCHECK_PATH = path.join('scripts', 'sync-space-check.mjs')
+const WORKFLOW_SOURCE = path.join(ROOT_DIR, 'docs', 'templates', 'vendor-check.yml')
+const WORKFLOW_PATH = path.join('.github', 'workflows', 'vendor-check.yml')
+
 // Repos/dirs the tool writes to but never expects to commit or push — printed on
 // every run so the exception stays visible instead of silently unmentioned.
 export const KNOWN_EXCEPTIONS = {
@@ -185,20 +194,42 @@ const bumpMinEngine = (manifestPath, version) => {
   return true
 }
 
+// Writes the self-check + its workflow if missing or stale (no-op, report-only, when
+// dryRunOnly is set). Static content (neither changes with ENGINE_VERSION), so a
+// byte-compare is enough. Returns the repo-relative paths written/would-be-written.
+export const writeSelfCheckAndWorkflow = (repoDir, dryRunOnly) => {
+  const changed = []
+  for (const [source, relPath] of [[SELFCHECK_SOURCE, SELFCHECK_PATH], [WORKFLOW_SOURCE, WORKFLOW_PATH]]) {
+    if (!fs.existsSync(source)) continue
+    const target = path.join(repoDir, relPath)
+    const content = fs.readFileSync(source)
+    const current = fs.existsSync(target) ? fs.readFileSync(target) : null
+    if (current && current.equals(content)) continue
+    if (!dryRunOnly) {
+      fs.mkdirSync(path.dirname(target), { recursive: true })
+      fs.writeFileSync(target, content)
+    }
+    changed.push(relPath)
+  }
+  return changed
+}
+
 // One commit+push per repo -- not atomic across repos (git can't do that), but one
 // invocation, and a partial failure names exactly which repo is behind instead of
 // staying silent for 15 hours the way the last manual upgrade did.
 const releaseOneRepo = (repoDir, repoName, upstreamVersion) => {
   if (dryRun) {
-    console.log(`      (dry-run — would commit + push ${repoName})`)
+    const extraFiles = writeSelfCheckAndWorkflow(repoDir, true)
+    console.log(`      (dry-run — would commit + push ${repoName}${extraFiles.length ? ` including ${extraFiles.join(', ')}` : ''})`)
     return
   }
+  const extraFiles = writeSelfCheckAndWorkflow(repoDir, false)
   const staged = execFileSync('git', ['diff', '--cached', '--name-only'], { encoding: 'utf8', cwd: repoDir }).trim()
   if (staged) {
     console.log(`      ✗ ${repoName} has other staged changes — refusing to commit over them, left as a working-tree write`)
     return
   }
-  execFileSync('git', ['add', VENDORED_PATH, 'di-space.space.json'], { cwd: repoDir })
+  execFileSync('git', ['add', VENDORED_PATH, 'di-space.space.json', ...extraFiles], { cwd: repoDir })
   execFileSync(
     'git',
     ['commit', '-m', `chore(sync): vendor space-sync engine v${upstreamVersion} from di.iiii@${git(['rev-parse', '--short', 'HEAD'], ROOT_DIR)}`],

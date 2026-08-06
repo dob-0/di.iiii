@@ -16,7 +16,8 @@ export const REQUIRED_AI_DOC_FILES = [
   'docs/ai/deploy.md',
   'docs/ai/agent-support-matrix.md',
   'docs/ai/private-overrides.md',
-  'docs/ai/sessions/README.md'
+  'docs/ai/sessions/README.md',
+  'docs/ai/space-sync-vendoring.md'
 ]
 
 // primaryRoles: which company roles own files in this scope (see docs/ai/roles/)
