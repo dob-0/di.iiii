@@ -208,9 +208,18 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         <h1 className="sh-title">Projects</h1>
                     </div>
                     {creatingTitle === null ? (
-                        <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
-                            + New
-                        </button>
+                        <div className="sh-top-actions">
+                            <button
+                                className="sh-btn-outline"
+                                title="Raw — the experimental node-first editor"
+                                onClick={() => appNavigate(buildRawHubPath(spaceId))}
+                            >
+                                Raw
+                            </button>
+                            <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
+                                + New
+                            </button>
+                        </div>
                     ) : (
                         <form
                             className="sh-new-form"
@@ -254,8 +263,6 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                             </button>
                         </>
                     )}
-                    <span className="sh-sep">·</span>
-                    <button className="sh-link" onClick={() => appNavigate(buildRawHubPath(spaceId))}>Raw</button>
                     {/* /admin gates non-admins out — showing this to everyone
                         was the audit's "Settings dead-end" (labeled Settings, led
                         to an admin wall, bounced the user back). Admin-only now. */}
