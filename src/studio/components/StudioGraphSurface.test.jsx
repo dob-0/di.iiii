@@ -34,7 +34,7 @@ describe('StudioGraphSurface', () => {
         expect(screen.getByText('geom.cube')).toBeInTheDocument()
 
         // Delete/Backspace must be a no-op here — no onDeleteNode was passed to
-        // BetaGraphSurface, so nothing in this read-only view can remove a node.
+        // RawGraphSurface, so nothing in this read-only view can remove a node.
         fireEvent.keyDown(window, { key: 'Delete' })
         expect(screen.getAllByText('My Cube').length).toBeGreaterThan(1)
     })

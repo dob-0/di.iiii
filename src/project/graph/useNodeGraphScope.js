@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 // Node-graph "scope" navigation: a breadcrumb stack of node ids, where
 // entering a node makes its interior the current authoring surface (nodes
-// created next are children of it). Lane-agnostic — Beta's floating-window
+// created next are children of it). Lane-agnostic — Raw's floating-window
 // shell and (eventually) a Studio graph panel both need the same concept.
-// UI-shell side effects that ride along with navigation (e.g. Beta's
+// UI-shell side effects that ride along with navigation (e.g. Raw's
 // world-fullscreen toggle when entering a world node) stay in the caller;
 // this hook only owns the stack itself.
 export function useNodeGraphScope({ nodes, rootTypeId = null }) {

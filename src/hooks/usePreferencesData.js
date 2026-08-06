@@ -156,7 +156,6 @@ export function usePreferencesData({ onNavigateToEditor }) {
             : [
                   { key: 'public', label: 'Public', href: `${window.location.origin}${currentSpaceRoutes.publicPath}` },
                   { key: 'studio', label: 'Studio', href: `${window.location.origin}${currentSpaceRoutes.studioPath}` },
-                  { key: 'beta', label: 'Beta', href: `${window.location.origin}${currentSpaceRoutes.betaPath}` },
                   { key: 'admin', label: 'Admin', href: `${window.location.origin}${buildPreferencesPath(sync?.spaceId)}` },
                   { key: 'monitor', label: 'Backend Monitor', href: `${window.location.origin}/serverXR/` },
                   { key: 'health', label: 'Backend Health', href: `${window.location.origin}/serverXR/api/health` },
@@ -223,7 +222,6 @@ export function usePreferencesData({ onNavigateToEditor }) {
             publicPath: currentSpaceRoutes.publicPath,
             editorPath: currentSpaceRoutes.publicPath,
             studioPath: currentSpaceRoutes.studioPath,
-            betaPath: currentSpaceRoutes.betaPath,
             adminPath: buildPreferencesPath(sync?.spaceId)
         },
         space: {

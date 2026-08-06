@@ -595,7 +595,7 @@ export const NODE_TYPES = {
             // Per-universe chrome control (product decision 2026-07-17): lets
             // one universe be a normal authoring space (full topbar) and
             // another a chromeless embed/kiosk view, without a global toggle.
-            // BetaEditor walks up from the current scope to the nearest
+            // RawEditor walks up from the current scope to the nearest
             // ancestor universe.space node and reads this; Esc always pops
             // back up a scope regardless (unrelated to this flag).
             { id: 'showChrome', type: 'boolean', label: 'Show Chrome', default: true },

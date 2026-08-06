@@ -10,7 +10,7 @@
 - Preferred defaults:
   - `src/project/` for shared project-document logic
   - `src/studio/` for the main shipped editor lane
-  - `src/beta/` for experimental node-first work
+  - `src/raw/` for experimental node-first work
   - `src/shared/` for canonical schema/runtime truth
   - `serverXR/src/` for auth, persistence, routes, publish state, and realtime behavior
 - After canonical AI-doc changes, run `npm run docs:ai:sync` and `npm run docs:ai:check`.
@@ -21,10 +21,10 @@ Every task has one primary owner. Match the file path to the role, read the role
 
 | Path | Primary Role | Role Card | Min Model |
 |------|-------------|-----------|-----------|
-| `src/beta/styles/`, `src/styles/`, `*.css` | UI/UX Engineer (UX) | `docs/ai/roles/ui-ux-engineer.md` | Sonnet |
-| `src/beta/components/`, `src/studio/` | UI/UX Engineer (UX) | `docs/ai/roles/ui-ux-engineer.md` | Sonnet |
-| `src/beta/components/BetaViewport.jsx`, `src/objectComponents/` | 3D/Viewport Engineer (VPE) | `docs/ai/roles/viewport-3d-engineer.md` | Sonnet |
-| `src/project/nodeRegistry.js`, `src/beta/utils/node*.js` | Node System Engineer (NSE) | `docs/ai/roles/node-system-engineer.md` | Sonnet |
+| `src/raw/styles/`, `src/styles/`, `*.css` | UI/UX Engineer (UX) | `docs/ai/roles/ui-ux-engineer.md` | Sonnet |
+| `src/raw/components/`, `src/studio/` | UI/UX Engineer (UX) | `docs/ai/roles/ui-ux-engineer.md` | Sonnet |
+| `src/raw/components/RawViewport.jsx`, `src/objectComponents/` | 3D/Viewport Engineer (VPE) | `docs/ai/roles/viewport-3d-engineer.md` | Sonnet |
+| `src/project/nodeRegistry.js`, `src/raw/utils/node*.js` | Node System Engineer (NSE) | `docs/ai/roles/node-system-engineer.md` | Sonnet |
 | `serverXR/src/` | Backend/API Engineer (BAE) | `docs/ai/roles/backend-api-engineer.md` | Sonnet |
 | `shared/`, `src/shared/` | Schema/Protocol Engineer (SPE) | `docs/ai/roles/schema-protocol-engineer.md` | Opus |
 | `scripts/`, `deploy/`, `.github/workflows/`, `Dockerfile` | Infrastructure Engineer (IE) | `docs/ai/roles/infrastructure-engineer.md` | Haiku |

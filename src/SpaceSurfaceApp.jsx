@@ -3,7 +3,7 @@ import { getServerSpace, supportsServerSpaces } from './services/serverSpaces.js
 import { APP_PAGE_PREFERENCES } from './utils/spaceRouting.js'
 
 const App = lazy(() => import('./App.jsx'))
-const BlankNodeWorkspaceApp = lazy(() => import('./beta/BlankNodeWorkspaceApp.jsx'))
+const BlankNodeWorkspaceApp = lazy(() => import('./raw/BlankNodeWorkspaceApp.jsx'))
 const PublicProjectViewer = lazy(() => import('./project/components/PublicProjectViewer.jsx'))
 
 const DEFAULT_SPACE_ID = 'main'

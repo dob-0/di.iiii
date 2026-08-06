@@ -27,8 +27,8 @@ Short routing guide for AI agents working in `src/project/`.
 
 ## Do Not Assume
 
-- do not duplicate shared project sync logic into `Studio` or `Beta` unless there is a strong reason
-- do not treat Beta alias exports in `projectsApi.js` as a separate backend contract
+- do not duplicate shared project sync logic into `Studio` or `Raw` unless there is a strong reason
+- do not treat lane-specific alias exports in `projectsApi.js` as a separate backend contract
 - do not change client document shape without checking `src/shared/projectSchema.js`
 - do not treat local reducer state as the authoritative saved state; the server document and ops stream are authoritative
 

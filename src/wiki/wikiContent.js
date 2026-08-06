@@ -410,28 +410,12 @@ export const WIKI_ARTICLES = [
         updated: '2026-07-12'
     },
     {
-        id: 'beta-lane',
-        category: 'Editing',
-        title: 'Beta: the experimental node-first editor',
-        summary: 'Beta is a second, experimental editor lane at /<space>/beta — node-first project documents, for research-style iteration alongside Studio.',
-        body: [
-            'Studio is the main, stable editor. Beta is a separate lane at /<space>/beta for the same space’s projects, built around a recursive, node-first document model instead of Studio’s window/entity model — it’s where node-based and research-style editor work happens.',
-            { list: [
-                'Reached directly by URL at /<space>/beta (protected the same way as Studio — sign-in required for non-public spaces). The Studio hub and admin views now link to Raw instead — Beta stays reachable but is no longer promoted.',
-                'Beta and Studio share the same underlying projects and persistence, but the two editors are not drop-in equivalents — a project built with one lane’s assumptions may not look or behave identically in the other.',
-                'Expect it to be less polished and to change more often than Studio: it is where new node-first ideas get tried before (if ever) they inform Studio.'
-            ] }
-        ],
-        tags: ['beta', 'nodes', 'editor', 'experimental'],
-        updated: '2026-08-01'
-    },
-    {
         id: 'raw-lane',
         category: 'Editing',
         title: 'Raw: free-form node nesting',
-        summary: 'Raw is the experimental editor lane at /<space>/raw — forked from Beta, with free-form nesting: any node can contain a graph, and worlds open fullscreen.',
+        summary: 'Raw is di.iiii’s node-first editor lane at /<space>/raw, with free-form nesting: any node can contain a graph, and worlds open fullscreen.',
         body: [
-            'Raw is the newest experimental lane, forked from Beta in July 2026 and now the one promoted from the landing page (/open/raw to try it as a guest). Its core idea is free-form nesting: no node type is a singleton, and any node can be entered to author a graph inside it.',
+            'Raw is di.iiii’s node-first editor, promoted from the landing page (/open/raw to try it as a guest). Its core idea is free-form nesting: no node type is a singleton, and any node can be entered to author a graph inside it.',
             { list: [
                 'Reached from a space at /<space>/raw (same sign-in rules as Studio); /open/raw opens it on the communal open space.',
                 'Enter any node with its “Enter ›” button; the breadcrumb tracks your depth and Escape steps back out one level at a time.',

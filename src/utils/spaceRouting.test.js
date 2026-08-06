@@ -65,7 +65,7 @@ describe('spaceRouting', () => {
         })
     })
 
-    it('never classifies /:space/studio or /:space/beta as a project-slug route — those are claimed earlier by Studio/Beta\'s own location parsers, but this must not misclassify them either as a defense-in-depth guard', () => {
+    it('never classifies /:space/studio or /:space/beta as a project-slug route — studio is claimed earlier by its own location parser, beta stays a reserved segment even though Beta itself was retired, and this must not misclassify either as a defense-in-depth guard', () => {
         expect(getAppLocationState(new URL('https://example.com/somespace/studio')).projectSlugSegment).toBeUndefined()
         expect(getAppLocationState(new URL('https://example.com/somespace/beta')).projectSlugSegment).toBeUndefined()
     })

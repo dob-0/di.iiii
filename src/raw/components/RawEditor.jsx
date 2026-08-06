@@ -241,9 +241,7 @@ export default function RawEditor({
         [nodes, currentScopeId]
     )
     // Edges are scoped along with nodes — an edge whose endpoints aren't both
-    // in the current scope's card set has no business rendering here (Beta
-    // passes the document's full, unfiltered edge list to its graph surface;
-    // this is a deliberate fix, not a carried-over behavior).
+    // in the current scope's card set has no business rendering here.
     const graphCardEdges = useMemo(() => {
         const cardIds = new Set(graphCardNodes.map((node) => node.id))
         return (document.edges || []).filter((edge) => cardIds.has(edge.fromNodeId) && cardIds.has(edge.toNodeId))

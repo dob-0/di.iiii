@@ -42,16 +42,6 @@ vi.mock('./components/AuthGate.jsx', () => ({
     }
 }))
 
-vi.mock('./beta/BetaApp.jsx', () => ({
-    default: function MockBetaApp({ initialRoute }) {
-        return (
-            <div>
-                beta-app:{initialRoute?.page}:{initialRoute?.spaceId}
-            </div>
-        )
-    }
-}))
-
 vi.mock('./SpaceSurfaceApp.jsx', () => ({
     default: function MockSpaceSurfaceApp({ routeState }) {
         return (
@@ -134,16 +124,16 @@ describe('RootApp', () => {
         expect(await screen.findByText('algovrithm-experience')).toBeInTheDocument()
     })
 
-    it('keeps beta and legacy routes intact', async () => {
+    it('keeps legacy routes intact, and retired Beta URLs fall through like any unclaimed space', async () => {
+        // Beta was retired 2026-08-06 (absorbed into Raw) — 'beta' stays a
+        // reserved segment (see RESERVED_APP_SEGMENTS) so it can never collide
+        // with a real space slug, but no lane claims it anymore. A visitor on
+        // an old /beta link lands on the same unclaimed-space path as any
+        // other nonexistent space id, not a broken/blank screen.
         window.history.pushState({}, '', '/beta')
         const { unmount } = render(<RootApp />)
-        expect(await screen.findByText('beta-app:hub:main')).toBeInTheDocument()
+        expect(await screen.findByText('space-surface-app:editor:beta')).toBeInTheDocument()
         unmount()
-
-        window.history.pushState({}, '', '/gallery/beta/projects/test-project')
-        const { unmount: unmountBetaProject } = render(<RootApp />)
-        expect(await screen.findByText('beta-app:project:gallery')).toBeInTheDocument()
-        unmountBetaProject()
 
         window.history.pushState({}, '', '/main')
         render(<RootApp />)

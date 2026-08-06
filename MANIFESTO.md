@@ -72,7 +72,7 @@ Beta is experimental and intentionally unstable. Product work, bug fixes, and de
 
 These are not immediate tasks. They are directions to preserve headroom for:
 
-| Raw | Current state | Direction |
+| Seed | Current state | Direction |
 |------|--------------|-----------|
 | Asset IDs | **SHA-256 of file content (shipped)** — `crypto.createHash('sha256')` on upload, enforced in `projectStore.js` | content hash already IPFS-pinnable; next is the pinning layer itself |
 | Op-log format | append-only JSON ops | CRDT-compatible (Yjs candidate) |

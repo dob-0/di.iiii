@@ -16,8 +16,7 @@ import { buildStudioSpacesPath } from '../studio/utils/studioRouting.js'
 const GridFloorBackground = lazy(() => import('../components/GridFloorBackground.jsx'))
 
 // The landing page promotes one experimental lane, and that is Raw (formerly
-// Seed) — Beta is still routed and still listed in ROUTES below, just no longer
-// the thing the front door advertises.
+// Seed). Beta has been retired.
 //
 // Pointed at the communal 'open' space, not the bare '/raw' route: bare lane
 // routes default to the 'main' space — di.iiii's restricted flagship, not a
@@ -113,12 +112,10 @@ const FEATURES = [
 const ROUTES = [
     { path: '/', label: 'Landing — this page' },
     { path: '/studio', label: 'Studio — main authoring editor' },
-    // Space-scoped, not the bare /beta and /raw these used to list. A bare lane
-    // route defaults to the restricted 'main' space, where a guest session has
-    // no write scope, so every visitor who clicked one of these from the route
-    // map landed on "sign in to open the editor" instead of an editor. Same
-    // reasoning as the Raw CTA above, which was already pointed at 'open'.
-    { path: '/open/beta', label: 'Beta — experimental node editor' },
+    // Space-scoped, not the bare /raw this used to list. A bare lane route
+    // defaults to the restricted 'main' space, where a guest session has no
+    // write scope, so a visitor who clicked this from the route map landed on
+    // "sign in to open the editor" instead of an editor.
     { path: '/open/raw', label: 'Raw — experimental node-first editor' },
     { path: '/:spaceId', label: 'Public space viewer' },
     { path: '/serverXR/api/health', label: 'Backend health (JSON)' },
@@ -545,7 +542,7 @@ export default function LandingPage() {
                     </Typography>
                     <Typography className="lp-enter-body">
                         Step inside to build with everyone in the Open Space, open the Studio to start
-                        your own scene, or try Beta for the node-first workflow.
+                        your own scene, or try Raw for the node-first workflow.
                         Everything runs in your browser — no sign-up required to explore.
                     </Typography>
                     <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', justifyContent: 'center', mb: 2 }}>

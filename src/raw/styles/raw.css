@@ -547,7 +547,9 @@
     letter-spacing: 0.04em;
 }
 
-.raw-hub-sync-row {
+/* Styles src/components/SpaceSyncPanel.jsx (shared, not Raw-only) — it lives
+   here because Raw is currently the only mounted consumer. */
+.space-sync-row {
     display: flex;
     align-items: center;
     border: 1px solid var(--di-cyan-border);
@@ -555,7 +557,7 @@
     background: #0a0a0a;
 }
 
-.raw-hub-sync-msg {
+.space-sync-msg {
     flex: 1;
     padding: 10px 14px;
     font-size: 11px;
@@ -567,10 +569,10 @@
     text-overflow: ellipsis;
 }
 
-.raw-hub-sync-msg--ok { color: var(--di-cyan); }
-.raw-hub-sync-msg--err { color: #e05a5a; }
+.space-sync-msg--ok { color: var(--di-cyan); }
+.space-sync-msg--err { color: #e05a5a; }
 
-.raw-hub-sync-btn {
+.space-sync-btn {
     -webkit-appearance: none;
     appearance: none;
     border: none;
@@ -586,12 +588,12 @@
     white-space: nowrap;
 }
 
-.raw-hub-sync-btn:hover:not(:disabled) {
+.space-sync-btn:hover:not(:disabled) {
     color: var(--di-cyan);
     background: var(--di-cyan-dim);
 }
 
-.raw-hub-sync-btn:disabled {
+.space-sync-btn:disabled {
     opacity: 0.35;
     cursor: default;
 }
