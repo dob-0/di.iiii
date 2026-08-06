@@ -362,6 +362,31 @@ describe('RawGraphSurface', () => {
         fireEvent.pointerUp(window, { pointerId: 2 })
     })
 
+    // A press near a port now starts a wire, so the opening touch of a pinch
+    // landed on a card would begin dragging one and the pinch would do nothing.
+    it('cancels a wire the first finger started when a second finger lands', () => {
+        const onCreateEdge = vi.fn()
+        const colorNode = makeNode('value.color', { id: 'color-1', graphX: 0, graphY: 0 })
+        const cubeNode = makeNode('geom.cube', { id: 'cube-1', graphX: 320, graphY: 0 })
+        const { container } = render(
+            <RawGraphSurface nodes={[colorNode, cubeNode]} edges={[]} onCreateEdge={onCreateEdge} initialZoom={1} />
+        )
+
+        const surface = container.querySelector('.raw-graph-surface')
+        const outputDot = container
+            .querySelector('.raw-graph-node-card:nth-of-type(1)')
+            .querySelector('span[title*="(color)"]')
+
+        fireEvent.pointerDown(outputDot, { button: 0, pointerId: 1, pointerType: 'touch', clientX: 100, clientY: 100 })
+        // Second finger: this is a pinch, not a wire.
+        fireEvent.pointerDown(surface, { pointerId: 2, pointerType: 'touch', clientX: 260, clientY: 100 })
+        fireEvent.pointerMove(window, { pointerId: 2, pointerType: 'touch', clientX: 360, clientY: 100 })
+        fireEvent.pointerUp(window, { pointerId: 1, clientX: 320, clientY: 55 })
+        fireEvent.pointerUp(window, { pointerId: 2 })
+
+        expect(onCreateEdge).not.toHaveBeenCalled()
+    })
+
     it('does not pan while a pinch is in progress', () => {
         const colorNode = makeNode('value.color', { id: 'color-1' })
         const { container } = render(<RawGraphSurface nodes={[colorNode]} edges={[]} />)

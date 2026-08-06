@@ -140,6 +140,10 @@ export default function RawEditor({
     const [readChatCount, setReadChatCount] = useState(0)
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
     const [isWorldOverlay, setIsWorldOverlay] = useState(false)
+    // Declared here because hostInspector's JSX is built partway down the
+    // component and needs it; the effect that measures it lives further down,
+    // next to the selection state it depends on.
+    const scaffoldRef = useRef(null)
 
     const initialStoreState = useMemo(() => {
         if (projectId || !localStorageKey) return undefined
@@ -758,7 +762,7 @@ export default function RawEditor({
     // panel stayed pinned over the very node it was inspecting. CSS decides
     // where this sits; JS only supplies the measured offset.
     const hostInspector = (
-        <aside className="raw-selection-scaffold" style={{ '--raw-scaffold-top': workflowHeight + 'px' }}>
+        <aside ref={scaffoldRef} className="raw-selection-scaffold" style={{ '--raw-scaffold-top': workflowHeight + 'px' }}>
             <PropertyInspector
                 title={inspectorTitle}
                 subtitle={inspectorSubtitle}
@@ -895,6 +899,37 @@ export default function RawEditor({
     }
 
     const visibleSelection = Boolean(surfaceSelectedNode || surfaceSelectedEntity)
+
+    // How much of the canvas the selection panel is covering from the bottom,
+    // so the graph can fit itself into the part you can actually see. Only
+    // counts when the panel is anchored to the bottom edge (the phone sheet) —
+    // a floating panel at the top-right occludes a corner, not a band, and
+    // treating it as a band would push the graph up for no reason.
+    const [graphBottomInset, setGraphBottomInset] = useState(0)
+    useEffect(() => {
+        const el = scaffoldRef.current
+        if (!el) {
+            setGraphBottomInset(0)
+            return undefined
+        }
+        const measure = () => {
+            const rect = el.getBoundingClientRect()
+            const anchoredToBottom = Math.abs(rect.bottom - window.innerHeight) < 2
+            setGraphBottomInset(anchoredToBottom ? rect.height : 0)
+        }
+        measure()
+        // ResizeObserver is absent in jsdom (and in any non-browser runtime).
+        // The window resize listener alone still catches the case that matters
+        // — the viewport changing — so degrade rather than throw.
+        const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null
+        observer?.observe(el)
+        window.addEventListener('resize', measure)
+        return () => {
+            observer?.disconnect()
+            window.removeEventListener('resize', measure)
+        }
+    }, [visibleSelection, activeSurface])
+
 
     useEffect(() => {
         if (!visibleSelection || activeSurface === 'graph') return undefined
@@ -1083,6 +1118,7 @@ export default function RawEditor({
                 <RawGraphSurface
                     key={currentScopeId || 'root'}
                     topInset={graphTopInset}
+                    bottomInset={graphBottomInset}
                     nodes={graphCardNodes}
                     emptyHint={`${pointerVerb} to place your first node.`}
                     edges={graphCardEdges}

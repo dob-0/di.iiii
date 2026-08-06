@@ -2140,8 +2140,9 @@
     position: absolute;
     /* Bottom-LEFT: .raw-delete-fab is position:fixed at bottom/right 24px with
        z-index 1300, so anything in the bottom-right corner sits underneath it. */
-    bottom: calc(16px + env(safe-area-inset-bottom));
+    bottom: calc(16px + var(--raw-bottom-chrome, 0px) + env(safe-area-inset-bottom));
     left: calc(16px + env(safe-area-inset-left));
+    transition: bottom 0.18s ease;
     z-index: 2;
     width: fit-content;
     display: flex;
@@ -2352,6 +2353,84 @@
 
 .raw-graph-port-dot--out { cursor: crosshair; }
 .raw-graph-port-dot--in  { cursor: pointer; }
+
+/* touch-action is NOT inherited — it applies to whichever element the touch
+   hit-tests to. `.raw-graph-surface` sets `none`, but a finger landing on a
+   wire path or a node card hit those elements' own default `auto`, so the
+   browser claimed the gesture as a page pan/zoom and cancelled the pointer
+   stream. The effect: pinch-to-zoom worked perfectly on bare canvas and did
+   nothing at all over an actual graph — which is to say, it did nothing
+   whenever it mattered. Every descendant of the stage is part of the canvas
+   and its gestures are ours to interpret. */
+.raw-graph-stage,
+.raw-graph-stage * {
+    touch-action: none;
+}
+
+/* Semantic zoom. Below ~0.34 a port row cannot be read or hit, but the wires
+   still terminate at exactly those coordinates — so mark them. A tick, not a
+   dot: it reads as "a wire lands here", not as "aim at this". */
+.raw-graph-port-tick {
+    position: absolute;
+    width: 6px;
+    height: 2px;
+    pointer-events: none;
+}
+
+.raw-graph-port-tick--in  { left: -3px; }
+.raw-graph-port-tick--out { right: -3px; }
+
+/* At the smallest tier the card is a solid block: position and topology only.
+   The whole card stays one large select target, which is the point — a tap at
+   this zoom should always do something useful rather than miss three controls. */
+.raw-graph-node-card.is-lod-block .raw-graph-node-header {
+    border-bottom: none;
+}
+
+.raw-graph-node-card.is-lod-header .raw-graph-node-label,
+.raw-graph-node-card.is-lod-compact .raw-graph-node-label {
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+}
+
+/* Says how much of the graph is on screen when fitting all of it would have
+   been illegible. Reuses the overlay-message look rather than inventing chrome. */
+.raw-graph-fit-notice {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    /* Top, not bottom. The bottom-left corner already holds the zoom cluster
+       and the bottom-right the delete action; a centred notice down there
+       collided with both on a 393px screen. The surface is already offset
+       below the topbar, so 12px here sits just under it. */
+    top: 12px;
+    max-width: calc(100% - 24px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 3;
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    background: rgba(6, 10, 18, 0.92);
+    color: var(--di-text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    min-height: 32px;
+    padding: 0 12px;
+    cursor: pointer;
+}
+
+.raw-graph-fit-notice:hover,
+.raw-graph-fit-notice:focus-visible {
+    color: var(--di-cyan);
+}
+
+@media (hover: none) {
+    .raw-graph-fit-notice { min-height: 44px; }
+}
 
 .raw-graph-port-label {
     font-size: 11px;
