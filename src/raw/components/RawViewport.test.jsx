@@ -12,13 +12,15 @@ vi.mock('@react-three/fiber', () => ({
     })
 }))
 
+const gridSpy = vi.fn(() => null)
 vi.mock('@react-three/drei', () => ({
-    Grid: () => null,
+    Grid: (props) => gridSpy(props),
     Html: ({ children }) => <div>{children}</div>,
     OrbitControls: () => null
 }))
 
-vi.mock('../../objectComponents/SphereObject.jsx', () => ({ default: () => null }))
+const sphereObjectSpy = vi.fn(() => null)
+vi.mock('../../objectComponents/SphereObject.jsx', () => ({ default: (props) => sphereObjectSpy(props) }))
 vi.mock('../../objectComponents/ConeObject.jsx', () => ({ default: () => null }))
 vi.mock('../../objectComponents/CylinderObject.jsx', () => ({ default: () => null }))
 vi.mock('../../objectComponents/Text2DObject.jsx', () => ({ default: () => null }))
@@ -83,6 +85,86 @@ describe('RawViewport', () => {
 
         expect(boxObjectSpy).toHaveBeenCalled()
         expect(boxObjectSpy.mock.calls[0][0].boxSize).toEqual([1, 5, 100])
+    })
+
+    it('carries a wired color into geom.sphere, not just geom.cube', () => {
+        sphereObjectSpy.mockClear()
+
+        render(
+            <RawViewport
+                document={{
+                    worldState: {},
+                    entities: [],
+                    nodes: [
+                        { id: 'color-1', typeId: 'value.color', label: 'Color', values: { value: '#ff8800' } },
+                        { id: 'sphere-1', typeId: 'geom.sphere', label: 'Sphere', values: { radius: 0.5 } }
+                    ],
+                    edges: [{ id: 'e1', fromNodeId: 'color-1', fromPort: 'out', toNodeId: 'sphere-1', toPort: 'color' }]
+                }}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+
+        expect(sphereObjectSpy).toHaveBeenCalled()
+        expect(sphereObjectSpy.mock.calls[0][0].color).toBe('#ff8800')
+    })
+
+    it('carries a wired color into an untextured geom.plane material', () => {
+        const { container } = render(
+            <RawViewport
+                document={{
+                    worldState: {},
+                    entities: [],
+                    nodes: [
+                        { id: 'color-1', typeId: 'value.color', label: 'Color', values: { value: '#00aabb' } },
+                        { id: 'plane-1', typeId: 'geom.plane', label: 'Plane', values: { width: 2, height: 2 } }
+                    ],
+                    edges: [{ id: 'e1', fromNodeId: 'color-1', fromPort: 'out', toNodeId: 'plane-1', toPort: 'color' }]
+                }}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+
+        expect(container.querySelector('meshstandardmaterial')?.getAttribute('color')).toBe('#00aabb')
+    })
+
+    it('drives the ambient/directional light from a wired world.light node, not the legacy worldState fallback', () => {
+        const { container } = render(
+            <RawViewport
+                document={{
+                    worldState: { ambientLight: { color: '#ffffff', intensity: 0.8 } },
+                    entities: [],
+                    nodes: [
+                        { id: 'light-1', typeId: 'world.light', label: 'Light', values: { ambientColor: '#ff00ff', ambientIntensity: 0.4 } }
+                    ],
+                    edges: []
+                }}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+
+        expect(container.querySelector('ambientlight')?.getAttribute('color')).toBe('#ff00ff')
+    })
+
+    it('drives Grid size/color from a wired world.grid node, not the legacy worldState fallback', () => {
+        gridSpy.mockClear()
+
+        render(
+            <RawViewport
+                document={{
+                    worldState: { gridSize: 24 },
+                    entities: [],
+                    nodes: [
+                        { id: 'grid-1', typeId: 'world.grid', label: 'Grid', values: { size: 12, color: '#123456' } }
+                    ],
+                    edges: []
+                }}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+
+        expect(gridSpy).toHaveBeenCalled()
+        expect(gridSpy.mock.calls[0][0].args).toEqual([12, 12])
     })
 
     // Regression test for audit finding #22: universe.desk.3d is registered

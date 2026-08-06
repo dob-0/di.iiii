@@ -260,7 +260,7 @@ describe('getNodeInputs / getNodeOutputs', () => {
     it('returns type-level ports for standard nodes', () => {
         const node = createNode('geom.cube')
         expect(getNodeInputs(node).map(p => p.id)).toContain('color')
-        expect(getNodeOutputs(node).map(p => p.id)).toContain('out')
+        expect(getNodeOutputs(node).map(p => p.id)).toContain('bounds')
     })
 
     it('returns instance portDefs for null nodes', () => {

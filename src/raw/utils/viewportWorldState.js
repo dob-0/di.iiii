@@ -1,4 +1,4 @@
-import { evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 
 // Hierarchy-as-connection active-node pick (Kantan Mapper pattern) for
 // scope-repeatable types where exactly one "active" result is wanted
@@ -53,7 +53,7 @@ export function getRawWorldBackgroundColor(document, graphContext = null, { scop
     const resolvedValues = backgroundNode ? evaluateNodeInputs(backgroundNode, graphContext) : null
     const nodeColor = resolvedValues?.color ?? backgroundNode?.values?.color
     if (typeof nodeColor === 'string' && nodeColor.trim()) return nodeColor
-    const worldColor = worldNode?.values?.bgColor
+    const worldColor = worldNode ? evaluateNodeInput(worldNode, 'bgColor', graphContext) : null
     if (typeof worldColor === 'string' && worldColor.trim()) return worldColor
     return document?.worldState?.backgroundColor || '#0a0e16'
 }

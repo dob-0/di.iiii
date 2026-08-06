@@ -419,6 +419,65 @@ describe('RawEditor free-nesting palette create', () => {
     })
 })
 
+describe('RawEditor world title wiring', () => {
+    const TITLE_WIRE_STORAGE_KEY = 'test-world-title-wire'
+
+    afterEach(() => {
+        window.localStorage.removeItem(TITLE_WIRE_STORAGE_KEY)
+    })
+
+    // Regression: universe.world's `title` input is a real, drawable port, but
+    // the window chrome read node.values.title directly and never went
+    // through evaluateNodeInput — wiring a value.string node into it looked
+    // like it should work (the palette lets you draw the edge) and did nothing.
+    it('shows the title from a wired value.string node over the world\'s own static title', () => {
+        window.localStorage.setItem(
+            TITLE_WIRE_STORAGE_KEY,
+            makeWorkspaceDoc(
+                [
+                    { id: 'title-1', typeId: 'value.string', label: 'Title', parentId: null, values: { value: 'Wired Title' } },
+                    { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: { title: 'Static Title' } }
+                ]
+            ).replace('"edges":[]', '"edges":[{"id":"e1","fromNodeId":"title-1","fromPort":"out","toNodeId":"world-1","toPort":"title"}]')
+        )
+        render(<RawEditor localStorageKey={TITLE_WIRE_STORAGE_KEY} />)
+
+        expect(screen.getByRole('heading', { name: 'Wired Title' })).toBeTruthy()
+        expect(screen.queryByRole('heading', { name: 'Static Title' })).toBeNull()
+    })
+})
+
+describe('RawEditor view.browser panel', () => {
+    const BROWSER_STORAGE_KEY = 'test-view-browser'
+
+    afterEach(() => {
+        window.localStorage.removeItem(BROWSER_STORAGE_KEY)
+    })
+
+    // view.browser had zero test coverage despite being counted as one of the
+    // 27 "working" node types — nothing proved it rendered as an iframe rather
+    // than falling through renderViewNodeContent's default branch into
+    // TextPanelWindow's generic placeholder (the same trap desk.3d and the
+    // deleted Streaming Prototype preset hit for other unimplemented types).
+    it('renders as an iframe with a wired URL, not the generic text-panel fallback', () => {
+        window.localStorage.setItem(
+            BROWSER_STORAGE_KEY,
+            makeWorkspaceDoc(
+                [
+                    { id: 'url-1', typeId: 'value.string', label: 'URL', parentId: null, values: { value: 'https://di-studio.xyz' } },
+                    { id: 'browser-1', typeId: 'view.browser', label: 'Browser', parentId: null, values: {} }
+                ]
+            ).replace('"edges":[]', '"edges":[{"id":"e1","fromNodeId":"url-1","fromPort":"out","toNodeId":"browser-1","toPort":"url"}]')
+        )
+        render(<RawEditor localStorageKey={BROWSER_STORAGE_KEY} />)
+
+        const iframe = document.querySelector('iframe')
+        expect(iframe).toBeTruthy()
+        expect(iframe.getAttribute('src')).toBe('https://di-studio.xyz')
+        expect(screen.queryByText('This panel is ready for authored UI.')).toBeNull()
+    })
+})
+
 // Regression: universe.world (and every other panel-2d node type) never
 // rendered as an enterable graph card, so scopeEnterNode was unreachable for
 // them — nodes created while "inside" a World always landed as siblings at

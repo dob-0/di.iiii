@@ -116,6 +116,11 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
         case 'value.string':
             if (portId === 'out') return node.values?.value
             break
+        case 'geom.cube':
+            if (portId === 'bounds') {
+                return asVec3(evaluateNodeInput(node, 'size', context, nextStack), [1, 1, 1])
+            }
+            break
         case 'math.add':
             if (portId === 'out') {
                 return asNumber(evaluateNodeInput(node, 'a', context, nextStack))

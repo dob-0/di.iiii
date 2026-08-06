@@ -19,6 +19,20 @@ anything already placed still loads and renders.
 
 ## Works today (27)
 
+A 2026-08-06 audit found the "works today" label had overstated things: several
+of the 27 had output ports that were never computed, or read `node.values`
+directly instead of through the graph, so wiring into/out of them was a no-op
+even though the palette let you draw the edge. First stabilization pass (same
+day, see `docs/ai/known-fixes.md`): `universe.world.title`/`.bgColor` are now
+genuinely wire-evaluated, `geom.cube.bounds` is a real computed output, and
+every port that had zero consumers anywhere (`gridSize`, `slug`, `description`,
+`active`, `entry`, `state`, `signal`, `preview`, `world.background.texture`,
+per-node `position`/`width`/`height`, and the never-consumable `geom.*.out`
+Geometry ports) was deleted rather than left as a decorative wire target.
+Remaining gaps: `math.multiply`/`math.mix`/`math.clamp`, `world.light`,
+`world.grid`, and `geom.sphere`/`geom.plane` wiring are implemented but still
+have no dedicated runtime test — correct by inspection, not yet guarded.
+
 | Group | Types |
 | --- | --- |
 | Compute (14) | `value.number` `value.color` `value.vec3` `value.boolean` `value.string` · `math.add` `math.subtract` `math.multiply` `math.divide` `math.mod` `math.pow` `math.sin` `math.mix` `math.clamp` |
@@ -116,11 +130,15 @@ a text panel instead.
 The palette gate closes this for new documents. If a `panel-2d` type is ever
 un-gated before its panel exists, it returns.
 
-## Note on the demo preset
+## Note on the demo preset (removed)
 
-`RawEditor.jsx:551-611` builds a canned studio graph — Insta360, stereo, mic,
-PTZ, controller, compositor, output, monitor. It lays out the cards; nothing
-drives them. It is a layout fixture, not evidence any of those types work.
+`RawEditor.jsx` used to have a "Streaming Prototype" overflow-menu button that
+built a canned studio graph — Insta360, stereo, mic, PTZ, controller,
+compositor, output, monitor — via `createNode` calls that bypassed the palette
+gate. It laid out the cards; nothing drove them, and two of the nodes
+(`stream.monitor`, `stream.controller`) hit the "Known trap" below and silently
+rendered as generic text boxes. It was never evidence any of those types work,
+only misleading UI, so it was deleted rather than fixed.
 
 ## Method
 

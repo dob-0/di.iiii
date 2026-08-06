@@ -49,6 +49,22 @@ describe('nodeGraphRuntime', () => {
         expect(evaluateNodeInput(cube, 'color', context)).toBe('#00ff00')
     })
 
+    it('computes geom.cube.bounds from its resolved size and carries it across a wire', () => {
+        const size = createNode('value.vec3', { id: 'size-1', values: { value: [2, 3, 4] } })
+        const cube = createNode('geom.cube', { id: 'cube-1' })
+        const receiver = createNode('geom.cube', { id: 'cube-2' })
+        const context = createNodeGraphContext({
+            nodes: [size, cube, receiver],
+            edges: [
+                createEdge('size-1', 'out', 'cube-1', 'size'),
+                createEdge('cube-1', 'bounds', 'cube-2', 'position')
+            ]
+        })
+
+        expect(evaluateNodeOutput(cube, 'bounds', context)).toEqual([2, 3, 4])
+        expect(evaluateNodeInput(receiver, 'position', context)).toEqual([2, 3, 4])
+    })
+
     it('evaluates math nodes through chained edges', () => {
         const a = createNode('value.number', { id: 'a', values: { value: 2 } })
         const b = createNode('value.number', { id: 'b', values: { value: 3 } })
@@ -89,6 +105,48 @@ describe('nodeGraphRuntime', () => {
         expect(evaluateNodeOutput(divide, 'out', context)).toBe(2.25)
         expect(evaluateNodeOutput(mod, 'out', context)).toBe(1)
         expect(evaluateNodeOutput(pow, 'out', context)).toBe(6561)
+    })
+
+    it('evaluates multiply', () => {
+        const a = createNode('value.number', { id: 'a', values: { value: 6 } })
+        const b = createNode('value.number', { id: 'b', values: { value: 7 } })
+        const multiply = createNode('math.multiply', { id: 'multiply' })
+        const context = createNodeGraphContext({
+            nodes: [a, b, multiply],
+            edges: [
+                createEdge('a', 'out', 'multiply', 'a'),
+                createEdge('b', 'out', 'multiply', 'b')
+            ]
+        })
+
+        expect(evaluateNodeOutput(multiply, 'out', context)).toBe(42)
+    })
+
+    it('mixes numbers and vec3s by t, and clamps a value into range', () => {
+        const a = createNode('value.number', { id: 'a', values: { value: 0 } })
+        const b = createNode('value.number', { id: 'b', values: { value: 10 } })
+        const t = createNode('value.number', { id: 't', values: { value: 0.25 } })
+        const mixNum = createNode('math.mix', { id: 'mix-num' })
+        const vecA = createNode('value.vec3', { id: 'vec-a', values: { value: [0, 0, 0] } })
+        const vecB = createNode('value.vec3', { id: 'vec-b', values: { value: [4, 8, 12] } })
+        const mixVec = createNode('math.mix', { id: 'mix-vec' })
+        const clamp = createNode('math.clamp', { id: 'clamp', values: { min: 0, max: 5 } })
+        const context = createNodeGraphContext({
+            nodes: [a, b, t, mixNum, vecA, vecB, mixVec, clamp],
+            edges: [
+                createEdge('a', 'out', 'mix-num', 'a'),
+                createEdge('b', 'out', 'mix-num', 'b'),
+                createEdge('t', 'out', 'mix-num', 't'),
+                createEdge('vec-a', 'out', 'mix-vec', 'a'),
+                createEdge('vec-b', 'out', 'mix-vec', 'b'),
+                createEdge('t', 'out', 'mix-vec', 't'),
+                createEdge('b', 'out', 'clamp', 'in')
+            ]
+        })
+
+        expect(evaluateNodeOutput(mixNum, 'out', context)).toBe(2.5)
+        expect(evaluateNodeOutput(mixVec, 'out', context)).toEqual([1, 2, 3])
+        expect(evaluateNodeOutput(clamp, 'out', context)).toBe(5)
     })
 
     it('returns zero for divide/mod by zero', () => {
