@@ -26,4 +26,5 @@ run_gate() {
 run_gate "lint" npm run lint
 run_gate "schema-sync tests" npm run test:schema-sync
 run_gate "wiki/user-facing docs check" npm run docs:wiki:check
+run_gate "AI docs (CURRENT.md limit + derived facts + freshness)" npm run docs:ai:check
 exit 0

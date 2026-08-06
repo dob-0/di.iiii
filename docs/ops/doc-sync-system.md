@@ -21,7 +21,7 @@ pattern. Drift is made *un-mergeable* and *un-ignorable*, not magically fixed.
 | `README.md` | durable repo front door (keeps the Evergreen Rule — no feature dumps) | human / agent | must reference the wiki source |
 | `AGENTS.md` + `docs/ai/**` | AI knowledge base | human / agent | `docs:ai:sync` + `docs:ai:check` |
 | `.github/copilot-instructions.md`, `.github/instructions/**` | GitHub / Copilot guidance | generated bridges | `docs:ai:check` |
-| `CURRENT.md`, `PROGRESS.md` | session state + handoff | human / agent (recap) | manual / golden-rules |
+| `CURRENT.md`, `PROGRESS.md` | session state + handoff | human / agent (recap) | `docs:ai:check` (line limit, SHA/branch-position ban, staleness) — see below; the judgment content itself stays manual / golden-rules |
 
 ## Tiers
 
@@ -35,6 +35,10 @@ pattern. Drift is made *un-mergeable* and *un-ignorable*, not magically fixed.
   - `README.md` still points at `src/wiki/wikiContent.js`;
   - no private-host strings leak into shipped wiki text.
 - Wired into `.github/workflows/ci.yml` (after `docs:ai:check`) and the CURRENT.md Validation block.
+- `scripts/check-agent-docs.mjs` (`docs:ai:check`) also enforces CURRENT.md's own contract: the
+  ≤50-line limit, a ban on commit SHAs / ahead-behind counts (derived facts belong to
+  `npm run state`, see `scripts/repo-state.mjs`), and a staleness check against the newest
+  source commit. Since 2026-08-06 it also runs in `scripts/pre-push-gate.sh`, not just CI.
 
 ### Tier 2 — Authoring reminder (judgment, session-time, free)
 
