@@ -17,7 +17,7 @@ import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSy
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { getInspectorSections } from '../../project/entityRegistry.js'
-import { createNode, getNodeType } from '../../project/nodeRegistry.js'
+import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
