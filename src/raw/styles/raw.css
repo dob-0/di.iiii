@@ -2850,6 +2850,21 @@
     word-break: break-word;
 }
 
+/* Neither the manual path nor "Jump to <section>" overflows at phone widths,
+   but side-by-side both end up wrapped to 2-3 lines in ~130px each — legible
+   in the sense of "not broken", not in the sense of "readable". Stack them. */
+@media (max-width: 480px) {
+    .raw-help-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .raw-help-footer button {
+        width: 100%;
+    }
+}
+
 .raw-help-audiences {
     display: grid;
     gap: 12px;
