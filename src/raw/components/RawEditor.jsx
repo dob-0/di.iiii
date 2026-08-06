@@ -11,6 +11,8 @@ import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
 import ChatPanelWindow from './ChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
+import TimelinePanelWindow from './TimelinePanelWindow.jsx'
+import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
@@ -670,6 +672,21 @@ export default function RawEditor({
                         handleLiveOutputChange(nodeId, 'volume', volume)
                         handleLiveOutputChange(nodeId, 'frequency', frequency)
                     }}
+                />
+            )
+        }
+        if (node.typeId === 'view.director') {
+            return <DirectorPanelWindow node={node} />
+        }
+        if (node.typeId === 'view.timeline') {
+            return (
+                <TimelinePanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onChange={(clips) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId: node.id, patch: { values: { ...node.values, clips } } }
+                    })}
                 />
             )
         }

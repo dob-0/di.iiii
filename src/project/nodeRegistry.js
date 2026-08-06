@@ -793,6 +793,49 @@ export const NODE_TYPES = {
         render: 'panel-2d',
     },
 
+    'view.director': {
+        id: 'view.director',
+        label: 'Director (algovrithm)',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        inputs: [],
+        outputs: [],
+        // The edit list itself is NOT stored here — its rows carry component
+        // references that cannot survive JSON. See DirectorPanelWindow.jsx.
+        defaultValues: {
+            piece: 'algovrithm',
+        },
+        // A timeline is read left-to-right across its whole duration; the
+        // generic panel card crops it into uselessness.
+        defaultFrame: { width: 1080, height: 640 },
+        render: 'panel-2d',
+    },
+
+    'view.timeline': {
+        id: 'view.timeline',
+        label: 'Timeline',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'playhead', type: 'number', label: 'Playhead', default: 0  },
+            { id: 'fps',      type: 'number', label: 'FPS',      default: 60 },
+        ],
+        outputs: [
+            { id: 'frame', type: 'number', label: 'Source Frame' },
+            { id: 'clip',  type: 'string', label: 'Live Clip'    },
+        ],
+        // Clips are integer frames throughout — see src/project/timeline/
+        // timelineCore.js for why seconds are not stored anywhere.
+        defaultValues: {
+            fps: 60,
+            clips: [],
+        },
+        defaultFrame: { width: 900, height: 260 },
+        render: 'panel-2d',
+    },
+
     'view.image': {
         id: 'view.image',
         label: 'Image',
