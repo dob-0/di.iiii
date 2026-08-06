@@ -3,16 +3,16 @@
 **Every AI reads this before anything else. ≤50 lines. Read in full.**
 Updated at the end of every session. Replace content — do not append.
 
-active_branch: feat/space-declared
+active_branch: dev
 lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (live)
 
 ---
 
 ## Last commit
 
-**`main` is LIVE at `fed578f9`**, `dev` ahead at `0b4b2b7f`, both deploys green and both
-hosts self-reporting. `feat/space-declared` is `dev` + 7, merged up to `0b4b2b7f`, and is
-what the session below produced. Agents share this tree: **stage explicit paths**.
+**`dev` is at `d543fd80`, staging deploy GREEN and verified**; `main` still LIVE at
+`fed578f9` — the session below is on staging, NOT on prod. Promotion is unasked.
+Agents share this tree: **stage explicit paths**.
 
 ## Last session (2026-08-05/06 — `feat/space-declared`)
 
@@ -34,8 +34,8 @@ Studio (six panels + phone), Beta, Raw, WCC, viewer; auth (session-cookie, roles
 
 ## Open
 
-- The 8 prod spaces are still **ownerless**, and cannot be adopted until `feat/space-declared` ships: a `PATCH` with `ownerUserId` against the deployed build returns **200 and ignores it** (measured on staging). Three admins exist — who adopts what is a call. Recipe in `spaces/README.md`.
-- The three linked repos (`br_id_ge`, `beyond_form`, `platform_recordar`) hold **uncommitted** v6 engine copies + new space manifests — vendoring locally changes nothing CI runs.
+- The 8 **prod** spaces are still ownerless. The route is live on staging and verified there end to end (assign → scope granted in the same call → `null` releases); prod gets it on the next promotion. The three linked repos still hold **uncommitted** v6 engine copies + new manifests. Three admins exist — who adopts what is a call. Recipe in `spaces/README.md`.
+- Releasing ownership does **not** revoke the scope it granted — deliberate (losing a space should not lock you out), but `null` is therefore not a full undo. Staging's `dob-0` still carries `azd` from the rehearsal.
 - **Trees:** `~/di.iiii` drifts under whoever is working, and **:5173** serves whatever is on its disk — name the branch before you say "go look". `~/di.iiii-algomerge` is on `dev`; `dev-preview` is detached at `5f4cd3a9`, stale. **Push when you finish** — `dev` self-deploys and a red `dev` freezes staging; check `gh run list --branch dev --limit 1`.
 - **The mesh gate is INERT in prod** — the code is live but no `MESH_ROOM_SECRET` is set, so the keeper is still impersonable; set a distinct value per tier in the VPS `.env`, then deploy the three keeper clients.
 - **The leaked GitHub PAT and staging Google OAuth secret are still live**; 13 dead GitHub secrets also want revoking. Privacy calls owed: no account-deletion or export, **backups still unencrypted** (`age` decided, not built; key location undecided). §7 blocks Stage 2 — `docs/ai/INBOX.md`. Also owner-blocked: a Telegram chat id for backup-failure alerts, and a staging `LIVE_API_TOKEN` for `deploy-space-code.yml` (it fails on every triggering push today).
