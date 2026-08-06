@@ -397,17 +397,20 @@ export const WIKI_ARTICLES = [
         id: 'open-inscriptions',
         category: 'Spaces & access',
         title: 'Open inscriptions',
-        summary: 'A public space can opt in to anonymous, append-only inscriptions — visitors add one line of text to the scene, nothing else.',
+        summary: 'A public space can opt in to anonymous, append-only inscriptions — visitors add one line of text, and optionally one drawing, to the scene.',
         body: [
             'Open inscriptions let an artwork or event page write a visitor’s answer into a di.iiii space without accounts or tokens (built for br_id_ge’s vi.ritual: complete the rite, and your inscription becomes a persistent object in the space).',
             { list: [
                 'Opt-in per space: PATCH /api/spaces/:id with { "openInscriptions": true } (owner or admin). The space must also be public.',
-                'Visitors POST /api/spaces/:id/inscriptions with { name, word } — the server itself builds a single sanitized text object (insc-…) and appends it to the scene. Update and delete are impossible on this path; the generic ops route stays fully gated.',
+                'Visitors POST /api/spaces/:id/inscriptions with { name, word } — the server itself builds a single sanitized text object (insc-…) and appends it to the scene. Arbitrary ops are impossible on this path; the generic ops route stays fully gated.',
+                'Creating an inscription returns a one-time proof. Only its sha256 is stored, so the visitor — and nobody else — can DELETE /api/spaces/:id/inscriptions/:inscId to unmake exactly their own crossing. Inscriptions made before proofs existed cannot be unmade this way.',
+                'An inscription may also carry a mark: the drawing the visitor made, as an opaque m1.… token (base64url, capped). The server validates its shape and never parses it, so a viewer can render the line that was actually drawn instead of a shape derived from the id. A malformed or oversized mark is dropped and the inscription still succeeds — a drawing can never cost someone the crossing.',
+                'PUT /api/spaces/:id/inscriptions/:inscId/mark with { proof, mark } replaces the mark afterwards (the same authority that unmakes a crossing, writing that one property and nothing else) — for pages where the drawing is made after the inscription was already sent.',
                 'Rate-limited per client, capped at 999 inscriptions per space; setting allowEdits=false pauses new inscriptions instantly, and restore-snapshot remains the recovery path.'
             ] }
         ],
         tags: ['inscriptions', 'spaces', 'public', 'br_id_ge'],
-        updated: '2026-07-12'
+        updated: '2026-08-05'
     },
     {
         id: 'raw-lane',
