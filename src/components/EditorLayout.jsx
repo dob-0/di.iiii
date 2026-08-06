@@ -1,7 +1,6 @@
 ﻿import React from 'react'
 const SceneCanvas = React.lazy(() => import('./SceneCanvas.jsx'))
 const PresentationCanvas = React.lazy(() => import('./PresentationCanvas.jsx'))
-const Loader = React.lazy(() => import('@react-three/drei').then(m => ({ default: m.Loader })))
 import EditorOverlays from './EditorOverlays.jsx'
 import EditorChrome from './EditorChrome.jsx'
 import ControlClusters from './ControlClusters.jsx'
@@ -239,8 +238,6 @@ export function EditorLayout({
                         />
                     )
                 )}
-
-                {!isCodeView && <Loader />}
             </React.Suspense>
         </div>
     )

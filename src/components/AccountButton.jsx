@@ -1,6 +1,7 @@
-import { Avatar, Box, Button, CircularProgress, Divider, Popover, Stack, Tooltip, Typography } from '@mui/material'
+import { Avatar, Box, Button, Divider, Popover, Stack, Tooltip, Typography } from '@mui/material'
 import { useEffect, useRef, useState } from 'react'
 import { getApiAuthProviders, getOAuthUrl, logoutApiSession } from '../services/apiClient.js'
+import { LoadingInline } from './LoadingScreen.jsx'
 
 const GitHubIcon = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
@@ -213,7 +214,7 @@ export default function AccountButton({ authState, onLogout }) {
                                         '&:hover': { color: 'var(--ui-text-primary)' }
                                     }}
                                 >
-                                    {loggingOut ? <CircularProgress size={14} /> : 'Sign out'}
+                                    {loggingOut ? <LoadingInline announce="Signing out" /> : 'Sign out'}
                                 </Button>
                             </Box>
                         </>

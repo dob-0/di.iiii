@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
+import LoadingScreen from './components/LoadingScreen.jsx'
 import { getServerSpace, supportsServerSpaces } from './services/serverSpaces.js'
 import { APP_PAGE_PREFERENCES } from './utils/spaceRouting.js'
 
@@ -82,14 +83,21 @@ export default function SpaceSurfaceApp({ routeState }) {
 
     if (isLocalRootWorkspace) {
         return (
-            <Suspense fallback={null}>
+            <Suspense fallback={<LoadingScreen label="Loading workspace" />}>
                 <BlankNodeWorkspaceApp spaceId={spaceId} />
             </Suspense>
         )
     }
 
+    // 'idle'/'loading' only happens once per spaceId: the effect above sets
+    // 'loading' in its deps-driven setup pass, but the SPACE_META_REFRESH_MS
+    // background refresh calls loadSpace() directly and only ever lands on
+    // 'ready' or 'error' — it never routes back through 'loading'. So this
+    // full-screen takeover shows on the first resolve for a space and never
+    // again while the visitor stays on it (a background refresh cannot
+    // re-blank an already-drawn surface).
     if (shouldResolvePublishedSurface && (surfaceState.status === 'idle' || surfaceState.status === 'loading')) {
-        return null
+        return <LoadingScreen label="Loading space" />
     }
 
     // direct project link (/:space/p/:projectId) — the one-pager viewer for any
@@ -97,7 +105,7 @@ export default function SpaceSurfaceApp({ routeState }) {
     // upstream by SpaceSurfaceRoute for non-public spaces
     if (shouldResolvePublishedSurface && routeProjectId) {
         return (
-            <Suspense fallback={null}>
+            <Suspense fallback={<LoadingScreen label="Loading project" />}>
                 <PublicProjectViewer
                     key={`${spaceId}:${routeProjectId}`}
                     spaceId={spaceId}
@@ -111,7 +119,7 @@ export default function SpaceSurfaceApp({ routeState }) {
 
     if (shouldResolvePublishedSurface && publishedProjectId) {
         return (
-            <Suspense fallback={null}>
+            <Suspense fallback={<LoadingScreen label="Loading space" />}>
                 <PublicProjectViewer
                     key={`${spaceId}:${publishedProjectId}`}
                     spaceId={spaceId}
@@ -123,8 +131,8 @@ export default function SpaceSurfaceApp({ routeState }) {
     }
 
     if (page === APP_PAGE_PREFERENCES) {
-        return <Suspense fallback={null}><App /></Suspense>
+        return <Suspense fallback={<LoadingScreen label="Loading preferences" />}><App /></Suspense>
     }
 
-    return <Suspense fallback={null}><App /></Suspense>
+    return <Suspense fallback={<LoadingScreen label="Loading editor" />}><App /></Suspense>
 }

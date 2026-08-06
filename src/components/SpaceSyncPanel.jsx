@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiFetch } from '../services/apiClient.js'
+import { LoadingInline } from './LoadingScreen.jsx'
 
 const IDLE = 'idle'
 const BUSY = 'busy'
@@ -10,6 +11,7 @@ export default function SpaceSyncPanel({ spaceId, className = '' }) {
     const [state, setState] = useState(IDLE)
     const [message, setMessage] = useState('')
     const [status, setStatus] = useState(null)
+    const [pendingAction, setPendingAction] = useState(null)
     const abortRef = useRef(null)
     const statusAbortRef = useRef(null)
 
@@ -44,6 +46,7 @@ export default function SpaceSyncPanel({ spaceId, className = '' }) {
         const controller = new AbortController()
         abortRef.current = controller
         setState(BUSY)
+        setPendingAction(action)
         setMessage(action === 'pull' ? 'getting latest…' : 'publishing…')
         try {
             const data = await apiFetch(`/api/sync/spaces/${spaceId}/${action}`, {
@@ -61,6 +64,8 @@ export default function SpaceSyncPanel({ spaceId, className = '' }) {
             if (error.name === 'AbortError') return
             setState(ERR)
             setMessage(error.message || 'something went wrong')
+        } finally {
+            setPendingAction(null)
         }
     }
 
@@ -84,6 +89,7 @@ export default function SpaceSyncPanel({ spaceId, className = '' }) {
     return (
         <div className={`space-sync-row ${className}`} role="region" aria-label="Live sync">
             <span className={`space-sync-msg space-sync-msg--${state}`}>
+                {state === BUSY ? <LoadingInline announce={message || 'Loading'} /> : null}
                 {message || defaultMessage}
             </span>
             <button
@@ -93,7 +99,7 @@ export default function SpaceSyncPanel({ spaceId, className = '' }) {
                 disabled={state === BUSY}
                 title="Get the latest version from the live server"
             >
-                ↓ get latest
+                {pendingAction === 'pull' ? 'getting latest…' : '↓ get latest'}
             </button>
             <button
                 type="button"
@@ -102,7 +108,7 @@ export default function SpaceSyncPanel({ spaceId, className = '' }) {
                 disabled={state === BUSY}
                 title="Publish your local version to the live server"
             >
-                ↑ publish
+                {pendingAction === 'push' ? 'publishing…' : '↑ publish'}
             </button>
         </div>
     )

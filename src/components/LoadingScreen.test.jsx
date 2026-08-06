@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import LoadingScreen from './LoadingScreen.jsx'
+import LoadingScreen, { LoadingInline } from './LoadingScreen.jsx'
 
 // One loading screen for the whole platform: black, a spinner, no drawn words.
 // These guard the "no words" half — the part a future change would casually
@@ -38,5 +38,31 @@ describe('LoadingScreen', () => {
     it('does not leave a dangling separator when there is no detail', () => {
         render(<LoadingScreen label="Loading" />)
         expect(screen.getByRole('status').textContent.trim()).toBe('Loading')
+    })
+})
+
+// The inline member: unlike the full screen its label IS drawn (an inline
+// wait sits among other words), and with no label it must still announce.
+
+describe('LoadingInline', () => {
+    it('draws the spinner and the given label', () => {
+        const { container } = render(<LoadingInline label="loading projects…" />)
+
+        const spinner = container.querySelector('.loading-inline-spinner')
+        expect(spinner).not.toBeNull()
+        expect(spinner).toHaveAttribute('aria-hidden', 'true')
+        expect(screen.getByRole('status')).toHaveTextContent('loading projects…')
+        expect(container.querySelector('.loading-inline-text')).not.toBeNull()
+    })
+
+    it('announces without drawing when there is no label', () => {
+        const { container } = render(<LoadingInline announce="Signing out" />)
+
+        expect(screen.getByRole('status')).toHaveTextContent('Signing out')
+        // The announcement rides in the visually-hidden class, not painted text.
+        const hidden = container.querySelector('.loading-screen-label')
+        expect(hidden).not.toBeNull()
+        expect(hidden.textContent).toBe('Signing out')
+        expect(container.querySelector('.loading-inline-text')).toBeNull()
     })
 })

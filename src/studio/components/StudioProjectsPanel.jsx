@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { createProject, deleteProject, listProjects, updateProject } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioProjectPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { LoadingInline } from '../../components/LoadingScreen.jsx'
 
 // The Projects window: hop between the space's projects and do light
 // management (new / rename / delete) without leaving the editor for the hub.
@@ -47,7 +48,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
         setCreating(false)
         setCreateValue('')
         setBusy(true)
-        setStatus('creating...')
+        setStatus('creating…')
         try {
             const res = await createProject(spaceId, { title: name, slug: name, source: 'studio-v3' })
             navigateToStudioPath(buildStudioProjectPath(res.project.id, spaceId))
@@ -103,7 +104,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
         <div className="spp-root">
             <div className="spp-list">
                 {projects === null ? (
-                    <div className="spp-status">loading projects...</div>
+                    <div className="spp-status"><LoadingInline label="loading projects…" /></div>
                 ) : projects.length === 0 ? (
                     <div className="spp-status">no projects in this space yet</div>
                 ) : (
@@ -148,12 +149,12 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
                                         <button
                                             type="button"
                                             className="spp-icon spp-icon--danger"
-                                            title="Delete"
-                                            aria-label="Delete"
+                                            title={busy ? 'Working…' : 'Delete'}
+                                            aria-label={busy ? 'Working' : 'Delete'}
                                             disabled={busy}
                                             onClick={() => handleDelete(project)}
                                         >
-                                            ×
+                                            {busy ? <LoadingInline announce="Working" /> : '×'}
                                         </button>
                                     )}
                                 </span>
@@ -176,7 +177,7 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
                 </form>
             ) : (
                 <button type="button" className="spp-new" disabled={busy} onClick={() => setCreating(true)}>
-                    ＋ New project
+                    {busy ? 'working…' : '＋ New project'}
                 </button>
             )}
             {status && <div className="spp-status">{status}</div>}

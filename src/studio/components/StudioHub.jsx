@@ -5,6 +5,7 @@ import { buildAppSpacePath, buildPreferencesPath } from '../../utils/spaceRoutin
 import { buildRawHubPath } from '../../raw/utils/rawRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
 import GridFloorBackground from '../../components/GridFloorBackground.jsx'
+import { LoadingInline } from '../../components/LoadingScreen.jsx'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import {
     DEFAULT_PROJECT_SPACE_ID,
@@ -45,7 +46,7 @@ const isArchivedTitle = (title = '') => title.trimStart().startsWith('[archived]
 export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const { role, openSpaceId } = useAuthSession()
     const [projects, setProjects] = useState([])
-    const [status, setStatus] = useState('loading...')
+    const [status, setStatus] = useState('loading…')
     const [isBusy, setIsBusy] = useState(false)
     const [spaceLabel, setSpaceLabel] = useState(spaceId)
     const [creatingTitle, setCreatingTitle] = useState(null)
@@ -71,7 +72,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     }, [spaceId])
 
     const loadProjects = useCallback(async () => {
-        setStatus('loading...')
+        setStatus('loading…')
         try {
             const next = await listProjects(spaceId)
             setProjects(next)
@@ -108,7 +109,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         const name = title.trim() || 'Untitled'
         setCreatingTitle(null)
         setIsBusy(true)
-        setStatus('creating...')
+        setStatus('creating…')
         try {
             const res = await createProject(spaceId, { title: name, slug: name, source: 'studio-v3' })
             openProject(res.project.id)
@@ -122,7 +123,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         const file = event.target.files?.[0]
         if (!file) return
         setIsBusy(true)
-        setStatus(`importing ${file.name}...`)
+        setStatus(`importing ${file.name}…`)
         try {
             const { document, assetFiles, warnings } = await importLegacySceneFile(file)
             const title = document.projectMeta.title
@@ -217,7 +218,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                 Raw
                             </button>
                             <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
-                                + New
+                                {isBusy ? 'working…' : '+ New'}
                             </button>
                         </div>
                     ) : (
@@ -284,11 +285,17 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     )}
                 </div>
 
-                {/* Status */}
+                {/* Status. A trailing typographic ellipsis marks a busy state — the
+                    only kind of status this component ever ends with one — so it's
+                    drawn with the shared spinner instead of bare text. */}
                 {status && (
-                    <p className={`sh-status${status.includes('error') || status.includes('failed') ? ' sh-status-error' : ''}`}>
-                        {status}
-                    </p>
+                    status.endsWith('…') ? (
+                        <p className="sh-status"><LoadingInline label={status} /></p>
+                    ) : (
+                        <p className={`sh-status${status.includes('error') || status.includes('failed') ? ' sh-status-error' : ''}`}>
+                            {status}
+                        </p>
+                    )
                 )}
 
                 {/* Empty state — first visit to a fresh space. Suppressed for a
@@ -303,7 +310,7 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                             Create your first one — you can rename or delete it anytime.
                         </p>
                         <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
-                            + Create your first project
+                            {isBusy ? 'working…' : '+ Create your first project'}
                         </button>
                     </div>
                 )}

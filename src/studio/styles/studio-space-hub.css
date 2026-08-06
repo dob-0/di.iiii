@@ -285,6 +285,16 @@
     pointer-events: none;
 }
 
+/* Shown while the preview iframe waits on the boot queue (PREVIEW_BOOT_SLOTS
+   in SpaceHub.jsx) so the box reads as loading instead of empty. */
+.ssh-card-preview-loading {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: var(--di-text-muted, rgba(200,230,240,0.45));
+}
+
 .ssh-space-label {
     margin: 0 0 4px;
     font-size: 1rem;

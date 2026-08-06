@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ModuleSection, InfoPair } from './PreferencesShared.jsx'
+import { LoadingInline } from '../LoadingScreen.jsx'
 import {
     getSpaceGithubLink,
     connectSpaceGithub,
@@ -99,7 +100,11 @@ export default function GithubSyncSection({ space, projects }) {
 
     return (
         <ModuleSection title="GitHub sync" subtitle="Connect a repo — pushes auto-update this space">
-            {link === undefined && <div className="preferences-empty">Loading…</div>}
+            {link === undefined && (
+                <div className="preferences-empty">
+                    <LoadingInline label="loading…" />
+                </div>
+            )}
 
             {link === 'denied' && (
                 <div className="preferences-empty">Sign in as the space owner or an admin to manage GitHub sync.</div>
@@ -153,7 +158,10 @@ export default function GithubSyncSection({ space, projects }) {
                         </div>
                     )}
                     {awaitingInstall && (
-                        <div className="preferences-empty">Waiting for GitHub… finish choosing repos in the other tab; new ones appear here automatically.</div>
+                        <div className="preferences-empty">
+                            <LoadingInline announce="Waiting for GitHub" />
+                            {' '}Waiting for GitHub… finish choosing repos in the other tab; new ones appear here automatically.
+                        </div>
                     )}
                     {!awaitingInstall && Array.isArray(repos) && repos.length === 0 && appInfo?.configured && !reposBusy && (
                         <div className="preferences-empty">No repositories connected yet — the GitHub button above takes ~20 seconds.</div>

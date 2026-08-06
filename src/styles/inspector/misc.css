@@ -154,12 +154,12 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, transparent, rgba(34, 211, 238, 0.9), transparent);
+    background: linear-gradient(90deg, transparent, rgba(77, 249, 255, 0.9), transparent);
     animation: status-indeterminate 1.5s ease-out infinite;
 }
 
 .status-progress {
-    background: linear-gradient(90deg, #4ade80, #22d3ee);
+    background: linear-gradient(90deg, var(--di-success), var(--di-cyan));
     height: 100%;
     border-radius: 999px;
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04);

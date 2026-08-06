@@ -10,6 +10,7 @@ import {
     NODE_COLORS
 } from '../utils/constellationLayout.js'
 import { listProjects, updateProject } from '../../project/services/projectsApi.js'
+import { LoadingInline } from '../../components/LoadingScreen.jsx'
 import '../styles/space-constellation.css'
 
 // One space, rendered as a living node: an emissive core, an additive halo
@@ -308,7 +309,7 @@ export default function SpaceConstellation({
                         <div className="scon-projects-head mono">
                             projects {projects ? `· ${projects.length}` : ''}
                         </div>
-                        {projectsLoading && <div className="scon-muted mono">loading…</div>}
+                        {projectsLoading && <div className="scon-muted mono"><LoadingInline label="loading…" /></div>}
                         {projects && projects.length === 0 && <div className="scon-muted mono">no projects yet</div>}
                         {projects && projects.map(p => (
                             <ProjectRow

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { useFrame } from '@react-three/fiber'
 import { Billboard, Text } from '@react-three/drei'
 import EntityContent from './EntityContent.jsx'
+import LoadingBounds from '../../objectComponents/LoadingBounds.jsx'
 import { buildAssetMap } from './buildAssetMap.js'
 import { getProjectDocument } from '../services/projectsApi.js'
 import { normalizeProjectDocument } from '../../shared/projectSchema.js'
@@ -81,7 +82,15 @@ function EmbeddedScene({ projectId }) {
     }, [doc])
     const nextChain = useMemo(() => [...chain, projectId], [chain, projectId])
 
-    if (blocked || !doc) return null
+    // `blocked` is a policy state (self-embed / depth cap / no id), not a
+    // wait -- nothing will ever arrive, so it stays a silent no-render.
+    if (blocked) return null
+    if (!doc) {
+        // Real bounds are unknown until the embedded document resolves;
+        // approximate the region an embedded scene + its label typically
+        // occupy (see LabelPlate above, anchored around y=3.4).
+        return <LoadingBounds position={[0, 1.5, 0]} size={[3, 3, 3]} />
+    }
     return (
         <EmbedChainContext.Provider value={nextChain}>
             {roots.map((entity) => (

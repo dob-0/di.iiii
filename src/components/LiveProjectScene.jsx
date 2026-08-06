@@ -1553,6 +1553,8 @@ export default function LiveProjectScene({
                 <>
                     <div
                         className="live-scene-loading"
+                        role="status"
+                        aria-live="polite"
                         style={{ opacity: doc ? 0 : 1, pointerEvents: doc ? 'none' : 'all' }}
                     >
                         {loadError ? (

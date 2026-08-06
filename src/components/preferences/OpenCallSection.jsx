@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { deleteOpenCallApplication, listOpenCallApplications, updateOpenCallApplication } from '../../services/openCallApi.js'
 import { MetricCard, ModuleSection } from './PreferencesShared.jsx'
+import { LoadingInline } from '../LoadingScreen.jsx'
 
 const OPEN_CALLS = [
     { id: 'beyond_form', label: 'Beyond Form — Gyumri Art Week' }
@@ -188,7 +189,7 @@ export default function OpenCallSection() {
     return (
         <ModuleSection
             title={call?.label || callId}
-            subtitle={applications === null ? 'Loading…' : `${applications.length} application${applications.length === 1 ? '' : 's'}`}
+            subtitle={applications === null ? <LoadingInline label="loading…" /> : `${applications.length} application${applications.length === 1 ? '' : 's'}`}
             actions={
                 <button type="button" className="toggle-button" onClick={exportCsv} disabled={!applications?.length}>
                     Export CSV

@@ -206,7 +206,7 @@ function DriveImportSection({ onDriveImportUrl, onDriveImportSelection }) {
                                         disabled={drive.listing}
                                     />
                                     <button className="scc-btn" onClick={drive.runSearch} disabled={drive.listing}>
-                                        {drive.listing ? '…' : 'Search'}
+                                        {drive.listing ? 'searching…' : 'Search'}
                                     </button>
                                 </div>
                                 {drive.files.length > 0 && (
@@ -246,7 +246,7 @@ function DriveImportSection({ onDriveImportUrl, onDriveImportSelection }) {
                                 disabled={drive.busy}
                             />
                             <button className="scc-btn" onClick={drive.importUrl} disabled={drive.busy || !drive.url.trim()}>
-                                {drive.busy ? '…' : 'Import'}
+                                {drive.busy ? 'importing…' : 'Import'}
                             </button>
                         </div>
                         {drive.notice && (
@@ -340,7 +340,7 @@ function CommonsSection({ onCommonsImport }) {
                                 disabled={listing}
                             />
                             <button className="scc-btn" onClick={() => runSearch()} disabled={listing}>
-                                {listing ? '…' : 'Search'}
+                                {listing ? 'searching…' : 'Search'}
                             </button>
                         </div>
                         {Array.isArray(items) && items.length === 0 && (

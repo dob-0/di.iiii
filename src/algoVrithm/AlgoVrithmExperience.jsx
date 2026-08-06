@@ -431,7 +431,30 @@ export default function AlgoVrithmExperience({ embedded = false, director = unde
     // piece opens on, so a slow or dead backend costs frames, not the show.
     const timing = useSavedTiming()
     if (!timing.ready) {
-        return <div className={`algo-vrithm-root${embedded ? ' is-embedded' : ''}`} aria-hidden="true" />
+        // The void is the piece's deliberate opening -- visuals stay byte-identical.
+        // aria-hidden previously left screen readers told nothing at all; this
+        // adds an sr-only announcement without drawing anything new on screen.
+        return (
+            <div className={`algo-vrithm-root${embedded ? ' is-embedded' : ''}`}>
+                <span
+                    role="status"
+                    aria-live="polite"
+                    style={{
+                        position: 'absolute',
+                        width: 1,
+                        height: 1,
+                        margin: -1,
+                        padding: 0,
+                        overflow: 'hidden',
+                        clipPath: 'inset(50%)',
+                        whiteSpace: 'nowrap',
+                        border: 0
+                    }}
+                >
+                    Loading
+                </span>
+            </div>
+        )
     }
     return (
         <AlgoVrithmStage

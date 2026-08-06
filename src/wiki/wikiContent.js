@@ -525,6 +525,24 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['algovrithm', 'vr', 'webxr', 'three.js', 'linked-space', 'code', 'lighting', 'spatial-audio'],
         updated: '2026-08-05'
+    },
+    {
+        id: 'one-loading-language',
+        category: 'Getting started',
+        title: 'One loading language',
+        summary: 'Every wait in di.iiii now speaks the same design: black, one spinner, no drawn words — from the first pre-JS frame to a model streaming into a scene.',
+        body: [
+            'Loading used to be the least designed thing on the platform — a red ring here, a glass card there, bare “Loading...” text, and sometimes nothing at all. It is now one family everywhere:',
+            { list: [
+                'Full-surface waits (opening a space, a route chunk downloading) show the platform loading screen: black, a single spinner, no text drawn — including the very first frame before any code has arrived.',
+                'Waits inside an already-drawn panel (project lists, hubs, the project switcher) show a small inline spinner beside a lowercase label like “loading projects…”.',
+                'Buttons that are busy say so — “creating…”, “publishing…”, “working…” — instead of silently going dead.',
+                'In 3D, a model, image, or video that is still streaming in shows a faint breathing wireframe box where it will appear; if it fails to load, the box turns red instead of vanishing silently.'
+            ] },
+            'All of it announces properly to screen readers and calms down for reduced-motion settings.'
+        ],
+        tags: ['loading', 'design', 'ui', 'accessibility'],
+        updated: '2026-08-07'
     }
 ]
 

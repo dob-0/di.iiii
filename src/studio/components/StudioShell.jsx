@@ -9,6 +9,7 @@ import StudioQuickInsert from './StudioQuickInsert.jsx'
 import { useStudioPanelState } from '../hooks/useStudioPanelState.js'
 import useAuthSession from '../../hooks/useAuthSession.js'
 import StudioCoachMarks from './StudioCoachMarks.jsx'
+import { LoadingInline } from '../../components/LoadingScreen.jsx'
 import { loadStudioWorkspace, saveStudioWorkspace } from '../utils/studioWorkspaceStorage.js'
 import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
@@ -544,7 +545,7 @@ export default function StudioShell({
             />
 
             {loading && (
-                <div className="sfp-overlay-card">Loading project…</div>
+                <div className="sfp-overlay-card"><LoadingInline label="loading project…" /></div>
             )}
             {loadError && (
                 <div className="sfp-overlay-card sfp-overlay-card--error">{loadError}</div>

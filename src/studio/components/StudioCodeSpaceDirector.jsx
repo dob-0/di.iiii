@@ -2,6 +2,7 @@ import { Suspense, lazy, useMemo } from 'react'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { getCodeSpace } from '../utils/codeSpaces.js'
 import { buildStudioHubPath, buildStudioSpacesPath } from '../utils/studioRouting.js'
+import { LoadingInline } from '../../components/LoadingScreen.jsx'
 import '../styles/studio-hub.css'
 import './studioCodeSpaceDirector.css'
 
@@ -79,7 +80,7 @@ export default function StudioCodeSpaceDirector({ spaceId }) {
                 `.is-embedded` rule in algoVrithm.css. Without a positioned host
                 an `absolute` root escapes to the nearest one, which is the page. */}
             <div className="scsd-stage">
-                <Suspense fallback={<div className="scsd-loading">Loading the piece…</div>}>
+                <Suspense fallback={<div className="scsd-loading"><LoadingInline label="loading the piece…" /></div>}>
                     <Surface embedded director />
                 </Suspense>
             </div>

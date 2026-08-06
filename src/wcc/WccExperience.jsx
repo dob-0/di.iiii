@@ -12,6 +12,36 @@ const LiveProjectScene = lazy(() => import('../components/LiveProjectScene.jsx')
 const SCENE_PATH = '/wcc/scene'
 const LANDING_PATH = '/wcc'
 
+// Not the canonical LoadingScreen here on purpose. The scene mounts inside
+// `.wcc-experience__scene`, whose opacity gsap drives from 0 -> 1 during the
+// dive (see the 'entering' timeline below); CSS opacity < 1 forces a stacking
+// context, which traps a fixed, z-index:9999 LoadingScreen under the sibling
+// `.wcc-experience__warp` overlay (z-index 20) for most of the transition and
+// then lets it pop through right as the warp clears -- a solid black+spinner
+// flash fighting the deliberate red/black warp gradient at the exact reveal
+// beat. The transparent fallback already reads as part of the dive (the
+// scene wrapper sits on `.wcc-experience`'s near-black #070506), so this only
+// adds the missing screen-reader announcement, sighted output unchanged.
+const sceneLoadingFallback = (
+    <span
+        role="status"
+        aria-live="polite"
+        style={{
+            position: 'absolute',
+            width: 1,
+            height: 1,
+            margin: -1,
+            padding: 0,
+            overflow: 'hidden',
+            clipPath: 'inset(50%)',
+            whiteSpace: 'nowrap',
+            border: 0
+        }}
+    >
+        Loading world
+    </span>
+)
+
 // "Enter space" for one artist lands on their own actual Studio project
 // (via LiveProjectScene — the same viewer used everywhere else in the app).
 // "Enter Exhibition" with no specific artist renders the full ring of all 10.
@@ -142,7 +172,7 @@ export default function WccExperience({ initialMode = 'landing' }) {
                     ref={sceneWrapRef}
                     style={mode === 'entering' ? { opacity: 0 } : undefined}
                 >
-                    <Suspense fallback={null}>
+                    <Suspense fallback={sceneLoadingFallback}>
                         <LiveProjectScene
                             projectId={activeProjectId || 'main'}
                             interactive

@@ -572,6 +572,10 @@
     text-overflow: ellipsis;
 }
 
+.space-sync-msg .loading-inline {
+    margin-right: 7px;
+}
+
 .space-sync-msg--ok { color: var(--di-cyan); }
 .space-sync-msg--err { color: #e05a5a; }
 

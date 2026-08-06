@@ -4,7 +4,6 @@ import {
     DialogActions,
     DialogContent,
     DialogTitle,
-    LinearProgress,
     Stack,
     Typography
 } from '@mui/material'
@@ -41,7 +40,11 @@ export default function AssetOptimizationDialog({
                             <Typography variant="body2" color="text.secondary">
                                 Optimizing textures and model data before upload…
                             </Typography>
-                            <LinearProgress aria-label="Optimizing model" />
+                            <div
+                                className="sao-progress-bar"
+                                role="progressbar"
+                                aria-label="Optimizing model"
+                            />
                         </>
                     ) : (
                         <Typography variant="body2" color={hasError ? 'error' : 'text.secondary'}>

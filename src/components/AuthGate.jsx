@@ -1,4 +1,4 @@
-import { Box, Button, CircularProgress, Divider, Link, Stack, TextField, Typography } from '@mui/material'
+import { Box, Button, Divider, Link, Stack, TextField, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useSpacePublicFlag from '../hooks/useSpacePublicFlag.js'
@@ -8,7 +8,7 @@ import { appNavigate } from '../utils/appNavigate.js'
 import { buildAppSpacePath, buildWikiPath } from '../utils/spaceRouting.js'
 import AccountButton from './AccountButton.jsx'
 import { OUT_OF_SCOPE_EXPLAIN, OUT_OF_SCOPE_REDIRECT } from './authGateScope.js'
-import LoadingScreen from './LoadingScreen.jsx'
+import LoadingScreen, { LoadingInline } from './LoadingScreen.jsx'
 
 const readInviteTokenFromUrl = () => {
     if (typeof window === 'undefined') return null
@@ -276,8 +276,8 @@ export default function AuthGate({
                     </Typography>
                 )}
                 {providers === null ? (
-                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
-                        <CircularProgress size={18} sx={{ color: 'var(--ui-accent)' }} />
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 1, color: 'var(--ui-accent)' }}>
+                        <LoadingInline announce="Loading sign-in options" />
                     </Box>
                 ) : null}
                 {(providers?.github || providers?.google) ? (
@@ -353,7 +353,11 @@ export default function AuthGate({
                         '&:hover': { background: 'var(--ui-accent-strong)' }
                     }}
                 >
-                    {submitting ? <CircularProgress size={18} sx={{ color: '#07111b' }} /> : 'Sign in'}
+                    {submitting ? (
+                        <span style={{ color: '#07111b' }}>
+                            <LoadingInline announce="Signing in" />
+                        </span>
+                    ) : 'Sign in'}
                 </Button>
                     </>
                 ) : (providers?.github || providers?.google) ? (

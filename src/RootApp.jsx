@@ -35,9 +35,9 @@ const WikiPage = lazy(() => import('./wiki/WikiPage.jsx'))
 import { OUT_OF_SCOPE_EXPLAIN } from './components/authGateScope.js'
 const AuthGate = lazy(() => import('./components/AuthGate.jsx'))
 
-function ProtectedSurface({ children, requiredSpaceId = null, showAccountButton = true, outOfScopeBehavior }) {
+function ProtectedSurface({ children, requiredSpaceId = null, showAccountButton = true, outOfScopeBehavior, fallbackLabel = 'Loading' }) {
     return (
-        <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+        <Suspense fallback={<RouteSurfaceFallback label={fallbackLabel} detail="" />}>
             <AuthGate requiredSpaceId={requiredSpaceId} showAccountButton={showAccountButton} outOfScopeBehavior={outOfScopeBehavior}>{children}</AuthGate>
         </Suspense>
     )
@@ -48,7 +48,7 @@ function SpaceSurfaceRoute({ appState }) {
     const { isPublic, loading } = useSpacePublicFlag(canBePublic ? appState.spaceId : null)
 
     if (canBePublic && loading) {
-        return <RouteSurfaceFallback label="Loading" detail="" />
+        return <RouteSurfaceFallback label="Loading space" detail="" />
     }
 
     if (canBePublic && isPublic) {
@@ -56,7 +56,7 @@ function SpaceSurfaceRoute({ appState }) {
     }
 
     return (
-        <ProtectedSurface requiredSpaceId={appState.spaceId}>
+        <ProtectedSurface requiredSpaceId={appState.spaceId} fallbackLabel="Loading space">
             <SpaceSurfaceApp routeState={appState} />
         </ProtectedSurface>
     )
@@ -73,7 +73,7 @@ function SlugProjectRoute({ appState }) {
     const { result, error } = useResolveSlugProject(appState.spaceId, appState.projectSlugSegment)
 
     if (result === undefined && !error) {
-        return <RouteSurfaceFallback label="Loading" detail="" />
+        return <RouteSurfaceFallback label="Loading project" detail="" />
     }
 
     if (result?.space?.id && result?.project?.id) {
@@ -93,11 +93,11 @@ function WccSurfaceRoute({ mode }) {
     const { isPublic, loading } = useSpacePublicFlag('wcc')
 
     if (loading) {
-        return <RouteSurfaceFallback label="Loading" detail="" />
+        return <RouteSurfaceFallback label="Loading WCC" detail="" />
     }
 
     const content = (
-        <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+        <Suspense fallback={<RouteSurfaceFallback label="Loading WCC" detail="" />}>
             <WccExperience initialMode={mode} />
         </Suspense>
     )
@@ -106,7 +106,7 @@ function WccSurfaceRoute({ mode }) {
         return content
     }
 
-    return <ProtectedSurface requiredSpaceId="wcc">{content}</ProtectedSurface>
+    return <ProtectedSurface requiredSpaceId="wcc" fallbackLabel="Loading WCC">{content}</ProtectedSurface>
 }
 
 // Same shape as WccSurfaceRoute: algovrithm is a real space whose *contents*
@@ -116,11 +116,11 @@ function AlgoVrithmSurfaceRoute({ mode }) {
     const { isPublic, loading } = useSpacePublicFlag(ALGO_VRITHM_SPACE_ID)
 
     if (loading) {
-        return <RouteSurfaceFallback label="Loading" detail="" />
+        return <RouteSurfaceFallback label="Loading exhibition" detail="" />
     }
 
     const content = (
-        <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+        <Suspense fallback={<RouteSurfaceFallback label="Loading exhibition" detail="" />}>
             {mode === 'scene' ? <AlgoVrithmExperience /> : <AlgoVrithmLanding />}
         </Suspense>
     )
@@ -129,7 +129,7 @@ function AlgoVrithmSurfaceRoute({ mode }) {
         return content
     }
 
-    return <ProtectedSurface requiredSpaceId={ALGO_VRITHM_SPACE_ID}>{content}</ProtectedSurface>
+    return <ProtectedSurface requiredSpaceId={ALGO_VRITHM_SPACE_ID} fallbackLabel="Loading exhibition">{content}</ProtectedSurface>
 }
 
 function AppRouter() {
@@ -163,7 +163,7 @@ function AppRouter() {
 
     if (isStudioLocation(studioState)) {
         return (
-            <ProtectedSurface requiredSpaceId={studioState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
+            <ProtectedSurface requiredSpaceId={studioState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN} fallbackLabel="Loading Studio">
                 <Suspense
                     fallback={
                         <RouteSurfaceFallback
@@ -180,7 +180,7 @@ function AppRouter() {
 
     if (isRawLocation(rawState)) {
         return (
-            <ProtectedSurface requiredSpaceId={rawState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
+            <ProtectedSurface requiredSpaceId={rawState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN} fallbackLabel="Loading Raw">
                 <Suspense
                     fallback={
                         <RouteSurfaceFallback
@@ -197,7 +197,7 @@ function AppRouter() {
 
     if (appState.page === APP_PAGE_WIKI) {
         return (
-            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+            <Suspense fallback={<RouteSurfaceFallback label="Loading wiki" detail="" />}>
                 <WikiPage />
             </Suspense>
         )
@@ -209,7 +209,7 @@ function AppRouter() {
 
     if (isRootLanding) {
         return (
-            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+            <Suspense fallback={<RouteSurfaceFallback label="Loading landing" detail="" />}>
                 <LandingPage />
             </Suspense>
         )

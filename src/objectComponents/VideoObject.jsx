@@ -3,6 +3,7 @@ import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
 import { attachVideoPlaybackRetry, attachVideoSound, configureVideoElement } from '../utils/videoPlayback.js'
+import LoadingBounds from './LoadingBounds.jsx'
 
 function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = true } = {}) {
     const [texture, setTexture] = useState(null)
@@ -64,6 +65,7 @@ export default function VideoObject({ assetRef, data, opacity = 1, linkActive, m
     const isVideoType = !assetRef?.mimeType || assetRef.mimeType.startsWith('video/')
     const rawSource = (isVideoType ? assetUrl : null) || data || null
     const sourceUrl = typeof rawSource === 'string' ? rawSource.trim() : null
+    const hasSource = Boolean(sourceUrl) && sourceUrl !== 'blob:null'
     const [size, setSize] = useState([1, 1])
     const { texture, playbackBlocked } = useVideoTextureSource(sourceUrl, { muted, volume, loop })
 
@@ -89,7 +91,8 @@ export default function VideoObject({ assetRef, data, opacity = 1, linkActive, m
     }, [sourceUrl])
 
     if (!texture) {
-        return null
+        if (!hasSource) return null
+        return <LoadingBounds position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]} size={[size[0], size[1], 0.02]} />
     }
 
     return (

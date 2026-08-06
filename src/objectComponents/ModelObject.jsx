@@ -17,6 +17,7 @@ import { getAssetSourceUrl, streamRemoteAsset } from '../services/assetSources.j
 import { isHtmlLikeMimeType } from '../utils/assetContentType.js'
 import { asColor } from '../utils/colorValue.js'
 import { isContentAddressedAssetUrl } from '../utils/contentAddressedAsset.js'
+import LoadingBounds from './LoadingBounds.jsx'
 
 // Compressed GLBs (Draco / Meshopt — the default export of most DCC tools and
 // asset stores) need their decoders registered or the load fails silently to
@@ -78,8 +79,13 @@ export default function ModelObject({
     animationClip = ''
 }) {
     const [loaded, setLoaded] = useState(null)
+    const [loadError, setLoadError] = useState(false)
     const loadedScene = loaded?.scene || null
     const gl = useThree((state) => state.gl)
+    // Whether there's actually something to wait on -- distinct from "loaded
+    // but empty". An object with no model assigned yet renders nothing, same
+    // as before; only an assigned-but-unresolved asset gets a placeholder.
+    const hasSource = Boolean(assetRef?.id) || (typeof data === 'string' && data.trim().length > 0)
 
     const effectiveFormat = useMemo(() => {
         if (modelFormat) return modelFormat
@@ -93,6 +99,7 @@ export default function ModelObject({
 
     useEffect(() => {
         let disposed = false
+        setLoadError(false)
 
         const resolveAssetSource = async (ref, fallbackUrl) => {
             if (ref?.id) {
@@ -184,6 +191,7 @@ export default function ModelObject({
             if (disposed) return
             console.warn('[ModelObject] failed to load model:', assetRef?.name || data, error?.message || error)
             setLoaded(null)
+            setLoadError(true)
         }
 
         const loadModel = async () => {
@@ -348,7 +356,14 @@ export default function ModelObject({
         mixerRef.current?.update(delta * speed)
     })
 
-    if (!renderedScene) return null
+    if (!renderedScene) {
+        // Unit box at the object's own transform -- the real bounds are
+        // unknown pre-load, this is just "something is here, wait" / "this
+        // one failed" rather than the previous total absence.
+        if (loadError) return <LoadingBounds error />
+        if (hasSource) return <LoadingBounds />
+        return null
+    }
 
     return <primitive object={renderedScene} />
 }

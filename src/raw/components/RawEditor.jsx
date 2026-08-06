@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { LoadingInline } from '../../components/LoadingScreen.jsx'
 import PropertyInspector from './PropertyInspector.jsx'
 import DesktopWindow from './DesktopWindow.jsx'
 import RawViewport from './RawViewport.jsx'
@@ -1105,7 +1106,11 @@ export default function RawEditor({
                 )}
             </header>
 
-            {state.loading ? <div className="raw-overlay-message">Loading project…</div> : null}
+            {state.loading ? (
+                <div className="raw-overlay-message">
+                    <LoadingInline label="loading project…" />
+                </div>
+            ) : null}
             {state.loadError ? <div className="raw-overlay-message is-error">{state.loadError}</div> : null}
             {visibleSelection && (
                 <button type="button" className="raw-delete-fab" onClick={handleDeleteSelected}>

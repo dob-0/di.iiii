@@ -15,6 +15,7 @@ import {
 } from '../../services/serverSpaces.js'
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
+import { LoadingInline } from '../../components/LoadingScreen.jsx'
 import SpaceConstellation from './SpaceConstellation.jsx'
 import { buildStudioHubPath, navigateToStudioPath } from '../utils/studioRouting.js'
 import { appNavigate } from '../../utils/appNavigate.js'
@@ -137,7 +138,14 @@ function SpaceCardPreview({ spaceId, label }) {
                         transform: `scale(${scale})`
                     }}
                 />
-            ) : null}
+            ) : (
+                // The boot queue (PREVIEW_BOOT_SLOTS) can leave this card
+                // waiting for seconds behind other previews — without this the
+                // box is just blank, which reads as broken rather than loading.
+                <div className="ssh-card-preview-loading">
+                    <LoadingInline announce="Loading preview" />
+                </div>
+            )}
         </div>
     )
 }
@@ -147,7 +155,7 @@ export default function SpaceHub() {
     const [spaces, setSpaces] = useState([])
     const [sandboxSummary, setSandboxSummary] = useState(null)
     const [isPurging, setIsPurging] = useState(false)
-    const [status, setStatus] = useState('loading...')
+    const [status, setStatus] = useState('loading…')
     const [creatingTitle, setCreatingTitle] = useState(null)
     const [isBusy, setIsBusy] = useState(false)
     const [defaultSpaceId, setDefaultSpaceId] = useState(null)
@@ -177,7 +185,7 @@ export default function SpaceHub() {
     const canManage = (space) => space.isOwner || isAdmin
 
     const loadSpaces = useCallback(async () => {
-        setStatus('loading...')
+        setStatus('loading…')
         try {
             const [index, cfg] = await Promise.all([fetchServerSpacesIndex(), getServerConfig()])
             const list = index.spaces
@@ -233,7 +241,7 @@ export default function SpaceHub() {
         if (!name) return
         setCreatingTitle(null)
         setIsBusy(true)
-        setStatus('creating...')
+        setStatus('creating…')
         try {
             const space = await createServerSpace({ label: name, isPermanent: true })
             await loadSpaces()
@@ -522,9 +530,13 @@ export default function SpaceHub() {
                 )}
 
                 {status && (
-                    <p className={`ssh-status${status.includes('error') ? ' ssh-status-error' : ''}`}>
-                        {status}
-                    </p>
+                    status.endsWith('…') ? (
+                        <p className="ssh-status"><LoadingInline label={status} /></p>
+                    ) : (
+                        <p className={`ssh-status${status.includes('error') ? ' ssh-status-error' : ''}`}>
+                            {status}
+                        </p>
+                    )
                 )}
 
                 {viewMode === 'map' && spaces.length > 0 && (
@@ -705,14 +717,14 @@ export default function SpaceHub() {
                                     {github?.spaceId === space.id && (
                                         <div className="ssh-github-panel" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
                                             {github.loading
-                                                ? <p className="ssh-linker-status">Loading…</p>
+                                                ? <p className="ssh-linker-status"><LoadingInline label="loading…" /></p>
                                                 : <GithubSyncSection space={space} projects={github.projects} />}
                                         </div>
                                     )}
 
                                     {isLinking && (
                                         <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                                            {linker.loading && <p className="ssh-linker-status">Loading projects...</p>}
+                                            {linker.loading && <p className="ssh-linker-status"><LoadingInline label="loading projects…" /></p>}
                                             {linker.error && <p className="ssh-linker-status ssh-linker-error">{linker.error}</p>}
                                             {!linker.loading && !linker.error && linker.projects.length === 0 && (
                                                 <p className="ssh-linker-status">No projects yet. Open this space in Studio to create one.</p>

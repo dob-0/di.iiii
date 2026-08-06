@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { LoadingInline } from '../../components/LoadingScreen.jsx'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { buildPublicProjectPath, buildVanityProjectPath } from '../../utils/spaceRouting.js'
 import { listProjects } from '../services/projectsApi.js'
@@ -204,7 +205,9 @@ export default function ProjectSwitcher({ spaceId, currentProjectId, spaceLabel 
             {open ? (
                 <nav style={cardStyle} aria-label="Projects in this space">
                     {projects === null ? (
-                        <div style={{ ...itemStyle, cursor: 'default', opacity: 0.7 }}>Loading projects...</div>
+                        <div style={{ ...itemStyle, cursor: 'default', opacity: 0.7 }}>
+                            <LoadingInline label="loading projects…" />
+                        </div>
                     ) : projects.length === 0 ? (
                         <div style={{ ...itemStyle, cursor: 'default', opacity: 0.7 }}>No projects here.</div>
                     ) : (

@@ -1576,3 +1576,38 @@
     color: #9fb0bf;
     padding: 4px 8px;
 }
+
+/* Indeterminate progress bar for waits with no known duration — asset
+   optimization, etc. System tokens only; see AssetOptimizationDialog.jsx.
+   Pattern matches .preferences-status-bar.indeterminate in preferences.css,
+   defined locally here rather than imported so Studio doesn't pull in that
+   stylesheet's other rules. */
+.sao-progress-bar {
+    position: relative;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 0;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.sao-progress-bar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, var(--di-cyan), transparent);
+    animation: sao-progress-indeterminate 1.4s linear infinite;
+}
+
+@keyframes sao-progress-indeterminate {
+    from { transform: translateX(-120%); }
+    to { transform: translateX(260%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sao-progress-bar::after {
+        animation: none;
+        left: 30%;
+        opacity: 0.6;
+    }
+}

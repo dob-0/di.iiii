@@ -131,4 +131,19 @@ describe('SpaceSurfaceApp', () => {
         expect(await screen.findByText('legacy-app')).toBeInTheDocument()
         expect(getServerSpace).not.toHaveBeenCalled()
     })
+
+    // Source contract: this file is the public /{space} entry, and it shipped
+    // for months with six `fallback={null}` waits — a visitor got literally
+    // nothing while the surface resolved. Every Suspense here must show the
+    // platform loading screen (see src/components/LoadingScreen.jsx).
+    it('never leaves a route wait blank (no fallback={null})', async () => {
+        const { readFileSync, existsSync } = await import('node:fs')
+        const { join } = await import('node:path')
+        // import.meta.url is not a file: URL under Vitest's transform; the
+        // test can run with cwd at the repo root or at src/ (Vitest's root).
+        const candidates = [join(process.cwd(), 'src', 'SpaceSurfaceApp.jsx'), join(process.cwd(), 'SpaceSurfaceApp.jsx')]
+        const source = readFileSync(candidates.find(existsSync), 'utf8')
+        expect(source).not.toMatch(/fallback=\{null\}/)
+        expect(source).toMatch(/LoadingScreen/)
+    })
 })

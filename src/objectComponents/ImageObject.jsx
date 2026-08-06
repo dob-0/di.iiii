@@ -2,11 +2,13 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
+import LoadingBounds from './LoadingBounds.jsx'
 
 export default function ImageObject({ assetRef, data, opacity = 1, linkActive }) {
     const assetUrl = useAssetUrl(assetRef, { preferRemoteSource: true })
     const isImageType = !assetRef?.mimeType || assetRef.mimeType.startsWith('image/')
     const sourceUrl = (isImageType ? assetUrl : null) || data || null
+    const hasSource = typeof sourceUrl === 'string' && sourceUrl.trim().length > 0 && sourceUrl.trim() !== 'blob:null'
     const textureRef = useRef(null)
     const [texture, setTexture] = useState(null)
     const [loadFailed, setLoadFailed] = useState(false)
@@ -71,13 +73,18 @@ export default function ImageObject({ assetRef, data, opacity = 1, linkActive })
     }, [])
 
     if (!texture) {
-        if (!loadFailed) return null
-        return (
-            <mesh position-y={0.01} rotation-x={-Math.PI / 2}>
-                <planeGeometry args={[3, 3]} />
-                <meshBasicMaterial color="#12292b" transparent={true} opacity={0.55} side={THREE.DoubleSide} />
-            </mesh>
-        )
+        if (loadFailed) {
+            return (
+                <mesh position-y={0.01} rotation-x={-Math.PI / 2}>
+                    <planeGeometry args={[3, 3]} />
+                    <meshBasicMaterial color="#12292b" transparent={true} opacity={0.55} side={THREE.DoubleSide} />
+                </mesh>
+            )
+        }
+        // No source assigned at all -- nothing to wait on, keep the prior
+        // silent-empty behavior rather than pulsing forever.
+        if (!hasSource) return null
+        return <LoadingBounds position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]} size={[size[0], size[1], 0.02]} />
     }
 
     return (

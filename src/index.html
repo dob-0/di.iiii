@@ -25,8 +25,41 @@
     <meta name="twitter:title" content="di.iiii — browser-native XR authoring">
     <meta name="twitter:description" content="Build and publish spatial XR experiences — 3D scenes, node-driven behaviors, AR/VR spaces — without leaving the web.">
     <meta name="twitter:image" content="https://di-studio.xyz/brand/og-image.png">
+
+    <!-- Pre-hydration frame: without this the first paint on a cold load is
+         browser white until the JS bundle brings base.css. This mirrors
+         LoadingScreen (src/components/loadingScreen.css) exactly -- black,
+         one 34px spinner, nothing drawn -- so the pre-JS frame already looks
+         like the app rather than a flash of a different product. React's
+         createRoot render replaces #root's contents once it mounts. -->
+    <style>
+        html, body { background: #000; margin: 0; }
+        .boot-loading-screen {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            background: #000;
+        }
+        .boot-loading-spinner {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.14);
+            border-top-color: rgba(255, 255, 255, 0.85);
+            animation: boot-loading-spin 820ms linear infinite;
+        }
+        @keyframes boot-loading-spin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) {
+            .boot-loading-spinner {
+                animation: boot-loading-pulse 1600ms ease-in-out infinite;
+                border-top-color: rgba(255, 255, 255, 0.55);
+            }
+            @keyframes boot-loading-pulse { 50% { opacity: 0.3; } }
+        }
+    </style>
 </head>
 <body>
-    <div id="root"></div>
+    <div id="root"><div class="boot-loading-screen" aria-hidden="true"><div class="boot-loading-spinner"></div></div></div>
     <script type="module" src="./index.jsx"></script></body>
 </html>

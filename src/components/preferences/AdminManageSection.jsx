@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ModuleSection, MetricCard, InfoPair } from './PreferencesShared.jsx'
+import { LoadingInline } from '../LoadingScreen.jsx'
 import GithubSyncSection from './GithubSyncSection.jsx'
 import {
     listServerSpaces,
@@ -265,7 +266,11 @@ export default function AdminManageSection() {
                                 </button>
                                 {isOpen && (
                                     <>
-                                        {bucket?.loading && <div className="preferences-tree-note">Loading projects…</div>}
+                                        {bucket?.loading && (
+                                            <div className="preferences-tree-note">
+                                                <LoadingInline label="loading projects…" />
+                                            </div>
+                                        )}
                                         {bucket?.error && <div className="preferences-tree-note">{bucket.error}</div>}
                                         {bucket && !bucket.loading && bucket.items.length === 0 && (
                                             <div className="preferences-tree-note">No projects yet.</div>
@@ -388,7 +393,11 @@ function RootDetail({ spaces, users, globalSpaceId, draftSpace, setDraftSpace, o
             <CommonsModerationSection />
 
             <ModuleSection title="People" subtitle="Account roles and overall reach">
-                {users === null && <div className="preferences-empty">Loading accounts…</div>}
+                {users === null && (
+                    <div className="preferences-empty">
+                        <LoadingInline label="loading accounts…" />
+                    </div>
+                )}
                 {Array.isArray(users) && users.length === 0 && (
                     <div className="preferences-empty">No accounts to manage (admin sign-in required).</div>
                 )}
@@ -503,7 +512,7 @@ function SpaceDetail({
 
             <ModuleSection
                 title="Projects"
-                subtitle={projectsBucket?.loading ? 'Loading…' : `${projects.length} in this space`}
+                subtitle={projectsBucket?.loading ? <LoadingInline label="loading…" /> : `${projects.length} in this space`}
             >
                 <div className="preferences-space-list">
                     {projects.map((project) => (
@@ -547,7 +556,11 @@ function SpaceDetail({
                     value={ownerLabel}
                     mono={!ownerUser}
                 />
-                {users === null && <div className="preferences-empty">Loading accounts…</div>}
+                {users === null && (
+                    <div className="preferences-empty">
+                        <LoadingInline label="loading accounts…" />
+                    </div>
+                )}
                 {Array.isArray(users) && users.length === 0 && (
                     <div className="preferences-empty">No accounts to manage (admin sign-in required).</div>
                 )}
@@ -636,7 +649,7 @@ function CommonsModerationSection() {
     }
 
     return (
-        <ModuleSection title="Asset commons" subtitle={items === null ? 'Loading…' : `${items.length} publicly shared asset${items.length === 1 ? '' : 's'}`}>
+        <ModuleSection title="Asset commons" subtitle={items === null ? <LoadingInline label="loading…" /> : `${items.length} publicly shared asset${items.length === 1 ? '' : 's'}`}>
             <form className="preferences-inline-form" onSubmit={(e) => { e.preventDefault(); load(query.trim()) }}>
                 <input
                     className="preferences-input"

@@ -17,12 +17,14 @@ import { buildStudioHubPath } from '../../studio/utils/studioRouting.js'
 import { buildRawProjectPath, navigateToRawPath } from '../utils/rawRouting.js'
 import { GUIDE_AUDIENCES } from '../utils/rawGuide.js'
 import SpaceSyncPanel from '../../components/SpaceSyncPanel.jsx'
+import { LoadingInline } from '../../components/LoadingScreen.jsx'
 
 export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const { role } = useAuthSession()
     const [projects, setProjects] = useState([])
     const [title, setTitle] = useState('Untitled Project')
-    const [status, setStatus] = useState('Loading raw projects...')
+    const [status, setStatus] = useState('Loading raw projects…')
+    const [isLoadingList, setIsLoadingList] = useState(true)
     const [isBusy, setIsBusy] = useState(false)
     const [importWarnings, setImportWarnings] = useState([])
     const titleInputRef = useRef(null)
@@ -34,13 +36,16 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     ]
 
     const loadProjects = useCallback(async () => {
-        setStatus('Loading raw projects...')
+        setIsLoadingList(true)
+        setStatus('Loading raw projects…')
         try {
             const nextProjects = await listProjects(spaceId)
             setProjects(nextProjects)
             setStatus(nextProjects.length ? '' : 'No raw projects in this space yet.')
         } catch (error) {
             setStatus(error.message || 'Unable to load raw projects.')
+        } finally {
+            setIsLoadingList(false)
         }
     }, [spaceId])
 
@@ -54,7 +59,7 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
 
     const handleCreate = async () => {
         setIsBusy(true)
-        setStatus('Creating raw project...')
+        setStatus('Creating raw project…')
         try {
             const response = await createProject(spaceId, {
                 title,
@@ -73,7 +78,7 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         const file = event.target.files?.[0]
         if (!file) return
         setIsBusy(true)
-        setStatus(`Importing ${file.name}...`)
+        setStatus(`Importing ${file.name}…`)
         setImportWarnings([])
         try {
             const { document, assetFiles, warnings } = await importLegacySceneFile(file)
@@ -112,7 +117,7 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         const confirmed = window.confirm(`Delete project "${project.title || project.id}"? This cannot be undone.`)
         if (!confirmed) return
         setIsBusy(true)
-        setStatus(`Deleting ${project.title || project.id}...`)
+        setStatus(`Deleting ${project.title || project.id}…`)
         try {
             const spaceMeta = await getServerSpace(spaceId).catch(() => null)
             if (spaceMeta?.publishedProjectId === project.id) {
@@ -216,7 +221,7 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         onKeyDown={(e) => e.key === 'Enter' && !isBusy && handleCreate()}
                     />
                     <button type="button" className="raw-hub-create-btn" onClick={handleCreate} disabled={isBusy}>
-                        new
+                        {isBusy ? 'working…' : 'new'}
                     </button>
                     <label className="raw-hub-import-btn">
                         <input type="file" accept=".zip,.json,application/zip,application/json" onChange={handleImport} />
@@ -244,7 +249,11 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                             ))}
                         </ul>
                     ) : (
-                        <p className="raw-hub-empty">{status}</p>
+                        <p className="raw-hub-empty">
+                            {(isLoadingList || isBusy) && status
+                                ? <LoadingInline label={status} />
+                                : status}
+                        </p>
                     )}
                 </div>
 

@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import LoadingScreen, { LoadingInline } from '../../components/LoadingScreen.jsx'
 import MadeWithBadge from '../../components/MadeWithBadge.jsx'
 import ProjectSwitcher from './ProjectSwitcher.jsx'
 import { createProjectSyncService } from '../services/projectSyncService.js'
@@ -25,11 +26,26 @@ import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 // chunk (~1.6MB raw, measured against first paint on /br_id_ge).
 const PublicProjectSceneSurface = lazy(() => import('./PublicProjectSceneSurface.jsx'))
 
-const loadingOverlay = (
-    <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '2rem' }}>
-        <div style={overlayCardStyle}>
-            <strong>Loading live experience...</strong>
-        </div>
+// Suspense fallback: the lazy PublicProjectSceneSurface chunk (three/fiber/xr,
+// ~1.6MB) hasn't arrived yet, so nothing of the piece itself is drawn -- the
+// platform's full canonical takeover.
+const sceneChunkFallback = <LoadingScreen label="Loading live experience" />
+
+// status === 'loading' overlay: the page is already painted (chrome, prior
+// document) and this is a re-fetch (initial load or a reconnect) -- system
+// treatment over a dim backdrop, no glass card.
+const documentLoadingOverlay = (
+    <div
+        style={{
+            position: 'absolute',
+            inset: 0,
+            display: 'grid',
+            placeItems: 'center',
+            background: 'rgba(0, 0, 0, 0.6)',
+            color: 'var(--di-text-muted)'
+        }}
+    >
+        <LoadingInline label="loading live experience…" />
     </div>
 )
 
@@ -253,7 +269,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                     </div>
                 )
             ) : document ? (
-                <Suspense fallback={loadingOverlay}>
+                <Suspense fallback={sceneChunkFallback}>
                     <PublicProjectSceneSurface
                         projectId={projectId}
                         document={document}
@@ -299,7 +315,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 <MadeWithBadge variant="floating" />
             ) : null}
 
-            {state.status === 'loading' ? loadingOverlay : null}
+            {state.status === 'loading' ? documentLoadingOverlay : null}
 
             {state.status === 'error' ? (
                 <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '2rem' }}>
