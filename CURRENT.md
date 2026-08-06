@@ -11,14 +11,9 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session (2026-08-06 — br_id_ge visibility/UX fixes + a stuck deploy pipeline)
+## Last session
 
-- Promoted Raw from a buried `.sh-link` text row to an outlined top-row button in Studio Hub, next to "+ New".
-- Hid br_id_ge's tech rider ("needs dash", `br-id-ge-needs`) from the public `ProjectSwitcher` via new `SPACE_PROJECT_HIDDEN` — it was public and copy-linkable next to the field/rite/landing; project and its direct URL are untouched.
-- `ProjectSwitcher`'s pill also went low-contrast-at-rest (full contrast only on hover/focus/open) — landed by another concurrent session on top of the above.
-- Fixed two live bugs in br_id_ge's rite itself (a hand-authored `index.html` code-space, not this repo): Act III's blessing text had no backdrop against the ambient letter-scatter canvas (added a radial-gradient + blur scrim), and Act V's action links had zero idle motion (added a staggered opacity/translateY animation, `prefers-reduced-motion`-guarded). Verified page loads clean with no console errors; the acts themselves are camera-gesture-gated so a human still needs to confirm on a phone.
-- Found and landed a real, unrelated CI blocker: a stray `docs/ai/sessions/chore-sync-safety-rescue.md` (from a branch merged without `npm run land`) was failing the AI-docs gate for every push behind it — fixed via `npm run land` itself.
-- GitHub Actions had a rough stretch today (action-download 503s, a stuck webhook, a runner queue stuck at zero progress for 25+ min across multiple unrelated branches) — not code-related. Deploy to staging was still pending when this session ended; re-dispatch via `gh workflow run deploy-vps-staging.yml --ref dev` if it's still stuck.
+- Raw on touch, the all-nodes example, Studio as a node
 
 Full detail: `PROGRESS.md`.
 
