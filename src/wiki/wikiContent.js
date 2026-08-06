@@ -429,6 +429,43 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-06'
     },
     {
+        id: 'studio-node',
+        category: 'Editing',
+        title: 'The Studio node: an editor you can place in a graph',
+        summary: 'Studio is one entry in Raw’s palette. Place it like any other node, enter it, and you find the panels it is assembled from — the same container idea you would use to build your own node later.',
+        body: [
+            'In Raw’s palette, Studio sits next to Color, Browser and Cube. Placing it gives you a single card on the canvas. Entering that card — the “›” control on its header — takes you inside, where you find the nodes it is made of: an Outliner, a Scene, and an Inspector. It is one node from the outside and a graph from the inside.',
+            'This is the same shape TouchDesigner uses for a Component and Nuke uses for a Group: a container whose contents are a normal subgraph. That is the point of building it this way rather than hard-wiring Studio into the editor — the mechanism that makes Studio a node is the mechanism that will let you wrap your own patch into a palette item and place it beside the built-in ones.',
+            { list: [
+                'Every node in a scope now appears on the canvas, panels included. Previously a panel existed only as a floating window, so you could not select, move, wire or delete it from the graph, and a wire feeding a panel was invisible even though it was carrying a value.',
+                'A panel window and its card are two views of one node: close the window and the card remains; open it from the Windows menu and the panel comes back.',
+                'Studio’s panels start closed so that entering the node shows you its graph rather than three windows over it.'
+            ] },
+            'What is not there yet: Studio’s other panels — assets, code, share, projects — are still hardcoded chrome rather than nodes, because their bodies need a large amount of editor state that has not been re-plumbed yet. Two design questions are also deliberately still open: which of a container’s inner ports should show on the outside, and whether a saved palette item stays linked to the graph it came from or becomes a frozen copy.'
+        ],
+        tags: ['raw', 'studio', 'nodes', 'container', 'palette', 'nesting', 'touchdesigner'],
+        updated: '2026-08-06'
+    },
+    {
+        id: 'raw-on-a-phone',
+        category: 'Editing',
+        title: 'Raw on a phone: wiring nodes with a finger',
+        summary: 'The Raw graph editor is usable on touch — pinch to zoom, drag between ports to wire, and an All Nodes Example that puts the whole palette in one graph.',
+        body: [
+            'The graph editor was previously mouse-only in a way no amount of zooming could work around: starting a wire on an output port captured the pointer, so the release never reached the input port under your finger and no connection could be made. Dragging between ports now works the same way on a phone as on a desktop.',
+            { list: [
+                'Drag from an output port to an input port to wire them. You do not have to land exactly on the dot — the drop snaps to the nearest port that accepts that type, within a finger’s width, so a small miss still connects.',
+                'Pinch with two fingers to zoom and pan the canvas at the same time. The zoom buttons in the bottom-left corner do the same thing in steps.',
+                'Opening a graph fits it to the screen instead of dropping you at 100% somewhere inside it, so you can see the whole patch before choosing where to work.',
+                'Tap a wire to delete it — the tap area is much wider than the line you see.',
+                'Panel windows (World, Text, Browser, Image) shrink to fit the screen rather than running off the edge.'
+            ] },
+            'The overflow menu (⋯) has an All Nodes Example: one graph containing every node type the palette can create, with a clock driving a chain of maths into a pulsing sphere, a colour crossfade on a cube, and a breathing light. It is the quickest way to see what the node system can currently do — and it is deliberately honest about what it cannot: geometry, texture and signal outputs are declared on several node types but are not computed yet, so those ports are left unwired rather than connected to look complete.'
+        ],
+        tags: ['raw', 'nodes', 'mobile', 'touch', 'phone', 'example', 'editor'],
+        updated: '2026-08-06'
+    },
+    {
         id: 'br-id-ge',
         category: 'Spaces & access',
         title: 'br_id_ge (կամուրջ): an Armenian XR rite — live at Notations #2',
