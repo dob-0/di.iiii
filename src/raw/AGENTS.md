@@ -45,6 +45,7 @@ left untouched beyond removing its now-obsolete blocked-create warning.
 
 - `npm run test`
 - `npm run build`
+- `npm run check:toolbar-overlap` — any `raw-topbar` change (dynamic center-slot state: hint pill vs. breadcrumb, both must survive 390–1440px without colliding with `.raw-topbar-right`)
 - nearby tests:
   - `src/project/state/projectStore.test.js` (shared store; Raw consumes it directly)
   - `src/raw/utils/windowLayout.test.js`

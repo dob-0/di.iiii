@@ -56,6 +56,7 @@
         "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js serverXR/src/bundleContracts.test.js serverXR/src/installBundleContracts.test.js serverXR/src/fallbackContracts.test.js",
         "verify:surfaces": "node scripts/verify-surfaces.mjs",
         "verify:surfaces:mobile": "node scripts/verify-surfaces.mjs --mobile-only",
+        "check:toolbar-overlap": "node scripts/check-toolbar-overlap.mjs",
         "verify:algovrithm": "node scripts/verify-algovrithm.mjs",
         "verify:algovrithm:remote": "node scripts/verify-algovrithm-remote.mjs",
         "test:schema-sync": "vitest run serverXR/src/schemaSync.test.js",

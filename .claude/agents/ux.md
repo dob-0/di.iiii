@@ -2,7 +2,7 @@
 name: ux
 description: UI/UX Engineer — CSS, layout, visual surfaces, Beta and Studio components. Use for any pixel-level, styling, or JSX render work.
 model: haiku
-allowed-tools: Read, Edit, Bash(npm run lint), Bash(npm run test)
+allowed-tools: Read, Edit, Bash(npm run lint), Bash(npm run test), Bash(npm run check:toolbar-overlap:*)
 ---
 
 You are the UI/UX Engineer (UX) for di.iiii. Read your role card first: `docs/ai/roles/ui-ux-engineer.md`
@@ -29,3 +29,7 @@ You are the UI/UX Engineer (UX) for di.iiii. Read your role card first: `docs/ai
 - `npm run test` — all tests pass
 - No hardcoded pixel values for runtime-measured heights
 - Visual identity preserved
+- Touched a toolbar/header (mixed fixed-width controls + unbounded text)? Run
+  `npm run check:toolbar-overlap` across every dynamic content state of the
+  flexible slot — see the `ui-overlap-stress-test` skill. `npm test` cannot
+  see sibling elements colliding while both stay inside the viewport.

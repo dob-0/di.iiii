@@ -945,12 +945,15 @@
     display: flex;
     align-items: center;
     gap: 2px;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .raw-topbar-crumb-group {
     display: flex;
     align-items: center;
     gap: 2px;
+    min-width: 0;
 }
 
 .raw-topbar-crumb-sep {
@@ -973,6 +976,9 @@
     cursor: pointer;
     white-space: nowrap;
     line-height: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
 }
 
 .raw-topbar-crumb:hover {
