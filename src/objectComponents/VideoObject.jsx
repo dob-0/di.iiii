@@ -4,9 +4,22 @@ import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
 import { attachVideoPlaybackRetry, attachVideoSound, configureVideoElement } from '../utils/videoPlayback.js'
 
+const DEFAULT_SIZE = [1, 1]
+
+// Plane dimensions come from this element's own metadata. They used to come
+// from a second <video> created solely to read videoWidth/videoHeight, which
+// doubled the network cost of every video in the app: /wcc/main embeds ten
+// artist projects at once, and the same 12.36MB file was fetched six times —
+// three objects referencing it, two elements each.
+const sizeFromVideo = (video) => {
+    const aspect = video.videoWidth / (video.videoHeight || 1)
+    return Number.isFinite(aspect) && aspect > 0 ? [Math.max(aspect * 3, 1), 3] : DEFAULT_SIZE
+}
+
 function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = true } = {}) {
     const [texture, setTexture] = useState(null)
     const [playbackBlocked, setPlaybackBlocked] = useState(false)
+    const [size, setSize] = useState(DEFAULT_SIZE)
     const videoRef = useRef(null)
 
     useEffect(() => {
@@ -14,6 +27,7 @@ function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = tru
         if (!resolvedSrc || resolvedSrc === 'blob:null') {
             setTexture(null)
             setPlaybackBlocked(false)
+            setSize(DEFAULT_SIZE)
             return
         }
 
@@ -37,14 +51,22 @@ function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = tru
         const onData = () => setTexture(tex)
         video.addEventListener('loadeddata', onData, { once: true })
 
+        // HAVE_METADATA. A cached video can reach it before this listener is
+        // attached, and then the event never comes.
+        const onMetadata = () => setSize(sizeFromVideo(video))
+        if (video.readyState >= 1) onMetadata()
+        else video.addEventListener('loadedmetadata', onMetadata, { once: true })
+
         return () => {
             video.removeEventListener('loadeddata', onData)
+            video.removeEventListener('loadedmetadata', onMetadata)
             detachPlaybackRetry()
             video.pause()
             video.src = ''
             tex.dispose()
             videoRef.current = null
             setTexture(null)
+            setSize(DEFAULT_SIZE)
         }
     }, [sourceUrl])
 
@@ -56,7 +78,7 @@ function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = tru
         return attachVideoSound(video, { muted, volume })
     }, [texture, muted, volume, loop])
 
-    return { texture, playbackBlocked }
+    return { texture, playbackBlocked, size }
 }
 
 export default function VideoObject({ assetRef, data, opacity = 1, linkActive, muted = true, volume = 1, loop = true }) {
@@ -64,29 +86,7 @@ export default function VideoObject({ assetRef, data, opacity = 1, linkActive, m
     const isVideoType = !assetRef?.mimeType || assetRef.mimeType.startsWith('video/')
     const rawSource = (isVideoType ? assetUrl : null) || data || null
     const sourceUrl = typeof rawSource === 'string' ? rawSource.trim() : null
-    const [size, setSize] = useState([1, 1])
-    const { texture, playbackBlocked } = useVideoTextureSource(sourceUrl, { muted, volume, loop })
-
-    useEffect(() => {
-        const resolvedSrc = typeof sourceUrl === 'string' ? sourceUrl.trim() : ''
-        if (!resolvedSrc || resolvedSrc === 'blob:null') {
-            setSize([1, 1])
-            return
-        }
-
-        const video = document.createElement('video')
-        configureVideoElement(video, resolvedSrc, { preload: 'metadata' })
-        const handleMetadata = () => {
-            const aspect = video.videoWidth / (video.videoHeight || 1)
-            setSize([Math.max(aspect * 3, 1), 3])
-            video.removeEventListener('loadedmetadata', handleMetadata)
-        }
-        video.addEventListener('loadedmetadata', handleMetadata)
-        return () => {
-            video.removeEventListener('loadedmetadata', handleMetadata)
-            video.src = ''
-        }
-    }, [sourceUrl])
+    const { texture, playbackBlocked, size } = useVideoTextureSource(sourceUrl, { muted, volume, loop })
 
     if (!texture) {
         return null
