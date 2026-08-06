@@ -657,4 +657,65 @@ describe('useProjectDocumentSync', () => {
         expect(result.current.store.state.sceneStreamState).toBe('degraded')
         expect(result.current.store.state.activity[0].message).toMatch(/catch-up failed/i)
     }, 10000)
+
+    // Regression test: the SSE stream and this client's own HTTP flush
+    // response race independently. A broadcast for an already-superseded op
+    // (delayed by proxy buffering, or simply overtaken by a faster POST
+    // response for a later op) used to regress the tracked version backward
+    // whenever it carried a lower version number than what the client
+    // already knew -- the next flush then submitted a stale baseVersion and
+    // got a spurious 409.
+    it('never regresses the tracked version when a stale broadcast arrives after a newer version is already known', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'studio-project', title: 'Studio Project' },
+                presentationState: { mode: 'scene', entryView: 'scene', codeHtml: '' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+        submitProjectOpsMock.mockImplementation(async (_projectId, _baseVersion, ops) => ({
+            newVersion: 3,
+            ops
+        }))
+
+        const { result } = renderHook(() => {
+            const store = useProjectStore()
+            const sync = useProjectDocumentSync({ projectId: 'studio-project', store })
+            return { store, sync }
+        })
+
+        await waitFor(() => {
+            expect(result.current.store.state.document.projectMeta.id).toBe('studio-project')
+        })
+
+        act(() => {
+            result.current.sync.applyLocalOps({
+                type: 'setPresentationState',
+                payload: { patch: { mode: 'code', codeHtml: '<main>Newer</main>' } }
+            })
+        })
+
+        await waitFor(() => {
+            expect(result.current.store.state.version).toBe(3)
+        })
+
+        // A delayed SSE broadcast for an earlier, already-superseded op
+        // arrives after the client's own submit already advanced past it.
+        const handlers = connectMock.mock.calls[0][0]
+        act(() => {
+            handlers.onProjectOp({
+                version: 2,
+                ops: [{
+                    opId: 'stale-broadcast',
+                    version: 2,
+                    type: 'setPresentationState',
+                    payload: { patch: { codeHtml: '<main>Stale</main>' } }
+                }]
+            })
+        })
+
+        expect(result.current.store.state.version).toBe(3)
+    })
 })

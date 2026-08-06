@@ -1046,7 +1046,11 @@ const invertSingleOp = (document, op) => {
             if (!payload.node || !ensureString(payload.node.id)) break
             const node = normalizeProjectNode(payload.node)
             if (!node) break
-            if (nodes.has(node.id)) break
+            // Mirrors createEntity/createEdge: forward apply overwrites a
+            // colliding id (see applyProjectOps) rather than no-op'ing, so
+            // the inverse must restore what was hijacked, not just delete.
+            const prev = nodes.get(node.id)
+            if (prev) return [{ type: 'createNode', payload: { node: cloneValue(prev) } }]
             return [{ type: 'deleteNode', payload: { nodeId: node.id } }]
         }
         case 'updateNode': {

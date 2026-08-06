@@ -429,6 +429,23 @@ describe('invertProjectOps', () => {
         expect(restored.entities.find((entity) => entity.id === 'child-1').parentId).toBe('group-1')
     })
 
+    // createEntity/createEdge both restore the previous value when their id
+    // collides with an existing one, because forward apply overwrites
+    // ("hijacks") rather than no-ops on that id -- createNode was missing
+    // this and inverted a hijack to nothing, permanently losing the
+    // overwritten node with no undo path.
+    it('inverts a createNode id collision to a restore, not a no-op', () => {
+        const base = baseDoc()
+        const hijack = [{
+            type: 'createNode',
+            payload: { node: { id: 'n1', typeId: 'geom.cube', label: 'Hijacked', values: { x: 999 } } }
+        }]
+        const { forward, inverse, restored } = expectRoundTrip(base, hijack)
+        expect(forward.nodes.find((node) => node.id === 'n1').label).toBe('Hijacked')
+        expect(inverse).toEqual([{ type: 'createNode', payload: { node: expect.objectContaining({ id: 'n1', label: 'A' }) } }])
+        expect(restored.nodes.find((node) => node.id === 'n1').label).toBe('A')
+    })
+
     it('inverts deleteNode to node + dropped edges + selection restore', () => {
         const base = baseDoc()
         const { forward, restored } = expectRoundTrip(base, [{ type: 'deleteNode', payload: { nodeId: 'n1' } }])

@@ -1737,6 +1737,7 @@ initStorage()
     initializeSocket(httpServer, {
       ...config,
       lookupTokenVersion: lookupSessionTokenVersion,
+      getFreshDbIdentity,
       canEditSpace: async (spaceId) => {
         const normalized = normalizeSpaceId(spaceId)
         if (!normalized) return false

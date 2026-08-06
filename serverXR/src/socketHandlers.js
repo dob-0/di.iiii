@@ -64,14 +64,49 @@ const getSocketAuthState = (socket, config) => {
       reason: 'legacy'
     }
   }
-  return {
+  const base = {
     authenticated: true,
     type: 'session',
     role,
     subject: result.session?.subject || null,
     label: result.session?.label || null,
-    spaces: normalizeAuthScopeSpaces(result.session?.spaces, null)
+    spaces: normalizeAuthScopeSpaces(result.session?.spaces, null),
+    isUnrestricted: Boolean(result.session?.isUnrestricted)
   }
+  return applyFreshDbIdentity(base, config)
+}
+
+// HTTP re-checks role/spaces/isUnrestricted against the DB on every request
+// (readAuthSession -> getFreshDbIdentity, index.js), so an admin's PATCH
+// /api/users/:id takes effect within its 60s cache window without the target
+// needing to re-login. A socket's io.use middleware only runs once, at
+// connect — without this, socket.data.authState is frozen to whatever the
+// cookie said at handshake time for the connection's whole lifetime, so a
+// role downgrade or space-scope revocation never reaches an already-open
+// tab (it can still broadcast/receive scene-update, cursor and chat events
+// for a space it was just cut off from). token_version only covers logout,
+// not a live role/scope edit, so it does not close this gap either.
+const applyFreshDbIdentity = (authState, config) => {
+  if (!authState?.subject || typeof config?.getFreshDbIdentity !== 'function') return authState
+  const fresh = config.getFreshDbIdentity(authState.subject)
+  if (!fresh || !fresh.dbRole) return authState
+  return {
+    ...authState,
+    role: fresh.dbRole,
+    spaces: normalizeAuthScopeSpaces(fresh.dbSpaces, null),
+    isUnrestricted: Boolean(fresh.dbUnrestricted)
+  }
+}
+
+// Called right before an access-control decision, on the already-established
+// connection's cached authState, so a live socket picks up a DB-side role or
+// scope change within the same 60s cache window HTTP requests get, instead
+// of only at the socket's next reconnect.
+const refreshSocketAuthState = (socket, config) => {
+  const current = socket.data?.authState
+  if (!current || current.type !== 'session') return current
+  socket.data.authState = applyFreshDbIdentity(current, config)
+  return socket.data.authState
 }
 
 const getSocketPath = (basePath = '') => {
@@ -120,7 +155,7 @@ function initializeSocket(httpServer, config) {
   })
 
   const ensureSpaceAccess = async (spaceId, socket) => {
-    const authState = socket.data?.authState || {}
+    const authState = refreshSocketAuthState(socket, config) || {}
     if (!canAccessSpace(authState, spaceId)) {
       socket.emit('space-forbidden', {
         spaceId,
@@ -164,7 +199,7 @@ function initializeSocket(httpServer, config) {
     try {
       const project = await config.resolveProjectContext(projectId)
       if (project) {
-        const authState = socket.data?.authState || {}
+        const authState = refreshSocketAuthState(socket, config) || {}
         if (!canAccessSpace(authState, project.spaceId)) {
           socket.emit('project-forbidden', {
             projectId,
@@ -250,7 +285,7 @@ function initializeSocket(httpServer, config) {
     socket.on('join-space', (data) => {
       const { spaceId, userId, userName } = data
       if (!spaceId) return
-      if (!canAccessSpace(socket.data?.authState, spaceId)) {
+      if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) {
         socket.emit('space-forbidden', {
           spaceId,
           message: 'Space access denied.'
@@ -369,7 +404,7 @@ function initializeSocket(httpServer, config) {
     socket.on('user-cursor', (data) => {
       const { spaceId, cursor } = data
       if (!spaceId) return
-      if (!canAccessSpace(socket.data?.authState, spaceId)) return
+      if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) return
 
       socket.to(`space-${spaceId}`).emit('user-cursor', {
         userId: socket.id,
@@ -391,7 +426,7 @@ function initializeSocket(httpServer, config) {
         }
         socket.data.projectSpaces.set(project.projectId || projectId, projectSpaceId)
       }
-      if (!canAccessSpace(socket.data?.authState, projectSpaceId)) return
+      if (!canAccessSpace(refreshSocketAuthState(socket, config), projectSpaceId)) return
 
       socket.to(`project-${projectId}`).emit('project-cursor', {
         userId: userId || socket.id,
@@ -423,7 +458,7 @@ function initializeSocket(httpServer, config) {
         }
         socket.data.projectSpaces.set(project.projectId || projectId, projectSpaceId)
       }
-      if (!canAccessSpace(socket.data?.authState, projectSpaceId)) return
+      if (!canAccessSpace(refreshSocketAuthState(socket, config), projectSpaceId)) return
 
       socket.to(`project-${projectId}`).emit('project-chat-message', {
         id: crypto.randomUUID(),
@@ -439,7 +474,7 @@ function initializeSocket(httpServer, config) {
     socket.on('selection-changed', (data) => {
       const { spaceId, selectedObjects } = data
       if (!spaceId) return
-      if (!canAccessSpace(socket.data?.authState, spaceId)) return
+      if (!canAccessSpace(refreshSocketAuthState(socket, config), spaceId)) return
 
       socket.to(`space-${spaceId}`).emit('selection-changed', {
         userId: socket.id,
@@ -483,4 +518,10 @@ function initializeSocket(httpServer, config) {
   return io
 }
 
-module.exports = { initializeSocket, spaceConnections, projectConnections, getSocketPath }
+module.exports = {
+  initializeSocket,
+  spaceConnections,
+  projectConnections,
+  getSocketPath,
+  applyFreshDbIdentity
+}
