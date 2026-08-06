@@ -145,6 +145,37 @@ const SCHEMA = `
     key TEXT PRIMARY KEY,
     completed_at INTEGER NOT NULL
   );
+
+  -- A gated write pauses here instead of running immediately. See approvalGate.js.
+  CREATE TABLE IF NOT EXISTS pending_actions (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    args TEXT NOT NULL,
+    intent_hash TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    actor_subject TEXT,
+    actor_type TEXT NOT NULL,
+    actor_role TEXT,
+    actor_label TEXT,
+    request_method TEXT NOT NULL,
+    request_path TEXT NOT NULL,
+    request_ip TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    decision_token_hash TEXT NOT NULL,
+    decided_by TEXT,
+    decided_at INTEGER,
+    decision_note TEXT,
+    notify_status TEXT NOT NULL DEFAULT 'queued',
+    notify_attempts INTEGER NOT NULL DEFAULT 0,
+    notified_at INTEGER,
+    executed_at INTEGER,
+    error TEXT,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_pending_actions_status ON pending_actions(status, expires_at);
+  CREATE INDEX IF NOT EXISTS idx_pending_actions_actor ON pending_actions(actor_subject, created_at);
 `
 
 // Patch a DatabaseSync instance to expose the better-sqlite3 surface used

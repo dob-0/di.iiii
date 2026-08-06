@@ -33,7 +33,7 @@ personality — scope stays space lifecycle + assets.
 |---|---|
 | GitHub engine | **Live.** Repo→space sync already works; nothing to build here. |
 | Google login + Drive asset import | **Live**, shipped since the original draft. Not part of this spec anymore. |
-| Telegram bot | **Does not exist.** Zero references in the codebase. |
+| Telegram bot | **Live, but not this spec's bot.** `di-bo` (`dob-0/di-bo`, deployed at `/opt/di-bo`) exists as the messenger for the `br_id_ge` rite — crossings, health alerts, and (2026-08-06) relaying the owner's Telegram approval for gated admin actions (`serverXR/src/approvalGate.js`) and GitHub deploy reviews. It holds **no session-per-artist identity linking** and is **not** the artist-journey bot this spec describes — §4a below is still unbuilt. Don't assume di-bo already covers this; it's a different bot for a different audience (the rite's owner/admin, not artists at large). |
 | Claude/AI ops layer as a product surface | **Does not exist.** Only ad hoc agent sessions (like this one) with direct repo/API access — no bot-mediated version for end users. |
 
 So the only real build left here is: a Telegram bot + a thin command layer connecting it to the
