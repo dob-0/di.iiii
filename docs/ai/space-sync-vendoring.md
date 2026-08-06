@@ -85,6 +85,20 @@ rather than silently unmentioned:
 | `platform_recordar` | no git remote — local-only, so it can have no CI at all. The vendor tool still writes and reports drift; there is just no automated push-side enforcement. `platform_recordar/AGENTS.md` states this. |
 | `space-starter` | a scaffold template for bootstrapping a *new* linked space, not a git repo itself. `--write`/`--release` refresh its copy so a new space isn't born already behind, but nothing commits it — there's nothing to commit to. |
 
+## `~/di-spaces` is a different system — backup, not editing
+
+`~/di-spaces` (private repo, `dob-0/di-spaces`) pulls a git-diffable snapshot of every
+production space nightly and can restore from one — a genuinely separate concern from
+this document. It is **not** a second place to edit or push routine content, and
+already says so in its own README ("Landing-page source repos — push flows live
+there, not here"): `push-space.mjs --env prod` requires an explicit `--force-prod` and
+is documented as "disaster restore only", never a routine operation. The three
+vendored-engine repos this document covers are where content actually gets authored
+and pushed; `di-spaces` is where prod gets pulled *from*, read-only in the common case.
+Investigated 2026-08-06 specifically to check it wasn't an unexamined duplicate of the
+editing path this document describes — it isn't; the boundary was already correct, just
+undocumented from this side.
+
 ## Files
 
 `scripts/space-sync-vendor.mjs` (the tool + guard), `scripts/space-sync-selfcheck.mjs`

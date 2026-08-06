@@ -95,5 +95,16 @@ on PR #94's `repo-state.mjs` tooling rather than duplicating it.
   `platform_recordar`'s `di-space.json`) deliberately left untouched and unstaged —
   not mine, not this task's scope.
 
-**Still open:** the `di-spaces` reconciliation, and consolidating to one canonical
-di.iiii checkout (blocked on `di.iiii-algomerge`'s active work).
+- `~/di-spaces` investigated: a genuinely separate system (nightly pull-based backup +
+  guarded disaster-restore, `--force-prod` required for a prod write), not an
+  unexamined duplicate of the editing path — it already documents the boundary in its
+  own README. Cross-referenced from `docs/ai/space-sync-vendoring.md` so the boundary
+  is visible from both sides, no code changes needed.
+
+**Plan complete** except: consolidating to one canonical di.iiii checkout, blocked on
+`di.iiii-algomerge`'s active work (check `npm run state` before attempting it), and the
+human-triage branch list from the P0/P1 worktree cleanup (`fix/audit-gaps`,
+`feat/inscription-mark` — overlaps `fix/inscription-mark-server`, `fix/space-sync-engine`,
+`fix/wcc-degenerate-lock-deltas`, `feat/raw-studio-node`, `feat/timeline-core`,
+`chore/github-oauth-env-wiring`'s 4 real unmerged walker fixes, `feat/algovrithm`'s 1
+unmerged hook-path fix) — land, park, or drop, one call each, not this session's to make.
