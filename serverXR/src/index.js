@@ -1027,6 +1027,13 @@ const approvalGate = createApprovalGate()
 // truth). Anything else (guest, sync-key) can never legitimately be admin.
 function currentRoleForActor(actorType, actorSubject) {
   if (!actorSubject) return null
+  // getPublicAuthState treats EVERY request as admin when config.requireAuth
+  // is false (type 'disabled', subject 'auth-disabled') — every other admin
+  // gate in this file (requireAdminAlways etc.) already short-circuits the
+  // same way. Re-authorization has to agree, or a self-hosted no-auth
+  // deployment would see every gated action denied at execution time no
+  // matter who approved it — the opposite of what "auth is off" means here.
+  if (actorType === 'disabled') return 'admin'
   if (actorType === 'session') {
     try {
       const user = findUserById(actorSubject)

@@ -116,7 +116,7 @@ function createApprovalGate() {
     }
     if (!isConfigured()) {
       const err = new Error('Approval gate is enabled but not configured (APPROVAL_BOT_URL / APPROVAL_SHARED_SECRET missing).')
-      err.statusCode = 503
+      err.status = 503
       throw err
     }
     const id = crypto.randomBytes(12).toString('hex')
