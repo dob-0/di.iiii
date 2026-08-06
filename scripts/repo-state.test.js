@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest'
 
 import {
   formatStateReport,
+  formatBriefReport,
   collectStateWarnings,
+  classifyWorktree,
+  isSweepSafe,
   isNoiseBranch,
+  isLiveProcessCmdline,
   WORKTREE_BUDGET,
   UNMERGED_BRANCH_BUDGET
 } from './repo-state-lib.mjs'
@@ -96,6 +100,127 @@ describe('collectStateWarnings', () => {
     const worktrees = [{ path: '/a' }, { path: '/b' }]
     const warnings = collectStateWarnings({ ...baseState(), worktrees }, { worktreeBudget: 1 })
     expect(warnings.some((w) => w.includes('exceeds the budget of 1'))).toBe(true)
+  })
+})
+
+// classifyWorktree/isSweepSafe exist because git state alone (clean/dirty,
+// ahead/behind) says nothing about whether a worktree is actually in use — a live
+// dev server bound to it was the only reliable signal found during the 2026-08-06
+// audit, and none of the other tooling checked for one.
+describe('classifyWorktree', () => {
+  const wt = (overrides) => ({
+    path: '/wt', branch: 'feat/x', detached: false, prunable: false,
+    dirty: false, live: false, mergedIntoDev: false, hasUpstream: true, ...overrides
+  })
+
+  it('GONE wins over everything — a prunable worktree has no working tree left to examine', () => {
+    expect(classifyWorktree(wt({ prunable: true, live: true, mergedIntoDev: false }))).toBe('GONE')
+  })
+
+  it('LIVE wins over merge status — never suggest touching a worktree with a running process', () => {
+    expect(classifyWorktree(wt({ live: true, mergedIntoDev: false, hasUpstream: false }))).toBe('LIVE')
+  })
+
+  it('UNPUSHED is the loudest non-live verdict — no remote means this disk is the only copy', () => {
+    expect(classifyWorktree(wt({ hasUpstream: false, mergedIntoDev: false }))).toBe('UNPUSHED')
+  })
+
+  it('a detached worktree is never UNPUSHED even with no upstream — nothing to push to a remote branch', () => {
+    expect(classifyWorktree(wt({ detached: true, branch: null, hasUpstream: false, mergedIntoDev: true }))).toBe('STALE')
+  })
+
+  it('UNMERGED when pushed but not yet merged into dev', () => {
+    expect(classifyWorktree(wt({ hasUpstream: true, mergedIntoDev: false }))).toBe('UNMERGED')
+  })
+
+  it('STALE when merged, clean, and not live — safe to remove', () => {
+    expect(classifyWorktree(wt({ mergedIntoDev: true }))).toBe('STALE')
+  })
+})
+
+describe('isSweepSafe', () => {
+  it('sweeps a GONE worktree unconditionally', () => {
+    expect(isSweepSafe({ prunable: true, live: true, dirty: true, mergedIntoDev: false })).toBe(true)
+  })
+
+  it('sweeps a clean, merged, non-live worktree', () => {
+    expect(isSweepSafe({ prunable: false, live: false, dirty: false, mergedIntoDev: true })).toBe(true)
+  })
+
+  it('refuses a live worktree even if merged and clean', () => {
+    expect(isSweepSafe({ prunable: false, live: true, dirty: false, mergedIntoDev: true })).toBe(false)
+  })
+
+  it('refuses a dirty worktree even if merged and not live', () => {
+    expect(isSweepSafe({ prunable: false, live: false, dirty: true, mergedIntoDev: true })).toBe(false)
+  })
+
+  it('refuses an unmerged worktree even if clean and not live', () => {
+    expect(isSweepSafe({ prunable: false, live: false, dirty: false, mergedIntoDev: false })).toBe(false)
+  })
+})
+
+describe('formatBriefReport', () => {
+  it('stays to counts alone when nothing is live or unpushed', () => {
+    const report = formatBriefReport({ ...baseState(), worktrees: [{ path: '/a' }] })
+    expect(report.split('\n')).toHaveLength(1)
+    expect(report).toContain('1 worktrees')
+  })
+
+  it('lists a live worktree with its ports', () => {
+    const report = formatBriefReport({
+      ...baseState(),
+      worktrees: [{ path: '/wt', branch: 'dev', live: true, ports: [5174, 4001] }]
+    })
+    expect(report).toContain('LIVE')
+    expect(report).toContain(':5174 :4001')
+    expect(report).toContain('/wt')
+  })
+
+  it('lists an unpushed branch by name', () => {
+    const report = formatBriefReport({
+      ...baseState(),
+      worktrees: [{ path: '/wt', branch: 'feat/lonely', detached: false, hasUpstream: false, mergedIntoDev: false }]
+    })
+    expect(report).toContain('UNPUSHED')
+    expect(report).toContain('feat/lonely')
+  })
+
+  it('stays within the ~12-line budget for the SessionStart hook even with several worktrees', () => {
+    const worktrees = Array.from({ length: 5 }, (_, i) => ({
+      path: `/wt-${i}`, branch: `feat/${i}`, live: i < 2, ports: i < 2 ? [5170 + i] : [],
+      hasUpstream: i >= 3, mergedIntoDev: false
+    }))
+    const report = formatBriefReport({ ...baseState(), worktrees })
+    expect(report.split('\n').length).toBeLessThanOrEqual(12)
+  })
+})
+
+describe('isLiveProcessCmdline', () => {
+  it('recognizes a real vite dev server, with or without an explicit port', () => {
+    expect(isLiveProcessCmdline('node /home/nooo/di.iiii/node_modules/.bin/vite')).toBe(true)
+    expect(isLiveProcessCmdline('node .bin/vite --port 5174 --strictPort')).toBe(true)
+  })
+
+  it('recognizes a serverXR instance', () => {
+    expect(isLiveProcessCmdline('node src/index.js')).toBe(true)
+  })
+
+  it('recognizes vitest in watch mode', () => {
+    expect(isLiveProcessCmdline('node .bin/vitest')).toBe(true)
+    expect(isLiveProcessCmdline('node .bin/vitest watch')).toBe(true)
+  })
+
+  it('does NOT recognize `vitest run` -- a real false positive caught during development: a one-shot test run briefly still exists during its own exit/report phase and was misidentified as a persistent dev server', () => {
+    expect(isLiveProcessCmdline('node .bin/vitest run scripts/repo-state.test.js')).toBe(false)
+  })
+
+  it('does NOT recognize `vite build` -- also one-shot', () => {
+    expect(isLiveProcessCmdline('node .bin/vite build')).toBe(false)
+  })
+
+  it('does NOT recognize an unrelated process that happens to mention neither pattern', () => {
+    expect(isLiveProcessCmdline('/bin/bash -c sleep 10')).toBe(false)
   })
 })
 

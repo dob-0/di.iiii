@@ -8,6 +8,7 @@ import {
   getGeneratedEntries,
   repoRoot
 } from './sync-agent-docs.mjs'
+import { isNoiseBranch } from './repo-state-lib.mjs'
 
 const normalizePath = (value) => value.split(path.sep).join('/')
 
@@ -201,8 +202,82 @@ const collectCurrentMdFreshnessErrors = () => {
   return []
 }
 
+// The session-notes protocol (docs/ai/sessions/, see its README) exists because
+// CURRENT.md's "replace, don't append" convention plus concurrent branches raced
+// destructively -- three sessions' real notes were silently overwritten before their
+// branch merged, recovered afterward only via git fsck --dangling. Fix: CURRENT.md is
+// written by exactly one thing (`npm run land`, at merge time); every other branch
+// writes to its own append-only file at a path nothing else can collide on.
+const slugifyBranch = (branch) => branch.replace(/\//g, '-')
+
+const gitOrNull = (args) => {
+  try {
+    return execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8' }).trim()
+  } catch {
+    return null
+  }
+}
+
+const collectSessionNoteErrors = async () => {
+  const branch = gitOrNull(['branch', '--show-current'])
+  if (!branch) return [] // detached HEAD -- nothing to attribute a note to
+
+  const sessionsDir = 'docs/ai/sessions'
+  let sessionFiles = []
+  try {
+    sessionFiles = (await fs.readdir(toAbsolute(sessionsDir)))
+      .filter((name) => name.endsWith('.md') && name !== 'README.md')
+  } catch {
+    sessionFiles = []
+  }
+
+  if (branch === 'dev' || branch === 'main') {
+    // Landing (npm run land) is what empties this directory -- a non-empty one here
+    // means a merge happened without it, which is exactly the un-enforced "courtesy
+    // cleanup" this protocol exists to replace.
+    return sessionFiles.length
+      ? [`${sessionsDir}/ is not empty on "${branch}" (${sessionFiles.join(', ')}) — run \`npm run land\` before pushing.`]
+      : []
+  }
+
+  if (isNoiseBranch(branch)) return []
+
+  const errors = []
+  const expected = `${slugifyBranch(branch)}.md`
+  if (!sessionFiles.includes(expected)) {
+    errors.push(
+      `No session note at ${sessionsDir}/${expected} for branch "${branch}" — add one before ` +
+        `pushing (see ${sessionsDir}/README.md). This is what stops a branch's notes from being ` +
+        'lost if a concurrent branch rewrites CURRENT.md first.'
+    )
+  } else {
+    const content = await readFile(`${sessionsDir}/${expected}`)
+    if (!/^##\s+/m.test(content)) {
+      errors.push(`${sessionsDir}/${expected} has no "## " heading — see ${sessionsDir}/README.md for the format.`)
+    }
+  }
+
+  // CURRENT.md describes dev's state and is written only by `npm run land` -- a
+  // feature branch that edits it is pre-writing what it guesses dev will look like,
+  // which is the exact race this protocol replaces. Best-effort: only checks when
+  // origin/dev is resolvable locally (it may not be on a shallow/stale fetch).
+  if (gitOrNull(['rev-parse', '--verify', 'origin/dev'])) {
+    // Two-dot, not three-dot: compares the working tree's CURRENT.md against origin/dev's
+    // CURRENT tip. `origin/dev...HEAD` would diff from the merge-base instead, which stays
+    // "different" for the life of the branch even after reverting back to dev's content.
+    const diff = gitOrNull(['diff', '--quiet', 'origin/dev', '--', 'CURRENT.md'])
+    if (diff === null) {
+      // non-zero exit from --quiet means there IS a diff (gitOrNull returns null on throw)
+      errors.push('CURRENT.md differs from origin/dev — only `npm run land` (at merge time) writes this file; revert your branch\'s copy.')
+    }
+  }
+
+  return errors
+}
+
 const main = async () => {
   const errors = []
+  errors.push(...(await collectSessionNoteErrors()))
 
   for (const relativePath of requiredCanonicalFiles) {
     if (!await exists(relativePath)) {
@@ -215,6 +290,13 @@ const main = async () => {
     const lines = currentMdContent.replace(/\n$/, '').split('\n').length
     if (lines > CURRENT_MD_MAX_LINES) {
       errors.push(`CURRENT.md is ${lines} lines, limit ${CURRENT_MD_MAX_LINES}. It is read in full at the start of every session — cut the settled items or move them to PROGRESS.md.`)
+    }
+
+    // CURRENT.md describes dev, unconditionally -- ownership stated once, literally,
+    // rather than left implicit (see collectSessionNoteErrors above for the rest of
+    // the protocol this backs).
+    if (!currentMdContent.includes('active_branch: dev')) {
+      errors.push('CURRENT.md must contain the literal line "active_branch: dev" — it always describes dev\'s state now, never a feature branch\'s.')
     }
 
     for (const line of currentMdContent.split('\n')) {

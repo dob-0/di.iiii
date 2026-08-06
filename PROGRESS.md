@@ -5,6 +5,93 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-06 — A third CURRENT.md casualty, found while cleaning up worktrees (2026-07-15 session)
+
+**Why this entry exists:** the `nginx-header-fix` worktree (branch `feat/brand-refresh`,
+PR #65, squash-merged into `dev` weeks ago) was marked safe to remove, but carried one
+uncommitted `CURRENT.md` edit — not a stray edit, an entire session's real notes that
+never made it anywhere else. Recovered before removing the worktree, same pattern as
+the other two entries below.
+
+- **A real prod bug, found and fixed**: nginx's `add_header` directive does not
+  inherit into a location block that sets its own `add_header` — so all 3 security
+  headers were silently dropped on every real route despite being declared once at
+  server level. Fixed by repeating them per location block (confirmed still live:
+  `nginx.conf` carries 18 `add_header` lines today, one set per block).
+- **VPS cutover confirmed and hardened**: prod fully on the Hetzner VPS
+  (Docker + Caddy), cPanel demoted to a manual-dispatch fallback only (auto-trigger
+  removed, host left intact, decommission timeline undecided). Closed direct
+  port-8080 exposure (Caddy-only), rotated `ADMIN_API_TOKEN`, added nightly SQLite
+  `VACUUM INTO` backups (14d retention), fail2ban, SSH password auth disabled, Docker
+  log rotation.
+- Merged 5 repo-improvement PRs (#57–#62): GitHub OAuth env wiring, Docker resource
+  limits, nginx compression/caching, a GHCR+SSH deploy pipeline scaffold (left inert,
+  needs secrets), serverXR structured logging.
+- GitHub cleanup (#63): 16 stale branches deleted, old PRs closed/retargeted, ~562
+  dead lines stripped from `mobile-shell.css`.
+- Shipped a branding refresh (#65): real favicons/OG-image/wordmark replacing a
+  placeholder text SVG; GitHub social preview image uploaded manually (no API).
+- **WCC mouse-look reopened**: a user report that it was still broken live despite an
+  earlier merged fix. This session ruled out a routing-pattern cause (WCC shares the
+  same walker code as every other published space) and couldn't reproduce via
+  `input-check.mjs` (its debug hook is dev-only, stripped from prod), and was left
+  waiting on a concrete repro. **Later resolved** — three separate mouse-look root
+  causes were subsequently found and fixed (see `docs/ai/known-fixes.md`: a silent
+  `reloadDocument()` failure blocking input behind an invisible overlay; drag-look
+  sensitivity mistuned 3x too gentle for non-pointer-lock users; a spawn effect
+  replacing `playerRef.current` instead of mutating it, orphaning the mouse-look
+  listeners' closure). None reference this session, so the link was only visible by
+  reading both.
+- Still open at the time, unclear if since resolved: `self-host` and
+  `claude/di-iiii-new-space-kbywad` branches were deliberately left undeleted pending
+  a human call — both still exist as of 2026-08-06, worth a decision.
+
+## 2026-08-06 — Two sessions' CURRENT.md notes, recovered from unreachable commits
+
+**Why this entry exists:** a forensic pass (`git fsck --dangling`) found that two
+concurrent sessions on 2026-08-05/06 each wrote real notes into `CURRENT.md`, and a
+third, later session on a different branch overwrote the whole file (per its own
+"replace, don't append" convention) before either had merged into `dev`. No code was
+lost — only these notes, which existed nowhere else. Recovered via `git show <sha>:CURRENT.md`
+and folded in here rather than restored to CURRENT.md itself, since neither describes
+`dev`'s current state. This is also the concrete case study behind the CURRENT.md
+race fix below (session notes now live in `docs/ai/sessions/`, one file per branch,
+so they can't be overwritten by a concurrent branch again).
+
+**From `bb9db2b4` (2026-08-06, "the audit's leftovers" session):**
+- The Open Space scene is designed and rendered but **still not applied** — the
+  scene-ops write was denied by the tool permission classifier, so it exists only as
+  `/home/nooo/open-space.dii-project.zip` (import at `/open?ui=show` → Load Scene;
+  import replaces the whole scene). **Still an open TODO** — re-added to CURRENT.md's
+  Open section.
+- A parallel tools survey hit its session limit — only the realtime-audio and
+  observability strands returned results; 3D/XR, creative-coding, infra, video and ML
+  strands still need re-running.
+
+**From `71a729e1` (2026-08-05, `feat/timeline-core` session recap):**
+- Algovrithm's art was separated from its tool: `AlgoVrithmExperience` cut from 747 to
+  404 lines (playback + fullscreen + VR/AR only, no editor); the editor moved to
+  `src/raw/director/` and became a tool that takes a piece descriptor (`pieces.js` is
+  the only file that knows algovrithm exists).
+- Two new Raw nodes, `view.director` and `view.timeline`, verified in a real browser.
+  Node types can now declare `defaultFrame` — without it the director opened at
+  360×280 and cropped.
+- `src/project/timeline/timelineCore.js`: a frame-exact shared core merging
+  algoVrithm's ops with cutlab's discipline, 30 tests, cross-checked against cutlab's
+  33-shot REVÓ EDL (966 frames, matches MLT).
+- Same-day parallel session: a crash had left a zero-length commit object under HEAD,
+  repaired, with `core.fsync=loose-object,...` set globally so it can't recur; the
+  GitHub App was found never wired after the cPanel→VPS move (not a stale key — never
+  configured); a manual `docker compose up -d` could silently downgrade a host because
+  `:latest`/`:staging` resolve against the local image cache; br_id_ge staging sync had
+  been silently skipping staging for lack of `DI_SPACE_TOKEN_STAGING` and reporting
+  success anyway.
+- `feat/timeline-core` itself is still unpushed at the time of this recap (later pushed
+  to `origin/feat/timeline-core` in the 2026-08-06 sync-safety session below) — 5
+  commits, not yet landed on `dev`; branched before the phone keyboard-scroll fix, so
+  it still carries the old two-corner chrome and needs a deliberate merge, not a fast-
+  forward (`chromeLayout.test.js` catches the regression if it lands carelessly).
+
 ## 2026-08-04 (second session) — A dead repo, a feature that was off for three weeks, and the flaky suite pinned down
 
 **Who:** Claude ("analyze it, look what's left" → "fix all things"). Pushed to

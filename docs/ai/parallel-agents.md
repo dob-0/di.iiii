@@ -57,27 +57,40 @@ If you are working **in `dob-0/di.iiii` itself** (not a fork), this is how fork 
 
 Each agent gets its own checkout of the repo, sharing the same `.git` history, on its own branch.
 
+**The actual convention is `.claude/worktrees/<task-name>/`, created by the Claude Code
+harness's `EnterWorktree` tool** — not a `../di.iiii-*` sibling. (An earlier version of this
+doc said "either is fine"; by 2026-08-06 that had produced a mix of both plus four `/tmp`
+scratchpad worktrees, none of them consistently tracked. Sibling checkouts still exist for
+long-lived roles — `di.iiii-algomerge`, `di.iiii-studionode` — but a new *task* worktree
+belongs under `.claude/worktrees/`.)
+
 ```bash
-# from the main checkout, create a worktree for agent 2
-git worktree add ../di.iiii-agent2 -b agent2/<short-task-name> dev
-
-# agent 2 works entirely inside ../di.iiii-agent2
-# agent 1 keeps working in the original directory on its own branch
+# equivalent to what EnterWorktree does, if you need the raw command:
+git worktree add .claude/worktrees/<task-name> -b <task-name> dev
 ```
-
-The Claude Code harness itself creates worktrees under `.claude/worktrees/<name>/` rather
-than as `../di.iiii-*` siblings — same mechanism, different location. Either is fine; what
-matters is that `git worktree remove` (below) actually gets run against wherever yours
-landed, not just the sibling-path form.
 
 Rules:
 
-- name the branch after the task, not the agent (`agent2/inspector-sliders`, not `agent2-branch`)
-- each agent commits and pushes its own branch independently
+- name the branch after the task, not the agent (`inspector-sliders`, not `agent2-branch`)
+- **push with `-u` on your first push, no exceptions**: `git push -u origin <branch>`.
+  A branch with no upstream configured exists only on this one disk — two real branches
+  were found in exactly this state on 2026-08-06 (one had never been pushed at all; the
+  other was silently tracking `origin/dev`, so a bare `git push` from it would have landed
+  straight on `dev`). `npm run state --brief`/the SessionStart hook flags any `UNPUSHED`
+  worktree for exactly this reason.
+- write your session's notes to `docs/ai/sessions/<branch-slug>.md` as you go (see its
+  README) — **not** to `CURRENT.md`, which a feature branch may not touch at all
+  (`docs:ai:check` refuses it). This is what stops your notes from being lost if a
+  concurrent branch on `dev` moves first.
 - **run `npm run state` before any fan-out** — it reports how many worktrees and unmerged
-  branches already exist, so a new one isn't started on top of forgotten ones
+  branches already exist, and (`headSubject`) what each unmerged one is actually about, so
+  a new task doesn't start on top of work someone's already doing (two agents independently
+  fixed the same bug this way on 2026-08-05, unaware of each other)
 - merge each branch into `dev` only when its task is done and validated
-- remove the worktree when finished: `git worktree remove <path>` (or `git worktree remove ../di.iiii-agent2` for the sibling form) — then `npm run state:prune` to clear the registry entry if the directory is already gone
+- **removal is not a courtesy — it happens automatically.** Whoever runs `npm run land` on
+  `dev` after merging sweeps every worktree that's confirmed merged, clean, and not live.
+  You don't need to remember to run `git worktree remove` yourself unless your worktree
+  needs to go before the next landing (e.g. you're reusing the task name).
 
 ## Mode 2: Role-Scoped Same-Branch Work (lighter weight, higher risk)
 
