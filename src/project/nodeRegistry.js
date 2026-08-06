@@ -569,16 +569,11 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'title',    type: 'string',  label: 'Title',    default: 'World'    },
             { id: 'bgColor',  type: 'color',   label: 'Sky',      default: '#0a0e16'  },
-            { id: 'gridSize', type: 'number',  label: 'Grid',     default: 24         },
         ],
-        outputs: [
-            { id: 'state',  type: 'any',    label: 'World State' },
-            { id: 'signal', type: 'signal', label: 'Changed'     },
-        ],
+        outputs: [],
         defaultValues: {
             title: 'World',
             bgColor: '#0a0e16',
-            gridSize: 24,
             hostHint: 'any',
         },
         render: 'panel-2d',
@@ -592,10 +587,6 @@ export const NODE_TYPES = {
         authoringOnly: true,
         singleton: false,
         inputs: [
-            { id: 'title',       type: 'string', label: 'Title', default: 'New Universe' },
-            { id: 'slug',        type: 'string', label: 'Slug',  default: 'new-universe'  },
-            { id: 'description', type: 'string', label: 'Description', default: ''         },
-            { id: 'active',      type: 'boolean', label: 'Active', default: true            },
             // Per-universe chrome control (product decision 2026-07-17): lets
             // one universe be a normal authoring space (full topbar) and
             // another a chromeless embed/kiosk view, without a global toggle.
@@ -604,11 +595,7 @@ export const NODE_TYPES = {
             // back up a scope regardless (unrelated to this flag).
             { id: 'showChrome', type: 'boolean', label: 'Show Chrome', default: true },
         ],
-        outputs: [
-            { id: 'entry',  type: 'string', label: 'Entry URL'      },
-            { id: 'state',  type: 'any',    label: 'Universe State' },
-            { id: 'signal', type: 'signal', label: 'Changed'        },
-        ],
+        outputs: [],
         defaultValues: {
             hostHint: 'any',
         },
@@ -648,18 +635,13 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'title',       type: 'string', label: 'Title', default: '3D Desk'     },
             { id: 'position',    type: 'vec3',   label: 'Position', default: [0, 0, 0]  },
             { id: 'rotation',    type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
             { id: 'scale',       type: 'vec3',   label: 'Scale', default: [2, 2, 2]     },
             { id: 'gridVisible', type: 'boolean', label: 'Grid Visible', default: true   },
             { id: 'bgColor',     type: 'color',  label: 'Background', default: '#0a0e16' },
         ],
-        outputs: [
-            { id: 'state',   type: 'any',    label: 'Desk State' },
-            { id: 'preview', type: 'texture', label: 'Preview'    },
-            { id: 'signal',  type: 'signal', label: 'Changed'     },
-        ],
+        outputs: [],
         defaultValues: {
             hostHint: 'any',
             gridVisible: true,
@@ -727,8 +709,7 @@ export const NODE_TYPES = {
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
         ],
         outputs: [
-            { id: 'out',    type: 'geometry', label: 'Geometry' },
-            { id: 'bounds', type: 'vec3',     label: 'Bounds'   },
+            { id: 'bounds', type: 'vec3', label: 'Bounds' },
         ],
         defaultValues: {},
         render: 'spatial-3d',
@@ -746,9 +727,7 @@ export const NODE_TYPES = {
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
         ],
-        outputs: [
-            { id: 'out', type: 'geometry', label: 'Geometry' },
-        ],
+        outputs: [],
         defaultValues: {},
         render: 'spatial-3d',
     },
@@ -767,9 +746,7 @@ export const NODE_TYPES = {
             { id: 'position',   type: 'vec3',   label: 'Position',   default: [0, 0, 0]  },
             { id: 'rotation',   type: 'vec3',   label: 'Rotation',   default: [0, 0, 0]  },
         ],
-        outputs: [
-            { id: 'out', type: 'geometry', label: 'Geometry' },
-        ],
+        outputs: [],
         defaultValues: {},
         render: 'spatial-3d',
     },
@@ -785,10 +762,7 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'content',  type: 'string', label: 'Content',  default: 'Hello'      },
-            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 1.5, 0]  },
-            { id: 'width',    type: 'number', label: 'Width',    default: 340           },
-            { id: 'height',   type: 'number', label: 'Height',   default: 220           },
+            { id: 'content', type: 'string', label: 'Content', default: 'Hello' },
         ],
         outputs: [],
         defaultValues: {},
@@ -802,10 +776,7 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'url',      type: 'string', label: 'URL',      default: 'https://example.com' },
-            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 1.5, 0]           },
-            { id: 'width',    type: 'number', label: 'Width',    default: 420                    },
-            { id: 'height',   type: 'number', label: 'Height',   default: 320                    },
+            { id: 'url', type: 'string', label: 'URL', default: 'https://example.com' },
         ],
         outputs: [],
         defaultValues: {},
@@ -819,10 +790,7 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'src',      type: 'texture', label: 'Source'   },
-            { id: 'position', type: 'vec3',    label: 'Position', default: [0, 1.5, 0] },
-            { id: 'width',    type: 'number',  label: 'Width',    default: 360          },
-            { id: 'height',   type: 'number',  label: 'Height',   default: 240          },
+            { id: 'src', type: 'texture', label: 'Source' },
         ],
         outputs: [],
         defaultValues: {},
@@ -1014,8 +982,7 @@ export const NODE_TYPES = {
         category: 'world',
         runtime: 'any',
         inputs: [
-            { id: 'color',   type: 'color',   label: 'Color'   },
-            { id: 'texture', type: 'texture', label: 'Texture' },
+            { id: 'color', type: 'color', label: 'Color' },
         ],
         defaultValues: { color: '#0a0e16' },
         outputs: [],

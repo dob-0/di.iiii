@@ -15,9 +15,9 @@ import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSy
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { getInspectorSections } from '../../project/entityRegistry.js'
-import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.js'
+import { createNode, getNodeType } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
-import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
@@ -73,14 +73,14 @@ const WINDOW_DEFAULT_POSITIONS = {
     'legacy-world.outliner':  { x: 660,  y: 56, width: 240, height: 360 },
 }
 
-const buildWindowStateFromNode = (node, index = 0) => {
+const buildWindowStateFromNode = (node, index = 0, graphContext = null) => {
     const def = WINDOW_DEFAULT_POSITIONS[node.typeId] || { x: 96, y: 140, width: 360, height: 280 }
     const frame = node.values?.frame || {}
     const hasSavedPos = frame.x != null && frame.y != null
     const cascadeOffset = hasSavedPos ? 0 : index * 32
     return {
         id: node.id,
-        title: frame.title || node.values?.title || node.label,
+        title: frame.title || evaluateNodeInput(node, 'title', graphContext) || node.label,
         x: (frame.x ?? def.x) + cascadeOffset,
         y: (frame.y ?? def.y) + cascadeOffset,
         width: frame.width || def.width,
@@ -564,140 +564,6 @@ export default function RawEditor({
         openPalette('world', placement)
     }
 
-    const handleCreateStreamingPrototype = () => {
-        const startX = 80
-        const startY = workspaceTop + 72
-        const mkNode = ({ typeId, label, graphX, graphY, hostHint = '', values = {} }) => {
-            const seededValues = buildNodeValues(typeId, {
-                ...values,
-                ...(hostHint ? { hostHint } : {})
-            }, {
-                clientX: graphX + 180,
-                clientY: graphY + 48
-            })
-            return createNode(typeId, {
-                label,
-                graphX,
-                graphY,
-                values: seededValues
-            })
-        }
-
-        const instaNode = mkNode({
-            typeId: 'source.insta360',
-            label: 'Insta360 [mac]',
-            graphX: startX,
-            graphY: startY,
-            hostHint: 'mac'
-        })
-        const stereoNode = mkNode({
-            typeId: 'source.stereo',
-            label: 'Stereo Cam [linux]',
-            graphX: startX,
-            graphY: startY + 150,
-            hostHint: 'linux'
-        })
-        const micNode = mkNode({
-            typeId: 'source.mic',
-            label: 'Mic [mac]',
-            graphX: startX,
-            graphY: startY + 300,
-            hostHint: 'mac'
-        })
-        const ptzANode = mkNode({
-            typeId: 'device.ptz.osc',
-            label: 'PTZ A [windows]',
-            graphX: startX + 260,
-            graphY: startY,
-            hostHint: 'windows',
-            values: { oscAddress: '/ptz/a' }
-        })
-        const ptzBNode = mkNode({
-            typeId: 'device.ptz.osc',
-            label: 'PTZ B [windows]',
-            graphX: startX + 260,
-            graphY: startY + 150,
-            hostHint: 'windows',
-            values: { oscAddress: '/ptz/b' }
-        })
-        const controllerNode = mkNode({
-            typeId: 'stream.controller',
-            label: 'Controller [mobile]',
-            graphX: startX + 260,
-            graphY: startY + 300,
-            hostHint: 'mobile',
-            values: { title: 'Mobile Control Desk' }
-        })
-        const compositorNode = mkNode({
-            typeId: 'stream.compositor',
-            label: 'Compositor [linux]',
-            graphX: startX + 560,
-            graphY: startY + 120,
-            hostHint: 'linux'
-        })
-        const outputNode = mkNode({
-            typeId: 'stream.output',
-            label: 'Stream Output [windows]',
-            graphX: startX + 880,
-            graphY: startY + 80,
-            hostHint: 'windows',
-            values: { target: 'rtmp://localhost/live/main' }
-        })
-        const monitorNode = mkNode({
-            typeId: 'stream.monitor',
-            label: 'Program Monitor [mac]',
-            graphX: startX + 880,
-            graphY: startY + 240,
-            hostHint: 'mac',
-            values: { title: 'Program Monitor' }
-        })
-
-        const nodesToCreate = [
-            instaNode,
-            stereoNode,
-            micNode,
-            ptzANode,
-            ptzBNode,
-            controllerNode,
-            compositorNode,
-            outputNode,
-            monitorNode
-        ].filter(Boolean)
-
-        if (!nodesToCreate.length) return
-
-        const id = (node) => node?.id || ''
-        const edgesToCreate = [
-            createEdge(id(instaNode), 'frame', id(compositorNode), 'primary'),
-            createEdge(id(ptzANode), 'frame', id(compositorNode), 'altA'),
-            createEdge(id(ptzBNode), 'frame', id(compositorNode), 'altB'),
-            createEdge(id(stereoNode), 'depth', id(compositorNode), 'depth'),
-            createEdge(id(controllerNode), 'mix', id(compositorNode), 'mix'),
-            createEdge(id(compositorNode), 'program', id(outputNode), 'video'),
-            createEdge(id(micNode), 'frequency', id(outputNode), 'audio'),
-            createEdge(id(compositorNode), 'program', id(monitorNode), 'src')
-        ].filter((edge) => edge.fromNodeId && edge.toNodeId)
-
-        const ops = [
-            ...nodesToCreate.map((node) => ({ type: 'createNode', payload: { node } })),
-            ...edgesToCreate.map((edge) => ({ type: 'createEdge', payload: { edge } })),
-            {
-                type: 'setWorkspaceState',
-                payload: {
-                    patch: {
-                        activeSurface: 'graph',
-                        selectedNodeId: compositorNode?.id || null
-                    }
-                }
-            }
-        ]
-
-        dispatch({ type: 'select-entity', entityId: null })
-        applyLocalOps(ops, {
-            activityMessage: 'Created streaming prototype graph (linux + mac + windows + mobile).'
-        })
-    }
-
     const hostInspector = (
         <aside className="raw-selection-scaffold" style={{ top: workflowHeight + 'px' }}>
             <PropertyInspector
@@ -931,7 +797,6 @@ export default function RawEditor({
                                 {overflowOpen && (
                                     <div className="raw-topbar-overflow-menu">
                                         <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
-                                        <button type="button" onClick={() => { handleCreateStreamingPrototype(); setOverflowOpen(false) }}>Streaming Prototype</button>
                                         {isLocalWorkspace && (
                                             <button type="button" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Reset Workspace</button>
                                         )}
@@ -995,7 +860,7 @@ export default function RawEditor({
                 />
                 {/* Panel nodes float above the graph as viewport-fixed windows */}
                 {visibleViewNodes.map((node, index) => {
-                    const windowState = buildWindowStateFromNode(node, index)
+                    const windowState = buildWindowStateFromNode(node, index, graphContext)
                     return (
                         <DesktopWindow
                             key={node.id}
