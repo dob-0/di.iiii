@@ -19,7 +19,13 @@
 - Also this session: promoted `dev` to `main` (fast-forward, deployed, verified live),
   and merged the session-hygiene PR (#94) — `npm run state`, the CURRENT.md derived-fact
   ban, and the push-gate wiring this branch's own note-based workflow builds on.
-- Opened as PR #98 against `dev`. First CI attempt hit a transient GitHub runner-queue
-  failure ("job not acquired by hosted runner"), unrelated to this change — reran and
-  it's green (build-and-test + browser-checks both pass). **Not yet merged** — merge is
-  a deliberate call left to the user, not something this session does unattended.
+- Opened as PR #98 against `dev`. First commit (`84409f2a`) got a green CI run after
+  one rerun (transient runner-queue failure, unrelated to this change). The follow-up
+  sync commit (`f883c8f9`) never got a CI run dispatched at all — confirmed via the
+  GitHub API (`check-runs` and `actions/runs?head_sha=...` both empty, not a display
+  lag) while `dev`'s own staging deploy was queuing/cancelling repeatedly from heavy
+  concurrent push traffic on other branches at the same time. No `workflow_dispatch`
+  trigger exists on `ci.yml` to force it (`pull_request` only, deliberately no `push`
+  trigger — see the workflow's own comment). Left waiting rather than forcing an empty
+  commit or a close/reopen, since the cause reads as GitHub-side congestion, not this
+  branch's problem. **Not yet merged** — merge, and any retrigger, is the user's call.
