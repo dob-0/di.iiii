@@ -10,10 +10,10 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ## Last commit
 
-**`dev` and `main` are LEVEL at `ef6e1fe7`** — staging green and verified; prod promoted
-on the owner's word, tests + browser-checks passed, image build still running when this was
-written and **the live host was never looked at** (audit it, probe the ownership route,
-screenshot `/wiki#joining-a-space` at 390px). Share this tree: **stage explicit paths**.
+**`dev` and `main` are LEVEL at `ef6e1fe7`** — promoted 2026-08-06, both deploys green,
+prod self-reports the commit. Verified on the live host: ownership route 404s an unknown
+account and 400s a `guest:` one, settings route answers, all 5 declared spaces audit clean,
+door + wiki + invite card **looked at** at 390px. Share this tree: **stage explicit paths**.
 
 ## Last session (2026-08-05/06 — `feat/space-declared`)
 
