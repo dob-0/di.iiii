@@ -23,12 +23,22 @@
  *   node scripts/space-sync-vendor.mjs --root /somewhere
  *
  * Missing repos are reported and skipped, never failed: CI checks out one repo.
+ *
+ * checkSafeSource() below closes a THIRD hole found 2026-08-06: every git
+ * worktree in this repo carries its own full copy of scripts/, including this
+ * file. At the time it was written, 8 runnable copies of this exact script
+ * existed on one machine — 2 of them sitting next to a stale v4 engine, in
+ * worktrees nobody had cleaned up. Running --write from either would have
+ * silently downgraded all 3 linked repos and reported success. The guard
+ * below makes that impossible regardless of how many stale copies exist or
+ * where they sit — it does not depend on anyone finding and removing them.
  */
 
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import crypto from 'node:crypto'
+import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -38,8 +48,116 @@ const UPSTREAM = path.join(ROOT_DIR, 'scripts', 'space-sync.mjs')
 export const VENDORED_REPOS = ['br_id_ge', 'beyond_form', 'platform_recordar']
 export const VENDORED_PATH = path.join('scripts', 'sync-space.mjs')
 
+// Repos/dirs the tool writes to but never expects to commit or push — printed on
+// every run so the exception stays visible instead of silently unmentioned.
+export const KNOWN_EXCEPTIONS = {
+  platform_recordar: 'no git remote — local check only, see docs/ai/space-sync-vendoring.md',
+  'space-starter': 'scaffold template, not a git repo — refreshed by --write, never committed'
+}
+
+// Written but never committed: the scaffold new linked spaces are born from. Not in
+// VENDORED_REPOS (that list implies "has its own CI to keep honest"); this one has
+// neither a repo nor CI, so it's tracked separately and always just overwritten.
+export const TEMPLATE_TARGETS = ['space-starter']
+
+const ENGINE_VERSION_RE = /export const ENGINE_VERSION = (\d+)/
+
+export const parseEngineVersion = (buf) => {
+  const m = ENGINE_VERSION_RE.exec(String(buf))
+  return m ? Number(m[1]) : null
+}
+
+// Pure — takes pre-gathered facts, returns an array of refusal reasons (empty = safe).
+// Every reason names the exact fix, because "run this from the right place" is not
+// discoverable from a stack trace once you're already running it from the wrong place.
+export const checkSafeSource = ({
+  isLinkedWorktree,
+  headBranch,
+  devIsAncestorOfHead,
+  upstreamDirty,
+  upstreamVersion,
+  targetVersions = {},
+  allowDowngrade
+}) => {
+  const reasons = []
+
+  if (isLinkedWorktree) {
+    reasons.push(
+      'refusing to vendor from a linked git worktree — re-vendor from the canonical ' +
+        'checkout instead (the one where `git rev-parse --git-dir` and `--git-common-dir` ' +
+        'are the same path).'
+    )
+  }
+
+  if (headBranch !== 'dev' && headBranch !== 'main') {
+    reasons.push(
+      `refusing to vendor from branch "${headBranch || '(detached HEAD)'}" — ` +
+        'checkout dev (or main) first: git switch dev'
+    )
+  } else if (devIsAncestorOfHead === false) {
+    reasons.push(
+      'this checkout is behind origin/dev — pull first: git pull --ff-only origin dev'
+    )
+  }
+
+  if (upstreamDirty) {
+    reasons.push(
+      'scripts/space-sync.mjs has uncommitted changes — commit and push the engine ' +
+        'bump before vendoring it out. (This is exactly what stalled the last ' +
+        'v5→v6 upgrade for 15+ hours: written to disk, never committed.)'
+    )
+  }
+
+  if (!allowDowngrade && Number.isFinite(upstreamVersion)) {
+    for (const [repo, targetVersion] of Object.entries(targetVersions)) {
+      if (Number.isFinite(targetVersion) && targetVersion > upstreamVersion) {
+        reasons.push(
+          `${repo}'s vendored engine is v${targetVersion}, upstream is only v${upstreamVersion} — ` +
+            'refusing to downgrade. Pass --allow-downgrade if this is deliberate.'
+        )
+      }
+    }
+  }
+
+  return reasons
+}
+
+const git = (args, cwd) => {
+  try {
+    return execFileSync('git', args, { encoding: 'utf8', cwd }).trim()
+  } catch {
+    return null
+  }
+}
+
+const gatherSafetyFacts = ({ upstream, upstreamVersion, targetVersions }) => {
+  const gitDir = git(['rev-parse', '--git-dir'], ROOT_DIR)
+  const commonDir = git(['rev-parse', '--git-common-dir'], ROOT_DIR)
+  const isLinkedWorktree =
+    gitDir != null && commonDir != null && path.resolve(ROOT_DIR, gitDir) !== path.resolve(ROOT_DIR, commonDir)
+
+  const headBranch = git(['branch', '--show-current'], ROOT_DIR) || null
+  let devIsAncestorOfHead = null
+  if (headBranch === 'dev' || headBranch === 'main') {
+    try {
+      execFileSync('git', ['merge-base', '--is-ancestor', 'origin/dev', 'HEAD'], { cwd: ROOT_DIR, stdio: 'ignore' })
+      devIsAncestorOfHead = true
+    } catch {
+      devIsAncestorOfHead = false
+    }
+  }
+
+  // --porcelain catches both staged and unstaged changes relative to HEAD; a plain
+  // `git diff --quiet` would miss anything already staged.
+  const statusOut = git(['status', '--porcelain', '--', 'scripts/space-sync.mjs'], ROOT_DIR)
+  const upstreamDirty = Boolean(statusOut)
+
+  return { isLinkedWorktree, headBranch, devIsAncestorOfHead, upstreamDirty, upstreamVersion, targetVersions }
+}
+
 const args = process.argv.slice(2)
 const write = args.includes('--write')
+const allowDowngrade = args.includes('--allow-downgrade')
 const rootArg = args.indexOf('--root')
 const root = rootArg >= 0 ? args[rootArg + 1] : os.homedir()
 
@@ -61,14 +179,32 @@ const main = () => {
     return 1
   }
 
-  console.log(`upstream  ${hash(upstream)}  ${path.relative(root, UPSTREAM)}`)
+  const upstreamVersion = parseEngineVersion(upstream)
+
+  if (write) {
+    const targetVersions = {}
+    for (const repo of VENDORED_REPOS) {
+      const target = path.join(root, repo, VENDORED_PATH)
+      if (fs.existsSync(target)) targetVersions[repo] = parseEngineVersion(fs.readFileSync(target))
+    }
+    const facts = gatherSafetyFacts({ upstream, upstreamVersion, targetVersions })
+    const refusals = checkSafeSource({ ...facts, allowDowngrade })
+    if (refusals.length) {
+      console.error(`space-sync-vendor.mjs --write refused (${refusals.length} reason(s)):`)
+      for (const r of refusals) console.error(`  ✗ ${r}`)
+      return 1
+    }
+  }
+
+  console.log(`upstream  ${hash(upstream)}  v${upstreamVersion ?? '?'}  ${path.relative(root, UPSTREAM)}`)
 
   let drift = 0
   let missing = 0
   for (const repo of VENDORED_REPOS) {
     const target = path.join(root, repo, VENDORED_PATH)
+    const exception = KNOWN_EXCEPTIONS[repo]
     if (!fs.existsSync(path.join(root, repo))) {
-      console.log(`  – ${repo.padEnd(18)} not checked out here — skipped`)
+      console.log(`  – ${repo.padEnd(18)} not checked out here — skipped${exception ? ` (${exception})` : ''}`)
       missing++
       continue
     }
@@ -85,6 +221,30 @@ const main = () => {
       console.log(`  ✎ ${repo.padEnd(18)} ${was} → ${hash(upstream)}  written`)
     } else {
       console.log(`  ✗ ${repo.padEnd(18)} ${was}  DRIFTED from upstream`)
+    }
+    if (exception) console.log(`      exception: ${exception}`)
+  }
+
+  for (const target of TEMPLATE_TARGETS) {
+    const dir = path.join(root, target)
+    const file = path.join(dir, VENDORED_PATH)
+    const exception = KNOWN_EXCEPTIONS[target]
+    if (!fs.existsSync(dir)) {
+      console.log(`  – ${target.padEnd(18)} not present here — skipped${exception ? ` (${exception})` : ''}`)
+      continue
+    }
+    const current = fs.existsSync(file) ? fs.readFileSync(file) : null
+    if (current && current.equals(upstream)) {
+      console.log(`  ✓ ${target.padEnd(18)} ${hash(current)}  equal (template)`)
+      continue
+    }
+    if (write) {
+      fs.mkdirSync(path.dirname(file), { recursive: true })
+      fs.writeFileSync(file, upstream)
+      console.log(`  ✎ ${target.padEnd(18)} written (template — not committed by this tool)`)
+    } else {
+      console.log(`  ✗ ${target.padEnd(18)} ${current ? hash(current) : '(absent)'}  DRIFTED (template)`)
+      if (exception) console.log(`      exception: ${exception}`)
     }
   }
 
