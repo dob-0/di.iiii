@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
     clampWindowFrame,
     getWorkspaceTopInset,
-    selectMountedPanelNodes
+    selectMountedPanelNodes,
+    RAW_WINDOW_BOTTOM_RESERVE
 } from './windowLayout.js'
 
 describe('selectMountedPanelNodes', () => {
@@ -150,6 +151,25 @@ describe('windowLayout', () => {
         })
         expect(result.width).toBeGreaterThanOrEqual(260)
         expect(result.height).toBeGreaterThanOrEqual(180)
+    })
+
+    it('never lands a window flush against the bottom-right corner — the delete FAB and zoom controls live there', () => {
+        // Chat's default frame ({ x: 24, y: 432, width: 280, height: 360 }) on an
+        // iPhone SE viewport (320x568): before the bottom reserve existed, this
+        // clamped flush to the true bottom edge, landing directly under
+        // raw-delete-fab (fixed, z-index 1300 — above any window) whenever a
+        // node was selected, covering the chat input for both display and clicks.
+        const result = clampWindowFrame({
+            x: 24,
+            y: 432,
+            width: 280,
+            height: 360
+        }, {
+            minTop: 64,
+            viewportWidth: 320,
+            viewportHeight: 568
+        })
+        expect(result.y + result.height).toBeLessThanOrEqual(568 - RAW_WINDOW_BOTTOM_RESERVE)
     })
 
     it('leaves a window that already fits the viewport untouched', () => {
