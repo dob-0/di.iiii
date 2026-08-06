@@ -71,4 +71,49 @@ describe('VideoObject network cost', () => {
         // the document base URL and hands back "http://localhost:3000/".
         expect(created[0].getAttribute('src')).toBe('')
     })
+
+    // /wcc/main's meri-andreasyan has three entities on one 12.36MB clip.
+    // Before sharing, that was three downloads of identical bytes.
+    it('shares one element across objects with the same source and settings', () => {
+        const created = countCreatedVideos()
+
+        render(
+            <>
+                <VideoObject assetRef={{ mimeType: 'video/mp4' }} />
+                <VideoObject assetRef={{ mimeType: 'video/mp4' }} />
+                <VideoObject assetRef={{ mimeType: 'video/mp4' }} />
+            </>
+        )
+
+        expect(created).toHaveLength(1)
+    })
+
+    // An HTMLVideoElement has one volume. Sharing across objects that disagree
+    // would let whichever mounted last silently win for all of them.
+    it('does not share across objects whose playback settings differ', () => {
+        const created = countCreatedVideos()
+
+        render(
+            <>
+                <VideoObject assetRef={{ mimeType: 'video/mp4' }} muted volume={1} />
+                <VideoObject assetRef={{ mimeType: 'video/mp4' }} muted={false} volume={0.3} />
+            </>
+        )
+
+        expect(created).toHaveLength(2)
+    })
+
+    it('keeps the shared element alive until the last object lets go', () => {
+        const created = countCreatedVideos()
+
+        const first = render(<VideoObject assetRef={{ mimeType: 'video/mp4' }} />)
+        const second = render(<VideoObject assetRef={{ mimeType: 'video/mp4' }} />)
+        expect(created).toHaveLength(1)
+
+        first.unmount()
+        expect(created[0].getAttribute('src')).toBe('https://example.com/clip.mp4')
+
+        second.unmount()
+        expect(created[0].getAttribute('src')).toBe('')
+    })
 })
