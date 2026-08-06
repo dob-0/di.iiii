@@ -157,9 +157,18 @@ export function useProjectDocumentSync({
             const opId = typeof op?.opId === 'string' ? op.opId : ''
             return !opId || !seenOpIdsRef.current.has(opId)
         })
+        // The SSE stream and this client's own HTTP flush responses race
+        // independently -- a broadcast for an already-superseded op can
+        // arrive after a later op already advanced versionRef (proxy
+        // buffering, or simply a slow SSE push overtaken by a fast POST
+        // response). Never let a stale/duplicate version regress the
+        // tracked version backward; only move forward.
+        const nextVersion = Number.isFinite(version) && version > versionRef.current
+            ? version
+            : null
         if (!unseen.length) {
-            if (Number.isFinite(version)) {
-                versionRef.current = version
+            if (nextVersion !== null) {
+                versionRef.current = nextVersion
             }
             return
         }
@@ -167,10 +176,10 @@ export function useProjectDocumentSync({
         dispatch?.({
             type: 'apply-ops',
             ops: unseen,
-            version: Number.isFinite(version) ? version : undefined
+            version: nextVersion !== null ? nextVersion : undefined
         })
-        if (Number.isFinite(version)) {
-            versionRef.current = version
+        if (nextVersion !== null) {
+            versionRef.current = nextVersion
         }
     }, [dispatch, rememberSeenOps])
 

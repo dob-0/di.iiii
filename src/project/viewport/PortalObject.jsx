@@ -106,8 +106,18 @@ function LabelPlate({ text, fontSize, maxWidth }) {
 // Portal (gateway) mode: a ring marker + floating label. Clicking enters the
 // space in the live viewer; in the Studio editor the click is left to the
 // editor's own selection handling (so a portal stays selectable/movable).
+// Matches only an actual `/studio` path SEGMENT — the Studio app's reserved
+// route prefix (see src/studio/utils/studioRouting.js's STUDIO_RESERVED_SEGMENT)
+// — never a space/project id or slug that merely starts with "studio". Ids
+// like "studio-tour" are legal and unreserved (spaceStore.js's
+// RESERVED_SPACE_SLUGS is an exact-match Set), so a public URL such as
+// `/expo/studio-tour` used to satisfy a plain `.includes('/studio')` check
+// and permanently disable this portal's click-to-enter for every visitor.
+const STUDIO_PATH_SEGMENT_RE = /(?:^|\/)studio(?:\/|$)/
+export const isStudioEditorPath = (pathname = '') => STUDIO_PATH_SEGMENT_RE.test(pathname)
+
 function PortalGateway({ spaceId, label, color = '#4df9ff' }) {
-    const inEditor = typeof window !== 'undefined' && window.location.pathname.includes('/studio')
+    const inEditor = typeof window !== 'undefined' && isStudioEditorPath(window.location.pathname)
     const enter = (event) => {
         event.stopPropagation()
         // appNavigate keeps this an SPA route change (back/forward stay sane);

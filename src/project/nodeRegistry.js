@@ -646,7 +646,6 @@ export const NODE_TYPES = {
         label: '3D Desk',
         category: 'universe',
         runtime: 'any',
-        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'title',       type: 'string', label: 'Title', default: '3D Desk'     },

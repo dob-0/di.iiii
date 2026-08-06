@@ -37,7 +37,7 @@ export const GUIDE_SECTIONS = [
         label: 'Start Here',
         icon: '◎',
         title: 'Start small',
-        description: 'Start empty. Double-click to create node 0.',
+        description: 'Start empty. Double-click to place your first node.',
         callouts: [
             { icon: '◫', title: 'World', detail: 'Place scene nodes' },
             { icon: '▤', title: 'View', detail: 'Make panels' },
@@ -50,7 +50,7 @@ export const GUIDE_SECTIONS = [
         ],
         steps: [
             'First page is empty.',
-            'Double-click to create node 0.',
+            'Double-click to place your first node.',
             'Then add nodes one by one.',
             'Connect values when needed.'
         ],
@@ -78,7 +78,7 @@ export const GUIDE_SECTIONS = [
         ],
         steps: [
             'Start with nothing.',
-            'Create node 0.',
+            'Double-click World to place a node.',
             'Add nodes one by one.',
             'Use Graph when you need values.'
         ],

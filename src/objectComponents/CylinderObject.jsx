@@ -1,5 +1,6 @@
 import React from 'react'
 import PrimitiveMaterial from './PrimitiveMaterial.jsx'
+import { safeDimension } from './safeDimension.js'
 
 export default function CylinderObject({
     color,
@@ -10,9 +11,12 @@ export default function CylinderObject({
     opacity = 1,
     material = {}
 }) {
+    const safeRadiusTop = safeDimension(cylinderRadiusTop, 0.5)
+    const safeRadiusBottom = safeDimension(cylinderRadiusBottom, 0.5)
+    const safeHeight = safeDimension(cylinderHeight, 1.5)
     return (
-        <mesh position-y={cylinderHeight / 2}>
-            <cylinderGeometry args={[cylinderRadiusTop, cylinderRadiusBottom, cylinderHeight, 32]} />
+        <mesh position-y={safeHeight / 2}>
+            <cylinderGeometry args={[safeRadiusTop, safeRadiusBottom, safeHeight, 32]} />
             <PrimitiveMaterial color={color} wireframe={wireframe} opacity={opacity} {...material} />
         </mesh>
     )

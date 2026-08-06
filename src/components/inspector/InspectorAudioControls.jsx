@@ -12,6 +12,13 @@ export default function InspectorAudioControls({
     const fieldPrefix = useId()
     if (!selectedObject || !isAudioObject) return null
 
+    // Matches AudioObject.jsx's own default resolution: an unset field plays
+    // back as "on" (that's also what useObjectFactory writes at creation), so
+    // the toggle must default to "On" too — else it shows Off for an object
+    // that is, in fact, autoplaying/looping right now.
+    const audioAutoplayOn = typeof selectedObject.audioAutoplay === 'boolean' ? selectedObject.audioAutoplay : true
+    const audioLoopOn = typeof selectedObject.audioLoop === 'boolean' ? selectedObject.audioLoop : true
+
     return (
         <>
             <div className="prop-row-stacked">
@@ -25,7 +32,7 @@ export default function InspectorAudioControls({
                         src={audioUrl}
                         aria-label="Audio preview player"
                         style={{ width: '100%' }}
-                        loop={selectedObject.audioLoop ?? true}
+                        loop={audioLoopOn}
                         onPlay={onPreviewPlay}
                         onPause={onPreviewStop}
                         onEnded={onPreviewStop}
@@ -40,10 +47,10 @@ export default function InspectorAudioControls({
                     id={`${fieldPrefix}-autoplay`}
                     className="toggle-button-small"
                     aria-label="Toggle audio autoplay"
-                    aria-pressed={Boolean(selectedObject.audioAutoplay)}
-                    onClick={() => onUpdateProperty('audioAutoplay', !selectedObject.audioAutoplay)}
+                    aria-pressed={audioAutoplayOn}
+                    onClick={() => onUpdateProperty('audioAutoplay', !audioAutoplayOn)}
                 >
-                    {selectedObject.audioAutoplay ? 'On' : 'Off'}
+                    {audioAutoplayOn ? 'On' : 'Off'}
                 </button>
             </div>
             <div className="prop-row">
@@ -52,10 +59,10 @@ export default function InspectorAudioControls({
                     id={`${fieldPrefix}-loop`}
                     className="toggle-button-small"
                     aria-label="Toggle audio loop"
-                    aria-pressed={Boolean(selectedObject.audioLoop)}
-                    onClick={() => onUpdateProperty('audioLoop', !selectedObject.audioLoop)}
+                    aria-pressed={audioLoopOn}
+                    onClick={() => onUpdateProperty('audioLoop', !audioLoopOn)}
                 >
-                    {selectedObject.audioLoop ? 'On' : 'Off'}
+                    {audioLoopOn ? 'On' : 'Off'}
                 </button>
             </div>
             <div className="prop-row">
