@@ -19,9 +19,14 @@ import {
   isLiveProcessCmdline
 } from './repo-state-lib.mjs'
 
+// stdio must be explicit: execFileSync inherits the parent's stderr by default, so an
+// EXPECTED failure (e.g. probing a branch with no upstream) prints a scary "fatal: ..."
+// straight to the console even though the catch block below handles it cleanly and
+// returns '' -- caught live testing `land` against a branch with no upstream, on this
+// exact code path.
 const git = (args, cwd) => {
   try {
-    return execFileSync('git', args, { encoding: 'utf8', cwd }).trim()
+    return execFileSync('git', args, { encoding: 'utf8', cwd, stdio: ['ignore', 'pipe', 'pipe'] }).trim()
   } catch {
     return ''
   }
@@ -40,7 +45,7 @@ const getCurrentBranchBehindDev = (branch) => {
 
 const isAncestor = (ancestorRef, descendantRef) => {
   try {
-    execFileSync('git', ['merge-base', '--is-ancestor', ancestorRef, descendantRef])
+    execFileSync('git', ['merge-base', '--is-ancestor', ancestorRef, descendantRef], { stdio: 'ignore' })
     return true
   } catch {
     return false
@@ -188,7 +193,7 @@ const runSweep = (worktrees) => {
       continue
     }
     try {
-      execFileSync('git', ['worktree', 'remove', wt.path], { encoding: 'utf8', cwd: repoRoot })
+      execFileSync('git', ['worktree', 'remove', wt.path], { encoding: 'utf8', cwd: repoRoot, stdio: ['ignore', 'pipe', 'pipe'] })
       console.log(`  ✓ removed ${wt.path}${wt.branch ? ` [${wt.branch}]` : ''}`)
       removed++
     } catch (error) {

@@ -21,6 +21,7 @@
         "state:brief": "node scripts/repo-state.mjs --brief",
         "state:sweep": "node scripts/repo-state.mjs --sweep",
         "state:prune": "node scripts/repo-state.mjs --prune",
+        "land": "node scripts/session-land.mjs",
         "check:fallback-patterns": "node scripts/check-fallback-patterns.mjs",
         "docs:wiki:check": "node scripts/check-wiki-sync.mjs",
         "deploy": "node scripts/deploy.mjs",

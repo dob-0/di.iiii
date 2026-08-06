@@ -128,9 +128,12 @@ export const checkSafeSource = ({
   return reasons
 }
 
+// stdio must be explicit -- execFileSync inherits the parent's stderr by default, so
+// an EXPECTED failure (e.g. no upstream configured) prints straight to the console
+// even though the catch below handles it cleanly. Same fix as repo-state.mjs's git().
 const git = (args, cwd) => {
   try {
-    return execFileSync('git', args, { encoding: 'utf8', cwd }).trim()
+    return execFileSync('git', args, { encoding: 'utf8', cwd, stdio: ['ignore', 'pipe', 'pipe'] }).trim()
   } catch {
     return null
   }

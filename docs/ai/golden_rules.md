@@ -815,12 +815,24 @@ This does **not** fully solve node-to-node label collision (two labels can still
 
 ---
 
-### One worktree per task; prune when the branch lands
+### CURRENT.md has exactly one writer: `npm run land`
 
-**Rule:** Before starting a fan-out or a new worktree, run `npm run state` and check the count. After a branch merges, remove its worktree (`git worktree remove <path>`) and run `npm run state:prune` to clear stale registry entries.
+**Rule:** Never edit `CURRENT.md` on a feature branch. Write session notes to `docs/ai/sessions/<branch-slug>.md` instead (see its README for the format) and let `npm run land` — run on `dev`, at merge time — fold them into `PROGRESS.md` and rewrite `CURRENT.md`'s "Last session" from them.
 
-**Why:** By 2026-08-06 there were 21 worktrees: 3 prunable with their /tmp scratchpad directories already deleted, one detached and stale at a commit from the previous day, and 17 branches sitting unmerged into dev. Nothing reported this — agents only discover it by accident, usually when a worktree they need is already locked by another one (git worktree add fails with 'already used by worktree at ...').
+**Why:** The SHA/ahead-behind ban above fixed *what* got written into CURRENT.md; it did nothing about *when* or *by whom*. Every branch was still pre-writing what it guessed `dev` would look like once merged, and `CURRENT.md`'s own "replace, don't append" convention meant whichever branch wrote last won — silently destroying whatever the previous writer had recorded. Confirmed on 2026-08-06: three separate sessions' real notes were permanently overwritten this way before their branch ever merged, recoverable only via `git fsck --dangling` (which nobody would think to run) — one of them was on this very rule's own commit, caught while writing it. A single-writer point, naturally serialized by git (only one branch can be `dev` at a time), closes the race that a naming convention alone cannot.
 
-**How:** scripts/repo-state.mjs prints the live worktree count and flags prunable/detached entries every session (wired into the SessionStart hook); --prune runs git worktree prune only — it never removes a directory or deletes unpushed work.
+**How:** `docs:ai:check` enforces the shape: `CURRENT.md` must contain the literal `active_branch: dev`; a branch off `dev`/`main` must have a matching session note before pushing, and its `CURRENT.md` must not differ from `origin/dev`; `dev`/`main` themselves must have an empty `docs/ai/sessions/` (forces the fold-in — cleanup is part of landing, not a courtesy). `.claude/commands/recap.md` writes the note; `.claude/commands/land.md` runs the fold.
 
-**Files:** `scripts/repo-state.mjs, scripts/repo-state-lib.mjs, docs/ai/parallel-agents.md`
+**Files:** `docs/ai/sessions/README.md, scripts/session-land.mjs, scripts/session-land-lib.mjs, scripts/check-agent-docs.mjs, .claude/commands/recap.md, .claude/commands/land.md`
+
+---
+
+### One worktree per task; landing sweeps it, not memory
+
+**Rule:** Before starting a fan-out or a new worktree, run `npm run state` and check the count. `npm run land` (see above) sweeps merged/clean/non-live worktrees automatically at merge time — a worktree that survives a landing needs a reason (still live, still unmerged, or dirty), not a reminder to someone.
+
+**Why:** By 2026-08-06 there were 21 worktrees: 3 prunable with their /tmp scratchpad directories already deleted, one detached and stale at a commit from the previous day, and 17 branches sitting unmerged into dev. Nothing reported this — agents only discover it by accident, usually when a worktree they need is already locked by another one (git worktree add fails with 'already used by worktree at ...'). A cleanup step that depends on someone remembering to run it is the same shape of unenforced rule as the CURRENT.md line limit was before a check existed for it.
+
+**How:** `scripts/repo-state.mjs` prints the live worktree count and flags prunable/detached/live entries every session (wired into the SessionStart hook via `--brief`); `--sweep` removes only what `classifyWorktree`/`isSweepSafe` agree is safe (merged by `git cherry`, not just `merge-base` — catches squash merges — clean, and no live process bound to it via `/proc` scan), never `--force`, and names the exact reason + override command for everything it leaves alone. `npm run land` runs it as its last step.
+
+**Files:** `scripts/repo-state.mjs, scripts/repo-state-lib.mjs, scripts/session-land.mjs, docs/ai/parallel-agents.md`

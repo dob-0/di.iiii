@@ -25,9 +25,37 @@ on PR #94's `repo-state.mjs` tooling rather than duplicating it.
   the `active_branch: dev` literal check) is the structural fix for the one *confirmed*
   loss mechanism — everything above was rescue/cleanup around the edges of it.
 
-**Still open, not done this session:** `npm run land` (the command that folds these
-notes into `PROGRESS.md`/`CURRENT.md` and sweeps worktrees at merge time — referenced
-by this same protocol but not yet built), `repo-state.mjs` live-process/merge-status
-extensions, CI self-checks in the 3 linked repos so engine drift can fail loudly instead
-of stalling silently, and the `di-spaces` reconciliation. Consolidating to one canonical
-di.iiii checkout stays blocked on `di.iiii-algomerge`'s active webcam-feature work.
+## 2026-08-06 — `npm run land`, `repo-state.mjs` live-process detection
+
+- `repo-state.mjs`/`repo-state-lib.mjs` (extends PR #94, doesn't duplicate it):
+  `classifyWorktree` (LIVE > UNPUSHED > UNMERGED > STALE > GONE, via `/proc` scan +
+  `git cherry` for squash-merge-aware merge detection), `--brief`/`--sweep`/`--json`.
+  Real bug caught building this: the first live-process pattern matched `vitest run`
+  (one-shot), so a test run in progress got misidentified as a live dev server —
+  happened for real, not hypothetical, fixed and regression-tested.
+- `session-land.mjs`/`session-land-lib.mjs` (`npm run land`): folds `docs/ai/sessions/`
+  notes into `PROGRESS.md`, rewrites `CURRENT.md`'s Last-session to a title list
+  pointing there (full prose never goes in CURRENT.md — the only way to guarantee the
+  50-line budget regardless of how much landed in one batch), deletes the notes, runs
+  the worktree sweep, commits (not pushes). Verified end-to-end in an isolated clone
+  with two fake notes — folding, CURRENT.md rewrite, file deletion, sweep, commit all
+  confirmed correct.
+- Second real bug caught testing `land`: `execFileSync`'s default stderr inheritance
+  leaked "fatal: no upstream configured" straight to the console for an expected,
+  already-handled failure (probing an unpushed branch) — in both `repo-state.mjs` and
+  `space-sync-vendor.mjs`'s `git()` helpers, pre-existing in PR #94's code, not just
+  this branch's additions. Fixed both.
+- Dogfooded the CURRENT.md-untouched rule on this exact branch: my own earlier commits
+  had hand-edited `CURRENT.md` directly, in violation of the rule being written.
+  Reverted rather than grandfathered — see the commit for the full story, including a
+  second bug this surfaced (`origin/dev...HEAD` vs `origin/dev` diff form).
+- `.claude/commands/land.md` added; `recap.md` (from PR #94) rewritten to write session
+  notes instead of editing `CURRENT.md` directly, which is now a `docs:ai:check`
+  violation. `docs/ai/golden_rules.md` and `docs/ai/parallel-agents.md` updated to
+  match — the worktree-location convention (`.claude/worktrees/`, not `../di.iiii-*`)
+  is now stated as the rule, not "either is fine".
+
+**Still open:** CI self-checks in the 3 linked repos so engine drift can fail loudly
+instead of stalling silently (`space:sync:release` exists but hasn't run for real —
+waiting on this branch merging), and the `di-spaces` reconciliation. Consolidating to
+one canonical di.iiii checkout stays blocked on `di.iiii-algomerge`'s active work.
