@@ -78,6 +78,21 @@ describe('nodeGraphRuntime', () => {
         expect(evaluateNodeOutput(webcam, 'frame', emptyContext)).toBeNull()
     })
 
+    it('reads source.mic.volume/.frequency from the injected liveOutputs map, defaulting to silence when uncaptured', () => {
+        const mic = createNode('source.mic', { id: 'mic-1' })
+        const spectrum = new Uint8Array([1, 2, 3])
+        const liveContext = createNodeGraphContext(
+            { nodes: [mic], edges: [] },
+            { liveOutputs: new Map([['mic-1:volume', 0.42], ['mic-1:frequency', spectrum]]) }
+        )
+        expect(evaluateNodeOutput(mic, 'volume', liveContext)).toBe(0.42)
+        expect(evaluateNodeOutput(mic, 'frequency', liveContext)).toBe(spectrum)
+
+        const emptyContext = createNodeGraphContext({ nodes: [mic], edges: [] })
+        expect(evaluateNodeOutput(mic, 'volume', emptyContext)).toBe(0)
+        expect(evaluateNodeOutput(mic, 'frequency', emptyContext)).toBeNull()
+    })
+
     it('carries a live webcam texture across a wire into geom.plane.texture', () => {
         const webcam = createNode('source.webcam', { id: 'webcam-1' })
         const plane = createNode('geom.plane', { id: 'plane-1' })

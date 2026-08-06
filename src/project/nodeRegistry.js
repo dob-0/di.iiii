@@ -189,7 +189,6 @@ export const NODE_TYPES = {
         label: 'Microphone',
         category: 'source',
         runtime: 'web',
-        authoringOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
@@ -197,7 +196,10 @@ export const NODE_TYPES = {
             { id: 'frequency', type: 'any',    label: 'Frequency' },
         ],
         defaultValues: {},
-        render: 'hidden',
+        // panel-2d, not hidden — same reasoning as source.webcam: permission
+        // denial and no-microphone-present are normal outcomes that need a
+        // visible surface, not a blank node.
+        render: 'panel-2d',
     },
 
     'source.insta360': {
@@ -1103,7 +1105,6 @@ export const createEdge = (fromNodeId, fromPort, toNodeId, toPort, options = {})
 export const UNIMPLEMENTED_NODE_TYPES = new Set([
     // capture — no getUserMedia anywhere
     'source.ar',
-    'source.mic',
     'source.insta360',
     'source.stereo',
     'source.realsense.d405',

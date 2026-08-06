@@ -288,7 +288,7 @@ describe('getNodeInputs / getNodeOutputs', () => {
 describe('unimplemented node types', () => {
     it('withholds types with nothing behind them from the palette', () => {
         const offered = listNodeTypes().map((type) => type.id)
-        for (const id of ['source.mic', 'device.midi.in', 'stream.compositor', 'universe.link']) {
+        for (const id of ['source.ar', 'device.midi.in', 'stream.compositor', 'universe.link']) {
             expect(offered).not.toContain(id)
         }
     })
@@ -298,7 +298,7 @@ describe('unimplemented node types', () => {
         for (const id of [
             'value.number', 'math.add', 'geom.cube', 'world.light',
             'universe.world', 'view.image', 'view.browser', 'time',
-            'source.webcam'
+            'source.webcam', 'source.mic'
         ]) {
             expect(offered).toContain(id)
         }
@@ -313,7 +313,7 @@ describe('unimplemented node types', () => {
 
     it('can list them explicitly, for the backlog', () => {
         const all = listNodeTypes({ includeUnimplemented: true }).map((type) => type.id)
-        expect(all).toContain('source.mic')
+        expect(all).toContain('source.ar')
         expect(all.length).toBeGreaterThan(listNodeTypes().length)
     })
 

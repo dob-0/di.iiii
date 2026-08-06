@@ -1,32 +1,9 @@
 import { useEffect, useState } from 'react'
 import * as THREE from 'three'
+import { MEDIA_CAPTURE_STATUS, statusForMediaError } from './mediaCaptureStatus.js'
 
-export const WEBCAM_STATUS = {
-    REQUESTING: 'requesting',
-    ACTIVE: 'active',
-    DENIED: 'denied',
-    UNAVAILABLE: 'unavailable',
-    ERROR: 'error'
-}
-
-// getUserMedia's DOMException.name tells you why it failed. Permission
-// denial and no-camera-present are the normal cases for this node, not edge
-// cases (docs/roadmaps/NODE_BACKLOG.md's capture-family note) — everything
-// else collapses to a generic error state.
-export const statusForError = (error) => {
-    switch (error?.name) {
-        case 'NotAllowedError':
-        case 'SecurityError':
-        case 'PermissionDeniedError':
-            return WEBCAM_STATUS.DENIED
-        case 'NotFoundError':
-        case 'OverconstrainedError':
-        case 'DevicesNotFoundError':
-            return WEBCAM_STATUS.UNAVAILABLE
-        default:
-            return WEBCAM_STATUS.ERROR
-    }
-}
+export const WEBCAM_STATUS = MEDIA_CAPTURE_STATUS
+export const statusForError = statusForMediaError
 
 // Captures the default camera onto `videoRef`'s element and builds a
 // THREE.VideoTexture from it. The video element is owned by the caller (so

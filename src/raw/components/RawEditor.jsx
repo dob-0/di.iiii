@@ -10,6 +10,7 @@ import WorldPanelWindow from './WorldPanelWindow.jsx'
 import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
 import ChatPanelWindow from './ChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
+import MicSourcePanel from './MicSourcePanel.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
@@ -589,10 +590,14 @@ export default function RawEditor({
     const handleLiveOutputChange = useCallback((nodeId, portId, value) => {
         setLiveOutputs((prev) => {
             const key = `${nodeId}:${portId}`
-            if (!value && !prev.has(key)) return prev
+            // null/undefined clears the port (unmount, capture failed); any
+            // other value — including 0, an empty array — is set as-is, so a
+            // real "silent microphone" reading doesn't get treated as unset.
+            const clear = value === null || value === undefined
+            if (clear && !prev.has(key)) return prev
             const next = new Map(prev)
-            if (value) next.set(key, value)
-            else next.delete(key)
+            if (clear) next.delete(key)
+            else next.set(key, value)
             return next
         })
     }, [])
@@ -653,6 +658,17 @@ export default function RawEditor({
         }
         if (node.typeId === 'source.webcam') {
             return <WebcamSourcePanel node={node} onFrameChange={(nodeId, texture) => handleLiveOutputChange(nodeId, 'frame', texture)} />
+        }
+        if (node.typeId === 'source.mic') {
+            return (
+                <MicSourcePanel
+                    node={node}
+                    onLevelsChange={(nodeId, volume, frequency) => {
+                        handleLiveOutputChange(nodeId, 'volume', volume)
+                        handleLiveOutputChange(nodeId, 'frequency', frequency)
+                    }}
+                />
+            )
         }
         return <TextPanelWindow node={node} values={resolvedValues} />
     }

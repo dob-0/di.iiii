@@ -919,6 +919,7 @@
     min-width: 0;
     flex: 1;
     justify-content: center;
+    overflow: hidden;
 }
 
 .raw-topbar-location {
@@ -934,6 +935,10 @@
     text-transform: uppercase;
     font-family: 'JetBrains Mono', 'Fira Code', monospace;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex-shrink: 1;
 }
 
 .raw-topbar-breadcrumb {
@@ -2964,7 +2969,8 @@
     transform: scaleX(-1);
 }
 
-.raw-webcam-panel-status {
+.raw-webcam-panel-status,
+.raw-mic-panel-status {
     position: absolute;
     inset: 0;
     display: grid;
@@ -2977,6 +2983,35 @@
     background: rgba(8, 12, 20, 0.86);
 }
 
+.raw-mic-panel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #080c14;
+    display: grid;
+    place-items: center;
+    padding: 0 20px;
+}
+
+.raw-mic-panel-meter {
+    width: 100%;
+    height: 10px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(77, 249, 255, 0.08);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+}
+
+.raw-mic-panel-meter-fill {
+    width: 100%;
+    height: 100%;
+    transform-origin: left center;
+    transform: scaleX(0);
+    background: linear-gradient(90deg, #4df9ff, #5fa8ff);
+    /* volume updates go straight to this transform every animation frame
+       (see MicSourcePanel) — a transition here would fight that and lag. */
+}
+
 @media (max-width: 1200px) {
     .raw-hub-grid {
         grid-template-columns: 1fr;
@@ -2987,9 +3022,27 @@
     }
 }
 
+@media (max-width: 900px) {
+    .raw-topbar-scale-control label {
+        display: none;
+    }
+
+    .raw-topbar-right {
+        gap: 4px;
+    }
+}
+
 @media (max-width: 700px) {
     .raw-op-create-body {
         grid-template-columns: 1fr;
+    }
+
+    .raw-topbar-location {
+        max-width: 38vw;
+    }
+
+    .raw-topbar-scale-control {
+        display: none;
     }
 }
 

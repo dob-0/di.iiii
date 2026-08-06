@@ -131,6 +131,14 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
                 return context?.liveOutputs?.get(`${node.id}:frame`) ?? null
             }
             break
+        case 'source.mic':
+            if (portId === 'volume') {
+                return context?.liveOutputs?.get(`${node.id}:volume`) ?? 0
+            }
+            if (portId === 'frequency') {
+                return context?.liveOutputs?.get(`${node.id}:frequency`) ?? null
+            }
+            break
         case 'math.add':
             if (portId === 'out') {
                 return asNumber(evaluateNodeInput(node, 'a', context, nextStack))
