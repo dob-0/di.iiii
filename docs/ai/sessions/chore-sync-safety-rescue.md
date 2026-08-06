@@ -78,8 +78,22 @@ on PR #94's `repo-state.mjs` tooling rather than duplicating it.
   vendoring rule updated to `npm run space:sync:release` and a new rule on why a
   checked-out worktree is a runnable copy of every tool, not just source code.
 
-**Still open:** actually running `--release` for real (needs this branch merged first —
-the guard correctly refuses from here), the 3 linked repos' own `AGENTS.md`/CI (in
-progress, separate commits in those repos), and the `di-spaces` reconciliation.
-Consolidating to one canonical di.iiii checkout stays blocked on `di.iiii-algomerge`'s
-active work.
+## 2026-08-06 — The real fix, landed for real, in all 3 linked repos
+
+- `br_id_ge`: `minEngine` 5→6, engine v6 committed, `sync-space-check.mjs` +
+  `vendor-check.yml` added, `sync-space.yml` gated on it. Pushed to `main`. **Both the
+  new vendor-check AND the existing production sync workflow ran and passed for
+  real on GitHub Actions** — content unchanged, tooling only, verified green.
+- `beyond_form`: same fix, plus `di-space.space.json` committed for the first time
+  (was untracked since the repo was linked — no history at all until this commit).
+  Pushed. **This repo's first CI run ever, passed.**
+- `platform_recordar`: same fix, committed. No remote — this repo's permanent state,
+  documented in a new `AGENTS.md` (had none) as a deliberate `KNOWN_EXCEPTIONS` entry
+  rather than a silent gap.
+- Each repo's own pre-existing uncommitted work (br_id_ge's real session notes in
+  `CURRENT.md`; a `DEFAULT_LIVE_URL`-removal edit in both `beyond_form` and
+  `platform_recordar`'s `di-space.json`) deliberately left untouched and unstaged —
+  not mine, not this task's scope.
+
+**Still open:** the `di-spaces` reconciliation, and consolidating to one canonical
+di.iiii checkout (blocked on `di.iiii-algomerge`'s active work).
