@@ -114,4 +114,71 @@ describe('useStatusItems', () => {
         expect(sceneStreamStatus?.label).toBe('Scene stream degraded')
         expect(sceneStreamStatus?.detail).toBe('Scene event stream is reconnecting.')
     })
+
+    // Regression: a failing write POST used to be invisible. useLiveSync retried it
+    // but sceneFlushError was dropped at useAppState's destructure, so the user saw a
+    // healthy 'Scene stream connected' while every edit silently failed to save.
+    it('surfaces a flush failure even while the scene stream reads as connected', () => {
+        const { result } = renderHook(() => useStatusItems({
+            uploadProgress: null,
+            assetRestoreProgress: null,
+            serverAssetSyncProgress: null,
+            serverAssetSyncPending: 0,
+            localSaveStatus: { ts: null, label: 'Not saved locally' },
+            mediaOptimizationStatus: null,
+            supportsServerSpaces: true,
+            isOfflineMode: false,
+            liveSyncFeatureEnabled: true,
+            isLiveSyncEnabled: true,
+            sceneVersion: 1,
+            spaceId: 'main',
+            canPublishToServer: true,
+            isReadOnly: false,
+            serverSyncInfo: { ts: null, label: 'Server: not synced yet' },
+            isSocketConnected: true,
+            collaborators: [],
+            participantRoster: [{ userId: 'self', userName: 'Self', isSelf: true }],
+            isSceneStreamConnected: true,
+            sceneStreamState: 'connected',
+            sceneStreamError: null,
+            sceneFlushError: 'Scene sync failed.'
+        }))
+
+        const sceneStreamStatus = result.current.find((item) => item.key === 'scene-stream')
+        const flushStatus = result.current.find((item) => item.key === 'scene-flush')
+
+        expect(sceneStreamStatus?.label).toBe('Scene stream connected')
+        expect(flushStatus?.label).toBe('Scene changes not saved')
+        expect(flushStatus?.detail).toContain('Scene sync failed.')
+        expect(flushStatus?.detail).toContain('Retrying')
+    })
+
+    it('shows no flush row when writes are healthy', () => {
+        const { result } = renderHook(() => useStatusItems({
+            uploadProgress: null,
+            assetRestoreProgress: null,
+            serverAssetSyncProgress: null,
+            serverAssetSyncPending: 0,
+            localSaveStatus: { ts: null, label: 'Not saved locally' },
+            mediaOptimizationStatus: null,
+            supportsServerSpaces: true,
+            isOfflineMode: false,
+            liveSyncFeatureEnabled: true,
+            isLiveSyncEnabled: true,
+            sceneVersion: 1,
+            spaceId: 'main',
+            canPublishToServer: true,
+            isReadOnly: false,
+            serverSyncInfo: { ts: null, label: 'Server: not synced yet' },
+            isSocketConnected: true,
+            collaborators: [],
+            participantRoster: [{ userId: 'self', userName: 'Self', isSelf: true }],
+            isSceneStreamConnected: true,
+            sceneStreamState: 'connected',
+            sceneStreamError: null,
+            sceneFlushError: null
+        }))
+
+        expect(result.current.find((item) => item.key === 'scene-flush')).toBeUndefined()
+    })
 })
