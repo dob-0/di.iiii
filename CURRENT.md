@@ -21,12 +21,13 @@ door + wiki + invite card **looked at** at 390px. Share this tree: **stage expli
 - The algovrithm Director now saves from the live site — `GET/PUT /api/spaces/:id/settings` (opaque JSON, 64 KB) plus a timing overlay resolved before the clock is built; **seen** on a production build with no dev server.
 - "Invite carries its role" was **dropped after measuring** — new accounts already default to `editor`. Instead, an invited collaborator got a door: `joining-a-space` in the wiki is the browser-only path, `README`/`ONBOARDING` fork into two, both AuthGate cards link to it.
 - **All 8 prod spaces are declared.** Engine v6 reads an empty `projects` list as a space-only declaration, so Studio-authored and code spaces can be declared at all; `npm run spaces:audit` walks every one, read-only. Prod and staging agree on every declared field.
+- `5a34baa3` (another session, now live): `?preview=1` was honoured only by `PublicProjectViewer`, so a space-card thumbnail of a space with no published project embedded the whole editor and showed Enter VR / Enter AR / Mode.
 - **`docs/promo/` is out of the public repo** — grant calendar, stakeholder tracker, revenue model, unsent drafts now in private `dob-0/di.iiii-ops`. `git rm` does not remove history: treat it as already seen.
 - **CURRENT.md's own 50-line limit is now a CI check** (`check-agent-docs.mjs`) — written in the file's first line, read by nothing, and it blocked three of this session's own commits. `golden_rules.md` records which half of the contract CI enforces and which half is discipline.
 
-Before it (2026-08-05, now live): the 54-agent audit — run against a tree **51 commits
-behind `dev`**, so check `git rev-list --left-right --count HEAD...origin/dev` before any
-fan-out. Every push reports `Bypassed rule violations`; branch protection does not stop this account.
+Before it, now live: the 54-agent audit — run against a tree **51 commits behind `dev`**, so
+check `git rev-list --left-right --count HEAD...origin/dev` before any fan-out. Every push
+reports `Bypassed rule violations`; branch protection does not stop this account.
 
 ## What works
 
