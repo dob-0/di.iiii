@@ -13,7 +13,8 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Raw on touch, the all-nodes example, Studio as a node
+- Open inscriptions can carry the drawing that was made for them
+- Audit backlog closed, two real gaps fixed
 
 Full detail: `PROGRESS.md`.
 
