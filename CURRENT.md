@@ -11,19 +11,11 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session (2026-08-06 — Beta retired; one node lane, mid-consolidation)
+## Last session
 
-- Beta (`src/beta/`, 41 files) deleted — a verbatim fork of Raw (`RawHub.jsx`/
-  `BetaHub.jsx` differed by 0 lines), already unreachable except one V1 dropdown.
-  `beta-v2`-tagged projects keep the label as provenance, no DB migration needed.
-- Studio's read-only previews imported `BetaGraphSurface`/`BetaViewport`
-  directly — repointed at Raw's equivalents first, or Studio's build would
-  have broken silently (writeup + a second bug found alongside: `docs/ai/known-fixes.md`).
-  Docs updated to match: `PROJECT_SURFACES.md`, `RECURSIVE_NODE_CORE.md`, `AGENTS.md`,
-  `src/raw/AGENTS.md`, `MANIFESTO.md`. lint/build/1692 tests green.
-- **Not done yet, same plan**: rebase `feat/raw-studio-node` (worktree
-  `~/di.iiii-studionode`, unpushed) onto this, then promote Raw to the default
-  new-project surface. Plan: `/home/nooo/.claude/plans/sunny-growing-canyon.md`.
+- Sync-safety pass: rescue, seal, and the structural fix
+
+Full detail: `PROGRESS.md`.
 
 ## What works
 
