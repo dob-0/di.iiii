@@ -65,6 +65,22 @@ describe('ProjectSwitcher', () => {
         expect(items.map((el) => el.textContent)).toEqual(['br_id_ge', 'graph', 'jam brief'])
     })
 
+    // known-fixes: the tech rider ("needs dash", br-id-ge-needs) was public
+    // and copy-linkable in this switcher alongside the field/rite/landing.
+    it('hides crew-only projects from the switcher without removing them from the space', async () => {
+        listProjects.mockResolvedValue([
+            { id: 'br-id-ge-needs', title: 'needs dash' },
+            { id: 'br-id-ge-field', title: 'the field' }
+        ])
+
+        render(<ProjectSwitcher spaceId="br_id_ge" currentProjectId="br-id-ge-field" />)
+        await userEvent.click(screen.getByRole('button', { name: /br_id_ge/ }))
+
+        const nav = await screen.findByRole('navigation', { name: /projects in this space/i })
+        expect(within(nav).queryByText('needs dash')).not.toBeInTheDocument()
+        expect(within(nav).getByText('the field')).toBeInTheDocument()
+    })
+
     // docs/architecture/SPEC_space_urls_and_portability.md — vanity slugs.
     it('copies the vanity link when a project has a slug, the /p/ fallback otherwise', async () => {
         listProjects.mockResolvedValue([

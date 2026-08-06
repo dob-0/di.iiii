@@ -14,14 +14,26 @@ const SPACE_PROJECT_ORDER = {
         'ops-board', 'v-oooooo', 'br-id-ge-lab']
 }
 
+// Crew-only documents that must never appear in the visitor-facing switcher.
+// This list previously had no visibility concept at all -- it showed every
+// project the API returned, which is how the show's tech rider ("needs dash",
+// br-id-ge-needs: equipment lists, open/settled task tracking) ended up
+// public and copy-linkable next to the field/rite/landing. Hiding here, not
+// deleting the project -- the crew still uses it via its direct URL.
+const SPACE_PROJECT_HIDDEN = {
+    br_id_ge: ['br-id-ge-needs']
+}
+
 function sortProjectsForSpace(spaceId, projects) {
+    const hidden = SPACE_PROJECT_HIDDEN[spaceId]
+    const visible = hidden ? projects.filter((p) => !hidden.includes(p.id)) : projects
     const order = SPACE_PROJECT_ORDER[spaceId]
-    if (!order) return projects
+    if (!order) return visible
     const rank = (id) => {
         const index = order.indexOf(id)
         return index === -1 ? order.length : index
     }
-    return [...projects].sort((a, b) => rank(a.id) - rank(b.id))
+    return [...visible].sort((a, b) => rank(a.id) - rank(b.id))
 }
 
 const pillStyle = {
