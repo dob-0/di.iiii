@@ -800,3 +800,27 @@ This does **not** fully solve node-to-node label collision (two labels can still
 **How:** Prefer a check to a paragraph, and make it cheap: the line-limit guard is nine lines inside `check-agent-docs.mjs`. When a rule genuinely cannot be automated — "you have not verified it until you looked at it" — say so explicitly where it is written, so nobody mistakes discipline for a tripwire. And **watch a new check fail before trusting it**: append junk, see the error, revert. A guard you never saw fire proves nothing about the day it matters.
 
 **Files:** `scripts/check-agent-docs.mjs` (the enforced half), `scripts/check-wiki-sync.mjs` (the freshness gap), `.github/workflows/ci.yml` (what actually runs), `AGENTS.md` (where the unenforced half is written down).
+
+---
+
+### CURRENT.md states no commit SHA and no branch position
+
+**Rule:** Never write a commit SHA or an ahead/behind count into CURRENT.md. Run `npm run state` (scripts/repo-state.mjs) for those facts instead.
+
+**Why:** On 2026-08-06, two commits landed one minute apart from two different branches asserting contradictory positions for main — 682a556a said main is at 0b4b2b7f, 7a613c69 said dev and main level at ef6e1fe7. Neither agent lied; each transcribed a stale fact from its own worktree's view into a single-slot file. Derived facts belong to a live command, not hand-authored prose, because two branches can never disagree about what a command reports at the moment it runs.
+
+**How:** scripts/check-agent-docs.mjs bans commit-SHA and ahead/behind patterns in CURRENT.md and is wired into both CI and the pre-push gate; .claude/commands/recap.md (repo-local) tells the recap flow to run npm run state instead of transcribing git log.
+
+**Files:** `scripts/check-agent-docs.mjs, scripts/repo-state.mjs, scripts/repo-state-lib.mjs, .claude/commands/recap.md, CURRENT.md`
+
+---
+
+### One worktree per task; prune when the branch lands
+
+**Rule:** Before starting a fan-out or a new worktree, run `npm run state` and check the count. After a branch merges, remove its worktree (`git worktree remove <path>`) and run `npm run state:prune` to clear stale registry entries.
+
+**Why:** By 2026-08-06 there were 21 worktrees: 3 prunable with their /tmp scratchpad directories already deleted, one detached and stale at a commit from the previous day, and 17 branches sitting unmerged into dev. Nothing reported this — agents only discover it by accident, usually when a worktree they need is already locked by another one (git worktree add fails with 'already used by worktree at ...').
+
+**How:** scripts/repo-state.mjs prints the live worktree count and flags prunable/detached entries every session (wired into the SessionStart hook); --prune runs git worktree prune only — it never removes a directory or deletes unpushed work.
+
+**Files:** `scripts/repo-state.mjs, scripts/repo-state-lib.mjs, docs/ai/parallel-agents.md`

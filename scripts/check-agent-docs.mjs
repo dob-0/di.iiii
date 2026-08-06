@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { execFileSync } from 'node:child_process'
 
 import {
   AI_DOC_SCOPES,
@@ -166,6 +167,40 @@ const ensureContains = (content, needle, filePath, errors) => {
 // convention, not a protocol.
 const CURRENT_MD_MAX_LINES = 50
 
+// CURRENT.md was rewritten 22 times on 2026-08-06 from 3 different branches. Two
+// commits landed one minute apart with contradictory claims about where `main` was —
+// each agent had faithfully transcribed a stale fact from its own worktree. Commit
+// SHAs and ahead/behind counts are derived facts; `npm run state` (scripts/repo-state.mjs)
+// is the one place they can live without going stale the moment another branch moves.
+const currentMdDerivedPatterns = [
+  { re: /`[0-9a-f]{7,40}`/g, why: 'commit SHA in CURRENT.md — derived; run `npm run state` instead of transcribing one' },
+  { re: /\b\d+\s+(ahead|behind)\b/gi, why: 'branch position in CURRENT.md — derived; run `npm run state` instead of transcribing one' }
+]
+
+// If code changed days ago and CURRENT.md didn't, the end-of-session recap was
+// skipped. Mirrors collectFreshnessErrors in check-wiki-sync.mjs, including its
+// shallow-checkout guard.
+const CURRENT_MD_GRACE_DAYS = 2
+const CURRENT_MD_FRESHNESS_PATHS = ['src', 'serverXR', 'shared', 'scripts']
+
+const collectCurrentMdFreshnessErrors = () => {
+  try {
+    const lastCode = execFileSync('git', ['log', '-1', '--format=%cs', '--', ...CURRENT_MD_FRESHNESS_PATHS], { cwd: repoRoot, encoding: 'utf8' }).trim()
+    if (!lastCode) return []
+    const depth = execFileSync('git', ['rev-list', '--count', 'HEAD'], { cwd: repoRoot, encoding: 'utf8' }).trim()
+    if (Number(depth) < 10) return []
+    const lastRecap = execFileSync('git', ['log', '-1', '--format=%cs', '--', 'CURRENT.md'], { cwd: repoRoot, encoding: 'utf8' }).trim()
+    if (!lastRecap) return []
+    const gapDays = Math.floor((new Date(lastCode) - new Date(lastRecap)) / 86_400_000)
+    if (gapDays > CURRENT_MD_GRACE_DAYS) {
+      return [`CURRENT.md freshness: code last changed ${lastCode} but CURRENT.md was last recapped ${lastRecap} (${gapDays} days behind, grace ${CURRENT_MD_GRACE_DAYS}). Run /recap.`]
+    }
+  } catch {
+    return []
+  }
+  return []
+}
+
 const main = async () => {
   const errors = []
 
@@ -176,10 +211,22 @@ const main = async () => {
   }
 
   if (await exists('CURRENT.md')) {
-    const lines = (await readFile('CURRENT.md')).replace(/\n$/, '').split('\n').length
+    const currentMdContent = await readFile('CURRENT.md')
+    const lines = currentMdContent.replace(/\n$/, '').split('\n').length
     if (lines > CURRENT_MD_MAX_LINES) {
       errors.push(`CURRENT.md is ${lines} lines, limit ${CURRENT_MD_MAX_LINES}. It is read in full at the start of every session — cut the settled items or move them to PROGRESS.md.`)
     }
+
+    for (const line of currentMdContent.split('\n')) {
+      for (const { re, why } of currentMdDerivedPatterns) {
+        re.lastIndex = 0
+        if (re.test(line)) {
+          errors.push(`CURRENT.md: "${line.trim().slice(0, 80)}" — ${why}`)
+        }
+      }
+    }
+
+    errors.push(...collectCurrentMdFreshnessErrors())
   }
 
   for (const entry of getGeneratedEntries()) {

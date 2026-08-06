@@ -5,7 +5,7 @@ Full process contract: **[docs/ai/agent-operating-contract.md](docs/ai/agent-ope
 
 ## Start Here
 
-- **[CURRENT.md](CURRENT.md)** — read FIRST, every session. ≤50 lines: last commit, what works, what's broken, and a pointer to the known-fixes table ([docs/ai/known-fixes.md](docs/ai/known-fixes.md)) that prevents re-investigating solved problems.
+- **[CURRENT.md](CURRENT.md)** — read FIRST, every session. ≤50 lines: what works, what's broken, open calls, and a pointer to the known-fixes table ([docs/ai/known-fixes.md](docs/ai/known-fixes.md)) that prevents re-investigating solved problems. No commit SHAs or branch positions — those are derived; run `npm run state`.
 - **[PROGRESS.md](PROGRESS.md)** — full session history. Read only if CURRENT.md isn't enough. Update before stopping.
 - **[MANIFESTO.md](MANIFESTO.md)** — vision and non-negotiables. Read before any architectural/product decision.
 - **[docs/ai/golden_rules.md](docs/ai/golden_rules.md)** — hard-won solutions and behavior rules. Add when you learn something worth keeping.

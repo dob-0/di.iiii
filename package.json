@@ -17,6 +17,8 @@
         "build": "vite build",
         "docs:ai:sync": "node scripts/sync-agent-docs.mjs",
         "docs:ai:check": "node scripts/check-agent-docs.mjs",
+        "state": "node scripts/repo-state.mjs",
+        "state:prune": "node scripts/repo-state.mjs --prune",
         "check:fallback-patterns": "node scripts/check-fallback-patterns.mjs",
         "docs:wiki:check": "node scripts/check-wiki-sync.mjs",
         "deploy": "node scripts/deploy.mjs",

@@ -65,12 +65,19 @@ git worktree add ../di.iiii-agent2 -b agent2/<short-task-name> dev
 # agent 1 keeps working in the original directory on its own branch
 ```
 
+The Claude Code harness itself creates worktrees under `.claude/worktrees/<name>/` rather
+than as `../di.iiii-*` siblings — same mechanism, different location. Either is fine; what
+matters is that `git worktree remove` (below) actually gets run against wherever yours
+landed, not just the sibling-path form.
+
 Rules:
 
 - name the branch after the task, not the agent (`agent2/inspector-sliders`, not `agent2-branch`)
 - each agent commits and pushes its own branch independently
+- **run `npm run state` before any fan-out** — it reports how many worktrees and unmerged
+  branches already exist, so a new one isn't started on top of forgotten ones
 - merge each branch into `dev` only when its task is done and validated
-- remove the worktree when finished: `git worktree remove ../di.iiii-agent2`
+- remove the worktree when finished: `git worktree remove <path>` (or `git worktree remove ../di.iiii-agent2` for the sibling form) — then `npm run state:prune` to clear the registry entry if the directory is already gone
 
 ## Mode 2: Role-Scoped Same-Branch Work (lighter weight, higher risk)
 
