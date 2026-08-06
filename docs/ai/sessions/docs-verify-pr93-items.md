@@ -16,3 +16,10 @@
   just no current stage to see it on. Not a gap in this session's testing.
 - `docs/ai/known-fixes.md` rows for all four updated with these findings in place of
   the stale "not yet eyeballed" notes.
+- Also this session: promoted `dev` to `main` (fast-forward, deployed, verified live),
+  and merged the session-hygiene PR (#94) — `npm run state`, the CURRENT.md derived-fact
+  ban, and the push-gate wiring this branch's own note-based workflow builds on.
+- Opened as PR #98 against `dev`. First CI attempt hit a transient GitHub runner-queue
+  failure ("job not acquired by hosted runner"), unrelated to this change — reran and
+  it's green (build-and-test + browser-checks both pass). **Not yet merged** — merge is
+  a deliberate call left to the user, not something this session does unattended.
