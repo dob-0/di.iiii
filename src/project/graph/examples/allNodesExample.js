@@ -30,32 +30,18 @@ const ROW = 130
 // by the test, so this list rots loudly instead of silently.
 export const UNWIRABLE_PORTS = [
     { port: 'time.beat', reason: 'signal outputs are never computed by the runtime' },
-    { port: 'geom.cube.out', reason: 'geometry outputs are never computed by the runtime' },
     { port: 'geom.cube.bounds', reason: 'declared vec3 output, but geometry nodes have no runtime case' },
-    { port: 'geom.sphere.out', reason: 'geometry outputs are never computed by the runtime' },
-    { port: 'geom.plane.out', reason: 'geometry outputs are never computed by the runtime' },
-    { port: 'view.image.src', reason: 'texture inputs need an asset, and no node produces a texture' },
-    { port: 'world.background.texture', reason: 'declared input, read nowhere in the viewport' },
-    { port: 'universe.world.state', reason: 'state/any outputs are never computed by the runtime' },
-    { port: 'universe.world.signal', reason: 'signal outputs are never computed by the runtime' },
-    { port: 'universe.space.entry', reason: 'universe.space has no runtime case at all' },
-    { port: 'universe.desk.3d.preview', reason: 'texture outputs are never computed by the runtime' }
+    { port: 'view.image.src', reason: 'texture inputs need an asset, and no node produces a texture' }
 ]
 
 // Ports that are declared and accept a value, but whose value is ignored by the
 // renderer — wiring them proves nothing, so the example leaves them alone.
-export const INERT_INPUTS = [
-    { port: 'universe.world.gridSize', reason: 'grid size comes from worldState, not this port' },
-    { port: 'view.text.position', reason: 'panel geometry comes from values.frame' },
-    { port: 'view.text.width', reason: 'panel geometry comes from values.frame' },
-    { port: 'view.text.height', reason: 'panel geometry comes from values.frame' },
-    { port: 'view.browser.position', reason: 'panel geometry comes from values.frame' },
-    { port: 'view.browser.width', reason: 'panel geometry comes from values.frame' },
-    { port: 'view.browser.height', reason: 'panel geometry comes from values.frame' },
-    { port: 'view.image.position', reason: 'panel geometry comes from values.frame' },
-    { port: 'view.image.width', reason: 'panel geometry comes from values.frame' },
-    { port: 'view.image.height', reason: 'panel geometry comes from values.frame' }
-]
+// Empty today: the registry's panel-2d/universe types were simplified down to
+// the ports they actually use (geometry now comes only from values.frame),
+// which retired the ports this list used to document. Kept as a named export,
+// asserted against the registry by the same test as UNWIRABLE_PORTS, so it
+// rots loudly instead of silently if a future port reintroduces the pattern.
+export const INERT_INPUTS = []
 
 /**
  * Build the example graph.
@@ -146,6 +132,14 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('outliner', 'view.outliner', { label: 'Outliner panel', col: 5, row: 1 })
     add('inspector', 'view.inspector', { label: 'Inspector panel', col: 5, row: 2 })
 
+    // --- column 6: live capture sources -----------------------------------------
+    // Unlike the rest of the registry, these two DO carry real data: their panel
+    // components push frames/levels straight into node output values as they
+    // capture (handleLiveOutputChange in RawEditor), bypassing the pure
+    // computeNodeOutput gap the rest of this file documents around.
+    add('webcam', 'source.webcam', { label: 'Webcam', col: 6, row: 0 })
+    add('mic', 'source.mic', { label: 'Microphone', col: 6, row: 1 })
+
     const id = (key) => made.get(key)?.id || ''
     const wire = (fromKey, fromPort, toKey, toPort) => {
         const from = id(fromKey)
@@ -206,14 +200,13 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('colorA', 'out', 'plane', 'color'),
         wire('numA', 'out', 'plane', 'width'),
         wire('numB', 'out', 'plane', 'height'),
+        // Live texture wins over textureUrl — see geom.plane's own comment.
+        wire('webcam', 'frame', 'plane', 'texture'),
 
         // Containers and panels.
         wire('str', 'out', 'world', 'title'),
         wire('colorB', 'out', 'world', 'bgColor'),
-        wire('str', 'out', 'space', 'title'),
-        wire('bool', 'out', 'space', 'active'),
         wire('bool', 'out', 'space', 'showChrome'),
-        wire('str', 'out', 'desk', 'title'),
         wire('vec', 'out', 'desk', 'position'),
         wire('colorA', 'out', 'desk', 'bgColor'),
         wire('bool', 'out', 'desk', 'gridVisible'),
