@@ -943,6 +943,19 @@
     flex-shrink: 1;
 }
 
+/* Below this, Help/Chat/⋯ alone leave the pill ~40px of usable content width
+   (measured on iPhone SE, 320px) — too tight for any hint text to read as
+   more than a few ellipsis-truncated letters, short variant or not. The
+   canvas-center empty-state message (RawGraphSurface's emptyHint) has the
+   whole viewport to work with and already reads fine at this width, so the
+   topbar copy is redundant clutter here rather than useful chrome — same
+   "shed before truncating unreadably" call as raw-topbar-name/scale-control. */
+@media (max-width: 400px) {
+    .raw-topbar-location {
+        display: none;
+    }
+}
+
 .raw-topbar-breadcrumb {
     display: flex;
     align-items: center;

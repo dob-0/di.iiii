@@ -838,3 +838,15 @@ This does **not** fully solve node-to-node label collision (two labels can still
 **How:** `scripts/repo-state.mjs` prints the live worktree count and flags prunable/detached/live entries every session (wired into the SessionStart hook via `--brief`); `--sweep` removes only what `classifyWorktree`/`isSweepSafe` agree is safe (merged by `git cherry`, not just `merge-base` — catches squash merges — clean, and no live process bound to it via `/proc` scan), never `--force`, and names the exact reason + override command for everything it leaves alone. `npm run land` runs it as its last step.
 
 **Files:** `scripts/repo-state.mjs, scripts/repo-state-lib.mjs, scripts/session-land.mjs, docs/ai/parallel-agents.md`
+
+---
+
+### A screenshot referenced by path is not a screenshot you have
+
+**Rule:** When a bug report points at a screenshot by filesystem path instead of pasting it inline, read that path as the very first action, before anything else — including before reading the rest of a multi-image message. Do not batch it in with other reads a few tool calls later.
+
+**Why:** On 2026-08-06 a user pasted one screenshot inline and referenced two more by path (`/tmp/Spectacle.XXXXXX/Screenshot_*.png`) in the same message. By the time they were read — one reply-turn later, after other embedded work — one path's directory no longer existed and the other's was empty. Screenshot tools like Spectacle write to a fresh temp directory per capture and clear it aggressively, sometimes within the same minute. The content was gone for good: no `find`, no re-request to the same path, nothing recovers it. The two bugs those screenshots showed had to be re-derived by manual reproduction instead, burning most of a session on rediscovering what a single timely read would have shown directly.
+
+**How:** This is unenforced — a person (or a stale temp path) is the only thing that notices when it's skipped, the same shape as the verification rule in "A rule no build can see is a convention, not a protocol" above. Treat it with the same discipline: image-by-path references are perishable evidence, not durable input. Read first, investigate second. If a path is already gone when you get to it, say so plainly and ask for a resend rather than guessing at what it showed.
+
+**Files:** none — process discipline, not code.

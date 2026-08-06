@@ -300,10 +300,15 @@ export default function RawEditor({
         }
         return true
     }, [navStack, authoredNodes])
-    const topbarLocationText = useMemo(() => {
-        if (!hasGraphNodes && !hasWorldNode) return 'Double-click to place your first node'
-        return ''
-    }, [hasGraphNodes, hasWorldNode])
+    // Computed once: pointer type doesn't change mid-session on the devices this
+    // matters for, and re-checking on every render would just be wasted work.
+    const [pointerVerb] = useState(() => (
+        typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches
+            ? 'Double-tap'
+            : 'Double-click'
+    ))
+    const showEmptyHint = !hasGraphNodes && !hasWorldNode
+    const topbarLocationText = showEmptyHint ? `${pointerVerb} to place your first node` : ''
 
     useEffect(() => {
         if (hasAnyNodes) return
@@ -759,7 +764,7 @@ export default function RawEditor({
                                         )
                                     })}
                                 </nav>
-                            ) : topbarLocationText ? (
+                            ) : showEmptyHint ? (
                                 <span className="raw-topbar-location" aria-live="polite">{topbarLocationText}</span>
                             ) : null}
                             {hasWorldNode && (
@@ -859,7 +864,7 @@ export default function RawEditor({
                     key={currentScopeId || 'root'}
                     topInset={graphTopInset}
                     nodes={graphCardNodes}
-                    emptyHint="Double-click to place your first node."
+                    emptyHint={`${pointerVerb} to place your first node.`}
                     edges={graphCardEdges}
                     selectedNodeId={workspaceState.selectedNodeId}
                     onEnterNode={handleEnterNode}
