@@ -40,8 +40,18 @@ export function clampWindowFrame(frame = {}, bounds = {}) {
     const viewportHeight = Number.isFinite(bounds.viewportHeight) ? bounds.viewportHeight : null
     const viewportPadding = Number.isFinite(bounds.viewportPadding) ? bounds.viewportPadding : RAW_WINDOW_PADDING
 
-    const width = Math.max(260, Number(frame.width) || 260)
-    const height = Math.max(180, Number(frame.height) || 180)
+    // A node's default window size (e.g. universe.world's 680x480) is tuned for
+    // desktop and is never re-derived per viewport. Without a ceiling here, that
+    // fixed size ships as-is on a 390px phone: wider than the whole screen, and
+    // tall enough to cover it below the topbar, with no way to see anything else.
+    const maxWidth = viewportWidth
+        ? Math.max(260, viewportWidth - viewportPadding * 2)
+        : Infinity
+    const maxHeight = viewportHeight
+        ? Math.max(180, viewportHeight - (effectiveMinTop ?? 0) - viewportPadding)
+        : Infinity
+    const width = clamp(Math.max(260, Number(frame.width) || 260), 260, maxWidth)
+    const height = clamp(Math.max(180, Number(frame.height) || 180), 180, maxHeight)
     const nextX = hasFiniteValue(frame.x) ? Number(frame.x) : (minLeft ?? 0)
     const nextY = hasFiniteValue(frame.y) ? Number(frame.y) : (effectiveMinTop ?? 0)
     const maxX = viewportWidth

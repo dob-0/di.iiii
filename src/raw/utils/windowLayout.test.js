@@ -119,4 +119,52 @@ describe('windowLayout', () => {
             height: 240
         }))
     })
+
+    it('shrinks a desktop-sized default (e.g. universe.world 680x480) to fit a phone viewport', () => {
+        const result = clampWindowFrame({
+            x: 96,
+            y: 60,
+            width: 680,
+            height: 480
+        }, {
+            minTop: 64,
+            viewportWidth: 390,
+            viewportHeight: 844
+        })
+        expect(result.width).toBeLessThanOrEqual(390)
+        expect(result.height).toBeLessThanOrEqual(844 - 64)
+        expect(result.x + result.width).toBeLessThanOrEqual(390)
+        expect(result.y + result.height).toBeLessThanOrEqual(844)
+    })
+
+    it('never shrinks a window below its usable minimum, even on a very small viewport', () => {
+        const result = clampWindowFrame({
+            x: 0,
+            y: 0,
+            width: 680,
+            height: 480
+        }, {
+            minTop: 64,
+            viewportWidth: 280,
+            viewportHeight: 500
+        })
+        expect(result.width).toBeGreaterThanOrEqual(260)
+        expect(result.height).toBeGreaterThanOrEqual(180)
+    })
+
+    it('leaves a window that already fits the viewport untouched', () => {
+        expect(clampWindowFrame({
+            x: 96,
+            y: 60,
+            width: 320,
+            height: 240
+        }, {
+            minTop: 64,
+            viewportWidth: 1440,
+            viewportHeight: 900
+        })).toEqual(expect.objectContaining({
+            width: 320,
+            height: 240
+        }))
+    })
 })

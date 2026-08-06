@@ -304,8 +304,8 @@ export default function RawEditor({
     }, [navStack, authoredNodes])
     const topbarLocationText = useMemo(() => {
         if (!hasGraphNodes && !hasWorldNode) return 'Double-click to place your first node'
-        return workflow.title
-    }, [hasGraphNodes, hasWorldNode, workflow.title])
+        return ''
+    }, [hasGraphNodes, hasWorldNode])
 
     useEffect(() => {
         if (hasAnyNodes) return
@@ -761,9 +761,9 @@ export default function RawEditor({
                                         )
                                     })}
                                 </nav>
-                            ) : (
+                            ) : topbarLocationText ? (
                                 <span className="raw-topbar-location" aria-live="polite">{topbarLocationText}</span>
-                            )}
+                            ) : null}
                             {hasWorldNode && (
                                 <div className="raw-topbar-windows">
                                     <button
