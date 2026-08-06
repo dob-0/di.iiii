@@ -4,14 +4,24 @@
 // Always advisory (exit 0) by default; `--prune` runs `git worktree prune` and nothing
 // more destructive. See docs/ai/golden_rules.md for why derived facts don't belong in
 // CURRENT.md prose.
+import fs from 'node:fs'
+import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 
 import { getProductionPromotionPlan } from './deploy-lib.mjs'
-import { formatStateReport, collectStateWarnings, isNoiseBranch } from './repo-state-lib.mjs'
+import {
+  formatStateReport,
+  formatBriefReport,
+  collectStateWarnings,
+  classifyWorktree,
+  isSweepSafe,
+  isNoiseBranch,
+  isLiveProcessCmdline
+} from './repo-state-lib.mjs'
 
-const git = (args) => {
+const git = (args, cwd) => {
   try {
-    return execFileSync('git', args, { encoding: 'utf8' }).trim()
+    return execFileSync('git', args, { encoding: 'utf8', cwd }).trim()
   } catch {
     return ''
   }
@@ -66,6 +76,72 @@ const getWorktrees = () => {
   }).filter((entry) => entry.path)
 }
 
+// Live-process detection is the only reliable "is this worktree actually in use"
+// signal — the 2026-08-06 audit found git state alone (clean/dirty, ahead/behind)
+// says nothing about it, and CURRENT.md's old hand-written "Trees" line (which port
+// serves which worktree) was wrong by the time anyone read it twice. Scans /proc
+// directly rather than shelling out to `ps`/`pgrep`, which aren't guaranteed present
+// in every container image this might run in.
+const PORT_PATTERN = /--port[= ](\d+)/
+
+const getLiveProcesses = () => {
+  let pids
+  try {
+    pids = fs.readdirSync('/proc').filter((name) => /^\d+$/.test(name))
+  } catch {
+    return [] // /proc not present (non-Linux) — degrade to "nothing is live", never throw
+  }
+  const procs = []
+  for (const pid of pids) {
+    let cmdline
+    let cwd
+    try {
+      cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0').filter(Boolean).join(' ')
+      cwd = fs.readlinkSync(`/proc/${pid}/cwd`)
+    } catch {
+      continue // process exited between readdir and read, or we can't see it — skip, not fatal
+    }
+    if (!isLiveProcessCmdline(cmdline)) continue // vitest run / vite build are one-shot, not a dev server
+    const portMatch = PORT_PATTERN.exec(cmdline)
+    procs.push({ pid, cwd, port: portMatch ? Number(portMatch[1]) : null })
+  }
+  return procs
+}
+
+// Nested worktrees (.claude/worktrees/* lives INSIDE the main di.iiii checkout) make
+// naive prefix matching attribute a nested worktree's process to the outer one —
+// verified live during the audit. Deepest (longest) matching path wins.
+const attachLiveInfo = (worktrees, liveProcesses) => {
+  const sorted = [...worktrees].sort((a, b) => b.path.length - a.path.length)
+  for (const wt of worktrees) {
+    wt.live = false
+    wt.ports = []
+  }
+  for (const proc of liveProcesses) {
+    const owner = sorted.find((wt) => proc.cwd === wt.path || proc.cwd.startsWith(`${wt.path}${path.sep}`))
+    if (!owner) continue
+    owner.live = true
+    if (proc.port && !owner.ports.includes(proc.port)) owner.ports.push(proc.port)
+  }
+  return worktrees
+}
+
+const getWorktreeGitFacts = (wt) => {
+  const dirty = git(['status', '--porcelain'], wt.path) !== ''
+  const headSubject = git(['log', '-1', '--format=%s'], wt.path) || null
+  if (!wt.branch) return { dirty, headSubject, mergedIntoDev: true, hasUpstream: false }
+  // git cherry (patch-id comparison) catches squash merges that merge-base --is-ancestor
+  // misses entirely — a branch whose commits were squashed into one on origin/dev is
+  // otherwise permanently misreported as "unmerged".
+  const cherryOut = git(['cherry', 'origin/dev', wt.branch], wt.path)
+  const mergedIntoDev = cherryOut
+    .split('\n')
+    .filter(Boolean)
+    .every((line) => !line.startsWith('+'))
+  const hasUpstream = git(['rev-parse', '--abbrev-ref', '--symbolic-full-name', `${wt.branch}@{upstream}`], wt.path) !== ''
+  return { dirty, headSubject, mergedIntoDev, hasUpstream }
+}
+
 const getUnmergedBranches = () => {
   const raw = git(['branch', '--no-merged', 'origin/dev', '--format=%(refname:short)'])
   if (!raw) return []
@@ -73,6 +149,56 @@ const getUnmergedBranches = () => {
     const out = git(['rev-list', '--count', `origin/dev..${name}`])
     return { name, aheadOfDev: Number(out) || 0 }
   })
+}
+
+const getEnrichedWorktrees = () => {
+  const worktrees = getWorktrees()
+  for (const wt of worktrees) {
+    if (wt.prunable) continue // directory is gone — nothing left to inspect
+    wt.volatile = wt.path.startsWith('/tmp/')
+    Object.assign(wt, getWorktreeGitFacts(wt))
+  }
+  attachLiveInfo(worktrees, getLiveProcesses())
+  return worktrees
+}
+
+const getState = () => {
+  const currentBranch = getCurrentBranch()
+  return {
+    currentBranch: currentBranch || '(detached)',
+    currentBranchBehindDev: getCurrentBranchBehindDev(currentBranch),
+    promotionPlan: getPromotionPlan(),
+    worktrees: getEnrichedWorktrees(),
+    unmergedBranches: getUnmergedBranches()
+  }
+}
+
+// Removes only what classifyWorktree/isSweepSafe agree is safe (GONE, or STALE +
+// clean + no live process + merged-or-cherry-empty). Never --force. Everything it
+// refuses is listed with the reason and the exact override command — the missing
+// half of --prune, which only ever cleaned up already-deleted directories.
+const runSweep = (worktrees) => {
+  let removed = 0
+  for (const wt of worktrees) {
+    if (wt.path === repoRoot) continue // never remove the checkout we're running from
+    if (!isSweepSafe(wt)) {
+      const verdict = classifyWorktree(wt)
+      const reason = wt.live ? 'live process bound to it' : wt.dirty ? 'dirty' : 'not merged into dev'
+      console.log(`  – ${verdict.padEnd(9)} ${wt.path} (not swept: ${reason} — git worktree remove ${wt.path} once resolved)`)
+      continue
+    }
+    try {
+      execFileSync('git', ['worktree', 'remove', wt.path], { encoding: 'utf8', cwd: repoRoot })
+      console.log(`  ✓ removed ${wt.path}${wt.branch ? ` [${wt.branch}]` : ''}`)
+      removed++
+    } catch (error) {
+      console.log(`  ✗ ${wt.path} — remove failed: ${error.message.split('\n')[0]}`)
+    }
+  }
+  try {
+    execFileSync('git', ['worktree', 'prune', '-v'], { encoding: 'utf8', stdio: 'inherit', cwd: repoRoot })
+  } catch { /* advisory */ }
+  console.log(`\n${removed} worktree(s) removed.`)
 }
 
 const main = () => {
@@ -88,13 +214,21 @@ const main = () => {
     return
   }
 
-  const currentBranch = getCurrentBranch()
-  const state = {
-    currentBranch: currentBranch || '(detached)',
-    currentBranchBehindDev: getCurrentBranchBehindDev(currentBranch),
-    promotionPlan: getPromotionPlan(),
-    worktrees: getWorktrees(),
-    unmergedBranches: getUnmergedBranches()
+  if (args.includes('--sweep')) {
+    runSweep(getEnrichedWorktrees())
+    return
+  }
+
+  const state = getState()
+
+  if (args.includes('--json')) {
+    console.log(JSON.stringify(state, null, 2))
+    return
+  }
+
+  if (args.includes('--brief')) {
+    console.log(formatBriefReport(state))
+    return
   }
 
   console.log(formatStateReport(state))
