@@ -25,3 +25,28 @@ export default function LoadingScreen({ label = 'Loading', detail = '' }) {
         </div>
     )
 }
+
+// The same design at panel scale, for waits inside an already-drawn surface —
+// a hub list, a dropdown, a button that went busy — where a full-bleed
+// takeover would be wrong. Same arc on a faint ring, same rhythm; sized to
+// sit in a line of text and colored from currentColor so a muted host gets a
+// muted spinner.
+//
+// Unlike the full screen, a `label` here IS drawn: an inline wait lives among
+// other words, and an unexplained pause inside a panel reads as broken. The
+// label inherits the host's typography — this component brings only the
+// spinner and the announcement. With no label, `announce` is spoken instead.
+//
+// House pending vocabulary, for sites too small even for this: a busy control
+// keeps its own words and gains a typographic ellipsis — "publishing…", not
+// "publishing..." and not a bare disable.
+export function LoadingInline({ label = '', announce = 'Loading' }) {
+    return (
+        <span className="loading-inline" role="status" aria-live="polite">
+            <span className="loading-inline-spinner" aria-hidden="true" />
+            {label
+                ? <span className="loading-inline-text">{label}</span>
+                : <span className="loading-screen-label">{announce}</span>}
+        </span>
+    )
+}

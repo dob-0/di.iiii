@@ -44,6 +44,32 @@
     }
 }
 
+/* The inline member of the family — see LoadingInline in LoadingScreen.jsx.
+   currentColor for both ring and arc so the spinner takes the mute level of
+   whatever text it sits beside instead of shouting white inside a dim panel. */
+.loading-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    vertical-align: middle;
+}
+
+.loading-inline-spinner {
+    width: 13px;
+    height: 13px;
+    flex: none;
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, currentColor 22%, transparent);
+    border-top-color: currentColor;
+    animation: loading-screen-spin 820ms linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .loading-inline-spinner {
+        animation: loading-screen-pulse 1600ms ease-in-out infinite;
+    }
+}
+
 /* The label still exists, it is just not drawn. Removing the text outright
    would leave a screen reader announcing an empty status region, and the call
    sites already say something useful ("Loading Studio", "Loading admin
