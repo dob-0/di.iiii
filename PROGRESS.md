@@ -5,6 +5,47 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-06 — A third CURRENT.md casualty, found while cleaning up worktrees (2026-07-15 session)
+
+**Why this entry exists:** the `nginx-header-fix` worktree (branch `feat/brand-refresh`,
+PR #65, squash-merged into `dev` weeks ago) was marked safe to remove, but carried one
+uncommitted `CURRENT.md` edit — not a stray edit, an entire session's real notes that
+never made it anywhere else. Recovered before removing the worktree, same pattern as
+the other two entries below.
+
+- **A real prod bug, found and fixed**: nginx's `add_header` directive does not
+  inherit into a location block that sets its own `add_header` — so all 3 security
+  headers were silently dropped on every real route despite being declared once at
+  server level. Fixed by repeating them per location block (confirmed still live:
+  `nginx.conf` carries 18 `add_header` lines today, one set per block).
+- **VPS cutover confirmed and hardened**: prod fully on the Hetzner VPS
+  (Docker + Caddy), cPanel demoted to a manual-dispatch fallback only (auto-trigger
+  removed, host left intact, decommission timeline undecided). Closed direct
+  port-8080 exposure (Caddy-only), rotated `ADMIN_API_TOKEN`, added nightly SQLite
+  `VACUUM INTO` backups (14d retention), fail2ban, SSH password auth disabled, Docker
+  log rotation.
+- Merged 5 repo-improvement PRs (#57–#62): GitHub OAuth env wiring, Docker resource
+  limits, nginx compression/caching, a GHCR+SSH deploy pipeline scaffold (left inert,
+  needs secrets), serverXR structured logging.
+- GitHub cleanup (#63): 16 stale branches deleted, old PRs closed/retargeted, ~562
+  dead lines stripped from `mobile-shell.css`.
+- Shipped a branding refresh (#65): real favicons/OG-image/wordmark replacing a
+  placeholder text SVG; GitHub social preview image uploaded manually (no API).
+- **WCC mouse-look reopened**: a user report that it was still broken live despite an
+  earlier merged fix. This session ruled out a routing-pattern cause (WCC shares the
+  same walker code as every other published space) and couldn't reproduce via
+  `input-check.mjs` (its debug hook is dev-only, stripped from prod), and was left
+  waiting on a concrete repro. **Later resolved** — three separate mouse-look root
+  causes were subsequently found and fixed (see `docs/ai/known-fixes.md`: a silent
+  `reloadDocument()` failure blocking input behind an invisible overlay; drag-look
+  sensitivity mistuned 3x too gentle for non-pointer-lock users; a spawn effect
+  replacing `playerRef.current` instead of mutating it, orphaning the mouse-look
+  listeners' closure). None reference this session, so the link was only visible by
+  reading both.
+- Still open at the time, unclear if since resolved: `self-host` and
+  `claude/di-iiii-new-space-kbywad` branches were deliberately left undeleted pending
+  a human call — both still exist as of 2026-08-06, worth a decision.
+
 ## 2026-08-06 — Two sessions' CURRENT.md notes, recovered from unreachable commits
 
 **Why this entry exists:** a forensic pass (`git fsck --dangling`) found that two
