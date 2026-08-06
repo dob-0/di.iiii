@@ -12,7 +12,7 @@ This is the role system for AI agents working in di.iiii. Every task has an owne
 | [Technical Architect](technical-architect.md) | TA | AGENTS.md, MANIFESTO.md, non-negotiables, cross-cutting calls | Implementation files |
 | [UI/UX Engineer](ui-ux-engineer.md) | UX | All CSS, all visual layout, React render/JSX, visual identity | serverXR/, nodeRegistry, schema, nodeGraphRuntime |
 | [Node System Engineer](node-system-engineer.md) | NSE | nodeRegistry, ports, graph model, nodeGraphRuntime | CSS, layout, serverXR, Three.js rendering |
-| [3D/Viewport Engineer](viewport-3d-engineer.md) | VPE | Three.js scene, BetaViewport, objectComponents, XR | CSS layout, nodeRegistry logic, serverXR |
+| [3D/Viewport Engineer](viewport-3d-engineer.md) | VPE | Three.js scene, RawViewport, objectComponents, XR | CSS layout, nodeRegistry logic, serverXR |
 | [XR Creator](xr-creator.md) | XRC | Immersive experience design, spatial UX, presence, locomotion, exhibition flow | serverXR, CSS, nodeRegistry, schema |
 | [Backend/API Engineer](backend-api-engineer.md) | BAE | serverXR/, SQLite, auth, API routes | src/ React components, CSS, shared schema |
 | [Schema/Protocol Engineer](schema-protocol-engineer.md) | SPE | shared/, src/shared/, op-log format, CRDT rules | Implementation files in serverXR or frontend |
@@ -92,7 +92,7 @@ Every role inherits the MANIFESTO.md non-negotiables regardless of task:
 - Op-log stays CRDT-compatible (append-only, no server-side rewrites)
 - Asset IDs move toward content-addressing (SHA-256, not random UUIDs)
 - serverXR is the write authority — frontend is display state
-- Studio is the main shipped lane — Beta is experimental
+- Studio is the main shipped lane — Raw is experimental
 - shared/ is the canonical schema layer — never fork schema into lane-specific code
 
 If a task prompt conflicts with any of these, refuse and explain. A bad prompt does not override a non-negotiable.

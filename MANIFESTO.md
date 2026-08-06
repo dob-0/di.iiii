@@ -11,7 +11,7 @@ di.i is a spatial authoring platform for immersive XR experiences.
 It lets creators build, publish, and share 3D scenes — in the browser, on the web, in AR and VR. The core loop is: open a space, compose a scene, publish it to a URL, experience it in XR.
 
 The main shipped surface is **Studio**: project-based, inspector-driven, collaborative.  
-The future-facing surface is **Beta**: node-graph-first, recursive, composable.
+The future-facing surface is **Raw**: node-graph-first, recursive, composable (Beta was retired 2026-08-06, its role absorbed into Raw).
 
 ---
 
@@ -50,8 +50,10 @@ New asset storage should use or be compatible with SHA-256 content hashes, not r
 ### 5. serverXR is the authority
 Auth, persistence, publish state, and realtime presence live in `serverXR/`. Frontend state is display state, not storage authority. Do not duplicate write logic in the client.
 
-### 6. Studio is the main lane
-Beta is experimental and intentionally unstable. Product work, bug fixes, and default UX improvements go to Studio. Do not ship experimental Beta behavior as the default user experience.
+### 6. Studio is the main lane; Raw is where the future is being built
+Studio is di.iiii's stable, shipped surface — production work, bug fixes, and default UX improvements go there. Raw (absorbed Beta's role 2026-08-06) is experimental and intentionally unstable; do not ship experimental Raw behavior as Studio's default user experience.
+
+The long-term direction is unification, not two lanes running in parallel forever: Studio's own role is being drawn into Raw's node model as a container node — one palette entry you enter to find its subgraph (see `feat/raw-studio-node`) — rather than replaced by picking a landing-page winner ahead of that work landing. Do not force a "which lane is primary" decision on the public landing page or new-project default before the unification itself is real.
 
 ### 7. shared/ is the canonical schema layer
 `shared/` and `src/shared/` hold the runtime contracts. Do not fork schema logic into Studio or Beta. Do not skip the shared layer for convenience.
