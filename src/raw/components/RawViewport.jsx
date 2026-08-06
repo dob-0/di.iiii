@@ -81,6 +81,17 @@ export function renderNodeBody(node, values) {
         case 'geom.plane': {
             const w = Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.width, 1))))
             const h = Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(values.height, 1))))
+            // A live texture (source.webcam.frame etc.) wins over textureUrl —
+            // it's a THREE.Texture instance from the graph's liveOutputs, not
+            // a loadable URL, so it renders directly instead of via useTexture.
+            if (values.texture?.isTexture) {
+                return (
+                    <mesh>
+                        <planeGeometry args={[w, h]} />
+                        <meshStandardMaterial map={values.texture} color="#ffffff" side={2} />
+                    </mesh>
+                )
+            }
             if (values.textureUrl) {
                 return <PlaneWithTexture w={w} h={h} textureUrl={values.textureUrl} />
             }
@@ -162,7 +173,8 @@ function SceneContent({
     onMoveNode,
     nodeScale = 1,
     scopeId,
-    worldNode
+    worldNode,
+    liveOutputs = null
 }) {
     // Keyed on assets + project id so the map only rebuilds when assets change,
     // not on every document identity change from a sync tick.
@@ -172,8 +184,8 @@ function SceneContent({
     // must not survive a tick or the clock would freeze at its first sample.
     const clockNow = useGraphClock(hasClockNode(document.nodes))
     const graphContext = useMemo(
-        () => createNodeGraphContext(document, { now: clockNow }),
-        [document, clockNow]
+        () => createNodeGraphContext(document, { now: clockNow, liveOutputs }),
+        [document, clockNow, liveOutputs]
     )
     // scopeId undefined = unscoped, matches the old document-wide behavior; a real
     // scope (including root, `null`) only renders/uses siblings of that scope — see
@@ -316,7 +328,8 @@ export default function RawViewport({
     nodeScale = 1,
     showEmptyHint = true,
     scopeId,
-    worldNode
+    worldNode,
+    liveOutputs = null
 }) {
     const viewportRef = useRef(null)
     const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
@@ -428,6 +441,7 @@ export default function RawViewport({
                     nodeScale={nodeScale}
                     scopeId={scopeId}
                     worldNode={worldNode}
+                    liveOutputs={liveOutputs}
                 />
             </Canvas>
             {contextLost && <WebglContextLostOverlay onRestore={restoreContext} />}

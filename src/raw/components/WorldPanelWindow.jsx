@@ -19,6 +19,7 @@ export default function WorldPanelWindow({
     onSetLive,
     onEnterFullscreen,
     onEnterOverlay,
+    liveOutputs = null,
 }) {
     return (
         <div className="raw-world-panel">
@@ -39,6 +40,7 @@ export default function WorldPanelWindow({
                 showEmptyHint={false}
                 scopeId={scopeId}
                 worldNode={worldNode}
+                liveOutputs={liveOutputs}
             />
             <div className="raw-world-panel-actions">
                 <button

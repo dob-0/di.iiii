@@ -171,14 +171,17 @@ export const NODE_TYPES = {
         label: 'Webcam',
         category: 'source',
         runtime: 'web',
-        authoringOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
             { id: 'frame', type: 'texture', label: 'Frame' },
         ],
         defaultValues: {},
-        render: 'hidden',
+        // panel-2d, not hidden: getUserMedia's permission-denied and
+        // no-camera-present are normal outcomes, not edge cases, so the node
+        // needs a visible surface to show requesting/denied/unavailable state
+        // instead of sitting blank (see docs/roadmaps/NODE_BACKLOG.md).
+        render: 'panel-2d',
     },
 
     'source.mic': {
@@ -739,12 +742,17 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'color',      type: 'color',  label: 'Color',      default: '#ffffff'  },
-            { id: 'width',      type: 'number', label: 'Width',      default: 2          },
-            { id: 'height',     type: 'number', label: 'Height',     default: 2          },
-            { id: 'textureUrl', type: 'string', label: 'Texture URL', default: ''        },
-            { id: 'position',   type: 'vec3',   label: 'Position',   default: [0, 0, 0]  },
-            { id: 'rotation',   type: 'vec3',   label: 'Rotation',   default: [0, 0, 0]  },
+            { id: 'color',      type: 'color',   label: 'Color',       default: '#ffffff' },
+            { id: 'width',      type: 'number',  label: 'Width',       default: 2         },
+            { id: 'height',     type: 'number',  label: 'Height',      default: 2         },
+            { id: 'textureUrl', type: 'string',  label: 'Texture URL', default: ''        },
+            // A live texture (e.g. source.webcam.frame) wired in here wins over
+            // textureUrl — see renderNodeBody's geom.plane case. Distinct from
+            // textureUrl because a MediaStream-backed texture isn't a loadable
+            // URL, and 'texture'/'string' ports aren't wire-compatible.
+            { id: 'texture',    type: 'texture', label: 'Texture'                         },
+            { id: 'position',   type: 'vec3',    label: 'Position',    default: [0, 0, 0] },
+            { id: 'rotation',   type: 'vec3',    label: 'Rotation',    default: [0, 0, 0] },
         ],
         outputs: [],
         defaultValues: {},
@@ -1095,7 +1103,6 @@ export const createEdge = (fromNodeId, fromPort, toNodeId, toPort, options = {})
 export const UNIMPLEMENTED_NODE_TYPES = new Set([
     // capture — no getUserMedia anywhere
     'source.ar',
-    'source.webcam',
     'source.mic',
     'source.insta360',
     'source.stereo',

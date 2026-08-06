@@ -436,11 +436,12 @@ export const WIKI_ARTICLES = [
                 'Reached from a space at /<space>/raw (same sign-in rules as Studio); /open/raw opens it on the communal open space.',
                 'Enter any node with its “Enter ›” button; the breadcrumb tracks your depth and Escape steps back out one level at a time.',
                 'Entering a World node opens its 3D viewport fullscreen; the ← World button in the topbar drops back to the graph.',
-                'The palette only lists node types that actually compute or render — anything still marked “authoring only” is a declared-but-unbuilt placeholder.'
+                'The palette only lists node types that actually compute or render — anything still marked “authoring only” is a declared-but-unbuilt placeholder.',
+                'Webcam is the first real capture node: it asks for camera permission, shows a live preview on the node itself (with a visible message if access is denied or no camera is found), and its Frame output can be wired into a Plane’s Texture input to project the live feed onto geometry.'
             ] }
         ],
-        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting'],
-        updated: '2026-08-01'
+        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam'],
+        updated: '2026-08-06'
     },
     {
         id: 'br-id-ge',

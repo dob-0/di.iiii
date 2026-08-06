@@ -65,6 +65,30 @@ describe('nodeGraphRuntime', () => {
         expect(evaluateNodeInput(receiver, 'position', context)).toEqual([2, 3, 4])
     })
 
+    it('reads source.webcam.frame from the injected liveOutputs map, and returns null when uncaptured', () => {
+        const webcam = createNode('source.webcam', { id: 'webcam-1' })
+        const fakeTexture = { isTexture: true }
+        const liveContext = createNodeGraphContext(
+            { nodes: [webcam], edges: [] },
+            { liveOutputs: new Map([['webcam-1:frame', fakeTexture]]) }
+        )
+        expect(evaluateNodeOutput(webcam, 'frame', liveContext)).toBe(fakeTexture)
+
+        const emptyContext = createNodeGraphContext({ nodes: [webcam], edges: [] })
+        expect(evaluateNodeOutput(webcam, 'frame', emptyContext)).toBeNull()
+    })
+
+    it('carries a live webcam texture across a wire into geom.plane.texture', () => {
+        const webcam = createNode('source.webcam', { id: 'webcam-1' })
+        const plane = createNode('geom.plane', { id: 'plane-1' })
+        const fakeTexture = { isTexture: true }
+        const context = createNodeGraphContext(
+            { nodes: [webcam, plane], edges: [createEdge('webcam-1', 'frame', 'plane-1', 'texture')] },
+            { liveOutputs: new Map([['webcam-1:frame', fakeTexture]]) }
+        )
+        expect(evaluateNodeInput(plane, 'texture', context)).toBe(fakeTexture)
+    })
+
     it('evaluates math nodes through chained edges', () => {
         const a = createNode('value.number', { id: 'a', values: { value: 2 } })
         const b = createNode('value.number', { id: 'b', values: { value: 3 } })

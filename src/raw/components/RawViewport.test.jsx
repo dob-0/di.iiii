@@ -16,7 +16,12 @@ const gridSpy = vi.fn(() => null)
 vi.mock('@react-three/drei', () => ({
     Grid: (props) => gridSpy(props),
     Html: ({ children }) => <div>{children}</div>,
-    OrbitControls: () => null
+    OrbitControls: () => null,
+    // A live texture must render directly (PlaneWithTexture's useTexture is
+    // for loadable URLs only) — if geom.plane ever falls through to this path
+    // for a live-texture value, the test should fail loudly, not silently
+    // pass on an untestable dropped prop.
+    useTexture: () => { throw new Error('useTexture should not be called for a live-texture value') }
 }))
 
 const sphereObjectSpy = vi.fn(() => null)
@@ -126,6 +131,28 @@ describe('RawViewport', () => {
         )
 
         expect(container.querySelector('meshstandardmaterial')?.getAttribute('color')).toBe('#00aabb')
+    })
+
+    it('renders a live texture (e.g. a captured webcam frame) on geom.plane, over textureUrl', () => {
+        const fakeTexture = { isTexture: true }
+
+        const { container } = render(
+            <RawViewport
+                document={{
+                    worldState: {},
+                    entities: [],
+                    nodes: [
+                        { id: 'webcam-1', typeId: 'source.webcam', label: 'Webcam', values: {} },
+                        { id: 'plane-1', typeId: 'geom.plane', label: 'Plane', values: { textureUrl: 'https://example.com/should-not-load.png' } }
+                    ],
+                    edges: [{ id: 'e1', fromNodeId: 'webcam-1', fromPort: 'frame', toNodeId: 'plane-1', toPort: 'texture' }]
+                }}
+                liveOutputs={new Map([['webcam-1:frame', fakeTexture]])}
+                onWorldDoubleClick={() => {}}
+            />
+        )
+
+        expect(container.querySelector('meshstandardmaterial')?.getAttribute('color')).toBe('#ffffff')
     })
 
     it('drives the ambient/directional light from a wired world.light node, not the legacy worldState fallback', () => {

@@ -9,6 +9,7 @@ import ImagePanelWindow from './ImagePanelWindow.jsx'
 import WorldPanelWindow from './WorldPanelWindow.jsx'
 import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
 import ChatPanelWindow from './ChatPanelWindow.jsx'
+import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
@@ -582,9 +583,22 @@ export default function RawEditor({
     // Rebuilt every frame while a Time node exists — the per-pass outputCache
     // must not survive a tick or the clock would freeze at its first sample.
     const clockNow = useGraphClock(hasClockNode(document.nodes))
+    // Live, non-serializable node outputs (a captured webcam's VideoTexture)
+    // that can't live in node.values — see createNodeGraphContext's liveOutputs.
+    const [liveOutputs, setLiveOutputs] = useState(() => new Map())
+    const handleLiveOutputChange = useCallback((nodeId, portId, value) => {
+        setLiveOutputs((prev) => {
+            const key = `${nodeId}:${portId}`
+            if (!value && !prev.has(key)) return prev
+            const next = new Map(prev)
+            if (value) next.set(key, value)
+            else next.delete(key)
+            return next
+        })
+    }, [])
     const graphContext = useMemo(
-        () => createNodeGraphContext(document, { now: clockNow }),
-        [document, clockNow]
+        () => createNodeGraphContext(document, { now: clockNow, liveOutputs }),
+        [document, clockNow, liveOutputs]
     )
 
     const renderViewNodeContent = (node) => {
@@ -606,6 +620,7 @@ export default function RawEditor({
                     nodeScale={nodeScale}
                     scopeId={node.id}
                     worldNode={node}
+                    liveOutputs={liveOutputs}
                     isLive={(document.workspaceState?.liveWorldNodeIdByScope || {})[node.parentId || ''] === node.id}
                     onSetLive={() => markWorldLive(node)}
                     onEnterFullscreen={() => {
@@ -635,6 +650,9 @@ export default function RawEditor({
         }
         if (node.typeId === 'view.image') {
             return <ImagePanelWindow node={node} values={resolvedValues} assetMap={assetMap} />
+        }
+        if (node.typeId === 'source.webcam') {
+            return <WebcamSourcePanel node={node} onFrameChange={(nodeId, texture) => handleLiveOutputChange(nodeId, 'frame', texture)} />
         }
         return <TextPanelWindow node={node} values={resolvedValues} />
     }
@@ -935,6 +953,7 @@ export default function RawEditor({
                         showEmptyHint={false}
                         scopeId={worldNode?.id}
                         worldNode={worldNode}
+                        liveOutputs={liveOutputs}
                     />
                 </div>
             )}
@@ -959,6 +978,7 @@ export default function RawEditor({
                         showEmptyHint={false}
                         scopeId={worldNode?.id}
                         worldNode={worldNode}
+                        liveOutputs={liveOutputs}
                     />
                 </div>
             )}
