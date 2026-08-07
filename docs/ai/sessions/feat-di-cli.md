@@ -98,3 +98,16 @@ leaves the artist on the working version, still serving.
 **Still open:** **the GHCR packages are private**, so the CLI's docker branch self-skips (it
 probes rather than assumes, and will light up with no new release once they are public).
 Windows is written and covered by CI but has not been run by a human on real Windows.
+
+## Where it stands
+
+- Nine commits on `feat/di-cli`, in the worktree `/home/nooo/di.iiii-di-cli`. **Not pushed** —
+  pushing opens a PR into `dev` via `auto-pr.yml`, which is the user's call.
+- `origin/dev` moved 8 commits ahead while this branch was being written (canonical
+  LoadingScreen / stale-chunk reload, pdfjs bump). Rebase before landing; nothing here conflicts
+  with those areas, but `vite.config.js` and `package.json` are touched by both.
+- Nothing ships until a `v*` tag: that is what publishes the artifact the one-liner downloads.
+- Blocked on the user: `gh auth refresh -s read:packages,write:packages`, then the GHCR packages
+  can be made public and the docker branch stops self-skipping.
+- Blocked on hardware: real Windows. Expect trouble first from execution policy, `npm.cmd` under
+  a path with spaces, and antivirus on a freshly downloaded `node.exe` — none of which CI sees.
