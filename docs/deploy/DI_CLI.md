@@ -47,8 +47,9 @@ your work; `di uninstall --with-data` is the only thing that deletes it.
 
 About 170 MB installed — a 103 MB download plus serverXR's production
 dependencies. (`npm run di:pack -- --lean` drops algovrithm's reels for a 32 MB
-artifact, and says so; that surface then shows missing media.) The repo's own `node_modules` is 877 MB, which is why an artist
-gets a built runtime rather than a checkout.
+artifact, and says so; that surface then shows missing media.) The repo's own
+`node_modules` is 877 MB, which is why an artist gets a built runtime rather
+than a checkout.
 
 Nothing is written outside `$HOME`. Nothing asks for sudo, on any OS.
 

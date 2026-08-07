@@ -45,11 +45,19 @@ zero external origins, so offline-first is measured rather than claimed. `nginx.
 against a real nginx: `/get` returns the script as `text/plain`, `/main` still returns the app.
 `.github/workflows/install-matrix.yml` encodes all of that.
 
-**Still open, and deliberately not fixed here:** `src/algoVrithm/assets` holds 197 MB of stock
-video imported as ES modules, so every build bundles it — 205 MB of a 232 MB `dist`, which
-di-studio.xyz serves today as well. The packer drops those files by default, says so on
-stdout, and writes `MISSING_MEDIA.txt` naming the affected surface; the real fix is
-lazy-loading the imports. **The GHCR packages are private**, so the CLI's docker branch
+**algovrithm's media, fixed rather than worked around.** The 31 reels were 720x1280 at
+~3.4 Mbps — 189 MB, bundled into every build, 205 MB of a 232 MB `dist` that di-studio.xyz
+serves too. Both the assets README ("compress video before adding it") and `reelPlayers.js`
+("compressing the source to something like 540p would make the whole question go away — the
+reels are shown at about 1.4m wide on a 7m shell") had already said what to do. Done:
+189 MB → 65 MB, `dist` 232 → 114 MB, the artifact 103 MB complete. Frame counts identical on
+all 31, audio copied (the reels unmute on first gesture, so it is part of the piece), and the
+before/after compared by eye — at the size the piece shows a reel they are indistinguishable
+and the datamosh artefacts survive. The packer therefore no longer drops video by default;
+`--lean` still does, for a 32 MB artifact, and names the cost. The recipe is in the assets
+README so the next clip added matches.
+
+**Still open:** **the GHCR packages are private**, so the CLI's docker branch
 self-skips (it probes rather than assumes, and will light up with no new release once they
 are public). The Windows path is written and covered by CI but has not been run by a human on
 real Windows, and macOS has not been tried at all.
