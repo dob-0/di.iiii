@@ -13,8 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Open inscriptions can carry the drawing that was made for them
-- Audit backlog closed, two real gaps fixed
+- public project pages drop the floating project switcher
 
 Full detail: `PROGRESS.md`.
 
