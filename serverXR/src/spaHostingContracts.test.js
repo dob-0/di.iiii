@@ -66,13 +66,24 @@ const waitForHealth = async ({ url, child, getLogs }) => {
     throw new Error(`Server did not become healthy in time.\n${getLogs()}`)
 }
 
-/** A minimal stand-in for a built dist/: an index.html and one hashed asset. */
+/**
+ * A minimal stand-in for a built dist/: an index.html and one hashed asset.
+ *
+ * Nested under a HIDDEN directory on purpose. A local install lives in ~/.di,
+ * and `res.sendFile(absolutePath)` with no root applies send's
+ * dotfiles:'ignore' rule to every segment of that absolute path — so serving
+ * from anywhere under a dot-directory 404s the whole app while the API and
+ * express.static both keep working. It looks like a routing bug and is not one.
+ * A fixture in a plain tmpdir passes happily and proves nothing.
+ */
 const makeClientDir = async () => {
-    const dir = await mkdtemp(path.join(os.tmpdir(), 'dii-spa-client-'))
+    const base = await mkdtemp(path.join(os.tmpdir(), 'dii-spa-'))
+    const dir = path.join(base, '.di', 'versions', '0.0.0', 'dist')
+    await mkdir(dir, { recursive: true })
     await writeFile(path.join(dir, 'index.html'), SPA_MARKER)
     await mkdir(path.join(dir, 'assets'), { recursive: true })
     await writeFile(path.join(dir, 'assets', 'app-abc123.js'), ASSET_BODY)
-    return dir
+    return { dir, base }
 }
 
 const startServer = async ({ clientDir, extraEnv = {} } = {}) => {
@@ -133,8 +144,8 @@ const startServer = async ({ clientDir, extraEnv = {} } = {}) => {
 
 const clientDirs = []
 const withClientDir = async () => {
-    const dir = await makeClientDir()
-    clientDirs.push(dir)
+    const { dir, base } = await makeClientDir()
+    clientDirs.push(base)
     return dir
 }
 
@@ -144,7 +155,9 @@ afterEach(async () => {
 })
 
 describe('CLIENT_DIR set: one process serves both the API and the app', () => {
-    it('serves the SPA for a space URL that is not a file and not an API route', async () => {
+    it('serves the SPA from a hidden directory — the default install lives in ~/.di', async () => {
+        // The bug this exists for: sendFile(absolutePath) 404s every route under
+        // a dot-directory, so a real install answered its API but never its app.
         const server = await startServer({ clientDir: await withClientDir() })
 
         const response = await fetch(`${server.origin}/main`)

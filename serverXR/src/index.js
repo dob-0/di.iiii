@@ -1712,7 +1712,11 @@ if (CLIENT_DIR) {
       next()
       return
     }
-    res.sendFile(path.join(CLIENT_DIR, 'index.html'))
+    // `root` + a relative name, never sendFile(absolutePath). With no root,
+    // send applies its dotfiles:'ignore' rule to every segment of the absolute
+    // path — and the default install lives in ~/.di, so a hidden directory in
+    // the path 404s the entire app. Relative to root, there is no dot segment.
+    res.sendFile('index.html', { root: CLIENT_DIR })
   })
 
   logger.info(`[client] serving the built app from ${CLIENT_DIR}`)
