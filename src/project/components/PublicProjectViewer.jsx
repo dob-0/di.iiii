@@ -284,7 +284,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 </button>
             ) : null}
 
-            {/* direct project links only — the published face stays chrome-free */}
+            {/* no route passes showProjectSwitcher since 2026-08-07 (owner call:
+                the chip clashed with published page designs) — kept for a future
+                edit-context surface, not reachable from public links */}
             {showProjectSwitcher && state.status !== 'loading' && navMode === 'orbit' && !isPreview ? (
                 <ProjectSwitcher
                     spaceId={resolvedRouteSpaceId}

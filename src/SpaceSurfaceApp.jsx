@@ -96,7 +96,10 @@ export default function SpaceSurfaceApp({ routeState }) {
 
     // direct project link (/:space/p/:projectId) — the one-pager viewer for any
     // project of the space, not just the published one; auth is still enforced
-    // upstream by SpaceSurfaceRoute for non-public spaces
+    // upstream by SpaceSurfaceRoute for non-public spaces. No showProjectSwitcher:
+    // owner call 2026-08-07 — the floating chip clashed with published page
+    // designs, so every public face stays chrome-free; project hopping lives in
+    // the Studio Projects window.
     if (shouldResolvePublishedSurface && routeProjectId) {
         return (
             <Suspense fallback={<LoadingScreen label="Loading surface" />}>
@@ -105,7 +108,6 @@ export default function SpaceSurfaceApp({ routeState }) {
                     spaceId={spaceId}
                     projectId={routeProjectId}
                     spaceLabel={surfaceState.space?.label || spaceId}
-                    showProjectSwitcher
                 />
             </Suspense>
         )
