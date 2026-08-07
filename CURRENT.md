@@ -11,19 +11,11 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session (2026-08-06 — Beta retired; one node lane, mid-consolidation)
+## Last session
 
-- Beta (`src/beta/`, 41 files) deleted — a verbatim fork of Raw (`RawHub.jsx`/
-  `BetaHub.jsx` differed by 0 lines), already unreachable except one V1 dropdown.
-  `beta-v2`-tagged projects keep the label as provenance, no DB migration needed.
-- Studio's read-only previews imported `BetaGraphSurface`/`BetaViewport`
-  directly — repointed at Raw's equivalents first, or Studio's build would
-  have broken silently (writeup + a second bug found alongside: `docs/ai/known-fixes.md`).
-  Docs updated to match: `PROJECT_SURFACES.md`, `RECURSIVE_NODE_CORE.md`, `AGENTS.md`,
-  `src/raw/AGENTS.md`, `MANIFESTO.md`. lint/build/1692 tests green.
-- **Not done yet, same plan**: rebase `feat/raw-studio-node` (worktree
-  `~/di.iiii-studionode`, unpushed) onto this, then promote Raw to the default
-  new-project surface. Plan: `/home/nooo/.claude/plans/sunny-growing-canyon.md`.
+- Raw on touch, the all-nodes example, Studio as a node
+
+Full detail: `PROGRESS.md`.
 
 ## What works
 
@@ -40,7 +32,9 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 - **Mesh gate INERT in prod** (no `MESH_ROOM_SECRET`); **leaked GitHub PAT +
   staging Google OAuth secret still live**, 13 dead secrets to revoke.
 - Owner's/artist's calls: `open`'s card blank, director page unseen, purple-gap
-  check fails, `br_id_ge ▾` chip covers letter-row. `feat/timeline-core` UNPUSHED.
+  check fails. `feat/timeline-core` UNPUSHED.
+- **br_id_ge rite fixes unverified by a human** — Act III backdrop + Act V idle-motion CSS shipped live, page loads clean, but the acts are camera-gesture-gated so no automated check could actually see them render.
+- Staging deploy pending as of session end — GitHub Actions infra was degraded (stuck queues across unrelated branches too); check `gh run list --repo dob-0/di.iiii --branch dev` before assuming it landed.
 
 ## Deploy & validation — [docs/ai/known-fixes.md](docs/ai/known-fixes.md), check before any bug hunt
 

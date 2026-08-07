@@ -422,10 +422,12 @@ export const WIKI_ARTICLES = [
                 'Entering a World node opens its 3D viewport fullscreen; the ← World button in the topbar drops back to the graph.',
                 'The palette only lists node types that actually compute or render — anything still marked “authoring only” is a declared-but-unbuilt placeholder.',
                 'Webcam is the first real capture node: it asks for camera permission, shows a live preview on the node itself (with a visible message if access is denied or no camera is found), and its Frame output can be wired into a Plane’s Texture input to project the live feed onto geometry.',
-                'Microphone is the second: it shows a live level meter on the node itself, and its Volume/Frequency outputs update continuously for anything wired to read them.'
+                'Microphone is the second: it shows a live level meter on the node itself, and its Volume/Frequency outputs update continuously for anything wired to read them.',
+                'Work Status reads your local dev setup — recent sessions, worktree branches and dirty state, open PRs, recent deploys — and outputs a running count, a dirty flag, an open-PR count and a text summary. Local dev only; it 404s on a deployed server.',
+                'Agent Run launches a real headless `claude -p` process from a wired Prompt and fires on a Trigger port changing value (not on it being truthy — same contract as the clock’s beat output). Its Status/Running/Result outputs update as the run progresses. Local dev only, and only inside a di.iiii checkout.'
             ] }
         ],
-        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone'],
+        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run'],
         updated: '2026-08-06'
     },
     {

@@ -139,6 +139,17 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
                 return context?.liveOutputs?.get(`${node.id}:frequency`) ?? null
             }
             break
+        case 'work.status':
+            if (portId === 'running') return context?.liveOutputs?.get(`${node.id}:running`) ?? 0
+            if (portId === 'dirty') return context?.liveOutputs?.get(`${node.id}:dirty`) ?? false
+            if (portId === 'openPrs') return context?.liveOutputs?.get(`${node.id}:openPrs`) ?? 0
+            if (portId === 'summary') return context?.liveOutputs?.get(`${node.id}:summary`) ?? ''
+            break
+        case 'work.agent':
+            if (portId === 'status') return context?.liveOutputs?.get(`${node.id}:status`) ?? 'idle'
+            if (portId === 'running') return context?.liveOutputs?.get(`${node.id}:running`) ?? false
+            if (portId === 'result') return context?.liveOutputs?.get(`${node.id}:result`) ?? ''
+            break
         case 'math.add':
             if (portId === 'out') {
                 return asNumber(evaluateNodeInput(node, 'a', context, nextStack))

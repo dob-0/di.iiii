@@ -24,7 +24,10 @@ describe('LandingPage CTA routing', () => {
         // Bare lane routes default to the restricted 'main' space, where a guest
         // has no write scope and gets bounced to the read-only viewer.
         render(<LandingPage />)
-        const rawLinks = screen.getAllByRole('link', { name: 'Raw v.0' })
+        const rawLinks = [
+            ...screen.getAllByRole('link', { name: 'Raw' }),
+            ...screen.getAllByRole('link', { name: 'Enter Raw' })
+        ]
         expect(rawLinks.length).toBeGreaterThan(0)
         for (const link of rawLinks) {
             expect(link.getAttribute('href')).toBe('/open/raw')
@@ -65,13 +68,16 @@ describe('LandingPage CTA routing', () => {
         }
     })
 
-    it('keeps "Step inside" pointing at the plain open-space door (jam forward stays active)', () => {
+    it('points "Step inside" at Raw, the promoted default surface, not the bare /raw route', () => {
+        // Raw replaced Studio as the primary door (2026-08-06 lane promotion).
+        // Still asserts the space-scoped form, not bare /raw — same guest-scope
+        // trap this test originally guarded against for Studio.
         Object.assign(sessionState, { authenticated: true, type: 'user' })
         render(<LandingPage />)
         const doors = screen.getAllByRole('link', { name: 'Step inside' })
         expect(doors.length).toBeGreaterThan(0)
         for (const link of doors) {
-            expect(link.getAttribute('href')).toBe('/open/studio')
+            expect(link.getAttribute('href')).toBe('/open/raw')
         }
     })
 })

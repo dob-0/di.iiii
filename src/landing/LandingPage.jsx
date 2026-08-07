@@ -41,7 +41,7 @@ const FEATURED_SPACES = [
 ]
 
 const STEPS = [
-    { n: '01', title: 'Open a space', body: 'Click "Open Studio" or go to any space URL. No account required to view. Sign in only to edit.' },
+    { n: '01', title: 'Open a space', body: 'Click "Step inside" or go to any space URL. No account required to view. Sign in only to edit.' },
     { n: '02', title: 'Add objects', body: 'Use the Library panel to add 3D shapes, text, images, or 3D models. Drag to position them.' },
     { n: '03', title: 'Customize your world', body: 'Change colors, lighting, camera angle, and background. Tweak with the Inspector on the right.' },
     { n: '04', title: 'Share or publish', body: 'Copy the space link to invite collaborators, or publish to make it live for the public.' }
@@ -226,12 +226,11 @@ export default function LandingPage() {
                 <nav className="lp-nav">
                     <a href="/" className="lp-nav-logo">di<span className="lp-dot">.</span>iiii</a>
                     <div className="lp-nav-links">
-                        <a href={studioHref} className="lp-nav-link">Studio</a>
-                        <a href={RAW_LANE_HREF} className="lp-nav-link">Raw v.0</a>
+                        <a href={RAW_LANE_HREF} className="lp-nav-link">Raw</a>
                         <a href={buildWikiPath()} className="lp-nav-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
                     </div>
-                    <a href={studioHref} className="lp-nav-cta">Open Studio</a>
+                    <a href={RAW_LANE_HREF} className="lp-nav-cta">Enter Raw</a>
                 </nav>
             )}
 
@@ -260,14 +259,11 @@ export default function LandingPage() {
                     </Typography>
 
                     <Stack direction="row" spacing={2} sx={{ pt: 1, pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href="/open/studio">
+                        <Button className="landing-cta-primary" variant="contained" size="large" href={RAW_LANE_HREF}>
                             Step inside
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref}>
                             Open Studio
-                        </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={RAW_LANE_HREF}>
-                            Raw v.0
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
                             Enter Space
@@ -541,19 +537,16 @@ export default function LandingPage() {
                         Start building your space.
                     </Typography>
                     <Typography className="lp-enter-body">
-                        Step inside to build with everyone in the Open Space, open the Studio to start
-                        your own scene, or try Raw for the node-first workflow.
+                        Step inside to build with everyone in the Open Space, or open Studio for the
+                        classic panel-based editor.
                         Everything runs in your browser — no sign-up required to explore.
                     </Typography>
                     <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', justifyContent: 'center', mb: 2 }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href="/open/studio">
+                        <Button className="landing-cta-primary" variant="contained" size="large" href={RAW_LANE_HREF}>
                             Step inside
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref}>
                             Open Studio
-                        </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={RAW_LANE_HREF}>
-                            Raw v.0
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
                             Enter Space
@@ -573,8 +566,8 @@ export default function LandingPage() {
                 <div className="lp-footer-inner">
                     <span className="lp-footer-brand">di<span className="lp-dot">.</span>iiii</span>
                     <nav className="lp-footer-nav" aria-label="Footer navigation">
+                        <a href={RAW_LANE_HREF} className="lp-footer-link">Raw</a>
                         <a href={studioHref} className="lp-footer-link">Studio</a>
-                        <a href={RAW_LANE_HREF} className="lp-footer-link">Raw v.0</a>
                         <a href={buildWikiPath()} className="lp-footer-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
                         <a href="/serverXR/api/health" className="lp-footer-link">API</a>

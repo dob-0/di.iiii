@@ -140,6 +140,12 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('webcam', 'source.webcam', { label: 'Webcam', col: 6, row: 0 })
     add('mic', 'source.mic', { label: 'Microphone', col: 6, row: 1 })
 
+    // --- column 7: workflow nodes ------------------------------------------
+    // Also live, same mechanism as the capture sources above: WorkStatusPanel/
+    // AgentRunPanel push through handleLiveOutputChange, not computeNodeOutput.
+    add('workStatus', 'work.status', { label: 'Work Status', col: 7, row: 0 })
+    add('agentRun', 'work.agent', { label: 'Agent Run', col: 7, row: 1 })
+
     const id = (key) => made.get(key)?.id || ''
     const wire = (fromKey, fromPort, toKey, toPort) => {
         const from = id(fromKey)
@@ -211,7 +217,10 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('colorA', 'out', 'desk', 'bgColor'),
         wire('bool', 'out', 'desk', 'gridVisible'),
         wire('str', 'out', 'text', 'content'),
-        wire('str', 'out', 'studio', 'title')
+        wire('str', 'out', 'studio', 'title'),
+        // Work Status's summary feeds Agent Run's prompt — not its trigger,
+        // so placing the example never launches a real process.
+        wire('workStatus', 'summary', 'agentRun', 'prompt')
     ].filter(Boolean)
 
     return { nodes: [...made.values()], edges }

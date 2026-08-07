@@ -41,6 +41,8 @@ const { createKeyedLock } = require('./asyncLock')
 const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
+const { registerWorkStatusRoutes } = require('./routes/workStatusRoutes')
+const { registerAgentRunRoutes } = require('./routes/agentRunRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
@@ -1291,6 +1293,9 @@ registerStatusRoutes(router, {
   releaseInfo,
   startedAt
 })
+
+registerWorkStatusRoutes(router, {})
+registerAgentRunRoutes(router, {})
 
 registerIntegrationRoutes(router)
 

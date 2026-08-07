@@ -202,6 +202,49 @@ export const NODE_TYPES = {
         render: 'panel-2d',
     },
 
+    'work.status': {
+        id: 'work.status',
+        label: 'Work Status',
+        category: 'source',
+        runtime: 'web',
+        singleton: false,
+        inputs: [],
+        outputs: [
+            { id: 'running', type: 'number',  label: 'Running Sessions' },
+            { id: 'dirty',   type: 'boolean', label: 'Any Tree Dirty'   },
+            { id: 'openPrs', type: 'number',  label: 'Open PRs'         },
+            { id: 'summary', type: 'string',  label: 'Summary'          },
+        ],
+        defaultValues: {},
+        // panel-2d: the readable surface is the point of the node, and its
+        // data (sessions, worktrees, PRs, deploys) only exists server-side —
+        // see serverXR/src/routes/workStatusRoutes.js, local-dev-only.
+        render: 'panel-2d',
+    },
+
+    'work.agent': {
+        id: 'work.agent',
+        label: 'Agent Run',
+        category: 'custom',
+        runtime: 'web',
+        singleton: false,
+        inputs: [
+            { id: 'prompt',  type: 'string', label: 'Prompt' },
+            { id: 'trigger', type: 'signal', label: 'Trigger' },
+        ],
+        outputs: [
+            { id: 'status',  type: 'string',  label: 'Status'  },
+            { id: 'running', type: 'boolean', label: 'Running' },
+            { id: 'result',  type: 'string',  label: 'Result'  },
+        ],
+        defaultValues: {},
+        // panel-2d: launches a headless `claude -p` run and reports its
+        // status/tail — see serverXR/src/routes/agentRunRoutes.js,
+        // local-dev-only. `trigger` fires on value CHANGE, same contract as
+        // time.beat, not on truthiness.
+        render: 'panel-2d',
+    },
+
     'source.insta360': {
         id: 'source.insta360',
         label: 'Insta360 Camera',
