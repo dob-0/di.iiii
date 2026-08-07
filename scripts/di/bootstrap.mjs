@@ -49,6 +49,21 @@ const npmCommand = () => {
 }
 
 /**
+ * What the artist's next login shell will have on its PATH — asked of that shell
+ * rather than inferred from this process's own environment, which belongs to a
+ * curl pipe or an ssh command and says nothing about their terminal.
+ */
+const loginPath = () => {
+    const shell = String(process.env.SHELL || '').trim()
+    if (shell) {
+        const result = spawnSync(shell, ['-lc', 'printf %s "$PATH"'], { encoding: 'utf8', timeout: 8000 })
+        const value = String(result.stdout || '').trim()
+        if (value) return value.split(':').filter(Boolean)
+    }
+    return String(process.env.PATH || '').split(':').filter(Boolean)
+}
+
+/**
  * Put the shim somewhere already on PATH if we can, and only edit a shell rc
  * as a last resort. Never sudo, never a system directory — an installer that
  * asks for a password is one most people are right to refuse.
@@ -77,9 +92,18 @@ const installShim = async ({ home, names, versionDir }) => {
         return { written, hint: ui.pathHintWindows() }
     }
 
-    const pathEntries = String(process.env.PATH || '').split(':')
+    // The PATH that matters is the one the artist's NEXT terminal will have, and
+    // this process cannot see it — an installer runs from a curl pipe, an ssh
+    // command or CI, all of which have their own reduced environment. So ask the
+    // login shell directly. Getting this wrong is not cosmetic: a shim dropped in
+    // a directory that is not really on PATH leaves `di: command not found` with
+    // an install that reported success.
+    const onPath = (dir) => loginPath().includes(dir)
+
+    // ~/.local/bin only when it is genuinely on that login PATH. Otherwise it is
+    // just a folder, and the rc block below is what actually makes `di` work.
     const localBin = path.join(os.homedir(), '.local', 'bin')
-    if (fs.existsSync(localBin) && pathEntries.includes(localBin)) {
+    if (fs.existsSync(localBin) && onPath(localBin)) {
         for (const name of names) {
             const link = path.join(localBin, name)
             await fsp.rm(link, { force: true })
@@ -88,9 +112,22 @@ const installShim = async ({ home, names, versionDir }) => {
         return { written, hint: null }
     }
 
-    const rc = ['.zshrc', '.bashrc', '.bash_profile', '.profile']
-        .map(file => path.join(os.homedir(), file))
-        .find(file => fs.existsSync(file)) || path.join(os.homedir(), '.profile')
+    // Otherwise edit an rc file — chosen by which shell this is, not by which
+    // file happens to exist. zsh is where guessing bites: a LOGIN zsh reads
+    // .zprofile and .zshenv and never .zshrc, so a PATH line in .zshrc leaves
+    // `di` missing from exactly the shell an artist opens next.
+    const shell = path.basename(String(process.env.SHELL || '')) || 'sh'
+    const userHome = os.homedir()
+    const targets = shell === 'zsh'
+        // .zshenv is read by every zsh — login, interactive and script alike.
+        ? [path.join(userHome, '.zshenv')]
+        : shell === 'bash'
+            ? (process.platform === 'darwin'
+                // macOS Terminal starts bash as a login shell, which reads
+                // .bash_profile and skips .bashrc.
+                ? [path.join(userHome, '.bash_profile'), path.join(userHome, '.bashrc')]
+                : [path.join(userHome, '.bashrc'), path.join(userHome, '.profile')])
+            : [path.join(userHome, '.profile')]
 
     const block = [
         '',
@@ -100,10 +137,13 @@ const installShim = async ({ home, names, versionDir }) => {
         ''
     ].join('\n')
 
-    const existing = fs.existsSync(rc) ? await fsp.readFile(rc, 'utf8') : ''
-    if (!existing.includes('# >>> di.iiii >>>')) await fsp.appendFile(rc, block)
+    for (const rc of targets) {
+        const existing = fs.existsSync(rc) ? await fsp.readFile(rc, 'utf8') : ''
+        if (existing.includes('# >>> di.iiii >>>')) continue
+        await fsp.appendFile(rc, block)
+    }
 
-    return { written, hint: ui.pathHint(p.bin) }
+    return { written, hint: onPath(p.bin) ? null : ui.pathHint(p.bin) }
 }
 
 const main = async () => {

@@ -147,6 +147,16 @@ looked nothing like a real install — see below.
 - **Do not stage in `/tmp`.** Renaming from tmpfs into `$HOME` fails with EXDEV.
   Stage in `<versions>/<v>.partial`, on one volume.
 - **Do not resolve files relative to a directory you are about to rename.**
+- **The installer cannot see the artist's PATH.** It runs from a curl pipe, an
+  ssh command or CI, each with its own reduced environment. Ask the login shell
+  (`$SHELL -lc 'printf %s "$PATH"'`) instead of reading `process.env.PATH` — a
+  shim dropped in a directory that is not really on PATH leaves
+  `di: command not found` after an install that reported success. macOS found
+  this: `~/.local/bin` existed but was not on the login PATH.
+- **A login zsh never reads `.zshrc`.** It reads `.zprofile` and `.zshenv`, so a
+  PATH line in `.zshrc` is missing from exactly the shell an artist opens next.
+  Pick the rc file from `$SHELL`, not from which files happen to exist —
+  `.zshenv` for zsh, `.bash_profile` before `.bashrc` on macOS.
 
 ## Not here yet
 

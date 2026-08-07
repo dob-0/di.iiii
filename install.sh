@@ -58,7 +58,7 @@ need tar
 
 if [ "${DI_INSTALL_DRY:-}" = "1" ]; then
     info "di.iiii install plan"
-    dim "os      $OS/$ARCH ($LIBC)"
+    if [ "$OS" = "linux" ]; then dim "os      $OS/$ARCH ($LIBC)"; else dim "os      $OS/$ARCH"; fi
     dim "home    $DI_HOME"
     dim "node    $(command -v node >/dev/null 2>&1 && node -v || echo 'none — would download')"
     dim "source  https://github.com/$REPO/releases/latest"

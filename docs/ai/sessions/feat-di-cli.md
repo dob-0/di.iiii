@@ -57,7 +57,23 @@ and the datamosh artefacts survive. The packer therefore no longer drops video b
 `--lean` still does, for a 32 MB artifact, and names the cost. The recipe is in the assets
 README so the next clip added matches.
 
-**Still open:** **the GHCR packages are private**, so the CLI's docker branch
-self-skips (it probes rather than assumes, and will light up with no new release once they
-are public). The Windows path is written and covered by CI but has not been run by a human on
-real Windows, and macOS has not been tried at all.
+**macOS verified on real hardware** (`di-mac`, M1, macOS 26.5.1 arm64, no node installed) —
+the arm64 + darwin + vendored-node path end to end, `di` resolving in a real zsh login shell,
+`/main`, `/studio` and a reel all 200, uninstall keeping the data. It found two PATH bugs that
+no Linux container could:
+
+- The installer read `process.env.PATH` to decide whether `~/.local/bin` was usable. Its own
+  environment is a curl pipe / ssh / CI, not the artist's terminal — on the Mac `~/.local/bin`
+  existed but was NOT on the login PATH, so the shim went somewhere useless and the install
+  reported success. It now asks the login shell (`$SHELL -lc 'printf %s "$PATH"'`).
+- The rc fallback picked the first existing file out of a list, which on macOS is `.zshrc` —
+  and a LOGIN zsh never reads `.zshrc`. `di` was missing from exactly the shell someone opens
+  next. The rc file is now chosen from `$SHELL`: `.zshenv` for zsh, `.bash_profile` before
+  `.bashrc` on macOS. Debian and Alpine re-verified after the change.
+
+The Mac was left exactly as found — uninstalled, `.zshenv` block removed, `~/.local/bin` and
+`/tmp` cleaned.
+
+**Still open:** **the GHCR packages are private**, so the CLI's docker branch self-skips (it
+probes rather than assumes, and will light up with no new release once they are public).
+Windows is written and covered by CI but has not been run by a human on real Windows.
