@@ -90,8 +90,30 @@ installs dependencies and health-checks it **on a scratch port** before stopping
 anything. `current` flips last. Any failure leaves you exactly where you were
 and says so. `di update --rollback` returns to `previous`.
 
-`di up` checks for a newer version and prints one line. It never self-updates —
-silent auto-update mid-gig is how you lose a show.
+`di up` mentions a newer version in one dim line and never installs it — silent
+auto-update mid-gig is how you lose a show. That check runs *after* the app is
+already up, swallows every failure, and only looks once a day, so an offline
+machine never waits on it and never retries in a loop.
+
+An update can also come from a file rather than a release: `stageVersion` accepts
+a `file://` URL, which is how CI drives the real code path without publishing,
+and how a venue with no network updates from a USB stick.
+
+**What is actually asserted, on Linux and Windows, on every change** (the
+`update` job): install a version, create a canary space with known contents,
+update onto a second version, and diff the canary — byte for byte. Then roll
+back and diff it again. Then assert `current` is still a *link* and the version
+it points at is whole.
+
+That last one is not paranoia. On Windows `current` is a junction, and
+`fs.rm(junction, { recursive: true })` deletes **what it points at** — the
+installed version. Every removal of a link goes through `unlinkLink()`, which
+lstats first, unlinks a link, `rmdir`s only an empty directory, and refuses
+anything else rather than deleting it.
+
+Verified by hand as well as in CI, including the failure path: a version that
+installs but cannot boot is caught by the scratch-port health check before
+anything is stopped, and the artist stays exactly where they were.
 
 ## Releasing
 

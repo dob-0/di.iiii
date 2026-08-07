@@ -20,6 +20,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 import { decideCommandName, decideMode } from './detect.mjs'
+import { unlinkLink } from './install.mjs'
 import { isWindows, paths, versionLayout } from './paths.mjs'
 import { probeAll, probeForeignDi } from './probe.mjs'
 import { writeState } from './state.mjs'
@@ -173,7 +174,9 @@ const main = async () => {
     await fsp.rm(finalDir, { recursive: true, force: true })
     await fsp.rename(staged, finalDir)
 
-    await fsp.rm(p.current, { recursive: false, force: true })
+    // unlinkLink, never fs.rm: on Windows `current` is a junction, and removing
+    // one recursively removes what it points at.
+    await unlinkLink(p.current)
     await fsp.symlink(finalDir, p.current, isWindows ? 'junction' : 'dir')
     await fsp.mkdir(p.data, { recursive: true })
 

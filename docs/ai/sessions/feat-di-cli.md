@@ -74,6 +74,27 @@ no Linux container could:
 The Mac was left exactly as found — uninstalled, `.zshenv` block removed, `~/.local/bin` and
 `/tmp` cleaned.
 
+**The update path is now guarded, and Windows is guarded with it.** `di update` promises one
+thing — it never touches your work — so there is now an `update` CI job on **ubuntu-latest and
+windows-latest** that installs a version, writes a canary space, updates, diffs the canary byte
+for byte, rolls back, diffs again, and finally asserts `current` is still a *link* whose target
+is whole. Windows is in that matrix specifically so it cannot drift while nobody is running it:
+its update path has a failure mode unix does not, and one of them was real —
+`fs.rm(junction, { recursive: true })` deletes **what the junction points at**, i.e. the
+installed version. All link removal now goes through `unlinkLink()` (lstat, unlink a link,
+rmdir only an empty directory, refuse anything else).
+
+Also fixed while here: `ui.updateAvailable` was a string nothing ever printed. `di up` now
+mentions a newer version in one dim line — after the app is already up, failing silently, and
+at most once a day, so offline never waits on it. And `stageVersion` accepts a `file://` URL,
+which is how CI exercises the real update code without publishing a release (and how a venue
+with no network could update from a USB stick).
+
+Run by hand on Linux, not just in CI: install → canary → update → rollback, canary identical
+at every step, `current` still a symlink, both versions kept, data intact. Plus the failure
+path — a build that installs but cannot boot is refused by the scratch-port health check and
+leaves the artist on the working version, still serving.
+
 **Still open:** **the GHCR packages are private**, so the CLI's docker branch self-skips (it
 probes rather than assumes, and will light up with no new release once they are public).
 Windows is written and covered by CI but has not been run by a human on real Windows.

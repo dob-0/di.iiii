@@ -27,7 +27,7 @@ import * as docker from './runner-docker.mjs'
 import * as node from './runner-node.mjs'
 import {
     currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
-    localUrl, readState, resolvePort, writeEnv
+    localUrl, readState, resolvePort, writeEnv, writeState
 } from './state.mjs'
 import { fail, say, style, ui } from './ui.mjs'
 
@@ -106,6 +106,34 @@ const cmdUp = async (args) => {
 
     say(ui.running(localUrl(port), await spaceNames(port)))
     if (!args.flags['no-open']) openBrowser(localUrl(port))
+    await noticeNewVersion(home)
+}
+
+/**
+ * Mention a newer version, once a day, and never get in the way.
+ *
+ * `di up` must not become a thing that needs the network: the whole product is
+ * that a laptop at a venue behaves the same as one at a desk. So this runs after
+ * the app is already up and printed, swallows every failure, and remembers when
+ * it last looked so an offline machine is not retrying on every start. It only
+ * ever prints one dim line — installing is still something the artist types.
+ */
+const CHECK_EVERY_MS = 24 * 60 * 60 * 1000
+const noticeNewVersion = async (home) => {
+    try {
+        const state = readState(home)
+        const last = Date.parse(state.lastUpdateCheck || '') || 0
+        if (Date.now() - last < CHECK_EVERY_MS) return
+        const release = await latestRelease()
+        await writeState(home, { lastUpdateCheck: new Date().toISOString() })
+        const current = installedVersion(home)
+        if (release.version && current && release.version !== current) {
+            say(ui.updateAvailable(current, release.version))
+        }
+    } catch {
+        // No network, a rate limit, a captive portal — none of that is the
+        // artist's problem while their di.iiii is already running.
+    }
 }
 
 const cmdDown = async () => {

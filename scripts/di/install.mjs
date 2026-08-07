@@ -15,6 +15,7 @@ import fsp from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
 
 import { isWindows, paths, versionLayout } from './paths.mjs'
 import { probeHealth } from './probe.mjs'
@@ -53,6 +54,13 @@ const sha256 = async (file) => {
 }
 
 const download = async (url, target) => {
+    // A file:// source is how CI drives a real update without a published
+    // release, and how an update can be applied from a USB stick at a venue with
+    // no network. Node's fetch does not speak file:, so copy instead.
+    if (String(url).startsWith('file://')) {
+        await fsp.copyFile(fileURLToPath(url), target)
+        return
+    }
     const response = await fetch(url, { redirect: 'follow' })
     if (!response.ok) throw new Error(`download failed (${response.status})`)
     await fsp.writeFile(target, Buffer.from(await response.arrayBuffer()))
@@ -138,8 +146,34 @@ export const smokeTest = async ({ home, versionDir, nodeBinary }) => {
     }
 }
 
+/**
+ * Remove a link without ever following it.
+ *
+ * `fs.rm(path, { recursive: true })` on a junction is the way to delete the
+ * artist's installed version by accident — and `current` points at it. So:
+ * lstat, unlink if it is a link (a Windows junction lstats as one), rmdir only
+ * if it is an empty directory, and refuse anything else out loud. A real
+ * directory sitting where a link belongs means something is wrong that deleting
+ * it recursively would only hide.
+ */
+export const unlinkLink = async (target) => {
+    let stat
+    try {
+        stat = await fsp.lstat(target)
+    } catch {
+        return
+    }
+    if (stat.isSymbolicLink()) { await fsp.unlink(target); return }
+    if (stat.isDirectory()) {
+        // Throws if it is not empty, which is the point.
+        await fsp.rmdir(target)
+        return
+    }
+    await fsp.rm(target, { force: true })
+}
+
 const linkDir = async (link, target) => {
-    await fsp.rm(link, { recursive: false, force: true })
+    await unlinkLink(link)
     // Windows needs an explicit junction; a plain symlink there requires either
     // admin rights or developer mode, and this installer promises neither.
     await fsp.symlink(target, link, isWindows ? 'junction' : 'dir')

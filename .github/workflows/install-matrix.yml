@@ -123,6 +123,136 @@ jobs:
           test ! -e "$HOME/.di/bin/di" || { echo 'the binary survived uninstall'; exit 1; }
           test -d "$HOME/.di/data" || { echo 'uninstall deleted the artist work'; exit 1; }
 
+  update:
+    # `di update` makes exactly one promise — it never touches your work — and a
+    # promise about data needs a test that can fail. This installs a version,
+    # puts a canary space in it, updates onto a second version, and asserts the
+    # canary came through byte for byte. Then rolls back and asserts it again.
+    name: update keeps the work (${{ matrix.os }})
+    needs: pack
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows is here on purpose. Its update path has failure modes the unix
+        # one does not — `current` is a junction, and removing a junction the
+        # wrong way removes what it points at — so it has to be exercised on
+        # every change, or it drifts until the day someone actually runs it.
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: di-runtime
+          path: dist-runtime
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # Two artifacts from one build: same bytes, different version numbers.
+      # Enough to exercise stage → verify → smoke-test → flip → rollback.
+      - name: make a second version to update onto
+        shell: bash
+        run: |
+          set -eu
+          V=$(node -p "require('./package.json').version")
+          cp "dist-runtime/di-runtime-$V.tar.gz" "dist-runtime/di-runtime-9.9.9.tar.gz"
+          echo "BASE_VERSION=$V" >> "$GITHUB_ENV"
+
+      - name: install the older version
+        shell: bash
+        run: |
+          set -eu
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            DI_INSTALL_ARTIFACT="dist-runtime/di-runtime-$BASE_VERSION.tar.gz" \
+            DI_INSTALL_VERSION="$BASE_VERSION" pwsh ./install.ps1
+          else
+            DI_INSTALL_ARTIFACT="dist-runtime/di-runtime-$BASE_VERSION.tar.gz" \
+            DI_INSTALL_VERSION="$BASE_VERSION" DI_NO_COLOR=1 sh install.sh
+          fi
+
+      - name: leave a canary in the artist's work
+        shell: bash
+        run: |
+          set -eu
+          DI="$HOME/.di/bin/di"
+          "$DI" up --port 4310 --no-open
+          curl -fsS -X POST http://127.0.0.1:4310/serverXR/api/spaces \
+            -H 'Content-Type: application/json' \
+            -d '{"label":"Canary","slug":"canary"}' -o /dev/null
+          curl -fsS -X PUT http://127.0.0.1:4310/serverXR/api/spaces/canary/scene \
+            -H 'Content-Type: application/json' \
+            -d '{"version":4,"objects":[],"metadata":{"canary":"do-not-lose-me"}}' -o /dev/null
+          curl -fsS http://127.0.0.1:4310/serverXR/api/spaces/canary/scene > canary-before.json
+          grep -q 'do-not-lose-me' canary-before.json
+          "$DI" down
+
+      # No release feed in CI, so drive the same code path directly rather than
+      # a fake `di update` that would prove something else.
+      - name: update onto 9.9.9
+        shell: bash
+        run: |
+          set -eu
+          node -e "
+            const path = require('node:path')
+            const url = (p) => require('node:url').pathToFileURL(p).href
+            ;(async () => {
+              const install = await import(url(path.resolve('scripts/di/install.mjs')))
+              const nodeRunner = await import(url(path.resolve('scripts/di/runner-node.mjs')))
+              const home = path.join(require('node:os').homedir(), '.di')
+              const staged = await install.stageVersion({ home, release: {
+                version: '9.9.9',
+                url: url(path.resolve('dist-runtime/di-runtime-9.9.9.tar.gz')),
+                checksumsUrl: null
+              }})
+              const ok = await install.smokeTest({ home, versionDir: staged.partialDir, nodeBinary: nodeRunner.nodeBinary(home) })
+              if (!ok) throw new Error('the staged version did not answer on a scratch port')
+              await install.activate({ home, ...staged, version: '9.9.9', mode: 'node' })
+              console.log('activated 9.9.9')
+            })().catch((error) => { console.error(error); process.exit(1) })
+          "
+
+      - name: the canary survived the update
+        shell: bash
+        run: |
+          set -eu
+          DI="$HOME/.di/bin/di"
+          test "$("$DI" version)" = "9.9.9"
+          "$DI" up --port 4311 --no-open
+          curl -fsS http://127.0.0.1:4311/serverXR/api/spaces/canary/scene > canary-after.json
+          diff canary-before.json canary-after.json || { echo 'the update changed the artist work'; exit 1; }
+          "$DI" down
+
+      - name: rollback, and it survives that too
+        shell: bash
+        run: |
+          set -eu
+          DI="$HOME/.di/bin/di"
+          "$DI" update --rollback
+          test "$("$DI" version)" = "$BASE_VERSION"
+          "$DI" up --port 4312 --no-open
+          curl -fsS http://127.0.0.1:4312/serverXR/api/spaces/canary/scene > canary-rollback.json
+          diff canary-before.json canary-rollback.json || { echo 'the rollback changed the artist work'; exit 1; }
+          "$DI" down
+
+      # The junction trap, asserted directly: `current` must be a link, and the
+      # version it points at must still be whole after all of the above.
+      - name: current is still a link, not a copy
+        shell: bash
+        run: |
+          set -eu
+          node -e "
+            const fs = require('node:fs'), path = require('node:path'), os = require('node:os')
+            const current = path.join(os.homedir(), '.di', 'current')
+            const st = fs.lstatSync(current)
+            if (!st.isSymbolicLink()) throw new Error('current is not a link — a junction was replaced by a copy')
+            const target = fs.realpathSync(current)
+            for (const f of ['dist/index.html', 'serverXR/src/index.js', 'cli/cli.mjs']) {
+              if (!fs.existsSync(path.join(target, f))) throw new Error('missing after link churn: ' + f)
+            }
+            console.log('current -> ' + target)
+          "
+
   offline:
     # Offline-first is the whole claim. It needs a test that fails when it stops
     # being true, not a sentence in a README.
