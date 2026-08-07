@@ -81,15 +81,14 @@ const main = async () => {
         await copy(path.join(ROOT, 'docker-compose.di.yml'), path.join(stage, 'docker-compose.di.yml'))
     }
 
-    // ── the algoVrithm media problem ──
-    // src/algoVrithm/assets holds 197 MB of stock video, imported as ES modules,
-    // so every build bundles all of it into dist/assets — 220 MB of a 232 MB
-    // dist. Asking a stranger to download that to open an empty space is not a
-    // first impression worth having, and the artifact is not the place to fix
-    // it: the fix is lazy-loading those imports in the app.
-    // So they are dropped by default and the cost is stated out loud, never
-    // silently. --with-media ships the complete build.
-    if (!args.includes('--with-media')) {
+    // ── media ──
+    // The artifact ships complete: algovrithm's reels are part of the piece, and
+    // a build that renders a surface broken to save a download is not a product.
+    // That is affordable because those videos were re-encoded to the ~540p the
+    // piece actually shows (189 MB -> 65 MB); before that they were 205 MB of a
+    // 232 MB dist and leaving them out was the lesser evil.
+    // --lean drops them anyway, for a small artifact, and says exactly what it cost.
+    if (args.includes('--lean')) {
         const assetsDir = path.join(stage, 'dist', 'assets')
         let dropped = 0
         let bytes = 0
@@ -101,12 +100,12 @@ const main = async () => {
             dropped += 1
         }
         if (dropped) {
-            log(`dropped ${dropped} bundled videos (${(bytes / 1024 / 1024).toFixed(0)} MB) — the algovrithm lane's stock footage`)
-            log('  that surface will show missing media in this build. --with-media ships them.')
+            log(`--lean: dropped ${dropped} videos (${(bytes / 1024 / 1024).toFixed(0)} MB) — the algovrithm reels`)
+            log('  that surface will show missing media in this build.')
             await fsp.writeFile(path.join(stage, 'MISSING_MEDIA.txt'),
                 `${dropped} .mp4 files from src/algoVrithm/assets were left out of this build to keep the download small.\n`
                 + 'Everything else is complete. The algovrithm surface will show missing media.\n'
-                + 'Build with --with-media to include them.\n')
+                + 'Build without --lean to include them.\n')
         }
     }
 
