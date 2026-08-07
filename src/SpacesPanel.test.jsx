@@ -51,14 +51,13 @@ describe('SpacesPanel', () => {
         expect(screen.getByLabelText('Open After Create')).toBeInTheDocument()
         expect(screen.getByRole('option', { name: 'Public route' })).toBeInTheDocument()
         expect(screen.getByRole('option', { name: 'Studio workspace' })).toBeInTheDocument()
-        expect(screen.getByRole('option', { name: 'Beta workspace' })).toBeInTheDocument()
         expect(screen.getByRole('option', { name: 'Admin page' })).toBeInTheDocument()
 
         fireEvent.change(screen.getByLabelText('Open After Create'), {
-            target: { value: 'beta' }
+            target: { value: 'admin' }
         })
 
-        expect(handleOpenAfterCreateTargetChange).toHaveBeenCalledWith('beta')
+        expect(handleOpenAfterCreateTargetChange).toHaveBeenCalledWith('admin')
     })
 
     it('exposes a rename action for existing spaces', () => {

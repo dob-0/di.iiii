@@ -14,7 +14,6 @@ import {
     deleteServerSpace,
     updateServerSpace
 } from '../services/serverSpaces.js'
-import { buildBetaHubPath } from '../beta/utils/betaRouting.js'
 import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
 import { appNavigate } from '../utils/appNavigate.js'
 import { slugifySpaceName } from '../utils/spaceNames.js'
@@ -118,8 +117,6 @@ export function useSpacesController({
         switch (target) {
             case 'studio':
                 return buildStudioHubPath(targetId)
-            case 'beta':
-                return buildBetaHubPath(targetId)
             case 'admin':
                 return buildPreferencesPath(targetId)
             case 'public':

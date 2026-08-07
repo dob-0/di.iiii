@@ -80,10 +80,11 @@ explicit **active marker**, stored in `workspaceState`:
   `viewportWorldState.js`'s `pickActiveTypeNode` helper. Both maps default to
   the first-created candidate when nothing's been explicitly marked.
 
-Beta was not given this active-marker mechanism (kept as the original
-sketch — its `worldNode`/`lightNode`/`gridNode` lookups just pick the first
-sibling via `.find()`, which is fine now that a duplicate isn't blocked, just
-not the "correct" pick when there's more than one).
+Beta (retired 2026-08-06, see `docs/architecture/PROJECT_SURFACES.md`'s "Beta
+retired, absorbed into Raw") was never given this active-marker mechanism —
+its `worldNode`/`lightNode`/`gridNode` lookups just picked the first sibling
+via `.find()`, not the "correct" pick when there was more than one. Raw is now
+the only lane exercising this code path.
 
 ## Evaluation
 
@@ -105,13 +106,12 @@ Cycle protection is a `stack` Set of `id:in/out:port` keys threaded through
 recursive calls; re-entry returns the node's stored/default value rather
 than infinite-looping.
 
-Consumers of this runtime today: `src/beta/*`
-(`BetaViewport`/`BetaEditor`/`viewportWorldState`) and, since 2026-07-19,
-`src/raw/*` (`RawViewport`/`RawEditor`/`viewportWorldState`) — a lane
-forked from Beta, see "The `raw` lane" below. Studio's own viewport does
-not evaluate the graph — Studio's dev-only graph/world preview panes
-(`StudioGraphSurface.jsx`/`StudioWorldSurface.jsx`) reuse Beta's components
-read-only, gated off in production builds.
+Consumers of this runtime today: `src/raw/*`
+(`RawViewport`/`RawEditor`/`viewportWorldState`) — originally a lane forked
+from Beta (retired 2026-08-06), see "The `raw` lane" below. Studio's own
+viewport does not evaluate the graph — Studio's dev-only graph/world preview
+panes (`StudioGraphSurface.jsx`/`StudioWorldSurface.jsx`) reuse Raw's
+components read-only, gated off in production builds.
 
 ## What normalization enforces vs. what's just convention
 
@@ -158,17 +158,20 @@ otherwise:
 
 ## The `raw` lane
 
-`src/raw/` (routes at `/open/raw`) is a fork of Beta, added 2026-07-19 —
-the first lane forked from Beta rather than built from scratch (no prior
+`src/raw/` (routes at `/open/raw`) was forked from Beta on 2026-07-19 — the
+first lane forked from another lane rather than built from scratch (no prior
 graduation/retirement policy existed for experimental lanes before this; see
-`docs/architecture/PROJECT_SURFACES.md`). It carries the same node registry,
+`docs/architecture/PROJECT_SURFACES.md`). It carried the same node registry,
 `useNodeGraphScope.js`, and `nodeGraphRuntime.js` as Beta, with three real
-differences: no singleton/blocked-create warning (nothing left to block, see
-"Nesting" above), the active-marker mechanism for World/Light/Background/Grid
-(see "Nesting" above), and a scope-filtered edge list passed to its graph
-surface (Beta passes the document's full, unfiltered edge list — a latent
-inconsistency `raw` doesn't carry forward). Everything else — window
-management, palette, presence, op history — is an unmodified fork.
+differences at fork time: no singleton/blocked-create warning (nothing left
+to block, see "Nesting" above), the active-marker mechanism for
+World/Light/Background/Grid (see "Nesting" above), and a scope-filtered edge
+list passed to its graph surface (Beta passed the document's full,
+unfiltered edge list — a latent inconsistency `raw` didn't carry forward).
+Beta was retired 2026-08-06 (see `docs/architecture/PROJECT_SURFACES.md`'s
+"Beta retired, absorbed into Raw") — Raw is now the sole node-first lane,
+and those three points are history, not an ongoing diff against a lane that
+no longer exists.
 
 ## CJS/ESM mirror status
 

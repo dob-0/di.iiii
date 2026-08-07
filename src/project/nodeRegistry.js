@@ -171,14 +171,17 @@ export const NODE_TYPES = {
         label: 'Webcam',
         category: 'source',
         runtime: 'web',
-        authoringOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
             { id: 'frame', type: 'texture', label: 'Frame' },
         ],
         defaultValues: {},
-        render: 'hidden',
+        // panel-2d, not hidden: getUserMedia's permission-denied and
+        // no-camera-present are normal outcomes, not edge cases, so the node
+        // needs a visible surface to show requesting/denied/unavailable state
+        // instead of sitting blank (see docs/roadmaps/NODE_BACKLOG.md).
+        render: 'panel-2d',
     },
 
     'source.mic': {
@@ -186,7 +189,6 @@ export const NODE_TYPES = {
         label: 'Microphone',
         category: 'source',
         runtime: 'web',
-        authoringOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
@@ -194,7 +196,10 @@ export const NODE_TYPES = {
             { id: 'frequency', type: 'any',    label: 'Frequency' },
         ],
         defaultValues: {},
-        render: 'hidden',
+        // panel-2d, not hidden — same reasoning as source.webcam: permission
+        // denial and no-microphone-present are normal outcomes that need a
+        // visible surface, not a blank node.
+        render: 'panel-2d',
     },
 
     'source.insta360': {
@@ -569,16 +574,11 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'title',    type: 'string',  label: 'Title',    default: 'World'    },
             { id: 'bgColor',  type: 'color',   label: 'Sky',      default: '#0a0e16'  },
-            { id: 'gridSize', type: 'number',  label: 'Grid',     default: 24         },
         ],
-        outputs: [
-            { id: 'state',  type: 'any',    label: 'World State' },
-            { id: 'signal', type: 'signal', label: 'Changed'     },
-        ],
+        outputs: [],
         defaultValues: {
             title: 'World',
             bgColor: '#0a0e16',
-            gridSize: 24,
             hostHint: 'any',
         },
         render: 'panel-2d',
@@ -592,23 +592,15 @@ export const NODE_TYPES = {
         authoringOnly: true,
         singleton: false,
         inputs: [
-            { id: 'title',       type: 'string', label: 'Title', default: 'New Universe' },
-            { id: 'slug',        type: 'string', label: 'Slug',  default: 'new-universe'  },
-            { id: 'description', type: 'string', label: 'Description', default: ''         },
-            { id: 'active',      type: 'boolean', label: 'Active', default: true            },
             // Per-universe chrome control (product decision 2026-07-17): lets
             // one universe be a normal authoring space (full topbar) and
             // another a chromeless embed/kiosk view, without a global toggle.
-            // BetaEditor walks up from the current scope to the nearest
+            // RawEditor walks up from the current scope to the nearest
             // ancestor universe.space node and reads this; Esc always pops
             // back up a scope regardless (unrelated to this flag).
             { id: 'showChrome', type: 'boolean', label: 'Show Chrome', default: true },
         ],
-        outputs: [
-            { id: 'entry',  type: 'string', label: 'Entry URL'      },
-            { id: 'state',  type: 'any',    label: 'Universe State' },
-            { id: 'signal', type: 'signal', label: 'Changed'        },
-        ],
+        outputs: [],
         defaultValues: {
             hostHint: 'any',
         },
@@ -648,18 +640,13 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'title',       type: 'string', label: 'Title', default: '3D Desk'     },
             { id: 'position',    type: 'vec3',   label: 'Position', default: [0, 0, 0]  },
             { id: 'rotation',    type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
             { id: 'scale',       type: 'vec3',   label: 'Scale', default: [2, 2, 2]     },
             { id: 'gridVisible', type: 'boolean', label: 'Grid Visible', default: true   },
             { id: 'bgColor',     type: 'color',  label: 'Background', default: '#0a0e16' },
         ],
-        outputs: [
-            { id: 'state',   type: 'any',    label: 'Desk State' },
-            { id: 'preview', type: 'texture', label: 'Preview'    },
-            { id: 'signal',  type: 'signal', label: 'Changed'     },
-        ],
+        outputs: [],
         defaultValues: {
             hostHint: 'any',
             gridVisible: true,
@@ -727,8 +714,7 @@ export const NODE_TYPES = {
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
         ],
         outputs: [
-            { id: 'out',    type: 'geometry', label: 'Geometry' },
-            { id: 'bounds', type: 'vec3',     label: 'Bounds'   },
+            { id: 'bounds', type: 'vec3', label: 'Bounds' },
         ],
         defaultValues: {},
         render: 'spatial-3d',
@@ -746,9 +732,7 @@ export const NODE_TYPES = {
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
         ],
-        outputs: [
-            { id: 'out', type: 'geometry', label: 'Geometry' },
-        ],
+        outputs: [],
         defaultValues: {},
         render: 'spatial-3d',
     },
@@ -760,16 +744,19 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'color',      type: 'color',  label: 'Color',      default: '#ffffff'  },
-            { id: 'width',      type: 'number', label: 'Width',      default: 2          },
-            { id: 'height',     type: 'number', label: 'Height',     default: 2          },
-            { id: 'textureUrl', type: 'string', label: 'Texture URL', default: ''        },
-            { id: 'position',   type: 'vec3',   label: 'Position',   default: [0, 0, 0]  },
-            { id: 'rotation',   type: 'vec3',   label: 'Rotation',   default: [0, 0, 0]  },
+            { id: 'color',      type: 'color',   label: 'Color',       default: '#ffffff' },
+            { id: 'width',      type: 'number',  label: 'Width',       default: 2         },
+            { id: 'height',     type: 'number',  label: 'Height',      default: 2         },
+            { id: 'textureUrl', type: 'string',  label: 'Texture URL', default: ''        },
+            // A live texture (e.g. source.webcam.frame) wired in here wins over
+            // textureUrl — see renderNodeBody's geom.plane case. Distinct from
+            // textureUrl because a MediaStream-backed texture isn't a loadable
+            // URL, and 'texture'/'string' ports aren't wire-compatible.
+            { id: 'texture',    type: 'texture', label: 'Texture'                         },
+            { id: 'position',   type: 'vec3',    label: 'Position',    default: [0, 0, 0] },
+            { id: 'rotation',   type: 'vec3',    label: 'Rotation',    default: [0, 0, 0] },
         ],
-        outputs: [
-            { id: 'out', type: 'geometry', label: 'Geometry' },
-        ],
+        outputs: [],
         defaultValues: {},
         render: 'spatial-3d',
     },
@@ -785,10 +772,7 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'content',  type: 'string', label: 'Content',  default: 'Hello'      },
-            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 1.5, 0]  },
-            { id: 'width',    type: 'number', label: 'Width',    default: 340           },
-            { id: 'height',   type: 'number', label: 'Height',   default: 220           },
+            { id: 'content', type: 'string', label: 'Content', default: 'Hello' },
         ],
         outputs: [],
         defaultValues: {},
@@ -802,10 +786,7 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'url',      type: 'string', label: 'URL',      default: 'https://example.com' },
-            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 1.5, 0]           },
-            { id: 'width',    type: 'number', label: 'Width',    default: 420                    },
-            { id: 'height',   type: 'number', label: 'Height',   default: 320                    },
+            { id: 'url', type: 'string', label: 'URL', default: 'https://example.com' },
         ],
         outputs: [],
         defaultValues: {},
@@ -819,14 +800,84 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'src',      type: 'texture', label: 'Source'   },
-            { id: 'position', type: 'vec3',    label: 'Position', default: [0, 1.5, 0] },
-            { id: 'width',    type: 'number',  label: 'Width',    default: 360          },
-            { id: 'height',   type: 'number',  label: 'Height',   default: 240          },
+            { id: 'src', type: 'texture', label: 'Source' },
         ],
         outputs: [],
         defaultValues: {},
         render: 'panel-2d',
+    },
+
+    // The two panels below finally implement type ids that RawEditor and
+    // BetaEditor have carried default window frames for since the lanes were
+    // written (WINDOW_DEFAULT_POSITIONS) without the types ever existing — the
+    // intent was declared and left unbuilt. They are the first pieces of
+    // Studio's own chrome to become nodes rather than hardcoded panels.
+    //
+    // Both are content-less by design: a panel node receives only `node` and
+    // `values`, but the editor dispatches its body from inside RawEditor, where
+    // the selection, document and callbacks already live. That is the seam that
+    // makes UI-as-node possible at all without threading twenty props through
+    // the graph.
+
+    'view.outliner': {
+        id: 'view.outliner',
+        label: 'Outliner',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Outliner' },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'panel-2d',
+    },
+
+    'view.inspector': {
+        id: 'view.inspector',
+        label: 'Inspector',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Inspector' },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'panel-2d',
+    },
+
+    // -----------------------------------------------------------------------
+    // STUDIO — the editor itself, as one node you can enter
+    // -----------------------------------------------------------------------
+
+    // One palette entry. Placing it gives you a card like any other; entering
+    // it reveals the subgraph it is assembled from. This is the TouchDesigner
+    // COMP / Nuke Group shape, and it is the same mechanism a user would use to
+    // build their own palette item — which is the point of doing it this way
+    // rather than special-casing Studio.
+    //
+    // `render: 'hidden'` is load-bearing and NOT a placeholder: RawEditor's
+    // graphCardNodes explicitly drops every `render === 'panel-2d'` node from
+    // the canvas (they exist only as floating windows), so a panel-2d Studio
+    // node would be invisible on the graph and could never be entered. A
+    // container has to be a card.
+    'studio': {
+        id: 'studio',
+        label: 'Studio',
+        category: 'universe',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Studio' },
+        ],
+        // No outputs on purpose. `state`/`signal` would be honest-looking and
+        // dead: computeNodeOutput has no case for anything outside value.*,
+        // math.* and time, so every such port returns undefined. Declaring one
+        // here would add to exactly the problem the all-nodes example documents.
+        outputs: [],
+        defaultValues: { title: 'Studio' },
+        render: 'hidden',
     },
 
     // -----------------------------------------------------------------------
@@ -1014,8 +1065,7 @@ export const NODE_TYPES = {
         category: 'world',
         runtime: 'any',
         inputs: [
-            { id: 'color',   type: 'color',   label: 'Color'   },
-            { id: 'texture', type: 'texture', label: 'Texture' },
+            { id: 'color', type: 'color', label: 'Color' },
         ],
         defaultValues: { color: '#0a0e16' },
         outputs: [],
@@ -1128,8 +1178,6 @@ export const createEdge = (fromNodeId, fromPort, toNodeId, toPort, options = {})
 export const UNIMPLEMENTED_NODE_TYPES = new Set([
     // capture — no getUserMedia anywhere
     'source.ar',
-    'source.webcam',
-    'source.mic',
     'source.insta360',
     'source.stereo',
     'source.realsense.d405',

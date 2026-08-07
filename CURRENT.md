@@ -8,38 +8,34 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 
 ---
 
-## Last commit
+No commit SHAs or branch positions below — run `npm run state` for those; see
+`docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-`dev` is at `92efc7bf` (staging GREEN); `main` LIVE at `0b4b2b7f`. **PR #93**
-(`fix/bugsweep-2026-08-06` → `dev`) open, CI running, not yet merged.
-Agents share this tree: **stage explicit paths**.
+## Last session
 
-## Last session (2026-08-06 — bug sweep, worktree `bugsweep-2026-08-06`, PR #93)
+- Open inscriptions can carry the drawing that was made for them
+- Audit backlog closed, two real gaps fixed
 
-- 5 parallel agents (UI/UX, 3D/Viewport, Backend/API, Schema/Protocol, Node System) found and
-  fixed **9 real bugs** off fresh `origin/dev`, each with a watched-failing regression test —
-  full list in `docs/ai/known-fixes.md`. Worst: a Socket.IO connection never re-checked DB
-  auth after handshake, so a revoked/downgraded user's open tab kept full space access.
-- Full validation green (lint/build/1721 tests/77 contract tests). **4 of the 9 — Inspector
-  wheel-scroll, audio toggles, primitive-shape clamping, Beta Help copy — are not yet seen
-  in a real browser** (Chrome tool wasn't connected this session).
+Full detail: `PROGRESS.md`.
 
 ## What works
 
-Studio (six panels + phone), Beta, Raw, WCC, viewer; auth (session-cookie, roles, OAuth-first)
+Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAuth-first)
 + open-space/sandbox grants; Open Jam and vanity links; deploy by push; nightly VPS backups.
 
 ## Open
 
-- **PR #93 needs a real-browser look** (desktop + phone) on its 4 flagged items before/after merge.
-- 8 prod spaces still ownerless (staging verified end to end; prod gets it next promotion);
-  releasing ownership does not revoke the scope it granted (deliberate, not a full undo).
-- **Mesh gate INERT in prod** — code live, no `MESH_ROOM_SECRET` set.
-- **Leaked GitHub PAT + staging Google OAuth secret still live**; 13 dead secrets to revoke.
-- Owner's/artist's calls: `open`'s card blank, director page unseen, purple-gap check fails,
-  `br_id_ge ▾` chip covers the letter-row.
-- `feat/timeline-core` UNPUSHED (5 ahead of `dev`, 51 behind) — land deliberately,
-  `chromeLayout.test.js` guards the old two-corner chrome regression.
+- **Lane consolidation in progress** — Studio-as-a-node rebase + Raw-as-default promotion pending, see Last session / plan file above.
+- **Real-browser looks owed**: `source.webcam`/`source.mic` (camera+mic needed) +
+  PR #93's 4 items (Inspector wheel-scroll, audio toggles, primitive clamping).
+- 8 prod spaces still ownerless (staging verified end to end; prod gets it next
+  promotion); releasing ownership doesn't revoke the scope it granted (deliberate).
+- **Mesh gate INERT in prod** (no `MESH_ROOM_SECRET`); **leaked GitHub PAT +
+  staging Google OAuth secret still live**, 13 dead secrets to revoke.
+- Owner's/artist's calls: `open`'s card blank, director page unseen, purple-gap
+  check fails. `feat/timeline-core` UNPUSHED.
+- **br_id_ge rite fixes unverified by a human** — Act III backdrop + Act V idle-motion CSS shipped live, page loads clean, but the acts are camera-gesture-gated so no automated check could actually see them render.
+- Staging deploy pending as of session end — GitHub Actions infra was degraded (stuck queues across unrelated branches too); check `gh run list --repo dob-0/di.iiii --branch dev` before assuming it landed.
 
 ## Deploy & validation — [docs/ai/known-fixes.md](docs/ai/known-fixes.md), check before any bug hunt
 

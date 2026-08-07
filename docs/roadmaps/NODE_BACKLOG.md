@@ -17,7 +17,21 @@ anything already placed still loads and renders.
 
 ---
 
-## Works today (27)
+## Works today (29)
+
+A 2026-08-06 audit found the "works today" label had overstated things: several
+of the 27 had output ports that were never computed, or read `node.values`
+directly instead of through the graph, so wiring into/out of them was a no-op
+even though the palette let you draw the edge. First stabilization pass (same
+day, see `docs/ai/known-fixes.md`): `universe.world.title`/`.bgColor` are now
+genuinely wire-evaluated, `geom.cube.bounds` is a real computed output, and
+every port that had zero consumers anywhere (`gridSize`, `slug`, `description`,
+`active`, `entry`, `state`, `signal`, `preview`, `world.background.texture`,
+per-node `position`/`width`/`height`, and the never-consumable `geom.*.out`
+Geometry ports) was deleted rather than left as a decorative wire target.
+Remaining gaps: `math.multiply`/`math.mix`/`math.clamp`, `world.light`,
+`world.grid`, and `geom.sphere`/`geom.plane` wiring are implemented but still
+have no dedicated runtime test — correct by inspection, not yet guarded.
 
 | Group | Types |
 | --- | --- |
@@ -25,29 +39,40 @@ anything already placed still loads and renders.
 | Clock (1) | `time` — **built 2026-07-30**, the first one off this backlog |
 | 3D (4) | `geom.cube` `geom.sphere` `geom.plane` `universe.desk.3d` |
 | World (3) | `world.light` `world.background` `world.grid` |
-| Panels (4) | `universe.world` `view.browser` `view.image` `view.text` |
+| Panels (6) | `universe.world` `view.browser` `view.image` `view.text` `source.webcam` — **built 2026-08-06** · `source.mic` — **built 2026-08-06** |
 | Structure (1) | `universe.space` |
+
+Both capture nodes' live outputs (`source.webcam.frame`, `source.mic.volume`/
+`.frequency`) only carry a value through a wire because `computeNodeOutput`/
+`createNodeGraphContext` grew a `liveOutputs` map — a per-pass injection point
+for values that can't serialize into `node.values` (same idea as `time`'s
+injected clock). `source.mic`'s levels need this too — they change every
+animation frame, and writing that to the persisted document would spam the
+op log/undo history exactly like an un-gated clock would. `MicSourcePanel`
+throttles how often it
+*reports* into the graph (~10/s) without slowing the on-screen meter, which
+still updates every frame via a direct DOM write. `geom.plane` grew a
+dedicated `texture` input (distinct from `textureUrl`, which stays a loadable
+URL string) to receive a live texture. Any future live-data node reuses this
+same `liveOutputs` mechanism instead of inventing another.
 
 ---
 
-## The queue (22)
+## The queue (20)
 
 Ordered by leverage per unit of work. Take them top-down.
 
-### 1. Capture — 6 types
+### 1. Capture — 4 types remaining
 
-`source.webcam` · `source.mic` · `source.ar` · `source.insta360` ·
-`source.stereo` · `source.realsense.d405`
+`source.ar` · `source.insta360` · `source.stereo` · `source.realsense.d405`
 
-**`getUserMedia` appears zero times in `src/`.** No camera or microphone is ever
-opened. These produce `texture` and `number` outputs that nothing generates.
-
-Build `source.webcam` first: it is the smallest real capture node and proves the
-whole texture path end to end (getUserMedia → `<video>` → `VideoTexture` → a
-`geom.plane`'s `textureUrl`). `source.mic` is next and needs an `AnalyserNode`
-for its `volume`/`frequency` outputs. Everything after that is hardware —
-`insta360`, `stereo` and `realsense.d405` cannot be finished or tested without
-the physical devices, so keep them last regardless of how interesting they are.
+`source.webcam` and `source.mic` (both built 2026-08-06) proved the capture
+path end to end: `getUserMedia` → analysis (`VideoTexture` / `AnalyserNode`)
+→ the graph's `liveOutputs` → a consumer input (`geom.plane.texture`, or any
+`number`/`any` port for the mic). Everything left is hardware or WebXR —
+`insta360`, `stereo` and `realsense.d405` cannot be finished or tested
+without the physical devices, so keep them last regardless of how
+interesting they are.
 
 Watch for: permission denial and device-unplugged are the normal cases, not edge
 cases. A capture node must render a visible refused/unavailable state rather than
@@ -107,24 +132,28 @@ built**. Decide intent before writing code:
 
 ## Known trap: dead panel nodes become text boxes
 
-`RawEditor.jsx`'s panel switch handles `universe.world`, `view.browser` and
-`view.image`, and **everything else falls through to `TextPanelWindow`**. So an
-unimplemented `panel-2d` node — `stream.monitor`, `stream.controller`,
-`universe.desk.2d` — opened looking like a deliberate feature and quietly showed
-a text panel instead.
+`RawEditor.jsx`'s panel switch handles `universe.world`, `view.browser`,
+`view.image`, `source.webcam` and `source.mic`, and **everything else falls
+through to `TextPanelWindow`**. So an unimplemented `panel-2d` node —
+`stream.monitor`, `stream.controller`, `universe.desk.2d` — opened looking
+like a deliberate feature and quietly showed a text panel instead.
 
 The palette gate closes this for new documents. If a `panel-2d` type is ever
 un-gated before its panel exists, it returns.
 
-## Note on the demo preset
+## Note on the demo preset (removed)
 
-`RawEditor.jsx:551-611` builds a canned studio graph — Insta360, stereo, mic,
-PTZ, controller, compositor, output, monitor. It lays out the cards; nothing
-drives them. It is a layout fixture, not evidence any of those types work.
+`RawEditor.jsx` used to have a "Streaming Prototype" overflow-menu button that
+built a canned studio graph — Insta360, stereo, mic, PTZ, controller,
+compositor, output, monitor — via `createNode` calls that bypassed the palette
+gate. It laid out the cards; nothing drove them, and two of the nodes
+(`stream.monitor`, `stream.controller`) hit the "Known trap" below and silently
+rendered as generic text boxes. It was never evidence any of those types work,
+only misleading UI, so it was deleted rather than fixed.
 
 ## Method
 
 Static analysis: call-graph and reference tracing, not clicking through the app.
 Strong evidence for absence — you cannot capture a webcam without `getUserMedia`
-— and weaker evidence that the 27 "working" types are bug-free. A runtime pass
+— and weaker evidence that the "working" types are bug-free. A runtime pass
 over the working set is worth doing separately.

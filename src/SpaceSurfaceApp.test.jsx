@@ -10,7 +10,7 @@ vi.mock('./App.jsx', () => ({
     }
 }))
 
-vi.mock('./beta/BlankNodeWorkspaceApp.jsx', () => ({
+vi.mock('./raw/BlankNodeWorkspaceApp.jsx', () => ({
     default: function MockBlankNodeWorkspaceApp({ spaceId }) {
         return <div>blank-node-workspace:{spaceId || 'main'}</div>
     }

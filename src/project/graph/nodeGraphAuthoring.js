@@ -5,7 +5,7 @@ import { getNodeType } from '../nodeRegistry.js'
 // lift for world-placed nodes, a floating-window frame for panel nodes).
 // No dispatch, no side effects — the caller owns turning this into an op.
 // workspaceTop/topZIndex are passed in rather than read from a shared
-// context so this stays usable outside Beta's floating-window shell.
+// context so this stays usable outside Raw's floating-window shell.
 export const buildNodeValues = (definitionId, params, place, { workspaceTop = 0, topZIndex = 6 } = {}) => {
     const type = getNodeType(definitionId)
     const render = type?.render || 'hidden'
@@ -38,8 +38,8 @@ export const buildNodeValues = (definitionId, params, place, { workspaceTop = 0,
     return values
 }
 
-// A root node (e.g. Beta's "Node 0") is a normal, deletable node in the
-// document, but the topbar/back-navigation UI in both Beta and Studio's
+// A root node (e.g. Raw's "Node 0") is a normal, deletable node in the
+// document, but the topbar/back-navigation UI in both Raw and Studio's
 // graph views depends on one existing — deleting it silently removes that
 // whole UI with no way back except a page reload. Callers should confirm
 // with the user before deleting a node this returns true for; the actual

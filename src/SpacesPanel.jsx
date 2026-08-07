@@ -108,7 +108,6 @@ export default function SpacesPanel({
                     >
                         <option value="public">Public route</option>
                         <option value="studio">Studio workspace</option>
-                        <option value="beta">Beta workspace</option>
                         <option value="admin">Admin page</option>
                     </select>
                 </div>

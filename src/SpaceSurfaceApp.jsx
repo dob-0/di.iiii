@@ -1,10 +1,12 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { getServerSpace, supportsServerSpaces } from './services/serverSpaces.js'
 import { APP_PAGE_PREFERENCES } from './utils/spaceRouting.js'
+import lazyWithReload from './utils/lazyWithReload.js'
+import LoadingScreen from './components/LoadingScreen.jsx'
 
-const App = lazy(() => import('./App.jsx'))
-const BlankNodeWorkspaceApp = lazy(() => import('./beta/BlankNodeWorkspaceApp.jsx'))
-const PublicProjectViewer = lazy(() => import('./project/components/PublicProjectViewer.jsx'))
+const App = lazyWithReload(() => import('./App.jsx'), 'app')
+const BlankNodeWorkspaceApp = lazyWithReload(() => import('./raw/BlankNodeWorkspaceApp.jsx'), 'raw-workspace')
+const PublicProjectViewer = lazyWithReload(() => import('./project/components/PublicProjectViewer.jsx'), 'public-project-viewer')
 
 const DEFAULT_SPACE_ID = 'main'
 const SPACE_META_REFRESH_MS = 2000
@@ -82,14 +84,14 @@ export default function SpaceSurfaceApp({ routeState }) {
 
     if (isLocalRootWorkspace) {
         return (
-            <Suspense fallback={null}>
+            <Suspense fallback={<LoadingScreen label="Loading surface" />}>
                 <BlankNodeWorkspaceApp spaceId={spaceId} />
             </Suspense>
         )
     }
 
     if (shouldResolvePublishedSurface && (surfaceState.status === 'idle' || surfaceState.status === 'loading')) {
-        return null
+        return <LoadingScreen label="Loading space" />
     }
 
     // direct project link (/:space/p/:projectId) — the one-pager viewer for any
@@ -97,7 +99,7 @@ export default function SpaceSurfaceApp({ routeState }) {
     // upstream by SpaceSurfaceRoute for non-public spaces
     if (shouldResolvePublishedSurface && routeProjectId) {
         return (
-            <Suspense fallback={null}>
+            <Suspense fallback={<LoadingScreen label="Loading surface" />}>
                 <PublicProjectViewer
                     key={`${spaceId}:${routeProjectId}`}
                     spaceId={spaceId}
@@ -111,7 +113,7 @@ export default function SpaceSurfaceApp({ routeState }) {
 
     if (shouldResolvePublishedSurface && publishedProjectId) {
         return (
-            <Suspense fallback={null}>
+            <Suspense fallback={<LoadingScreen label="Loading surface" />}>
                 <PublicProjectViewer
                     key={`${spaceId}:${publishedProjectId}`}
                     spaceId={spaceId}
@@ -123,8 +125,8 @@ export default function SpaceSurfaceApp({ routeState }) {
     }
 
     if (page === APP_PAGE_PREFERENCES) {
-        return <Suspense fallback={null}><App /></Suspense>
+        return <Suspense fallback={<LoadingScreen label="Loading surface" />}><App /></Suspense>
     }
 
-    return <Suspense fallback={null}><App /></Suspense>
+    return <Suspense fallback={<LoadingScreen label="Loading surface" />}><App /></Suspense>
 }

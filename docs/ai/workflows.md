@@ -9,7 +9,7 @@ This page tells an agent where to start and what to check next.
 | Main shipped editor UX | `src/studio/` | `src/project/`, `src/shared/` |
 | Shared project sync/viewer/presence | `src/project/` | `src/shared/`, `serverXR/src/` |
 | Canonical document shape or ops | `src/shared/` | `src/project/`, `serverXR/src/` |
-| Experimental node-first UX | `src/beta/` | `src/project/`, `src/shared/` |
+| Experimental node-first UX | `src/raw/` | `src/project/`, `src/shared/` |
 | Backend auth/persistence/routes/realtime | `serverXR/src/` | `src/project/`, `src/shared/`, `serverXR/README.md` |
 | Release automation or local helper scripts | `scripts/` | `deploy/`, `.github/workflows/` |
 | Deployment docs/examples/templates | `deploy/` | `scripts/`, `docs/deploy/`, `serverXR/README.md` |
@@ -79,10 +79,10 @@ Rules:
 
 Push changes downward only when needed:
 
-- if both `Studio` and `Beta` should benefit, prefer `src/project/`
+- if both `Studio` and `Raw` should benefit, prefer `src/project/`
 - if the change is schema/runtime truth, prefer `src/shared/`
 - if the change is only the shipped main editor shell or UX, prefer `src/studio/`
-- if the change is deliberately experimental, prefer `src/beta/`
+- if the change is deliberately experimental, prefer `src/raw/`
 
 ## Running More Than One Agent
 

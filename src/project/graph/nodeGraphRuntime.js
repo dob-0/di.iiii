@@ -50,14 +50,19 @@ const buildEdgesByTarget = (edges) => {
 // always yields the same outputs. outputCache already holds results for the
 // lifetime of one pass, which is exactly right here — time must not advance
 // midway through a pass or two nodes reading the same clock would disagree.
-export const createNodeGraphContext = (document = {}, { now = 0 } = {}) => {
+// liveOutputs carries values a node output can't serialize into node.values —
+// a captured MediaStream's THREE.VideoTexture, say — keyed by `${nodeId}:${portId}`.
+// Same idea as `now` for the clock: injected per-pass by whichever renderer
+// owns the live resource, read generically by computeNodeOutput/evaluateNodeInput.
+export const createNodeGraphContext = (document = {}, { now = 0, liveOutputs = null } = {}) => {
     const edges = document.edges || []
     return {
         nodesById: new Map((document.nodes || []).map((node) => [node.id, node])),
         edges,
         edgesByTarget: buildEdgesByTarget(edges),
         outputCache: new Map(),
-        now: Number.isFinite(now) ? now : 0
+        now: Number.isFinite(now) ? now : 0,
+        liveOutputs
     }
 }
 
@@ -115,6 +120,24 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
         case 'value.boolean':
         case 'value.string':
             if (portId === 'out') return node.values?.value
+            break
+        case 'geom.cube':
+            if (portId === 'bounds') {
+                return asVec3(evaluateNodeInput(node, 'size', context, nextStack), [1, 1, 1])
+            }
+            break
+        case 'source.webcam':
+            if (portId === 'frame') {
+                return context?.liveOutputs?.get(`${node.id}:frame`) ?? null
+            }
+            break
+        case 'source.mic':
+            if (portId === 'volume') {
+                return context?.liveOutputs?.get(`${node.id}:volume`) ?? 0
+            }
+            if (portId === 'frequency') {
+                return context?.liveOutputs?.get(`${node.id}:frequency`) ?? null
+            }
             break
         case 'math.add':
             if (portId === 'out') {

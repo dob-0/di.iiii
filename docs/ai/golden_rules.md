@@ -163,6 +163,26 @@ Guessing wrong on a destructive or architectural decision costs more than a one-
 
 **Files:** `AGENTS.md`, `docs/ai/workflows.md`, `README.md`
 
+### Restate the core concept in the user's own words and get it confirmed before building
+
+**Rule:** On any open-ended or architectural ask, write back what you believe the core concept *is* — in the requester's vocabulary, not a restatement of their sentence — and get an explicit yes before writing code. This is not "ask if ambiguous": a request can be perfectly clear as English and still leave you holding the wrong mental model.
+
+**Why:** 2026-08-06, the ask was "have the Studio in the graph… like in TouchDesigner where the palette has already-built things and you can build your own." Three readings were live: Studio panels each becoming a node type; one shared document with Studio and Raw as two views onto it; or Raw growing until it replaces Studio. All three are plausible, all three are weeks of divergent work, and the prompt discriminates between none of them. The actual answer was a fourth thing — *one* `studio` palette entry that, when you enter it, reveals the subgraph it is assembled from — i.e. a container node. One round of restating produced it in two sentences. Building first would have produced the wrong architecture confidently.
+
+**How:** Name the concept, name the mechanism you think implements it, and name what it is *not*. Prefer the user's own reference points (they said TouchDesigner, so answer in COMP/palette terms). If you find yourself listing three options in your head, that is the signal to stop and restate — not to pick the safest one and proceed. Pair this with the existing two-question cap: restating is one message, not a loop.
+
+**Files:** n/a (agent behavior). The concrete case: `src/project/nodeRegistry.js`, `src/raw/components/RawEditor.jsx`.
+
+### Every interaction ships a touch path, not just a responsive layout
+
+**Rule:** A surface is not mobile-ready because it reflows. Every action reachable on desktop must have a working path on a phone, designed in the same change that adds the action — never deferred to a later "mobile pass".
+
+**Why:** 2026-08-06 audit of Raw: **you could not connect two nodes on a phone at all.** `RawGraphSurface.jsx` starts a wire on the output dot's `pointerdown`; on touch the browser grants that element *implicit pointer capture*, so `pointerup` is delivered back to the output dot and never to the input dot under the finger — the drop handler could not fire, ever. Port dots were 8×8px against a 44px target. Edge deletion was hover-then-click on a 2px stroke, which touch cannot trigger, and it was the only way to delete an edge. None of this reflows into existence; the CSS was irrelevant. Worse, `RawGraphSurface.test.jsx` stubbed `setPointerCapture` with `vi.fn()`, so the drag tests passed green over exactly the semantics that were broken.
+
+**How:** For each new interaction ask: what fires it with one finger? Use pointer events with explicit `releasePointerCapture` + `document.elementFromPoint` for drag-and-drop between elements — implicit capture makes the naive `pointerup`-on-target pattern a desktop-only illusion. Hit targets ≥44px (a visual dot can stay small; enlarge the hit box). Never make hover the only affordance. Never stub `setPointerCapture` in a test that is meant to prove dragging works.
+
+**Files:** `src/raw/components/RawGraphSurface.jsx`, `src/raw/styles/raw.css`, `scripts/verify-surfaces.mjs`.
+
 ### Enforce a task contract before tool-heavy work
 
 **Rule:** Do not start broad searches or multi-file edits until goal, priority, scope, non-goals, and done criteria are explicit.
@@ -765,9 +785,11 @@ This does **not** fully solve node-to-node label collision (two labels can still
 
 **Why:** This is the same bug three times, each caught only by accident. v3 fixed the project **slug** — sent in the CREATE POST and nowhere else, so a tier that got its projects any other way had null slugs and answered 404 at the door the landing page linked to, with perfectly synced content behind it. v4 fixed the project **title** — same shape, so `di-space.field.json` said "the field — every crossing, together" while all three tiers went on saying "the field". Then on 2026-08-05 the user opened prod, staging and `localhost:5173` side by side and saw the space *itself* named three different things: `br_id_ge`, `br_id_ge`, and `br_id_ge XR_ Notations:vi.ritual`. The space label was still create-only, and worse, it was taken from whichever *page* manifest ran first — provisioning a fresh tier from `di-space.landing.json` would have named the whole space "the landing — the door". The audit that came out of it immediately found more than the label: the dev tier had null slugs on `rite` and `field`, the old `the field` title, `br-id-ge-needs` missing entirely, and 70 projects the repo does not declare. **The real defect was never any single field — it was that drift could only be discovered by a human with three browser windows open, which only ever checks the surfaces someone happens to look at.**
 
-**How:** Put space-level truth in `di-space.space.json` and page-level truth in `di-space.<page>.json`; never let a page's `label` name the space. Add the field to `SPACE_FIELDS` / `TIER_FIELDS` in the engine so the reconcile, the audit and the docs cannot disagree about what "declared" means. Bump `ENGINE_VERSION`, have the manifest pin `minEngine`, then `node scripts/space-sync-vendor.mjs --write` so all four copies stay byte-equal. Run `--audit` in CI *after* the sync — a sync reporting success is not the same as tiers agreeing — and keep the audit read-only so it is safe to point at the live space. When adding any new create-time field to a space or project, write the reconcile in the same change; the guard that catches this class is asserting the PATCH exists, and it must be seen failing against the previous engine before it counts.
+**How:** Put space-level truth in `di-space.space.json` and page-level truth in `di-space.<page>.json`; never let a page's `label` name the space. Add the field to `SPACE_FIELDS` / `TIER_FIELDS` in the engine so the reconcile, the audit and the docs cannot disagree about what "declared" means. Bump `ENGINE_VERSION`, then `npm run space:sync:release` — one command that writes the engine to every linked repo, bumps their `minEngine` to match, and commits + pushes each (the old two-step "`--write` then remember to commit and push three separate repos" is exactly where the real v5→v6 upgrade stalled uncommitted for 15+ hours on 2026-08-06). Run `--audit` in CI *after* the sync — a sync reporting success is not the same as tiers agreeing — and keep the audit read-only so it is safe to point at the live space. When adding any new create-time field to a space or project, write the reconcile in the same change; the guard that catches this class is asserting the PATCH exists, and it must be seen failing against the previous engine before it counts.
 
-**Files:** `scripts/space-sync.mjs` (the engine: `SPACE_FIELDS`, step 1b, `audit()`), `scripts/space-sync.test.js` (the guards), `scripts/space-sync-vendor.mjs` (keeps the four copies equal), `br_id_ge/di-space.space.json` (the first space manifest), `br_id_ge/.github/workflows/sync-space.yml` (`--all` then `--audit`), `docs/ai/known-fixes.md`.
+**A checked-out worktree is a runnable copy of every tool in the repo, including the ones that write outside it.** Eight copies of `space-sync-vendor.mjs` existed on one machine on 2026-08-06, two of them next to a stale v4 engine — running `--write` from either would have silently downgraded every linked repo and reported success (it did, once, while testing the fix). Any tool whose job is to write into a DIFFERENT repo must verify it is running from the canonical checkout before it writes anything — see `checkSafeSource` in `space-sync-vendor.mjs` and `docs/ai/space-sync-vendoring.md` for the full guard.
+
+**Files:** `scripts/space-sync.mjs` (the engine: `SPACE_FIELDS`, step 1b, `audit()`), `scripts/space-sync.test.js` (the guards, including `minEngine === ENGINE_VERSION` for di.iiii's own spaces — strict equality, no lag excuse), `scripts/space-sync-vendor.mjs` (the guard + `--release`), `scripts/space-sync-selfcheck.mjs` + `docs/templates/vendor-check.yml` (vendored into each linked repo so drift can fail in a place that can actually see it), `docs/ai/space-sync-vendoring.md` (full reference), `br_id_ge/di-space.space.json` (the first space manifest), `br_id_ge/.github/workflows/sync-space.yml` (`--all` then `--audit`, gated on `vendor-check`), `docs/ai/known-fixes.md`.
 
 **Same shape, one level up — a grant is not a preference, and a half-grant is worse than none.** On 2026-08-05 the identical defect turned up on the platform's own object: `ownerUserId` was written only in the `POST` that creates a space, and read from the *session* making the request. Every repo-linked space is provisioned by an API token, which has no session, so all 8 production spaces were `ownerUserId: null` — and `ownerUserId` was not in the PATCH field list, so there was no route back. The store had supported the update the whole time; no caller could reach it. Consequence: publish, invite, rename and delete all fell through to a platform admin, and one person was the bottleneck for every space in the product. Two things generalise from the fix. First, **ownership is admin-only** — an owner cannot hand their own space away, because a grant that the grantee can re-grant is not a grant. Second, **ownership and reach are two grants and must move together**: assigning `ownerUserId` without adding the space to that account's scope produced an owner who could not open their own space, so the route now does both in one call (scope best-effort, so it can never fail the ownership write). The same audit found `serverSpaces.js` silently dropping `slug` on the way out — Preferences → Manage had an "Edit public link" button that had never done anything, because the server supported the field and the client never sent it. **When you add a field to a route, check the client actually forwards it; a button that posts nothing looks exactly like a button that works.**
 
@@ -800,3 +822,51 @@ This does **not** fully solve node-to-node label collision (two labels can still
 **How:** Prefer a check to a paragraph, and make it cheap: the line-limit guard is nine lines inside `check-agent-docs.mjs`. When a rule genuinely cannot be automated — "you have not verified it until you looked at it" — say so explicitly where it is written, so nobody mistakes discipline for a tripwire. And **watch a new check fail before trusting it**: append junk, see the error, revert. A guard you never saw fire proves nothing about the day it matters.
 
 **Files:** `scripts/check-agent-docs.mjs` (the enforced half), `scripts/check-wiki-sync.mjs` (the freshness gap), `.github/workflows/ci.yml` (what actually runs), `AGENTS.md` (where the unenforced half is written down).
+
+---
+
+### CURRENT.md states no commit SHA and no branch position
+
+**Rule:** Never write a commit SHA or an ahead/behind count into CURRENT.md. Run `npm run state` (scripts/repo-state.mjs) for those facts instead.
+
+**Why:** On 2026-08-06, two commits landed one minute apart from two different branches asserting contradictory positions for main — 682a556a said main is at 0b4b2b7f, 7a613c69 said dev and main level at ef6e1fe7. Neither agent lied; each transcribed a stale fact from its own worktree's view into a single-slot file. Derived facts belong to a live command, not hand-authored prose, because two branches can never disagree about what a command reports at the moment it runs.
+
+**How:** scripts/check-agent-docs.mjs bans commit-SHA and ahead/behind patterns in CURRENT.md and is wired into both CI and the pre-push gate; .claude/commands/recap.md (repo-local) tells the recap flow to run npm run state instead of transcribing git log.
+
+**Files:** `scripts/check-agent-docs.mjs, scripts/repo-state.mjs, scripts/repo-state-lib.mjs, .claude/commands/recap.md, CURRENT.md`
+
+---
+
+### CURRENT.md has exactly one writer: `npm run land`
+
+**Rule:** Never edit `CURRENT.md` on a feature branch. Write session notes to `docs/ai/sessions/<branch-slug>.md` instead (see its README for the format) and let `npm run land` — run on `dev`, at merge time — fold them into `PROGRESS.md` and rewrite `CURRENT.md`'s "Last session" from them.
+
+**Why:** The SHA/ahead-behind ban above fixed *what* got written into CURRENT.md; it did nothing about *when* or *by whom*. Every branch was still pre-writing what it guessed `dev` would look like once merged, and `CURRENT.md`'s own "replace, don't append" convention meant whichever branch wrote last won — silently destroying whatever the previous writer had recorded. Confirmed on 2026-08-06: three separate sessions' real notes were permanently overwritten this way before their branch ever merged, recoverable only via `git fsck --dangling` (which nobody would think to run) — one of them was on this very rule's own commit, caught while writing it. A single-writer point, naturally serialized by git (only one branch can be `dev` at a time), closes the race that a naming convention alone cannot.
+
+**How:** `docs:ai:check` enforces the shape: `CURRENT.md` must contain the literal `active_branch: dev`; a branch off `dev`/`main` must have a matching session note before pushing, and its `CURRENT.md` must not differ from `origin/dev`; `dev`/`main` themselves must have an empty `docs/ai/sessions/` (forces the fold-in — cleanup is part of landing, not a courtesy). `.claude/commands/recap.md` writes the note; `.claude/commands/land.md` runs the fold.
+
+**Files:** `docs/ai/sessions/README.md, scripts/session-land.mjs, scripts/session-land-lib.mjs, scripts/check-agent-docs.mjs, .claude/commands/recap.md, .claude/commands/land.md`
+
+---
+
+### One worktree per task; landing sweeps it, not memory
+
+**Rule:** Before starting a fan-out or a new worktree, run `npm run state` and check the count. `npm run land` (see above) sweeps merged/clean/non-live worktrees automatically at merge time — a worktree that survives a landing needs a reason (still live, still unmerged, or dirty), not a reminder to someone.
+
+**Why:** By 2026-08-06 there were 21 worktrees: 3 prunable with their /tmp scratchpad directories already deleted, one detached and stale at a commit from the previous day, and 17 branches sitting unmerged into dev. Nothing reported this — agents only discover it by accident, usually when a worktree they need is already locked by another one (git worktree add fails with 'already used by worktree at ...'). A cleanup step that depends on someone remembering to run it is the same shape of unenforced rule as the CURRENT.md line limit was before a check existed for it.
+
+**How:** `scripts/repo-state.mjs` prints the live worktree count and flags prunable/detached/live entries every session (wired into the SessionStart hook via `--brief`); `--sweep` removes only what `classifyWorktree`/`isSweepSafe` agree is safe (merged by `git cherry`, not just `merge-base` — catches squash merges — clean, and no live process bound to it via `/proc` scan), never `--force`, and names the exact reason + override command for everything it leaves alone. `npm run land` runs it as its last step.
+
+**Files:** `scripts/repo-state.mjs, scripts/repo-state-lib.mjs, scripts/session-land.mjs, docs/ai/parallel-agents.md`
+
+---
+
+### A screenshot referenced by path is not a screenshot you have
+
+**Rule:** When a bug report points at a screenshot by filesystem path instead of pasting it inline, read that path as the very first action, before anything else — including before reading the rest of a multi-image message. Do not batch it in with other reads a few tool calls later.
+
+**Why:** On 2026-08-06 a user pasted one screenshot inline and referenced two more by path (`/tmp/Spectacle.XXXXXX/Screenshot_*.png`) in the same message. By the time they were read — one reply-turn later, after other embedded work — one path's directory no longer existed and the other's was empty. Screenshot tools like Spectacle write to a fresh temp directory per capture and clear it aggressively, sometimes within the same minute. The content was gone for good: no `find`, no re-request to the same path, nothing recovers it. The two bugs those screenshots showed had to be re-derived by manual reproduction instead, burning most of a session on rediscovering what a single timely read would have shown directly.
+
+**How:** This is unenforced — a person (or a stale temp path) is the only thing that notices when it's skipped, the same shape as the verification rule in "A rule no build can see is a convention, not a protocol" above. Treat it with the same discipline: image-by-path references are perishable evidence, not durable input. Read first, investigate second. If a path is already gone when you get to it, say so plainly and ask for a resend rather than guessing at what it showed.
+
+**Files:** none — process discipline, not code.

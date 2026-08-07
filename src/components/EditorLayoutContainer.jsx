@@ -76,7 +76,8 @@ export default function EditorLayoutContainer({
         participantRoster,
         isSceneStreamConnected,
         sceneStreamState,
-        sceneStreamError
+        sceneStreamError,
+        sceneFlushError
     } = useContext(SyncContext)
     const {
         spaces,
@@ -126,7 +127,8 @@ export default function EditorLayoutContainer({
         participantRoster,
         isSceneStreamConnected,
         sceneStreamState,
-        sceneStreamError
+        sceneStreamError,
+        sceneFlushError
     })
 
     const { shouldShowStatusPanel, statusPanelClassName, statusSummary, statusDotClass } =

@@ -5,6 +5,318 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-06 — Open inscriptions can carry the drawing that was made for them
+
+A crossing of br_id_ge left a name and a word, and the form it wore in the field
+was a torus knot picked by a hash of its own id — unique, permanent, and nobody's.
+Nothing a visitor actually authored survived.
+
+- The rite now quantizes the line a hand drew into an opaque `m1.<base64url>`
+  token (~1KB) and sends it with the crossing. `POST /inscriptions` takes an
+  optional `mark`; `PUT /inscriptions/:id/mark` replaces it afterwards with the
+  same one-time proof that unmakes a crossing — needed because the ending is a
+  page you can draw on again, long after the crossing was posted.
+- The server validates by shape and never parses it: a malformed or oversized
+  mark is dropped and the crossing still succeeds, because a drawing is not
+  worth failing a crossing over.
+- Added the new route to `PUBLIC_CORS_ROUTES` beside its DELETE sibling,
+  verified with a real preflight from a foreign origin (a rite running on a
+  mirror or an installation laptop is cross-origin to the field).
+- The wiki entry still said "update and delete are impossible on this path",
+  which the proof-gated DELETE had already made untrue — corrected alongside
+  documenting the new mark field.
+- `.env.example` never mentioned `MESH_ROOM_SECRET`/`MESH_PROTECTED_NODE_PREFIXES`
+  even though both compose files have passed them since the mesh identity gate
+  landed — the only way to learn the keeper could be protected was reading
+  `meshHub.js`. Found because it stayed unprotected on prod: `node=keeper-anything`
+  was able to join the live relay on 2026-08-06. Documented what an empty value
+  means, since empty is the dangerous state and looks identical from outside
+  until someone claims the id.
+
+## 2026-08-05 — Audit backlog closed, two real gaps fixed
+
+Re-verified the standing audit backlog: 17/17 previously-reported findings were
+already fixed on `dev`; `CURRENT.md` had been carrying it as open. Two gaps were
+real and are fixed here.
+
+- **A failing scene write was invisible.** `useLiveSync` set `sceneFlushError`
+  correctly, but the value died at `useAppState`'s explicit destructure (it
+  listed `sceneStreamState`/`sceneStreamError` and simply omitted the flush
+  field) — every hop in between is a spread, so a grep for the identifier found
+  almost nothing. The Studio status panel read "Scene stream connected" the
+  whole time a write was actually failing. Threaded through `useAppState` →
+  `useAppContextValues` → `EditorLayoutContainer` → `useStatusItems`, given its
+  own status row rather than folded into the stream row (a healthy stream is
+  exactly what was masking it). Two new tests in `useStatusItems.test.js`.
+- **A portal in embed mode rendered blank tiles** for older imported projects.
+  `EmbeddedScene` called `buildAssetMap(doc)` with no `fallbackProjectId` — the
+  fallback that rescues assets written without a `url` by the legacy import
+  gap — and an embedded document has no `projectMeta.id` of its own to fall
+  back on. Passed the `projectId` the component already had in scope.
+- Checked by diffing the test suite's failing-file *set* before/after
+  `origin/dev`: identical (raw totals read 68 vs 67 — flake in uncollectable-
+  file counting, so the set is the check, not the count).
+
+Left deliberately open (not this branch's to fix): `StudioEditor` has no
+`[projectId]` reset on switch — fixing it means deciding which editor state is
+per-project vs per-session, and a wrong guess silently discards work.
+
+## 2026-08-06 — Raw on touch, the all-nodes example, Studio as a node
+
+- **Graph wiring was impossible on a phone.** A wire starts on the output
+  dot's `pointerdown`, which on touch grants that element implicit pointer
+  capture — so `pointerup` was retargeted back to the output dot and never
+  reached the input dot under the finger. Drops now resolve to the nearest
+  *compatible* input port within `PORT_DROP_RADIUS_PX` (36 screen px,
+  constant across zoom) via a window-level `pointerup`, one code path for
+  mouse and finger. The old drag tests passed green because they stubbed
+  `setPointerCapture` over exactly the semantics that were broken.
+- Zooming out on a phone (double-tapping the zoom buttons, since there's no
+  wheel on touch) bubbled to the graph surface's `onDoubleClick` and opened
+  the create-node palette over the graph — `handleSectionDoubleClick` now
+  excludes `.raw-graph-zoom-controls`.
+- `viewport-fit=cover` was missing from the viewport meta — every
+  `env(safe-area-inset-*)` in the app resolved to 0, silently neutering
+  Studio's already-written notch handling. Added, plus safe-area padding to
+  Raw's fixed chrome.
+- `docs/roadmaps/NODE_BACKLOG.md` claims all 27 palette types "work today".
+  At port level only 17 do — `computeNodeOutput` has cases for `value.*`,
+  `math.*` and `time` only; no `geometry`/`texture`/`signal`/`state` output
+  on any node ever carries data. New `src/project/graph/examples/allNodesExample.js`
+  covers the whole palette and lists the unwirable ports as such rather than
+  wiring them to look complete. Reachable from Raw's ⋯ menu.
+- `verify:surfaces` reported ALL CLEAN for `/raw` while actually auditing the
+  sign-in card: `/raw` loads an empty workspace, and editor lanes sit behind
+  `AuthGate`, so with no session the script audited the gate's panel instead
+  of the editor. Now seeds the all-nodes example via `addInitScript`, accepts
+  `--token`, and prints `[AUTH-GATED]` when it lands on a sign-in card
+  instead of silently reporting clean. Tap findings on `/raw` went 2 → 8 once
+  it was actually looking at the editor.
+- **`studio` is now a node.** One palette entry; entering it reveals
+  Outliner + Scene + Inspector as a subgraph (TouchDesigner COMP / Nuke Group
+  pattern). Needed three prerequisite fixes: panel nodes had NO canvas
+  representation as graph cards at all (so a wire into a panel was
+  invisible); entering a node required hover+double-click below 0.5 zoom
+  where a card is a few pixels wide, now a real button; the selection
+  inspector used to cover the node it was inspecting, now a bottom sheet on
+  phones. `view.outliner`/`view.inspector` — type ids both lanes have
+  carried window frames for since they were written — are implemented for
+  the first time.
+
+Verified on a real iPhone 15 Pro at 393px with real CDP touch events; full
+`verify:surfaces` clean across six profiles including 320px.
+
+## Open, carried from the branch's own notes
+
+- Studio-as-node is a **first slice**: assets/code/share/projects panels are
+  still hardcoded chrome (`PublishPanel` alone takes 17 callback props).
+  Two decisions deliberately left open, recorded in
+  `src/project/graph/studioNode.js`: **port promotion** (which interior
+  ports surface on the container) and **live reference vs. frozen snapshot**
+  when a subgraph becomes a palette item.
+- No user-authored node types yet: `NODE_TYPES` is a static module literal
+  with no `registerNodeType`, `node.null` is declared but not placeable,
+  `values.__code` is inert, and `templates[]` exists in the schema with zero
+  consumers.
+
+## 2026-08-06 — Sync-safety pass: rescue, seal, and the structural fix
+
+Full plan at `~/.claude/plans/humming-wiggling-wozniak.md` (not tracked in-repo). Built
+on PR #94's `repo-state.mjs` tooling rather than duplicating it.
+
+- Recovered three sessions' `CURRENT.md` notes that a concurrent rewrite had silently
+  destroyed before their branch merged (found via `git fsck --dangling`) — folded into
+  `PROGRESS.md`. Re-opened one still-genuinely-undone TODO that was lost with them (the
+  Open Space scene zip, never imported).
+- Rescued 263 uncommitted lines sitting in a `/tmp` worktree with no backup → pushed as
+  `fix/inscription-mark-server`. Pushed two branches that existed only on this disk
+  (`feat/timeline-core` had no upstream at all; `feat/raw-studio-node` was mistargeting
+  `origin/dev`, so a bare push from it would have landed straight on `dev`).
+- Built and verified a guard (`checkSafeSource` in `space-sync-vendor.mjs`) against the
+  8-copies-of-the-vendoring-tool hazard — confirmed live, not theoretical: triggered the
+  real downgrade once while testing the unguarded old copy, fixed it, then verified the
+  guarded version refuses the same operation. Added `--release` (write + bump
+  `minEngine` + commit + push per linked repo in one command) — not run for real yet,
+  waiting on this branch merging so a real `dev` checkout can run it.
+- Worktrees 21 → 10 (removed 8 confirmed merged/stale, one of which turned out to hide
+  a third lost session), local branches 55 → 17 (deleted 38 confirmed fully-merged or
+  patch-equivalent — 2 looked like garbage by branch name but had real unmerged work,
+  caught by checking each individually rather than trusting the heuristic).
+- This session-notes protocol itself (`docs/ai/sessions/`, `docs:ai:check` enforcement,
+  the `active_branch: dev` literal check) is the structural fix for the one *confirmed*
+  loss mechanism — everything above was rescue/cleanup around the edges of it.
+
+## 2026-08-06 — `npm run land`, `repo-state.mjs` live-process detection
+
+- `repo-state.mjs`/`repo-state-lib.mjs` (extends PR #94, doesn't duplicate it):
+  `classifyWorktree` (LIVE > UNPUSHED > UNMERGED > STALE > GONE, via `/proc` scan +
+  `git cherry` for squash-merge-aware merge detection), `--brief`/`--sweep`/`--json`.
+  Real bug caught building this: the first live-process pattern matched `vitest run`
+  (one-shot), so a test run in progress got misidentified as a live dev server —
+  happened for real, not hypothetical, fixed and regression-tested.
+- `session-land.mjs`/`session-land-lib.mjs` (`npm run land`): folds `docs/ai/sessions/`
+  notes into `PROGRESS.md`, rewrites `CURRENT.md`'s Last-session to a title list
+  pointing there (full prose never goes in CURRENT.md — the only way to guarantee the
+  50-line budget regardless of how much landed in one batch), deletes the notes, runs
+  the worktree sweep, commits (not pushes). Verified end-to-end in an isolated clone
+  with two fake notes — folding, CURRENT.md rewrite, file deletion, sweep, commit all
+  confirmed correct.
+- Second real bug caught testing `land`: `execFileSync`'s default stderr inheritance
+  leaked "fatal: no upstream configured" straight to the console for an expected,
+  already-handled failure (probing an unpushed branch) — in both `repo-state.mjs` and
+  `space-sync-vendor.mjs`'s `git()` helpers, pre-existing in PR #94's code, not just
+  this branch's additions. Fixed both.
+- Dogfooded the CURRENT.md-untouched rule on this exact branch: my own earlier commits
+  had hand-edited `CURRENT.md` directly, in violation of the rule being written.
+  Reverted rather than grandfathered — see the commit for the full story, including a
+  second bug this surfaced (`origin/dev...HEAD` vs `origin/dev` diff form).
+- `.claude/commands/land.md` added; `recap.md` (from PR #94) rewritten to write session
+  notes instead of editing `CURRENT.md` directly, which is now a `docs:ai:check`
+  violation. `docs/ai/golden_rules.md` and `docs/ai/parallel-agents.md` updated to
+  match — the worktree-location convention (`.claude/worktrees/`, not `../di.iiii-*`)
+  is now stated as the rule, not "either is fine".
+
+## 2026-08-06 — Vendor drift gets a check that can actually fail
+
+- `scripts/space-sync-selfcheck.mjs` (vendored as `sync-space-check.mjs`): fetches
+  di.iiii's real upstream engine over HTTPS (public repo, no token), byte-compares,
+  asserts `minEngine` matches. Never skips on a fetch failure — that was the exact flaw
+  in the tool it replaces. Live-tested against br_id_ge's real current state: correctly
+  caught the actual `minEngine: 5` vs vendored `v6` drift that's been sitting there all
+  session, plus byte-mismatch and missing-file failure modes, all verified for real.
+- `docs/templates/vendor-check.yml`: the CI workflow that runs it, in the LINKED repo's
+  own CI (di.iiii's CI structurally can't see a linked repo's copy — that inversion is
+  the actual fix). `--release` now writes both alongside the engine.
+- Second real dry-run bug, same shape as `land`'s: `--release --dry-run` was calling the
+  new file-writer unconditionally before checking the flag, so a "preview" silently
+  wrote files to disk. Caught by actually running it against a scratch directory, not
+  by inspection. Fixed, regression-tested (3 cases: dry-run writes nothing, a real run
+  writes everything, a second real run is idempotent).
+- `space-sync.test.js`: di.iiii's own spaces' `minEngine` now asserted strictly equal
+  to `ENGINE_VERSION` (was `<=`) — these are declared in the same repo as the engine,
+  no excuse for lagging the way a linked repo briefly can.
+- `docs/ai/space-sync-vendoring.md` added (full reference); `golden_rules.md`'s
+  vendoring rule updated to `npm run space:sync:release` and a new rule on why a
+  checked-out worktree is a runnable copy of every tool, not just source code.
+
+## 2026-08-06 — The real fix, landed for real, in all 3 linked repos
+
+- `br_id_ge`: `minEngine` 5→6, engine v6 committed, `sync-space-check.mjs` +
+  `vendor-check.yml` added, `sync-space.yml` gated on it. Pushed to `main`. **Both the
+  new vendor-check AND the existing production sync workflow ran and passed for
+  real on GitHub Actions** — content unchanged, tooling only, verified green.
+- `beyond_form`: same fix, plus `di-space.space.json` committed for the first time
+  (was untracked since the repo was linked — no history at all until this commit).
+  Pushed. **This repo's first CI run ever, passed.**
+- `platform_recordar`: same fix, committed. No remote — this repo's permanent state,
+  documented in a new `AGENTS.md` (had none) as a deliberate `KNOWN_EXCEPTIONS` entry
+  rather than a silent gap.
+- Each repo's own pre-existing uncommitted work (br_id_ge's real session notes in
+  `CURRENT.md`; a `DEFAULT_LIVE_URL`-removal edit in both `beyond_form` and
+  `platform_recordar`'s `di-space.json`) deliberately left untouched and unstaged —
+  not mine, not this task's scope.
+
+- `~/di-spaces` investigated: a genuinely separate system (nightly pull-based backup +
+  guarded disaster-restore, `--force-prod` required for a prod write), not an
+  unexamined duplicate of the editing path — it already documents the boundary in its
+  own README. Cross-referenced from `docs/ai/space-sync-vendoring.md` so the boundary
+  is visible from both sides, no code changes needed.
+
+**Plan complete** except: consolidating to one canonical di.iiii checkout, blocked on
+`di.iiii-algomerge`'s active work (check `npm run state` before attempting it), and the
+human-triage branch list from the P0/P1 worktree cleanup (`fix/audit-gaps`,
+`feat/inscription-mark` — overlaps `fix/inscription-mark-server`, `fix/space-sync-engine`,
+`fix/wcc-degenerate-lock-deltas`, `feat/raw-studio-node`, `feat/timeline-core`,
+`chore/github-oauth-env-wiring`'s 4 real unmerged walker fixes, `feat/algovrithm`'s 1
+unmerged hook-path fix) — land, park, or drop, one call each, not this session's to make.
+
+## 2026-08-06 — A third CURRENT.md casualty, found while cleaning up worktrees (2026-07-15 session)
+
+**Why this entry exists:** the `nginx-header-fix` worktree (branch `feat/brand-refresh`,
+PR #65, squash-merged into `dev` weeks ago) was marked safe to remove, but carried one
+uncommitted `CURRENT.md` edit — not a stray edit, an entire session's real notes that
+never made it anywhere else. Recovered before removing the worktree, same pattern as
+the other two entries below.
+
+- **A real prod bug, found and fixed**: nginx's `add_header` directive does not
+  inherit into a location block that sets its own `add_header` — so all 3 security
+  headers were silently dropped on every real route despite being declared once at
+  server level. Fixed by repeating them per location block (confirmed still live:
+  `nginx.conf` carries 18 `add_header` lines today, one set per block).
+- **VPS cutover confirmed and hardened**: prod fully on the Hetzner VPS
+  (Docker + Caddy), cPanel demoted to a manual-dispatch fallback only (auto-trigger
+  removed, host left intact, decommission timeline undecided). Closed direct
+  port-8080 exposure (Caddy-only), rotated `ADMIN_API_TOKEN`, added nightly SQLite
+  `VACUUM INTO` backups (14d retention), fail2ban, SSH password auth disabled, Docker
+  log rotation.
+- Merged 5 repo-improvement PRs (#57–#62): GitHub OAuth env wiring, Docker resource
+  limits, nginx compression/caching, a GHCR+SSH deploy pipeline scaffold (left inert,
+  needs secrets), serverXR structured logging.
+- GitHub cleanup (#63): 16 stale branches deleted, old PRs closed/retargeted, ~562
+  dead lines stripped from `mobile-shell.css`.
+- Shipped a branding refresh (#65): real favicons/OG-image/wordmark replacing a
+  placeholder text SVG; GitHub social preview image uploaded manually (no API).
+- **WCC mouse-look reopened**: a user report that it was still broken live despite an
+  earlier merged fix. This session ruled out a routing-pattern cause (WCC shares the
+  same walker code as every other published space) and couldn't reproduce via
+  `input-check.mjs` (its debug hook is dev-only, stripped from prod), and was left
+  waiting on a concrete repro. **Later resolved** — three separate mouse-look root
+  causes were subsequently found and fixed (see `docs/ai/known-fixes.md`: a silent
+  `reloadDocument()` failure blocking input behind an invisible overlay; drag-look
+  sensitivity mistuned 3x too gentle for non-pointer-lock users; a spawn effect
+  replacing `playerRef.current` instead of mutating it, orphaning the mouse-look
+  listeners' closure). None reference this session, so the link was only visible by
+  reading both.
+- Still open at the time, unclear if since resolved: `self-host` and
+  `claude/di-iiii-new-space-kbywad` branches were deliberately left undeleted pending
+  a human call — both still exist as of 2026-08-06, worth a decision.
+
+## 2026-08-06 — Two sessions' CURRENT.md notes, recovered from unreachable commits
+
+**Why this entry exists:** a forensic pass (`git fsck --dangling`) found that two
+concurrent sessions on 2026-08-05/06 each wrote real notes into `CURRENT.md`, and a
+third, later session on a different branch overwrote the whole file (per its own
+"replace, don't append" convention) before either had merged into `dev`. No code was
+lost — only these notes, which existed nowhere else. Recovered via `git show <sha>:CURRENT.md`
+and folded in here rather than restored to CURRENT.md itself, since neither describes
+`dev`'s current state. This is also the concrete case study behind the CURRENT.md
+race fix below (session notes now live in `docs/ai/sessions/`, one file per branch,
+so they can't be overwritten by a concurrent branch again).
+
+**From `bb9db2b4` (2026-08-06, "the audit's leftovers" session):**
+- The Open Space scene is designed and rendered but **still not applied** — the
+  scene-ops write was denied by the tool permission classifier, so it exists only as
+  `/home/nooo/open-space.dii-project.zip` (import at `/open?ui=show` → Load Scene;
+  import replaces the whole scene). **Still an open TODO** — re-added to CURRENT.md's
+  Open section.
+- A parallel tools survey hit its session limit — only the realtime-audio and
+  observability strands returned results; 3D/XR, creative-coding, infra, video and ML
+  strands still need re-running.
+
+**From `71a729e1` (2026-08-05, `feat/timeline-core` session recap):**
+- Algovrithm's art was separated from its tool: `AlgoVrithmExperience` cut from 747 to
+  404 lines (playback + fullscreen + VR/AR only, no editor); the editor moved to
+  `src/raw/director/` and became a tool that takes a piece descriptor (`pieces.js` is
+  the only file that knows algovrithm exists).
+- Two new Raw nodes, `view.director` and `view.timeline`, verified in a real browser.
+  Node types can now declare `defaultFrame` — without it the director opened at
+  360×280 and cropped.
+- `src/project/timeline/timelineCore.js`: a frame-exact shared core merging
+  algoVrithm's ops with cutlab's discipline, 30 tests, cross-checked against cutlab's
+  33-shot REVÓ EDL (966 frames, matches MLT).
+- Same-day parallel session: a crash had left a zero-length commit object under HEAD,
+  repaired, with `core.fsync=loose-object,...` set globally so it can't recur; the
+  GitHub App was found never wired after the cPanel→VPS move (not a stale key — never
+  configured); a manual `docker compose up -d` could silently downgrade a host because
+  `:latest`/`:staging` resolve against the local image cache; br_id_ge staging sync had
+  been silently skipping staging for lack of `DI_SPACE_TOKEN_STAGING` and reporting
+  success anyway.
+- `feat/timeline-core` itself is still unpushed at the time of this recap (later pushed
+  to `origin/feat/timeline-core` in the 2026-08-06 sync-safety session below) — 5
+  commits, not yet landed on `dev`; branched before the phone keyboard-scroll fix, so
+  it still carries the old two-corner chrome and needs a deliberate merge, not a fast-
+  forward (`chromeLayout.test.js` catches the regression if it lands carelessly).
+
 ## 2026-08-04 (second session) — A dead repo, a feature that was off for three weeks, and the flaky suite pinned down
 
 **Who:** Claude ("analyze it, look what's left" → "fix all things"). Pushed to

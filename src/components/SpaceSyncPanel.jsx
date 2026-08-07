@@ -82,13 +82,13 @@ export default function SpaceSyncPanel({ spaceId, className = '' }) {
         : `local · ${local?.objects ?? 0} objects`
 
     return (
-        <div className={`beta-hub-sync-row ${className}`} role="region" aria-label="Live sync">
-            <span className={`beta-hub-sync-msg beta-hub-sync-msg--${state}`}>
+        <div className={`space-sync-row ${className}`} role="region" aria-label="Live sync">
+            <span className={`space-sync-msg space-sync-msg--${state}`}>
                 {message || defaultMessage}
             </span>
             <button
                 type="button"
-                className="beta-hub-sync-btn"
+                className="space-sync-btn"
                 onClick={() => run('pull')}
                 disabled={state === BUSY}
                 title="Get the latest version from the live server"
@@ -97,7 +97,7 @@ export default function SpaceSyncPanel({ spaceId, className = '' }) {
             </button>
             <button
                 type="button"
-                className="beta-hub-sync-btn"
+                className="space-sync-btn"
                 onClick={() => run('push')}
                 disabled={state === BUSY}
                 title="Publish your local version to the live server"

@@ -117,6 +117,17 @@ describe('getRawWorldBackgroundColor', () => {
         expect(getRawWorldBackgroundColor(document, null, { scopeId: 'root', worldNode })).toBe('#663399')
     })
 
+    it('a wire into the world node\'s own bgColor input overrides its static value', () => {
+        const document = { worldState: { backgroundColor: '#05070a' }, nodes: [] }
+        const colorNode = createNode('value.color', { id: 'color-1', values: { value: '#663399' } })
+        const worldNode = createNode('universe.world', { id: 'world-1', values: { bgColor: '#000000' } })
+        const graphContext = createNodeGraphContext({
+            nodes: [colorNode, worldNode],
+            edges: [createEdge('color-1', 'out', 'world-1', 'bgColor')]
+        })
+        expect(getRawWorldBackgroundColor(document, graphContext, { scopeId: 'root', worldNode })).toBe('#663399')
+    })
+
     it('with multiple world.background siblings in one scope, uses the one marked active', () => {
         const document = {
             nodes: [

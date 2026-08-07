@@ -695,7 +695,7 @@ function registerSpaceRoutes(router, {
       // A scrubbed file no longer hashes to the id the client computed from the
       // original, so its requested id is moot — the content address is
       // recomputed below and returned. Callers already remap ids from the
-      // response (bundle import in StudioEditor/BetaHub does exactly this).
+      // response (bundle import in StudioEditor/RawHub does exactly this).
       // Anything we did NOT rewrite keeps the strict check unchanged.
       if (req.body?.assetId && !scrub.scrubbed) {
         const requested = String(req.body.assetId).trim()

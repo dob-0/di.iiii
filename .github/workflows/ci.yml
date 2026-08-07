@@ -81,6 +81,16 @@ jobs:
       - name: Check three-vendor chunk allowlist
         run: npm run check:three-vendor
 
+      # docs:ai:check diffs CURRENT.md against origin/dev to enforce that only
+      # `npm run land` writes it (see docs/ai/sessions/README.md) -- needs dev's
+      # history reachable, which the default shallow checkout doesn't have on a
+      # pull_request run. Cheap (depth 50, not full history); the check itself
+      # degrades to a no-op if this fetch fails, same shallow-guard shape as its
+      # existing freshness check.
+      - name: Fetch base ref for docs checks
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags --depth=50 origin ${{ github.base_ref }}
+
       - name: Check AI docs
         run: npm run docs:ai:check
 

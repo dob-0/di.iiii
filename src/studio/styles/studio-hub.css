@@ -49,6 +49,26 @@
 .sh-btn-new:hover { background: #fff; }
 .sh-btn-new:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* Same box model as .sh-btn-new, outlined instead of filled — a second
+   top-row action (Raw) that isn't the primary "create" CTA but still
+   deserves more weight than a .sh-link in the secondary row. */
+.sh-btn-outline {
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: transparent;
+    color: var(--di-cyan);
+    border: 1px solid var(--di-cyan-border);
+    padding: 6px 17px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: background 0.1s, border-color 0.1s;
+    border-radius: 0;
+    font-family: inherit;
+    flex-shrink: 0;
+}
+
+.sh-btn-outline:hover { background: rgba(77, 249, 255, 0.08); border-color: var(--di-cyan); }
+
 .sh-new-form {
     display: flex;
     align-items: center;
@@ -80,6 +100,13 @@
 }
 
 .sh-btn-cancel:hover { opacity: 1; }
+
+.sh-top-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
 
 /* ─── SECONDARY ROW ────────────────────────────────────────── */
 .sh-secondary-row {

@@ -42,6 +42,11 @@ behaviour. 320px still exists. Landscape is its own layout.
    rotate, arrive at the bare URL with no query string.
 4. Exercise what the UI *claims*. If the help dialog advertises a shortcut,
    press it. If a hint says "tap to…", tap.
+5. On any toolbar/header, also run `npm run check:toolbar-overlap` (see the
+   `ui-overlap-stress-test` skill) — `verify:surfaces` only catches elements
+   escaping the *viewport*; it does not catch two siblings colliding with each
+   other while both stay inside it, which is exactly how Raw's topbar shipped
+   broken at ~890px on 2026-08-06.
 
 ## Reporting
 

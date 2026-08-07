@@ -29,6 +29,8 @@
 import { chromium, devices } from 'playwright'
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { buildAllNodesExample } from '../src/project/graph/examples/allNodesExample.js'
+import { normalizeProjectDocument } from '../src/shared/projectSchema.js'
 
 const arg = (name, fallback = null) => {
   const i = process.argv.indexOf(`--${name}`)
@@ -45,6 +47,24 @@ const SETTLE_MS = Number(arg('settle', 7000))
 
 // Default surfaces: one per thing a visitor can actually reach.
 const PAGES = String(arg('pages', '/,/wiki,/studio,/main,/raw')).split(',').filter(Boolean)
+
+// /raw is the local node workspace, and it opens EMPTY. Every graph-editor
+// defect therefore sat outside this tool's reach even though the route was
+// listed: there were no nodes, no ports and no wires on the page to audit.
+// Seeding the workspace with the all-nodes example puts the whole registry on
+// screen before the audit runs. --no-seed-raw restores the empty-editor pass.
+const SEED_RAW = !arg('no-seed-raw', false)
+// Editor lanes sit behind AuthGate. Without a session the audit silently
+// inspects the sign-in card instead of the editor and reports ALL CLEAN — a
+// perfect example of the silent-failure class this script exists to catch.
+// Pass --token (or VERIFY_API_TOKEN) to sign in first; the run then says which
+// routes were audited signed-out so a clean result can never be misread.
+const API_TOKEN = arg('token', null) || process.env.VERIFY_API_TOKEN || null
+const RAW_WORKSPACE_KEY = 'dii.localNodeWorkspace.main'
+const rawSeedDocument = () => {
+  const { nodes, edges } = buildAllNodesExample({ workspaceTop: 64 })
+  return normalizeProjectDocument({ nodes, edges })
+}
 
 // The shapes that break: narrowest phone still in use, a tall notched phone,
 // Android, a tablet, and one landscape (rotation is its own layout).
@@ -123,6 +143,19 @@ const main = async () => {
   for (const [profileName, profile] of PROFILES) {
     for (const route of PAGES) {
       const ctx = await browser.newContext(profile)
+      // ctx.request shares the context's cookie jar, so this session cookie is
+      // the one the page will carry.
+      let authState = 'signed-out'
+      if (API_TOKEN) {
+        try {
+          const res = await ctx.request.post(`${BASE}/serverXR/api/auth/session`, {
+            data: { token: API_TOKEN }
+          })
+          authState = res.ok() ? 'signed-in' : `auth-failed(${res.status()})`
+        } catch (e) {
+          authState = 'auth-error ' + String(e.message).slice(0, 60)
+        }
+      }
       const page = await ctx.newPage()
       const pageErrors = [], consoleErrors = [], httpErrors = [], htmlAssets = []
 
@@ -136,6 +169,17 @@ const main = async () => {
           if (/text\/html|application\/xhtml/i.test(ct)) htmlAssets.push(`${url.slice(0, 90)} -> ${ct}`)
         }
       })
+
+      // /raw is the local node workspace and it loads EMPTY, so every graph
+      // defect — 8px port dots, wires that cannot be dragged with a finger,
+      // panel windows wider than the screen — was outside this tool's reach
+      // even though the route was in the list. Seed the workspace's own
+      // localStorage before first paint so the audit sees a populated editor.
+      if (SEED_RAW && /(^|\/)raw\/?$/.test(route)) {
+        await page.addInitScript(({ key, doc }) => {
+          try { window.localStorage.setItem(key, JSON.stringify(doc)) } catch { /* private mode */ }
+        }, { key: RAW_WORKSPACE_KEY, doc: rawSeedDocument() })
+      }
 
       let nav = 'ok'
       try { await page.goto(BASE + route, { waitUntil: 'load', timeout: 45000 }) }
@@ -252,8 +296,16 @@ const main = async () => {
         problems.push(`viewport-meta ${audit.viewportMeta}`)
       }
 
-      results.push({ profileName, route, nav, audit, frames, covered, problems, htmlAssets })
-      console.log(`${problems.length ? 'XX' : 'ok'} ${profileName.padEnd(20)} ${route.padEnd(18)} vw=${audit.vw} ovf=${audit.overflow} taps<32=${(audit.smallTaps || []).length}`)
+      // Did we actually reach the surface, or just its sign-in card? A clean
+      // audit of AuthGate looks identical to a clean audit of the editor.
+      const gated = await page.evaluate(() => Boolean(
+        [...document.querySelectorAll('button')]
+          .some((b) => /^(sign in|open the public view)$/i.test((b.innerText || '').trim()))
+      )).catch(() => false)
+      if (gated) problems.push(`AUTH-GATED (${authState}) — audited the sign-in card, not the surface`)
+
+      results.push({ profileName, route, nav, audit, frames, covered, problems, htmlAssets, authState, gated })
+      console.log(`${problems.length ? 'XX' : 'ok'} ${profileName.padEnd(20)} ${route.padEnd(18)} vw=${audit.vw} ovf=${audit.overflow} taps<32=${(audit.smallTaps || []).length}${gated ? '  [AUTH-GATED]' : ''}`)
       for (const p of problems) console.log(`     ! ${p}`)
       await ctx.close()
     }

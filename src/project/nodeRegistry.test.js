@@ -260,7 +260,14 @@ describe('getNodeInputs / getNodeOutputs', () => {
     it('returns type-level ports for standard nodes', () => {
         const node = createNode('geom.cube')
         expect(getNodeInputs(node).map(p => p.id)).toContain('color')
-        expect(getNodeOutputs(node).map(p => p.id)).toContain('out')
+        expect(getNodeOutputs(node).map(p => p.id)).toContain('bounds')
+    })
+
+    it('exposes a texture input on geom.plane distinct from textureUrl, for a live source like source.webcam', () => {
+        const node = createNode('geom.plane')
+        const inputIds = getNodeInputs(node).map(p => p.id)
+        expect(inputIds).toContain('texture')
+        expect(inputIds).toContain('textureUrl')
     })
 
     it('returns instance portDefs for null nodes', () => {
@@ -281,7 +288,7 @@ describe('getNodeInputs / getNodeOutputs', () => {
 describe('unimplemented node types', () => {
     it('withholds types with nothing behind them from the palette', () => {
         const offered = listNodeTypes().map((type) => type.id)
-        for (const id of ['source.webcam', 'device.midi.in', 'stream.compositor', 'universe.link']) {
+        for (const id of ['source.ar', 'device.midi.in', 'stream.compositor', 'universe.link']) {
             expect(offered).not.toContain(id)
         }
     })
@@ -290,7 +297,8 @@ describe('unimplemented node types', () => {
         const offered = listNodeTypes().map((type) => type.id)
         for (const id of [
             'value.number', 'math.add', 'geom.cube', 'world.light',
-            'universe.world', 'view.image', 'view.browser', 'time'
+            'universe.world', 'view.image', 'view.browser', 'time',
+            'source.webcam', 'source.mic'
         ]) {
             expect(offered).toContain(id)
         }
@@ -305,7 +313,7 @@ describe('unimplemented node types', () => {
 
     it('can list them explicitly, for the backlog', () => {
         const all = listNodeTypes({ includeUnimplemented: true }).map((type) => type.id)
-        expect(all).toContain('source.webcam')
+        expect(all).toContain('source.ar')
         expect(all.length).toBeGreaterThan(listNodeTypes().length)
     })
 

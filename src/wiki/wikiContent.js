@@ -397,50 +397,76 @@ export const WIKI_ARTICLES = [
         id: 'open-inscriptions',
         category: 'Spaces & access',
         title: 'Open inscriptions',
-        summary: 'A public space can opt in to anonymous, append-only inscriptions — visitors add one line of text to the scene, nothing else.',
+        summary: 'A public space can opt in to anonymous, append-only inscriptions — visitors add one line of text, and optionally one drawing, to the scene.',
         body: [
             'Open inscriptions let an artwork or event page write a visitor’s answer into a di.iiii space without accounts or tokens (built for br_id_ge’s vi.ritual: complete the rite, and your inscription becomes a persistent object in the space).',
             { list: [
                 'Opt-in per space: PATCH /api/spaces/:id with { "openInscriptions": true } (owner or admin). The space must also be public.',
-                'Visitors POST /api/spaces/:id/inscriptions with { name, word } — the server itself builds a single sanitized text object (insc-…) and appends it to the scene. Update and delete are impossible on this path; the generic ops route stays fully gated.',
+                'Visitors POST /api/spaces/:id/inscriptions with { name, word } — the server itself builds a single sanitized text object (insc-…) and appends it to the scene. Arbitrary ops are impossible on this path; the generic ops route stays fully gated.',
+                'Creating an inscription returns a one-time proof. Only its sha256 is stored, so the visitor — and nobody else — can DELETE /api/spaces/:id/inscriptions/:inscId to unmake exactly their own crossing. Inscriptions made before proofs existed cannot be unmade this way.',
+                'An inscription may also carry a mark: the drawing the visitor made, as an opaque m1.… token (base64url, capped). The server validates its shape and never parses it, so a viewer can render the line that was actually drawn instead of a shape derived from the id. A malformed or oversized mark is dropped and the inscription still succeeds — a drawing can never cost someone the crossing.',
+                'PUT /api/spaces/:id/inscriptions/:inscId/mark with { proof, mark } replaces the mark afterwards (the same authority that unmakes a crossing, writing that one property and nothing else) — for pages where the drawing is made after the inscription was already sent.',
                 'Rate-limited per client, capped at 999 inscriptions per space; setting allowEdits=false pauses new inscriptions instantly, and restore-snapshot remains the recovery path.'
             ] }
         ],
         tags: ['inscriptions', 'spaces', 'public', 'br_id_ge'],
-        updated: '2026-07-12'
-    },
-    {
-        id: 'beta-lane',
-        category: 'Editing',
-        title: 'Beta: the experimental node-first editor',
-        summary: 'Beta is a second, experimental editor lane at /<space>/beta — node-first project documents, for research-style iteration alongside Studio.',
-        body: [
-            'Studio is the main, stable editor. Beta is a separate lane at /<space>/beta for the same space’s projects, built around a recursive, node-first document model instead of Studio’s window/entity model — it’s where node-based and research-style editor work happens.',
-            { list: [
-                'Reached directly by URL at /<space>/beta (protected the same way as Studio — sign-in required for non-public spaces). The Studio hub and admin views now link to Raw instead — Beta stays reachable but is no longer promoted.',
-                'Beta and Studio share the same underlying projects and persistence, but the two editors are not drop-in equivalents — a project built with one lane’s assumptions may not look or behave identically in the other.',
-                'Expect it to be less polished and to change more often than Studio: it is where new node-first ideas get tried before (if ever) they inform Studio.'
-            ] }
-        ],
-        tags: ['beta', 'nodes', 'editor', 'experimental'],
-        updated: '2026-08-01'
+        updated: '2026-08-05'
     },
     {
         id: 'raw-lane',
         category: 'Editing',
         title: 'Raw: free-form node nesting',
-        summary: 'Raw is the experimental editor lane at /<space>/raw — forked from Beta, with free-form nesting: any node can contain a graph, and worlds open fullscreen.',
+        summary: 'Raw is di.iiii’s node-first editor lane at /<space>/raw, with free-form nesting: any node can contain a graph, and worlds open fullscreen.',
         body: [
-            'Raw is the newest experimental lane, forked from Beta in July 2026 and now the one promoted from the landing page (/open/raw to try it as a guest). Its core idea is free-form nesting: no node type is a singleton, and any node can be entered to author a graph inside it.',
+            'Raw is di.iiii’s node-first editor, promoted from the landing page (/open/raw to try it as a guest). Its core idea is free-form nesting: no node type is a singleton, and any node can be entered to author a graph inside it.',
             { list: [
                 'Reached from a space at /<space>/raw (same sign-in rules as Studio); /open/raw opens it on the communal open space.',
                 'Enter any node with its “Enter ›” button; the breadcrumb tracks your depth and Escape steps back out one level at a time.',
                 'Entering a World node opens its 3D viewport fullscreen; the ← World button in the topbar drops back to the graph.',
-                'The palette only lists node types that actually compute or render — anything still marked “authoring only” is a declared-but-unbuilt placeholder.'
+                'The palette only lists node types that actually compute or render — anything still marked “authoring only” is a declared-but-unbuilt placeholder.',
+                'Webcam is the first real capture node: it asks for camera permission, shows a live preview on the node itself (with a visible message if access is denied or no camera is found), and its Frame output can be wired into a Plane’s Texture input to project the live feed onto geometry.',
+                'Microphone is the second: it shows a live level meter on the node itself, and its Volume/Frequency outputs update continuously for anything wired to read them.'
             ] }
         ],
-        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting'],
-        updated: '2026-08-01'
+        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone'],
+        updated: '2026-08-06'
+    },
+    {
+        id: 'studio-node',
+        category: 'Editing',
+        title: 'The Studio node: an editor you can place in a graph',
+        summary: 'Studio is one entry in Raw’s palette. Place it like any other node, enter it, and you find the panels it is assembled from — the same container idea you would use to build your own node later.',
+        body: [
+            'In Raw’s palette, Studio sits next to Color, Browser and Cube. Placing it gives you a single card on the canvas. Entering that card — the “›” control on its header — takes you inside, where you find the nodes it is made of: an Outliner, a Scene, and an Inspector. It is one node from the outside and a graph from the inside.',
+            'This is the same shape TouchDesigner uses for a Component and Nuke uses for a Group: a container whose contents are a normal subgraph. That is the point of building it this way rather than hard-wiring Studio into the editor — the mechanism that makes Studio a node is the mechanism that will let you wrap your own patch into a palette item and place it beside the built-in ones.',
+            { list: [
+                'Every node in a scope now appears on the canvas, panels included. Previously a panel existed only as a floating window, so you could not select, move, wire or delete it from the graph, and a wire feeding a panel was invisible even though it was carrying a value.',
+                'A panel window and its card are two views of one node: close the window and the card remains; open it from the Windows menu and the panel comes back.',
+                'Studio’s panels start closed so that entering the node shows you its graph rather than three windows over it.'
+            ] },
+            'What is not there yet: Studio’s other panels — assets, code, share, projects — are still hardcoded chrome rather than nodes, because their bodies need a large amount of editor state that has not been re-plumbed yet. Two design questions are also deliberately still open: which of a container’s inner ports should show on the outside, and whether a saved palette item stays linked to the graph it came from or becomes a frozen copy.'
+        ],
+        tags: ['raw', 'studio', 'nodes', 'container', 'palette', 'nesting', 'touchdesigner'],
+        updated: '2026-08-06'
+    },
+    {
+        id: 'raw-on-a-phone',
+        category: 'Editing',
+        title: 'Raw on a phone: wiring nodes with a finger',
+        summary: 'The Raw graph editor is usable on touch — pinch to zoom, drag between ports to wire, and an All Nodes Example that puts the whole palette in one graph.',
+        body: [
+            'The graph editor was previously mouse-only in a way no amount of zooming could work around: starting a wire on an output port captured the pointer, so the release never reached the input port under your finger and no connection could be made. Dragging between ports now works the same way on a phone as on a desktop.',
+            { list: [
+                'Drag from an output port to an input port to wire them. You do not have to land exactly on the dot — the drop snaps to the nearest port that accepts that type, within a finger’s width, so a small miss still connects.',
+                'Pinch with two fingers to zoom and pan the canvas at the same time. The zoom buttons in the bottom-left corner do the same thing in steps.',
+                'Opening a graph fits it to the screen instead of dropping you at 100% somewhere inside it, so you can see the whole patch before choosing where to work.',
+                'Tap a wire to delete it — the tap area is much wider than the line you see.',
+                'Panel windows (World, Text, Browser, Image) shrink to fit the screen rather than running off the edge.'
+            ] },
+            'The overflow menu (⋯) has an All Nodes Example: one graph containing every node type the palette can create, with a clock driving a chain of maths into a pulsing sphere, a colour crossfade on a cube, and a breathing light. It is the quickest way to see what the node system can currently do — and it is deliberately honest about what it cannot: geometry, texture and signal outputs are declared on several node types but are not computed yet, so those ports are left unwired rather than connected to look complete.'
+        ],
+        tags: ['raw', 'nodes', 'mobile', 'touch', 'phone', 'example', 'editor'],
+        updated: '2026-08-06'
     },
     {
         id: 'br-id-ge',

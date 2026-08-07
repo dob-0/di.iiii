@@ -330,6 +330,10 @@ const PUBLIC_CORS_ROUTES = [
   { pattern: /\/api\/spaces\/[a-z0-9_-]+\/inscriptions\/?$/, methods: 'POST, OPTIONS' },
   // self-unmake of a single inscription (proof-gated DELETE — see inscriptionRoutes)
   { pattern: /\/api\/spaces\/[a-z0-9_-]+\/inscriptions\/insc-[A-Za-z0-9-]+\/?$/, methods: 'DELETE, OPTIONS' },
+  // the mark a crossing carries, changed after the fact (proof-gated PUT). Same
+  // authority as the unmaking above and reachable from the same places — a rite
+  // running on a mirror or an installation laptop is cross-origin to the field.
+  { pattern: /\/api\/spaces\/[a-z0-9_-]+\/inscriptions\/insc-[A-Za-z0-9-]+\/mark\/?$/, methods: 'PUT, OPTIONS' },
   // space scene reads — the field viewer fetches its own space's scene from
   // inside the sandboxed preview (opaque origin); private spaces still 401
   { pattern: /\/api\/spaces\/[a-z0-9_-]+\/scene\/?$/, methods: 'GET, HEAD, OPTIONS' }
