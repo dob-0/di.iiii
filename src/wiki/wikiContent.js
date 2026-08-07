@@ -528,12 +528,39 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['algovrithm', 'vr', 'webxr', 'three.js', 'linked-space', 'code', 'lighting', 'spatial-audio'],
         updated: '2026-08-05'
+    },
+    {
+        id: 'di-cli-local',
+        category: 'Getting started',
+        title: 'Run di.iiii on your own machine',
+        summary: 'One line installs di.iiii locally. Your work lives on your disk, and it keeps working with no internet.',
+        body: [
+            'di.iiii does not have to be somewhere you go. One line puts the whole thing on your own machine, with your spaces in a folder you own, and after the install it never needs the network again.',
+            { list: [
+                'macOS and Linux — curl -fsSL https://di-studio.xyz/get | sh',
+                'Windows (PowerShell) — irm https://di-studio.xyz/get.ps1 | iex'
+            ] },
+            'Then type di up. It starts, opens in your browser, and you are in a Studio that looks exactly like the one online, with an empty Main Space waiting. di down stops it. di help lists the rest.',
+            'This is meant for a laptop at a venue with bad wifi, a studio that would rather not keep its work on someone else’s server, and anyone who wants the piece to still open in ten years. Offline is the normal state, not a broken one: nothing phones home, and the page loads no fonts or scripts from anywhere else.',
+            'Your work lives in a folder called .di in your home directory, deliberately kept apart from the app itself — so updating, rolling back, or removing di.iiii cannot touch it. di uninstall says as much, and leaves your spaces where they are.',
+            { list: [
+                'di backup — writes your whole di.iiii to one file you can carry to another machine',
+                'di restore — reads one back in',
+                'di update — installs the newest version, and never touches your work; di update --rollback returns to the one before',
+                'di status — what is running, on which address, and how much space your work takes',
+                'di doctor — what this machine can and cannot do, and what to install if something is missing'
+            ] },
+            'It does not need admin rights, and it does not ask for a password. If the machine has Docker running it will use it; otherwise it runs as a single ordinary program, and if there is no suitable Node it quietly fetches its own rather than sending you away.',
+            'Syncing a local space with di-studio.xyz is not here yet — for now, di backup and the space bundles on the Spaces page are how work moves between the two.'
+        ],
+        tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup'],
+        updated: '2026-08-08'
     }
 ]
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['br-id-ge', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

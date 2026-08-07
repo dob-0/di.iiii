@@ -1,0 +1,224 @@
+# The stranger's-machine test.
+#
+# Everything else in CI checks the code. This checks the thing an artist
+# actually does: paste one line onto a machine that has never seen di.iiii.
+# Every job below is a genuinely clean root filesystem and HOME.
+#
+# The three bugs this was written after all had one thing in common — the unit
+# tests were green and the product did not work. A hidden install directory
+# 404'd the whole app, a vendored node had no npm beside it, and nodejs.org has
+# no musl build. None of those are visible from inside the repo.
+
+name: install matrix
+
+on:
+  pull_request:
+    paths:
+      - 'install.sh'
+      - 'install.ps1'
+      - 'scripts/di/**'
+      - 'scripts/pack-runtime.mjs'
+      - 'serverXR/src/index.js'
+      - 'serverXR/src/config.js'
+      - '.github/workflows/install-matrix.yml'
+  push:
+    branches: [dev, main]
+    paths:
+      - 'install.sh'
+      - 'install.ps1'
+      - 'scripts/di/**'
+      - 'scripts/pack-runtime.mjs'
+  workflow_dispatch:
+
+jobs:
+  pack:
+    name: pack the runtime
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run di:pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: di-runtime
+          path: dist-runtime/
+          retention-days: 3
+
+  linux:
+    name: ${{ matrix.name }}
+    needs: pack
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # No node, no docker — exercises the vendored-node path end to end.
+          - { name: 'debian 12', image: 'debian:12', prep: 'apt-get update -qq && apt-get install -y -qq curl ca-certificates' }
+          - { name: 'ubuntu 24.04', image: 'ubuntu:24.04', prep: 'apt-get update -qq && apt-get install -y -qq curl ca-certificates' }
+          - { name: 'fedora 40', image: 'fedora:40', prep: 'dnf install -y -q curl' }
+          # busybox ash + musl. This is the job that catches bashisms, and the
+          # one that found nodejs.org's missing musl build. libstdc++/libgcc are
+          # what the musl node needs — the installer says so when they are
+          # absent, and this proves the sentence it prints is true.
+          - { name: 'alpine 3.20 (musl)', image: 'alpine:3.20', prep: 'apk add --no-cache curl bash libstdc++ libgcc' }
+          # A node that is present but below the floor: must download its own
+          # rather than boot and die on node:sqlite.
+          - { name: 'node 20 (too old)', image: 'node:20-bookworm', prep: 'true' }
+          - { name: 'node 22 (happy path)', image: 'node:22-bookworm', prep: 'true' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: di-runtime
+          path: dist-runtime
+
+      - name: prepare the machine
+        run: ${{ matrix.prep }}
+
+      - name: install
+        run: |
+          set -eu
+          VERSION=$(node -p "require('./package.json').version" 2>/dev/null || echo '')
+          if [ -z "$VERSION" ]; then VERSION=$(ls dist-runtime/di-runtime-*.tar.gz | sed 's/.*di-runtime-\(.*\)\.tar\.gz/\1/'); fi
+          DI_INSTALL_ARTIFACT="dist-runtime/di-runtime-$VERSION.tar.gz" \
+          DI_INSTALL_VERSION="$VERSION" \
+          DI_NO_COLOR=1 sh install.sh
+
+      # A fresh login shell is the real PATH test. Running the shim by absolute
+      # path proves only that the file exists.
+      - name: di works in a fresh login shell
+        shell: bash -l {0}
+        run: |
+          set -eu
+          di version
+          di up --port 4300 --no-open
+          di status
+
+      - name: the app is actually served, not just the API
+        run: |
+          set -eu
+          curl -fsS -o /dev/null -w 'health %{http_code}\n' http://127.0.0.1:4300/serverXR/api/health
+          curl -fsS http://127.0.0.1:4300/main | grep -q 'id="root"' || { echo 'GET /main did not return the app'; exit 1; }
+          curl -fsS -o /dev/null http://127.0.0.1:4300/studio
+
+      - name: down releases the port
+        shell: bash -l {0}
+        run: |
+          set -eu
+          di down
+          if curl -fsS -o /dev/null --max-time 3 http://127.0.0.1:4300/serverXR/api/health; then
+            echo 'still listening after di down'; exit 1
+          fi
+
+      - name: uninstall keeps the work
+        shell: bash -l {0}
+        run: |
+          set -eu
+          di uninstall
+          test ! -e "$HOME/.di/bin/di" || { echo 'the binary survived uninstall'; exit 1; }
+          test -d "$HOME/.di/data" || { echo 'uninstall deleted the artist work'; exit 1; }
+
+  offline:
+    # Offline-first is the whole claim. It needs a test that fails when it stops
+    # being true, not a sentence in a README.
+    name: works with the network unplugged
+    needs: pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: di-runtime
+          path: dist-runtime
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: install with the network
+        run: |
+          set -eu
+          VERSION=$(node -p "require('./package.json').version")
+          DI_INSTALL_ARTIFACT="dist-runtime/di-runtime-$VERSION.tar.gz" \
+          DI_INSTALL_VERSION="$VERSION" DI_NO_COLOR=1 sh install.sh
+
+      - name: then take it away
+        run: |
+          set -eu
+          # unshare gives this step a namespace with loopback only.
+          sudo unshare -n -- sudo -u "$USER" env "HOME=$HOME" "PATH=$HOME/.di/bin:$PATH" DI_NO_COLOR=1 bash -c '
+            ip link set lo up 2>/dev/null || true
+            di up --port 4301 --no-open
+            curl -fsS http://127.0.0.1:4301/main | grep -q "id=\"root\"" || exit 1
+            curl -fsS -o /dev/null http://127.0.0.1:4301/serverXR/api/spaces
+            di down
+          '
+
+  windows:
+    name: windows
+    needs: pack
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: di-runtime
+          path: dist-runtime
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: install
+        shell: pwsh
+        run: |
+          $version = (node -p "require('./package.json').version")
+          $env:DI_INSTALL_ARTIFACT = "dist-runtime/di-runtime-$version.tar.gz"
+          $env:DI_INSTALL_VERSION = $version
+          ./install.ps1
+
+      - name: di runs, serves, and stops
+        shell: pwsh
+        run: |
+          $env:Path = "$env:USERPROFILE\.di\bin;$env:Path"
+          di version
+          di up --port 4302 --no-open
+          $body = (Invoke-WebRequest -Uri http://127.0.0.1:4302/main -UseBasicParsing).Content
+          if ($body -notmatch 'id="root"') { throw 'GET /main did not return the app' }
+          di down
+
+  docker-mode:
+    # Runs on the host runner, which has a real daemon. Self-skips while the
+    # GHCR packages are private — and that skip line is the reminder to make
+    # them public.
+    name: docker mode
+    needs: pack
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: are the images public yet?
+        id: images
+        run: |
+          token=$(curl -fsSL "https://ghcr.io/token?scope=repository:dob-0/dii-server:pull&service=ghcr.io" | jq -r .token 2>/dev/null || echo '')
+          code=$(curl -s -o /dev/null -w '%{http_code}' -H "Authorization: Bearer $token" \
+            -H 'Accept: application/vnd.oci.image.index.v1+json' \
+            https://ghcr.io/v2/dob-0/dii-server/manifests/latest)
+          echo "public=$([ "$code" = 200 ] && echo yes || echo no)" >> "$GITHUB_OUTPUT"
+          if [ "$code" != 200 ]; then
+            echo "::notice::ghcr.io/dob-0/dii-server is not anonymously pullable ($code) — docker mode skipped. Make the package public to enable it."
+          fi
+
+      - name: bring the stack up
+        if: steps.images.outputs.public == 'yes'
+        run: |
+          set -eu
+          docker compose -p di-ci -f docker-compose.yml -f docker-compose.di.yml up -d
+          for i in $(seq 1 60); do
+            curl -fsS -o /dev/null http://127.0.0.1:4000/serverXR/api/health && break
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:4000/ | grep -q 'id="root"'
+          docker compose -p di-ci -f docker-compose.yml -f docker-compose.di.yml down
