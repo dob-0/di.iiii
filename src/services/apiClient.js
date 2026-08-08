@@ -236,3 +236,16 @@ export const logoutApiSession = async () => apiFetch('/api/auth/session', {
 export const getApiAuthProviders = async () => apiFetch('/api/auth/providers')
 
 export const getOAuthUrl = (provider) => `${apiBaseUrl}/api/auth/${provider}`
+
+export const getAiConnectionStatus = async (provider) =>
+    apiFetch(`/api/integrations/ai/status?provider=${encodeURIComponent(provider)}`)
+
+export const connectAiKey = async (provider, apiKey, label) => apiFetch('/api/integrations/ai/connect', {
+    method: 'POST',
+    body: { provider, apiKey, label }
+})
+
+export const disconnectAiKey = async (provider) => apiFetch('/api/integrations/ai/disconnect', {
+    method: 'POST',
+    body: { provider }
+})
