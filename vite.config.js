@@ -107,10 +107,19 @@ const stubXrEmulatorPlugin = () => ({
 //
 // DEV ONLY, and structurally so rather than by a runtime check — `apply:
 // 'serve'` means the plugin is not part of a production build at all, so there
-// is no endpoint to reach in anything that ships. It also writes exactly one
-// path, computed here and never taken from the request.
+// is no endpoint to reach in anything that ships.
+//
+// The director became a general tool in 2026-08-05 and can now edit more than
+// one piece, so the request names WHICH piece. It still never names a path:
+// the browser sends an id, the id is looked up in this table, and an id that
+// is not in it is refused. Accepting a path from the request instead would
+// turn the dev server into an arbitrary file write, which is exactly what the
+// original single-path version was careful to avoid — adding pieces must not
+// quietly give that up.
 const algoVrithmSavePlugin = () => {
-    const EDIT_LIST_PATH = path.resolve(ROOT_DIR, 'src/algoVrithm/sequences/index.js')
+    const EDIT_LISTS = {
+        algovrithm: path.resolve(ROOT_DIR, 'src/algoVrithm/sequences/index.js')
+    }
 
     return {
         name: 'algovrithm-save-edit-list',
@@ -129,18 +138,28 @@ const algoVrithmSavePlugin = () => {
                 request.on('data', (chunk) => { body += chunk })
                 request.on('end', async () => {
                     try {
-                        const { sequences, baseline } = JSON.parse(body)
+                        const { piece, sequences, baseline } = JSON.parse(body)
                         if (!Array.isArray(sequences)) {
                             return reply(400, { ok: false, reason: 'no sequences in the request' })
+                        }
+
+                        // Own-property lookup: a piece id of `constructor` or
+                        // `__proto__` would otherwise resolve to something off
+                        // Object.prototype rather than missing.
+                        const editListPath = Object.prototype.hasOwnProperty.call(EDIT_LISTS, piece)
+                            ? EDIT_LISTS[piece]
+                            : null
+                        if (!editListPath) {
+                            return reply(400, { ok: false, reason: `unknown piece ${JSON.stringify(piece)}` })
                         }
 
                         // Imported through Vite rather than with a bare import so
                         // the module resolves the same way it does in the app.
                         const { patchEditListSource } = await server.ssrLoadModule(
-                            '/algoVrithm/editListSource.js'
+                            '/raw/director/editListSource.js'
                         )
 
-                        const source = fs.readFileSync(EDIT_LIST_PATH, 'utf8')
+                        const source = fs.readFileSync(editListPath, 'utf8')
                         const result = patchEditListSource(source, sequences, baseline ?? [])
                         if (!result.ok) return reply(422, result)
 
@@ -148,7 +167,7 @@ const algoVrithmSavePlugin = () => {
                             return reply(200, { ok: true, changed: false })
                         }
 
-                        fs.writeFileSync(EDIT_LIST_PATH, result.source, 'utf8')
+                        fs.writeFileSync(editListPath, result.source, 'utf8')
                         return reply(200, { ok: true, changed: true })
                     } catch (error) {
                         return reply(500, { ok: false, reason: String(error?.message || error) })

@@ -7,7 +7,7 @@ import {
     dispersionSource,
     resetDispersionControls,
     setDispersionControl
-} from './dispersionControls.js'
+} from '../../algoVrithm/dispersionControls.js'
 
 // The dispersion sphere's controls. Author-only, mounted alongside the director
 // panel and behind the same H toggle — it is authoring furniture, and an
