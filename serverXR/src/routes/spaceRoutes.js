@@ -8,6 +8,7 @@ const { getOwnSandboxSpaceId, isGuestSubject } = require('../authAccess')
 const driveAccount = require('../googleDriveAccount')
 const commonsStore = require('../commonsStore')
 const { createKeyedLock } = require('../asyncLock')
+const { SENSITIVE_SPACE_PATCH_FIELDS } = require('../approvalGate')
 
 const defaultWithSpaceOpsLock = createKeyedLock()
 
@@ -65,8 +66,37 @@ function registerSpaceRoutes(router, {
   upload,
   writeJson,
   writeOpsHistory,
-  onDeleteSpace = null
+  onDeleteSpace = null,
+  approvalGate = null
 }) {
+  // SENSITIVE_SPACE_PATCH_FIELDS (imported above) is the same list the
+  // fail-loud net matches against (approvalGate.js) — one source, so the net
+  // and this route can never disagree on WHEN a PATCH gates. Ordinary
+  // label/allowEdits/previewImageAssetId edits never touch it and always
+  // apply immediately — gating is for what a visitor sees or who can reach a
+  // space, not routine editing.
+
+  if (approvalGate) {
+    approvalGate.registerExecutor('spaces.patch', async ({ spaceId, patch, nextOwnerUserId }) => {
+      const meta = await upsertSpaceMeta(spaceId, patch)
+      if (nextOwnerUserId && findUserById && setUserSpaces) {
+        try {
+          const user = findUserById(nextOwnerUserId)
+          if (user && Array.isArray(user.spaces) && !user.spaces.includes(spaceId)) {
+            setUserSpaces(nextOwnerUserId, [...user.spaces, spaceId])
+          }
+        } catch { /* scope is a convenience grant here; ownership already landed */ }
+      }
+      return { space: meta }
+    })
+    approvalGate.registerExecutor('spaces.delete', async ({ spaceId }) => {
+      if (typeof onDeleteSpace === 'function') await onDeleteSpace(spaceId)
+      await deleteSpace(spaceId)
+      return { ok: true }
+    })
+    approvalGate.registerExecutor('commons.asset.delete', ({ assetId }) => ({ ok: true, removed: commonsStore.unshareAsset(assetId) }))
+  }
+
   // GET /scene is unauthenticated (PUBLIC_CORS_ROUTES) and hit on every
   // public-space page view -- filterAvailableSceneAssets used to do one
   // fs.access syscall per asset on EVERY such request, uncached. The asset
@@ -357,7 +387,7 @@ function registerSpaceRoutes(router, {
           nextPreviewImageAssetId = requested
         }
       }
-      const meta = await upsertSpaceMeta(spaceId, {
+      const patch = {
         ...(label !== undefined ? { label } : {}),
         ...(permanent !== undefined ? { permanent } : {}),
         ...(allowEdits !== undefined ? { allowEdits } : {}),
@@ -368,22 +398,38 @@ function registerSpaceRoutes(router, {
         ...(openInscriptions !== undefined ? { openInscriptions: Boolean(openInscriptions) } : {}),
         ...(slug !== undefined ? { slug: nextSlug } : {}),
         ...(ownerUserId !== undefined ? { ownerUserId: nextOwnerUserId } : {})
-      })
+      }
       // An owner who cannot reach the space is not an owner. Scope and
       // ownership were separate grants, so assigning one without the other left
-      // the new owner staring at a space they were not allowed to open.
-      if (nextOwnerUserId && findUserById && setUserSpaces) {
-        try {
-          const user = findUserById(nextOwnerUserId)
-          if (user && Array.isArray(user.spaces) && !user.spaces.includes(spaceId)) {
-            setUserSpaces(nextOwnerUserId, [...user.spaces, spaceId])
-          }
-        } catch {
-          // Scope is a convenience here; the ownership write already landed and
-          // an admin can grant scope directly. Never fail the PATCH over it.
+      // the new owner staring at a space they were not allowed to open. (The
+      // grant itself runs inside the executor, so it happens exactly once —
+      // immediately when the gate is off, or on approval when it's on.)
+      const args = { spaceId, patch, nextOwnerUserId: nextOwnerUserId || null }
+      const touchesSensitive = SENSITIVE_SPACE_PATCH_FIELDS.some((f) => Object.prototype.hasOwnProperty.call(req.body || {}, f))
+      if (!touchesSensitive || !approvalGate) {
+        const meta = await upsertSpaceMeta(spaceId, patch)
+        if (nextOwnerUserId && findUserById && setUserSpaces) {
+          try {
+            const user = findUserById(nextOwnerUserId)
+            if (user && Array.isArray(user.spaces) && !user.spaces.includes(spaceId)) {
+              setUserSpaces(nextOwnerUserId, [...user.spaces, spaceId])
+            }
+          } catch { /* scope is a convenience grant here; ownership already landed */ }
         }
+        return res.json({ space: meta })
       }
-      res.json({ space: meta })
+      const changeDesc = Object.keys(patch).map((k) => `${k}→${JSON.stringify(patch[k])}`).join(', ')
+      const outcome = await approvalGate.gateOrApply({
+        kind: 'spaces.patch',
+        args,
+        actorState: req.authState,
+        summary: `patch space "${spaceId}": ${changeDesc}`,
+        req
+      })
+      if (outcome.pending) {
+        return res.status(202).json({ status: 'pending_approval', approvalId: outcome.id, expiresAt: outcome.expiresAt })
+      }
+      res.json(outcome.result)
     } catch (error) {
       next(error)
     }
@@ -403,11 +449,22 @@ function registerSpaceRoutes(router, {
           return res.status(403).json({ error: 'Only an admin can delete the shared global space.' })
         }
       }
-      if (typeof onDeleteSpace === 'function') {
-        await onDeleteSpace(spaceId)
+      if (!approvalGate) {
+        if (typeof onDeleteSpace === 'function') await onDeleteSpace(spaceId)
+        await deleteSpace(spaceId)
+        return res.json({ ok: true })
       }
-      await deleteSpace(spaceId)
-      res.json({ ok: true })
+      const outcome = await approvalGate.gateOrApply({
+        kind: 'spaces.delete',
+        args: { spaceId },
+        actorState: req.authState,
+        summary: `delete space "${spaceId}"`,
+        req
+      })
+      if (outcome.pending) {
+        return res.status(202).json({ status: 'pending_approval', approvalId: outcome.id, expiresAt: outcome.expiresAt })
+      }
+      res.json(outcome.result)
     } catch (error) {
       next(error)
     }
@@ -1024,7 +1081,20 @@ function registerSpaceRoutes(router, {
     try {
       const assetId = req.params.assetId
       if (!isValidAssetId(assetId)) return res.status(400).json({ error: 'Invalid request.' })
-      res.json({ ok: true, removed: commonsStore.unshareAsset(assetId) })
+      if (!approvalGate) {
+        return res.json({ ok: true, removed: commonsStore.unshareAsset(assetId) })
+      }
+      const outcome = await approvalGate.gateOrApply({
+        kind: 'commons.asset.delete',
+        args: { assetId },
+        actorState: req.authState,
+        summary: `remove commons asset ${assetId}`,
+        req
+      })
+      if (outcome.pending) {
+        return res.status(202).json({ status: 'pending_approval', approvalId: outcome.id, expiresAt: outcome.expiresAt })
+      }
+      res.json(outcome.result)
     } catch (error) { next(error) }
   })
 

@@ -66,6 +66,8 @@ const { createRateLimiter } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
+const { createApprovalGate, createGatedRequestNet, verifyInboundSignature, GATED_ROUTES } = require('./approvalGate')
+const pendingActionStore = require('./pendingActionStore')
 const configStore = require('./configStore')
 const { createSpaceStore } = require('./spaceStore')
 const { loadSharedModule } = require('./sharedRuntime')
@@ -1022,6 +1024,61 @@ const requireReadRole = (requiredRole = 'viewer') => async (req, res, next) => {
   return next()
 }
 
+// ── the approval gate ────────────────────────────────────────────────────
+// One instance, shared by every gated route below. Each route module (user/
+// config/space routes) registers its own executor + reauthorizer closures at
+// setup time via approvalGate.registerExecutor/registerReauthorizer — see
+// approvalGate.js for why (recovery after a restart needs to look an
+// executor up by kind, independent of any single request).
+const approvalGate = createApprovalGate()
+
+// Re-derives a role from the CURRENT database/config state for a given actor
+// — never trusts the role captured in the actor snapshot at request time.
+// Covers both identity shapes that can reach an admin-gated route: a real
+// session/account (subject == users.id) and a static bearer-token identity
+// (ADMIN_API_TOKEN etc. — subject is the configured token subject, e.g.
+// "admin"; there is no DB row, so config.auth.identities is the source of
+// truth). Anything else (guest, sync-key) can never legitimately be admin.
+function currentRoleForActor(actorType, actorSubject) {
+  if (!actorSubject) return null
+  // getPublicAuthState treats EVERY request as admin when config.requireAuth
+  // is false (type 'disabled', subject 'auth-disabled') — every other admin
+  // gate in this file (requireAdminAlways etc.) already short-circuits the
+  // same way. Re-authorization has to agree, or a self-hosted no-auth
+  // deployment would see every gated action denied at execution time no
+  // matter who approved it — the opposite of what "auth is off" means here.
+  if (actorType === 'disabled') return 'admin'
+  if (actorType === 'session') {
+    try {
+      const user = findUserById(actorSubject)
+      return user ? normalizeAuthRole(user.role, null) : null
+    } catch { return null }
+  }
+  if (actorType === 'token') {
+    const identity = config.auth.identities.find((i) => i.subject === actorSubject)
+    return identity ? normalizeAuthRole(identity.role, null) : null
+  }
+  return null
+}
+const requireAdminNow = (args, subject, actorType) => hasRequiredAuthRole(currentRoleForActor(actorType, subject), 'admin')
+approvalGate.registerReauthorizer('users.patch', requireAdminNow)
+approvalGate.registerReauthorizer('config.patch', requireAdminNow)
+approvalGate.registerReauthorizer('sandboxes.purge', requireAdminNow)
+approvalGate.registerReauthorizer('commons.asset.delete', requireAdminNow)
+// spaces.patch/spaces.delete are owner-or-admin, not admin-only — re-derived
+// against the space's CURRENT ownership, which may have changed during the
+// pending hour (e.g. the owner transferred it, or lost their account).
+async function currentlyOwnerOrAdmin(spaceId, actorType, actorSubject) {
+  if (hasRequiredAuthRole(currentRoleForActor(actorType, actorSubject), 'admin')) return true
+  if (actorType !== 'session') return false
+  const meta = await loadSpaceMeta(spaceId).catch(() => null)
+  if (!meta) return false
+  if (meta.kind === 'sandbox' && meta.id && !isGuestSubject(actorSubject) && meta.id === getOwnSandboxSpaceId(actorSubject)) return true
+  return Boolean(meta.ownerUserId) && meta.ownerUserId === actorSubject
+}
+approvalGate.registerReauthorizer('spaces.patch', (args, subject, actorType) => currentlyOwnerOrAdmin(args?.spaceId, actorType, subject))
+approvalGate.registerReauthorizer('spaces.delete', (args, subject, actorType) => currentlyOwnerOrAdmin(args?.spaceId, actorType, subject))
+
 // ── One-click GitHub sync: webhook receiver (signature-authed, pre-gate) ──────
 // Default loopback works on a normal TCP listen; under Passenger (cPanel) the app
 // is fronted by a Unix socket and nothing binds config.port, so SELF_API_URL must
@@ -1163,6 +1220,22 @@ router.post('/api/github/webhook', async (req, res) => {
   }
 })
 
+// di-bo posts the owner's Telegram decision here. Signature-authed (same
+// shape as the GitHub webhook above), not session-authed — di-bo has no
+// di.iiii account. Pre-gate on purpose: it must work even when the gate
+// itself is what's blocking every other /api route for this actor.
+router.post('/api/approvals/decision', async (req, res) => {
+  if (!verifyInboundSignature(req)) {
+    return res.status(401).json({ error: 'Invalid or missing signature.' })
+  }
+  const { id, intentHash, decision, decisionToken, decidedBy, note } = req.body || {}
+  if (!id || !intentHash || !decisionToken) {
+    return res.status(400).json({ error: 'id, intentHash and decisionToken are required.' })
+  }
+  const outcome = await approvalGate.handleDecision({ id, intentHash, decision, decisionToken, decidedBy, note })
+  res.status(outcome.status).json(outcome.body)
+})
+
 // Creating a space (POST /api/spaces) is open to any signed-in account; the
 // route handler enforces the free-tier quota (and blocks guests/tokens). Space
 // *management* (PATCH/DELETE below) is owner-or-admin, enforced by
@@ -1271,6 +1344,15 @@ registerInscriptionRoutes(router, {
 
 router.use('/api', requireReadRole('viewer'))
 router.use('/api', requireWriteRole('editor'))
+// Must run after the two lines above (role/scope already enforced by the
+// time this sees the request) and before every route registration below —
+// see approvalGate.js for why this can only ever be a net, not enforcement.
+// Mounted WITHOUT a path prefix on purpose: `router.use('/api', …)` would
+// make Express strip `/api` off req.path inside the net, so the registry's
+// `^/api/…` patterns could never match and the net would be inert. Mounted
+// bare, req.path is the router-relative path (`/api/users/42`) under every
+// mount target (/, /serverXR). Regression: approvalGate.test.js.
+router.use(createGatedRequestNet(GATED_ROUTES))
 
 const resolveProjectContext = async (projectId) => {
   const normalized = normalizeProjectId(projectId)
@@ -1326,7 +1408,8 @@ registerUserRoutes(router, {
   findUserById,
   setUserSpaces,
   setUserUnrestricted,
-  setUserRole
+  setUserRole,
+  approvalGate
 })
 
 // Throttle asset uploads only (POST); asset reads on the same path stay free.
@@ -1386,7 +1469,8 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   upsertSpaceMeta,
   upload,
   writeJson,
-  writeOpsHistory
+  writeOpsHistory,
+  approvalGate
 })
 
 // Space sync keys — mint/list/revoke. Management is restricted to the space
@@ -1677,11 +1761,24 @@ registerSyncRoutes(router, {
 
 // Admin sweep for the hub's collapsed sandbox row: remove guest sandboxes the
 // TTL has already expired — the same thing the 30-minute timer does, on demand.
+approvalGate.registerExecutor('sandboxes.purge', async () => {
+  const removed = await pruneStaleSandboxes()
+  const archived = await archiveIdleAccountSandboxes()
+  return { removed: removed.length, archived: archived.length }
+})
 router.post('/api/admin/sandboxes/purge', requireAdminAlways, async (req, res, next) => {
   try {
-    const removed = await pruneStaleSandboxes()
-    const archived = await archiveIdleAccountSandboxes()
-    res.json({ ok: true, removed: removed.length, archived: archived.length })
+    const outcome = await approvalGate.gateOrApply({
+      kind: 'sandboxes.purge',
+      args: {},
+      actorState: req.authState,
+      summary: 'purge stale/idle sandboxes',
+      req
+    })
+    if (outcome.pending) {
+      return res.status(202).json({ status: 'pending_approval', approvalId: outcome.id, expiresAt: outcome.expiresAt })
+    }
+    res.json({ ok: true, ...outcome.result })
   } catch (error) {
     next(error)
   }
@@ -1692,7 +1789,8 @@ registerConfigRoutes(router, {
   configStore,
   // Repointing globalSpaceId moves the communal grant and ensures the new
   // open space exists.
-  onConfigChanged: () => ensureOpenSpace()
+  onConfigChanged: () => ensureOpenSpace(),
+  approvalGate
 })
 
 const mountTargets = new Set([config.mountPath])
@@ -1772,6 +1870,13 @@ initStorage()
   .then(async () => {
     await ensureDefaultSpace()
     await ensureOpenSpace()
+    // A decision can land, then the process dies before executing it. Catch
+    // up on boot rather than leaving an approved action stuck forever.
+    if (approvalGate.isEnabled()) {
+      const recovered = await approvalGate.recoverPendingActions()
+      if (recovered) logger.info(`[approvalGate] recovered ${recovered} approved-but-unexecuted action(s)`)
+    }
+    approvalGate.startSweepLoop()
     pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
     setInterval(() => {
       pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))

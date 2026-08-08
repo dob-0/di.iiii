@@ -320,6 +320,16 @@ const config = {
       clientSecret: (process.env.GOOGLE_CLIENT_SECRET || '').trim(),
       enabled: Boolean((process.env.GOOGLE_CLIENT_ID || '').trim())
     }
+  },
+  // Human-approval gate for admin-level writes (see approvalGate.js). Unset
+  // secret/botUrl = disabled: gated routes apply immediately, exactly as
+  // before this feature existed. Never fail open when explicitly enabled —
+  // that's approvalGate.js's job, not this file's.
+  approval: {
+    enabled: parseBool(process.env.APPROVAL_GATE_ENABLED, false),
+    botUrl: (process.env.APPROVAL_BOT_URL || '').replace(/\/+$/, ''),
+    secret: (process.env.APPROVAL_SHARED_SECRET || '').trim(),
+    ttlMs: Number(process.env.APPROVAL_TTL_MS || 1000 * 60 * 60)
   }
 }
 
