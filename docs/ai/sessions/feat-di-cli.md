@@ -99,15 +99,57 @@ leaves the artist on the working version, still serving.
 probes rather than assumes, and will light up with no new release once they are public).
 Windows is written and covered by CI but has not been run by a human on real Windows.
 
+## What CI found on Windows — four bugs, one per run
+
+Everything above was verified on real Linux and macOS machines. Windows was written
+blind and covered only by `install-matrix.yml`, and every round it found exactly one
+more thing. All six Linux images were green throughout.
+
+- **Two tars.** Windows ships bsdtar at `System32\tar.exe`, which understands `C:\...`;
+  Git for Windows ships GNU tar, usually first on PATH, which reads a leading `C:` as a
+  **remote host** — `tar (child): Cannot connect to C: resolve failed`, naming neither
+  tar nor the drive letter. `tarCommand()` prefers bsdtar, else `--force-local`.
+- **`di up` never returned the prompt.** `detached` and `unref` were both guarded by
+  `!isWindows`, so the parent Node kept a handle on the child and its event loop never
+  emptied. The server was up and the terminal was dead — including the terminal you would
+  run `di down` from. Now detached + unref'd everywhere, `windowsHide` so no console
+  window appears. It surfaced as a job that ran for **six hours and reported nothing**, so
+  both Windows jobs now carry `timeout-minutes: 25`: a hang has to read as a failure.
+- **A batch file needs CRLF.** cmd.exe re-seeks a `.cmd` by the byte length it believes
+  each line had, so a missing CR costs one byte per line, cumulatively — later lines run
+  with their heads eaten (`setlocal` → `etlocal`), ending in `di.iiii is not installed
+  here ()` with an empty `%DI_HOME%`. **The same file worked one run earlier; two added
+  comment lines pushed it over.** `.gitattributes` pins `*.cmd`/`*.bat` to `eol=crlf`,
+  and `scripts/di/shim.test.js` holds that plus pure-ASCII (a batch file is read in the
+  console code page) and the mirror rule for the sh shim.
+- **The shim is `di.cmd` on Windows.** The CI harness hardcoded the unix name and failed
+  with `No such file or directory` after a perfectly good install.
+
+Also fixed here: the installer already falls back to `dii` when a foreign `di` owns the
+name — that worked — but every message still said `di`, including `stop it with: di down`,
+which points at the other binary. The shims now export their own basename (`$0` / `%~n0`)
+and `ui.mjs` prints it.
+
+**A conflicting PR runs no CI at all.** GitHub cannot build the merge ref, so every
+`pull_request` workflow is skipped and the PR page shows nothing red. Two Windows fixes sat
+untested behind that for a round. Check `mergeable` before reading green as green.
+
 ## Where it stands
 
-- Nine commits on `feat/di-cli`, in the worktree `/home/nooo/di.iiii-di-cli`. **Not pushed** —
-  pushing opens a PR into `dev` via `auto-pr.yml`, which is the user's call.
-- `origin/dev` moved 8 commits ahead while this branch was being written (canonical
-  LoadingScreen / stale-chunk reload, pdfjs bump). Rebase before landing; nothing here conflicts
-  with those areas, but `vite.config.js` and `package.json` are touched by both.
+- **PR #104** into `dev`, MERGEABLE/CLEAN. `install matrix` **12/12 green** (debian, ubuntu,
+  fedora, alpine/musl, node 20 refused, node 22, offline, docker-mode, windows, both
+  update-and-rollback jobs, pack) and `CI` green on the same commit.
+- Merged `origin/dev` on the way: `bc22acb6` had run the repo's own `compress-reels.mjs
+  --replace` over the same 31 algoVrithm reels this branch had re-encoded by hand. **Took
+  dev's** — 81 MB / 360x640, the documented tool, verified beat by beat there — over this
+  branch's 65 MB / 540x960 ad-hoc ffmpeg pass. The artifact is ~16 MB larger for it; tuning
+  that script is the honest way to get it back, not overriding shared binaries in a merge.
 - Nothing ships until a `v*` tag: that is what publishes the artifact the one-liner downloads.
-- Blocked on the user: `gh auth refresh -s read:packages,write:packages`, then the GHCR packages
-  can be made public and the docker branch stops self-skipping.
-- Blocked on hardware: real Windows. Expect trouble first from execution policy, `npm.cmd` under
-  a path with spaces, and antivirus on a freshly downloaded `node.exe` — none of which CI sees.
+- Blocked on the user: `gh auth refresh -s read:packages,write:packages`, then the GHCR
+  packages can be made public and the docker branch stops self-skipping.
+- Blocked on hardware: **real Windows**. CI is a clean runner with pwsh 7 and Git already
+  present, which is not what a person's machine looks like — expect execution policy,
+  antivirus on a freshly downloaded `node.exe`, and a username with a space in it.
+- Phases 2-4 untouched: `di sync`, `di venue` (LAN + QR), the VJ output nodes. Sync's hard
+  part is not transport — `PUT /scene` replaces a space wholesale and wipes its op-log, and
+  `PUT /document` is last-write-wins with no version check.
