@@ -1,5 +1,5 @@
 // Port type-compatibility for `color` inputs is only enforced in the UI's
-// drag gesture (BetaGraphSurface.jsx) — an edge created any other way
+// drag gesture (RawGraphSurface.jsx) — an edge created any other way
 // (project import, hand-edited API payload, an op-log replay) can wire a
 // vec3-typed output straight into a color input (nodeRegistry.js declares
 // them cross-compatible) with a value never intended as a color, e.g. a

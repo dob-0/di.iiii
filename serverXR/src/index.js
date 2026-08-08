@@ -42,6 +42,7 @@ const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
+const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
 const openCallStore = require('./openCallStore')
@@ -104,6 +105,14 @@ const DB_PATH = config.directories.dbPath
 const RECENT_LIMIT = 25
 const DEFAULT_TTL_MS = config.defaultTtlMs
 const MAX_OP_HISTORY = 500
+// Retention is bounded by age as well as count. Counting alone made how long a
+// space or project keeps history — and therefore how long every asset that
+// history mentions survives a garbage collection — depend on how busy it is:
+// dormant work kept its last ops, and their blobs, permanently. 30 days is far
+// longer than any reconnect window (a client that falls outside it resyncs the
+// whole document via hasOpGap) and far longer than any retry the idempotency
+// guard in POST /ops has to recognise.
+const MAX_OP_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const DEFAULT_SPACE_ID = 'main'
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'model/']
 const ALLOWED_MIME_TYPES = new Set([
@@ -330,6 +339,10 @@ const PUBLIC_CORS_ROUTES = [
   { pattern: /\/api\/spaces\/[a-z0-9_-]+\/inscriptions\/?$/, methods: 'POST, OPTIONS' },
   // self-unmake of a single inscription (proof-gated DELETE — see inscriptionRoutes)
   { pattern: /\/api\/spaces\/[a-z0-9_-]+\/inscriptions\/insc-[A-Za-z0-9-]+\/?$/, methods: 'DELETE, OPTIONS' },
+  // the mark a crossing carries, changed after the fact (proof-gated PUT). Same
+  // authority as the unmaking above and reachable from the same places — a rite
+  // running on a mirror or an installation laptop is cross-origin to the field.
+  { pattern: /\/api\/spaces\/[a-z0-9_-]+\/inscriptions\/insc-[A-Za-z0-9-]+\/mark\/?$/, methods: 'PUT, OPTIONS' },
   // space scene reads — the field viewer fetches its own space's scene from
   // inside the sandboxed preview (opaque origin); private spaces still 401
   { pattern: /\/api\/spaces\/[a-z0-9_-]+\/scene\/?$/, methods: 'GET, HEAD, OPTIONS' }
@@ -1247,6 +1260,7 @@ registerInscriptionRoutes(router, {
   inscriptionLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 12, name: 'inscriptions' }),
   loadSpaceMeta,
   maxOpHistory: MAX_OP_HISTORY,
+  maxOpAgeMs: MAX_OP_AGE_MS,
   normalizeSpaceId,
   readJson,
   withSpaceOpsLock: sharedSpaceOpsLock,
@@ -1293,6 +1307,8 @@ registerStatusRoutes(router, {
 })
 
 registerIntegrationRoutes(router)
+
+registerAgentBoardRoutes(router)
 
 registerOpenCallRoutes(router, {
   requireAdminAlways,
@@ -1347,6 +1363,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   listSpaces,
   listProjectsInSpace,
   maxOpHistory: MAX_OP_HISTORY,
+  maxOpAgeMs: MAX_OP_AGE_MS,
   normalizeIncomingOps,
   normalizeProjectId,
   normalizeSpaceId,
@@ -1626,6 +1643,7 @@ registerProjectRoutes(router, {
   isValidAssetId: isValidProjectAssetId,
   listProjectsInSpace,
   maxOpHistory: MAX_OP_HISTORY,
+  maxOpAgeMs: MAX_OP_AGE_MS,
   normalizeIncomingOps,
   normalizeProjectDocument,
   normalizeProjectId,
@@ -1683,6 +1701,40 @@ mountTargets.forEach((targetPath) => {
   const normalizedTarget = targetPath || '/'
   app.use(normalizedTarget, router)
 })
+
+// ── the SPA, when this process is also the web server ──
+// Only for a local `di` install (CLIENT_DIR set). In the deployed topology nginx
+// serves dist/ and this block never runs, so the API's shape is unchanged.
+//
+// Order matters and is the whole trick: this sits AFTER the router mounts above,
+// so /serverXR/api/* is already answered and can never fall through to index.html.
+const CLIENT_DIR = config.directories.clientDir
+if (CLIENT_DIR) {
+  app.use(express.static(CLIENT_DIR))
+
+  app.get(/.*/, (req, res, next) => {
+    // Anything the API owns is not ours, even unmatched — a wrong URL under the
+    // API must 404 as an API, not hand back an HTML page a fetch() can't parse.
+    if (req.path.startsWith('/serverXR') || req.path.startsWith('/api')) {
+      next()
+      return
+    }
+    // A request for a real file that express.static already declined is a 404,
+    // not the app: serving index.html for /assets/missing.js turns a cache miss
+    // into a JS syntax error thrown from inside the page.
+    if (path.extname(req.path)) {
+      next()
+      return
+    }
+    // `root` + a relative name, never sendFile(absolutePath). With no root,
+    // send applies its dotfiles:'ignore' rule to every segment of the absolute
+    // path — and the default install lives in ~/.di, so a hidden directory in
+    // the path 404s the entire app. Relative to root, there is no dot segment.
+    res.sendFile('index.html', { root: CLIENT_DIR })
+  })
+
+  logger.info(`[client] serving the built app from ${CLIENT_DIR}`)
+}
 
 app.use((err, req, res, next) => {
   pushEvent('error', { message: err.message })
@@ -1752,14 +1804,15 @@ initStorage()
 
     initializeMesh(httpServer, config)
 
-    httpServer.listen(PORT, () => {
+    httpServer.listen(PORT, config.host, () => {
       pushEvent('server-started', {
         port: PORT,
+        host: config.host,
         node: process.version,
         releaseId: releaseInfo.releaseId,
         deployEnv: releaseInfo.deployEnv
       })
-      logger.info(`Server running. Listening on: ${PORT}`)
+      logger.info(`Server running. Listening on: ${config.host}:${PORT}`)
     })
   })
   .catch((error) => {

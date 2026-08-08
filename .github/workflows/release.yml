@@ -53,11 +53,22 @@ jobs:
           cd .deploy/cpanel
           zip -r ../../cpanel-release.zip .
 
+      # The artifact `curl … /get | sh` installs. Built from the tag rather than
+      # package.json so the filename always matches the tag the installer
+      # resolves from the release feed — a mismatch there is a 404 for every
+      # person who pastes the line.
+      # Its own build, not the cPanel one: that step sets VITE_API_BASE_URL for
+      # a different topology, and a local install is same-origin.
+      - name: Pack the di runtime
+        run: npm run di:pack -- --version=${GITHUB_REF_NAME#v}
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
           files: |
             dist.zip
             cpanel-release.zip
+            dist-runtime/di-runtime-*.tar.gz
+            dist-runtime/checksums.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

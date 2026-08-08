@@ -12,7 +12,7 @@ You own the written record of the project. When something important is discovere
 ```
 PROGRESS.md                       ← session handoff log
 docs/ai/                          ← AI knowledge base
-docs/beta/                        ← Beta user-facing docs
+docs/raw/                         ← Raw user-facing docs
 docs/architecture/                ← architecture decision records
 docs/deploy/                      ← deployment documentation
 ```

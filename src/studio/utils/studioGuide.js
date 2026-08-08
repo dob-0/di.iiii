@@ -1,6 +1,6 @@
-// Content model for Studio's visual help (StudioHelpDialog) — same
-// data-driven pattern as Beta's betaGuide.js. Copy stays terse on purpose:
-// the diagrams carry the explanation, the words only anchor them.
+// Content model for Studio's visual help (StudioHelpDialog). Copy stays
+// terse on purpose: the diagrams carry the explanation, the words only
+// anchor them.
 
 export const STUDIO_GUIDE_SECTIONS = [
     {

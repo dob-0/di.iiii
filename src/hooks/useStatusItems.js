@@ -21,7 +21,8 @@ export function useStatusItems({
     participantRoster,
     isSceneStreamConnected,
     sceneStreamState,
-    sceneStreamError
+    sceneStreamError,
+    sceneFlushError
 }) {
     return useMemo(() => {
         const list = []
@@ -180,6 +181,19 @@ export function useStatusItems({
             })
         }
 
+        // A flush failure is not a stream failure: the event stream can read as
+        // `connected` while every write POST is failing and silently retrying.
+        // Without its own row the user sees a healthy scene and loses edits.
+        if (sceneFlushError) {
+            list.push({
+                key: 'scene-flush',
+                label: 'Scene changes not saved',
+                detail: `${sceneFlushError} Retrying automatically.`,
+                showBar: false,
+                percent: 0
+            })
+        }
+
         return list
     }, [
         uploadProgress?.active,
@@ -213,7 +227,8 @@ export function useStatusItems({
         participantRoster,
         isSceneStreamConnected,
         sceneStreamState,
-        sceneStreamError
+        sceneStreamError,
+        sceneFlushError
     ])
 }
 

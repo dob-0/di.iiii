@@ -1,7 +1,6 @@
 import { Suspense, lazy, useEffect } from 'react'
 import { BrowserRouter, useLocation, useNavigate } from 'react-router-dom'
 import { setAppNavigate } from './utils/appNavigate.js'
-import { getBetaLocationState, isBetaLocation } from './beta/utils/betaRouting.js'
 import {
     buildRawHubPath,
     buildRawProjectPath,
@@ -20,7 +19,6 @@ import { getStudioLocationState, isStudioLocation } from './studio/utils/studioR
 import { ALGO_VRITHM_SPACE_ID, isAlgoVrithmSegment } from './algoVrithm/algoVrithmRouting.js'
 import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_WIKI, getAppLocationState } from './utils/spaceRouting.js'
 
-const BetaApp = lazy(() => import('./beta/BetaApp.jsx'))
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
 const StudioApp = lazy(() => import('./studio/StudioApp.jsx'))
@@ -141,7 +139,6 @@ function AppRouter() {
         return () => setAppNavigate(null)
     }, [rrNavigate])
     const location = useLocation()
-    const betaState = getBetaLocationState(location)
     const rawState = getRawLocationState(location)
     const studioState = getStudioLocationState(location)
     const appState = getAppLocationState(location)
@@ -176,23 +173,6 @@ function AppRouter() {
                     }
                 >
                     <StudioApp initialRoute={studioState} />
-                </Suspense>
-            </ProtectedSurface>
-        )
-    }
-
-    if (isBetaLocation(betaState)) {
-        return (
-            <ProtectedSurface requiredSpaceId={betaState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
-                <Suspense
-                    fallback={
-                        <RouteSurfaceFallback
-                            label="Loading Beta"
-                            detail="Preparing the experimental workspace..."
-                        />
-                    }
-                >
-                    <BetaApp initialRoute={betaState} />
                 </Suspense>
             </ProtectedSurface>
         )

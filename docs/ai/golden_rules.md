@@ -163,6 +163,26 @@ Guessing wrong on a destructive or architectural decision costs more than a one-
 
 **Files:** `AGENTS.md`, `docs/ai/workflows.md`, `README.md`
 
+### Restate the core concept in the user's own words and get it confirmed before building
+
+**Rule:** On any open-ended or architectural ask, write back what you believe the core concept *is* — in the requester's vocabulary, not a restatement of their sentence — and get an explicit yes before writing code. This is not "ask if ambiguous": a request can be perfectly clear as English and still leave you holding the wrong mental model.
+
+**Why:** 2026-08-06, the ask was "have the Studio in the graph… like in TouchDesigner where the palette has already-built things and you can build your own." Three readings were live: Studio panels each becoming a node type; one shared document with Studio and Raw as two views onto it; or Raw growing until it replaces Studio. All three are plausible, all three are weeks of divergent work, and the prompt discriminates between none of them. The actual answer was a fourth thing — *one* `studio` palette entry that, when you enter it, reveals the subgraph it is assembled from — i.e. a container node. One round of restating produced it in two sentences. Building first would have produced the wrong architecture confidently.
+
+**How:** Name the concept, name the mechanism you think implements it, and name what it is *not*. Prefer the user's own reference points (they said TouchDesigner, so answer in COMP/palette terms). If you find yourself listing three options in your head, that is the signal to stop and restate — not to pick the safest one and proceed. Pair this with the existing two-question cap: restating is one message, not a loop.
+
+**Files:** n/a (agent behavior). The concrete case: `src/project/nodeRegistry.js`, `src/raw/components/RawEditor.jsx`.
+
+### Every interaction ships a touch path, not just a responsive layout
+
+**Rule:** A surface is not mobile-ready because it reflows. Every action reachable on desktop must have a working path on a phone, designed in the same change that adds the action — never deferred to a later "mobile pass".
+
+**Why:** 2026-08-06 audit of Raw: **you could not connect two nodes on a phone at all.** `RawGraphSurface.jsx` starts a wire on the output dot's `pointerdown`; on touch the browser grants that element *implicit pointer capture*, so `pointerup` is delivered back to the output dot and never to the input dot under the finger — the drop handler could not fire, ever. Port dots were 8×8px against a 44px target. Edge deletion was hover-then-click on a 2px stroke, which touch cannot trigger, and it was the only way to delete an edge. None of this reflows into existence; the CSS was irrelevant. Worse, `RawGraphSurface.test.jsx` stubbed `setPointerCapture` with `vi.fn()`, so the drag tests passed green over exactly the semantics that were broken.
+
+**How:** For each new interaction ask: what fires it with one finger? Use pointer events with explicit `releasePointerCapture` + `document.elementFromPoint` for drag-and-drop between elements — implicit capture makes the naive `pointerup`-on-target pattern a desktop-only illusion. Hit targets ≥44px (a visual dot can stay small; enlarge the hit box). Never make hover the only affordance. Never stub `setPointerCapture` in a test that is meant to prove dragging works.
+
+**Files:** `src/raw/components/RawGraphSurface.jsx`, `src/raw/styles/raw.css`, `scripts/verify-surfaces.mjs`.
+
 ### Enforce a task contract before tool-heavy work
 
 **Rule:** Do not start broad searches or multi-file edits until goal, priority, scope, non-goals, and done criteria are explicit.
@@ -838,3 +858,15 @@ This does **not** fully solve node-to-node label collision (two labels can still
 **How:** `scripts/repo-state.mjs` prints the live worktree count and flags prunable/detached/live entries every session (wired into the SessionStart hook via `--brief`); `--sweep` removes only what `classifyWorktree`/`isSweepSafe` agree is safe (merged by `git cherry`, not just `merge-base` — catches squash merges — clean, and no live process bound to it via `/proc` scan), never `--force`, and names the exact reason + override command for everything it leaves alone. `npm run land` runs it as its last step.
 
 **Files:** `scripts/repo-state.mjs, scripts/repo-state-lib.mjs, scripts/session-land.mjs, docs/ai/parallel-agents.md`
+
+---
+
+### A screenshot referenced by path is not a screenshot you have
+
+**Rule:** When a bug report points at a screenshot by filesystem path instead of pasting it inline, read that path as the very first action, before anything else — including before reading the rest of a multi-image message. Do not batch it in with other reads a few tool calls later.
+
+**Why:** On 2026-08-06 a user pasted one screenshot inline and referenced two more by path (`/tmp/Spectacle.XXXXXX/Screenshot_*.png`) in the same message. By the time they were read — one reply-turn later, after other embedded work — one path's directory no longer existed and the other's was empty. Screenshot tools like Spectacle write to a fresh temp directory per capture and clear it aggressively, sometimes within the same minute. The content was gone for good: no `find`, no re-request to the same path, nothing recovers it. The two bugs those screenshots showed had to be re-derived by manual reproduction instead, burning most of a session on rediscovering what a single timely read would have shown directly.
+
+**How:** This is unenforced — a person (or a stale temp path) is the only thing that notices when it's skipped, the same shape as the verification rule in "A rule no build can see is a convention, not a protocol" above. Treat it with the same discipline: image-by-path references are perishable evidence, not durable input. Read first, investigate second. If a path is already gone when you get to it, say so plainly and ask for a resend rather than guessing at what it showed.
+
+**Files:** none — process discipline, not code.

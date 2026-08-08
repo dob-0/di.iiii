@@ -5,7 +5,7 @@ import {
 } from '../utils/studioGuide.js'
 import '../styles/studio-help.css'
 
-// Pure-CSS diagrams, one per guide section — same approach as Beta's
+// Pure-CSS diagrams, one per guide section — same approach as Raw's
 // SurfaceDiagram: the picture explains, the copy just anchors it.
 function GuideDiagram({ sectionId }) {
     if (sectionId === 'build') {

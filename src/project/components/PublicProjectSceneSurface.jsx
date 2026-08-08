@@ -1,7 +1,8 @@
-import { lazy, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import useXrAr from '../../hooks/useXrAr.js'
 import { computeFramingCamera, getPointsBoundingSphere } from '../../utils/cameraFraming.js'
 import { overlayButtonStyle } from './publicViewerStyles.js'
+import lazyWithReload from '../../utils/lazyWithReload.js'
 
 // Everything in this module -- the XR store, the camera framing math, the two
 // renderers -- reaches three.js. It is loaded only from PublicProjectViewer's
@@ -10,8 +11,8 @@ import { overlayButtonStyle } from './publicViewerStyles.js'
 // useXrAr or cameraFraming from the viewer itself puts three back on the
 // critical path even though both renderers are lazy; see the guard in
 // publicViewerCodeModeGraph.test.js.
-const LiveProjectScene = lazy(() => import('../../components/LiveProjectScene.jsx'))
-const StudioViewport = lazy(() => import('../../studio/components/StudioViewport.jsx'))
+const LiveProjectScene = lazyWithReload(() => import('../../components/LiveProjectScene.jsx'), 'live-project-scene')
+const StudioViewport = lazyWithReload(() => import('../../studio/components/StudioViewport.jsx'), 'studio-viewport')
 
 // A scene's saved camera can go stale (e.g. left pointed off into empty
 // space mid-edit) — that's invisible to editors, who interactively orbit

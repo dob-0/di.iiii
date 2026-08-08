@@ -25,6 +25,7 @@ function registerProjectRoutes(router, {
   isValidAssetId,
   listProjectsInSpace,
   maxOpHistory,
+  maxOpAgeMs = 0,
   normalizeIncomingOps,
   normalizeProjectDocument,
   normalizeProjectId,
@@ -228,7 +229,7 @@ function registerProjectRoutes(router, {
           version: nextVersion,
           timestamp: Date.now()
         }
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory)
+        await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory, maxOpAgeMs)
         const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
           title: document.projectMeta.title,
           documentVersion: nextVersion
@@ -359,7 +360,7 @@ function registerProjectRoutes(router, {
           updatedAt: Date.now()
         }
         await writeProjectDocument(spacesDir, project.spaceId, project.projectId, nextDocument)
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory)
+        await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory, maxOpAgeMs)
         const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
           title: nextDocument.projectMeta.title,
           documentVersion: nextVersion
@@ -413,7 +414,7 @@ function registerProjectRoutes(router, {
       // A scrubbed file no longer hashes to the id the client computed from the
       // original, so its requested id is dropped and the content address is
       // recomputed below. Callers already remap ids from the response (bundle
-      // import in StudioEditor/BetaHub). Un-rewritten files keep the strict check.
+      // import in StudioEditor/RawHub). Un-rewritten files keep the strict check.
       let assetId = (req.body?.assetId && !scrub.scrubbed) ? String(req.body.assetId).trim() : ''
       if (assetId) {
         if (!isValidAssetId(assetId)) {

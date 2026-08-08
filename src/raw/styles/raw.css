@@ -1,6 +1,7 @@
 .raw-editor-shell,
 .raw-hub {
     min-height: 100vh;
+    min-height: 100dvh;
     background: var(--di-black);
     color: var(--di-text);
     font-family: 'Inter', 'Segoe UI', sans-serif;
@@ -347,7 +348,9 @@
 
 .raw-hub {
     min-height: 100vh;
+    min-height: 100dvh;
     height: 100vh;
+    height: 100dvh;
     display: flex;
     align-items: flex-start;
     justify-content: center;
@@ -547,7 +550,9 @@
     letter-spacing: 0.04em;
 }
 
-.raw-hub-sync-row {
+/* Styles src/components/SpaceSyncPanel.jsx (shared, not Raw-only) — it lives
+   here because Raw is currently the only mounted consumer. */
+.space-sync-row {
     display: flex;
     align-items: center;
     border: 1px solid var(--di-cyan-border);
@@ -555,7 +560,7 @@
     background: #0a0a0a;
 }
 
-.raw-hub-sync-msg {
+.space-sync-msg {
     flex: 1;
     padding: 10px 14px;
     font-size: 11px;
@@ -567,10 +572,10 @@
     text-overflow: ellipsis;
 }
 
-.raw-hub-sync-msg--ok { color: var(--di-cyan); }
-.raw-hub-sync-msg--err { color: #e05a5a; }
+.space-sync-msg--ok { color: var(--di-cyan); }
+.space-sync-msg--err { color: #e05a5a; }
 
-.raw-hub-sync-btn {
+.space-sync-btn {
     -webkit-appearance: none;
     appearance: none;
     border: none;
@@ -586,12 +591,12 @@
     white-space: nowrap;
 }
 
-.raw-hub-sync-btn:hover:not(:disabled) {
+.space-sync-btn:hover:not(:disabled) {
     color: var(--di-cyan);
     background: var(--di-cyan-dim);
 }
 
-.raw-hub-sync-btn:disabled {
+.space-sync-btn:disabled {
     opacity: 0.35;
     cursor: default;
 }
@@ -941,6 +946,19 @@
     flex-shrink: 1;
 }
 
+/* Below this, Help/Chat/⋯ alone leave the pill ~40px of usable content width
+   (measured on iPhone SE, 320px) — too tight for any hint text to read as
+   more than a few ellipsis-truncated letters, short variant or not. The
+   canvas-center empty-state message (RawGraphSurface's emptyHint) has the
+   whole viewport to work with and already reads fine at this width, so the
+   topbar copy is redundant clutter here rather than useful chrome — same
+   "shed before truncating unreadably" call as raw-topbar-name/scale-control. */
+@media (max-width: 400px) {
+    .raw-topbar-location {
+        display: none;
+    }
+}
+
 .raw-topbar-breadcrumb {
     display: flex;
     align-items: center;
@@ -1229,8 +1247,8 @@
 
 .raw-delete-fab {
     position: fixed;
-    bottom: 24px;
-    right: 24px;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    right: calc(24px + env(safe-area-inset-right));
     z-index: 1300;
     -webkit-appearance: none;
     appearance: none;
@@ -1929,6 +1947,7 @@
 .raw-surface-shell {
     position: relative;
     min-height: 100vh;
+    min-height: 100dvh;
 }
 
 .raw-surface-workflow {
@@ -2075,10 +2094,15 @@
 
 .raw-selection-scaffold {
     position: fixed;
-    top: 64px;
+    /* RawEditor supplies the measured workflow-strip height as a custom
+       property instead of an inline `top`, so the phone bottom-sheet rule
+       below can actually win. An inline declaration cannot be overridden by a
+       media query. */
+    top: var(--raw-scaffold-top, 64px);
     right: 24px;
     width: min(320px, calc(100vw - 48px));
     max-height: calc(100vh - 88px);
+    max-height: calc(100dvh - 88px);
     z-index: 1350;
     border-radius: 0;
     background: #0a0a0a;
@@ -2114,8 +2138,11 @@
 
 .raw-graph-zoom-controls {
     position: absolute;
-    bottom: 16px;
-    right: 16px;
+    /* Bottom-LEFT: .raw-delete-fab is position:fixed at bottom/right 24px with
+       z-index 1300, so anything in the bottom-right corner sits underneath it. */
+    bottom: calc(16px + var(--raw-bottom-chrome, 0px) + env(safe-area-inset-bottom));
+    left: calc(16px + env(safe-area-inset-left));
+    transition: bottom 0.18s ease;
     z-index: 2;
     width: fit-content;
     display: flex;
@@ -2127,8 +2154,8 @@
 }
 
 .raw-graph-zoom-controls button {
-    min-width: 28px;
-    height: 28px;
+    min-width: 44px;
+    height: 44px;
     border: 1px solid var(--di-cyan-border);
     background: var(--di-black);
     color: var(--di-text);
@@ -2243,16 +2270,41 @@
 }
 
 .raw-graph-node-enter-hint {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    background: transparent;
+    padding: 0 4px;
+    margin: -8px -4px -8px 0;
     font-size: 13px;
+    font-family: inherit;
     color: rgba(244, 247, 251, 0.2);
     flex-shrink: 0;
     line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
     transition: color 0.15s;
 }
 
 .raw-graph-node-card:hover .raw-graph-node-enter-hint,
-.raw-graph-node-card.is-selected .raw-graph-node-enter-hint {
+.raw-graph-node-card.is-selected .raw-graph-node-enter-hint,
+.raw-graph-node-enter-hint:focus-visible {
     color: rgba(77, 249, 255, 0.7);
+}
+
+/* Coarse pointers get no hover, so the chevron was invisible and entering a
+   node had no affordance at all — fatal for container nodes, whose entire
+   purpose is being entered. Show it always, and give it a real tap target. */
+@media (hover: none) {
+    .raw-graph-node-enter-hint {
+        color: rgba(77, 249, 255, 0.7);
+        min-width: 32px;
+        min-height: 32px;
+        margin: -10px -8px -10px 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
 }
 
 .raw-graph-port-row {
@@ -2281,10 +2333,104 @@
     border-radius: 0;
     border: 1.5px solid var(--di-black);
     pointer-events: auto;
+    touch-action: none;
+}
+
+/* The dot stays 8px because the graph should read as a diagram, but 8px is
+   unhittable with a finger. This pseudo-element widens the HIT box to 44px
+   horizontally without changing anything visible or shifting layout. Vertical
+   growth is capped at the 22px port-row pitch so adjacent ports never overlap
+   each other's targets — the remaining slack is covered by the nearest-port
+   drop resolution in RawGraphSurface.jsx (PORT_DROP_RADIUS_PX). */
+.raw-graph-port-dot::after {
+    content: '';
+    position: absolute;
+    top: -7px;
+    bottom: -7px;
+    left: -18px;
+    right: -18px;
 }
 
 .raw-graph-port-dot--out { cursor: crosshair; }
 .raw-graph-port-dot--in  { cursor: pointer; }
+
+/* touch-action is NOT inherited — it applies to whichever element the touch
+   hit-tests to. `.raw-graph-surface` sets `none`, but a finger landing on a
+   wire path or a node card hit those elements' own default `auto`, so the
+   browser claimed the gesture as a page pan/zoom and cancelled the pointer
+   stream. The effect: pinch-to-zoom worked perfectly on bare canvas and did
+   nothing at all over an actual graph — which is to say, it did nothing
+   whenever it mattered. Every descendant of the stage is part of the canvas
+   and its gestures are ours to interpret. */
+.raw-graph-stage,
+.raw-graph-stage * {
+    touch-action: none;
+}
+
+/* Semantic zoom. Below ~0.34 a port row cannot be read or hit, but the wires
+   still terminate at exactly those coordinates — so mark them. A tick, not a
+   dot: it reads as "a wire lands here", not as "aim at this". */
+.raw-graph-port-tick {
+    position: absolute;
+    width: 6px;
+    height: 2px;
+    pointer-events: none;
+}
+
+.raw-graph-port-tick--in  { left: -3px; }
+.raw-graph-port-tick--out { right: -3px; }
+
+/* At the smallest tier the card is a solid block: position and topology only.
+   The whole card stays one large select target, which is the point — a tap at
+   this zoom should always do something useful rather than miss three controls. */
+.raw-graph-node-card.is-lod-block .raw-graph-node-header {
+    border-bottom: none;
+}
+
+.raw-graph-node-card.is-lod-header .raw-graph-node-label,
+.raw-graph-node-card.is-lod-compact .raw-graph-node-label {
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+}
+
+/* Says how much of the graph is on screen when fitting all of it would have
+   been illegible. Reuses the overlay-message look rather than inventing chrome. */
+.raw-graph-fit-notice {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    /* Top, not bottom. The bottom-left corner already holds the zoom cluster
+       and the bottom-right the delete action; a centred notice down there
+       collided with both on a 393px screen. The surface is already offset
+       below the topbar, so 12px here sits just under it. */
+    top: 12px;
+    max-width: calc(100% - 24px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 3;
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    background: rgba(6, 10, 18, 0.92);
+    color: var(--di-text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    min-height: 32px;
+    padding: 0 12px;
+    cursor: pointer;
+}
+
+.raw-graph-fit-notice:hover,
+.raw-graph-fit-notice:focus-visible {
+    color: var(--di-cyan);
+}
+
+@media (hover: none) {
+    .raw-graph-fit-notice { min-height: 44px; }
+}
 
 .raw-graph-port-label {
     font-size: 11px;
@@ -2319,6 +2465,7 @@
     position: relative;
     width: min(1080px, calc(100vw - 48px));
     max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
     display: grid;
     grid-template-rows: auto auto 1fr auto;
     overflow: hidden;
@@ -2438,6 +2585,7 @@
     position: relative;
     width: min(880px, calc(100vw - 48px));
     max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
     display: grid;
     grid-template-rows: auto auto 1fr auto;
     overflow: hidden;
@@ -2835,6 +2983,21 @@
     word-break: break-word;
 }
 
+/* Neither the manual path nor "Jump to <section>" overflows at phone widths,
+   but side-by-side both end up wrapped to 2-3 lines in ~130px each — legible
+   in the sense of "not broken", not in the sense of "readable". Stack them. */
+@media (max-width: 480px) {
+    .raw-help-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .raw-help-footer button {
+        width: 100%;
+    }
+}
+
 .raw-help-audiences {
     display: grid;
     gap: 12px;
@@ -3049,6 +3212,87 @@
 
     .raw-topbar-scale-control {
         display: none;
+    }
+}
+
+/* Phones. The topbar is a fixed-height single flex row holding the back button,
+   breadcrumb, surface toggles, window list, scale select, node count, chat and
+   overflow — at 390px that overflowed with no wrap and no collapse, and
+   `overflow: hidden` on the seeded state made the overflowing controls
+   unreachable rather than merely cramped. Nothing is removed here (the same
+   controls stay available); the row is simply allowed to scroll, and the fixed
+   chrome is pulled clear of the notch and the home indicator. */
+@media (max-width: 640px) {
+    .raw-topbar.is-seeded {
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        justify-content: flex-start;
+        padding-left: calc(12px + env(safe-area-inset-left));
+        padding-right: calc(12px + env(safe-area-inset-right));
+    }
+
+    .raw-topbar.is-seeded::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Every cluster keeps its intrinsic width so the row scrolls as one strip
+       instead of squashing the controls into unreadable slivers.
+       .raw-topbar-center needs the full `flex` shorthand, not just
+       flex-shrink: its base rule is `flex: 1`, i.e. flex-basis 0 — with the
+       right-hand cluster already 279px wide on a 393px screen there is no free
+       space to grow into, so the centre collapsed to width 0 while its 299px
+       location chip kept its intrinsic size and spilled to x:-51, painting on
+       top of the back button on one side and the Help/Size controls on the
+       other. Overflow scrolling cannot fix a child escaping a zero-width
+       parent; the parent has to be allowed to measure its content. */
+    .raw-topbar-left,
+    .raw-topbar-right {
+        flex-shrink: 0;
+    }
+
+    .raw-topbar-center {
+        flex: 0 0 auto;
+        justify-content: flex-start;
+    }
+
+    .raw-topbar-location {
+        max-width: 60vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Bottom sheet, not a floating panel. At 320-412px `width: min(320px,
+       100vw - 48px)` is effectively the whole screen and the panel is pinned
+       to the top, so selecting a node covered the node it was inspecting —
+       its header, its enter control and its ports all sat underneath, and the
+       panel swallowed the taps aimed at them. Selecting something must not
+       hide the thing you selected. Same shape Studio already uses for phones
+       (studio-mobile.css), so this is the existing pattern, not new chrome. */
+    .raw-selection-scaffold {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: auto;
+        max-height: 38dvh;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* The Delete FAB lives in the bottom-right corner, which the sheet now
+       occupies — and the sheet is only ever up when something is selected,
+       i.e. exactly when Delete is the button you want. Move it above the
+       sheet's reach. Pinch still zooms the canvas that stays visible, so the
+       zoom controls being covered while a node is selected is survivable;
+       losing Delete is not. */
+    .raw-delete-fab {
+        top: calc(58px + env(safe-area-inset-top));
+        bottom: auto;
+        right: calc(12px + env(safe-area-inset-right));
     }
 }
 

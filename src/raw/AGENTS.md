@@ -2,15 +2,17 @@
 
 Short routing guide for AI agents working in `src/raw/`.
 
-A fork of `src/beta/` (2026-07-19, the first lane forked from another lane
-in this project — see `docs/architecture/PROJECT_SURFACES.md`'s "On forking
-a new lane from Beta"). Same node registry/scope model as Beta, but: no
-singleton restrictions anywhere (every node type nests freely — see
+The sole experimental node-first lane. Originally forked from `src/beta/`
+(2026-07-19, the first lane forked from another lane in this project — see
+`docs/architecture/PROJECT_SURFACES.md`'s "On forking a new lane from
+Beta") with three real differences at fork time: no singleton restrictions
+anywhere (every node type nests freely — see
 `docs/architecture/RECURSIVE_NODE_CORE.md`'s "Nesting"), a hierarchy-as-
 connection active-marker toggle for scope-repeatable types, and a universal
-"view as code" inspector section on every node type. The two lanes are
-otherwise independent forks, not shared components — Beta was deliberately
-left untouched beyond removing its now-obsolete blocked-create warning.
+"view as code" inspector section on every node type. Beta was retired
+2026-08-06 (see `docs/architecture/PROJECT_SURFACES.md`'s "Beta retired,
+absorbed into Raw") — Raw absorbed its role rather than the fork
+graduating piecemeal.
 
 ## What This Area Owns
 
@@ -35,11 +37,11 @@ left untouched beyond removing its now-obsolete blocked-create warning.
 
 ## Do Not Assume
 
-- do not treat `Raw` as the main shipped product lane
+- do not treat `Raw` as the main shipped product lane — Studio still is (see `MANIFESTO.md`'s non-negotiable #6: the long-term direction is unifying Studio into Raw's node model, not a landing-page primacy switch ahead of that landing)
 - do not fork shared project logic into Raw unless the behavior is intentionally experimental
 - do not move canonical schema changes into Raw-only state or utilities
 - do not re-add a singleton/scope-restriction mechanism to any node type without checking with the user first (product decision 2026-07-19, see `docs/architecture/RECURSIVE_NODE_CORE.md`)
-- do not assume Beta and Raw share components — they're independent forks; a fix in one does not apply to the other unless deliberately ported
+- do not assume Studio's read-only graph/world previews (`StudioGraphSurface.jsx`, `StudioWorldSurface.jsx`) can be ignored when changing `RawGraphSurface.jsx`/`RawViewport.jsx`'s props — Studio wraps them directly and passes no mutation handlers, so a required prop added here breaks Studio's build
 
 ## Validation And Tests
 

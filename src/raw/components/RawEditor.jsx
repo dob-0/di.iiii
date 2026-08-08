@@ -17,13 +17,15 @@ import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSy
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { getInspectorSections } from '../../project/entityRegistry.js'
-import { createNode, getNodeType } from '../../project/nodeRegistry.js'
+import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
+import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
+import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
 import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
 
@@ -138,6 +140,10 @@ export default function RawEditor({
     const [readChatCount, setReadChatCount] = useState(0)
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
     const [isWorldOverlay, setIsWorldOverlay] = useState(false)
+    // Declared here because hostInspector's JSX is built partway down the
+    // component and needs it; the effect that measures it lives further down,
+    // next to the selection state it depends on.
+    const scaffoldRef = useRef(null)
 
     const initialStoreState = useMemo(() => {
         if (projectId || !localStorageKey) return undefined
@@ -232,18 +238,26 @@ export default function RawEditor({
         () => authoredNodes.filter((node) => matchesNodeTypeSurface(getNodeType(node.typeId), activeSurface)),
         [activeSurface, authoredNodes]
     )
-    // Panel nodes float as windows; graph cards are non-panel nodes in the current scope
+    // Every node in the current scope gets a card, panel types included.
+    //
+    // Panel nodes used to be excluded here, which meant they had NO
+    // representation on the canvas: they could not be selected, wired, moved or
+    // deleted from the graph, and because graphCardEdges below drops any edge
+    // whose endpoints are not both cards, a wire into `view.text`'s content was
+    // invisible even though it was real and carrying a value. A node the graph
+    // cannot draw is not really in the graph.
+    //
+    // It also made containers impossible: entering a node whose contents are
+    // all panels showed an empty scope. The window and the card are two views
+    // of one node — the window is the panel, the card is the node — which is
+    // the same split TouchDesigner draws between a Panel COMP in the network
+    // editor and the panel it renders.
     const graphCardNodes = useMemo(
-        () => nodes.filter((node) => {
-            if (getNodeType(node.typeId)?.render === 'panel-2d') return false
-            return (node.parentId || null) === currentScopeId
-        }),
+        () => nodes.filter((node) => (node.parentId || null) === currentScopeId),
         [nodes, currentScopeId]
     )
     // Edges are scoped along with nodes — an edge whose endpoints aren't both
-    // in the current scope's card set has no business rendering here (Beta
-    // passes the document's full, unfiltered edge list to its graph surface;
-    // this is a deliberate fix, not a carried-over behavior).
+    // in the current scope's card set has no business rendering here.
     const graphCardEdges = useMemo(() => {
         const cardIds = new Set(graphCardNodes.map((node) => node.id))
         return (document.edges || []).filter((edge) => cardIds.has(edge.fromNodeId) && cardIds.has(edge.toNodeId))
@@ -302,10 +316,15 @@ export default function RawEditor({
         }
         return true
     }, [navStack, authoredNodes])
-    const topbarLocationText = useMemo(() => {
-        if (!hasGraphNodes && !hasWorldNode) return 'Double-click to place your first node'
-        return workflow.title
-    }, [hasGraphNodes, hasWorldNode, workflow.title])
+    // Computed once: pointer type doesn't change mid-session on the devices this
+    // matters for, and re-checking on every render would just be wasted work.
+    const [pointerVerb] = useState(() => (
+        typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches
+            ? 'Double-tap'
+            : 'Double-click'
+    ))
+    const showEmptyHint = !hasGraphNodes && !hasWorldNode
+    const topbarLocationText = showEmptyHint ? `${pointerVerb} to place your first node` : ''
 
     useEffect(() => {
         if (hasAnyNodes) return
@@ -554,11 +573,24 @@ export default function RawEditor({
         const nodeRender = getNodeType(definition.id)?.render || 'hidden'
         const workspacePatch = { selectedNodeId: nextNode.id }
         if (nodeRender === 'hidden') workspacePatch.activeSurface = 'graph'
+        // A container arrives with its contents. `studio` is one palette entry;
+        // entering it has to reveal the subgraph it is made of, so the interior
+        // is created in the SAME op batch — otherwise a single undo would leave
+        // an empty container behind, and entering a freshly-placed Studio would
+        // show nothing.
+        const interior = definition.id === STUDIO_TYPE_ID
+            ? buildStudioInterior({ studioNodeId: nextNode.id, workspaceTop })
+            : []
         dispatch({ type: 'select-entity', entityId: null })
         applyLocalOps([
             { type: 'createNode', payload: { node: nextNode } },
+            ...interior.map((node) => ({ type: 'createNode', payload: { node } })),
             { type: 'setWorkspaceState', payload: { patch: workspacePatch } }
-        ], { activityMessage: `Created ${definition.label}.` })
+        ], {
+            activityMessage: interior.length
+                ? `Created ${definition.label} with ${interior.length} panels inside.`
+                : `Created ${definition.label}.`
+        })
         setPaletteState({ open: false, surface: paletteState.surface, placement: null })
     }
 
@@ -566,8 +598,171 @@ export default function RawEditor({
         openPalette('world', placement)
     }
 
+    // Every palette-creatable node type in one graph, with the maths chain
+    // actually driving the geometry. Unlike the streaming preset below, this one
+    // builds nothing that isn't implemented — see the module for which ports are
+    // deliberately left unwired and why.
+    const handleCreateAllNodesExample = () => {
+        const { nodes: exampleNodes, edges: exampleEdges } = buildAllNodesExample({
+            parentId: currentScopeId || null,
+            workspaceTop
+        })
+        if (!exampleNodes.length) return
+
+        dispatch({ type: 'select-entity', entityId: null })
+        applyLocalOps([
+            ...exampleNodes.map((node) => ({ type: 'createNode', payload: { node } })),
+            ...exampleEdges.map((edge) => ({ type: 'createEdge', payload: { edge } })),
+            {
+                type: 'setWorkspaceState',
+                payload: { patch: { activeSurface: 'graph', selectedNodeId: null } }
+            }
+        ], {
+            activityMessage: `Created the all-nodes example (${exampleNodes.length} nodes, ${exampleEdges.length} edges).`
+        })
+    }
+
+    const handleCreateStreamingPrototype = () => {
+        const startX = 80
+        const startY = workspaceTop + 72
+        const mkNode = ({ typeId, label, graphX, graphY, hostHint = '', values = {} }) => {
+            const seededValues = buildNodeValues(typeId, {
+                ...values,
+                ...(hostHint ? { hostHint } : {})
+            }, {
+                clientX: graphX + 180,
+                clientY: graphY + 48
+            })
+            return createNode(typeId, {
+                label,
+                graphX,
+                graphY,
+                values: seededValues
+            })
+        }
+
+        const instaNode = mkNode({
+            typeId: 'source.insta360',
+            label: 'Insta360 [mac]',
+            graphX: startX,
+            graphY: startY,
+            hostHint: 'mac'
+        })
+        const stereoNode = mkNode({
+            typeId: 'source.stereo',
+            label: 'Stereo Cam [linux]',
+            graphX: startX,
+            graphY: startY + 150,
+            hostHint: 'linux'
+        })
+        const micNode = mkNode({
+            typeId: 'source.mic',
+            label: 'Mic [mac]',
+            graphX: startX,
+            graphY: startY + 300,
+            hostHint: 'mac'
+        })
+        const ptzANode = mkNode({
+            typeId: 'device.ptz.osc',
+            label: 'PTZ A [windows]',
+            graphX: startX + 260,
+            graphY: startY,
+            hostHint: 'windows',
+            values: { oscAddress: '/ptz/a' }
+        })
+        const ptzBNode = mkNode({
+            typeId: 'device.ptz.osc',
+            label: 'PTZ B [windows]',
+            graphX: startX + 260,
+            graphY: startY + 150,
+            hostHint: 'windows',
+            values: { oscAddress: '/ptz/b' }
+        })
+        const controllerNode = mkNode({
+            typeId: 'stream.controller',
+            label: 'Controller [mobile]',
+            graphX: startX + 260,
+            graphY: startY + 300,
+            hostHint: 'mobile',
+            values: { title: 'Mobile Control Desk' }
+        })
+        const compositorNode = mkNode({
+            typeId: 'stream.compositor',
+            label: 'Compositor [linux]',
+            graphX: startX + 560,
+            graphY: startY + 120,
+            hostHint: 'linux'
+        })
+        const outputNode = mkNode({
+            typeId: 'stream.output',
+            label: 'Stream Output [windows]',
+            graphX: startX + 880,
+            graphY: startY + 80,
+            hostHint: 'windows',
+            values: { target: 'rtmp://localhost/live/main' }
+        })
+        const monitorNode = mkNode({
+            typeId: 'stream.monitor',
+            label: 'Program Monitor [mac]',
+            graphX: startX + 880,
+            graphY: startY + 240,
+            hostHint: 'mac',
+            values: { title: 'Program Monitor' }
+        })
+
+        const nodesToCreate = [
+            instaNode,
+            stereoNode,
+            micNode,
+            ptzANode,
+            ptzBNode,
+            controllerNode,
+            compositorNode,
+            outputNode,
+            monitorNode
+        ].filter(Boolean)
+
+        if (!nodesToCreate.length) return
+
+        const id = (node) => node?.id || ''
+        const edgesToCreate = [
+            createEdge(id(instaNode), 'frame', id(compositorNode), 'primary'),
+            createEdge(id(ptzANode), 'frame', id(compositorNode), 'altA'),
+            createEdge(id(ptzBNode), 'frame', id(compositorNode), 'altB'),
+            createEdge(id(stereoNode), 'depth', id(compositorNode), 'depth'),
+            createEdge(id(controllerNode), 'mix', id(compositorNode), 'mix'),
+            createEdge(id(compositorNode), 'program', id(outputNode), 'video'),
+            createEdge(id(micNode), 'frequency', id(outputNode), 'audio'),
+            createEdge(id(compositorNode), 'program', id(monitorNode), 'src')
+        ].filter((edge) => edge.fromNodeId && edge.toNodeId)
+
+        const ops = [
+            ...nodesToCreate.map((node) => ({ type: 'createNode', payload: { node } })),
+            ...edgesToCreate.map((edge) => ({ type: 'createEdge', payload: { edge } })),
+            {
+                type: 'setWorkspaceState',
+                payload: {
+                    patch: {
+                        activeSurface: 'graph',
+                        selectedNodeId: compositorNode?.id || null
+                    }
+                }
+            }
+        ]
+
+        dispatch({ type: 'select-entity', entityId: null })
+        applyLocalOps(ops, {
+            activityMessage: 'Created streaming prototype graph (linux + mac + windows + mobile).'
+        })
+    }
+
+    // The scaffold's offset is published as a custom property rather than an
+    // inline `top`, because an inline declaration outranks every media query:
+    // the phone bottom-sheet rule in raw.css could not override it, so the
+    // panel stayed pinned over the very node it was inspecting. CSS decides
+    // where this sits; JS only supplies the measured offset.
     const hostInspector = (
-        <aside className="raw-selection-scaffold" style={{ top: workflowHeight + 'px' }}>
+        <aside ref={scaffoldRef} className="raw-selection-scaffold" style={{ '--raw-scaffold-top': workflowHeight + 'px' }}>
             <PropertyInspector
                 title={inspectorTitle}
                 subtitle={inspectorSubtitle}
@@ -670,10 +865,71 @@ export default function RawEditor({
                 />
             )
         }
+        // Studio chrome, as nodes. These render the SAME components as the
+        // hardcoded outliner and inspector below — the panel node supplies the
+        // window, the editor supplies the body, so neither has to thread the
+        // selection and document through the graph as ports.
+        if (node.typeId === 'view.outliner') {
+            return (
+                <OutlinerPanelWindow
+                    nodes={surfaceNodes}
+                    selectedNodeId={workspaceState.selectedNodeId || null}
+                    onSelectNode={(nodeId) => selectNode(nodeId)}
+                />
+            )
+        }
+        if (node.typeId === 'view.inspector') {
+            return (
+                <PropertyInspector
+                    title={inspectorTitle}
+                    subtitle={inspectorSubtitle}
+                    sections={inspectorSections}
+                    values={inspectorValues}
+                    assetOptions={document.assets || []}
+                    onSectionChange={handleInspectorChange}
+                    emptyMessage="Select a node to inspect it."
+                />
+            )
+        }
+        // Every unhandled panel-2d type falls through to a text box, which is
+        // how the streaming preset's stream.monitor/stream.controller ended up
+        // looking like working features. Anything added above this line must be
+        // real; anything below it is a text box wearing another name.
         return <TextPanelWindow node={node} values={resolvedValues} />
     }
 
     const visibleSelection = Boolean(surfaceSelectedNode || surfaceSelectedEntity)
+
+    // How much of the canvas the selection panel is covering from the bottom,
+    // so the graph can fit itself into the part you can actually see. Only
+    // counts when the panel is anchored to the bottom edge (the phone sheet) —
+    // a floating panel at the top-right occludes a corner, not a band, and
+    // treating it as a band would push the graph up for no reason.
+    const [graphBottomInset, setGraphBottomInset] = useState(0)
+    useEffect(() => {
+        const el = scaffoldRef.current
+        if (!el) {
+            setGraphBottomInset(0)
+            return undefined
+        }
+        const measure = () => {
+            const rect = el.getBoundingClientRect()
+            const anchoredToBottom = Math.abs(rect.bottom - window.innerHeight) < 2
+            setGraphBottomInset(anchoredToBottom ? rect.height : 0)
+        }
+        measure()
+        // ResizeObserver is absent in jsdom (and in any non-browser runtime).
+        // The window resize listener alone still catches the case that matters
+        // — the viewport changing — so degrade rather than throw.
+        const observer = typeof ResizeObserver === 'function' ? new ResizeObserver(measure) : null
+        observer?.observe(el)
+        window.addEventListener('resize', measure)
+        return () => {
+            observer?.disconnect()
+            window.removeEventListener('resize', measure)
+        }
+    }, [visibleSelection, activeSurface])
+
 
     useEffect(() => {
         if (!visibleSelection || activeSurface === 'graph') return undefined
@@ -761,9 +1017,9 @@ export default function RawEditor({
                                         )
                                     })}
                                 </nav>
-                            ) : (
+                            ) : showEmptyHint ? (
                                 <span className="raw-topbar-location" aria-live="polite">{topbarLocationText}</span>
-                            )}
+                            ) : null}
                             {hasWorldNode && (
                                 <div className="raw-topbar-windows">
                                     <button
@@ -831,6 +1087,8 @@ export default function RawEditor({
                                 {overflowOpen && (
                                     <div className="raw-topbar-overflow-menu">
                                         <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
+                                        <button type="button" onClick={() => { handleCreateAllNodesExample(); setOverflowOpen(false) }}>All Nodes Example</button>
+                                        <button type="button" onClick={() => { handleCreateStreamingPrototype(); setOverflowOpen(false) }}>Streaming Prototype</button>
                                         {isLocalWorkspace && (
                                             <button type="button" onClick={() => { handleResetLocalWorkspace(); setOverflowOpen(false) }}>Reset Workspace</button>
                                         )}
@@ -860,8 +1118,9 @@ export default function RawEditor({
                 <RawGraphSurface
                     key={currentScopeId || 'root'}
                     topInset={graphTopInset}
+                    bottomInset={graphBottomInset}
                     nodes={graphCardNodes}
-                    emptyHint="Double-click to place your first node."
+                    emptyHint={`${pointerVerb} to place your first node.`}
                     edges={graphCardEdges}
                     selectedNodeId={workspaceState.selectedNodeId}
                     onEnterNode={handleEnterNode}
