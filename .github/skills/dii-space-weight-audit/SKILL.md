@@ -48,7 +48,11 @@ Every command below runs from `~/di-spaces`.
    half-applied is worse than no swap.
 6. **Look at it.** Render each changed surface on both tiers and compare. Not "it loads" —
    *look*. See Looking, below.
-7. **Promote,** then re-snapshot so the backup describes the optimized truth.
+7. **Promote,** then re-snapshot **before** running the final verification, not after. A
+   verification step must never be able to stop the backup from being written — the first
+   real promotion died on a pre-existing broken reference and `set -e` took the re-snapshot
+   down with it, leaving the backup describing pre-optimization prod while prod was already
+   optimized. That is the exact state the snapshot exists to prevent.
 
 ## Transforms And Their Risk
 
@@ -104,6 +108,12 @@ codec, keep the pixels.
   A large image (6MB, 10400px) has been seen to 502 the EXIF-scrub path four retries deep.
 - **Space and project asset stores are separate.** The same media legitimately exists twice when
   a space scene and its published project both use it. That is scoping, not duplication.
+- **A pre-existing break will fail your post-check.** Know which references were already
+  broken before you started, and say so in the script, or every future run reads as a
+  regression you caused. `platform-recordar` → `2022u52jt` is one of these.
+- **Never leave the promotion depending on a scratch directory.** Scripts written into a
+  session's `/tmp` workspace vanish with the session, and a promotion that only exists there
+  is not a procedure, it is a one-off you cannot repeat or hand over.
 - **Unreferenced is not unwanted.** Orphan sweeps empty items out of artists' Assets panels.
   sha256-id assets restore to the identical id from the snapshot, so it is reversible — but it
   is someone else's workspace, and it is their call.

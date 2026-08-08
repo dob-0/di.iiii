@@ -479,9 +479,10 @@ function AlgoVrithmStage({
     // until the beat, so this costs bandwidth early and nothing else; the beats
     // it loads under are the cheapest in the piece to render.
     //
-    // It does NOT replace compressing the source. See the assets README: the
-    // reels are drawn about 1.4m wide on a 7m shell, so full-resolution footage
-    // is being decoded and thrown away.
+    // The source IS compressed now (2026-08-08, scripts/compress-reels.mjs
+    // --replace: 360x640, 189MB -> 81MB, 3.6x less decode) — this warm-up and
+    // the compression are the two halves of the globe opening full, not
+    // alternatives.
     // Deferred by a beat rather than run inline. Warming at mount put ~190MB of
     // video in front of the app's own modules and the first frame, so the piece
     // took visibly longer to START in exchange for the reel beat arriving full.

@@ -26,7 +26,7 @@ Every task has an owner. Route to the right role before starting work.
 - [roles/README.md](roles/README.md) — company overview, org chart, routing guide
 - [roles/ui-ux-engineer.md](roles/ui-ux-engineer.md) — CSS, layout, visual identity, React render
 - [roles/node-system-engineer.md](roles/node-system-engineer.md) — nodeRegistry, ports, graph model, runtime
-- [roles/viewport-3d-engineer.md](roles/viewport-3d-engineer.md) — Three.js, BetaViewport, XR rendering
+- [roles/viewport-3d-engineer.md](roles/viewport-3d-engineer.md) — Three.js, RawViewport, XR rendering
 - [roles/backend-api-engineer.md](roles/backend-api-engineer.md) — serverXR, SQLite, auth, API routes
 - [roles/schema-protocol-engineer.md](roles/schema-protocol-engineer.md) — shared/, op-log, CRDT rules
 - [roles/infrastructure-engineer.md](roles/infrastructure-engineer.md) — Docker, GitHub Actions, deploy
@@ -64,7 +64,7 @@ Use the nearest scoped guide before reading broad docs:
 - shared project logic: [../../src/project/AGENTS.md](../../src/project/AGENTS.md)
 - main shipped Studio lane: [../../src/studio/AGENTS.md](../../src/studio/AGENTS.md)
 - shared schema/runtime: [../../src/shared/AGENTS.md](../../src/shared/AGENTS.md)
-- experimental Beta lane: [../../src/beta/AGENTS.md](../../src/beta/AGENTS.md)
+- experimental Raw lane: [../../src/raw/AGENTS.md](../../src/raw/AGENTS.md)
 - backend source: [../../serverXR/src/AGENTS.md](../../serverXR/src/AGENTS.md)
 - automation scripts: [../../scripts/AGENTS.md](../../scripts/AGENTS.md)
 - deployment docs/examples: [../../deploy/AGENTS.md](../../deploy/AGENTS.md)

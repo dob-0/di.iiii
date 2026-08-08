@@ -850,6 +850,79 @@ export const NODE_TYPES = {
         render: 'panel-2d',
     },
 
+    // The two panels below finally implement type ids that RawEditor and
+    // BetaEditor have carried default window frames for since the lanes were
+    // written (WINDOW_DEFAULT_POSITIONS) without the types ever existing — the
+    // intent was declared and left unbuilt. They are the first pieces of
+    // Studio's own chrome to become nodes rather than hardcoded panels.
+    //
+    // Both are content-less by design: a panel node receives only `node` and
+    // `values`, but the editor dispatches its body from inside RawEditor, where
+    // the selection, document and callbacks already live. That is the seam that
+    // makes UI-as-node possible at all without threading twenty props through
+    // the graph.
+
+    'view.outliner': {
+        id: 'view.outliner',
+        label: 'Outliner',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Outliner' },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'panel-2d',
+    },
+
+    'view.inspector': {
+        id: 'view.inspector',
+        label: 'Inspector',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Inspector' },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'panel-2d',
+    },
+
+    // -----------------------------------------------------------------------
+    // STUDIO — the editor itself, as one node you can enter
+    // -----------------------------------------------------------------------
+
+    // One palette entry. Placing it gives you a card like any other; entering
+    // it reveals the subgraph it is assembled from. This is the TouchDesigner
+    // COMP / Nuke Group shape, and it is the same mechanism a user would use to
+    // build their own palette item — which is the point of doing it this way
+    // rather than special-casing Studio.
+    //
+    // `render: 'hidden'` is load-bearing and NOT a placeholder: RawEditor's
+    // graphCardNodes explicitly drops every `render === 'panel-2d'` node from
+    // the canvas (they exist only as floating windows), so a panel-2d Studio
+    // node would be invisible on the graph and could never be entered. A
+    // container has to be a card.
+    'studio': {
+        id: 'studio',
+        label: 'Studio',
+        category: 'universe',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Studio' },
+        ],
+        // No outputs on purpose. `state`/`signal` would be honest-looking and
+        // dead: computeNodeOutput has no case for anything outside value.*,
+        // math.* and time, so every such port returns undefined. Declaring one
+        // here would add to exactly the problem the all-nodes example documents.
+        outputs: [],
+        defaultValues: { title: 'Studio' },
+        render: 'hidden',
+    },
+
     // -----------------------------------------------------------------------
     // MATH — transform values, connect anywhere
     // -----------------------------------------------------------------------

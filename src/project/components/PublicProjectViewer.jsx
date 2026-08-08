@@ -1,5 +1,7 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import MadeWithBadge from '../../components/MadeWithBadge.jsx'
+import LoadingScreen from '../../components/LoadingScreen.jsx'
+import lazyWithReload from '../../utils/lazyWithReload.js'
 import ProjectSwitcher from './ProjectSwitcher.jsx'
 import { createProjectSyncService } from '../services/projectSyncService.js'
 import {
@@ -23,15 +25,12 @@ import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
 // a single static import of any of them -- even one only used to render a scene
 // -- makes the code-mode page fetch and evaluate the whole three/fiber/drei/xr
 // chunk (~1.6MB raw, measured against first paint on /br_id_ge).
-const PublicProjectSceneSurface = lazy(() => import('./PublicProjectSceneSurface.jsx'))
+const PublicProjectSceneSurface = lazyWithReload(() => import('./PublicProjectSceneSurface.jsx'), 'public-scene-surface')
 
-const loadingOverlay = (
-    <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '2rem' }}>
-        <div style={overlayCardStyle}>
-            <strong>Loading live experience...</strong>
-        </div>
-    </div>
-)
+// The platform's one loading screen — black, one spinner, no drawn words
+// (LoadingScreen.jsx). The published face used to show its own lit text pill
+// here, the last per-surface loading look left.
+const loadingOverlay = <LoadingScreen label="Loading live experience" />
 
 // deviceAccess (owner opt-in in presentationState) adds allow-same-origin so the
 // page has a real security origin — getUserMedia is impossible in an opaque one
@@ -285,7 +284,9 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 </button>
             ) : null}
 
-            {/* direct project links only — the published face stays chrome-free */}
+            {/* no route passes showProjectSwitcher since 2026-08-07 (owner call:
+                the chip clashed with published page designs) — kept for a future
+                edit-context surface, not reachable from public links */}
             {showProjectSwitcher && state.status !== 'loading' && navMode === 'orbit' && !isPreview ? (
                 <ProjectSwitcher
                     spaceId={resolvedRouteSpaceId}

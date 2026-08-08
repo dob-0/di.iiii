@@ -42,6 +42,8 @@ const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
+const { registerAiConnectionRoutes } = require('./routes/aiConnectionRoutes')
+const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
 const openCallStore = require('./openCallStore')
@@ -64,6 +66,8 @@ const { createRateLimiter } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
+const { createApprovalGate, createGatedRequestNet, verifyInboundSignature, GATED_ROUTES } = require('./approvalGate')
+const pendingActionStore = require('./pendingActionStore')
 const configStore = require('./configStore')
 const { createSpaceStore } = require('./spaceStore')
 const { loadSharedModule } = require('./sharedRuntime')
@@ -104,6 +108,14 @@ const DB_PATH = config.directories.dbPath
 const RECENT_LIMIT = 25
 const DEFAULT_TTL_MS = config.defaultTtlMs
 const MAX_OP_HISTORY = 500
+// Retention is bounded by age as well as count. Counting alone made how long a
+// space or project keeps history — and therefore how long every asset that
+// history mentions survives a garbage collection — depend on how busy it is:
+// dormant work kept its last ops, and their blobs, permanently. 30 days is far
+// longer than any reconnect window (a client that falls outside it resyncs the
+// whole document via hasOpGap) and far longer than any retry the idempotency
+// guard in POST /ops has to recognise.
+const MAX_OP_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const DEFAULT_SPACE_ID = 'main'
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'model/']
 const ALLOWED_MIME_TYPES = new Set([
@@ -330,6 +342,10 @@ const PUBLIC_CORS_ROUTES = [
   { pattern: /\/api\/spaces\/[a-z0-9_-]+\/inscriptions\/?$/, methods: 'POST, OPTIONS' },
   // self-unmake of a single inscription (proof-gated DELETE — see inscriptionRoutes)
   { pattern: /\/api\/spaces\/[a-z0-9_-]+\/inscriptions\/insc-[A-Za-z0-9-]+\/?$/, methods: 'DELETE, OPTIONS' },
+  // the mark a crossing carries, changed after the fact (proof-gated PUT). Same
+  // authority as the unmaking above and reachable from the same places — a rite
+  // running on a mirror or an installation laptop is cross-origin to the field.
+  { pattern: /\/api\/spaces\/[a-z0-9_-]+\/inscriptions\/insc-[A-Za-z0-9-]+\/mark\/?$/, methods: 'PUT, OPTIONS' },
   // space scene reads — the field viewer fetches its own space's scene from
   // inside the sandboxed preview (opaque origin); private spaces still 401
   { pattern: /\/api\/spaces\/[a-z0-9_-]+\/scene\/?$/, methods: 'GET, HEAD, OPTIONS' }
@@ -1008,6 +1024,61 @@ const requireReadRole = (requiredRole = 'viewer') => async (req, res, next) => {
   return next()
 }
 
+// ── the approval gate ────────────────────────────────────────────────────
+// One instance, shared by every gated route below. Each route module (user/
+// config/space routes) registers its own executor + reauthorizer closures at
+// setup time via approvalGate.registerExecutor/registerReauthorizer — see
+// approvalGate.js for why (recovery after a restart needs to look an
+// executor up by kind, independent of any single request).
+const approvalGate = createApprovalGate()
+
+// Re-derives a role from the CURRENT database/config state for a given actor
+// — never trusts the role captured in the actor snapshot at request time.
+// Covers both identity shapes that can reach an admin-gated route: a real
+// session/account (subject == users.id) and a static bearer-token identity
+// (ADMIN_API_TOKEN etc. — subject is the configured token subject, e.g.
+// "admin"; there is no DB row, so config.auth.identities is the source of
+// truth). Anything else (guest, sync-key) can never legitimately be admin.
+function currentRoleForActor(actorType, actorSubject) {
+  if (!actorSubject) return null
+  // getPublicAuthState treats EVERY request as admin when config.requireAuth
+  // is false (type 'disabled', subject 'auth-disabled') — every other admin
+  // gate in this file (requireAdminAlways etc.) already short-circuits the
+  // same way. Re-authorization has to agree, or a self-hosted no-auth
+  // deployment would see every gated action denied at execution time no
+  // matter who approved it — the opposite of what "auth is off" means here.
+  if (actorType === 'disabled') return 'admin'
+  if (actorType === 'session') {
+    try {
+      const user = findUserById(actorSubject)
+      return user ? normalizeAuthRole(user.role, null) : null
+    } catch { return null }
+  }
+  if (actorType === 'token') {
+    const identity = config.auth.identities.find((i) => i.subject === actorSubject)
+    return identity ? normalizeAuthRole(identity.role, null) : null
+  }
+  return null
+}
+const requireAdminNow = (args, subject, actorType) => hasRequiredAuthRole(currentRoleForActor(actorType, subject), 'admin')
+approvalGate.registerReauthorizer('users.patch', requireAdminNow)
+approvalGate.registerReauthorizer('config.patch', requireAdminNow)
+approvalGate.registerReauthorizer('sandboxes.purge', requireAdminNow)
+approvalGate.registerReauthorizer('commons.asset.delete', requireAdminNow)
+// spaces.patch/spaces.delete are owner-or-admin, not admin-only — re-derived
+// against the space's CURRENT ownership, which may have changed during the
+// pending hour (e.g. the owner transferred it, or lost their account).
+async function currentlyOwnerOrAdmin(spaceId, actorType, actorSubject) {
+  if (hasRequiredAuthRole(currentRoleForActor(actorType, actorSubject), 'admin')) return true
+  if (actorType !== 'session') return false
+  const meta = await loadSpaceMeta(spaceId).catch(() => null)
+  if (!meta) return false
+  if (meta.kind === 'sandbox' && meta.id && !isGuestSubject(actorSubject) && meta.id === getOwnSandboxSpaceId(actorSubject)) return true
+  return Boolean(meta.ownerUserId) && meta.ownerUserId === actorSubject
+}
+approvalGate.registerReauthorizer('spaces.patch', (args, subject, actorType) => currentlyOwnerOrAdmin(args?.spaceId, actorType, subject))
+approvalGate.registerReauthorizer('spaces.delete', (args, subject, actorType) => currentlyOwnerOrAdmin(args?.spaceId, actorType, subject))
+
 // ── One-click GitHub sync: webhook receiver (signature-authed, pre-gate) ──────
 // Default loopback works on a normal TCP listen; under Passenger (cPanel) the app
 // is fronted by a Unix socket and nothing binds config.port, so SELF_API_URL must
@@ -1149,6 +1220,22 @@ router.post('/api/github/webhook', async (req, res) => {
   }
 })
 
+// di-bo posts the owner's Telegram decision here. Signature-authed (same
+// shape as the GitHub webhook above), not session-authed — di-bo has no
+// di.iiii account. Pre-gate on purpose: it must work even when the gate
+// itself is what's blocking every other /api route for this actor.
+router.post('/api/approvals/decision', async (req, res) => {
+  if (!verifyInboundSignature(req)) {
+    return res.status(401).json({ error: 'Invalid or missing signature.' })
+  }
+  const { id, intentHash, decision, decisionToken, decidedBy, note } = req.body || {}
+  if (!id || !intentHash || !decisionToken) {
+    return res.status(400).json({ error: 'id, intentHash and decisionToken are required.' })
+  }
+  const outcome = await approvalGate.handleDecision({ id, intentHash, decision, decisionToken, decidedBy, note })
+  res.status(outcome.status).json(outcome.body)
+})
+
 // Creating a space (POST /api/spaces) is open to any signed-in account; the
 // route handler enforces the free-tier quota (and blocks guests/tokens). Space
 // *management* (PATCH/DELETE below) is owner-or-admin, enforced by
@@ -1247,6 +1334,7 @@ registerInscriptionRoutes(router, {
   inscriptionLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 12, name: 'inscriptions' }),
   loadSpaceMeta,
   maxOpHistory: MAX_OP_HISTORY,
+  maxOpAgeMs: MAX_OP_AGE_MS,
   normalizeSpaceId,
   readJson,
   withSpaceOpsLock: sharedSpaceOpsLock,
@@ -1256,6 +1344,15 @@ registerInscriptionRoutes(router, {
 
 router.use('/api', requireReadRole('viewer'))
 router.use('/api', requireWriteRole('editor'))
+// Must run after the two lines above (role/scope already enforced by the
+// time this sees the request) and before every route registration below —
+// see approvalGate.js for why this can only ever be a net, not enforcement.
+// Mounted WITHOUT a path prefix on purpose: `router.use('/api', …)` would
+// make Express strip `/api` off req.path inside the net, so the registry's
+// `^/api/…` patterns could never match and the net would be inert. Mounted
+// bare, req.path is the router-relative path (`/api/users/42`) under every
+// mount target (/, /serverXR). Regression: approvalGate.test.js.
+router.use(createGatedRequestNet(GATED_ROUTES))
 
 const resolveProjectContext = async (projectId) => {
   const normalized = normalizeProjectId(projectId)
@@ -1293,6 +1390,9 @@ registerStatusRoutes(router, {
 })
 
 registerIntegrationRoutes(router)
+registerAiConnectionRoutes(router)
+
+registerAgentBoardRoutes(router)
 
 registerOpenCallRoutes(router, {
   requireAdminAlways,
@@ -1308,7 +1408,8 @@ registerUserRoutes(router, {
   findUserById,
   setUserSpaces,
   setUserUnrestricted,
-  setUserRole
+  setUserRole,
+  approvalGate
 })
 
 // Throttle asset uploads only (POST); asset reads on the same path stay free.
@@ -1347,6 +1448,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   listSpaces,
   listProjectsInSpace,
   maxOpHistory: MAX_OP_HISTORY,
+  maxOpAgeMs: MAX_OP_AGE_MS,
   normalizeIncomingOps,
   normalizeProjectId,
   normalizeSpaceId,
@@ -1367,7 +1469,8 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   upsertSpaceMeta,
   upload,
   writeJson,
-  writeOpsHistory
+  writeOpsHistory,
+  approvalGate
 })
 
 // Space sync keys — mint/list/revoke. Management is restricted to the space
@@ -1626,6 +1729,7 @@ registerProjectRoutes(router, {
   isValidAssetId: isValidProjectAssetId,
   listProjectsInSpace,
   maxOpHistory: MAX_OP_HISTORY,
+  maxOpAgeMs: MAX_OP_AGE_MS,
   normalizeIncomingOps,
   normalizeProjectDocument,
   normalizeProjectId,
@@ -1657,11 +1761,24 @@ registerSyncRoutes(router, {
 
 // Admin sweep for the hub's collapsed sandbox row: remove guest sandboxes the
 // TTL has already expired — the same thing the 30-minute timer does, on demand.
+approvalGate.registerExecutor('sandboxes.purge', async () => {
+  const removed = await pruneStaleSandboxes()
+  const archived = await archiveIdleAccountSandboxes()
+  return { removed: removed.length, archived: archived.length }
+})
 router.post('/api/admin/sandboxes/purge', requireAdminAlways, async (req, res, next) => {
   try {
-    const removed = await pruneStaleSandboxes()
-    const archived = await archiveIdleAccountSandboxes()
-    res.json({ ok: true, removed: removed.length, archived: archived.length })
+    const outcome = await approvalGate.gateOrApply({
+      kind: 'sandboxes.purge',
+      args: {},
+      actorState: req.authState,
+      summary: 'purge stale/idle sandboxes',
+      req
+    })
+    if (outcome.pending) {
+      return res.status(202).json({ status: 'pending_approval', approvalId: outcome.id, expiresAt: outcome.expiresAt })
+    }
+    res.json({ ok: true, ...outcome.result })
   } catch (error) {
     next(error)
   }
@@ -1672,7 +1789,8 @@ registerConfigRoutes(router, {
   configStore,
   // Repointing globalSpaceId moves the communal grant and ensures the new
   // open space exists.
-  onConfigChanged: () => ensureOpenSpace()
+  onConfigChanged: () => ensureOpenSpace(),
+  approvalGate
 })
 
 const mountTargets = new Set([config.mountPath])
@@ -1683,6 +1801,40 @@ mountTargets.forEach((targetPath) => {
   const normalizedTarget = targetPath || '/'
   app.use(normalizedTarget, router)
 })
+
+// ── the SPA, when this process is also the web server ──
+// Only for a local `di` install (CLIENT_DIR set). In the deployed topology nginx
+// serves dist/ and this block never runs, so the API's shape is unchanged.
+//
+// Order matters and is the whole trick: this sits AFTER the router mounts above,
+// so /serverXR/api/* is already answered and can never fall through to index.html.
+const CLIENT_DIR = config.directories.clientDir
+if (CLIENT_DIR) {
+  app.use(express.static(CLIENT_DIR))
+
+  app.get(/.*/, (req, res, next) => {
+    // Anything the API owns is not ours, even unmatched — a wrong URL under the
+    // API must 404 as an API, not hand back an HTML page a fetch() can't parse.
+    if (req.path.startsWith('/serverXR') || req.path.startsWith('/api')) {
+      next()
+      return
+    }
+    // A request for a real file that express.static already declined is a 404,
+    // not the app: serving index.html for /assets/missing.js turns a cache miss
+    // into a JS syntax error thrown from inside the page.
+    if (path.extname(req.path)) {
+      next()
+      return
+    }
+    // `root` + a relative name, never sendFile(absolutePath). With no root,
+    // send applies its dotfiles:'ignore' rule to every segment of the absolute
+    // path — and the default install lives in ~/.di, so a hidden directory in
+    // the path 404s the entire app. Relative to root, there is no dot segment.
+    res.sendFile('index.html', { root: CLIENT_DIR })
+  })
+
+  logger.info(`[client] serving the built app from ${CLIENT_DIR}`)
+}
 
 app.use((err, req, res, next) => {
   pushEvent('error', { message: err.message })
@@ -1718,6 +1870,13 @@ initStorage()
   .then(async () => {
     await ensureDefaultSpace()
     await ensureOpenSpace()
+    // A decision can land, then the process dies before executing it. Catch
+    // up on boot rather than leaving an approved action stuck forever.
+    if (approvalGate.isEnabled()) {
+      const recovered = await approvalGate.recoverPendingActions()
+      if (recovered) logger.info(`[approvalGate] recovered ${recovered} approved-but-unexecuted action(s)`)
+    }
+    approvalGate.startSweepLoop()
     pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
     setInterval(() => {
       pruneSpaces().catch((error) => logger.warn('Failed to prune spaces', error))
@@ -1752,14 +1911,15 @@ initStorage()
 
     initializeMesh(httpServer, config)
 
-    httpServer.listen(PORT, () => {
+    httpServer.listen(PORT, config.host, () => {
       pushEvent('server-started', {
         port: PORT,
+        host: config.host,
         node: process.version,
         releaseId: releaseInfo.releaseId,
         deployEnv: releaseInfo.deployEnv
       })
-      logger.info(`Server running. Listening on: ${PORT}`)
+      logger.info(`Server running. Listening on: ${config.host}:${PORT}`)
     })
   })
   .catch((error) => {

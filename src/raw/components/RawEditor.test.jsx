@@ -419,6 +419,46 @@ describe('RawEditor free-nesting palette create', () => {
     })
 })
 
+describe('RawEditor topbar empty-state hint', () => {
+    const HINT_STORAGE_KEY = 'test-topbar-hint'
+    const originalMatchMedia = window.matchMedia
+
+    afterEach(() => {
+        window.localStorage.removeItem(HINT_STORAGE_KEY)
+        window.matchMedia = originalMatchMedia
+    })
+
+    const mockPointer = (coarse) => {
+        window.matchMedia = vi.fn().mockImplementation((query) => ({
+            matches: coarse && query.includes('coarse'),
+            media: query,
+            addEventListener: () => {},
+            removeEventListener: () => {}
+        }))
+    }
+
+    it('says "Double-click" on a fine pointer (mouse)', () => {
+        mockPointer(false)
+        render(<RawEditor localStorageKey={HINT_STORAGE_KEY} />)
+        expect(screen.getByText(/Double-click to place your first node/)).toBeTruthy()
+        expect(screen.queryByText(/Double-tap/)).toBeNull()
+    })
+
+    it('says "Double-tap" on a coarse pointer (touch)', () => {
+        mockPointer(true)
+        render(<RawEditor localStorageKey={HINT_STORAGE_KEY} />)
+        expect(screen.getByText(/Double-tap to place your first node/)).toBeTruthy()
+        expect(screen.queryByText(/Double-click/)).toBeNull()
+    })
+
+    it('renders no topbar hint pill once any node exists — only the mocked canvas hint area remains', () => {
+        mockPointer(false)
+        window.localStorage.setItem(HINT_STORAGE_KEY, makeWorkspaceDoc([makeNodeZero()]))
+        render(<RawEditor localStorageKey={HINT_STORAGE_KEY} />)
+        expect(screen.queryByText(/Double-click|Double-tap/)).toBeNull()
+    })
+})
+
 describe('RawEditor world title wiring', () => {
     const TITLE_WIRE_STORAGE_KEY = 'test-world-title-wire'
 

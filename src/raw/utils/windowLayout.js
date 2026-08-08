@@ -1,5 +1,18 @@
 export const RAW_WINDOW_PADDING = 12
 export const DEFAULT_RAW_WORKSPACE_TOP = 64
+// The bottom-right corner permanently hosts several pieces of fixed chrome a
+// window can land under: the zoom controls, the destructive raw-delete-fab
+// (z-index 1300, whenever a node is selected), and — app-wide, on every
+// route, not just Raw — AccountButton's "Sign in" icon at zIndex 9999,
+// `bottom: 86px`/30px tall, i.e. up to 116px above the true viewport edge.
+// That z-index is above everything, so it isn't just visual: it eats clicks
+// meant for whatever a window put underneath it. On a phone, where a
+// window's default frame routinely shrinks to fill most of the available
+// height (see the width/height clamp below), a window reliably lands there
+// unless this space is reserved. Reserve it on every window, not only when
+// a node happens to be selected — the alternative is a window that jumps
+// size the moment a selection (and therefore the delete FAB) changes.
+export const RAW_WINDOW_BOTTOM_RESERVE = 120
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 const hasFiniteValue = (value) => Number.isFinite(Number(value))
@@ -39,6 +52,8 @@ export function clampWindowFrame(frame = {}, bounds = {}) {
     const viewportWidth = Number.isFinite(bounds.viewportWidth) ? bounds.viewportWidth : null
     const viewportHeight = Number.isFinite(bounds.viewportHeight) ? bounds.viewportHeight : null
     const viewportPadding = Number.isFinite(bounds.viewportPadding) ? bounds.viewportPadding : RAW_WINDOW_PADDING
+    const bottomReserve = Number.isFinite(bounds.bottomReserve) ? bounds.bottomReserve : RAW_WINDOW_BOTTOM_RESERVE
+    const bottomEdgePadding = viewportPadding + bottomReserve
 
     // A node's default window size (e.g. universe.world's 680x480) is tuned for
     // desktop and is never re-derived per viewport. Without a ceiling here, that
@@ -48,7 +63,7 @@ export function clampWindowFrame(frame = {}, bounds = {}) {
         ? Math.max(260, viewportWidth - viewportPadding * 2)
         : Infinity
     const maxHeight = viewportHeight
-        ? Math.max(180, viewportHeight - (effectiveMinTop ?? 0) - viewportPadding)
+        ? Math.max(180, viewportHeight - (effectiveMinTop ?? 0) - bottomEdgePadding)
         : Infinity
     const width = clamp(Math.max(260, Number(frame.width) || 260), 260, maxWidth)
     const height = clamp(Math.max(180, Number(frame.height) || 180), 180, maxHeight)
@@ -61,8 +76,8 @@ export function clampWindowFrame(frame = {}, bounds = {}) {
         : (allowOverflowLeft ? nextX : Math.max(minLeft, nextX))
     const maxY = viewportHeight
         ? (allowOverflowTop
-            ? viewportHeight - height - viewportPadding
-            : Math.max(minTop, viewportHeight - height - viewportPadding))
+            ? viewportHeight - height - bottomEdgePadding
+            : Math.max(minTop, viewportHeight - height - bottomEdgePadding))
         : (allowOverflowTop ? nextY : Math.max(minTop, nextY))
 
     return {
