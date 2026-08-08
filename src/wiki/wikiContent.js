@@ -129,7 +129,7 @@ export const WIKI_ARTICLES = [
         summary: 'Place an agent node in Raw and chat with Claude inside your workspace — powered by your own connected API key.',
         body: [
             'In the Raw editor, add an agent node from the palette. It opens as a chat window: type, and Claude answers in a live stream, right inside your workspace. Conversations are saved to your account — reopen the node and the chat is still there.',
-            'It runs on the Claude API key connected to your account (account menu → Claude API key). No key connected yet? The chat says so and points you there. Your key stays on the server: the browser never talks to Anthropic directly, and nobody else can use your key.',
+            'It runs on the Claude API key connected to your account. No key yet? The node itself asks: paste your key straight into the panel (or sign in first, if you are a guest) and start chatting — no detour through settings. Your key stays on the server: the browser never talks to Anthropic directly, and nobody else can use your key.',
             { list: [
                 'Each agent node holds its own conversation — place several for parallel topics.',
                 'Replies stream token by token; usage (tokens in/out) is recorded per turn on your account.',

@@ -30,6 +30,13 @@
   stream, split mid-event). **The only untested inch: a valid key's 200** — no
   sk-ant key exists on this machine (owner runs Claude Code on OAuth); one human
   message with a real key remains before promote.
+- No dead ends (owner's call): with no key the panel IS the connect flow — paste
+  the key inline (guests get sign-in buttons via the existing OAuth URLs); a
+  mid-chat key loss flips back to connect mode. Seen rendering; component-tested.
+- Dev-mode trap, learned the hard way: with REQUIRE_AUTH=false every browser and
+  every curl is the same `auth-disabled` subject, so an agent testing the key
+  flow can silently overwrite/delete the operator's real pasted key (this
+  happened). Known-fixes entry owed when this lands on dev.
 - Phase 2 contract on record: `trigger` (signal) in, `result` (string) out, so an
   agent's reply can drive other nodes; reuse approvalGate for anything an agent
   writes to a space.
