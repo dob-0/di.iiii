@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { isTypingInto } from './useAutoHideChrome.js'
+import { isTypingInto } from '../../algoVrithm/useAutoHideChrome.js'
 
 // One key hides or reveals every piece of authoring furniture at once.
 //

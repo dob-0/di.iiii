@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { TransformControls } from '@react-three/drei'
-import { roundPlacement } from './sequenceTransform.js'
-import { isLightName } from './worldLights.js'
+import { roundPlacement } from '../../algoVrithm/sequenceTransform.js'
+import { isLightName } from '../../algoVrithm/worldLights.js'
 
 // Drag handles for placing a sequence, from the outside view.
 //

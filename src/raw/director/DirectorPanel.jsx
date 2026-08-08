@@ -20,18 +20,8 @@ import {
     splitClip,
     timelinePosition,
     trimClip
-} from './editList.js'
-import { ASSET_FOLDER, ASSET_LIBRARY } from './assetLibrary.js'
-import AssetClip, { resolvePlacement } from './sequences/AssetClip.jsx'
-import { SEQUENCES } from './sequences/index.js'
-import { PLAYBACK_RATES } from './ritualClock.js'
-import {
-    LIGHT_INTENSITIES,
-    LIGHT_KINDS,
-    LIGHT_SWATCHES,
-    WORLD_SWATCHES,
-    paletteWarning
-} from './palette.js'
+} from '../../algoVrithm/editList.js'
+import { PLAYBACK_RATES } from '../../algoVrithm/ritualClock.js'
 import {
     DEFAULT_AMBIENT,
     addLight,
@@ -42,7 +32,7 @@ import {
     rowLights,
     setLightValue,
     setWorldValue
-} from './worldLights.js'
+} from '../../algoVrithm/worldLights.js'
 
 // The director panel — a video-editor timeline for the piece, for the author
 // only (see directorFlag.js). Nothing here ships to an audience.
@@ -131,10 +121,10 @@ const sameHex = (a, b) => String(a).toLowerCase() === String(b).toLowerCase()
  * choice breaks and gets out of the way — the rule holds by default and is
  * broken on purpose, never by accident.
  */
-function ColorChoice({ label, value, swatches, onChange }) {
+function ColorChoice({ label, value, swatches, onChange, warn }) {
     const [custom, setCustom] = useState(false)
     const offered = swatches.some((swatch) => sameHex(swatch.color, value))
-    const warning = paletteWarning(value)
+    const warning = warn(value)
 
     return (
         <span className="algo-vrithm-director-color-choice">
@@ -221,7 +211,18 @@ function Section({ title, open, onToggle, children }) {
     )
 }
 
-export default function DirectorPanel({ sequences, onChange, clock, selectedId, onSelect, onPlace, onSaveTiming = null }) {
+export default function DirectorPanel({ piece, sequences, onChange, clock, selectedId, onSelect, onPlace, onSaveTiming = null }) {
+    // Everything piece-specific arrives here rather than being imported — see
+    // pieces.js. The panel itself is the tool and knows about no piece at all.
+    const {
+        id: pieceId,
+        baseline,
+        assetLibrary,
+        assetFolder,
+        AssetClip,
+        resolvePlacement,
+        palette
+    } = piece
     const trackRef = useRef(null)
     const dragRef = useRef(null)
     const [trackWidth, setTrackWidth] = useState(0)
@@ -381,7 +382,7 @@ export default function DirectorPanel({ sequences, onChange, clock, selectedId, 
     // leaves the rest of the file alone. Copy stays for the cases save cannot
     // do: rows added in the panel, and any machine that is not this one.
     //
-    // SEQUENCES imported directly, not from props, on purpose: this is the
+    // The baseline comes from the piece descriptor, not from props, on purpose: this is the
     // pristine edit list as the FILE currently declares it, and the patcher
     // needs it to tell an edited field from an untouched one. `sequences` is
     // the draft and would report everything as unchanged.
@@ -395,7 +396,7 @@ export default function DirectorPanel({ sequences, onChange, clock, selectedId, 
                 headers: { 'Content-Type': 'application/json' },
                 // Component is a function and JSON drops it — which is what we
                 // want, since the patcher never touches that field.
-                body: JSON.stringify({ sequences, baseline: SEQUENCES })
+                body: JSON.stringify({ piece: pieceId, sequences, baseline })
             })
             const result = await response.json()
 
@@ -834,7 +835,8 @@ export default function DirectorPanel({ sequences, onChange, clock, selectedId, 
                                         <ColorChoice
                                             label={`${sequence.title} world colour`}
                                             value={sequence.backdrop.color}
-                                            swatches={WORLD_SWATCHES}
+                                            swatches={palette.worldSwatches}
+                                            warn={palette.warn}
                                             onChange={(color) => onChange(
                                                 setWorldValue(sequences, sequence.id, 'color', color)
                                             )}
@@ -905,7 +907,7 @@ export default function DirectorPanel({ sequences, onChange, clock, selectedId, 
                                                     role="group"
                                                     aria-label={`${light.id} kind`}
                                                 >
-                                                    {LIGHT_KINDS.map((kind) => (
+                                                    {palette.lightKinds.map((kind) => (
                                                         <button
                                                             type="button"
                                                             key={kind}
@@ -943,7 +945,8 @@ export default function DirectorPanel({ sequences, onChange, clock, selectedId, 
                                             <ColorChoice
                                                 label={`${sequence.title} ${light.id} colour`}
                                                 value={light.color}
-                                                swatches={LIGHT_SWATCHES}
+                                                swatches={palette.lightSwatches}
+                                                warn={palette.warn}
                                                 onChange={(color) => patch('color', color)}
                                             />
 
@@ -960,7 +963,7 @@ export default function DirectorPanel({ sequences, onChange, clock, selectedId, 
                                                 role="group"
                                                 aria-label={`${light.id} intensity`}
                                             >
-                                                {Object.entries(LIGHT_INTENSITIES).map(([stop, value]) => (
+                                                {Object.entries(palette.lightIntensities).map(([stop, value]) => (
                                                     <button
                                                         type="button"
                                                         key={stop}
@@ -1009,12 +1012,12 @@ export default function DirectorPanel({ sequences, onChange, clock, selectedId, 
                 drops the clip at the playhead, which is where you are looking. */}
             <div className="algo-vrithm-director-bin">
                 <span className="algo-vrithm-director-tag">assets</span>
-                {ASSET_LIBRARY.length === 0 ? (
+                {assetLibrary.length === 0 ? (
                     <span className="algo-vrithm-director-note">
-                        empty — drop images, video or .glb into {ASSET_FOLDER} and they appear here
+                        empty — drop images, video or .glb into {assetFolder} and they appear here
                     </span>
                 ) : (
-                    ASSET_LIBRARY.map((asset) => (
+                    assetLibrary.map((asset) => (
                         <button
                             type="button"
                             key={asset.id}
