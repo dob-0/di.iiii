@@ -79,11 +79,19 @@ const WINDOW_DEFAULT_POSITIONS = {
     'legacy-world.outliner':  { x: 660,  y: 56, width: 240, height: 360 },
 }
 
+const ACTIVE_MARKER_TYPE_IDS = ['world.light', 'world.background', 'world.grid']
+
 const buildWindowStateFromNode = (node, index = 0, graphContext = null) => {
     const def = WINDOW_DEFAULT_POSITIONS[node.typeId] || { x: 96, y: 140, width: 360, height: 280 }
     const frame = node.values?.frame || {}
     const hasSavedPos = frame.x != null && frame.y != null
-    const cascadeOffset = hasSavedPos ? 0 : index * 32
+    // Cascade unpositioned windows by a STABLE per-node offset, not the list
+    // index — index shifts when a sibling closes, which made every later
+    // unpositioned window hop 32px.
+    const cascadeSlot = hasSavedPos
+        ? 0
+        : Array.from(String(node.id)).reduce((sum, ch) => sum + ch.charCodeAt(0), index) % 8
+    const cascadeOffset = hasSavedPos ? 0 : cascadeSlot * 32
     return {
         id: node.id,
         title: frame.title || evaluateNodeInput(node, 'title', graphContext) || node.label,
@@ -285,7 +293,7 @@ export default function RawEditor({
     // background/world.grid) — same hierarchy-as-connection idea, same
     // workspaceState side-channel, just keyed by type as well as scope since
     // there's no dedicated map per type the way World has its own.
-    const activeMarkerTypeIds = ['world.light', 'world.background', 'world.grid']
+    const activeMarkerTypeIds = ACTIVE_MARKER_TYPE_IDS
     const getActiveNodeId = useCallback((typeId, scopeId) => {
         const candidates = authoredNodes.filter((node) => node.typeId === typeId && (node.parentId || null) === scopeId)
         if (!candidates.length) return null
@@ -343,19 +351,41 @@ export default function RawEditor({
         }
     }, [hasWorldNode])
 
+    const pendingLocalSaveRef = useRef(null)
     useEffect(() => {
-        if (!isLocalWorkspace || !localStorageKey) return
-        // The whole node document is stringified on every change, so quota
-        // exhaustion is realistic. Discarding the result meant saving stayed
-        // silently dead for the rest of the session and a reload reverted to
-        // the last successful write with no warning. Same one-time-alert
-        // shape as the asset-store quota path in useAssetRestore.
-        if (writeLocalWorkspaceDocument(localStorageKey, document)) return
-        if (localSaveFailedRef.current) return
-        localSaveFailedRef.current = true
-        console.error('[local-workspace] save failed — browser storage is full or unavailable')
-        alert('This workspace can no longer be saved to browser storage (it is full or unavailable). Export your work — reloading will lose changes made from now on.')
+        if (!isLocalWorkspace || !localStorageKey) return undefined
+        // Debounced: the whole node document is stringified per write, and an
+        // undebounced effect ran that synchronously on EVERY op — including
+        // every rAF-gated drag frame, which is exactly when jank hurts most.
+        // The pending ref + unload flush below make the debounce lossless.
+        pendingLocalSaveRef.current = document
+        const timer = setTimeout(() => {
+            pendingLocalSaveRef.current = null
+            // Quota exhaustion is realistic. Discarding the result meant saving
+            // stayed silently dead for the session — same one-time-alert shape
+            // as the asset-store quota path in useAssetRestore.
+            if (writeLocalWorkspaceDocument(localStorageKey, document)) return
+            if (localSaveFailedRef.current) return
+            localSaveFailedRef.current = true
+            console.error('[local-workspace] save failed — browser storage is full or unavailable')
+            alert('This workspace can no longer be saved to browser storage (it is full or unavailable). Export your work — reloading will lose changes made from now on.')
+        }, 400)
+        return () => clearTimeout(timer)
     }, [document, isLocalWorkspace, localStorageKey])
+    useEffect(() => {
+        if (!isLocalWorkspace || !localStorageKey || typeof window === 'undefined') return undefined
+        const flush = () => {
+            if (pendingLocalSaveRef.current) {
+                writeLocalWorkspaceDocument(localStorageKey, pendingLocalSaveRef.current)
+                pendingLocalSaveRef.current = null
+            }
+        }
+        window.addEventListener('beforeunload', flush)
+        return () => {
+            window.removeEventListener('beforeunload', flush)
+            flush()
+        }
+    }, [isLocalWorkspace, localStorageKey])
 
     useEffect(() => {
         try {
@@ -452,15 +482,53 @@ export default function RawEditor({
     const handleEnterNode = useCallback((nodeId) => {
         const node = authoredNodes.find((n) => n.id === nodeId)
         if (!node) return
+        // A closed panel window had NO reopen path (close wrote
+        // frame.visible=false and nothing ever set it back) — entering the
+        // node's graph card now reopens its window instead of entering an
+        // empty scope.
+        if (getNodeRender(node) === 'panel-2d' && node.values?.frame?.visible === false) {
+            applyLocalOps({
+                type: 'updateNode',
+                payload: { nodeId, patch: { values: { frame: { ...(node.values?.frame || {}), visible: true } } } }
+            })
+            return
+        }
         if (node.typeId === 'universe.world') setIsWorldFullscreen(true)
         scopeEnterNode(nodeId)
-    }, [authoredNodes, scopeEnterNode])
+    }, [authoredNodes, scopeEnterNode, applyLocalOps])
 
     const handleNavigateToScope = useCallback((targetIndex) => {
         const newScopeId = navStack[targetIndex] ?? null
         if (worldNode && newScopeId !== worldNode.id) setIsWorldFullscreen(false)
         scopeNavigateToScope(targetIndex)
     }, [navStack, scopeNavigateToScope, worldNode])
+
+    // Browser/hardware BACK pops one scope level. This is the only exit on a
+    // phone when a space hides the chrome (showChrome:false removes the back
+    // button and breadcrumb, and the Escape fallback needs a keyboard) —
+    // without it a chromeless scope is a dead end on touch.
+    const scopeDepthRef = useRef(0)
+    const navigateUpRef = useRef(() => {})
+    useEffect(() => {
+        scopeDepthRef.current = navStack.length
+        navigateUpRef.current = () => handleNavigateToScope(navStack.length - 2)
+    }, [navStack, handleNavigateToScope])
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined
+        const onPop = () => {
+            if (scopeDepthRef.current > 0) {
+                navigateUpRef.current()
+                window.history.pushState({ rawScope: true }, '')
+            }
+        }
+        window.addEventListener('popstate', onPop)
+        return () => window.removeEventListener('popstate', onPop)
+    }, [])
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        // arm one history entry when entering the first scope level
+        if (navStack.length === 1) window.history.pushState({ rawScope: true }, '')
+    }, [navStack.length])
 
     const handleInspectorChange = (component, nextComponentValue) => {
         if (surfaceSelectedNode) {
@@ -792,6 +860,9 @@ export default function RawEditor({
             // real "silent microphone" reading doesn't get treated as unset.
             const clear = value === null || value === undefined
             if (clear && !prev.has(key)) return prev
+            // identical value re-reported (mic at a steady level, the same
+            // texture instance) must not re-render the whole editor
+            if (!clear && prev.get(key) === value) return prev
             const next = new Map(prev)
             if (clear) next.delete(key)
             else next.set(key, value)
@@ -811,6 +882,27 @@ export default function RawEditor({
         handleLiveOutputChange(nodeId, 'volume', volume)
         handleLiveOutputChange(nodeId, 'frequency', frequency)
     }, [handleLiveOutputChange])
+    // Stable graph-surface callbacks: as inline lambdas these re-registered
+    // RawGraphSurface's window-level drag/key listeners on every parent
+    // render, and a teardown mid-drag dropped the queued final frame.
+    const handleCreateEdge = useCallback((payload) => applyLocalOps({
+        type: 'createEdge',
+        payload: { edge: payload }
+    }), [applyLocalOps])
+    const handleDeleteEdge = useCallback((edgeId) => applyLocalOps({
+        type: 'deleteEdge',
+        payload: { edgeId }
+    }), [applyLocalOps])
+    const handleDeleteNode = useCallback((nodeId) => {
+        applyLocalOps([
+            { type: 'deleteNode', payload: { nodeId } },
+            { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
+        ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })
+    }, [applyLocalOps])
+    const handleMoveNode = useCallback((nodeId, nextX, nextY) => applyLocalOps({
+        type: 'updateNode',
+        payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
+    }), [applyLocalOps])
     const graphContext = useMemo(
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs }),
         [document, clockNow, liveOutputs]
@@ -1143,24 +1235,10 @@ export default function RawEditor({
                     selectedNodeId={workspaceState.selectedNodeId}
                     onEnterNode={handleEnterNode}
                     onSelectNode={selectNode}
-                    onCreateEdge={(payload) => applyLocalOps({
-                        type: 'createEdge',
-                        payload: { edge: payload }
-                    })}
-                    onDeleteEdge={(edgeId) => applyLocalOps({
-                        type: 'deleteEdge',
-                        payload: { edgeId }
-                    })}
-                    onDeleteNode={(nodeId) => {
-                        applyLocalOps([
-                            { type: 'deleteNode', payload: { nodeId } },
-                            { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
-                        ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })
-                    }}
-                    onMoveNode={(nodeId, nextX, nextY) => applyLocalOps({
-                        type: 'updateNode',
-                        payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
-                    })}
+                    onCreateEdge={handleCreateEdge}
+                    onDeleteEdge={handleDeleteEdge}
+                    onDeleteNode={handleDeleteNode}
+                    onMoveNode={handleMoveNode}
                     onDoubleClick={(placement) => openPalette('graph', placement)}
                     isNodeActive={(node) =>
                         activeMarkerTypeIds.includes(node.typeId)
@@ -1182,6 +1260,11 @@ export default function RawEditor({
                             allowOverflowTop
                             onFocus={() => {
                                 selectNode(node.id)
+                                // already topmost → no op. Unconditional bumps
+                                // inflated zIndex forever AND pushed a real
+                                // undo entry per title-bar click, so Ctrl+Z
+                                // undid a focus instead of the last edit.
+                                if ((node.values?.frame?.zIndex || 6) >= topZIndex) return
                                 applyLocalOps({
                                     type: 'updateNode',
                                     payload: {

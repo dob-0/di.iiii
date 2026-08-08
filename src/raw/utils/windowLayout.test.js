@@ -102,23 +102,28 @@ describe('windowLayout', () => {
         }))
     })
 
-    it('allows view windows to overflow above the top inset while still clamping the right and bottom edges', () => {
+    it('allows overflow above the top INSET but never above the viewport — the header must stay reachable', () => {
+        // above the topbar inset (minTop) is allowed…
         expect(clampWindowFrame({
-            x: 24,
-            y: -140,
-            width: 360,
-            height: 240
+            x: 24, y: 40, width: 360, height: 240
         }, {
-            minTop: 180,
-            allowOverflowTop: true,
-            viewportWidth: 1024,
-            viewportHeight: 768
-        })).toEqual(expect.objectContaining({
-            x: 24,
-            y: -140,
-            width: 360,
-            height: 240
-        }))
+            minTop: 180, allowOverflowTop: true, viewportWidth: 1024, viewportHeight: 768
+        })).toEqual(expect.objectContaining({ x: 24, y: 40 }))
+        // …above the viewport top is not: a header at y<0 is unreachable and
+        // the frame persists, so one stray swipe would lose the window forever
+        expect(clampWindowFrame({
+            x: 24, y: -140, width: 360, height: 240
+        }, {
+            minTop: 180, allowOverflowTop: true, viewportWidth: 1024, viewportHeight: 768
+        })).toEqual(expect.objectContaining({ x: 24, y: 0 }))
+    })
+
+    it('keeps at least 72px of an overflow-left window inside the viewport', () => {
+        expect(clampWindowFrame({
+            x: -5000, y: 200, width: 360, height: 240
+        }, {
+            minTop: 64, allowOverflowLeft: true, viewportWidth: 390, viewportHeight: 844
+        }).x).toBe(-(360 - 72))
     })
 
     it('shrinks a desktop-sized default (e.g. universe.world 680x480) to fit a phone viewport', () => {

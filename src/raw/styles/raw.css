@@ -1776,7 +1776,9 @@
 .raw-chat-input-row {
     display: flex;
     gap: 8px;
-    padding: 10px 12px;
+    /* right padding clears the 16px window resize handle at bottom-right —
+       it paints and hit-tests over the Send button's corner otherwise */
+    padding: 10px 28px 10px 12px;
     border-top: 1px solid var(--di-cyan-border);
 }
 
@@ -3223,6 +3225,20 @@
    controls stay available); the row is simply allowed to scroll, and the fixed
    chrome is pulled clear of the notch and the home indicator. */
 @media (max-width: 640px) {
+    /* below 16px, mobile Safari auto-zooms the page on input focus — with
+       fixed-position windows that strands the user mid-window after every
+       message. 16px is the no-zoom floor, not a style choice. */
+    .raw-chat-input,
+    .raw-node-palette-input {
+        font-size: 16px;
+    }
+
+    /* breadcrumbs live inside a horizontal scroller here — a ~20px target
+       loses most taps to the scroll gesture. Grow them to a finger size. */
+    .raw-topbar-crumb {
+        padding: 10px 12px;
+    }
+
     .raw-topbar.is-seeded {
         overflow-x: auto;
         overflow-y: hidden;

@@ -47,14 +47,24 @@ function deleteChat(userId, chatId) {
   return result.changes > 0
 }
 
+// The LAST N messages, oldest-first — a plain ASC LIMIT would freeze the
+// window at the chat's beginning once it outgrows the limit, silently feeding
+// the model ancient context forever.
 function listMessages(userId, chatId, { limit = 200 } = {}) {
   const chat = getChat(userId, chatId)
   if (!chat) return null
   const db = getDb()
   return db.prepare(`
     SELECT id, role, content, model, input_tokens, output_tokens, created_at
-    FROM ai_messages WHERE chat_id = ? ORDER BY rowid ASC LIMIT ?
-  `).all(chatId, limit)
+    FROM ai_messages WHERE chat_id = ? ORDER BY rowid DESC LIMIT ?
+  `).all(chatId, limit).reverse()
+}
+
+function deleteMessage(userId, chatId, messageId) {
+  const chat = getChat(userId, chatId)
+  if (!chat) return false
+  const db = getDb()
+  return db.prepare('DELETE FROM ai_messages WHERE id = ? AND chat_id = ?').run(messageId, chatId).changes > 0
 }
 
 function appendMessage(userId, chatId, { role, content, model = null, inputTokens = null, outputTokens = null }) {
@@ -91,4 +101,4 @@ function usageSince(userId, sinceMs) {
   return { inputTokens: row?.input || 0, outputTokens: row?.output || 0 }
 }
 
-module.exports = { createChat, getChat, listChats, renameChat, deleteChat, listMessages, appendMessage, setClaudeSession, usageSince }
+module.exports = { createChat, getChat, listChats, renameChat, deleteChat, listMessages, appendMessage, deleteMessage, setClaudeSession, usageSince }

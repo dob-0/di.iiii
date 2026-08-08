@@ -9,7 +9,10 @@ const https = require('node:https')
 
 const ANTHROPIC_HOST = 'api.anthropic.com'
 const ANTHROPIC_VERSION = '2023-06-01'
+// Socket-idle timeout (reset by every byte) — pairs with the wall-clock
+// deadline below; idle alone never bounds a trickling stream.
 const REQUEST_TIMEOUT_MS = 120_000
+const WALL_CLOCK_DEADLINE_MS = 300_000
 
 // The models a di.iiii account may call through the proxy. Keep small and
 // current-generation — the ceiling on max_tokens below is the cost control.
@@ -19,7 +22,12 @@ const ALLOWED_MODELS = new Set([
   'claude-haiku-4-5-20251001'
 ])
 const DEFAULT_MODEL = 'claude-sonnet-5'
-const MAX_TOKENS_CEILING = 4096
+// On the 5-family, thinking is ON by default and max_tokens caps
+// thinking + reply TOGETHER — a tight cap silently truncates or blanks the
+// visible reply while thinking consumes the budget. 16k default leaves room;
+// 64k is the ceiling a caller may request (streaming, so no HTTP timeout).
+const DEFAULT_MAX_TOKENS = 16_000
+const MAX_TOKENS_CEILING = 64_000
 
 // messages: [{role:'user'|'assistant', content:string}]
 // onDelta(text) fires per streamed text chunk.
@@ -39,7 +47,7 @@ function streamChatCompletion({ apiKey, model, system, messages, maxTokens, sign
     const resolvedModel = ALLOWED_MODELS.has(model) ? model : DEFAULT_MODEL
     const body = JSON.stringify({
       model: resolvedModel,
-      max_tokens: Math.min(Number(maxTokens) || MAX_TOKENS_CEILING, MAX_TOKENS_CEILING),
+      max_tokens: Math.min(Number(maxTokens) || DEFAULT_MAX_TOKENS, MAX_TOKENS_CEILING),
       stream: true,
       ...(system ? { system } : {}),
       messages: messages.map((m) => ({ role: m.role, content: String(m.content) }))
@@ -119,6 +127,12 @@ function streamChatCompletion({ apiKey, model, system, messages, maxTokens, sign
     req.on('timeout', () => {
       req.destroy(Object.assign(new Error('anthropic request timeout'), { status: 504 }))
     })
+    // Hard wall-clock deadline: the socket timeout resets on every byte, so a
+    // trickling upstream could otherwise hold a stream slot indefinitely.
+    const deadline = setTimeout(() => {
+      req.destroy(Object.assign(new Error('anthropic request exceeded deadline'), { status: 504 }))
+    }, WALL_CLOCK_DEADLINE_MS)
+    req.on('close', () => clearTimeout(deadline))
     req.on('error', reject)
     if (signal) {
       const abort = () => req.destroy(Object.assign(new Error('aborted'), { status: 499 }))

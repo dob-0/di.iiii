@@ -52,3 +52,32 @@
 - Phase 2 contract on record: `trigger` (signal) in, `result` (string) out, so an
   agent's reply can drive other nodes; reuse approvalGate for anything an agent
   writes to a space.
+
+## 2026-08-08 — deep audit round: 4-agent sweep, ~40 findings, 25 fixed
+
+- Trigger: the owner hit a live "Maximum update depth exceeded" loop (webcam
+  node) and asked for a full Raw audit. Four parallel read-only auditors ran:
+  effects/state loops, graph runtime + memory, adversarial review of the new
+  chat code, touch/UX paths.
+- Fixed this round (each with mechanism recorded in known-fixes): the webcam/
+  mic inline-callback loop; undo coalescing destroying same-node edits; the
+  off-screen-window trap (clamp floor + resize re-clamp + reopen-via-card);
+  palette placing nodes on scroll-touch; chromeless-scope dead end on phones
+  (browser BACK pops scope); VR misdetection on every WebXR browser; graph
+  re-fit yank on create/delete; zIndex inflation + undo pollution from focus;
+  frozen 200-message context window; composer lock on dropped streams; missing
+  abort wiring (tokens burned after close); 5-family max_tokens truncation
+  (thinking shares the cap — 16k/64k now, stopReason surfaced); prompt-as-argv
+  flag injection in the local runner (stdin now); /tmp cwd hazard (dataDir);
+  event-loop-blocking availability probe (async); orphaned user turns on
+  failure (deleted); double-send race; chatId 404 recovery for shared
+  projects; scroll pinning yanking readers mid-stream; iOS input zoom; resize
+  handle over Send; localStorage-per-render in presence; per-drag-frame
+  document stringify (debounced + unload flush); same-value liveOutputs churn.
+- **Deferred, by size or product judgment** (next session's backlog): the
+  60fps document-global graph clock (needs a subscription model — biggest
+  perf item); capture lifetime coupled to panel mount (fullscreen kills the
+  webcam feeding it — needs design); selection sheet covering the chat input
+  on phones (product call on focus-opens-inspector); panel `title` port dead
+  vs authored frame.title; cycle cache order-dependence; inspector whole-blob
+  patches; per-viewport unsynchronised clocks.

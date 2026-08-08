@@ -30,7 +30,13 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
             // a logged-in local `claude` CLI counts as connected — Max/Pro
             // subscribers never need an API key on their own machine
             .then((available) => {
-                if (!cancelled) setConnection(available?.keyConnected || available?.localClaude ? 'connected' : 'none')
+                if (cancelled) return
+                // never demote an already-connected panel: a slow providers
+                // response must not revert a connect the user just completed
+                setConnection((current) => {
+                    if (current === 'connected') return current
+                    return available?.keyConnected || available?.localClaude ? 'connected' : 'none'
+                })
             })
             .catch((e) => {
                 if (cancelled) return
@@ -58,16 +64,30 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
         }
     }
 
+    const sendingRef = useRef(false)
+
     useEffect(() => {
         let cancelled = false
         if (!chatId) return undefined
+        // Skip the refetch when we just created this chat ourselves — the
+        // persisted-id prop bounce would otherwise race the in-flight stream
+        // and wipe the message the user just sent.
+        if (chatIdRef.current === chatId) return undefined
         chatIdRef.current = chatId
         getAiChat(chatId)
             .then(({ messages: loaded }) => {
                 if (!cancelled) setMessages(loaded || [])
             })
             .catch((e) => {
-                if (!cancelled) setNotice(e.status === 403 ? 'Sign in with an account to chat.' : 'Could not load this chat.')
+                if (cancelled) return
+                if (e.status === 404) {
+                    // another user's chat (shared project) or a deleted one —
+                    // clear the poisoned ref so the next send starts fresh
+                    chatIdRef.current = null
+                    setNotice('This node held someone else’s chat — your next message starts your own.')
+                } else {
+                    setNotice(e.status === 403 ? 'Sign in with an account to chat.' : 'Could not load this chat.')
+                }
             })
         return () => { cancelled = true }
     }, [chatId])
@@ -75,45 +95,66 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
     const lastText = streamText ?? messages.at(-1)?.content
     useEffect(() => {
         const el = listRef.current
-        if (el) el.scrollTop = el.scrollHeight
+        if (!el) return
+        // only pin when the reader is already near the bottom — never yank
+        // the view away from someone reading history mid-stream
+        const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48
+        if (nearBottom) el.scrollTop = el.scrollHeight
     }, [messages.length, lastText])
 
     const send = useCallback(async (text) => {
+        if (sendingRef.current) return false
+        sendingRef.current = true
         setNotice('')
         try {
             if (!chatIdRef.current) {
                 const chat = await createAiChat({ title: text.slice(0, 60) })
                 chatIdRef.current = chat.id
                 onPersistChatId?.(chat.id)
+            } else if (chatId !== chatIdRef.current) {
+                // an undo stripped the node's chatId while the live chat keeps
+                // working off the ref — re-persist so a reload finds it again
+                onPersistChatId?.(chatIdRef.current)
             }
         } catch (e) {
+            sendingRef.current = false
             setNotice(e.status === 403 ? 'Sign in with an account to chat.' : 'Could not start the chat.')
-            return
+            return false
         }
         setStreamText('')
-        await sendAiChatMessage(chatIdRef.current, text, {
-            onAccepted: (userMessage) => setMessages((prev) => [...prev, userMessage]),
-            onDelta: (delta) => setStreamText((prev) => (prev ?? '') + delta),
-            onDone: (assistantMessage) => {
-                setMessages((prev) => [...prev, assistantMessage])
-                setStreamText(null)
-            },
-            onError: (message) => {
-                setNotice(message)
-                setStreamText(null)
-                // a mid-chat key loss (deleted/rejected) flips the panel back
-                // into its connect mode instead of leaving a dead notice
-                if (/connect your claude api key/i.test(message || '')) setConnection('none')
-            }
-        }).catch(() => setStreamText(null))
-    }, [onPersistChatId])
+        try {
+            await sendAiChatMessage(chatIdRef.current, text, {
+                onAccepted: (userMessage) => setMessages((prev) => [...prev, userMessage]),
+                onDelta: (delta) => setStreamText((prev) => (prev ?? '') + delta),
+                onDone: (assistantMessage, stopReason) => {
+                    setMessages((prev) => [...prev, assistantMessage])
+                    if (stopReason === 'max_tokens') setNotice('The reply hit its length limit and may be cut short.')
+                },
+                onError: (message) => {
+                    setNotice(message)
+                    // a mid-chat key loss (deleted/rejected) flips the panel back
+                    // into its connect mode instead of leaving a dead notice
+                    if (/connect your claude api key/i.test(message || '')) setConnection('none')
+                }
+            })
+        } catch {
+            setNotice('The reply failed — try again.')
+            return false
+        } finally {
+            sendingRef.current = false
+            setStreamText(null)
+        }
+        return true
+    }, [onPersistChatId, chatId])
 
-    const submit = (event) => {
+    const submit = async (event) => {
         event.preventDefault()
         const trimmed = draft.trim()
-        if (!trimmed || streamText !== null) return
+        if (!trimmed || streamText !== null || sendingRef.current) return
         setDraft('')
-        send(trimmed)
+        const delivered = await send(trimmed)
+        // a failed send must not eat the typed message
+        if (!delivered) setDraft((current) => current || trimmed)
     }
 
     return (

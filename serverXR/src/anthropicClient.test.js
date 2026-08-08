@@ -96,7 +96,7 @@ describe('anthropicClient against a wire-shaped fixture', () => {
       system: 'sys',
       messages: [{ role: 'user', content: 'hi' }]
     })
-    expect(lastRequest.body.max_tokens).toBeLessThanOrEqual(4096)
+    expect(lastRequest.body.max_tokens).toBe(16000) // 5-family default: thinking + reply share the cap
   })
 
   it('clamps a disallowed model to the default and caps max_tokens', async () => {
@@ -108,6 +108,6 @@ describe('anthropicClient against a wire-shaped fixture', () => {
       transport: { host: '127.0.0.1', port, rejectUnauthorized: false }
     })
     expect(lastRequest.body.model).toBe('claude-sonnet-5')
-    expect(lastRequest.body.max_tokens).toBe(4096)
+    expect(lastRequest.body.max_tokens).toBe(64000)
   })
 })

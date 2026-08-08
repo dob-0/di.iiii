@@ -66,7 +66,8 @@ async function runHandlers(handlers, req) {
     json(value) { this.body = value; this.ended = true; return this },
     write(chunk) { this.chunks.push(chunk); return true },
     end() { this.ended = true },
-    flushHeaders() {}
+    flushHeaders() {},
+    on() {}
   }
   for (const handler of handlers) {
     if (res.ended && res.body !== null) break

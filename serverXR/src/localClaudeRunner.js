@@ -9,28 +9,42 @@
 // --resume it. Tools: none are allowlisted, and -p mode auto-denies anything
 // that would need permission — this is a conversation, not an agent run.
 
-const { spawn, spawnSync } = require('node:child_process')
+const { spawn } = require('node:child_process')
 const fsp = require('node:fs/promises')
-const os = require('node:os')
 const path = require('node:path')
+const { config } = require('./config')
 
 const RUN_TIMEOUT_MS = 180_000
+const SESSION_ID_SHAPE = /^[a-zA-Z0-9-]{8,64}$/
 const SYSTEM_PROMPT = 'You are Claude, chatting with a creator inside di.iiii, a browser-native XR authoring studio. Conversational replies only — you have no tools here. Be concise and practical.'
 
+// Availability is probed asynchronously (spawnSync here froze the whole
+// event loop for the probe's duration on every first panel mount). Until the
+// probe resolves the answer is pessimistically false — the panel's next
+// providers poll picks up the real value.
 let availabilityCache = null
+let availabilityProbe = null
 
-// `claude --version` once per process; a missing binary means the local
-// backend simply is not offered.
 function isLocalClaudeAvailable() {
   if (availabilityCache !== null) return availabilityCache
-  try {
-    const probe = spawnSync('claude', ['--version'], { timeout: 10_000, encoding: 'utf8' })
-    availabilityCache = probe.status === 0
-  } catch {
-    availabilityCache = false
+  if (!availabilityProbe) {
+    availabilityProbe = new Promise((resolve) => {
+      let child
+      try {
+        child = spawn('claude', ['--version'], { stdio: 'ignore' })
+      } catch {
+        resolve(false)
+        return
+      }
+      const timer = setTimeout(() => { child.kill('SIGKILL'); resolve(false) }, 10_000)
+      child.on('error', () => { clearTimeout(timer); resolve(false) })
+      child.on('close', (code) => { clearTimeout(timer); resolve(code === 0) })
+    }).then((ok) => { availabilityCache = ok; return ok })
   }
-  return availabilityCache
+  return false
 }
+// warm the cache at boot so the first real request already knows
+isLocalClaudeAvailable()
 
 const extractText = (content) => {
   if (typeof content === 'string') return content
@@ -45,18 +59,30 @@ const extractText = (content) => {
 // onDelta fires per assistant message (message-grained, not token-grained —
 // the CLI's stream-json emits whole assistant turns).
 async function runLocalClaude({ prompt, resumeSessionId, onDelta, signal, binary = 'claude' }) {
-  const cwd = path.join(os.tmpdir(), 'dii-agent-chat')
-  await fsp.mkdir(cwd, { recursive: true }).catch(() => {})
+  // Under the app's own data dir, not the shared world-writable /tmp — a
+  // co-tenant could pre-create a /tmp path and choose the CLAUDE.md the
+  // spawned claude picks up.
+  const cwd = path.join(config.directories.dataDir, 'agent-chat')
+  await fsp.mkdir(cwd, { recursive: true })
+
+  if (resumeSessionId && !SESSION_ID_SHAPE.test(resumeSessionId)) {
+    throw Object.assign(new Error('invalid resume session id'), { status: 400 })
+  }
 
   return new Promise((resolve, reject) => {
+    // The prompt goes over STDIN, never argv: a message starting with "-"
+    // (e.g. "--help", "-1 or -2?") would otherwise be parsed as CLI flags,
+    // since -p's value is optional.
     const args = [
-      '-p', prompt,
+      '-p',
       '--output-format', 'stream-json',
       '--verbose',
       '--append-system-prompt', SYSTEM_PROMPT,
       ...(resumeSessionId ? ['--resume', resumeSessionId] : [])
     ]
-    const child = spawn(binary, args, { cwd, stdio: ['ignore', 'pipe', 'pipe'] })
+    const child = spawn(binary, args, { cwd, stdio: ['pipe', 'pipe', 'pipe'] })
+    child.stdin.on('error', () => {})
+    child.stdin.end(prompt)
 
     let buffer = ''
     let text = ''

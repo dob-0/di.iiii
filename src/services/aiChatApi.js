@@ -45,9 +45,14 @@ export async function sendAiChatMessage(chatId, text, { model, onAccepted, onDel
         throw error
     }
 
+    if (!response.body) {
+        onError?.('The reply stream could not be opened.', 502)
+        return
+    }
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
+    let terminal = false
     const dispatch = (eventName, payloadText) => {
         let payload
         try {
@@ -57,8 +62,13 @@ export async function sendAiChatMessage(chatId, text, { model, onAccepted, onDel
         }
         if (eventName === 'accepted') onAccepted?.(payload.userMessage)
         else if (eventName === 'delta') onDelta?.(payload.text)
-        else if (eventName === 'done') onDone?.(payload.assistantMessage)
-        else if (eventName === 'error') onError?.(payload.message, payload.status)
+        else if (eventName === 'done') {
+            terminal = true
+            onDone?.(payload.assistantMessage, payload.stopReason)
+        } else if (eventName === 'error') {
+            terminal = true
+            onError?.(payload.message, payload.status)
+        }
     }
 
     for (;;) {
@@ -78,4 +88,7 @@ export async function sendAiChatMessage(chatId, text, { model, onAccepted, onDel
             if (payloadText) dispatch(eventName, payloadText)
         }
     }
+    // A graceful EOF without done/error (server restart, proxy timeout) must
+    // not leave the caller waiting forever — synthesize the error.
+    if (!terminal) onError?.('The reply was cut off — try again.', 502)
 }

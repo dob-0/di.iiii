@@ -163,13 +163,17 @@ export default function NodePalette({
                                     }}
                                     onPointerDown={(event) => {
                                         // preventDefault keeps focus in the search
-                                        // input on mouse. It is a no-op for touch,
-                                        // which is why this used to be onMouseDown
-                                        // and why the row never committed on a tap.
+                                        // input on mouse. Committing moved to
+                                        // onClick: pointerdown fires the instant a
+                                        // finger lands, so scrolling this list by
+                                        // dragging on a row placed that row's node.
+                                        // The browser suppresses click after a
+                                        // scroll drag, which is exactly the
+                                        // discrimination needed here.
                                         event.preventDefault()
                                         setActiveIndex(index)
-                                        handleConfirm(definition)
                                     }}
+                                    onClick={() => handleConfirm(definition)}
                                 >
                                     <span className="raw-node-palette-item-title">
                                         <strong>{definition.label}</strong>

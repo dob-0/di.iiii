@@ -391,7 +391,10 @@ export default function RawGraphSurface({
     // count: entering a container node is the event worth re-fitting for, and
     // adding a node is emphatically not (no editor re-fits on every create —
     // it would yank the canvas out from under you mid-edit).
-    const scopeKey = nodes.length ? `${nodes.length}:${nodes[0]?.parentId || ''}:${nodes[0]?.id || ''}` : ''
+    // The key must be the SCOPE, nothing else — a node count or first-node id
+    // in here made every create/delete miss the guard and re-fit, which is
+    // exactly the yank the comment above forbids.
+    const scopeKey = nodes.length ? `scope:${nodes[0]?.parentId || 'root'}` : ''
     useEffect(() => {
         if (initialZoom !== null) return
         if (hasFitRef.current === scopeKey || !containerRef.current || nodes.length === 0) return

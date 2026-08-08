@@ -144,6 +144,12 @@ function registerAiChatRoutes(router, {
     }
     send('accepted', { userMessage })
 
+    // A closed client (window closed, node deleted, navigation) must abort
+    // the upstream request — otherwise tokens keep burning and the in-flight
+    // slot stays held for the full run.
+    const abortController = new AbortController()
+    res.on('close', () => abortController.abort())
+
     inFlight.set(userId, (inFlight.get(userId) || 0) + 1)
     try {
       let result
@@ -152,6 +158,7 @@ function registerAiChatRoutes(router, {
         result = await localRunFn({
           prompt: text,
           resumeSessionId: chat.claude_session_id || null,
+          signal: abortController.signal,
           onDelta: (delta) => send('delta', { text: delta })
         })
         if (result.sessionId && result.sessionId !== chat.claude_session_id) {
@@ -163,6 +170,7 @@ function registerAiChatRoutes(router, {
           model: typeof req.body?.model === 'string' ? req.body.model : undefined,
           system: SYSTEM_PROMPT,
           messages: [...history, { role: 'user', content: text }],
+          signal: abortController.signal,
           onDelta: (delta) => send('delta', { text: delta })
         })
       }
@@ -173,8 +181,11 @@ function registerAiChatRoutes(router, {
         inputTokens: result.inputTokens,
         outputTokens: result.outputTokens
       })
-      send('done', { assistantMessage })
+      send('done', { assistantMessage, stopReason: result.stopReason || null })
     } catch (error) {
+      // A failed turn must not leave an orphaned user message in the history —
+      // later turns would replay a dangling user turn with no reply forever.
+      try { chatStore.deleteMessage(userId, chat.id, userMessage.id) } catch { /* best effort */ }
       // 401 from Anthropic = the stored key is bad — tell the user to
       // reconnect instead of surfacing a bare server error.
       const message = error.status === 401
