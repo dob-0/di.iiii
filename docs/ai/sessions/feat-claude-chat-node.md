@@ -20,10 +20,16 @@
   is persisted on the node (the op-log is not a chat log). `aiChatApi.js` parses
   the SSE-over-POST stream.
 - Verified by looking (desktop, real browser, live stack): palette placement,
-  window chrome, empty state, and the no-key path ("Connect your Claude API key
-  from the account menu first"). **The real streamed-reply path needs a genuine
-  API key and was NOT visually verified** — unit tests cover it with an injected
-  stream; a human with a connected key should send one message before promote.
+  window chrome, empty state, the no-key path, AND the live network path — an
+  invalid key connected through the real integrations API, a message sent from
+  the real browser, the request reaching **real api.anthropic.com**, its 401
+  coming back through the SSE error event as "Your Claude API key was rejected —
+  reconnect it from your account menu." The node + its chat also survived a full
+  page reload (chatId persistence works). The 200-stream wire shape is pinned by
+  `anthropicClient.test.js` (local https fixture replaying a real-format event
+  stream, split mid-event). **The only untested inch: a valid key's 200** — no
+  sk-ant key exists on this machine (owner runs Claude Code on OAuth); one human
+  message with a real key remains before promote.
 - Phase 2 contract on record: `trigger` (signal) in, `result` (string) out, so an
   agent's reply can drive other nodes; reuse approvalGate for anything an agent
   writes to a space.

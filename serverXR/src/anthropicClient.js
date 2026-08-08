@@ -25,7 +25,10 @@ const MAX_TOKENS_CEILING = 4096
 // onDelta(text) fires per streamed text chunk.
 // Resolves { text, model, inputTokens, outputTokens, stopReason }.
 // Rejects with err.status carrying Anthropic's HTTP status when available.
-function streamChatCompletion({ apiKey, model, system, messages, maxTokens, signal, onDelta }) {
+// `transport` is a test seam: {host, port, rejectUnauthorized} lets the wire
+// protocol be exercised against a local fixture server; production callers
+// omit it and always hit api.anthropic.com.
+function streamChatCompletion({ apiKey, model, system, messages, maxTokens, signal, onDelta, transport }) {
   return new Promise((resolve, reject) => {
     if (!apiKey) {
       const err = new Error('missing api key')
@@ -43,7 +46,9 @@ function streamChatCompletion({ apiKey, model, system, messages, maxTokens, sign
     })
 
     const req = https.request({
-      host: ANTHROPIC_HOST,
+      host: transport?.host || ANTHROPIC_HOST,
+      ...(transport?.port ? { port: transport.port } : {}),
+      ...(transport?.rejectUnauthorized === false ? { rejectUnauthorized: false } : {}),
       method: 'POST',
       path: '/v1/messages',
       headers: {
