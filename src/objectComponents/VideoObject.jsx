@@ -1,62 +1,115 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
 import { attachVideoPlaybackRetry, attachVideoSound, configureVideoElement } from '../utils/videoPlayback.js'
 
+const DEFAULT_SIZE = [1, 1]
+
+// Plane dimensions come from this element's own metadata. They used to come
+// from a second <video> created solely to read videoWidth/videoHeight, which
+// doubled the network cost of every video in the app: /wcc/main embeds ten
+// artist projects at once, and the same 12.36MB file was fetched six times —
+// three objects referencing it, two elements each.
+const sizeFromVideo = (video) => {
+    const aspect = video.videoWidth / (video.videoHeight || 1)
+    return Number.isFinite(aspect) && aspect > 0 ? [Math.max(aspect * 3, 1), 3] : DEFAULT_SIZE
+}
+
+// One element and one texture per (source, playback settings), shared by every
+// object that asks for the same thing and torn down when the last one lets go.
+//
+// The key includes muted/volume/loop deliberately. A single HTMLVideoElement
+// has ONE volume and ONE loop flag, so sharing across objects that disagree
+// would make the last one mounted silently win for all of them. Objects that
+// differ keep their own element — they cost what they always cost — and only
+// genuinely identical requests collapse.
+const videoCache = new Map()
+
+const cacheKey = (src, muted, volume, loop) => `${src}|${muted ? 1 : 0}|${volume}|${loop === false ? 0 : 1}`
+
+const acquireVideo = (src, { muted, volume, loop }) => {
+    const key = cacheKey(src, muted, volume, loop)
+    const existing = videoCache.get(key)
+    if (existing) {
+        existing.refs += 1
+        return existing
+    }
+
+    const video = document.createElement('video')
+    configureVideoElement(video, src, { preload: 'auto' })
+    video.loop = loop !== false
+
+    const texture = new THREE.VideoTexture(video)
+    texture.colorSpace = THREE.SRGBColorSpace
+    texture.minFilter = THREE.LinearFilter
+    texture.magFilter = THREE.LinearFilter
+    texture.needsUpdate = true
+
+    const entry = { key, video, texture, refs: 1, ready: false, size: DEFAULT_SIZE, blocked: false, subscribers: new Set() }
+    const publish = () => { for (const notify of entry.subscribers) notify() }
+
+    entry.detachSound = attachVideoSound(video, { muted, volume })
+    entry.detachRetry = attachVideoPlaybackRetry(video, {
+        onBlockedChange: (blocked) => { entry.blocked = blocked; publish() }
+    })
+
+    // Only show the texture once the video has a decoded frame — avoids
+    // a solid black rectangle while the video source is still loading or
+    // when the URL is inaccessible (auth-gated, 404, etc.)
+    entry.onData = () => { entry.ready = true; publish() }
+    video.addEventListener('loadeddata', entry.onData, { once: true })
+
+    // HAVE_METADATA. A cached video can reach it before this listener is
+    // attached, and then the event never comes.
+    entry.onMetadata = () => { entry.size = sizeFromVideo(video); publish() }
+    if (video.readyState >= 1) entry.onMetadata()
+    else video.addEventListener('loadedmetadata', entry.onMetadata, { once: true })
+
+    videoCache.set(key, entry)
+    return entry
+}
+
+const releaseVideo = (entry) => {
+    entry.refs -= 1
+    if (entry.refs > 0) return
+    videoCache.delete(entry.key)
+    entry.video.removeEventListener('loadeddata', entry.onData)
+    entry.video.removeEventListener('loadedmetadata', entry.onMetadata)
+    entry.detachRetry?.()
+    entry.detachSound?.()
+    entry.video.pause()
+    entry.video.src = ''
+    entry.texture.dispose()
+    entry.subscribers.clear()
+}
+
 function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = true } = {}) {
-    const [texture, setTexture] = useState(null)
-    const [playbackBlocked, setPlaybackBlocked] = useState(false)
-    const videoRef = useRef(null)
+    const [state, setState] = useState({ texture: null, playbackBlocked: false, size: DEFAULT_SIZE })
 
     useEffect(() => {
         const resolvedSrc = typeof sourceUrl === 'string' ? sourceUrl.trim() : ''
         if (!resolvedSrc || resolvedSrc === 'blob:null') {
-            setTexture(null)
-            setPlaybackBlocked(false)
-            return
+            setState({ texture: null, playbackBlocked: false, size: DEFAULT_SIZE })
+            return undefined
         }
 
-        const video = document.createElement('video')
-        videoRef.current = video
-        configureVideoElement(video, resolvedSrc, { preload: 'auto' })
-
-        const tex = new THREE.VideoTexture(video)
-        tex.colorSpace = THREE.SRGBColorSpace
-        tex.minFilter = THREE.LinearFilter
-        tex.magFilter = THREE.LinearFilter
-        tex.needsUpdate = true
-
-        const detachPlaybackRetry = attachVideoPlaybackRetry(video, {
-            onBlockedChange: setPlaybackBlocked
+        const entry = acquireVideo(resolvedSrc, { muted, volume, loop })
+        const sync = () => setState({
+            texture: entry.ready ? entry.texture : null,
+            playbackBlocked: entry.blocked,
+            size: entry.size
         })
-
-        // Only show the texture once the video has a decoded frame — avoids
-        // a solid black rectangle while the video source is still loading or
-        // when the URL is inaccessible (auth-gated, 404, etc.)
-        const onData = () => setTexture(tex)
-        video.addEventListener('loadeddata', onData, { once: true })
+        entry.subscribers.add(sync)
+        sync()
 
         return () => {
-            video.removeEventListener('loadeddata', onData)
-            detachPlaybackRetry()
-            video.pause()
-            video.src = ''
-            tex.dispose()
-            videoRef.current = null
-            setTexture(null)
+            entry.subscribers.delete(sync)
+            releaseVideo(entry)
         }
-    }, [sourceUrl])
+    }, [sourceUrl, muted, volume, loop])
 
-    // Sound and loop apply live without recreating the video/texture.
-    useEffect(() => {
-        const video = videoRef.current
-        if (!video) return undefined
-        video.loop = loop !== false
-        return attachVideoSound(video, { muted, volume })
-    }, [texture, muted, volume, loop])
-
-    return { texture, playbackBlocked }
+    return state
 }
 
 export default function VideoObject({ assetRef, data, opacity = 1, linkActive, muted = true, volume = 1, loop = true }) {
@@ -64,29 +117,7 @@ export default function VideoObject({ assetRef, data, opacity = 1, linkActive, m
     const isVideoType = !assetRef?.mimeType || assetRef.mimeType.startsWith('video/')
     const rawSource = (isVideoType ? assetUrl : null) || data || null
     const sourceUrl = typeof rawSource === 'string' ? rawSource.trim() : null
-    const [size, setSize] = useState([1, 1])
-    const { texture, playbackBlocked } = useVideoTextureSource(sourceUrl, { muted, volume, loop })
-
-    useEffect(() => {
-        const resolvedSrc = typeof sourceUrl === 'string' ? sourceUrl.trim() : ''
-        if (!resolvedSrc || resolvedSrc === 'blob:null') {
-            setSize([1, 1])
-            return
-        }
-
-        const video = document.createElement('video')
-        configureVideoElement(video, resolvedSrc, { preload: 'metadata' })
-        const handleMetadata = () => {
-            const aspect = video.videoWidth / (video.videoHeight || 1)
-            setSize([Math.max(aspect * 3, 1), 3])
-            video.removeEventListener('loadedmetadata', handleMetadata)
-        }
-        video.addEventListener('loadedmetadata', handleMetadata)
-        return () => {
-            video.removeEventListener('loadedmetadata', handleMetadata)
-            video.src = ''
-        }
-    }, [sourceUrl])
+    const { texture, playbackBlocked, size } = useVideoTextureSource(sourceUrl, { muted, volume, loop })
 
     if (!texture) {
         return null
