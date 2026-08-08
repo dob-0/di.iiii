@@ -6,7 +6,10 @@ export default function ChatPanelWindow({ messages, onSend }) {
 
     useEffect(() => {
         const el = listRef.current
-        if (el) el.scrollTop = el.scrollHeight
+        if (!el) return
+        // don't yank the view from someone reading history
+        const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 48
+        if (nearBottom) el.scrollTop = el.scrollHeight
     }, [messages.length])
 
     const submit = (event) => {

@@ -44,6 +44,7 @@ const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
 const { registerAiConnectionRoutes } = require('./routes/aiConnectionRoutes')
 const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
+const { registerAiChatRoutes } = require('./routes/aiChatRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
 const openCallStore = require('./openCallStore')
@@ -1393,6 +1394,8 @@ registerIntegrationRoutes(router)
 registerAiConnectionRoutes(router)
 
 registerAgentBoardRoutes(router)
+
+registerAiChatRoutes(router)
 
 registerOpenCallRoutes(router, {
   requireAdminAlways,

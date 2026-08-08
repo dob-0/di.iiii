@@ -123,6 +123,29 @@ const SCHEMA = `
     PRIMARY KEY (user_id, provider)
   );
 
+  CREATE TABLE IF NOT EXISTS ai_chats (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    title TEXT,
+    node_id TEXT,
+    project_id TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_ai_chats_user ON ai_chats (user_id, updated_at);
+
+  CREATE TABLE IF NOT EXISTS ai_messages (
+    id TEXT PRIMARY KEY,
+    chat_id TEXT NOT NULL REFERENCES ai_chats(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    model TEXT,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_ai_messages_chat ON ai_messages (chat_id, created_at);
+
   CREATE TABLE IF NOT EXISTS public_assets (
     asset_id TEXT PRIMARY KEY,
     space_id TEXT NOT NULL,
@@ -276,6 +299,7 @@ function initDb(dbPath) {
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
   db.exec(SCHEMA)
+  ensureColumn(db, 'ai_chats', 'claude_session_id', 'TEXT')
   ensureColumn(db, 'spaces', 'is_public', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'spaces', 'kind', "TEXT NOT NULL DEFAULT 'normal'")
   ensureColumn(db, 'spaces', 'owner_user_id', 'TEXT')

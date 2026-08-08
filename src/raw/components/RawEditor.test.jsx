@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import TextPanelWindow from './TextPanelWindow.jsx'
 
@@ -27,6 +27,15 @@ vi.mock('../../project/hooks/useProjectDocumentSync.js', () => ({
 }))
 vi.mock('../../project/hooks/useProjectPresence.js', () => ({
     useProjectPresence: () => ({ users: [], cursors: [], emitCursor: vi.fn(), clearCursor: vi.fn(), messages: [], sendChatMessage: vi.fn() })
+}))
+// Captures the onFrameChange prop each render so the stable-identity
+// regression below can compare references across re-renders.
+const webcamPanelProps = []
+vi.mock('./WebcamSourcePanel.jsx', () => ({
+    default: (props) => {
+        webcamPanelProps.push(props)
+        return <div data-testid="mock-webcam-panel" />
+    }
 }))
 
 import RawEditor from './RawEditor.jsx'
@@ -616,5 +625,39 @@ describe('TextPanelWindow', () => {
 
         expect(screen.getByText('Body only')).toBeTruthy()
         expect(screen.queryByRole('heading', { name: 'My note' })).toBeNull()
+    })
+})
+
+// Regression: the webcam/mic capture panels received INLINE-lambda live-output
+// callbacks whose identity changed every render. Their effects depend on that
+// identity and their cleanup mutates liveOutputs — with an active capture that
+// is set→delete→set on parent state, an infinite "Maximum update depth
+// exceeded" loop (hit live 2026-08-08). The callbacks must be render-stable.
+describe('RawEditor capture panel callback stability', () => {
+    const WEBCAM_STORAGE_KEY = 'test-webcam-stable'
+
+    afterEach(() => {
+        window.localStorage.removeItem(WEBCAM_STORAGE_KEY)
+    })
+
+    it('passes the same onFrameChange reference across re-renders', () => {
+        window.localStorage.setItem(
+            WEBCAM_STORAGE_KEY,
+            makeWorkspaceDoc([
+                { id: 'cam-1', typeId: 'source.webcam', label: 'Webcam', parentId: null, values: {} }
+            ])
+        )
+        webcamPanelProps.length = 0
+        render(<RawEditor localStorageKey={WEBCAM_STORAGE_KEY} />)
+        expect(webcamPanelProps.length).toBeGreaterThan(0)
+        const first = webcamPanelProps[0].onFrameChange
+
+        // what the real panel does with a live camera: report a frame — this
+        // mutates liveOutputs and re-renders the editor
+        act(() => { first('cam-1', { isTexture: true }) })
+
+        const last = webcamPanelProps.at(-1).onFrameChange
+        expect(webcamPanelProps.length).toBeGreaterThan(1)
+        expect(last).toBe(first)
     })
 })
