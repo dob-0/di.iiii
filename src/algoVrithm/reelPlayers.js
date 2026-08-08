@@ -34,18 +34,18 @@ import { ASSET_LIBRARY } from './assetLibrary.js'
 // ceiling below.
 //
 // This is the expensive decision in the whole piece and it should be made
-// knowingly. Nine decoders was not a guess — it was chosen because these were
+// knowingly. Nine decoders was not a guess — it was chosen because these are
 // full-resolution phone captures and a browser decoding thirty-one of those at
 // once is doing thirty-one times the work. On a desktop with a discrete GPU that
 // is usually fine. On a standalone headset it is the thing most likely to drop
 // the frame rate, and dropped frames in a headset are nausea rather than an
 // aesthetic problem.
 //
-// The compression this comment used to ask for has since been done: the library
-// is 540x960, which is the resolution the reels are actually seen at (about 1.4m
-// wide on a 7m shell), so each decoder now does roughly half the work it did.
-// MAX_PLAYERS remains the knob — lower it and the globe simply repeats clips more
-// often; nothing else in the piece changes.
+// So: MAX_PLAYERS is the knob. Lower it and the globe simply repeats clips more
+// often; nothing else in the piece changes. The other half of the answer is
+// DONE: the sources are 360x640 since 2026-08-08 (scripts/compress-reels.mjs
+// --replace), which took the pool from 25.9 to 7.1 megapixels per frame — keep
+// running that script over anything new dropped in the folder.
 const MAX_PLAYERS = 32
 
 export const playerCount = () => Math.min(
