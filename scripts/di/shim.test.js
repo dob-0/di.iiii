@@ -32,7 +32,8 @@ describe('the windows shim', () => {
         // A batch file is read in the console's active code page, not UTF-8, so
         // an em dash in a comment can end the line early or corrupt the byte
         // count that the CRLF rule above depends on.
-        expect(cmd.match(/[^\x00-\x7F]/gu) || []).toEqual([])
+        const nonAscii = [...cmd].filter(ch => ch.codePointAt(0) > 127)
+        expect(nonAscii).toEqual([])
     })
 
     it('exports the name it was invoked as', () => {
