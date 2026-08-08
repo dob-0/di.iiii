@@ -26,18 +26,22 @@ import AgentsSection from './preferences/AgentsSection.jsx'
 // Two groups: "admin" is real access-control (who can see/publish what),
 // "diagnostics" is live operator/debug telemetry — same nav, visually
 // separated so it's clear which screens change permissions vs just observe.
+// Diagnostics deliberately collapsed to three (2026-08-08): the seven-section
+// nav made the console feel like seven separate tools instead of one surface.
+// Inspect = topology + objects + session; System = console + controls + env.
 const SECTIONS = [
     { key: 'manage', label: 'Manage', glyph: '▸', group: 'admin' },
     { key: 'opencall', label: 'Open Call', glyph: '✉', group: 'admin' },
     { key: 'agents', label: 'Agents', glyph: '◈', group: 'admin' },
     { key: 'overview', label: 'Overview', glyph: '◆', group: 'diagnostics' },
-    { key: 'topology', label: 'Topology', glyph: '◇', group: 'diagnostics' },
-    { key: 'objects', label: 'Objects', glyph: '▦', group: 'diagnostics' },
-    { key: 'session', label: 'Session', glyph: '◎', group: 'diagnostics' },
-    { key: 'console', label: 'Console', glyph: '▤', group: 'diagnostics' },
-    { key: 'controls', label: 'Controls', glyph: '▣', group: 'diagnostics' },
+    { key: 'inspect', label: 'Inspect', glyph: '◇', group: 'diagnostics' },
     { key: 'system', label: 'System', glyph: '▥', group: 'diagnostics' }
 ]
+
+// Sections where the person is administering, not debugging the scene — the
+// topbar drops the scene-editor telemetry and shows counts that belong to the
+// work at hand instead (fed back by the sections that own the data).
+const ADMIN_SECTION_KEYS = new Set(['manage', 'opencall', 'agents'])
 
 // The 4 management toggles operators flip most often — surfaced on Overview so the
 // full 11-button Command Deck doesn't have to be visible at all times (see Controls).
@@ -60,6 +64,10 @@ function ManagementButton({ button }) {
 export default function PreferencesPage({ onNavigateToEditor }) {
     const [activeSection, setActiveSection] = useState('manage')
     const [headerCollapsed, setHeaderCollapsed] = useState(false)
+    // Counts reported upward by the sections that own the data, so the slim
+    // admin topbar can show real numbers without lifting whole fetches here.
+    const [manageStats, setManageStats] = useState(null)
+    const [agentStats, setAgentStats] = useState(null)
     const {
         sync,
         xr,
@@ -143,11 +151,13 @@ export default function PreferencesPage({ onNavigateToEditor }) {
     }
 
     const sections = SECTIONS.map((section) => {
-        if (section.key === 'objects') return { ...section, badge: objects?.length || 0 }
-        if (section.key === 'session') return { ...section, badge: sync?.participantRoster?.length || 0 }
-        if (section.key === 'console') return { ...section, badge: entries.length }
+        if (section.key === 'agents') return { ...section, badge: agentStats?.live || 0 }
+        if (section.key === 'inspect') return { ...section, badge: objects?.length || 0 }
+        if (section.key === 'system') return { ...section, badge: entries.length }
         return section
     })
+
+    const isAdminSection = ADMIN_SECTION_KEYS.has(activeSection)
 
     return (
         <div className="preferences-page">
@@ -170,21 +180,46 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                 </div>
 
                 <div className="preferences-topbar-metrics">
-                    <MetricCard label="Objects" value={objects?.length || 0} />
-                    <MetricCard label="Visible" value={visibleObjectCount} tone="success" />
-                    <MetricCard label="Selected" value={selectedCount} tone={selectedCount ? 'accent' : 'default'} />
-                    <MetricCard label="Hidden" value={hiddenObjectCount} tone={hiddenObjectCount ? 'warning' : 'default'} />
-                    <MetricCard label="Socket" value={sync?.isSocketConnected ? 'Live' : 'Down'} tone={sync?.isSocketConnected ? 'success' : 'warning'} />
-                    <MetricCard label="Roster" value={sync?.participantRoster?.length || 0} tone={sync?.participantRoster?.length ? 'accent' : 'default'} />
+                    {isAdminSection ? (
+                        // exactly three cards — the metrics grid is 3-up, and a
+                        // partial row reads as a broken band of empty cells
+                        <>
+                            {activeSection === 'agents' ? (
+                                <>
+                                    <MetricCard label="Live" value={agentStats?.live ?? '—'} tone={agentStats?.live ? 'success' : 'default'} />
+                                    <MetricCard label="Sessions" value={agentStats?.total ?? '—'} />
+                                </>
+                            ) : (
+                                <>
+                                    <MetricCard label="Spaces" value={manageStats?.spaces ?? '—'} />
+                                    <MetricCard label="Users" value={manageStats?.users ?? '—'} />
+                                </>
+                            )}
+                            <MetricCard label="Socket" value={sync?.isSocketConnected ? 'Live' : 'Down'} tone={sync?.isSocketConnected ? 'success' : 'warning'} />
+                        </>
+                    ) : (
+                        <>
+                            <MetricCard label="Objects" value={objects?.length || 0} />
+                            <MetricCard label="Visible" value={visibleObjectCount} tone="success" />
+                            <MetricCard label="Selected" value={selectedCount} tone={selectedCount ? 'accent' : 'default'} />
+                            <MetricCard label="Hidden" value={hiddenObjectCount} tone={hiddenObjectCount ? 'warning' : 'default'} />
+                            <MetricCard label="Socket" value={sync?.isSocketConnected ? 'Live' : 'Down'} tone={sync?.isSocketConnected ? 'success' : 'warning'} />
+                            <MetricCard label="Roster" value={sync?.participantRoster?.length || 0} tone={sync?.participantRoster?.length ? 'accent' : 'default'} />
+                        </>
+                    )}
                 </div>
 
                 <div className="preferences-topbar-actions">
                     <button type="button" className="toggle-button" onClick={() => onNavigateToEditor?.(sync?.spaceId)}>Back to Editor</button>
-                    <button type="button" className="toggle-button" onClick={copySnapshot}>Copy Snapshot</button>
-                    <button type="button" className="toggle-button" onClick={copyRuntimeLog}>Copy Log</button>
-                    <button type="button" className="toggle-button" onClick={copyOperatorLinks}>Copy Links</button>
+                    {!isAdminSection && (
+                        <>
+                            <button type="button" className="toggle-button" onClick={copySnapshot}>Copy Snapshot</button>
+                            <button type="button" className="toggle-button" onClick={copyRuntimeLog}>Copy Log</button>
+                            <button type="button" className="toggle-button" onClick={copyOperatorLinks}>Copy Links</button>
+                            <button type="button" className="toggle-button warning-button" onClick={() => xr?.showXrDiagnostics?.()}>XR Debug</button>
+                        </>
+                    )}
                     <button type="button" className="toggle-button" onClick={() => window.location.reload()}>Refresh</button>
-                    <button type="button" className="toggle-button warning-button" onClick={() => xr?.showXrDiagnostics?.()}>XR Debug</button>
                 </div>
             </header>
 
@@ -226,7 +261,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                 title="Recent Log"
                                 subtitle={`Last ${recentLogEntries.length} of ${entries.length} entries`}
                                 actions={
-                                    <button type="button" className="preferences-inline-action" onClick={() => setActiveSection('console')}>
+                                    <button type="button" className="preferences-inline-action" onClick={() => setActiveSection('system')}>
                                         Open Console
                                     </button>
                                 }
@@ -248,7 +283,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         </>
                     )}
 
-                    {activeSection === 'topology' && (
+                    {activeSection === 'inspect' && (
                         <ModuleSection
                             title="System Architecture"
                             subtitle="Live control map — click a node to inspect it"
@@ -293,7 +328,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         </ModuleSection>
                     )}
 
-                    {activeSection === 'objects' && (
+                    {activeSection === 'inspect' && (
                         <>
                             <div className="preferences-objects-top">
                                 <ModuleSection title="Scene Radar" subtitle={`${objects?.length || 0} objects`}>
@@ -372,7 +407,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         </>
                     )}
 
-                    {activeSection === 'session' && (
+                    {activeSection === 'inspect' && (
                         <>
                             <ModuleSection title="Presence" subtitle={`${sync?.participantRoster?.length || 0} online`}>
                                 <label className="preferences-field">
@@ -428,13 +463,13 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         </>
                     )}
 
-                    {activeSection === 'manage' && <AdminManageSection />}
+                    {activeSection === 'manage' && <AdminManageSection onStats={setManageStats} />}
 
                     {activeSection === 'opencall' && <OpenCallSection />}
 
-                    {activeSection === 'agents' && <AgentsSection />}
+                    {activeSection === 'agents' && <AgentsSection onBoardStats={setAgentStats} />}
 
-                    {activeSection === 'console' && (
+                    {activeSection === 'system' && (
                         <ModuleSection
                             title="Runtime Terminal"
                             subtitle={`${entries.length} entries`}
@@ -462,7 +497,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                         </ModuleSection>
                     )}
 
-                    {activeSection === 'controls' && (
+                    {activeSection === 'system' && (
                         <>
                             <ModuleSection title="Command Deck" subtitle="Core admin actions">
                                 <div className="preferences-command-grid">

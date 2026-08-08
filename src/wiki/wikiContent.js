@@ -239,7 +239,7 @@ export const WIKI_ARTICLES = [
         summary: 'The /admin console is admins-only; your own spaces are managed from /studio.',
         body: [
             '/admin is the platform console, visible to admin accounts only — everyone else is pointed back to their Spaces page. Owners never need it: your own spaces are fully self-service on /studio.',
-            'Admins manage everything from /admin → Manage: a directory tree of spaces, each expanding to its projects.',
+            'Admins manage everything from /admin → Manage: a directory tree of spaces, each expanding to its projects. The console keeps three admin sections (Manage, Open Call, Agents) and three diagnostics sections (Overview, Inspect, System); the header shows counts for the work at hand instead of scene telemetry while you administer.',
             { list: [
                 'Create / rename / delete spaces and projects inline.',
                 'Edit a space or project’s public link (slug) separately from its rename — the id underneath never changes, so old links stay valid.',
@@ -248,7 +248,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['admin', 'manage', 'access', 'slug'],
-        updated: '2026-07-19'
+        updated: '2026-08-08'
     },
     {
         id: 'agents-board',

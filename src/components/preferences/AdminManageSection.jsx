@@ -35,7 +35,7 @@ const ROLES = [
 // One directory-tree surface for spaces -> projects -> access. Composed entirely
 // from the canonical preferences-* design system; reuses the existing space/project/
 // user services (no bespoke backend, no duplicated logic).
-export default function AdminManageSection() {
+export default function AdminManageSection({ onStats }) {
     const { spaceLimit } = useAuthSession()
     const [spaces, setSpaces] = useState([])
     const [config, setConfig] = useState({})
@@ -69,6 +69,12 @@ export default function AdminManageSection() {
     }, [])
 
     useEffect(() => { loadSpaces() }, [loadSpaces])
+
+    // Feed the slim admin topbar its counts (see PreferencesPage) without
+    // lifting the fetches out of this section.
+    useEffect(() => {
+        onStats?.({ spaces: spaces.length, users: users?.length ?? null })
+    }, [spaces, users, onStats])
 
     const loadProjects = useCallback(async (spaceId) => {
         setProjectsBySpace((prev) => ({ ...prev, [spaceId]: { loading: true, error: '', items: prev[spaceId]?.items || [] } }))

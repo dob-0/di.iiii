@@ -42,7 +42,7 @@ const treeLabel = (treePath) => treePath.split('/').filter(Boolean).pop() || tre
 // most sessions launch from the home directory and only then enter a tree.
 const sessionTreePath = (session) => session.worktreePath || session.cwd || null
 
-export default function AgentsSection() {
+export default function AgentsSection({ onBoardStats }) {
     const [board, setBoard] = useState(null)
     const [unavailable, setUnavailable] = useState(false)
     const [error, setError] = useState('')
@@ -53,9 +53,11 @@ export default function AgentsSection() {
 
     const loadBoard = useCallback(async () => {
         try {
-            setBoard(await getAgentBoard())
+            const next = await getAgentBoard()
+            setBoard(next)
             setUnavailable(false)
             setError('')
+            onBoardStats?.({ live: next.live?.length || 0, total: next.totalSessions || 0 })
         } catch (e) {
             if (e.status === 404) {
                 setUnavailable(true)
@@ -63,7 +65,7 @@ export default function AgentsSection() {
                 setError(e.message || 'Failed to load the agent board.')
             }
         }
-    }, [])
+    }, [onBoardStats])
 
     useEffect(() => {
         loadBoard()

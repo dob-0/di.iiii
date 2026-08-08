@@ -208,9 +208,10 @@ describe('PreferencesPage', () => {
         expect(within(snapshotSection).getByText('/main/studio')).toBeInTheDocument()
         expect(within(snapshotSection).getByText('/main/raw')).toBeInTheDocument()
 
-        // Topology section — clicking a node in the architecture map updates the
-        // inline Node Inspector ("Node Inspector — <label>" after selection).
-        gotoSection('Topology')
+        // Inspect section (topology + objects + session merged, 2026-08-08) —
+        // clicking a node in the architecture map updates the inline Node
+        // Inspector ("Node Inspector — <label>" after selection).
+        gotoSection('Inspect')
         const architectureSection = screen.getByText('System Architecture').closest('section')
         expect(architectureSection).toBeTruthy()
 
@@ -229,12 +230,10 @@ describe('PreferencesPage', () => {
         expect(within(inspector).getByText('socket jitter detected')).toBeInTheDocument()
         expect(within(inspector).getByText('Copy Log')).toBeInTheDocument()
 
-        // Objects section — scene radar.
-        gotoSection('Objects')
+        // Scene radar renders in the same Inspect section.
         expect(screen.getByText('Scene Radar')).toBeInTheDocument()
 
-        // Session section — per-space route shortcuts.
-        gotoSection('Session')
+        // Per-space route shortcuts, also under Inspect.
         const spacesHeading = screen.getAllByText('Spaces').find((node) => node.tagName === 'H2')
         expect(spacesHeading).toBeTruthy()
         const spacesSection = spacesHeading.closest('section')
