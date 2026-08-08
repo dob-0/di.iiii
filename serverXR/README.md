@@ -79,6 +79,15 @@ Agent board (operator-only: non-production + loopback, 404 otherwise — reads t
 - `GET /api/agent-board`
 - `GET /api/agent-board/session/:sessionId`
 
+AI chat (signed-in accounts only, uses the user's connected Claude key server-side; the browser never talks to Anthropic):
+
+- `GET /api/ai/chats`
+- `POST /api/ai/chats`
+- `GET /api/ai/chats/:chatId`
+- `PATCH /api/ai/chats/:chatId`
+- `DELETE /api/ai/chats/:chatId`
+- `POST /api/ai/chats/:chatId/messages` (SSE response: `accepted` / `delta` / `done` / `error`)
+
 Browser auth session:
 
 - `GET /api/auth/session`

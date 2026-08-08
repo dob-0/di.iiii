@@ -131,6 +131,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('studio', 'studio', { label: 'Studio', col: 5, row: 0, values: { title: 'Studio' } })
     add('outliner', 'view.outliner', { label: 'Outliner panel', col: 5, row: 1 })
     add('inspector', 'view.inspector', { label: 'Inspector panel', col: 5, row: 2 })
+    add('agent', 'agent', { label: 'Agent', col: 5, row: 3 })
 
     // --- column 6: live capture sources -----------------------------------------
     // Unlike the rest of the registry, these two DO carry real data: their panel

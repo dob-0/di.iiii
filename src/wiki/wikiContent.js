@@ -116,10 +116,27 @@ export const WIKI_ARTICLES = [
         body: [
             'Open the account menu (bottom-right avatar) while signed in and paste a Claude API key under "Claude API key." It is encrypted at rest and stored per account — no one else, including admins, can read it back once saved.',
             'The panel shows "Connected — ····XXXX" (the last 4 characters, as a hint that it is the right key) once saved, with a Disconnect button to remove it.',
-            'This is the storage layer only, v1: it does not yet power any feature inside di.iiii on its own — it is the account-level place to hold the credential that future AI-connected tools (in di.iiii or elsewhere, like the di. Telegram bot) will read from.',
+            'Your key powers the Claude agent node in Raw (see "Chat with Claude in Raw"): the server uses it on your behalf for your own chats; the key itself never reaches the browser or other users.',
             'Guest sessions cannot connect a key — sign in with GitHub or Google first.'
         ],
         tags: ['ai', 'claude', 'integrations', 'account', 'api key'],
+        updated: '2026-08-08'
+    },
+    {
+        id: 'claude-chat-node',
+        category: 'Editing',
+        title: 'Chat with Claude in Raw',
+        summary: 'Place an agent node in Raw and chat with Claude inside your workspace — powered by your own connected API key.',
+        body: [
+            'In the Raw editor, add an agent node from the palette. It opens as a chat window: type, and Claude answers in a live stream, right inside your workspace. Conversations are saved to your account — reopen the node and the chat is still there.',
+            'It runs on the Claude API key connected to your account (account menu → Claude API key). No key connected yet? The chat says so and points you there. Your key stays on the server: the browser never talks to Anthropic directly, and nobody else can use your key.',
+            { list: [
+                'Each agent node holds its own conversation — place several for parallel topics.',
+                'Replies stream token by token; usage (tokens in/out) is recorded per turn on your account.',
+                'Costs go to your own Anthropic account, with a per-reply cap and a rate limit as guardrails.'
+            ] }
+        ],
+        tags: ['ai', 'claude', 'chat', 'raw', 'agent', 'node'],
         updated: '2026-08-08'
     },
     {

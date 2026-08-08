@@ -123,6 +123,29 @@ const SCHEMA = `
     PRIMARY KEY (user_id, provider)
   );
 
+  CREATE TABLE IF NOT EXISTS ai_chats (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    title TEXT,
+    node_id TEXT,
+    project_id TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_ai_chats_user ON ai_chats (user_id, updated_at);
+
+  CREATE TABLE IF NOT EXISTS ai_messages (
+    id TEXT PRIMARY KEY,
+    chat_id TEXT NOT NULL REFERENCES ai_chats(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    model TEXT,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_ai_messages_chat ON ai_messages (chat_id, created_at);
+
   CREATE TABLE IF NOT EXISTS public_assets (
     asset_id TEXT PRIMARY KEY,
     space_id TEXT NOT NULL,

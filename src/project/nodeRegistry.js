@@ -847,6 +847,26 @@ export const NODE_TYPES = {
         render: 'panel-2d',
     },
 
+    // Chat with Claude, as a node. The panel talks to serverXR's AI proxy,
+    // which uses the account's own connected key (aiConnectionStore) — the
+    // browser never holds the key. The transcript lives server-side in
+    // ai_chats/ai_messages, NOT in node.values: the op-log is not a chat log.
+    // Only the server chat id is persisted on the node, so reopening the
+    // project reopens the same conversation.
+    'agent': {
+        id: 'agent',
+        label: 'Agent',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Agent' },
+        ],
+        outputs: [],
+        defaultValues: { chatId: null },
+        render: 'panel-2d',
+    },
+
     // -----------------------------------------------------------------------
     // STUDIO — the editor itself, as one node you can enter
     // -----------------------------------------------------------------------

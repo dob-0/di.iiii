@@ -9,6 +9,7 @@ import ImagePanelWindow from './ImagePanelWindow.jsx'
 import WorldPanelWindow from './WorldPanelWindow.jsx'
 import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
 import ChatPanelWindow from './ChatPanelWindow.jsx'
+import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
@@ -68,6 +69,7 @@ const ROOT_WORLD_CARD_HEIGHT = 120
 const WINDOW_DEFAULT_POSITIONS = {
     'universe.world':  { x: 120,  y: 60, width: 680, height: 480 },
     'view.inspector':  { x: 24,   y: 56, width: 320, height: 480 },
+    'agent':           { x: 96,   y: 140, width: 420, height: 480 },
     'view.assets':     { x: 24,   y: 56, width: 280, height: 380 },
     'view.outliner':   { x: 24,   y: 56, width: 240, height: 360 },
     'view.activity':   { x: 24,   y: 56, width: 280, height: 300 },
@@ -888,6 +890,17 @@ export default function RawEditor({
                     assetOptions={document.assets || []}
                     onSectionChange={handleInspectorChange}
                     emptyMessage="Select a node to inspect it."
+                />
+            )
+        }
+        if (node.typeId === 'agent') {
+            return (
+                <AgentChatPanelWindow
+                    chatId={node.values?.chatId || null}
+                    onPersistChatId={(chatId) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId: node.id, patch: { values: { chatId } } }
+                    })}
                 />
             )
         }
