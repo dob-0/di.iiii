@@ -12,6 +12,12 @@
   SQLite (not plaintext) → full page reload → still connected → disconnect → row gone.
   lint/build/1798 tests green, server contracts green.
 - Wiki entry added (`ai-connection`) under Spaces & access.
+- Review follow-up (same branch): merged current `dev` in (kept both sides of the
+  adjacent-append collisions with the admin work in `serverXR/src/index.js` /
+  `src/services/apiClient.js`); connect/disconnect now explicitly reject `guest:` subjects
+  (403) so the route matches what the UI and wiki already claim; apiKey capped at 512
+  chars; added `aiConnectionStore.test.js` (encrypt round-trip, at-rest, upsert, delete,
+  tampered blob → '') and `routes/aiConnectionRoutes.test.js` (401/403/400 + happy path).
 - Deliberately stopped here: no Telegram-linking (di-bo is currently hardcoded to one
   owner Telegram ID — generalizing it to "any linked di.iiii user" is real, separate
   work), no other AI providers, no shared/free-credit pool (needs per-user metering
