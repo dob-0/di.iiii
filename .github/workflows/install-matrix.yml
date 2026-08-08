@@ -279,14 +279,36 @@ jobs:
       - name: then take it away
         run: |
           set -eu
-          # unshare gives this step a namespace with loopback only.
-          sudo unshare -n -- sudo -u "$USER" env "HOME=$HOME" "PATH=$HOME/.di/bin:$PATH" DI_NO_COLOR=1 bash -c '
-            ip link set lo up 2>/dev/null || true
-            di up --port 4301 --no-open
-            curl -fsS http://127.0.0.1:4301/main | grep -q "id=\"root\"" || exit 1
-            curl -fsS -o /dev/null http://127.0.0.1:4301/serverXR/api/spaces
-            di down
-          '
+
+          # The work, in a file — three levels of nested shell quoting is its own
+          # source of false failures.
+          cat > /tmp/offline-check.sh <<'SCRIPT'
+          set -eu
+          di up --port 4301 --no-open
+          curl -fsS http://127.0.0.1:4301/main | grep -q 'id="root"'
+          curl -fsS -o /dev/null http://127.0.0.1:4301/serverXR/api/spaces
+          di down
+          echo "served with no network"
+          SCRIPT
+          chmod +x /tmp/offline-check.sh
+
+          cat > /tmp/offline-outer.sh <<'SCRIPT'
+          set -eu
+          # A fresh network namespace HAS a loopback interface, but it is DOWN, so
+          # 127.0.0.1 is unreachable and the failure reads as "the server never
+          # started". Bring lo up while still root, THEN drop privileges — the
+          # other order fails silently and the job proves nothing.
+          ip link set lo up
+          exec sudo -u "$TARGET_USER" \
+            env "HOME=$TARGET_HOME" "PATH=$TARGET_HOME/.di/bin:$PATH" DI_NO_COLOR=1 \
+            bash /tmp/offline-check.sh
+          SCRIPT
+
+          # Proves there is no route off this machine — if anything here can still
+          # reach the internet, the job is not testing what it claims.
+          sudo unshare -n -- bash -c 'ip link set lo up; curl -sS --max-time 5 https://nodejs.org >/dev/null 2>&1 && { echo "namespace still has network — this job proves nothing"; exit 1; }; echo "confirmed: no route out"'
+
+          sudo TARGET_USER="$USER" TARGET_HOME="$HOME" unshare -n -- bash /tmp/offline-outer.sh
 
   windows:
     name: windows

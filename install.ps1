@@ -130,8 +130,18 @@ $Staged = Join-Path $DiHome "versions\$Version.partial"
 Remove-Item -Recurse -Force $Staged -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $Staged -Force | Out-Null
 
-# tar.exe has shipped in Windows 10 1803 and later — no extra tooling needed.
-& tar.exe -xzf (Join-Path $tmp $Artifact) -C $Staged --strip-components 1
+# Windows ships bsdtar at System32\tar.exe and it understands `C:\...`. Git for
+# Windows ships GNU tar, which is often first on PATH and reads a leading `C:` as
+# a REMOTE HOST — it fails with "Cannot connect to C: resolve failed", naming
+# neither tar nor the drive letter. So call bsdtar by full path, and only fall
+# back to whatever `tar` is with --force-local, which tells GNU tar that a colon
+# is just a colon.
+$SystemTar = Join-Path $env:SystemRoot 'System32\tar.exe'
+if (Test-Path $SystemTar) {
+    & $SystemTar -xzf (Join-Path $tmp $Artifact) -C $Staged --strip-components 1
+} else {
+    & tar --force-local -xzf (Join-Path $tmp $Artifact) -C $Staged --strip-components 1
+}
 if ($LASTEXITCODE -ne 0) { Die 'could not unpack the download.' }
 Remove-Item -Recurse -Force $tmp -ErrorAction SilentlyContinue
 

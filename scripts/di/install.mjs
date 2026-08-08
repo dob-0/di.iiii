@@ -47,6 +47,23 @@ export const latestRelease = async () => {
     }
 }
 
+/**
+ * Which tar to run, and with what.
+ *
+ * On Windows there are usually two. Windows ships bsdtar at
+ * System32\tar.exe, which understands `C:\...`. Git for Windows ships GNU tar,
+ * which is often first on PATH and reads a leading `C:` as a REMOTE HOST — the
+ * extract fails with `tar (child): Cannot connect to C: resolve failed`, which
+ * names neither tar nor the drive letter as the problem. Prefer bsdtar; if only
+ * GNU tar is there, `--force-local` tells it a colon is just a colon.
+ */
+export const tarCommand = () => {
+    if (!isWindows) return { command: 'tar', args: [] }
+    const bsd = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'tar.exe')
+    if (fs.existsSync(bsd)) return { command: bsd, args: [] }
+    return { command: 'tar', args: ['--force-local'] }
+}
+
 const sha256 = async (file) => {
     const hash = crypto.createHash('sha256')
     for await (const chunk of fs.createReadStream(file)) hash.update(chunk)
@@ -97,7 +114,8 @@ export const stageVersion = async ({ home, release, verbose = false }) => {
             }
         }
 
-        await run('tar', ['-xzf', archive, '-C', partialDir, '--strip-components', '1'], { verbose })
+        const tar = tarCommand()
+        await run(tar.command, [...tar.args, '-xzf', archive, '-C', partialDir, '--strip-components', '1'], { verbose })
 
         // serverXR only, and production deps only. The artist never needs Vite
         // or the root dependency tree — dist/ arrived already built.
