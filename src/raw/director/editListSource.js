@@ -20,7 +20,7 @@
 // in vite.config.js reads the file, calls this, and writes the result, so the
 // interesting half is testable without a server or a browser.
 
-import { roundUnit } from './editList.js'
+import { roundUnit } from '../../algoVrithm/editList.js'
 
 // ---- scanning ---------------------------------------------------------------
 //

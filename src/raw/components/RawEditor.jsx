@@ -12,6 +12,8 @@ import ChatPanelWindow from './ChatPanelWindow.jsx'
 import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
+import TimelinePanelWindow from './TimelinePanelWindow.jsx'
+import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
@@ -963,6 +965,21 @@ export default function RawEditor({
         }
         if (node.typeId === 'source.mic') {
             return <MicSourcePanel node={node} onLevelsChange={handleMicOutputChange} />
+        }
+        if (node.typeId === 'view.director') {
+            return <DirectorPanelWindow node={node} />
+        }
+        if (node.typeId === 'view.timeline') {
+            return (
+                <TimelinePanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onChange={(clips) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId: node.id, patch: { values: { ...node.values, clips } } }
+                    })}
+                />
+            )
         }
         // Studio chrome, as nodes. These render the SAME components as the
         // hardcoded outliner and inspector below — the panel node supplies the

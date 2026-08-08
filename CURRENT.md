@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- five people's personal details come out of the public deck
+- Shared frame-exact timeline core + Raw Timeline node
 
 Full detail: `PROGRESS.md`.
 
@@ -27,12 +27,12 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 - **Lane consolidation in progress** — Studio-as-a-node rebase + Raw-as-default promotion pending, see Last session / plan file above.
 - **Real-browser looks owed**: `source.webcam`/`source.mic` (camera+mic needed) +
   PR #93's 4 items (Inspector wheel-scroll, audio toggles, primitive clamping).
-- 8 prod spaces still ownerless (staging verified end to end; prod gets it next
-  promotion); releasing ownership doesn't revoke the scope it granted (deliberate).
-- **Mesh gate INERT in prod** (no `MESH_ROOM_SECRET`); **leaked GitHub PAT +
-  staging Google OAuth secret still live**, 13 dead secrets to revoke.
+- All 8 prod spaces owned (queried prod 2026-08-08); releasing ownership doesn't
+  revoke the scope it granted (deliberate). Mesh gate ARMED both tiers; leaked
+  PAT inferred-closed; **staging Google OAuth secret parked by the user** —
+  rotation script staged, see memory `reference-leaked-secrets`.
 - Owner's/artist's calls: `open`'s card blank, director page unseen, purple-gap
-  check fails. `feat/timeline-core` UNPUSHED.
+  check fails. `feat/timeline-core` is PR #100 (dead ports being stripped).
 - **br_id_ge rite fixes unverified by a human** — Act III backdrop + Act V idle-motion CSS shipped live, page loads clean, but the acts are camera-gesture-gated so no automated check could actually see them render.
 - Staging deploy pending as of session end — GitHub Actions infra was degraded (stuck queues across unrelated branches too); check `gh run list --repo dob-0/di.iiii --branch dev` before assuming it landed.
 
