@@ -13,13 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Corrections to CURRENT.md → Open (verified today, not assumed)
-- Verified PR #93's 4 unseen fixes in a real browser
-- Ops Graph minimal pass: 10 sections → 6, contextual header
-- per-user "connect your AI key", v1
-- human-approval gate for admin-level writes (+ review fixes)
-- `di`: one line installs di.iiii on your own machine, offline
-- Ops Graph → Agents: a live map of the machine's Claude sessions
+- Shared frame-exact timeline core + Raw Timeline node
 
 Full detail: `PROGRESS.md`.
 
