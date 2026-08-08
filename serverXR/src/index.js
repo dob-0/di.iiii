@@ -42,6 +42,7 @@ const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
+const { registerAiConnectionRoutes } = require('./routes/aiConnectionRoutes')
 const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
@@ -1307,6 +1308,7 @@ registerStatusRoutes(router, {
 })
 
 registerIntegrationRoutes(router)
+registerAiConnectionRoutes(router)
 
 registerAgentBoardRoutes(router)
 
