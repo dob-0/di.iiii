@@ -251,6 +251,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-07-19'
     },
     {
+        id: 'agents-board',
+        category: 'Spaces & access',
+        title: 'Ops Graph → Agents',
+        summary: 'An operator-only map of the Claude Code sessions and agents working on this machine.',
+        body: [
+            'The Agents section of /admin shows the AI sessions working alongside you: a live map of every running Claude Code session, which checkout and branch each one holds, and a directory of recent chats with their topics.',
+            'Selecting a session opens its detail: the subagent tree it spawned, its background-job state, and the tail of its conversation.',
+            { list: [
+                'The map links each live session to the checkout it is editing — two sessions on one tree is visible at a glance.',
+                'Live status (busy / shell / idle) updates every few seconds.',
+                'This surface reads local machine data, so it only exists when serverXR runs on your own machine in dev mode. Deployed environments serve nothing here.'
+            ] }
+        ],
+        tags: ['admin', 'agents', 'ai', 'sessions', 'operator'],
+        updated: '2026-08-08'
+    },
+    {
         id: 'keyboard-shortcuts',
         category: 'Editing',
         title: 'Keyboard shortcuts',

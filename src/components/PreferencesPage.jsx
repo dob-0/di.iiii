@@ -21,6 +21,7 @@ import {
 } from './preferences/PreferencesShared.jsx'
 import AdminManageSection from './preferences/AdminManageSection.jsx'
 import OpenCallSection from './preferences/OpenCallSection.jsx'
+import AgentsSection from './preferences/AgentsSection.jsx'
 
 // Two groups: "admin" is real access-control (who can see/publish what),
 // "diagnostics" is live operator/debug telemetry — same nav, visually
@@ -28,6 +29,7 @@ import OpenCallSection from './preferences/OpenCallSection.jsx'
 const SECTIONS = [
     { key: 'manage', label: 'Manage', glyph: '▸', group: 'admin' },
     { key: 'opencall', label: 'Open Call', glyph: '✉', group: 'admin' },
+    { key: 'agents', label: 'Agents', glyph: '◈', group: 'admin' },
     { key: 'overview', label: 'Overview', glyph: '◆', group: 'diagnostics' },
     { key: 'topology', label: 'Topology', glyph: '◇', group: 'diagnostics' },
     { key: 'objects', label: 'Objects', glyph: '▦', group: 'diagnostics' },
@@ -429,6 +431,8 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                     {activeSection === 'manage' && <AdminManageSection />}
 
                     {activeSection === 'opencall' && <OpenCallSection />}
+
+                    {activeSection === 'agents' && <AgentsSection />}
 
                     {activeSection === 'console' && (
                         <ModuleSection
