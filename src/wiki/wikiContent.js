@@ -109,6 +109,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-06-26'
     },
     {
+        id: 'ai-connection',
+        category: 'Spaces & access',
+        title: 'Connect your own Claude API key',
+        summary: 'Every signed-in account can store its own Claude API key against the account — encrypted, never shared with other users.',
+        body: [
+            'Open the account menu (bottom-right avatar) while signed in and paste a Claude API key under "Claude API key." It is encrypted at rest and stored per account — no one else, including admins, can read it back once saved.',
+            'The panel shows "Connected — ····XXXX" (the last 4 characters, as a hint that it is the right key) once saved, with a Disconnect button to remove it.',
+            'This is the storage layer only, v1: it does not yet power any feature inside di.iiii on its own — it is the account-level place to hold the credential that future AI-connected tools (in di.iiii or elsewhere, like the di. Telegram bot) will read from.',
+            'Guest sessions cannot connect a key — sign in with GitHub or Google first.'
+        ],
+        tags: ['ai', 'claude', 'integrations', 'account', 'api key'],
+        updated: '2026-08-08'
+    },
+    {
         id: 'publishing',
         category: 'Spaces & access',
         title: 'Publishing & public spaces',

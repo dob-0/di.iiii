@@ -1,6 +1,13 @@
-import { Avatar, Box, Button, CircularProgress, Divider, Popover, Stack, Tooltip, Typography } from '@mui/material'
+import { Avatar, Box, Button, CircularProgress, Divider, Popover, Stack, TextField, Tooltip, Typography } from '@mui/material'
 import { useEffect, useRef, useState } from 'react'
-import { getApiAuthProviders, getOAuthUrl, logoutApiSession } from '../services/apiClient.js'
+import {
+    connectAiKey,
+    disconnectAiKey,
+    getAiConnectionStatus,
+    getApiAuthProviders,
+    getOAuthUrl,
+    logoutApiSession
+} from '../services/apiClient.js'
 
 const GitHubIcon = () => (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
@@ -22,6 +29,11 @@ export default function AccountButton({ authState, onLogout }) {
     const [providers, setProviders] = useState({ github: false, google: false })
     const [loggingOut, setLoggingOut] = useState(false)
     const fetchedRef = useRef(false)
+    // AI connection: undefined=loading · null=none connected · object={label,last4}
+    const [aiConnection, setAiConnection] = useState(undefined)
+    const [aiKeyInput, setAiKeyInput] = useState('')
+    const [aiBusy, setAiBusy] = useState(false)
+    const [aiError, setAiError] = useState('')
 
     useEffect(() => {
         if (fetchedRef.current) return
@@ -38,6 +50,42 @@ export default function AccountButton({ authState, onLogout }) {
 
     const handleOpen = (e) => setAnchorEl(e.currentTarget)
     const handleClose = () => setAnchorEl(null)
+
+    useEffect(() => {
+        if (!anchorEl || isGuest) return
+        setAiConnection(undefined)
+        setAiError('')
+        getAiConnectionStatus('claude')
+            .then((s) => setAiConnection(s.connected ? { label: s.label, last4: s.last4 } : null))
+            .catch(() => setAiConnection(null))
+    }, [anchorEl, isGuest])
+
+    const handleConnectAi = async () => {
+        const key = aiKeyInput.trim()
+        if (!key) return
+        setAiBusy(true); setAiError('')
+        try {
+            const res = await connectAiKey('claude', key)
+            setAiConnection({ label: res.label, last4: res.last4 })
+            setAiKeyInput('')
+        } catch (e) {
+            setAiError(e.message || 'Could not save key.')
+        } finally {
+            setAiBusy(false)
+        }
+    }
+
+    const handleDisconnectAi = async () => {
+        setAiBusy(true); setAiError('')
+        try {
+            await disconnectAiKey('claude')
+            setAiConnection(null)
+        } catch (e) {
+            setAiError(e.message || 'Could not disconnect.')
+        } finally {
+            setAiBusy(false)
+        }
+    }
 
     const handleOAuth = (provider) => {
         window.location.href = getOAuthUrl(provider)
@@ -196,6 +244,61 @@ export default function AccountButton({ authState, onLogout }) {
                                 {authState?.subject && (
                                     <Typography variant="caption" sx={{ color: 'var(--ui-text-muted)' }}>
                                         {authState.role}
+                                    </Typography>
+                                )}
+                            </Box>
+                            <Divider sx={{ borderColor: 'var(--ui-border)' }} />
+                            <Box sx={{ px: 2, py: 1.5 }}>
+                                <Typography variant="caption" sx={{ color: 'var(--ui-text-muted)', display: 'block', mb: 1 }}>
+                                    Claude API key
+                                </Typography>
+                                {aiConnection === undefined && (
+                                    <Typography variant="caption" sx={{ color: 'var(--ui-text-muted)' }}>Loading…</Typography>
+                                )}
+                                {aiConnection === null && (
+                                    <Stack spacing={1}>
+                                        <TextField
+                                            size="small"
+                                            type="password"
+                                            placeholder="sk-ant-…"
+                                            value={aiKeyInput}
+                                            onChange={(e) => setAiKeyInput(e.target.value)}
+                                            disabled={aiBusy}
+                                            sx={{
+                                                '& .MuiInputBase-input': { color: 'var(--ui-text-primary)', fontSize: 13 },
+                                                '& .MuiOutlinedInput-notchedOutline': { borderColor: 'var(--ui-border)' }
+                                            }}
+                                        />
+                                        <Button
+                                            fullWidth
+                                            size="small"
+                                            variant="outlined"
+                                            onClick={handleConnectAi}
+                                            disabled={aiBusy || !aiKeyInput.trim()}
+                                            sx={{ textTransform: 'none', borderColor: 'var(--ui-border)', color: 'var(--ui-text-primary)' }}
+                                        >
+                                            {aiBusy ? <CircularProgress size={14} /> : 'Connect'}
+                                        </Button>
+                                    </Stack>
+                                )}
+                                {aiConnection && (
+                                    <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between">
+                                        <Typography variant="caption" sx={{ color: 'var(--ui-text-primary)' }}>
+                                            Connected — ····{aiConnection.last4}
+                                        </Typography>
+                                        <Button
+                                            size="small"
+                                            onClick={handleDisconnectAi}
+                                            disabled={aiBusy}
+                                            sx={{ textTransform: 'none', color: 'var(--ui-text-muted)', minWidth: 0 }}
+                                        >
+                                            Disconnect
+                                        </Button>
+                                    </Stack>
+                                )}
+                                {aiError && (
+                                    <Typography variant="caption" sx={{ color: '#e57373', display: 'block', mt: 0.5 }}>
+                                        {aiError}
                                     </Typography>
                                 )}
                             </Box>
