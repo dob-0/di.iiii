@@ -1688,6 +1688,40 @@ mountTargets.forEach((targetPath) => {
   app.use(normalizedTarget, router)
 })
 
+// ── the SPA, when this process is also the web server ──
+// Only for a local `di` install (CLIENT_DIR set). In the deployed topology nginx
+// serves dist/ and this block never runs, so the API's shape is unchanged.
+//
+// Order matters and is the whole trick: this sits AFTER the router mounts above,
+// so /serverXR/api/* is already answered and can never fall through to index.html.
+const CLIENT_DIR = config.directories.clientDir
+if (CLIENT_DIR) {
+  app.use(express.static(CLIENT_DIR))
+
+  app.get(/.*/, (req, res, next) => {
+    // Anything the API owns is not ours, even unmatched — a wrong URL under the
+    // API must 404 as an API, not hand back an HTML page a fetch() can't parse.
+    if (req.path.startsWith('/serverXR') || req.path.startsWith('/api')) {
+      next()
+      return
+    }
+    // A request for a real file that express.static already declined is a 404,
+    // not the app: serving index.html for /assets/missing.js turns a cache miss
+    // into a JS syntax error thrown from inside the page.
+    if (path.extname(req.path)) {
+      next()
+      return
+    }
+    // `root` + a relative name, never sendFile(absolutePath). With no root,
+    // send applies its dotfiles:'ignore' rule to every segment of the absolute
+    // path — and the default install lives in ~/.di, so a hidden directory in
+    // the path 404s the entire app. Relative to root, there is no dot segment.
+    res.sendFile('index.html', { root: CLIENT_DIR })
+  })
+
+  logger.info(`[client] serving the built app from ${CLIENT_DIR}`)
+}
+
 app.use((err, req, res, next) => {
   pushEvent('error', { message: err.message })
   logger.error(err)
@@ -1756,14 +1790,15 @@ initStorage()
 
     initializeMesh(httpServer, config)
 
-    httpServer.listen(PORT, () => {
+    httpServer.listen(PORT, config.host, () => {
       pushEvent('server-started', {
         port: PORT,
+        host: config.host,
         node: process.version,
         releaseId: releaseInfo.releaseId,
         deployEnv: releaseInfo.deployEnv
       })
-      logger.info(`Server running. Listening on: ${PORT}`)
+      logger.info(`Server running. Listening on: ${config.host}:${PORT}`)
     })
   })
   .catch((error) => {
