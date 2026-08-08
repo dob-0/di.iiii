@@ -60,9 +60,16 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
     await fsp.mkdir(p.run, { recursive: true })
 
     const logStream = fs.openSync(p.serverLog, 'a')
+    // Detached on every OS, and unref'd on every OS. Windows was the exception
+    // here and that is exactly what hung `di up`: without detach+unref the
+    // parent node keeps a handle on the child, so the CLI never exits, so cmd
+    // never gives the artist their prompt back — the server is up and the
+    // terminal looks frozen. windowsHide stops the detached child from opening
+    // a console window of its own.
     const child = spawn(nodeBinary(home), [layout.serverEntry], {
         cwd: layout.server,
-        detached: !isWindows,
+        detached: true,
+        windowsHide: true,
         stdio: ['ignore', logStream, logStream],
         env: {
             ...process.env,
@@ -80,7 +87,7 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
         }
     })
 
-    if (!isWindows) child.unref()
+    child.unref()
     await fsp.writeFile(p.pidFile, String(child.pid))
 
     if (verbose) process.stdout.write(`[di] pid ${child.pid}, log ${p.serverLog}\n`)

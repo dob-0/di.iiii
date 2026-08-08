@@ -175,6 +175,14 @@ looked nothing like a real install — see below.
   shim dropped in a directory that is not really on PATH leaves
   `di: command not found` after an install that reported success. macOS found
   this: `~/.local/bin` existed but was not on the login PATH.
+- **Windows needed `detached` + `unref` too.** Without them the CLI's own event
+  loop never empties, so `di up` starts the server, prints the URL and then
+  never gives the prompt back. Nothing fails; the terminal just stops. Both
+  Windows jobs now carry `timeout-minutes`, because a hang has to read as a
+  failure rather than as a job still running.
+- **When the command is renamed, the sentences have to be renamed with it.** The
+  installer becomes `dii` if a foreign `di` already owns the name; the shim now
+  exports its own basename so every message says the word the artist types.
 - **A login zsh never reads `.zshrc`.** It reads `.zprofile` and `.zshenv`, so a
   PATH line in `.zshrc` is missing from exactly the shell an artist opens next.
   Pick the rc file from `$SHELL`, not from which files happen to exist —

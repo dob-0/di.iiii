@@ -131,6 +131,8 @@ jobs:
     name: update keeps the work (${{ matrix.os }})
     needs: pack
     runs-on: ${{ matrix.os }}
+    # A hang is a failure. Without this, `di up` not returning cost a six-hour job.
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -175,7 +177,7 @@ jobs:
         shell: bash
         run: |
           set -eu
-          DI="$HOME/.di/bin/di"
+          if [ "$RUNNER_OS" = "Windows" ]; then DI="$HOME/.di/bin/di.cmd"; else DI="$HOME/.di/bin/di"; fi
           "$DI" up --port 4310 --no-open
           curl -fsS -X POST http://127.0.0.1:4310/serverXR/api/spaces \
             -H 'Content-Type: application/json' \
@@ -216,7 +218,7 @@ jobs:
         shell: bash
         run: |
           set -eu
-          DI="$HOME/.di/bin/di"
+          if [ "$RUNNER_OS" = "Windows" ]; then DI="$HOME/.di/bin/di.cmd"; else DI="$HOME/.di/bin/di"; fi
           test "$("$DI" version)" = "9.9.9"
           "$DI" up --port 4311 --no-open
           curl -fsS http://127.0.0.1:4311/serverXR/api/spaces/canary/scene > canary-after.json
@@ -227,7 +229,7 @@ jobs:
         shell: bash
         run: |
           set -eu
-          DI="$HOME/.di/bin/di"
+          if [ "$RUNNER_OS" = "Windows" ]; then DI="$HOME/.di/bin/di.cmd"; else DI="$HOME/.di/bin/di"; fi
           "$DI" update --rollback
           test "$("$DI" version)" = "$BASE_VERSION"
           "$DI" up --port 4312 --no-open
@@ -314,6 +316,7 @@ jobs:
     name: windows
     needs: pack
     runs-on: windows-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4

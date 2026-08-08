@@ -5,6 +5,9 @@ rem over to the installed CLI, stay small enough that it never has to change.
 setlocal
 if "%DI_HOME%"=="" set "DI_HOME=%USERPROFILE%\.di"
 
+rem What the artist typed — the installer uses `dii` when `di` is taken.
+set "DI_COMMAND=%~n0"
+
 set "DI_NODE=%DI_HOME%\runtime\node\node.exe"
 if not exist "%DI_NODE%" set "DI_NODE=node"
 

@@ -27,6 +27,16 @@ export const style = {
     yellow: wrap('33')
 }
 
+/**
+ * What the artist actually types. The installer falls back to `dii` when a
+ * foreign `di` already exists on the machine, so a message hardcoding "di down"
+ * would send them to somebody else's binary. The shim exports its own basename.
+ */
+export const CMD = (() => {
+    const name = String(process.env.DI_COMMAND || '').trim()
+    return /^[A-Za-z0-9_.-]+$/.test(name) ? name : 'di'
+})()
+
 export const say = (message = '') => { process.stdout.write(`${message}\n`) }
 export const warn = (message = '') => { process.stderr.write(`${style.yellow(message)}\n`) }
 export const fail = (message = '') => { process.stderr.write(`${style.red(message)}\n`) }
@@ -35,7 +45,7 @@ export const ui = {
     running: (url, spaces) => [
         `di.iiii is running.  ${style.cyan(url)}`,
         spaces?.length ? style.dim(`your spaces: ${spaces.join(', ')}`) : null,
-        style.dim('stop it with: di down')
+        style.dim(`stop it with: ${CMD} down`)
     ].filter(Boolean).join('\n'),
 
     alreadyRunning: (url) => `already running — ${style.cyan(url)}`,
@@ -48,7 +58,7 @@ export const ui = {
 
     updated: (from, to) => `${from} → ${to}. your work was not touched.`,
     upToDate: (version) => `${version} — already the newest.`,
-    updateAvailable: (current, next) => style.dim(`${current} → ${next} available — di update`),
+    updateAvailable: (current, next) => style.dim(`${current} → ${next} available — ${CMD} update`),
     rolledBack: (to) => `back on ${to}. your work was not touched.`,
     noPrevious: () => 'nothing to roll back to — only one version is installed.',
     updateFailed: (version) => `update failed, still on ${version}. your work was not touched.`,
@@ -80,9 +90,9 @@ export const ui = {
         'you need one of these. pick whichever sounds easier:',
         '',
         `  docker desktop  ${style.cyan('https://docker.com/products/docker-desktop')}`,
-        '                  install it, open it once, then run:  di up',
+        `                  install it, open it once, then run:  ${CMD} up`,
         `  node.js 22      ${style.cyan('https://nodejs.org')}`,
-        '                  the big green LTS button, then run:  di up',
+        `                  the big green LTS button, then run:  ${CMD} up`,
         '',
         'nothing was installed. full report:  di doctor'
     ].join('\n'),
@@ -106,25 +116,25 @@ export const ui = {
 
     uninstalled: (dataDir) => [
         'removed di.iiii.',
-        style.dim(`your work is still at ${dataDir} — delete it yourself, or run: di uninstall --with-data`)
+        style.dim(`your work is still at ${dataDir} — delete it yourself, or run: ${CMD} uninstall --with-data`)
     ].join('\n'),
 
     help: () => [
-        style.bold('di') + style.dim(' — di.iiii on your own machine'),
+        style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
         '',
-        '  di up            start it, and open it',
-        '  di down          stop it',
-        '  di status        what is running, where, and how big',
-        '  di open          open it in your browser',
+        `  ${CMD} up            start it, and open it`,
+        `  ${CMD} down          stop it`,
+        `  ${CMD} status        what is running, where, and how big`,
+        `  ${CMD} open          open it in your browser`,
         '',
-        '  di backup        write your whole di.iiii to one file',
-        '  di restore FILE  read one back in',
+        `  ${CMD} backup        write your whole di.iiii to one file`,
+        `  ${CMD} restore FILE  read one back in`,
         '',
-        '  di update        get the newest version — never touches your work',
-        '  di logs [-f]     what the server is saying',
-        '  di doctor        what this machine can and cannot do',
-        '  di where         the three paths that matter',
-        '  di uninstall     remove it, keep your work',
+        `  ${CMD} update        get the newest version — never touches your work`,
+        `  ${CMD} logs [-f]     what the server is saying`,
+        `  ${CMD} doctor        what this machine can and cannot do`,
+        `  ${CMD} where         the three paths that matter`,
+        `  ${CMD} uninstall     remove it, keep your work`,
         '',
         style.dim('  --port N     run somewhere other than 4000'),
         style.dim('  --verbose    show the docker/npm/node underneath'),

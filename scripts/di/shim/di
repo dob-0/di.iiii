@@ -22,6 +22,11 @@ if [ -z "$DI_NODE" ]; then
     exit 1
 fi
 
+# What the artist typed. The installer uses `dii` when a foreign `di` already
+# owns the name, and every message the CLI prints has to say the same word.
+DI_COMMAND=$(basename "$0")
+export DI_COMMAND
+
 CLI="$DI_HOME/current/cli/cli.mjs"
 if [ ! -f "$CLI" ]; then
     echo "di.iiii is not installed here ($DI_HOME)." >&2
