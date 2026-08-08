@@ -236,3 +236,24 @@ export const logoutApiSession = async () => apiFetch('/api/auth/session', {
 export const getApiAuthProviders = async () => apiFetch('/api/auth/providers')
 
 export const getOAuthUrl = (provider) => `${apiBaseUrl}/api/auth/${provider}`
+
+export const getAiConnectionStatus = async (provider) =>
+    apiFetch(`/api/integrations/ai/status?provider=${encodeURIComponent(provider)}`)
+
+export const connectAiKey = async (provider, apiKey, label) => apiFetch('/api/integrations/ai/connect', {
+    method: 'POST',
+    body: { provider, apiKey, label }
+})
+
+export const disconnectAiKey = async (provider) => apiFetch('/api/integrations/ai/disconnect', {
+    method: 'POST',
+    body: { provider }
+})
+
+// Operator-only agent board (Ops Graph → Agents). 404s everywhere except a
+// local dev serverXR over loopback — callers treat that as "unavailable".
+export const getAgentBoard = async () => apiFetch('/api/agent-board')
+
+export const getAgentBoardSession = async (sessionId) => (
+    apiFetch(`/api/agent-board/session/${encodeURIComponent(sessionId)}`)
+)

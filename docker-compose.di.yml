@@ -1,0 +1,30 @@
+# Local install override — what `di up` runs in docker mode.
+#
+# Not used by any deployment. Composed on top of docker-compose.yml:
+#   docker compose -p di-local -f docker-compose.yml -f docker-compose.di.yml up -d
+#
+# Three differences from the deployed stack, each of which matters on a laptop:
+
+services:
+  server:
+    build: !reset null
+    image: ghcr.io/${REGISTRY_USER:-dob-0}/dii-server:${IMAGE_TAG:-latest}
+    environment:
+      # The base file hardcodes NODE_ENV=production, which flips REQUIRE_AUTH's
+      # default to true. Left implicit, an artist would be locked out of their
+      # own machine by an auth system with no token to satisfy it.
+      REQUIRE_AUTH: "false"
+      AUTH_SESSION_COOKIE_SECURE: "false"
+    # `unless-stopped` is right for a server and wrong for a laptop: di.iiii
+    # would silently come back every reboot, holding a port nobody asked it to.
+    restart: "no"
+
+  client:
+    build: !reset null
+    image: ghcr.io/${REGISTRY_USER:-dob-0}/dii-client:${IMAGE_TAG:-latest}
+    restart: "no"
+    ports: !override
+      # Loopback only. A local install on café wifi with auth off is not meant
+      # to be an editor the whole room shares — LAN exposure is a later,
+      # deliberate feature with an auth story of its own.
+      - "127.0.0.1:${PORT:-4000}:8080"

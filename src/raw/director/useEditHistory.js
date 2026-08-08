@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { isTypingInto } from './useAutoHideChrome.js'
+import { isTypingInto } from '../../algoVrithm/useAutoHideChrome.js'
 
 // Undo for the edit list.
 //

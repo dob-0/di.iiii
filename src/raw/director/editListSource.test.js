@@ -9,10 +9,10 @@ import {
     patchEditListSource,
     scanCode
 } from './editListSource.js'
-import { SEQUENCES } from './sequences/index.js'
+import { SEQUENCES } from '../../algoVrithm/sequences/index.js'
 
 const HERE = path.dirname(fileURLToPath(import.meta.url))
-const INDEX_PATH = path.resolve(HERE, 'sequences/index.js')
+const INDEX_PATH = path.resolve(HERE, '../../algoVrithm/sequences/index.js')
 const realSource = () => fs.readFileSync(INDEX_PATH, 'utf8')
 
 const TINY = `export const SEQUENCES = [

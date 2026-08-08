@@ -10,6 +10,8 @@
 // array for "Copy edit list". Save is the one to reach for — the formatter is
 // lossy by design, see its own note.
 
+import { formatTransformSource } from './sequenceTransform.js'
+
 // Smallest editable step. Fine enough to place a cut precisely, coarse enough
 // that dragging produces round numbers instead of 7.203041s.
 export const SNAP_SEC = 0.05
@@ -462,6 +464,23 @@ export const formatEditListSource = (sequences, componentNames = {}) => {
             ? `        source: [${roundUnit(sequence.source[0])}, ${roundUnit(sequence.source[1])}],\n`
             : ''
 
+        // `veil: false` is a choreographed decision, not a default — two rows
+        // carry it so their arrival is not buried under the generic dip (see
+        // transitions.js). The copy losing it would silently put the grey dip
+        // back on top of the portal reveal the next time the output was pasted
+        // over the file.
+        const veilLine = sequence.veil === false ? '        veil: false,\n' : ''
+
+        // Placement, only for rows that were actually moved — same rule as
+        // `source` and `ambient`: an untouched row comes back out untouched.
+        const transformLine = formatTransformSource(sequence)
+
+        // `travel` carries the one passive locomotion move a row can make, and
+        // a pasted copy that drops it leaves the visitor standing still.
+        const travelLine = Array.isArray(sequence.travel)
+            ? `        travel: [${sequence.travel.map(formatNumber).join(', ')}],\n`
+            : ''
+
         // Asset clips are written back by REFERENCE, not by value: `src` is a
         // build-time URL that changes with the file's content hash, so pasting
         // it in would break on the next build. Resolving the id against the
@@ -487,6 +506,9 @@ export const formatEditListSource = (sequences, componentNames = {}) => {
             + sourceLine
             + backdropLine
             + lightsLine
+            + transformLine
+            + travelLine
+            + veilLine
             + assetLine
             + `        Component: ${componentName}\n`
             + '    }'

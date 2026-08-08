@@ -1,0 +1,37 @@
+#!/bin/sh
+# The `di` on your PATH. Deliberately tiny and permanently stable: it only finds
+# a node and hands over to the installed CLI, so `di update` can replace all the
+# real logic without anyone re-running the installer.
+#
+# POSIX sh on purpose — this has to run under busybox ash on Alpine too.
+
+if [ -z "$DI_HOME" ]; then
+    DI_HOME="$HOME/.di"
+fi
+export DI_HOME
+
+# The node di downloaded, if it had to. Otherwise whatever the machine has.
+DI_NODE="$DI_HOME/runtime/node/bin/node"
+if [ ! -x "$DI_NODE" ]; then
+    DI_NODE=$(command -v node 2>/dev/null)
+fi
+
+if [ -z "$DI_NODE" ]; then
+    echo "di.iiii cannot find node on this machine." >&2
+    echo "reinstall it with:  curl -fsSL https://di-studio.xyz/get | sh" >&2
+    exit 1
+fi
+
+# What the artist typed. The installer uses `dii` when a foreign `di` already
+# owns the name, and every message the CLI prints has to say the same word.
+DI_COMMAND=$(basename "$0")
+export DI_COMMAND
+
+CLI="$DI_HOME/current/cli/cli.mjs"
+if [ ! -f "$CLI" ]; then
+    echo "di.iiii is not installed here ($DI_HOME)." >&2
+    echo "install it with:  curl -fsSL https://di-studio.xyz/get | sh" >&2
+    exit 1
+fi
+
+exec "$DI_NODE" "$CLI" "$@"

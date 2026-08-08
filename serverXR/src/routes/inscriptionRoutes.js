@@ -84,6 +84,7 @@ function registerInscriptionRoutes(router, {
   inscriptionLimiter = (req, res, next) => next(),
   loadSpaceMeta,
   maxOpHistory,
+  maxOpAgeMs = 0,
   normalizeSpaceId,
   readJson,
   upsertSpaceMeta,
@@ -154,7 +155,7 @@ function registerInscriptionRoutes(router, {
         const versionedOp = { ...op, version: currentVersion + 1, timestamp: Date.now() }
         const updatedScene = applySceneOps(scene, [versionedOp])
         await writeJson(scenePath, updatedScene)
-        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory)
+        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory, maxOpAgeMs)
         await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: versionedOp.version })
         broadcastLiveEvent(spaceId, 'scene-op', { version: versionedOp.version, ops: [versionedOp] })
 
@@ -215,7 +216,7 @@ function registerInscriptionRoutes(router, {
         const versionedOp = { ...op, version: currentVersion + 1, timestamp: Date.now() }
         const updatedScene = applySceneOps(scene, [versionedOp])
         await writeJson(scenePath, updatedScene)
-        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory)
+        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory, maxOpAgeMs)
         await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: versionedOp.version })
         broadcastLiveEvent(spaceId, 'scene-op', { version: versionedOp.version, ops: [versionedOp] })
         return { id }
@@ -271,7 +272,7 @@ function registerInscriptionRoutes(router, {
         const versionedOp = { ...op, version: currentVersion + 1, timestamp: Date.now() }
         const updatedScene = applySceneOps(scene, [versionedOp])
         await writeJson(scenePath, updatedScene)
-        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory)
+        await appendOpsHistory(spaceId, [versionedOp], maxOpHistory, maxOpAgeMs)
         await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: versionedOp.version })
         broadcastLiveEvent(spaceId, 'scene-op', { version: versionedOp.version, ops: [versionedOp] })
 
