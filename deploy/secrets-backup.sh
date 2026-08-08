@@ -88,7 +88,15 @@ fi
 
 mkdir -p "$OUT_DIR"; chmod 700 "$OUT_DIR"
 stamp=$(ssh "$VPS" date -u +%Y-%m-%d 2>/dev/null || echo unknown)
-tar -czf "$work/bundle.tar.gz" -C "$work" --exclude bundle.tar.gz .
+# Build the archive OUTSIDE the directory being archived. Writing it into
+# $work made tar notice the directory grow underneath it and exit 1 with
+# "file changed as we read it" — and under `set -e` that aborted the script
+# before it encrypted anything, so the run ended having written no bundle at
+# all while looking like it had merely warned. --exclude does not help: it
+# keeps the file out of the archive, not out of the directory tar is reading.
+bundle=$(mktemp /dev/shm/secrets-bundle.XXXXXX.tar.gz)
+cleanup() { rm -rf "$work" "$bundle"; }
+tar -czf "$bundle" -C "$work" .
 
 # age encrypts to the ssh key already protected and already backed up, so this
 # adds no new secret to lose. gpg --symmetric is the fallback when age is not
@@ -96,15 +104,15 @@ tar -czf "$work/bundle.tar.gz" -C "$work" --exclude bundle.tar.gz .
 # second choice rather than first.
 if command -v age >/dev/null 2>&1 && [ -f "$RECIPIENT_KEY" ]; then
   out="$OUT_DIR/secrets-$stamp.age"
-  age -R "$RECIPIENT_KEY" -o "$out" "$work/bundle.tar.gz"
+  age -R "$RECIPIENT_KEY" -o "$out" "$bundle"
   method="age → $(basename "$RECIPIENT_KEY")"
 elif command -v gpg >/dev/null 2>&1; then
   out="$OUT_DIR/secrets-$stamp.gpg"
   if [ -n "${SECRETS_PASSPHRASE_FILE:-}" ] && [ -f "$SECRETS_PASSPHRASE_FILE" ]; then
     gpg --batch --yes --symmetric --cipher-algo AES256 \
-        --passphrase-file "$SECRETS_PASSPHRASE_FILE" -o "$out" "$work/bundle.tar.gz"
+        --passphrase-file "$SECRETS_PASSPHRASE_FILE" -o "$out" "$bundle"
   else
-    gpg --symmetric --cipher-algo AES256 -o "$out" "$work/bundle.tar.gz"
+    gpg --symmetric --cipher-algo AES256 -o "$out" "$bundle"
   fi
   method="gpg symmetric"
 else
