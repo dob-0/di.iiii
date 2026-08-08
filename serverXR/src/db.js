@@ -113,6 +113,16 @@ const SCHEMA = `
     updated_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS user_ai_connections (
+    user_id TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    label TEXT,
+    api_key TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, provider)
+  );
+
   CREATE TABLE IF NOT EXISTS public_assets (
     asset_id TEXT PRIMARY KEY,
     space_id TEXT NOT NULL,
