@@ -60,3 +60,10 @@ Left open, per the branch's own commit message: 3D placement in
 `DirectorPanelWindow` — the gizmo/orbit/standpoint components moved into Raw
 but need the piece's own Canvas mounted inside the window before they can
 attach to anything; `onPlace` currently only selects the row.
+
+- 2026-08-08 review follow-up: stripped `view.timeline`'s declared ports
+  (`playhead`/`fps` inputs, `frame`/`clip` outputs) in
+  `src/project/nodeRegistry.js` — no runtime carried them (dead-port rule);
+  the node stays panel-only like `view.director`, and the ports can be wired
+  later via `nodeGraphRuntime` when the data is real. The panel's local
+  playhead state is untouched.

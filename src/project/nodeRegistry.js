@@ -818,14 +818,11 @@ export const NODE_TYPES = {
         category: 'view',
         runtime: 'any',
         singleton: false,
-        inputs: [
-            { id: 'playhead', type: 'number', label: 'Playhead', default: 0  },
-            { id: 'fps',      type: 'number', label: 'FPS',      default: 60 },
-        ],
-        outputs: [
-            { id: 'frame', type: 'number', label: 'Source Frame' },
-            { id: 'clip',  type: 'string', label: 'Live Clip'    },
-        ],
+        // Ports stripped per review (dead-port rule): no runtime carries
+        // playhead/fps in or frame/clip out yet. Wire via nodeGraphRuntime
+        // when the data is real; the panel keeps its own playhead locally.
+        inputs: [],
+        outputs: [],
         // Clips are integer frames throughout — see src/project/timeline/
         // timelineCore.js for why seconds are not stored anywhere.
         defaultValues: {
