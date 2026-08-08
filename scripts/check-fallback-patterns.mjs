@@ -29,7 +29,11 @@ const ALLOWLIST = [
   // OAuth token-response `scope` string — not an identity/access-scope value,
   // just the space-delimited permissions string Google returns; '' is a
   // correct empty-permissions default, not a fallback masking a real scope.
-  ['googleOAuth.js', "scope: json.scope || ''"]
+  ['googleOAuth.js', "scope: json.scope || ''"],
+  // Optional request-body field on chat creation: null means "chat is not
+  // linked to a project", a legal state — not a masked lookup failure. The
+  // chat's real ownership gate is user_id, enforced in every store query.
+  ['aiChatRoutes.js', "projectId: typeof projectId === 'string' ? projectId : null"]
 ]
 
 const FALLBACK_PATTERN = /\b(spaceId|scope|tenant|projectId)\b\s*(\|\||\?\?)\s*['"]/
