@@ -180,6 +180,7 @@ function createSpaceStore({
       opsInsert:     db.prepare('INSERT INTO space_ops (space_id, version, data, created_at) VALUES (?, ?, ?, ?)'),
       opsCount:      db.prepare('SELECT COUNT(*) as cnt FROM space_ops WHERE space_id = ?'),
       opsTrim:       db.prepare('DELETE FROM space_ops WHERE space_id = ? AND seq IN (SELECT seq FROM space_ops WHERE space_id = ? ORDER BY seq ASC LIMIT ?)'),
+      opsTrimAged:   db.prepare('DELETE FROM space_ops WHERE space_id = ? AND created_at < ?'),
     }
     return _s
   }
@@ -415,9 +416,13 @@ function createSpaceStore({
     })()
   }
 
-  const appendOpsHistory = async (spaceId, newOps = [], maxHistory = 500) => {
+  // maxAgeMs bounds the window by age as well as count; 0 disables it. Same
+  // reasoning as appendProjectOps in projectStore.js — counting alone ties how
+  // long history (and every asset it mentions) survives to how busy the space
+  // is, so a dormant space keeps its last ops forever.
+  const appendOpsHistory = async (spaceId, newOps = [], maxHistory = 500, maxAgeMs = 0) => {
     if (!Array.isArray(newOps) || newOps.length === 0) return
-    const { opsInsert, opsCount, opsTrim } = s()
+    const { opsInsert, opsCount, opsTrim, opsTrimAged } = s()
     const now = Date.now()
     getDb().transaction(() => {
       for (const op of newOps) {
@@ -425,6 +430,7 @@ function createSpaceStore({
       }
       const { cnt } = opsCount.get(spaceId)
       if (cnt > maxHistory) opsTrim.run(spaceId, spaceId, cnt - maxHistory)
+      if (maxAgeMs > 0) opsTrimAged.run(spaceId, now - maxAgeMs)
     })()
   }
 

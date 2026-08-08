@@ -91,6 +91,17 @@ log "listing backups on $VPS_HOST:$VPS_DIR"
 # non-zero, which would otherwise be reported as "cannot reach host" — sending
 # whoever is on call after an ssh fault when the real problem is that the
 # nightly job stopped producing archives. Only a genuine ssh failure exits here.
+# A desktop that was switched off at 09:00 has not failed to back anything up;
+# it was asleep. Reporting that as a failure taught everyone to ignore this
+# unit's failures — it failed 4 of 6 days in August and nobody looked, which is
+# exactly how a real one would have been missed. So: no route to anywhere means
+# skip, quietly and successfully. A route that exists while the VPS refuses is
+# still a genuine failure and still shouts.
+if ! ip route get 1.1.1.1 >/dev/null 2>&1; then
+  log "this machine is offline — skipping, not failing"
+  exit 0
+fi
+
 if ! REMOTE_LIST=$(ssh -o BatchMode=yes -o ConnectTimeout=15 "$VPS_HOST" \
     "ls -1 $VPS_DIR/dii-backup-*.tar.gz 2>/dev/null || true" </dev/null); then
   fail "cannot reach $VPS_HOST over ssh"

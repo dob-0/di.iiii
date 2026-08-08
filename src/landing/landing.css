@@ -10,6 +10,13 @@
     scroll-behavior: smooth;
 }
 
+/* The landing has no ThemeProvider, so MUI's default theme puts Roboto on every
+   Typography element and wins over the family declared above. Harmless while Inter
+   was never actually loaded; visible as mixed type the moment it is. */
+.lp-root .MuiTypography-root {
+    font-family: inherit;
+}
+
 /* ─── BUTTONS ─────────────────────────────────────────────── */
 .landing-cta-primary,
 .lp-btn-primary {

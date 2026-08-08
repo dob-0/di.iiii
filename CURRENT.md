@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- public project pages drop the floating project switcher
+- five people's personal details come out of the public deck
 
 Full detail: `PROGRESS.md`.
 

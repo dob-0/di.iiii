@@ -249,3 +249,11 @@ export const disconnectAiKey = async (provider) => apiFetch('/api/integrations/a
     method: 'POST',
     body: { provider }
 })
+
+// Operator-only agent board (Ops Graph → Agents). 404s everywhere except a
+// local dev serverXR over loopback — callers treat that as "unavailable".
+export const getAgentBoard = async () => apiFetch('/api/agent-board')
+
+export const getAgentBoardSession = async (sessionId) => (
+    apiFetch(`/api/agent-board/session/${encodeURIComponent(sessionId)}`)
+)

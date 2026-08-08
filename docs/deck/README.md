@@ -1,6 +1,17 @@
 # di.iiii Deck Context
 
-This folder is the public-context lane for `di.iiii` deck, CV, portfolio, and proof materials.
+This folder is the public-context lane for `di.iiii` deck, portfolio, and proof material.
+
+> **The deck here is the CV-free build — 90 pages, not 95.** Pages 85–89 of the full
+> deck are CV pages for five named people, each carrying a date of birth, a personal
+> mobile number, a personal email and a photograph. They do not belong in a public
+> repository: a deck is handed to a specific person, and four of the five did not
+> choose to publish theirs. The complete deck lives in the private `di.iiii-ops`
+> repo (`deck/`), which also documents how this build is regenerated and how to check
+> that it actually lost what it was meant to lose.
+>
+> **If you add anything here, read it first.** Portfolio material tends to arrive with
+> contact details baked in; this folder is world-readable under AGPL.
 
 Use it for:
 
@@ -10,6 +21,8 @@ Use it for:
 
 Do not use it for:
 
+- **anyone's personal data** — date of birth, phone number, home address, private
+  email, ID document, or a photograph they did not agree to publish
 - raw private drafts that should stay internal
 - large binaries without a clear reason
 - time-sensitive milestone logs that belong in more specific docs
