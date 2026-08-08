@@ -466,4 +466,33 @@ describe('formatEditListSource', () => {
         expect(formatEditListSource(removeLight(addLight(list(), 'a'), 'a', 'light-1')))
             .not.toContain('lights:')
     })
+
+    it("keeps a row's veil: false through a paste", () => {
+        // Two shipped rows carry it — the portal reveal and the step out —
+        // and a copy that drops the flag puts the generic grey dip back on
+        // top of the one choreographed transition the piece has.
+        const rows = list()
+        rows[1].veil = false
+        const source = formatEditListSource(rows)
+        expect(source).toContain('veil: false')
+        // The other row never declared one; `veil: true` is not a thing any
+        // shipped row says, so nothing should be invented for it.
+        expect(source).not.toContain('veil: true')
+    })
+
+    it('keeps a moved row\'s transform and drops the identity', () => {
+        const rows = list()
+        rows[0].transform = { position: [1, 0, -2], rotation: [0, 0, 0], scale: 2 }
+        const source = formatEditListSource(rows)
+        expect(source).toContain('transform: { position: [1, 0, -2], rotation: [0, 0, 0], scale: 2 }')
+        // An untouched row must not acquire three lines of zeroes.
+        expect(source.match(/transform:/g)).toHaveLength(1)
+    })
+
+    it("keeps a row's travel through a paste", () => {
+        const rows = list()
+        rows[0].travel = [0, 0, -6]
+        expect(formatEditListSource(rows)).toContain('travel: [0, 0, -6]')
+        expect(formatEditListSource(list())).not.toContain('travel:')
+    })
 })
