@@ -42,10 +42,10 @@ import { ASSET_LIBRARY } from './assetLibrary.js'
 // aesthetic problem.
 //
 // So: MAX_PLAYERS is the knob. Lower it and the globe simply repeats clips more
-// often; nothing else in the piece changes. And compressing the source to
-// something like 540p (see the note in the assets README) would make the whole
-// question go away — the reels are shown at about 1.4m wide on a 7m shell, so
-// full resolution is being decoded and then thrown away.
+// often; nothing else in the piece changes. The other half of the answer is
+// DONE: the sources are 360x640 since 2026-08-08 (scripts/compress-reels.mjs
+// --replace), which took the pool from 25.9 to 7.1 megapixels per frame — keep
+// running that script over anything new dropped in the folder.
 const MAX_PLAYERS = 32
 
 export const playerCount = () => Math.min(

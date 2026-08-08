@@ -81,6 +81,28 @@ describe('ProjectSwitcher', () => {
         expect(within(nav).getByText('the field')).toBeInTheDocument()
     })
 
+    // known-fixes: the pill sat at full contrast at rest, which read as a
+    // generic chunky bubble clashing with whatever a space's own design was —
+    // and, sitting fixed top-left, could visually cover a space's own content
+    // in that corner. Idle now stays low-contrast; only hover/focus/open goes
+    // to full contrast, same as the affordance change a real button gets.
+    it('starts low-contrast and only reaches full contrast on hover, focus, or open', async () => {
+        listProjects.mockResolvedValue([])
+        render(<ProjectSwitcher spaceId="br_id_ge" currentProjectId="landing" spaceLabel="br_id_ge" />)
+
+        const pill = screen.getByRole('button', { name: /br_id_ge/ })
+        expect(pill.style.background).toBe('rgba(10, 16, 24, 0.32)')
+
+        await userEvent.hover(pill)
+        expect(pill.style.background).toBe('rgba(10, 16, 24, 0.82)')
+
+        await userEvent.unhover(pill)
+        expect(pill.style.background).toBe('rgba(10, 16, 24, 0.32)')
+
+        await userEvent.click(pill)
+        expect(pill.style.background).toBe('rgba(10, 16, 24, 0.82)')
+    })
+
     // docs/architecture/SPEC_space_urls_and_portability.md — vanity slugs.
     it('copies the vanity link when a project has a slug, the /p/ fallback otherwise', async () => {
         listProjects.mockResolvedValue([

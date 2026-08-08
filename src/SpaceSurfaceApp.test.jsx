@@ -17,8 +17,8 @@ vi.mock('./raw/BlankNodeWorkspaceApp.jsx', () => ({
 }))
 
 vi.mock('./project/components/PublicProjectViewer.jsx', () => ({
-    default: function MockPublicProjectViewer({ spaceId, projectId }) {
-        return <div>public-project-viewer:{spaceId}:{projectId}</div>
+    default: function MockPublicProjectViewer({ spaceId, projectId, showProjectSwitcher }) {
+        return <div>public-project-viewer:{spaceId}:{projectId}{showProjectSwitcher ? ':switcher' : ''}</div>
     }
 }))
 
@@ -55,6 +55,21 @@ describe('SpaceSurfaceApp', () => {
         render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'main', projectId: 'draft-project' }} />)
 
         expect(await screen.findByText('public-project-viewer:main:draft-project')).toBeInTheDocument()
+    })
+
+    // Owner call 2026-08-07: the floating project switcher clashed with
+    // published page designs — every public face stays chrome-free.
+    it('keeps direct project links chrome-free (no floating project switcher)', async () => {
+        getServerSpace.mockResolvedValue({
+            id: 'main',
+            label: 'Main Space',
+            publishedProjectId: 'live-project'
+        })
+
+        render(<SpaceSurfaceApp routeState={{ page: 'editor', spaceId: 'main', projectId: 'draft-project' }} />)
+
+        expect(await screen.findByText('public-project-viewer:main:draft-project')).toBeInTheDocument()
+        expect(screen.queryByText(/:switcher/)).not.toBeInTheDocument()
     })
 
     it('renders a direct project link even if space metadata fails to load', async () => {

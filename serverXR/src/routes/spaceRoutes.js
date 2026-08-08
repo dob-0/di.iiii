@@ -44,6 +44,7 @@ function registerSpaceRoutes(router, {
   listSpaces,
   listProjectsInSpace = null,
   maxOpHistory,
+  maxOpAgeMs = 0,
   normalizeIncomingOps,
   normalizeProjectId,
   normalizeSpaceId,
@@ -580,7 +581,7 @@ function registerSpaceRoutes(router, {
         }))
         const updatedScene = applySceneOps(scene, opsWithVersion)
         await writeJson(scenePath, updatedScene)
-        await appendOpsHistory(spaceId, opsWithVersion, maxOpHistory)
+        await appendOpsHistory(spaceId, opsWithVersion, maxOpHistory, maxOpAgeMs)
         await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: nextVersion })
         return { nextVersion, opsWithVersion }
       })

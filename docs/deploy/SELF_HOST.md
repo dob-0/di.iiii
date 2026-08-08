@@ -1,5 +1,11 @@
 # Self-Hosting a Space
 
+> **Just want di.iiii on your machine?** One line, no clone, no Node needed:
+> `curl -fsSL https://di-studio.xyz/get | sh` — then `di up`.
+> See **[DI_CLI.md](DI_CLI.md)**. This page is about moving a *space* between
+> installs, and about the developer path (`npm run selfhost`) for people who
+> want the source and the dev stack.
+
 Move a space — scene, projects, assets, op history — out of one di.iiii install
 and run it on your own machine with one command. No running source server is
 needed to import; the bundle is the space.

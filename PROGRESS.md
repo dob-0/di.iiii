@@ -5,6 +5,178 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-07 — five people's personal details come out of the public deck
+
+- `docs/deck/di.ii XR studio_network .pdf` was tracked here, on `main` and `dev`, and
+  downloadable from `raw.githubusercontent.com` (verified, HTTP 200). Its pages 85–89
+  are CV pages for **five named people** — Gevorg, Emilya, Syuzanna, Taron, Yeva —
+  each carrying a **date of birth, a personal mobile number, a personal email address
+  and a photograph**. Found while reading the deck to identify a di.iiii admin account
+  nobody had written down.
+- No scan would ever have caught it. The repo has no tracked credentials and the
+  secret scan looks for secrets; this is not a secret, it is somebody's phone number.
+  A deck is a document you hand to a specific person, and four of the five did not
+  choose to publish theirs.
+- **What changed here:** the public copy is now the same deck with pages 85–89 removed
+  — 90 pages instead of 95. The complete file moved to the private `di.iiii-ops`
+  (`deck/`), whose README carries the regeneration command and the verification.
+  `docs/deck/README.md` says which build this is and adds "anyone's personal data" to
+  the do-not-put-here list, because portfolio material arrives with contact details
+  baked in and this folder is world-readable under AGPL.
+- Verified by **text, not page count**: `gs -sDEVICE=txtwrite` over the new build finds
+  zero hits for all five phone numbers, all five emails, all five dates of birth and
+  the string "Date of birth" — and the same search over the original finds them, so the
+  check can actually fail. The seam (page 84 divider → 85 network list) was looked at.
+- **This does NOT undo the disclosure, and nobody should read it as if it does.**
+  `git rm` removes a file from `HEAD` and from nothing else. The full deck remains in
+  this repo's history, and — the part that makes a history rewrite insufficient on its
+  own — **in two public forks**, `emilyanikoghosyan/di.iiii` and `normal22194/di.iiii`,
+  both of which served the PDF when checked. Forks are separate repositories; a
+  force-push here reaches neither.
+- **Still to do, deliberately not done here:** tell the four people whose details these
+  are; ask the two fork owners to clean or delete their forks; then, and only then,
+  consider a history rewrite with GitHub Support in the loop (their cached blob views
+  survive a force-push and need a support request quoting the SHAs). A rewrite today
+  would also invalidate 10 open PRs and 25 remote branches with several sessions
+  actively pushing — real disruption, and the data would still be at two URLs.
+- A full mirror backup of the public repo was taken first:
+  `/home/nooo/di-backups/di.iiii-mirror-20260807.git` — 1204 commits, 145 refs, 450 MB,
+  deck confirmed present in it.
+
+# Session notes — fix/hide-public-project-switcher
+
+## 2026-08-07 — public project pages drop the floating project switcher
+
+- Owner call (from the staging screenshot of `/br_id_ge/rite`): the `br_id_ge ▾`
+  chip and its dropdown clashed with the published page's design. The switcher is
+  right in Studio, where you're working — not floating over a public face.
+- `SpaceSurfaceApp` no longer passes `showProjectSwitcher` to `PublicProjectViewer`,
+  so direct project links (`/:space/p/:id` and vanity `/:space/:slug`) render
+  chrome-free like the live route. `ProjectSwitcher` itself is kept (unreachable
+  from public routes) for a possible future edit-context surface; Studio's
+  Projects window still covers project hopping.
+- Regression guard in `SpaceSurfaceApp.test.jsx`: the viewer mock now surfaces the
+  prop and a test asserts direct links stay switcher-free. Wiki `publishing` entry
+  updated to match. This also resolves the open "`br_id_ge ▾` chip covers the
+  letter-row" call in CURRENT.md — the chip is gone from public pages entirely.
+- Verified by looking: local vite (port 5473, proxied to the staging API) rendered
+  `/br_id_ge/rite` desktop + iPhone-13 viewport and `/br_id_ge/p/landing` — no chip
+  on any of them. Lint 0 errors, build green, full suite 1798/1798.
+
+## 2026-08-06 — Open inscriptions can carry the drawing that was made for them
+
+A crossing of br_id_ge left a name and a word, and the form it wore in the field
+was a torus knot picked by a hash of its own id — unique, permanent, and nobody's.
+Nothing a visitor actually authored survived.
+
+- The rite now quantizes the line a hand drew into an opaque `m1.<base64url>`
+  token (~1KB) and sends it with the crossing. `POST /inscriptions` takes an
+  optional `mark`; `PUT /inscriptions/:id/mark` replaces it afterwards with the
+  same one-time proof that unmakes a crossing — needed because the ending is a
+  page you can draw on again, long after the crossing was posted.
+- The server validates by shape and never parses it: a malformed or oversized
+  mark is dropped and the crossing still succeeds, because a drawing is not
+  worth failing a crossing over.
+- Added the new route to `PUBLIC_CORS_ROUTES` beside its DELETE sibling,
+  verified with a real preflight from a foreign origin (a rite running on a
+  mirror or an installation laptop is cross-origin to the field).
+- The wiki entry still said "update and delete are impossible on this path",
+  which the proof-gated DELETE had already made untrue — corrected alongside
+  documenting the new mark field.
+- `.env.example` never mentioned `MESH_ROOM_SECRET`/`MESH_PROTECTED_NODE_PREFIXES`
+  even though both compose files have passed them since the mesh identity gate
+  landed — the only way to learn the keeper could be protected was reading
+  `meshHub.js`. Found because it stayed unprotected on prod: `node=keeper-anything`
+  was able to join the live relay on 2026-08-06. Documented what an empty value
+  means, since empty is the dangerous state and looks identical from outside
+  until someone claims the id.
+
+## 2026-08-05 — Audit backlog closed, two real gaps fixed
+
+Re-verified the standing audit backlog: 17/17 previously-reported findings were
+already fixed on `dev`; `CURRENT.md` had been carrying it as open. Two gaps were
+real and are fixed here.
+
+- **A failing scene write was invisible.** `useLiveSync` set `sceneFlushError`
+  correctly, but the value died at `useAppState`'s explicit destructure (it
+  listed `sceneStreamState`/`sceneStreamError` and simply omitted the flush
+  field) — every hop in between is a spread, so a grep for the identifier found
+  almost nothing. The Studio status panel read "Scene stream connected" the
+  whole time a write was actually failing. Threaded through `useAppState` →
+  `useAppContextValues` → `EditorLayoutContainer` → `useStatusItems`, given its
+  own status row rather than folded into the stream row (a healthy stream is
+  exactly what was masking it). Two new tests in `useStatusItems.test.js`.
+- **A portal in embed mode rendered blank tiles** for older imported projects.
+  `EmbeddedScene` called `buildAssetMap(doc)` with no `fallbackProjectId` — the
+  fallback that rescues assets written without a `url` by the legacy import
+  gap — and an embedded document has no `projectMeta.id` of its own to fall
+  back on. Passed the `projectId` the component already had in scope.
+- Checked by diffing the test suite's failing-file *set* before/after
+  `origin/dev`: identical (raw totals read 68 vs 67 — flake in uncollectable-
+  file counting, so the set is the check, not the count).
+
+Left deliberately open (not this branch's to fix): `StudioEditor` has no
+`[projectId]` reset on switch — fixing it means deciding which editor state is
+per-project vs per-session, and a wrong guess silently discards work.
+
+## 2026-08-06 — Raw on touch, the all-nodes example, Studio as a node
+
+- **Graph wiring was impossible on a phone.** A wire starts on the output
+  dot's `pointerdown`, which on touch grants that element implicit pointer
+  capture — so `pointerup` was retargeted back to the output dot and never
+  reached the input dot under the finger. Drops now resolve to the nearest
+  *compatible* input port within `PORT_DROP_RADIUS_PX` (36 screen px,
+  constant across zoom) via a window-level `pointerup`, one code path for
+  mouse and finger. The old drag tests passed green because they stubbed
+  `setPointerCapture` over exactly the semantics that were broken.
+- Zooming out on a phone (double-tapping the zoom buttons, since there's no
+  wheel on touch) bubbled to the graph surface's `onDoubleClick` and opened
+  the create-node palette over the graph — `handleSectionDoubleClick` now
+  excludes `.raw-graph-zoom-controls`.
+- `viewport-fit=cover` was missing from the viewport meta — every
+  `env(safe-area-inset-*)` in the app resolved to 0, silently neutering
+  Studio's already-written notch handling. Added, plus safe-area padding to
+  Raw's fixed chrome.
+- `docs/roadmaps/NODE_BACKLOG.md` claims all 27 palette types "work today".
+  At port level only 17 do — `computeNodeOutput` has cases for `value.*`,
+  `math.*` and `time` only; no `geometry`/`texture`/`signal`/`state` output
+  on any node ever carries data. New `src/project/graph/examples/allNodesExample.js`
+  covers the whole palette and lists the unwirable ports as such rather than
+  wiring them to look complete. Reachable from Raw's ⋯ menu.
+- `verify:surfaces` reported ALL CLEAN for `/raw` while actually auditing the
+  sign-in card: `/raw` loads an empty workspace, and editor lanes sit behind
+  `AuthGate`, so with no session the script audited the gate's panel instead
+  of the editor. Now seeds the all-nodes example via `addInitScript`, accepts
+  `--token`, and prints `[AUTH-GATED]` when it lands on a sign-in card
+  instead of silently reporting clean. Tap findings on `/raw` went 2 → 8 once
+  it was actually looking at the editor.
+- **`studio` is now a node.** One palette entry; entering it reveals
+  Outliner + Scene + Inspector as a subgraph (TouchDesigner COMP / Nuke Group
+  pattern). Needed three prerequisite fixes: panel nodes had NO canvas
+  representation as graph cards at all (so a wire into a panel was
+  invisible); entering a node required hover+double-click below 0.5 zoom
+  where a card is a few pixels wide, now a real button; the selection
+  inspector used to cover the node it was inspecting, now a bottom sheet on
+  phones. `view.outliner`/`view.inspector` — type ids both lanes have
+  carried window frames for since they were written — are implemented for
+  the first time.
+
+Verified on a real iPhone 15 Pro at 393px with real CDP touch events; full
+`verify:surfaces` clean across six profiles including 320px.
+
+## Open, carried from the branch's own notes
+
+- Studio-as-node is a **first slice**: assets/code/share/projects panels are
+  still hardcoded chrome (`PublishPanel` alone takes 17 callback props).
+  Two decisions deliberately left open, recorded in
+  `src/project/graph/studioNode.js`: **port promotion** (which interior
+  ports surface on the container) and **live reference vs. frozen snapshot**
+  when a subgraph becomes a palette item.
+- No user-authored node types yet: `NODE_TYPES` is a static module literal
+  with no `registerNodeType`, `node.null` is declared but not placeable,
+  `values.__code` is inert, and `templates[]` exists in the schema with zero
+  consumers.
+
 ## 2026-08-06 — Sync-safety pass: rescue, seal, and the structural fix
 
 Full plan at `~/.claude/plans/humming-wiggling-wozniak.md` (not tracked in-repo). Built

@@ -137,6 +137,7 @@ const corsOrigins = expandLoopbackOrigins(parseList(process.env.CORS_ORIGINS))
 const maxUploadMb = parseNumber(process.env.MAX_UPLOAD_MB, 100)
 const maxUploadBytes = Math.max(1, maxUploadMb) * 1024 * 1024
 const dataDir = resolveDir(process.env.DATA_ROOT, DEFAULT_DATA_DIR)
+const clientDir = process.env.CLIENT_DIR ? resolveDir(process.env.CLIENT_DIR, null) : null
 const spacesDir = resolveDir(process.env.SPACES_DIR, path.join(dataDir, 'spaces'))
 const uploadsDir = resolveDir(process.env.UPLOADS_DIR, path.join(dataDir, 'uploads'))
 const dbPath = resolveDir(process.env.DB_PATH, path.join(dataDir, 'di.db'))
@@ -246,6 +247,10 @@ for (const [provider, idVar, secretVar] of [
 
 const config = {
   port: Number(process.env.PORT) || 4000,
+  // Default stays every interface, which is what the container topology needs.
+  // A local install sets HOST=127.0.0.1 so an artist's laptop on café wifi is not
+  // quietly editable by the room.
+  host: String(process.env.HOST || '').trim() || '0.0.0.0',
   basePath,
   mountPath: basePath || '/',
   apiToken,
@@ -266,6 +271,10 @@ const config = {
   directories: {
     root: ROOT_DIR,
     publicDir: path.resolve(ROOT_DIR, 'public'),
+    // The built frontend, when this server is also the one serving it — a local
+    // `di` install, where one process on one port is the whole product. Unset in
+    // the deployed topology, where nginx owns the SPA and this stays a pure API.
+    clientDir,
     dataDir,
     spacesDir,
     uploadsDir,

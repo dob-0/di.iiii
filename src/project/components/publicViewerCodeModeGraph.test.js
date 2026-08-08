@@ -89,7 +89,9 @@ describe('the code-mode published page never reaches three-vendor', () => {
 
     it('keeps the scene surface -- which does reach three -- behind React.lazy', () => {
         const source = fs.readFileSync(ENTRY, 'utf8')
-        expect(source).toMatch(/const PublicProjectSceneSurface = lazy\(\(\) => import\(/)
+        // lazyWithReload is React.lazy plus a stale-chunk reload; the boundary
+        // it creates is the same one this contract exists to keep
+        expect(source).toMatch(/const PublicProjectSceneSurface = lazy(WithReload)?\(\(\) => import\(/)
         expect(source).not.toMatch(/^import\s+PublicProjectSceneSurface\s+from/m)
         // and the guard above is only meaningful if that surface really is the
         // module that pulls three in

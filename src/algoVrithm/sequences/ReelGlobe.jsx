@@ -532,6 +532,58 @@ const buildGlobe = (playerCount, grid) => {
     })
 }
 
+// ---- the ears ---------------------------------------------------------------
+//
+// The listener rides the CAMERA, which in an XR session is the headset. That
+// is the whole mechanism: the visitor's head turns, the listener turns with
+// it, and the patches move around them in the mix without a single line of
+// panning code.
+//
+// ONE listener and one set of positional sources for the life of the page,
+// same contract as reelPlayers(). They used to be built per mount, and the
+// piece loops: a THREE.AudioListener wires its master gain into
+// context.destination the moment it is constructed, and unmounting only ever
+// removed it from the camera — so every ~53s pass of an exhibition day left
+// one more listener, one more limiter and thirty-odd dead panner chains
+// permanently connected into the audio graph. Silent in both senses: nothing
+// crackled and nothing threw, the graph just grew all day. The shared media
+// sources also fan out one extra connection per mount, and a
+// MediaElementAudioSourceNode can never be rebuilt, so the only shape that
+// stays clean over a long run is the one where the whole chain is built once.
+//
+// The sources are MOUNTED as primitives inside the shell group (not merely
+// constructed): a PositionalAudio's panner is positioned from
+// updateMatrixWorld(), which three only runs for objects in the scene graph.
+// Constructed-but-unparented sources all sit at the origin — inside the
+// visitor's head, at full level, with no falloff and no error to show for it.
+let sharedEars = null
+
+const reelEars = (pool, centres) => {
+    if (!sharedEars) {
+        const listener = new THREE.AudioListener()
+        // Safety limiter on this path's master gain: 31 uncorrelated reels
+        // summing is exactly the case levels alone cannot promise anything
+        // about. See audioBus.js.
+        attachLimiter(listener)
+
+        const audios = pool.map((player, index) => {
+            const audio = new THREE.PositionalAudio(listener)
+            audio.position.copy(centres[index] ?? new THREE.Vector3(0, 0, -RADIUS))
+            audio.setRefDistance(AUDIO_REF_DISTANCE)
+            audio.setRolloffFactor(AUDIO_ROLLOFF)
+            audio.setDistanceModel('inverse')
+            audio.setVolume(0)
+
+            const source = reelAudioSource(player, listener)
+            if (source) audio.setNodeSource(source)
+            return audio
+        })
+
+        sharedEars = { listener, audios }
+    }
+    return sharedEars
+}
+
 export default function ReelGlobe({ progress }) {
     const pool = useMemo(() => reelPlayers(), [])
     // One arrangement, built once, read by both the picture and the sound — the
@@ -590,6 +642,11 @@ export default function ReelGlobe({ progress }) {
     const centres = useMemo(() => mixCentres(grid, pool.length), [grid, pool])
     const camera = useThree((state) => state.camera)
 
+    // The ears, shared for the life of the page like the player pool — see
+    // reelEars below for why building them per mount leaked a listener into
+    // the audio graph on every loop of the piece.
+    const { listener, audios } = useMemo(() => reelEars(pool, centres), [pool, centres])
+
     // Seconds elapsed since the first swipe was due. Resets on mount, which is
     // once per loop of the piece, so every play-through opens on a held frame
     // rather than mid-flick.
@@ -623,20 +680,6 @@ export default function ReelGlobe({ progress }) {
         materials.forEach((material) => material.dispose())
     }, [geometries, materials])
 
-    // ---- the ears ----------------------------------------------------------
-    //
-    // The listener rides the CAMERA, which in an XR session is the headset. That
-    // is the whole mechanism: the visitor's head turns, the listener turns with
-    // it, and the nine patches move around them in the mix without a single line
-    // of panning code.
-    const listener = useMemo(() => {
-        const built = new THREE.AudioListener()
-        // Safety limiter on this path's master gain: 31 uncorrelated reels
-        // summing is exactly the case levels alone cannot promise anything
-        // about. See audioBus.js.
-        attachLimiter(built)
-        return built
-    }, [])
     useEffect(() => {
         camera.add(listener)
         return () => { camera.remove(listener) }
@@ -650,51 +693,20 @@ export default function ReelGlobe({ progress }) {
         if (context && context.state === 'suspended') context.resume()
     }), [listener])
 
-    // One positional source per player, parked at its patch's centre.
-    //
-    // Built here rather than in JSX because each one has to be fed the pool's
-    // cached MediaElementAudioSourceNode: that node can be created only once per
-    // <video> for the life of the page, and these elements outlive every mount.
-    // ---- THE BUG THIS FIXES, because it was invisible and total -------------
-    //
-    // These used to be built in an effect and never parented to anything. A
-    // PositionalAudio is an Object3D and its panner is positioned from
-    // updateMatrixWorld(), which three only calls on objects that are IN the
-    // scene graph. Thirty-one sources sat at identity — that is, all of them at
-    // the origin, inside the visitor's head, at full level with no falloff and
-    // no direction. Every line of placement above ran correctly and none of it
-    // reached the ears.
-    //
-    // It is silent in both senses: nothing throws, nothing warns, and the beat
-    // still makes noise. The only symptom is that turning your head does
-    // nothing, which is easy to read as "spatial audio is subtle" rather than
-    // "spatial audio is off".
-    //
-    // So they are built here and MOUNTED as primitives below, inside the same
-    // group as the shell. Their positions are the cell centres, in that group's
-    // space, so a source is where its reel is.
-    const audios = useMemo(() => pool.map((player, index) => {
-        const audio = new THREE.PositionalAudio(listener)
-        audio.position.copy(centres[index] ?? new THREE.Vector3(0, 0, -RADIUS))
-        audio.setRefDistance(AUDIO_REF_DISTANCE)
-        audio.setRolloffFactor(AUDIO_ROLLOFF)
-        audio.setDistanceModel('inverse')
-        audio.setVolume(0)
-
-        const source = reelAudioSource(player, listener)
-        if (source) audio.setNodeSource(source)
-        return audio
-    }), [pool, listener, centres])
-
-    useEffect(() => () => {
-        audios.forEach((audio) => {
-            audio.setVolume(0)
-            // Disconnect the PANNER, never the shared source node — that one
-            // belongs to the pool and has to survive for the next mount,
-            // because it can never be created again.
-            if (audio.getOutput) audio.getOutput().disconnect()
+    // A source that could not be created at build time (the audio context was
+    // not usable yet) gets another try on every mount — the retry the old
+    // per-mount construction provided, kept.
+    useEffect(() => {
+        audios.forEach((audio, index) => {
+            if (audio.source) return
+            const source = reelAudioSource(pool[index], listener)
+            if (source) audio.setNodeSource(source)
         })
-    }, [audios])
+        // Silenced rather than torn down on unmount: the whole chain is shared
+        // for the life of the page, and the envelope drives the volume back up
+        // on the next pass.
+        return () => audios.forEach((audio) => audio.setVolume(0))
+    }, [audios, pool, listener])
 
     // Play on mount, pause on unmount — and shift the pool onto the next nine
     // clips as the beat ends, so a looping installation works through the whole
