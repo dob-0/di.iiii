@@ -175,6 +175,11 @@ looked nothing like a real install — see below.
   shim dropped in a directory that is not really on PATH leaves
   `di: command not found` after an install that reported success. macOS found
   this: `~/.local/bin` existed but was not on the login PATH.
+- **A batch file needs CRLF, or cmd.exe eats characters.** LF-only `di.cmd`
+  drifts one byte per line and starts running `setlocal` as `etlocal` — it
+  reports `di.iiii is not installed here ()` and names nothing that is wrong.
+  `.gitattributes` pins `*.cmd` to `eol=crlf`; `scripts/di/shim.test.js` holds
+  it. Keep the file pure ASCII too: it is read in the console code page.
 - **Windows needed `detached` + `unref` too.** Without them the CLI's own event
   loop never empties, so `di up` starts the server, prints the URL and then
   never gives the prompt back. Nothing fails; the terminal just stops. Both
