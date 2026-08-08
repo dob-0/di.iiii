@@ -225,31 +225,88 @@ function createApprovalGate() {
 }
 
 // ── fail-loud net ────────────────────────────────────────────────────────
-// Mounted once at the blanket /api gate (index.js:1257-1258). It does NOT
-// enforce anything by itself — the per-route requireAdminAlways etc. already
-// ran, or hasn't, by the time this runs at that depth. It only catches the
-// case a gated route was added later and someone forgot to call gateOrApply:
-// a 2xx response where the registry says a decision was required and none
-// was recorded is refused, turning a silent bypass into a loud failure.
+// Mounted once on the API router (index.js, right after the blanket role
+// gates). It does NOT enforce anything by itself — the per-route
+// requireAdminAlways etc. already ran, or hasn't, by the time this runs at
+// that depth. It only catches the case a gated route was added later and
+// someone forgot to call gateOrApply: a 2xx response where the registry says
+// a decision was required and none was recorded is refused, turning a silent
+// bypass into a loud failure.
+
+// The registry the net matches against. pathTest sees the router-relative
+// path (leading `/api/...`), which is why the net must be mounted WITHOUT a
+// path prefix — `router.use('/api', net)` would strip `/api` off req.path
+// and no pattern here could ever match (that exact bug shipped once; see
+// approvalGate.test.js). `bodyTest` on spaces.patch mirrors the "only
+// sensitive fields gate" rule in routes/spaceRoutes.js — the net must agree
+// with the route on WHEN a response is required to have cleared the gate, or
+// every ordinary space edit would trip it.
+const SENSITIVE_SPACE_PATCH_FIELDS = ['isPublic', 'publishedProjectId', 'slug', 'openInscriptions', 'ownerUserId', 'kind', 'permanent']
+const GATED_ROUTES = [
+  { method: 'PATCH', pathTest: (p) => /^\/api\/users\/[^/]+$/.test(p), kind: 'users.patch' },
+  { method: 'PATCH', pathTest: (p) => p === '/api/config', kind: 'config.patch' },
+  { method: 'POST', pathTest: (p) => p === '/api/admin/sandboxes/purge', kind: 'sandboxes.purge' },
+  { method: 'DELETE', pathTest: (p) => /^\/api\/spaces\/[^/]+$/.test(p), kind: 'spaces.delete' },
+  { method: 'DELETE', pathTest: (p) => /^\/api\/commons\/assets\/[^/]+$/.test(p), kind: 'commons.asset.delete' },
+  {
+    method: 'PATCH',
+    pathTest: (p) => /^\/api\/spaces\/[^/]+$/.test(p),
+    kind: 'spaces.patch',
+    bodyTest: (body) => SENSITIVE_SPACE_PATCH_FIELDS.some((f) => body && Object.prototype.hasOwnProperty.call(body, f))
+  }
+]
+
 function createGatedRequestNet(routeRegistry) {
   return function markGatedRequest(req, res, next) {
-    const match = routeRegistry.find((r) => r.method === req.method && r.pathTest(req.path))
+    const match = routeRegistry.find(
+      (r) => r.method === req.method && r.pathTest(req.path) && (!r.bodyTest || r.bodyTest(req.body))
+    )
     if (!match) return next()
     req.gateRequired = match.kind
+    // Intercept end/write, NOT writeHead: writeHead runs inside node's own
+    // end() when headers are implicit, and calling res.end from there is a
+    // recursive end — ERR_INTERNAL_ASSERTION and a crashed response. Here the
+    // response is swapped before the original end ever runs.
+    const originalWrite = res.write.bind(res)
+    const originalEnd = res.end.bind(res)
     const originalWriteHead = res.writeHead.bind(res)
+    let blocked = false
+    const mustBlock = (statusCode) =>
+      !blocked && !res.headersSent && statusCode >= 200 && statusCode < 300 && req.gateRequired && !req.gateCleared
+    const block = () => {
+      blocked = true
+      logger.error(`[approvalGate] BLOCKED unguarded response on gated route ${req.method} ${req.path} (kind=${req.gateRequired}) — a route was added without calling gateOrApply`)
+      const body = JSON.stringify({ error: 'approval gate misconfigured — route not wired to gateOrApply' })
+      res.statusCode = 500
+      res.removeHeader('Content-Length')
+      res.removeHeader('ETag')
+      res.setHeader('Content-Type', 'application/json')
+      res.setHeader('Content-Length', Buffer.byteLength(body))
+      originalEnd(body)
+    }
+    res.write = (...args) => {
+      if (mustBlock(res.statusCode)) { block(); return true }
+      if (blocked) return true
+      return originalWrite(...args)
+    }
+    res.end = (...args) => {
+      if (mustBlock(res.statusCode)) { block(); return res }
+      if (blocked) return res
+      return originalEnd(...args)
+    }
+    // Explicit res.writeHead(2xx) sends headers before end can intercept —
+    // catch that shape too. block() ends with statusCode 500, so the
+    // implicit-header call from inside originalEnd passes straight through.
     res.writeHead = (statusCode, ...rest) => {
-      if (statusCode >= 200 && statusCode < 300 && req.gateRequired && !req.gateCleared) {
-        logger.error(`[approvalGate] BLOCKED unguarded response on gated route ${req.method} ${req.path} (kind=${req.gateRequired}) — a route was added without calling gateOrApply`)
-        res.statusCode = 500
-        const body = JSON.stringify({ error: 'approval gate misconfigured — route not wired to gateOrApply' })
-        originalWriteHead(500, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) })
-        res.end(body)
-        return res
-      }
+      if (mustBlock(statusCode)) { block(); return res }
+      // Once blocked, the only legitimate caller left is the implicit-header
+      // path inside block()'s originalEnd — let it send the 500; swallow any
+      // later attempt after headers went out.
+      if (blocked && res.headersSent) return res
       return originalWriteHead(statusCode, ...rest)
     }
     next()
   }
 }
 
-module.exports = { createApprovalGate, createGatedRequestNet, verifyInboundSignature, computeIntentHash }
+module.exports = { createApprovalGate, createGatedRequestNet, verifyInboundSignature, computeIntentHash, GATED_ROUTES, SENSITIVE_SPACE_PATCH_FIELDS }

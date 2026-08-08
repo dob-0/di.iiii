@@ -65,7 +65,7 @@ const { createRateLimiter } = require('./rateLimit')
 const { registerSyncRoutes } = require('./routes/syncRoutes')
 const { registerAuthRoutes, GUEST_SPACES } = require('./routes/authRoutes')
 const { registerConfigRoutes } = require('./routes/configRoutes')
-const { createApprovalGate, createGatedRequestNet, verifyInboundSignature } = require('./approvalGate')
+const { createApprovalGate, createGatedRequestNet, verifyInboundSignature, GATED_ROUTES } = require('./approvalGate')
 const pendingActionStore = require('./pendingActionStore')
 const configStore = require('./configStore')
 const { createSpaceStore } = require('./spaceStore')
@@ -1078,27 +1078,6 @@ async function currentlyOwnerOrAdmin(spaceId, actorType, actorSubject) {
 approvalGate.registerReauthorizer('spaces.patch', (args, subject, actorType) => currentlyOwnerOrAdmin(args?.spaceId, actorType, subject))
 approvalGate.registerReauthorizer('spaces.delete', (args, subject, actorType) => currentlyOwnerOrAdmin(args?.spaceId, actorType, subject))
 
-// The fail-loud net (see approvalGate.js): catches a gated route added later
-// without a matching gateOrApply call, turning a silent bypass into a 500
-// instead. `bodyTest` on spaces.patch mirrors the "only sensitive fields
-// gate" rule in spaceRoutes.js — the net must agree with the route on WHEN a
-// response is required to have cleared the gate, or every ordinary space
-// edit would trip it.
-const SENSITIVE_SPACE_PATCH_FIELDS = ['isPublic', 'publishedProjectId', 'slug', 'openInscriptions', 'ownerUserId', 'kind', 'permanent']
-const GATED_ROUTES = [
-  { method: 'PATCH', pathTest: (p) => /^\/api\/users\/[^/]+$/.test(p), kind: 'users.patch' },
-  { method: 'PATCH', pathTest: (p) => p === '/api/config', kind: 'config.patch' },
-  { method: 'POST', pathTest: (p) => p === '/api/admin/sandboxes/purge', kind: 'sandboxes.purge' },
-  { method: 'DELETE', pathTest: (p) => /^\/api\/spaces\/[^/]+$/.test(p), kind: 'spaces.delete' },
-  { method: 'DELETE', pathTest: (p) => /^\/api\/commons\/assets\/[^/]+$/.test(p), kind: 'commons.asset.delete' },
-  {
-    method: 'PATCH',
-    pathTest: (p) => /^\/api\/spaces\/[^/]+$/.test(p),
-    kind: 'spaces.patch',
-    bodyTest: (req) => SENSITIVE_SPACE_PATCH_FIELDS.some((f) => req.body && Object.prototype.hasOwnProperty.call(req.body, f))
-  }
-]
-
 // ── One-click GitHub sync: webhook receiver (signature-authed, pre-gate) ──────
 // Default loopback works on a normal TCP listen; under Passenger (cPanel) the app
 // is fronted by a Unix socket and nothing binds config.port, so SELF_API_URL must
@@ -1367,7 +1346,12 @@ router.use('/api', requireWriteRole('editor'))
 // Must run after the two lines above (role/scope already enforced by the
 // time this sees the request) and before every route registration below —
 // see approvalGate.js for why this can only ever be a net, not enforcement.
-router.use('/api', createGatedRequestNet(GATED_ROUTES))
+// Mounted WITHOUT a path prefix on purpose: `router.use('/api', …)` would
+// make Express strip `/api` off req.path inside the net, so the registry's
+// `^/api/…` patterns could never match and the net would be inert. Mounted
+// bare, req.path is the router-relative path (`/api/users/42`) under every
+// mount target (/, /serverXR). Regression: approvalGate.test.js.
+router.use(createGatedRequestNet(GATED_ROUTES))
 
 const resolveProjectContext = async (projectId) => {
   const normalized = normalizeProjectId(projectId)

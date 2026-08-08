@@ -8,6 +8,7 @@ const { getOwnSandboxSpaceId, isGuestSubject } = require('../authAccess')
 const driveAccount = require('../googleDriveAccount')
 const commonsStore = require('../commonsStore')
 const { createKeyedLock } = require('../asyncLock')
+const { SENSITIVE_SPACE_PATCH_FIELDS } = require('../approvalGate')
 
 const defaultWithSpaceOpsLock = createKeyedLock()
 
@@ -68,12 +69,12 @@ function registerSpaceRoutes(router, {
   onDeleteSpace = null,
   approvalGate = null
 }) {
-  // Must match SENSITIVE_SPACE_PATCH_FIELDS in index.js (the fail-loud net
-  // reads that copy; this one decides whether THIS request actually gates).
-  // Ordinary label/allowEdits/previewImageAssetId edits never touch this list
-  // and always apply immediately — gating is for what a visitor sees or who
-  // can reach a space, not routine editing.
-  const SENSITIVE_SPACE_PATCH_FIELDS = ['isPublic', 'publishedProjectId', 'slug', 'openInscriptions', 'ownerUserId', 'kind', 'permanent']
+  // SENSITIVE_SPACE_PATCH_FIELDS (imported above) is the same list the
+  // fail-loud net matches against (approvalGate.js) — one source, so the net
+  // and this route can never disagree on WHEN a PATCH gates. Ordinary
+  // label/allowEdits/previewImageAssetId edits never touch it and always
+  // apply immediately — gating is for what a visitor sees or who can reach a
+  // space, not routine editing.
 
   if (approvalGate) {
     approvalGate.registerExecutor('spaces.patch', async ({ spaceId, patch, nextOwnerUserId }) => {
