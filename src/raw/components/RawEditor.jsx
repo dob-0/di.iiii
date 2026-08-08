@@ -798,6 +798,19 @@ export default function RawEditor({
             return next
         })
     }, [])
+    // Stable per-port wrappers for the capture panels. These MUST NOT be
+    // inline lambdas at the call site: the panels' effects depend on the
+    // callback identity, and a fresh lambda per render makes cleanup fire
+    // every render — with a live capture that is set→delete→set on
+    // liveOutputs, an infinite update loop (hit with an active webcam,
+    // 2026-08-08).
+    const handleFrameOutputChange = useCallback((nodeId, texture) => {
+        handleLiveOutputChange(nodeId, 'frame', texture)
+    }, [handleLiveOutputChange])
+    const handleMicOutputChange = useCallback((nodeId, volume, frequency) => {
+        handleLiveOutputChange(nodeId, 'volume', volume)
+        handleLiveOutputChange(nodeId, 'frequency', frequency)
+    }, [handleLiveOutputChange])
     const graphContext = useMemo(
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs }),
         [document, clockNow, liveOutputs]
@@ -854,18 +867,10 @@ export default function RawEditor({
             return <ImagePanelWindow node={node} values={resolvedValues} assetMap={assetMap} />
         }
         if (node.typeId === 'source.webcam') {
-            return <WebcamSourcePanel node={node} onFrameChange={(nodeId, texture) => handleLiveOutputChange(nodeId, 'frame', texture)} />
+            return <WebcamSourcePanel node={node} onFrameChange={handleFrameOutputChange} />
         }
         if (node.typeId === 'source.mic') {
-            return (
-                <MicSourcePanel
-                    node={node}
-                    onLevelsChange={(nodeId, volume, frequency) => {
-                        handleLiveOutputChange(nodeId, 'volume', volume)
-                        handleLiveOutputChange(nodeId, 'frequency', frequency)
-                    }}
-                />
-            )
+            return <MicSourcePanel node={node} onLevelsChange={handleMicOutputChange} />
         }
         // Studio chrome, as nodes. These render the SAME components as the
         // hardcoded outliner and inspector below — the panel node supplies the
