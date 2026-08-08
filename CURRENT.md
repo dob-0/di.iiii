@@ -16,6 +16,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 - Claude chat as a Raw node: the key store gets its consumer
 - Why now
 - a tag published nothing, because a legacy path could veto the release
+- the disk incident (96%→28%, weekly prune timer), the secrets backup (daily, two keys, round-trip verified), and backup-pull no longer crying wolf
 
 Full detail: `PROGRESS.md`.
 
@@ -33,6 +34,8 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
   revoke the scope it granted (deliberate). Mesh gate ARMED both tiers; leaked
   PAT inferred-closed; **staging Google OAuth secret parked by the user** —
   rotation script staged, see memory `reference-leaked-secrets`.
+- **Nothing watches free disk** except di-bo now; no per-space or per-account byte quota exists
+  anywhere, and no ENOSPC pre-check — writes run until the volume physically fills.
 - Owner's/artist's calls: `open`'s card blank, director page unseen, purple-gap
   check fails. `feat/timeline-core` is PR #100 (dead ports being stripped).
 - **br_id_ge rite fixes unverified by a human** — Act III backdrop + Act V idle-motion CSS shipped live, page loads clean, but the acts are camera-gesture-gated so no automated check could actually see them render.
