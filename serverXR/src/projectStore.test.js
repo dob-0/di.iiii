@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const {
+    appendProjectOps,
     deleteProject,
     ensureProject,
     findProjectById,
@@ -15,6 +16,7 @@ const {
     readJson,
     readProjectDocument,
     readProjectIndex,
+    readProjectOps,
     writeJson
 } = require('./projectStore.js')
 const { initDb, closeDb } = require('./db.js')
@@ -108,5 +110,41 @@ describe('projectStore', () => {
 
         const onDisk = await readJson(documentPath, null)
         expect(onDisk.entities[0].type).toBe('box')
+    })
+
+    // Retention used to be by count alone, so a dormant project kept its last
+    // ops -- and every asset those ops mention -- forever, while a busy one
+    // dropped the same history in days. On production that pinned 145 MB of
+    // blobs the collector could otherwise have taken.
+    it('trims ops past the age bound while keeping the count-based window intact', async () => {
+        const spacesDir = await createSpacesDir()
+        await ensureProject(spacesDir, 'main', 'aged-project', { title: 'Aged' })
+
+        const DAY = 24 * 60 * 60 * 1000
+        const now = Date.now()
+        // timestamp is what lands in created_at, so the ages are explicit here.
+        await appendProjectOps(spacesDir, 'main', 'aged-project', [
+            { version: 1, opId: 'old-1', timestamp: now - 60 * DAY },
+            { version: 2, opId: 'old-2', timestamp: now - 31 * DAY },
+            { version: 3, opId: 'fresh-1', timestamp: now - 2 * DAY }
+        ], 500, 30 * DAY)
+
+        const kept = await readProjectOps(spacesDir, 'main', 'aged-project')
+        expect(kept.map((op) => op.opId)).toEqual(['fresh-1'])
+    })
+
+    it('leaves every op in place when no age bound is given', async () => {
+        const spacesDir = await createSpacesDir()
+        await ensureProject(spacesDir, 'main', 'unbounded-project', { title: 'Unbounded' })
+
+        const DAY = 24 * 60 * 60 * 1000
+        const now = Date.now()
+        await appendProjectOps(spacesDir, 'main', 'unbounded-project', [
+            { version: 1, opId: 'ancient', timestamp: now - 400 * DAY },
+            { version: 2, opId: 'recent', timestamp: now }
+        ], 500)
+
+        const kept = await readProjectOps(spacesDir, 'main', 'unbounded-project')
+        expect(kept.map((op) => op.opId)).toEqual(['ancient', 'recent'])
     })
 })

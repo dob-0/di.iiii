@@ -121,16 +121,16 @@ export const WIKI_ARTICLES = [
             'Owners manage the card preview from the Preview button on the card: keep the live miniature or upload a custom cover image (Replace image / Use live preview to switch back anytime). A cover image also works on spaces that aren’t public yet.',
             'The editor’s Spaces panel has the same self-serve Make Public / Make Private toggle as the Spaces page.',
             'Publishing (which project is live) and visibility (Public/Private) are independent choices — linking a project does not automatically make the space public.',
-            'A public space also shares every project individually at /<space>/p/<project-id> — the same no-login viewer as the live route, without touching the published pointer. Handy for one-pagers, drafts, and documents that live next to the main page. Direct project links carry a small floating project list (top-left), so viewers can hop between the space’s pages without a detour through the hub; the published live route stays chrome-free.',
+            'A public space also shares every project individually at /<space>/p/<project-id> — the same no-login viewer as the live route, without touching the published pointer. Handy for one-pagers, drafts, and documents that live next to the main page. Like the live route, these pages are chrome-free — nothing floats over your design; hop between a space’s projects from the Studio Projects window.',
             'A published-but-private space shows a login wall to visitors instead of the scene. The editor’s Share window and the space card both tell you when that’s the case and offer a one-click “Make space public” right there — no hunting for the toggle.',
             'Opening an editor URL (like /<space>/studio) with an account that isn’t scoped to that space no longer dead-ends: if the space is public you are taken to its live view; only private spaces show the access-restricted screen.',
             'Every public space carries a small “Made with di.iiii — build yours” badge, so visitors who like what they see have a way in. It never appears on hub-card preview thumbnails.',
-            'Spaces and individual projects can each get a clean public link (a slug) that’s independent of their internal id — e.g. /wcc/artistplace instead of a longer id-based path. Set it from /admin → Manage (“Edit public link” next to Rename); old id-based links keep working forever, they’re never replaced. Every project link in a space’s floating project switcher has a one-click Copy link action that uses the slug when one is set.',
+            'Spaces and individual projects can each get a clean public link (a slug) that’s independent of their internal id — e.g. /wcc/artistplace instead of a longer id-based path. Set it from /admin → Manage (“Edit public link” next to Rename); old id-based links keep working forever, they’re never replaced.',
             'Published code pages can use the visitor’s camera, microphone and motion sensors — but only if the project opts in by setting deviceAccess: true in its presentation state (repo-synced pages set it in their di-space manifest). Opted-in pages run without the usual origin isolation, so reserve it for pages you author yourself; everything else stays fully sandboxed. The visitor still gets the normal browser permission prompt either way.',
             'Published code pages can read the URL’s query string — /<space>/<page>?just=bkyi — through window.diiPageQuery (already parsed for you as window.diiPageParams). A published page is rendered inside a frame with no URL of its own, so location.search there is always empty; read new URLSearchParams(window.diiPageQuery || location.search) and the same code keeps working when you open the file locally. This is what lets one published page hand over to another with state — “open the field, on the core I just made”.'
         ],
         tags: ['publish', 'public', 'sharing', 'owner', 'live link', 'slug', 'custom link', 'camera', 'device access', 'query', 'url parameters'],
-        updated: '2026-08-04'
+        updated: '2026-08-07'
     },
     {
         id: 'invite-links',
@@ -239,7 +239,7 @@ export const WIKI_ARTICLES = [
         summary: 'The /admin console is admins-only; your own spaces are managed from /studio.',
         body: [
             '/admin is the platform console, visible to admin accounts only — everyone else is pointed back to their Spaces page. Owners never need it: your own spaces are fully self-service on /studio.',
-            'Admins manage everything from /admin → Manage: a directory tree of spaces, each expanding to its projects.',
+            'Admins manage everything from /admin → Manage: a directory tree of spaces, each expanding to its projects. The console keeps three admin sections (Manage, Open Call, Agents) and three diagnostics sections (Overview, Inspect, System); the header shows counts for the work at hand instead of scene telemetry while you administer.',
             { list: [
                 'Create / rename / delete spaces and projects inline.',
                 'Edit a space or project’s public link (slug) separately from its rename — the id underneath never changes, so old links stay valid.',
@@ -248,7 +248,24 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['admin', 'manage', 'access', 'slug'],
-        updated: '2026-07-19'
+        updated: '2026-08-08'
+    },
+    {
+        id: 'agents-board',
+        category: 'Spaces & access',
+        title: 'Ops Graph → Agents',
+        summary: 'An operator-only map of the Claude Code sessions and agents working on this machine.',
+        body: [
+            'The Agents section of /admin shows the AI sessions working alongside you: a live map of every running Claude Code session, which checkout and branch each one holds, and a directory of recent chats with their topics.',
+            'Selecting a session opens its detail: the subagent tree it spawned, its background-job state, and the tail of its conversation.',
+            { list: [
+                'The map links each live session to the checkout it is editing — two sessions on one tree is visible at a glance.',
+                'Live status (busy / shell / idle) updates every few seconds.',
+                'This surface reads local machine data, so it only exists when serverXR runs on your own machine in dev mode. Deployed environments serve nothing here.'
+            ] }
+        ],
+        tags: ['admin', 'agents', 'ai', 'sessions', 'operator'],
+        updated: '2026-08-08'
     },
     {
         id: 'keyboard-shortcuts',
@@ -397,17 +414,20 @@ export const WIKI_ARTICLES = [
         id: 'open-inscriptions',
         category: 'Spaces & access',
         title: 'Open inscriptions',
-        summary: 'A public space can opt in to anonymous, append-only inscriptions — visitors add one line of text to the scene, nothing else.',
+        summary: 'A public space can opt in to anonymous, append-only inscriptions — visitors add one line of text, and optionally one drawing, to the scene.',
         body: [
             'Open inscriptions let an artwork or event page write a visitor’s answer into a di.iiii space without accounts or tokens (built for br_id_ge’s vi.ritual: complete the rite, and your inscription becomes a persistent object in the space).',
             { list: [
                 'Opt-in per space: PATCH /api/spaces/:id with { "openInscriptions": true } (owner or admin). The space must also be public.',
-                'Visitors POST /api/spaces/:id/inscriptions with { name, word } — the server itself builds a single sanitized text object (insc-…) and appends it to the scene. Update and delete are impossible on this path; the generic ops route stays fully gated.',
+                'Visitors POST /api/spaces/:id/inscriptions with { name, word } — the server itself builds a single sanitized text object (insc-…) and appends it to the scene. Arbitrary ops are impossible on this path; the generic ops route stays fully gated.',
+                'Creating an inscription returns a one-time proof. Only its sha256 is stored, so the visitor — and nobody else — can DELETE /api/spaces/:id/inscriptions/:inscId to unmake exactly their own crossing. Inscriptions made before proofs existed cannot be unmade this way.',
+                'An inscription may also carry a mark: the drawing the visitor made, as an opaque m1.… token (base64url, capped). The server validates its shape and never parses it, so a viewer can render the line that was actually drawn instead of a shape derived from the id. A malformed or oversized mark is dropped and the inscription still succeeds — a drawing can never cost someone the crossing.',
+                'PUT /api/spaces/:id/inscriptions/:inscId/mark with { proof, mark } replaces the mark afterwards (the same authority that unmakes a crossing, writing that one property and nothing else) — for pages where the drawing is made after the inscription was already sent.',
                 'Rate-limited per client, capped at 999 inscriptions per space; setting allowEdits=false pauses new inscriptions instantly, and restore-snapshot remains the recovery path.'
             ] }
         ],
         tags: ['inscriptions', 'spaces', 'public', 'br_id_ge'],
-        updated: '2026-07-12'
+        updated: '2026-08-05'
     },
     {
         id: 'raw-lane',
@@ -426,6 +446,43 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone'],
+        updated: '2026-08-06'
+    },
+    {
+        id: 'studio-node',
+        category: 'Editing',
+        title: 'The Studio node: an editor you can place in a graph',
+        summary: 'Studio is one entry in Raw’s palette. Place it like any other node, enter it, and you find the panels it is assembled from — the same container idea you would use to build your own node later.',
+        body: [
+            'In Raw’s palette, Studio sits next to Color, Browser and Cube. Placing it gives you a single card on the canvas. Entering that card — the “›” control on its header — takes you inside, where you find the nodes it is made of: an Outliner, a Scene, and an Inspector. It is one node from the outside and a graph from the inside.',
+            'This is the same shape TouchDesigner uses for a Component and Nuke uses for a Group: a container whose contents are a normal subgraph. That is the point of building it this way rather than hard-wiring Studio into the editor — the mechanism that makes Studio a node is the mechanism that will let you wrap your own patch into a palette item and place it beside the built-in ones.',
+            { list: [
+                'Every node in a scope now appears on the canvas, panels included. Previously a panel existed only as a floating window, so you could not select, move, wire or delete it from the graph, and a wire feeding a panel was invisible even though it was carrying a value.',
+                'A panel window and its card are two views of one node: close the window and the card remains; open it from the Windows menu and the panel comes back.',
+                'Studio’s panels start closed so that entering the node shows you its graph rather than three windows over it.'
+            ] },
+            'What is not there yet: Studio’s other panels — assets, code, share, projects — are still hardcoded chrome rather than nodes, because their bodies need a large amount of editor state that has not been re-plumbed yet. Two design questions are also deliberately still open: which of a container’s inner ports should show on the outside, and whether a saved palette item stays linked to the graph it came from or becomes a frozen copy.'
+        ],
+        tags: ['raw', 'studio', 'nodes', 'container', 'palette', 'nesting', 'touchdesigner'],
+        updated: '2026-08-06'
+    },
+    {
+        id: 'raw-on-a-phone',
+        category: 'Editing',
+        title: 'Raw on a phone: wiring nodes with a finger',
+        summary: 'The Raw graph editor is usable on touch — pinch to zoom, drag between ports to wire, and an All Nodes Example that puts the whole palette in one graph.',
+        body: [
+            'The graph editor was previously mouse-only in a way no amount of zooming could work around: starting a wire on an output port captured the pointer, so the release never reached the input port under your finger and no connection could be made. Dragging between ports now works the same way on a phone as on a desktop.',
+            { list: [
+                'Drag from an output port to an input port to wire them. You do not have to land exactly on the dot — the drop snaps to the nearest port that accepts that type, within a finger’s width, so a small miss still connects.',
+                'Pinch with two fingers to zoom and pan the canvas at the same time. The zoom buttons in the bottom-left corner do the same thing in steps.',
+                'Opening a graph fits it to the screen instead of dropping you at 100% somewhere inside it, so you can see the whole patch before choosing where to work.',
+                'Tap a wire to delete it — the tap area is much wider than the line you see.',
+                'Panel windows (World, Text, Browser, Image) shrink to fit the screen rather than running off the edge.'
+            ] },
+            'The overflow menu (⋯) has an All Nodes Example: one graph containing every node type the palette can create, with a clock driving a chain of maths into a pulsing sphere, a colour crossfade on a cube, and a breathing light. It is the quickest way to see what the node system can currently do — and it is deliberately honest about what it cannot: geometry, texture and signal outputs are declared on several node types but are not computed yet, so those ports are left unwired rather than connected to look complete.'
+        ],
+        tags: ['raw', 'nodes', 'mobile', 'touch', 'phone', 'example', 'editor'],
         updated: '2026-08-06'
     },
     {
@@ -488,12 +545,39 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['algovrithm', 'vr', 'webxr', 'three.js', 'linked-space', 'code', 'lighting', 'spatial-audio'],
         updated: '2026-08-05'
+    },
+    {
+        id: 'di-cli-local',
+        category: 'Getting started',
+        title: 'Run di.iiii on your own machine',
+        summary: 'One line installs di.iiii locally. Your work lives on your disk, and it keeps working with no internet.',
+        body: [
+            'di.iiii does not have to be somewhere you go. One line puts the whole thing on your own machine, with your spaces in a folder you own, and after the install it never needs the network again.',
+            { list: [
+                'macOS and Linux — curl -fsSL https://di-studio.xyz/get | sh',
+                'Windows (PowerShell) — irm https://di-studio.xyz/get.ps1 | iex'
+            ] },
+            'Then type di up. It starts, opens in your browser, and you are in a Studio that looks exactly like the one online, with an empty Main Space waiting. di down stops it. di help lists the rest.',
+            'This is meant for a laptop at a venue with bad wifi, a studio that would rather not keep its work on someone else’s server, and anyone who wants the piece to still open in ten years. Offline is the normal state, not a broken one: nothing phones home, and the page loads no fonts or scripts from anywhere else.',
+            'Your work lives in a folder called .di in your home directory, deliberately kept apart from the app itself — so updating, rolling back, or removing di.iiii cannot touch it. di uninstall says as much, and leaves your spaces where they are.',
+            { list: [
+                'di backup — writes your whole di.iiii to one file you can carry to another machine',
+                'di restore — reads one back in',
+                'di update — installs the newest version, and never touches your work; di update --rollback returns to the one before',
+                'di status — what is running, on which address, and how much space your work takes',
+                'di doctor — what this machine can and cannot do, and what to install if something is missing'
+            ] },
+            'It does not need admin rights, and it does not ask for a password. If the machine has Docker running it will use it; otherwise it runs as a single ordinary program, and if there is no suitable Node it quietly fetches its own rather than sending you away.',
+            'Syncing a local space with di-studio.xyz is not here yet — for now, di backup and the space bundles on the Spaces page are how work moves between the two.'
+        ],
+        tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup'],
+        updated: '2026-08-08'
     }
 ]
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['br-id-ge', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

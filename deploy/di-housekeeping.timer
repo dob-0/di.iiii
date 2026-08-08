@@ -1,0 +1,13 @@
+[Unit]
+Description=Weekly housekeeping — prune superseded deploy images
+Documentation=file:/opt/di.iiii/deploy/prune-images.sh
+
+[Timer]
+OnCalendar=Sun 04:40 UTC
+# The box is often off or busy at 04:40; a missed week must still run, because
+# the whole point is that nothing accumulates unattended.
+Persistent=true
+RandomizedDelaySec=600
+
+[Install]
+WantedBy=timers.target

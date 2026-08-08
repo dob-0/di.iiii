@@ -80,10 +80,11 @@ explicit **active marker**, stored in `workspaceState`:
   `viewportWorldState.js`'s `pickActiveTypeNode` helper. Both maps default to
   the first-created candidate when nothing's been explicitly marked.
 
-Beta was not given this active-marker mechanism (kept as the original
-sketch — its `worldNode`/`lightNode`/`gridNode` lookups just pick the first
-sibling via `.find()`, which is fine now that a duplicate isn't blocked, just
-not the "correct" pick when there's more than one).
+Beta (retired 2026-08-06, see `docs/architecture/PROJECT_SURFACES.md`'s "Beta
+retired, absorbed into Raw") was never given this active-marker mechanism —
+its `worldNode`/`lightNode`/`gridNode` lookups just picked the first sibling
+via `.find()`, not the "correct" pick when there was more than one. Raw is now
+the only lane exercising this code path.
 
 ## Evaluation
 
@@ -105,13 +106,12 @@ Cycle protection is a `stack` Set of `id:in/out:port` keys threaded through
 recursive calls; re-entry returns the node's stored/default value rather
 than infinite-looping.
 
-Consumers of this runtime today: `src/beta/*`
-(`BetaViewport`/`BetaEditor`/`viewportWorldState`) and, since 2026-07-19,
-`src/raw/*` (`RawViewport`/`RawEditor`/`viewportWorldState`) — a lane
-forked from Beta, see "The `raw` lane" below. Studio's own viewport does
-not evaluate the graph — Studio's dev-only graph/world preview panes
-(`StudioGraphSurface.jsx`/`StudioWorldSurface.jsx`) reuse Beta's components
-read-only, gated off in production builds.
+Consumers of this runtime today: `src/raw/*`
+(`RawViewport`/`RawEditor`/`viewportWorldState`) — originally a lane forked
+from Beta (retired 2026-08-06), see "The `raw` lane" below. Studio's own
+viewport does not evaluate the graph — Studio's dev-only graph/world preview
+panes (`StudioGraphSurface.jsx`/`StudioWorldSurface.jsx`) reuse Raw's
+components read-only, gated off in production builds.
 
 ## What normalization enforces vs. what's just convention
 

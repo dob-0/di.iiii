@@ -56,6 +56,24 @@ const restartOnPublicChangePlugin = () => {
     }
 }
 
+/**
+ * Publish the install scripts as part of the site, so `curl … /get | sh` serves
+ * the same file that lives in the repo root. Copying them into public/ instead
+ * would mean two copies of a script people paste into a shell, and they would
+ * drift. nginx.conf maps /get -> /get.sh.
+ */
+const emitInstallScriptsPlugin = () => ({
+    name: 'emit-install-scripts',
+    apply: 'build',
+    generateBundle() {
+        for (const [source, fileName] of [['install.sh', 'get.sh'], ['install.ps1', 'get.ps1']]) {
+            const full = path.resolve(ROOT_DIR, source)
+            if (!fs.existsSync(full)) continue
+            this.emitFile({ type: 'asset', fileName, source: fs.readFileSync(full, 'utf8') })
+        }
+    }
+})
+
 const stubXrEmulatorPlugin = () => ({
     name: 'stub-xr-emulator',
     enforce: 'pre',
@@ -185,6 +203,9 @@ export default {
         stubXrEmulatorPlugin(),
         // Restart server on static/public file change
         restartOnPublicChangePlugin(),
+
+        // Publish install.sh / install.ps1 as /get.sh and /get.ps1
+        emitInstallScriptsPlugin(),
 
         // Save from the algovrithm director panel (dev only)
         algoVrithmSavePlugin(),

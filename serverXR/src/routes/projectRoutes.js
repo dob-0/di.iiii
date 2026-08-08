@@ -25,6 +25,7 @@ function registerProjectRoutes(router, {
   isValidAssetId,
   listProjectsInSpace,
   maxOpHistory,
+  maxOpAgeMs = 0,
   normalizeIncomingOps,
   normalizeProjectDocument,
   normalizeProjectId,
@@ -228,7 +229,7 @@ function registerProjectRoutes(router, {
           version: nextVersion,
           timestamp: Date.now()
         }
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory)
+        await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory, maxOpAgeMs)
         const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
           title: document.projectMeta.title,
           documentVersion: nextVersion
@@ -359,7 +360,7 @@ function registerProjectRoutes(router, {
           updatedAt: Date.now()
         }
         await writeProjectDocument(spacesDir, project.spaceId, project.projectId, nextDocument)
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory)
+        await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory, maxOpAgeMs)
         const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
           title: nextDocument.projectMeta.title,
           documentVersion: nextVersion

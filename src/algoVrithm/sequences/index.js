@@ -257,7 +257,7 @@ export const SEQUENCES = [
     {
         id: 's06-reel-globe',
         title: 'Reel globe',
-        note: 'The footage, finally, and as a room rather than a swarm. A closed globe of 288 video frames tiled edge to edge on a latitude/longitude grid — the columns chosen so every cell at the equator is a true 9:16 reel — with the standpoint at its centre. Every clip in the folder is scattered across it, no reel ever touching itself, which is what a feed is. It does not rotate: the visitor turns, the globe does not.',
+        note: 'The footage, finally, and as a room rather than a swarm. A closed globe of 224 video frames tiled edge to edge on a latitude/longitude grid — the columns chosen so every cell at the equator is a true 9:16 reel — with the standpoint at its centre. Every clip in the folder is scattered across it, no reel ever touching itself, which is what a feed is. It does not rotate: the visitor turns, the globe does not.',
         // PLACED LAST, and that is an argument rather than a convenience. Every
         // other beat is the MEDIUM — light, noise, measurement, pattern, fluid,
         // monument. This is what the medium is actually full of, so it reads as

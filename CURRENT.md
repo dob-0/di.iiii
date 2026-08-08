@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Sync-safety pass: rescue, seal, and the structural fix
+- five people's personal details come out of the public deck
 
 Full detail: `PROGRESS.md`.
 
@@ -32,7 +32,9 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 - **Mesh gate INERT in prod** (no `MESH_ROOM_SECRET`); **leaked GitHub PAT +
   staging Google OAuth secret still live**, 13 dead secrets to revoke.
 - Owner's/artist's calls: `open`'s card blank, director page unseen, purple-gap
-  check fails, `br_id_ge ▾` chip covers letter-row. `feat/timeline-core` UNPUSHED.
+  check fails. `feat/timeline-core` UNPUSHED.
+- **br_id_ge rite fixes unverified by a human** — Act III backdrop + Act V idle-motion CSS shipped live, page loads clean, but the acts are camera-gesture-gated so no automated check could actually see them render.
+- Staging deploy pending as of session end — GitHub Actions infra was degraded (stuck queues across unrelated branches too); check `gh run list --repo dob-0/di.iiii --branch dev` before assuming it landed.
 
 ## Deploy & validation — [docs/ai/known-fixes.md](docs/ai/known-fixes.md), check before any bug hunt
 

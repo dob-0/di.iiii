@@ -74,6 +74,11 @@ Monitor and status:
 - `GET /api/health`
 - `GET /api/events`
 
+Agent board (operator-only: non-production + loopback, 404 otherwise — reads the local `~/.claude`):
+
+- `GET /api/agent-board`
+- `GET /api/agent-board/session/:sessionId`
+
 Browser auth session:
 
 - `GET /api/auth/session`

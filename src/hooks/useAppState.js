@@ -284,6 +284,7 @@ export function useAppState() {
         isSceneStreamConnected,
         sceneStreamState,
         sceneStreamError,
+        sceneFlushError,
         fileInputRef,
         skipServerLoadRef,
         setRemoteSceneVersion
@@ -673,6 +674,7 @@ export function useAppState() {
             isSceneStreamConnected,
             sceneStreamState,
             sceneStreamError,
+            sceneFlushError,
             collaborators,
             usersInSpace,
             participantRoster,
