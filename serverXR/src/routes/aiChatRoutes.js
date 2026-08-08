@@ -10,6 +10,8 @@ const { isGuestSubject } = require('../authAccess')
 const aiConnectionStore = require('../aiConnectionStore')
 const chatStore = require('../aiChatStore')
 const anthropic = require('../anthropicClient')
+const localClaude = require('../localClaudeRunner')
+const { isLocalOperatorRequest } = require('./agentBoardRoutes')
 
 // Cost controls: per-subject message rate + per-user in-flight streams.
 // max_tokens per turn is capped in anthropicClient; a broader daily token
@@ -23,8 +25,17 @@ const SYSTEM_PROMPT = 'You are Claude, working alongside a creator inside di.iii
 
 const HISTORY_LIMIT = 40
 
-function registerAiChatRoutes(router, { streamFn = anthropic.streamChatCompletion } = {}) {
+function registerAiChatRoutes(router, {
+  streamFn = anthropic.streamChatCompletion,
+  localRunFn = localClaude.runLocalClaude,
+  localAvailableFn = localClaude.isLocalClaudeAvailable
+} = {}) {
   const inFlight = new Map() // userId -> count
+
+  // The operator's own machine can chat through its logged-in `claude` CLI
+  // (subscription login, no API key). Same trust boundary as the agent board:
+  // loopback + non-production only — never a hosted path.
+  const localBackendFor = (req) => isLocalOperatorRequest(req) && localAvailableFn()
 
   const requireAccount = (req, res, next) => {
     const userId = req.authState?.subject
@@ -39,6 +50,13 @@ function registerAiChatRoutes(router, { streamFn = anthropic.streamChatCompletio
   const messageLimiter = createRateLimiter({
     ...MESSAGE_LIMIT,
     keyFn: (req) => req.authState?.subject || 'anonymous'
+  })
+
+  router.get('/api/ai/providers', requireAccount, (req, res) => {
+    res.json({
+      keyConnected: Boolean(aiConnectionStore.getConnection(req.aiUserId, 'claude')),
+      localClaude: localBackendFor(req)
+    })
   })
 
   router.get('/api/ai/chats', requireAccount, (req, res) => {
@@ -95,7 +113,8 @@ function registerAiChatRoutes(router, { streamFn = anthropic.streamChatCompletio
       return
     }
     const apiKey = aiConnectionStore.getKey(userId, 'claude')
-    if (!apiKey) {
+    const useLocal = !apiKey && localBackendFor(req)
+    if (!apiKey && !useLocal) {
       res.status(403).json({ error: 'no-ai-connection', hint: 'Connect your Claude API key from your account menu first.' })
       return
     }
@@ -127,13 +146,26 @@ function registerAiChatRoutes(router, { streamFn = anthropic.streamChatCompletio
 
     inFlight.set(userId, (inFlight.get(userId) || 0) + 1)
     try {
-      const result = await streamFn({
-        apiKey,
-        model: typeof req.body?.model === 'string' ? req.body.model : undefined,
-        system: SYSTEM_PROMPT,
-        messages: [...history, { role: 'user', content: text }],
-        onDelta: (delta) => send('delta', { text: delta })
-      })
+      let result
+      if (useLocal) {
+        // continuity via Claude Code's own --resume; no history replay needed
+        result = await localRunFn({
+          prompt: text,
+          resumeSessionId: chat.claude_session_id || null,
+          onDelta: (delta) => send('delta', { text: delta })
+        })
+        if (result.sessionId && result.sessionId !== chat.claude_session_id) {
+          chatStore.setClaudeSession(userId, chat.id, result.sessionId)
+        }
+      } else {
+        result = await streamFn({
+          apiKey,
+          model: typeof req.body?.model === 'string' ? req.body.model : undefined,
+          system: SYSTEM_PROMPT,
+          messages: [...history, { role: 'user', content: text }],
+          onDelta: (delta) => send('delta', { text: delta })
+        })
+      }
       const assistantMessage = chatStore.appendMessage(userId, chat.id, {
         role: 'assistant',
         content: result.text,

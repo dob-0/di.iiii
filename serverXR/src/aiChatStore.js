@@ -72,6 +72,14 @@ function appendMessage(userId, chatId, { role, content, model = null, inputToken
   return { id, role, content, model, input_tokens: inputTokens, output_tokens: outputTokens, created_at: now }
 }
 
+// The local-CLI backend's continuity handle: Claude Code's own session id,
+// created on the first turn and --resume'd on every later one.
+function setClaudeSession(userId, chatId, sessionId) {
+  const db = getDb()
+  db.prepare('UPDATE ai_chats SET claude_session_id = ? WHERE id = ? AND user_id = ?')
+    .run(sessionId || null, chatId, userId)
+}
+
 // Ground truth for metering: tokens this user consumed in the trailing window.
 function usageSince(userId, sinceMs) {
   const db = getDb()
@@ -83,4 +91,4 @@ function usageSince(userId, sinceMs) {
   return { inputTokens: row?.input || 0, outputTokens: row?.output || 0 }
 }
 
-module.exports = { createChat, getChat, listChats, renameChat, deleteChat, listMessages, appendMessage, usageSince }
+module.exports = { createChat, getChat, listChats, renameChat, deleteChat, listMessages, appendMessage, setClaudeSession, usageSince }

@@ -37,6 +37,18 @@
   every curl is the same `auth-disabled` subject, so an agent testing the key
   flow can silently overwrite/delete the operator's real pasted key (this
   happened). Known-fixes entry owed when this lands on dev.
+- **The owner has no API key — only a Claude Max login.** So the local backend
+  exists: with no key stored, a loopback operator's send runs through the
+  machine's own logged-in `claude` CLI (`localClaudeRunner.js` — `-p` +
+  `stream-json`, no tools allowlisted, continuity via Claude Code's own
+  `--resume` with the session id stored on the chat row). Same trust boundary
+  as the agent board: loopback + non-production, never hosted. `GET
+  /api/ai/providers` tells the panel which backend exists; a logged-in local
+  CLI counts as connected, so Max/Pro users on their own machine paste nothing.
+- **THE human test passed 2026-08-08, seen on screen**: "Hi — Claude here, live
+  inside di.iiii and ready when you are." — a real reply through the owner's Max
+  subscription, persisted with claude_session_id + model + tokens in ai_chats/
+  ai_messages. Every path of the feature is now verified live end to end.
 - Phase 2 contract on record: `trigger` (signal) in, `result` (string) out, so an
   agent's reply can drive other nodes; reuse approvalGate for anything an agent
   writes to a space.

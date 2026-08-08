@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createAiChat, getAiChat, sendAiChatMessage } from '../../services/aiChatApi.js'
-import { connectAiKey, getAiConnectionStatus, getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
+import { createAiChat, getAiChat, getAiProviders, sendAiChatMessage } from '../../services/aiChatApi.js'
+import { connectAiKey, getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
 
 // The `agent` node's panel body: a Claude chat riding the raw-chat-* classes
 // from the collaborator chat 1:1 (no new CSS). Transcript state lives on the
@@ -26,9 +26,11 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
 
     useEffect(() => {
         let cancelled = false
-        getAiConnectionStatus('claude')
-            .then((status) => {
-                if (!cancelled) setConnection(status?.connected ? 'connected' : 'none')
+        getAiProviders()
+            // a logged-in local `claude` CLI counts as connected — Max/Pro
+            // subscribers never need an API key on their own machine
+            .then((available) => {
+                if (!cancelled) setConnection(available?.keyConnected || available?.localClaude ? 'connected' : 'none')
             })
             .catch((e) => {
                 if (cancelled) return

@@ -91,9 +91,9 @@ describe('aiChatRoutes', () => {
     expect(anonymous.statusCode).toBe(403)
   })
 
-  it('403s message send when no key is connected', async () => {
+  it('403s message send when no key is connected and no local claude', async () => {
     const router = makeFakeRouter()
-    registerAiChatRoutes(router, { streamFn: vi.fn() })
+    registerAiChatRoutes(router, { streamFn: vi.fn(), localAvailableFn: () => false })
     const chat = store.createChat('user-1')
 
     const res = await runHandlers(
@@ -134,6 +134,47 @@ describe('aiChatRoutes', () => {
     expect(messages.map((m) => m.role)).toEqual(['user', 'assistant'])
     expect(messages[1].content).toBe('hello back')
     expect(messages[1].output_tokens).toBe(7)
+  })
+
+  it('falls back to the local claude CLI for a loopback operator with no key', async () => {
+    const localRunFn = vi.fn(async ({ prompt, resumeSessionId, onDelta }) => {
+      onDelta('local says hi')
+      return {
+        text: 'local says hi',
+        model: 'claude (local)',
+        sessionId: resumeSessionId || 'cc-session-1',
+        inputTokens: 3,
+        outputTokens: 4
+      }
+    })
+    const router = makeFakeRouter()
+    const previousEnv = process.env.NODE_ENV
+    process.env.NODE_ENV = 'test'
+    try {
+      registerAiChatRoutes(router, { streamFn: vi.fn(), localRunFn, localAvailableFn: () => true })
+      const chat = store.createChat('user-1')
+      const request = () => asUser('user-1', {
+        params: { chatId: chat.id }, body: { text: 'hello' }, socket: { remoteAddress: '127.0.0.1' }
+      })
+
+      const res = await runHandlers(router.routes['post /api/ai/chats/:chatId/messages'], request())
+      expect(res.chunks.join('')).toContain('local says hi')
+      expect(localRunFn).toHaveBeenCalledWith(expect.objectContaining({ resumeSessionId: null }))
+      expect(store.getChat('user-1', chat.id).claude_session_id).toBe('cc-session-1')
+
+      // the second turn resumes the Claude Code session
+      await runHandlers(router.routes['post /api/ai/chats/:chatId/messages'], request())
+      expect(localRunFn).toHaveBeenLastCalledWith(expect.objectContaining({ resumeSessionId: 'cc-session-1' }))
+
+      // a non-loopback caller with no key still gets the 403, never the CLI
+      const remote = await runHandlers(
+        router.routes['post /api/ai/chats/:chatId/messages'],
+        asUser('user-1', { params: { chatId: chat.id }, body: { text: 'hello' }, socket: { remoteAddress: '10.0.0.5' } })
+      )
+      expect(remote.statusCode).toBe(403)
+    } finally {
+      process.env.NODE_ENV = previousEnv
+    }
   })
 
   it('reports a rejected key as a reconnect hint, not a bare 500', async () => {

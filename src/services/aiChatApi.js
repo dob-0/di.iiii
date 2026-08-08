@@ -4,6 +4,10 @@
 
 import { apiFetch } from './apiClient.js'
 
+// {keyConnected, localClaude} — localClaude is true only on the operator's
+// own machine (loopback dev server with a logged-in `claude` CLI).
+export const getAiProviders = async () => apiFetch('/api/ai/providers')
+
 export const listAiChats = async () => (await apiFetch('/api/ai/chats')).chats
 
 export const createAiChat = async ({ title, nodeId, projectId } = {}) => (
