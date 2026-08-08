@@ -2,6 +2,8 @@
 //
 // A blob spaces/<space>/blobs/<sha256> is referenced while any project in
 // that space holds assets/<sha256>.json (or a legacy assets/<sha256> binary),
+// while any project document mentions it in an /assets/<sha256> URL (markup
+// refs appear in no asset list, and may name a project that no longer exists),
 // OR while any retained op in di.db still mentions it.
 // Asset routes never delete blobs; this script is the only remover.
 //
@@ -91,13 +93,48 @@ const listFileNames = async (dir) => {
     }
 }
 
+// An <img src="/serverXR/api/projects/<pid>/assets/<sha>"> inside a rich-text
+// field is a reference like any other, but it appears in no asset list — and
+// when the project named in that URL has since been deleted, its assets/
+// manifest went with it. The blob then belongs to nobody by this scan's
+// reckoning while a live document still displays it.
+//
+// That is not hypothetical: on 2026-08-08 it put four stills of the br_id_ge
+// rite on the deletion list. They existed nowhere else, and every automated
+// check agreed they were unreferenced.
+const MARKUP_ASSET_REF = /\/assets\/([0-9a-f]{64})/gi
+
+const collectDocumentHashes = async (documentPath) => {
+    const hashes = new Set()
+    const raw = await fs.readFile(documentPath, 'utf8').catch(() => null)
+    if (!raw) return hashes
+    for (const [, hash] of raw.matchAll(MARKUP_ASSET_REF)) hashes.add(hash.toLowerCase())
+    return hashes
+}
+
 const collectReferencedHashes = async (spaceDir) => {
     const referenced = new Set()
-    for (const projectId of await listDirNames(path.join(spaceDir, 'projects'))) {
-        const assetsDir = path.join(spaceDir, 'projects', projectId, 'assets')
+    const projectsDir = path.join(spaceDir, 'projects')
+    for (const projectId of await listDirNames(projectsDir)) {
+        const assetsDir = path.join(projectsDir, projectId, 'assets')
         for (const name of await listFileNames(assetsDir)) {
             const hash = name.endsWith('.json') ? name.slice(0, -5) : name
             if (SHA256_HEX_REGEX.test(hash)) referenced.add(hash.toLowerCase())
+        }
+        // The document itself, for refs that live only in its markup — including
+        // ones pointing at another project's path.
+        for (const hash of await collectDocumentHashes(path.join(projectsDir, projectId, 'document.json'))) {
+            referenced.add(hash)
+        }
+    }
+    // Archived documents, where the snapshot keeps them. They exist so a deleted
+    // project can be restored, and a restore without its images restores a
+    // broken page.
+    const archivedDir = path.join(projectsDir, '_removed')
+    for (const name of await listFileNames(archivedDir)) {
+        if (!name.endsWith('.json')) continue
+        for (const hash of await collectDocumentHashes(path.join(archivedDir, name))) {
+            referenced.add(hash)
         }
     }
     return referenced

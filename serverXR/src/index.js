@@ -42,6 +42,7 @@ const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
+const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
 const openCallStore = require('./openCallStore')
@@ -104,6 +105,14 @@ const DB_PATH = config.directories.dbPath
 const RECENT_LIMIT = 25
 const DEFAULT_TTL_MS = config.defaultTtlMs
 const MAX_OP_HISTORY = 500
+// Retention is bounded by age as well as count. Counting alone made how long a
+// space or project keeps history — and therefore how long every asset that
+// history mentions survives a garbage collection — depend on how busy it is:
+// dormant work kept its last ops, and their blobs, permanently. 30 days is far
+// longer than any reconnect window (a client that falls outside it resyncs the
+// whole document via hasOpGap) and far longer than any retry the idempotency
+// guard in POST /ops has to recognise.
+const MAX_OP_AGE_MS = 30 * 24 * 60 * 60 * 1000
 const DEFAULT_SPACE_ID = 'main'
 const ALLOWED_MIME_PREFIXES = ['image/', 'video/', 'audio/', 'model/']
 const ALLOWED_MIME_TYPES = new Set([
@@ -1251,6 +1260,7 @@ registerInscriptionRoutes(router, {
   inscriptionLimiter: createRateLimiter({ windowMs: 10 * 60_000, max: 12, name: 'inscriptions' }),
   loadSpaceMeta,
   maxOpHistory: MAX_OP_HISTORY,
+  maxOpAgeMs: MAX_OP_AGE_MS,
   normalizeSpaceId,
   readJson,
   withSpaceOpsLock: sharedSpaceOpsLock,
@@ -1297,6 +1307,8 @@ registerStatusRoutes(router, {
 })
 
 registerIntegrationRoutes(router)
+
+registerAgentBoardRoutes(router)
 
 registerOpenCallRoutes(router, {
   requireAdminAlways,
@@ -1351,6 +1363,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   listSpaces,
   listProjectsInSpace,
   maxOpHistory: MAX_OP_HISTORY,
+  maxOpAgeMs: MAX_OP_AGE_MS,
   normalizeIncomingOps,
   normalizeProjectId,
   normalizeSpaceId,
@@ -1630,6 +1643,7 @@ registerProjectRoutes(router, {
   isValidAssetId: isValidProjectAssetId,
   listProjectsInSpace,
   maxOpHistory: MAX_OP_HISTORY,
+  maxOpAgeMs: MAX_OP_AGE_MS,
   normalizeIncomingOps,
   normalizeProjectDocument,
   normalizeProjectId,
