@@ -50,6 +50,12 @@ services:
       GITHUB_APP_WEBHOOK_SECRET: ${STAGING_GITHUB_APP_WEBHOOK_SECRET:-}
       MESH_ROOM_SECRET: ${STAGING_MESH_ROOM_SECRET:-}
       MESH_PROTECTED_NODE_PREFIXES: ${STAGING_MESH_PROTECTED_NODE_PREFIXES:-}
+      # approvalGate.js — see serverXR/.env.example. Same secret as di-bo's
+      # APPROVAL_SHARED_SECRET; unset here (default false/empty) leaves every
+      # gated route behaving exactly as before this feature existed.
+      APPROVAL_GATE_ENABLED: ${STAGING_APPROVAL_GATE_ENABLED:-false}
+      APPROVAL_BOT_URL: ${STAGING_APPROVAL_BOT_URL:-}
+      APPROVAL_SHARED_SECRET: ${STAGING_APPROVAL_SHARED_SECRET:-}
     # Small ceiling: staging only ever serves one person clicking through at
     # a time, it must not be able to meaningfully compete with production
     # for the VPS's 2 vCPU / 3.7GB (confirmed via `nproc`/`free -h` on the
