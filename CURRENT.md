@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- chain fixes from the collaborator-onboarding discovery walk
+- Raw as a workspace: the plan, and the first node in it
 
 Full detail: `PROGRESS.md`.
 
