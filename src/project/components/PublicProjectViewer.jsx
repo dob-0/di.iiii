@@ -155,7 +155,11 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
     // the shell's query belongs to the page it is showing — a published page
     // hands over to a sibling with ?param=…, and srcdoc would otherwise drop it
-    const previewDocument = buildPresentationPreviewDocument(rawHtml, typeof window !== 'undefined' ? window.location.search : '')
+    const previewDocument = buildPresentationPreviewDocument(
+        rawHtml,
+        typeof window !== 'undefined' ? window.location.search : '',
+        typeof window !== 'undefined' ? window.location.origin : ''
+    )
     const xrDefaultMode = publishState.xrDefaultMode || 'none'
 
     useEffect(() => {

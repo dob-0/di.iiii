@@ -40,6 +40,19 @@ that matters — br_id_ge's field is HTML, so the srcdoc iframe was the opaque
 surface), and the un-embedded default keeping its dark shell and badge. All three
 watched failing against the unconditional background before the fix.
 
+## `window.diiPageOrigin`, added for the same reason
+
+Verifying the fix meant looking at it on staging — and staging could not show
+it, because `fieldHref()` hardcodes `https://di-studio.xyz`. It has to: a srcdoc
+page has no URL, so `location.origin` is opaque and `location.hostname` is empty.
+(`field.html`'s `location.hostname.endsWith('di-studio.xyz')` check had therefore
+never once taken its relative branch.) The rite on staging embedded PRODUCTION's
+field and read production's crossings.
+
+That is the same gap `diiPageQuery` was added to close, so it is closed the same
+way: the bootstrap now hands down `window.diiPageOrigin`. Both br_id_ge call
+sites read it and keep their literals as the fallback.
+
 ## Not done here, and it must come second
 
 `field.html`'s `html.embed,html.embed body{background:var(--paper)}` can now
@@ -50,6 +63,16 @@ is worse than the seam. Order is di.iiii → prod, then br_id_ge.
 ## Verified
 
 `lint` `build` clean; `vitest run src/project` 274/274; `docs:wiki:check` passes.
-The visual claim is verified on **staging** — see the branch's report, not this
-file. Nothing here is proven by the unit tests: they assert a style attribute,
-not that a page reads.
+
+The visual claim is verified by **looking at it**, not by the tests — they assert
+a style attribute, not that a page reads. A local dev client carrying this branch
+was proxied at staging's API and driven through the rite's own `window.__end`
+probe at 1440×900 DPR2 and 390×844 DPR3: the seam is gone, the shared body's
+letters read as a ring of everyone's words, and the visitor's mark is whole
+instead of sliced by the box's top edge.
+
+Also looked at, and worth recording because it is the failure this ordering
+exists to prevent: br_id_ge's half was pushed to staging BEFORE this branch
+existed there, and the ending came back a **black box** — transparent field over
+a viewer still painting `#05070a`. Staging was rolled back to the paper build the
+same minute. The comment in `field.html` was right.

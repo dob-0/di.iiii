@@ -39,6 +39,20 @@ describe('presentationPreviewDocument', () => {
         expect(result).toContain('window.diiPageParams = new URLSearchParams(window.diiPageQuery)')
     })
 
+    // A srcdoc page cannot read its own host any more than it can read its own
+    // query, so every page that links to a sibling hardcoded one — and staging
+    // embedded production's copy, which means the tier could never rehearse
+    // itself.
+    it('hands the page the origin it is actually running on', () => {
+        const result = buildPresentationPreviewDocument('<main>Rite</main>', '', 'https://staging.di-studio.xyz')
+        expect(result).toContain('window.diiPageOrigin = "https://staging.di-studio.xyz"')
+    })
+
+    it('leaves diiPageOrigin an empty string when no origin is given', () => {
+        const result = buildPresentationPreviewDocument('<main>Rite</main>')
+        expect(result).toContain('window.diiPageOrigin = ""')
+    })
+
     it('escapes the shell query so it cannot break out of the bootstrap script', () => {
         const result = buildPresentationPreviewDocument('<main>Field</main>', '?x=</script><script>alert(1)</script>')
 

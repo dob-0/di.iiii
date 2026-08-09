@@ -13,7 +13,7 @@ const SANDBOX_ERROR_PATTERN = /(sandbox|denied|securityerror|not allowed|blocked
 // `<` keeps a `</script>` in it from closing the bootstrap tag
 const inlineJson = (value) => JSON.stringify(value ?? '').replace(/</g, '\\u003c')
 
-const buildBootstrapScript = (pageQuery) => `(() => {
+const buildBootstrapScript = (pageQuery, pageOrigin) => `(() => {
     const MESSAGE_TYPE = ${JSON.stringify(PREVIEW_HOST_MESSAGE_TYPE)};
     const ENTER_EXHIBITION_KIND = ${JSON.stringify(PREVIEW_ENTER_EXHIBITION_KIND)};
     const ISSUE_CODES = ${JSON.stringify(PREVIEW_ISSUE_CODES)};
@@ -28,6 +28,13 @@ const buildBootstrapScript = (pageQuery) => `(() => {
     } catch {
         window.diiPageParams = new URLSearchParams();
     }
+
+    // …and for the same reason it cannot read its own host. A page that links
+    // to a sibling page had no choice but to hardcode one, which is why
+    // br_id_ge's rite embedded PRODUCTION's field even when the rite itself
+    // was running on staging — the tier could never rehearse itself. Read
+    // this instead of writing a hostname down.
+    window.diiPageOrigin = ${inlineJson(pageOrigin)};
 
     window.diiEnterExhibition = () => {
         try {
@@ -171,8 +178,8 @@ const buildBootstrapScript = (pageQuery) => `(() => {
     sendIssues();
 })();`
 
-const injectBootstrap = (documentSource, pageQuery) => {
-    const bootstrapTag = `<script>${buildBootstrapScript(pageQuery)}</script>`
+const injectBootstrap = (documentSource, pageQuery, pageOrigin) => {
+    const bootstrapTag = `<script>${buildBootstrapScript(pageQuery, pageOrigin)}</script>`
     const openHeadPattern = /<head(\s[^>]*)?>/i
     const openHtmlPattern = /<html(\s[^>]*)?>/i
 
@@ -197,8 +204,8 @@ ${documentSource}
 </html>`
 }
 
-export function buildPresentationPreviewDocument(html = '', pageQuery = '') {
-    return injectBootstrap(String(html || ''), String(pageQuery || ''))
+export function buildPresentationPreviewDocument(html = '', pageQuery = '', pageOrigin = '') {
+    return injectBootstrap(String(html || ''), String(pageQuery || ''), String(pageOrigin || ''))
 }
 
 export function getPreviewIssueMessage(code) {
