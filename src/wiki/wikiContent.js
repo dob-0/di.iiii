@@ -606,6 +606,26 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup'],
         updated: '2026-08-08'
+    },
+    {
+        id: 'keeper-node',
+        category: 'Editing',
+        title: 'The Keeper: a language model as a node',
+        summary: 'Point a Keeper node at a model — one on this machine, or a box on the same network — and its answer becomes a value the rest of the graph can use.',
+        body: [
+            'Add a Keeper from the palette (category Agent) and it opens as a window with a prompt box. Set an Endpoint and a Model in the window itself, ask it something, and the reply appears in the panel.',
+            'The Keeper is pointed at an endpoint rather than signed in to an account. You give it a URL and a model name; nothing runs as you, and no key is stored. That means it works with a model on your own machine and it works in a room with no internet — which is the situation it was built for.',
+            { list: [
+                'Endpoint — a chat URL. A bare host such as http://localhost:11434 is completed for you; anything with a path is used as given.',
+                'Model — the model name that server knows, for example qwen3.',
+                'System — an optional instruction that shapes every answer.'
+            ] },
+            'It speaks to Ollama and to any OpenAI-compatible server, because both accept the same request. If a reasoning model wraps its working in <think> tags, that part is dropped and only the answer is shown. If the reply was cut off mid-sentence the panel says so rather than presenting a fragment as complete.',
+            'Two ports carry the result into the graph: Reply (the text) and Busy (true while it is thinking). Wire something into the Prompt port and the graph asks the question instead of you — the box then shows what it was asked and becomes read-only.',
+            'If the keeper cannot be reached the node says so. A browser will also refuse a call to a local model that has not been told to allow this page, so a model box may need its allowed origins set before it will answer.'
+        ],
+        tags: ['raw', 'nodes', 'keeper', 'agent', 'llm', 'local', 'offline', 'ollama'],
+        updated: '2026-08-08'
     }
 ]
 

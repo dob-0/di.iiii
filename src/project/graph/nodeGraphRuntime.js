@@ -131,6 +131,15 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
                 return context?.liveOutputs?.get(`${node.id}:frame`) ?? null
             }
             break
+        case 'agent.keeper':
+            // Same live-output side channel as the capture family: the reply
+            // arrives from a network call the panel makes, so it cannot be a
+            // serialised node value. An unanswered keeper reads as empty
+            // string rather than undefined, so a downstream string input gets
+            // something it can render instead of "undefined".
+            if (portId === 'reply') return context?.liveOutputs?.get(`${node.id}:reply`) ?? ''
+            if (portId === 'busy') return context?.liveOutputs?.get(`${node.id}:busy`) ?? false
+            break
         case 'source.mic':
             if (portId === 'volume') {
                 return context?.liveOutputs?.get(`${node.id}:volume`) ?? 0

@@ -130,6 +130,11 @@ Shape A, plus a `di` daemon on localhost owning NDI/OSC/MIDI/process spawning.
   must show which one it is in, honestly, per node.
 - Needs an auth story on the LAN, which `di venue` needs anyway.
 
+> **DECIDED 2026-08-08 by the owner: Shape B, hybrid** — *"have the local and
+> online version and if needed connect."* Both modes exist; the page works
+> online without a bridge, and gains the local capabilities when `di` is
+> present. Which mode a node is in must be visible in the node, never guessed.
+
 **Recommendation: build A's foundation in a way that B plugs into.** Concretely
 that means one contract — the *capability provider* in §5.1 — with a browser
 implementation first and a bridge implementation second. It is the same work up to
@@ -211,10 +216,72 @@ separate plan of their own.
 
 ---
 
-## 7. Open questions, for the owner
+## 7. Festival scope — what this toolkit should and should not be
 
-1. **Shape A or Shape B?** (§4) — decides whether NDI/OSC exist at all.
+The owner's question was whether Raw can cover a full multimedia artist's toolkit
+for a festival. **"Full" is the wrong target**, and the palette already shows why
+the right one is reachable.
+
+### The palette is a portrait of a real rig
+
+`source.realsense.d405` exists as a node type because a D405 was used at Notations
+#2 (Jul 20 – Aug 2 2026). The show's tech rider had five layers, and the registry
+is those layers with the runtime missing:
+
+| Rig layer | Palette | State today |
+|---|---|---|
+| **Keeper** — a local LLM on site; *the main installation layer* | — | **no node type exists at all** |
+| Senses — RealSense D405, Orbbec Astra, mic | `source.*` | mic + webcam live; D405 / stereo / insta360 gated |
+| Body — ROSMASTER, 2× ESP32, RPi | `device.osc.*` | gated; needs the bridge |
+| Projection — 2× 5000 lm | `stream.*` | gated; needs NDI |
+| Visitors — jam laptops + phones | the web | **already the strongest part** |
+
+The keeper is the striking absence: it was the *main* layer of that show and it is
+the one thing the graph cannot express.
+
+### What di.iiii uniquely owns
+
+**The audience's own device as an output surface, addressed by a URL, with the
+whole show as one document that syncs and survives as an archive.** Proven three
+times in public — br_id_ge, beyond_form, platform-recordar. No festival tool on the
+market does this. That is the band worth owning, and it is already won.
+
+### What to refuse, explicitly
+
+- **A video mixing engine.** `stream.compositor` / `stream.switcher` is rebuilding
+  OBS. Speak NDI to it instead.
+- **A timeline editor.** `cutlab` already exists for that and is destined to live
+  inside di.iiii — compose with it rather than absorbing it.
+- **A DAW, and projection mapping.** Ableton and MadMapper exist and are not the
+  fight.
+
+Interoperate via OSC / MIDI / NDI; do not replace.
+
+### What actually decides a festival
+
+Not features — **not failing in a room with no internet, on one laptop.** `di`
+running offline is worth more than ten node types. The estate's own rule applies
+directly: the desktop goes offline, so nothing critical may depend on it.
+
+### The shape, then
+
+Aim at **the show's nervous system plus the audience layer**: cue/go, sensing in,
+devices out, phones as the surface. `view.timeline` and `view.director` already
+exist as the cue spine. In that shape the toolkit is genuinely completable.
+
+**Build order:** the keeper node first — it restores the missing main layer and
+needs no bridge — then MIDI, as the cheapest proof of the bridge contract.
+
+---
+
+## 8. Open questions, for the owner
+
+1. ~~**Shape A or Shape B?**~~ **ANSWERED: B, hybrid.** Local and online, connect
+   when needed.
 2. **Agent authority** (§5.2) — what may an agent node read and write, and as whom?
+   *Deliberately side-stepped by the first keeper implementation, which talks to an
+   endpoint the user names rather than running anything as anyone. Still open the
+   moment an agent needs to touch files.*
 3. **Is `di` the bridge**, or a separate daemon? Overlaps `di venue` and its LAN
    auth problem.
 4. **Does this workspace need to work on a phone?** A touch path for every

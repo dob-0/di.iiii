@@ -13,6 +13,7 @@ import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
+import KeeperPanelWindow from './KeeperPanelWindow.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
@@ -965,6 +966,25 @@ export default function RawEditor({
         }
         if (node.typeId === 'source.mic') {
             return <MicSourcePanel node={node} onLevelsChange={handleMicOutputChange} />
+        }
+        if (node.typeId === 'agent.keeper') {
+            return (
+                <KeeperPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onReplyChange={(nodeId, reply, busy) => {
+                        handleLiveOutputChange(nodeId, 'reply', reply)
+                        handleLiveOutputChange(nodeId, 'busy', busy)
+                    }}
+                    // Endpoint and model are settable in the window itself, not
+                    // only in the inspector: a node the palette can place must be
+                    // usable where it lands, without also placing an inspector.
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
         }
         if (node.typeId === 'view.director') {
             return <DirectorPanelWindow node={node} />

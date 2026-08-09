@@ -143,6 +143,13 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('webcam', 'source.webcam', { label: 'Webcam', col: 6, row: 0 })
     add('mic', 'source.mic', { label: 'Microphone', col: 6, row: 1 })
 
+    // --- column 7: the keeper ---------------------------------------------------
+    // Third member of the live-output family, and the same exception applies:
+    // `reply` is filled by KeeperPanelWindow's network call, not by
+    // computeNodeOutput. Left unconfigured on purpose — an endpoint is a
+    // property of the room you are in, not of the example.
+    add('keeper', 'agent.keeper', { label: 'Keeper', col: 7, row: 0 })
+
     const id = (key) => made.get(key)?.id || ''
     const wire = (fromKey, fromPort, toKey, toPort) => {
         const from = id(fromKey)

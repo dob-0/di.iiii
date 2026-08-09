@@ -28,6 +28,7 @@ export const NODE_CATEGORIES = [
     { id: 'view',     label: 'View',     color: '#ff79c6' },
     { id: 'math',     label: 'Math',     color: '#f1fa8c' },
     { id: 'world',    label: 'World',    color: '#ff9e6d' },
+    { id: 'agent',    label: 'Agent',    color: '#a8ff9e' },
     { id: 'custom',   label: 'Custom',   color: '#aaaaaa' },
 ]
 
@@ -896,7 +897,11 @@ export const NODE_TYPES = {
     'agent': {
         id: 'agent',
         label: 'Agent',
-        category: 'view',
+        // Moved out of 'view' when the Agent category arrived with agent.keeper:
+        // a node called Agent filed under View reads as a filing mistake, and
+        // the two belong side by side — this one talks to a hosted model through
+        // the server, the keeper talks to one you name.
+        category: 'agent',
         // what people actually type in the palette for this node
         keywords: ['claude', 'chat', 'ai', 'assistant'],
         runtime: 'any',
@@ -1147,6 +1152,44 @@ export const NODE_TYPES = {
         outputs: [],
         defaultValues: {},
         render: 'hidden',
+    },
+
+    // --- Agent ---------------------------------------------------------------
+
+    'agent.keeper': {
+        id: 'agent.keeper',
+        label: 'Keeper',
+        category: 'agent',
+        runtime: 'web',
+        singleton: false,
+        inputs: [
+            { id: 'prompt', type: 'string', label: 'Prompt', default: '' },
+        ],
+        outputs: [
+            { id: 'reply', type: 'string',  label: 'Reply' },
+            { id: 'busy',  type: 'boolean', label: 'Busy'  },
+        ],
+        // Endpoint-shaped, not account-shaped: you name a URL and a model, so
+        // nothing runs as anyone. At a festival that URL is a GPU box on the
+        // same table and there is no internet — see docs/architecture/RAW_WORKSPACE.md.
+        defaultValues: { endpoint: '', model: '', system: '' },
+        // Config, not ports — you set these once for the room you are in, and
+        // nothing upstream should be able to repoint the keeper mid-graph.
+        // Without these the panel told you to "set an endpoint in the inspector"
+        // and the inspector had no such field.
+        configInputs: [
+            { id: 'endpoint', type: 'string', label: 'Endpoint' },
+            { id: 'model',    type: 'string', label: 'Model'    },
+            { id: 'system',   type: 'string', label: 'System'   },
+        ],
+        // panel-2d for the same reason as the capture family: "no endpoint set"
+        // and "the box isn't answering" are the normal states of this node, and
+        // both need somewhere to be said.
+        render: 'panel-2d',
+        // The default 360x280 clipped the Ask button below the fold on a fresh
+        // node — the panel carries setup text, a prompt box, an action row and a
+        // reply, where the capture panels carry one video element.
+        defaultFrame: { width: 380, height: 440 },
     },
 
     // -----------------------------------------------------------------------
