@@ -606,6 +606,56 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup'],
         updated: '2026-08-08'
+    },
+    {
+        id: 'keeper-node',
+        category: 'Editing',
+        title: 'The Keeper: a language model as a node',
+        summary: 'Point a Keeper node at a model — one on this machine, or a box on the same network — and its answer becomes a value the rest of the graph can use.',
+        body: [
+            'Add a Keeper from the palette (category Agent) and it opens as a window with a prompt box. Set an Endpoint and a Model in the window itself, ask it something, and the reply appears in the panel.',
+            'The Keeper is pointed at an endpoint rather than signed in to an account. You give it a URL and a model name; nothing runs as you, and no key is stored. That means it works with a model on your own machine and it works in a room with no internet — which is the situation it was built for.',
+            { list: [
+                'Endpoint — a chat URL. A bare host such as http://localhost:11434 is completed for you; anything with a path is used as given.',
+                'Model — the model name that server knows, for example qwen3.',
+                'System — an optional instruction that shapes every answer.'
+            ] },
+            'It speaks to Ollama and to any OpenAI-compatible server, because both accept the same request. If a reasoning model wraps its working in <think> tags, that part is dropped and only the answer is shown. If the reply was cut off mid-sentence the panel says so rather than presenting a fragment as complete.',
+            'Two ports carry the result into the graph: Reply (the text) and Busy (true while it is thinking). Wire something into the Prompt port and the graph asks the question instead of you — the box then shows what it was asked and becomes read-only.',
+            'If the keeper cannot be reached the node says so. A browser will also refuse a call to a local model that has not been told to allow this page, so a model box may need its allowed origins set before it will answer.'
+        ],
+        tags: ['raw', 'nodes', 'keeper', 'agent', 'llm', 'local', 'offline', 'ollama'],
+        updated: '2026-08-08'
+    },
+    {
+        id: 'midi-in-node',
+        category: 'Editing',
+        title: 'MIDI In: a controller as a node',
+        summary: 'Plug in a MIDI controller and its keys and knobs become numbers the graph can use.',
+        body: [
+            'Add a MIDI In node from the palette (category Device). It asks the browser for MIDI access, lists what is plugged in, and shows each message as it arrives so you can see the node is really hearing your controller.',
+            'Pick a Device, or leave it on "First available". Pick a Channel, or leave it on "All channels" — a controller set to a channel the node is not listening on looks exactly like a broken cable, so listening to everything is the default.',
+            'Four ports carry what it hears: Note and Velocity from keys and pads, CC and Value from knobs and faders. A key you release reports velocity 0 rather than going blank, because that is what a released key means.',
+            'The fifth port, Trigger, counts up by one on every message. Watch it change rather than trying to catch a pulse — that is how a node downstream knows something happened, even between frames.',
+            'This needs Chrome or Edge; Safari and Firefox have no Web MIDI and the node says so instead of sitting blank. A controller plugged in after you opened the page appears on its own, without a reload.'
+        ],
+        tags: ['raw', 'nodes', 'midi', 'device', 'controller', 'performance'],
+        updated: '2026-08-08'
+    },
+    {
+        id: 'raw-zen-workspace',
+        category: 'Editing',
+        title: 'A workspace with nothing on it',
+        summary: 'Raw opens as bare surface and nodes. One gesture summons everything else — panels, the help, even the toolbar itself.',
+        body: [
+            'A new workspace has no toolbar, no zoom buttons, no help or chat button. There is the surface, whatever nodes you place, and nothing else sitting there waiting to be needed.',
+            'Everything is one gesture away. Press ⌘K (Ctrl+K) or just / — on a touch screen, double-tap the empty surface. The same panel opens either way: type what you want and press Enter.',
+            'That panel creates nodes and summons everything else from the same list. "Help", "Chat", "Outliner", any window you closed, and "Show the chrome" to bring the toolbar back. Summoning rows sit at the top, so with the toolbar hidden they are never more than a keystroke away.',
+            'Zoom still works as it always did: the wheel on a computer, and on a phone the zoom buttons stay in the corner — faded until you reach for them, because on a touch screen they are the only way to zoom.',
+            'Each workspace remembers its own choice, on this device. A workspace you already arranged keeps its toolbar; only new ones start bare. Turning the toolbar on or off in one workspace never changes another, and never changes what anyone else sees.'
+        ],
+        tags: ['raw', 'workspace', 'zen', 'minimal', 'palette', 'shortcuts', 'ui'],
+        updated: '2026-08-08'
     }
 ]
 
