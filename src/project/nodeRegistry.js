@@ -344,8 +344,11 @@ export const NODE_TYPES = {
         id: 'device.midi.in',
         label: 'MIDI In',
         category: 'device',
-        runtime: 'local',
-        authoringOnly: true,
+        // Web MIDI, not the local runtime: this is the one device family a page
+        // can already reach, which makes it the cheapest proof of the provider
+        // contract the bridge will later implement — see
+        // docs/architecture/RAW_WORKSPACE.md §5.4.
+        runtime: 'web',
         singleton: false,
         inputs: [],
         outputs: [
@@ -355,11 +358,21 @@ export const NODE_TYPES = {
             { id: 'value',    type: 'number', label: 'Value'    },
             { id: 'trigger',  type: 'signal', label: 'Trigger'  },
         ],
-        defaultValues: {
-            hostHint: 'windows',
-            channel: 1,
-        },
-        render: 'hidden',
+        // channel 0 = every channel. Defaulting to 1 silently dropped every
+        // message from a controller set to any other channel.
+        defaultValues: { deviceId: '', channel: 0 },
+        configInputs: [
+            { id: 'channel', type: 'number', label: 'Channel' },
+        ],
+        // panel-2d for the same reason as the capture family: denied permission,
+        // no browser support and nothing-plugged-in are all ordinary outcomes
+        // that need somewhere to be said.
+        render: 'panel-2d',
+        // 320x260 was too small twice over: the window's own four header buttons
+        // wrapped onto a second row, and that pushed the channel select and the
+        // last-message line below the fold. Matches the keeper's width so the
+        // header fits on one line.
+        defaultFrame: { width: 380, height: 340 },
     },
 
     'device.midi.out': {
@@ -1286,11 +1299,12 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
     'source.insta360',
     'source.stereo',
     'source.realsense.d405',
-    // devices — no OSC client, no WebMIDI
+    // devices — no OSC client (UDP, needs the local bridge), and MIDI Out has
+    // no sender yet. device.midi.in came off this list on 2026-08-08: Web MIDI
+    // is real in the page, so that one is implemented.
     'device.ptz.osc',
     'device.osc.in',
     'device.osc.out',
-    'device.midi.in',
     'device.midi.out',
     // streaming — no compositor, no transport
     'stream.compositor',

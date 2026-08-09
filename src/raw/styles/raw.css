@@ -3183,6 +3183,71 @@
        (see MicSourcePanel) — a transition here would fight that and lag. */
 }
 
+/* MIDI In — same panel language as the keeper and the capture family. */
+.raw-midi-panel {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    background: #080c14;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--di-cyan-dim, #9fd7ff);
+}
+
+.raw-midi-panel-status {
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: rgba(77, 249, 255, 0.07);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.25));
+}
+
+.raw-midi-panel-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.raw-midi-panel-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.raw-midi-panel-select {
+    width: 100%;
+    box-sizing: border-box;
+    /* Touch target — one finger has to be able to change the channel. */
+    min-height: 34px;
+    padding: 6px 8px;
+    font: inherit;
+    color: #e8f6ff;
+    background: rgba(77, 249, 255, 0.06);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    border-radius: 4px;
+}
+
+.raw-midi-panel-select:focus-visible {
+    outline: 2px solid var(--di-cyan, #4df9ff);
+    outline-offset: 1px;
+}
+
+.raw-midi-panel-last {
+    margin-top: auto;
+    padding: 8px 10px;
+    color: #e8f6ff;
+    background: rgba(8, 12, 20, 0.7);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.22));
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
 /* Keeper — reuses the capture family's ground and cyan accents rather than
    introducing a second panel language. */
 .raw-keeper-panel {

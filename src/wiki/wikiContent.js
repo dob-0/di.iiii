@@ -626,6 +626,21 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'nodes', 'keeper', 'agent', 'llm', 'local', 'offline', 'ollama'],
         updated: '2026-08-08'
+    },
+    {
+        id: 'midi-in-node',
+        category: 'Editing',
+        title: 'MIDI In: a controller as a node',
+        summary: 'Plug in a MIDI controller and its keys and knobs become numbers the graph can use.',
+        body: [
+            'Add a MIDI In node from the palette (category Device). It asks the browser for MIDI access, lists what is plugged in, and shows each message as it arrives so you can see the node is really hearing your controller.',
+            'Pick a Device, or leave it on "First available". Pick a Channel, or leave it on "All channels" — a controller set to a channel the node is not listening on looks exactly like a broken cable, so listening to everything is the default.',
+            'Four ports carry what it hears: Note and Velocity from keys and pads, CC and Value from knobs and faders. A key you release reports velocity 0 rather than going blank, because that is what a released key means.',
+            'The fifth port, Trigger, counts up by one on every message. Watch it change rather than trying to catch a pulse — that is how a node downstream knows something happened, even between frames.',
+            'This needs Chrome or Edge; Safari and Firefox have no Web MIDI and the node says so instead of sitting blank. A controller plugged in after you opened the page appears on its own, without a reload.'
+        ],
+        tags: ['raw', 'nodes', 'midi', 'device', 'controller', 'performance'],
+        updated: '2026-08-08'
     }
 ]
 

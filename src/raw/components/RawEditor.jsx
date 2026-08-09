@@ -14,6 +14,7 @@ import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
 import KeeperPanelWindow from './KeeperPanelWindow.jsx'
+import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
@@ -966,6 +967,27 @@ export default function RawEditor({
         }
         if (node.typeId === 'source.mic') {
             return <MicSourcePanel node={node} onLevelsChange={handleMicOutputChange} />
+        }
+        if (node.typeId === 'device.midi.in') {
+            return (
+                <MidiInputPanel
+                    node={node}
+                    values={resolvedValues}
+                    onSignalChange={(nodeId, ports) => {
+                        // null clears every port at once (unmount). Otherwise
+                        // only the ports this message carries are written, so a
+                        // CC does not wipe the last note and vice versa.
+                        for (const portId of ['note', 'velocity', 'cc', 'value', 'trigger']) {
+                            if (ports === null) handleLiveOutputChange(nodeId, portId, null)
+                            else if (ports[portId] !== undefined) handleLiveOutputChange(nodeId, portId, ports[portId])
+                        }
+                    }}
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
         }
         if (node.typeId === 'agent.keeper') {
             return (

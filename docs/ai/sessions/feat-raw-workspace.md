@@ -53,3 +53,40 @@ looked at in both.
 **Not done, deliberately:** no streaming responses (one reply per ask), no
 conversation history, and no bridge — MIDI is the next step and the cheapest
 proof of that contract.
+
+## 2026-08-08 — MIDI In, the first node with two possible providers
+
+`device.midi.in` came off `UNIMPLEMENTED_NODE_TYPES`. Web MIDI is real in the
+page, so this is the one device family that needs no bridge — which is exactly
+why it is the cheapest proof of the provider contract the bridge will later
+implement for OSC and NDI.
+
+Three things the parsing had to get right, none of them obvious from the spec:
+
+- **A note-on with velocity 0 is a note-off.** Most keyboards release a key that
+  way rather than sending `0x8`. Read as a press, every released note stays
+  stuck on for ever.
+- **System messages carry no channel nibble.** Clock (`0xF8`) and active sensing
+  arrive constantly; masking their status byte yields a plausible-looking
+  channel 16 and would fire the node dozens of times a second.
+- **The default channel is now 0 (all).** The registry had it at 1, which
+  silently dropped everything from a controller set to any other channel — and a
+  node that hears nothing looks exactly like a broken cable.
+
+`trigger` is declared `signal`, and the runtime computes no signal outputs, so
+it carries a monotonically rising count — the same idiom as `time.beat`.
+
+**Honest limits of the verification.** There is no MIDI hardware on this machine
+and none in CI. The ACTIVE path was driven through a fake port installed at the
+`navigator.requestMIDIAccess` boundary, so everything above that line is the
+real code; the DENIED path was seen for real, because headless Chromium refuses
+Web MIDI even with the permission granted. **NO_DEVICES is unit-tested only** —
+it has never been seen in a browser, and no real controller has ever been
+attached to this node.
+
+Fixed while looking: `defaultFrame` of 320x260 was too small twice over — the
+window's own four header buttons wrapped to a second row, which pushed the
+channel select and the message line below the fold.
+
+Still gated: `device.midi.out` (no sender yet) and all the OSC types (UDP —
+needs the bridge).

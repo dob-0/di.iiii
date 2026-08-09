@@ -150,6 +150,11 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // property of the room you are in, not of the example.
     add('keeper', 'agent.keeper', { label: 'Keeper', col: 7, row: 0 })
 
+    // Fourth member of the live-output family. Listening on every channel,
+    // because a controller set to anything other than channel 1 would otherwise
+    // look broken in the one graph that exists to show what works.
+    add('midiIn', 'device.midi.in', { label: 'MIDI In', col: 7, row: 1, values: { channel: 0 } })
+
     const id = (key) => made.get(key)?.id || ''
     const wire = (fromKey, fromPort, toKey, toPort) => {
         const from = id(fromKey)
