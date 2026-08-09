@@ -13,7 +13,9 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Shared frame-exact timeline core + Raw Timeline node
+- Claude chat as a Raw node: the key store gets its consumer
+- Why now
+- a tag published nothing, because a legacy path could veto the release
 
 Full detail: `PROGRESS.md`.
 
