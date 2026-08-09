@@ -8,7 +8,7 @@
 ## Start Here
 
 - main authoring lane: `Studio`
-- experimental node-first lane: `Beta`
+- experimental node-first lane: `Raw`
 - compatibility lane: `V1`
 - backend authority: `serverXR`
 - public unit: `space`

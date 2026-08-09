@@ -897,6 +897,8 @@ export const NODE_TYPES = {
         id: 'agent',
         label: 'Agent',
         category: 'view',
+        // what people actually type in the palette for this node
+        keywords: ['claude', 'chat', 'ai', 'assistant'],
         runtime: 'any',
         singleton: false,
         inputs: [
@@ -1271,7 +1273,7 @@ export const listNodeTypes = ({ category = 'all', query = '', runtime = 'any', i
         if (category !== 'all' && type.category !== category) return false
         if (runtime !== 'any' && type.runtime !== 'any' && type.runtime !== runtime) return false
         if (!q) return true
-        return `${type.label} ${type.id} ${type.category}`.toLowerCase().includes(q)
+        return `${type.label} ${type.id} ${type.category} ${(type.keywords || []).join(' ')}`.toLowerCase().includes(q)
     })
 }
 

@@ -34,7 +34,8 @@ function registerAiChatRoutes(router, {
 
   // The operator's own machine can chat through its logged-in `claude` CLI
   // (subscription login, no API key). Same trust boundary as the agent board:
-  // loopback + non-production only — never a hosted path.
+  // loopback + local server (non-production, or DI_LOCAL=1 on a di CLI
+  // install) — never a hosted path.
   const localBackendFor = (req) => isLocalOperatorRequest(req) && localAvailableFn()
 
   const requireAccount = (req, res, next) => {

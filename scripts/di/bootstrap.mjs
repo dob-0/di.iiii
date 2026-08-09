@@ -204,7 +204,8 @@ const main = async () => {
     say('')
     say(`  ${style.cyan(`${naming.primary} up`)}   start it, and open it`)
     say(style.dim(`  ${naming.primary} help  everything else`))
-    if (hint) { say(''); say(hint) }
+    say('')
+    say(hint || ui.freshTerminal(naming.primary))
 }
 
 main().catch((error) => {
