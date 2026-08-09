@@ -90,3 +90,51 @@ channel select and the message line below the fold.
 
 Still gated: `device.midi.out` (no sender yet) and all the OSC types (UDP —
 needs the bridge).
+
+## 2026-08-08 — zen: the workspace with nothing resident on it
+
+§5.3 of the plan, built to a design the user delegated to a peer session and
+which is better than what I had been heading toward. **One mechanism, not
+three.**
+
+I was about to build a zen-flip *plus* per-panel `⌘1..9` toggles — two systems
+and a memorisation tax, and with no path at all on a phone, which has no
+keyboard. The palette was already the answer: double-tap on empty canvas has
+opened it since Raw existed. Extending *that* into the single summons means the
+touch path is preserved for free and no new chrome is introduced.
+
+- Default is zen: no topbar, no zoom buttons, no help or chat button. The canvas
+  keeps its own empty hint, so a new workspace is **minimal, not blank** — worth
+  stating because the first version of this genuinely was blank until I looked.
+- `⌘K` / `/` on a keyboard, the existing double-tap on touch. `/` is ignored
+  while typing, or no text field in the workspace could accept the character.
+- Commands sort **above** node types: with the chrome hidden they are the only
+  way back to it, so they must not be below a scroll.
+- Hidden panel windows are listed generically, so a node type added later — or
+  by PR #99 — is summonable without touching the list.
+- **Relocated, not deleted.** Zoom controls vanish on a fine pointer (the wheel
+  zooms) but idle-fade to 0.28 on a coarse one, where they are the only way to
+  zoom. Deleting them would have undone a real touch fix.
+- Extends the existing `universe.space` `showChrome` concept rather than adding
+  a parallel flag.
+- Preference is per-device localStorage, **not** document state: one
+  collaborator choosing zen must not strip the topbar from everyone else. The
+  first resolution is remembered, or a workspace that opened empty would get its
+  chrome back by itself once it had a node in it.
+
+**Two pre-existing CSS bugs surfaced.** Palette rows are flex children, so
+`min-width: auto` let them grow to min-content — 301px inside a 268px box — and
+the right-hand tag rode past the palette edge, rendering "PANEL" as "PAN". They
+also lacked `border-box`, so `width: 100%` plus padding overflowed by the
+padding. Both were there before; a wide enough tag just reached far enough to
+show them. Found by measuring the box chain after guessing wrong twice.
+
+**Also fixed a test that could not fail honestly:** the `RawGraphSurface` mock
+never rendered `emptyHint`, so the hint tests were asserting against a mock
+incapable of showing what they claimed to check. The mock now mirrors the real
+component, including its `nodes.length === 0` condition.
+
+Rebase note: recovering from a conflicted rebase with uncommitted work stashed
+on top is how work gets lost — commit first, then rebase. The `agent` node's
+category conflict resolved keeping **both** sides: dev's new palette `keywords`
+and the move into the Agent category.
