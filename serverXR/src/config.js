@@ -299,6 +299,20 @@ const config = {
     url: (process.env.LIVE_API_URL || '').replace(/\/+$/, ''),
     token: (process.env.LIVE_API_TOKEN || '').trim()
   },
+  sceneReplace: {
+    // Whether PUT /scene must carry an If-Match/baseVersion precondition.
+    //
+    // OFF by default, because this route has callers we cannot enumerate --
+    // scripts in this repo, the vendored space-sync engines in three other
+    // repos, and whatever is running against production. Turning it on there
+    // would break them at once.
+    //
+    // A `di` install turns it ON (scripts/di/install.mjs writes it into
+    // ~/.di/di.env): a fresh local install has no legacy callers, so the safe
+    // mode is free. When the unconditional-replace warnings stop appearing in
+    // the online logs, the default here can flip.
+    requirePrecondition: String(process.env.SCENE_REPLACE_REQUIRE_PRECONDITION || '').trim() === 'true'
+  },
   googleDrive: {
     // Optional. Unlocks folder import + real metadata; keyless single-file import
     // works without it. The Google Picker also needs it (developerKey).

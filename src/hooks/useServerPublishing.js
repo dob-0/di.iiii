@@ -259,10 +259,17 @@ export function useServerPublishing({
                     return
                 }
                 try {
+                    // Condition the overwrite on the version the person was
+                    // just SHOWN, not on sceneVersionRef — that one is stale by
+                    // definition here, it is what caused the 409. If the scene
+                    // moves again while the confirm dialog is open, this 409s
+                    // rather than silently burying a third change nobody saw.
+                    // No latestVersion (older server) means no precondition is
+                    // available, so it stays unconditional as it always was.
                     const response = await overwriteServerScene(spaceId, {
                         ...payload,
                         sceneVersion: sceneVersionRef?.current || payload.sceneVersion || 0
-                    })
+                    }, { expectedVersion: Number.isInteger(latestVersion) ? latestVersion : null })
                     if (typeof response?.newVersion === 'number') {
                         setSceneVersion?.(response.newVersion)
                         markServerSync?.('Published to server (forced)')
@@ -271,6 +278,10 @@ export function useServerPublishing({
                     }
                     alert('Server scene overwritten with your copy.')
                 } catch (forceError) {
+                    if (forceError?.status === 409) {
+                        alert('The server scene changed again while this dialog was open. Nothing was overwritten — reload and try once more.')
+                        return
+                    }
                     alert(forceError?.message || 'Error: Force publish failed.')
                 }
                 return

@@ -1472,7 +1472,6 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   upsertSpaceMeta,
   upload,
   writeJson,
-  writeOpsHistory,
   approvalGate
 })
 
@@ -1760,6 +1759,8 @@ registerSyncRoutes(router, {
   normalizeSpaceId,
   ensureSpaceWritable,
   replaceSceneAndBroadcast,
+  loadSpaceMeta,
+  snapshotSpaceScene,
 })
 
 // Admin sweep for the hub's collapsed sandbox row: remove guest sandboxes the

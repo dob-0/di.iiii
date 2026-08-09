@@ -572,6 +572,41 @@
     text-overflow: ellipsis;
 }
 
+/* Two sides, each unbreakable. The row shows both local and live now, and on
+   a phone that string is wider than the column it sits in — it truncated to
+   "local v0 · 0 …", hiding the live side entirely, which is the one thing the
+   row exists to show. */
+.space-sync-side {
+    white-space: nowrap;
+}
+
+.space-sync-side + .space-sync-side {
+    margin-left: 14px;
+}
+
+@media (max-width: 560px) {
+    .space-sync-row {
+        flex-wrap: wrap;
+    }
+    .space-sync-msg {
+        flex: 1 0 100%;
+        white-space: normal;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px 14px;
+        border-bottom: 1px solid var(--di-cyan-border);
+    }
+    .space-sync-side + .space-sync-side {
+        margin-left: 0;
+    }
+    .space-sync-btn {
+        flex: 1;
+    }
+    .space-sync-btn:first-of-type {
+        border-left: none;
+    }
+}
+
 .space-sync-msg--ok { color: var(--di-cyan); }
 .space-sync-msg--err { color: #e05a5a; }
 
