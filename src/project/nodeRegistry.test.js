@@ -212,6 +212,11 @@ describe('listNodeTypes', () => {
         expect(results.map(t => t.id)).not.toContain('geom.sphere')
     })
 
+    it('matches keywords — "claude" and "chat" find the agent node', () => {
+        expect(listNodeTypes({ query: 'claude' }).map(t => t.id)).toContain('agent')
+        expect(listNodeTypes({ query: 'chat' }).map(t => t.id)).toContain('agent')
+    })
+
     it('returns all nodes including web-only when runtime filter is any (no filter)', () => {
         const all = listNodeTypes({ runtime: 'any', includeUnimplemented: true })
         expect(all.length).toBe(Object.keys(NODE_TYPES).length)

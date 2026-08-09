@@ -129,7 +129,7 @@ export const WIKI_ARTICLES = [
         summary: 'Place an agent node in Raw and chat with Claude inside your workspace — powered by your own connected API key.',
         body: [
             'In the Raw editor, add an agent node from the palette. It opens as a chat window: type, and Claude answers in a live stream, right inside your workspace. Conversations are saved to your account — reopen the node and the chat is still there.',
-            'On your own machine, if Claude Code is installed and logged in (a Claude Pro/Max subscription), the node just works — no API key at all: di.iiii talks to your local Claude, and conversations continue across sessions. Otherwise it runs on the Claude API key connected to your account, and the node itself asks for it: paste the key straight into the panel (or sign in first, if you are a guest) — no detour through settings. Keys stay on the server: the browser never talks to Anthropic directly, and nobody else can use yours.',
+            'On your own machine — meaning a di.iiii you run locally (`di up` or the dev server), not the hosted site — if Claude Code is installed and logged in (a Claude Pro/Max subscription), the node just works — no API key at all: di.iiii talks to your local Claude, and conversations continue across sessions. Otherwise it runs on the Claude API key connected to your account, and the node itself asks for it: paste the key straight into the panel (or sign in first, if you are a guest) — no detour through settings. Keys stay on the server: the browser never talks to Anthropic directly, and nobody else can use yours.',
             { list: [
                 'Each agent node holds its own conversation — place several for parallel topics.',
                 'Replies stream token by token; usage (tokens in/out) is recorded per turn on your account.',
@@ -137,7 +137,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['ai', 'claude', 'chat', 'raw', 'agent', 'node'],
-        updated: '2026-08-08'
+        updated: '2026-08-09'
     },
     {
         id: 'publishing',

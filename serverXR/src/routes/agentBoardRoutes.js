@@ -1,9 +1,11 @@
 // Operator-only board of local Claude Code sessions for Ops Graph → Agents.
 // This surface reads ~/.claude — transcripts can contain secrets — so it must
 // never be reachable off the operator's own machine. Guarded the same way for
-// the same reason as approval-style local tooling: NODE_ENV must not be
-// production AND the request must arrive over loopback. Both, because a
-// misconfigured NODE_ENV, or a dev box with its port forwarded, must still
+// the same reason as approval-style local tooling: the request must arrive
+// over loopback AND the server must be a local one — NODE_ENV not production,
+// or an explicit DI_LOCAL=1 (the di CLI runner sets NODE_ENV=production for a
+// personal install, which is still one person on their own machine). Loopback
+// stays absolute either way: a dev box with its port forwarded must still
 // refuse. Refusals are 404 (the surface does not advertise itself).
 
 const { createAgentBoardStore } = require('../agentBoardStore')
@@ -11,7 +13,8 @@ const { createAgentBoardStore } = require('../agentBoardStore')
 const LOOPBACK_ADDRESSES = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
 
 function isLocalOperatorRequest(req) {
-  if (process.env.NODE_ENV === 'production') return false
+  const local = process.env.NODE_ENV !== 'production' || process.env.DI_LOCAL === '1'
+  if (!local) return false
   const address = req.socket?.remoteAddress || ''
   return LOOPBACK_ADDRESSES.has(address)
 }
