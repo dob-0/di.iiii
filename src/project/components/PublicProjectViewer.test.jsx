@@ -269,6 +269,63 @@ describe('PublicProjectViewer', () => {
         }
     })
 
+    // ?embed=1 is what br_id_ge's ending has been asking for since it started
+    // opening the field inside itself. Without it the viewer paints #05070a and
+    // the embedded page can only answer with opaque paper of its own, which is
+    // how a window became a rectangle pasted across the closing words.
+    it('is glass, not paper, in ?embed=1 mode — no shell, no badge, no Walk / Fly', async () => {
+        window.history.replaceState(null, '', '/main?embed=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            const { container } = render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+            expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+            expect(container.querySelector('main').style.background).toBe('transparent')
+            expect(screen.queryByRole('button', { name: 'Walk / Fly' })).toBeNull()
+            expect(screen.queryByText('Made with di.iiii')).toBeNull()
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
+    // A code page is the case that actually matters here: br_id_ge's field is
+    // an HTML project, so the srcdoc iframe is the surface that was opaque.
+    it('leaves a code page its own ground in ?embed=1 mode', async () => {
+        window.history.replaceState(null, '', '/main?embed=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'live-project', title: 'Live Project' },
+                    presentationState: { mode: 'code', entryView: 'code', codeHtml: '<p>the field</p>' },
+                    entities: []
+                }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            const { container } = render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+            const frame = await screen.findByTitle('Live Project')
+            expect(frame.style.background).toBe('transparent')
+            expect(container.querySelector('main').style.background).toBe('transparent')
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
+    it('keeps the dark shell and the badge when nothing asks to be embedded', async () => {
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        const { container } = render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+        expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+        expect(container.querySelector('main').style.background).toBe('rgb(5, 7, 10)')
+        expect(await screen.findByText('Made with di.iiii')).toBeInTheDocument()
+    })
+
     it('keeps navigation and Walk / Fly outside preview mode', async () => {
         getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
