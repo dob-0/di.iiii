@@ -210,8 +210,19 @@
     overflow-y: auto;
 }
 
+/* The rows are flex children of the list, so their default `min-width: auto`
+   let them grow to min-content — 301px inside a 268px content box — and the
+   right-hand tag rode past the palette's edge. Pre-existing; only visible once
+   a tag was wide enough to reach it. */
+.raw-node-palette-list li {
+    min-width: 0;
+    width: 100%;
+}
+
 .raw-node-palette-item {
     width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -232,6 +243,17 @@
     align-items: center;
     gap: 10px;
     min-width: 0;
+    /* The row is 280px wide. Without this the title pushed the tag past the
+       palette's right edge and "PANEL" rendered as "PAN" — the hint truncates
+       instead, since the tag is the part that says what the row DOES. */
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.raw-node-palette-item-title > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .raw-node-palette-item strong {
@@ -248,6 +270,13 @@
 .raw-node-palette-item.is-active,
 .raw-node-palette-item:hover {
     background: var(--di-cyan-dim);
+}
+
+/* Commands sit above node types in the same list; the tag is what tells you a
+   row summons something rather than creating it. */
+.raw-node-palette-tag.is-command {
+    background: rgba(77, 249, 255, 0.14);
+    color: rgba(210, 245, 255, 0.85);
 }
 
 .raw-node-palette-tag {
@@ -2136,6 +2165,34 @@
 .raw-graph-stage {
     position: relative;
     transform-origin: 0 0;
+}
+
+/* Zen: the zoom controls stop being resident, but are never removed.
+   On a fine pointer the wheel already zooms, so they can go entirely — the
+   palette brings the chrome back. On a coarse pointer there IS no wheel, so
+   they are the only way to zoom: they idle at low opacity and come back the
+   moment a finger or the keyboard reaches them. Removing them there would
+   undo a real touch fix (see known-fixes: zoom buttons vs double-tap). */
+.raw-graph-zoom-controls.is-chromeless {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+
+@media (pointer: coarse) {
+    .raw-graph-zoom-controls.is-chromeless {
+        opacity: 0.28;
+        pointer-events: auto;
+    }
+    .raw-graph-zoom-controls.is-chromeless:hover,
+    .raw-graph-zoom-controls.is-chromeless:focus-within,
+    .raw-graph-zoom-controls.is-chromeless:active {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .raw-graph-zoom-controls.is-chromeless { transition: none; }
 }
 
 .raw-graph-zoom-controls {
