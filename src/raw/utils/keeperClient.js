@@ -58,12 +58,18 @@ export const parseKeeperReply = (payload) => {
 // A bare host is the most likely thing to be pasted ("http://localhost:11434"),
 // and it is not a chat endpoint. Complete it to Ollama's, since that is what a
 // local box runs; leave anything with a path alone.
+//
+// Except a path ending in /v1: that is the OpenAI *base* URL every such server
+// prints on startup (llama.cpp, vLLM, LM Studio), and it is the thing people
+// paste. Posting to it 404s, which read as "the keeper answered 404" — a
+// working server reported as broken. Complete it to the chat route too.
 export const resolveKeeperEndpoint = (endpoint) => {
     const trimmed = String(endpoint || '').trim().replace(/\/+$/, '')
     if (!trimmed) return ''
     try {
         const url = new URL(trimmed)
         if (url.pathname === '' || url.pathname === '/') return `${trimmed}/api/chat`
+        if (/\/v1$/.test(url.pathname)) return `${trimmed}/chat/completions`
         return trimmed
     } catch {
         return trimmed

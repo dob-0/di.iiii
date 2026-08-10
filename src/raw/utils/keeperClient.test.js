@@ -52,6 +52,16 @@ describe('resolveKeeperEndpoint', () => {
         expect(resolveKeeperEndpoint('http://localhost:11434/')).toBe('http://localhost:11434/api/chat')
     })
 
+    it('completes an OpenAI base URL to the chat route', () => {
+        // The regression: llama.cpp (and vLLM, and LM Studio) print
+        // ".../v1" on startup, so that is what gets pasted. POSTing to it
+        // 404s, and the panel reported a working server as broken.
+        expect(resolveKeeperEndpoint('http://127.0.0.1:8090/v1'))
+            .toBe('http://127.0.0.1:8090/v1/chat/completions')
+        expect(resolveKeeperEndpoint('http://127.0.0.1:8090/v1/'))
+            .toBe('http://127.0.0.1:8090/v1/chat/completions')
+    })
+
     it('leaves an explicit path alone', () => {
         expect(resolveKeeperEndpoint('https://box.local/v1/chat/completions'))
             .toBe('https://box.local/v1/chat/completions')

@@ -16,18 +16,18 @@ describe('KeeperPanelWindow', () => {
         expect(screen.getByText(/Point the keeper at a model/i)).toBeInTheDocument()
         expect(screen.getByRole('button', { name: /ask/i })).toBeDisabled()
 
-        fireEvent.change(screen.getByPlaceholderText('http://localhost:11434'), {
+        fireEvent.change(screen.getByPlaceholderText('http://127.0.0.1:8090/v1'), {
             target: { value: 'http://box:11434' }
         })
         expect(onConfigChange).toHaveBeenCalledWith('keeper-1', { endpoint: 'http://box:11434' })
 
-        fireEvent.change(screen.getByPlaceholderText('qwen3'), { target: { value: 'qwen3' } })
+        fireEvent.change(screen.getByPlaceholderText('qwen3-4b'), { target: { value: 'qwen3' } })
         expect(onConfigChange).toHaveBeenCalledWith('keeper-1', { model: 'qwen3' })
     })
 
     it('hides the setup fields once it is configured', () => {
         render(<KeeperPanelWindow node={node} values={configured} />)
-        expect(screen.queryByPlaceholderText('http://localhost:11434')).not.toBeInTheDocument()
+        expect(screen.queryByPlaceholderText('http://127.0.0.1:8090/v1')).not.toBeInTheDocument()
     })
 
     it('publishes the reply and clears busy when the keeper answers', async () => {

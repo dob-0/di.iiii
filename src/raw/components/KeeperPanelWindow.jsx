@@ -98,7 +98,7 @@ export default function KeeperPanelWindow({ node, values, onReplyChange, onConfi
                             className="raw-keeper-panel-input"
                             type="text"
                             value={endpoint}
-                            placeholder="http://localhost:11434"
+                            placeholder="http://127.0.0.1:8090/v1"
                             onChange={(event) => onConfigChange?.(node.id, { endpoint: event.target.value })}
                         />
                     </label>
@@ -108,7 +108,7 @@ export default function KeeperPanelWindow({ node, values, onReplyChange, onConfi
                             className="raw-keeper-panel-input"
                             type="text"
                             value={model}
-                            placeholder="qwen3"
+                            placeholder="qwen3-4b"
                             onChange={(event) => onConfigChange?.(node.id, { model: event.target.value })}
                         />
                     </label>
