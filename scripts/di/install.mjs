@@ -29,10 +29,23 @@ const run = (command, args, options = {}) => new Promise((resolve, reject) => {
     child.on('exit', (code) => (code === 0 ? resolve() : reject(new Error(`${command} exited ${code}`))))
 })
 
-export const latestRelease = async () => {
-    const response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
-        headers: { Accept: 'application/vnd.github+json' }
-    })
+// timeoutMs is optional because the two callers want different things: `di
+// install` / `di update` are network operations the artist asked for and can
+// wait on, while the once-a-day notice after `di up` must never hold the
+// terminal. Unbounded is the default only because that is what an explicit
+// install already was; nothing should call it unbounded from a start path.
+export const latestRelease = async ({ timeoutMs = 0 } = {}) => {
+    const controller = timeoutMs > 0 ? new AbortController() : null
+    const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null
+    let response
+    try {
+        response = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`, {
+            headers: { Accept: 'application/vnd.github+json' },
+            ...(controller ? { signal: controller.signal } : {})
+        })
+    } finally {
+        if (timer) clearTimeout(timer)
+    }
     if (!response.ok) throw new Error(`could not reach the release feed (${response.status})`)
     const body = await response.json()
     const version = String(body.tag_name || '').replace(/^v/, '')
