@@ -609,7 +609,7 @@ export const WIKI_ARTICLES = [
                 'Windows (PowerShell) — irm https://di-studio.xyz/get.ps1 | iex'
             ] },
             'Then type di up. It starts, opens in your browser, and you are in a Studio that looks exactly like the one online, with an empty Main Space waiting. di down stops it. di help lists the rest.',
-            'This is meant for a laptop at a venue with bad wifi, a studio that would rather not keep its work on someone else’s server, and anyone who wants the piece to still open in ten years. Offline is the normal state, not a broken one: nothing phones home, and the page loads no fonts or scripts from anywhere else.',
+            'This is meant for a laptop at a venue with bad wifi, a studio that would rather not keep its work on someone else’s server, and anyone who wants the piece to still open in ten years. Offline is the normal state, not a broken one. Nothing is sent anywhere: the one outbound request is a version check, at most once a day, which gives up after three seconds and never blocks anything.',
             'Your work lives in a folder called .di in your home directory, deliberately kept apart from the app itself — so updating, rolling back, or removing di.iiii cannot touch it. di uninstall says as much, and leaves your spaces where they are.',
             { list: [
                 'di backup — writes your whole di.iiii to one file you can carry to another machine',
