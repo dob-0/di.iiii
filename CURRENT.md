@@ -13,10 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Claude chat as a Raw node: the key store gets its consumer
-- Why now
-- a tag published nothing, because a legacy path could veto the release
-- the disk incident (96%→28%, weekly prune timer), the secrets backup (daily, two keys, round-trip verified), and backup-pull no longer crying wolf
+- Raw as a workspace: the plan, and the first node in it
 
 Full detail: `PROGRESS.md`.
 

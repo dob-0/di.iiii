@@ -107,6 +107,11 @@ export const ui = {
         `  export PATH="${binDir}:$PATH"`
     ].join('\n'),
 
+    // Printed even when the installer's own PATH already resolves: the shell
+    // the artist ran curl|sh from predates the rc-file change and won't see
+    // the command until a fresh one.
+    freshTerminal: (cmd) => style.dim(`open a new terminal first — that puts ${cmd} on your PATH.`),
+
     pathHintWindows: () => style.dim('open a new terminal — PATH was updated for your user.'),
 
     nameTaken: (existing) => [

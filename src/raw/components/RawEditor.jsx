@@ -13,6 +13,8 @@ import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
+import KeeperPanelWindow from './KeeperPanelWindow.jsx'
+import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
@@ -38,6 +40,7 @@ const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 import { buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
 import { DEFAULT_PROJECT_SPACE_ID } from '../../project/services/projectsApi.js'
 import { getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { isPaletteSummons, resolveZenPreference, writeZenPreference } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
     readLocalWorkspaceDocument,
@@ -145,6 +148,12 @@ export default function RawEditor({
     })
     const [overflowOpen, setOverflowOpen] = useState(false)
     const [helpOpen, setHelpOpen] = useState(false)
+    // Zen: nothing resident on the workspace. Read once, from this device's
+    // preference, defaulting to on only for a workspace with no work in it —
+    // see zenMode.js for why it is not document state.
+    const zenWorkspaceKey = projectId || localStorageKey || 'default'
+    const [zen, setZen] = useState(false)
+    const zenReadRef = useRef(false)
     const [outlinerOpen, setOutlinerOpen] = useState(false)
     const [outlinerFrame, setOutlinerFrame] = useState({ x: 24, y: 56, width: 240, height: 360, zIndex: 20, minimized: false, pinned: false })
     const [chatOpen, setChatOpen] = useState(false)
@@ -320,6 +329,10 @@ export default function RawEditor({
     // shows chrome. Esc already pops the scope stack unconditionally
     // (existing handler below), so chromeless scopes are never a dead end.
     const chromeVisible = useMemo(() => {
+        // Zen wins over the scope rule: a scope that would show chrome still
+        // shows none while the workspace is zen. The palette is the way back,
+        // and Esc still pops the scope stack, so this is never a dead end.
+        if (zen) return false
         for (let i = navStack.length - 1; i >= 1; i--) {
             const scopeNode = authoredNodes.find((n) => n.id === navStack[i])
             if (scopeNode?.typeId === 'universe.space') {
@@ -327,7 +340,7 @@ export default function RawEditor({
             }
         }
         return true
-    }, [navStack, authoredNodes])
+    }, [zen, navStack, authoredNodes])
     // Computed once: pointer type doesn't change mid-session on the devices this
     // matters for, and re-checking on every render would just be wasted work.
     const [pointerVerb] = useState(() => (
@@ -619,6 +632,41 @@ export default function RawEditor({
         : (surfaceSelectedEntity ? surfaceSelectedEntity.components : { worldState: document.worldState })
     const inspectorTitle = surfaceSelectedNode ? surfaceSelectedNode.label : (surfaceSelectedEntity ? surfaceSelectedEntity.name : 'World')
     const inspectorSubtitle = surfaceSelectedNode ? surfaceSelectedNode.typeId : (surfaceSelectedEntity ? surfaceSelectedEntity.type : 'Scene defaults')
+
+    // Read the zen preference ONCE, and only after the document has loaded —
+    // the default depends on whether this workspace already has work in it, and
+    // on first render it always looks empty.
+    useEffect(() => {
+        if (zenReadRef.current || !document) return
+        zenReadRef.current = true
+        setZen(resolveZenPreference(zenWorkspaceKey, { nodeCount: (document.nodes || []).length }))
+    }, [document, zenWorkspaceKey])
+
+    const setZenPreference = useCallback((next) => {
+        setZen(next)
+        writeZenPreference(zenWorkspaceKey, next)
+    }, [zenWorkspaceKey])
+
+    // Cmd/Ctrl+K or a bare `/` opens the palette at the middle of the screen.
+    // Touch already has this: double-tapping empty canvas opens the same
+    // palette, which is why there is no second gesture to learn and no new
+    // chrome for a finger to reach.
+    useEffect(() => {
+        const onKeyDown = (event) => {
+            if (!isPaletteSummons(event)) return
+            event.preventDefault()
+            setPaletteState({
+                open: true,
+                surface: 'graph',
+                placement: {
+                    clientX: Math.round(window.innerWidth / 2) - 140,
+                    clientY: Math.round(window.innerHeight / 3)
+                }
+            })
+        }
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+    }, [])
 
     const openPalette = (surface, placement = null) => {
         setPaletteState({
@@ -966,6 +1014,46 @@ export default function RawEditor({
         if (node.typeId === 'source.mic') {
             return <MicSourcePanel node={node} onLevelsChange={handleMicOutputChange} />
         }
+        if (node.typeId === 'device.midi.in') {
+            return (
+                <MidiInputPanel
+                    node={node}
+                    values={resolvedValues}
+                    onSignalChange={(nodeId, ports) => {
+                        // null clears every port at once (unmount). Otherwise
+                        // only the ports this message carries are written, so a
+                        // CC does not wipe the last note and vice versa.
+                        for (const portId of ['note', 'velocity', 'cc', 'value', 'trigger']) {
+                            if (ports === null) handleLiveOutputChange(nodeId, portId, null)
+                            else if (ports[portId] !== undefined) handleLiveOutputChange(nodeId, portId, ports[portId])
+                        }
+                    }}
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
+        if (node.typeId === 'agent.keeper') {
+            return (
+                <KeeperPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onReplyChange={(nodeId, reply, busy) => {
+                        handleLiveOutputChange(nodeId, 'reply', reply)
+                        handleLiveOutputChange(nodeId, 'busy', busy)
+                    }}
+                    // Endpoint and model are settable in the window itself, not
+                    // only in the inspector: a node the palette can place must be
+                    // usable where it lands, without also placing an inspector.
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
         if (node.typeId === 'view.director') {
             return <DirectorPanelWindow node={node} />
         }
@@ -1106,6 +1194,38 @@ export default function RawEditor({
         })
     }
 
+    // Everything the workspace can summon. The Windows menu's job, the help
+    // button's job and the chat button's job all arrive here rather than
+    // sitting resident on the surface — and any panel node that is currently
+    // hidden is listed generically, so a node type added later is summonable
+    // without touching this list.
+    const hiddenPanelNodes = surfaceNodes.filter(
+        (node) => isPanelNode(node) && node.values?.frame?.visible === false
+    )
+    const paletteCommands = [
+        {
+            id: 'chrome',
+            label: zen ? 'Show the chrome' : 'Hide the chrome',
+            hint: zen ? 'topbar, controls' : 'zen — surface and nodes only',
+            run: () => setZenPreference(!zen)
+        },
+        { id: 'help', label: 'Help', hint: 'what the keys do', run: () => setHelpOpen(true) },
+        { id: 'chat', label: 'Chat', hint: 'talk to whoever is here', run: () => setChatOpen(true) },
+        { id: 'outliner', label: 'Outliner', hint: 'every node in this scope', run: () => setOutlinerOpen(true) },
+        ...hiddenPanelNodes.map((node) => ({
+            id: `window:${node.id}`,
+            label: node.values?.frame?.title || node.label || getNodeType(node.typeId)?.label || 'Panel',
+            hint: `open — ${node.typeId}`,
+            run: () => applyLocalOps({
+                type: 'updateNode',
+                payload: {
+                    nodeId: node.id,
+                    patch: { values: { frame: { ...(node.values?.frame || {}), visible: true } } }
+                }
+            })
+        }))
+    ]
+
     const workspaceTitle = isLocalWorkspace ? 'Blank White Workspace' : (document.projectMeta?.title || 'Raw Project')
     const graphTopInset = chromeVisible ? workspaceTop : 0
 
@@ -1244,6 +1364,7 @@ export default function RawEditor({
                 {/* Graph is the primary surface — always visible */}
                 <RawGraphSurface
                     key={currentScopeId || 'root'}
+                    chromeless={!chromeVisible}
                     topInset={graphTopInset}
                     bottomInset={graphBottomInset}
                     nodes={graphCardNodes}
@@ -1429,6 +1550,7 @@ export default function RawEditor({
                 placement={paletteState.placement}
                 onClose={() => setPaletteState({ open: false, surface: 'world', placement: null })}
                 onCreate={handlePaletteCreate}
+                commands={paletteCommands}
             />
 
         </main>

@@ -23,7 +23,7 @@ const { WebSocketServer } = require('ws')
 const { URL } = require('url')
 const logger = require('./logger')
 
-// Node ids reserved for the rite's own machines (the di_bot keeper, di-bo, the
+// Node ids reserved for the rite's own machines (the di.jet keeper, di-bo, the
 // br_id_ge presence script). Visitors' browsers are mesh clients too — the
 // public index.html/field.html embed the relay URL — so a blanket secret would
 // either break co-presence or ship the secret in public HTML, where it is not a

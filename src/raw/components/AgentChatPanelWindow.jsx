@@ -185,17 +185,19 @@ export default function AgentChatPanelWindow({ chatId, onPersistChatId }) {
             </div>
             {connection === 'guest' ? (
                 <div className="raw-chat-input-row">
-                    {providers?.github?.enabled && (
+                    {/* /api/auth/providers returns plain booleans ({ github: true }),
+                        same shape AuthGate consumes — not { enabled } objects */}
+                    {providers?.github && (
                         <button type="button" onClick={() => { window.location.href = getOAuthUrl('github') }}>
                             Sign in with GitHub
                         </button>
                     )}
-                    {providers?.google?.enabled && (
+                    {providers?.google && (
                         <button type="button" onClick={() => { window.location.href = getOAuthUrl('google') }}>
                             Sign in with Google
                         </button>
                     )}
-                    {!providers?.github?.enabled && !providers?.google?.enabled && (
+                    {!providers?.github && !providers?.google && (
                         <span className="raw-chat-message-author">Sign in with an account to chat.</span>
                     )}
                 </div>

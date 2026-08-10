@@ -111,6 +111,12 @@ const buildWirePath = (from, to) => {
 }
 
 export default function RawGraphSurface({
+    // Zen: the zoom controls stop being resident. They are NOT removed — on a
+    // touch screen there is no wheel, so they are the only way to zoom, and the
+    // double-tap-vs-zoom-button guard exists because of a real bug. They fade
+    // out of the way instead, and come back on touch or focus. Optional and
+    // defaulted, because Studio wraps this component and passes no extra props.
+    chromeless = false,
     topInset = 0,
     // Chrome that overlays the BOTTOM of the canvas (the selection sheet on a
     // phone). The fit used to centre content in the container's full height,
@@ -815,7 +821,7 @@ export default function RawGraphSurface({
             onKeyDown={handleSectionKeyDown}
             onPointerDown={handleSurfacePointerDown}
         >
-            <div className="raw-graph-zoom-controls">
+            <div className={`raw-graph-zoom-controls${chromeless ? ' is-chromeless' : ''}`}>
                 <button type="button" aria-label="Zoom out" onClick={() => updateZoom(zoom - GRAPH_ZOOM_STEP)}>-</button>
                 <span className="raw-graph-zoom-value">{Math.round(zoom * 100)}%</span>
                 <button type="button" aria-label="Zoom in" onClick={() => updateZoom(zoom + GRAPH_ZOOM_STEP)}>+</button>

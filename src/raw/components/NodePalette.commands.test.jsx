@@ -1,0 +1,71 @@
+import { fireEvent, render, screen } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import NodePalette from './NodePalette.jsx'
+
+const placement = { clientX: 100, clientY: 100 }
+
+const open = (props = {}) => render(
+    <NodePalette open surface="graph" placement={placement} onClose={() => {}} onCreate={() => {}} {...props} />
+)
+
+describe('NodePalette as the workspace summons', () => {
+    it('lists commands ABOVE node types', () => {
+        // With the chrome hidden these rows are the only way back to it, so
+        // they must not sit below a scroll of node types.
+        open({ commands: [{ id: 'chrome', label: 'Show the chrome', hint: 'topbar', run: () => {} }] })
+        const rows = screen.getAllByRole('button')
+        expect(rows[0]).toHaveTextContent('Show the chrome')
+    })
+
+    it('runs a command and closes, rather than creating a node', () => {
+        const run = vi.fn()
+        const onClose = vi.fn()
+        const onCreate = vi.fn()
+        open({ onClose, onCreate, commands: [{ id: 'help', label: 'Help', hint: 'what the keys do', run }] })
+
+        fireEvent.click(screen.getByText('Help'))
+        expect(run).toHaveBeenCalled()
+        expect(onCreate).not.toHaveBeenCalled()
+        // Closed BEFORE running: a command that opens a panel would otherwise
+        // put it behind the palette's own backdrop.
+        expect(onClose).toHaveBeenCalled()
+    })
+
+    it('filters commands by the same query as nodes', () => {
+        open({
+            commands: [
+                { id: 'help', label: 'Help', hint: 'what the keys do', run: () => {} },
+                { id: 'chat', label: 'Chat', hint: 'talk to whoever is here', run: () => {} }
+            ]
+        })
+        fireEvent.change(screen.getByPlaceholderText(/type a node or panel name/i), { target: { value: 'chat' } })
+        expect(screen.getByText('Chat')).toBeInTheDocument()
+        expect(screen.queryByText('Help')).not.toBeInTheDocument()
+    })
+
+    it('finds a command by its hint, not only its label', () => {
+        open({ commands: [{ id: 'chrome', label: 'Show the chrome', hint: 'topbar, controls', run: () => {} }] })
+        fireEvent.change(screen.getByPlaceholderText(/type a node or panel name/i), { target: { value: 'topbar' } })
+        expect(screen.getByText('Show the chrome')).toBeInTheDocument()
+    })
+
+    it('Enter runs the highlighted command', () => {
+        const run = vi.fn()
+        open({ commands: [{ id: 'help', label: 'Help', hint: '', run }] })
+        fireEvent.keyDown(screen.getByPlaceholderText(/type a node or panel name/i), { key: 'Enter' })
+        expect(run).toHaveBeenCalled()
+    })
+
+    it('still creates nodes — commands are additive, not a replacement', () => {
+        const onCreate = vi.fn()
+        open({ onCreate, commands: [{ id: 'help', label: 'Help', hint: '', run: () => {} }] })
+        fireEvent.change(screen.getByPlaceholderText(/type a node or panel name/i), { target: { value: 'Number' } })
+        fireEvent.keyDown(screen.getByPlaceholderText(/type a node or panel name/i), { key: 'Enter' })
+        expect(onCreate).toHaveBeenCalled()
+        expect(onCreate.mock.calls[0][0].definition.id).toMatch(/^value\./)
+    })
+
+    it('works with no commands at all', () => {
+        expect(() => open()).not.toThrow()
+    })
+})

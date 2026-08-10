@@ -83,7 +83,11 @@ export const start = async ({ home, port, host = '127.0.0.1', verbose = false })
             // what makes it usable without an account; loopback-only binding
             // above is what keeps that from meaning "the café can edit it".
             REQUIRE_AUTH: 'false',
-            NODE_ENV: 'production'
+            NODE_ENV: 'production',
+            // NODE_ENV=production would otherwise close the local-operator
+            // gate (agent board, local claude chat) on a personal install.
+            // Loopback binding above is still what keeps it local-only.
+            DI_LOCAL: '1'
         }
     })
 

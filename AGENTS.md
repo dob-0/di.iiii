@@ -98,7 +98,7 @@ unit test. Full standard, and the techniques that do NOT work here:
 
 - Two lanes, four names: `dev` branch → staging.di-studio.xyz (rehearsal) · `main` branch → di-studio.xyz (live). Staging/prod are deploy targets, not branches.
 - Branch flow `dev -> main`, promote only after staging verify. Don't start routine work on `main`; use `main` directly only for emergency hotfixes.
-- Fork work lands on a task branch (`feat/…`, `fix/…`, `chore/…`), never the fork's `main`/`dev`. Pushing a task branch triggers `.github/workflows/auto-pr.yml`, which opens/updates a PR to `dob-0/di.iiii`'s `dev`. A push to the fork's `main`/`dev` does NOT notify upstream.
+- Fork work lands on a task branch (`feat/…`, `fix/…`, `chore/…`), never the fork's `main`/`dev`. Pushing a task branch triggers `.github/workflows/auto-pr.yml`, which opens/updates a PR to `dob-0/di.iiii`'s `dev`. A push to the fork's `main`/`dev` does NOT notify upstream. A fresh fork must enable Actions once (GitHub disables fork workflows by default) and set an `UPSTREAM_PR_TOKEN` secret before auto-PR can run.
 - Upstream (dob-side) agents: review incoming fork PRs against `dev` (`gh pr checkout <n>`, validate, merge to `dev`); promote `dev -> main` only when asked.
 - Full contract: [docs/ai/parallel-agents.md](docs/ai/parallel-agents.md).
 

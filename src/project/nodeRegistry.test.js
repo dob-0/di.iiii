@@ -212,6 +212,11 @@ describe('listNodeTypes', () => {
         expect(results.map(t => t.id)).not.toContain('geom.sphere')
     })
 
+    it('matches keywords — "claude" and "chat" find the agent node', () => {
+        expect(listNodeTypes({ query: 'claude' }).map(t => t.id)).toContain('agent')
+        expect(listNodeTypes({ query: 'chat' }).map(t => t.id)).toContain('agent')
+    })
+
     it('returns all nodes including web-only when runtime filter is any (no filter)', () => {
         const all = listNodeTypes({ runtime: 'any', includeUnimplemented: true })
         expect(all.length).toBe(Object.keys(NODE_TYPES).length)
@@ -288,7 +293,10 @@ describe('getNodeInputs / getNodeOutputs', () => {
 describe('unimplemented node types', () => {
     it('withholds types with nothing behind them from the palette', () => {
         const offered = listNodeTypes().map((type) => type.id)
-        for (const id of ['source.ar', 'device.midi.in', 'stream.compositor', 'universe.link']) {
+        // device.midi.in left this list on 2026-08-08 — Web MIDI is real in the
+        // page, so it is implemented. device.midi.out stands in its place: it
+        // has no sender yet.
+        for (const id of ['source.ar', 'device.midi.out', 'stream.compositor', 'universe.link']) {
             expect(offered).not.toContain(id)
         }
     })
@@ -298,7 +306,7 @@ describe('unimplemented node types', () => {
         for (const id of [
             'value.number', 'math.add', 'geom.cube', 'world.light',
             'universe.world', 'view.image', 'view.browser', 'time',
-            'source.webcam', 'source.mic'
+            'source.webcam', 'source.mic', 'agent.keeper', 'device.midi.in'
         ]) {
             expect(offered).toContain(id)
         }
