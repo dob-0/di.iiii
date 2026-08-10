@@ -14,6 +14,7 @@ import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
 import KeeperPanelWindow from './KeeperPanelWindow.jsx'
+import DijetSourcePanel from './DijetSourcePanel.jsx'
 import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
@@ -1013,6 +1014,27 @@ export default function RawEditor({
         }
         if (node.typeId === 'source.mic') {
             return <MicSourcePanel node={node} onLevelsChange={handleMicOutputChange} />
+        }
+        if (node.typeId === 'device.dijet') {
+            return (
+                <DijetSourcePanel
+                    node={node}
+                    values={resolvedValues}
+                    onSignalChange={(nodeId, ports) => {
+                        // null clears every port at once (unmount). Otherwise
+                        // only the ports this sample carries are written, so a
+                        // battery reading does not wipe the last lidar range.
+                        for (const portId of ['nearest', 'battery', 'speed', 'trigger']) {
+                            if (ports === null) handleLiveOutputChange(nodeId, portId, null)
+                            else if (ports[portId] !== undefined) handleLiveOutputChange(nodeId, portId, ports[portId])
+                        }
+                    }}
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
         }
         if (node.typeId === 'device.midi.in') {
             return (

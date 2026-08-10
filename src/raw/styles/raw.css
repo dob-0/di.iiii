@@ -3305,6 +3305,94 @@
     overflow-wrap: anywhere;
 }
 
+/* di.jet — same ground and cyan accents as the capture family; a robot source
+   is not a new panel language. */
+.raw-dijet-panel {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    background: #080c14;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--di-cyan-dim, #9fd7ff);
+}
+
+.raw-dijet-panel-status {
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: rgba(77, 249, 255, 0.07);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.25));
+}
+
+.raw-dijet-panel-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.raw-dijet-panel-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.raw-dijet-panel-input {
+    width: 100%;
+    box-sizing: border-box;
+    /* Touch target — the address has to be editable with one finger. */
+    min-height: 34px;
+    padding: 6px 8px;
+    font: inherit;
+    color: #e8f6ff;
+    background: rgba(77, 249, 255, 0.06);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    border-radius: 4px;
+}
+
+.raw-dijet-panel-input:focus-visible {
+    outline: 2px solid var(--di-cyan, #4df9ff);
+    outline-offset: 1px;
+}
+
+.raw-dijet-panel-readout {
+    margin: 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 12px;
+    padding: 8px 10px;
+    color: #e8f6ff;
+    background: rgba(8, 12, 20, 0.7);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.22));
+    border-radius: 4px;
+}
+
+.raw-dijet-panel-readout dt {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+    align-self: center;
+}
+
+.raw-dijet-panel-readout dd {
+    margin: 0;
+    text-align: right;
+    /* the numbers must not shuffle sideways as they change */
+    font-variant-numeric: tabular-nums;
+}
+
+.raw-dijet-panel-note {
+    margin-top: auto;
+    font-size: 11px;
+    opacity: 0.7;
+}
+
 /* Keeper — reuses the capture family's ground and cyan accents rather than
    introducing a second panel language. */
 .raw-keeper-panel {

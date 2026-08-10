@@ -157,6 +157,11 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // look broken in the one graph that exists to show what works.
     add('midiIn', 'device.midi.in', { label: 'MIDI In', col: 7, row: 1, values: { channel: 0 } })
 
+    // Fifth member of the live-output family, and the first that is a machine
+    // in the room rather than something plugged into this one. It reads a
+    // robot's lidar, battery and speed over rosbridge and never drives it.
+    add('dijet', 'device.dijet', { label: 'di.jet', col: 7, row: 2, values: { host: '192.168.1.11' } })
+
     const id = (key) => made.get(key)?.id || ''
     const wire = (fromKey, fromPort, toKey, toPort) => {
         const from = id(fromKey)

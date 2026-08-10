@@ -142,6 +142,20 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
                 return context?.liveOutputs?.get(`${node.id}:${portId}`) ?? 0
             }
             break
+        case 'device.dijet':
+            // Live side channel again, written by DijetSourcePanel from the
+            // robot's rosbridge socket. `nearest` stays null when the lidar
+            // sees nothing rather than falling back to 0 -- a graph reading 0
+            // metres would believe something is touching the robot, which is
+            // the opposite of what an empty scan means. `trigger` carries the
+            // same rising count as device.midi.in.
+            if (portId === 'nearest' || portId === 'battery' || portId === 'speed') {
+                return context?.liveOutputs?.get(`${node.id}:${portId}`) ?? null
+            }
+            if (portId === 'trigger') {
+                return context?.liveOutputs?.get(`${node.id}:trigger`) ?? 0
+            }
+            break
         case 'agent.keeper':
             // Same live-output side channel as the capture family: the reply
             // arrives from a network call the panel makes, so it cannot be a

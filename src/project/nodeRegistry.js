@@ -375,6 +375,36 @@ export const NODE_TYPES = {
         defaultFrame: { width: 380, height: 340 },
     },
 
+    'device.dijet': {
+        id: 'device.dijet',
+        label: 'di.jet',
+        category: 'device',
+        // Same reasoning as device.midi.in: reachable from the page itself, so
+        // it needs no local bridge. di.jet runs rosbridge on a plain WebSocket,
+        // and the page subscribes to it directly.
+        runtime: 'web',
+        singleton: false,
+        inputs: [],
+        // A LaserScan is 260 numbers and a graph wants one, so the lidar
+        // arrives as "nearest thing" rather than as an array. `nearest` is null
+        // when nothing returns, never 0 -- zero would read as "touching".
+        outputs: [
+            { id: 'nearest', type: 'number', label: 'Nearest (m)' },
+            { id: 'battery', type: 'number', label: 'Battery (V)' },
+            { id: 'speed',   type: 'number', label: 'Speed (m/s)' },
+            { id: 'trigger', type: 'signal', label: 'Trigger'     },
+        ],
+        defaultValues: { host: '192.168.1.11' },
+        configInputs: [
+            { id: 'host', type: 'string', label: 'Robot host' },
+        ],
+        // panel-2d for the capture family's reason: "the robot is off",
+        // "wrong network" and "no lidar returns" are all ordinary outcomes that
+        // need somewhere to be said.
+        render: 'panel-2d',
+        defaultFrame: { width: 380, height: 340 },
+    },
+
     'device.midi.out': {
         id: 'device.midi.out',
         label: 'MIDI Out',
