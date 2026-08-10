@@ -1,3 +1,4 @@
+import { PORT_STATUS } from '../../project/graph/livePorts.js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 // Web MIDI, as the first capability that will eventually have TWO providers:
@@ -16,6 +17,27 @@ export const MIDI_STATUS = {
     NO_DEVICES: 'no-devices',
     ERROR: 'error'
 }
+
+// Onto the graph's port vocabulary, so a `note` port that is empty can say
+// which kind of empty it is. UNSUPPORTED and NO_DEVICES both land on
+// UNAVAILABLE — from the graph's side they are the same fact ("not here, and
+// retrying will not change it"); the difference is a sentence for the panel,
+// which keeps its own richer message.
+export const portStatusForMidiStatus = (midiStatus) => {
+    switch (midiStatus) {
+        case MIDI_STATUS.REQUESTING: return PORT_STATUS.STARTING
+        case MIDI_STATUS.ACTIVE: return PORT_STATUS.LIVE
+        case MIDI_STATUS.DENIED: return PORT_STATUS.DENIED
+        case MIDI_STATUS.UNSUPPORTED:
+        case MIDI_STATUS.NO_DEVICES: return PORT_STATUS.UNAVAILABLE
+        case MIDI_STATUS.ERROR: return PORT_STATUS.ERROR
+        default: return PORT_STATUS.IDLE
+    }
+}
+
+// Every port on this node shares one device's fate, so the device's status is
+// reported on all of them rather than only the one that last carried a value.
+export const MIDI_SIGNAL_PORTS = Object.freeze(['note', 'velocity', 'cc', 'value', 'trigger'])
 
 const NOTE_OFF = 0x8
 const NOTE_ON = 0x9

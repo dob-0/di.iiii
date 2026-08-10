@@ -1,5 +1,6 @@
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { PORT_STATUS } from '../../project/graph/livePorts.js'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 
 afterEach(() => {
@@ -46,7 +47,13 @@ describe('WebcamSourcePanel', () => {
         })
 
         expect(screen.queryByRole('status')).toBeNull()
-        expect(onFrameChange).toHaveBeenLastCalledWith('cam-1', expect.objectContaining({ isTexture: true }))
+        // The texture now travels with the reason the port is (or is not)
+        // carrying it, so the graph can say "denied" rather than only "empty".
+        expect(onFrameChange).toHaveBeenLastCalledWith(
+            'cam-1',
+            expect.objectContaining({ isTexture: true }),
+            { status: PORT_STATUS.LIVE, message: null }
+        )
 
         view.unmount()
         expect(onFrameChange).toHaveBeenLastCalledWith('cam-1', null)

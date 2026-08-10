@@ -1,4 +1,5 @@
 import { getNodeInputs } from '../nodeRegistry.js'
+import { readLivePort, readLivePortStatus } from './livePorts.js'
 
 const asNumber = (value, fallback = 0) => {
     const next = Number(value)
@@ -51,9 +52,11 @@ const buildEdgesByTarget = (edges) => {
 // lifetime of one pass, which is exactly right here — time must not advance
 // midway through a pass or two nodes reading the same clock would disagree.
 // liveOutputs carries values a node output can't serialize into node.values —
-// a captured MediaStream's THREE.VideoTexture, say — keyed by `${nodeId}:${portId}`.
-// Same idea as `now` for the clock: injected per-pass by whichever renderer
-// owns the live resource, read generically by computeNodeOutput/evaluateNodeInput.
+// a captured MediaStream's THREE.VideoTexture, say. See ./livePorts.js for the
+// contract; it is a LivePortRegistry, or (still, for hand-built contexts and
+// older tests) a bare Map keyed `${nodeId}:${portId}`. Same idea as `now` for
+// the clock: injected per-pass by whichever renderer owns the live resource,
+// read generically by computeNodeOutput/evaluateNodeInput.
 export const createNodeGraphContext = (document = {}, { now = 0, liveOutputs = null } = {}) => {
     const edges = document.edges || []
     return {
@@ -62,7 +65,12 @@ export const createNodeGraphContext = (document = {}, { now = 0, liveOutputs = n
         edgesByTarget: buildEdgesByTarget(edges),
         outputCache: new Map(),
         now: Number.isFinite(now) ? now : 0,
-        liveOutputs
+        liveOutputs,
+        // Why a port is empty, for anything that renders a node rather than
+        // evaluating it. Kept off `evaluateNodeOutput` deliberately: a status
+        // is not a value, and a downstream math node must never be able to
+        // consume "denied" as a number.
+        portStatus: (nodeId, portId) => readLivePortStatus(liveOutputs, nodeId, portId)
     }
 }
 
@@ -128,7 +136,7 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
             break
         case 'source.webcam':
             if (portId === 'frame') {
-                return context?.liveOutputs?.get(`${node.id}:frame`) ?? null
+                return readLivePort(context?.liveOutputs, node.id, 'frame') ?? null
             }
             break
         case 'device.midi.in':
@@ -139,7 +147,7 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
             // not by catching a pulse between frames.
             if (portId === 'note' || portId === 'velocity' || portId === 'cc'
                 || portId === 'value' || portId === 'trigger') {
-                return context?.liveOutputs?.get(`${node.id}:${portId}`) ?? 0
+                return readLivePort(context?.liveOutputs, node.id, portId) ?? 0
             }
             break
         case 'agent.keeper':
@@ -148,15 +156,15 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
             // serialised node value. An unanswered keeper reads as empty
             // string rather than undefined, so a downstream string input gets
             // something it can render instead of "undefined".
-            if (portId === 'reply') return context?.liveOutputs?.get(`${node.id}:reply`) ?? ''
-            if (portId === 'busy') return context?.liveOutputs?.get(`${node.id}:busy`) ?? false
+            if (portId === 'reply') return readLivePort(context?.liveOutputs, node.id, 'reply') ?? ''
+            if (portId === 'busy') return readLivePort(context?.liveOutputs, node.id, 'busy') ?? false
             break
         case 'source.mic':
             if (portId === 'volume') {
-                return context?.liveOutputs?.get(`${node.id}:volume`) ?? 0
+                return readLivePort(context?.liveOutputs, node.id, 'volume') ?? 0
             }
             if (portId === 'frequency') {
-                return context?.liveOutputs?.get(`${node.id}:frequency`) ?? null
+                return readLivePort(context?.liveOutputs, node.id, 'frequency') ?? null
             }
             break
         case 'math.add':

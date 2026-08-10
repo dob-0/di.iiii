@@ -25,6 +25,8 @@ import { getInspectorSections } from '../../project/entityRegistry.js'
 import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { createLivePortRegistry } from '../../project/graph/livePorts.js'
+import { MIDI_SIGNAL_PORTS } from '../utils/midiCapture.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
@@ -901,23 +903,21 @@ export default function RawEditor({
     const clockNow = useGraphClock(hasClockNode(document.nodes))
     // Live, non-serializable node outputs (a captured webcam's VideoTexture)
     // that can't live in node.values — see createNodeGraphContext's liveOutputs.
-    const [liveOutputs, setLiveOutputs] = useState(() => new Map())
-    const handleLiveOutputChange = useCallback((nodeId, portId, value) => {
-        setLiveOutputs((prev) => {
-            const key = `${nodeId}:${portId}`
-            // null/undefined clears the port (unmount, capture failed); any
-            // other value — including 0, an empty array — is set as-is, so a
-            // real "silent microphone" reading doesn't get treated as unset.
-            const clear = value === null || value === undefined
-            if (clear && !prev.has(key)) return prev
-            // identical value re-reported (mic at a steady level, the same
-            // texture instance) must not re-render the whole editor
-            if (!clear && prev.get(key) === value) return prev
-            const next = new Map(prev)
-            if (clear) next.delete(key)
-            else next.set(key, value)
-            return next
-        })
+    const [liveOutputs, setLiveOutputs] = useState(createLivePortRegistry)
+    // The registry owns the clear/identity rules that used to live inline here
+    // — null/undefined clears the port, a falsy reading like a silent mic is
+    // still a reading, and an unchanged report returns the same instance so a
+    // capture reporting every frame doesn't re-render the editor 60 times a
+    // second. See src/project/graph/livePorts.js.
+    const handleLiveOutputChange = useCallback((nodeId, portId, value, status = null) => {
+        setLiveOutputs((prev) => prev.set(nodeId, portId, value, status))
+    }, [])
+    // Why a port is empty, with no value attached: the camera was denied, MIDI
+    // isn't available in this browser, the keeper's endpoint refused. Without
+    // this a node can only ever show nothing, and "nothing" is the same shape
+    // whether the user said no or the device is missing.
+    const handleLiveOutputStatus = useCallback((nodeId, portId, status, message = null) => {
+        setLiveOutputs((prev) => prev.report(nodeId, portId, status, message))
     }, [])
     // Stable per-port wrappers for the capture panels. These MUST NOT be
     // inline lambdas at the call site: the panels' effects depend on the
@@ -925,8 +925,8 @@ export default function RawEditor({
     // every render — with a live capture that is set→delete→set on
     // liveOutputs, an infinite update loop (hit with an active webcam,
     // 2026-08-08).
-    const handleFrameOutputChange = useCallback((nodeId, texture) => {
-        handleLiveOutputChange(nodeId, 'frame', texture)
+    const handleFrameOutputChange = useCallback((nodeId, texture, status = null) => {
+        handleLiveOutputChange(nodeId, 'frame', texture, status)
     }, [handleLiveOutputChange])
     const handleMicOutputChange = useCallback((nodeId, volume, frequency) => {
         handleLiveOutputChange(nodeId, 'volume', volume)
@@ -948,6 +948,11 @@ export default function RawEditor({
             { type: 'deleteNode', payload: { nodeId } },
             { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
         ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })
+        // The node is gone from the document, but its live ports are not in the
+        // document — they are in the registry, which knows nothing about
+        // deletion. Left alone, a deleted webcam's VideoTexture stays
+        // referenced here and the GPU never gets it back.
+        setLiveOutputs((prev) => prev.clearNode(nodeId))
     }, [applyLocalOps])
     const handleMoveNode = useCallback((nodeId, nextX, nextY) => applyLocalOps({
         type: 'updateNode',
@@ -1023,9 +1028,16 @@ export default function RawEditor({
                         // null clears every port at once (unmount). Otherwise
                         // only the ports this message carries are written, so a
                         // CC does not wipe the last note and vice versa.
-                        for (const portId of ['note', 'velocity', 'cc', 'value', 'trigger']) {
+                        for (const portId of MIDI_SIGNAL_PORTS) {
                             if (ports === null) handleLiveOutputChange(nodeId, portId, null)
                             else if (ports[portId] !== undefined) handleLiveOutputChange(nodeId, portId, ports[portId])
+                        }
+                    }}
+                    onStatusChange={(nodeId, status, message) => {
+                        // One device, five ports, one fate — a browser with no
+                        // Web MIDI leaves all five empty for the same reason.
+                        for (const portId of MIDI_SIGNAL_PORTS) {
+                            handleLiveOutputStatus(nodeId, portId, status, message)
                         }
                     }}
                     onConfigChange={(nodeId, patch) => applyLocalOps({

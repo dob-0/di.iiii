@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { WEBCAM_STATUS, useWebcamCapture } from '../utils/webcamCapture.js'
+import { portStatusForCaptureStatus } from '../utils/mediaCaptureStatus.js'
 
 const STATUS_MESSAGE = {
     [WEBCAM_STATUS.REQUESTING]: 'Requesting camera access…',
@@ -12,10 +13,17 @@ export default function WebcamSourcePanel({ node, onFrameChange }) {
     const videoRef = useRef(null)
     const { status, texture, errorMessage } = useWebcamCapture(videoRef)
 
+    // The status rides along with the texture rather than going through a
+    // second channel, because they must never disagree: a port reporting
+    // DENIED while still handing out the last good frame is worse than one
+    // that is simply blank.
     useEffect(() => {
-        onFrameChange?.(node.id, texture)
+        onFrameChange?.(node.id, texture, {
+            status: portStatusForCaptureStatus(status),
+            message: errorMessage || null
+        })
         return () => onFrameChange?.(node.id, null)
-    }, [node.id, texture, onFrameChange])
+    }, [node.id, texture, status, errorMessage, onFrameChange])
 
     return (
         <div className="raw-webcam-panel">

@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- estate-keeping rules from the worktree audit
+- The live-port contract (`RAW_WORKSPACE.md` §5.1, "the keystone") — built at last
 
 Full detail: `PROGRESS.md`.
 
@@ -27,6 +27,13 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 - **Lane consolidation in progress** — Studio-as-a-node rebase + Raw-as-default promotion pending, see Last session / plan file above.
 - **Real-browser looks owed**: `source.webcam`/`source.mic` (camera+mic needed) +
   PR #93's 4 items (Inspector wheel-scroll, audio toggles, primitive clamping).
+  **Now also the live-port statuses** — `PORT_STATUS` reaches the graph from the
+  webcam and MIDI panels, and *nothing renders it on the node yet*. Deliberate:
+  Raw's node card is UI/UX's, not the node system's. Until something shows it,
+  the contract is proven by tests only.
+- **§5.1 is built, §5.1's siblings are not.** `livePorts.js` gives per-port
+  status; a real scheduler, per-node state across frames, and a
+  `capabilities()` query are still missing. Evaluation is still React render.
 - All 8 prod spaces owned (queried prod 2026-08-08); releasing ownership doesn't
   revoke the scope it granted (deliberate). Mesh gate ARMED both tiers; leaked
   PAT inferred-closed; **staging Google OAuth secret parked by the user** —

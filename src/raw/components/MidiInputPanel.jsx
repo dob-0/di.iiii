@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { MIDI_STATUS, useMidiInput } from '../utils/midiCapture.js'
+import { MIDI_STATUS, portStatusForMidiStatus, useMidiInput } from '../utils/midiCapture.js'
+import { PORT_STATUS } from '../../project/graph/livePorts.js'
 
 const STATUS_MESSAGE = {
     [MIDI_STATUS.REQUESTING]: 'Asking for MIDI access…',
@@ -13,7 +14,7 @@ const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 
 // Middle C = note 60 = C4 in the convention most controllers print on the case.
 export const noteName = (note) => `${NOTE_NAMES[note % 12]}${Math.floor(note / 12) - 1}`
 
-export default function MidiInputPanel({ node, values, onSignalChange, onConfigChange }) {
+export default function MidiInputPanel({ node, values, onSignalChange, onStatusChange, onConfigChange }) {
     const deviceId = values?.deviceId ?? node.values?.deviceId ?? ''
     const channel = Number(values?.channel ?? node.values?.channel ?? 0)
 
@@ -44,6 +45,19 @@ export default function MidiInputPanel({ node, values, onSignalChange, onConfigC
     const { status, devices, errorMessage } = useMidiInput({ deviceId, channel, onMessage: handleMessage })
 
     useEffect(() => () => onSignalChange?.(node.id, null), [node.id, onSignalChange])
+
+    // Tell the graph why the ports are empty. Safari and Firefox have no Web
+    // MIDI at all, which is the single most common reason this node produces
+    // nothing — and until now the only place that fact appeared was inside
+    // this window.
+    useEffect(() => {
+        onStatusChange?.(node.id, portStatusForMidiStatus(status), errorMessage || null)
+        // Back to IDLE on unmount, for the same reason the value ports clear:
+        // this window closing is not evidence that the browser still has no
+        // MIDI. A status that outlives the thing reporting it is a lie with a
+        // long shelf life.
+        return () => onStatusChange?.(node.id, PORT_STATUS.IDLE, null)
+    }, [node.id, status, errorMessage, onStatusChange])
 
     const showStatus = status !== MIDI_STATUS.ACTIVE
 

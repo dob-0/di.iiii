@@ -150,8 +150,20 @@ types cost zero migration.
 
 ### 5.1 Formalise the live-port contract — the keystone
 
-`liveOutputs` works but is ad hoc: a `Map` in one component's state, with no
-lifecycle beyond mount/unmount, no error state, no notion of *who* provides a port.
+**Status: the status half is built (`src/project/graph/livePorts.js`). The
+provider registry and the capability query are not.**
+
+`liveOutputs` is no longer a bare `Map` — it is a `LivePortRegistry` that owns
+the key spelling, the clear/identity rules that used to sit inline in
+`RawEditor`, and a status per port. `source.webcam` and `device.midi.in` report
+theirs; both panels already knew why they were dark and simply never told the
+graph. A bare `Map` is still accepted everywhere, so nothing was a breaking
+change.
+
+Still ad hoc: there is no `registerProvider`, so a port's *provider* is still
+whichever panel happens to be mounted, and no `capabilities()`, so a node
+cannot ask what this host can do before trying. Those two are what a bridge
+needs; the status is what a node window needs.
 
 Turn it into a small explicit contract:
 
@@ -168,6 +180,15 @@ invents its own convention.
 **Regression guard:** a test asserting that a node whose provider reports `denied`
 renders a denied state rather than an empty panel — the silent-failure class that
 43 of 134 known fixes fall into.
+
+**Guard status: half-paid, and the unpaid half is the one that matters.**
+`livePorts.test.js` (31 cases) asserts the contract *carries* denied, keeps a
+falsy reading, drops a stale value on failure, keeps a live value on a
+non-failure report, and never re-renders on an unchanged report.
+`WebcamSourcePanel.test.jsx` asserts the panel *reports* it. **Nothing yet
+asserts a node card renders it, because nothing renders it** — the node card is
+UI/UX's surface. Until that lands this is exactly the silent-failure shape the
+guard was written against: the reason now travels, and still nobody shows it.
 
 ### 5.2 The agent node — the highest-value single node
 
