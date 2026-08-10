@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- stale-tree guard for the main checkout
+- the estate map, inside /admin, without leaking it
 
 Full detail: `PROGRESS.md`.
 

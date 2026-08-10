@@ -48,6 +48,7 @@ const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
 const { registerAiChatRoutes } = require('./routes/aiChatRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
+const { registerEstateRoutes } = require('./routes/estateRoutes')
 const openCallStore = require('./openCallStore')
 const {
   listUsers,
@@ -1401,6 +1402,11 @@ registerAiConnectionRoutes(router)
 registerAgentBoardRoutes(router)
 
 registerAiChatRoutes(router)
+
+registerEstateRoutes(router, {
+  requireAdminAlways,
+  estateMapPath: config.directories.estateMapPath
+})
 
 registerOpenCallRoutes(router, {
   requireAdminAlways,
