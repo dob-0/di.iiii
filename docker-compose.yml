@@ -83,6 +83,15 @@ services:
       MESH_ROOM_SECRET: ${MESH_ROOM_SECRET:-}
       MESH_PROTECTED_NODE_PREFIXES: ${MESH_PROTECTED_NODE_PREFIXES:-}
 
+      # The tunnel — inscriptionRoutes.js mints a Telegram deep link for the
+      # person who can prove a crossing, and di.bo verifies it with the same
+      # secret. Unset on either side means the route 404s and the tunnel simply
+      # does not exist, which is the safe direction. Same lesson as the mesh
+      # secret directly above: a secret the deployment cannot deliver is not a
+      # secret it has, and the .env would have looked correct the whole time.
+      TUNNEL_SHARED_SECRET: ${TUNNEL_SHARED_SECRET:-}
+      TUNNEL_BOT_USERNAME: ${TUNNEL_BOT_USERNAME:-}
+
       # approvalGate.js — see serverXR/.env.example. Unset (default
       # false/empty) leaves every gated route behaving exactly as before
       # this feature existed; staging overrides via STAGING_APPROVAL_*
