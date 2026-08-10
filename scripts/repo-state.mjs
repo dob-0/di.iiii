@@ -43,6 +43,23 @@ const getCurrentBranchBehindDev = (branch) => {
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
+// The cases getCurrentBranchBehindDev deliberately skips — detached HEAD and a stale
+// local dev — are exactly how the main checkout served old code unnoticed (2026-08-10,
+// 115 commits behind). Counted against the local origin/dev ref; no fetch.
+const getHeadBehindDev = (branch) => {
+  if (branch && branch !== 'dev') return null
+  const out = git(['rev-list', '--count', 'HEAD..origin/dev'])
+  const n = Number(out)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+// "[gone]" = upstream configured but deleted on the remote (a merged branch) — a
+// checkout parked there is a stale viewing surface. Distinct from never-pushed.
+const isCurrentUpstreamGone = (branch) => {
+  if (!branch) return false
+  return git(['for-each-ref', '--format=%(upstream:track)', `refs/heads/${branch}`]) === '[gone]'
+}
+
 const isAncestor = (ancestorRef, descendantRef) => {
   try {
     execFileSync('git', ['merge-base', '--is-ancestor', ancestorRef, descendantRef], { stdio: 'ignore' })
@@ -172,6 +189,8 @@ const getState = () => {
   return {
     currentBranch: currentBranch || '(detached)',
     currentBranchBehindDev: getCurrentBranchBehindDev(currentBranch),
+    headBehindDev: getHeadBehindDev(currentBranch),
+    currentUpstreamGone: isCurrentUpstreamGone(currentBranch),
     promotionPlan: getPromotionPlan(),
     worktrees: getEnrichedWorktrees(),
     unmergedBranches: getUnmergedBranches()

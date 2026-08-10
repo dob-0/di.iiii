@@ -58,6 +58,8 @@ export const isSweepSafe = (wt) => {
 //   main: { commit },
 //   promotionPlan: { type },              // from getProductionPromotionPlan
 //   currentBranchBehindDev,               // number|null
+//   headBehindDev,                        // number|null — detached or on dev, HEAD behind origin/dev
+//   currentUpstreamGone,                  // boolean — upstream configured but deleted on the remote
 //   worktrees: [{ path, branch, prunable, detached }],
 //   unmergedBranches: [{ name, aheadOfDev }]
 // }
@@ -115,6 +117,16 @@ export const collectStateWarnings = (state, thresholds = {}) => {
 
   if (state.currentBranchBehindDev) {
     warnings.push(`current branch "${state.currentBranch}" is ${state.currentBranchBehindDev} commits behind origin/dev`)
+  }
+
+  // The two shapes of the 2026-08-10 incident: the main checkout served a merged
+  // feature branch 115 commits behind origin/dev for two days, and nothing said so.
+  if (state.headBehindDev) {
+    warnings.push(`this checkout (${state.currentBranch}) is ${state.headBehindDev} commits behind origin/dev — stale viewing surface; git fetch && git checkout --detach origin/dev`)
+  }
+
+  if (state.currentUpstreamGone) {
+    warnings.push(`current branch "${state.currentBranch}" tracks an upstream that is gone (merged and deleted?) — park this checkout: git fetch && git checkout --detach origin/dev`)
   }
 
   const worktrees = state.worktrees ?? []

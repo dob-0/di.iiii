@@ -6,6 +6,21 @@ How to run more than one agent or person on `di.iiii` at the same time without a
 
 Two agents (or people) must never write to the same working directory at the same time. A single shared working tree means uncommitted edits from one look like stray/conflicting changes to the other (this happened — see golden_rules.md). Pick one of the three isolation modes below based on how close the collaboration needs to be.
 
+## The Parking Rule
+
+The main checkout is the user's **viewing surface**, not a workbench. Before a session
+ends, leave it detached at (or on) `origin/dev`:
+
+```bash
+git fetch && git checkout --detach origin/dev
+```
+
+All branch work lives in worktrees under `.claude/worktrees/` — never park the main
+checkout on a task branch. A session that left it on a merged feature branch had
+`npm run dev:browser` silently serving code 115 commits behind `origin/dev` for two
+days (caught 2026-08-10). `npm run dev` and `npm run state` now print a stale-tree
+warning, but the warning is the backstop — parking is the rule.
+
 ## Choosing A Mode
 
 | Mode | Use when | Sync mechanism |
