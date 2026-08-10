@@ -162,6 +162,13 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // robot's lidar, battery and speed over rosbridge and never drives it.
     add('dijet', 'device.dijet', { label: 'di.jet', col: 7, row: 2, values: { host: '192.168.1.11' } })
 
+    // The control half of the same machine. Drive is unarmed here and stays
+    // that way: arming is a switch a person throws in the node's own window,
+    // never something an example graph can do for them.
+    add('dijetDrive', 'device.dijet.drive', { label: 'di.jet Drive', col: 8, row: 0, values: { host: '192.168.1.11' } })
+    add('dijetLights', 'device.dijet.lights', { label: 'di.jet Lights', col: 8, row: 1, values: { host: '192.168.1.11' } })
+    add('dijetSay', 'device.dijet.say', { label: 'di.jet Say', col: 8, row: 2, values: { host: '192.168.1.11' } })
+
     const id = (key) => made.get(key)?.id || ''
     const wire = (fromKey, fromPort, toKey, toPort) => {
         const from = id(fromKey)

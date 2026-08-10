@@ -3387,10 +3387,78 @@
     font-variant-numeric: tabular-nums;
 }
 
+/* These notes carry the constraints that matter -- the speed ceiling, the
+   serial-port limit -- so they get a real colour rather than a faded one.
+   Dimming with opacity over an already-dim cyan put them below readable. */
 .raw-dijet-panel-note {
     margin-top: auto;
     font-size: 11px;
-    opacity: 0.7;
+    line-height: 1.45;
+    color: #9db6c8;
+}
+
+/* Arm is the one control in this family that moves a real machine, so it is
+   the one control that does not look like the others. */
+.raw-dijet-drive-arm {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.raw-dijet-arm-button {
+    flex: none;
+    min-width: 96px;
+    /* 44px: this is a stop button on a phone, and it has to be hittable in a
+       hurry without looking. */
+    min-height: 44px;
+    padding: 0 16px;
+    font: inherit;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #e8f6ff;
+    background: rgba(77, 249, 255, 0.06);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.raw-dijet-arm-button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.raw-dijet-arm-button.is-armed {
+    /* armed reads as a warning, not as a success */
+    color: #0b1016;
+    background: #ffb000;
+    border-color: #ffb000;
+}
+
+.raw-dijet-arm-button:focus-visible {
+    outline: 2px solid var(--di-cyan, #4df9ff);
+    outline-offset: 2px;
+}
+
+/* This sentence tells you how to stop a moving machine, so it does not get the
+   quiet treatment the rest of the captions get. Dimming it to 0.75 of an
+   already-dim cyan made it the least readable text in the window. */
+.raw-dijet-arm-hint {
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: #cfe6f5;
+}
+
+.raw-dijet-drive-arm.is-armed .raw-dijet-arm-hint {
+    color: #ffd98a;
+}
+
+.raw-dijet-say-last {
+    padding: 8px 10px;
+    color: #e8f6ff;
+    background: rgba(8, 12, 20, 0.7);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.22));
+    border-radius: 4px;
+    overflow-wrap: anywhere;
 }
 
 /* Keeper — reuses the capture family's ground and cyan accents rather than

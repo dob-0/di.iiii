@@ -14,6 +14,9 @@ import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
 import KeeperPanelWindow from './KeeperPanelWindow.jsx'
+import DijetDrivePanel from './DijetDrivePanel.jsx'
+import DijetLightsPanel from './DijetLightsPanel.jsx'
+import DijetSayPanel from './DijetSayPanel.jsx'
 import DijetSourcePanel from './DijetSourcePanel.jsx'
 import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
@@ -1029,6 +1032,47 @@ export default function RawEditor({
                             else if (ports[portId] !== undefined) handleLiveOutputChange(nodeId, portId, ports[portId])
                         }
                     }}
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
+        // The control family. resolvedValues already carries the wired input
+        // ports merged over node.values, so it serves as both.
+        if (node.typeId === 'device.dijet.drive') {
+            return (
+                <DijetDrivePanel
+                    node={node}
+                    values={resolvedValues}
+                    inputs={resolvedValues}
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
+        if (node.typeId === 'device.dijet.lights') {
+            return (
+                <DijetLightsPanel
+                    node={node}
+                    values={resolvedValues}
+                    inputs={resolvedValues}
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
+        if (node.typeId === 'device.dijet.say') {
+            return (
+                <DijetSayPanel
+                    node={node}
+                    values={resolvedValues}
+                    inputs={resolvedValues}
                     onConfigChange={(nodeId, patch) => applyLocalOps({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, ...patch } } }

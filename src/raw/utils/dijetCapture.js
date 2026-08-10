@@ -1,28 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
+import { LINK_STATUS, acquireLink, releaseLink } from './dijetLink.js'
 
 // di.jet is a Yahboom ROSMASTER on a Jetson Nano. It exposes rosbridge over a
-// plain WebSocket, so the page can read it directly — no local bridge, the same
-// reason Web MIDI was the cheapest proof of the provider contract.
-//
-// Deliberately READ-ONLY. This subscribes and never advertises or publishes, so
-// a node graph cannot drive the robot by accident. The panel that steers it is
-// the robot's own, which has a dead-man heartbeat and a stop-on-hide; a Raw
-// node quietly gaining motor control would route around both.
+// plain WebSocket, so the page can read and drive it directly — no local
+// bridge, the same reason Web MIDI was the cheapest proof of the provider
+// contract.
 
 export const DIJET_STATUS = {
     IDLE: 'idle',
-    CONNECTING: 'connecting',
-    ACTIVE: 'active',
-    UNREACHABLE: 'unreachable'
+    CONNECTING: LINK_STATUS.CONNECTING,
+    ACTIVE: LINK_STATUS.ACTIVE,
+    UNREACHABLE: LINK_STATUS.UNREACHABLE
 }
 
 export const DIJET_DEFAULT_HOST = '192.168.1.11'
-const PORT = 9090
 
 // Throttles are the robot's, not ours. Its link is about 5 Mbit/s and the
 // camera already wants most of it, so these are the rates the robot's own panel
 // settled on: /scan carries 260 floats, /odom two 36-float covariance matrices.
-const TOPICS = [
+const SENSOR_TOPICS = [
     { topic: '/scan', type: 'sensor_msgs/LaserScan', throttle: 200 },
     { topic: '/voltage', type: 'std_msgs/Float32', throttle: 2000 },
     { topic: '/vel_raw', type: 'geometry_msgs/Twist', throttle: 500 }
@@ -51,95 +47,64 @@ export const speedFrom = (twist) => {
     return Math.sqrt(x * x + y * y)
 }
 
-export function useDijet({ host, enabled = true, onSample }) {
+export const clamp = (v, limit) => {
+    const n = Number(v)
+    if (!Number.isFinite(n)) return 0
+    return Math.max(-limit, Math.min(limit, n))
+}
+
+// Shared plumbing: hold a link for as long as the component lives, and report
+// its status. Every di.jet node uses this.
+export function useDijetLink(host) {
     const [status, setStatus] = useState(DIJET_STATUS.IDLE)
+    const linkRef = useRef(null)
+
+    useEffect(() => {
+        const target = (host || '').trim()
+        if (!target) {
+            linkRef.current = null
+            setStatus(DIJET_STATUS.IDLE)
+            return undefined
+        }
+        const link = acquireLink(target)
+        linkRef.current = link
+        const off = link.onStatus(setStatus)
+        return () => {
+            off()
+            // The ref is deliberately NOT cleared here. React runs cleanups in
+            // declaration order, so this one runs before the cleanup of any
+            // effect that uses the link -- and a drive node being deleted
+            // mid-drive needs to publish its stop from that later cleanup.
+            // Nulling the ref here made that stop silently a no-op. The link's
+            // own close is deferred a tick to match (see releaseLink).
+            releaseLink(target)
+        }
+    }, [host])
+
+    return { status, linkRef }
+}
+
+export function useDijet({ host, onSample }) {
+    const { status, linkRef } = useDijetLink(host || DIJET_DEFAULT_HOST)
     const [last, setLast] = useState(null)
     const onSampleRef = useRef(onSample)
     onSampleRef.current = onSample
 
     useEffect(() => {
-        if (!enabled) {
-            setStatus(DIJET_STATUS.IDLE)
-            return undefined
-        }
-        const target = (host || DIJET_DEFAULT_HOST).trim()
-        if (!target) {
-            setStatus(DIJET_STATUS.IDLE)
-            return undefined
-        }
-
-        let socket = null
-        let closed = false
-        let retryTimer = null
-        // The robot goes away often — it is battery powered and its wifi link
-        // is the only route in. Back off rather than hammering a machine that
-        // is simply off.
-        let backoff = 1500
-
-        const open = () => {
-            if (closed) return
-            setStatus(DIJET_STATUS.CONNECTING)
-            let sock
-            try {
-                sock = new WebSocket(`ws://${target}:${PORT}`)
-            } catch {
-                setStatus(DIJET_STATUS.UNREACHABLE)
-                return
-            }
-            socket = sock
-
-            sock.onopen = () => {
-                if (closed || sock !== socket) return
-                backoff = 1500
-                setStatus(DIJET_STATUS.ACTIVE)
-                for (const t of TOPICS) {
-                    try {
-                        sock.send(JSON.stringify({
-                            op: 'subscribe', topic: t.topic, type: t.type,
-                            throttle_rate: t.throttle, queue_length: 1
-                        }))
-                    } catch { /* a closing socket is not an error worth surfacing */ }
-                }
-            }
-
-            sock.onmessage = (event) => {
-                if (closed || sock !== socket) return
-                let msg
-                try { msg = JSON.parse(event.data) } catch { return }
-                if (msg.op !== 'publish') return
-                if (msg.topic === '/scan') {
-                    const nearest = nearestReturn(msg.msg)
-                    setLast((prev) => ({ ...prev, nearest }))
-                    onSampleRef.current?.({ nearest })
-                } else if (msg.topic === '/voltage') {
-                    const battery = msg.msg?.data ?? null
-                    setLast((prev) => ({ ...prev, battery }))
-                    onSampleRef.current?.({ battery })
-                } else if (msg.topic === '/vel_raw') {
-                    const speed = speedFrom(msg.msg)
-                    setLast((prev) => ({ ...prev, speed }))
-                    onSampleRef.current?.({ speed })
-                }
-            }
-
-            const fail = () => {
-                if (closed || sock !== socket) return
-                setStatus(DIJET_STATUS.UNREACHABLE)
-                retryTimer = setTimeout(open, backoff)
-                backoff = Math.min(backoff * 2, 20000)
-            }
-            sock.onclose = fail
-            sock.onerror = () => { try { sock.close() } catch { /* already gone */ } }
-        }
-
-        open()
-
-        return () => {
-            closed = true
-            if (retryTimer) clearTimeout(retryTimer)
-            try { socket?.close() } catch { /* already gone */ }
-        }
-    }, [host, enabled])
+        const link = linkRef.current
+        if (!link) return undefined
+        const offs = SENSOR_TOPICS.map((t) => link.subscribe(t.topic, t.type, t.throttle, (msg) => {
+            let sample = null
+            if (t.topic === '/scan') sample = { nearest: nearestReturn(msg) }
+            else if (t.topic === '/voltage') sample = { battery: msg?.data ?? null }
+            else if (t.topic === '/vel_raw') sample = { speed: speedFrom(msg) }
+            if (!sample) return
+            setLast((prev) => ({ ...prev, ...sample }))
+            onSampleRef.current?.(sample)
+        }))
+        return () => offs.forEach((off) => off())
+        // linkRef is a ref; status changing is what tells us a link exists
+    }, [status, linkRef])
 
     return { status, last }
 }

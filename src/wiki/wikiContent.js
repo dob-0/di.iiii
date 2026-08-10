@@ -677,6 +677,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-11'
     },
     {
+        id: 'dijet-control-nodes',
+        category: 'Editing',
+        title: 'Driving di.jet from a graph',
+        summary: 'Three more nodes move the robot, light it up and give it a voice — with the arming left firmly in your hand.',
+        body: [
+            'di.jet Drive takes Forward, Strafe and Turn as numbers and sends them to the robot. di.jet Lights takes a colour, an effect number and a beep length. di.jet Say takes a line of text and speaks it. All three sit in the palette under Device, next to the di.jet sensor node.',
+            'Nothing moves until you press Arm in the Drive window. That is a switch you throw, never something the graph can do — a graph decides how fast, never whether. Connecting an edge should not be able to set a real machine rolling across a room.',
+            'While it is armed the node keeps talking to the robot ten times a second, and the robot stops the moment that stream stops. So closing the tab, hiding it, deleting the node or walking out of wifi range all bring the robot to a halt on their own. Nothing has to reach it to make it stop.',
+            'The speed ceiling in the Drive window is real and it is enforced here, in your browser. The robot itself accepts whatever it is told — it has no limit of its own — so this is the only thing standing between a stray number and a machine at full tilt.',
+            'Lights are sent at most twice a second, however fast the input changes. Every lamp write travels down the same wire as the motor commands, so a colour wired to a sound level would otherwise fight the steering for the cable. For movement on the strip, use an effect: the robot animates it itself, at no further cost.',
+            'Say speaks when its Trigger changes, not when its text does. Wired to a live string it would otherwise start a new sentence on every keystroke and fall minutes behind the thing it was describing.',
+            'The robot’s own control panel still exists and still works, and is still the right thing for driving it by hand — it has the joystick, the camera and the lidar view. These nodes are for when the robot should be part of a larger piece rather than something you steer.'
+        ],
+        tags: ['raw', 'nodes', 'device', 'robot', 'dijet', 'control', 'safety'],
+        updated: '2026-08-11'
+    },
+    {
         id: 'raw-zen-workspace',
         category: 'Editing',
         title: 'A workspace with nothing on it',

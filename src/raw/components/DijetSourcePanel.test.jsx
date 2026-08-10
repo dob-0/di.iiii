@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import DijetSourcePanel from './DijetSourcePanel.jsx'
 import { nearestReturn, speedFrom } from '../utils/dijetCapture.js'
+import { __resetLinks } from '../utils/dijetLink.js'
 
 const node = { id: 'dijet-1', typeId: 'device.dijet', values: { host: '192.168.1.11' } }
 
@@ -26,7 +27,9 @@ const fakeSocket = () => {
     return sockets
 }
 
-afterEach(() => { delete global.WebSocket; vi.restoreAllMocks() })
+// links are module-level and refcounted, so they must be torn down between
+// cases or one test's socket serves the next one
+afterEach(() => { __resetLinks(); delete global.WebSocket; vi.restoreAllMocks() })
 
 describe('nearestReturn', () => {
     it('ignores inf, NaN and out-of-range samples', () => {
@@ -71,9 +74,12 @@ describe('DijetSourcePanel', () => {
         sockets[0].openIt()
         await waitFor(() => expect(sockets[0].sent.length).toBeGreaterThan(0))
         const ops = sockets[0].sent.map((m) => m.op)
-        expect(new Set(ops)).toEqual(new Set(['subscribe']))
+        // The property that matters is that it never WRITES. unsubscribe is a
+        // read-side op and shows up when a sibling node lets a topic go, so
+        // assert the absence of the two dangerous ops rather than an exact set.
         expect(ops).not.toContain('advertise')
         expect(ops).not.toContain('publish')
+        expect(ops.every((op) => op === 'subscribe' || op === 'unsubscribe')).toBe(true)
     })
 
     it('writes the lidar range to the port and shows it', async () => {

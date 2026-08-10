@@ -405,6 +405,71 @@ export const NODE_TYPES = {
         defaultFrame: { width: 380, height: 340 },
     },
 
+    'device.dijet.drive': {
+        id: 'device.dijet.drive',
+        label: 'di.jet Drive',
+        category: 'device',
+        runtime: 'web',
+        singleton: false,
+        // Motion comes IN from the graph. Arming does not: it is a switch in
+        // the node's own window that a person throws. A graph can say how fast,
+        // never whether -- otherwise connecting an edge could set a real
+        // machine moving across a room.
+        inputs: [
+            { id: 'forward', type: 'number', label: 'Forward (m/s)' },
+            { id: 'strafe',  type: 'number', label: 'Strafe (m/s)'  },
+            { id: 'turn',    type: 'number', label: 'Turn (rad/s)'  },
+        ],
+        outputs: [],
+        // The robot's driver clamps NOTHING -- read Mcnamu_driver.py, the
+        // limits are assigned and never referenced. A ceiling that is not
+        // applied client-side does not exist, so these are the real limits.
+        defaultValues: { host: '192.168.1.11', maxLinear: 0.3, maxAngular: 1.2 },
+        configInputs: [
+            { id: 'maxLinear',  type: 'number', label: 'Max speed (m/s)' },
+            { id: 'maxAngular', type: 'number', label: 'Max turn (rad/s)' },
+        ],
+        render: 'panel-2d',
+        defaultFrame: { width: 380, height: 380 },
+    },
+
+    'device.dijet.lights': {
+        id: 'device.dijet.lights',
+        label: 'di.jet Lights',
+        category: 'device',
+        runtime: 'web',
+        singleton: false,
+        inputs: [
+            { id: 'color',  type: 'color',  label: 'Colour'      },
+            { id: 'effect', type: 'number', label: 'Effect (0-6)' },
+            { id: 'beep',   type: 'number', label: 'Beep (ms)'   },
+        ],
+        outputs: [],
+        defaultValues: { host: '192.168.1.11', color: '#3fb950' },
+        configInputs: [],
+        render: 'panel-2d',
+        defaultFrame: { width: 380, height: 320 },
+    },
+
+    'device.dijet.say': {
+        id: 'device.dijet.say',
+        label: 'di.jet Say',
+        category: 'device',
+        runtime: 'web',
+        singleton: false,
+        // Speaks on the trigger, not on the text: a live string would queue an
+        // utterance per keystroke and the robot would fall minutes behind.
+        inputs: [
+            { id: 'text',    type: 'string', label: 'Text'    },
+            { id: 'trigger', type: 'number', label: 'Trigger' },
+        ],
+        outputs: [],
+        defaultValues: { host: '192.168.1.11', text: '' },
+        configInputs: [],
+        render: 'panel-2d',
+        defaultFrame: { width: 380, height: 300 },
+    },
+
     'device.midi.out': {
         id: 'device.midi.out',
         label: 'MIDI Out',
