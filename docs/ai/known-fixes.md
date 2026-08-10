@@ -3,6 +3,25 @@
 **Check here before investigating any bug.** If a symptom matches a row, use the recorded fix instead of re-investigating.
 When you solve something that took >5 min to find, add a row here and update `CURRENT.md`'s Last commit line.
 
+## A bare `*` route stops serverXR booting, it does not fail a request
+
+serverXR is on Express 5, whose router uses path-to-regexp v8. That version
+rejects an unnamed wildcard:
+
+```js
+router.get('/serverXR/og/*', h)        // PathError: Missing parameter name
+router.get('/serverXR/og/*splat', h)   // ok — req.params.splat is an ARRAY
+```
+
+The trap is *when* it throws. Registration happens at module load, so a bad
+pattern does not 404 or 500 — the process dies before it listens, and every
+route in the app goes with it. Unit tests on the handler pass happily, because
+the handler is never the thing that breaks.
+
+Caught only by mounting the router on a real express app and issuing a request.
+If you add a wildcard route, add that check with it.
+
+
 ## Recurring bug class: silent hardcoded fallback
 
 A per-entity value (spaceId, auth scope, asset id) gets read from a source that can be
