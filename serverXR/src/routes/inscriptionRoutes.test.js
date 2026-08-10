@@ -363,3 +363,124 @@ describe('a mark can be changed afterwards, by exactly the person who made it', 
     expect(withSpaceOpsLock).toHaveBeenCalledWith('open', expect.any(Function))
   })
 })
+
+// ── the tunnel ────────────────────────────────────────────────────────────
+const TUNNEL_POST = 'post /api/spaces/:spaceId/inscriptions/:id/tunnel'
+const SECRET = 'a-shared-secret-with-di-bo'
+const REAL_INSC = 'insc-a012122a-cbfa-4155-84e1-69d0a532c251'
+const tunnelScene = () => ({
+  objects: [{ id: REAL_INSC, proofHash: proofHashOf('right'), data: 'YN · skin' }]
+})
+const tunnelSetup = (overrides = {}) => setup(vi.fn((spaceId, fn) => fn()), {
+  readJson: vi.fn().mockResolvedValue(tunnelScene()),
+  tunnelSecret: SECRET,
+  ...overrides
+})
+
+describe('the tunnel mint', () => {
+  it('hands back a link for the person who can prove the crossing', async () => {
+    const { router } = tunnelSetup()
+    const { req, res, next } = makeReqRes({ proof: 'right' }, { id: REAL_INSC })
+
+    await lastHandler(router, TUNNEL_POST)(req, res, next)
+
+    const body = res.json.mock.calls[0][0]
+    expect(body.ok).toBe(true)
+    expect(body.url).toBe(`https://t.me/diiii111bot?start=${body.token}`)
+    expect(body.expiresAt).toBeGreaterThan(Date.now())
+    // the token really names THIS crossing, decoded the way di.bo decodes it
+    const raw = Buffer.from(body.token, 'base64url')
+    const hex = raw.subarray(1, 17).toString('hex')
+    expect(`insc-${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`)
+      .toBe(REAL_INSC)
+  })
+
+  // The route is INERT without the secret, and inert as a 404: a switch that is
+  // off should look exactly like a feature that was never built, and say
+  // nothing about this server's configuration. di.bo's half returns early on
+  // the same condition, so the tunnel is never half-on.
+  it('does not exist at all until the secret does', async () => {
+    const { router } = tunnelSetup({ tunnelSecret: '' })
+    const { req, res, next } = makeReqRes({ proof: 'right' }, { id: REAL_INSC })
+
+    await lastHandler(router, TUNNEL_POST)(req, res, next)
+
+    expect(res.statusCode).toBe(404)
+    expect(res.json).toHaveBeenCalledWith({ error: 'Not found.' })
+  })
+
+  it('refuses a proof that does not match', async () => {
+    const { router } = tunnelSetup()
+    const { req, res, next } = makeReqRes({ proof: 'wrong' }, { id: REAL_INSC })
+
+    await lastHandler(router, TUNNEL_POST)(req, res, next)
+
+    expect(res.statusCode).toBe(403)
+  })
+
+  // The field's scene is world-readable, so every insc- id is public. Without a
+  // proof the id alone must buy nothing at all — this is the whole reason the
+  // link is minted here rather than composed in the page.
+  it('refuses a request carrying only the public id', async () => {
+    const { router } = tunnelSetup()
+    const { req, res, next } = makeReqRes({}, { id: REAL_INSC })
+
+    await lastHandler(router, TUNNEL_POST)(req, res, next)
+
+    expect(res.statusCode).toBe(400)
+  })
+
+  // A crossing that predates proof can never be unmade; it must not be
+  // tunnellable either, or the one crossing nobody can prove is the one
+  // anybody can claim.
+  it('refuses a crossing that has no proof of authorship', async () => {
+    const { router } = tunnelSetup({
+      readJson: vi.fn().mockResolvedValue({ objects: [{ id: REAL_INSC, data: 'old · one' }] })
+    })
+    const { req, res, next } = makeReqRes({ proof: 'right' }, { id: REAL_INSC })
+
+    await lastHandler(router, TUNNEL_POST)(req, res, next)
+
+    expect(res.statusCode).toBe(403)
+    // Assert WHICH 403. Without this the test passed even with the proofHash
+    // check deleted: proofMatches(proof, undefined) compares against a garbage
+    // buffer, returns false, and answers 403 from the next branch down. A
+    // status code alone cannot tell a guard from its neighbour, and this one
+    // guards the crossing nobody can prove — the one anybody could claim.
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'This crossing predates proof of authorship and cannot open a tunnel.'
+    })
+  })
+
+  it('refuses a crossing that is not in the field', async () => {
+    const { router } = tunnelSetup({ readJson: vi.fn().mockResolvedValue({ objects: [] }) })
+    const { req, res, next } = makeReqRes({ proof: 'right' }, { id: REAL_INSC })
+
+    await lastHandler(router, TUNNEL_POST)(req, res, next)
+
+    expect(res.statusCode).toBe(404)
+  })
+
+  // Minting a link changes nothing about the field, so it must not touch it.
+  it('writes nothing — no op, no scene, no history', async () => {
+    const { router, deps } = tunnelSetup()
+    const { req, res, next } = makeReqRes({ proof: 'right' }, { id: REAL_INSC })
+
+    await lastHandler(router, TUNNEL_POST)(req, res, next)
+
+    expect(deps.writeJson).not.toHaveBeenCalled()
+    expect(deps.appendOpsHistory).not.toHaveBeenCalled()
+    expect(deps.broadcastLiveEvent).not.toHaveBeenCalled()
+  })
+
+  it('respects the space kill switch like every other inscription route', async () => {
+    const { router } = tunnelSetup({
+      loadSpaceMeta: vi.fn().mockResolvedValue({ openInscriptions: false, isPublic: true })
+    })
+    const { req, res, next } = makeReqRes({ proof: 'right' }, { id: REAL_INSC })
+
+    await lastHandler(router, TUNNEL_POST)(req, res, next)
+
+    expect(res.statusCode).toBe(403)
+  })
+})
