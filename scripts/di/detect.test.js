@@ -51,10 +51,27 @@ describe('satisfiesFloor', () => {
 })
 
 describe('decideMode', () => {
-    it('picks docker when the daemon runs and the images are public', () => {
+    it('picks docker when the daemon runs, the images are public, and there is no usable node', () => {
         const result = decideMode({ dockerRunning: true, imagesPullable: true })
 
         expect(result.mode).toBe('docker')
+    })
+
+    it('prefers node when both node and docker are viable — docker is opt-in, not the accident', () => {
+        // Docker Desktop merely being open used to win, landing artists in the
+        // one mode with no DI_LOCAL, a non-loopback remoteAddress and no
+        // reachable claude binary: every local operator surface 404s there
+        // while the wiki promises it works.
+        const result = decideMode({ dockerRunning: true, imagesPullable: true, systemNode: '22.18.0' })
+
+        expect(result).toMatchObject({ mode: 'node', nodeSource: 'system' })
+        expect(result.reason).toContain('opt-in')
+    })
+
+    it('prefers a downloadable node over running docker', () => {
+        const result = decideMode({ dockerRunning: true, imagesPullable: true, canReachNodeOrg: true })
+
+        expect(result).toMatchObject({ mode: 'node', nodeSource: 'download' })
     })
 
     it('falls back to node when docker runs but the images are private', () => {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createXRStore } from '@react-three/xr'
+import { isLocalInstallSession } from '../services/apiClient.js'
 
 const DEFAULT_SUPPORTED_XR_MODES = { vr: false, ar: false }
 
@@ -85,11 +86,23 @@ export function useXrAr({
     // Request the exact same minimal feature set as before (`local-floor`
     // only) via the granular flags instead, which leaves `domOverlay` at
     // its library default (`true`) rather than silently dropping it.
+    // Controller/hand MODELS default to jsdelivr (@pmndrs/xr's
+    // DefaultAssetBasePath) — a network fetch at session start. On a local
+    // install (`di up`, offline by design) that fetch can never land, so turn
+    // the models off there rather than spraying failed requests: pointers and
+    // teleport still render, which is the same thing an offline hosted-default
+    // build would degrade to, minus the console noise. Hosted stays unchanged.
+    // Read once at store creation, after the session resolved (gated surfaces
+    // mount behind AuthGate).
     const xrStore = useMemo(() => createXRStore({
         offerSession: false,
         emulate: false,
-        controller: { teleportPointer: true },
-        hand: { teleportPointer: true },
+        controller: isLocalInstallSession()
+            ? { teleportPointer: true, model: false }
+            : { teleportPointer: true },
+        hand: isLocalInstallSession()
+            ? { teleportPointer: true, model: false }
+            : { teleportPointer: true },
         anchors: false,
         handTracking: false,
         layers: false,

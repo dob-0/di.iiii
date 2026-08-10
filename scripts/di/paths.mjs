@@ -54,5 +54,10 @@ export const versionLayout = (versionDir) => ({
     server: path.join(versionDir, 'serverXR'),
     serverEntry: path.join(versionDir, 'serverXR', 'src', 'index.js'),
     cli: path.join(versionDir, 'cli', 'cli.mjs'),
+    // Both compose files, because the override is ONLY an override: it is
+    // full of `!reset`/`!override` tags and defines no volumes, so composed
+    // alone the named data volume never exists and work lands in an
+    // anonymous one — while `di where` points at the named volume.
+    composeBase: path.join(versionDir, 'docker-compose.yml'),
     compose: path.join(versionDir, 'docker-compose.di.yml')
 })

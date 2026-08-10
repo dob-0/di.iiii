@@ -575,7 +575,13 @@ const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
   }
 }
 
-const GUEST_SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30
+// The guest cookie lives exactly as long as the guest sandbox's idle TTL
+// (config.sandboxTtlMs, 7 days by default). It used to claim 30 days while
+// the sweep archived the sandbox at 7 idle and guest snapshots are never
+// revived — so a guest returning on day 10 carried a valid cookie scoped to
+// a room that had already been emptied. A promise the sweep can't keep is
+// worse than a shorter one it can.
+const GUEST_SESSION_TTL_MS = config.sandboxTtlMs
 
 // The communal open space id: the admin-set globalSpaceId wins (legacy
 // "open jam" knob, kept as the override), otherwise the config default.
@@ -813,6 +819,11 @@ router.get('/api/auth/session', async (req, res, next) => {
 
     res.json({
       requireAuth: config.requireAuth,
+      // One boolean, read at request time so tests can toggle it: this server
+      // is a `di up` install on the artist's own machine (the CLI runner sets
+      // DI_LOCAL=1). The client uses it to stop speaking hosted-product copy
+      // ("sign in to edit", space quotas) to someone who owns the whole disk.
+      local: process.env.DI_LOCAL === '1',
       authenticated: Boolean(state.authenticated),
       type: isGuest ? 'guest' : (state.type || null),
       role: state.role || null,
@@ -1813,7 +1824,8 @@ registerConfigRoutes(router, {
   // Repointing globalSpaceId moves the communal grant and ensures the new
   // open space exists.
   onConfigChanged: () => ensureOpenSpace(),
-  approvalGate
+  approvalGate,
+  requireAuth: config.requireAuth
 })
 
 const mountTargets = new Set([config.mountPath])

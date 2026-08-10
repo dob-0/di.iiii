@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, Text, Billboard } from '@react-three/drei'
+import { TROIKA_FONT_URL } from '../project/viewport/troikaFont.js'
 import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState } from '@react-three/xr'
 import * as THREE from 'three'
 import { useXrAr } from '../hooks/useXrAr.js'
@@ -243,6 +244,7 @@ function EntityVisual({ entity, assetMap }) {
                         return (
                             <Text
                                 key={i}
+                                font={TROIKA_FONT_URL}
                                 position={[0, y, 0]}
                                 fontSize={ln.fontSize || 0.4}
                                 maxWidth={tc.maxWidth || 16}
@@ -957,6 +959,7 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
             {showVrHint && (
                 <group ref={hintGroupRef}>
                     <Text
+                        font={TROIKA_FONT_URL}
                         fontSize={0.055}
                         maxWidth={1.1}
                         lineHeight={1.4}

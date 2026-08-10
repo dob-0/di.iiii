@@ -97,7 +97,12 @@ export function useProjectPresence({
         const socket = io(serverUrl, {
             path,
             auth,
-            reconnection: true
+            reconnection: true,
+            // Cap the retry cadence against a server that is simply off (a
+            // local install after `di down`): socket.io's default backoff
+            // tops out at 5s forever. 15s matches apiClient's
+            // SERVER_UNAVAILABLE_COOLDOWN_MS and useSpaceSocket's idiom.
+            reconnectionDelayMax: 15000
         })
 
         socket.on('connect', () => {
