@@ -99,7 +99,7 @@ export default function AuthGate({
         && Array.isArray(sessionSpaces)
         && !sessionSpaces.includes(requiredSpaceId)
     )
-    const { isPublic: liveIsPublic, loading: liveLoading } = useSpacePublicFlag(outOfScope ? requiredSpaceId : null)
+    const { isPublic: liveIsPublic, exists: liveExists, loading: liveLoading } = useSpacePublicFlag(outOfScope ? requiredSpaceId : null)
     const invitePending = inviteStatus === 'pending'
 
     useEffect(() => {
@@ -224,16 +224,30 @@ export default function AuthGate({
             if (invitePending || liveLoading || liveIsPublic) {
                 return <LoadingScreen label="Loading" detail="Checking access to this space" />
             }
+            // Two cards, one panel. The space exists but this session can't
+            // enter it → say so and offer the doors that DO open. The space
+            // never existed (a mistyped id, most commonly — the server 404s) →
+            // scope language about it would be nonsense; say nothing lives
+            // there, with the same doors. Neither card lists raw session ids:
+            // "Allowed: open, sandbox-guestfa58…" was a dead end wearing a
+            // stack trace.
             return (
                 <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
                     <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
                         <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
                             di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
                         </Typography>
-                        <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
-                            Access restricted — your session isn&apos;t scoped to &ldquo;{requiredSpaceId}&rdquo;.
-                            {spaces.length > 0 ? ` Allowed: ${spaces.join(', ')}.` : ' Allowed: no spaces.'}
-                        </Typography>
+                        {liveExists ? (
+                            <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                                Access restricted — your session isn&apos;t scoped to &ldquo;{requiredSpaceId}&rdquo;.
+                                Sign in with an account that has access, or step through one of your own doors.
+                            </Typography>
+                        ) : (
+                            <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                                Nothing lives at &ldquo;{requiredSpaceId}&rdquo; — there is no space with that
+                                address. Check the spelling, or step through one of your own doors.
+                            </Typography>
+                        )}
                         {inviteStatus === 'failed' && (
                             <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
                                 The invite link you followed is invalid or has expired — ask the owner for a fresh one.
@@ -250,6 +264,29 @@ export default function AuthGate({
                                 {' '}&mdash; how an invite works, and what to ask for.
                             </Typography>
                         )}
+                        {/* The doors this session can actually use — named, never
+                            the raw ids. */}
+                        {authSession.openSpaceId && (
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => appNavigate(buildAppSpacePath(authSession.openSpaceId))}
+                                sx={{ textTransform: 'none', borderColor: 'var(--ui-border)', color: 'var(--ui-text-primary)' }}
+                            >
+                                Open Space
+                            </Button>
+                        )}
+                        {authSession.sandboxSpaceId && (
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => appNavigate(buildAppSpacePath(authSession.sandboxSpaceId))}
+                                sx={{ textTransform: 'none', borderColor: 'var(--ui-border)', color: 'var(--ui-text-primary)' }}
+                            >
+                                Your private sandbox
+                            </Button>
+                        )}
+                        <ProviderSignInButtons providers={providers} />
                         <AccountButton authState={authSession} onLogout={refresh} />
                     </Stack>
                 </Box>

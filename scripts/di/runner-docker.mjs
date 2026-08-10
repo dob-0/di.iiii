@@ -23,18 +23,29 @@ const execFileAsync = promisify(execFile)
 
 export const PROJECT = 'di-local'
 
-const composeFile = (home) => {
+/**
+ * Base file THEN override, exactly as CI runs it (install-matrix.yml's
+ * docker job). The .di file is only an override: it leans on `!reset` /
+ * `!override` tags and defines no volumes, so composed alone the named
+ * `di-local_data` volume never exists — work lands in an anonymous volume
+ * while `di where` points at the named one. The base's extra services
+ * (tunnel, caddy) sit behind compose profiles and do not start.
+ *
+ * Exported for the guard test: this pairing is the bug class.
+ */
+export const composeFiles = (home) => {
     const versionDir = currentVersionDir(home)
     if (!versionDir) throw new Error('not installed')
-    return versionLayout(versionDir).compose
+    const layout = versionLayout(versionDir)
+    return [layout.composeBase, layout.compose]
 }
 
 const compose = async (home, args, { verbose = false } = {}) => {
-    const file = composeFile(home)
-    const full = ['compose', '-p', PROJECT, '-f', file, ...args]
+    const files = composeFiles(home)
+    const full = ['compose', '-p', PROJECT, ...files.flatMap((file) => ['-f', file]), ...args]
     if (verbose) process.stdout.write(`[di] docker ${full.join(' ')}\n`)
     return execFileAsync('docker', full, {
-        cwd: path.dirname(file),
+        cwd: path.dirname(files[0]),
         env: { ...process.env, ...readEnv(home) },
         timeout: 300000,
         maxBuffer: 10 * 1024 * 1024
@@ -70,8 +81,8 @@ export const readLog = async (home, lines = 200) => {
 }
 
 export const followLog = (home) => {
-    const file = composeFile(home)
-    return spawn('docker', ['compose', '-p', PROJECT, '-f', file, 'logs', '-f', '--tail', '200'], {
+    const files = composeFiles(home)
+    return spawn('docker', ['compose', '-p', PROJECT, ...files.flatMap((file) => ['-f', file]), 'logs', '-f', '--tail', '200'], {
         stdio: 'inherit'
     })
 }

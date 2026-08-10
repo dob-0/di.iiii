@@ -92,7 +92,8 @@ export const getRawLocationState = (
             isLegacyPath,
             page: RAW_PAGE_PROJECT,
             projectId: segments[2],
-            spaceId: defaultSpaceId
+            spaceId: defaultSpaceId,
+            isDefaultSpace: true
         }
     }
 
@@ -102,7 +103,8 @@ export const getRawLocationState = (
             isLegacyPath,
             page: RAW_PAGE_PROJECTS,
             projectId: null,
-            spaceId: defaultSpaceId
+            spaceId: defaultSpaceId,
+            isDefaultSpace: true
         }
     }
 
@@ -111,7 +113,8 @@ export const getRawLocationState = (
         isLegacyPath,
         page: RAW_PAGE_HUB,
         projectId: null,
-        spaceId: defaultSpaceId
+        spaceId: defaultSpaceId,
+        isDefaultSpace: true
     }
 }
 
