@@ -193,11 +193,26 @@ describe('createEdge', () => {
 })
 
 describe('listNodeTypes', () => {
-    it('returns every implemented type when no filter given', () => {
+    it('returns every implemented, non-admin type when no filter given', () => {
         // Not every declared type: unimplemented ones are withheld from the
-        // palette so the editor stops offering nodes that do nothing.
+        // palette so the editor stops offering nodes that do nothing — and
+        // adminOnly ones are withheld from anyone who has not said they are an
+        // admin, which is the point of the default being false.
+        const adminOnly = Object.values(NODE_TYPES).filter((t) => t.adminOnly).length
         const all = listNodeTypes()
-        expect(all.length).toBe(Object.keys(NODE_TYPES).length - UNIMPLEMENTED_NODE_TYPES.size)
+        expect(all.length).toBe(Object.keys(NODE_TYPES).length - UNIMPLEMENTED_NODE_TYPES.size - adminOnly)
+        expect(all.some((t) => t.adminOnly)).toBe(false)
+    })
+
+    it('offers admin types only when told the caller is an admin', () => {
+        const adminIds = Object.values(NODE_TYPES).filter((t) => t.adminOnly).map((t) => t.id)
+        expect(adminIds.length).toBeGreaterThan(0)
+        const withheld = listNodeTypes({ query: 'estate' }).map((t) => t.id)
+        const offered = listNodeTypes({ query: 'estate', isAdmin: true }).map((t) => t.id)
+        for (const id of adminIds) {
+            expect(withheld).not.toContain(id)
+        }
+        expect(offered).toContain('admin.estate')
     })
 
     it('filters by category', () => {
@@ -218,7 +233,7 @@ describe('listNodeTypes', () => {
     })
 
     it('returns all nodes including web-only when runtime filter is any (no filter)', () => {
-        const all = listNodeTypes({ runtime: 'any', includeUnimplemented: true })
+        const all = listNodeTypes({ runtime: 'any', includeUnimplemented: true, isAdmin: true })
         expect(all.length).toBe(Object.keys(NODE_TYPES).length)
     })
 

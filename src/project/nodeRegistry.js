@@ -29,6 +29,10 @@ export const NODE_CATEGORIES = [
     { id: 'math',     label: 'Math',     color: '#f1fa8c' },
     { id: 'world',    label: 'World',    color: '#ff9e6d' },
     { id: 'agent',    label: 'Agent',    color: '#a8ff9e' },
+    // The admin console, re-hosted as windows. These are not ordinary nodes and
+    // two rules keep them from behaving like ordinary nodes — see
+    // isNodeTypeAdminOnly / isNodeTypeDeletable below.
+    { id: 'admin',    label: 'Admin',    color: '#7fd8ff' },
     { id: 'custom',   label: 'Custom',   color: '#aaaaaa' },
 ]
 
@@ -1206,6 +1210,32 @@ export const NODE_TYPES = {
     },
 
     // -----------------------------------------------------------------------
+    // ADMIN — the console, re-hosted as windows
+    //
+    // Each of these mounts an EXISTING preferences section component unchanged;
+    // the shell is what changes, not the interiors. The section keeps its own
+    // tests, so a window is a wrapper, not a rewrite.
+    //
+    // No admin node declares an input port, and none ever should: a mutation
+    // that can be reached from graph evaluation is a delete wired to a signal.
+    // See docs/architecture/RAW_ADMIN.md.
+    // -----------------------------------------------------------------------
+    'admin.estate': {
+        id: 'admin.estate',
+        label: 'Estate',
+        category: 'admin',
+        runtime: 'web',
+        singleton: true,
+        adminOnly: true,
+        deletable: false,
+        inputs: [],
+        outputs: [],
+        render: 'panel-2d',
+        // A whole page inside a window: the map wants room or it is a keyhole.
+        defaultFrame: { width: 900, height: 640 },
+    },
+
+    // -----------------------------------------------------------------------
     // CUSTOM — the null node, the extensibility primitive
     //
     // Start blank. Write code, define ports, embed sub-nodes, or layer
@@ -1233,6 +1263,27 @@ export const NODE_TYPES = {
 // --- API ---
 
 export const getNodeType = (typeId) => NODE_TYPES[typeId] || null
+
+// --- Admin nodes: two rules that make them not ordinary nodes ---
+//
+// 1. adminOnly — the palette does not offer them to anyone who is not an admin.
+//    This is a courtesy, NOT the wall: serverXR's requireAdminAlways is the wall,
+//    and every admin surface must still be useless without it. A flag in a client
+//    registry protects nothing on its own.
+//
+// 2. deletable: false — an admin node can be hidden (frame.visible === false) but
+//    never deleted. Otherwise Backspace on a selected window removes the admin
+//    tool from the desk, and the only way back is knowing a palette command
+//    exists. Closing is the affordance; deleting is not one.
+export const isNodeTypeAdminOnly = (typeId) => Boolean(getNodeType(typeId)?.adminOnly)
+
+export const isNodeTypeDeletable = (typeId) => {
+    const type = getNodeType(typeId)
+    if (!type) return true          // unknown types stay deletable, or a typo strands a node
+    return type.deletable !== false
+}
+
+export const isNodeDeletable = (node) => isNodeTypeDeletable(node?.typeId)
 
 export const getPortType = (typeId) => PORT_TYPES[typeId] || PORT_TYPES.any
 
@@ -1323,9 +1374,14 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
 
 export const isNodeTypeImplemented = (typeId) => !UNIMPLEMENTED_NODE_TYPES.has(typeId)
 
-export const listNodeTypes = ({ category = 'all', query = '', runtime = 'any', includeUnimplemented = false } = {}) => {
+// `isAdmin` defaults to FALSE, so a caller that has not thought about roles gets
+// the safe answer rather than the convenient one. This hides admin types from
+// the palette; it does not protect anything — serverXR's requireAdminAlways is
+// the wall, and every admin surface stays useless without it.
+export const listNodeTypes = ({ category = 'all', query = '', runtime = 'any', includeUnimplemented = false, isAdmin = false } = {}) => {
     const q = String(query || '').trim().toLowerCase()
     return Object.values(NODE_TYPES).filter(type => {
+        if (type.adminOnly && !isAdmin) return false
         if (!includeUnimplemented && !isNodeTypeImplemented(type.id)) return false
         if (category !== 'all' && type.category !== category) return false
         if (runtime !== 'any' && type.runtime !== 'any' && type.runtime !== runtime) return false

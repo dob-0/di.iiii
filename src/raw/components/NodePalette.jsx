@@ -57,7 +57,10 @@ export default function NodePalette({
     // command system beside it: the same gesture that creates a node also
     // brings back the help, the chat, a hidden panel or the chrome itself.
     // Shape: { id, label, hint, run }.
-    commands = []
+    commands = [],
+    // Withholds admin node types from the list. Default false: a palette that
+    // has not been told the role offers no admin surface.
+    isAdmin = false
 }) {
     const [query, setQuery] = useState('')
     const [activeIndex, setActiveIndex] = useState(0)
@@ -70,7 +73,7 @@ export default function NodePalette({
         item?.scrollIntoView({ block: 'nearest' })
     }, [])
 
-    const nodeEntries = filterNodeTypesForSurface(listNodeTypes({ query }), surface)
+    const nodeEntries = filterNodeTypesForSurface(listNodeTypes({ query, isAdmin }), surface)
         .map(toDefinitionShim)
         .filter(Boolean)
         .map((definition) => ({ kind: 'node', id: definition.id, label: definition.label, hint: definition.id, definition }))

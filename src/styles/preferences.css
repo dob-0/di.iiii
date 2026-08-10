@@ -1,6 +1,17 @@
-.preferences-page {
+/* The preferences design system is used in two shells now: the full-page admin
+   console, and Raw panel windows that mount the very same section components.
+   Everything in this file is portable except the two things that were only ever
+   true inside the page — these custom properties, and the .toggle-button rules
+   below. Both are keyed off `.preferences-scope`, which the page carries and a
+   window can put on its body. Nothing else needed changing: 198 of the 206
+   rules here were already unscoped. */
+.preferences-page,
+.preferences-scope {
     --pref-border: rgba(255, 255, 255, 0.1);
     --pref-border-active: var(--di-cyan-border);
+}
+
+.preferences-page {
     position: fixed;
     inset: 0;
     overflow: auto;
@@ -22,7 +33,8 @@
     opacity: 0.32;
 }
 
-.preferences-page .toggle-button {
+.preferences-page .toggle-button,
+.preferences-scope .toggle-button {
     min-height: 40px;
     padding: 8px 16px;
     border: 1px solid var(--pref-border-active);
@@ -33,27 +45,32 @@
     font-family: inherit;
 }
 
-.preferences-page .toggle-button:hover:not(:disabled) {
+.preferences-page .toggle-button:hover:not(:disabled),
+.preferences-scope .toggle-button:hover:not(:disabled) {
     border-color: var(--di-cyan);
     background: var(--di-cyan-dim);
 }
 
-.preferences-page .toggle-button.active {
+.preferences-page .toggle-button.active,
+.preferences-scope .toggle-button.active {
     border-color: var(--di-cyan);
     background: var(--di-cyan-dim);
 }
 
-.preferences-page .toggle-button.warning-button {
+.preferences-page .toggle-button.warning-button,
+.preferences-scope .toggle-button.warning-button {
     border-color: rgba(255, 179, 71, 0.32);
     background: rgba(255, 179, 71, 0.08);
 }
 
-.preferences-page .toggle-button.success-button {
+.preferences-page .toggle-button.success-button,
+.preferences-scope .toggle-button.success-button {
     border-color: rgba(77, 249, 192, 0.32);
     background: rgba(77, 249, 192, 0.08);
 }
 
 .preferences-page .toggle-button:disabled,
+.preferences-scope .toggle-button:disabled,
 .preferences-inline-action:disabled,
 .preferences-panel-tile:disabled {
     cursor: not-allowed;
@@ -1148,7 +1165,8 @@
 .preferences-object-row:focus-visible,
 .preferences-preview-dot:focus-visible,
 .preferences-nav-item:focus-visible,
-.preferences-page .toggle-button:focus-visible {
+.preferences-page .toggle-button:focus-visible,
+.preferences-scope .toggle-button:focus-visible {
     outline: 1px solid var(--di-cyan);
     outline-offset: 2px;
 }

@@ -14,6 +14,8 @@ import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
 import KeeperPanelWindow from './KeeperPanelWindow.jsx'
+import AdminPanelWindow, { hasAdminSection } from './AdminPanelWindow.jsx'
+import useAuthSession from '../../hooks/useAuthSession.js'
 import MidiInputPanel from './MidiInputPanel.jsx'
 import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
@@ -22,7 +24,7 @@ import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSy
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { getInspectorSections } from '../../project/entityRegistry.js'
-import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.js'
+import { createEdge, createNode, getNodeType, isNodeDeletable } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
@@ -33,6 +35,7 @@ import { buildAllNodesExample } from '../../project/graph/examples/allNodesExamp
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
 import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
+import { selectHiddenPanelNodes } from '../utils/panelWindows.js'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
@@ -134,6 +137,7 @@ export default function RawEditor({
     spaceId = DEFAULT_PROJECT_SPACE_ID,
     localStorageKey = ''
 }) {
+    const auth = useAuthSession()
     const [displayName] = useState(() => {
         try {
             return window.localStorage.getItem(DISPLAY_NAME_KEY) || ''
@@ -579,6 +583,9 @@ export default function RawEditor({
 
     const handleDeleteSelected = useCallback(() => {
         if (surfaceSelectedNode) {
+            // Admin windows close, they do not delete. Backspace on a selected
+            // window must not be able to remove the admin tool from the desk.
+            if (!isNodeDeletable(surfaceSelectedNode)) return
             applyLocalOps([
                 {
                     type: 'deleteNode',
@@ -944,11 +951,13 @@ export default function RawEditor({
         payload: { edgeId }
     }), [applyLocalOps])
     const handleDeleteNode = useCallback((nodeId) => {
+        const target = nodes.find((n) => n.id === nodeId)
+        if (target && !isNodeDeletable(target)) return
         applyLocalOps([
             { type: 'deleteNode', payload: { nodeId } },
             { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
         ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })
-    }, [applyLocalOps])
+    }, [applyLocalOps, nodes])
     const handleMoveNode = useCallback((nodeId, nextX, nextY) => applyLocalOps({
         type: 'updateNode',
         payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
@@ -1034,6 +1043,13 @@ export default function RawEditor({
                     })}
                 />
             )
+        }
+        // Admin windows mount the existing console sections unchanged — the
+        // wrapper supplies the scope class and nothing else. No props flow in:
+        // an admin surface that could be configured from the graph is one that
+        // could be driven from the graph.
+        if (hasAdminSection(node.typeId)) {
+            return <AdminPanelWindow node={node} />
         }
         if (node.typeId === 'agent.keeper') {
             return (
@@ -1199,9 +1215,10 @@ export default function RawEditor({
     // sitting resident on the surface — and any panel node that is currently
     // hidden is listed generically, so a node type added later is summonable
     // without touching this list.
-    const hiddenPanelNodes = surfaceNodes.filter(
-        (node) => isPanelNode(node) && node.values?.frame?.visible === false
-    )
+    // Deliberately NOT surfaceNodes: activeSurface defaults to 'world', which
+    // matches no panel-2d type, so a closed window was invisible to its own
+    // reopen command. See selectHiddenPanelNodes.
+    const hiddenPanelNodes = selectHiddenPanelNodes(authoredNodes, isPanelNode)
     const paletteCommands = [
         {
             id: 'chrome',
@@ -1551,6 +1568,10 @@ export default function RawEditor({
                 onClose={() => setPaletteState({ open: false, surface: 'world', placement: null })}
                 onCreate={handlePaletteCreate}
                 commands={paletteCommands}
+                // Withheld unless the session actually says admin. Cosmetic —
+                // serverXR is the wall — but a palette that offers a surface it
+                // cannot open is a worse lie than one that says nothing.
+                isAdmin={auth.role === 'admin'}
             />
 
         </main>
