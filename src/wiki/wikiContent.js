@@ -271,7 +271,7 @@ export const WIKI_ARTICLES = [
         summary: 'The /admin console is admins-only; your own spaces are managed from /studio.',
         body: [
             '/admin is the platform console, visible to admin accounts only — everyone else is pointed back to their Spaces page. Owners never need it: your own spaces are fully self-service on /studio.',
-            'Admins manage everything from /admin → Manage: a directory tree of spaces, each expanding to its projects. The console keeps three admin sections (Manage, Open Call, Agents) and three diagnostics sections (Overview, Inspect, System); the header shows counts for the work at hand instead of scene telemetry while you administer.',
+            'Admins manage everything from /admin → Manage: a directory tree of spaces, each expanding to its projects. The console keeps three admin sections (Manage, Open Call, Agents) and four diagnostics sections (Overview, Inspect, System, Estate); the header shows counts for the work at hand instead of scene telemetry while you administer.',
             { list: [
                 'Create / rename / delete spaces and projects inline.',
                 'Edit a space or project’s public link (slug) separately from its rename — the id underneath never changes, so old links stay valid.',
@@ -280,7 +280,24 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['admin', 'manage', 'access', 'slug'],
-        updated: '2026-08-08'
+        updated: '2026-08-10'
+    },
+    {
+        id: 'admin-estate',
+        category: 'Spaces & access',
+        title: 'Estate — the machines behind the platform',
+        summary: 'A read-only map of every machine, address and store the studio runs, shown inside /admin.',
+        body: [
+            '/admin → Estate renders the studio\u2019s infrastructure map: the tailnet topology, every machine and what it is for, what runs where, the public names, and the totals \u2014 threads, memory, storage, GPUs, backups.',
+            'It is written and kept in a private repository, not in this one. This repository is public, so the map is never committed here and never served from the static site; the server reads it from a path given at deploy time and hands it only to admin accounts.',
+            { list: [
+                'A host that was never given the file says so plainly \u2014 that is the normal state, not a fault.',
+                'The map is displayed in a fully sandboxed frame: no scripts, no forms, no same-origin access.',
+                'Source name, last-modified date and size are shown above it, so a stale copy is visible rather than believed.'
+            ] }
+        ],
+        tags: ['admin', 'estate', 'infrastructure', 'diagnostics'],
+        updated: '2026-08-10'
     },
     {
         id: 'agents-board',

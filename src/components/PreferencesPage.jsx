@@ -22,6 +22,7 @@ import {
 import AdminManageSection from './preferences/AdminManageSection.jsx'
 import OpenCallSection from './preferences/OpenCallSection.jsx'
 import AgentsSection from './preferences/AgentsSection.jsx'
+import EstateSection from './preferences/EstateSection.jsx'
 
 // Two groups: "admin" is real access-control (who can see/publish what),
 // "diagnostics" is live operator/debug telemetry — same nav, visually
@@ -35,7 +36,11 @@ const SECTIONS = [
     { key: 'agents', label: 'Agents', glyph: '◈', group: 'admin' },
     { key: 'overview', label: 'Overview', glyph: '◆', group: 'diagnostics' },
     { key: 'inspect', label: 'Inspect', glyph: '◇', group: 'diagnostics' },
-    { key: 'system', label: 'System', glyph: '▥', group: 'diagnostics' }
+    { key: 'system', label: 'System', glyph: '▥', group: 'diagnostics' },
+    // Diagnostics, not admin: the estate map only observes. It is the machines
+    // themselves rather than this app — read from the private atlas, admin-gated
+    // at the server because it is infrastructure topology.
+    { key: 'estate', label: 'Estate', glyph: '⌗', group: 'diagnostics' }
 ]
 
 // Sections where the person is administering, not debugging the scene — the
@@ -468,6 +473,8 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                     {activeSection === 'opencall' && <OpenCallSection />}
 
                     {activeSection === 'agents' && <AgentsSection onBoardStats={setAgentStats} />}
+
+                    {activeSection === 'estate' && <EstateSection />}
 
                     {activeSection === 'system' && (
                         <ModuleSection

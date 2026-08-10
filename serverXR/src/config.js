@@ -141,6 +141,13 @@ const clientDir = process.env.CLIENT_DIR ? resolveDir(process.env.CLIENT_DIR, nu
 const spacesDir = resolveDir(process.env.SPACES_DIR, path.join(dataDir, 'spaces'))
 const uploadsDir = resolveDir(process.env.UPLOADS_DIR, path.join(dataDir, 'uploads'))
 const dbPath = resolveDir(process.env.DB_PATH, path.join(dataDir, 'di.db'))
+// The estate map is infrastructure topology — public IP, tailnet addresses,
+// hostnames, where the backups live. This repo is public, so the file is never
+// committed here and never placed in public/; it is written onto the box out of
+// band from the private di-atlas. Unset means the Estate panel simply says so.
+const estateMapPath = process.env.ESTATE_MAP_PATH
+  ? resolveDir(process.env.ESTATE_MAP_PATH, null)
+  : null
 const authSessionTtlMs = parseNumber(process.env.AUTH_SESSION_TTL_MS, 1000 * 60 * 60 * 12)
 const authSessionCookieName = (process.env.AUTH_SESSION_COOKIE_NAME || 'dii_serverxr_session').trim()
 const authSessionCookieSecure = parseBool(process.env.AUTH_SESSION_COOKIE_SECURE, isProduction)
@@ -278,7 +285,8 @@ const config = {
     dataDir,
     spacesDir,
     uploadsDir,
-    dbPath
+    dbPath,
+    estateMapPath
   },
   defaultTtlMs: Number(process.env.SPACE_TTL_MS || 1000 * 60 * 60 * 24 * 30),
   // Guest sandboxes are throwaway by contract (the hub banner says so) — idle

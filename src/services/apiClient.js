@@ -228,6 +228,12 @@ export const loginApiSession = async (token) => apiFetch('/api/auth/session', {
     body: { token: normalizeSessionApiToken(token) }
 })
 
+// The estate map is infrastructure topology and this repo is public, so the file
+// is never in it — the server reads it from ESTATE_MAP_PATH and hands it to
+// admins only. A 404 here is the normal state on any host that has not been
+// given the file, not a fault.
+export const getEstateMap = async (opts = {}) => apiFetch('/api/estate/map', opts)
+
 export const logoutApiSession = async () => apiFetch('/api/auth/session', {
     method: 'DELETE',
     json: false
