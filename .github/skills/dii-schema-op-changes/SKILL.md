@@ -49,12 +49,12 @@ Update canonical schema truth first, keep the client and server mirrors aligned,
 5. Add tests for duplicate handling, bad payloads, and correct state changes.
 
 ## Repo Anchors
-- Shared guide: ../../src/shared/AGENTS.md
-- Project guide: ../../src/project/AGENTS.md
-- Backend guide: ../../serverXR/src/AGENTS.md
-- Shared tests: ../../src/shared/projectSchema.test.js
-- Project sync tests: ../../src/project/hooks/useProjectDocumentSync.test.jsx
-- Server contracts: ../../serverXR/src/projectContracts.test.js
+- Shared guide: ../../../src/shared/AGENTS.md
+- Project guide: ../../../src/project/AGENTS.md
+- Backend guide: ../../../serverXR/src/AGENTS.md
+- Shared tests: ../../../src/shared/projectSchema.test.js
+- Project sync tests: ../../../src/project/hooks/useProjectDocumentSync.test.jsx
+- Server contracts: ../../../serverXR/src/projectContracts.test.js
 
 ## Validation
 - Minimum: npm run test

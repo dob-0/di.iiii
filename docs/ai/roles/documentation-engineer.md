@@ -105,10 +105,32 @@ npm run docs:wiki:check # verifies the in-app wiki matches shipped features
 
 All must pass before stopping work on documentation.
 
-`docs:ai:check` also enforces a **banned-strings list** over `docs/ai/roles/` (see
-`scripts/check-agent-docs.mjs`) — legacy cPanel workflow and artifact-branch names are
-rejected in every role card except the Infrastructure Engineer's, which is allowlisted.
-Refer to that legacy path descriptively in any other card.
+### Banned strings: the legacy deploy path
+
+`docs:ai:check` enforces a **banned-strings list** (`legacyDeployPatterns` in
+`scripts/check-agent-docs.mjs`). Three literals are rejected:
+
+- `publish-cpanel-prebuilt-v2.yml`
+- `cpanel-staging`
+- `cpanel-production`
+
+**Why:** production moved from cPanel to the Hetzner VPS on 2026-07-15, and a session
+afterward still cited the old workflow and artifact-branch names from memory. The strings
+are the cheapest reliable signature of that mistake.
+
+**Where it applies:** `rotScanFiles` — `AGENTS.md`, `CHEATSHEET.md`, `ONBOARDING.md`, every
+scope `AGENTS.md`, `.claude/agents/`, `.claude/commands/`, `docs/ai/roles/`, and
+`docs/deploy/*.md` (top level only; `docs/deploy/legacy/` is not scanned).
+
+**Where it does not apply:** `legacyDeployAllowlist` — the deploy runbooks whose job is to
+name the legacy path in order to rule it out, plus the Infrastructure Engineer card (owns
+the deploy truth) and this card (owns this rule, so it can quote what it bans).
+
+**What to do when the check fires:** the default is to delete the stale citation, not to
+widen the allowlist. Current deploy truth lives in `docs/deploy/LIVE_DEPLOY.md`; in any
+non-allowlisted file, refer to the legacy path descriptively ("the legacy cPanel publish
+workflow") and link to that doc. Add a file to the allowlist only if documenting the legacy
+path is that file's actual job — and say so in the PR.
 
 ### The wiki is part of the change, not a follow-up
 

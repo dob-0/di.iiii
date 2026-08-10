@@ -31,7 +31,6 @@ import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
-import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
 import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
 
 const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
@@ -195,9 +194,7 @@ export default function RawEditor({
     const unreadChatCount = chatOpen ? 0 : Math.max(0, presence.messages.length - readChatCount)
     const localSaveFailedRef = useRef(false)
     const topbarRef = useRef(null)
-    const workflowRef = useRef(null)
     const [workspaceTop, setWorkspaceTop] = useState(168)
-    const [workflowHeight, setWorkflowHeight] = useState(0)
     const [nodeScale, setNodeScale] = useState(() => {
         try {
             const saved = window.localStorage.getItem(NODE_SCALE_KEY)
@@ -232,7 +229,6 @@ export default function RawEditor({
     const scope = useNodeGraphScope({ nodes: authoredNodes })
     const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, reset: scopeReset } = scope
     const activeSurface = workspaceState.activeSurface || 'graph'
-    const workflow = getSurfaceWorkflow(activeSurface)
     // Panel windows are scoped exactly like graph cards. Before, this filtered
     // the whole document, so every universe.world node at any depth kept a live
     // <Canvas> mounted in every scope — see selectMountedPanelNodes.
@@ -431,28 +427,6 @@ export default function RawEditor({
             resizeObserver?.disconnect?.()
         }
     }, [presence.users.length])
-
-    useLayoutEffect(() => {
-        const updateWorkflowHeight = () => {
-            const el = workflowRef.current
-            const nextHeight = el ? el.offsetTop + el.offsetHeight : workspaceTop
-            setWorkflowHeight(nextHeight)
-        }
-
-        updateWorkflowHeight()
-        window.addEventListener('resize', updateWorkflowHeight)
-
-        let resizeObserver = null
-        if (typeof ResizeObserver !== 'undefined' && workflowRef.current) {
-            resizeObserver = new ResizeObserver(updateWorkflowHeight)
-            resizeObserver.observe(workflowRef.current)
-        }
-
-        return () => {
-            window.removeEventListener('resize', updateWorkflowHeight)
-            resizeObserver?.disconnect?.()
-        }
-    }, [activeSurface, workflow.actionLabel, workflow.description, workflow.title, workspaceTop])
 
     const selectNode = (nodeId, patch = {}) => {
         dispatch({ type: 'select-entity', entityId: null })
@@ -882,7 +856,7 @@ export default function RawEditor({
     // panel stayed pinned over the very node it was inspecting. CSS decides
     // where this sits; JS only supplies the measured offset.
     const hostInspector = (
-        <aside ref={scaffoldRef} className="raw-selection-scaffold" style={{ '--raw-scaffold-top': workflowHeight + 'px' }}>
+        <aside ref={scaffoldRef} className="raw-selection-scaffold" style={{ '--raw-scaffold-top': workspaceTop + 'px' }}>
             <PropertyInspector
                 title={inspectorTitle}
                 subtitle={inspectorSubtitle}

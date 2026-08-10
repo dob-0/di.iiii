@@ -54,3 +54,65 @@ Deliberately not done:
 - `PROGRESS.md` still references the deleted `deploy-staging-ssh.yml`. Left alone: it is a
   dated historical log, and rewriting history entries to match the present is how a log
   stops being evidence.
+
+## 2026-08-11 — the defects the doc pass turned up, fixed
+
+Correcting the docs surfaced real code and tooling defects. Each was verified before being
+acted on, and each fix carries its own proof rather than an assurance.
+
+**A failed delete could silently unpublish a space.** `RawHub.jsx` cleared
+`publishedProjectId` *before* calling `deleteProject`, so a delete that threw left the space
+unpublished with the project still sitting there — a visitor's live page goes blank and
+nothing says why. Studio already did it in the safe order and carries a comment explaining
+exactly this. RawHub now matches, and the regression guard was run against the unfixed code
+first and watched to fail: it caught the pointer being cleared anyway
+(`["gallery", { publishedProjectId: null }]`).
+
+**Two more delete sites had the other half of the same bug**, found while fixing the first —
+`AdminManageSection.jsx` never cleared the pointer at all (dangling pointer on the admin
+surface, the one most likely to be used on someone else's space), and
+`StudioProjectsPanel.jsx` set the "deleted but the pointer could not be cleared" warning and
+then called `loadProjects()`, which clears status on success — so the user was never told.
+
+**Three months of dead layout scaffolding removed from Raw.** `workflowRef` was declared,
+read by a `ResizeObserver`, and never attached to any element. `git log -S` found the cause:
+commit `9968ab00` (May 2026) deliberately deleted the contextual workflow strip when the
+window-based workspace landed, and the ref, the observer, `workflowHeight` and
+`src/raw/utils/surfaceWorkflow.js` all survived it. Removal proven a no-op by rendering
+before and after at DPR 2 — byte-identical screenshots, zero differing pixels.
+
+**A CSS declaration that resolved to nothing.** `raw.css` used `var(--di-card)` with no
+fallback, and `--di-card` is defined nowhere; repointed to `--di-surface`, the token the
+identical neighbouring card already uses. The fix is invisible for a reason worth recording:
+`.raw-card` is itself dead CSS — no element in the repo carries the class. It was proven by
+injecting a probe element and reading computed style: `rgba(0,0,0,0)` before,
+`rgb(10,10,10)` after, matching the live reference card.
+
+Four more tokens (`--di-accent`, `--di-bg`, `--di-dim`, `--di-line`) are also undefined but
+carry inline fallbacks and render correctly. Deliberately left alone — repointing them would
+visibly restyle Studio surfaces, and defining them at their fallback values would enshrine
+four off-palette hexes beside the canonical ones. That is a design-system decision, not a
+bug fix.
+
+**Every skill anchor in the repo was broken.** All 15 `.github/skills/*/SKILL.md` used
+`../../`, which from `.github/skills/<name>/` resolves to `.github/` — so not one anchor
+pointed at a real file. Swept to `../../../`; all **106 anchors now resolve, 0 broken**,
+checked by resolving each against the filesystem.
+
+**A guard that made a true fact undocumentable.** `check-agent-docs.mjs` bans the legacy
+cPanel workflow and branch names anywhere in its scanned paths — a good rule, added after an
+agent cited the dead deploy path from memory. But it meant you could not write down *why*
+that workflow is inert. One allowlist entry added for the documentation-engineer card, which
+now states the rule in full; the guard was proven still to fire by planting a probe citation
+in a non-allowlisted file, watching the check fail, and removing it.
+
+Also corrected: `dii-project-asset-transport` cited `projectImportAssets.js`, which never
+existed (real code is `src/project/transfer/studioProjectBundle.js`); `src/project/AGENTS.md`
+cited the same phantom test; `serverXR/ecosystem.config.js` is now marked as PM2/cPanel
+legacy rather than sitting unmarked and reading as current.
+
+Open, deliberately not done:
+
+- `.raw-card` and `.raw-hub-grid` are dead CSS blocks. The declaration inside was fixed
+  rather than the block deleted — deletion was not in scope and wants a decision.
+- The four fallback-carrying undefined tokens, above.

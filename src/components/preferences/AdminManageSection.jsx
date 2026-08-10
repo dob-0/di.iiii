@@ -4,6 +4,7 @@ import GithubSyncSection from './GithubSyncSection.jsx'
 import {
     listServerSpaces,
     createServerSpace,
+    getServerSpace,
     updateServerSpace,
     deleteServerSpace,
     getServerConfig,
@@ -181,13 +182,36 @@ export default function AdminManageSection({ onStats }) {
     const removeProject = useCallback((spaceId, project) => {
         if (!window.confirm(`Delete project "${project.title || project.id}"? This cannot be undone.`)) return
         runMutation(async () => {
+            const spaceMeta = await getServerSpace(spaceId).catch(() => null)
+            const publishedId = spaceMeta
+                ? spaceMeta.publishedProjectId
+                : spaces.find((s) => s.id === spaceId)?.publishedProjectId
+            const wasPublished = publishedId === project.id
+            // Never leave a dangling published pointer, and never silently
+            // unpublish a space whose project still exists: delete first, and
+            // clear the space's live pointer only once the project is gone.
             await deleteProject(project.id)
+            let unpublishError = null
+            if (wasPublished) {
+                try {
+                    await updateServerSpace(spaceId, { publishedProjectId: null })
+                } catch (e) {
+                    unpublishError = e
+                }
+            }
             if (selection.type === 'project' && selection.projectId === project.id) {
                 setSelection({ type: 'space', spaceId })
             }
             await loadProjects(spaceId)
+            // Both reloads clear `error` on success, so report the half-done
+            // delete only once they have settled — otherwise the one message
+            // that says the space is now pointing nowhere never renders.
+            if (wasPublished) await loadSpaces()
+            if (unpublishError) {
+                setError(`Project deleted, but the space's live pointer could not be cleared: ${unpublishError.message || unpublishError}`)
+            }
         }, 'Could not delete project.')
-    }, [runMutation, loadProjects, selection])
+    }, [runMutation, loadProjects, loadSpaces, selection, spaces])
 
     // ─── user / access actions ────────────────────────────────────
     const patchUser = useCallback((userId, patch) => (

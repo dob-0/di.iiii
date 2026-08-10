@@ -39,7 +39,7 @@ Short routing guide for AI agents working in `src/project/`.
 - nearby tests:
   - `src/project/hooks/useProjectDocumentSync.test.jsx`
   - `src/project/services/projectsApi.test.js`
-  - `src/project/import/projectImportAssets.test.js`
+  - `src/project/transfer/studioProjectBundle.test.js`
   - `src/project/nodeRegistry.test.js`
   - `src/project/components/PublicProjectViewer.test.jsx`
 

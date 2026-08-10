@@ -676,7 +676,7 @@
 }
 
 .raw-card {
-    background: var(--di-card);
+    background: var(--di-surface);
     border: 1px solid var(--di-cyan-border);
     border-radius: 0;
     box-shadow: none;
@@ -1981,65 +1981,6 @@
     min-height: 100dvh;
 }
 
-.raw-surface-workflow {
-    margin: 12px 16px 0;
-    z-index: 4;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 14px 16px;
-    border: 1px solid var(--di-cyan-border);
-    background: rgba(8, 12, 20, 0.92);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-}
-
-.raw-surface-workflow-copy {
-    max-width: 44rem;
-}
-
-.raw-surface-workflow-copy strong {
-    display: block;
-    margin: 0 0 4px;
-    font-size: 13px;
-    color: #f4f7fb;
-    letter-spacing: 0.02em;
-}
-
-.raw-surface-workflow-copy p {
-    margin: 0;
-    color: rgba(244, 247, 251, 0.62);
-    font-size: 12px;
-    line-height: 1.45;
-}
-
-.raw-surface-workflow-actions {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    gap: 8px;
-}
-
-.raw-surface-workflow-actions button {
-    -webkit-appearance: none;
-    appearance: none;
-    border: 1px solid rgba(77, 249, 255, 0.3);
-    border-radius: 0;
-    background: rgba(77, 249, 255, 0.08);
-    color: #f4f7fb;
-    padding: 8px 12px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: background 0.12s, border-color 0.12s, color 0.12s;
-}
-
-.raw-surface-workflow-actions button:hover {
-    background: rgba(77, 249, 255, 0.16);
-    border-color: var(--di-cyan);
-    color: var(--di-cyan);
-}
-
 .raw-topbar-help-action {
     -webkit-appearance: none;
     appearance: none;
@@ -2069,14 +2010,6 @@
 
     .raw-hub-projects {
         max-height: none;
-    }
-
-    .raw-surface-workflow {
-        flex-direction: column;
-    }
-
-    .raw-surface-workflow-actions {
-        justify-content: flex-start;
     }
 
     .raw-help-body {

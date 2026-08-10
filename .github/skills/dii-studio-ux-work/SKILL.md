@@ -54,16 +54,16 @@ Make the smallest Studio-only change that advances the shipped product without p
 - When the inspector grows, prefer new sub-components over widening the root inspector file.
 
 ## Repo Anchors
-- Studio guide: ../../src/studio/AGENTS.md
-- Shared project guide: ../../src/project/AGENTS.md
-- Shared schema: ../../src/shared/AGENTS.md
-- Architecture hotspots: ../../docs/roadmaps/PROJECT_DEVELOPMENT_FRAMEWORK.md
+- Studio guide: ../../../src/studio/AGENTS.md
+- Shared project guide: ../../../src/project/AGENTS.md
+- Shared schema: ../../../src/shared/AGENTS.md
+- Architecture hotspots: ../../../docs/roadmaps/PROJECT_DEVELOPMENT_FRAMEWORK.md
 - Useful tests:
-  - ../../src/studio/components/StudioHub.test.jsx
-  - ../../src/studio/components/StudioPresentationSurface.test.jsx
-  - ../../src/studio/utils/studioRouting.test.js
-  - ../../src/studio/utils/studioWorkspaceStorage.test.js
-  - ../../src/studio/components/StudioShell.test.jsx
+  - ../../../src/studio/components/StudioHub.test.jsx
+  - ../../../src/studio/components/StudioPresentationSurface.test.jsx
+  - ../../../src/studio/utils/studioRouting.test.js
+  - ../../../src/studio/utils/studioWorkspaceStorage.test.js
+  - ../../../src/studio/components/StudioShell.test.jsx
 
 ## Validation
 - npm run test

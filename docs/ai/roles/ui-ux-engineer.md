@@ -36,7 +36,6 @@ src/project/nodeRegistry.js       ← node model is NSE territory
 src/project/graph/nodeGraphRuntime.js← graph execution is NSE territory
 src/project/graph/nodeInspectorSections.js
 src/project/graph/nodeSurfaceFilters.js
-src/raw/utils/surfaceWorkflow.js
 shared/                           ← schema contracts — SPE territory
 src/shared/                       ← schema contracts — SPE territory
 ```
@@ -65,9 +64,13 @@ components consume, so a palette change stays a one-line edit in `base.css`.
 
 If a token you want does not exist, add it to `base.css` and to `docs/ai/ui-system.md` in the
 same change — never hardcode a hex value in a component stylesheet, and never invent a
-`--di-*` name at the point of use. (`--di-accent`, `--di-bg`, `--di-card`, `--di-dim` and
-`--di-line` appear in Studio/Raw CSS but are **not defined anywhere** — most carry an inline
-fallback and so silently render the fallback. Do not add more of these.)
+`--di-*` name at the point of use. (`--di-accent`, `--di-bg`, `--di-dim` and `--di-line`
+appear in Studio CSS but are **not defined anywhere** — each carries an inline fallback and
+so silently renders it. They are left alone deliberately: repointing them at real tokens
+would visibly restyle those surfaces, and defining them at their fallback values would
+enshrine four off-palette hexes next to the canonical ones. Do not add more of these.
+`--di-card` was a fifth, with **no** fallback, so it resolved to nothing; it was repointed to
+`--di-surface` on 2026-08-11 and is now referenced nowhere.)
 
 ### Visual Language Rules
 
@@ -111,19 +114,21 @@ return bottom > 0 ? bottom + padding : DEFAULT_RAW_WORKSPACE_TOP
 `clampWindowFrame(frame, bounds)` — use `clampWindowFrame` to keep a floating window on screen
 rather than writing your own bounds math.
 
-### `workspaceTop` vs `workflowHeight`
+### `workspaceTop`
 
-`RawEditor.jsx` holds two separate layout numbers. Do not conflate them:
+`RawEditor.jsx` holds one layout number: **`workspaceTop`**, the measured topbar bottom.
+That is the inset every surface gets, and it is what feeds `--raw-scaffold-top` on the
+inspector.
 
-- **`workspaceTop`** — measured topbar bottom. This is the inset every surface actually gets.
-- **`workflowHeight`** — measured from `workflowRef`, falling back to `workspaceTop`.
+There used to be a second number, `workflowHeight`, measured from a `workflowRef` on a
+contextual workflow strip. **The strip was deliberately removed in May 2026** (commit
+`9968ab00`, the move to a window-based workspace), but the ref, the ResizeObserver and
+`src/raw/utils/surfaceWorkflow.js` survived unattached for three months — so
+`workflowHeight` always resolved to its `workspaceTop` fallback and was an alias with an
+extra render hop. All of it was deleted on 2026-08-11, verified as a pixel-identical no-op.
 
-**Current state, verify before relying on it:** `workflowRef` is declared but is not attached
-to any element, so `workflowHeight` always resolves to its `workspaceTop` fallback. The
-contextual workflow strip it was measuring is not rendered in Raw today (`getSurfaceWorkflow`
-in `src/raw/utils/surfaceWorkflow.js` still exists and is only read for an effect dependency
-list). If you re-introduce a workflow strip, attach `workflowRef` to it — do not hardcode a
-height, and do not "simplify" `workflowHeight` away without checking the scaffold below.
+If you ever re-introduce a workflow strip, measure it with its own ref and feed the
+scaffold from that — do not hardcode a height.
 
 ### Inspector (`.raw-selection-scaffold`)
 

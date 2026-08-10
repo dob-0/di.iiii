@@ -108,4 +108,29 @@ describe('StudioProjectsPanel', () => {
         expect(updateServerSpace).toHaveBeenCalledWith('br-id-ge', { publishedProjectId: null })
         expect(listProjects).toHaveBeenCalledTimes(2)
     })
+
+    // Regression guard: the warning used to be set before the project list
+    // reloaded, and loadProjects clears the status on success — so the one
+    // message telling the user their space is now pointing nowhere was wiped
+    // before it could ever be read.
+    it('keeps the failed-unpublish warning on screen after the list reloads', async () => {
+        listProjects
+            .mockResolvedValueOnce([
+                { id: 'keep', title: 'keep me' },
+                { id: 'gone', title: 'delete me' }
+            ])
+            .mockResolvedValue([{ id: 'keep', title: 'keep me' }])
+        getServerSpace.mockResolvedValue({ publishedProjectId: 'gone' })
+        updateServerSpace.mockRejectedValue(new Error('space is locked'))
+        deleteProject.mockResolvedValue({})
+        vi.spyOn(window, 'confirm').mockReturnValue(true)
+
+        render(<StudioProjectsPanel spaceId="br-id-ge" currentProjectId="keep" />)
+
+        await userEvent.click(await screen.findByRole('button', { name: 'Delete' }))
+
+        // the reload has landed once the deleted row is gone from the list
+        await waitFor(() => expect(screen.queryByText('delete me')).toBeNull())
+        expect(screen.getByText(/Project deleted, but the space's live pointer could not be cleared: space is locked/)).toBeInTheDocument()
+    })
 })

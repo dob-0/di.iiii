@@ -5,6 +5,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest'
 vi.mock('../../services/serverSpaces.js', () => ({
     listServerSpaces: vi.fn(),
     createServerSpace: vi.fn(),
+    getServerSpace: vi.fn(),
     updateServerSpace: vi.fn(),
     deleteServerSpace: vi.fn(),
     getServerConfig: vi.fn(),
@@ -40,12 +41,13 @@ import AdminManageSection from './AdminManageSection.jsx'
 import {
     listServerSpaces,
     getServerConfig,
+    getServerSpace,
     updateServerSpace,
     getGithubAppInfo,
     listGithubRepos,
     connectSpaceGithub
 } from '../../services/serverSpaces.js'
-import { listProjects, updateProject } from '../../project/services/projectsApi.js'
+import { listProjects, updateProject, deleteProject } from '../../project/services/projectsApi.js'
 import { listUsers } from '../../services/usersApi.js'
 import { navigateToStudioPath } from '../../studio/utils/studioRouting.js'
 
@@ -59,6 +61,7 @@ describe('AdminManageSection', () => {
         getServerConfig.mockResolvedValue({ defaultSpaceId: 'main', globalSpaceId: 'main' })
         listUsers.mockResolvedValue([])
         listProjects.mockResolvedValue([{ id: 'p1', title: 'First Project', spaceId: 'demo' }])
+        getServerSpace.mockResolvedValue({ id: 'demo', label: 'Demo', publishedProjectId: null })
     })
 
     it('renders the spaces tree and root overview', async () => {
@@ -176,5 +179,65 @@ describe('AdminManageSection', () => {
         fireEvent.click((await screen.findAllByText('Studio'))[0])
 
         expect(await screen.findByText('/demo/artistplace')).toBeTruthy()
+    })
+
+    // Regression guard: deleting a project from the admin surface used to
+    // leave the space's publishedProjectId pointing at a project that no
+    // longer exists — a dangling pointer that breaks the public route. The
+    // order matters both ways: delete first (a failed delete must never
+    // unpublish a live space), then clear the pointer.
+    describe('deleting a project', () => {
+        const openProjectDetail = async () => {
+            vi.spyOn(window, 'confirm').mockReturnValue(true)
+            render(<AdminManageSection />)
+            fireEvent.click(await screen.findByText('Demo'))
+            fireEvent.click((await screen.findAllByText('First Project'))[0])
+            return screen.findByRole('button', { name: 'Delete' })
+        }
+
+        it('clears the space live pointer after deleting the published project', async () => {
+            getServerSpace.mockResolvedValue({ id: 'demo', publishedProjectId: 'p1' })
+            deleteProject.mockResolvedValue({})
+            updateServerSpace.mockResolvedValue({})
+
+            fireEvent.click(await openProjectDetail())
+
+            await waitFor(() => expect(deleteProject).toHaveBeenCalledWith('p1'))
+            await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('demo', { publishedProjectId: null }))
+        })
+
+        it('leaves the live pointer alone when the deleted project was not the published one', async () => {
+            getServerSpace.mockResolvedValue({ id: 'demo', publishedProjectId: 'some-other-project' })
+            deleteProject.mockResolvedValue({})
+            updateServerSpace.mockResolvedValue({})
+
+            fireEvent.click(await openProjectDetail())
+
+            await waitFor(() => expect(deleteProject).toHaveBeenCalledWith('p1'))
+            await waitFor(() => expect(listProjects).toHaveBeenCalledTimes(2))
+            expect(updateServerSpace).not.toHaveBeenCalled()
+        })
+
+        it('leaves the published pointer intact when the delete fails', async () => {
+            getServerSpace.mockResolvedValue({ id: 'demo', publishedProjectId: 'p1' })
+            deleteProject.mockRejectedValue(new Error('server said no'))
+            updateServerSpace.mockResolvedValue({})
+
+            fireEvent.click(await openProjectDetail())
+
+            await waitFor(() => expect(deleteProject).toHaveBeenCalledWith('p1'))
+            expect(await screen.findByText('server said no')).toBeTruthy()
+            expect(updateServerSpace).not.toHaveBeenCalled()
+        })
+
+        it('says so when the project was deleted but the live pointer could not be cleared', async () => {
+            getServerSpace.mockResolvedValue({ id: 'demo', publishedProjectId: 'p1' })
+            deleteProject.mockResolvedValue({})
+            updateServerSpace.mockRejectedValue(new Error('space is locked'))
+
+            fireEvent.click(await openProjectDetail())
+
+            expect(await screen.findByText(/Project deleted, but the space's live pointer could not be cleared: space is locked/)).toBeTruthy()
+        })
     })
 })

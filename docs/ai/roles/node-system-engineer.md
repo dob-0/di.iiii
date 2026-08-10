@@ -16,7 +16,6 @@ src/project/graph/nodeInspectorSections.js← inspector field definitions per no
 src/project/graph/nodeSurfaceFilters.js  ← which node types appear on which surface
 src/project/graph/nodeGraphAuthoring.js  ← node/edge authoring operations
 src/project/graph/useGraphClock.js       ← the graph clock (Time node)
-src/raw/utils/surfaceWorkflow.js      ← which workflow actions belong to each surface
 src/raw/utils/rawGuide.js             ← Raw help content (surface-aware)
 ```
 

@@ -49,15 +49,15 @@ Implement backend-authoritative behavior with explicit contract validation befor
 3. Check project sync or presence clients for compatibility.
 
 ## Repo Anchors
-- Backend guide: ../../serverXR/src/AGENTS.md
-- Backend README: ../../serverXR/README.md
-- Shared schema guide: ../../src/shared/AGENTS.md
-- Project sync guide: ../../src/project/AGENTS.md
+- Backend guide: ../../../serverXR/src/AGENTS.md
+- Backend README: ../../../serverXR/README.md
+- Shared schema guide: ../../../src/shared/AGENTS.md
+- Project sync guide: ../../../src/project/AGENTS.md
 - Core tests:
-  - ../../serverXR/src/httpContracts.test.js
-  - ../../serverXR/src/projectContracts.test.js
-  - ../../serverXR/src/socketHandlers.test.js
-  - ../../serverXR/src/config.test.js
+  - ../../../serverXR/src/httpContracts.test.js
+  - ../../../serverXR/src/projectContracts.test.js
+  - ../../../serverXR/src/socketHandlers.test.js
+  - ../../../serverXR/src/config.test.js
 
 ## Validation
 - Minimum backend check: npm run test:server-contracts

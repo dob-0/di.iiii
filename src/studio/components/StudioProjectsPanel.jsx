@@ -83,15 +83,22 @@ export default function StudioProjectsPanel({ spaceId, currentProjectId }) {
             // actually gone, so a failed delete never leaves the space
             // silently unpublished while the project still exists.
             await deleteProject(project.id)
+            let unpublishError = null
             if (wasPublished) {
                 try {
                     await updateServerSpace(spaceId, { publishedProjectId: null })
                     setPublishedProjectId(null)
-                } catch (unpublishError) {
-                    setStatus(`Project deleted, but the space's live pointer could not be cleared: ${unpublishError.message || unpublishError}`)
+                } catch (e) {
+                    unpublishError = e
                 }
             }
             await loadProjects()
+            // loadProjects clears the status on success, so the warning has to
+            // be set after it — otherwise the one message telling the user the
+            // space now points nowhere is wiped before it can be read.
+            if (unpublishError) {
+                setStatus(`Project deleted, but the space's live pointer could not be cleared: ${unpublishError.message || unpublishError}`)
+            }
         } catch (e) {
             setStatus(e.message || 'delete failed')
         } finally {

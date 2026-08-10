@@ -177,14 +177,19 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
             // actually gone, so a failed delete never leaves the space
             // silently unpublished while the project still exists.
             await deleteProject(project.id)
+            let unpublishWarning = ''
             if (wasPublished) {
                 try {
                     await updateServerSpace(spaceId, { publishedProjectId: null })
                 } catch (unpublishError) {
-                    setStatus(`Project deleted, but the space's live pointer could not be cleared: ${unpublishError.message || unpublishError}`)
+                    unpublishWarning = `Project deleted, but the space's live pointer could not be cleared: ${unpublishError.message || unpublishError}`
                 }
             }
+            // Set the warning AFTER the reload: loadProjects() clears status on
+            // success, so setting it inline means the user never sees that the
+            // space was left pointing at a project that no longer exists.
             await loadProjects()
+            if (unpublishWarning) setStatus(unpublishWarning)
         } catch (e) {
             setStatus(e.message || 'delete failed')
         } finally {

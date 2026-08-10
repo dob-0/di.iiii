@@ -54,13 +54,13 @@ Make the smallest shared sync change that preserves deduplication, version order
 3. Confirm peers clear stale state on disconnect.
 
 ## Repo Anchors
-- Shared sync guide: ../../src/project/AGENTS.md
-- Backend guide: ../../serverXR/src/AGENTS.md
-- Workflow map: ../../docs/ai/workflows.md
+- Shared sync guide: ../../../src/project/AGENTS.md
+- Backend guide: ../../../serverXR/src/AGENTS.md
+- Workflow map: ../../../docs/ai/workflows.md
 - Useful tests:
-  - ../../src/project/hooks/useProjectDocumentSync.test.jsx
-  - ../../serverXR/src/projectContracts.test.js
-  - ../../serverXR/src/socketHandlers.test.js
+  - ../../../src/project/hooks/useProjectDocumentSync.test.jsx
+  - ../../../serverXR/src/projectContracts.test.js
+  - ../../../serverXR/src/socketHandlers.test.js
 
 ## Validation
 - Shared client sync changes: npm run test and npm run build

@@ -122,6 +122,36 @@ describe('StudioHub', () => {
         })
     })
 
+    // The warning used to be set inline in the catch, before loadProjects() —
+    // which clears status on success, so the author was never told the space had
+    // been left pointing at a project that no longer exists. Assert on the state
+    // AFTER the reload has landed, not on a transient frame.
+    it('keeps the failed-unpublish warning on screen after the list reloads', async () => {
+        listProjects
+            .mockResolvedValueOnce([{
+                id: 'live-project',
+                title: 'Live Project',
+                updatedAt: new Date().toISOString(),
+                source: 'studio-v3'
+            }])
+            .mockResolvedValueOnce([])
+        getServerSpace.mockResolvedValue({ id: 'gallery', publishedProjectId: 'live-project' })
+        deleteProject.mockResolvedValue({ ok: true })
+        updateServerSpace.mockRejectedValue(new Error('space is locked'))
+
+        render(<StudioHub spaceId="gallery" />)
+        fireEvent.click(await screen.findByRole('button', { name: 'Delete' }))
+
+        // the reload has rendered (the deleted row is gone) …
+        await waitFor(() => {
+            expect(screen.queryByText('Live Project')).not.toBeInTheDocument()
+        })
+        // … and only then does the warning still have to be there
+        expect(
+            await screen.findByText(/live pointer could not be cleared: space is locked/)
+        ).toBeInTheDocument()
+    })
+
     describe('code spaces', () => {
         // algovrithm's scene is a React route, not a project document, so the
         // server correctly reports zero projects for it. Without the registry

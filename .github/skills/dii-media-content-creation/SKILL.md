@@ -65,17 +65,17 @@ Make media reliably uploadable, displayable, and playable across the editor, XR 
 - adding a new font requires placing the typeface.js file in public/fonts/ and registering it in the text object config
 
 ## Repo Anchors
-- Asset panel: ../../src/AssetPanel.jsx
-- Media panel: ../../src/MediaPanel.jsx
-- Asset pipeline hook: ../../src/hooks/useAssetPipeline.js
-- Object components: ../../src/objectComponents/
-- Media asset types: ../../src/utils/mediaAssetTypes.js
-- Media inspector: ../../src/components/inspector/InspectorMediaSection.jsx
-- Media variants: ../../src/components/inspector/InspectorMediaVariants.jsx
-- Font assets: ../../public/fonts/
+- Asset panel: ../../../src/AssetPanel.jsx
+- Media panel: ../../../src/MediaPanel.jsx
+- Asset pipeline hook: ../../../src/hooks/useAssetPipeline.js
+- Object components: ../../../src/objectComponents/
+- Media asset types: ../../../src/utils/mediaAssetTypes.js
+- Media inspector: ../../../src/components/inspector/InspectorMediaSection.jsx
+- Media variants: ../../../src/components/inspector/InspectorMediaVariants.jsx
+- Font assets: ../../../public/fonts/
 - Useful tests:
-  - ../../src/hooks/useAssetPipeline.test.jsx
-  - ../../src/objectComponents/VideoObject.test.jsx
+  - ../../../src/hooks/useAssetPipeline.test.jsx
+  - ../../../src/objectComponents/VideoObject.test.jsx
 
 ## Validation
 - npm run test

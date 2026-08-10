@@ -51,11 +51,11 @@ Extract by concern, not by line count. One well-named module with clear ownershi
 - Do not extract shared behavior into a lane-specific module. Use the correct shared layer.
 
 ## Repo Anchors
-- Routing guidance: ../../AGENTS.md and dii-feature-routing skill
-- Architecture hotspots: ../../docs/roadmaps/PROJECT_DEVELOPMENT_FRAMEWORK.md
-- Studio guide: ../../src/studio/AGENTS.md
-- Shared project guide: ../../src/project/AGENTS.md
-- Backend guide: ../../serverXR/src/AGENTS.md
+- Routing guidance: ../../../AGENTS.md and dii-feature-routing skill
+- Architecture hotspots: ../../../docs/roadmaps/PROJECT_DEVELOPMENT_FRAMEWORK.md
+- Studio guide: ../../../src/studio/AGENTS.md
+- Shared project guide: ../../../src/project/AGENTS.md
+- Backend guide: ../../../serverXR/src/AGENTS.md
 
 ## Validation
 - Before extraction: npm run test to baseline

@@ -77,12 +77,12 @@ Advance code through the correct branch path, verify what is actually running on
 - PM2 is not used anywhere; the VPS runs Docker Compose
 
 ## Repo Anchors
-- Deploy runbook: ../../docs/deploy/LIVE_DEPLOY.md
-- VPS detail and secrets reference: ../../docs/deploy/VPS_DOCKER_DEPLOY.md
-- Production workflow: ../../.github/workflows/deploy-vps.yml
-- Staging workflow: ../../.github/workflows/deploy-vps-staging.yml
-- Automation: ../../scripts/AGENTS.md
-- Deploy docs: ../../deploy/AGENTS.md
+- Deploy runbook: ../../../docs/deploy/LIVE_DEPLOY.md
+- VPS detail and secrets reference: ../../../docs/deploy/VPS_DOCKER_DEPLOY.md
+- Production workflow: ../../../.github/workflows/deploy-vps.yml
+- Staging workflow: ../../../.github/workflows/deploy-vps-staging.yml
+- Automation: ../../../scripts/AGENTS.md
+- Deploy docs: ../../../deploy/AGENTS.md
 - Shortcut commands: package.json scripts section
 
 ## Validation

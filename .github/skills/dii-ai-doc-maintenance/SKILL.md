@@ -33,14 +33,14 @@ Keep canonical docs concise and authoritative, regenerate bridges, and verify th
 - When architecture or workflow truth changes, update canonical docs before generated outputs.
 
 ## Repo Anchors
-- Root guide: ../../AGENTS.md
-- AI index: ../../docs/ai/index.md
-- Workflow guide: ../../docs/ai/workflows.md
-- Testing guide: ../../docs/ai/testing.md
-- Deploy guide: ../../docs/ai/deploy.md
-- Automation guide: ../../scripts/AGENTS.md
-- Sync script: ../../scripts/sync-agent-docs.mjs
-- Check script: ../../scripts/check-agent-docs.mjs
+- Root guide: ../../../AGENTS.md
+- AI index: ../../../docs/ai/index.md
+- Workflow guide: ../../../docs/ai/workflows.md
+- Testing guide: ../../../docs/ai/testing.md
+- Deploy guide: ../../../docs/ai/deploy.md
+- Automation guide: ../../../scripts/AGENTS.md
+- Sync script: ../../../scripts/sync-agent-docs.mjs
+- Check script: ../../../scripts/check-agent-docs.mjs
 
 ## Validation
 - npm run docs:ai:sync

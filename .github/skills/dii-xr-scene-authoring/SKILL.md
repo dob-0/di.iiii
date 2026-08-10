@@ -64,12 +64,12 @@ Make the smallest, correct change to the 3D layer that keeps the scene determini
 - InspectorBasics owns name, visibility, and shared flags
 
 ## Repo Anchors
-- Object components: ../../src/objectComponents/
-- XR entry: ../../src/xr/
-- Scene canvas: ../../src/components/SceneCanvas.jsx
-- Inspector panels: ../../src/components/inspector/
-- Asset source helpers: ../../src/services/assetSources.js
-- Media asset types: ../../src/utils/mediaAssetTypes.js
+- Object components: ../../../src/objectComponents/
+- XR entry: ../../../src/xr/
+- Scene canvas: ../../../src/components/SceneCanvas.jsx
+- Inspector panels: ../../../src/components/inspector/
+- Asset source helpers: ../../../src/services/assetSources.js
+- Media asset types: ../../../src/utils/mediaAssetTypes.js
 
 ## Validation
 - npm run test

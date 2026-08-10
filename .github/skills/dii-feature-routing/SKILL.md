@@ -41,15 +41,15 @@ Pick one primary edit location, list adjacent surfaces to inspect, and choose th
 - If the change is documentation, templates, or deploy examples, prefer deploy.
 
 ## Repo Anchors
-- Root routing: ../../AGENTS.md
-- Workflow matrix: ../../docs/ai/workflows.md
-- Studio lane: ../../src/studio/AGENTS.md
-- Raw lane: ../../src/raw/AGENTS.md
-- Shared project layer: ../../src/project/AGENTS.md
-- Shared schema layer: ../../src/shared/AGENTS.md
-- Backend authority: ../../serverXR/src/AGENTS.md
-- Automation: ../../scripts/AGENTS.md
-- Deploy docs: ../../deploy/AGENTS.md
+- Root routing: ../../../AGENTS.md
+- Workflow matrix: ../../../docs/ai/workflows.md
+- Studio lane: ../../../src/studio/AGENTS.md
+- Raw lane: ../../../src/raw/AGENTS.md
+- Shared project layer: ../../../src/project/AGENTS.md
+- Shared schema layer: ../../../src/shared/AGENTS.md
+- Backend authority: ../../../serverXR/src/AGENTS.md
+- Automation: ../../../scripts/AGENTS.md
+- Deploy docs: ../../../deploy/AGENTS.md
 
 ## Validation Matrix
 - src/studio, src/project, src/shared, src/raw: npm run test and npm run build

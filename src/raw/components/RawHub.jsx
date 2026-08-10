@@ -115,12 +115,23 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         setStatus(`Deleting ${project.title || project.id}...`)
         try {
             const spaceMeta = await getServerSpace(spaceId).catch(() => null)
-            if (spaceMeta?.publishedProjectId === project.id) {
-                await updateServerSpace(spaceId, { publishedProjectId: null })
-            }
+            const wasPublished = spaceMeta?.publishedProjectId === project.id
+            // Never leave a dangling published pointer, and never silently
+            // unpublish a space whose project still exists: delete first, and
+            // clear the space's live pointer only once the project is gone.
             await deleteProject(project.id)
+            let unpublishError = null
+            if (wasPublished) {
+                try {
+                    await updateServerSpace(spaceId, { publishedProjectId: null })
+                } catch (error) {
+                    unpublishError = error
+                }
+            }
             await loadProjects()
-            setStatus('Project deleted.')
+            setStatus(unpublishError
+                ? `Project deleted, but the space's live pointer could not be cleared: ${unpublishError.message || unpublishError}`
+                : 'Project deleted.')
         } catch (error) {
             setStatus(error.message || 'Unable to delete project.')
         } finally {

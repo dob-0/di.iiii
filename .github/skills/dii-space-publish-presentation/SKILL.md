@@ -57,17 +57,17 @@ Make the smallest change that keeps publish state correct, the live pointer dura
 - read-only space routes are not blocked by auth, but write routes require valid session
 
 ## Repo Anchors
-- Space surface gate: ../../src/SpaceSurfaceApp.jsx
-- Public viewer: ../../src/project/components/PublicProjectViewer.jsx
-- Studio hub (publish UI): ../../src/studio/components/StudioHub.jsx
-- Studio presentation: ../../src/studio/components/StudioPresentationSurface.jsx
-- serverXR space routes: ../../serverXR/src/routes/spaceRoutes.js and ../../serverXR/src/AGENTS.md
-- Surface map: ../../docs/architecture/PROJECT_SURFACES.md
+- Space surface gate: ../../../src/SpaceSurfaceApp.jsx
+- Public viewer: ../../../src/project/components/PublicProjectViewer.jsx
+- Studio hub (publish UI): ../../../src/studio/components/StudioHub.jsx
+- Studio presentation: ../../../src/studio/components/StudioPresentationSurface.jsx
+- serverXR space routes: ../../../serverXR/src/routes/spaceRoutes.js and ../../../serverXR/src/AGENTS.md
+- Surface map: ../../../docs/architecture/PROJECT_SURFACES.md
 - Useful tests:
-  - ../../src/studio/components/StudioHub.test.jsx
-  - ../../src/studio/components/StudioPresentationSurface.test.jsx
-  - ../../src/SpaceSurfaceApp.test.jsx
-  - ../../src/project/components/PublicProjectViewer.test.jsx
+  - ../../../src/studio/components/StudioHub.test.jsx
+  - ../../../src/studio/components/StudioPresentationSurface.test.jsx
+  - ../../../src/SpaceSurfaceApp.test.jsx
+  - ../../../src/project/components/PublicProjectViewer.test.jsx
 
 ## Validation
 - npm run test

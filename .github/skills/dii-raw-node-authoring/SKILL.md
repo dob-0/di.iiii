@@ -62,11 +62,11 @@ A Raw pattern is ready to graduate when:
 Studio embeds RawGraphSurface.jsx and RawViewport.jsx directly (StudioGraphSurface.jsx, StudioWorldSurface.jsx) as read-only previews and passes no mutation handlers — a new required prop added in Raw breaks Studio's build.
 
 ## Repo Anchors
-- Raw guide: ../../src/raw/AGENTS.md
-- Shared project guide: ../../src/project/AGENTS.md
-- Node registry: ../../src/project/nodeRegistry.js
-- Studio lane: ../../src/studio/AGENTS.md
-- Surface map: ../../docs/architecture/PROJECT_SURFACES.md
+- Raw guide: ../../../src/raw/AGENTS.md
+- Shared project guide: ../../../src/project/AGENTS.md
+- Node registry: ../../../src/project/nodeRegistry.js
+- Studio lane: ../../../src/studio/AGENTS.md
+- Surface map: ../../../docs/architecture/PROJECT_SURFACES.md
 
 ## Validation
 - npm run test (including the Raw tests under src/raw)

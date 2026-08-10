@@ -129,6 +129,13 @@ const legacyDeployPatterns = [
   { re: /cpanel-staging\b/g, why: 'legacy cPanel artifact branch — current deploy target is the Hetzner VPS' },
   { re: /cpanel-production\b/g, why: 'legacy cPanel artifact branch — current deploy target is the Hetzner VPS' }
 ]
+// Allowlist criterion: a file belongs here only if its job is to say what the
+// legacy path IS and why it is inert — the deploy runbooks that must name it to
+// rule it out, and the two role cards that own that statement (IE owns the
+// deploy truth, DE owns this rule and has to be able to quote the strings it
+// bans). Everything else naming these strings is citing a dead deploy path from
+// memory, which is what this guard exists to catch. Do not add a file here to
+// silence an error; delete the stale citation instead.
 const legacyDeployAllowlist = new Set([
   'docs/deploy/CPANEL_DEPLOYMENT.md',
   'docs/deploy/CPANEL_PREBUILT_DEPLOY.md',
@@ -136,7 +143,8 @@ const legacyDeployAllowlist = new Set([
   'docs/deploy/LIVE_DEPLOY.md',
   'docs/deploy/VPS_DOCKER_DEPLOY.md',
   'deploy/AGENTS.md',
-  'docs/ai/roles/infrastructure-engineer.md'
+  'docs/ai/roles/infrastructure-engineer.md',
+  'docs/ai/roles/documentation-engineer.md'
 ])
 
 const collectRotScanTargets = async () => {
