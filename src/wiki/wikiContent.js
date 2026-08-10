@@ -661,6 +661,22 @@ export const WIKI_ARTICLES = [
         updated: '2026-08-08'
     },
     {
+        id: 'dijet-node',
+        category: 'Editing',
+        title: 'di.jet: a robot as a node',
+        summary: 'Point a di.jet node at a robot on the same network and what it senses — how close the nearest thing is, how charged it is, how fast it is going — becomes numbers the graph can use.',
+        body: [
+            'Add a di.jet node from the palette (category Device). Type the robot\'s address in the window — 192.168.1.11 if it is serving its own wifi — and it connects on its own.',
+            'Three ports carry what it senses. Nearest is the closest thing its laser scanner can see, in metres, taken from a full circle around it. Battery is volts. Speed is how fast it is actually moving, which is not always what it was told to do.',
+            'Nearest goes blank rather than to zero when nothing comes back. Those are different things: zero metres would mean something is pressed against the robot, and an empty scan means the room is out of range. A graph that confused the two would brake at open space.',
+            'The fourth port, Trigger, counts up by one on every reading — watch it change rather than trying to catch a pulse, the same as MIDI In.',
+            'This node only reads. It cannot drive the robot, and it never will: steering belongs to the robot\'s own panel, which stops the moment you close it or walk out of range. A node quietly gaining control would go around that.',
+            'The page has to be on the same network as the robot — its own wifi, or a mesh routed to it. A robot on the far side of the internet is not reachable this way, and the node says so rather than sitting blank.'
+        ],
+        tags: ['raw', 'nodes', 'device', 'robot', 'dijet', 'lidar', 'sensors'],
+        updated: '2026-08-11'
+    },
+    {
         id: 'raw-zen-workspace',
         category: 'Editing',
         title: 'A workspace with nothing on it',
