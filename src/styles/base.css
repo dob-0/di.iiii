@@ -122,3 +122,16 @@ a
 }
 
 
+
+/* ?embed=1 — the page is a window inside someone else's page, so the document
+   itself must not paint. The viewer's own shell and iframes were made
+   transparent when the mode shipped, but html/body/#root kept `--di-black`
+   underneath them: measured on both tiers afterwards, an embedded page viewed
+   on its own was still a black box. br_id_ge's rite only looked right because
+   it injects this same override into the frame itself as a fallback — a
+   workaround the mode exists to retire. Set by PublicProjectViewer. */
+html.dii-embed,
+html.dii-embed body,
+html.dii-embed #root {
+    background: transparent;
+}

@@ -315,6 +315,27 @@ describe('PublicProjectViewer', () => {
         }
     })
 
+    // The viewer's own shell going transparent was never enough: html/body/#root
+    // carry --di-black, so an embedded page viewed on its own was still a black
+    // box on both tiers after the mode shipped. Guards the class AND the shadow
+    // trap — `document` is rebound inside this component, so a bare reference
+    // would resolve to a project document and quietly do nothing.
+    it('clears the document background in ?embed=1 mode, and gives it back on unmount', async () => {
+        window.history.replaceState(null, '', '/main?embed=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            const { unmount } = render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+            expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+            expect(window.document.documentElement.classList.contains('dii-embed')).toBe(true)
+            unmount()
+            expect(window.document.documentElement.classList.contains('dii-embed')).toBe(false)
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
     it('keeps the dark shell and the badge when nothing asks to be embedded', async () => {
         getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
         listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
