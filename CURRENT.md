@@ -11,9 +11,18 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session
+## Last session — 2026-08-11
 
-- The live-port contract (`RAW_WORKSPACE.md` §5.1, "the keystone") — built at last
+- Deep audit of Raw ("combined workspace, code view, full multimedia"): the gap is
+  **UI, not architecture** — `setPresentationState`/`setPublishState`/`upsertAsset` are
+  real ops with inverses no Raw component emits. Plan: `docs/architecture/RAW_WORKSPACE.md`.
+- Structural absences named: no scheduler, no way to define a node from inside the
+  graph, ops not emitted. Sandbox settled: QuickJS-in-WASM, measured on this machine.
+- Built §5.1's first half — `src/project/graph/livePorts.js`, a registry carrying a
+  *reason* per port (idle/starting/live/denied/unavailable/error), 31 tests; webcam
+  and MIDI panels report through it.
+- Seen, not just tested: Raw at 1440×900 on prod **and** off this branch — 40 nodes,
+  all wires, zero console errors, identical.
 
 Full detail: `PROGRESS.md`.
 
@@ -27,13 +36,15 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 - **Lane consolidation in progress** — Studio-as-a-node rebase + Raw-as-default promotion pending, see Last session / plan file above.
 - **Real-browser looks owed**: `source.webcam`/`source.mic` (camera+mic needed) +
   PR #93's 4 items (Inspector wheel-scroll, audio toggles, primitive clamping).
-  **Now also the live-port statuses** — `PORT_STATUS` reaches the graph from the
-  webcam and MIDI panels, and *nothing renders it on the node yet*. Deliberate:
-  Raw's node card is UI/UX's, not the node system's. Until something shows it,
-  the contract is proven by tests only.
-- **§5.1 is built, §5.1's siblings are not.** `livePorts.js` gives per-port
-  status; a real scheduler, per-node state across frames, and a
-  `capabilities()` query are still missing. Evaluation is still React render.
+  **Now also the live-port statuses** — `PORT_STATUS` reaches the graph and
+  *nothing renders it on a node card yet*, so the contract is proven by tests only.
+- **§5.1 is half built.** `registerProvider()` + `capabilities()` — the half a
+  bridge needs — unwritten; no scheduler, no per-node state, evaluation is still
+  React render. Then, in order: a `code` node whose ports come from its source
+  (QuickJS); port promotion; Raw emitting the page+asset ops it already has;
+  automation. All in `docs/architecture/RAW_WORKSPACE.md`.
+- **`feat/graph-runtime-contract` unpushed** in worktree `~/di.iiii-raw-ws`.
+  Pushing fires `auto-pr.yml` → PR against `dev`.
 - All 8 prod spaces owned (queried prod 2026-08-08); releasing ownership doesn't
   revoke the scope it granted (deliberate). Mesh gate ARMED both tiers; leaked
   PAT inferred-closed; **staging Google OAuth secret parked by the user** —
