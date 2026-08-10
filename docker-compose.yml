@@ -92,6 +92,12 @@ services:
       TUNNEL_SHARED_SECRET: ${TUNNEL_SHARED_SECRET:-}
       TUNNEL_BOT_USERNAME: ${TUNNEL_BOT_USERNAME:-}
 
+      # meshHub.js room history — unset keeps persistence OFF; switch on with
+      # 'talk,keeper:say' only after the room's wording stops promising
+      # impermanence (compose env is an allow-list: a var missing here never
+      # reaches the container, however correct the .env looks — see #134).
+      MESH_HISTORY_CHANNELS: ${MESH_HISTORY_CHANNELS:-}
+
       # approvalGate.js — see serverXR/.env.example. Unset (default
       # false/empty) leaves every gated route behaving exactly as before
       # this feature existed; staging overrides via STAGING_APPROVAL_*
