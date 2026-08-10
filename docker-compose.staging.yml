@@ -54,6 +54,8 @@ services:
       TUNNEL_SHARED_SECRET: ${STAGING_TUNNEL_SHARED_SECRET:-}
       TUNNEL_BOT_USERNAME: ${STAGING_TUNNEL_BOT_USERNAME:-}
       MESH_PROTECTED_NODE_PREFIXES: ${STAGING_MESH_PROTECTED_NODE_PREFIXES:-}
+      # room history switch-on, staging tier (allow-list — see production file)
+      MESH_HISTORY_CHANNELS: ${STAGING_MESH_HISTORY_CHANNELS:-}
       # approvalGate.js — see serverXR/.env.example. Same secret as di-bo's
       # APPROVAL_SHARED_SECRET; unset here (default false/empty) leaves every
       # gated route behaving exactly as before this feature existed.
