@@ -48,6 +48,11 @@ the cursor vanished. Only looking does that.
    cores went unnoticed.
 4. **Check the quiet paths.** Did anything get swallowed? Is that 200 really the
    asset, or the SPA shell wearing its clothes?
+5. **Verify with the session the user actually has.** An admin API token in your
+   env is not the user's browser session: a space was reported "working" through
+   a token-authenticated check while the owner's own (guest) session got "Access
+   restricted" (2026-08-10). If the audience is a guest, verify as a guest — a
+   fresh incognito context with no token is the honest instrument.
 
 ### Mobile is not optional
 

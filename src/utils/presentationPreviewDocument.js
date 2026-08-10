@@ -120,8 +120,27 @@ const buildBootstrapScript = (pageQuery, pageOrigin) => `(() => {
         return true;
     };
 
-    installStorageShim('localStorage');
-    installStorageShim('sessionStorage');
+    // The shim guards pages in OPAQUE frames, where touching window.localStorage
+    // throws. With deviceAccess the frame has a real origin and real storage —
+    // shimming there shadows it, so everything a page saves (the rite's last
+    // crossing, any progress) evaporates on every load. Probe by WRITING —
+    // some policies expose a Storage object that only throws on setItem —
+    // and shim only where the native storage actually refuses.
+    const nativeStorageWorks = (name) => {
+        try {
+            const storage = window[name];
+            if (!storage) return false;
+            const probeKey = '__dii_storage_probe__';
+            storage.setItem(probeKey, '1');
+            storage.removeItem(probeKey);
+            return true;
+        } catch {
+            return false;
+        }
+    };
+
+    if (!nativeStorageWorks('localStorage')) installStorageShim('localStorage');
+    if (!nativeStorageWorks('sessionStorage')) installStorageShim('sessionStorage');
 
     // srcdoc documents inherit the parent shell's base URL, so a plain
     // href="#id" click would navigate this sandboxed iframe to the shell URL

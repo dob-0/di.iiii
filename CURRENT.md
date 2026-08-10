@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a local install now tells the truth about being one
+- estate-keeping rules from the worktree audit
 
 Full detail: `PROGRESS.md`.
 
