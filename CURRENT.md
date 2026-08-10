@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Raw as a workspace: the plan, and the first node in it
+- stale-tree guard for the main checkout
 
 Full detail: `PROGRESS.md`.
 
