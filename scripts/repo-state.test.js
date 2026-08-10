@@ -64,6 +64,18 @@ describe('collectStateWarnings', () => {
     expect(warnings).toHaveLength(0)
   })
 
+  // The 2026-08-10 incident shape: main checkout detached on a merged branch's commit,
+  // 115 behind origin/dev, serving old code for two days with no warning anywhere.
+  it('warns when a detached (or dev) HEAD trails origin/dev — stale viewing surface', () => {
+    const warnings = collectStateWarnings({ ...baseState(), currentBranch: '(detached)', headBehindDev: 115 })
+    expect(warnings.some((w) => w.includes('115 commits behind') && w.includes('checkout --detach origin/dev'))).toBe(true)
+  })
+
+  it('warns when the current branch upstream is gone — parked on a merged branch', () => {
+    const warnings = collectStateWarnings({ ...baseState(), currentBranch: 'fix/merged-thing', currentUpstreamGone: true })
+    expect(warnings.some((w) => w.includes('upstream that is gone') && w.includes('checkout --detach origin/dev'))).toBe(true)
+  })
+
   it('warns once worktree count exceeds the budget', () => {
     const worktrees = Array.from({ length: WORKTREE_BUDGET + 1 }, (_, i) => ({ path: `/wt-${i}` }))
     const warnings = collectStateWarnings({ ...baseState(), worktrees })
