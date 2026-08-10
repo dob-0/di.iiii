@@ -69,6 +69,22 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         typeof window !== 'undefined'
         && new URLSearchParams(window.location.search).get('embed') === '1'
     ))
+    // The DOCUMENT, not just this component's own shell: html/body/#root carry
+    // --di-black from base.css, which sat under a "transparent" viewer and left
+    // an embedded page a black box when viewed on its own. Toggled rather than
+    // set, so routing away from an embedded page takes the ground back.
+    //
+    // `window.document`, deliberately: this component declares `const document =
+    // state.document` below, which shadows the global for the WHOLE function
+    // scope — a bare `document` here resolves to a project document object, not
+    // the DOM, and the class would silently never be applied.
+    useEffect(() => {
+        if (!isEmbed || typeof window === 'undefined') return undefined
+        const root = window.document.documentElement
+        root.classList.add('dii-embed')
+        return () => root.classList.remove('dii-embed')
+    }, [isEmbed])
+
     const iframeRef = useRef(null)
     const syncServiceRef = useRef(createProjectSyncService())
     const versionRef = useRef(0)
