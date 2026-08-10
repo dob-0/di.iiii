@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the estate map, inside /admin, without leaking it
+- What was wrong
 
 Full detail: `PROGRESS.md`.
 
