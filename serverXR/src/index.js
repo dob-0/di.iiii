@@ -575,13 +575,15 @@ const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
   }
 }
 
-// The guest cookie lives exactly as long as the guest sandbox's idle TTL
+// The guest cookie lives as long as the guest sandbox's idle TTL
 // (config.sandboxTtlMs, 7 days by default). It used to claim 30 days while
 // the sweep archived the sandbox at 7 idle and guest snapshots are never
 // revived — so a guest returning on day 10 carried a valid cookie scoped to
 // a room that had already been emptied. A promise the sweep can't keep is
-// worse than a shorter one it can.
-const GUEST_SESSION_TTL_MS = config.sandboxTtlMs
+// worse than a shorter one it can. The one-hour floor keeps a test-tuned
+// SANDBOX_TTL_MS (contract fixtures use 1ms to make sandboxes instantly
+// stale) from minting cookies that expire before their first request lands.
+const GUEST_SESSION_TTL_MS = Math.max(config.sandboxTtlMs, 60 * 60 * 1000)
 
 // The communal open space id: the admin-set globalSpaceId wins (legacy
 // "open jam" knob, kept as the override), otherwise the config default.
