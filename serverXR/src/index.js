@@ -40,6 +40,7 @@ const { registerSpaceRoutes } = require('./routes/spaceRoutes')
 const { createKeyedLock } = require('./asyncLock')
 const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
+const { registerOgRoutes } = require('./routes/ogRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
 const { registerAiConnectionRoutes } = require('./routes/aiConnectionRoutes')
@@ -1324,6 +1325,10 @@ const sharedSpaceOpsLock = createKeyedLock()
 // Public, unauthenticated, append-only: space inscriptions (the br_id_ge
 // portal write path). Registered before the gates like open-call submissions;
 // per-space opt-in + sanitization live in the route itself.
+// Public, unauthenticated, and registered before the /api gates: a crawler
+// carries no session and must still get a card.
+registerOgRoutes(router, { loadSpaceMeta, siteOrigin: process.env.SITE_ORIGIN || '' })
+
 registerInscriptionRoutes(router, {
   appendOpsHistory,
   applySceneOps,
