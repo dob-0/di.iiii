@@ -1328,7 +1328,16 @@ const sharedSpaceOpsLock = createKeyedLock()
 // per-space opt-in + sanitization live in the route itself.
 // Public, unauthenticated, and registered before the /api gates: a crawler
 // carries no session and must still get a card.
-registerOgRoutes(router, { loadSpaceMeta, siteOrigin: process.env.SITE_ORIGIN || '' })
+// A URL segment is not a space id. `br_id_ge` is the handle people share; the
+// space's id is `br-id-ge`, and loadSpaceMeta is an exact selectById — so the
+// og route resolved nothing for the one link this was built for and served the
+// platform tile. Same resolver the /api/resolve middleware above uses: slug
+// first, then the normalized id.
+registerOgRoutes(router, {
+  loadSpaceMeta: async (segment) =>
+    (await findSpaceBySlug(segment)) || (await loadSpaceMeta(normalizeSpaceId(segment) || segment)),
+  siteOrigin: process.env.SITE_ORIGIN || '',
+})
 
 registerInscriptionRoutes(router, {
   appendOpsHistory,
