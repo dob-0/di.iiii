@@ -18,7 +18,11 @@ vi.mock('../services/apiClient.js', () => ({
 
 vi.mock('../services/serverSpaces.js', () => ({
     supportsServerSpaces: true,
-    getServerSpace: (spaceId) => Promise.resolve({ id: spaceId, isPublic: spaceId === 'pub' })
+    // 'ghost' plays the mistyped id: the server 404s for a space that was
+    // never created, and the card must say so instead of talking scope.
+    getServerSpace: (spaceId) => (spaceId === 'ghost'
+        ? Promise.reject(Object.assign(new Error('Space not found.'), { status: 404 }))
+        : Promise.resolve({ id: spaceId, isPublic: spaceId === 'pub' }))
 }))
 
 const mockAppNavigate = vi.fn()
@@ -37,6 +41,8 @@ const scopedElsewhereSession = (spaces) => ({
     loading: false,
     error: null,
     spaces,
+    openSpaceId: 'open',
+    sandboxSpaceId: 'sandbox-guestfa58',
     login: vi.fn(),
     logout: vi.fn(),
     refresh: vi.fn()
@@ -72,6 +78,84 @@ describe('AuthGate out-of-scope handling', () => {
 
         expect(screen.getByText('editor')).toBeInTheDocument()
         expect(mockAppNavigate).not.toHaveBeenCalled()
+    })
+})
+
+// The restricted card used to be a dead end: raw session ids as prose
+// ("Allowed: open, sandbox-guestfa58…") and not a single way onward. The user
+// hit it himself by mistyping a space name. It now offers doors — the spaces
+// the session CAN use, named, never as ids — plus the sign-in buttons, and a
+// mistyped address gets its own honest sentence instead of scope language
+// about a space that never existed.
+describe('AuthGate restricted card doors', () => {
+    afterEach(() => {
+        mockAppNavigate.mockClear()
+        providersState.current = { github: false, google: false }
+    })
+
+    it('never prints raw session space ids', async () => {
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open', 'sandbox-guestfa58']))
+        render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
+
+        await screen.findByText(/Access restricted/)
+        expect(screen.queryByText(/sandbox-guestfa58/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/Allowed:/)).not.toBeInTheDocument()
+    })
+
+    it('offers the open space and the private sandbox as doors', async () => {
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open', 'sandbox-guestfa58']))
+        render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Open Space' }))
+        expect(mockAppNavigate).toHaveBeenCalledWith('/open')
+
+        fireEvent.click(screen.getByRole('button', { name: 'Your private sandbox' }))
+        expect(mockAppNavigate).toHaveBeenCalledWith('/sandbox-guestfa58')
+    })
+
+    it('offers the sign-in buttons when OAuth providers are on', async () => {
+        providersState.current = { github: true, google: true }
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open']))
+        render(<AuthGate requiredSpaceId="secret">editor</AuthGate>)
+
+        expect(await screen.findByRole('button', { name: /Continue with GitHub/ })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: /Continue with Google/ })).toBeInTheDocument()
+    })
+
+    it('says nothing lives at a mistyped address instead of talking scope', async () => {
+        mockUseAuthSession.mockReturnValue(scopedElsewhereSession(['open', 'sandbox-guestfa58']))
+        render(<AuthGate requiredSpaceId="ghost">editor</AuthGate>)
+
+        expect(await screen.findByText(/Nothing lives at/)).toBeInTheDocument()
+        expect(screen.queryByText(/Access restricted/)).not.toBeInTheDocument()
+        // the same doors are still on the card
+        expect(screen.getByRole('button', { name: 'Open Space' })).toBeInTheDocument()
+        expect(screen.getByRole('button', { name: 'Your private sandbox' })).toBeInTheDocument()
+    })
+})
+
+// On a local install (`di up`) the server reports requireAuth: false, and
+// AuthGate must let everything through — the restricted card is unreachable
+// no matter what space the URL names. Both fixtures used to hardcode
+// requireAuth: true, so this short-circuit was never asserted.
+describe('AuthGate on a local install (requireAuth off)', () => {
+    it('renders children for any space and never shows a card', () => {
+        mockUseAuthSession.mockReturnValue({
+            requireAuth: false,
+            local: true,
+            authenticated: false,
+            loading: false,
+            error: null,
+            spaces: null,
+            login: vi.fn(),
+            logout: vi.fn(),
+            refresh: vi.fn()
+        })
+        render(<AuthGate requiredSpaceId="anything-at-all">editor</AuthGate>)
+
+        expect(screen.getByText('editor')).toBeInTheDocument()
+        expect(screen.queryByText(/Access restricted/)).not.toBeInTheDocument()
+        expect(screen.queryByText(/Sign in/)).not.toBeInTheDocument()
     })
 })
 

@@ -288,6 +288,11 @@ jobs:
           set -eu
           di up --port 4301 --no-open
           curl -fsS http://127.0.0.1:4301/main | grep -q 'id="root"'
+          # The SPA shell above is served for ANY route — including the auth
+          # wall — so it proves the server is up, not that the install is
+          # usable. This is the assertion that means something: a local
+          # install answers with auth off, i.e. the artist owns the door.
+          curl -fsS http://127.0.0.1:4301/serverXR/api/auth/session | grep -q '"requireAuth":false'
           curl -fsS -o /dev/null http://127.0.0.1:4301/serverXR/api/spaces
           di down
           echo "served with no network"

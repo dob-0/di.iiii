@@ -134,7 +134,8 @@ export const getStudioLocationState = (
         isStudio: true,
         page: STUDIO_PAGE_HUB,
         projectId: null,
-        spaceId: defaultSpaceId
+        spaceId: defaultSpaceId,
+        isDefaultSpace: true
     }
 }
 

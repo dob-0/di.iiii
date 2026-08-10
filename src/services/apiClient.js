@@ -221,7 +221,19 @@ export async function apiFetch(path, {
     return response.json()
 }
 
-export const getApiSession = async (opts = {}) => apiFetch('/api/auth/session', opts)
+// Module-level echo of the session's `local` flag (a `di up` install on the
+// visitor's own machine, server-side DI_LOCAL). For code that must decide
+// synchronously at mount time — the XR store picks its controller-model
+// source once — after the session has resolved at least once. Defaults to
+// false, i.e. hosted behavior.
+let lastSessionWasLocal = false
+export const isLocalInstallSession = () => lastSessionWasLocal
+
+export const getApiSession = async (opts = {}) => {
+    const data = await apiFetch('/api/auth/session', opts)
+    lastSessionWasLocal = Boolean(data?.local)
+    return data
+}
 
 export const loginApiSession = async (token) => apiFetch('/api/auth/session', {
     method: 'POST',
