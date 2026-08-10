@@ -3,6 +3,9 @@ import { getApiSession, hasServerApi, loginApiSession, logoutApiSession } from '
 
 const DEFAULT_STATE = {
     requireAuth: false,
+    // True when this server is a `di up` install on the visitor's own machine
+    // (server reads DI_LOCAL). Hosted-product copy must not render over it.
+    local: false,
     authenticated: false,
     type: null,
     role: null,

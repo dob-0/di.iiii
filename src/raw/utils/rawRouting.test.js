@@ -26,7 +26,8 @@ describe('rawRouting', () => {
             isLegacyPath: false,
             page: RAW_PAGE_HUB,
             projectId: null,
-            spaceId: DEFAULT_RAW_SPACE_ID
+            spaceId: DEFAULT_RAW_SPACE_ID,
+            isDefaultSpace: true
         })
 
         expect(getRawLocationState({ pathname: '/raw/projects/demo-project', search: '' })).toEqual({
@@ -34,7 +35,8 @@ describe('rawRouting', () => {
             isLegacyPath: false,
             page: RAW_PAGE_PROJECT,
             projectId: 'demo-project',
-            spaceId: DEFAULT_RAW_SPACE_ID
+            spaceId: DEFAULT_RAW_SPACE_ID,
+            isDefaultSpace: true
         })
 
         expect(getRawLocationState({ pathname: '/raw/projects', search: '' })).toEqual({
@@ -42,7 +44,8 @@ describe('rawRouting', () => {
             isLegacyPath: false,
             page: RAW_PAGE_PROJECTS,
             projectId: null,
-            spaceId: DEFAULT_RAW_SPACE_ID
+            spaceId: DEFAULT_RAW_SPACE_ID,
+            isDefaultSpace: true
         })
     })
 
@@ -82,7 +85,8 @@ describe('legacy /seed paths', () => {
             isLegacyPath: true,
             page: RAW_PAGE_HUB,
             projectId: null,
-            spaceId: 'main'
+            spaceId: 'main',
+            isDefaultSpace: true
         })
     })
 
@@ -114,5 +118,17 @@ describe('legacy /seed paths', () => {
     it('still ignores unrelated paths', () => {
         expect(getRawLocationState({ pathname: '/studio' }).isRaw).toBe(false)
         expect(getRawLocationState({ pathname: '/seedling' }).isRaw).toBe(false)
+    })
+})
+
+// The defaulted-space flag is what lets RootApp bend a bare typed /raw toward
+// a space the session can actually enter (LaneDefaultSpace). A URL that NAMES
+// its space is a deliberate address and must never carry the flag.
+describe('isDefaultSpace', () => {
+    it('marks only the routes whose space came from the default', () => {
+        expect(getRawLocationState({ pathname: '/raw' }).isDefaultSpace).toBe(true)
+        expect(getRawLocationState({ pathname: '/raw/projects' }).isDefaultSpace).toBe(true)
+        expect(getRawLocationState({ pathname: '/gallery/raw' }).isDefaultSpace).toBeUndefined()
+        expect(getRawLocationState({ pathname: '/gallery/raw/projects/abc' }).isDefaultSpace).toBeUndefined()
     })
 })

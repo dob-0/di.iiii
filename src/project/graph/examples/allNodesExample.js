@@ -120,7 +120,9 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('space', 'universe.space', { label: 'Space', col: 4, row: 1 })
     add('desk', 'universe.desk.3d', { label: '3D Desk', col: 4, row: 2 })
     add('text', 'view.text', { label: 'Text panel', col: 4, row: 3, values: { content: 'Every node type, one graph.' } })
-    add('browser', 'view.browser', { label: 'Browser panel', col: 4, row: 4, values: { url: 'https://di-studio.xyz' } })
+    // Same-origin on purpose: the example must also open on a local install
+    // with no network, where an iframe of di-studio.xyz is a dead panel.
+    add('browser', 'view.browser', { label: 'Browser panel', col: 4, row: 4, values: { url: '/wiki' } })
     add('image', 'view.image', { label: 'Image panel', col: 4, row: 5 })
 
     // --- column 5: the editor's own chrome, as nodes ---------------------------

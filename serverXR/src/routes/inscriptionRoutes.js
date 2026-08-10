@@ -25,6 +25,7 @@
 
 const crypto = require('node:crypto')
 const { createKeyedLock } = require('../asyncLock')
+const { mintTunnelToken, tunnelUrl } = require('../tunnelToken')
 
 const NAME_MAX = 40
 const WORD_MAX = 60
@@ -95,7 +96,11 @@ function registerInscriptionRoutes(router, {
   // op-write to the same space could race outside each other's mutex
   // (audit 2026-07-17). Falls back to a fresh per-registration lock only if
   // the caller doesn't inject one (e.g. an isolated test).
-  withSpaceOpsLock = createKeyedLock()
+  withSpaceOpsLock = createKeyedLock(),
+  // The tunnel's half of a shared secret with di.bo. Absent = the route is not
+  // there at all; see the POST .../tunnel handler below.
+  tunnelSecret = '',
+  tunnelBotUsername = 'diiii111bot'
 }) {
   router.post('/api/spaces/:spaceId/inscriptions', inscriptionLimiter, async (req, res, next) => {
     try {
@@ -287,6 +292,66 @@ function registerInscriptionRoutes(router, {
       }
       if (result.denied) return res.status(403).json({ error: 'The proof does not match this crossing.' })
       res.json({ ok: true, id: result.id, total: result.total })
+    } catch (error) {
+      next(error)
+    }
+  })
+
+  // THE TUNNEL. A crossing does not have to end at the ending: this mints the
+  // deep link that carries WHICH crossing is arriving into a private Telegram
+  // thread with di.bo. Protocol in the di-bo repo, as the-tunnel.md.
+  //
+  // Same proof as an unmaking, and for the same reason — the field's scene is
+  // served with NO auth, so every insc- id in it is public. A link that trusted
+  // an id would let anyone who can read the field claim anyone's crossing. The
+  // proof is the only thing the crosser holds that the field does not publish.
+  //
+  // Reads only. No lock, no op, no scene write: minting a link changes nothing
+  // about the field.
+  router.post('/api/spaces/:spaceId/inscriptions/:id/tunnel', inscriptionLimiter, async (req, res, next) => {
+    try {
+      // Inert unless the secret exists, and inert as a 404 rather than a 503:
+      // a route that is not switched on should look exactly like a route that
+      // was never built, and say nothing about this server's configuration.
+      // di.bo's half returns early on the same condition, so with the secret
+      // absent on either side the tunnel is simply not there — never half-on.
+      if (!tunnelSecret) return res.status(404).json({ error: 'Not found.' })
+
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!spaceId) return res.status(400).json({ error: 'Invalid space id.' })
+      const id = String(req.params.id || '')
+      if (!id.startsWith('insc-')) return res.status(400).json({ error: 'Invalid inscription id.' })
+      const proof = req.body?.proof
+      if (typeof proof !== 'string' || !proof) return res.status(400).json({ error: 'A tunnel needs its proof.' })
+
+      const meta = await loadSpaceMeta(spaceId)
+      if (!meta) return res.status(404).json({ error: 'Space not found.' })
+      if (!meta.openInscriptions || !meta.isPublic) {
+        return res.status(403).json({ error: 'This space does not accept inscriptions.' })
+      }
+
+      const { scenePath } = getSpacePaths(spaceId)
+      const scene = await readJson(scenePath, blankScene)
+      const target = (scene.objects || []).find((obj) => String(obj?.id || '') === id)
+      if (!target) return res.status(404).json({ error: 'No such inscription.' })
+      // A crossing with no proofHash can never be unmade, and must never be
+      // tunnellable either — otherwise the one crossing nobody can prove is the
+      // one anybody can claim.
+      if (!target.proofHash) {
+        return res.status(403).json({ error: 'This crossing predates proof of authorship and cannot open a tunnel.' })
+      }
+      if (!proofMatches(proof, target.proofHash)) {
+        return res.status(403).json({ error: 'The proof does not match this crossing.' })
+      }
+
+      const minted = mintTunnelToken(id, tunnelSecret)
+      if (!minted) return res.status(500).json({ error: 'The tunnel could not be opened.' })
+      res.json({
+        ok: true,
+        token: minted.token,
+        url: tunnelUrl(tunnelBotUsername, minted.token),
+        expiresAt: minted.expiresAt,
+      })
     } catch (error) {
       next(error)
     }

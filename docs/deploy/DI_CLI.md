@@ -1,6 +1,8 @@
 # `di` — di.iiii on your own machine
 
-One line, any system, and after that it never needs the network again.
+One line, any system, and after that it keeps working with no network. (One
+thing still asks for it: `di up`'s once-a-day newer-version notice — bounded
+at 3 seconds, failure swallowed, never blocking. Everything else is local.)
 
 ```
 macOS / Linux   curl -fsSL https://di-studio.xyz/get | sh
@@ -22,9 +24,11 @@ di doctor      what this machine can and cannot do
 di help        the rest
 ```
 
-Offline is the default state, not a degraded one. Nothing phones home after the
-install; the page requests zero external origins. A laptop at a venue with no
-wifi runs exactly the same as one at a desk.
+Offline is the default state, not a degraded one. The page requests zero
+external origins (down to the 3D text labels, whose font is vendored — troika's
+default resolver would have gone to a CDN), and the only outbound request the
+CLI ever makes on its own is the once-a-day version check above. A laptop at a
+venue with no wifi runs exactly the same as one at a desk.
 
 ---
 
@@ -57,15 +61,31 @@ Nothing is written outside `$HOME`. Nothing asks for sudo, on any OS.
 
 ```
 1. DI_MODE, or --docker / --node   → obeyed, no probing
-2. `docker info` succeeds AND the GHCR images are anonymously pullable → docker
-3. node >= 22.15 (the system's, or one di downloads)                   → node
+2. node >= 22.15 (the system's, or one di downloads)                   → node
+3. `docker info` succeeds AND the GHCR images are anonymously pullable → docker
 4. neither → the two links that fix it; nothing is installed
 ```
+
+**Node wins whenever it is viable** (changed 2026-08-10 — it used to be the
+other way around). Docker Desktop merely being open would land an artist in
+the one mode that carries none of the local operator surfaces: no `DI_LOCAL`,
+a non-loopback `remoteAddress` seen by the server, and no way to reach a
+`claude` binary on the host — so the agent board and the local Claude chat
+node 404 there while the wiki promises them. Docker mode is real and kept,
+but it is the deliberate choice (`--docker` / `DI_MODE=docker`), never the
+accident. The recorded mode of an existing install never flips; this decision
+runs at install/doctor time only.
 
 Docker is gated on the image probe, not just on the daemon, so an install can
 never 403 halfway through. **The GHCR packages are private today**, so the
 docker branch skips itself; make `ghcr.io/dob-0/dii-server` and `dii-client`
 public and it starts working with no new release.
+
+Docker mode composes **both** files — `docker-compose.yml` *then*
+`docker-compose.di.yml`, the same pairing CI runs. The `.di` file is only an
+override (`!reset` tags, no volume definitions): composed alone, the named
+`di-local_data` volume never exists and the work lands in an anonymous volume
+`di where` never mentions. Both files ship in the runtime tarball.
 
 The node floor is **22.15**, not serverXR's `engines: ">=22.5.0"`. `node:sqlite`
 landed in 22.5 behind `--experimental-sqlite` and was unflagged later in the 22

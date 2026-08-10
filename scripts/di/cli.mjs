@@ -119,13 +119,23 @@ const cmdUp = async (args) => {
  * ever prints one dim line — installing is still something the artist types.
  */
 const CHECK_EVERY_MS = 24 * 60 * 60 * 1000
+const UPDATE_CHECK_TIMEOUT_MS = 3000
 const noticeNewVersion = async (home) => {
     try {
         const state = readState(home)
         const last = Date.parse(state.lastUpdateCheck || '') || 0
         if (Date.now() - last < CHECK_EVERY_MS) return
-        const release = await latestRelease()
+        // Recorded BEFORE the request, not after it. Written after, a failed
+        // check never records — so the machine that has no network is exactly
+        // the machine that retries on every single start, which is the opposite
+        // of what the comment above promises. "We looked" is the fact worth
+        // remembering; whether anyone answered is not.
         await writeState(home, { lastUpdateCheck: new Date().toISOString() })
+        // Bounded, like every other network probe in this CLI (probe.mjs's
+        // NET_TIMEOUT_MS). Without it a captive portal — the normal state of
+        // venue wifi — holds `di up` for the OS TCP timeout, after the app is
+        // already running and printed.
+        const release = await latestRelease({ timeoutMs: UPDATE_CHECK_TIMEOUT_MS })
         const current = installedVersion(home)
         if (release.version && current && release.version !== current) {
             say(ui.updateAvailable(current, release.version))

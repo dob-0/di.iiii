@@ -11,6 +11,7 @@ import {
     RAW_PAGE_PROJECTS
 } from './raw/utils/rawRouting.js'
 import AuthReturnNotice from './components/AuthReturnNotice.jsx'
+import LaneDefaultSpace from './components/LaneDefaultSpace.jsx'
 import RouteSurfaceFallback from './components/RouteSurfaceFallback.jsx'
 import SpaceSurfaceApp from './SpaceSurfaceApp.jsx'
 import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
@@ -162,8 +163,8 @@ function AppRouter() {
     }
 
     if (isStudioLocation(studioState)) {
-        return (
-            <ProtectedSurface requiredSpaceId={studioState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
+        const renderStudio = (spaceId) => (
+            <ProtectedSurface requiredSpaceId={spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
                 <Suspense
                     fallback={
                         <RouteSurfaceFallback
@@ -172,15 +173,20 @@ function AppRouter() {
                         />
                     }
                 >
-                    <StudioApp initialRoute={studioState} />
+                    <StudioApp initialRoute={{ ...studioState, spaceId }} />
                 </Suspense>
             </ProtectedSurface>
         )
+        // A defaulted (not URL-named) space bends to what the session can
+        // actually enter — see LaneDefaultSpace.
+        return studioState.isDefaultSpace
+            ? <LaneDefaultSpace state={studioState}>{renderStudio}</LaneDefaultSpace>
+            : renderStudio(studioState.spaceId)
     }
 
     if (isRawLocation(rawState)) {
-        return (
-            <ProtectedSurface requiredSpaceId={rawState.spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
+        const renderRaw = (spaceId) => (
+            <ProtectedSurface requiredSpaceId={spaceId} outOfScopeBehavior={OUT_OF_SCOPE_EXPLAIN}>
                 <Suspense
                     fallback={
                         <RouteSurfaceFallback
@@ -189,10 +195,13 @@ function AppRouter() {
                         />
                     }
                 >
-                    <RawApp initialRoute={rawState} />
+                    <RawApp initialRoute={{ ...rawState, spaceId }} />
                 </Suspense>
             </ProtectedSurface>
         )
+        return rawState.isDefaultSpace
+            ? <LaneDefaultSpace state={rawState}>{renderRaw}</LaneDefaultSpace>
+            : renderRaw(rawState.spaceId)
     }
 
     if (appState.page === APP_PAGE_WIKI) {

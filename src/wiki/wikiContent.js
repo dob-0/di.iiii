@@ -81,7 +81,7 @@ export const WIKI_ARTICLES = [
             'Someone sent you a link to a space. You do not need to install anything, clone anything, or open a terminal: a browser is the entire toolchain. (The repo has a developer setup guide as well — that is a different door, for people who want to run the platform itself, and you can ignore it.)',
             { list: [
                 '1 — Open the link. It carries the invite; the space opens as soon as access is granted.',
-                '2 — Sign in with GitHub or Google when asked. You can accept an invite as a guest, but a guest session lasts about 30 days and lives in one browser; signing in makes the access permanent and carries any work you already did onto your account.',
+                '2 — Sign in with GitHub or Google when asked. You can accept an invite as a guest, but a guest session lives in one browser and lasts about a week — the same week its sandbox survives idleness; signing in makes the access permanent and carries any work you already did onto your account.',
                 '3 — You land in the space. /<space>/studio is its project hub: every project in the space, plus ＋ New to start one.',
                 '4 — Open a project and build. There is no Save button — every change is written as you make it, and anyone else in the same project sees it live.',
                 '5 — Stuck? The ? button in the Studio (or Shift+?) opens the illustrated guides and the full shortcut list.'
@@ -92,7 +92,7 @@ export const WIKI_ARTICLES = [
             'If the link says it is invalid or has expired, it is not you — invites last 7 days. Ask for a fresh one.'
         ],
         tags: ['invite', 'collaboration', 'onboarding', 'getting started', 'no install', 'editor', 'access'],
-        updated: '2026-08-06'
+        updated: '2026-08-10'
     },
     {
         id: 'free-spaces',
@@ -129,7 +129,7 @@ export const WIKI_ARTICLES = [
         summary: 'Place an agent node in Raw and chat with Claude inside your workspace — powered by your own connected API key.',
         body: [
             'In the Raw editor, add an agent node from the palette. It opens as a chat window: type, and Claude answers in a live stream, right inside your workspace. Conversations are saved to your account — reopen the node and the chat is still there.',
-            'On your own machine — meaning a di.iiii you run locally (`di up` or the dev server), not the hosted site — if Claude Code is installed and logged in (a Claude Pro/Max subscription), the node just works — no API key at all: di.iiii talks to your local Claude, and conversations continue across sessions. Otherwise it runs on the Claude API key connected to your account, and the node itself asks for it: paste the key straight into the panel (or sign in first, if you are a guest) — no detour through settings. Keys stay on the server: the browser never talks to Anthropic directly, and nobody else can use yours.',
+            'On your own machine — meaning a di.iiii you run locally (`di up` in its ordinary mode, or the dev server), not the hosted site and not the docker container, which cannot see programs on the host — if Claude Code is installed and logged in (a Claude Pro/Max subscription), the node just works — no API key at all: di.iiii talks to your local Claude, and conversations continue across sessions. Otherwise it runs on the Claude API key connected to your account, and the node itself asks for it: paste the key straight into the panel (or sign in first, if you are a guest) — no detour through settings. Keys stay on the server: the browser never talks to Anthropic directly, and nobody else can use yours.',
             { list: [
                 'Each agent node holds its own conversation — place several for parallel topics.',
                 'Replies stream token by token; usage (tokens in/out) is recorded per turn on your account.',
@@ -137,7 +137,7 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['ai', 'claude', 'chat', 'raw', 'agent', 'node'],
-        updated: '2026-08-09'
+        updated: '2026-08-10'
     },
     {
         id: 'publishing',
@@ -603,13 +603,13 @@ export const WIKI_ARTICLES = [
         title: 'Run di.iiii on your own machine',
         summary: 'One line installs di.iiii locally. Your work lives on your disk, and it keeps working with no internet.',
         body: [
-            'di.iiii does not have to be somewhere you go. One line puts the whole thing on your own machine, with your spaces in a folder you own, and after the install it never needs the network again.',
+            'di.iiii does not have to be somewhere you go. One line puts the whole thing on your own machine, with your spaces in a folder you own, and after the install it keeps working with no internet at all.',
             { list: [
                 'macOS and Linux — curl -fsSL https://di-studio.xyz/get | sh',
                 'Windows (PowerShell) — irm https://di-studio.xyz/get.ps1 | iex'
             ] },
             'Then type di up. It starts, opens in your browser, and you are in a Studio that looks exactly like the one online, with an empty Main Space waiting. di down stops it. di help lists the rest.',
-            'This is meant for a laptop at a venue with bad wifi, a studio that would rather not keep its work on someone else’s server, and anyone who wants the piece to still open in ten years. Offline is the normal state, not a broken one: nothing phones home, and the page loads no fonts or scripts from anywhere else.',
+            'This is meant for a laptop at a venue with bad wifi, a studio that would rather not keep its work on someone else’s server, and anyone who wants the piece to still open in ten years. Offline is the normal state, not a broken one. Nothing is sent anywhere: the one outbound request is a version check, at most once a day, which gives up after three seconds and never blocks anything — and the page loads no fonts or scripts from anywhere else, down to the 3D text labels, whose font ships with the install.',
             'Your work lives in a folder called .di in your home directory, deliberately kept apart from the app itself — so updating, rolling back, or removing di.iiii cannot touch it. di uninstall says as much, and leaves your spaces where they are.',
             { list: [
                 'di backup — writes your whole di.iiii to one file you can carry to another machine',
@@ -618,11 +618,11 @@ export const WIKI_ARTICLES = [
                 'di status — what is running, on which address, and how much space your work takes',
                 'di doctor — what this machine can and cannot do, and what to install if something is missing'
             ] },
-            'It does not need admin rights, and it does not ask for a password. If the machine has Docker running it will use it; otherwise it runs as a single ordinary program, and if there is no suitable Node it quietly fetches its own rather than sending you away.',
+            'It does not need admin rights, and it does not ask for a password. It runs as a single ordinary program, and if there is no suitable Node it quietly fetches its own rather than sending you away. Docker is there too, but only if you ask for it (di install --docker) — a container cannot reach things on your machine, so the surfaces that talk to your own tools (the agent board, a Claude installed on this computer) work in the ordinary mode and not in the container one.',
             'Syncing a local space with di-studio.xyz is not here yet — for now, di backup and the space bundles on the Spaces page are how work moves between the two.'
         ],
         tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup'],
-        updated: '2026-08-08'
+        updated: '2026-08-10'
     },
     {
         id: 'keeper-node',
