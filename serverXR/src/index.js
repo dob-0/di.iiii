@@ -1355,7 +1355,12 @@ registerInscriptionRoutes(router, {
   readJson,
   withSpaceOpsLock: sharedSpaceOpsLock,
   upsertSpaceMeta,
-  writeJson
+  writeJson,
+  // Shared with di.bo. Unset on both sides = the tunnel does not exist; unset
+  // here alone = the mint 404s and no link is ever handed out, which is the
+  // safe direction to fail in.
+  tunnelSecret: process.env.TUNNEL_SHARED_SECRET || '',
+  tunnelBotUsername: process.env.TUNNEL_BOT_USERNAME || 'diiii111bot'
 })
 
 router.use('/api', requireReadRole('viewer'))
