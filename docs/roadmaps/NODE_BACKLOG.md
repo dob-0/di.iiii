@@ -1,8 +1,24 @@
 # Node backlog
 
-The node registry declared 49 types. An audit on 2026-07-30 found **27 that do
-something and 22 that were declarations with nothing behind them** — no case in
+An audit on 2026-07-30 found, of 49 declared types, **27 that did something and 22
+that were declarations with nothing behind them** — no case in
 `nodeGraphRuntime.js`, no renderer, no capability code.
+
+The registry has grown since. **Do not quote a count from this or any other
+document** — three separate docs carried three different figures (49/27, 30/20,
+54/22) and all three were stale by 2026-08-11. Derive it:
+
+```bash
+node --input-type=module -e "
+const m = await import('./src/project/nodeRegistry.js')
+console.log(Object.keys(m.NODE_TYPES).length, 'declared')
+console.log(m.listNodeTypes().length, 'implemented')
+console.log(m.UNIMPLEMENTED_NODE_TYPES.size, 'unimplemented')
+"
+```
+
+As of 2026-08-11 that reports **56 declared / 37 implemented / 19 unimplemented**
+across 10 categories — a datestamp to re-derive, not a fact to maintain.
 
 Nothing is deleted. Each dead definition is the **port contract to build
 against**: its inputs, outputs and types are the spec. They are withheld from the

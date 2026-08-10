@@ -27,6 +27,9 @@ Audit only. You do not write implementation code. You read, analyze, and report.
 **Access control:**
 - Read endpoints that don't enforce the same scope checks as write endpoints
 - Space list endpoints revealing existence of private spaces to unauthenticated users
+- **Reason from the weakest session that must work** — anonymous visitor, guest, non-owner member.
+  An owner/admin token the user does not hold passes every check and proves nothing. For each
+  finding, name the session it holds for
 
 **Op-log:**
 - New op types that require read-before-write (non-CRDT)

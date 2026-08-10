@@ -14,9 +14,15 @@ You own the path from code to production. Your domain is build systems, deployme
 serverXR/Dockerfile               ← container build definition
 .dockerignore                     ← Docker build context exclusions
 deploy/                           ← deployment docs and examples
+docs/deploy/                      ← deployment documentation (canonical: LIVE_DEPLOY.md)
 scripts/                          ← automation and release helpers
-ecosystem.config.js               ← PM2 process config (shared with BAE)
+docker-compose*.yml               ← Compose stack definitions (base + prod/staging/caddy overrides)
 ```
+
+**There is no PM2.** Process supervision is Docker Compose (`restart:` policy), not a process
+manager. A `serverXR/ecosystem.config.js` file still exists, but it is dead weight referenced
+only by the legacy cPanel staging script (`scripts/stage-cpanel-nodeapp-release.mjs`) — it is
+not part of any live deploy path. Do not add process-manager config to a task.
 
 ---
 
@@ -35,8 +41,11 @@ You may read any file to understand what to build or deploy. You do not edit pro
 
 ## Current Deployment Architecture — Elite Knowledge
 
+**Canonical doc: `docs/deploy/LIVE_DEPLOY.md`.** When this card and that doc disagree, that doc
+wins — read it before any deploy work.
+
 Production DNS (`di-studio.xyz`) is fully cut over to a **Hetzner VPS running Docker + Caddy**.
-cPanel is a disabled, documented fallback only (see below) — do not treat it as the live path.
+cPanel has been legacy fallback only since 2026-07-15 (see below) — do not treat it as the live path.
 
 **The deploy pipeline is wired up and verified (2026-07-16).** Both `deploy-vps.yml` (production,
 push to `main`) and `deploy-vps-staging.yml` (staging, push to `dev`) have had real, successful
@@ -44,9 +53,22 @@ end-to-end runs — GitHub secrets/variables are set (`VPS_HOST`, `VPS_SSH_USER`
 `VPS_DEPLOY_PATH`, `VPS_STAGING_DEPLOY_PATH`, `REGISTRY_USER`, `VPS_BASE_URL`,
 `VPS_STAGING_BASE_URL`). Both workflows `git checkout <deployed-sha> -- <tracked compose/Caddy
 files>` before restarting the stack, so config drift on the host is caught automatically, not
-just image updates. There is still no `release.json`/git-commit stamp anywhere in the build, so
-`/api/health` can't confirm what's running purely from that endpoint — cross-check with `gh run
-list --workflow=deploy-vps.yml` and the run's `head_sha` if in doubt.
+just image updates.
+
+**`/api/health` now tells you what is actually running** (this card previously said no
+git-commit stamp existed — that is out of date). `serverXR/Dockerfile` bakes a `release.json`
+into the image, `serverXR/src/releaseInfo.js` loads it, and `statusRoutes.js` exposes
+`release: { deployEnv, sourceRef, gitCommit, releaseId, generatedAt }`. Verify a deploy by
+comparing `release.gitCommit` against the workflow run's `head_sha`:
+
+```bash
+curl -s https://staging.di-studio.xyz/serverXR/api/health   # or di-studio.xyz for prod
+gh run list --workflow=deploy-vps.yml --limit 1
+```
+
+Note the asymmetry: `release.json` is baked by **serverXR's Dockerfile only** — the client
+image does not carry one. A `null` `gitCommit` means the file was missing at build time, which
+is itself a finding, not a reason to go back to guessing from run logs.
 
 ### Frontend + Backend (VPS, Docker Compose)
 
@@ -65,11 +87,13 @@ list --workflow=deploy-vps.yml` and the run's `head_sha` if in doubt.
   are set per-service but oversubscribe the 2 vCPU host once staging is running alongside prod
   (see audit notes) — check actual host specs before raising any service's ceiling.
 
-### cPanel — Legacy Fallback (disabled)
+### cPanel — Legacy Fallback (disabled since 2026-07-15)
 
 Kept only until its hosting term expires; do not build new deploy work against it.
 
-- `publish-cpanel-prebuilt-v2.yml` is `workflow_dispatch`-only (no longer triggers on push)
+- `publish-cpanel-prebuilt-v2.yml` is `workflow_dispatch`-only (no longer triggers on push),
+  and its smoke check **fails on every run**. A red run on that workflow is the expected state,
+  not an incident — do not "fix" it, and do not treat it as evidence that prod is broken.
 - Docs: `docs/deploy/CPANEL_DEPLOYMENT.md`, `docs/deploy/CPANEL_PREBUILT_DEPLOY.md`,
   `docs/deploy/legacy/` — treat as historical reference, not instructions to follow
 - Known limitations that motivated the VPS move: no reliable process resurrection, shared disk
@@ -95,6 +119,10 @@ Why: `serverXR/src/sharedRuntime.js` loads `../../shared` which resolves to `/sh
 dev → main
 ```
 
+There are exactly two source branches. **There is no `staging` branch** — "staging" is an
+environment (`staging.di-studio.xyz`), deployed from `dev`. If a task says "push to staging",
+it means push to `dev`.
+
 - Routine feature work: start on `dev`
 - Production deploy: merge `dev` into `main` and push — triggers `deploy-vps.yml`
 - Staging deploy: push to `dev` — triggers `deploy-vps-staging.yml`
@@ -111,10 +139,16 @@ dev → main
 
 `deploy-vps.yml` (production, push to `main`) and `deploy-vps-staging.yml` (staging, push to
 `dev`) both: build+push images to GHCR, SSH into the VPS, `docker compose pull && up -d`, then
-run `scripts/smoke-check.mjs` (shared smoke check for both the VPS and cPanel paths, renamed
-from `smoke-check-cpanel.mjs` since it was never cPanel-specific) against the deployed host.
+run `scripts/smoke-check.mjs` (shared smoke check, renamed from `smoke-check-cpanel.mjs` since
+it was never cPanel-specific) against the deployed host.
 
 Required GitHub secrets/variables: see `docs/deploy/VPS_DOCKER_DEPLOY.md`.
+
+**Deploy gates — a stalled deploy is usually one of these, not a broken workflow:**
+- Production `deploy` waits for a manual approval. A run sitting in `waiting` is blocked on
+  that approval; `waiting` is not `queued`.
+- A leftover session note committed on `dev` silently **skips** the staging deploy. If a push
+  to `dev` produced no staging deploy, check for that before debugging the workflow.
 
 ### Never in CI
 
@@ -129,9 +163,14 @@ Required GitHub secrets/variables: see `docs/deploy/VPS_DOCKER_DEPLOY.md`.
 ```
 scripts/capture-rule.sh           ← add a golden rule mid-session
 scripts/golden-rules-check.sh     ← check if a rule needs to be added
+scripts/smoke-check.mjs           ← post-deploy smoke check (also run by both VPS workflows)
 npm run docs:ai:sync              ← sync AI doc bridges after canonical doc changes
 npm run docs:ai:check             ← verify bridge files match canonical docs
+npm run deploy:status             ← current deploy state
+npm run smoke                     ← smoke check against a host
 ```
+
+Run `npm run` with no arguments for the full list before assuming a helper does not exist.
 
 ---
 

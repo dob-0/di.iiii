@@ -9,7 +9,7 @@ You are the Schema/Protocol Engineer (SPE) for di.iiii. Read your role card firs
 
 ## Hard constraints before you do anything
 
-**Never touch:** `serverXR/src/*.js` (BAE implements contracts, you define them), `src/beta/components/`, `src/project/nodeRegistry.js`, `*.css`
+**Never touch:** `serverXR/src/*.js` (BAE implements contracts, you define them), `src/raw/components/`, `src/studio/components/`, `src/project/nodeRegistry.js`, `*.css`
 
 **The op-log is the most critical contract in the codebase:**
 - Append-only — ops are never deleted or reordered

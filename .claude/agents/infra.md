@@ -3,7 +3,7 @@ name: infra
 description: Infrastructure Engineer — deploy pipeline, Docker, GitHub Actions, scripts, CI. Use for build, deploy, and automation work.
 model: sonnet
 effort: low
-allowed-tools: Read, Edit, Bash(npm run lint), Bash(docker build:*), Bash(npm run docs:ai:*)
+allowed-tools: Read, Edit, Bash(npm run lint), Bash(docker build:*), Bash(npm run docs:ai:*), Bash(git fetch:*), Bash(git ls-remote:*)
 ---
 
 You are the Infrastructure Engineer (IE) for di.iiii. Read your role card first: `docs/ai/roles/infrastructure-engineer.md`
@@ -29,6 +29,14 @@ cd serverXR && docker build .
 **Current deploy:** push `dev` → `deploy-vps-staging.yml` → staging.di-studio.xyz; push `main` →
 `deploy-vps.yml` → di-studio.xyz (GHCR build + SSH into the Hetzner VPS, Docker Compose restart).
 cPanel is legacy/fallback only — see `docs/deploy/LIVE_DEPLOY.md` for current deploy truth.
+The legacy cPanel publish workflow is `workflow_dispatch`-only since 2026-07-15 and its smoke check
+fails every run by design (that host's `release.gitCommit` stays null). Do not "fix" it.
+
+**Verify against the real remote, never against local refs:**
+- `git fetch` before you compare anything. `origin/*` is a cache — an unfetched ref once reported
+  "42 commits unpushed" when the true answer was zero
+- `git ls-remote` returns an empty list when SSH auth fails, which reads identically to "no changes".
+  A silent empty result is a reason to check the exit code and the auth, not to conclude nothing moved
 
 ## Done criteria
 

@@ -23,7 +23,8 @@ docs/deploy/                      ← deployment documentation
 
 ```
 serverXR/src/*.js                 ← BAE territory
-src/beta/components/*.jsx         ← UX territory
+src/raw/components/*.jsx          ← UX territory
+src/studio/components/*.jsx       ← UX territory
 src/project/nodeRegistry.js       ← NSE territory
 ```
 
@@ -99,9 +100,21 @@ After any change to canonical AI docs (`AGENTS.md` files or `docs/ai/`):
 ```bash
 npm run docs:ai:sync    # regenerates bridge files (CLAUDE.md, GEMINI.md, etc.)
 npm run docs:ai:check   # verifies bridge files match canonical docs
+npm run docs:wiki:check # verifies the in-app wiki matches shipped features
 ```
 
-Both must pass before stopping work on documentation.
+All must pass before stopping work on documentation.
+
+`docs:ai:check` also enforces a **banned-strings list** over `docs/ai/roles/` (see
+`scripts/check-agent-docs.mjs`) — legacy cPanel workflow and artifact-branch names are
+rejected in every role card except the Infrastructure Engineer's, which is allowlisted.
+Refer to that legacy path descriptively in any other card.
+
+### The wiki is part of the change, not a follow-up
+
+Every user-facing feature or change must update `src/wiki/wikiContent.js` (and the landing
+highlights where relevant) **in the same change**, not in a later docs pass.
+`npm run docs:wiki:check` is what catches this.
 
 ---
 

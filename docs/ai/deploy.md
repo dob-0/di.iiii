@@ -4,28 +4,44 @@ This page is the AI-safe deployment map. Keep host-specific or secret material o
 
 ## Canonical Deployment Model
 
-- normal branch flow is `dev -> main`
-- `dev` push deploys to `staging.di-studio.xyz`; `main` push deploys to `di-studio.xyz`
-- prebuilt `cpanel-*` branches are the release artifacts consumed by cPanel Git Version Control
-- prebuilt `cpanel-*` branches are the release artifacts consumed by cPanel Git Version Control
-- `/serverXR` stays owned by the cPanel Node.js App
+- normal branch flow is `dev -> main`. There is no `staging` source branch — staging is a
+  deploy target
+- push `dev` → `.github/workflows/deploy-vps-staging.yml` → `staging.di-studio.xyz`
+- push `main` → `.github/workflows/deploy-vps.yml` → `di-studio.xyz`
+- both build images, push to GHCR, connect to the VPS, and restart the Docker Compose
+  project. Each checks out the deployed SHA's tracked compose/Caddy files before
+  restarting, so host config drift is caught, not just image updates
+- **the production deploy waits for a manual approval.** A run sitting at `waiting` is
+  not `queued` and is not stuck — it is asking for a human
+- the deployed commit is stamped at `/serverXR/api/health` → `release.gitCommit`.
+  `curl -s <host>/serverXR/api/health` is the fastest way to see what is actually running
+
+**Legacy, since 2026-07-15:** production DNS moved off cPanel to the VPS on that date.
+The `cpanel-*` branches and `publish-cpanel-prebuilt-v2.yml` are fallback only — the
+workflow is `workflow_dispatch`-only and its smoke check fails every run, so it will
+never confirm a deploy. Do not treat any cPanel path as current, and do not wait on a
+cPanel cron.
 
 ## Main Places To Read
 
-- human deploy runbook: [../deploy/LIVE_DEPLOY.md](../deploy/LIVE_DEPLOY.md)
+- human deploy runbook: [../deploy/LIVE_DEPLOY.md](../deploy/LIVE_DEPLOY.md) — canonical
 - publish content to a space (Options A–D): [../deploy/PUBLISH_WORKFLOW.md](../deploy/PUBLISH_WORKFLOW.md)
-- cPanel bundle notes: [../../deploy/cpanel/DEPLOY.md](../../deploy/cpanel/DEPLOY.md)
 - backend runtime contract: [../../serverXR/README.md](../../serverXR/README.md)
 - automation entrypoint: [../../scripts/AGENTS.md](../../scripts/AGENTS.md)
+- cPanel bundle notes (legacy): [../../deploy/cpanel/DEPLOY.md](../../deploy/cpanel/DEPLOY.md)
 
 ## Main Commands
 
 From the repo root:
 
 ```bash
-npm run deploy:production
-npm run deploy:cpanel
+npm run deploy:production   # promote
+npm run deploy:status       # where things are
+npm run smoke               # verify the host after a deploy
 ```
+
+`npm run deploy:cpanel` still exists but stages a legacy cPanel release artifact. It is
+not part of the current path.
 
 ## Routing Rules
 

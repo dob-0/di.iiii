@@ -72,9 +72,11 @@ appear in the other.
 
 ## The node palette shows only what works
 
-Raw offers **27 node types**. Another 22 were declarations with no runtime behind
-them — capture, device I/O, streaming, and some structural types — and are
-withheld from the palette rather than shown as dead options. The queue for
+The palette shows only node types that actually do something (**37 of 56 declared,
+as of 2026-08-11** — re-derive rather than trust that number, see
+`docs/roadmaps/NODE_BACKLOG.md`). The rest were declarations with no runtime behind
+them — capture, device I/O, streaming, and some structural types — and are withheld
+from the palette rather than shown as dead options. The queue for
 building them out is `docs/roadmaps/NODE_BACKLOG.md`; implementing one means
 deleting its line from `UNIMPLEMENTED_NODE_TYPES` in `src/project/nodeRegistry.js`.
 

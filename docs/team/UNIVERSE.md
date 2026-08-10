@@ -38,12 +38,14 @@ Owns the main shipped editor lane: StudioShell, StudioHub, StudioEditor, StudioI
 - Skills: `dii-studio-ux-work`, `dii-hotspot-refactor`, `dii-feature-routing`
 - Runs: `npx vitest run src/studio`
 
-### Beta / Node Engineer
-Owns the experimental node-first authoring lane. Explores patterns that may eventually ship in Studio. Works with the node registry, node palette, window layout, and Beta workspace.
+### Raw / Node Engineer
+Owns the node-first authoring lane. Works with the node registry, node palette, window layout, and the Raw workspace. Studio embeds Raw's graph and viewport surfaces read-only, so a new required prop here breaks Studio's build.
 
-- Home: `src/beta/`, `src/project/nodeRegistry.js`
-- Skills: `dii-beta-node-authoring`, `dii-feature-routing`
-- Runs: `npx vitest run src/beta`
+- Home: `src/raw/`, `src/project/nodeRegistry.js`, `src/project/graph/`
+- Skills: `dii-raw-node-authoring`, `dii-feature-routing`
+- Runs: `npx vitest run src/raw`
+
+*Was "Beta / Node Engineer" until 2026-08-06, when Beta was retired and absorbed into Raw.*
 
 ### XR / 3D Engineer
 Owns Three.js and R3F integration, object component implementations, scene canvas, camera controls, gizmos, and the WebXR entry path. Keeps the scene graph deterministic and XR-compatible.
@@ -57,9 +59,9 @@ Owns Three.js and R3F integration, object component implementations, scene canva
 ## Creative Roles
 
 ### Spatial Designer
-Composes scenes using the Studio or Beta editor. Arranges objects in 3D space, sets transforms, lighting, and camera angles. Authors the spatial experience that gets published as the live space.
+Composes scenes using the Studio or Raw editor. Arranges objects in 3D space, sets transforms, lighting, and camera angles. Authors the spatial experience that gets published as the live space.
 
-- Home: the editor — Studio at `/<space>/studio`, Beta at `/<space>/beta`
+- Home: the editor — Studio at `/<space>/studio`, Raw at `/raw`
 - Skills: `dii-xr-scene-authoring`, `dii-space-publish-presentation`
 - Key actions: add object → set position/rotation/scale → publish to space
 
@@ -105,7 +107,7 @@ Watches the hotspot files for overgrowth and leads safe decompositions. Ensures 
 | Frontend Platform Engineer | `dii-project-sync-ops` · `dii-schema-op-changes` · `dii-feature-routing` |
 | Infra / Deploy Engineer | `dii-deploy-workflow` · `dii-ai-doc-maintenance` |
 | Studio Engineer | `dii-studio-ux-work` · `dii-hotspot-refactor` · `dii-feature-routing` |
-| Beta / Node Engineer | `dii-beta-node-authoring` · `dii-feature-routing` |
+| Raw / Node Engineer | `dii-raw-node-authoring` · `dii-feature-routing` |
 | XR / 3D Engineer | `dii-xr-scene-authoring` · `dii-media-content-creation` |
 | Spatial Designer | `dii-xr-scene-authoring` · `dii-space-publish-presentation` |
 | Multimedia Artist | `dii-media-content-creation` · `dii-project-asset-transport` |

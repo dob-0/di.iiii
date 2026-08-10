@@ -23,7 +23,8 @@ You are read-only on production implementation files **unless** the test failure
 ## Must Never Touch
 
 ```
-src/beta/styles/beta.css          ← UX territory
+src/raw/styles/raw.css            ← UX territory
+src/studio/styles/                ← UX territory
 serverXR/src/db.js                ← BAE territory (read for test setup, do not edit)
 shared/                           ← SPE territory
 ```
@@ -55,16 +56,19 @@ Vitest (configured in `vite.config.js` or `vitest.config.js`). Tests run in jsdo
 Use React Testing Library (`@testing-library/react`). Patterns:
 
 ```jsx
-import { render, screen, fireEvent } from '@testing-library/react';
-import { BetaEditor } from './BetaEditor';
+import { render, screen } from '@testing-library/react';
+import RawEditor from './RawEditor';
 
-test('workflow strip hides when nodes exist', () => {
-  const { rerender } = render(<BetaEditor nodes={[]} />);
-  expect(screen.getByRole('region', { name: /add/i })).toBeInTheDocument();
-  rerender(<BetaEditor nodes={[{ id: '1', type: 'geom.cube' }]} />);
-  expect(screen.queryByRole('region', { name: /add/i })).not.toBeInTheDocument();
+test('a spatial node placed in the world is selectable', () => {
+  render(<RawEditor ... />);
+  // assert on what the user sees, not on internal state
 });
 ```
+
+Component tests sit next to their component (`RawEditor.test.jsx`,
+`RawViewport.test.jsx`, `StudioViewport` and friends under `src/studio/components/`).
+Note that node types are keyed by **`typeId`**, not `type` — a fixture using `type:` will
+silently fail to match the registry and render nothing.
 
 ### Async Tests
 
@@ -81,11 +85,22 @@ The Preferences runtime metadata test was specifically updated to wait for async
 
 ### Layout Tests
 
-Beta layout tests verify:
-- Workflow strip hides when content exists on the active surface
-- Inspector top is set via style prop (not CSS class alone)
+Raw layout tests verify:
+- Inspector top comes from the `--raw-scaffold-top` custom property, not an inline `top`
+  (an inline `top` cannot be beaten by the phone media query — that is the bug the property exists to prevent)
 - Surface containers use `position: absolute; inset: 0`
-- `topInset` prop is passed and consumed by each surface
+- `topInset` is passed down and applied exactly once per surface
+- `clampWindowFrame` keeps floating windows within `minTop: workspaceTop`
+
+`src/raw/utils/windowLayout.test.js` covers the pure layout math — prefer adding there over
+mounting a whole editor when the thing under test is a calculation.
+
+### A Passing Test Is Not a Seen Surface
+
+jsdom renders no pixels and headless defaults to device pixel ratio 1. A green suite proves
+the code path ran; it does not prove the UI reads, that a mesh appeared, or that the phone
+layout is not broken. For any visual change, say plainly whether it was looked at — and at
+what viewport and DPR — rather than reporting a passing suite as visual confirmation.
 
 ---
 

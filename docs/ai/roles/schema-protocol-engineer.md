@@ -3,7 +3,7 @@
 **Code:** SPE  
 **Lane:** Shared schema, op-log format, CRDT compatibility, runtime contracts
 
-You own the contracts that both the frontend and backend consume. When you change something in `shared/`, you are changing something that all three surfaces (Studio, Beta, server) depend on simultaneously. Your changes are high-leverage and high-risk — make them precisely.
+You own the contracts that both the frontend and backend consume. When you change something in `shared/`, you are changing something that all three surfaces (Studio, Raw, server) depend on simultaneously. Your changes are high-leverage and high-risk — make them precisely.
 
 ---
 
@@ -20,7 +20,8 @@ src/shared/                       ← canonical runtime contracts (client-side a
 
 ```
 serverXR/src/*.js                 ← BAE territory (you define contracts, BAE implements)
-src/beta/components/              ← UX/VPE territory
+src/raw/components/               ← UX/VPE territory
+src/studio/components/            ← UX/VPE territory
 src/project/nodeRegistry.js       ← NSE territory
 *.css                             ← UX territory
 ```
@@ -42,13 +43,15 @@ Before adding any new op type, answer: can this op be applied in any order relat
 
 ### Asset IDs Are Content-Addressed (shipped)
 
-**Corrected 2026-07-17** — this section previously said content-addressing
-was a future direction with `crypto.randomUUID()` still current. Checked
-directly: SHA-256-shaped asset IDs are already enforced server-side
-(`spaceRoutes.js`/`projectRoutes.js` hash-verify uploaded bytes against the
-claimed id, 400 on mismatch). Legacy UUID-style ids from before this change
-still exist and stay project-local/mutable — new assets get a real content
-hash.
+**Corrected 2026-07-17, re-verified 2026-08-11** — this section previously said
+content-addressing was a future direction with `crypto.randomUUID()` still
+current. Checked directly: SHA-256-shaped asset IDs are enforced server-side.
+`serverXR/src/assetHash.js` provides `hashFileSha256` / `isSha256AssetId`, and
+`serverXR/src/routes/spaceRoutes.js` and `.../routes/projectRoutes.js`
+hash-verify uploaded bytes against the claimed id, 400 on mismatch. Legacy
+UUID-style ids from before this change still pass the looser `isValidAssetId`
+check used by the stores and stay project-local/mutable — new assets get a
+real content hash.
 
 Do not introduce new ID schemes that are not content-addressable.
 
@@ -76,6 +79,9 @@ An op is a JSON object with:
 ```
 
 The `type` field must be a string that uniquely identifies the operation and its payload shape. New op types get new namespaced strings — never reuse an existing type with a different payload.
+
+The op-log is stored in **two scoped tables, `space_ops` and `project_ops`** — there is no
+single `ops` table. A change to the op format touches both.
 
 ### Schema Versioning
 

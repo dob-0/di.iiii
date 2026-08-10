@@ -1,4 +1,15 @@
-# cPanel Release Bundle
+# cPanel Release Bundle — LEGACY FALLBACK
+
+> **Not the current deploy path.** Production DNS moved off cPanel to the Hetzner VPS
+> (Docker + Caddy) on 2026-07-15.
+>
+> Current: push `dev` → `deploy-vps-staging.yml` → `staging.di-studio.xyz`; push `main`
+> → `deploy-vps.yml` → `di-studio.xyz`. See
+> [`../../docs/deploy/LIVE_DEPLOY.md`](../../docs/deploy/LIVE_DEPLOY.md).
+>
+> `publish-cpanel-prebuilt-v2.yml` is `workflow_dispatch`-only and its smoke check has
+> failed every run since the cutover — it will never confirm a deploy for you. Use this
+> bundle only for deliberate cPanel disaster recovery.
 
 Build the staged release with:
 

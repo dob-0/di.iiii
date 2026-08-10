@@ -148,7 +148,7 @@ Useful local routes:
 
 - `http://localhost:5173/main`
 - `http://localhost:5173/main/studio`
-- `http://localhost:5173/main/beta`
+- `http://localhost:5173/raw`
 - `http://localhost:5173/admin?space=main`
 - `http://localhost:4000/serverXR/api/health`
 

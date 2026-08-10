@@ -1,4 +1,19 @@
-# SSH Staging Deploy
+# SSH Staging Deploy — SUPERSEDED, NEVER ADOPTED
+
+> **Do not follow this document.** Archived 2026-08-11.
+>
+> Everything below describes a design that was replaced before it went live:
+>
+> - the workflow it documents, `.github/workflows/deploy-staging-ssh.yml`, **has been
+>   deleted** and is not in the repo
+> - it triggers on a `staging` branch, which **does not exist** — staging is a deploy
+>   target, not a source branch
+> - its restart command is PM2, which was replaced by **Docker Compose**
+>
+> The staging deploy is now `.github/workflows/deploy-vps-staging.yml`, fired by a push
+> to `dev`. See [`../LIVE_DEPLOY.md`](../LIVE_DEPLOY.md) for the current path.
+>
+> Kept only as the record of how the VPS staging path was originally scoped.
 
 This workflow is the VPS-style staging deploy path. It is intentionally opt-in so it can live beside the current cPanel prebuilt flow until the SSH host is ready.
 

@@ -17,9 +17,15 @@ stack rather than the most. Cheap now means Haiku, not free.
 | 3 — Expensive | Claude Opus / Fable | High | Only: architecture decisions, non-negotiable reviews, security audits, cross-system refactors, full audits |
 
 The main Claude Code session is **not pinned** in `.claude/settings.json` — it uses whatever the
-user set as their default (`/model`). Per-task tiering happens through the subagents in
-`.claude/agents/` (ux/qa → haiku, backend/viewport/nodes → sonnet, schema/security → opus) and
-this table.
+user set as their default (`/model`), which some worktrees override in a local settings file.
+Per-task tiering happens through the subagents in `.claude/agents/` and this table.
+
+Actual `model:` frontmatter in `.claude/agents/` (verified 2026-08-11) — the file is the
+authority, not this table:
+
+| haiku | sonnet | opus |
+|-------|--------|------|
+| `qa`, `ux` | `backend`, `viewport`, `nodes`, `infra`, `human-verifier`, `release-verifier` | `schema`, `security`, `silent-failure-hunter` |
 
 ---
 
@@ -54,7 +60,7 @@ this table.
 | 3D/Viewport Engineer | Sonnet | — |
 | Backend/API Engineer | Sonnet | Opus for auth changes |
 | Schema/Protocol Engineer | Opus | — |
-| Infrastructure Engineer | Haiku | Sonnet for new workflows |
+| Infrastructure Engineer | Sonnet | — (deploy mistakes are expensive; `.claude/agents/infra.md` is sonnet) |
 | QA/Test Engineer | Haiku | Sonnet for complex test scenarios |
 | Security Auditor | Opus | — |
 | Documentation Engineer | Haiku | Sonnet for structured docs |

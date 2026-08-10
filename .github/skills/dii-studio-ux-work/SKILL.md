@@ -25,9 +25,9 @@ Make the smallest Studio-only change that advances the shipped product without p
    - StudioInspector: selected node or object property editing
    - StudioViewport: three.js canvas, gizmo, and camera controls composition
    - StudioPresentationSurface: presentation overlay and iframe embedding
-3. If the behavior should also work in Beta or the public viewer, move it down into src/project instead.
+3. If the behavior should also work in Raw or the public viewer, move it down into src/project instead.
 4. Use studioRouting.js for route path helpers and route decisions.
-5. Use useStudioLayoutPrefs for layout preference persistence.
+5. Use useStudioPanelState and studioWorkspaceStorage.js for panel state and its persistence, useViewportLayout for viewport splits.
 6. When Studio composes older shared hooks or components from src/hooks and src/components, prefer the shared version rather than forking it.
 7. Write or update a focused test before touching adjacent surfaces.
 
@@ -38,11 +38,13 @@ Make the smallest Studio-only change that advances the shipped product without p
 - StudioInspector: property panel for selected objects and nodes
 - StudioViewport: three.js render surface, controls, gizmos
 - StudioPresentationSurface: presentation overlay, iframe embed, view controls
-- src/studio/hooks/useStudioLayoutPrefs.js: persisted panel layout preferences
+- src/studio/hooks/useStudioPanelState.js: which floating panels are open
+- src/studio/hooks/useViewportLayout.js: viewport split tree
+- src/studio/utils/studioWorkspaceStorage.js: persisted panel open state, positions, sizes, snap edges
 - src/studio/utils/studioRouting.js: route path builders for Studio surfaces
 
 ## Decision Checklist Before Editing
-- Is this Studio-specific UX or should Beta or the viewer benefit too?
+- Is this Studio-specific UX or should Raw or the viewer benefit too?
 - Does this change shared sync, project state, or schema? If so, move to src/project or src/shared.
 - Is this behavior already in a shared hook or component? Use the shared version.
 - Is this a large orchestration change to StudioShell? Consider extracting by concern rather than adding another branch.
@@ -59,8 +61,9 @@ Make the smallest Studio-only change that advances the shipped product without p
 - Useful tests:
   - ../../src/studio/components/StudioHub.test.jsx
   - ../../src/studio/components/StudioPresentationSurface.test.jsx
-  - ../../src/studio/hooks/useStudioLayoutPrefs.test.js
   - ../../src/studio/utils/studioRouting.test.js
+  - ../../src/studio/utils/studioWorkspaceStorage.test.js
+  - ../../src/studio/components/StudioShell.test.jsx
 
 ## Validation
 - npm run test

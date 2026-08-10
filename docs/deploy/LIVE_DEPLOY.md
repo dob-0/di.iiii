@@ -88,7 +88,7 @@ commit back into `dev` so the branches do not drift apart.
 - public/space route: `https://di-studio.xyz/<space>`
 - admin: `https://di-studio.xyz/admin?space=main`
 - Studio: `https://di-studio.xyz/main/studio`
-- Beta: `https://di-studio.xyz/main/beta`
+- Raw: `https://di-studio.xyz/raw`
 - backend health: `https://di-studio.xyz/serverXR/api/health`
 
 ## First Checks If Something Breaks

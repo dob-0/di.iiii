@@ -17,9 +17,12 @@ serverXR/src/spaceStore.js            ← space/project metadata CRUD
 serverXR/src/projectStore.js          ← project ops and document CRUD
 serverXR/src/authSession.js           ← session cookie auth
 serverXR/src/sharedRuntime.js         ← server-side use of shared/ schema
-serverXR/ecosystem.config.js          ← PM2 process config
 serverXR/Dockerfile                   ← container build (shared with IE)
 ```
+
+**There is no PM2.** The server runs under Docker Compose. `serverXR/ecosystem.config.js`
+still exists but is dead: nothing in the live deploy path reads it (only the legacy cPanel
+staging script copies it). Do not write code or docs that assume a process manager.
 
 ---
 
@@ -27,7 +30,7 @@ serverXR/Dockerfile                   ← container build (shared with IE)
 
 ```
 src/                                  ← frontend source — UX/NSE/VPE territory
-src/beta/                             ← Beta frontend
+src/raw/                              ← Raw frontend
 src/studio/                           ← Studio frontend
 src/components/                       ← shared UI components
 *.css                                 ← CSS — UX territory
@@ -44,8 +47,12 @@ You may read `shared/` schema files to implement them correctly. You do not defi
 
 `VITE_*` env vars are baked into the built JavaScript. Never instruct the frontend to read a secret from a Vite env var. Auth tokens, signing keys, and session secrets live server-side only.
 
-Current auth model:
-- `POST /api/auth/login` — accepts credentials, sets a signed session cookie
+Current auth model — the session **is** the resource, verbed by method (verified against
+`serverXR/src/index.js`; there is no `/api/auth/login` or `/api/auth/logout` route):
+- `POST   /api/auth/session` — sign in, sets a signed session cookie (rate-limited)
+- `GET    /api/auth/session` — current session info
+- `DELETE /api/auth/session` — sign out
+- `/api/auth/github`, `/api/auth/google` — OAuth entry points (rate-limited)
 - All subsequent requests use the session cookie (`withCredentials: true` on frontend)
 - No raw token ever sent to the frontend
 
@@ -76,11 +83,13 @@ db.pragma('journal_mode = WAL')
 db.pragma('foreign_keys = ON')
 ```
 
-`node:sqlite` was chosen deliberately (see `docs/ai/golden_rules.md`):
-`better-sqlite3` has no prebuilt binary for this Node version / no C++
-toolchain on the retired cPanel host, and `node-sqlite3-wasm` OOMs under
-CloudLinux LVE memory caps. `DB_PATH` defaults to `{DATA_ROOT}/di.db`.
-Override with the `DB_PATH` env var.
+`node:sqlite` was chosen deliberately (see `docs/ai/golden_rules.md`). The original driver
+was the retired cPanel host (no C++ toolchain for `better-sqlite3`, and `node-sqlite3-wasm`
+OOMing under CloudLinux LVE caps). That constraint is gone now that deploys run on Docker,
+but the choice stands on its own — `node:sqlite` is in the Node runtime, so it is one fewer
+native dependency to rebuild per Node version. Do not "modernize" back to `better-sqlite3`
+without a decision on the record. `DB_PATH` defaults to `{DATA_ROOT}/di.db`; override with
+the `DB_PATH` env var.
 
 ### Prepared Statement Pattern
 
@@ -101,12 +110,22 @@ This was validated with real measurements: caching gives ~30–50% latency reduc
 
 ### Tables
 
-```sql
-spaces           -- space metadata (id, name, ownerId, createdAt)
-projects         -- project metadata (id, spaceId, name, createdAt)
-ops              -- op-log entries (id, projectId, op JSON, timestamp)
-migrations       -- migration log (name, appliedAt)
+The full DDL is at the top of `serverXR/src/db.js` — read it there rather than trusting a
+list in a doc. Shape as of this writing (16 tables), grouped:
+
 ```
+spaces, projects                          -- metadata
+space_ops, project_ops                    -- the two op-logs (there is no single `ops` table)
+users                                     -- provider identity; role column defaults to 'editor'
+space_sync_keys, space_invites, space_links  -- linked-space sync + sharing
+user_drive_tokens, user_ai_connections    -- third-party credentials
+ai_chats, ai_messages                     -- agent chat persistence
+public_assets, open_call_applications     -- published + open-call surfaces
+migrations, pending_actions               -- bookkeeping
+```
+
+**There are two op-logs, scoped separately: `space_ops` and `project_ops`.** Code or docs
+referring to a single `ops` table is describing a schema that does not exist.
 
 Binary assets (images, models) remain on disk at `{DATA_ROOT}/spaces/{spaceId}/assets/`.
 
@@ -124,14 +143,20 @@ When you need a schema change, add a new migration function — never mutate exi
 ## Auth Session Architecture
 
 ```
-POST /api/auth/login    → validates credentials → sets signed cookie → 200
-POST /api/auth/logout   → clears cookie → 200
-GET  /api/auth/session  → returns current session info → 200 | 401
+POST   /api/auth/session  → validates credentials → sets signed cookie → 200
+GET    /api/auth/session  → returns current session info → 200 | 401
+DELETE /api/auth/session  → clears cookie → 200
 ```
 
-All protected routes check the session cookie via `requireAuth` middleware. Socket.IO connections inherit the session via `withCredentials: true` on the client.
+Protected routes check the session cookie. Note that `config.requireAuth` is a **config flag**,
+not a middleware function — it resolves `true` under `NODE_ENV=production` and gates whether
+anonymous access is allowed at all (see `serverXR/src/config.test.js`, and `socketHandlers.js`
+which short-circuits when it is false). Socket.IO connections inherit the session via
+`withCredentials: true` on the client.
 
-Role model: `viewer` | `editor` | `admin`. Role is stored in the session, not in every request.
+Role model: the `users.role` column defaults to `'editor'`. Role is normalized onto the session
+in `authSession.js` (lowercased, trimmed) and stored there, not resent per request. Read the
+current vocabulary from the code before writing a role check — do not hardcode a list from memory.
 
 ---
 
@@ -140,7 +165,8 @@ Role model: `viewer` | `editor` | `admin`. Role is stored in the session, not in
 - Never use empty `catch {}` — log with context
 - Never let auth errors silently fall through to a 200 response
 - Ops that fail validation must return 4xx, never silently drop
-- Server startup failures must exit with a non-zero code — PM2 will restart
+- Server startup failures must exit with a non-zero code — Docker Compose's restart policy
+  handles the restart, and a zero exit on a failed start looks like a clean shutdown to it
 
 ---
 

@@ -9,19 +9,19 @@ You are the Node System Engineer (NSE) for di.iiii. Read your role card first: `
 
 ## Hard constraints before you do anything
 
-**Never touch:** `*.css`, `serverXR/`, `shared/`, `src/shared/`, `src/beta/components/BetaViewport.jsx`, `src/objectComponents/`
+**Never touch:** `*.css`, `serverXR/`, `shared/`, `src/shared/`, `src/raw/components/RawViewport.jsx`, `src/studio/components/StudioViewport.jsx`, `src/project/viewport/`, `src/objectComponents/`
 
 **Registry rules:**
 - All new node types must be in `NODE_DEFINITIONS` with namespaced type string (`namespace.name`)
 - Surface field must be set correctly: `'world' | 'view' | 'graph' | 'any'`
-- Inspector field overrides go in `nodeInspectorSections.js` — never in components
+- Inspector field overrides go in `src/project/graph/nodeInspectorSections.js` — never in components
 
 **Runtime rules:**
 - Evaluation is pure and read-only — never write back to the document store
 - No synchronous I/O in the evaluation loop
 - New node types need a corresponding evaluator registered
 
-**Handoff rule:** If a new node type needs 3D rendering, write the data model here and hand off to VPE — do not touch `BetaViewport.jsx` yourself.
+**Handoff rule:** If a new node type needs 3D rendering, write the data model here and hand off to VPE — do not touch `RawViewport.jsx`, `StudioViewport.jsx` or `EntityContent.jsx` yourself.
 
 ## Done criteria
 

@@ -27,6 +27,9 @@ the current path.
 - [CPANEL_GIT_PULL_DEPLOY.md](CPANEL_GIT_PULL_DEPLOY.md)
 - [PM2_QUICK_GUIDE.md](PM2_QUICK_GUIDE.md)
 - [SSH_COMMANDS.md](SSH_COMMANDS.md)
+- [SSH_STAGING_DEPLOY.md](SSH_STAGING_DEPLOY.md) — **superseded before it shipped**, not
+  recovery material: the workflow it describes was deleted, its `staging` trigger branch
+  never existed, and it restarts via PM2. Archived here 2026-08-11 as a design record only.
 - [`legacy/cpanel-git-pull/cpanel.git-pull.yml`](../../../legacy/cpanel-git-pull/cpanel.git-pull.yml)
 - [`legacy/cpanel-git-pull/cpanel-git-deploy.sh`](../../../legacy/cpanel-git-pull/cpanel-git-deploy.sh)
 - [`legacy/pm2/build-for-cpanel.ps1`](../../../legacy/pm2/build-for-cpanel.ps1)

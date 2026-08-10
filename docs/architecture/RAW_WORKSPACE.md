@@ -63,7 +63,9 @@ live `VideoTexture`, an analyser reading, a process handle.
 That single mechanism is the seam this entire plan hangs off. It already carries a
 webcam frame and a microphone's volume and frequency.
 
-**The palette is 54 types, 22 gated.** `UNIMPLEMENTED_NODE_TYPES` is honest about
+**The palette gates the types with nothing behind them** (56 declared / 37 shown /
+19 gated as of 2026-08-11 — derive it, don't quote it; see
+`docs/roadmaps/NODE_BACKLOG.md`). `UNIMPLEMENTED_NODE_TYPES` is honest about
 why each is gated: *"no OSC client, no WebMIDI"*, *"no compositor, no transport"*,
 *"zero consumers outside this file"*.
 
@@ -230,7 +232,7 @@ is those layers with the runtime missing:
 
 | Rig layer | Palette | State today |
 |---|---|---|
-| **Keeper** — a local LLM on site; *the main installation layer* | — | **no node type exists at all** |
+| **Keeper** — *the main installation layer*. Was a local LLM on site; local models were removed from every machine 2026-08-05, so any keeper node now talks to an endpoint it is given, not one it runs | — | **no node type exists at all** |
 | Senses — RealSense D405, Orbbec Astra, mic | `source.*` | mic + webcam live; D405 / stereo / insta360 gated |
 | Body — ROSMASTER, 2× ESP32, RPi | `device.osc.*` | gated; needs the bridge |
 | Projection — 2× 5000 lm | `stream.*` | gated; needs NDI |

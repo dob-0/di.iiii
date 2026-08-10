@@ -102,7 +102,7 @@ This starts **serverXR** (`http://localhost:4000`) and the **Vite client**
 
 - `http://localhost:5173/main` — public view
 - `http://localhost:5173/main/studio` — main editor
-- `http://localhost:5173/main/beta` — experimental node editor
+- `http://localhost:5173/raw` — node-first workspace
 - `http://localhost:5173/admin?space=main` — ops
 - `http://localhost:4000/serverXR/api/health` — server health check
 

@@ -12,7 +12,7 @@ Short routing guide for AI agents working in `src/studio/`.
 ## When To Edit Here
 
 - edit here for shipped Studio UX, Studio-only routing, or Studio-specific shell behavior
-- start elsewhere if the change should also affect `Beta` or the public viewer
+- start elsewhere if the change should also affect `Raw` or the public viewer
 - move to `src/project/` when the change is shared project sync, shared viewer logic, project presence, or shared project API behavior
 - move to `src/shared/` when the change affects canonical project schema or shared runtime defaults
 
@@ -53,7 +53,7 @@ Scrollbars are themed globally in `src/styles/base.css` (`*::-webkit-scrollbar*`
 ## Do Not Assume
 
 - do not duplicate shared project sync logic here if the change should live in `src/project/`
-- do not treat `Studio` as the most node-native surface; that is still the experimental `Beta` lane
+- do not treat `Studio` as the most node-native surface; that is the `Raw` lane (`src/raw/`). Studio embeds Raw's graph and viewport surfaces read-only, so changing a required prop in Raw breaks Studio's build
 - do not move canonical schema decisions into Studio-only state or components
 
 ## Validation And Tests

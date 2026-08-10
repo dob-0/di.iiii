@@ -59,9 +59,12 @@ const checks = [
         contentTypeIncludes: 'text/html',
         bodyIncludes: ['<div id="root"></div>']
     },
+    // Was '/main/beta' until 2026-08-11. Beta was retired 2026-08-06, so that
+    // check covered a lane which no longer exists — and because the SPA serves
+    // index.html for any path, it could never have failed to tell us so.
     {
-        name: 'beta route',
-        path: '/main/beta',
+        name: 'raw route',
+        path: '/raw',
         expectedStatuses: [200],
         contentTypeIncludes: 'text/html',
         bodyIncludes: ['<div id="root"></div>']

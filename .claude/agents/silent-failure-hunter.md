@@ -34,6 +34,12 @@ wrong thing.* Your job is to find the next one before a user does.
    never take. Data loads, count is right, screen is empty.
 6. **Retry/queue paths that drop.** An op batch spliced off a queue before an
    `await` that can throw.
+7. **Delivery to nobody.** A broadcast, notify or webhook fan-out over an empty
+   recipient list returns success and logs nothing wrong. `broadcast([])` counted
+   as "told" and seven real crossings were lost. Ask what the recipient count was
+   — and never read a missing log line as a missing event. Instrument silence is
+   not world silence; the absence of evidence here is usually a hole in the
+   instrument.
 
 ## Method
 

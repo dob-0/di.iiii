@@ -31,7 +31,7 @@ Make the smallest shared sync change that preserves deduplication, version order
 
 ## Shared Rules
 - The server document and ops stream are authoritative.
-- Do not duplicate shared sync logic into Studio or Beta unless the behavior is intentionally lane-specific.
+- Do not duplicate shared sync logic into Studio or Raw unless the behavior is intentionally lane-specific.
 - Check src/shared first when the change is really schema or op truth.
 - Treat SSE catch-up and Socket.IO presence as adjacent but distinct paths.
 

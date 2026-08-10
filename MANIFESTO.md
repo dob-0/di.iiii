@@ -56,7 +56,7 @@ Studio is di.iiii's stable, shipped surface — production work, bug fixes, and 
 The long-term direction is unification, not two lanes running in parallel forever: Studio's own role is being drawn into Raw's node model as a container node — one palette entry you enter to find its subgraph (see `feat/raw-studio-node`) — rather than replaced by picking a landing-page winner ahead of that work landing. Do not force a "which lane is primary" decision on the public landing page or new-project default before the unification itself is real.
 
 ### 7. shared/ is the canonical schema layer
-`shared/` and `src/shared/` hold the runtime contracts. Do not fork schema logic into Studio or Beta. Do not skip the shared layer for convenience.
+`shared/` and `src/shared/` hold the runtime contracts. Do not fork schema logic into Studio or Raw. Do not skip the shared layer for convenience.
 
 ---
 
@@ -113,32 +113,40 @@ Keep it brief and actionable. Capture the path that worked, not a long narrative
 	4. Verify publish pipeline status, then run staging smoke checks.
 - Verification:
 	- `git status --short --branch` shows clean worktree before deploy.
-	- `gh run list --workflow publish-cpanel-prebuilt-v2.yml` shows the latest staging publish succeeded.
-	- `npm run deploy -- smoke staging` passes.
-	- `https://staging.di-studio.xyz` and `https://staging.di-studio.xyz/serverXR/api/health` respond correctly.
+	- `gh run list --workflow=deploy-vps-staging.yml` shows the latest staging run succeeded.
+	- `curl -s https://staging.di-studio.xyz/serverXR/api/health` returns a `release.gitCommit`
+	  equal to the commit you deployed. This is the only check that proves *what* is running.
+	- `https://staging.di-studio.xyz` responds correctly.
 - Source files or commands used:
 	- `scripts/deploy.mjs`
-	- `CURRENT.md` deploy commands
+	- `.github/workflows/deploy-vps-staging.yml`
 	- `npm run deploy:staging`
-	- `npm run deploy -- smoke staging`
+	- `npm run smoke`
 
 ### Shortcut: Staging Not Fresh After Push
 
 - Problem: staging site still serves an old build or throws runtime errors after staging was updated.
 - Short way:
-	1. Check publish workflow result for `publish-cpanel-prebuilt-v2.yml`.
-	2. If `Publish target branch` fails with missing `deploy/cpanel/cpanel.prebuilt.yml`, restore that file.
-	3. Commit and run `npm run deploy:staging`.
-	4. Confirm `origin/cpanel-staging` moved to a newer commit.
+	1. `curl -s https://staging.di-studio.xyz/serverXR/api/health` and compare
+	   `release.gitCommit` against the commit you pushed. If they match, the deploy landed and
+	   the problem is the build, not the pipeline.
+	2. If they differ, check `gh run list --workflow=deploy-vps-staging.yml`.
+	3. A run sitting at `waiting` is **awaiting manual approval**, not stuck — approve it.
+	   `waiting` is not `queued`; treating it as "still starting" waits forever.
+	4. Re-push to `dev` (or re-run the workflow) once the cause is fixed.
 - Verification:
 	- Workflow conclusion is `success`.
-	- `git ls-remote --heads origin staging cpanel-staging` shows updated prebuilt branch head.
+	- `release.gitCommit` at the health endpoint matches the deployed SHA.
 	- Staging browser path loads node palette and node inspector without the prior runtime error.
 - Source files or commands used:
-	- `deploy/cpanel/cpanel.prebuilt.yml`
-	- `.github/workflows/publish-cpanel-prebuilt-v2.yml`
-	- `npm run deploy:staging`
-	- `gh run list --workflow publish-cpanel-prebuilt-v2.yml`
+	- `.github/workflows/deploy-vps-staging.yml`
+	- `docs/deploy/LIVE_DEPLOY.md`
+	- `gh run list --workflow=deploy-vps-staging.yml`
+
+> Both shortcuts above were rewritten 2026-08-11. They previously verified against
+> `publish-cpanel-prebuilt-v2.yml` and `origin/cpanel-staging` — a pipeline that has been
+> `workflow_dispatch`-only since the 2026-07-15 VPS cutover and whose smoke check fails every
+> run, so following them could never confirm a deploy.
 
 ---
 

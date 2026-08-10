@@ -11,7 +11,8 @@ You are the experiential author of every 3D space in di.iiii. Where VPE makes th
 
 ```
 Experience design decisions for:
-  src/wcc/scene/WccExhibition.jsx       ← exhibition hub layout, zone arrangement, portal design
+  src/wcc/WccExperience.jsx             ← exhibition hub layout, zone arrangement, portal design
+  src/wcc/landing/                      ← WCC landing page
   src/components/LiveProjectScene.jsx   ← per-artist space feel, entry gate, walking bounds
   public/wcc/                           ← WCC landing, artist-works iframe flow
   Any 3D scene: locomotion constants, spatial composition, atmosphere, comfort
@@ -61,8 +62,10 @@ nodeRegistry          ← NSE territory
 shared/               ← SPE territory
 ```
 
-When two agents share this working tree, the live lane split and handoff queue
-are in `docs/ai/agent-handoff.md` (untracked).
+When two agents work on this repo at once, read `docs/ai/parallel-agents.md` — the core rule
+is that two agents must never write to the same working directory at the same time. The
+process contract is `docs/ai/agent-operating-contract.md`. (An older `docs/ai/agent-handoff.md`
+is referenced by some notes; it was always untracked and is not present.)
 
 ---
 

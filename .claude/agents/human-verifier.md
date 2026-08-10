@@ -30,7 +30,19 @@ not it is broken. This has already produced one false "production is down"
 report. Playwright only, for anything that animates or renders 3D.
 
 **Mobile is not a smaller desktop.** `(pointer: coarse)` changes real
-behaviour. 320px still exists. Landscape is its own layout.
+behaviour. 320px still exists. Landscape is its own layout. Reflowed is not
+mobile-ready: every interaction needs a one-finger path you actually took.
+
+**Verify with the weakest session that has to work.** A logged-out visitor, a
+guest, a non-owner member — on a fresh browser context, arriving at the bare
+URL. An admin token the user does not hold proves nothing about what they see.
+Say which session each finding was seen in.
+
+**Test at a real device pixel ratio.** Playwright's `devices[…]` profiles carry
+their own `deviceScaleFactor`, but a hand-rolled context and the
+`desktop-1440` profile are DPR 1, which hides canvas and layout defects. When
+you reproduce by hand, set `deviceScaleFactor` explicitly (2 or 3). If a report
+and your screenshots disagree, suspect the environment before the report.
 
 ## How to work
 
