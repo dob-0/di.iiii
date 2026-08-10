@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- estate-keeping rules from the worktree audit
+- the room keeps its chat (hub side)
 
 Full detail: `PROGRESS.md`.
 
