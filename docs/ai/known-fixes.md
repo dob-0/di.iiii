@@ -21,6 +21,24 @@ Guardrails: `scripts/check-fallback-patterns.mjs` (CI-gated) greps for the liter
 `serverXR/src/fallbackContracts.test.js` (planned/see `docs/ai/audit-*.md`) encodes it as HTTP-level
 contract assertions.
 
+## A bare `*` route stops serverXR booting, it does not fail a request
+
+serverXR is on Express 5, whose router uses path-to-regexp v8. That version
+rejects an unnamed wildcard:
+
+```js
+router.get('/serverXR/og/*', h)        // PathError: Missing parameter name
+router.get('/serverXR/og/*splat', h)   // ok — req.params.splat is an ARRAY
+```
+
+The trap is *when* it throws. Registration happens at module load, so a bad
+pattern does not 404 or 500 — the process dies before it listens, and every
+route in the app goes with it. Unit tests on the handler pass happily, because
+the handler is never the thing that breaks.
+
+Caught only by mounting the router on a real express app and issuing a request.
+If you add a wildcard route, add that check with it.
+
 | Symptom | Root cause | Fix | File |
 |---------|-----------|-----|------|
 | **`npm run dev:browser` silently served two-day-old code** — the main checkout sat parked on a merged feature branch, 115 commits behind origin/dev; the stack started clean, everything rendered, nothing anywhere said the tree was stale | A session ended without parking the main checkout back at origin/dev, and no tool reported the viewing surface's position: dev-stack printed no tree position at all, and `npm run state` deliberately skipped exactly the two shapes this takes (detached HEAD behind origin/dev, and a branch whose upstream is gone because it merged and was deleted) | `dev-stack.mjs` prints branch/sha/behind-count at startup and a loud STALE/DRIFTED warning with the fix command (`git fetch && git checkout --detach origin/dev`) when HEAD is off the origin/dev tip or the upstream is gone — read-only, counts against the local origin/dev ref (no fetch; offline is a real case), degrades to silence if git is unavailable. `repo-state` warns on both shapes. The Parking Rule added to `parallel-agents.md`: the main checkout is the user's viewing surface, leave it detached at origin/dev; branch work lives in `.claude/worktrees/`. Guard: new `collectStateWarnings` cases in `scripts/repo-state.test.js` | `scripts/dev-stack.mjs`, `scripts/repo-state.mjs`, `scripts/repo-state-lib.mjs`, `docs/ai/parallel-agents.md` |
