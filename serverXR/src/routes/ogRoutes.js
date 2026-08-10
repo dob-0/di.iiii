@@ -55,7 +55,15 @@ function registerOgRoutes(router, { loadSpaceMeta, siteOrigin }) {
   // Express 5's router (path-to-regexp v8) rejects a bare '*' — it throws at
   // REGISTRATION, so this would not have failed a request, it would have stopped
   // serverXR from booting at all. Named wildcard, and params.splat is an array.
-  router.get('/serverXR/og/*splat', async (req, res, next) => {
+  //
+  // The path is relative to the MOUNT. index.js does `app.use(normalizedTarget,
+  // router)` with the target already `/serverXR`, and every sibling route here
+  // is declared as `/api/…` for exactly that reason. This one was declared as
+  // `/serverXR/og/…`, so it actually served `/serverXR/serverXR/og/…` — and the
+  // nginx crawler rule proxies to `/serverXR/og$uri`, which therefore 404'd.
+  // The effect on prod was worse than the bug being fixed: every crawler, for
+  // every di.iiii link, got a 404 and no preview at all.
+  router.get('/og/*splat', async (req, res, next) => {
     try {
       const splat = req.params.splat
       const path = String(Array.isArray(splat) ? splat.join('/') : (splat || '')).replace(/^\/+/, '')
