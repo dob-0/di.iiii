@@ -7,15 +7,18 @@ This document describes the full system: what exists, how the parts relate, and 
 ```
 di.iiii platform  (dob-0/di.iiii)
 ├── Studio          main shipped authoring lane
-├── Beta            experimental node-graph editor
+├── Raw             experimental node-first lane (absorbed Beta, retired 2026-08-06)
 ├── V1              legacy fallback lane
-├── serverXR        Node/Express backend — auth, persistence, publish state
+├── serverXR        Node/Express backend — auth, persistence, publish state, realtime
 └── spaces/         content hosted on the platform
 
-Spaces hosted on di-studio.xyz:
-├── n000            default onboarding space
-├── br_id_ge        tele-symbiotic XR performance prototype  (dob-0/br_id_ge)
-└── wcc             World Creative Commons  (Emilya's wcc-space branch)
+Spaces live on di-studio.xyz (queried prod 2026-08-10):
+├── main            default space
+├── br-id-ge        tele-symbiotic XR performance  (linked repo dob-0/br_id_ge)
+├── wcc             World Creative Commons  (public landing → live scene, src/wcc/)
+├── beyond-form     Gyumri Art Week exhibition page
+├── platform-recordar  RecordAR landing
+├── azd · algovrithm · open
 
 Support tools:
 └── _ii             live terminal VJ visual engine for br_id_ge shows  (dob-0/_ii)
@@ -28,22 +31,26 @@ Support tools:
 | `dob-0/di.iiii` | Platform, editor, serverXR | React 18 + Three.js + R3F + Node/Express + SQLite (`node:sqlite`) | `dev → main` |
 | `dob-0/br_id_ge` | Performance prototype, GitHub Pages site | Vanilla JS + Three.js (index.html SPA) + Node ws | `main` |
 | `dob-0/_ii` | Live terminal VJ engine | Python 3 + curses | `main` |
-| `emilyanikoghosyan/di.iiii` | WCC fork; `wcc-space` branch | Same as di.iiii | `wcc-space` (79 commits ahead of main as of June 2026) |
+| `emilyanikoghosyan/di.iiii` | WCC fork (contributes via task branches → auto-PR to upstream `dev`) | Same as di.iiii | task branches |
 
 ## Data flow
 
 ```
-Creator browser (Studio/Beta)
+Creator browser (Studio/Raw)
     ↕ session cookie auth
     ↕ REST + Socket.IO
 serverXR (port 4000 in dev, /serverXR proxy in prod)
     ↕ SQLite (di.db)
     ↕ file system (serverXR/data/spaces/)
     ↕ op-log (append-only CRDT)
-GitHub Actions → cPanel deploy → di-studio.xyz
+GitHub Actions → Hetzner VPS (Docker Compose behind Caddy)
+    dev  → staging.di-studio.xyz   (deploy-vps-staging.yml)
+    main → di-studio.xyz           (deploy-vps.yml)
 ```
 
-br_id_ge WebSocket mesh (`serverXR/wsMesh.js`) is a separate Node process — it does NOT share serverXR's auth or database. It runs standalone for performances.
+Deploy truth: [docs/deploy/LIVE_DEPLOY.md](deploy/LIVE_DEPLOY.md) (production moved off cPanel to the VPS 2026-07-15).
+
+The live co-presence mesh (`serverXR/src/meshHub.js`) is NOT a separate process — it is a raw WebSocket hub attached to serverXR's own HTTP server, on its own path (`<basePath>/mesh`) beside Socket.IO. It is open/anonymous by default with abuse caps; protected node ids (`keeper-*`) require `MESH_ROOM_SECRET`. It has no persistence layer.
 
 _ii communicates with its own Debian machine via SSH (`scripts/sync.sh`). No connection to di.iiii's serverXR.
 
@@ -54,7 +61,7 @@ _ii communicates with its own Debian machine via SSH (`scripts/sync.sh`). No con
 | di.iiii `src/` | di.iiii `dist/` | `npm run build` (Vite) |
 | di.iiii `AGENTS.md` | `CLAUDE.md`, `GEMINI.md`, `.github/copilot-instructions.md`, `.cursor/rules/*.mdc` | `npm run docs:ai:sync` (auto-runs via PostToolUse hook) |
 | br_id_ge `main` | GitHub Pages (`dob-0.github.io/br_id_ge/`) | `.github/workflows/pages.yml` on push |
-| WCC `wcc-space` | di.iiii `main` | Not yet merged (see `docs/WCC_MERGE_PLAN.md`) |
+| WCC public page | di.iiii `src/wcc/` | Shipped — per-space `isPublic` flag + in-repo scene (see `docs/WCC_MERGE_PLAN.md`) |
 
 ## Canonical sources
 
@@ -72,10 +79,10 @@ _ii communicates with its own Debian machine via SSH (`scripts/sync.sh`). No con
 - **Op-log is append-only.** Never rewrite or server-side mutate.
 - **Schema is dual-file.** `src/shared/projectSchema.js` and `shared/projectSchema.cjs` must stay in lockstep. Mismatch = 503 on deploy.
 - **three-vendor chunk is manual.** Every npm package that imports `three` must be listed in `vite.config.js` `manualChunks`. Missing one = TDZ crash in production (invisible in dev).
-- **Studio is the main lane.** Beta is experimental. V1 is legacy fallback only.
+- **Studio is the main lane.** Raw is experimental (Beta retired 2026-08-06, absorbed into Raw). V1 is legacy fallback only.
 
 ## Pending integration points
 
 - `_ii` web portal (port 7777) could be embedded in di.iiii as a space panel — no work started.
 - WCC merge plan: `docs/WCC_MERGE_PLAN.md`
-- br_id_ge `serverXR/wsMesh.js` is auth-gated (`ROOM_SECRET` env var) but has no persistence layer or clustering.
+- The co-presence mesh (`serverXR/src/meshHub.js`) gates only `keeper-*` node ids (`MESH_ROOM_SECRET`) and has no persistence layer or clustering.
