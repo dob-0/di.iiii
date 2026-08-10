@@ -1019,6 +1019,14 @@ const requireReadRole = (requiredRole = 'viewer') => async (req, res, next) => {
   try {
     const meta = await loadSpaceMeta(spaceId)
     if (meta?.isPublic) return next()
+    if (!meta) {
+      // A space that was never created answers 404, not a scope error — so
+      // the client can tell a mistyped address from a locked door (the
+      // restricted card used to say "your session isn't scoped to 'br_id_gr'"
+      // about a typo). Existence is not a secret here: space ids live in
+      // public URLs, and the auth-off mode has always answered 404 for these.
+      return res.status(404).json({ error: 'Space not found.' })
+    }
   } catch (error) {
     return next(error)
   }

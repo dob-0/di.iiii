@@ -2727,3 +2727,37 @@ describe('guest session TTL matches the sandbox sweep', () => {
         expect(ttlMs).toBeLessThanOrEqual(sevenDays + 60 * 60 * 1000)
     })
 })
+
+// A mistyped space id must be distinguishable from a locked door: the client's
+// restricted card says "nothing lives at this address" only if the server
+// answers 404 for a space that was never created, instead of the scope error
+// it used to send for existent and nonexistent spaces alike.
+describe('nonexistent space vs restricted space', () => {
+    it('404s a guest GET for a space that never existed, 403s one that exists but is out of scope', async () => {
+        const server = await startServer({ requireAuth: true, extraEnv: { GITHUB_CLIENT_ID: 'd', GITHUB_CLIENT_SECRET: 'd' } })
+        // admin creates a private space
+        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: 'test-token' })
+        })
+        expect(login.status).toBe(200)
+        const adminCookie = (login.headers.get('set-cookie') || '').split(';')[0]
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
+            body: JSON.stringify({ label: 'secret-lab' })
+        })
+        expect(created.status).toBe(201)
+
+        // a fresh guest session
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
+
+        const missing = await fetch(`${server.baseUrl}/api/spaces/br-id-gr`, { headers: { Cookie: guestCookie } })
+        expect(missing.status).toBe(404)
+
+        const locked = await fetch(`${server.baseUrl}/api/spaces/secret-lab`, { headers: { Cookie: guestCookie } })
+        expect(locked.status).toBe(403)
+    })
+})
