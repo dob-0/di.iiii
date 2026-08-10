@@ -34,3 +34,53 @@ describe('link preview cards', () => {
     expect(h).toContain('rel="canonical" href="https://di-studio.xyz/br_id_ge"')
   })
 })
+
+// ── the route, mounted the way index.js mounts it ─────────────────────────
+// Everything above tests ogHtml(), the pure builder. None of it touches the
+// ROUTE, which is how the path shipped wrong: declared '/serverXR/og/*splat'
+// inside a router that index.js already mounts at '/serverXR', so the server
+// really answered '/serverXR/serverXR/og/…'. nginx proxies crawlers to
+// '/serverXR/og$uri', so every link preview on prod became a 404 — worse than
+// the platform tile it replaced. A builder test can never see that; only
+// mounting can.
+describe('the og route, through the real mount', () => {
+  const express = createRequire(import.meta.url)('express')
+  const { registerOgRoutes } = createRequire(import.meta.url)('./ogRoutes')
+
+  const app = (() => {
+    const a = express()
+    const router = express.Router()
+    registerOgRoutes(router, {
+      loadSpaceMeta: async (h) => (h === 'br_id_ge'
+        ? { title: 'br_id_ge', description: 'a rite', isPublic: true }
+        : null),
+      siteOrigin: 'https://di-studio.xyz',
+    })
+    a.use('/serverXR', router)   // <- exactly what index.js does
+    return a
+  })()
+
+  const hit = (path) => new Promise((resolve) => {
+    const server = app.listen(0, async () => {
+      const r = await fetch(`http://127.0.0.1:${server.address().port}${path}`)
+      const body = await r.text()
+      server.close(() => resolve({ status: r.status, body }))
+    })
+  })
+
+  it('answers the path nginx actually proxies to', async () => {
+    const r = await hit('/serverXR/og/br_id_ge')
+    expect(r.status).toBe(200)
+    expect(r.body).toContain('<meta property="og:title" content="br_id_ge">')
+  })
+
+  it('does NOT answer the double-prefixed path', async () => {
+    expect((await hit('/serverXR/serverXR/og/br_id_ge')).status).toBe(404)
+  })
+
+  it('an unknown space still gets a card, never a 404', async () => {
+    const r = await hit('/serverXR/og/nothing-here')
+    expect(r.status).toBe(200)
+    expect(r.body).toContain('/brand/og-image.png')
+  })
+})
