@@ -5,6 +5,47 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+# Session — dev (di-c-deck)
+
+## 2026-08-13 — closing every open question that a look could close
+
+- Staging deploy that ended the 2026-08-12 session as "pending" landed green.
+- **PR #93 fully dispositioned.** Items 2 (audio toggles) and 9 (Beta copy) were
+  already verified 2026-08-06 but CURRENT.md never learned. Item 1 (Inspector
+  wheel-scroll) verified LIVE on staging today: the known-fixes claim that
+  `Vector3Control`'s only render path is dead was WRONG — `SpaceSurfaceApp`'s
+  fall-through renders legacy `App` for any space with no published project;
+  `/open?ui=show` reaches it as a guest (`?ui=show` beats the hidden-UI default;
+  guest edits proven sandboxed — a radius change did not survive the session).
+  Unfocused wheel: value untouched; focused: steps. Item 4's malformed-JSON path
+  has no UI route (no raw scene editor exists) — rests on safeDimension's tests.
+- **`npm run verify:capture` committed** (`scripts/verify-capture.mjs`) — the
+  runtime pass NODE_BACKLOG owed. Places webcam+mic fresh from the Raw palette
+  (a seeded workspace hides windows and lies clean), fake media devices, DPR 2.
+  Webcam VERIFIED: live test pattern, 640x480, overlay cleared. Mic UNPROVABLE
+  on macOS: TCC hangs `getUserMedia({audio:true})` even for fake devices, every
+  headless flavour (shell, full Chromium, sandbox-disabled); no Chrome-family
+  browser exists on the Mac. Run the script on Linux or check by hand. The
+  flat-meter assertion exists because `micCapture.js` never calls `resume()` —
+  a gesture-less mount could sit suspended at volume 0 with status active.
+- **`open`'s blank card diagnosed** (only blank card of 8 on prod, confirmed by
+  API): no `previewImageAssetId` ever uploaded AND no `publishedProjectId` —
+  `open` forwards into the shared open-jam project, so the automatic-miniature
+  branch (`SpaceHub.jsx` fallback chain) can never fire. Same hole algovrithm
+  was in. The honest captured frame (golden rule: what a visitor actually gets)
+  is a NEAR-EMPTY teal world with one "New Text" — identical prod and staging —
+  so the fix is the artist's: upload that frame, dress the jam scene first, or
+  build an alias-resolving preview. 16:9 frame prepared in session scratchpad.
+- **Purple-gap failure located and scoped** (artist's call, standing since
+  632c649b): the reel-globe world `#04050A` (hue 230) in 4 places —
+  `sequences/index.js` backdrop, `ReelGlobe.jsx`, `beatCards.js`,
+  `beatSketches.js`. Invisible to CI: inline backdrops aren't swept by
+  `palette.test.js`, and `sequences.test.js` only shape-checks the hex. Close by
+  either sanctioned-exception + a real guard, or recolor to cool-band
+  (≈`#04080A`) + extend the sequence test to run `paletteWarning`.
+- Docs gate lesson re-paid: first push of this session turned staging red on
+  `docs:ai:check` — CURRENT.md over 50 lines. Trimmed; this entry is the detail.
+
 # Session — feat/mesh-room-history
 
 ## 2026-08-11 — the room keeps its chat (hub side)
