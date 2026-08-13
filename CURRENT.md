@@ -24,7 +24,9 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 ## Open
 
-- **Lane consolidation in progress** — Studio-as-a-node rebase + Raw-as-default promotion pending, see Last session / plan file above.
+- **Lane consolidation: PR #99 MERGED 2026-08-13** (reconciled with #121, CI green,
+  both sides' panels seen rendering). Raw-as-default landing promotion still open —
+  owner's call, MANIFESTO §6 gates it.
 - **Real-browser looks owed**: only `source.mic` (macOS TCC blocks fake-device
   audio headless — `npm run verify:capture` on Linux, or 30s by hand). Webcam
   verified 2026-08-13; PR #93's items all closed (see known-fixes).
@@ -32,11 +34,10 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
   Mesh gate ARMED both tiers; **staging Google OAuth secret parked by the user**
   — rotation script staged, see memory `reference-leaked-secrets`.
 - **No byte quota / ENOSPC pre-check anywhere** — only di-bo watches free disk.
-- Owner's/artist's calls (evidence gathered 2026-08-13, detail in PROGRESS.md):
-  `open`'s card blank (no `publishedProjectId`, no cover; honest frame = near-empty
-  teal viewer — upload it, dress the jam, or alias-preview); purple-gap = reel-globe
-  world `#04050A`, keep-as-exception+guard or recolor ≈`#04080A` (4 sites);
-  director page unseen.
+- Owner decisions 2026-08-13: purple-gap CLOSED (reel-globe world recolored
+  `#04080A`, backdrop palette guard added, DATA_WHITE the one named exception);
+  `open` card = upload the honest teal frame — decided, pending staging API token
+  then prod approval. Director page still unseen.
 - **br_id_ge rite fixes unverified by a human** — Act III backdrop + Act V idle-motion CSS shipped live, page loads clean, but the acts are camera-gesture-gated so no automated check could actually see them render.
 - **Prod room append path unproven** — record is empty by design (no backfill); the first real spoken line on di-studio.xyz/br_id_ge/field is both the proof and the room's first memory.
 - **Tunnel telegram first-binding untested by any human** — needs a telegram account with NO prior @diiii111bot chat.

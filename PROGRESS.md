@@ -45,6 +45,26 @@ Read this before starting work. Update it before stopping.
   (≈`#04080A`) + extend the sequence test to run `paletteWarning`.
 - Docs gate lesson re-paid: first push of this session turned staging red on
   `docs:ai:check` — CURRENT.md over 50 lines. Trimmed; this entry is the detail.
+- **Owner decided all three open questions**, then they were executed:
+  - **PR #99 MERGED.** This session did the #121-second-merger reconciliation
+    first (merge dev into the branch, 15 hunks / 11 files; both sides' panels
+    unioned and SEEN rendering together — dev's Timeline + branch's Work Status
+    live in one graph, Work Status correctly listing this very merge's own
+    worktrees). Kept dev's palette click-commit and scope-only fit key — both
+    were fixes to the branch's older lines. CI 14/14 green, then merged.
+    Raw-as-default landing promotion deliberately NOT taken (§6).
+  - **Purple-gap closed by recolor**: reel-globe world `#04050A` → `#04080A`
+    (hue 230 → 200, into the cool band) in beatCards, beatSketches,
+    sequences/index.js; heroField's comment updated. New guard in
+    sequences.test.js runs `paletteWarning` over every backdrop — watched
+    failing on the white worlds before naming DATA_WHITE as the piece's one
+    sanctioned exception. 475/475 algovrithm tests pass. The visible delta is
+    ~3/255 in one channel of a near-black: the point is the validator, not
+    the eye. Piece + door load error-free locally; the in-piece globe room
+    uses prod-only clip assets, so its tint is worth one glance on staging.
+  - **`open` card**: upload the honest teal frame — decided; blocked on the
+    staging API token (Mac has no VPS alias; classifier blocks remote secret
+    reads), then prod after the owner sees the staging card.
 
 # Session — feat/mesh-room-history
 
