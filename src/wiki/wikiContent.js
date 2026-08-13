@@ -81,7 +81,7 @@ export const WIKI_ARTICLES = [
             'Someone sent you a link to a space. You do not need to install anything, clone anything, or open a terminal: a browser is the entire toolchain. (The repo has a developer setup guide as well — that is a different door, for people who want to run the platform itself, and you can ignore it.)',
             { list: [
                 '1 — Open the link. It carries the invite; the space opens as soon as access is granted.',
-                '2 — Sign in with GitHub or Google when asked. You can accept an invite as a guest, but a guest session lasts about 30 days and lives in one browser; signing in makes the access permanent and carries any work you already did onto your account.',
+                '2 — Sign in with GitHub or Google when asked. You can accept an invite as a guest, but a guest session lives in one browser and lasts about a week — the same week its sandbox survives idleness; signing in makes the access permanent and carries any work you already did onto your account.',
                 '3 — You land in the space. /<space>/studio is its project hub: every project in the space, plus ＋ New to start one.',
                 '4 — Open a project and build. There is no Save button — every change is written as you make it, and anyone else in the same project sees it live.',
                 '5 — Stuck? The ? button in the Studio (or Shift+?) opens the illustrated guides and the full shortcut list.'
@@ -92,7 +92,7 @@ export const WIKI_ARTICLES = [
             'If the link says it is invalid or has expired, it is not you — invites last 7 days. Ask for a fresh one.'
         ],
         tags: ['invite', 'collaboration', 'onboarding', 'getting started', 'no install', 'editor', 'access'],
-        updated: '2026-08-06'
+        updated: '2026-08-10'
     },
     {
         id: 'free-spaces',
@@ -109,6 +109,37 @@ export const WIKI_ARTICLES = [
         updated: '2026-06-26'
     },
     {
+        id: 'ai-connection',
+        category: 'Spaces & access',
+        title: 'Connect your own Claude API key',
+        summary: 'Every signed-in account can store its own Claude API key against the account — encrypted, never shared with other users.',
+        body: [
+            'Open the account menu (bottom-right avatar) while signed in and paste a Claude API key under "Claude API key." It is encrypted at rest and stored per account — no one else, including admins, can read it back once saved.',
+            'The panel shows "Connected — ····XXXX" (the last 4 characters, as a hint that it is the right key) once saved, with a Disconnect button to remove it.',
+            'Your key powers the Claude agent node in Raw (see "Chat with Claude in Raw"): the server uses it on your behalf for your own chats; the key itself never reaches the browser or other users.',
+            'Guest sessions cannot connect a key — sign in with GitHub or Google first.'
+        ],
+        tags: ['ai', 'claude', 'integrations', 'account', 'api key'],
+        updated: '2026-08-08'
+    },
+    {
+        id: 'claude-chat-node',
+        category: 'Editing',
+        title: 'Chat with Claude in Raw',
+        summary: 'Place an agent node in Raw and chat with Claude inside your workspace — powered by your own connected API key.',
+        body: [
+            'In the Raw editor, add an agent node from the palette. It opens as a chat window: type, and Claude answers in a live stream, right inside your workspace. Conversations are saved to your account — reopen the node and the chat is still there.',
+            'On your own machine — meaning a di.iiii you run locally (`di up` in its ordinary mode, or the dev server), not the hosted site and not the docker container, which cannot see programs on the host — if Claude Code is installed and logged in (a Claude Pro/Max subscription), the node just works — no API key at all: di.iiii talks to your local Claude, and conversations continue across sessions. Otherwise it runs on the Claude API key connected to your account, and the node itself asks for it: paste the key straight into the panel (or sign in first, if you are a guest) — no detour through settings. Keys stay on the server: the browser never talks to Anthropic directly, and nobody else can use yours.',
+            { list: [
+                'Each agent node holds its own conversation — place several for parallel topics.',
+                'Replies stream token by token; usage (tokens in/out) is recorded per turn on your account.',
+                'Costs go to your own Anthropic account, with a per-reply cap and a rate limit as guardrails.'
+            ] }
+        ],
+        tags: ['ai', 'claude', 'chat', 'raw', 'agent', 'node'],
+        updated: '2026-08-10'
+    },
+    {
         id: 'publishing',
         category: 'Spaces & access',
         title: 'Publishing & public spaces',
@@ -121,16 +152,18 @@ export const WIKI_ARTICLES = [
             'Owners manage the card preview from the Preview button on the card: keep the live miniature or upload a custom cover image (Replace image / Use live preview to switch back anytime). A cover image also works on spaces that aren’t public yet.',
             'The editor’s Spaces panel has the same self-serve Make Public / Make Private toggle as the Spaces page.',
             'Publishing (which project is live) and visibility (Public/Private) are independent choices — linking a project does not automatically make the space public.',
-            'A public space also shares every project individually at /<space>/p/<project-id> — the same no-login viewer as the live route, without touching the published pointer. Handy for one-pagers, drafts, and documents that live next to the main page. Direct project links carry a small floating project list (top-left), so viewers can hop between the space’s pages without a detour through the hub; the published live route stays chrome-free.',
+            'A public space also shares every project individually at /<space>/p/<project-id> — the same no-login viewer as the live route, without touching the published pointer. Handy for one-pagers, drafts, and documents that live next to the main page. Like the live route, these pages are chrome-free — nothing floats over your design; hop between a space’s projects from the Studio Projects window.',
             'A published-but-private space shows a login wall to visitors instead of the scene. The editor’s Share window and the space card both tell you when that’s the case and offer a one-click “Make space public” right there — no hunting for the toggle.',
             'Opening an editor URL (like /<space>/studio) with an account that isn’t scoped to that space no longer dead-ends: if the space is public you are taken to its live view; only private spaces show the access-restricted screen.',
             'Every public space carries a small “Made with di.iiii — build yours” badge, so visitors who like what they see have a way in. It never appears on hub-card preview thumbnails.',
-            'Spaces and individual projects can each get a clean public link (a slug) that’s independent of their internal id — e.g. /wcc/artistplace instead of a longer id-based path. Set it from /admin → Manage (“Edit public link” next to Rename); old id-based links keep working forever, they’re never replaced. Every project link in a space’s floating project switcher has a one-click Copy link action that uses the slug when one is set.',
+            'Spaces and individual projects can each get a clean public link (a slug) that’s independent of their internal id — e.g. /wcc/artistplace instead of a longer id-based path. Set it from /admin → Manage (“Edit public link” next to Rename); old id-based links keep working forever, they’re never replaced.',
             'Published code pages can use the visitor’s camera, microphone and motion sensors — but only if the project opts in by setting deviceAccess: true in its presentation state (repo-synced pages set it in their di-space manifest). Opted-in pages run without the usual origin isolation, so reserve it for pages you author yourself; everything else stays fully sandboxed. The visitor still gets the normal browser permission prompt either way.',
-            'Published code pages can read the URL’s query string — /<space>/<page>?just=bkyi — through window.diiPageQuery (already parsed for you as window.diiPageParams). A published page is rendered inside a frame with no URL of its own, so location.search there is always empty; read new URLSearchParams(window.diiPageQuery || location.search) and the same code keeps working when you open the file locally. This is what lets one published page hand over to another with state — “open the field, on the core I just made”.'
+            'Opting into deviceAccess also gives the page real, persistent localStorage and sessionStorage — what it saves survives reloads and is shared with the space’s other opted-in pages on the same device, which is how one page can leave something for a sibling to find. Fully sandboxed pages keep an in-memory stand-in instead: calls succeed, but nothing outlives the visit.',
+            'Published code pages can read the URL’s query string — /<space>/<page>?just=bkyi — through window.diiPageQuery (already parsed for you as window.diiPageParams). A published page is rendered inside a frame with no URL of its own, so location.search there is always empty; read new URLSearchParams(window.diiPageQuery || location.search) and the same code keeps working when you open the file locally. This is what lets one published page hand over to another with state — “open the field, on the core I just made”.',
+            'Add ?embed=1 to any published link and the viewer becomes glass: no dark shell of its own, no “Made with di.iiii” badge, no Walk/Fly button, no loading screen. Use it when the page is a window inside another page rather than somewhere you send people — put it in an iframe and whatever your host page draws shows through behind it. Your page keeps its own background, so make that transparent too if you want the host to show through.'
         ],
-        tags: ['publish', 'public', 'sharing', 'owner', 'live link', 'slug', 'custom link', 'camera', 'device access', 'query', 'url parameters'],
-        updated: '2026-08-04'
+        tags: ['publish', 'public', 'sharing', 'owner', 'live link', 'slug', 'custom link', 'camera', 'device access', 'query', 'url parameters', 'embed', 'iframe', 'transparent', 'storage', 'localstorage'],
+        updated: '2026-08-10'
     },
     {
         id: 'invite-links',
@@ -239,7 +272,7 @@ export const WIKI_ARTICLES = [
         summary: 'The /admin console is admins-only; your own spaces are managed from /studio.',
         body: [
             '/admin is the platform console, visible to admin accounts only — everyone else is pointed back to their Spaces page. Owners never need it: your own spaces are fully self-service on /studio.',
-            'Admins manage everything from /admin → Manage: a directory tree of spaces, each expanding to its projects.',
+            'Admins manage everything from /admin → Manage: a directory tree of spaces, each expanding to its projects. The console keeps three admin sections (Manage, Open Call, Agents) and four diagnostics sections (Overview, Inspect, System, Estate); the header shows counts for the work at hand instead of scene telemetry while you administer.',
             { list: [
                 'Create / rename / delete spaces and projects inline.',
                 'Edit a space or project’s public link (slug) separately from its rename — the id underneath never changes, so old links stay valid.',
@@ -248,7 +281,41 @@ export const WIKI_ARTICLES = [
             ] }
         ],
         tags: ['admin', 'manage', 'access', 'slug'],
-        updated: '2026-07-19'
+        updated: '2026-08-10'
+    },
+    {
+        id: 'admin-estate',
+        category: 'Spaces & access',
+        title: 'Estate — the machines behind the platform',
+        summary: 'A read-only map of every machine, address and store the studio runs, shown inside /admin.',
+        body: [
+            '/admin → Estate renders the studio\u2019s infrastructure map: the tailnet topology, every machine and what it is for, what runs where, the public names, and the totals \u2014 threads, memory, storage, GPUs, backups.',
+            'It is written and kept in a private repository, not in this one. This repository is public, so the map is never committed here and never served from the static site; the server reads it from a path given at deploy time and hands it only to admin accounts.',
+            { list: [
+                'A host that was never given the file says so plainly \u2014 that is the normal state, not a fault.',
+                'The map is displayed in a fully sandboxed frame: no scripts, no forms, no same-origin access.',
+                'Source name, last-modified date and size are shown above it, so a stale copy is visible rather than believed.'
+            ] }
+        ],
+        tags: ['admin', 'estate', 'infrastructure', 'diagnostics'],
+        updated: '2026-08-10'
+    },
+    {
+        id: 'agents-board',
+        category: 'Spaces & access',
+        title: 'Ops Graph → Agents',
+        summary: 'An operator-only map of the Claude Code sessions and agents working on this machine.',
+        body: [
+            'The Agents section of /admin shows the AI sessions working alongside you: a live map of every running Claude Code session, which checkout and branch each one holds, and a directory of recent chats with their topics.',
+            'Selecting a session opens its detail: the subagent tree it spawned, its background-job state, and the tail of its conversation.',
+            { list: [
+                'The map links each live session to the checkout it is editing — two sessions on one tree is visible at a glance.',
+                'Live status (busy / shell / idle) updates every few seconds.',
+                'This surface reads local machine data, so it only exists when serverXR runs on your own machine in dev mode. Deployed environments serve nothing here.'
+            ] }
+        ],
+        tags: ['admin', 'agents', 'ai', 'sessions', 'operator'],
+        updated: '2026-08-08'
     },
     {
         id: 'keyboard-shortcuts',
@@ -397,17 +464,20 @@ export const WIKI_ARTICLES = [
         id: 'open-inscriptions',
         category: 'Spaces & access',
         title: 'Open inscriptions',
-        summary: 'A public space can opt in to anonymous, append-only inscriptions — visitors add one line of text to the scene, nothing else.',
+        summary: 'A public space can opt in to anonymous, append-only inscriptions — visitors add one line of text, and optionally one drawing, to the scene.',
         body: [
             'Open inscriptions let an artwork or event page write a visitor’s answer into a di.iiii space without accounts or tokens (built for br_id_ge’s vi.ritual: complete the rite, and your inscription becomes a persistent object in the space).',
             { list: [
                 'Opt-in per space: PATCH /api/spaces/:id with { "openInscriptions": true } (owner or admin). The space must also be public.',
-                'Visitors POST /api/spaces/:id/inscriptions with { name, word } — the server itself builds a single sanitized text object (insc-…) and appends it to the scene. Update and delete are impossible on this path; the generic ops route stays fully gated.',
+                'Visitors POST /api/spaces/:id/inscriptions with { name, word } — the server itself builds a single sanitized text object (insc-…) and appends it to the scene. Arbitrary ops are impossible on this path; the generic ops route stays fully gated.',
+                'Creating an inscription returns a one-time proof. Only its sha256 is stored, so the visitor — and nobody else — can DELETE /api/spaces/:id/inscriptions/:inscId to unmake exactly their own crossing. Inscriptions made before proofs existed cannot be unmade this way.',
+                'An inscription may also carry a mark: the drawing the visitor made, as an opaque m1.… token (base64url, capped). The server validates its shape and never parses it, so a viewer can render the line that was actually drawn instead of a shape derived from the id. A malformed or oversized mark is dropped and the inscription still succeeds — a drawing can never cost someone the crossing.',
+                'PUT /api/spaces/:id/inscriptions/:inscId/mark with { proof, mark } replaces the mark afterwards (the same authority that unmakes a crossing, writing that one property and nothing else) — for pages where the drawing is made after the inscription was already sent.',
                 'Rate-limited per client, capped at 999 inscriptions per space; setting allowEdits=false pauses new inscriptions instantly, and restore-snapshot remains the recovery path.'
             ] }
         ],
         tags: ['inscriptions', 'spaces', 'public', 'br_id_ge'],
-        updated: '2026-07-12'
+        updated: '2026-08-05'
     },
     {
         id: 'raw-lane',
@@ -424,10 +494,12 @@ export const WIKI_ARTICLES = [
                 'Webcam is the first real capture node: it asks for camera permission, shows a live preview on the node itself (with a visible message if access is denied or no camera is found), and its Frame output can be wired into a Plane’s Texture input to project the live feed onto geometry.',
                 'Microphone is the second: it shows a live level meter on the node itself, and its Volume/Frequency outputs update continuously for anything wired to read them.',
                 'Work Status reads your local dev setup — recent sessions, worktree branches and dirty state, open PRs, recent deploys — and outputs a running count, a dirty flag, an open-PR count and a text summary. Local dev only; it 404s on a deployed server.',
-                'Agent Run launches a real headless `claude -p` process from a wired Prompt and fires on a Trigger port changing value (not on it being truthy — same contract as the clock’s beat output). Its Status/Running/Result outputs update as the run progresses. Local dev only, and only inside a di.iiii checkout.'
+                'Agent Run launches a real headless `claude -p` process from a wired Prompt and fires on a Trigger port changing value (not on it being truthy — same contract as the clock’s beat output). Its Status/Running/Result outputs update as the run progresses. Local dev only, and only inside a di.iiii checkout.',
+                'A Timeline node (view.timeline) cuts clips on a frame-exact timeline: drag to move, drag an edge to trim, razor at the playhead, ripple later clips, retime a clip from 0.1x to 4x. Gaps are drawn as red hatching and cross-fades in amber, so an accidental hole in a cut is visible rather than silent.',
+                'A Director node (view.director) is a timeline editor for code-authored pieces, moved out of algovrithm into Raw on 2026-08-05 and generalised the same day — it takes the piece as input rather than being welded to one, so a future piece is a registration rather than a fork. For algovrithm it can retime and reorder its beats, edit each room’s colour, fog and lights, and drop assets onto the timeline — the same panel Studio’s code-space director page opens embedded in the piece, so this is a second way to reach it, not the only one. “Save to source” writes src/algoVrithm/sequences/index.js in place with its comments intact from either one.'
             ] }
         ],
-        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run'],
+        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director'],
         updated: '2026-08-06'
     },
     {
@@ -520,19 +592,96 @@ export const WIKI_ARTICLES = [
             ] },
             'It is built as a timeline rather than one scene: a single playhead runs 0→1, and each sequence claims an in/out window on it in src/algoVrithm/sequences/index.js. Windows overlap on purpose so handovers cross-fade instead of cutting, and each sequence declares its own backdrop colour and fog range which the room blends between — without that, the near-white opening would hard-cut to the near-black scene after it, which in a headset is genuinely unpleasant.',
             'The playhead is advanced from the render loop rather than from a timer of its own. This matters in a headset: once an immersive session starts, the browser stops driving the flat page and the scene is drawn from the headset’s own frame callback instead, so a clock running on a page timer simply stops — the piece would render at full frame rate showing one frozen moment. Ticking it inside the scene means one clock, running at whatever the display in front of you actually refreshes at.',
-            'The room and its lighting are edit-list data too, not code. A row carries a world — colour, fog range, and an ambient fill level saying how much unlit air you can see — plus an optional list of lights: point lamps, or “glow” lamps that also show the lit air around the source. Both are editable from the author-only director panel, with swatch grids drawn from the piece’s own palette, a custom colour picker that reports what a choice breaks without ever blocking it, and drag handles for placing a light in the room. Lights fade in and out with the row that owns them and the ambient level blends across a handover on exactly the same curve as the colour and fog, so nothing switches on at a cut.',
+            'The room and its lighting are edit-list data too, not code. A row carries a world — colour, fog range, and an ambient fill level saying how much unlit air you can see — plus an optional list of lights: point lamps, or “glow” lamps that also show the lit air around the source. Both are editable from the director panel, reachable either embedded in the piece (Studio’s code-space director page) or as a Director node in Raw (moved there 2026-08-05) — the same panel either way, with swatch grids drawn from the piece’s own palette, a custom colour picker that reports what a choice breaks without ever blocking it, and drag handles for placing a light in the room. Lights fade in and out with the row that owns them and the ambient level blends across a handover on exactly the same curve as the colour and fog, so nothing switches on at a cut.',
             'The panel saves, to one of two places, and it tells you which. On a machine running the dev server, Save writes the edits straight into src/algoVrithm/sequences/index.js — the single source of truth: git-tracked, reviewable, and what actually deploys. It writes in place, so only the fields that actually changed are rewritten and every other byte of the file is left exactly as it was, because that file carries a couple of hundred lines of reasoning about why each number is what it is, and a save that regenerated the list would delete all of it. A save with no edits in it changes nothing at all, so the button is safe to press to find out.',
             'Anywhere else — the deployed site, someone else’s laptop, a headset — Save keeps the timing on the space instead, and says “saved to this space ✓”. That is what makes the piece retimable by someone who is not running a dev server: open the Director on di-studio.xyz, move the beats, save, and it plays that way there for everyone. Only the numbers a director actually moves travel (each beat’s start and length); the scenes themselves, their worlds and the file’s reasoning stay in the code. The file remains what the piece IS and the saved timing says how this one space differs from it, so the two never fight: clearing the space’s timing always lands back on the file, and a deploy of new code does not wipe the retiming. Timing saved to a space does not travel to another one — send it on with Copy when it should become the piece everywhere.',
             '“Copy edit list” is still there for what neither save can do — rows added in the panel, which are new scenes and therefore need code, and carrying an edit from one place to the repo. It regenerates the whole array, so it drops the file’s comments and any field it was not taught about; paste it over the file only when that is what you want.'
         ],
         tags: ['algovrithm', 'vr', 'webxr', 'three.js', 'linked-space', 'code', 'lighting', 'spatial-audio'],
         updated: '2026-08-05'
+    },
+    {
+        id: 'di-cli-local',
+        category: 'Getting started',
+        title: 'Run di.iiii on your own machine',
+        summary: 'One line installs di.iiii locally. Your work lives on your disk, and it keeps working with no internet.',
+        body: [
+            'di.iiii does not have to be somewhere you go. One line puts the whole thing on your own machine, with your spaces in a folder you own, and after the install it keeps working with no internet at all.',
+            { list: [
+                'macOS and Linux — curl -fsSL https://di-studio.xyz/get | sh',
+                'Windows (PowerShell) — irm https://di-studio.xyz/get.ps1 | iex'
+            ] },
+            'Then type di up. It starts, opens in your browser, and you are in a Studio that looks exactly like the one online, with an empty Main Space waiting. di down stops it. di help lists the rest.',
+            'This is meant for a laptop at a venue with bad wifi, a studio that would rather not keep its work on someone else’s server, and anyone who wants the piece to still open in ten years. Offline is the normal state, not a broken one. Nothing is sent anywhere: the one outbound request is a version check, at most once a day, which gives up after three seconds and never blocks anything — and the page loads no fonts or scripts from anywhere else, down to the 3D text labels, whose font ships with the install.',
+            'Your work lives in a folder called .di in your home directory, deliberately kept apart from the app itself — so updating, rolling back, or removing di.iiii cannot touch it. di uninstall says as much, and leaves your spaces where they are.',
+            { list: [
+                'di backup — writes your whole di.iiii to one file you can carry to another machine',
+                'di restore — reads one back in',
+                'di update — installs the newest version, and never touches your work; di update --rollback returns to the one before',
+                'di status — what is running, on which address, and how much space your work takes',
+                'di doctor — what this machine can and cannot do, and what to install if something is missing'
+            ] },
+            'It does not need admin rights, and it does not ask for a password. It runs as a single ordinary program, and if there is no suitable Node it quietly fetches its own rather than sending you away. Docker is there too, but only if you ask for it (di install --docker) — a container cannot reach things on your machine, so the surfaces that talk to your own tools (the agent board, a Claude installed on this computer) work in the ordinary mode and not in the container one.',
+            'Syncing a local space with di-studio.xyz is not here yet — for now, di backup and the space bundles on the Spaces page are how work moves between the two.'
+        ],
+        tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup'],
+        updated: '2026-08-10'
+    },
+    {
+        id: 'keeper-node',
+        category: 'Editing',
+        title: 'The Keeper: a language model as a node',
+        summary: 'Point a Keeper node at a model — one on this machine, or a box on the same network — and its answer becomes a value the rest of the graph can use.',
+        body: [
+            'Add a Keeper from the palette (category Agent) and it opens as a window with a prompt box. Set an Endpoint and a Model in the window itself, ask it something, and the reply appears in the panel.',
+            'The Keeper is pointed at an endpoint rather than signed in to an account. You give it a URL and a model name; nothing runs as you, and no key is stored. That means it works with a model on your own machine and it works in a room with no internet — which is the situation it was built for.',
+            { list: [
+                'Endpoint — a chat URL. A bare host such as http://localhost:11434 is completed for you; anything with a path is used as given.',
+                'Model — the model name that server knows, for example qwen3.',
+                'System — an optional instruction that shapes every answer.'
+            ] },
+            'It speaks to Ollama and to any OpenAI-compatible server, because both accept the same request. If a reasoning model wraps its working in <think> tags, that part is dropped and only the answer is shown. If the reply was cut off mid-sentence the panel says so rather than presenting a fragment as complete.',
+            'Two ports carry the result into the graph: Reply (the text) and Busy (true while it is thinking). Wire something into the Prompt port and the graph asks the question instead of you — the box then shows what it was asked and becomes read-only.',
+            'If the keeper cannot be reached the node says so. A browser will also refuse a call to a local model that has not been told to allow this page, so a model box may need its allowed origins set before it will answer.'
+        ],
+        tags: ['raw', 'nodes', 'keeper', 'agent', 'llm', 'local', 'offline', 'ollama'],
+        updated: '2026-08-08'
+    },
+    {
+        id: 'midi-in-node',
+        category: 'Editing',
+        title: 'MIDI In: a controller as a node',
+        summary: 'Plug in a MIDI controller and its keys and knobs become numbers the graph can use.',
+        body: [
+            'Add a MIDI In node from the palette (category Device). It asks the browser for MIDI access, lists what is plugged in, and shows each message as it arrives so you can see the node is really hearing your controller.',
+            'Pick a Device, or leave it on "First available". Pick a Channel, or leave it on "All channels" — a controller set to a channel the node is not listening on looks exactly like a broken cable, so listening to everything is the default.',
+            'Four ports carry what it hears: Note and Velocity from keys and pads, CC and Value from knobs and faders. A key you release reports velocity 0 rather than going blank, because that is what a released key means.',
+            'The fifth port, Trigger, counts up by one on every message. Watch it change rather than trying to catch a pulse — that is how a node downstream knows something happened, even between frames.',
+            'This needs Chrome or Edge; Safari and Firefox have no Web MIDI and the node says so instead of sitting blank. A controller plugged in after you opened the page appears on its own, without a reload.'
+        ],
+        tags: ['raw', 'nodes', 'midi', 'device', 'controller', 'performance'],
+        updated: '2026-08-08'
+    },
+    {
+        id: 'raw-zen-workspace',
+        category: 'Editing',
+        title: 'A workspace with nothing on it',
+        summary: 'Raw opens as bare surface and nodes. One gesture summons everything else — panels, the help, even the toolbar itself.',
+        body: [
+            'A new workspace has no toolbar, no zoom buttons, no help or chat button. There is the surface, whatever nodes you place, and nothing else sitting there waiting to be needed.',
+            'Everything is one gesture away. Press ⌘K (Ctrl+K) or just / — on a touch screen, double-tap the empty surface. The same panel opens either way: type what you want and press Enter.',
+            'That panel creates nodes and summons everything else from the same list. "Help", "Chat", "Outliner", any window you closed, and "Show the chrome" to bring the toolbar back. Summoning rows sit at the top, so with the toolbar hidden they are never more than a keystroke away.',
+            'Zoom still works as it always did: the wheel on a computer, and on a phone the zoom buttons stay in the corner — faded until you reach for them, because on a touch screen they are the only way to zoom.',
+            'Each workspace remembers its own choice, on this device. A workspace you already arranged keeps its toolbar; only new ones start bare. Turning the toolbar on or off in one workspace never changes another, and never changes what anyone else sees.'
+        ],
+        tags: ['raw', 'workspace', 'zen', 'minimal', 'palette', 'shortcuts', 'ui'],
+        updated: '2026-08-08'
     }
 ]
 
 // Headline subset surfaced on the landing page. Keep ids here; `docs:wiki:check`
 // fails CI if any id does not resolve to an article (otherwise it silently vanishes).
-export const WIKI_HIGHLIGHT_IDS = ['br-id-ge', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
+export const WIKI_HIGHLIGHT_IDS = ['br-id-ge', 'di-cli-local', 'joining-a-space', 'guest-and-sandbox-modes', 'free-spaces', 'publishing', 'invite-links', 'admin-manage', 'github-sync']
 
 export const WIKI_HIGHLIGHTS = WIKI_HIGHLIGHT_IDS
     .map((id) => WIKI_ARTICLES.find((article) => article.id === id))

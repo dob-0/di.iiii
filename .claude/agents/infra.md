@@ -2,6 +2,7 @@
 name: infra
 description: Infrastructure Engineer — deploy pipeline, Docker, GitHub Actions, scripts, CI. Use for build, deploy, and automation work.
 model: sonnet
+effort: low
 allowed-tools: Read, Edit, Bash(npm run lint), Bash(docker build:*), Bash(npm run docs:ai:*)
 ---
 

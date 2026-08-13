@@ -4,6 +4,7 @@ import {
   formatStateReport,
   formatBriefReport,
   collectStateWarnings,
+  collectFinishedHints,
   classifyWorktree,
   isSweepSafe,
   isNoiseBranch,
@@ -51,6 +52,40 @@ describe('formatStateReport', () => {
     const report = formatStateReport({ ...baseState(), promotionPlan: { type } })
     expect(report.toLowerCase()).toContain(expectedFragment.toLowerCase())
   })
+
+  // The 2026-08-09 incident: the primary checkout was detached, `git switch dev`
+  // refused ("'dev' is already used by worktree at .../di.iiii-algomerge"), and
+  // nothing in `npm run state` said who held dev. Two people meant different
+  // things by "dev".
+  it('names the worktree that holds a flow branch when it is not the primary checkout', () => {
+    const report = formatStateReport({
+      ...baseState(),
+      primaryPath: '/home/nooo/di.iiii',
+      worktrees: [
+        { path: '/home/nooo/di.iiii', branch: null, detached: true },
+        { path: '/home/nooo/di.iiii-algomerge', branch: 'dev' }
+      ]
+    })
+    expect(report).toContain('dev is held by /home/nooo/di.iiii-algomerge')
+  })
+
+  it('stays silent about holders when the primary checkout holds the flow branch itself', () => {
+    const report = formatStateReport({
+      ...baseState(),
+      primaryPath: '/home/nooo/di.iiii',
+      worktrees: [{ path: '/home/nooo/di.iiii', branch: 'dev' }]
+    })
+    expect(report).not.toContain('is held by')
+  })
+
+  it('does not emit holder lines for non-flow branches — that is worktree-count noise', () => {
+    const report = formatStateReport({
+      ...baseState(),
+      primaryPath: '/home/nooo/di.iiii',
+      worktrees: [{ path: '/home/nooo/di.iiii-rawadmin', branch: 'feat/raw-admin' }]
+    })
+    expect(report).not.toContain('is held by')
+  })
 })
 
 describe('collectStateWarnings', () => {
@@ -62,6 +97,18 @@ describe('collectStateWarnings', () => {
   it('does not warn when current branch is up to date', () => {
     const warnings = collectStateWarnings(baseState())
     expect(warnings).toHaveLength(0)
+  })
+
+  // The 2026-08-10 incident shape: main checkout detached on a merged branch's commit,
+  // 115 behind origin/dev, serving old code for two days with no warning anywhere.
+  it('warns when a detached (or dev) HEAD trails origin/dev — stale viewing surface', () => {
+    const warnings = collectStateWarnings({ ...baseState(), currentBranch: '(detached)', headBehindDev: 115 })
+    expect(warnings.some((w) => w.includes('115 commits behind') && w.includes('checkout --detach origin/dev'))).toBe(true)
+  })
+
+  it('warns when the current branch upstream is gone — parked on a merged branch', () => {
+    const warnings = collectStateWarnings({ ...baseState(), currentBranch: 'fix/merged-thing', currentUpstreamGone: true })
+    expect(warnings.some((w) => w.includes('upstream that is gone') && w.includes('checkout --detach origin/dev'))).toBe(true)
   })
 
   it('warns once worktree count exceeds the budget', () => {
@@ -100,6 +147,119 @@ describe('collectStateWarnings', () => {
     const worktrees = [{ path: '/a' }, { path: '/b' }]
     const warnings = collectStateWarnings({ ...baseState(), worktrees }, { worktreeBudget: 1 })
     expect(warnings.some((w) => w.includes('exceeds the budget of 1'))).toBe(true)
+  })
+
+  // Why `git switch dev` refused in the primary checkout on 2026-08-09: the branch
+  // was checked out elsewhere. The warning must name the holder, not just "detached".
+  it('explains a detached primary cannot take dev by naming who holds it', () => {
+    const warnings = collectStateWarnings({
+      ...baseState(),
+      currentBranch: '(detached)',
+      primaryPath: '/home/nooo/di.iiii',
+      worktrees: [
+        { path: '/home/nooo/di.iiii', branch: null, detached: true },
+        { path: '/home/nooo/di.iiii-algomerge', branch: 'dev' }
+      ]
+    })
+    expect(warnings.some((w) =>
+      w.includes('primary checkout /home/nooo/di.iiii is detached') &&
+      w.includes('dev is held by /home/nooo/di.iiii-algomerge') &&
+      w.includes('git switch dev')
+    )).toBe(true)
+  })
+
+  it('does not raise the cannot-take-dev warning when the primary is on a branch', () => {
+    const warnings = collectStateWarnings({
+      ...baseState(),
+      currentBranch: 'feat/x',
+      primaryPath: '/home/nooo/di.iiii',
+      worktrees: [
+        { path: '/home/nooo/di.iiii', branch: 'feat/x' },
+        { path: '/home/nooo/di.iiii-algomerge', branch: 'dev' }
+      ]
+    })
+    expect(warnings.some((w) => w.includes('cannot take'))).toBe(false)
+  })
+
+  // The other half of the incident: the holder's dev was 10 commits behind
+  // origin/dev, so "dev" meant two different commits depending on who you asked.
+  it('reports a held branch trailing its own origin ref, naming holder, sha and count', () => {
+    const warnings = collectStateWarnings({
+      ...baseState(),
+      primaryPath: '/home/nooo/di.iiii',
+      worktrees: [
+        { path: '/home/nooo/di.iiii', branch: null, detached: true },
+        { path: '/home/nooo/di.iiii-algomerge', branch: 'dev', head: '28deb245aa00c0de28deb245aa00c0de28deb245', behindOrigin: 10, aheadOfOrigin: 0 }
+      ]
+    })
+    expect(warnings.some((w) => w.includes('di.iiii-algomerge holds dev at 28deb245 — 10 behind origin/dev'))).toBe(true)
+  })
+
+  it('stays silent on a held branch that is only ahead of origin — behind is the direction that lies', () => {
+    const warnings = collectStateWarnings({
+      ...baseState(),
+      primaryPath: '/home/nooo/di.iiii',
+      worktrees: [{ path: '/wt', branch: 'feat/x', head: 'abcdef1234567890', behindOrigin: 0, aheadOfOrigin: 3 }]
+    })
+    expect(warnings.some((w) => w.includes('holds'))).toBe(false)
+  })
+
+  it('mentions ahead alongside behind when a held branch has diverged both ways', () => {
+    const warnings = collectStateWarnings({
+      ...baseState(),
+      primaryPath: '/home/nooo/di.iiii',
+      worktrees: [{ path: '/wt/algo', branch: 'dev', head: 'abcdef1234567890', behindOrigin: 4, aheadOfOrigin: 2 }]
+    })
+    expect(warnings.some((w) => w.includes('4 behind origin/dev') && w.includes('2 ahead'))).toBe(true)
+  })
+})
+
+// Hints, not actions: repo-state stays read-only. A "finished?" line points at a
+// worktree whose branch looks done — merged, or its remote ref pruned after a
+// squash-merge PR (where the tip is NOT an ancestor of dev, so ancestry alone
+// would miss it). The human decides; --sweep has its own stricter gate.
+describe('collectFinishedHints', () => {
+  const wt = (overrides) => ({
+    path: '/home/nooo/di.iiii-done', branch: 'feat/done', detached: false, prunable: false,
+    dirty: false, live: false, hasUpstream: true, upstreamGone: false, headInOriginDev: false, ...overrides
+  })
+  const state = (worktrees) => ({ primaryPath: '/home/nooo/di.iiii', currentPath: '/home/nooo/di.iiii-here', worktrees })
+
+  it('flags a branch whose remote ref is gone — the squash-merge shape ancestry misses', () => {
+    const hints = collectFinishedHints(state([wt({ upstreamGone: true })]))
+    expect(hints).toEqual(['finished? /home/nooo/di.iiii-done (remote ref gone)'])
+  })
+
+  it('flags a branch whose HEAD is contained in origin/dev', () => {
+    const hints = collectFinishedHints(state([wt({ headInOriginDev: true })]))
+    expect(hints).toEqual(['finished? /home/nooo/di.iiii-done (branch merged)'])
+  })
+
+  it('joins both reasons when both apply', () => {
+    const hints = collectFinishedHints(state([wt({ upstreamGone: true, headInOriginDev: true })]))
+    expect(hints).toEqual(['finished? /home/nooo/di.iiii-done (branch merged / remote ref gone)'])
+  })
+
+  it('never hints at a never-pushed branch — no remote ref was ever there to go missing', () => {
+    const hints = collectFinishedHints(state([wt({ hasUpstream: false, upstreamGone: false })]))
+    expect(hints).toEqual([])
+  })
+
+  it.each([
+    ['dirty', { dirty: true, headInOriginDev: true }],
+    ['live', { live: true, headInOriginDev: true }],
+    ['prunable', { prunable: true, headInOriginDev: true }],
+    ['detached (parking at origin/dev is this tool\'s own advice)', { branch: null, detached: true, headInOriginDev: true }]
+  ])('never hints at a %s worktree', (_label, overrides) => {
+    expect(collectFinishedHints(state([wt(overrides)]))).toEqual([])
+  })
+
+  it('never hints at the primary checkout or the worktree it is running from', () => {
+    const hints = collectFinishedHints(state([
+      wt({ path: '/home/nooo/di.iiii', headInOriginDev: true }),
+      wt({ path: '/home/nooo/di.iiii-here', headInOriginDev: true })
+    ]))
+    expect(hints).toEqual([])
   })
 })
 

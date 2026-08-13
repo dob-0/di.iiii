@@ -2680,3 +2680,84 @@ describe('session revocation reaches the realtime layer', () => {
         })
     })
 })
+
+// A local install (`di up`, DI_LOCAL=1 from the CLI runner) must be able to
+// say so to the client — otherwise the browser keeps speaking hosted-product
+// copy ("sign in to edit", "3 free spaces") to the person who owns the whole
+// machine. One boolean, surfaced twice: on the session (the app's contract)
+// and on /api/config (which the landing page already fetches — it must never
+// have to mint a guest session just to learn where it is running).
+describe('local-install truth (DI_LOCAL)', () => {
+    it('reports local: true on session and config when DI_LOCAL=1', async () => {
+        const server = await startServer({ requireAuth: false, extraEnv: { DI_LOCAL: '1' } })
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`)).json()
+        expect(session.local).toBe(true)
+        expect(session.requireAuth).toBe(false)
+
+        const config = await (await fetch(`${server.baseUrl}/api/config`)).json()
+        expect(config.config.local).toBe(true)
+        expect(config.config.requireAuth).toBe(false)
+    })
+
+    it('reports local: false on a hosted-style boot, with requireAuth mirrored on config', async () => {
+        const server = await startServer({ requireAuth: true })
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`)).json()
+        expect(session.local).toBe(false)
+        expect(session.requireAuth).toBe(true)
+
+        const config = await (await fetch(`${server.baseUrl}/api/config`)).json()
+        expect(config.config.local).toBe(false)
+        expect(config.config.requireAuth).toBe(true)
+    })
+})
+
+// The guest cookie must not outlive the room it is scoped to: guest sandboxes
+// are swept after 7 idle days (config.sandboxTtlMs) and guest snapshots are
+// never revived, but the cookie used to claim 30 days — a promise the sweep
+// could not keep. The session's expiresAt now tracks the sandbox TTL.
+describe('guest session TTL matches the sandbox sweep', () => {
+    it('issues guest sessions that expire with the sandbox TTL, not after it', async () => {
+        const server = await startServer({ requireAuth: true })
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`)).json()
+        expect(session.type).toBe('guest')
+        // expiresAt is a ms epoch (authSession.js), not an ISO string
+        const ttlMs = Number(session.expiresAt) - Date.now()
+        const sevenDays = 7 * 24 * 60 * 60 * 1000
+        expect(ttlMs).toBeGreaterThan(sevenDays - 60 * 60 * 1000)
+        expect(ttlMs).toBeLessThanOrEqual(sevenDays + 60 * 60 * 1000)
+    })
+})
+
+// A mistyped space id must be distinguishable from a locked door: the client's
+// restricted card says "nothing lives at this address" only if the server
+// answers 404 for a space that was never created, instead of the scope error
+// it used to send for existent and nonexistent spaces alike.
+describe('nonexistent space vs restricted space', () => {
+    it('404s a guest GET for a space that never existed, 403s one that exists but is out of scope', async () => {
+        const server = await startServer({ requireAuth: true, extraEnv: { GITHUB_CLIENT_ID: 'd', GITHUB_CLIENT_SECRET: 'd' } })
+        // admin creates a private space
+        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: 'test-token' })
+        })
+        expect(login.status).toBe(200)
+        const adminCookie = (login.headers.get('set-cookie') || '').split(';')[0]
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
+            body: JSON.stringify({ label: 'secret-lab' })
+        })
+        expect(created.status).toBe(201)
+
+        // a fresh guest session
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
+
+        const missing = await fetch(`${server.baseUrl}/api/spaces/br-id-gr`, { headers: { Cookie: guestCookie } })
+        expect(missing.status).toBe(404)
+
+        const locked = await fetch(`${server.baseUrl}/api/spaces/secret-lab`, { headers: { Cookie: guestCookie } })
+        expect(locked.status).toBe(403)
+    })
+})

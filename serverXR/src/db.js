@@ -113,6 +113,49 @@ const SCHEMA = `
     updated_at INTEGER NOT NULL
   );
 
+  CREATE TABLE IF NOT EXISTS user_ai_connections (
+    user_id TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    label TEXT,
+    api_key TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (user_id, provider)
+  );
+
+  CREATE TABLE IF NOT EXISTS ai_chats (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    title TEXT,
+    node_id TEXT,
+    project_id TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_ai_chats_user ON ai_chats (user_id, updated_at);
+
+  CREATE TABLE IF NOT EXISTS ai_messages (
+    id TEXT PRIMARY KEY,
+    chat_id TEXT NOT NULL REFERENCES ai_chats(id) ON DELETE CASCADE,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    model TEXT,
+    input_tokens INTEGER,
+    output_tokens INTEGER,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_ai_messages_chat ON ai_messages (chat_id, created_at);
+
+  CREATE TABLE IF NOT EXISTS mesh_room_lines (
+    id TEXT PRIMARY KEY,
+    room_id TEXT NOT NULL,
+    channel TEXT NOT NULL,
+    from_id TEXT NOT NULL DEFAULT '',
+    payload TEXT,
+    ts INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_mesh_room_lines_room ON mesh_room_lines (room_id);
+
   CREATE TABLE IF NOT EXISTS public_assets (
     asset_id TEXT PRIMARY KEY,
     space_id TEXT NOT NULL,
@@ -145,6 +188,37 @@ const SCHEMA = `
     key TEXT PRIMARY KEY,
     completed_at INTEGER NOT NULL
   );
+
+  -- A gated write pauses here instead of running immediately. See approvalGate.js.
+  CREATE TABLE IF NOT EXISTS pending_actions (
+    id TEXT PRIMARY KEY,
+    kind TEXT NOT NULL,
+    args TEXT NOT NULL,
+    intent_hash TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    actor_subject TEXT,
+    actor_type TEXT NOT NULL,
+    actor_role TEXT,
+    actor_label TEXT,
+    request_method TEXT NOT NULL,
+    request_path TEXT NOT NULL,
+    request_ip TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    decision_token_hash TEXT NOT NULL,
+    decided_by TEXT,
+    decided_at INTEGER,
+    decision_note TEXT,
+    notify_status TEXT NOT NULL DEFAULT 'queued',
+    notify_attempts INTEGER NOT NULL DEFAULT 0,
+    notified_at INTEGER,
+    executed_at INTEGER,
+    error TEXT,
+    created_at INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_pending_actions_status ON pending_actions(status, expires_at);
+  CREATE INDEX IF NOT EXISTS idx_pending_actions_actor ON pending_actions(actor_subject, created_at);
 `
 
 // Patch a DatabaseSync instance to expose the better-sqlite3 surface used
@@ -235,6 +309,7 @@ function initDb(dbPath) {
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
   db.exec(SCHEMA)
+  ensureColumn(db, 'ai_chats', 'claude_session_id', 'TEXT')
   ensureColumn(db, 'spaces', 'is_public', 'INTEGER NOT NULL DEFAULT 0')
   ensureColumn(db, 'spaces', 'kind', "TEXT NOT NULL DEFAULT 'normal'")
   ensureColumn(db, 'spaces', 'owner_user_id', 'TEXT')

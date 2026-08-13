@@ -1,0 +1,22 @@
+[Unit]
+Description=Prune deploy images this host no longer needs
+Documentation=file:/opt/di.iiii/deploy/prune-images.sh
+
+[Service]
+Type=oneshot
+# Every deploy leaves a client (~555MB) and a server (~367MB) image behind, on
+# prod and on staging. Nothing removed them, so by 2026-08-07 there were 430
+# dead images — 41GB, sixty times the weight of every space, scene and asset
+# anyone had ever made. The disk reached 96% and nothing said so.
+#
+# Keeps the running images and the previous pair, so a rollback stays instant.
+# Anything it removes is a `docker pull` away: every one of these was pushed to
+# ghcr.io by the deploy that built it. Nothing here is the only copy.
+ExecStart=/opt/di.iiii/deploy/prune-images.sh --apply
+# Housekeeping must never compete with serving.
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=1800
+
+[Install]
+WantedBy=multi-user.target

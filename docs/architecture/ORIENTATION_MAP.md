@@ -32,7 +32,7 @@ The whole system hangs off four concepts. Internalize these first.
 
 | Concept | What it is |
 | --- | --- |
-| `space` | The public + management unit. Owns routes `/<space>`, `/<space>/studio`, `/<space>/beta`. |
+| `space` | The public + management unit. Owns routes `/<space>`, `/<space>/studio`, `/<space>/raw`. |
 | `project` | The editable document living inside a space. Stored independently from the public route. |
 | `publishedProjectId` | The project currently shown on a space's public route. Publishing = pointing this at a project. |
 | long-term doc shape | `rootNodeId`, `nodes[]`, `edges[]`, `assets[]`, `templates[]`, `workspaceState` — a recursive node graph. |
@@ -52,13 +52,13 @@ segments), not a flat router table.
 | --- | --- | --- |
 | Public viewer | `/<space>` | Live published project (orbit / walk / XR). |
 | **Studio** | `/<space>/studio` | **Stable main editor.** Five-window layout (World, View, Assets, Outliner, Inspector), now with a phone layout. This is where most product work happens. |
-| Beta | `/<space>/beta` | Experimental node-first editor lane. Research / editor-v2. Not the shipped default. |
+| Raw | `/<space>/raw` | Experimental node-first editor lane (absorbed Beta's role 2026-08-06). Research / editor-v2. Not the shipped default. |
 | WCC | `/wcc/...` | World Creative Commons surface — public showcase / artist-enter experience. |
 | Admin / Ops | `/admin?space=<space>` | Space management + Ops Graph. |
 | V1 | (compatibility) | Legacy fallback + migration-sensitive behavior. |
 
 **Default for new work: `Studio`**, unless the task is explicitly experimental
-(then `Beta`). Don't describe Beta as the shipped lane. Full surface breakdown:
+(then `Raw`). Don't describe Raw as the shipped lane. Full surface breakdown:
 [PROJECT_SURFACES.md](PROJECT_SURFACES.md).
 
 ---
@@ -71,7 +71,7 @@ segments), not a flat router table.
 | Path | Role |
 | --- | --- |
 | `src/studio/` | Stable main editor lane (`StudioApp.jsx`, `components/`, `hooks/`). Main product work. |
-| `src/beta/` | Experimental node-first lane (`BetaApp.jsx`, `BlankNodeWorkspaceApp.jsx`). |
+| `src/raw/` | Experimental node-first lane (`RawApp.jsx`, `BlankNodeWorkspaceApp.jsx`; absorbed `src/beta/`'s role 2026-08-06). |
 | `src/project/` | **Shared document/collab logic center.** `nodeRegistry.js`, `entityRegistry.js`, state, sync, presence, viewport, import/transfer. New shared logic goes here. |
 | `src/wcc/` | World Creative Commons public experience. |
 | `src/shared/` | Client-side schema mirrors (`projectSchema.js`, `sceneSchema.js`). |
@@ -130,7 +130,7 @@ Daily work ─▶ dob-0/di.iiii (primary public repo)
 
 | If the task is about… | Go to | Role card |
 | --- | --- | --- |
-| CSS / layout / visual | `src/studio`, `src/beta` components | `ui-ux-engineer` |
+| CSS / layout / visual | `src/studio`, `src/raw` components | `ui-ux-engineer` |
 | Node registry / ports / graph model | `src/project/nodeRegistry.js` | `node-system-engineer` |
 | Three.js / viewport / XR render | `src/objectComponents`, `src/xr`, `src/project/viewport` | `viewport-3d-engineer` |
 | Auth / SQLite / API / realtime | `serverXR/` | `backend-api-engineer` |
@@ -177,7 +177,7 @@ plus a regression guard. Same tier as the code.
 
 ## 9. Common misconceptions to avoid
 
-- Beta is **not** the main shipped lane — Studio is.
+- Raw is **not** the main shipped lane — Studio is.
 - Physical/hardware sync is **direction**, not a productized capability today.
 - Older orchestration files (`src/components/`, `src/hooks/`) are active but
   **not** the canonical home for new permanent logic — prefer `src/project/`.

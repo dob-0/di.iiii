@@ -210,8 +210,19 @@
     overflow-y: auto;
 }
 
+/* The rows are flex children of the list, so their default `min-width: auto`
+   let them grow to min-content — 301px inside a 268px content box — and the
+   right-hand tag rode past the palette's edge. Pre-existing; only visible once
+   a tag was wide enough to reach it. */
+.raw-node-palette-list li {
+    min-width: 0;
+    width: 100%;
+}
+
 .raw-node-palette-item {
     width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -232,6 +243,17 @@
     align-items: center;
     gap: 10px;
     min-width: 0;
+    /* The row is 280px wide. Without this the title pushed the tag past the
+       palette's right edge and "PANEL" rendered as "PAN" — the hint truncates
+       instead, since the tag is the part that says what the row DOES. */
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.raw-node-palette-item-title > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .raw-node-palette-item strong {
@@ -248,6 +270,13 @@
 .raw-node-palette-item.is-active,
 .raw-node-palette-item:hover {
     background: var(--di-cyan-dim);
+}
+
+/* Commands sit above node types in the same list; the tag is what tells you a
+   row summons something rather than creating it. */
+.raw-node-palette-tag.is-command {
+    background: rgba(77, 249, 255, 0.14);
+    color: rgba(210, 245, 255, 0.85);
 }
 
 .raw-node-palette-tag {
@@ -1776,7 +1805,9 @@
 .raw-chat-input-row {
     display: flex;
     gap: 8px;
-    padding: 10px 12px;
+    /* right padding clears the 16px window resize handle at bottom-right —
+       it paints and hit-tests over the Send button's corner otherwise */
+    padding: 10px 28px 10px 12px;
     border-top: 1px solid var(--di-cyan-border);
 }
 
@@ -2134,6 +2165,34 @@
 .raw-graph-stage {
     position: relative;
     transform-origin: 0 0;
+}
+
+/* Zen: the zoom controls stop being resident, but are never removed.
+   On a fine pointer the wheel already zooms, so they can go entirely — the
+   palette brings the chrome back. On a coarse pointer there IS no wheel, so
+   they are the only way to zoom: they idle at low opacity and come back the
+   moment a finger or the keyboard reaches them. Removing them there would
+   undo a real touch fix (see known-fixes: zoom buttons vs double-tap). */
+.raw-graph-zoom-controls.is-chromeless {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+
+@media (pointer: coarse) {
+    .raw-graph-zoom-controls.is-chromeless {
+        opacity: 0.28;
+        pointer-events: auto;
+    }
+    .raw-graph-zoom-controls.is-chromeless:hover,
+    .raw-graph-zoom-controls.is-chromeless:focus-within,
+    .raw-graph-zoom-controls.is-chromeless:active {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .raw-graph-zoom-controls.is-chromeless { transition: none; }
 }
 
 .raw-graph-zoom-controls {
@@ -3181,6 +3240,222 @@
        (see MicSourcePanel) — a transition here would fight that and lag. */
 }
 
+/* MIDI In — same panel language as the keeper and the capture family. */
+.raw-midi-panel {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    background: #080c14;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--di-cyan-dim, #9fd7ff);
+}
+
+.raw-midi-panel-status {
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: rgba(77, 249, 255, 0.07);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.25));
+}
+
+.raw-midi-panel-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.raw-midi-panel-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.raw-midi-panel-select {
+    width: 100%;
+    box-sizing: border-box;
+    /* Touch target — one finger has to be able to change the channel. */
+    min-height: 34px;
+    padding: 6px 8px;
+    font: inherit;
+    color: #e8f6ff;
+    background: rgba(77, 249, 255, 0.06);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    border-radius: 4px;
+}
+
+.raw-midi-panel-select:focus-visible {
+    outline: 2px solid var(--di-cyan, #4df9ff);
+    outline-offset: 1px;
+}
+
+.raw-midi-panel-last {
+    margin-top: auto;
+    padding: 8px 10px;
+    color: #e8f6ff;
+    background: rgba(8, 12, 20, 0.7);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.22));
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+/* Keeper — reuses the capture family's ground and cyan accents rather than
+   introducing a second panel language. */
+.raw-keeper-panel {
+    width: 100%;
+    height: 100%;
+    /* This sheet sets box-sizing per rule rather than globally, so width:100%
+       plus padding overflowed the window by exactly the padding — 398px of
+       content in a 368px window, clipped at the right edge on a phone. */
+    box-sizing: border-box;
+    background: #080c14;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--di-cyan-dim, #9fd7ff);
+}
+
+.raw-keeper-panel-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.raw-keeper-panel-setup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.raw-keeper-panel-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.raw-keeper-panel-input {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    padding: 7px 9px;
+    font: inherit;
+    color: #e8f6ff;
+    background: rgba(77, 249, 255, 0.06);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    border-radius: 4px;
+}
+
+.raw-keeper-panel-input:focus-visible {
+    outline: 2px solid var(--di-cyan, #4df9ff);
+    outline-offset: 1px;
+}
+
+.raw-keeper-panel-input[readonly] {
+    opacity: 0.75;
+    cursor: default;
+}
+
+.raw-keeper-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.raw-keeper-panel-ask {
+    padding: 6px 14px;
+    font: inherit;
+    color: #08131a;
+    background: var(--di-cyan, #4df9ff);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    /* Touch target — a workspace node has to be usable with one finger.
+       See docs/architecture/RAW_WORKSPACE.md §8 q4. */
+    min-height: 34px;
+}
+
+.raw-keeper-panel-ask:disabled {
+    background: rgba(77, 249, 255, 0.22);
+    color: rgba(232, 246, 255, 0.55);
+    cursor: not-allowed;
+}
+
+.raw-keeper-panel-ask:focus-visible {
+    outline: 2px solid #e8f6ff;
+    outline-offset: 2px;
+}
+
+.raw-keeper-panel-state {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.75;
+}
+
+.raw-keeper-panel-state-unreachable,
+.raw-keeper-panel-state-error {
+    color: #ff9e9e;
+    opacity: 1;
+}
+
+.raw-keeper-panel-state-answered {
+    color: #9effb0;
+    opacity: 1;
+}
+
+/* Not absolutely positioned like the capture family's overlay: the keeper's
+   messages sit in the flow so a reply and an error can be read together. */
+.raw-keeper-panel-status {
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: rgba(77, 249, 255, 0.07);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.25));
+}
+
+.raw-keeper-panel-status-error {
+    color: #ffc9c9;
+    background: rgba(255, 120, 120, 0.1);
+    border-color: rgba(255, 120, 120, 0.35);
+}
+
+.raw-keeper-panel-status code {
+    font-size: 12px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: rgba(8, 12, 20, 0.6);
+    /* A URL is one unbreakable token and the panel is narrow — without this it
+       runs past the edge of its own box. */
+    overflow-wrap: anywhere;
+}
+
+.raw-keeper-panel-reply {
+    flex: 1;
+    min-height: 0;
+    padding: 9px 10px;
+    color: #e8f6ff;
+    background: rgba(8, 12, 20, 0.7);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.22));
+    border-radius: 4px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.raw-keeper-panel-note {
+    font-size: 11px;
+    opacity: 0.65;
+}
+
 @media (max-width: 1200px) {
     .raw-hub-grid {
         grid-template-columns: 1fr;
@@ -3223,6 +3498,20 @@
    controls stay available); the row is simply allowed to scroll, and the fixed
    chrome is pulled clear of the notch and the home indicator. */
 @media (max-width: 640px) {
+    /* below 16px, mobile Safari auto-zooms the page on input focus — with
+       fixed-position windows that strands the user mid-window after every
+       message. 16px is the no-zoom floor, not a style choice. */
+    .raw-chat-input,
+    .raw-node-palette-input {
+        font-size: 16px;
+    }
+
+    /* breadcrumbs live inside a horizontal scroller here — a ~20px target
+       loses most taps to the scroll gesture. Grow them to a finger size. */
+    .raw-topbar-crumb {
+        padding: 10px 12px;
+    }
+
     .raw-topbar.is-seeded {
         overflow-x: auto;
         overflow-y: hidden;
@@ -3526,4 +3815,264 @@
     line-height: 1.4;
     white-space: pre-wrap;
     word-break: break-word;
+
+/* --- Timeline panel (view.timeline) --- */
+
+.raw-timeline-panel {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #05080f;
+    color: #f4f7fb;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    overflow: hidden;
+}
+
+.raw-timeline-bar {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 8px 12px 6px;
+    border-bottom: 1px solid rgba(244, 247, 251, 0.08);
+}
+
+.raw-timeline-title {
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.raw-timeline-readout {
+    color: #4f9eff;
+    font-variant-numeric: tabular-nums;
+}
+
+.raw-timeline-meta {
+    margin-left: auto;
+    color: rgba(244, 247, 251, 0.52);
+}
+
+.raw-timeline-ruler {
+    position: relative;
+    height: 16px;
+    flex: none;
+    border-bottom: 1px solid rgba(244, 247, 251, 0.08);
+}
+
+.raw-timeline-tick {
+    position: absolute;
+    top: 2px;
+    transform: translateX(-50%);
+    color: rgba(244, 247, 251, 0.38);
+    font-size: 9px;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* The zero tick has nothing to its left to be centred against. */
+.raw-timeline-tick:first-child {
+    transform: none;
+    left: 3px !important;
+}
+
+.raw-timeline-lane {
+    position: relative;
+    flex: 1;
+    min-height: 56px;
+    margin: 10px 0;
+    background: #080c14;
+    cursor: text;
+    touch-action: none;
+}
+
+.raw-timeline-clip {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    padding: 0 6px;
+    background: rgba(79, 158, 255, 0.16);
+    border: 1px solid rgba(79, 158, 255, 0.5);
+    border-radius: 3px;
+    cursor: grab;
+    overflow: hidden;
+}
+
+.raw-timeline-clip--selected {
+    background: rgba(79, 158, 255, 0.32);
+    border-color: #4f9eff;
+}
+
+.raw-timeline-clip-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+    font-size: 10px;
+}
+
+.raw-timeline-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    /* 6px was measurably hard to hit when driving this with a pointer; a trim
+       handle you miss drags the whole clip instead, which is a destructive
+       edit standing in for a precise one. */
+    width: 9px;
+    cursor: ew-resize;
+}
+
+.raw-timeline-handle--start { left: 0; }
+.raw-timeline-handle--end { right: 0; }
+
+.raw-timeline-handle:hover {
+    background: #4f9eff;
+}
+
+/* A gap is the piece playing to an empty room — invisible in the numbers,
+   obvious as a red band. */
+.raw-timeline-gap {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(255, 95, 95, 0.16) 0 6px,
+        transparent 6px 12px
+    );
+    border-left: 1px solid rgba(255, 95, 95, 0.5);
+    border-right: 1px solid rgba(255, 95, 95, 0.5);
+    pointer-events: none;
+}
+
+/* An overlap is a deliberate cross-fade, not an error. */
+.raw-timeline-overlap {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    background: rgba(244, 195, 110, 0.22);
+    border-left: 1px solid #f4c36e;
+    border-right: 1px solid #f4c36e;
+    pointer-events: none;
+}
+
+.raw-timeline-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #f4877e;
+    pointer-events: none;
+}
+
+.raw-timeline-playhead::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -4px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #f4877e;
+}
+
+.raw-timeline-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px 10px;
+    border-top: 1px solid rgba(244, 247, 251, 0.08);
+    flex-wrap: wrap;
+}
+
+.raw-timeline-tool {
+    background: rgba(244, 247, 251, 0.06);
+    color: #f4f7fb;
+    border: 1px solid rgba(244, 247, 251, 0.16);
+    border-radius: 3px;
+    padding: 3px 9px;
+    font-family: inherit;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.raw-timeline-tool:hover:not(:disabled) {
+    border-color: #4f9eff;
+    color: #4f9eff;
+}
+
+.raw-timeline-tool:disabled {
+    opacity: 0.32;
+    cursor: default;
+}
+
+.raw-timeline-tool--danger:hover:not(:disabled) {
+    border-color: #ff5f5f;
+    color: #ff5f5f;
+}
+
+.raw-timeline-speed {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(244, 247, 251, 0.62);
+    font-size: 10px;
+}
+
+.raw-timeline-speed input {
+    width: 84px;
+    accent-color: #4f9eff;
+}
+
+.raw-timeline-speed-value {
+    font-variant-numeric: tabular-nums;
+    color: #f4f7fb;
+    min-width: 34px;
+}
+
+.raw-timeline-status {
+    margin-left: auto;
+    color: rgba(244, 247, 251, 0.52);
+    font-size: 10px;
+}
+
+/* --- Director window (view.director) — hosts the algovrithm editor --- */
+
+.raw-director-window {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #05080f;
+    overflow: auto;
+}
+
+.raw-director-note {
+    flex: none;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(244, 247, 251, 0.08);
+    color: rgba(244, 247, 251, 0.52);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.raw-director-note strong { color: #f4f7fb; font-weight: 600; }
+.raw-director-note code { color: #4f9eff; }
+
+/* The director was authored to sit at the bottom of the piece's viewport
+   (position:absolute; bottom:0 in algoVrithm.css). Inside a Raw window there
+   is no viewport to hang off — it has to be a normal block in the flow, or it
+   floats over the window's own header. Scoped here so the artwork's own
+   stylesheet stays exactly as she wrote it. */
+.raw-director-window .algo-vrithm-director {
+    position: static;
+    flex: 1;
+    min-height: 0;
+    border-top: none;
+    backdrop-filter: none;
+    background: transparent;
 }

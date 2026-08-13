@@ -82,6 +82,30 @@ services:
       # ungated, which is how it shipped; set a DIFFERENT value per tier.
       MESH_ROOM_SECRET: ${MESH_ROOM_SECRET:-}
       MESH_PROTECTED_NODE_PREFIXES: ${MESH_PROTECTED_NODE_PREFIXES:-}
+
+      # The tunnel — inscriptionRoutes.js mints a Telegram deep link for the
+      # person who can prove a crossing, and di.bo verifies it with the same
+      # secret. Unset on either side means the route 404s and the tunnel simply
+      # does not exist, which is the safe direction. Same lesson as the mesh
+      # secret directly above: a secret the deployment cannot deliver is not a
+      # secret it has, and the .env would have looked correct the whole time.
+      TUNNEL_SHARED_SECRET: ${TUNNEL_SHARED_SECRET:-}
+      TUNNEL_BOT_USERNAME: ${TUNNEL_BOT_USERNAME:-}
+
+      # meshHub.js room history — unset keeps persistence OFF; switch on with
+      # 'talk,keeper:say' only after the room's wording stops promising
+      # impermanence (compose env is an allow-list: a var missing here never
+      # reaches the container, however correct the .env looks — see #134).
+      MESH_HISTORY_CHANNELS: ${MESH_HISTORY_CHANNELS:-}
+
+      # approvalGate.js — see serverXR/.env.example. Unset (default
+      # false/empty) leaves every gated route behaving exactly as before
+      # this feature existed; staging overrides via STAGING_APPROVAL_*
+      # (docker-compose.staging.yml) so the two tiers can be enabled
+      # independently.
+      APPROVAL_GATE_ENABLED: ${APPROVAL_GATE_ENABLED:-false}
+      APPROVAL_BOT_URL: ${APPROVAL_BOT_URL:-}
+      APPROVAL_SHARED_SECRET: ${APPROVAL_SHARED_SECRET:-}
     restart: unless-stopped
     healthcheck:
       # 127.0.0.1, not localhost: busybox wget resolves localhost to the

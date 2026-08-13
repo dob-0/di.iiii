@@ -44,6 +44,29 @@ export default function DesktopWindow({
         }))
     }, [allowOverflowLeft, allowOverflowTop, minTop, windowState.height, windowState.width, windowState.x, windowState.y])
 
+    // Re-clamp when the viewport itself changes — rotation, window resize, the
+    // virtual keyboard shrinking the layout viewport. Without this a window
+    // placed in landscape is stranded fully off-screen in portrait.
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined
+        const reclamp = () => {
+            if (interactionRef.current) return
+            setDraft((current) => clampWindowFrame(current, {
+                minTop,
+                allowOverflowLeft,
+                allowOverflowTop,
+                viewportWidth: window.innerWidth,
+                viewportHeight: window.innerHeight
+            }))
+        }
+        window.addEventListener('resize', reclamp)
+        window.addEventListener('orientationchange', reclamp)
+        return () => {
+            window.removeEventListener('resize', reclamp)
+            window.removeEventListener('orientationchange', reclamp)
+        }
+    }, [allowOverflowLeft, allowOverflowTop, minTop])
+
     useEffect(() => {
         if (!dragMode) return undefined
         const handlePointerMove = (event) => {

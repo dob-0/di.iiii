@@ -80,10 +80,16 @@ export function clampWindowFrame(frame = {}, bounds = {}) {
             : Math.max(minTop, viewportHeight - height - bottomEdgePadding))
         : (allowOverflowTop ? nextY : Math.max(minTop, nextY))
 
+    // Overflow is allowed, but never total: some of the header must stay
+    // reachable or one stray swipe loses the window forever (there is no
+    // window list and frames persist into the document). Keep at least 72px
+    // of the window inside the viewport horizontally, and never let the
+    // header rise above the viewport top.
+    const overflowFloorX = viewportWidth ? -(width - 72) : nextX
     return {
         ...frame,
-        x: allowOverflowLeft ? Math.min(nextX, maxX) : clamp(nextX, minLeft, maxX),
-        y: allowOverflowTop ? Math.min(nextY, maxY) : clamp(nextY, minTop, maxY),
+        x: allowOverflowLeft ? clamp(nextX, Math.min(overflowFloorX, maxX), maxX) : clamp(nextX, minLeft, maxX),
+        y: allowOverflowTop ? clamp(nextY, Math.min(0, maxY), maxY) : clamp(nextY, minTop, maxY),
         width,
         height
     }

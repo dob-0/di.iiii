@@ -28,6 +28,7 @@ export const NODE_CATEGORIES = [
     { id: 'view',     label: 'View',     color: '#ff79c6' },
     { id: 'math',     label: 'Math',     color: '#f1fa8c' },
     { id: 'world',    label: 'World',    color: '#ff9e6d' },
+    { id: 'agent',    label: 'Agent',    color: '#a8ff9e' },
     { id: 'custom',   label: 'Custom',   color: '#aaaaaa' },
 ]
 
@@ -386,8 +387,11 @@ export const NODE_TYPES = {
         id: 'device.midi.in',
         label: 'MIDI In',
         category: 'device',
-        runtime: 'local',
-        authoringOnly: true,
+        // Web MIDI, not the local runtime: this is the one device family a page
+        // can already reach, which makes it the cheapest proof of the provider
+        // contract the bridge will later implement — see
+        // docs/architecture/RAW_WORKSPACE.md §5.4.
+        runtime: 'web',
         singleton: false,
         inputs: [],
         outputs: [
@@ -397,11 +401,21 @@ export const NODE_TYPES = {
             { id: 'value',    type: 'number', label: 'Value'    },
             { id: 'trigger',  type: 'signal', label: 'Trigger'  },
         ],
-        defaultValues: {
-            hostHint: 'windows',
-            channel: 1,
-        },
-        render: 'hidden',
+        // channel 0 = every channel. Defaulting to 1 silently dropped every
+        // message from a controller set to any other channel.
+        defaultValues: { deviceId: '', channel: 0 },
+        configInputs: [
+            { id: 'channel', type: 'number', label: 'Channel' },
+        ],
+        // panel-2d for the same reason as the capture family: denied permission,
+        // no browser support and nothing-plugged-in are all ordinary outcomes
+        // that need somewhere to be said.
+        render: 'panel-2d',
+        // 320x260 was too small twice over: the window's own four header buttons
+        // wrapped onto a second row, and that pushed the channel select and the
+        // last-message line below the fold. Matches the keeper's width so the
+        // header fits on one line.
+        defaultFrame: { width: 380, height: 340 },
     },
 
     'device.midi.out': {
@@ -836,6 +850,46 @@ export const NODE_TYPES = {
         render: 'panel-2d',
     },
 
+    'view.director': {
+        id: 'view.director',
+        label: 'Director (algovrithm)',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        inputs: [],
+        outputs: [],
+        // The edit list itself is NOT stored here — its rows carry component
+        // references that cannot survive JSON. See DirectorPanelWindow.jsx.
+        defaultValues: {
+            piece: 'algovrithm',
+        },
+        // A timeline is read left-to-right across its whole duration; the
+        // generic panel card crops it into uselessness.
+        defaultFrame: { width: 1080, height: 640 },
+        render: 'panel-2d',
+    },
+
+    'view.timeline': {
+        id: 'view.timeline',
+        label: 'Timeline',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        // Ports stripped per review (dead-port rule): no runtime carries
+        // playhead/fps in or frame/clip out yet. Wire via nodeGraphRuntime
+        // when the data is real; the panel keeps its own playhead locally.
+        inputs: [],
+        outputs: [],
+        // Clips are integer frames throughout — see src/project/timeline/
+        // timelineCore.js for why seconds are not stored anywhere.
+        defaultValues: {
+            fps: 60,
+            clips: [],
+        },
+        defaultFrame: { width: 900, height: 260 },
+        render: 'panel-2d',
+    },
+
     'view.image': {
         id: 'view.image',
         label: 'Image',
@@ -887,6 +941,32 @@ export const NODE_TYPES = {
         ],
         outputs: [],
         defaultValues: {},
+        render: 'panel-2d',
+    },
+
+    // Chat with Claude, as a node. The panel talks to serverXR's AI proxy,
+    // which uses the account's own connected key (aiConnectionStore) — the
+    // browser never holds the key. The transcript lives server-side in
+    // ai_chats/ai_messages, NOT in node.values: the op-log is not a chat log.
+    // Only the server chat id is persisted on the node, so reopening the
+    // project reopens the same conversation.
+    'agent': {
+        id: 'agent',
+        label: 'Agent',
+        // Moved out of 'view' when the Agent category arrived with agent.keeper:
+        // a node called Agent filed under View reads as a filing mistake, and
+        // the two belong side by side — this one talks to a hosted model through
+        // the server, the keeper talks to one you name.
+        category: 'agent',
+        // what people actually type in the palette for this node
+        keywords: ['claude', 'chat', 'ai', 'assistant'],
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Agent' },
+        ],
+        outputs: [],
+        defaultValues: { chatId: null },
         render: 'panel-2d',
     },
 
@@ -1130,6 +1210,44 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    // --- Agent ---------------------------------------------------------------
+
+    'agent.keeper': {
+        id: 'agent.keeper',
+        label: 'Keeper',
+        category: 'agent',
+        runtime: 'web',
+        singleton: false,
+        inputs: [
+            { id: 'prompt', type: 'string', label: 'Prompt', default: '' },
+        ],
+        outputs: [
+            { id: 'reply', type: 'string',  label: 'Reply' },
+            { id: 'busy',  type: 'boolean', label: 'Busy'  },
+        ],
+        // Endpoint-shaped, not account-shaped: you name a URL and a model, so
+        // nothing runs as anyone. At a festival that URL is a GPU box on the
+        // same table and there is no internet — see docs/architecture/RAW_WORKSPACE.md.
+        defaultValues: { endpoint: '', model: '', system: '' },
+        // Config, not ports — you set these once for the room you are in, and
+        // nothing upstream should be able to repoint the keeper mid-graph.
+        // Without these the panel told you to "set an endpoint in the inspector"
+        // and the inspector had no such field.
+        configInputs: [
+            { id: 'endpoint', type: 'string', label: 'Endpoint' },
+            { id: 'model',    type: 'string', label: 'Model'    },
+            { id: 'system',   type: 'string', label: 'System'   },
+        ],
+        // panel-2d for the same reason as the capture family: "no endpoint set"
+        // and "the box isn't answering" are the normal states of this node, and
+        // both need somewhere to be said.
+        render: 'panel-2d',
+        // The default 360x280 clipped the Ask button below the fold on a fresh
+        // node — the panel carries setup text, a prompt box, an action row and a
+        // reply, where the capture panels carry one video element.
+        defaultFrame: { width: 380, height: 440 },
+    },
+
     // -----------------------------------------------------------------------
     // CUSTOM — the null node, the extensibility primitive
     //
@@ -1224,11 +1342,12 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
     'source.insta360',
     'source.stereo',
     'source.realsense.d405',
-    // devices — no OSC client, no WebMIDI
+    // devices — no OSC client (UDP, needs the local bridge), and MIDI Out has
+    // no sender yet. device.midi.in came off this list on 2026-08-08: Web MIDI
+    // is real in the page, so that one is implemented.
     'device.ptz.osc',
     'device.osc.in',
     'device.osc.out',
-    'device.midi.in',
     'device.midi.out',
     // streaming — no compositor, no transport
     'stream.compositor',
@@ -1254,7 +1373,7 @@ export const listNodeTypes = ({ category = 'all', query = '', runtime = 'any', i
         if (category !== 'all' && type.category !== category) return false
         if (runtime !== 'any' && type.runtime !== 'any' && type.runtime !== runtime) return false
         if (!q) return true
-        return `${type.label} ${type.id} ${type.category}`.toLowerCase().includes(q)
+        return `${type.label} ${type.id} ${type.category} ${(type.keywords || []).join(' ')}`.toLowerCase().includes(q)
     })
 }
 

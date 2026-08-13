@@ -107,6 +107,7 @@ const s = () => {
     opsInsert:        db.prepare('INSERT INTO project_ops (project_id, version, data, created_at) VALUES (?, ?, ?, ?)'),
     opsCount:         db.prepare('SELECT COUNT(*) as cnt FROM project_ops WHERE project_id = ?'),
     opsTrim:          db.prepare('DELETE FROM project_ops WHERE project_id = ? AND seq IN (SELECT seq FROM project_ops WHERE project_id = ? ORDER BY seq ASC LIMIT ?)'),
+    opsTrimAged:      db.prepare('DELETE FROM project_ops WHERE project_id = ? AND created_at < ?'),
     ensureSpace:      db.prepare('INSERT OR IGNORE INTO spaces (id, label, permanent, allow_edits, scene_version, created_at, updated_at, last_touched_at) VALUES (?, ?, 0, 1, 0, ?, ?, ?)'),
   }
   return _s
@@ -224,9 +225,24 @@ const writeProjectOps = async (spacesDir, spaceId, projectId, ops) => {
   })()
 }
 
-const appendProjectOps = async (spacesDir, spaceId, projectId, ops, maxHistory = 500) => {
+// maxAgeMs bounds the window by age as well as count; 0 disables it.
+//
+// Counting alone makes retention depend on how busy a project is, which is
+// backwards: a project edited daily drops its dead history in a week, while a
+// dormant one keeps its last ops — and every asset they mention — forever. On
+// production that pinned 145 MB of blobs the garbage collector could otherwise
+// have taken, one project holding seven of them behind four ops it made in
+// June.
+//
+// Emptying the window is safe: the client's hasOpGap() sees a window that does
+// not start at its next version and calls resyncDocument() for the whole
+// materialized document instead. The one thing that does read the full window
+// is the retry/idempotency guard in POST .../ops, which matches opIds to spot a
+// resent batch — so the bound has to stay far longer than any retry. Days, not
+// minutes.
+const appendProjectOps = async (spacesDir, spaceId, projectId, ops, maxHistory = 500, maxAgeMs = 0) => {
   if (!Array.isArray(ops) || ops.length === 0) return
-  const { opsInsert, opsCount, opsTrim } = s()
+  const { opsInsert, opsCount, opsTrim, opsTrimAged } = s()
   const now = Date.now()
   getDb().transaction(() => {
     for (const op of ops) {
@@ -234,6 +250,7 @@ const appendProjectOps = async (spacesDir, spaceId, projectId, ops, maxHistory =
     }
     const { cnt } = opsCount.get(projectId)
     if (cnt > maxHistory) opsTrim.run(projectId, projectId, cnt - maxHistory)
+    if (maxAgeMs > 0) opsTrimAged.run(projectId, now - maxAgeMs)
   })()
 }
 

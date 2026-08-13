@@ -316,3 +316,74 @@ describe('the server container can actually receive the mesh secret', () => {
         }
     })
 })
+
+// The tunnel shipped its route and its wiring in PR #133 and could still never
+// have been switched on: the compose `environment:` block is an allow-list, and
+// TUNNEL_SHARED_SECRET was not in it. Writing it into .env and restarting would
+// have reported success and changed nothing -- the same shape as the mesh
+// secret above, and the same shape as an empty recipient list counting as
+// delivery. A secret the deployment cannot deliver is not a secret it has.
+describe('the server container can actually receive the tunnel secret', () => {
+    const TUNNEL_VARS = ['TUNNEL_SHARED_SECRET', 'TUNNEL_BOT_USERNAME']
+
+    it.each([
+        ['docker-compose.yml', ''],
+        ['docker-compose.staging.yml', 'STAGING_']
+    ])('%s passes the tunnel vars through to the server', (name, prefix) => {
+        const source = read(name)
+        for (const key of TUNNEL_VARS) {
+            expect(source).toContain(`${key}: \${${prefix}${key}:-}`)
+        }
+    })
+
+    it('gives staging its own value, never production\'s', () => {
+        // A token minted on staging with production's secret would open a
+        // crossing on production -- and the bot username decides which bot the
+        // link even points at, so both have to differ per tier.
+        const staging = read('docker-compose.staging.yml')
+        expect(staging).toContain('${STAGING_TUNNEL_SHARED_SECRET:-}')
+        expect(staging).not.toContain('${TUNNEL_SHARED_SECRET:-}')
+    })
+
+    it('is the env name serverXR actually reads', () => {
+        const index = read('serverXR/src/index.js')
+        for (const key of TUNNEL_VARS) {
+            expect(index).toContain(`process.env.${key}`)
+        }
+    })
+})
+
+// Caddy terminates TLS in front of the nginx container, so `$scheme` inside
+// nginx is always http — the Caddy→nginx hop is plaintext on the compose
+// network. Setting X-Forwarded-Proto to $scheme therefore REPLACED Caddy's
+// truthful `https` with `http`, and the link-preview card shipped
+// http://staging.di-studio.xyz in og:url, og:image and the canonical link.
+// Nothing about `proxy_set_header X-Forwarded-Proto $scheme;` looks wrong; it
+// is the standard line, and it is wrong specifically behind another proxy.
+describe('the scheme a card advertises survives the Caddy hop', () => {
+    const conf = read('nginx.conf')
+
+    it('prefers the proto the edge already sent', () => {
+        expect(conf).toMatch(/map\s+\$http_x_forwarded_proto\s+\$dii_proto\s*\{/)
+        // default $scheme keeps a direct request (or a local install over plain
+        // http) honest when nothing forwarded anything.
+        expect(conf).toMatch(/map\s+\$http_x_forwarded_proto\s+\$dii_proto\s*\{[^}]*default\s+\$scheme;/)
+    })
+
+    it('never hardcodes $scheme as the forwarded proto', () => {
+        // The regression, exactly: every X-Forwarded-Proto must read the map.
+        // Directives only — the comment above the map names $scheme on purpose.
+        const lines = conf.split('\n')
+            .filter((l) => /^\s*proxy_set_header\s+X-Forwarded-Proto/.test(l))
+        expect(lines.length).toBeGreaterThan(0)
+        for (const line of lines) expect(line).toContain('$dii_proto')
+        expect(conf).not.toMatch(/proxy_set_header\s+X-Forwarded-Proto\s+\$scheme;/)
+    })
+
+    it('preserves the public Host, or the card names the container', () => {
+        // `Host: server:4000` is what nginx sends by default on proxy_pass, and
+        // it went out live in og:url.
+        const spa = conf.slice(conf.indexOf('location / {'))
+        expect(spa).toMatch(/proxy_set_header\s+Host\s+\$host;/)
+    })
+})

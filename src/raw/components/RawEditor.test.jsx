@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import TextPanelWindow from './TextPanelWindow.jsx'
 
@@ -7,6 +7,12 @@ vi.mock('./RawViewport.jsx', () => ({ default: () => <div data-testid="mock-view
 vi.mock('./RawGraphSurface.jsx', () => ({
     default: (props) => (
         <div data-testid="mock-graph" role="presentation" onDoubleClick={() => props.onDoubleClick?.({})}>
+            {/* The real surface renders emptyHint in the middle of the canvas,
+                independent of the chrome. The mock has to as well, or a zen
+                workspace looks hintless here while the real one is not. */}
+            {props.emptyHint && props.nodes?.length === 0 && (
+                <span data-testid="mock-graph-hint">{props.emptyHint}</span>
+            )}
             {props.selectedNodeId && (
                 <button type="button" onClick={() => props.onDeleteNode?.(props.selectedNodeId)}>
                     delete-via-graph-canvas
@@ -28,6 +34,15 @@ vi.mock('../../project/hooks/useProjectDocumentSync.js', () => ({
 vi.mock('../../project/hooks/useProjectPresence.js', () => ({
     useProjectPresence: () => ({ users: [], cursors: [], emitCursor: vi.fn(), clearCursor: vi.fn(), messages: [], sendChatMessage: vi.fn() })
 }))
+// Captures the onFrameChange prop each render so the stable-identity
+// regression below can compare references across re-renders.
+const webcamPanelProps = []
+vi.mock('./WebcamSourcePanel.jsx', () => ({
+    default: (props) => {
+        webcamPanelProps.push(props)
+        return <div data-testid="mock-webcam-panel" />
+    }
+}))
 
 import RawEditor from './RawEditor.jsx'
 
@@ -43,6 +58,16 @@ const makeNodeZero = () => ({
     typeId: 'universe.node0',
     label: 'Node 0',
     values: { title: 'Node 0' }
+})
+
+// The zen preference is per workspace key and STICKY by design — a workspace
+// that opened empty stays chromeless once it has nodes. Tests reuse one key
+// across a suite, so without this the first empty render decides the chrome for
+// every later test in the file.
+afterEach(() => {
+    for (const key of Object.keys(window.localStorage)) {
+        if (key.startsWith('dii.raw.zen.')) window.localStorage.removeItem(key)
+    }
 })
 
 describe('RawEditor outliner toggle', () => {
@@ -130,8 +155,8 @@ describe('RawEditor undo/redo', () => {
         // Seed history by creating a node via the palette (double-click on the
         // empty graph surface opens it directly — no forced Node 0 first step).
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
-        fireEvent.change(screen.getByPlaceholderText('type a node name…'), { target: { value: 'Cube' } })
-        fireEvent.keyDown(screen.getByPlaceholderText('type a node name…'), { key: 'Enter' })
+        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Cube' } })
+        fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
         const batches = () => mockApplyLocalOps.mock.calls
             .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
         const createdNode = batches().flat().find((op) => op.type === 'createNode')
@@ -184,7 +209,7 @@ describe('RawEditor canvas mode', () => {
 
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
 
-        expect(screen.getByRole('dialog', { name: 'Create node' })).toBeTruthy()
+        expect(screen.getByRole('dialog', { name: 'Create a node, or summon a panel' })).toBeTruthy()
         // No node auto-created just by opening the palette
         expect(mockApplyLocalOps).not.toHaveBeenCalled()
     })
@@ -407,8 +432,8 @@ describe('RawEditor free-nesting palette create', () => {
         render(<RawEditor localStorageKey={FREE_NEST_STORAGE_KEY} />)
 
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
-        fireEvent.change(screen.getByPlaceholderText('type a node name…'), { target: { value: 'World' } })
-        fireEvent.keyDown(screen.getByPlaceholderText('type a node name…'), { key: 'Enter' })
+        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'World' } })
+        fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
 
         expect(screen.queryByText(/Only one World per scope/)).toBeNull()
         const createdWorld = mockApplyLocalOps.mock.calls
@@ -560,8 +585,8 @@ describe('RawEditor world scope entry', () => {
 
         fireEvent.click(screen.getByText('Enter ›'))
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
-        fireEvent.change(screen.getByPlaceholderText('type a node name…'), { target: { value: 'Cube' } })
-        fireEvent.keyDown(screen.getByPlaceholderText('type a node name…'), { key: 'Enter' })
+        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Cube' } })
+        fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
 
         const createdCube = mockApplyLocalOps.mock.calls
             .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
@@ -616,5 +641,39 @@ describe('TextPanelWindow', () => {
 
         expect(screen.getByText('Body only')).toBeTruthy()
         expect(screen.queryByRole('heading', { name: 'My note' })).toBeNull()
+    })
+})
+
+// Regression: the webcam/mic capture panels received INLINE-lambda live-output
+// callbacks whose identity changed every render. Their effects depend on that
+// identity and their cleanup mutates liveOutputs — with an active capture that
+// is set→delete→set on parent state, an infinite "Maximum update depth
+// exceeded" loop (hit live 2026-08-08). The callbacks must be render-stable.
+describe('RawEditor capture panel callback stability', () => {
+    const WEBCAM_STORAGE_KEY = 'test-webcam-stable'
+
+    afterEach(() => {
+        window.localStorage.removeItem(WEBCAM_STORAGE_KEY)
+    })
+
+    it('passes the same onFrameChange reference across re-renders', () => {
+        window.localStorage.setItem(
+            WEBCAM_STORAGE_KEY,
+            makeWorkspaceDoc([
+                { id: 'cam-1', typeId: 'source.webcam', label: 'Webcam', parentId: null, values: {} }
+            ])
+        )
+        webcamPanelProps.length = 0
+        render(<RawEditor localStorageKey={WEBCAM_STORAGE_KEY} />)
+        expect(webcamPanelProps.length).toBeGreaterThan(0)
+        const first = webcamPanelProps[0].onFrameChange
+
+        // what the real panel does with a live camera: report a frame — this
+        // mutates liveOutputs and re-renders the editor
+        act(() => { first('cam-1', { isTexture: true }) })
+
+        const last = webcamPanelProps.at(-1).onFrameChange
+        expect(webcamPanelProps.length).toBeGreaterThan(1)
+        expect(last).toBe(first)
     })
 })

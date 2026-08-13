@@ -9,10 +9,15 @@ import ImagePanelWindow from './ImagePanelWindow.jsx'
 import WorldPanelWindow from './WorldPanelWindow.jsx'
 import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
 import ChatPanelWindow from './ChatPanelWindow.jsx'
+import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
 import WorkStatusPanel from './WorkStatusPanel.jsx'
 import AgentRunPanel from './AgentRunPanel.jsx'
+import TimelinePanelWindow from './TimelinePanelWindow.jsx'
+import KeeperPanelWindow from './KeeperPanelWindow.jsx'
+import MidiInputPanel from './MidiInputPanel.jsx'
+import DirectorPanelWindow from './DirectorPanelWindow.jsx'
 import RawHelpDialog from './RawHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
@@ -37,6 +42,7 @@ const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 import { buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
 import { DEFAULT_PROJECT_SPACE_ID } from '../../project/services/projectsApi.js'
 import { getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { isPaletteSummons, resolveZenPreference, writeZenPreference } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
     readLocalWorkspaceDocument,
@@ -71,6 +77,7 @@ const ROOT_WORLD_CARD_HEIGHT = 120
 const WINDOW_DEFAULT_POSITIONS = {
     'universe.world':  { x: 120,  y: 60, width: 680, height: 480 },
     'view.inspector':  { x: 24,   y: 56, width: 320, height: 480 },
+    'agent':           { x: 96,   y: 140, width: 420, height: 480 },
     'view.assets':     { x: 24,   y: 56, width: 280, height: 380 },
     'view.outliner':   { x: 24,   y: 56, width: 240, height: 360 },
     'view.activity':   { x: 24,   y: 56, width: 280, height: 300 },
@@ -80,11 +87,19 @@ const WINDOW_DEFAULT_POSITIONS = {
     'legacy-world.outliner':  { x: 660,  y: 56, width: 240, height: 360 },
 }
 
+const ACTIVE_MARKER_TYPE_IDS = ['world.light', 'world.background', 'world.grid']
+
 const buildWindowStateFromNode = (node, index = 0, graphContext = null) => {
     const def = WINDOW_DEFAULT_POSITIONS[node.typeId] || { x: 96, y: 140, width: 360, height: 280 }
     const frame = node.values?.frame || {}
     const hasSavedPos = frame.x != null && frame.y != null
-    const cascadeOffset = hasSavedPos ? 0 : index * 32
+    // Cascade unpositioned windows by a STABLE per-node offset, not the list
+    // index — index shifts when a sibling closes, which made every later
+    // unpositioned window hop 32px.
+    const cascadeSlot = hasSavedPos
+        ? 0
+        : Array.from(String(node.id)).reduce((sum, ch) => sum + ch.charCodeAt(0), index) % 8
+    const cascadeOffset = hasSavedPos ? 0 : cascadeSlot * 32
     return {
         id: node.id,
         title: frame.title || evaluateNodeInput(node, 'title', graphContext) || node.label,
@@ -136,6 +151,12 @@ export default function RawEditor({
     })
     const [overflowOpen, setOverflowOpen] = useState(false)
     const [helpOpen, setHelpOpen] = useState(false)
+    // Zen: nothing resident on the workspace. Read once, from this device's
+    // preference, defaulting to on only for a workspace with no work in it —
+    // see zenMode.js for why it is not document state.
+    const zenWorkspaceKey = projectId || localStorageKey || 'default'
+    const [zen, setZen] = useState(false)
+    const zenReadRef = useRef(false)
     const [outlinerOpen, setOutlinerOpen] = useState(false)
     const [outlinerFrame, setOutlinerFrame] = useState({ x: 24, y: 56, width: 240, height: 360, zIndex: 20, minimized: false, pinned: false })
     const [chatOpen, setChatOpen] = useState(false)
@@ -304,7 +325,7 @@ export default function RawEditor({
     // background/world.grid) — same hierarchy-as-connection idea, same
     // workspaceState side-channel, just keyed by type as well as scope since
     // there's no dedicated map per type the way World has its own.
-    const activeMarkerTypeIds = ['world.light', 'world.background', 'world.grid']
+    const activeMarkerTypeIds = ACTIVE_MARKER_TYPE_IDS
     const getActiveNodeId = useCallback((typeId, scopeId) => {
         const candidates = authoredNodes.filter((node) => node.typeId === typeId && (node.parentId || null) === scopeId)
         if (!candidates.length) return null
@@ -329,6 +350,10 @@ export default function RawEditor({
     // shows chrome. Esc already pops the scope stack unconditionally
     // (existing handler below), so chromeless scopes are never a dead end.
     const chromeVisible = useMemo(() => {
+        // Zen wins over the scope rule: a scope that would show chrome still
+        // shows none while the workspace is zen. The palette is the way back,
+        // and Esc still pops the scope stack, so this is never a dead end.
+        if (zen) return false
         for (let i = navStack.length - 1; i >= 1; i--) {
             const scopeNode = authoredNodes.find((n) => n.id === navStack[i])
             if (scopeNode?.typeId === 'universe.space') {
@@ -336,7 +361,7 @@ export default function RawEditor({
             }
         }
         return true
-    }, [navStack, authoredNodes])
+    }, [zen, navStack, authoredNodes])
     // Computed once: pointer type doesn't change mid-session on the devices this
     // matters for, and re-checking on every render would just be wasted work.
     const [pointerVerb] = useState(() => (
@@ -362,19 +387,41 @@ export default function RawEditor({
         }
     }, [hasWorldNode])
 
+    const pendingLocalSaveRef = useRef(null)
     useEffect(() => {
-        if (!isLocalWorkspace || !localStorageKey) return
-        // The whole node document is stringified on every change, so quota
-        // exhaustion is realistic. Discarding the result meant saving stayed
-        // silently dead for the rest of the session and a reload reverted to
-        // the last successful write with no warning. Same one-time-alert
-        // shape as the asset-store quota path in useAssetRestore.
-        if (writeLocalWorkspaceDocument(localStorageKey, document)) return
-        if (localSaveFailedRef.current) return
-        localSaveFailedRef.current = true
-        console.error('[local-workspace] save failed — browser storage is full or unavailable')
-        alert('This workspace can no longer be saved to browser storage (it is full or unavailable). Export your work — reloading will lose changes made from now on.')
+        if (!isLocalWorkspace || !localStorageKey) return undefined
+        // Debounced: the whole node document is stringified per write, and an
+        // undebounced effect ran that synchronously on EVERY op — including
+        // every rAF-gated drag frame, which is exactly when jank hurts most.
+        // The pending ref + unload flush below make the debounce lossless.
+        pendingLocalSaveRef.current = document
+        const timer = setTimeout(() => {
+            pendingLocalSaveRef.current = null
+            // Quota exhaustion is realistic. Discarding the result meant saving
+            // stayed silently dead for the session — same one-time-alert shape
+            // as the asset-store quota path in useAssetRestore.
+            if (writeLocalWorkspaceDocument(localStorageKey, document)) return
+            if (localSaveFailedRef.current) return
+            localSaveFailedRef.current = true
+            console.error('[local-workspace] save failed — browser storage is full or unavailable')
+            alert('This workspace can no longer be saved to browser storage (it is full or unavailable). Export your work — reloading will lose changes made from now on.')
+        }, 400)
+        return () => clearTimeout(timer)
     }, [document, isLocalWorkspace, localStorageKey])
+    useEffect(() => {
+        if (!isLocalWorkspace || !localStorageKey || typeof window === 'undefined') return undefined
+        const flush = () => {
+            if (pendingLocalSaveRef.current) {
+                writeLocalWorkspaceDocument(localStorageKey, pendingLocalSaveRef.current)
+                pendingLocalSaveRef.current = null
+            }
+        }
+        window.addEventListener('beforeunload', flush)
+        return () => {
+            window.removeEventListener('beforeunload', flush)
+            flush()
+        }
+    }, [isLocalWorkspace, localStorageKey])
 
     useEffect(() => {
         try {
@@ -471,15 +518,53 @@ export default function RawEditor({
     const handleEnterNode = useCallback((nodeId) => {
         const node = authoredNodes.find((n) => n.id === nodeId)
         if (!node) return
+        // A closed panel window had NO reopen path (close wrote
+        // frame.visible=false and nothing ever set it back) — entering the
+        // node's graph card now reopens its window instead of entering an
+        // empty scope.
+        if (getNodeRender(node) === 'panel-2d' && node.values?.frame?.visible === false) {
+            applyLocalOps({
+                type: 'updateNode',
+                payload: { nodeId, patch: { values: { frame: { ...(node.values?.frame || {}), visible: true } } } }
+            })
+            return
+        }
         if (node.typeId === 'universe.world') setIsWorldFullscreen(true)
         scopeEnterNode(nodeId)
-    }, [authoredNodes, scopeEnterNode])
+    }, [authoredNodes, scopeEnterNode, applyLocalOps])
 
     const handleNavigateToScope = useCallback((targetIndex) => {
         const newScopeId = navStack[targetIndex] ?? null
         if (worldNode && newScopeId !== worldNode.id) setIsWorldFullscreen(false)
         scopeNavigateToScope(targetIndex)
     }, [navStack, scopeNavigateToScope, worldNode])
+
+    // Browser/hardware BACK pops one scope level. This is the only exit on a
+    // phone when a space hides the chrome (showChrome:false removes the back
+    // button and breadcrumb, and the Escape fallback needs a keyboard) —
+    // without it a chromeless scope is a dead end on touch.
+    const scopeDepthRef = useRef(0)
+    const navigateUpRef = useRef(() => {})
+    useEffect(() => {
+        scopeDepthRef.current = navStack.length
+        navigateUpRef.current = () => handleNavigateToScope(navStack.length - 2)
+    }, [navStack, handleNavigateToScope])
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined
+        const onPop = () => {
+            if (scopeDepthRef.current > 0) {
+                navigateUpRef.current()
+                window.history.pushState({ rawScope: true }, '')
+            }
+        }
+        window.addEventListener('popstate', onPop)
+        return () => window.removeEventListener('popstate', onPop)
+    }, [])
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        // arm one history entry when entering the first scope level
+        if (navStack.length === 1) window.history.pushState({ rawScope: true }, '')
+    }, [navStack.length])
 
     const handleInspectorChange = (component, nextComponentValue) => {
         if (surfaceSelectedNode) {
@@ -568,6 +653,41 @@ export default function RawEditor({
         : (surfaceSelectedEntity ? surfaceSelectedEntity.components : { worldState: document.worldState })
     const inspectorTitle = surfaceSelectedNode ? surfaceSelectedNode.label : (surfaceSelectedEntity ? surfaceSelectedEntity.name : 'World')
     const inspectorSubtitle = surfaceSelectedNode ? surfaceSelectedNode.typeId : (surfaceSelectedEntity ? surfaceSelectedEntity.type : 'Scene defaults')
+
+    // Read the zen preference ONCE, and only after the document has loaded —
+    // the default depends on whether this workspace already has work in it, and
+    // on first render it always looks empty.
+    useEffect(() => {
+        if (zenReadRef.current || !document) return
+        zenReadRef.current = true
+        setZen(resolveZenPreference(zenWorkspaceKey, { nodeCount: (document.nodes || []).length }))
+    }, [document, zenWorkspaceKey])
+
+    const setZenPreference = useCallback((next) => {
+        setZen(next)
+        writeZenPreference(zenWorkspaceKey, next)
+    }, [zenWorkspaceKey])
+
+    // Cmd/Ctrl+K or a bare `/` opens the palette at the middle of the screen.
+    // Touch already has this: double-tapping empty canvas opens the same
+    // palette, which is why there is no second gesture to learn and no new
+    // chrome for a finger to reach.
+    useEffect(() => {
+        const onKeyDown = (event) => {
+            if (!isPaletteSummons(event)) return
+            event.preventDefault()
+            setPaletteState({
+                open: true,
+                surface: 'graph',
+                placement: {
+                    clientX: Math.round(window.innerWidth / 2) - 140,
+                    clientY: Math.round(window.innerHeight / 3)
+                }
+            })
+        }
+        window.addEventListener('keydown', onKeyDown)
+        return () => window.removeEventListener('keydown', onKeyDown)
+    }, [])
 
     const openPalette = (surface, placement = null) => {
         setPaletteState({
@@ -811,12 +931,49 @@ export default function RawEditor({
             // real "silent microphone" reading doesn't get treated as unset.
             const clear = value === null || value === undefined
             if (clear && !prev.has(key)) return prev
+            // identical value re-reported (mic at a steady level, the same
+            // texture instance) must not re-render the whole editor
+            if (!clear && prev.get(key) === value) return prev
             const next = new Map(prev)
             if (clear) next.delete(key)
             else next.set(key, value)
             return next
         })
     }, [])
+    // Stable per-port wrappers for the capture panels. These MUST NOT be
+    // inline lambdas at the call site: the panels' effects depend on the
+    // callback identity, and a fresh lambda per render makes cleanup fire
+    // every render — with a live capture that is set→delete→set on
+    // liveOutputs, an infinite update loop (hit with an active webcam,
+    // 2026-08-08).
+    const handleFrameOutputChange = useCallback((nodeId, texture) => {
+        handleLiveOutputChange(nodeId, 'frame', texture)
+    }, [handleLiveOutputChange])
+    const handleMicOutputChange = useCallback((nodeId, volume, frequency) => {
+        handleLiveOutputChange(nodeId, 'volume', volume)
+        handleLiveOutputChange(nodeId, 'frequency', frequency)
+    }, [handleLiveOutputChange])
+    // Stable graph-surface callbacks: as inline lambdas these re-registered
+    // RawGraphSurface's window-level drag/key listeners on every parent
+    // render, and a teardown mid-drag dropped the queued final frame.
+    const handleCreateEdge = useCallback((payload) => applyLocalOps({
+        type: 'createEdge',
+        payload: { edge: payload }
+    }), [applyLocalOps])
+    const handleDeleteEdge = useCallback((edgeId) => applyLocalOps({
+        type: 'deleteEdge',
+        payload: { edgeId }
+    }), [applyLocalOps])
+    const handleDeleteNode = useCallback((nodeId) => {
+        applyLocalOps([
+            { type: 'deleteNode', payload: { nodeId } },
+            { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
+        ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })
+    }, [applyLocalOps])
+    const handleMoveNode = useCallback((nodeId, nextX, nextY) => applyLocalOps({
+        type: 'updateNode',
+        payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
+    }), [applyLocalOps])
     const graphContext = useMemo(
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs }),
         [document, clockNow, liveOutputs]
@@ -873,16 +1030,29 @@ export default function RawEditor({
             return <ImagePanelWindow node={node} values={resolvedValues} assetMap={assetMap} />
         }
         if (node.typeId === 'source.webcam') {
-            return <WebcamSourcePanel node={node} onFrameChange={(nodeId, texture) => handleLiveOutputChange(nodeId, 'frame', texture)} />
+            return <WebcamSourcePanel node={node} onFrameChange={handleFrameOutputChange} />
         }
         if (node.typeId === 'source.mic') {
+            return <MicSourcePanel node={node} onLevelsChange={handleMicOutputChange} />
+        }
+        if (node.typeId === 'device.midi.in') {
             return (
-                <MicSourcePanel
+                <MidiInputPanel
                     node={node}
-                    onLevelsChange={(nodeId, volume, frequency) => {
-                        handleLiveOutputChange(nodeId, 'volume', volume)
-                        handleLiveOutputChange(nodeId, 'frequency', frequency)
+                    values={resolvedValues}
+                    onSignalChange={(nodeId, ports) => {
+                        // null clears every port at once (unmount). Otherwise
+                        // only the ports this message carries are written, so a
+                        // CC does not wipe the last note and vice versa.
+                        for (const portId of ['note', 'velocity', 'cc', 'value', 'trigger']) {
+                            if (ports === null) handleLiveOutputChange(nodeId, portId, null)
+                            else if (ports[portId] !== undefined) handleLiveOutputChange(nodeId, portId, ports[portId])
+                        }
                     }}
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
                 />
             )
         }
@@ -896,6 +1066,40 @@ export default function RawEditor({
                     prompt={resolvedValues.prompt}
                     trigger={resolvedValues.trigger}
                     onValuesChange={handleLiveOutputChange}
+                />
+            )
+        }
+        if (node.typeId === 'agent.keeper') {
+            return (
+                <KeeperPanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onReplyChange={(nodeId, reply, busy) => {
+                        handleLiveOutputChange(nodeId, 'reply', reply)
+                        handleLiveOutputChange(nodeId, 'busy', busy)
+                    }}
+                    // Endpoint and model are settable in the window itself, not
+                    // only in the inspector: a node the palette can place must be
+                    // usable where it lands, without also placing an inspector.
+                    onConfigChange={(nodeId, patch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
+                    })}
+                />
+            )
+        }
+        if (node.typeId === 'view.director') {
+            return <DirectorPanelWindow node={node} />
+        }
+        if (node.typeId === 'view.timeline') {
+            return (
+                <TimelinePanelWindow
+                    node={node}
+                    values={resolvedValues}
+                    onChange={(clips) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId: node.id, patch: { values: { ...node.values, clips } } }
+                    })}
                 />
             )
         }
@@ -922,6 +1126,17 @@ export default function RawEditor({
                     assetOptions={document.assets || []}
                     onSectionChange={handleInspectorChange}
                     emptyMessage="Select a node to inspect it."
+                />
+            )
+        }
+        if (node.typeId === 'agent') {
+            return (
+                <AgentChatPanelWindow
+                    chatId={node.values?.chatId || null}
+                    onPersistChatId={(chatId) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId: node.id, patch: { values: { chatId } } }
+                    })}
                 />
             )
         }
@@ -1012,6 +1227,38 @@ export default function RawEditor({
             payload: { nodeId, patch: { values: { position: nextPosition } } }
         })
     }
+
+    // Everything the workspace can summon. The Windows menu's job, the help
+    // button's job and the chat button's job all arrive here rather than
+    // sitting resident on the surface — and any panel node that is currently
+    // hidden is listed generically, so a node type added later is summonable
+    // without touching this list.
+    const hiddenPanelNodes = surfaceNodes.filter(
+        (node) => isPanelNode(node) && node.values?.frame?.visible === false
+    )
+    const paletteCommands = [
+        {
+            id: 'chrome',
+            label: zen ? 'Show the chrome' : 'Hide the chrome',
+            hint: zen ? 'topbar, controls' : 'zen — surface and nodes only',
+            run: () => setZenPreference(!zen)
+        },
+        { id: 'help', label: 'Help', hint: 'what the keys do', run: () => setHelpOpen(true) },
+        { id: 'chat', label: 'Chat', hint: 'talk to whoever is here', run: () => setChatOpen(true) },
+        { id: 'outliner', label: 'Outliner', hint: 'every node in this scope', run: () => setOutlinerOpen(true) },
+        ...hiddenPanelNodes.map((node) => ({
+            id: `window:${node.id}`,
+            label: node.values?.frame?.title || node.label || getNodeType(node.typeId)?.label || 'Panel',
+            hint: `open — ${node.typeId}`,
+            run: () => applyLocalOps({
+                type: 'updateNode',
+                payload: {
+                    nodeId: node.id,
+                    patch: { values: { frame: { ...(node.values?.frame || {}), visible: true } } }
+                }
+            })
+        }))
+    ]
 
     const workspaceTitle = isLocalWorkspace ? 'Blank White Workspace' : (document.projectMeta?.title || 'Raw Project')
     const graphTopInset = chromeVisible ? workspaceTop : 0
@@ -1151,6 +1398,7 @@ export default function RawEditor({
                 {/* Graph is the primary surface — always visible */}
                 <RawGraphSurface
                     key={currentScopeId || 'root'}
+                    chromeless={!chromeVisible}
                     topInset={graphTopInset}
                     bottomInset={graphBottomInset}
                     nodes={graphCardNodes}
@@ -1159,24 +1407,10 @@ export default function RawEditor({
                     selectedNodeId={workspaceState.selectedNodeId}
                     onEnterNode={handleEnterNode}
                     onSelectNode={selectNode}
-                    onCreateEdge={(payload) => applyLocalOps({
-                        type: 'createEdge',
-                        payload: { edge: payload }
-                    })}
-                    onDeleteEdge={(edgeId) => applyLocalOps({
-                        type: 'deleteEdge',
-                        payload: { edgeId }
-                    })}
-                    onDeleteNode={(nodeId) => {
-                        applyLocalOps([
-                            { type: 'deleteNode', payload: { nodeId } },
-                            { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: null } } }
-                        ], { activityMessage: 'Deleted node.', activityLevel: 'warning' })
-                    }}
-                    onMoveNode={(nodeId, nextX, nextY) => applyLocalOps({
-                        type: 'updateNode',
-                        payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
-                    })}
+                    onCreateEdge={handleCreateEdge}
+                    onDeleteEdge={handleDeleteEdge}
+                    onDeleteNode={handleDeleteNode}
+                    onMoveNode={handleMoveNode}
                     onDoubleClick={(placement) => openPalette('graph', placement)}
                     isNodeActive={(node) =>
                         activeMarkerTypeIds.includes(node.typeId)
@@ -1198,6 +1432,11 @@ export default function RawEditor({
                             allowOverflowTop
                             onFocus={() => {
                                 selectNode(node.id)
+                                // already topmost → no op. Unconditional bumps
+                                // inflated zIndex forever AND pushed a real
+                                // undo entry per title-bar click, so Ctrl+Z
+                                // undid a focus instead of the last edit.
+                                if ((node.values?.frame?.zIndex || 6) >= topZIndex) return
                                 applyLocalOps({
                                     type: 'updateNode',
                                     payload: {
@@ -1345,6 +1584,7 @@ export default function RawEditor({
                 placement={paletteState.placement}
                 onClose={() => setPaletteState({ open: false, surface: 'world', placement: null })}
                 onCreate={handlePaletteCreate}
+                commands={paletteCommands}
             />
 
         </main>

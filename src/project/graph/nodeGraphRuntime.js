@@ -131,6 +131,26 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
                 return context?.liveOutputs?.get(`${node.id}:frame`) ?? null
             }
             break
+        case 'device.midi.in':
+            // Live side channel again, written by MidiInputPanel. `trigger` is
+            // declared `signal`, and the runtime computes no signal outputs —
+            // so it carries a monotonically rising count, the same idiom as
+            // time.beat: a consumer sees an event because the number changed,
+            // not by catching a pulse between frames.
+            if (portId === 'note' || portId === 'velocity' || portId === 'cc'
+                || portId === 'value' || portId === 'trigger') {
+                return context?.liveOutputs?.get(`${node.id}:${portId}`) ?? 0
+            }
+            break
+        case 'agent.keeper':
+            // Same live-output side channel as the capture family: the reply
+            // arrives from a network call the panel makes, so it cannot be a
+            // serialised node value. An unanswered keeper reads as empty
+            // string rather than undefined, so a downstream string input gets
+            // something it can render instead of "undefined".
+            if (portId === 'reply') return context?.liveOutputs?.get(`${node.id}:reply`) ?? ''
+            if (portId === 'busy') return context?.liveOutputs?.get(`${node.id}:busy`) ?? false
+            break
         case 'source.mic':
             if (portId === 'volume') {
                 return context?.liveOutputs?.get(`${node.id}:volume`) ?? 0

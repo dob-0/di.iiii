@@ -111,6 +111,12 @@ const buildWirePath = (from, to) => {
 }
 
 export default function RawGraphSurface({
+    // Zen: the zoom controls stop being resident. They are NOT removed — on a
+    // touch screen there is no wheel, so they are the only way to zoom, and the
+    // double-tap-vs-zoom-button guard exists because of a real bug. They fade
+    // out of the way instead, and come back on touch or focus. Optional and
+    // defaulted, because Studio wraps this component and passes no extra props.
+    chromeless = false,
     topInset = 0,
     // Chrome that overlays the BOTTOM of the canvas (the selection sheet on a
     // phone). The fit used to centre content in the container's full height,
@@ -391,7 +397,10 @@ export default function RawGraphSurface({
     // count: entering a container node is the event worth re-fitting for, and
     // adding a node is emphatically not (no editor re-fits on every create —
     // it would yank the canvas out from under you mid-edit).
-    const scopeKey = nodes.length ? `${nodes.length}:${nodes[0]?.parentId || ''}:${nodes[0]?.id || ''}` : ''
+    // The key must be the SCOPE, nothing else — a node count or first-node id
+    // in here made every create/delete miss the guard and re-fit, which is
+    // exactly the yank the comment above forbids.
+    const scopeKey = nodes.length ? `scope:${nodes[0]?.parentId || 'root'}` : ''
     useEffect(() => {
         if (initialZoom !== null) return
         if (hasFitRef.current === scopeKey || !containerRef.current || nodes.length === 0) return
@@ -812,7 +821,7 @@ export default function RawGraphSurface({
             onKeyDown={handleSectionKeyDown}
             onPointerDown={handleSurfacePointerDown}
         >
-            <div className="raw-graph-zoom-controls">
+            <div className={`raw-graph-zoom-controls${chromeless ? ' is-chromeless' : ''}`}>
                 <button type="button" aria-label="Zoom out" onClick={() => updateZoom(zoom - GRAPH_ZOOM_STEP)}>-</button>
                 <span className="raw-graph-zoom-value">{Math.round(zoom * 100)}%</span>
                 <button type="button" aria-label="Zoom in" onClick={() => updateZoom(zoom + GRAPH_ZOOM_STEP)}>+</button>

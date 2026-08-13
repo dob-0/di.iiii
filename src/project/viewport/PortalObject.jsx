@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useFrame } from '@react-three/fiber'
 import { Billboard, Text } from '@react-three/drei'
+import { TROIKA_FONT_URL } from './troikaFont.js'
 import EntityContent from './EntityContent.jsx'
 import { buildAssetMap } from './buildAssetMap.js'
 import { getProjectDocument } from '../services/projectsApi.js'
@@ -61,7 +62,11 @@ function EmbeddedScene({ projectId }) {
         return () => { alive = false }
     }, [projectId, blocked])
 
-    const assetMap = useMemo(() => (doc ? buildAssetMap(doc) : new Map()), [doc])
+    // Pass projectId: an embedded document whose assets were written without a
+    // url (the legacy import gap) has no projectMeta.id to fall back on either,
+    // so without this the portal renders blank tiles where the host scene shows
+    // the same assets fine.
+    const assetMap = useMemo(() => (doc ? buildAssetMap(doc, projectId) : new Map()), [doc, projectId])
     const { roots, childMap } = useMemo(() => {
         const cm = new Map()
         const rs = []
@@ -133,7 +138,7 @@ function PortalGateway({ spaceId, label, color = '#4df9ff' }) {
             {label ? (
                 <Billboard position={[0, 1.9, 0]}>
                     <LabelPlate text={label} fontSize={0.4} />
-                    <Text fontSize={0.4} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.018} outlineColor="#04070c">
+                    <Text font={TROIKA_FONT_URL} fontSize={0.4} color="#ffffff" anchorX="center" anchorY="middle" outlineWidth={0.018} outlineColor="#04070c">
                         {label}
                     </Text>
                 </Billboard>
@@ -153,7 +158,7 @@ export default function PortalObject({ entity }) {
                 {reference.label ? (
                     <Billboard position={[0, 3.4, 0]}>
                         <LabelPlate text={reference.label} fontSize={0.7} maxWidth={9} />
-                        <Text fontSize={0.7} maxWidth={9} color="#ffffff" outlineWidth={0.02} outlineColor="#000000" anchorX="center" anchorY="middle">
+                        <Text font={TROIKA_FONT_URL} fontSize={0.7} maxWidth={9} color="#ffffff" outlineWidth={0.02} outlineColor="#000000" anchorX="center" anchorY="middle">
                             {reference.label}
                         </Text>
                     </Billboard>

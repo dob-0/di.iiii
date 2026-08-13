@@ -137,9 +137,17 @@ const corsOrigins = expandLoopbackOrigins(parseList(process.env.CORS_ORIGINS))
 const maxUploadMb = parseNumber(process.env.MAX_UPLOAD_MB, 100)
 const maxUploadBytes = Math.max(1, maxUploadMb) * 1024 * 1024
 const dataDir = resolveDir(process.env.DATA_ROOT, DEFAULT_DATA_DIR)
+const clientDir = process.env.CLIENT_DIR ? resolveDir(process.env.CLIENT_DIR, null) : null
 const spacesDir = resolveDir(process.env.SPACES_DIR, path.join(dataDir, 'spaces'))
 const uploadsDir = resolveDir(process.env.UPLOADS_DIR, path.join(dataDir, 'uploads'))
 const dbPath = resolveDir(process.env.DB_PATH, path.join(dataDir, 'di.db'))
+// The estate map is infrastructure topology — public IP, tailnet addresses,
+// hostnames, where the backups live. This repo is public, so the file is never
+// committed here and never placed in public/; it is written onto the box out of
+// band from the private di-atlas. Unset means the Estate panel simply says so.
+const estateMapPath = process.env.ESTATE_MAP_PATH
+  ? resolveDir(process.env.ESTATE_MAP_PATH, null)
+  : null
 const authSessionTtlMs = parseNumber(process.env.AUTH_SESSION_TTL_MS, 1000 * 60 * 60 * 12)
 const authSessionCookieName = (process.env.AUTH_SESSION_COOKIE_NAME || 'dii_serverxr_session').trim()
 const authSessionCookieSecure = parseBool(process.env.AUTH_SESSION_COOKIE_SECURE, isProduction)
@@ -246,6 +254,10 @@ for (const [provider, idVar, secretVar] of [
 
 const config = {
   port: Number(process.env.PORT) || 4000,
+  // Default stays every interface, which is what the container topology needs.
+  // A local install sets HOST=127.0.0.1 so an artist's laptop on café wifi is not
+  // quietly editable by the room.
+  host: String(process.env.HOST || '').trim() || '0.0.0.0',
   basePath,
   mountPath: basePath || '/',
   apiToken,
@@ -266,10 +278,15 @@ const config = {
   directories: {
     root: ROOT_DIR,
     publicDir: path.resolve(ROOT_DIR, 'public'),
+    // The built frontend, when this server is also the one serving it — a local
+    // `di` install, where one process on one port is the whole product. Unset in
+    // the deployed topology, where nginx owns the SPA and this stays a pure API.
+    clientDir,
     dataDir,
     spacesDir,
     uploadsDir,
-    dbPath
+    dbPath,
+    estateMapPath
   },
   defaultTtlMs: Number(process.env.SPACE_TTL_MS || 1000 * 60 * 60 * 24 * 30),
   // Guest sandboxes are throwaway by contract (the hub banner says so) — idle
@@ -311,6 +328,16 @@ const config = {
       clientSecret: (process.env.GOOGLE_CLIENT_SECRET || '').trim(),
       enabled: Boolean((process.env.GOOGLE_CLIENT_ID || '').trim())
     }
+  },
+  // Human-approval gate for admin-level writes (see approvalGate.js). Unset
+  // secret/botUrl = disabled: gated routes apply immediately, exactly as
+  // before this feature existed. Never fail open when explicitly enabled —
+  // that's approvalGate.js's job, not this file's.
+  approval: {
+    enabled: parseBool(process.env.APPROVAL_GATE_ENABLED, false),
+    botUrl: (process.env.APPROVAL_BOT_URL || '').replace(/\/+$/, ''),
+    secret: (process.env.APPROVAL_SHARED_SECRET || '').trim(),
+    ttlMs: Number(process.env.APPROVAL_TTL_MS || 1000 * 60 * 60)
   }
 }
 

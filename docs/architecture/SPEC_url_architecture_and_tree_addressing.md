@@ -344,9 +344,10 @@ striking through the recommendation you reject, not silence.
    > **Recommendation: address `entities[]`. Add `slug` to the entity, not the node.**
    > URLs are a public-surface contract, and the public surfaces
    > (`PublicProjectViewer`, `LiveProjectScene`, the shared `buildAssetMap`) render
-   > entities. `nodes[]` lives in Beta and Raw — two independent experimental forks
-   > that AGENTS.md explicitly says are not the shipped lane; addressing them would
-   > freeze an experiment as a permanent public contract.
+   > entities. `nodes[]` lives in Raw — the sole experimental lane (Beta retired
+   > 2026-08-06, its role absorbed into Raw) — which AGENTS.md explicitly says is
+   > not the shipped lane; addressing it would freeze an experiment as a
+   > permanent public contract.
    >
    > **No bridge is needed, and none should be built.** `entity.parentId` only ever
    > points at another entity, and node scoping (`node.parentId`) only ever points at

@@ -5,6 +5,1255 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+# Session — feat/mesh-room-history
+
+## 2026-08-11 — the room keeps its chat (hub side)
+
+- The owner's ask after his br_id_ge walk: the room becomes a persistent group
+  conversation — same history on every device, crossed speak, everyone reads.
+- meshHub gains durable per-room lines in SQLite (`mesh_room_lines`,
+  `meshRoomHistoryStore`): persistent channels append on publish with a
+  hub-minted stable line id (same id live and in replay — dedupe by identity,
+  not text+time); replay is strictly OPT-IN via `{type:'control',
+  cmd:'history'}` and arrives only as `mesh:history` envelopes, never
+  `mesh:event` — a listener that never asks can never mistake history for a
+  live line (fails closed; di bo's flag, same failure shape as broadcast([])).
+- Chunks stay under a 6KB budget (mesh payload cap is 8KB — the robot's eye).
+- Persistence is OFF until `MESH_HISTORY_CHANNELS` is set (compose allow-list
+  entries added both tiers, the #134 lesson): the room's own wording promises
+  impermanence until the field surface changes that promise, and the hub must
+  not start keeping words first. No backfill by design — history begins at
+  switch-on.
+- Guards: 3 store tests + 4 hub tests (replay ordering + stable ids, ephemeral
+  channels excluded, store-loss keeps the room alive, unconfigured hub answers
+  empty done). Persistence guard mutation-tested — watched 1 failing with the
+  append removed.
+- NOT here: the field.html render + the room's new wording + ink design pass
+  (br_id_ge side, next), the keeper-mind budget reserve (di bo's side).
+
+# Session — docs/estate-audit
+
+## 2026-08-10 — estate-keeping rules from the worktree audit
+
+- Full audit of the worktree estate (14 trees, 3 stashes) after a session was
+  blocked by `git switch dev` refusing — `di.iiii-algomerge` held `dev`, stale
+  behind origin. Written down as **The Holding Rule** in `parallel-agents.md`:
+  no side worktree checks out `dev`/`main`.
+- Named the sweep gap: `npm run land`'s auto-reap stopped firing when merges
+  moved to `gh pr merge`; seven finished worktrees had piled up. Merging via gh
+  still means you land. Three checks before removing any tree: clean tree,
+  occupancy ack, contained-or-pushed (squash-merges make ancestry lie — a
+  pruned remote ref is the better merged-signal).
+- Shared-stash discipline written down (refs/stash is common to all worktrees;
+  tagged pushes, apply by SHA, triage at land time).
+- Verification charter gains: verify with the session the user actually has —
+  an admin API token reported a space working while the owner's guest browser
+  session got "Access restricted".
+- Recovered the Express 5 bare-`*` boot-death lesson from an uncommitted
+  `known-fixes.md` edit sitting in the og-preview worktree — landed here before
+  that tree is reaped.
+- Still undone, deliberately: the actual reaping (waits on the owner's word),
+  freeing `dev` from algomerge, stash triage verdicts, and the companion
+  `npm run state` holders/drift upgrade (separate branch, in flight).
+
+# fix/offline-local-truth
+
+## 2026-08-10 — a local install now tells the truth about being one
+
+- The offline/local fix set from the cross-machine audit, minus the `di up`
+  update-check pair — that one is already fixed on `fix/di-offline-update-check`
+  (another session's branch) and was deliberately left there. `install.mjs`'s
+  `smokeTest` temp-dir cleanup cosmetic was deferred with it, since those files
+  are that branch's.
+- `local: DI_LOCAL === '1'` surfaced on `/api/auth/session` AND `/api/config`
+  (the landing reads config so it never mints a guest session just to learn
+  where it runs). Landing swaps "Sign in only to edit" / "3 free spaces" for
+  local-truthful copy when `local && !requireAuth`.
+- The access-restricted card got doors: "Open Space" + "Your private sandbox"
+  buttons and the shared OAuth sign-in block; raw session ids no longer print.
+  A mistyped space id (server 404) now says "Nothing lives at …" instead of
+  scope language — `useSpacePublicFlag` reports `exists`, failing safe to true
+  on non-404 errors. Verified in a real browser, desktop and 390×844 DPR3.
+- Typed bare `/raw` no longer walls guests: routing marks a *defaulted* space
+  (`isDefaultSpace`) and `LaneDefaultSpace` bends only those to the session's
+  `openSpaceId`. URL-named spaces keep their (door-bearing) wall.
+- Guest cookie TTL now equals the sandbox sweep TTL (`config.sandboxTtlMs`,
+  7d) instead of promising 30 days over a room swept at 7. Wiki corrected.
+- `decideMode` prefers node over a merely-running Docker Desktop — docker is
+  explicit (`--docker`) or last resort. **Behavior change**, install-time only;
+  recorded modes never flip. Docker mode also composes BOTH compose files now
+  (the `.di` file is only an override; alone, the named data volume never
+  existed) and the base file ships in the runtime tarball.
+- CI's offline job now asserts `"requireAuth":false` on the session endpoint —
+  the SPA-shell grep it had could not fail for a walled install.
+- Reconnect drips capped: scene/project SSE close after 3 straight errors and
+  sit out the shared 15s cooldown; presence socket.io gets
+  `reconnectionDelayMax: 15000`.
+- Offline CDN leaks closed: every drei `<Text>` names a vendored static Inter
+  woff (32 KB, instanced from the woff2 the 2D UI already ships) instead of
+  troika's jsdelivr resolver; XR controller/hand models turn off only when the
+  session says `local`. Verified with jsdelivr blocked in a real browser.
+- Docs truth: DI_CLI.md (network claim, node-first decision, compose pairing),
+  wiki local-install article (+ docker caveat in the Claude-node article,
+  guest-week truth in the invite article), v1-studio-feature-map's stale "no
+  offline requirement yet" row, and the all-nodes example's browser panel now
+  points same-origin (`/wiki`) so it opens offline.
+- Adjacent finding, deliberately not fixed here (needs a decision): `npm run
+  dev` binds 0.0.0.0 with auth off and CORS `*`, and the config warning names
+  only the auth half.
+
+# fix/embed-document-ground
+
+`?embed=1` was incomplete when it shipped, and it shipped to production.
+
+## What was wrong
+
+The mode made the viewer's own `<main>` and its code-view iframes transparent. It
+did not touch `html`, `body` or `#root`, which carry `background: var(--di-black)`
+from `base.css`. So an embedded page opened on its own is a **black box** — I
+measured it on both tiers and then looked at a screenshot of the isolated URL to
+be sure: chrome cores floating on solid black.
+
+br_id_ge's ending looked correct throughout, which is why this survived review.
+It looks correct because the rite *also* injects
+`html,body,#root{background:transparent!important}` into the frame from its own
+side — the exact workaround `?embed=1` exists to retire. The mode was leaning on
+the thing it replaced.
+
+## The trap in the fix
+
+`PublicProjectViewer` declares `const document = state.document`. That shadows the
+global for the **whole function scope**, so an effect written with a bare
+`document.documentElement` resolves to a project document object and silently does
+nothing — no error, no class, and the page stays black. The effect uses
+`window.document` and says why in a comment.
+
+## Verified
+
+`lint` clean; `vitest run src/project/components/PublicProjectViewer.test.jsx`
+12/12. The new guard asserts the class is applied in embed mode and released on
+unmount, and was watched failing against the shipped version first.
+
+Not yet looked at on a tier — this branch has not been synced anywhere. That check
+belongs with whoever lands it: open `/<space>/<page>?embed=1` directly, not inside
+the rite, because inside the rite br_id_ge's own override hides the bug.
+
+## 2026-08-10 — the estate map, inside /admin, without leaking it
+
+- **New diagnostics section: `/admin` → Estate.** Renders the studio's infrastructure
+  map — tailnet topology, every machine and what it is for, what runs where, the
+  totals. It is observation only, so it sits in diagnostics rather than admin.
+- **The map is never in this repo.** `dob-0/di.iiii` is public and the map is
+  infrastructure topology: the VPS public IP, tailnet addresses, hostnames, where the
+  backups live. It is authored in the private `di-atlas` and reaches the host out of
+  band. `serverXR` reads it from `ESTATE_MAP_PATH` behind `requireAdminAlways` and
+  hands it back as JSON; nothing is committed here and nothing goes in `public/`.
+- **Framed with `sandbox=""` — every allow- token off**, scripts included. The map is
+  pure HTML/CSS/SVG with no `<script>` and no inline handlers, so nothing is lost, and
+  a future edit that adds script fails to run rather than quietly gaining the admin
+  page's origin. There is a test for the sandbox attribute, because that is the line
+  that matters.
+- **Framed dark on purpose.** The map is theme-aware and would otherwise follow the
+  *viewer's OS*, putting a white page inside a console that has no light mode.
+  `asDarkDocument()` wraps it with `data-theme="dark"`.
+- Three states are distinguished rather than collapsed into "error": no path
+  configured, path configured but no file on this host (both ordinary), and a real
+  failure. Source name, mtime and size are shown above the frame so a stale copy is
+  visible instead of believed.
+- Verified by looking: signed in as admin against a local serverXR with
+  `ESTATE_MAP_PATH` set, desktop 1440×900 @2 and phone 390×844 @3. The 401-without-
+  session and 200-with-session path was exercised end to end, not assumed.
+
+**Still open:** the map has to be placed on staging and production hosts and
+`ESTATE_MAP_PATH` set there — until then the section correctly says the host has no
+map. A sync step from `di-atlas` at deploy time does not exist yet.
+
+# fix/dev-stack-drift-guard
+
+## 2026-08-10 — stale-tree guard for the main checkout
+
+- Root cause being guarded: the main checkout sat parked on a merged feature branch,
+  far behind origin/dev, and `npm run dev:browser` served it for two days with nothing
+  saying so.
+- `scripts/dev-stack.mjs` now prints the tree position (branch/detached, short sha,
+  behind-count vs the local origin/dev ref) at startup, and a loud STALE/DRIFTED
+  warning with the fix command when HEAD is off the origin/dev tip or the branch's
+  upstream is gone. Read-only, no fetch (offline is a real case), degrades to silence
+  if git is unavailable.
+- `scripts/repo-state.mjs` + `repo-state-lib.mjs`: `npm run state` now warns on the two
+  shapes the old warnings missed — detached (or local dev) HEAD behind origin/dev, and
+  a current branch whose upstream is gone. Tests added in `scripts/repo-state.test.js`.
+- `docs/ai/parallel-agents.md` gained The Parking Rule: the main checkout is the user's
+  viewing surface; leave it detached at origin/dev before a session ends; all branch
+  work lives in `.claude/worktrees/`.
+- Known-fixes row added for the incident (symptom: dev stack silently serving old code).
+- Deliberately not touched: CURRENT.md (feature branches may not), no fetch at stack
+  startup (offline desktop is a real case — counts run against the local origin/dev ref).
+
+## 2026-08-08 — Raw as a workspace: the plan, and the first node in it
+
+Wrote `docs/architecture/RAW_WORKSPACE.md` and built the keeper node it names as
+step one.
+
+**The plan, read out of the code rather than the roadmaps.** Three findings
+changed its shape:
+
+- Nodes are already windows. Nine panel components exist plus `DesktopWindow`,
+  and Studio is itself a node. "Nodes are windows, windows are small apps" is
+  the existing architecture, not a proposal.
+- The runtime ceiling recorded in `reference-raw-node-runtime-truth` (2026-08-06:
+  no stream output ever carries data) is **out of date**. `nodeGraphRuntime.js`
+  reads `context.liveOutputs`, a `Map` keyed `nodeId:portId` that panels write
+  into; webcam frames and mic readings already flow through it. That seam is
+  what the whole plan hangs off.
+- `stream.*` and `device.osc.*` are gated because they are **not implementable in
+  a page** — NDI and OSC are UDP/LAN — not because nobody got to them. So the
+  workspace needs a local process, and `di` is the obvious host. Raised with the
+  session designing `di` phase 2 rather than designing a second daemon.
+
+The owner chose the hybrid shape (local *and* online, connect when needed), and
+asked whether this could cover a festival toolkit. §7 answers that: the palette
+is already a portrait of the Notations #2 rig, `source.realsense.d405` exists
+because a D405 was used — and the keeper, which was that show's **main**
+installation layer, had no node type at all. That is what this branch fixes.
+
+**`agent.keeper`.** Endpoint-shaped, not account-shaped: you name a URL and a
+model, so nothing runs as anyone and no credential is held. That side-steps the
+open "agent authority" question entirely, and it is the only shape that works in
+a room with no internet. One request body reaches both Ollama and any
+OpenAI-compatible server; only the reply differs. Reasoning models' `<think>`
+blocks are stripped and a truncated answer says so, both carried over from what
+the rite hit live. `reply` and `busy` are real ports.
+
+Set up in the window itself, not only the inspector — a node the palette can
+place has to be usable where it lands.
+
+**Two bugs found by looking at it in the real editor**, neither visible to unit
+tests, both now in `known-fixes.md`:
+
+- The panel sat on "Asking…" for ever while the request had actually succeeded.
+  `RawEditor` passes its callbacks as inline arrows, so the unmount effect that
+  listed one as a dependency re-ran on every parent render and aborted the live
+  request. Any panel using the `liveOutputs` channel is exposed to this.
+- The panel overflowed its own window by exactly its padding, clipping the reply
+  on a phone. `raw.css` sets `box-sizing` per rule, not globally.
+
+Verified end to end against a stub model box at 1440×900 DPR 2 and 390×844 DPR 3
+— placed from the palette, configured, asked, answered, `<think>` stripped, and
+looked at in both.
+
+**Not done, deliberately:** no streaming responses (one reply per ask), no
+conversation history, and no bridge — MIDI is the next step and the cheapest
+proof of that contract.
+
+## 2026-08-08 — MIDI In, the first node with two possible providers
+
+`device.midi.in` came off `UNIMPLEMENTED_NODE_TYPES`. Web MIDI is real in the
+page, so this is the one device family that needs no bridge — which is exactly
+why it is the cheapest proof of the provider contract the bridge will later
+implement for OSC and NDI.
+
+Three things the parsing had to get right, none of them obvious from the spec:
+
+- **A note-on with velocity 0 is a note-off.** Most keyboards release a key that
+  way rather than sending `0x8`. Read as a press, every released note stays
+  stuck on for ever.
+- **System messages carry no channel nibble.** Clock (`0xF8`) and active sensing
+  arrive constantly; masking their status byte yields a plausible-looking
+  channel 16 and would fire the node dozens of times a second.
+- **The default channel is now 0 (all).** The registry had it at 1, which
+  silently dropped everything from a controller set to any other channel — and a
+  node that hears nothing looks exactly like a broken cable.
+
+`trigger` is declared `signal`, and the runtime computes no signal outputs, so
+it carries a monotonically rising count — the same idiom as `time.beat`.
+
+**Honest limits of the verification.** There is no MIDI hardware on this machine
+and none in CI. The ACTIVE path was driven through a fake port installed at the
+`navigator.requestMIDIAccess` boundary, so everything above that line is the
+real code; the DENIED path was seen for real, because headless Chromium refuses
+Web MIDI even with the permission granted. **NO_DEVICES is unit-tested only** —
+it has never been seen in a browser, and no real controller has ever been
+attached to this node.
+
+Fixed while looking: `defaultFrame` of 320x260 was too small twice over — the
+window's own four header buttons wrapped to a second row, which pushed the
+channel select and the message line below the fold.
+
+Still gated: `device.midi.out` (no sender yet) and all the OSC types (UDP —
+needs the bridge).
+
+## 2026-08-08 — zen: the workspace with nothing resident on it
+
+§5.3 of the plan, built to a design the user delegated to a peer session and
+which is better than what I had been heading toward. **One mechanism, not
+three.**
+
+I was about to build a zen-flip *plus* per-panel `⌘1..9` toggles — two systems
+and a memorisation tax, and with no path at all on a phone, which has no
+keyboard. The palette was already the answer: double-tap on empty canvas has
+opened it since Raw existed. Extending *that* into the single summons means the
+touch path is preserved for free and no new chrome is introduced.
+
+- Default is zen: no topbar, no zoom buttons, no help or chat button. The canvas
+  keeps its own empty hint, so a new workspace is **minimal, not blank** — worth
+  stating because the first version of this genuinely was blank until I looked.
+- `⌘K` / `/` on a keyboard, the existing double-tap on touch. `/` is ignored
+  while typing, or no text field in the workspace could accept the character.
+- Commands sort **above** node types: with the chrome hidden they are the only
+  way back to it, so they must not be below a scroll.
+- Hidden panel windows are listed generically, so a node type added later — or
+  by PR #99 — is summonable without touching the list.
+- **Relocated, not deleted.** Zoom controls vanish on a fine pointer (the wheel
+  zooms) but idle-fade to 0.28 on a coarse one, where they are the only way to
+  zoom. Deleting them would have undone a real touch fix.
+- Extends the existing `universe.space` `showChrome` concept rather than adding
+  a parallel flag.
+- Preference is per-device localStorage, **not** document state: one
+  collaborator choosing zen must not strip the topbar from everyone else. The
+  first resolution is remembered, or a workspace that opened empty would get its
+  chrome back by itself once it had a node in it.
+
+**Two pre-existing CSS bugs surfaced.** Palette rows are flex children, so
+`min-width: auto` let them grow to min-content — 301px inside a 268px box — and
+the right-hand tag rode past the palette edge, rendering "PANEL" as "PAN". They
+also lacked `border-box`, so `width: 100%` plus padding overflowed by the
+padding. Both were there before; a wide enough tag just reached far enough to
+show them. Found by measuring the box chain after guessing wrong twice.
+
+**Also fixed a test that could not fail honestly:** the `RawGraphSurface` mock
+never rendered `emptyHint`, so the hint tests were asserting against a mock
+incapable of showing what they claimed to check. The mock now mirrors the real
+component, including its `nodes.length === 0` condition.
+
+Rebase note: recovering from a conflicted rebase with uncommitted work stashed
+on top is how work gets lost — commit first, then rebase. The `agent` node's
+category conflict resolved keeping **both** sides: dev's new palette `keywords`
+and the move into the Agent category.
+
+# fix/collaborator-chain
+
+## 2026-08-09 — chain fixes from the collaborator-onboarding discovery walk
+
+- Eight small fixes, each one a door a new collaborator actually hit on the walk
+  from "invited" to "chatting with Claude in Raw".
+- `AgentChatPanelWindow.jsx`: guest sign-in buttons never rendered — the code
+  tested `providers?.github?.enabled`, but `/api/auth/providers` returns plain
+  booleans (AuthGate consumes them that way). Fixed to booleans; the test mock
+  had encoded the wrong shape too, so it was corrected and a regression test
+  added (boolean providers → both buttons appear).
+- Local-operator gate (`agentBoardRoutes.js` `isLocalOperatorRequest`): the di
+  CLI runner sets `NODE_ENV=production`, which closed the gate on exactly the
+  machines it exists for. Now loopback AND (non-production OR `DI_LOCAL === '1'`);
+  `runner-node.mjs` sets `DI_LOCAL: '1'`. Loopback stays absolute. `aiChatRoutes.js`
+  shares the same helper, so the Max/Pro local-claude chat path is covered by the
+  same change; gate tests extended with the DI_LOCAL path.
+- `nodeRegistry.js`: `agent` entry got `keywords: ['claude', 'chat', 'ai',
+  'assistant']` and `listNodeTypes` now includes keywords in the query haystack —
+  palette searches for "claude"/"chat" find the node.
+- `AuthGate.jsx`: the out-of-scope editor card said "Sign in to open the editor"
+  with no way to do it. The OAuth buttons were extracted into one shared
+  `ProviderSignInButtons` (same handlers, same styling) and rendered on that card too.
+- Wiki `claude-chat-node`: one clause making "on your own machine" explicit —
+  a locally run di.iiii (`di up` or dev server), not the hosted site. `updated` bumped.
+- `README.md` Start Here still listed the deleted Beta lane — now `Raw`.
+  Other Beta mentions further down README (Current Truth, repo map table) are
+  still stale — left alone on purpose, this branch is minimal fixes only.
+- Installer (`ui.mjs` + `bootstrap.mjs`): success output now always ends with a
+  dim "open a new terminal" line — the shell that ran curl|sh predates the rc
+  change, so the conditional-only hint missed exactly the common case.
+- `AGENTS.md` fork→auto-PR: one sentence that a fresh fork must enable Actions
+  once and set `UPSTREAM_PR_TOKEN` before auto-PR can run.
+
+# feat/claude-chat-node — session notes
+
+## 2026-08-08 — Claude chat as a Raw node: the key store gets its consumer
+
+- The vision this serves, in the owner's words: "syuzi or emili … run the one line
+  install and connect their claude to work." One-liner install (di CLI) → connect key
+  (account menu, PR #105) → place an `agent` node in Raw → chat with Claude in the
+  workspace. This branch builds the last two links.
+- Backend: `ai_chats`/`ai_messages` tables + `aiChatStore` (user-scoped, rowid-ordered,
+  usage recorded per assistant turn — `usageSince()` is the metering ground truth);
+  `anthropicClient` streams the Messages API over `node:https` (no SDK, no global
+  fetch — httpClient.js's documented constraint); `aiChatRoutes` serves
+  `/api/ai/chats*` with SSE replies (`accepted`/`delta`/`done`/`error`), guest
+  rejection, model allowlist + 4096 max_tokens ceiling, per-subject rate limit
+  (20/5min), 2 concurrent streams per user. 401 from Anthropic surfaces as
+  "reconnect your key", not a bare 500. The browser never talks to Anthropic.
+- Frontend: `agent` node type (panel-2d, category view, `defaultValues.chatId`);
+  `AgentChatPanelWindow` rides the raw-chat-* classes verbatim (zero new CSS,
+  scroll pinned during streaming); transcript stays server-side — only `chatId`
+  is persisted on the node (the op-log is not a chat log). `aiChatApi.js` parses
+  the SSE-over-POST stream.
+- Verified by looking (desktop, real browser, live stack): palette placement,
+  window chrome, empty state, the no-key path, AND the live network path — an
+  invalid key connected through the real integrations API, a message sent from
+  the real browser, the request reaching **real api.anthropic.com**, its 401
+  coming back through the SSE error event as "Your Claude API key was rejected —
+  reconnect it from your account menu." The node + its chat also survived a full
+  page reload (chatId persistence works). The 200-stream wire shape is pinned by
+  `anthropicClient.test.js` (local https fixture replaying a real-format event
+  stream, split mid-event). **The only untested inch: a valid key's 200** — no
+  sk-ant key exists on this machine (owner runs Claude Code on OAuth); one human
+  message with a real key remains before promote.
+- No dead ends (owner's call): with no key the panel IS the connect flow — paste
+  the key inline (guests get sign-in buttons via the existing OAuth URLs); a
+  mid-chat key loss flips back to connect mode. Seen rendering; component-tested.
+- Dev-mode trap, learned the hard way: with REQUIRE_AUTH=false every browser and
+  every curl is the same `auth-disabled` subject, so an agent testing the key
+  flow can silently overwrite/delete the operator's real pasted key (this
+  happened). Known-fixes entry owed when this lands on dev.
+- **The owner has no API key — only a Claude Max login.** So the local backend
+  exists: with no key stored, a loopback operator's send runs through the
+  machine's own logged-in `claude` CLI (`localClaudeRunner.js` — `-p` +
+  `stream-json`, no tools allowlisted, continuity via Claude Code's own
+  `--resume` with the session id stored on the chat row). Same trust boundary
+  as the agent board: loopback + non-production, never hosted. `GET
+  /api/ai/providers` tells the panel which backend exists; a logged-in local
+  CLI counts as connected, so Max/Pro users on their own machine paste nothing.
+- **THE human test passed 2026-08-08, seen on screen**: "Hi — Claude here, live
+  inside di.iiii and ready when you are." — a real reply through the owner's Max
+  subscription, persisted with claude_session_id + model + tokens in ai_chats/
+  ai_messages. Every path of the feature is now verified live end to end.
+- Phase 2 contract on record: `trigger` (signal) in, `result` (string) out, so an
+  agent's reply can drive other nodes; reuse approvalGate for anything an agent
+  writes to a space.
+
+## 2026-08-08 — deep audit round: 4-agent sweep, ~40 findings, 25 fixed
+
+- Trigger: the owner hit a live "Maximum update depth exceeded" loop (webcam
+  node) and asked for a full Raw audit. Four parallel read-only auditors ran:
+  effects/state loops, graph runtime + memory, adversarial review of the new
+  chat code, touch/UX paths.
+- Fixed this round (each with mechanism recorded in known-fixes): the webcam/
+  mic inline-callback loop; undo coalescing destroying same-node edits; the
+  off-screen-window trap (clamp floor + resize re-clamp + reopen-via-card);
+  palette placing nodes on scroll-touch; chromeless-scope dead end on phones
+  (browser BACK pops scope); VR misdetection on every WebXR browser; graph
+  re-fit yank on create/delete; zIndex inflation + undo pollution from focus;
+  frozen 200-message context window; composer lock on dropped streams; missing
+  abort wiring (tokens burned after close); 5-family max_tokens truncation
+  (thinking shares the cap — 16k/64k now, stopReason surfaced); prompt-as-argv
+  flag injection in the local runner (stdin now); /tmp cwd hazard (dataDir);
+  event-loop-blocking availability probe (async); orphaned user turns on
+  failure (deleted); double-send race; chatId 404 recovery for shared
+  projects; scroll pinning yanking readers mid-stream; iOS input zoom; resize
+  handle over Send; localStorage-per-render in presence; per-drag-frame
+  document stringify (debounced + unload flush); same-value liveOutputs churn.
+- **Deferred, by size or product judgment** (next session's backlog): the
+  60fps document-global graph clock (needs a subscription model — biggest
+  perf item); capture lifetime coupled to panel mount (fullscreen kills the
+  webcam feeding it — needs design); selection sheet covering the chat input
+  on phones (product call on focus-opens-inspector); panel `title` port dead
+  vs authored frame.title; cycle cache order-dependence; inspector whole-blob
+  patches; per-viewport unsynchronised clocks.
+
+# feat/viewer-embed-mode
+
+`?embed=1` on the published viewer: transparent shell, transparent code-view
+iframes, no Made-with badge, no Walk/Fly, no black loading screen.
+
+## Why now
+
+The user sent a screenshot of `di-studio.xyz/br_id_ge/rite` with "fix this its so
+ugly". I reproduced the ending headless at DPR 2 through the rite's own
+`window.__end(33)` probe and looked at it: the field, which the rite opens
+*inside* its own ending, arrived as an opaque rectangle. Its bottom edge cut a
+hard line straight across the page, and behind it sat the two things the whole
+rite exists to hand over — the shared body made of everyone's words, and the mark
+the visitor had just drawn. Both were covered.
+
+`field.html` already carried the diagnosis in a comment, and named the fix it was
+waiting for:
+
+> Paper, not transparent — measured on the live site, not assumed. The embedded
+> field arrives wrapped in a second di.iiii viewer whose iframe is sandboxed
+> WITHOUT allow-same-origin, so the rite cannot reach in and quiet the wrapper's
+> dark shell; "transparent" therefore renders as a black box. […] The day the
+> viewer grows a real ?embed=1 mode this can return to transparent.
+
+The rite has been appending `&embed=1` for months. Nothing on this side read it.
+So this is not a new feature so much as the answer to a request already being
+made — which is why it belongs in the viewer and not in another workaround on
+br_id_ge's side.
+
+## What changed
+
+`PublicProjectViewer` gains `isEmbed`, read from `?embed=1` exactly the way
+`isPreview` reads `?preview=1`. It gates five things: the `<main>` background,
+both code-view iframe backgrounds, the badge, Walk/Fly, and the LoadingScreen —
+that last one because it is deliberately black and full-bleed, so inside a window
+it would flash the very box this removes on every open.
+
+Guards in `PublicProjectViewer.test.jsx`: a scene page, a code page (the case
+that matters — br_id_ge's field is HTML, so the srcdoc iframe was the opaque
+surface), and the un-embedded default keeping its dark shell and badge. All three
+watched failing against the unconditional background before the fix.
+
+## `window.diiPageOrigin`, added for the same reason
+
+Verifying the fix meant looking at it on staging — and staging could not show
+it, because `fieldHref()` hardcodes `https://di-studio.xyz`. It has to: a srcdoc
+page has no URL, so `location.origin` is opaque and `location.hostname` is empty.
+(`field.html`'s `location.hostname.endsWith('di-studio.xyz')` check had therefore
+never once taken its relative branch.) The rite on staging embedded PRODUCTION's
+field and read production's crossings.
+
+That is the same gap `diiPageQuery` was added to close, so it is closed the same
+way: the bootstrap now hands down `window.diiPageOrigin`. Both br_id_ge call
+sites read it and keep their literals as the fallback.
+
+## Not done here, and it must come second
+
+`field.html`'s `html.embed,html.embed body{background:var(--paper)}` can now
+return to transparent — but only AFTER this ships to prod. Flip it first and the
+field goes transparent over a viewer still painting `#05070a`: a black box, which
+is worse than the seam. Order is di.iiii → prod, then br_id_ge.
+
+## Verified
+
+`lint` `build` clean; `vitest run src/project` 274/274; `docs:wiki:check` passes.
+
+The visual claim is verified by **looking at it**, not by the tests — they assert
+a style attribute, not that a page reads. A local dev client carrying this branch
+was proxied at staging's API and driven through the rite's own `window.__end`
+probe at 1440×900 DPR2 and 390×844 DPR3: the seam is gone, the shared body's
+letters read as a ring of everyone's words, and the visitor's mark is whole
+instead of sliced by the box's top edge.
+
+Also looked at, and worth recording because it is the failure this ordering
+exists to prevent: br_id_ge's half was pushed to staging BEFORE this branch
+existed there, and the ending came back a **black box** — transparent field over
+a viewer still painting `#05070a`. Staging was rolled back to the paper build the
+same minute. The comment in `field.html` was right.
+
+## 2026-08-08 — a tag published nothing, because a legacy path could veto the release
+
+`v0.3.0` was tagged so the `di` one-liner would have an artifact to download. The release
+workflow ran lint and tests green and then died at `Stage cPanel release` with
+`Missing VITE_API_TOKEN for cPanel release build`, publishing no release at all. `v0.2.1`
+had died at the same step earlier, which is why this repo has never had a GitHub Release
+and why `gh release list` comes back empty.
+
+Two separate faults, one on top of the other:
+
+- The step was **never passed `VITE_API_TOKEN`** — `release.yml` sets `VITE_API_BASE_URL`
+  and nothing else, so it could only ever throw.
+- **Ordering.** `Pack the di runtime` came after it, so a legacy fallback the repo moved off
+  on 2026-07-15 was able to stop the only artifact anyone actually installs.
+
+Fixed by inverting the priority rather than by chasing the secret: the runtime is packed
+first, the three cPanel steps are conditional on a probe for the secret (and are handed it
+when it exists), and `fail_on_unmatched_files: false` keeps skipped legacy zips from failing
+the upload. The cPanel bundles still build for anyone who sets the secret.
+
+Guard: `scripts/di/releaseWorkflow.test.js` — pack-before-cPanel, the tag-derived artifact
+name (`--version=${GITHUB_REF_NAME#v}`, so the filename always matches what the installer
+resolves from the feed), the conditionals, and the upload patterns. Watched failing against
+the old workflow on all four counts.
+
+**Still open:** `v0.3.0` is a tag with no release behind it. The next tag is the real test —
+this cannot be verified by re-running anything, only by tagging again.
+
+## 2026-08-05 — Shared frame-exact timeline core + Raw Timeline node
+
+`src/project/timeline/timelineCore.js`: frame-exact clip maths (move, trim,
+razor, ripple, retime 0.1x–4x, gap detection) shared between a new Raw
+`view.timeline` node (`TimelinePanelWindow.jsx`) and algovrithm's director.
+Gaps draw as red hatching, cross-fades in amber, so an accidental hole in a
+cut is visible rather than silent.
+
+## 2026-08-05 — algovrithm's director: moved into Raw, then generalised
+
+Two commits, reconciled here against ~94 commits of independent `dev` drift
+(see below):
+
+- **The director physically moved** out of `src/algoVrithm/` into
+  `src/raw/algovrithm-director/` (later renamed `src/raw/director/`), and a
+  new `view.director` Raw node (`DirectorPanelWindow.jsx`) hosts it.
+- **Generalised the same day**: the panel no longer imports algovrithm
+  directly — everything piece-specific (baseline edit list, asset library,
+  `AssetClip` renderer, palette) arrives through a descriptor in the new
+  `pieces.js`. Adding a second piece is a registration, not a fork. The save
+  endpoint now takes a piece id from the browser and resolves it against a
+  server-side allow-list (`hasOwnProperty`-guarded against `__proto__`)
+  instead of trusting a path from the request.
+
+### Reconciled against dev, not just rebased
+
+`dev` had independently built **`StudioCodeSpaceDirector.jsx`** — a real,
+shipped Studio page that mounts `AlgoVrithmExperience` with
+`embedded`/`director` props to render the *full* original in-piece director
+(panel, gizmo, orbit camera, split layout) inside Studio's own chrome. This
+branch's own refactor commit deletes exactly that machinery from
+`AlgoVrithmExperience.jsx`, on the premise that the director's only home is
+now Raw. Applying it as-written would have silently broken a real, currently
+working feature this branch's author never saw.
+
+Both are kept: `AlgoVrithmExperience.jsx` still hosts the embedded director
+when `director`/`embedded` are set (what Studio's page needs), and Raw's
+`view.director` node is a second, independent way to reach the *same*
+`DirectorPanel` component — both now take a `piece` prop. `docs/ai/roles/
+xr-creator.md` and the wiki's `algovrithm`/`raw-lane` articles were corrected
+to describe both paths rather than the refactor's original "no editor left in
+the piece" framing.
+
+`dev` had also independently shipped `useSavedTiming.js` (space-settings-
+backed timing, so the piece can be retimed from di-studio.xyz without a dev
+server) — this postdates the branch's own commits, so neither of its
+`DirectorPanelWindow.jsx` versions used it, starting every session from the
+raw file and (once `onSaveTiming` is wired) silently discarding the current
+space's saved timing on the first save. Wired `useSavedTiming` into
+`DirectorPanelWindow.jsx` too, gated on `piece.id === 'algovrithm'` since the
+space-settings fallback isn't generalized to other pieces yet — a future
+piece gets its own raw baseline, not silently algovrithm's timing.
+
+One real merge bug, self-caught: a context-based auto-merge silently dropped
+`createEdge` from an import line in an earlier commit of this same branch —
+caught by `npm run lint`, not by the merge itself. Fixed in a follow-up commit
+on `feat/raw-studio-node` (PR #99), same root cause.
+
+Left open, per the branch's own commit message: 3D placement in
+`DirectorPanelWindow` — the gizmo/orbit/standpoint components moved into Raw
+but need the piece's own Canvas mounted inside the window before they can
+attach to anything; `onPlace` currently only selects the row.
+
+- 2026-08-08 review follow-up: stripped `view.timeline`'s declared ports
+  (`playhead`/`fps` inputs, `frame`/`clip` outputs) in
+  `src/project/nodeRegistry.js` — no runtime carried them (dead-port rule);
+  the node stays panel-only like `view.director`, and the ports can be wired
+  later via `nodeGraphRuntime` when the data is real. The panel's local
+  playhead state is untouched.
+
+# chore/deck-forks-record
+
+Follow-up to `chore/deck-privacy`. No code changed here — this note exists because
+three lines in CURRENT.md's **Open** section are now false, and a stale Open line is
+worse than a missing one: an agent reads it and redoes finished work.
+
+## Corrections to CURRENT.md → Open (verified today, not assumed)
+
+- **"8 prod spaces still ownerless"** — they are all owned. Queried prod with
+  `PROD_API_TOKEN`: `main`, `open`, `azd`, `algovrithm`, `br-id-ge`,
+  `platform-recordar` → `33d8ad04-…` (Gevorg, GitHub account); `wcc`, `beyond-form`
+  → `f2d566f6-…` (Emilya). Matches what the user chose. The second half of that
+  line still stands: releasing ownership does **not** revoke the scope grant it
+  created, which is deliberate — losing a space shouldn't lock you out of it.
+- **"Mesh gate INERT in prod"** — armed and verified on both tiers by a parallel
+  session today. The robot's own client secret is still unset, so the keeper half
+  is not finished; the gate itself is.
+- **"leaked GitHub PAT + staging Google OAuth secret still live"** — the classic PAT
+  is inferred-closed (its prefix matches nothing stored on any machine, and the only
+  classic tokens GitHub still listed were two expired ones, since deleted). The
+  staging Google OAuth secret is the one item genuinely still owed, and the user
+  explicitly parked it today.
+
+## The deck exposure — where it actually stands
+
+The public repo is clean on **both** `dev` and `main`, verified against what GitHub
+serves rather than against the working tree: 16.6 MB CV-free build, zero hits for
+date-of-birth / cell phone / gmail in the extracted text.
+
+What is **not** clean, and is the part worth carrying forward:
+
+> A fork is a separate repository, and the file sits on **every branch** of it.
+
+`emilyanikoghosyan/di.iiii` serves the original 68 MB deck on all ten of its
+branches; `normal22194/di.iiii` on both of its. Nothing done upstream — including a
+history rewrite — reaches either. This is why "clean the fork instead of deleting
+it" is advice nobody should follow, and why the rewrite stays queued behind fork
+cleanup rather than in front of it.
+
+Order of operations, unchanged: both forks cleaned → quiet window in branch traffic
+→ GitHub Support with the blob SHAs, because a force-push does not purge their
+cached views. Doing the rewrite first achieves nothing and invalidates every open
+PR and remote branch in flight.
+
+## Owed to people, not to code
+
+Emilya has been approached (she owns a fork, so the thread had a reason to exist).
+**Syuzanna, Taron and Yeva have not been told** their date of birth, personal
+mobile, personal email and photograph were publicly downloadable for about seven
+weeks. They own no repo, so no cleanup task will ever surface them — they have to
+be raised deliberately or they get skipped.
+
+Record of what was sent and to whom: `di.iiii-ops/deck/fork-owner-messages.md`.
+
+## 2026-08-06 — Verified PR #93's 4 unseen fixes in a real browser
+
+- Audio autoplay/loop toggles: imported a fresh WAV into a Studio guest sandbox with
+  nothing set — both toggles showed On, matching the fix's claimed default.
+- Beta Help copy: checked Start Here/World tabs and their All Controls panels, no
+  leftover "node 0" wording anywhere.
+- Primitive-shape clamping: typed a negative sphere radius — the Inspector input
+  rejected the negative sign outright and settled on a small positive value; the
+  sphere stayed valid the whole time, no crash or invisible/inverted geometry. Couldn't
+  reach the deeper "malformed authored JSON" path (no raw scene-JSON editor in Studio's
+  UI) — that half still relies on the passing unit tests, not a fresh eyeball.
+- Inspector wheel-scroll guard (`Vector3Control`): traced its only render path and it's
+  dead code — `App.jsx` → `SpaceSurfaceApp`'s `isLocalRootWorkspace` branch is the sole
+  route in, but `RootApp.jsx` always resolves the no-`spaceId` case to the marketing
+  landing page first, so no live URL renders it. The fix is real and unit-tested; there's
+  just no current stage to see it on. Not a gap in this session's testing.
+- `docs/ai/known-fixes.md` rows for all four updated with these findings in place of
+  the stale "not yet eyeballed" notes.
+- Also this session: promoted `dev` to `main` (fast-forward, deployed, verified live),
+  and merged the session-hygiene PR (#94) — `npm run state`, the CURRENT.md derived-fact
+  ban, and the push-gate wiring this branch's own note-based workflow builds on.
+- Opened as PR #98 against `dev`. First commit (`84409f2a`) got a green CI run after
+  one rerun (transient runner-queue failure, unrelated to this change). The follow-up
+  sync commit (`f883c8f9`) never got a CI run dispatched at all — confirmed via the
+  GitHub API (`check-runs` and `actions/runs?head_sha=...` both empty, not a display
+  lag) while `dev`'s own staging deploy was queuing/cancelling repeatedly from heavy
+  concurrent push traffic on other branches at the same time. No `workflow_dispatch`
+  trigger exists on `ci.yml` to force it (`pull_request` only, deliberately no `push`
+  trigger — see the workflow's own comment). Left waiting rather than forcing an empty
+  commit or a close/reopen, since the cause reads as GitHub-side congestion, not this
+  branch's problem. **Not yet merged** — merge, and any retrigger, is the user's call.
+
+# feat/admin-minimal — session notes
+
+## 2026-08-08 — Ops Graph minimal pass: 10 sections → 6, contextual header
+
+- Owner's call ("admin is messy, make minimal"): diagnostics collapsed from seven
+  sections to three — Overview stays, **Inspect** absorbs Topology + Objects +
+  Session, **System** absorbs Console + Controls + the old System. Admin group
+  unchanged (Manage, Open Call, Agents). Nothing was removed — every module still
+  renders, just grouped.
+- Contextual topbar: on admin sections the scene-editor telemetry (Objects/Visible/
+  Selected/Hidden, Copy Snapshot/Log/Links, XR Debug) disappears; instead Manage and
+  Open Call show Spaces/Users counts, Agents shows Live/Sessions counts, both fed
+  upward via tiny `onStats`/`onBoardStats` callbacks — no fetch lifting. Diagnostics
+  sections keep the full telemetry header.
+- Overview's "Open Console" jump retargeted from the removed `console` key to
+  `system` — grep for `setActiveSection('` if sections are ever renamed again.
+- No new CSS, no restyling; PreferencesPage.test.jsx navigation updated to the new
+  section names in the same change.
+
+## 2026-08-08 — per-user "connect your AI key", v1
+
+- First slice of a bigger goal (multi-account collaboration, pluggable AI/Telegram tool
+  connections): a signed-in user can now store their own Claude API key against their
+  account, from the existing account-menu popover (`AccountButton.jsx`). Modeled on the
+  Google Drive per-user OAuth pattern (`integrationRoutes.js`/`driveTokenStore.js`) — new
+  `user_ai_connections` table, `aiConnectionStore.js` (AES-256-GCM at rest, own key
+  domain), new `routes/aiConnectionRoutes.js` (status/connect/disconnect, `claude`
+  provider only for now). The raw key never returns to the client — status is
+  `{connected, last4}` only.
+- Verified live in a real browser (headless): connect → encrypted row confirmed in
+  SQLite (not plaintext) → full page reload → still connected → disconnect → row gone.
+  lint/build/1798 tests green, server contracts green.
+- Wiki entry added (`ai-connection`) under Spaces & access.
+- Review follow-up (same branch): merged current `dev` in (kept both sides of the
+  adjacent-append collisions with the admin work in `serverXR/src/index.js` /
+  `src/services/apiClient.js`); connect/disconnect now explicitly reject `guest:` subjects
+  (403) so the route matches what the UI and wiki already claim; apiKey capped at 512
+  chars; added `aiConnectionStore.test.js` (encrypt round-trip, at-rest, upsert, delete,
+  tampered blob → '') and `routes/aiConnectionRoutes.test.js` (401/403/400 + happy path).
+- Deliberately stopped here: no Telegram-linking (di-bo is currently hardcoded to one
+  owner Telegram ID — generalizing it to "any linked di.iiii user" is real, separate
+  work), no other AI providers, no shared/free-credit pool (needs per-user metering
+  before it's safe to offer), and nothing inside di.iiii yet reads the stored key to do
+  anything — this is the storage/account layer only, for future work to build on.
+
+# feat/approval-gate — session notes
+
+## 2026-08-08 — human-approval gate for admin-level writes (+ review fixes)
+
+- New `serverXR/src/approvalGate.js`: gated routes call `gateOrApply` instead of
+  their store function directly. Gate disabled (default) → executes immediately,
+  behavior unchanged. Enabled → the intent is stored as a `pending_actions` row,
+  route answers 202, and nothing runs until di-bo returns a matching decision
+  (intent hash echoed back, authorization re-derived at execution time). Fails
+  closed: bot unreachable → expires denied; enabled-but-unconfigured → 503.
+- Deploy wiring: `APPROVAL_GATE_ENABLED` / `APPROVAL_BOT_URL` /
+  `APPROVAL_SHARED_SECRET` pass through compose.
+- Review fixes (PR #102): the fail-loud net was inert — mounted via
+  `router.use('/api', …)` Express stripped the prefix, so the registry's
+  `^/api/…` patterns never matched. Now mounted bare (router-relative path) and
+  the net evaluates `bodyTest`, so ordinary space PATCHes don't trip it; the
+  registry + `SENSITIVE_SPACE_PATCH_FIELDS` moved into `approvalGate.js` (one
+  source, imported by `index.js` and `routes/spaceRoutes.js`). The blocked-path
+  response was also rebuilt on end/write interception — the old writeHead hook
+  called `res.end` from inside an end call (ERR_INTERNAL_ASSERTION). Regression:
+  `serverXR/src/approvalGate.test.js` mounts the router exactly as production
+  does and pins gated-match / body-gated / fail-loud behavior.
+- Still genuinely undone: di-bo side of the decision flow ships separately (the
+  bot must echo `intentHash` and sign with the shared secret); gate stays
+  disabled everywhere until that lands.
+
+## 2026-08-08 — `di`: one line installs di.iiii on your own machine, offline
+
+The ask was a CLI that installs di.iiii locally on any system from one pasted line, keeps
+working without a network, and can later sync with the online instance. This branch is
+phase 1 of that: install, run, offline. Sync, LAN/venue mode and the VJ output lane are
+deliberately not here.
+
+- **`di` CLI** (`scripts/di/`) — `up · down · status · open · logs · doctor · where ·
+  backup · restore · update · uninstall`. `detect.mjs` is pure (probe results in, plan out)
+  so all 22 of its branch tests run without touching the machine; `probe.mjs` holds the I/O;
+  `ui.mjs` holds every artist-facing string, in the brand guide's voice.
+- **Runtime artifact, not the repo** (`scripts/pack-runtime.mjs`) — dist + serverXR + shared
+  + the CLI. 32 MB packed, ~100 MB installed, against 877 MB of `node_modules` for a
+  checkout, and no Vite on the artist's machine. `npm run selfhost` is untouched and remains
+  the developer path.
+- **serverXR serves the app** when `CLIENT_DIR` is set, so a local install is one process on
+  one port. Unset — the deployed topology — nothing changes and it stays a pure API behind
+  nginx. New `HOST` (default `0.0.0.0`) lets a local install bind loopback.
+- **`install.sh` / `install.ps1`**, published as `/get` and `/get.ps1` by a vite plugin plus
+  exact-match nginx blocks before the SPA catch-all.
+- **Fonts**: Inter and JetBrains Mono were named in the tokens and loaded from nowhere — the
+  app rendered in system fallbacks and only looked right on machines that happened to have
+  Inter. Now self-hosted (88 KB, variable, latin). That exposed a second thing: the landing
+  has no ThemeProvider, so MUI put Roboto on every Typography and beat the Inter `.lp-root`
+  already declared. Both fixed.
+
+Four bugs that unit tests could not see, each found by installing onto a real bare machine:
+
+- `res.sendFile(absolutePath)` 404s every SPA route when any path segment is hidden — `send`
+  applies `dotfiles:'ignore'` to the whole absolute path, and the install lives in `~/.di`.
+  The API and static assets kept working, so it read as a routing bug. The contract fixture
+  now lives under a hidden directory; three tests fail without the fix.
+- A vendored node has no `npm` beside it on PATH, and that machine may have no npm at all.
+- nodejs.org publishes **no musl build** — Alpine 404'd. It now uses
+  unofficial-builds.nodejs.org, and when that binary's `libstdc++`/`libgcc` are missing the
+  installer prints the `apk add` line (tested, not guessed) rather than failing in riddles.
+- Staging in `/tmp` then renaming into `$HOME` fails with EXDEV; staging is now
+  `<versions>/<v>.partial`, on one volume.
+
+Verified on four clean machines via podman — debian:12, alpine:3.20 (busybox ash + musl),
+fedora:40, node:20-bookworm — each: install exits 0, `di` resolves in a fresh login shell,
+`di up` serves `/main` and `/studio`, `di down` frees the port, `di uninstall` keeps
+`~/.di/data`. Also run inside a network namespace with only loopback, and the page requests
+zero external origins, so offline-first is measured rather than claimed. `nginx.conf` checked
+against a real nginx: `/get` returns the script as `text/plain`, `/main` still returns the app.
+`.github/workflows/install-matrix.yml` encodes all of that.
+
+**algovrithm's media, fixed rather than worked around.** The 31 reels were 720x1280 at
+~3.4 Mbps — 189 MB, bundled into every build, 205 MB of a 232 MB `dist` that di-studio.xyz
+serves too. Both the assets README ("compress video before adding it") and `reelPlayers.js`
+("compressing the source to something like 540p would make the whole question go away — the
+reels are shown at about 1.4m wide on a 7m shell") had already said what to do. Done:
+189 MB → 65 MB, `dist` 232 → 114 MB, the artifact 103 MB complete. Frame counts identical on
+all 31, audio copied (the reels unmute on first gesture, so it is part of the piece), and the
+before/after compared by eye — at the size the piece shows a reel they are indistinguishable
+and the datamosh artefacts survive. The packer therefore no longer drops video by default;
+`--lean` still does, for a 32 MB artifact, and names the cost. The recipe is in the assets
+README so the next clip added matches.
+
+**macOS verified on real hardware** (`di-mac`, M1, macOS 26.5.1 arm64, no node installed) —
+the arm64 + darwin + vendored-node path end to end, `di` resolving in a real zsh login shell,
+`/main`, `/studio` and a reel all 200, uninstall keeping the data. It found two PATH bugs that
+no Linux container could:
+
+- The installer read `process.env.PATH` to decide whether `~/.local/bin` was usable. Its own
+  environment is a curl pipe / ssh / CI, not the artist's terminal — on the Mac `~/.local/bin`
+  existed but was NOT on the login PATH, so the shim went somewhere useless and the install
+  reported success. It now asks the login shell (`$SHELL -lc 'printf %s "$PATH"'`).
+- The rc fallback picked the first existing file out of a list, which on macOS is `.zshrc` —
+  and a LOGIN zsh never reads `.zshrc`. `di` was missing from exactly the shell someone opens
+  next. The rc file is now chosen from `$SHELL`: `.zshenv` for zsh, `.bash_profile` before
+  `.bashrc` on macOS. Debian and Alpine re-verified after the change.
+
+The Mac was left exactly as found — uninstalled, `.zshenv` block removed, `~/.local/bin` and
+`/tmp` cleaned.
+
+**The update path is now guarded, and Windows is guarded with it.** `di update` promises one
+thing — it never touches your work — so there is now an `update` CI job on **ubuntu-latest and
+windows-latest** that installs a version, writes a canary space, updates, diffs the canary byte
+for byte, rolls back, diffs again, and finally asserts `current` is still a *link* whose target
+is whole. Windows is in that matrix specifically so it cannot drift while nobody is running it:
+its update path has a failure mode unix does not, and one of them was real —
+`fs.rm(junction, { recursive: true })` deletes **what the junction points at**, i.e. the
+installed version. All link removal now goes through `unlinkLink()` (lstat, unlink a link,
+rmdir only an empty directory, refuse anything else).
+
+Also fixed while here: `ui.updateAvailable` was a string nothing ever printed. `di up` now
+mentions a newer version in one dim line — after the app is already up, failing silently, and
+at most once a day, so offline never waits on it. And `stageVersion` accepts a `file://` URL,
+which is how CI exercises the real update code without publishing a release (and how a venue
+with no network could update from a USB stick).
+
+Run by hand on Linux, not just in CI: install → canary → update → rollback, canary identical
+at every step, `current` still a symlink, both versions kept, data intact. Plus the failure
+path — a build that installs but cannot boot is refused by the scratch-port health check and
+leaves the artist on the working version, still serving.
+
+**Still open:** **the GHCR packages are private**, so the CLI's docker branch self-skips (it
+probes rather than assumes, and will light up with no new release once they are public).
+Windows is written and covered by CI but has not been run by a human on real Windows.
+
+## What CI found on Windows — four bugs, one per run
+
+Everything above was verified on real Linux and macOS machines. Windows was written
+blind and covered only by `install-matrix.yml`, and every round it found exactly one
+more thing. All six Linux images were green throughout.
+
+- **Two tars.** Windows ships bsdtar at `System32\tar.exe`, which understands `C:\...`;
+  Git for Windows ships GNU tar, usually first on PATH, which reads a leading `C:` as a
+  **remote host** — `tar (child): Cannot connect to C: resolve failed`, naming neither
+  tar nor the drive letter. `tarCommand()` prefers bsdtar, else `--force-local`.
+- **`di up` never returned the prompt.** `detached` and `unref` were both guarded by
+  `!isWindows`, so the parent Node kept a handle on the child and its event loop never
+  emptied. The server was up and the terminal was dead — including the terminal you would
+  run `di down` from. Now detached + unref'd everywhere, `windowsHide` so no console
+  window appears. It surfaced as a job that ran for **six hours and reported nothing**, so
+  both Windows jobs now carry `timeout-minutes: 25`: a hang has to read as a failure.
+- **A batch file needs CRLF.** cmd.exe re-seeks a `.cmd` by the byte length it believes
+  each line had, so a missing CR costs one byte per line, cumulatively — later lines run
+  with their heads eaten (`setlocal` → `etlocal`), ending in `di.iiii is not installed
+  here ()` with an empty `%DI_HOME%`. **The same file worked one run earlier; two added
+  comment lines pushed it over.** `.gitattributes` pins `*.cmd`/`*.bat` to `eol=crlf`,
+  and `scripts/di/shim.test.js` holds that plus pure-ASCII (a batch file is read in the
+  console code page) and the mirror rule for the sh shim.
+- **The shim is `di.cmd` on Windows.** The CI harness hardcoded the unix name and failed
+  with `No such file or directory` after a perfectly good install.
+
+Also fixed here: the installer already falls back to `dii` when a foreign `di` owns the
+name — that worked — but every message still said `di`, including `stop it with: di down`,
+which points at the other binary. The shims now export their own basename (`$0` / `%~n0`)
+and `ui.mjs` prints it.
+
+**A conflicting PR runs no CI at all.** GitHub cannot build the merge ref, so every
+`pull_request` workflow is skipped and the PR page shows nothing red. Two Windows fixes sat
+untested behind that for a round. Check `mergeable` before reading green as green.
+
+## Where it stands
+
+- **PR #104** into `dev`, MERGEABLE/CLEAN. `install matrix` **12/12 green** (debian, ubuntu,
+  fedora, alpine/musl, node 20 refused, node 22, offline, docker-mode, windows, both
+  update-and-rollback jobs, pack) and `CI` green on the same commit.
+- Merged `origin/dev` on the way: `bc22acb6` had run the repo's own `compress-reels.mjs
+  --replace` over the same 31 algoVrithm reels this branch had re-encoded by hand. **Took
+  dev's** — 81 MB / 360x640, the documented tool, verified beat by beat there — over this
+  branch's 65 MB / 540x960 ad-hoc ffmpeg pass. The artifact is ~16 MB larger for it; tuning
+  that script is the honest way to get it back, not overriding shared binaries in a merge.
+- Nothing ships until a `v*` tag: that is what publishes the artifact the one-liner downloads.
+- Blocked on the user: `gh auth refresh -s read:packages,write:packages`, then the GHCR
+  packages can be made public and the docker branch stops self-skipping.
+- Blocked on hardware: **real Windows**. CI is a clean runner with pwsh 7 and Git already
+  present, which is not what a person's machine looks like — expect execution policy,
+  antivirus on a freshly downloaded `node.exe`, and a username with a space in it.
+- Phases 2-4 untouched: `di sync`, `di venue` (LAN + QR), the VJ output nodes. Sync's hard
+  part is not transport — `PUT /scene` replaces a space wholesale and wipes its op-log, and
+  `PUT /document` is last-write-wins with no version check.
+
+# feat/ops-agents-map — session notes
+
+## 2026-08-08 — Ops Graph → Agents: a live map of the machine's Claude sessions
+
+- New admin section `agents` in the Ops Graph, composed entirely from the
+  preferences-* design system — `ArchitectureCanvas` map of live sessions linked to
+  the checkout each one holds, a Directory (live first, then recent) master-detail,
+  and per-session detail: subagent tree, background-job state, conversation tail.
+- Backend: `serverXR/src/agentBoardStore.js` reads the operator's local `~/.claude`
+  (bounded head+tail scans — ~99 sessions indexed in ~130ms without parsing 700MB of
+  transcripts; `sessions/*.json` + `process.kill(pid,0)` for the live overlay; no
+  subprocesses). Routes `GET /api/agent-board` + `/api/agent-board/session/:id` are
+  refused with 404 unless BOTH non-production AND loopback — transcripts can contain
+  secrets and must never be served off-machine. Deployed environments show a plain
+  "operator mode only" card.
+- Design decision on record: this is the operator/diagnostics half (Framing C) of the
+  larger agents-as-nodes direction. The product half — an `agent` node type joining
+  `feat/ai-connections`' per-user encrypted keys (PR #105) to `feat/raw-studio-node`'s
+  runner (PR #99) with a serverXR-side Anthropic proxy — is designed but NOT built;
+  the analysis lives in this branch's PR discussion and the owner's session of
+  2026-08-08. Do not reinvent: reuse approvalGate (PR #102) for agent writes, SSE for
+  streaming, checkpoints-not-transcripts into the op-log.
+- Verified by looking: desktop 1440×900 DPR1 + phone 390×844 DPR3 via headless
+  Playwright against the real local data — map, selection, inspector, subagent tree,
+  conversation tail all seen rendering. Known quirks found and fixed along the way:
+  long titles blow the sidebar grid column open (grid min-width:auto) → JS-truncated;
+  conversation tail needs a 4MB window because one pasted screenshot line can exceed
+  256KB.
+- Still undone, deliberately: lifecycle actions (close/archive a session, rescue
+  job tmp/ artifacts) — the #1 want per the estate session's triage experience —
+  and any resume/dispatch capability. Both need a write path and a permission story.
+
+## 2026-08-07 — five people's personal details come out of the public deck
+
+- `docs/deck/di.ii XR studio_network .pdf` was tracked here, on `main` and `dev`, and
+  downloadable from `raw.githubusercontent.com` (verified, HTTP 200). Its pages 85–89
+  are CV pages for **five named people** — Gevorg, Emilya, Syuzanna, Taron, Yeva —
+  each carrying a **date of birth, a personal mobile number, a personal email address
+  and a photograph**. Found while reading the deck to identify a di.iiii admin account
+  nobody had written down.
+- No scan would ever have caught it. The repo has no tracked credentials and the
+  secret scan looks for secrets; this is not a secret, it is somebody's phone number.
+  A deck is a document you hand to a specific person, and four of the five did not
+  choose to publish theirs.
+- **What changed here:** the public copy is now the same deck with pages 85–89 removed
+  — 90 pages instead of 95. The complete file moved to the private `di.iiii-ops`
+  (`deck/`), whose README carries the regeneration command and the verification.
+  `docs/deck/README.md` says which build this is and adds "anyone's personal data" to
+  the do-not-put-here list, because portfolio material arrives with contact details
+  baked in and this folder is world-readable under AGPL.
+- Verified by **text, not page count**: `gs -sDEVICE=txtwrite` over the new build finds
+  zero hits for all five phone numbers, all five emails, all five dates of birth and
+  the string "Date of birth" — and the same search over the original finds them, so the
+  check can actually fail. The seam (page 84 divider → 85 network list) was looked at.
+- **This does NOT undo the disclosure, and nobody should read it as if it does.**
+  `git rm` removes a file from `HEAD` and from nothing else. The full deck remains in
+  this repo's history, and — the part that makes a history rewrite insufficient on its
+  own — **in two public forks**, `emilyanikoghosyan/di.iiii` and `normal22194/di.iiii`,
+  both of which served the PDF when checked. Forks are separate repositories; a
+  force-push here reaches neither.
+- **Still to do, deliberately not done here:** tell the four people whose details these
+  are; ask the two fork owners to clean or delete their forks; then, and only then,
+  consider a history rewrite with GitHub Support in the loop (their cached blob views
+  survive a force-push and need a support request quoting the SHAs). A rewrite today
+  would also invalidate 10 open PRs and 25 remote branches with several sessions
+  actively pushing — real disruption, and the data would still be at two URLs.
+- A full mirror backup of the public repo was taken first:
+  `/home/nooo/di-backups/di.iiii-mirror-20260807.git` — 1204 commits, 145 refs, 450 MB,
+  deck confirmed present in it.
+
+# Session notes — fix/hide-public-project-switcher
+
+## 2026-08-07 — public project pages drop the floating project switcher
+
+- Owner call (from the staging screenshot of `/br_id_ge/rite`): the `br_id_ge ▾`
+  chip and its dropdown clashed with the published page's design. The switcher is
+  right in Studio, where you're working — not floating over a public face.
+- `SpaceSurfaceApp` no longer passes `showProjectSwitcher` to `PublicProjectViewer`,
+  so direct project links (`/:space/p/:id` and vanity `/:space/:slug`) render
+  chrome-free like the live route. `ProjectSwitcher` itself is kept (unreachable
+  from public routes) for a possible future edit-context surface; Studio's
+  Projects window still covers project hopping.
+- Regression guard in `SpaceSurfaceApp.test.jsx`: the viewer mock now surfaces the
+  prop and a test asserts direct links stay switcher-free. Wiki `publishing` entry
+  updated to match. This also resolves the open "`br_id_ge ▾` chip covers the
+  letter-row" call in CURRENT.md — the chip is gone from public pages entirely.
+- Verified by looking: local vite (port 5473, proxied to the staging API) rendered
+  `/br_id_ge/rite` desktop + iPhone-13 viewport and `/br_id_ge/p/landing` — no chip
+  on any of them. Lint 0 errors, build green, full suite 1798/1798.
+
+## 2026-08-06 — Open inscriptions can carry the drawing that was made for them
+
+A crossing of br_id_ge left a name and a word, and the form it wore in the field
+was a torus knot picked by a hash of its own id — unique, permanent, and nobody's.
+Nothing a visitor actually authored survived.
+
+- The rite now quantizes the line a hand drew into an opaque `m1.<base64url>`
+  token (~1KB) and sends it with the crossing. `POST /inscriptions` takes an
+  optional `mark`; `PUT /inscriptions/:id/mark` replaces it afterwards with the
+  same one-time proof that unmakes a crossing — needed because the ending is a
+  page you can draw on again, long after the crossing was posted.
+- The server validates by shape and never parses it: a malformed or oversized
+  mark is dropped and the crossing still succeeds, because a drawing is not
+  worth failing a crossing over.
+- Added the new route to `PUBLIC_CORS_ROUTES` beside its DELETE sibling,
+  verified with a real preflight from a foreign origin (a rite running on a
+  mirror or an installation laptop is cross-origin to the field).
+- The wiki entry still said "update and delete are impossible on this path",
+  which the proof-gated DELETE had already made untrue — corrected alongside
+  documenting the new mark field.
+- `.env.example` never mentioned `MESH_ROOM_SECRET`/`MESH_PROTECTED_NODE_PREFIXES`
+  even though both compose files have passed them since the mesh identity gate
+  landed — the only way to learn the keeper could be protected was reading
+  `meshHub.js`. Found because it stayed unprotected on prod: `node=keeper-anything`
+  was able to join the live relay on 2026-08-06. Documented what an empty value
+  means, since empty is the dangerous state and looks identical from outside
+  until someone claims the id.
+
+## 2026-08-05 — Audit backlog closed, two real gaps fixed
+
+Re-verified the standing audit backlog: 17/17 previously-reported findings were
+already fixed on `dev`; `CURRENT.md` had been carrying it as open. Two gaps were
+real and are fixed here.
+
+- **A failing scene write was invisible.** `useLiveSync` set `sceneFlushError`
+  correctly, but the value died at `useAppState`'s explicit destructure (it
+  listed `sceneStreamState`/`sceneStreamError` and simply omitted the flush
+  field) — every hop in between is a spread, so a grep for the identifier found
+  almost nothing. The Studio status panel read "Scene stream connected" the
+  whole time a write was actually failing. Threaded through `useAppState` →
+  `useAppContextValues` → `EditorLayoutContainer` → `useStatusItems`, given its
+  own status row rather than folded into the stream row (a healthy stream is
+  exactly what was masking it). Two new tests in `useStatusItems.test.js`.
+- **A portal in embed mode rendered blank tiles** for older imported projects.
+  `EmbeddedScene` called `buildAssetMap(doc)` with no `fallbackProjectId` — the
+  fallback that rescues assets written without a `url` by the legacy import
+  gap — and an embedded document has no `projectMeta.id` of its own to fall
+  back on. Passed the `projectId` the component already had in scope.
+- Checked by diffing the test suite's failing-file *set* before/after
+  `origin/dev`: identical (raw totals read 68 vs 67 — flake in uncollectable-
+  file counting, so the set is the check, not the count).
+
+Left deliberately open (not this branch's to fix): `StudioEditor` has no
+`[projectId]` reset on switch — fixing it means deciding which editor state is
+per-project vs per-session, and a wrong guess silently discards work.
+
+## 2026-08-06 — Raw on touch, the all-nodes example, Studio as a node
+
+- **Graph wiring was impossible on a phone.** A wire starts on the output
+  dot's `pointerdown`, which on touch grants that element implicit pointer
+  capture — so `pointerup` was retargeted back to the output dot and never
+  reached the input dot under the finger. Drops now resolve to the nearest
+  *compatible* input port within `PORT_DROP_RADIUS_PX` (36 screen px,
+  constant across zoom) via a window-level `pointerup`, one code path for
+  mouse and finger. The old drag tests passed green because they stubbed
+  `setPointerCapture` over exactly the semantics that were broken.
+- Zooming out on a phone (double-tapping the zoom buttons, since there's no
+  wheel on touch) bubbled to the graph surface's `onDoubleClick` and opened
+  the create-node palette over the graph — `handleSectionDoubleClick` now
+  excludes `.raw-graph-zoom-controls`.
+- `viewport-fit=cover` was missing from the viewport meta — every
+  `env(safe-area-inset-*)` in the app resolved to 0, silently neutering
+  Studio's already-written notch handling. Added, plus safe-area padding to
+  Raw's fixed chrome.
+- `docs/roadmaps/NODE_BACKLOG.md` claims all 27 palette types "work today".
+  At port level only 17 do — `computeNodeOutput` has cases for `value.*`,
+  `math.*` and `time` only; no `geometry`/`texture`/`signal`/`state` output
+  on any node ever carries data. New `src/project/graph/examples/allNodesExample.js`
+  covers the whole palette and lists the unwirable ports as such rather than
+  wiring them to look complete. Reachable from Raw's ⋯ menu.
+- `verify:surfaces` reported ALL CLEAN for `/raw` while actually auditing the
+  sign-in card: `/raw` loads an empty workspace, and editor lanes sit behind
+  `AuthGate`, so with no session the script audited the gate's panel instead
+  of the editor. Now seeds the all-nodes example via `addInitScript`, accepts
+  `--token`, and prints `[AUTH-GATED]` when it lands on a sign-in card
+  instead of silently reporting clean. Tap findings on `/raw` went 2 → 8 once
+  it was actually looking at the editor.
+- **`studio` is now a node.** One palette entry; entering it reveals
+  Outliner + Scene + Inspector as a subgraph (TouchDesigner COMP / Nuke Group
+  pattern). Needed three prerequisite fixes: panel nodes had NO canvas
+  representation as graph cards at all (so a wire into a panel was
+  invisible); entering a node required hover+double-click below 0.5 zoom
+  where a card is a few pixels wide, now a real button; the selection
+  inspector used to cover the node it was inspecting, now a bottom sheet on
+  phones. `view.outliner`/`view.inspector` — type ids both lanes have
+  carried window frames for since they were written — are implemented for
+  the first time.
+
+Verified on a real iPhone 15 Pro at 393px with real CDP touch events; full
+`verify:surfaces` clean across six profiles including 320px.
+
+## Open, carried from the branch's own notes
+
+- Studio-as-node is a **first slice**: assets/code/share/projects panels are
+  still hardcoded chrome (`PublishPanel` alone takes 17 callback props).
+  Two decisions deliberately left open, recorded in
+  `src/project/graph/studioNode.js`: **port promotion** (which interior
+  ports surface on the container) and **live reference vs. frozen snapshot**
+  when a subgraph becomes a palette item.
+- No user-authored node types yet: `NODE_TYPES` is a static module literal
+  with no `registerNodeType`, `node.null` is declared but not placeable,
+  `values.__code` is inert, and `templates[]` exists in the schema with zero
+  consumers.
+
+## 2026-08-06 — Sync-safety pass: rescue, seal, and the structural fix
+
+Full plan at `~/.claude/plans/humming-wiggling-wozniak.md` (not tracked in-repo). Built
+on PR #94's `repo-state.mjs` tooling rather than duplicating it.
+
+- Recovered three sessions' `CURRENT.md` notes that a concurrent rewrite had silently
+  destroyed before their branch merged (found via `git fsck --dangling`) — folded into
+  `PROGRESS.md`. Re-opened one still-genuinely-undone TODO that was lost with them (the
+  Open Space scene zip, never imported).
+- Rescued 263 uncommitted lines sitting in a `/tmp` worktree with no backup → pushed as
+  `fix/inscription-mark-server`. Pushed two branches that existed only on this disk
+  (`feat/timeline-core` had no upstream at all; `feat/raw-studio-node` was mistargeting
+  `origin/dev`, so a bare push from it would have landed straight on `dev`).
+- Built and verified a guard (`checkSafeSource` in `space-sync-vendor.mjs`) against the
+  8-copies-of-the-vendoring-tool hazard — confirmed live, not theoretical: triggered the
+  real downgrade once while testing the unguarded old copy, fixed it, then verified the
+  guarded version refuses the same operation. Added `--release` (write + bump
+  `minEngine` + commit + push per linked repo in one command) — not run for real yet,
+  waiting on this branch merging so a real `dev` checkout can run it.
+- Worktrees 21 → 10 (removed 8 confirmed merged/stale, one of which turned out to hide
+  a third lost session), local branches 55 → 17 (deleted 38 confirmed fully-merged or
+  patch-equivalent — 2 looked like garbage by branch name but had real unmerged work,
+  caught by checking each individually rather than trusting the heuristic).
+- This session-notes protocol itself (`docs/ai/sessions/`, `docs:ai:check` enforcement,
+  the `active_branch: dev` literal check) is the structural fix for the one *confirmed*
+  loss mechanism — everything above was rescue/cleanup around the edges of it.
+
+## 2026-08-06 — `npm run land`, `repo-state.mjs` live-process detection
+
+- `repo-state.mjs`/`repo-state-lib.mjs` (extends PR #94, doesn't duplicate it):
+  `classifyWorktree` (LIVE > UNPUSHED > UNMERGED > STALE > GONE, via `/proc` scan +
+  `git cherry` for squash-merge-aware merge detection), `--brief`/`--sweep`/`--json`.
+  Real bug caught building this: the first live-process pattern matched `vitest run`
+  (one-shot), so a test run in progress got misidentified as a live dev server —
+  happened for real, not hypothetical, fixed and regression-tested.
+- `session-land.mjs`/`session-land-lib.mjs` (`npm run land`): folds `docs/ai/sessions/`
+  notes into `PROGRESS.md`, rewrites `CURRENT.md`'s Last-session to a title list
+  pointing there (full prose never goes in CURRENT.md — the only way to guarantee the
+  50-line budget regardless of how much landed in one batch), deletes the notes, runs
+  the worktree sweep, commits (not pushes). Verified end-to-end in an isolated clone
+  with two fake notes — folding, CURRENT.md rewrite, file deletion, sweep, commit all
+  confirmed correct.
+- Second real bug caught testing `land`: `execFileSync`'s default stderr inheritance
+  leaked "fatal: no upstream configured" straight to the console for an expected,
+  already-handled failure (probing an unpushed branch) — in both `repo-state.mjs` and
+  `space-sync-vendor.mjs`'s `git()` helpers, pre-existing in PR #94's code, not just
+  this branch's additions. Fixed both.
+- Dogfooded the CURRENT.md-untouched rule on this exact branch: my own earlier commits
+  had hand-edited `CURRENT.md` directly, in violation of the rule being written.
+  Reverted rather than grandfathered — see the commit for the full story, including a
+  second bug this surfaced (`origin/dev...HEAD` vs `origin/dev` diff form).
+- `.claude/commands/land.md` added; `recap.md` (from PR #94) rewritten to write session
+  notes instead of editing `CURRENT.md` directly, which is now a `docs:ai:check`
+  violation. `docs/ai/golden_rules.md` and `docs/ai/parallel-agents.md` updated to
+  match — the worktree-location convention (`.claude/worktrees/`, not `../di.iiii-*`)
+  is now stated as the rule, not "either is fine".
+
+## 2026-08-06 — Vendor drift gets a check that can actually fail
+
+- `scripts/space-sync-selfcheck.mjs` (vendored as `sync-space-check.mjs`): fetches
+  di.iiii's real upstream engine over HTTPS (public repo, no token), byte-compares,
+  asserts `minEngine` matches. Never skips on a fetch failure — that was the exact flaw
+  in the tool it replaces. Live-tested against br_id_ge's real current state: correctly
+  caught the actual `minEngine: 5` vs vendored `v6` drift that's been sitting there all
+  session, plus byte-mismatch and missing-file failure modes, all verified for real.
+- `docs/templates/vendor-check.yml`: the CI workflow that runs it, in the LINKED repo's
+  own CI (di.iiii's CI structurally can't see a linked repo's copy — that inversion is
+  the actual fix). `--release` now writes both alongside the engine.
+- Second real dry-run bug, same shape as `land`'s: `--release --dry-run` was calling the
+  new file-writer unconditionally before checking the flag, so a "preview" silently
+  wrote files to disk. Caught by actually running it against a scratch directory, not
+  by inspection. Fixed, regression-tested (3 cases: dry-run writes nothing, a real run
+  writes everything, a second real run is idempotent).
+- `space-sync.test.js`: di.iiii's own spaces' `minEngine` now asserted strictly equal
+  to `ENGINE_VERSION` (was `<=`) — these are declared in the same repo as the engine,
+  no excuse for lagging the way a linked repo briefly can.
+- `docs/ai/space-sync-vendoring.md` added (full reference); `golden_rules.md`'s
+  vendoring rule updated to `npm run space:sync:release` and a new rule on why a
+  checked-out worktree is a runnable copy of every tool, not just source code.
+
+## 2026-08-06 — The real fix, landed for real, in all 3 linked repos
+
+- `br_id_ge`: `minEngine` 5→6, engine v6 committed, `sync-space-check.mjs` +
+  `vendor-check.yml` added, `sync-space.yml` gated on it. Pushed to `main`. **Both the
+  new vendor-check AND the existing production sync workflow ran and passed for
+  real on GitHub Actions** — content unchanged, tooling only, verified green.
+- `beyond_form`: same fix, plus `di-space.space.json` committed for the first time
+  (was untracked since the repo was linked — no history at all until this commit).
+  Pushed. **This repo's first CI run ever, passed.**
+- `platform_recordar`: same fix, committed. No remote — this repo's permanent state,
+  documented in a new `AGENTS.md` (had none) as a deliberate `KNOWN_EXCEPTIONS` entry
+  rather than a silent gap.
+- Each repo's own pre-existing uncommitted work (br_id_ge's real session notes in
+  `CURRENT.md`; a `DEFAULT_LIVE_URL`-removal edit in both `beyond_form` and
+  `platform_recordar`'s `di-space.json`) deliberately left untouched and unstaged —
+  not mine, not this task's scope.
+
+- `~/di-spaces` investigated: a genuinely separate system (nightly pull-based backup +
+  guarded disaster-restore, `--force-prod` required for a prod write), not an
+  unexamined duplicate of the editing path — it already documents the boundary in its
+  own README. Cross-referenced from `docs/ai/space-sync-vendoring.md` so the boundary
+  is visible from both sides, no code changes needed.
+
+**Plan complete** except: consolidating to one canonical di.iiii checkout, blocked on
+`di.iiii-algomerge`'s active work (check `npm run state` before attempting it), and the
+human-triage branch list from the P0/P1 worktree cleanup (`fix/audit-gaps`,
+`feat/inscription-mark` — overlaps `fix/inscription-mark-server`, `fix/space-sync-engine`,
+`fix/wcc-degenerate-lock-deltas`, `feat/raw-studio-node`, `feat/timeline-core`,
+`chore/github-oauth-env-wiring`'s 4 real unmerged walker fixes, `feat/algovrithm`'s 1
+unmerged hook-path fix) — land, park, or drop, one call each, not this session's to make.
+
 ## 2026-08-06 — A third CURRENT.md casualty, found while cleaning up worktrees (2026-07-15 session)
 
 **Why this entry exists:** the `nginx-header-fix` worktree (branch `feat/brand-refresh`,

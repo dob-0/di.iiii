@@ -3,18 +3,19 @@ import { Canvas } from '@react-three/fiber'
 import { XR, XROrigin } from '@react-three/xr'
 import { useXrAr } from '../hooks/useXrAr.js'
 import Backdrop from './Backdrop.jsx'
-import DirectorPanel from './DirectorPanel.jsx'
+import DirectorPanel from '../raw/director/DirectorPanel.jsx'
 import LightHaze from './LightHaze.jsx'
 import LookAround from './LookAround.jsx'
-import OrbitView from './OrbitView.jsx'
+import OrbitView from '../raw/director/OrbitView.jsx'
 import RitualClockDriver from './RitualClockDriver.jsx'
 import SceneLights, { AmbientFill } from './SceneLights.jsx'
-import SplitHandle from './SplitHandle.jsx'
-import Standpoint from './Standpoint.jsx'
+import SplitHandle from '../raw/director/SplitHandle.jsx'
+import Standpoint from '../raw/director/Standpoint.jsx'
 import ViewerDolly from './ViewerDolly.jsx'
-import TransformGizmo, { GIZMO_MODES, gizmoModesFor } from './TransformGizmo.jsx'
+import TransformGizmo, { GIZMO_MODES, gizmoModesFor } from '../raw/director/TransformGizmo.jsx'
 import SpatialScore from './SpatialScore.jsx'
-import { isDirectorEnabled } from './directorFlag.js'
+import { isDirectorEnabled } from '../raw/director/directorFlag.js'
+import { ALGOVRITHM_PIECE } from '../raw/director/pieces.js'
 import { reelPlayers } from './reelPlayers.js'
 import { XR_AR_ONLY, xrAvailability } from './xrAvailability.js'
 import { describeEyeHeight } from './xrStandpoint.js'
@@ -31,15 +32,15 @@ import {
     VIEW_OUTSIDE,
     isOutside
 } from './stageView.js'
-import { formatSplit, readSplit, writeSplit } from './splitLayout.js'
+import { formatSplit, readSplit, writeSplit } from '../raw/director/splitLayout.js'
 import { resolveTravel } from './viewerTravel.js'
 import { parseLightName, setLightValue } from './worldLights.js'
 import { clipProgress, sourceProgress, useRitualClock } from './ritualClock.js'
 import { SEQUENCES } from './sequences/index.js'
 import useSavedTiming from './useSavedTiming.js'
 import useAutoHideChrome from './useAutoHideChrome.js'
-import useEditHistory from './useEditHistory.js'
-import usePanelToggle from './usePanelToggle.js'
+import useEditHistory from '../raw/director/useEditHistory.js'
+import usePanelToggle from '../raw/director/usePanelToggle.js'
 import './algoVrithm.css'
 
 // algovrithm — a virtual installation on hyperreality: pixels and code
@@ -53,7 +54,12 @@ import './algoVrithm.css'
 //   sequences/index.js   the edit list — which sequence owns which seconds
 //   sequences/*.jsx      one file per beat, each gets local 0..1 progress
 //   editList.js          timeline maths (move/trim/ripple, gap detection)
-//   DirectorPanel.jsx    author-only timeline (see directorFlag.js)
+//   DirectorPanel.jsx    author-only timeline (see directorFlag.js), now
+//                        living in src/raw/director/ — a general tool that
+//                        takes a piece descriptor (pieces.js), shared by this
+//                        file's embedded director (Studio's code-space
+//                        director page) and Raw's standalone
+//                        DirectorPanelWindow.
 //
 // Add a beat by writing a sequence file and adding a row to the edit list —
 // the director panel can retime and reorder, but a new beat is real code and
@@ -473,9 +479,10 @@ function AlgoVrithmStage({
     // until the beat, so this costs bandwidth early and nothing else; the beats
     // it loads under are the cheapest in the piece to render.
     //
-    // It does NOT replace compressing the source. See the assets README: the
-    // reels are drawn about 1.4m wide on a 7m shell, so full-resolution footage
-    // is being decoded and thrown away.
+    // The source IS compressed now (2026-08-08, scripts/compress-reels.mjs
+    // --replace: 360x640, 189MB -> 81MB, 3.6x less decode) — this warm-up and
+    // the compression are the two halves of the globe opening full, not
+    // alternatives.
     // Deferred by a beat rather than run inline. Warming at mount put ~190MB of
     // video in front of the app's own modules and the first frame, so the piece
     // took visibly longer to START in exchange for the reel beat arriving full.
@@ -814,6 +821,7 @@ function AlgoVrithmStage({
                         </button>
                     </div>
                     <DirectorPanel
+                        piece={ALGOVRITHM_PIECE}
                         sequences={editList}
                         onChange={setEditList}
                         clock={clock}

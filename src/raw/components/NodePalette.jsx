@@ -52,7 +52,12 @@ export default function NodePalette({
     surface = 'world',
     placement = null,
     onClose,
-    onCreate
+    onCreate,
+    // Commands make this the workspace's ONE summons rather than a second
+    // command system beside it: the same gesture that creates a node also
+    // brings back the help, the chat, a hidden panel or the chrome itself.
+    // Shape: { id, label, hint, run }.
+    commands = []
 }) {
     const [query, setQuery] = useState('')
     const [activeIndex, setActiveIndex] = useState(0)
@@ -65,7 +70,19 @@ export default function NodePalette({
         item?.scrollIntoView({ block: 'nearest' })
     }, [])
 
-    const definitions = filterNodeTypesForSurface(listNodeTypes({ query }), surface).map(toDefinitionShim).filter(Boolean)
+    const nodeEntries = filterNodeTypesForSurface(listNodeTypes({ query }), surface)
+        .map(toDefinitionShim)
+        .filter(Boolean)
+        .map((definition) => ({ kind: 'node', id: definition.id, label: definition.label, hint: definition.id, definition }))
+
+    const q = query.trim().toLowerCase()
+    const commandEntries = commands
+        .filter((command) => !q || `${command.label} ${command.hint || ''}`.toLowerCase().includes(q))
+        .map((command) => ({ kind: 'command', id: command.id, label: command.label, hint: command.hint, run: command.run }))
+
+    // Commands first: with the chrome hidden they are the only way back to it,
+    // so they must not be below a scroll of node types.
+    const entries = [...commandEntries, ...nodeEntries]
 
     useEffect(() => {
         if (!open) return
@@ -82,11 +99,18 @@ export default function NodePalette({
 
     const pos = getPalettePosition(placement.clientX || 0, placement.clientY || 0)
 
-    const handleConfirm = (definition) => {
-        if (!definition) return
+    const handleConfirm = (entry) => {
+        if (!entry) return
+        if (entry.kind === 'command') {
+            // Closing first: a command that opens a panel would otherwise put it
+            // behind the palette's own backdrop.
+            onClose()
+            entry.run?.()
+            return
+        }
         onCreate({
-            definition,
-            params: { ...(definition.defaultParams || {}) },
+            definition: entry.definition,
+            params: { ...(entry.definition.defaultParams || {}) },
             placement
         })
     }
@@ -99,7 +123,7 @@ export default function NodePalette({
         if (event.key === 'ArrowDown') {
             event.preventDefault()
             setActiveIndex((i) => {
-                const next = Math.min(i + 1, definitions.length - 1)
+                const next = Math.min(i + 1, entries.length - 1)
                 scrollActiveIntoView(next)
                 return next
             })
@@ -116,7 +140,7 @@ export default function NodePalette({
         }
         if (event.key === 'Enter') {
             event.preventDefault()
-            handleConfirm(definitions[activeIndex] || null)
+            handleConfirm(entries[activeIndex] || null)
         }
     }
 
@@ -132,14 +156,14 @@ export default function NodePalette({
                 className="raw-node-palette"
                 role="dialog"
                 aria-modal="true"
-                aria-label="Create node"
+                aria-label="Create a node, or summon a panel"
                 style={{ left: pos.x, top: pos.y }}
             >
                 <div className="raw-node-palette-input-row">
                     <input
                         ref={inputRef}
                         className="raw-node-palette-input"
-                        placeholder="type a node name…"
+                        placeholder="type a node or panel name…"
                         value={query}
                         onChange={(event) => setQuery(event.target.value)}
                         onKeyDown={handleKeyDown}
@@ -147,10 +171,10 @@ export default function NodePalette({
                         spellCheck={false}
                     />
                 </div>
-                {definitions.length > 0 ? (
+                {entries.length > 0 ? (
                     <ul ref={listRef} className="raw-node-palette-list">
-                        {definitions.map((definition, index) => (
-                            <li key={definition.id}>
+                        {entries.map((entry, index) => (
+                            <li key={`${entry.kind}:${entry.id}`}>
                                 <button
                                     type="button"
                                     className={`raw-node-palette-item${index === activeIndex ? ' is-active' : ''}`}
@@ -163,19 +187,26 @@ export default function NodePalette({
                                     }}
                                     onPointerDown={(event) => {
                                         // preventDefault keeps focus in the search
-                                        // input on mouse. It is a no-op for touch,
-                                        // which is why this used to be onMouseDown
-                                        // and why the row never committed on a tap.
+                                        // input on mouse. Committing moved to
+                                        // onClick: pointerdown fires the instant a
+                                        // finger lands, so scrolling this list by
+                                        // dragging on a row placed that row's node.
+                                        // The browser suppresses click after a
+                                        // scroll drag, which is exactly the
+                                        // discrimination needed here.
                                         event.preventDefault()
                                         setActiveIndex(index)
-                                        handleConfirm(definition)
                                     }}
+                                    onClick={() => handleConfirm(entry)}
                                 >
                                     <span className="raw-node-palette-item-title">
-                                        <strong>{definition.label}</strong>
-                                        <span>{definition.id}</span>
+                                        <strong>{entry.label}</strong>
+                                        <span>{entry.hint}</span>
                                     </span>
-                                    {definition.authoringOnly && (
+                                    {entry.kind === 'command' && (
+                                        <span className="raw-node-palette-tag is-command">panel</span>
+                                    )}
+                                    {entry.kind === 'node' && entry.definition.authoringOnly && (
                                         <span className="raw-node-palette-tag" title="Placeable and editable, but doesn't compute or render anything yet">
                                             authoring only
                                         </span>

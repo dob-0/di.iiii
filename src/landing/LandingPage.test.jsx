@@ -1,8 +1,9 @@
 import { render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../components/GridFloorBackground.jsx', () => ({ default: () => <div data-testid="mock-grid-bg" /> }))
-vi.mock('../services/serverSpaces.js', () => ({ getServerConfig: () => Promise.resolve({}) }))
+const serverConfigState = vi.hoisted(() => ({ current: {} }))
+vi.mock('../services/serverSpaces.js', () => ({ getServerConfig: () => Promise.resolve(serverConfigState.current) }))
 
 const sessionState = { authenticated: false, type: null }
 vi.mock('../hooks/useAuthSession.js', () => ({ default: () => ({ ...sessionState }) }))
@@ -79,5 +80,42 @@ describe('LandingPage CTA routing', () => {
         for (const link of doors) {
             expect(link.getAttribute('href')).toBe('/open/raw')
         }
+    })
+})
+
+// A `di up` install has no accounts and no quota; the server says so via
+// /api/config (local + requireAuth). The landing must stop speaking hosted
+// copy there — and must NOT switch on `local` alone: local with auth on is a
+// deliberate setup that keeps the hosted sentences.
+describe('LandingPage local-install copy', () => {
+    afterEach(() => {
+        serverConfigState.current = {}
+    })
+
+    it('swaps hosted sign-in copy for local truth when local && !requireAuth', async () => {
+        serverConfigState.current = { local: true, requireAuth: false }
+        render(<LandingPage />)
+
+        expect(await screen.findByText(/everything here is yours to edit/)).toBeInTheDocument()
+        expect(screen.getByText('Your machine, your spaces')).toBeInTheDocument()
+        expect(screen.queryByText(/Sign in only to edit/)).not.toBeInTheDocument()
+        expect(screen.queryByText('3 free spaces')).not.toBeInTheDocument()
+    })
+
+    it('keeps hosted copy on the hosted product', async () => {
+        serverConfigState.current = { local: false, requireAuth: true }
+        render(<LandingPage />)
+
+        expect(await screen.findByText(/Sign in only to edit/)).toBeInTheDocument()
+        expect(screen.getByText('3 free spaces')).toBeInTheDocument()
+        expect(screen.queryByText('Your machine, your spaces')).not.toBeInTheDocument()
+    })
+
+    it('keeps hosted copy when a local install deliberately turns auth on', async () => {
+        serverConfigState.current = { local: true, requireAuth: true }
+        render(<LandingPage />)
+
+        expect(await screen.findByText(/Sign in only to edit/)).toBeInTheDocument()
+        expect(screen.queryByText('Your machine, your spaces')).not.toBeInTheDocument()
     })
 })

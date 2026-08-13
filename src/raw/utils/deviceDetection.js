@@ -13,8 +13,11 @@ export const DEVICE_TYPES = {
  * Detect current device type
  */
 export function detectDeviceType() {
-    // Check for VR
-    if (navigator.xr?.isSessionSupported?.('immersive-vr')) {
+    // Check for VR — by user agent, NOT navigator.xr.isSessionSupported():
+    // that returns a Promise (always truthy), which classified every
+    // WebXR-capable browser (desktop Chrome included) as a headset and
+    // shipped the VR node scale to the majority platform.
+    if (typeof navigator !== 'undefined' && /OculusBrowser|Quest|Pico|WolvicVR/i.test(navigator.userAgent || '')) {
         return DEVICE_TYPES.VR
     }
 
