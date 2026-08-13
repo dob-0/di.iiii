@@ -34,10 +34,9 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
   Mesh gate ARMED both tiers; **staging Google OAuth secret parked by the user**
   — rotation script staged, see memory `reference-leaked-secrets`.
 - **No byte quota / ENOSPC pre-check anywhere** — only di-bo watches free disk.
-- Owner decisions 2026-08-13: purple-gap CLOSED (reel-globe world recolored
-  `#04080A`, backdrop palette guard added, DATA_WHITE the one named exception);
-  `open` card = upload the honest teal frame — decided, pending staging API token
-  then prod approval. Director page still unseen.
+- Owner decisions 2026-08-13: purple-gap CLOSED (recolor + backdrop guard, see
+  PROGRESS). `open` card = upload the honest teal frame — decided, pending
+  staging API token then prod approval. Director page still unseen.
 - **br_id_ge rite fixes unverified by a human** — Act III backdrop + Act V idle-motion CSS shipped live, page loads clean, but the acts are camera-gesture-gated so no automated check could actually see them render.
 - **Prod room append path unproven** — record is empty by design (no backfill); the first real spoken line on di-studio.xyz/br_id_ge/field is both the proof and the room's first memory.
 - **Tunnel telegram first-binding untested by any human** — needs a telegram account with NO prior @diiii111bot chat.
