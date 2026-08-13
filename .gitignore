@@ -52,6 +52,8 @@ serverXR/.env.local
 
 # verify-surfaces.mjs screenshots + report (local artefact)
 .verify-surfaces/
+# verify-capture.mjs screenshots (local artefact)
+.verify-capture/
 
 # Self-signed certs for `npm run dev:xr` (headset-reachable HTTPS). Machine-
 # specific and regenerated on demand — never commit them.

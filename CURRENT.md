@@ -27,8 +27,12 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 ## Open
 
 - **Lane consolidation in progress** — Studio-as-a-node rebase + Raw-as-default promotion pending, see Last session / plan file above.
-- **Real-browser looks owed**: `source.webcam`/`source.mic` (camera+mic needed) +
-  PR #93's 4 items (Inspector wheel-scroll, audio toggles, primitive clamping).
+- **Real-browser looks owed**: only `source.mic` remains — macOS TCC blocks even
+  fake-device audio headless; run `npm run verify:capture` on Linux or do the 30s
+  human check. Webcam verified 2026-08-13 (same script); PR #93's items are all
+  closed (wheel-scroll verified live on staging `/open?ui=show` — the "dead render
+  path" claim was wrong, see known-fixes; clamping's malformed-JSON path has no UI
+  route and rests on its unit tests).
 - All 8 prod spaces owned (queried prod 2026-08-08); releasing ownership doesn't
   revoke the scope it granted (deliberate). Mesh gate ARMED both tiers; leaked
   PAT inferred-closed; **staging Google OAuth secret parked by the user** —
@@ -41,6 +45,12 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 - **Prod room append path unproven** — record is empty by design (no backfill); the first real spoken line on di-studio.xyz/br_id_ge/field is both the proof and the room's first memory.
 - **Tunnel telegram first-binding untested by any human** — needs a telegram account with NO prior @diiii111bot chat.
 - Remaining trees, each with a reason: raw-ws (active session), inscription-mark / rawadmin / design-loading-unify / agents-upgrade (unmerged work — park or PR, owner's call).
+- Owner decisions prepared with evidence (2026-08-13): `open`'s blank card =
+  no `publishedProjectId` (forwards to open-jam) + no cover; the honest captured
+  frame is a near-empty teal viewer — decide: upload it, dress the jam scene
+  first, or a structural alias-preview. Purple-gap = the reel-globe world
+  `#04050A` (hue 230), left as the artist's since 632c649b, uncovered by CI —
+  decide keep-as-exception (then add guard) or recolor (≈`#04080A`, 4 sites).
 
 ## Deploy & validation — [docs/ai/known-fixes.md](docs/ai/known-fixes.md), check before any bug hunt
 
