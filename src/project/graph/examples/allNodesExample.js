@@ -145,17 +145,20 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('webcam', 'source.webcam', { label: 'Webcam', col: 6, row: 0 })
     add('mic', 'source.mic', { label: 'Microphone', col: 6, row: 1 })
 
-    // --- column 7: the keeper ---------------------------------------------------
-    // Third member of the live-output family, and the same exception applies:
-    // `reply` is filled by KeeperPanelWindow's network call, not by
-    // computeNodeOutput. Left unconfigured on purpose — an endpoint is a
-    // property of the room you are in, not of the example.
-    add('keeper', 'agent.keeper', { label: 'Keeper', col: 7, row: 0 })
+    // --- column 7: workflow nodes + the keeper -----------------------------
+    // All live, same mechanism as the capture sources above: their panels push
+    // through handleLiveOutputChange, not computeNodeOutput.
+    add('workStatus', 'work.status', { label: 'Work Status', col: 7, row: 0 })
+    add('agentRun', 'work.agent', { label: 'Agent Run', col: 7, row: 1 })
 
-    // Fourth member of the live-output family. Listening on every channel,
-    // because a controller set to anything other than channel 1 would otherwise
-    // look broken in the one graph that exists to show what works.
-    add('midiIn', 'device.midi.in', { label: 'MIDI In', col: 7, row: 1, values: { channel: 0 } })
+    // The keeper is left unconfigured on purpose — an endpoint is a property
+    // of the room you are in, not of the example.
+    add('keeper', 'agent.keeper', { label: 'Keeper', col: 7, row: 2 })
+
+    // Listening on every channel, because a controller set to anything other
+    // than channel 1 would otherwise look broken in the one graph that exists
+    // to show what works.
+    add('midiIn', 'device.midi.in', { label: 'MIDI In', col: 7, row: 3, values: { channel: 0 } })
 
     const id = (key) => made.get(key)?.id || ''
     const wire = (fromKey, fromPort, toKey, toPort) => {
@@ -228,7 +231,10 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('colorA', 'out', 'desk', 'bgColor'),
         wire('bool', 'out', 'desk', 'gridVisible'),
         wire('str', 'out', 'text', 'content'),
-        wire('str', 'out', 'studio', 'title')
+        wire('str', 'out', 'studio', 'title'),
+        // Work Status's summary feeds Agent Run's prompt — not its trigger,
+        // so placing the example never launches a real process.
+        wire('workStatus', 'summary', 'agentRun', 'prompt')
     ].filter(Boolean)
 
     return { nodes: [...made.values()], edges }

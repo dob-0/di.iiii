@@ -6,6 +6,7 @@ import {
     DEFAULT_PROJECT_SPACE_ID,
     createProject,
     deleteProject,
+    getProjectDocument,
     listProjects,
     updateProjectDocument,
     uploadProjectAsset
@@ -16,7 +17,17 @@ import useAuthSession from '../../hooks/useAuthSession.js'
 import { buildStudioHubPath } from '../../studio/utils/studioRouting.js'
 import { buildRawProjectPath, navigateToRawPath } from '../utils/rawRouting.js'
 import { GUIDE_AUDIENCES } from '../utils/rawGuide.js'
+import { STUDIO_TYPE_ID, buildStudioContainerWithInterior } from '../../project/graph/studioNode.js'
+import { stashRawEnterNode } from '../utils/rawEnterNodeHandoff.js'
+import { DEFAULT_RAW_WORKSPACE_TOP } from '../utils/windowLayout.js'
 import SpaceSyncPanel from '../../components/SpaceSyncPanel.jsx'
+
+// Reserved project slug (and therefore id — creation derives one from the
+// other, see serverXR/src/projectStore.js's PROJECT_RESERVED_SLUGS) for the
+// single per-space project that hosts the Studio container node. Not
+// "studio" itself — that slug is blocked because it would collide with the
+// existing /{space}/studio route.
+const STUDIO_PROJECT_ID = 'studio-node'
 
 export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const { role } = useAuthSession()
@@ -141,6 +152,53 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
         focusCreateInput()
     }
 
+    // "open studio" used to just navigate to the separate /studio route —
+    // a plain link, no data connecting it to anything the user built in Raw.
+    // Studio is now reachable as a container node inside Raw's own graph (see
+    // studioNode.js), so this finds or creates the one project that hosts it
+    // and opens straight into its interior (Outliner/Scene/Inspector) instead.
+    const handleOpenStudio = async () => {
+        setIsBusy(true)
+        setStatus('Opening Studio...')
+        try {
+            let project = projects.find((existing) => existing.id === STUDIO_PROJECT_ID)
+            let studioNodeId = null
+            if (!project) {
+                const response = await createProject(spaceId, {
+                    title: 'Studio',
+                    slug: STUDIO_PROJECT_ID,
+                    source: 'raw-v2'
+                })
+                project = response.project
+                const { container, interior } = buildStudioContainerWithInterior({
+                    workspaceTop: DEFAULT_RAW_WORKSPACE_TOP
+                })
+                if (container) {
+                    studioNodeId = container.id
+                    await updateProjectDocument(project.id, {
+                        ...response.document,
+                        nodes: [...(response.document.nodes || []), container, ...interior]
+                    })
+                }
+            } else {
+                // GET .../document responds { document, version, project } —
+                // not the document itself (see serverXR/src/routes/
+                // projectRoutes.js). Reading `.nodes` straight off the
+                // response silently found nothing on every "open studio"
+                // after the first, so the handoff never stashed and the
+                // editor landed at the project root instead of inside Studio.
+                const { document } = await getProjectDocument(project.id)
+                studioNodeId = (document?.nodes || []).find((node) => node.typeId === STUDIO_TYPE_ID)?.id || null
+            }
+            if (studioNodeId) stashRawEnterNode(project.id, studioNodeId)
+            openProject(project.id)
+        } catch (error) {
+            setStatus(error.message || 'Unable to open Studio.')
+        } finally {
+            setIsBusy(false)
+        }
+    }
+
     return (
         <main className="raw-hub">
             <div className="raw-hub-layout">
@@ -199,7 +257,7 @@ export default function RawHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                                     <li key={step}>{step}</li>
                                 ))}
                             </ol>
-                            <button type="button" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>
+                            <button type="button" onClick={handleOpenStudio} disabled={isBusy}>
                                 open studio
                             </button>
                         </section>

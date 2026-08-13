@@ -102,3 +102,22 @@ export function buildStudioInterior({ studioNodeId, workspaceTop = 64 } = {}) {
         })
     }).filter(Boolean)
 }
+
+/**
+ * Build a Studio container node together with its interior, for callers that
+ * place one outside the palette flow (e.g. RawHub's "open studio" shortcut,
+ * which needs the pair before a RawEditor instance exists to run
+ * `handlePaletteCreate`'s inline logic).
+ *
+ * @param {object} options
+ * @param {number} options.graphX
+ * @param {number} options.graphY
+ * @param {number} options.workspaceTop
+ * @returns {{ container: object|null, interior: Array }}
+ */
+export function buildStudioContainerWithInterior({ graphX = 0, graphY = 0, workspaceTop = 64 } = {}) {
+    const values = buildNodeValues(STUDIO_TYPE_ID, {}, { clientX: graphX, clientY: graphY }, { workspaceTop })
+    const container = createNode(STUDIO_TYPE_ID, { values, graphX, graphY })
+    if (!container) return { container: null, interior: [] }
+    return { container, interior: buildStudioInterior({ studioNodeId: container.id, workspaceTop }) }
+}

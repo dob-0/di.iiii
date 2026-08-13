@@ -39,8 +39,16 @@ have no dedicated runtime test — correct by inspection, not yet guarded.
 | Clock (1) | `time` — **built 2026-07-30**, the first one off this backlog |
 | 3D (4) | `geom.cube` `geom.sphere` `geom.plane` `universe.desk.3d` |
 | World (3) | `world.light` `world.background` `world.grid` |
-| Panels (7) | `universe.world` `view.browser` `view.image` `view.text` `source.webcam` — **built 2026-08-06** · `source.mic` — **built 2026-08-06** · `agent` — **built 2026-08-08**, Claude chat via the account's connected key (serverXR proxy, transcript server-side; no output ports yet — trigger/result are the phase-2 contract) |
+| Panels (9) | `universe.world` `view.browser` `view.image` `view.text` `source.webcam` — **built 2026-08-06** · `source.mic` — **built 2026-08-06** · `work.status` — **built 2026-08-06** · `work.agent` — **built 2026-08-06** · `agent` — **built 2026-08-08**, Claude chat via the account's connected key (serverXR proxy, transcript server-side; no output ports yet — trigger/result are the phase-2 contract) |
 | Structure (1) | `universe.space` |
+
+`work.status`/`work.agent` are also gated **local-dev-only** at the server
+(`serverXR/src/devLocalGuard.js`): they read `~/.claude`, git/gh state, and
+`work.agent` spawns a real `claude -p` process, so both 404 on a deployed
+server regardless of the palette gate. Totals above are not reconciled
+against the rest of this doc's headline counts, which predate other
+in-flight work on this branch — see git history for the current true count
+rather than trusting the header.
 
 Both capture nodes' live outputs (`source.webcam.frame`, `source.mic.volume`/
 `.frequency`) only carry a value through a wire because `computeNodeOutput`/
