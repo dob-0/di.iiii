@@ -11,11 +11,11 @@ lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (
 No commit SHAs or branch positions below — run `npm run state` for those; see
 `docs/ai/golden_rules.md` for why. Agents share this tree: **stage explicit paths**.
 
-## Last session (2026-08-13)
+## Last session
 
-- Closed the owed browser looks: PR #93 done, webcam verified (`npm run
-  verify:capture`, new), mic needs Linux/hand (macOS TCC). Owner decisions
-  for `open`'s card + purple-gap prepared with evidence. Full detail: `PROGRESS.md`.
+- Raw on touch, the all-nodes example, Studio as a node
+
+Full detail: `PROGRESS.md`.
 
 ## What works
 
