@@ -31,8 +31,7 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 - All 8 prod spaces owned; releasing ownership keeps granted scope (deliberate).
   Mesh gate ARMED both tiers; **staging Google OAuth secret parked by the user**
   — rotation script staged, see memory `reference-leaked-secrets`.
-- **Nothing watches free disk** except di-bo now; no per-space or per-account byte quota exists
-  anywhere, and no ENOSPC pre-check — writes run until the volume physically fills.
+- **No byte quota / ENOSPC pre-check anywhere** — only di-bo watches free disk.
 - Owner's/artist's calls (evidence gathered 2026-08-13, detail in PROGRESS.md):
   `open`'s card blank (no `publishedProjectId`, no cover; honest frame = near-empty
   teal viewer — upload it, dress the jam, or alias-preview); purple-gap = reel-globe
