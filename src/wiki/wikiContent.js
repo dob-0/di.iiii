@@ -372,6 +372,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-07-19'
     },
     {
+        id: 'privacy-and-terms',
+        category: 'Spaces & access',
+        title: 'Privacy & terms',
+        summary: 'What the platform stores about you and under which terms — plainly, at /privacy and /terms.',
+        body: [
+            'Two pages disclose how the platform treats you: /privacy describes exactly what is collected (the session cookie, OAuth profile fields, uploads, retention) and what is deliberately not (no third-party analytics, no stored IP addresses, no tracking that links visits together) — including the parts that are not built yet, named as gaps rather than hidden.',
+            '/terms covers the AGPL-3.0 license, the 3-free-spaces limit, and the append-only nature of anonymous inscriptions.',
+            'Visits are counted anonymously first-party: one event per page load with path, time, and referring site — no cookie, no IP, nothing identifying.',
+            'For anything the pages do not answer, or to request account or data removal by hand: info@thedi.studio.'
+        ],
+        tags: ['privacy', 'terms', 'legal', 'data', 'contact'],
+        updated: '2026-08-18'
+    },
+    {
         id: 'github-sync',
         category: 'For developers',
         title: 'GitHub sync',

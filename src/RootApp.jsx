@@ -18,7 +18,7 @@ import useSpacePublicFlag from './hooks/useSpacePublicFlag.js'
 import useResolveSlugProject from './hooks/useResolveSlugProject.js'
 import { getStudioLocationState, isStudioLocation } from './studio/utils/studioRouting.js'
 import { ALGO_VRITHM_SPACE_ID, isAlgoVrithmSegment } from './algoVrithm/algoVrithmRouting.js'
-import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_WIKI, getAppLocationState } from './utils/spaceRouting.js'
+import { APP_PAGE_EDITOR, APP_PAGE_PREFERENCES, APP_PAGE_PRIVACY, APP_PAGE_TERMS, APP_PAGE_WIKI, getAppLocationState } from './utils/spaceRouting.js'
 
 const RawApp = lazy(() => import('./raw/RawApp.jsx'))
 const LandingPage = lazy(() => import('./landing/LandingPage.jsx'))
@@ -30,6 +30,8 @@ const AlgoVrithmExperience = lazy(() => import('./algoVrithm/AlgoVrithmExperienc
 // not pressed Enter.
 const AlgoVrithmLanding = lazy(() => import('./algoVrithm/landing/AlgoVrithmLanding.jsx'))
 const WikiPage = lazy(() => import('./wiki/WikiPage.jsx'))
+const PrivacyPage = lazy(() => import('./pages/PrivacyPage.jsx'))
+const TermsPage = lazy(() => import('./pages/TermsPage.jsx'))
 // AuthGate pulls in MUI + AccountButton -- lazy so public routes (landing,
 // wiki, any public space) that never render a gate don't pay for MUI in
 // their eager bundle (2026-07-17 perf audit).
@@ -212,9 +214,29 @@ function AppRouter() {
         )
     }
 
+    // Top-level /privacy and /terms for now — may need to move under the /-/
+    // namespace once SPEC_url_architecture_and_tree_addressing.md is signed off.
+    if (appState.page === APP_PAGE_PRIVACY) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <PrivacyPage />
+            </Suspense>
+        )
+    }
+
+    if (appState.page === APP_PAGE_TERMS) {
+        return (
+            <Suspense fallback={<RouteSurfaceFallback label="Loading" detail="" />}>
+                <TermsPage />
+            </Suspense>
+        )
+    }
+
     const isRootLanding = !appState.spaceId
         && appState.page !== APP_PAGE_PREFERENCES
         && appState.page !== APP_PAGE_WIKI
+        && appState.page !== APP_PAGE_PRIVACY
+        && appState.page !== APP_PAGE_TERMS
 
     if (isRootLanding) {
         return (
