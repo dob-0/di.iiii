@@ -42,6 +42,8 @@ const { createSessionDbSync } = require('./sessionDbSync')
 const { registerInscriptionRoutes } = require('./routes/inscriptionRoutes')
 const { registerOgRoutes } = require('./routes/ogRoutes')
 const { registerStatusRoutes } = require('./routes/statusRoutes')
+const { registerWorkStatusRoutes } = require('./routes/workStatusRoutes')
+const { registerAgentRunRoutes } = require('./routes/agentRunRoutes')
 const { registerIntegrationRoutes } = require('./routes/integrationRoutes')
 const { registerAiConnectionRoutes } = require('./routes/aiConnectionRoutes')
 const { registerAgentBoardRoutes } = require('./routes/agentBoardRoutes')
@@ -1431,6 +1433,9 @@ registerStatusRoutes(router, {
   startedAt
 })
 
+registerWorkStatusRoutes(router, {})
+registerAgentRunRoutes(router, {})
+
 registerIntegrationRoutes(router)
 registerAiConnectionRoutes(router)
 
@@ -1518,7 +1523,6 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   upsertSpaceMeta,
   upload,
   writeJson,
-  writeOpsHistory,
   approvalGate
 })
 
@@ -1806,6 +1810,8 @@ registerSyncRoutes(router, {
   normalizeSpaceId,
   ensureSpaceWritable,
   replaceSceneAndBroadcast,
+  loadSpaceMeta,
+  snapshotSpaceScene,
 })
 
 // Admin sweep for the hub's collapsed sandbox row: remove guest sandboxes the

@@ -74,7 +74,7 @@ export const BEAT_CARDS = [
         blurb: 'What was on the other side: the feed, closed into a room with you inside it. It holds still, then begins to swipe.',
         startSec: 23.2,
         endSec: 45.4,
-        world: '#04050A',
+        world: '#04080A',
         ink: '#E9F1F5',
         sketch: 'globe'
     },

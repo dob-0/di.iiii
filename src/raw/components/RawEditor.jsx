@@ -12,6 +12,8 @@ import ChatPanelWindow from './ChatPanelWindow.jsx'
 import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
+import WorkStatusPanel from './WorkStatusPanel.jsx'
+import AgentRunPanel from './AgentRunPanel.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
 import KeeperPanelWindow from './KeeperPanelWindow.jsx'
 import MidiInputPanel from './MidiInputPanel.jsx'
@@ -46,6 +48,7 @@ import {
     readLocalWorkspaceDocument,
     writeLocalWorkspaceDocument
 } from '../utils/localWorkspaceStorage.js'
+import { peekRawEnterNode, clearRawEnterNode } from '../utils/rawEnterNodeHandoff.js'
 import {
     detectDeviceType,
     getDefaultNodeScale,
@@ -230,7 +233,25 @@ export default function RawEditor({
     // is an ordinary node, not an auto-created/auto-entered singleton (product
     // decision 2026-07-17 — see nodeRegistry.js/projectSchema.js comments).
     const scope = useNodeGraphScope({ nodes: authoredNodes })
-    const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, reset: scopeReset } = scope
+    const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, reset: scopeReset, goToRoot: scopeGoToRoot } = scope
+
+    // RawHub's "open studio" shortcut hands off a node to land inside via
+    // sessionStorage (see rawEnterNodeHandoff.js for why this can't live in
+    // the synced document). Peeked (non-destructive — StrictMode's dev-mode
+    // double-invoke of lazy initializers means a destructive read here would
+    // consume the value on the throwaway first pass and never see it on the
+    // real one) once per mount, then re-checked on every `nodes` change until
+    // the handed-off node actually shows up, since the document may still be
+    // syncing from the server on first render. Cleared only once applied.
+    const [pendingEnterNodeId, setPendingEnterNodeId] = useState(() => peekRawEnterNode(projectId))
+    useEffect(() => {
+        if (!pendingEnterNodeId) return
+        if (authoredNodes.some((node) => node.id === pendingEnterNodeId)) {
+            scopeGoToRoot(pendingEnterNodeId)
+            clearRawEnterNode()
+            setPendingEnterNodeId(null)
+        }
+    }, [pendingEnterNodeId, authoredNodes, scopeGoToRoot])
     const activeSurface = workspaceState.activeSurface || 'graph'
     const workflow = getSurfaceWorkflow(activeSurface)
     // Panel windows are scoped exactly like graph cards. Before, this filtered
@@ -1032,6 +1053,19 @@ export default function RawEditor({
                         type: 'updateNode',
                         payload: { nodeId, patch: { values: { ...node.values, ...patch } } }
                     })}
+                />
+            )
+        }
+        if (node.typeId === 'work.status') {
+            return <WorkStatusPanel node={node} onValuesChange={handleLiveOutputChange} />
+        }
+        if (node.typeId === 'work.agent') {
+            return (
+                <AgentRunPanel
+                    node={node}
+                    prompt={resolvedValues.prompt}
+                    trigger={resolvedValues.trigger}
+                    onValuesChange={handleLiveOutputChange}
                 />
             )
         }

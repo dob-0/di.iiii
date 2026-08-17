@@ -5,6 +5,264 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-09 — sync could not lose your work quietly; now it cannot lose it at all
+
+Groundwork for `di sync` (phase 2 of the CLI), but it landed alone and first because the
+survey turned up a **live data-loss path in shipped code**, not a future one. `serverXR`
+already has local↔live sync routes, and both directions were destructive:
+
+- `POST /api/sync/spaces/:id/pull` → `replaceSceneAndBroadcast` → `writeOpsHistory`, which
+  is delete-all-then-insert. A pull erased the **local** op-log — on the artist's own
+  machine. A push did the same **upstream**.
+- `GET /scene` does not return the stored scene: it drops manifest entries whose asset file
+  is missing here and rewrites every asset URL to the serving host. Sync round-tripped that,
+  so pull-then-push **permanently deleted upstream entries this machine had merely not
+  downloaded**, and baked the wrong origin into the scene.
+- The sync row claimed "in sync" whenever two object *counts* matched, and a remote `409` —
+  the status that means someone else's work would have been overwritten — was flattened into
+  `502 "Live server returned 409"`, i.e. displayed as a bad network.
+- Pull also wrote a copy into `<serverXR>/../spaces/<id>/scene.json`, which on a `di` install
+  lands inside `~/.di/versions/<v>/` — the directory `di update` deletes.
+
+## What changed
+
+**Append, never write-over.** One line — `writeOpsHistory` → `appendOpsHistory` — plus
+removing `writeOpsHistory` from the route module's injected dependencies entirely, so a
+future route that reaches for it fails loudly instead of quietly destroying. Safe because
+`applySceneOps` already treats a mid-log `replaceScene` as a full reset, so replay from any
+earlier version still converges; no op semantics changed, so no dual-maintained
+`src/shared` + `shared/*.cjs` edit was needed.
+
+**A precondition on whole-scene writes.** `If-Match: "<n>"` / `?baseVersion=<n>` on
+`PUT /scene`, answered with the same `409 { latestVersion, pendingOps }` shape `POST /ops`
+has always returned — so `useLiveSync` and `useServerPublishing` needed no new code. A
+*malformed* precondition is a 400, never a silent unconditional write. It is opt-in via
+`SCENE_REPLACE_REQUIRE_PRECONDITION`: **off online**, where this route has callers nobody can
+enumerate (scripts here, sync engines vendored into three other repos, whatever is pointed at
+production), and **on for `di` installs**, which have no legacy callers by construction. When
+the unconditional-replace warnings stop appearing in the online logs, that default can flip.
+
+**A verbatim read.** `GET /scene?verbatim=1` returns what is stored, with `missingAssetIds`
+naming what the normal read would have dropped. Sync uses it both ways and **refuses against
+a peer that cannot serve it** — an old server ignores the query and answers with its filtered
+rendering, identical apart from that key, and writing that back is the erasure bug.
+
+**Refusals instead of proceeding.** Pull requires the local version it means to replace
+(428 otherwise), snapshots before writing and reports where the snapshot went, and a remote
+409 passes straight through as a 409. `/status` reports both sides and returns
+`relation: 'unknown'`, because per-install counters genuinely cannot answer "are these the
+same?". Even force-publish is now conditional — on the version the person was *shown in the
+dialog*, not on the stale ref that caused the conflict, so a third change arriving while the
+confirm is open cannot be buried.
+
+## Verified
+
+lint 0 errors · 1934 tests · 7 server-contract files, 92 tests · build clean.
+
+Guards watched failing first, all of them: the op-log test leaves exactly one op on `dev`;
+the panel test really does print `in sync · 3 objects` for local v41 against live v13.
+
+End-to-end on a real install (`di` from a packed runtime, `DI_HOME` with a dot in it):
+
+```
+ops before replace: seed-1, seed-2, seed-3
+unconditional PUT            → 428
+conditional PUT If-Match "3" → 200
+same stale If-Match again    → 409
+ops after replace:  seed-1 | seed-2 | seed-3 | …:replaceScene
+```
+
+And looked at, desktop and phone, on a server with `LIVE_API_URL` configured — which is how
+the last bug was found: the new two-sided message truncated to `local v0 · 0 …` on a 390px
+phone, hiding the live side, the one thing the row exists to show. The row now wraps below
+560px with each side unbreakable.
+
+## Next
+
+`di sync` itself: `di link` + ledger + a read-only diff first, then `--push`/`--pull` over the
+op transport, then `--replace-*` over bundles. The plan and its refusal list are in
+`~/.claude/plans/misty-humming-hearth.md`; `PUT /document`'s precondition is deliberately
+split into its own PR because it drags `space-sync.mjs`'s `ENGINE_VERSION` and three
+vendored copies with it.
+
+## 2026-08-06 — Raw on touch, the all-nodes example, Studio as a node
+
+- **Graph wiring was impossible on a phone.** A wire starts on the output
+  dot's `pointerdown`, which on touch grants that element implicit pointer
+  capture — so `pointerup` was retargeted back to the output dot and never
+  reached the input dot under the finger. Drops now resolve to the nearest
+  *compatible* input port within `PORT_DROP_RADIUS_PX` (36 screen px,
+  constant across zoom) via a window-level `pointerup`, one code path for
+  mouse and finger. The old drag tests passed green because they stubbed
+  `setPointerCapture` over exactly the semantics that were broken.
+- Zooming out on a phone (double-tapping the zoom buttons, since there's no
+  wheel on touch) bubbled to the graph surface's `onDoubleClick` and opened
+  the create-node palette over the graph — `handleSectionDoubleClick` now
+  excludes `.raw-graph-zoom-controls`.
+- `viewport-fit=cover` was missing from the viewport meta — every
+  `env(safe-area-inset-*)` in the app resolved to 0, silently neutering
+  Studio's already-written notch handling. Added, plus safe-area padding to
+  Raw's fixed chrome.
+- `docs/roadmaps/NODE_BACKLOG.md` claims all 27 palette types "work today".
+  At port level only 17 do — `computeNodeOutput` has cases for `value.*`,
+  `math.*` and `time` only; no `geometry`/`texture`/`signal`/`state` output
+  on any node ever carries data. New `src/project/graph/examples/allNodesExample.js`
+  covers the whole palette and lists the unwirable ports as such rather than
+  wiring them to look complete. Reachable from Raw's ⋯ menu.
+- `verify:surfaces` reported ALL CLEAN for `/raw` while actually auditing the
+  sign-in card: `/raw` loads an empty workspace, and editor lanes sit behind
+  `AuthGate`, so with no session the script audited the gate's panel instead
+  of the editor. Now seeds the all-nodes example via `addInitScript`, accepts
+  `--token`, and prints `[AUTH-GATED]` when it lands on a sign-in card
+  instead of silently reporting clean. Tap findings on `/raw` went 2 → 8 once
+  it was actually looking at the editor.
+- **`studio` is now a node.** One palette entry; entering it reveals
+  Outliner + Scene + Inspector as a subgraph (TouchDesigner COMP / Nuke Group
+  pattern). Needed three prerequisite fixes: panel nodes had NO canvas
+  representation as graph cards at all (so a wire into a panel was
+  invisible); entering a node required hover+double-click below 0.5 zoom
+  where a card is a few pixels wide, now a real button; the selection
+  inspector used to cover the node it was inspecting, now a bottom sheet on
+  phones. `view.outliner`/`view.inspector` — type ids both lanes have
+  carried window frames for since they were written — are implemented for
+  the first time.
+
+Verified on a real iPhone 15 Pro at 393px with real CDP touch events; full
+`verify:surfaces` clean across six profiles including 320px.
+
+## Open, carried from the branch's own notes
+
+- Studio-as-node is a **first slice**: assets/code/share/projects panels are
+  still hardcoded chrome (`PublishPanel` alone takes 17 callback props).
+  Two decisions deliberately left open, recorded in
+  `src/project/graph/studioNode.js`: **port promotion** (which interior
+  ports surface on the container) and **live reference vs. frozen snapshot**
+  when a subgraph becomes a palette item.
+- No user-authored node types yet: `NODE_TYPES` is a static module literal
+  with no `registerNodeType`, `node.null` is declared but not placeable,
+  `values.__code` is inert, and `templates[]` exists in the schema with zero
+  consumers.
+
+## 2026-08-06 — Landed against dev as PR #99
+
+- Rebased onto ~94 commits of independent `dev` drift. Kept dev's
+  `windowLayout.js` `clamp()`-based implementation (already merged + tested)
+  over this branch's own older `Math.min`-based one.
+- A rebase auto-merge silently dropped `createEdge` from `RawEditor.jsx`'s
+  import line — caught by `npm run lint` (8 `no-undef` errors), not by the
+  merge itself. Fixed in a standalone follow-up commit.
+- `allNodesExample.js` had drifted from the real node registry, pre-existing
+  on the branch and unrelated to the rebase: `UNWIRABLE_PORTS` trimmed 11→3
+  real entries, `INERT_INPUTS` emptied (no such ports exist), 3 `wire()`
+  calls to nonexistent ports removed, `source.webcam`/`source.mic` coverage
+  added.
+- This worktree had never had `npm install` / `serverXR: npm install` run —
+  caused ~76 spurious `dotenv`-missing test failures until fixed.
+- lint clean, 1773/1773 tests, build green. Pushed `--force-with-lease`,
+  opened PR #99 (`feat/raw-studio-node` → `dev`). CI still settling as of
+  this note — see PR checks for current status.
+
+## 2026-08-06 — CI actually caught the allNodesExample.js drift the note above claimed was fixed
+
+The `UNWIRABLE_PORTS`/`INERT_INPUTS`/`wire()` fix described above never made
+it into the pushed commit — CI failed `allNodesExample.test.js` on the real
+current registry with the exact drift pattern already described (stale
+`geom.*`/`universe.*`/`view.*` port references, plus `source.webcam`/
+`source.mic` genuinely missing from coverage this time). Re-diagnosed
+directly against `git show HEAD:src/project/nodeRegistry.js` and
+`nodeGraphRuntime.js`'s `computeNodeOutput` switch (not the working tree —
+see below) and re-applied the fix for real, this time as its own commit
+(`5cd0394c`).
+
+**Shared-worktree hazard, worth naming explicitly**: this worktree
+(`~/di.iiii-studionode`) had uncommitted changes from a second, concurrent
+agent building an unrelated feature (`AgentRunPanel`/`WorkStatusPanel`,
+`work.status`/`work.agent` node types) sitting on top of `nodeRegistry.js`
+and `allNodesExample.js` in the working tree. Their uncommitted
+`allNodesExample.js` diff turned out to already contain the *correct* version
+of this exact fix (down to matching reasoning), extended with two more
+`add()`/`wire()` calls for their own new node types — which don't exist in
+the committed registry PR #99 is built on. Committed only the portion that's
+valid against `HEAD` (verified by temporarily `git stash`-ing their unrelated
+files, running the test, then `git stash pop` immediately); left their
+`work.status`/`work.agent` coverage for them to re-add once their own
+registry change lands. Their files were never edited or touched otherwise —
+confirmed after the fact: they re-added the same column-7 `add()`/`wire()`
+calls on top of my commit within the same working tree, undisturbed.
+
+## 2026-08-06 — `5cd0394c` pushed; GitHub Actions itself not creating runs
+
+Pushed the real fix. 8+ minutes later, no `CI` or `Auto-open PR to upstream
+dev` run has been *created* for this SHA at all (not queued — absent from
+`gh run list` entirely), while every earlier push on this same branch
+triggered both within ~15 seconds. `feat/timeline-core`'s PR #100 rerun
+(`31122178221`) has also sat `queued` with zero job progress since ~17:07,
+and unrelated `Deploy VPS` / `Deploy VPS Staging` runs are queued too. This
+reads as a platform-level GitHub Actions backlog for the org right now, not
+anything left to fix by cancelling more zombie runs or re-diagnosing this
+branch — nothing to do but wait it out.
+
+# Session — dev (di-c-deck)
+
+## 2026-08-13 — closing every open question that a look could close
+
+- Staging deploy that ended the 2026-08-12 session as "pending" landed green.
+- **PR #93 fully dispositioned.** Items 2 (audio toggles) and 9 (Beta copy) were
+  already verified 2026-08-06 but CURRENT.md never learned. Item 1 (Inspector
+  wheel-scroll) verified LIVE on staging today: the known-fixes claim that
+  `Vector3Control`'s only render path is dead was WRONG — `SpaceSurfaceApp`'s
+  fall-through renders legacy `App` for any space with no published project;
+  `/open?ui=show` reaches it as a guest (`?ui=show` beats the hidden-UI default;
+  guest edits proven sandboxed — a radius change did not survive the session).
+  Unfocused wheel: value untouched; focused: steps. Item 4's malformed-JSON path
+  has no UI route (no raw scene editor exists) — rests on safeDimension's tests.
+- **`npm run verify:capture` committed** (`scripts/verify-capture.mjs`) — the
+  runtime pass NODE_BACKLOG owed. Places webcam+mic fresh from the Raw palette
+  (a seeded workspace hides windows and lies clean), fake media devices, DPR 2.
+  Webcam VERIFIED: live test pattern, 640x480, overlay cleared. Mic UNPROVABLE
+  on macOS: TCC hangs `getUserMedia({audio:true})` even for fake devices, every
+  headless flavour (shell, full Chromium, sandbox-disabled); no Chrome-family
+  browser exists on the Mac. Run the script on Linux or check by hand. The
+  flat-meter assertion exists because `micCapture.js` never calls `resume()` —
+  a gesture-less mount could sit suspended at volume 0 with status active.
+- **`open`'s blank card diagnosed** (only blank card of 8 on prod, confirmed by
+  API): no `previewImageAssetId` ever uploaded AND no `publishedProjectId` —
+  `open` forwards into the shared open-jam project, so the automatic-miniature
+  branch (`SpaceHub.jsx` fallback chain) can never fire. Same hole algovrithm
+  was in. The honest captured frame (golden rule: what a visitor actually gets)
+  is a NEAR-EMPTY teal world with one "New Text" — identical prod and staging —
+  so the fix is the artist's: upload that frame, dress the jam scene first, or
+  build an alias-resolving preview. 16:9 frame prepared in session scratchpad.
+- **Purple-gap failure located and scoped** (artist's call, standing since
+  632c649b): the reel-globe world `#04050A` (hue 230) in 4 places —
+  `sequences/index.js` backdrop, `ReelGlobe.jsx`, `beatCards.js`,
+  `beatSketches.js`. Invisible to CI: inline backdrops aren't swept by
+  `palette.test.js`, and `sequences.test.js` only shape-checks the hex. Close by
+  either sanctioned-exception + a real guard, or recolor to cool-band
+  (≈`#04080A`) + extend the sequence test to run `paletteWarning`.
+- Docs gate lesson re-paid: first push of this session turned staging red on
+  `docs:ai:check` — CURRENT.md over 50 lines. Trimmed; this entry is the detail.
+- **Owner decided all three open questions**, then they were executed:
+  - **PR #99 MERGED.** This session did the #121-second-merger reconciliation
+    first (merge dev into the branch, 15 hunks / 11 files; both sides' panels
+    unioned and SEEN rendering together — dev's Timeline + branch's Work Status
+    live in one graph, Work Status correctly listing this very merge's own
+    worktrees). Kept dev's palette click-commit and scope-only fit key — both
+    were fixes to the branch's older lines. CI 14/14 green, then merged.
+    Raw-as-default landing promotion deliberately NOT taken (§6).
+  - **Purple-gap closed by recolor**: reel-globe world `#04050A` → `#04080A`
+    (hue 230 → 200, into the cool band) in beatCards, beatSketches,
+    sequences/index.js; heroField's comment updated. New guard in
+    sequences.test.js runs `paletteWarning` over every backdrop — watched
+    failing on the white worlds before naming DATA_WHITE as the piece's one
+    sanctioned exception. 475/475 algovrithm tests pass. The visible delta is
+    ~3/255 in one channel of a near-black: the point is the validator, not
+    the eye. Piece + door load error-free locally; the in-piece globe room
+    uses prod-only clip assets, so its tint is worth one glance on staging.
+  - **`open` card**: upload the honest teal frame — decided; blocked on the
+    staging API token (Mac has no VPS alias; classifier blocks remote secret
+    reads), then prod after the owner sees the staging card.
+
 # Session — feat/mesh-room-history
 
 ## 2026-08-11 — the room keeps its chat (hub side)

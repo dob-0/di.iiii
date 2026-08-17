@@ -182,7 +182,11 @@ jobs:
           curl -fsS -X POST http://127.0.0.1:4310/serverXR/api/spaces \
             -H 'Content-Type: application/json' \
             -d '{"label":"Canary","slug":"canary"}' -o /dev/null
-          curl -fsS -X PUT http://127.0.0.1:4310/serverXR/api/spaces/canary/scene \
+          # A di install requires a scene precondition (428 without one) — state
+          # the version this write is based on, the way any honest caller must.
+          BASE=$(curl -fsS http://127.0.0.1:4310/serverXR/api/spaces/canary/scene \
+            | node -p 'JSON.parse(require("fs").readFileSync(0,"utf8")).version ?? 0')
+          curl -fsS -X PUT "http://127.0.0.1:4310/serverXR/api/spaces/canary/scene?baseVersion=$BASE" \
             -H 'Content-Type: application/json' \
             -d '{"version":4,"objects":[],"metadata":{"canary":"do-not-lose-me"}}' -o /dev/null
           curl -fsS http://127.0.0.1:4310/serverXR/api/spaces/canary/scene > canary-before.json
