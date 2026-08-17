@@ -72,7 +72,7 @@ jobs:
           - { name: 'node 22 (happy path)', image: 'node:22-bookworm', prep: 'true' }
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: di-runtime
           path: dist-runtime
@@ -143,7 +143,7 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: di-runtime
           path: dist-runtime
@@ -267,7 +267,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: di-runtime
           path: dist-runtime
@@ -328,7 +328,7 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: di-runtime
           path: dist-runtime
