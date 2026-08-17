@@ -87,7 +87,7 @@
         "jsdom": "^30.0.1",
         "playwright": "^1.59.1",
         "prettier": "^3.8.4",
-        "vite": "^8.1.5",
+        "vite": "^8.2.1",
         "vitest": "^4.1.9"
     },
     "dependencies": {
