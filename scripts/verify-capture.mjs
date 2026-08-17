@@ -110,7 +110,10 @@ await page.screenshot({ path: `${OUT}/webcam.png` })
 // ---- mic ----
 await placeNode('Microphone', { x: 1050, y: 680 })
 await page.waitForTimeout(1500)
-const meter = page.locator('[class*="mic"][class*="meter"], .raw-mic-panel-meter-fill').first()
+// the fill specifically — `[class*="mic"][class*="meter"]` also matches the
+// meter TRACK, which precedes the fill in DOM order, and the track's transform
+// is "none" forever: .first() on that union read flat regardless of the app
+const meter = page.locator('.raw-mic-panel-meter-fill, [class*="mic"][class*="meter-fill"]').first()
 let micReadings = []
 if (await meter.count()) {
   for (let i = 0; i < 25; i++) {
