@@ -25,9 +25,8 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 ## Open
 
-- **Lane consolidation: PR #99 MERGED 2026-08-13** (reconciled with #121, CI green,
-  both sides' panels seen rendering). Raw-as-default landing promotion still open —
-  owner's call, MANIFESTO §6 gates it.
+- Lane consolidation MERGED 2026-08-13 (#99+#121). Raw-as-default landing promotion
+  still open — owner's call, MANIFESTO §6 gates it.
 - Real-browser looks ALL CLOSED — webcam 2026-08-13, `source.mic` 2026-08-18 (see PROGRESS).
 - All 8 prod spaces owned; releasing ownership keeps granted scope (deliberate).
   Mesh gate ARMED both tiers; **staging Google OAuth secret parked by the user**
