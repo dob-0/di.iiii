@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
@@ -91,6 +91,36 @@ const spawnProcess = (command, args, options = {}) => {
 }
 
 console.log('\n[dev-stack] First time here? Run: cat CHEATSHEET.md\n')
+
+// Read-only, no fetch (offline is a real case) — counts against the local origin/dev
+// ref. Exists because this checkout once served a merged branch 115 commits behind
+// origin/dev for two days with nothing saying so. Degrades to silence if git is unusable.
+const gitRead = (args) => {
+    try {
+        return execFileSync('git', args, { cwd: repoRoot, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim()
+    } catch {
+        return ''
+    }
+}
+
+const headSha = gitRead(['rev-parse', '--short', 'HEAD'])
+if (headSha) {
+    const branch = gitRead(['branch', '--show-current'])
+    const behindDev = gitRead(['rev-list', '--count', 'HEAD..origin/dev'])
+    const devTip = gitRead(['rev-parse', 'origin/dev'])
+    const upstreamGone = Boolean(branch) && gitRead(['for-each-ref', '--format=%(upstream:track)', `refs/heads/${branch}`]) === '[gone]'
+    console.log(`[dev-stack] Tree: ${branch || 'detached'} @ ${headSha}${behindDev && behindDev !== '0' ? ` (${behindDev} behind origin/dev)` : ''}`)
+    if ((devTip && gitRead(['rev-parse', 'HEAD']) !== devTip) || upstreamGone) {
+        const why = upstreamGone
+            ? `branch "${branch}" tracks an upstream that is GONE (merged and deleted?)`
+            : `HEAD is not at the origin/dev tip (${behindDev || '?'} behind)`
+        console.log('\n[dev-stack] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+        console.log(`[dev-stack] !!! STALE/DRIFTED TREE — ${why}.`)
+        console.log('[dev-stack] !!! What you are about to look at may be OLD code.')
+        console.log('[dev-stack] !!! Fix: git fetch && git checkout --detach origin/dev')
+        console.log('[dev-stack] !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n')
+    }
+}
 
 const CHROMIUM_PROFILE_DIR = path.join(
     process.env.HOME || '',

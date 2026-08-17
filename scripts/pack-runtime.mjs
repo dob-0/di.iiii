@@ -77,8 +77,14 @@ const main = async () => {
     for (const script of ['space-bundle.mjs', 'install-bundle.mjs']) {
         await copy(path.join(ROOT, 'scripts', script), path.join(stage, 'scripts', script))
     }
-    if (fs.existsSync(path.join(ROOT, 'docker-compose.di.yml'))) {
-        await copy(path.join(ROOT, 'docker-compose.di.yml'), path.join(stage, 'docker-compose.di.yml'))
+    // Both compose files. The .di override is only an override (`!reset`
+    // tags, no volume definitions) — packed without its base, docker mode
+    // composed a stack whose named data volume never existed, and the work
+    // landed in an anonymous volume `di where` never mentioned.
+    for (const composeName of ['docker-compose.yml', 'docker-compose.di.yml']) {
+        if (fs.existsSync(path.join(ROOT, composeName))) {
+            await copy(path.join(ROOT, composeName), path.join(stage, composeName))
+        }
     }
 
     // ── media ──

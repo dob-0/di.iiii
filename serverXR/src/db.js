@@ -146,6 +146,16 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_ai_messages_chat ON ai_messages (chat_id, created_at);
 
+  CREATE TABLE IF NOT EXISTS mesh_room_lines (
+    id TEXT PRIMARY KEY,
+    room_id TEXT NOT NULL,
+    channel TEXT NOT NULL,
+    from_id TEXT NOT NULL DEFAULT '',
+    payload TEXT,
+    ts INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_mesh_room_lines_room ON mesh_room_lines (room_id);
+
   CREATE TABLE IF NOT EXISTS public_assets (
     asset_id TEXT PRIMARY KEY,
     space_id TEXT NOT NULL,

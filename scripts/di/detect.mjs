@@ -73,16 +73,25 @@ export const decideMode = (probes = {}) => {
         return { mode: 'node', nodeSource: nodeSource(), reason: 'asked for node' }
     }
 
-    if (dockerRunning && imagesPullable) {
-        return { mode: 'docker', nodeSource: null, reason: 'docker is running and the images are pullable' }
-    }
-
+    // Node first, docker only when node isn't viable (or asked for by name).
+    // It used to be the other way around: Docker Desktop merely being open
+    // silently landed an artist in the mode with no DI_LOCAL, a non-loopback
+    // remoteAddress and no reachable claude binary — every local operator
+    // surface (agent board, local Claude chat) 404s there while the wiki
+    // promises it works. The container mode is real and kept, but it is the
+    // deliberate choice (--docker / DI_MODE=docker), never the accident.
     const source = nodeSource()
     if (source) {
-        const why = dockerRunning && !imagesPullable
-            ? 'docker is running but the images are not public yet'
-            : 'no usable docker'
+        const why = dockerRunning && imagesPullable
+            ? 'node is available — docker stays opt-in (--docker), local surfaces need the host'
+            : dockerRunning && !imagesPullable
+                ? 'docker is running but the images are not public yet'
+                : 'no usable docker'
         return { mode: 'node', nodeSource: source, reason: why }
+    }
+
+    if (dockerRunning && imagesPullable) {
+        return { mode: 'docker', nodeSource: null, reason: 'no usable node, and docker is running with pullable images' }
     }
 
     return {

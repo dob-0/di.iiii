@@ -302,7 +302,7 @@ export const SEQUENCES = [
         // Ambient 0: every cell is an unlit basic material showing video, so
         // fill light lands on nothing at all and would only lift the black
         // behind the shell.
-        backdrop: { color: '#04050A', fogNear: 6, fogFar: 24, ambient: 0 },
+        backdrop: { color: '#04080A', fogNear: 6, fogFar: 24, ambient: 0 },
         // NO VEIL on this arrival. The metaball field opens a portal with this
         // globe already visible through it, and then irises the wall out past
         // the visitor — that IS the transition, choreographed in the sequence

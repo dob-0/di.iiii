@@ -1223,6 +1223,24 @@
 
 .preferences-empty { color: var(--ui-text-muted); line-height: 1.5; }
 
+/* The estate map is a whole page rendered inside a section, so it gets a tall
+   viewport of its own rather than being squeezed into flow height. `sandbox=""`
+   on the element blocks scripts entirely — the frame can never size itself, so
+   the height has to be given here. */
+.preferences-estate-frame {
+    width: 100%;
+    height: min(78vh, 900px);
+    margin-top: 12px;
+    border: 1px solid var(--pref-border-active);
+    border-radius: 0;
+    background: var(--di-surface);
+    display: block;
+}
+
+@media (max-width: 640px) {
+    .preferences-estate-frame { height: 70vh; }
+}
+
 @keyframes preferences-indeterminate {
     from { transform: translateX(-120%); }
     to { transform: translateX(260%); }

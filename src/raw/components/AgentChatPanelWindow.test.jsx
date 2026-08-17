@@ -10,11 +10,12 @@ vi.mock('../../services/aiChatApi.js', () => ({
 }))
 vi.mock('../../services/apiClient.js', () => ({
     connectAiKey: vi.fn(),
-    getApiAuthProviders: vi.fn(() => Promise.resolve({ github: { enabled: true }, google: { enabled: false } })),
+    // real /api/auth/providers shape: plain booleans, not { enabled } objects
+    getApiAuthProviders: vi.fn(() => Promise.resolve({ github: true, google: false })),
     getOAuthUrl: vi.fn((p) => `https://example/auth/${p}`)
 }))
 
-import { connectAiKey } from '../../services/apiClient.js'
+import { connectAiKey, getApiAuthProviders } from '../../services/apiClient.js'
 import { getAiProviders } from '../../services/aiChatApi.js'
 import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 
@@ -59,5 +60,14 @@ describe('AgentChatPanelWindow connect flow', () => {
         render(<AgentChatPanelWindow chatId={null} onPersistChatId={vi.fn()} />)
         expect(await screen.findByText('Sign in with GitHub')).toBeTruthy()
         expect(screen.queryByPlaceholderText(/Paste your Claude API key/)).toBeNull()
+    })
+
+    it('boolean providers (the real API shape) render both sign-in buttons', async () => {
+        getAiProviders.mockRejectedValue(Object.assign(new Error('forbidden'), { status: 401 }))
+        getApiAuthProviders.mockResolvedValue({ github: true, google: true })
+        render(<AgentChatPanelWindow chatId={null} onPersistChatId={vi.fn()} />)
+        expect(await screen.findByText('Sign in with GitHub')).toBeTruthy()
+        expect(screen.getByText('Sign in with Google')).toBeTruthy()
+        expect(screen.queryByText('Sign in with an account to chat.')).toBeNull()
     })
 })

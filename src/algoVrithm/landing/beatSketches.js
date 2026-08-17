@@ -200,7 +200,7 @@ const metaball = (ctx, view) => {
 // Beat 05 — a closed shell of 9:16 reels on a lat/long grid, seen from inside.
 const globe = (ctx, view) => {
     const { width, height, progress, elapsed, ink } = view
-    fill(ctx, view, '#04050A')
+    fill(ctx, view, '#04080A')
     const cols = 18
     const rows = 9
     // Held still, then swiped, then accelerating into noise — the three

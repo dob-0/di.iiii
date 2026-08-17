@@ -11,6 +11,14 @@
 export const WORKTREE_BUDGET = 6
 export const UNMERGED_BRANCH_BUDGET = 8
 
+// The branches deploy actually watches (dev → staging, main → prod). When one of
+// these is checked out anywhere but the primary checkout, "git switch dev" refuses
+// everywhere else — worth a line before anyone hits that wall (2026-08-09 incident).
+export const FLOW_BRANCHES = ['dev', 'main']
+
+const shortSha = (sha) => (sha ? sha.slice(0, 8) : '?')
+const lastPathSegment = (p) => p.split('/').filter(Boolean).pop() || p
+
 // Branches that are never meant to reach dev and would otherwise drown the report in
 // noise that isn't actionable — dependabot PRs, the legacy cPanel artifact branches,
 // and personal scratch branches.
@@ -54,11 +62,16 @@ export const isSweepSafe = (wt) => {
 // state shape (all fields optional/best-effort — git failures should degrade, not throw):
 // {
 //   currentBranch, currentPath,
+//   primaryPath,                          // the main checkout (first entry of `git worktree list`)
 //   dev: { commit, aheadOfMain, behindMain },
 //   main: { commit },
 //   promotionPlan: { type },              // from getProductionPromotionPlan
 //   currentBranchBehindDev,               // number|null
-//   worktrees: [{ path, branch, prunable, detached }],
+//   headBehindDev,                        // number|null — detached or on dev, HEAD behind origin/dev
+//   currentUpstreamGone,                  // boolean — upstream configured but deleted on the remote
+//   worktrees: [{ path, head, branch, prunable, detached,
+//                 behindOrigin, aheadOfOrigin,   // vs origin/<branch>; null when no such ref
+//                 upstreamGone, headInOriginDev }],
 //   unmergedBranches: [{ name, aheadOfDev }]
 // }
 
@@ -78,6 +91,14 @@ export const formatStateReport = (state) => {
       merge: 'main and dev have diverged — promotion would need a merge'
     }[state.promotionPlan.type] || state.promotionPlan.type
     lines.push(`  ${planText}`)
+  }
+
+  // Who holds dev/main — the fact `git switch dev` refuses on. Flow branches only;
+  // one line per feature branch would blow the report's budget for no decision.
+  for (const wt of state.worktrees ?? []) {
+    if (!wt.branch || !FLOW_BRANCHES.includes(wt.branch)) continue
+    if (state.primaryPath && wt.path === state.primaryPath) continue
+    lines.push(`  ${wt.branch} is held by ${wt.path}`)
   }
 
   const worktreeCount = state.worktrees?.length ?? 0
@@ -117,7 +138,39 @@ export const collectStateWarnings = (state, thresholds = {}) => {
     warnings.push(`current branch "${state.currentBranch}" is ${state.currentBranchBehindDev} commits behind origin/dev`)
   }
 
+  // The two shapes of the 2026-08-10 incident: the main checkout served a merged
+  // feature branch 115 commits behind origin/dev for two days, and nothing said so.
+  if (state.headBehindDev) {
+    warnings.push(`this checkout (${state.currentBranch}) is ${state.headBehindDev} commits behind origin/dev — stale viewing surface; git fetch && git checkout --detach origin/dev`)
+  }
+
+  if (state.currentUpstreamGone) {
+    warnings.push(`current branch "${state.currentBranch}" tracks an upstream that is gone (merged and deleted?) — park this checkout: git fetch && git checkout --detach origin/dev`)
+  }
+
   const worktrees = state.worktrees ?? []
+
+  // 2026-08-09: the primary checkout sat detached, `git switch dev` refused with
+  // "'dev' is already used by worktree at .../di.iiii-algomerge", and nothing here
+  // said so. Name the holder in the same breath as the refusal it causes.
+  const primary = worktrees.find((w) => state.primaryPath && w.path === state.primaryPath)
+  if (primary?.detached) {
+    for (const flow of FLOW_BRANCHES) {
+      const holder = worktrees.find((w) => w.branch === flow && w.path !== primary.path)
+      if (!holder) continue
+      warnings.push(`primary checkout ${primary.path} is detached and cannot take ${flow} — ${flow} is held by ${holder.path} (git switch ${flow} would refuse)`)
+    }
+  }
+
+  // A held branch trailing its own origin ref means its name lies: "dev" in that
+  // worktree is not origin/dev (the holder above was 10 behind during the incident).
+  // Behind-only — ahead of origin is just unpushed work, already reported elsewhere.
+  for (const wt of worktrees) {
+    if (!wt.branch || !wt.behindOrigin) continue
+    const ahead = wt.aheadOfOrigin ? `, ${wt.aheadOfOrigin} ahead` : ''
+    warnings.push(`${lastPathSegment(wt.path)} holds ${wt.branch} at ${shortSha(wt.head)} — ${wt.behindOrigin} behind origin/${wt.branch}${ahead}`)
+  }
+
   if (worktrees.length > worktreeBudget) {
     warnings.push(`${worktrees.length} worktrees exceeds the budget of ${worktreeBudget}`)
   }
@@ -142,4 +195,24 @@ export const collectStateWarnings = (state, thresholds = {}) => {
   }
 
   return warnings
+}
+
+// Hints, not actions — repo-state stays read-only and --sweep keeps its stricter
+// gate. A worktree looks finished when its branch's HEAD is contained in origin/dev,
+// or when its remote ref is gone: a squash-merged PR leaves a tip that is NOT an
+// ancestor of dev, so remote-ref-gone is the signal ancestry alone would miss.
+// Detached worktrees are exempt — parking detached at origin/dev is this tool's
+// own advice, not a sign of abandonment. So are dirty/live trees (in use), the
+// primary checkout, and the worktree the report runs from.
+export const collectFinishedHints = (state) => {
+  const hints = []
+  for (const wt of state.worktrees ?? []) {
+    if (!wt.branch || wt.prunable || wt.dirty || wt.live) continue
+    if (wt.path === state.primaryPath || wt.path === state.currentPath) continue
+    const reasons = []
+    if (wt.headInOriginDev) reasons.push('branch merged')
+    if (wt.upstreamGone) reasons.push('remote ref gone')
+    if (reasons.length) hints.push(`finished? ${wt.path} (${reasons.join(' / ')})`)
+  }
+  return hints
 }

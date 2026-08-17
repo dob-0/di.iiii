@@ -13,6 +13,7 @@ import {
   formatStateReport,
   formatBriefReport,
   collectStateWarnings,
+  collectFinishedHints,
   classifyWorktree,
   isSweepSafe,
   isNoiseBranch,
@@ -43,6 +44,23 @@ const getCurrentBranchBehindDev = (branch) => {
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
+// The cases getCurrentBranchBehindDev deliberately skips — detached HEAD and a stale
+// local dev — are exactly how the main checkout served old code unnoticed (2026-08-10,
+// 115 commits behind). Counted against the local origin/dev ref; no fetch.
+const getHeadBehindDev = (branch) => {
+  if (branch && branch !== 'dev') return null
+  const out = git(['rev-list', '--count', 'HEAD..origin/dev'])
+  const n = Number(out)
+  return Number.isFinite(n) && n > 0 ? n : null
+}
+
+// "[gone]" = upstream configured but deleted on the remote (a merged branch) — a
+// checkout parked there is a stale viewing surface. Distinct from never-pushed.
+const isCurrentUpstreamGone = (branch) => {
+  if (!branch) return false
+  return git(['for-each-ref', '--format=%(upstream:track)', `refs/heads/${branch}`]) === '[gone]'
+}
+
 const isAncestor = (ancestorRef, descendantRef) => {
   try {
     execFileSync('git', ['merge-base', '--is-ancestor', ancestorRef, descendantRef], { stdio: 'ignore' })
@@ -70,9 +88,10 @@ const getWorktrees = () => {
   const raw = git(['worktree', 'list', '--porcelain'])
   if (!raw) return []
   return raw.split('\n\n').filter(Boolean).map((block) => {
-    const entry = { path: null, branch: null, detached: false, prunable: false }
+    const entry = { path: null, head: null, branch: null, detached: false, prunable: false }
     for (const line of block.split('\n')) {
       if (line.startsWith('worktree ')) entry.path = line.slice('worktree '.length)
+      else if (line.startsWith('HEAD ')) entry.head = line.slice('HEAD '.length)
       else if (line.startsWith('branch ')) entry.branch = line.slice('branch '.length).replace('refs/heads/', '')
       else if (line === 'detached') entry.detached = true
       else if (line.startsWith('prunable')) entry.prunable = true
@@ -134,7 +153,10 @@ const attachLiveInfo = (worktrees, liveProcesses) => {
 const getWorktreeGitFacts = (wt) => {
   const dirty = git(['status', '--porcelain'], wt.path) !== ''
   const headSubject = git(['log', '-1', '--format=%s'], wt.path) || null
-  if (!wt.branch) return { dirty, headSubject, mergedIntoDev: true, hasUpstream: false }
+  // Refs and objects are shared across worktrees, so everything below runs against
+  // the invoking repo — the report must be identical from any worktree.
+  const headInOriginDev = wt.head ? isAncestor(wt.head, 'origin/dev') : false
+  if (!wt.branch) return { dirty, headSubject, headInOriginDev, mergedIntoDev: true, hasUpstream: false }
   // git cherry (patch-id comparison) catches squash merges that merge-base --is-ancestor
   // misses entirely — a branch whose commits were squashed into one on origin/dev is
   // otherwise permanently misreported as "unmerged".
@@ -144,7 +166,23 @@ const getWorktreeGitFacts = (wt) => {
     .filter(Boolean)
     .every((line) => !line.startsWith('+'))
   const hasUpstream = git(['rev-parse', '--abbrev-ref', '--symbolic-full-name', `${wt.branch}@{upstream}`], wt.path) !== ''
-  return { dirty, headSubject, mergedIntoDev, hasUpstream }
+  // "[gone]" = upstream configured but deleted on the remote — the trace a
+  // squash-merged PR leaves once its branch is pruned. Distinct from never-pushed.
+  const upstreamGone = git(['for-each-ref', '--format=%(upstream:track)', `refs/heads/${wt.branch}`]) === '[gone]'
+  // Drift of the checked-out copy vs origin/<branch> — during the 2026-08-09 incident
+  // the worktree holding dev was 10 behind origin/dev, so "dev" named two commits.
+  // No origin/<branch> ref → git fails → '' → counts stay null. Behind matters most.
+  let behindOrigin = null
+  let aheadOfOrigin = null
+  const counts = git(['rev-list', '--left-right', '--count', `origin/${wt.branch}...${wt.branch}`])
+  if (counts) {
+    const [behind, ahead] = counts.split(/\s+/).map(Number)
+    if (Number.isFinite(behind) && Number.isFinite(ahead)) {
+      behindOrigin = behind
+      aheadOfOrigin = ahead
+    }
+  }
+  return { dirty, headSubject, headInOriginDev, mergedIntoDev, hasUpstream, upstreamGone, behindOrigin, aheadOfOrigin }
 }
 
 const getUnmergedBranches = () => {
@@ -169,11 +207,16 @@ const getEnrichedWorktrees = () => {
 
 const getState = () => {
   const currentBranch = getCurrentBranch()
+  const worktrees = getEnrichedWorktrees()
   return {
     currentBranch: currentBranch || '(detached)',
+    currentPath: repoRoot || null,
+    primaryPath: worktrees[0]?.path ?? null, // git worktree list always puts the main checkout first
     currentBranchBehindDev: getCurrentBranchBehindDev(currentBranch),
+    headBehindDev: getHeadBehindDev(currentBranch),
+    currentUpstreamGone: isCurrentUpstreamGone(currentBranch),
     promotionPlan: getPromotionPlan(),
-    worktrees: getEnrichedWorktrees(),
+    worktrees,
     unmergedBranches: getUnmergedBranches()
   }
 }
@@ -238,10 +281,14 @@ const main = () => {
 
   console.log(formatStateReport(state))
   const warnings = collectStateWarnings(state)
-  if (warnings.length) {
+  const hints = collectFinishedHints(state)
+  if (warnings.length || hints.length) {
     console.log('  ---')
     for (const warning of warnings) {
       console.log(`  ⚠ ${warning}`)
+    }
+    for (const hint of hints) {
+      console.log(`  · ${hint}`)
     }
   }
 }

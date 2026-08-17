@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ritualDurationSec, SEQUENCES } from './index.js'
+import { DATA_WHITE, paletteWarning } from '../palette.js'
 import { clipProgress, fadeEnvelope } from '../ritualClock.js'
 import { analyseEditList } from '../editList.js'
 
@@ -63,6 +64,26 @@ describe('algovrithm edit list', () => {
             expect(sequence.backdrop).toBeTruthy()
             expect(sequence.backdrop.color).toMatch(/^#[0-9a-f]{6}$/i)
             expect(sequence.backdrop.fogFar).toBeGreaterThan(sequence.backdrop.fogNear)
+        })
+    })
+
+    it('keeps every backdrop inside the palette, exceptions named not smuggled', () => {
+        // The reel globe's world sat at #04050A (hue 230, the purple gap) from
+        // 2026-08-05 to 2026-08-13 and no test saw it: palette.test.js sweeps
+        // only PALETTE/TUNNEL_WHITE/BACKDROPS, and the check above stops at
+        // "hex-shaped". Inline backdrops are palette surface too.
+        //
+        // DATA_WHITE is the piece's one sanctioned violation (see heroField.js:
+        // signal on a black world, seen by a dark-adapted eye in a headset —
+        // defensible there, and named here so it stays an exception). Anything
+        // else the validator rejects is a finding, not a style.
+        SEQUENCES.forEach((sequence) => {
+            const colour = sequence.backdrop.color
+            if (colour.toUpperCase() === DATA_WHITE) return
+            expect(
+                paletteWarning(colour),
+                `${sequence.id} backdrop ${colour}`
+            ).toBeNull()
         })
     })
 

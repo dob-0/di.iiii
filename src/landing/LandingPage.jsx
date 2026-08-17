@@ -40,8 +40,17 @@ const FEATURED_SPACES = [
     { id: ALGO_VRITHM_SPACE_ID, label: ALGO_VRITHM_LABEL, href: ALGO_VRITHM_PATH, className: 'landing-cta-algo-vrithm' }
 ]
 
+// A `di up` install on the visitor's own machine has no accounts and no
+// quota — the server says so (config.local + requireAuth off) and this page
+// must not keep speaking hosted-product copy at someone who owns the whole
+// disk. Not a separate "mode": one boolean, and the two hosted sentences
+// below get local-truthful variants. Voice matches the wiki's local-install
+// article ("Run di.iiii on your own machine").
+const LOCAL_STEP_OPEN = { n: '01', title: 'Open a space', body: 'Click "Open Studio" or go to any space URL. This is your machine — everything here is yours to edit, no account involved.' }
+const LOCAL_FEATURE_SPACES = { icon: '✦', title: 'Your machine, your spaces', desc: 'This di.iiii runs locally. Create as many spaces as you like — no sign-in, no quota, and your work stays in your own home folder.' }
+
 const STEPS = [
-    { n: '01', title: 'Open a space', body: 'Click "Open Studio" or go to any space URL. No account required to view. Sign in only to edit.' },
+    { n: '01', title: 'Open a space', body: 'Click "Step inside" or go to any space URL. No account required to view. Sign in only to edit.' },
     { n: '02', title: 'Add objects', body: 'Use the Library panel to add 3D shapes, text, images, or 3D models. Drag to position them.' },
     { n: '03', title: 'Customize your world', body: 'Change colors, lighting, camera angle, and background. Tweak with the Inspector on the right.' },
     { n: '04', title: 'Share or publish', body: 'Copy the space link to invite collaborators, or publish to make it live for the public.' }
@@ -153,6 +162,11 @@ export default function LandingPage() {
     // populated space instead of the decorative walkable void this page's
     // own background renders.
     const [mainSpaceId, setMainSpaceId] = useState(null)
+    // True only when the server declares itself a local install AND auth is
+    // off — the pair that makes "sign in to edit" a false sentence. Read from
+    // /api/config, which this page already fetches; deliberately NOT from
+    // /api/auth/session, which would mint a guest session for every visitor.
+    const [isLocalInstall, setIsLocalInstall] = useState(false)
     const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches)
     // Phones do not get the decorative WebGL hero. landing.css has tried to
     // disable it below 520px since the hero was built, but the rule targets
@@ -173,7 +187,9 @@ export default function LandingPage() {
     useEffect(() => {
         let cancelled = false
         getServerConfig().then((cfg) => {
-            if (!cancelled) setMainSpaceId(cfg?.defaultSpaceId || null)
+            if (cancelled) return
+            setMainSpaceId(cfg?.defaultSpaceId || null)
+            setIsLocalInstall(Boolean(cfg?.local) && cfg?.requireAuth === false)
         }).catch(() => {})
         return () => { cancelled = true }
     }, [])
@@ -226,12 +242,11 @@ export default function LandingPage() {
                 <nav className="lp-nav">
                     <a href="/" className="lp-nav-logo">di<span className="lp-dot">.</span>iiii</a>
                     <div className="lp-nav-links">
-                        <a href={studioHref} className="lp-nav-link">Studio</a>
-                        <a href={RAW_LANE_HREF} className="lp-nav-link">Raw v.0</a>
+                        <a href={RAW_LANE_HREF} className="lp-nav-link">Raw</a>
                         <a href={buildWikiPath()} className="lp-nav-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
                     </div>
-                    <a href={studioHref} className="lp-nav-cta">Open Studio</a>
+                    <a href={RAW_LANE_HREF} className="lp-nav-cta">Enter Raw</a>
                 </nav>
             )}
 
@@ -260,14 +275,11 @@ export default function LandingPage() {
                     </Typography>
 
                     <Stack direction="row" spacing={2} sx={{ pt: 1, pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href="/open/studio">
+                        <Button className="landing-cta-primary" variant="contained" size="large" href={RAW_LANE_HREF}>
                             Step inside
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref}>
                             Open Studio
-                        </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={RAW_LANE_HREF}>
-                            Raw v.0
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
                             Enter Space
@@ -383,7 +395,7 @@ export default function LandingPage() {
                     </Typography>
 
                     <Box className="lp-steps">
-                        {STEPS.map((step) => (
+                        {(isLocalInstall ? [LOCAL_STEP_OPEN, ...STEPS.slice(1)] : STEPS).map((step) => (
                             <Box key={step.n} className="lp-step">
                                 <Typography className="lp-step-num" aria-hidden="true">{step.n}</Typography>
                                 <Box>
@@ -431,7 +443,10 @@ export default function LandingPage() {
                     <Typography className="lp-section-title" component="h2">What you can do</Typography>
 
                     <Box className="lp-feature-grid">
-                        {FEATURES.map((f) => (
+                        {(isLocalInstall
+                            ? FEATURES.map((f) => (f.title === '3 free spaces' ? LOCAL_FEATURE_SPACES : f))
+                            : FEATURES
+                        ).map((f) => (
                             <Box key={f.title} className="lp-feature-card">
                                 <Typography className="lp-feature-icon" component="span" aria-hidden="true">{f.icon}</Typography>
                                 <Typography className="lp-feature-title" component="h3">{f.title}</Typography>
@@ -541,19 +556,16 @@ export default function LandingPage() {
                         Start building your space.
                     </Typography>
                     <Typography className="lp-enter-body">
-                        Step inside to build with everyone in the Open Space, open the Studio to start
-                        your own scene, or try Raw for the node-first workflow.
+                        Step inside to build with everyone in the Open Space, or open Studio for the
+                        classic panel-based editor.
                         Everything runs in your browser — no sign-up required to explore.
                     </Typography>
                     <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', justifyContent: 'center', mb: 2 }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href="/open/studio">
+                        <Button className="landing-cta-primary" variant="contained" size="large" href={RAW_LANE_HREF}>
                             Step inside
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref}>
                             Open Studio
-                        </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={RAW_LANE_HREF}>
-                            Raw v.0
                         </Button>
                         <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
                             Enter Space
@@ -573,8 +585,8 @@ export default function LandingPage() {
                 <div className="lp-footer-inner">
                     <span className="lp-footer-brand">di<span className="lp-dot">.</span>iiii</span>
                     <nav className="lp-footer-nav" aria-label="Footer navigation">
+                        <a href={RAW_LANE_HREF} className="lp-footer-link">Raw</a>
                         <a href={studioHref} className="lp-footer-link">Studio</a>
-                        <a href={RAW_LANE_HREF} className="lp-footer-link">Raw v.0</a>
                         <a href={buildWikiPath()} className="lp-footer-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
                         <a href="/serverXR/api/health" className="lp-footer-link">API</a>

@@ -330,3 +330,124 @@ describe('the mesh gates reserved node ids without gating visitors', () => {
     await wait(50)
   })
 })
+
+describe('room history — the room keeps its chat', () => {
+  const BASE = '/serverXR'
+  let httpServer
+  let port
+  let wsBase
+
+  const { initDb, closeDb } = require('./db.js')
+
+  beforeAll(async () => {
+    initDb(':memory:')
+    httpServer = http.createServer((req, res) => { res.writeHead(200); res.end('ok') })
+    initializeMesh(httpServer, { basePath: BASE, meshHistoryChannels: 'talk,keeper:say' })
+    await new Promise((r) => httpServer.listen(0, '127.0.0.1', r))
+    port = httpServer.address().port
+    wsBase = `ws://127.0.0.1:${port}${BASE}/mesh`
+  })
+
+  afterAll(async () => {
+    await new Promise((r) => httpServer.close(r))
+    closeDb()
+  })
+
+  const open = async (room, node) => {
+    const ws = new WebSocket(`${wsBase}?room=${room}&node=${node}`)
+    await new Promise((r) => ws.on('open', r))
+    return ws
+  }
+
+  const collectHistory = async (ws) => {
+    const lines = []
+    for (;;) {
+      const m = await nextMsg(ws, (x) => x.type === 'mesh:history')
+      lines.push(...m.lines)
+      if (m.done) return lines
+    }
+  }
+
+  it('persists talk lines and replays them, oldest-first with stable ids, to a later device that asks', async () => {
+    const a = await open('field-h1', 'a')
+    const b = await open('field-h1', 'b')
+    await wait(50)
+    a.send(JSON.stringify({ type: 'publish', channel: 'talk', payload: { text: 'first words' } }))
+    const liveFirst = await nextMsg(b, (m) => m.type === 'mesh:event' && m.channel === 'talk')
+    expect(typeof liveFirst.id).toBe('string')
+    b.send(JSON.stringify({ type: 'publish', channel: 'talk', payload: { text: 'an answer' } }))
+    await nextMsg(a, (m) => m.type === 'mesh:event' && m.channel === 'talk')
+    a.close(); b.close()
+    await wait(50)
+
+    // a fresh arrival — different device, empty room — asks and receives the kept chat
+    const late = await open('field-h1', 'late')
+    late.send(JSON.stringify({ type: 'control', cmd: 'history' }))
+    const lines = await collectHistory(late)
+    expect(lines.map((l) => l.payload.text)).toEqual(['first words', 'an answer'])
+    expect(lines.map((l) => l.from)).toEqual(['a', 'b'])
+    // the replayed line IS the live line — same id, so listeners dedupe on identity
+    expect(lines[0].id).toBe(liveFirst.id)
+    late.close()
+    await wait(50)
+  })
+
+  it('never persists ephemeral channels, never ids them, and never replays history as mesh:event', async () => {
+    const a = await open('field-h2', 'a')
+    const b = await open('field-h2', 'b')
+    await wait(50)
+    a.send(JSON.stringify({ type: 'publish', channel: 'motion', payload: { x: 1, y: 2, z: 3 } }))
+    const evt = await nextMsg(b, (m) => m.type === 'mesh:event' && m.channel === 'motion')
+    expect(evt.id).toBeUndefined()
+    a.close(); b.close()
+    await wait(50)
+
+    const late = await open('field-h2', 'late')
+    const stray = []
+    late.on('message', (raw) => {
+      try {
+        const m = JSON.parse(raw.toString())
+        if (m.type === 'mesh:event') stray.push(m)
+      } catch { /* not json */ }
+    })
+    late.send(JSON.stringify({ type: 'control', cmd: 'history' }))
+    const lines = await collectHistory(late)
+    expect(lines).toEqual([])
+    expect(stray).toEqual([])
+    late.close()
+    await wait(50)
+  })
+
+  it('keeps the room alive when the history store is gone — a lost line, not a lost room', async () => {
+    const a = await open('field-h3', 'a')
+    const b = await open('field-h3', 'b')
+    await wait(50)
+    closeDb()
+    const evtP = nextMsg(b, (m) => m.type === 'mesh:event' && m.channel === 'talk')
+    a.send(JSON.stringify({ type: 'publish', channel: 'talk', payload: { text: 'still speaking' } }))
+    const evt = await evtP
+    expect(evt.payload.text).toBe('still speaking')
+
+    a.send(JSON.stringify({ type: 'control', cmd: 'history' }))
+    const lines = await collectHistory(a)
+    expect(lines).toEqual([])
+    initDb(':memory:')
+    a.close(); b.close()
+    await wait(50)
+  })
+
+  it('a hub with history unconfigured answers an empty, done replay — asking is always safe', async () => {
+    const bare = http.createServer((req, res) => { res.writeHead(200); res.end('ok') })
+    initializeMesh(bare, { basePath: BASE })
+    await new Promise((r) => bare.listen(0, '127.0.0.1', r))
+    const barePort = bare.address().port
+    const ws = new WebSocket(`ws://127.0.0.1:${barePort}${BASE}/mesh?room=r&node=n`)
+    await new Promise((r) => ws.on('open', r))
+    ws.send(JSON.stringify({ type: 'control', cmd: 'history' }))
+    const m = await nextMsg(ws, (x) => x.type === 'mesh:history')
+    expect(m.lines).toEqual([])
+    expect(m.done).toBe(true)
+    ws.close()
+    await new Promise((r) => bare.close(r))
+  })
+})

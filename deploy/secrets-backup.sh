@@ -25,6 +25,12 @@ VPS="${VPS_HOST:-dii-vps}"
 OUT_DIR="${SECRETS_OUT:-$HOME/di-backups/secrets}"
 KEEP="${SECRETS_KEEP:-14}"
 RECIPIENT_KEY="${SECRETS_AGE_RECIPIENT:-$HOME/.ssh/id_ed25519.pub}"
+# Encrypting only to this machine's key makes the bundle useless in the exact
+# case it exists for: this disk dying takes the private key with it. Every
+# public key listed here (one per line, comments and blanks ignored) can open
+# the bundle independently, so a second machine is a second way in — not a
+# second copy of the same single point of failure.
+RECIPIENTS_FILE="${SECRETS_AGE_RECIPIENTS:-$OUT_DIR/recipients.txt}"
 CHECK=0
 [ "${1:-}" = "--check" ] && CHECK=1
 
@@ -48,7 +54,12 @@ work=$(mktemp -d /dev/shm/secrets-backup.XXXXXX)
 cleanup() { rm -rf "$work"; }
 trap cleanup EXIT INT TERM
 
-manifest="$work/MANIFEST.txt"
+# The payload lives one level down: tarring a directory into itself makes tar
+# notice it growing mid-read ("file changed as we read it") and abort, which
+# under `set -e` means no bundle at all.
+payload="$work/payload"
+mkdir -p "$payload"
+manifest="$payload/MANIFEST.txt"
 {
   echo "di.iiii secrets bundle"
   echo "taken from: $VPS"
@@ -66,8 +77,8 @@ got=0
 for entry in "${FILES[@]}"; do
   src="${entry%%:*}"; dst="${entry##*:}"
   if ssh "$VPS" "test -f '$src'" 2>/dev/null; then
-    ssh "$VPS" "cat '$src'" > "$work/$dst" 2>/dev/null
-    chmod 600 "$work/$dst"
+    ssh "$VPS" "cat '$src'" > "$payload/$dst" 2>/dev/null
+    chmod 600 "$payload/$dst"
     printf '  %-52s <- %s\n' "$dst" "$src" >> "$manifest"
     got=$((got + 1))
   else
@@ -88,15 +99,7 @@ fi
 
 mkdir -p "$OUT_DIR"; chmod 700 "$OUT_DIR"
 stamp=$(ssh "$VPS" date -u +%Y-%m-%d 2>/dev/null || echo unknown)
-# Build the archive OUTSIDE the directory being archived. Writing it into
-# $work made tar notice the directory grow underneath it and exit 1 with
-# "file changed as we read it" — and under `set -e` that aborted the script
-# before it encrypted anything, so the run ended having written no bundle at
-# all while looking like it had merely warned. --exclude does not help: it
-# keeps the file out of the archive, not out of the directory tar is reading.
-bundle=$(mktemp /dev/shm/secrets-bundle.XXXXXX.tar.gz)
-cleanup() { rm -rf "$work" "$bundle"; }
-tar -czf "$bundle" -C "$work" .
+tar -czf "$work/bundle.tar.gz" -C "$payload" .
 
 # age encrypts to the ssh key already protected and already backed up, so this
 # adds no new secret to lose. gpg --symmetric is the fallback when age is not
@@ -104,15 +107,21 @@ tar -czf "$bundle" -C "$work" .
 # second choice rather than first.
 if command -v age >/dev/null 2>&1 && [ -f "$RECIPIENT_KEY" ]; then
   out="$OUT_DIR/secrets-$stamp.age"
-  age -R "$RECIPIENT_KEY" -o "$out" "$bundle"
-  method="age → $(basename "$RECIPIENT_KEY")"
+  recipients=(-R "$RECIPIENT_KEY")
+  names=$(basename "$RECIPIENT_KEY")
+  if [ -f "$RECIPIENTS_FILE" ]; then
+    recipients+=(-R "$RECIPIENTS_FILE")
+    names="$names + $(grep -cvE '^\s*(#|$)' "$RECIPIENTS_FILE") more"
+  fi
+  age "${recipients[@]}" -o "$out" "$work/bundle.tar.gz"
+  method="age → $names"
 elif command -v gpg >/dev/null 2>&1; then
   out="$OUT_DIR/secrets-$stamp.gpg"
   if [ -n "${SECRETS_PASSPHRASE_FILE:-}" ] && [ -f "$SECRETS_PASSPHRASE_FILE" ]; then
     gpg --batch --yes --symmetric --cipher-algo AES256 \
-        --passphrase-file "$SECRETS_PASSPHRASE_FILE" -o "$out" "$bundle"
+        --passphrase-file "$SECRETS_PASSPHRASE_FILE" -o "$out" "$work/bundle.tar.gz"
   else
-    gpg --symmetric --cipher-algo AES256 -o "$out" "$bundle"
+    gpg --symmetric --cipher-algo AES256 -o "$out" "$work/bundle.tar.gz"
   fi
   method="gpg symmetric"
 else
@@ -123,8 +132,13 @@ chmod 600 "$out"
 
 # Prune by count, newest kept. Encrypted or not, old copies of live secrets are
 # still live secrets.
-ls -1t "$OUT_DIR"/secrets-*.age "$OUT_DIR"/secrets-*.gpg 2>/dev/null \
-  | tail -n +$((KEEP + 1)) | xargs -r rm -f
+#
+# `|| true`: with only .age bundles present the .gpg glob matches nothing, ls
+# exits 2, and under `set -euo pipefail` that killed the script AFTER the bundle
+# was written — so it succeeded silently and reported failure, which is the
+# worst of both. Found the first time this ran for real.
+find "$OUT_DIR" -maxdepth 1 -name 'secrets-*' -printf '%T@ %p\n' 2>/dev/null \
+  | sort -rn | tail -n +$((KEEP + 1)) | cut -d' ' -f2- | xargs -r rm -f || true
 
 say "wrote $out"
 say "  $got file(s), $method, $(du -h "$out" | cut -f1)"

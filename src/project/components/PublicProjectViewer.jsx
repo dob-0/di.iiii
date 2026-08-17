@@ -53,6 +53,38 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
         typeof window !== 'undefined'
         && new URLSearchParams(window.location.search).get('preview') === '1'
     ))
+    // ?embed=1 — this page is a WINDOW inside somebody else's page, not a
+    // destination. The viewer stops being a frame around the work and becomes
+    // glass: no paper of its own, no badge, no Walk/Fly.
+    //
+    // br_id_ge's rite has passed &embed=1 since it started opening the field
+    // inside its own ending, and asked for it the only other way available —
+    // reaching into the iframe's contentDocument to restyle it. Published
+    // pages are sandboxed WITHOUT allow-same-origin, so that reach always
+    // threw, and the embedded field fell back to painting opaque paper. The
+    // result on the live site was a rectangle pasted across the ending, with
+    // the shared body and the visitor's own mark hidden behind it. A window
+    // the host cannot see through is a box; only the viewer itself can open it.
+    const [isEmbed] = useState(() => (
+        typeof window !== 'undefined'
+        && new URLSearchParams(window.location.search).get('embed') === '1'
+    ))
+    // The DOCUMENT, not just this component's own shell: html/body/#root carry
+    // --di-black from base.css, which sat under a "transparent" viewer and left
+    // an embedded page a black box when viewed on its own. Toggled rather than
+    // set, so routing away from an embedded page takes the ground back.
+    //
+    // `window.document`, deliberately: this component declares `const document =
+    // state.document` below, which shadows the global for the WHOLE function
+    // scope — a bare `document` here resolves to a project document object, not
+    // the DOM, and the class would silently never be applied.
+    useEffect(() => {
+        if (!isEmbed || typeof window === 'undefined') return undefined
+        const root = window.document.documentElement
+        root.classList.add('dii-embed')
+        return () => root.classList.remove('dii-embed')
+    }, [isEmbed])
+
     const iframeRef = useRef(null)
     const syncServiceRef = useRef(createProjectSyncService())
     const versionRef = useRef(0)
@@ -139,7 +171,11 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
     const rawHtml = hasFiles ? bundleCodeFiles(presentationState.codeFiles) : (presentationState.codeHtml || '')
     // the shell's query belongs to the page it is showing — a published page
     // hands over to a sibling with ?param=…, and srcdoc would otherwise drop it
-    const previewDocument = buildPresentationPreviewDocument(rawHtml, typeof window !== 'undefined' ? window.location.search : '')
+    const previewDocument = buildPresentationPreviewDocument(
+        rawHtml,
+        typeof window !== 'undefined' ? window.location.search : '',
+        typeof window !== 'undefined' ? window.location.origin : ''
+    )
     const xrDefaultMode = publishState.xrDefaultMode || 'none'
 
     useEffect(() => {
@@ -210,7 +246,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 height: '100dvh',
                 minHeight: '100dvh',
                 position: 'relative',
-                background: '#05070a',
+                background: isEmbed ? 'transparent' : '#05070a',
                 overflow: 'hidden'
             }}
         >
@@ -227,7 +263,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                             border: 0,
                             width: '100%',
                             height: '100dvh',
-                            background: '#05070a'
+                            background: isEmbed ? 'transparent' : '#05070a'
                         }}
                     />
                 ) : rawHtml ? (
@@ -241,7 +277,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                             border: 0,
                             width: '100%',
                             height: '100dvh',
-                            background: '#05070a'
+                            background: isEmbed ? 'transparent' : '#05070a'
                         }}
                     />
                 ) : (
@@ -274,7 +310,7 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
                 </Suspense>
             ) : null}
 
-            {state.status === 'ready' && entryView === 'scene' && navMode === 'orbit' && !isPreview ? (
+            {state.status === 'ready' && entryView === 'scene' && navMode === 'orbit' && !isPreview && !isEmbed ? (
                 <button
                     type="button"
                     style={{ ...overlayButtonStyle, position: 'absolute', top: '1rem', right: '1rem', zIndex: 20 }}
@@ -296,11 +332,17 @@ export default function PublicProjectViewer({ spaceId, projectId, spaceLabel = '
             ) : null}
 
             {/* walk mode shows the badge in the LiveProjectScene chrome header */}
-            {state.status === 'ready' && navMode === 'orbit' && !isPreview ? (
+            {/* the host page carries its own badge; a second one inside the
+                window reads as chrome belonging to the work itself */}
+            {state.status === 'ready' && navMode === 'orbit' && !isPreview && !isEmbed ? (
                 <MadeWithBadge variant="floating" />
             ) : null}
 
-            {state.status === 'loading' ? loadingOverlay : null}
+            {/* the loading screen is deliberately black and full-bleed, which is
+                the exact box embed mode exists to remove — inside a window it
+                would flash one on every open. The host's own page is what the
+                visitor waits on. */}
+            {state.status === 'loading' && !isEmbed ? loadingOverlay : null}
 
             {state.status === 'error' ? (
                 <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', padding: '2rem' }}>

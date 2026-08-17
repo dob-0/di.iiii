@@ -72,7 +72,7 @@ term expires. Do not delete it as part of adopting this path.
    Generate with `openssl rand -hex 32`, and use a **different value per
    tier** — one shared value would let a staging client claim the keeper
    identity on production. Every keeper client must then send it as the
-   `secret=` query parameter: `dibot/deploy/scripts/keeper_agent.py`,
+   `secret=` query parameter: `di-jet/deploy/scripts/keeper_agent.py`,
    `di-bo/keeper.mjs`, and `br_id_ge/scripts/keeper-presence.mjs`. Leaving it
    unset keeps today's behaviour (reserved ids ungated), so it is safe to
    deploy this before the clients are updated — but the gate does nothing

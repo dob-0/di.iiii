@@ -120,7 +120,9 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('space', 'universe.space', { label: 'Space', col: 4, row: 1 })
     add('desk', 'universe.desk.3d', { label: '3D Desk', col: 4, row: 2 })
     add('text', 'view.text', { label: 'Text panel', col: 4, row: 3, values: { content: 'Every node type, one graph.' } })
-    add('browser', 'view.browser', { label: 'Browser panel', col: 4, row: 4, values: { url: 'https://di-studio.xyz' } })
+    // Same-origin on purpose: the example must also open on a local install
+    // with no network, where an iframe of di-studio.xyz is a dead panel.
+    add('browser', 'view.browser', { label: 'Browser panel', col: 4, row: 4, values: { url: '/wiki' } })
     add('image', 'view.image', { label: 'Image panel', col: 4, row: 5 })
 
     // --- column 5: the editor's own chrome, as nodes ---------------------------
@@ -142,6 +144,21 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // computeNodeOutput gap the rest of this file documents around.
     add('webcam', 'source.webcam', { label: 'Webcam', col: 6, row: 0 })
     add('mic', 'source.mic', { label: 'Microphone', col: 6, row: 1 })
+
+    // --- column 7: workflow nodes + the keeper -----------------------------
+    // All live, same mechanism as the capture sources above: their panels push
+    // through handleLiveOutputChange, not computeNodeOutput.
+    add('workStatus', 'work.status', { label: 'Work Status', col: 7, row: 0 })
+    add('agentRun', 'work.agent', { label: 'Agent Run', col: 7, row: 1 })
+
+    // The keeper is left unconfigured on purpose — an endpoint is a property
+    // of the room you are in, not of the example.
+    add('keeper', 'agent.keeper', { label: 'Keeper', col: 7, row: 2 })
+
+    // Listening on every channel, because a controller set to anything other
+    // than channel 1 would otherwise look broken in the one graph that exists
+    // to show what works.
+    add('midiIn', 'device.midi.in', { label: 'MIDI In', col: 7, row: 3, values: { channel: 0 } })
 
     const id = (key) => made.get(key)?.id || ''
     const wire = (fromKey, fromPort, toKey, toPort) => {
@@ -214,7 +231,10 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('colorA', 'out', 'desk', 'bgColor'),
         wire('bool', 'out', 'desk', 'gridVisible'),
         wire('str', 'out', 'text', 'content'),
-        wire('str', 'out', 'studio', 'title')
+        wire('str', 'out', 'studio', 'title'),
+        // Work Status's summary feeds Agent Run's prompt — not its trigger,
+        // so placing the example never launches a real process.
+        wire('workStatus', 'summary', 'agentRun', 'prompt')
     ].filter(Boolean)
 
     return { nodes: [...made.values()], edges }

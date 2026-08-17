@@ -174,4 +174,24 @@ describe('agent board local-operator guard', () => {
       process.env.NODE_ENV = previous
     }
   })
+
+  it('DI_LOCAL=1 reopens a production gate, but only over loopback', () => {
+    const previousEnv = process.env.NODE_ENV
+    const previousLocal = process.env.DI_LOCAL
+    try {
+      process.env.NODE_ENV = 'production'
+      process.env.DI_LOCAL = '1'
+      expect(isLocalOperatorRequest(request('127.0.0.1'))).toBe(true)
+      expect(isLocalOperatorRequest(request('::1'))).toBe(true)
+      expect(isLocalOperatorRequest(request('192.168.88.10'))).toBe(false)
+      expect(isLocalOperatorRequest({})).toBe(false)
+
+      process.env.DI_LOCAL = ''
+      expect(isLocalOperatorRequest(request('127.0.0.1'))).toBe(false)
+    } finally {
+      process.env.NODE_ENV = previousEnv
+      if (previousLocal === undefined) delete process.env.DI_LOCAL
+      else process.env.DI_LOCAL = previousLocal
+    }
+  })
 })

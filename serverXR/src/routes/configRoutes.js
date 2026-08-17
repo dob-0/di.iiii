@@ -1,9 +1,15 @@
-function registerConfigRoutes(router, { requireAdminAlways, configStore, onConfigChanged = null, approvalGate = null }) {
+function registerConfigRoutes(router, { requireAdminAlways, configStore, onConfigChanged = null, approvalGate = null, requireAuth = false }) {
   const serializeConfig = (cfg) => ({
     defaultSpaceId: cfg.defaultSpaceId || null,
     // null = no global space → each guest gets a private sandbox.
     // A space id = guests share that one editable 'global' space.
-    globalSpaceId: cfg.globalSpaceId === undefined ? null : (cfg.globalSpaceId || null)
+    globalSpaceId: cfg.globalSpaceId === undefined ? null : (cfg.globalSpaceId || null),
+    // Deployment truth for pages that must not mint a session to learn it
+    // (the landing page already fetches this config): is this a `di up`
+    // install on the visitor's own machine, and is auth even on? Read at
+    // request time so tests can toggle DI_LOCAL per boot.
+    local: process.env.DI_LOCAL === '1',
+    requireAuth: Boolean(requireAuth)
   })
 
   if (approvalGate) {

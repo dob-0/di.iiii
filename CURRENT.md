@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Shared frame-exact timeline core + Raw Timeline node
+- Raw on touch, the all-nodes example, Studio as a node
 
 Full detail: `PROGRESS.md`.
 
@@ -24,17 +24,23 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 
 ## Open
 
-- **Lane consolidation in progress** — Studio-as-a-node rebase + Raw-as-default promotion pending, see Last session / plan file above.
-- **Real-browser looks owed**: `source.webcam`/`source.mic` (camera+mic needed) +
-  PR #93's 4 items (Inspector wheel-scroll, audio toggles, primitive clamping).
-- All 8 prod spaces owned (queried prod 2026-08-08); releasing ownership doesn't
-  revoke the scope it granted (deliberate). Mesh gate ARMED both tiers; leaked
-  PAT inferred-closed; **staging Google OAuth secret parked by the user** —
-  rotation script staged, see memory `reference-leaked-secrets`.
-- Owner's/artist's calls: `open`'s card blank, director page unseen, purple-gap
-  check fails. `feat/timeline-core` is PR #100 (dead ports being stripped).
+- **Lane consolidation: PR #99 MERGED 2026-08-13** (reconciled with #121, CI green,
+  both sides' panels seen rendering). Raw-as-default landing promotion still open —
+  owner's call, MANIFESTO §6 gates it.
+- **Real-browser looks owed**: only `source.mic` (macOS TCC blocks fake-device
+  audio headless — `npm run verify:capture` on Linux, or 30s by hand). Webcam
+  verified 2026-08-13; PR #93's items all closed (see known-fixes).
+- All 8 prod spaces owned; releasing ownership keeps granted scope (deliberate).
+  Mesh gate ARMED both tiers; **staging Google OAuth secret parked by the user**
+  — rotation script staged, see memory `reference-leaked-secrets`.
+- **No byte quota / ENOSPC pre-check anywhere** — only di-bo watches free disk.
+- Owner decisions 2026-08-13: purple-gap CLOSED (recolor + backdrop guard, see
+  PROGRESS). `open` card = upload the honest teal frame — decided, pending
+  staging API token then prod approval. Director page still unseen.
 - **br_id_ge rite fixes unverified by a human** — Act III backdrop + Act V idle-motion CSS shipped live, page loads clean, but the acts are camera-gesture-gated so no automated check could actually see them render.
-- Staging deploy pending as of session end — GitHub Actions infra was degraded (stuck queues across unrelated branches too); check `gh run list --repo dob-0/di.iiii --branch dev` before assuming it landed.
+- **Prod room append path unproven** — record is empty by design (no backfill); the first real spoken line on di-studio.xyz/br_id_ge/field is both the proof and the room's first memory.
+- **Tunnel telegram first-binding untested by any human** — needs a telegram account with NO prior @diiii111bot chat.
+- Remaining trees, each with a reason: raw-ws (active session), inscription-mark / rawadmin / design-loading-unify / agents-upgrade (unmerged work — park or PR, owner's call).
 
 ## Deploy & validation — [docs/ai/known-fixes.md](docs/ai/known-fixes.md), check before any bug hunt
 

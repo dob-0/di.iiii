@@ -131,6 +131,26 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
                 return context?.liveOutputs?.get(`${node.id}:frame`) ?? null
             }
             break
+        case 'device.midi.in':
+            // Live side channel again, written by MidiInputPanel. `trigger` is
+            // declared `signal`, and the runtime computes no signal outputs —
+            // so it carries a monotonically rising count, the same idiom as
+            // time.beat: a consumer sees an event because the number changed,
+            // not by catching a pulse between frames.
+            if (portId === 'note' || portId === 'velocity' || portId === 'cc'
+                || portId === 'value' || portId === 'trigger') {
+                return context?.liveOutputs?.get(`${node.id}:${portId}`) ?? 0
+            }
+            break
+        case 'agent.keeper':
+            // Same live-output side channel as the capture family: the reply
+            // arrives from a network call the panel makes, so it cannot be a
+            // serialised node value. An unanswered keeper reads as empty
+            // string rather than undefined, so a downstream string input gets
+            // something it can render instead of "undefined".
+            if (portId === 'reply') return context?.liveOutputs?.get(`${node.id}:reply`) ?? ''
+            if (portId === 'busy') return context?.liveOutputs?.get(`${node.id}:busy`) ?? false
+            break
         case 'source.mic':
             if (portId === 'volume') {
                 return context?.liveOutputs?.get(`${node.id}:volume`) ?? 0
@@ -138,6 +158,17 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
             if (portId === 'frequency') {
                 return context?.liveOutputs?.get(`${node.id}:frequency`) ?? null
             }
+            break
+        case 'work.status':
+            if (portId === 'running') return context?.liveOutputs?.get(`${node.id}:running`) ?? 0
+            if (portId === 'dirty') return context?.liveOutputs?.get(`${node.id}:dirty`) ?? false
+            if (portId === 'openPrs') return context?.liveOutputs?.get(`${node.id}:openPrs`) ?? 0
+            if (portId === 'summary') return context?.liveOutputs?.get(`${node.id}:summary`) ?? ''
+            break
+        case 'work.agent':
+            if (portId === 'status') return context?.liveOutputs?.get(`${node.id}:status`) ?? 'idle'
+            if (portId === 'running') return context?.liveOutputs?.get(`${node.id}:running`) ?? false
+            if (portId === 'result') return context?.liveOutputs?.get(`${node.id}:result`) ?? ''
             break
         case 'math.add':
             if (portId === 'out') {
