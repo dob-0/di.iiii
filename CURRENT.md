@@ -13,7 +13,8 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- sync could not lose your work quietly; now it cannot lose it at all
+- sync cannot lose work: #119 merged, staging verified by eye, **promotion = PR #151, approval owed**.
+  Until #151 merges, merge NOTHING into `dev`; dependabot safe-bumps after, eslint-10/router-7 parked.
 
 Full detail: `PROGRESS.md`.
 
@@ -27,9 +28,8 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 - **Lane consolidation: PR #99 MERGED 2026-08-13** (reconciled with #121, CI green,
   both sides' panels seen rendering). Raw-as-default landing promotion still open —
   owner's call, MANIFESTO §6 gates it.
-- **Real-browser looks owed**: only `source.mic` (macOS TCC blocks fake-device
-  audio headless — `npm run verify:capture` on Linux, or 30s by hand). Webcam
-  verified 2026-08-13; PR #93's items all closed (see known-fixes).
+- **Real-browser looks owed**: only `source.mic` (`npm run verify:capture` on Linux,
+  or 30s by hand). Webcam verified 2026-08-13; PR #93's items all closed (see known-fixes).
 - All 8 prod spaces owned; releasing ownership keeps granted scope (deliberate).
   Mesh gate ARMED both tiers; **staging Google OAuth secret parked by the user**
   — rotation script staged, see memory `reference-leaked-secrets`.
