@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Raw on touch, the all-nodes example, Studio as a node
+- sync could not lose your work quietly; now it cannot lose it at all
 
 Full detail: `PROGRESS.md`.
 
