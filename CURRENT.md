@@ -35,9 +35,8 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
   QUOTA still unset — needs an owner policy number.
 - Deps 2026-08-18: #151 promoted + 6 safe bumps. Parked: eslint-10 #148, router-7 #150,
   checkout-7 #143 (conflicts; its windows install-test fails).
-- Owner decisions 2026-08-13: purple-gap CLOSED (recolor + backdrop guard, see
-  PROGRESS). `open` card = upload the honest teal frame — decided, pending
-  staging API token then prod approval. Director page still unseen.
+- `open` card = upload the honest teal frame — decided 2026-08-13, pending staging
+  API token then prod approval. Director page still unseen. (Purple-gap: CLOSED.)
 - **br_id_ge rite fixes unverified by a human** — Act III backdrop + Act V idle-motion CSS shipped live, page loads clean, but the acts are camera-gesture-gated so no automated check could actually see them render.
 - **Prod room append path unproven** — record is empty by design (no backfill); the first real spoken line on di-studio.xyz/br_id_ge/field is both the proof and the room's first memory.
 - **Tunnel telegram first-binding untested by any human** — needs a telegram account with NO prior @diiii111bot chat.
