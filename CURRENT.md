@@ -28,15 +28,14 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 - **Lane consolidation: PR #99 MERGED 2026-08-13** (reconciled with #121, CI green,
   both sides' panels seen rendering). Raw-as-default landing promotion still open —
   owner's call, MANIFESTO §6 gates it.
-- Real-browser looks ALL CLOSED — webcam 2026-08-13, `source.mic` 2026-08-18 (the flat
-  meter was verify-capture sampling the meter's track, not its fill; see PROGRESS).
+- Real-browser looks ALL CLOSED — webcam 2026-08-13, `source.mic` 2026-08-18 (see PROGRESS).
 - All 8 prod spaces owned; releasing ownership keeps granted scope (deliberate).
   Mesh gate ARMED both tiers; **staging Google OAuth secret parked by the user**
   — rotation script staged, see memory `reference-leaked-secrets`.
-- ENOSPC pre-check SHIPPED 2026-08-18 (`MIN_FREE_DISK_MB`, 507 floor on all writes).
-  Per-space byte QUOTA still unset — needs an owner policy number.
-- Deps: #151 promoted 2026-08-18 + 6 safe bumps merged. Parked: eslint-10 (#148),
-  router-7 (#150), checkout-7 (#143 — conflicts, its windows install-test fails).
+- ENOSPC pre-check SHIPPED 2026-08-18 (`MIN_FREE_DISK_MB` 507 floor); per-space byte
+  QUOTA still unset — needs an owner policy number.
+- Deps 2026-08-18: #151 promoted + 6 safe bumps. Parked: eslint-10 #148, router-7 #150,
+  checkout-7 #143 (conflicts; its windows install-test fails).
 - Owner decisions 2026-08-13: purple-gap CLOSED (recolor + backdrop guard, see
   PROGRESS). `open` card = upload the honest teal frame — decided, pending
   staging API token then prod approval. Director page still unseen.
