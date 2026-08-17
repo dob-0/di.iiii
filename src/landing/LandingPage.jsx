@@ -570,12 +570,9 @@ export default function LandingPage() {
                         <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
                             Enter Space
                         </Button>
-                        <Button className="lp-btn-link" href="/serverXR/api/health">
-                            Check backend status ↗
-                        </Button>
                     </Stack>
                     <Typography className="lp-enter-note">
-                        Armenia &nbsp;·&nbsp; Web XR &nbsp;·&nbsp; thedi.studio
+                        Armenia &nbsp;·&nbsp; Web XR &nbsp;·&nbsp; <a href="https://thedi.studio" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>thedi.studio</a>
                     </Typography>
                 </Box>
             </Box>
@@ -584,14 +581,20 @@ export default function LandingPage() {
             <footer className="lp-footer">
                 <div className="lp-footer-inner">
                     <span className="lp-footer-brand">di<span className="lp-dot">.</span>iiii</span>
-                    <nav className="lp-footer-nav" aria-label="Footer navigation">
+                    {/* inline flex-wrap: the nav row outgrew its one-line CSS
+                        when Privacy/Terms/Instagram joined; .lp-footer-inner
+                        already wraps, this lets the links themselves follow */}
+                    <nav className="lp-footer-nav" aria-label="Footer navigation" style={{ flexWrap: 'wrap' }}>
                         <a href={RAW_LANE_HREF} className="lp-footer-link">Raw</a>
                         <a href={studioHref} className="lp-footer-link">Studio</a>
                         <a href={buildWikiPath()} className="lp-footer-link">Wiki</a>
+                        <a href="/privacy" className="lp-footer-link">Privacy</a>
+                        <a href="/terms" className="lp-footer-link">Terms</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
+                        <a href="https://www.instagram.com/di.iiiiiiiiiiiiiiiiiiiii/" target="_blank" rel="noopener noreferrer" className="lp-footer-link">Instagram</a>
                         <a href="/serverXR/api/health" className="lp-footer-link">API</a>
                     </nav>
-                    <span className="lp-footer-note">Open source · Web XR · thedi.studio</span>
+                    <span className="lp-footer-note">Open source · Web XR · <a href="https://thedi.studio" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>thedi.studio</a></span>
                 </div>
             </footer>
             </>

@@ -1,8 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import GridFloorBackground from '../components/GridFloorBackground.jsx'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
+import useAuthSession from '../hooks/useAuthSession.js'
 import { WIKI_ARTICLES, WIKI_CATEGORIES } from './wikiContent.js'
 import './wiki.css'
+
+// Lazy, not static — same fix as LandingPage.jsx: a plain import ships the
+// three.js vendor chunk (1.47 MB) to every wiki reader, phones included,
+// whether or not the decorative background ever renders.
+const GridFloorBackground = lazy(() => import('../components/GridFloorBackground.jsx'))
 
 function ArticleBody({ body }) {
     return body.map((block, i) => {
@@ -19,6 +24,12 @@ function ArticleBody({ body }) {
 
 export default function WikiPage() {
     const [query, setQuery] = useState('')
+    // Same admin gate as StudioHub/RawHub. While auth resolves, role is null
+    // and the link stays hidden — anonymous readers never see a dead end.
+    // Trade-off: /api/auth/session issues a guest session to first-time
+    // visitors (LandingPage avoids it for exactly that reason) — accepted here
+    // to reuse the one canonical role check rather than invent a second.
+    const { role } = useAuthSession()
 
     useEffect(() => {
         document.body.classList.add('is-landing')
@@ -62,14 +73,16 @@ export default function WikiPage() {
 
     return (
         <div className="wiki-root" data-page="wiki" ref={rootRef}>
-            <GridFloorBackground aria-hidden="true" interactive={false} />
+            <Suspense fallback={null}>
+                <GridFloorBackground aria-hidden="true" interactive={false} />
+            </Suspense>
 
             <nav className="wiki-nav">
                 <a href="/" className="wiki-nav-logo">di<span className="wiki-dot">.</span>iiii</a>
                 <div className="wiki-nav-links">
                     <a href="/" className="wiki-nav-link">← Home</a>
                     <a href="/studio" className="wiki-nav-link">Studio</a>
-                    <a href="/admin" className="wiki-nav-link">Admin</a>
+                    {role === 'admin' && <a href="/admin" className="wiki-nav-link">Admin</a>}
                 </div>
             </nav>
 
