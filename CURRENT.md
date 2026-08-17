@@ -13,8 +13,8 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- sync cannot lose work: #119 merged, staging verified by eye, **promotion = PR #151, approval owed**.
-  Until #151 merges, merge NOTHING into `dev`; dependabot safe-bumps after, eslint-10/router-7 parked.
+- a free-disk floor for every write: 507 with headroom, never ENOSPC mid-file
+- the owed source.mic look: the probe was reading the meter's track, not its fill
 
 Full detail: `PROGRESS.md`.
 
@@ -28,12 +28,15 @@ Studio (six panels + phone), Raw, WCC, viewer; auth (session-cookie, roles, OAut
 - **Lane consolidation: PR #99 MERGED 2026-08-13** (reconciled with #121, CI green,
   both sides' panels seen rendering). Raw-as-default landing promotion still open —
   owner's call, MANIFESTO §6 gates it.
-- **Real-browser looks owed**: only `source.mic` (`npm run verify:capture` on Linux,
-  or 30s by hand). Webcam verified 2026-08-13; PR #93's items all closed (see known-fixes).
+- Real-browser looks ALL CLOSED — webcam 2026-08-13, `source.mic` 2026-08-18 (the flat
+  meter was verify-capture sampling the meter's track, not its fill; see PROGRESS).
 - All 8 prod spaces owned; releasing ownership keeps granted scope (deliberate).
   Mesh gate ARMED both tiers; **staging Google OAuth secret parked by the user**
   — rotation script staged, see memory `reference-leaked-secrets`.
-- **No byte quota / ENOSPC pre-check anywhere** — only di-bo watches free disk.
+- ENOSPC pre-check SHIPPED 2026-08-18 (`MIN_FREE_DISK_MB`, 507 floor on all writes).
+  Per-space byte QUOTA still unset — needs an owner policy number.
+- Deps: #151 promoted 2026-08-18 + 6 safe bumps merged. Parked: eslint-10 (#148),
+  router-7 (#150), checkout-7 (#143 — conflicts, its windows install-test fails).
 - Owner decisions 2026-08-13: purple-gap CLOSED (recolor + backdrop guard, see
   PROGRESS). `open` card = upload the honest teal frame — decided, pending
   staging API token then prod approval. Director page still unseen.
