@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- "there are no in/out connectors": the fit centred cards under a window
+- Raw could not open a file. Model / Video / Sound, and a door to put them through
 
 Full detail: `PROGRESS.md`.
 
