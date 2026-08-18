@@ -34,6 +34,7 @@ export function useMicCapture(onLevels) {
         let stream = null
         let audioContext = null
         let rafId = null
+        let detachGestureResume = null
         setStatus(MEDIA_CAPTURE_STATUS.REQUESTING)
         setErrorMessage('')
 
@@ -45,6 +46,24 @@ export function useMicCapture(onLevels) {
                 }
                 stream = mediaStream
                 audioContext = new AudioCtx()
+                // Created here, in getUserMedia's continuation, the context is
+                // outside any user-gesture call stack — Chrome starts it
+                // suspended, and the meter then reads silence while status says
+                // active. Resume immediately (allowed once the page has ever
+                // been interacted with), and failing that, on the next gesture.
+                if (audioContext.state === 'suspended') {
+                    const resumeOnGesture = () => { audioContext?.resume().catch(() => {}) }
+                    const gestureEvents = ['pointerdown', 'keydown']
+                    gestureEvents.forEach((name) => window.addEventListener(name, resumeOnGesture))
+                    detachGestureResume = () => {
+                        gestureEvents.forEach((name) => window.removeEventListener(name, resumeOnGesture))
+                        detachGestureResume = null
+                    }
+                    audioContext.addEventListener?.('statechange', () => {
+                        if (audioContext?.state === 'running') detachGestureResume?.()
+                    })
+                    audioContext.resume().catch(() => {})
+                }
                 const source = audioContext.createMediaStreamSource(stream)
                 const analyser = audioContext.createAnalyser()
                 analyser.fftSize = 1024
@@ -80,6 +99,7 @@ export function useMicCapture(onLevels) {
         return () => {
             cancelled = true
             if (rafId !== null) cancelAnimationFrame(rafId)
+            detachGestureResume?.()
             if (stream) stream.getTracks().forEach((track) => track.stop())
             audioContext?.close?.()
         }

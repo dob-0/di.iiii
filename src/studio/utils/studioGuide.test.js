@@ -5,7 +5,7 @@ import {
     shouldShowStudioCoach
 } from './studioGuide.js'
 
-describe('studio guest coach', () => {
+describe('studio first-run coach', () => {
     beforeEach(() => {
         window.localStorage.removeItem(STUDIO_COACH_DONE_KEY)
     })
@@ -16,9 +16,21 @@ describe('studio guest coach', () => {
         expect(shouldShowStudioCoach('guest')).toBe(false)
     })
 
-    it('never triggers for signed-in or unresolved sessions', () => {
+    it('shows once for a signed-in session, then never again', () => {
+        expect(shouldShowStudioCoach('session')).toBe(true)
+        markStudioCoachDone()
         expect(shouldShowStudioCoach('session')).toBe(false)
+    })
+
+    it('honors the done flag across identities — one browser sees it once', () => {
+        expect(shouldShowStudioCoach('guest')).toBe(true)
+        markStudioCoachDone()
+        expect(shouldShowStudioCoach('session')).toBe(false)
+    })
+
+    it('never triggers while auth is unresolved', () => {
         expect(shouldShowStudioCoach(null)).toBe(false)
         expect(shouldShowStudioCoach(undefined)).toBe(false)
+        expect(shouldShowStudioCoach('')).toBe(false)
     })
 })

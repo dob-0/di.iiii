@@ -19,15 +19,29 @@ class FakeAnalyser {
     getByteFrequencyData(array) { array.fill(7) }
 }
 
-function installFakeAudioContext() {
+function installFakeAudioContext({ state = 'running', resumeRuns = false } = {}) {
     const closeSpy = vi.fn()
     const connectSpy = vi.fn()
+    const resumeSpy = vi.fn()
+    const contexts = []
     window.AudioContext = function FakeAudioContext() {
+        this.state = state
+        this.listeners = {}
         this.createMediaStreamSource = vi.fn(() => ({ connect: connectSpy }))
         this.createAnalyser = vi.fn(() => new FakeAnalyser())
         this.close = closeSpy
+        this.addEventListener = vi.fn((name, cb) => { this.listeners[name] = cb })
+        this.resume = vi.fn(() => {
+            resumeSpy()
+            if (resumeRuns) {
+                this.state = 'running'
+                this.listeners.statechange?.()
+            }
+            return Promise.resolve()
+        })
+        contexts.push(this)
     }
-    return { closeSpy, connectSpy }
+    return { closeSpy, connectSpy, resumeSpy, contexts }
 }
 
 // The hook's own tick() re-schedules itself via requestAnimationFrame — a
@@ -89,6 +103,44 @@ describe('useMicCapture', () => {
         // getByteTimeDomainData filled with 128 (silence, centered) -> RMS 0.
         expect(levels[0][0]).toBe(0)
         expect(Array.from(levels[0][1])).toEqual(Array(512).fill(7))
+    })
+
+    // The context is created in getUserMedia's continuation — outside any
+    // user-gesture call stack — so Chrome may start it suspended: status
+    // reads active while the analyser reads silence (the flat-meter failure
+    // verify-capture.mjs exists to catch).
+    it('resumes a suspended context immediately, and again on the next gesture', async () => {
+        const track = makeTrack()
+        navigator.mediaDevices = { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [track] }) }
+        const { resumeSpy } = installFakeAudioContext({ state: 'suspended' })
+
+        await act(async () => { render(<Probe onLevels={() => {}} onValue={() => {}} />) })
+        expect(resumeSpy).toHaveBeenCalledTimes(1)
+
+        await act(async () => { window.dispatchEvent(new Event('pointerdown')) })
+        expect(resumeSpy).toHaveBeenCalledTimes(2)
+    })
+
+    it('stops resuming on gestures once the context reaches running', async () => {
+        const track = makeTrack()
+        navigator.mediaDevices = { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [track] }) }
+        const { resumeSpy } = installFakeAudioContext({ state: 'suspended', resumeRuns: true })
+
+        await act(async () => { render(<Probe onLevels={() => {}} onValue={() => {}} />) })
+        // The immediate resume succeeded and fired statechange -> running.
+        expect(resumeSpy).toHaveBeenCalledTimes(1)
+
+        await act(async () => { window.dispatchEvent(new Event('pointerdown')) })
+        expect(resumeSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it('does not touch resume on a context that starts running', async () => {
+        const track = makeTrack()
+        navigator.mediaDevices = { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [track] }) }
+        const { resumeSpy } = installFakeAudioContext()
+
+        await act(async () => { render(<Probe onLevels={() => {}} onValue={() => {}} />) })
+        expect(resumeSpy).not.toHaveBeenCalled()
     })
 
     it('reports denied when getUserMedia rejects with NotAllowedError', async () => {

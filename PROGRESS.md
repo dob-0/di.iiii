@@ -5,6 +5,67 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-18 — di sync phase 2, PR 3: link, ledger, and an audit that refuses what it cannot prove
+
+- `di link <space> --remote <url>` — pastes a `dii_sync_*` key, verifies it against the
+  remote BEFORE storing anything (reachability, key accepted, space exists, verbatim
+  supported — a peer without `?verbatim=1` is refused at link time, not discovered at
+  write time). Writes the key 0600 into `~/.di/credentials.json` (now also swept by
+  `di uninstall` — secrets are not "your work") and an initial ledger.
+- The ledger (`~/.di/data/sync/<remote>/<space>.json` — under data/ so backup carries it
+  and update can't touch it) is the origin field ops don't have: installId minted once
+  into state.json, version cursors null until a real sync, opId dedupe lists, and the
+  assetIdRemap that stops EXIF-re-encoded images double-counting forever.
+- `di sync <space>` — reads both sides verbatim-or-refuses, prints what it can prove,
+  writes NOTHING. Relation is anchored only by cursors (unknown / in-sync / local-ahead /
+  remote-ahead / diverged); diverged refuses both directions since scene ops have no
+  inverse. The retention wall is reported up front per direction. All decisions live in
+  pure `sync-plan.mjs` (no server needed to test); all I/O in `sync.mjs`; all words in
+  `ui.mjs`.
+- Verified end-to-end against two real serverXR instances with separate data roots and a
+  DI_HOME with a dot in it: link (bare URL auto-resolves to /serverXR), unknown-relation
+  refusal, divergence report (v1/1-object vs v0/0), baseline → local-ahead with push
+  possible, revoked-key denial (seen on the auth-on instance), remote-down. 25 new unit
+  tests across syncPlan/syncLedger/credentialsStore; whole scripts/di suite green; lint 0.
+- Spec: `docs/architecture/SPEC_di_sync.md`. No new server endpoints — the #119 surface
+  is the whole protocol. Next: PR 4 `--push`/`--pull` over ops; PR 5 `--replace-*` bundles.
+
+## 2026-08-18 — a free-disk floor for every write: 507 with headroom, never ENOSPC mid-file
+
+- Closes CURRENT.md's "no byte quota / ENOSPC pre-check anywhere". One app-level guard
+  (`serverXR/src/diskGuard.js`) mounted before the body parsers: POST/PUT/PATCH are refused
+  with `507 { code: 'insufficient_storage' }` when the data volume's free space is under a
+  floor — checked before multer spools a temp file or a body is parsed, so a full disk can
+  no longer be hit halfway through an asset, an op-log append, or a SQLite write. GET/HEAD
+  and DELETE always pass (DELETE is how a full disk empties).
+- `Content-Length` counts against the headroom, so a 300 MB upload is refused while small
+  writes still clear; statfs is cached ~5s, the cache drops on refusal so freeing space
+  recovers immediately; statfs failure fails OPEN with one loud warn, never takes writes down.
+- `MIN_FREE_DISK_MB` (default 512, `0` disables) — documented in serverXR/README.md's env
+  table. Verified live on a real boot: impossible floor → 507 with the message; normal floor
+  → requests reach routing/auth untouched. 7 unit tests; serverXR suite 405 + contracts 96 green.
+- Deliberately NOT a per-space byte quota — that needs a policy number the owner hasn't set.
+  The chokepoint is in place for it; a quota can ride the same refusal shape later.
+
+## 2026-08-18 — the owed source.mic look: the probe was reading the meter's track, not its fill
+
+- `npm run verify:capture` on Linux (aylmo), the one real-browser look CURRENT.md still
+  owed. First run: webcam OK, mic FAIL (flat) — same signature as the suspended-AudioContext
+  class the script hunts. A raw getUserMedia+analyser probe against the same page showed the
+  fake device delivering varying signal, so the app was suspect — until an A/B isolated it:
+  the meter moves fine with the app untouched.
+- The actual bug was in the probe: `[class*="mic"][class*="meter"]` also matches
+  `.raw-mic-panel-meter` — the TRACK, which precedes the fill in DOM order — so `.first()`
+  sampled an element whose transform is `none` forever. The selector now targets the fill.
+  source.mic verified moving: 25/25 distinct scaleX samples, screenshots looked at.
+- Kept a hardening in `useMicCapture` anyway: the AudioContext is created in getUserMedia's
+  continuation — outside any gesture call stack — so on a gestureless mount (a restored
+  workspace, an embed) Chrome starts it suspended and the meter reads silence while status
+  says active. The hook now resumes immediately and, failing that, on the next
+  pointerdown/keydown, detaching once running. Palette-placed nodes were never affected
+  (sticky activation from the double-click), which is why verify:capture couldn't see it.
+- Not done: nothing pushed to staging; this branch waits behind the #151 merge freeze.
+
 ## 2026-08-09 — sync could not lose your work quietly; now it cannot lose it at all
 
 Groundwork for `di sync` (phase 2 of the CLI), but it landed alone and first because the
