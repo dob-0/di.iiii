@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
     arePortsCompatible,
+    getNodeFamily,
     getNodeInputs,
     getNodeOutputs,
     getNodeType,
@@ -966,7 +967,15 @@ export default function RawGraphSurface({
                                         <span className="raw-graph-node-label">{node.label}</span>
                                     ) : null}
                                     {tier === 'full' ? (
-                                        <span className="raw-graph-node-category">{typeDef?.category || ''}</span>
+                                        // The family, not the category: a studio card used to
+                                        // say "universe" here — the raw code taxonomy leaking
+                                        // onto the canvas. One vocabulary with the palette.
+                                        <span
+                                            className="raw-graph-node-category"
+                                            style={{ color: getNodeFamily(node.typeId)?.color || undefined }}
+                                        >
+                                            {getNodeFamily(node.typeId)?.label || typeDef?.category || ''}
+                                        </span>
                                     ) : null}
                                     {/* Entering a node used to be double-click only, cued by a
                                         hover-revealed chevron — so on a phone there was no
@@ -1015,7 +1024,11 @@ export default function RawGraphSurface({
                                             style={{ top: idx * PORT_ROW_HEIGHT }}
                                         >
                                             <span
-                                                className="raw-graph-port-dot raw-graph-port-dot--in"
+                                                // While a wire is being dragged, every input dot
+                                                // says whether it can take it — before this, an
+                                                // incompatible drop was pure silence and the only
+                                                // feedback was nothing happening.
+                                                className={`raw-graph-port-dot raw-graph-port-dot--in${pendingWire ? (arePortsCompatible(pendingWire.fromPortType, port.type) ? ' is-compatible' : ' is-incompatible') : ''}`}
                                                 data-node-id={node.id}
                                                 data-port-id={port.id}
                                                 style={{ background: getPortType(port.type).color, left: -PORT_DOT_RADIUS }}

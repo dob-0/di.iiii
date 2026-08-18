@@ -35,6 +35,100 @@ export const NODE_CATEGORIES = [
 export const getCategoryColor = (categoryId) =>
     NODE_CATEGORIES.find((c) => c.id === categoryId)?.color || '#aaaaaa'
 
+// --- Families ---
+// The artist-facing grouping (palette sections, card headers, outliner dots).
+// Decided 2026-08-18 after the node truth audit: categories above group by
+// where the code lives (value.number under "source", studio under
+// "universe"), families group by what the artist is doing. Every type in
+// NODE_TYPES must appear in FAMILY_BY_TYPE — nodeRegistry.test.js enforces
+// both directions. Categories stay untouched underneath: search, surface
+// filters and old documents keep working.
+
+export const NODE_FAMILIES = [
+    { id: 'bring-in', label: 'bring in', color: '#5fa8ff' },
+    { id: 'make',     label: 'make',     color: '#8be9fd' },
+    { id: 'numbers',  label: 'numbers',  color: '#f1fa8c' },
+    { id: 'room',     label: 'the room', color: '#bd93f9' },
+    { id: 'watch',    label: 'watch',    color: '#ff79c6' },
+    { id: 'send-out', label: 'send out', color: '#ffb86c' },
+    { id: 'agents',   label: 'agents',   color: '#a8ff9e' },
+]
+
+export const FAMILY_BY_TYPE = {
+    // bring in — cameras, microphones, sensors, input devices
+    'source.webcam': 'bring-in',
+    'source.mic': 'bring-in',
+    'device.midi.in': 'bring-in',
+    'device.osc.in': 'bring-in',
+    'source.ar': 'bring-in',
+    'source.insta360': 'bring-in',
+    'source.stereo': 'bring-in',
+    'source.realsense.d405': 'bring-in',
+    'device.ptz.osc': 'bring-in',
+    // make — things you conjure into the space
+    'geom.cube': 'make',
+    'geom.sphere': 'make',
+    'geom.plane': 'make',
+    'view.text': 'make',
+    'view.image': 'make',
+    'view.browser': 'make',
+    'node.null': 'make',
+    // numbers — values, time, math: the stuff you shape and wire
+    'value.number': 'numbers',
+    'value.color': 'numbers',
+    'value.vec3': 'numbers',
+    'value.boolean': 'numbers',
+    'value.string': 'numbers',
+    'time': 'numbers',
+    'math.add': 'numbers',
+    'math.subtract': 'numbers',
+    'math.multiply': 'numbers',
+    'math.divide': 'numbers',
+    'math.mod': 'numbers',
+    'math.pow': 'numbers',
+    'math.sin': 'numbers',
+    'math.mix': 'numbers',
+    'math.clamp': 'numbers',
+    // the room — light, sky, grid, worlds, desks, containers
+    'world.light': 'room',
+    'world.background': 'room',
+    'world.grid': 'room',
+    'universe.world': 'room',
+    'universe.space': 'room',
+    'universe.desk.3d': 'room',
+    'universe.desk.2d': 'room',
+    'universe.node0': 'room',
+    'universe.activate': 'room',
+    'universe.link': 'room',
+    'studio': 'room',
+    // watch — observe and inspect what is happening
+    'view.outliner': 'watch',
+    'view.inspector': 'watch',
+    'view.timeline': 'watch',
+    'view.director': 'watch',
+    'stream.monitor': 'watch',
+    // send out — leave the browser: MIDI/OSC out, streams, recordings
+    'device.midi.out': 'send-out',
+    'device.osc.out': 'send-out',
+    'stream.output': 'send-out',
+    'stream.recorder': 'send-out',
+    'stream.compositor': 'send-out',
+    'stream.switcher': 'send-out',
+    'stream.controller': 'send-out',
+    // agents — language models and working sessions as nodes
+    'agent': 'agents',
+    'agent.keeper': 'agents',
+    'work.agent': 'agents',
+    'work.status': 'agents',
+}
+
+export const getNodeFamily = (typeId) => {
+    const familyId = FAMILY_BY_TYPE[typeId]
+    return NODE_FAMILIES.find((f) => f.id === familyId) || null
+}
+
+export const getFamilyColorForType = (typeId) => getNodeFamily(typeId)?.color || '#aaaaaa'
+
 // --- Node Type Definitions ---
 // This is the node language. Add a new entry here to add a new node type.
 //
@@ -208,6 +302,10 @@ export const NODE_TYPES = {
         label: 'Work Status',
         category: 'source',
         runtime: 'web',
+        // serverXR serves its routes only to loopback on a non-production
+        // server (devLocalGuard) — everywhere else the panel can only report
+        // that. The palette shows this as a "local dev" tag.
+        devLocalOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
@@ -228,6 +326,8 @@ export const NODE_TYPES = {
         label: 'Agent Run',
         category: 'custom',
         runtime: 'web',
+        // Same loopback-only gate as work.status (agentRunRoutes).
+        devLocalOnly: true,
         singleton: false,
         inputs: [
             { id: 'prompt',  type: 'string', label: 'Prompt' },
@@ -646,7 +746,10 @@ export const NODE_TYPES = {
         label: 'Universe',
         category: 'universe',
         runtime: 'any',
-        authoringOnly: true,
+        // Not authoringOnly: showChrome is consumed for real (RawEditor's
+        // chromeVisible walks to the nearest ancestor of this type) — the
+        // flag sat here misclassifying a working node until the 2026-08-18
+        // node truth audit.
         singleton: false,
         inputs: [
             // Per-universe chrome control (product decision 2026-07-17): lets

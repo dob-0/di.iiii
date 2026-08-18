@@ -299,6 +299,43 @@
     letter-spacing: 0.08em;
 }
 
+/* Family headers exist only in browse mode (empty query) — sticky so the
+   family you are scrolling through stays named. Any typed character removes
+   them entirely. */
+.raw-node-palette-group {
+    position: sticky;
+    top: -6px; /* cancels the list's own padding so the header pins flush */
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px 5px;
+    background: #0a0a0a;
+    color: rgba(210, 245, 255, 0.55);
+    font-size: 10px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: 0.15em;
+    text-transform: lowercase;
+    border-left: 2px solid var(--family-color, transparent);
+}
+
+.raw-node-palette-group-count {
+    color: rgba(244, 247, 251, 0.28);
+    letter-spacing: 0;
+}
+
+/* The same color the family header carries, on every row — one vocabulary
+   between palette and canvas. */
+.raw-node-palette-item {
+    border-left: 2px solid var(--family-color, transparent);
+}
+
+/* A shell places and holds its ports but computes nothing yet — it must not
+   look as alive as a node that does. */
+.raw-node-palette-item.is-shell {
+    opacity: 0.55;
+}
+
 
 
 .raw-world-type-overlay {
@@ -2447,6 +2484,18 @@
 
 .raw-graph-port-dot--out { cursor: crosshair; }
 .raw-graph-port-dot--in  { cursor: pointer; }
+
+/* Live feedback while a wire is being dragged: an input that can take it
+   glows, one that cannot goes quiet. Before this, an incompatible drop was
+   pure silence. */
+.raw-graph-port-dot--in.is-compatible {
+    box-shadow: 0 0 0 3px rgba(77, 249, 255, 0.35);
+    transform: scale(1.3);
+}
+
+.raw-graph-port-dot--in.is-incompatible {
+    opacity: 0.18;
+}
 
 /* touch-action is NOT inherited — it applies to whichever element the touch
    hit-tests to. `.raw-graph-surface` sets `none`, but a finger landing on a

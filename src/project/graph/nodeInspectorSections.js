@@ -10,7 +10,7 @@ const portToInspectorField = (port, node = null) => {
     if (port.type === 'boolean') return { label, path, type: 'checkbox', portType: 'boolean' }
     if (port.type === 'number') return { label, path, type: 'number', min: port.min, max: port.max, step: port.step, portType: 'number' }
     if (port.type === 'string') {
-        const isMultiline = port.id === 'body' || port.id === 'text'
+        const isMultiline = port.id === 'body' || port.id === 'text' || port.id === 'content'
         return { label, path, type: isMultiline ? 'textarea' : 'text', portType: 'string' }
     }
     if (port.type === 'vec3') return { label, path, type: 'vec3', portType: 'vec3' }
@@ -37,7 +37,11 @@ const portToInspectorField = (port, node = null) => {
 // for its own fields.
 const CODE_SECTION = {
     id: 'code',
-    label: 'Code',
+    // The label says what the box actually does: nothing executes this yet.
+    // Before, an editable "Code / Body" with no caveat was the whole
+    // inspector for input-less nodes — the single most dishonest surface the
+    // 2026-08-18 node truth audit found.
+    label: 'Code — stored, not run',
     component: 'values',
     fields: [{ label: 'Body', path: ['__code'], type: 'textarea', portType: 'string', component: 'values' }]
 }

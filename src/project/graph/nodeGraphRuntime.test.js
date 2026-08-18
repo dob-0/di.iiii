@@ -161,6 +161,34 @@ describe('nodeGraphRuntime', () => {
         expect(evaluateNodeOutput(multiply, 'out', context)).toBe(42)
     })
 
+    it('a value.boolean returns exactly what it stores', () => {
+        // The only member of the computed core that had zero coverage —
+        // it shares the value.* switch case, but sharing is what a regression
+        // quietly breaks.
+        const flag = createNode('value.boolean', { id: 'flag', values: { value: true } })
+        const context = createNodeGraphContext({ nodes: [flag], edges: [] })
+        expect(evaluateNodeOutput(flag, 'out', context)).toBe(true)
+        flag.values.value = false
+        const context2 = createNodeGraphContext({ nodes: [flag], edges: [] })
+        expect(evaluateNodeOutput(flag, 'out', context2)).toBe(false)
+    })
+
+    it('mixes two hex colors per RGB channel instead of hard-switching at t=0.5', () => {
+        const a = createNode('value.color', { id: 'ca', values: { value: '#000000' } })
+        const b = createNode('value.color', { id: 'cb', values: { value: '#ff0080' } })
+        const t = createNode('value.number', { id: 'ct', values: { value: 0.5 } })
+        const mix = createNode('math.mix', { id: 'mix-color' })
+        const context = createNodeGraphContext({
+            nodes: [a, b, t, mix],
+            edges: [
+                createEdge('ca', 'out', 'mix-color', 'a'),
+                createEdge('cb', 'out', 'mix-color', 'b'),
+                createEdge('ct', 'out', 'mix-color', 't')
+            ]
+        })
+        expect(evaluateNodeOutput(mix, 'out', context)).toBe('#800040')
+    })
+
     it('mixes numbers and vec3s by t, and clamps a value into range', () => {
         const a = createNode('value.number', { id: 'a', values: { value: 0 } })
         const b = createNode('value.number', { id: 'b', values: { value: 10 } })
