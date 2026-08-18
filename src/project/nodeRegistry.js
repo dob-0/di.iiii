@@ -740,7 +740,29 @@ export const NODE_TYPES = {
             { id: 'title',    type: 'string',  label: 'Title',    default: 'World'    },
             { id: 'bgColor',  type: 'color',   label: 'Sky',      default: '#0a0e16'  },
         ],
-        outputs: [],
+        // A CONTAINER OUTPUTS ITS OWN SETTINGS, NEVER ITS CONTENTS.
+        //
+        // Before this every container declared zero outputs, so a press-and-pull
+        // on a World card silently DRAGGED THE CARD — nearestOutputPort had an
+        // empty list to iterate and the press fell through to the drag branch.
+        // That is "can't connect", at the data layer.
+        //
+        // Nothing about a child leaks through the boundary here. Reaching inside
+        // is port promotion — sentinel nodes placed in the container, one per
+        // exterior port — and is deliberately a separate thing. Assuming wires
+        // pass through a container automatically is the single most common
+        // container mistake in every node tool surveyed (TouchDesigner, Max,
+        // LabVIEW, ComfyUI), so the line is drawn hard and visibly.
+        //
+        // The ids match the input ids on purpose: the card then reads row for
+        // row as a pass-through table. Safe because inputs and outputs are
+        // separate keyspaces in the runtime and edgesByTarget only ever keys
+        // inputs, and a self-wire is impossible because resolveWireDrop skips
+        // the source node.
+        outputs: [
+            { id: 'title',   type: 'string', label: 'Title' },
+            { id: 'bgColor', type: 'color',  label: 'Sky'   },
+        ],
         defaultValues: {
             title: 'World',
             bgColor: '#0a0e16',
@@ -768,6 +790,12 @@ export const NODE_TYPES = {
             // back up a scope regardless (unrelated to this flag).
             { id: 'showChrome', type: 'boolean', label: 'Show Chrome', default: true },
         ],
+        // NO outputs, and this is a decision rather than an oversight. Its one
+        // setting is showChrome, read by RawEditor's chrome walk and by nothing
+        // else; there is no input anywhere in the registry that a chrome boolean
+        // could drive to a result you could see. A port here would be the exact
+        // dead-wire disease this stage exists to avoid — it would draw, persist,
+        // survive a reload and carry nothing.
         outputs: [],
         defaultValues: {
             hostHint: 'any',
@@ -814,7 +842,20 @@ export const NODE_TYPES = {
             { id: 'gridVisible', type: 'boolean', label: 'Grid Visible', default: true   },
             { id: 'bgColor',     type: 'color',  label: 'Background', default: '#0a0e16' },
         ],
-        outputs: [],
+        // Its own placement, readable from outside, so something that is NOT in
+        // the desk can follow the desk — a light aimed at it, a second desk
+        // mirroring it. Things INSIDE the desk already move with it through the
+        // scene graph (RawViewport renders children inside the parent's group),
+        // so this is for everything else.
+        //
+        // gridVisible and bgColor are deliberately NOT echoed back out: no input
+        // anywhere in the registry could consume them to a visible result, and a
+        // port that draws a wire and changes nothing is worse than no port.
+        outputs: [
+            { id: 'position', type: 'vec3', label: 'Position' },
+            { id: 'rotation', type: 'vec3', label: 'Rotation' },
+            { id: 'scale',    type: 'vec3', label: 'Scale'    },
+        ],
         defaultValues: {
             hostHint: 'any',
             gridVisible: true,
@@ -1203,11 +1244,17 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'title', type: 'string', label: 'Title', default: 'Studio' },
         ],
-        // No outputs on purpose. `state`/`signal` would be honest-looking and
-        // dead: computeNodeOutput has no case for anything outside value.*,
-        // math.* and time, so every such port returns undefined. Declaring one
-        // here would add to exactly the problem the all-nodes example documents.
-        outputs: [],
+        // Its own title, and nothing else. The old comment here said outputs
+        // were impossible because computeNodeOutput had no case for anything
+        // outside value.*/math.*/time — true then, and the fix was to add the
+        // case, not to leave the card unwireable. `state`/`signal` are still
+        // refused for the original reason: nothing computes them.
+        //
+        // What is NOT here, deliberately: anything about the Studio's contents.
+        // A container outputs its own settings, never what is inside it.
+        outputs: [
+            { id: 'title', type: 'string', label: 'Title' },
+        ],
         defaultValues: { title: 'Studio' },
         render: 'hidden',
     },
