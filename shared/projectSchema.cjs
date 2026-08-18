@@ -860,9 +860,30 @@ const applyProjectOps = (document, ops = []) => {
           }
         }
         collect(nodeId)
+        // A doorway node puts a socket on its CONTAINER's outer face, and the
+        // wire to that socket names the container, not the door — so deleting
+        // the door leaves an edge whose endpoints both still exist. Nothing
+        // else would ever remove it: createEdge validates endpoint nodes only,
+        // and normalizeEdgesList drops edges by missing node id, never by
+        // missing port. Swept here, where the door's id is still known.
+        // Mirror of src/shared/projectSchema.js — if only the client copy had
+        // this, the wire would vanish locally and be resurrected by the
+        // server's replay on the next sync.
+        const deletedDoorwaySockets = new Set()
+        for (const id of toDelete) {
+          const doomed = nodes.get(id)
+          if (doomed && (doomed.typeId === 'port.in' || doomed.typeId === 'port.out') && doomed.parentId) {
+            deletedDoorwaySockets.add(`${doomed.parentId}:${doomed.id}`)
+          }
+        }
         for (const id of toDelete) nodes.delete(id)
         for (const [edgeId, edge] of edges) {
-          if (toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId)) edges.delete(edgeId)
+          if (toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId)) {
+            edges.delete(edgeId)
+          } else if (deletedDoorwaySockets.has(`${edge.toNodeId}:${edge.toPort}`)
+            || deletedDoorwaySockets.has(`${edge.fromNodeId}:${edge.fromPort}`)) {
+            edges.delete(edgeId)
+          }
         }
         if (toDelete.has(nextDocument.workspaceState.selectedNodeId)) {
           nextDocument.workspaceState = normalizeWorkspaceState({

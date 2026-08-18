@@ -63,7 +63,7 @@ export const INERT_INPUTS = []
 export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}) {
     const made = new Map()
 
-    const add = (key, typeId, { label, col, row, values = {} } = {}) => {
+    const add = (key, typeId, { label, col, row, values = {}, insideKey = null } = {}) => {
         const graphX = col * COL
         const graphY = workspaceTop + row * ROW
         const seeded = buildNodeValues(
@@ -74,7 +74,15 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
             { clientX: 120 + col * 60, clientY: 120 + row * 40 },
             { workspaceTop }
         )
-        const node = createNode(typeId, { label, graphX, graphY, values: seeded, parentId })
+        const node = createNode(typeId, {
+            label,
+            graphX,
+            graphY,
+            values: seeded,
+            // A doorway only means anything INSIDE a container, so this example
+            // has to be able to parent one.
+            parentId: insideKey ? (made.get(insideKey)?.id || parentId) : parentId
+        })
         if (node) {
             // Panel nodes mount as floating windows the instant they exist, and
             // four of them cover a 393px phone screen completely — the graph
@@ -136,6 +144,17 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('world', 'universe.world', { label: 'World', col: 4, row: 0 })
     add('space', 'universe.space', { label: 'Space', col: 4, row: 1 })
     add('desk', 'universe.desk.3d', { label: '3D Desk', col: 4, row: 2 })
+
+    // The doorways. They sit INSIDE the 3D Desk, which is what makes them mean
+    // anything: each one puts a socket on that desk's outer face, so a wire can
+    // reach through the wall. Deliberately UNWIRED here — this file's port tests
+    // call getNodeInputs/getNodeOutputs with no node list, which is the correct
+    // behaviour for every existing caller, so a promoted socket does not exist
+    // from their point of view and an edge into one would look like a wire to
+    // nowhere. The desk is the portrait; the wiring is the wiki's job.
+    add('doorIn', 'port.in', { label: 'In · a way through the wall', col: 3, row: 6, insideKey: 'desk', values: { label: 'Tint', portType: 'color' } })
+    add('doorOut', 'port.out', { label: 'Out · a way back through', col: 3, row: 7, insideKey: 'desk', values: { label: 'Size', portType: 'vec3' } })
+
     add('text', 'view.text', { label: 'Text panel', col: 4, row: 3, values: { content: 'Every node type, one graph.' } })
     // Same-origin on purpose: the example must also open on a local install
     // with no network, where an iframe of di-studio.xyz is a dead panel.

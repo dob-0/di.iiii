@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { createEdge, createNode, getNodeType } from '../nodeRegistry.js'
+import { createEdge, createNode, getNodeInputs, getNodeOutputs, getNodeType } from '../nodeRegistry.js'
 import {
     createNodeGraphContext,
     evaluateNodeInput,
@@ -423,5 +423,121 @@ describe('container outputs', () => {
         expect(position[0]).toBeCloseTo(1, 2)
         expect(position[1]).toBeCloseTo(128 / 255, 2)
         expect(position[2]).toBeCloseTo(0, 5)
+    })
+})
+
+// DOORWAYS — the answer to "I want to build a world but can't connect anything
+// to it". Put an In or an Out node inside a container and a socket appears on
+// that container's outer face.
+//
+// The load-bearing property, and the reason this design is safe: NO EDGE EVER
+// CROSSES A SCOPE BOUNDARY. The outside wire joins two siblings in the parent
+// scope; the inside wire joins two siblings within the container. RawEditor's
+// both-endpoints-in-scope filter stays exactly as written and the runtime needs
+// no notion of scope at all.
+describe('doorways', () => {
+    // outside ──▶ [ desk : socket(door) ]
+    //                        └─▶ In door ──▶ cube.color   (all inside)
+    const buildInwards = ({ wireOutside = true, fallback = null } = {}) => {
+        const source = createNode('value.color', { id: 'src', values: { value: '#ff0000' } })
+        const desk = createNode('universe.desk.3d', { id: 'desk' })
+        const door = createNode('port.in', {
+            id: 'door', parentId: 'desk', values: { label: 'Tint', portType: 'color', fallback }
+        })
+        const cube = createNode('geom.cube', { id: 'cube', parentId: 'desk', values: { color: '#000000' } })
+        const edges = [createEdge('door', 'value', 'cube', 'color')]
+        // The socket's id IS the door node's id — that is what makes renaming
+        // safe and what stops two clients colliding on a name.
+        if (wireOutside) edges.push(createEdge('src', 'out', 'desk', 'door'))
+        return { nodes: [source, desk, door, cube], edges, cube, desk, door }
+    }
+
+    it('carries a value from outside a container to a node inside it', () => {
+        const { nodes, edges, cube } = buildInwards()
+        const ctx = createNodeGraphContext({ nodes, edges })
+        expect(evaluateNodeInput(cube, 'color', ctx)).toBe('#ff0000')
+    })
+
+    it('makes the container grow a socket named by the door', () => {
+        const { nodes, desk } = buildInwards()
+        const ports = getNodeInputs(desk, nodes)
+        const socket = ports.find((port) => port.id === 'door')
+        expect(socket, 'the desk grew no socket for the door inside it').toBeTruthy()
+        expect(socket.label).toBe('Tint')
+        expect(socket.type).toBe('color')
+        // …and the declared ports are still all there, in front of it.
+        expect(ports.slice(0, 5).map((port) => port.id))
+            .toEqual(['position', 'rotation', 'scale', 'gridVisible', 'bgColor'])
+    })
+
+    // An unwired door that returned undefined would let the consumer quietly use
+    // its own local value, which looks EXACTLY like a door that works.
+    it('falls back to the door\'s own value when the socket is unwired', () => {
+        const { nodes, edges, cube } = buildInwards({ wireOutside: false, fallback: '#00ff00' })
+        const ctx = createNodeGraphContext({ nodes, edges })
+        expect(evaluateNodeInput(cube, 'color', ctx)).toBe('#00ff00')
+    })
+
+    // [ desk : socket(door) ] ──▶ outside
+    //     cube.bounds ──▶ Out door        (inside)
+    it('carries a value from inside a container out to a node beside it', () => {
+        const desk = createNode('universe.desk.3d', { id: 'desk' })
+        const cube = createNode('geom.cube', { id: 'cube', parentId: 'desk', values: { size: [3, 4, 5] } })
+        const door = createNode('port.out', {
+            id: 'door', parentId: 'desk', values: { label: 'Cube size', portType: 'vec3' }
+        })
+        const outside = createNode('geom.sphere', { id: 'ball' })
+        const nodes = [desk, cube, door, outside]
+        const edges = [
+            createEdge('cube', 'bounds', 'door', 'value'),
+            createEdge('desk', 'door', 'ball', 'color')
+        ]
+        const ctx = createNodeGraphContext({ nodes, edges })
+        expect(evaluateNodeOutput(desk, 'door', ctx)).toEqual([3, 4, 5])
+        expect(getNodeOutputs(desk, nodes).map((port) => port.id))
+            .toEqual(['position', 'rotation', 'scale', 'door'])
+    })
+
+    it('never asks an edge to cross a scope boundary', () => {
+        const { nodes, edges } = buildInwards()
+        const byId = new Map(nodes.map((node) => [node.id, node]))
+        for (const edge of edges) {
+            const from = byId.get(edge.fromNodeId)
+            const to = byId.get(edge.toNodeId)
+            expect(
+                from.parentId || null,
+                `${edge.fromNodeId} -> ${edge.toNodeId} crosses a scope`
+            ).toBe(to.parentId || null)
+        }
+    })
+
+    // Identity is the node id, so the label is free to change.
+    it('keeps a wire attached when the door is renamed', () => {
+        const { nodes, edges, cube, door } = buildInwards()
+        door.values.label = 'Something else entirely'
+        const ctx = createNodeGraphContext({ nodes, edges })
+        expect(evaluateNodeInput(cube, 'color', ctx)).toBe('#ff0000')
+    })
+
+    it('gives a door with no container its fallback rather than undefined', () => {
+        const door = createNode('port.in', { id: 'lonely', values: { fallback: 'nothing upstream' } })
+        const ctx = createNodeGraphContext({ nodes: [door], edges: [] })
+        expect(evaluateNodeOutput(door, 'value', ctx)).toBe('nothing upstream')
+    })
+
+    // Called without the node list — every existing call site — a container must
+    // return exactly what it always did, by reference.
+    it('changes nothing for callers that pass no node list', () => {
+        const desk = createNode('universe.desk.3d', { id: 'desk' })
+        expect(getNodeInputs(desk)).toBe(getNodeType('universe.desk.3d').inputs)
+        expect(getNodeOutputs(desk)).toBe(getNodeType('universe.desk.3d').outputs)
+    })
+
+    // Every node in production today is a node.null, and its dynamic ports
+    // return before the promotion merge. Stated out loud rather than discovered.
+    it('does not give node.null doors — a known limit, not an accident', () => {
+        const nullNode = createNode('node.null', { id: 'n', values: { portDefs: [] } })
+        const door = createNode('port.in', { id: 'd', parentId: 'n' })
+        expect(getNodeInputs(nullNode, [nullNode, door])).toEqual([])
     })
 })

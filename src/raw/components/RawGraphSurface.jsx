@@ -85,13 +85,17 @@ const DOOR_WIDTH_PX = 34
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
-const cardHeight = (node) => {
-    const rows = Math.max(getNodeInputs(node).length, getNodeOutputs(node).length, 1)
+// scopeNodes is threaded through every geometry helper because a container's
+// ports are DERIVED from the doorway nodes inside it — see getNodeInputs. Miss
+// one of these call sites and the container grows a socket the card does not
+// draw, or draws one the wires do not land on.
+const cardHeight = (node, scopeNodes = null) => {
+    const rows = Math.max(getNodeInputs(node, scopeNodes).length, getNodeOutputs(node, scopeNodes).length, 1)
     return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + 8
 }
 
-const inputPortCenter = (node, portId) => {
-    const inputs = getNodeInputs(node)
+const inputPortCenter = (node, portId, scopeNodes = null) => {
+    const inputs = getNodeInputs(node, scopeNodes)
     const idx = inputs.findIndex((p) => p.id === portId)
     if (idx < 0) return { x: node.graphX, y: node.graphY + HEADER_HEIGHT }
     return {
@@ -100,8 +104,8 @@ const inputPortCenter = (node, portId) => {
     }
 }
 
-const outputPortCenter = (node, portId) => {
-    const outputs = getNodeOutputs(node)
+const outputPortCenter = (node, portId, scopeNodes = null) => {
+    const outputs = getNodeOutputs(node, scopeNodes)
     const idx = outputs.findIndex((p) => p.id === portId)
     if (idx < 0) return { x: node.graphX + CARD_WIDTH, y: node.graphY + HEADER_HEIGHT }
     return {
@@ -143,6 +147,12 @@ export default function RawGraphSurface({
     // Studio wraps this component read-only and passes nothing, and must keep
     // rendering exactly as before.
     childCounts = null,
+    // EVERY node in the document, not the scoped card list. A container's ports
+    // come from the doorway nodes INSIDE it, and those live in a different
+    // scope from the container's own card — so the scoped list would find none
+    // of them and the feature would fail in total silence, with every unit test
+    // still green. Optional and defaulted: Studio wraps this read-only.
+    portScopeNodes = null,
     selectedNodeId = null,
     emptyHint = 'Cursor is material. Double-click to place nodes.',
     onSelectNode,
@@ -238,7 +248,7 @@ export default function RawGraphSurface({
         const minX = Math.min(...subset.map((n) => (n.graphX ?? 0) - doorGutter()))
         const minY = Math.min(...subset.map((n) => n.graphY ?? 0))
         const maxX = Math.max(...subset.map((n) => (n.graphX ?? 0) + CARD_WIDTH))
-        const maxY = Math.max(...subset.map((n) => (n.graphY ?? 0) + cardHeight(n)))
+        const maxY = Math.max(...subset.map((n) => (n.graphY ?? 0) + cardHeight(n, portScopeNodes)))
         return { minX, minY, maxX, maxY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }
     }
 
@@ -403,7 +413,7 @@ export default function RawGraphSurface({
                 const x = (node.graphX ?? 0) * vp.zoom + vp.panX
                 const y = (node.graphY ?? 0) * vp.zoom + vp.panY
                 const w = CARD_WIDTH * vp.zoom
-                const h = cardHeight(node) * vp.zoom
+                const h = cardHeight(node, portScopeNodes) * vp.zoom
                 return x + w > 0 && x < box.width && y + h > 0 && y < box.height - Math.max(0, bottomInset)
             }).length
             : 0
@@ -616,8 +626,8 @@ export default function RawGraphSurface({
         const radius = PORT_GRAB_RADIUS_PX / viewportRef.current.zoom
         let best = null
         let bestDistance = radius
-        for (const port of getNodeOutputs(node)) {
-            const centre = outputPortCenter(node, port.id)
+        for (const port of getNodeOutputs(node, portScopeNodes)) {
+            const centre = outputPortCenter(node, port.id, portScopeNodes)
             const distance = Math.hypot(centre.x - point.x, centre.y - point.y)
             if (distance > bestDistance) continue
             bestDistance = distance
@@ -664,9 +674,9 @@ export default function RawGraphSurface({
         let bestDistance = radius
         for (const node of nodes) {
             if (node.id === wire.fromNodeId) continue
-            for (const port of getNodeInputs(node)) {
+            for (const port of getNodeInputs(node, portScopeNodes)) {
                 if (!arePortsCompatible(wire.fromPortType, port.type)) continue
-                const center = inputPortCenter(node, port.id)
+                const center = inputPortCenter(node, port.id, portScopeNodes)
                 const distance = Math.hypot(center.x - point.x, center.y - point.y)
                 if (distance > bestDistance) continue
                 bestDistance = distance
@@ -809,16 +819,16 @@ export default function RawGraphSurface({
             const fromNode = nodeById.get(edge.fromNodeId)
             const toNode = nodeById.get(edge.toNodeId)
             if (!fromNode || !toNode) continue
-            const from = outputPortCenter(fromNode, edge.fromPort)
-            const to = inputPortCenter(toNode, edge.toPort)
-            const fromPort = getNodeOutputs(fromNode).find((p) => p.id === edge.fromPort)
+            const from = outputPortCenter(fromNode, edge.fromPort, portScopeNodes)
+            const to = inputPortCenter(toNode, edge.toPort, portScopeNodes)
+            const fromPort = getNodeOutputs(fromNode, portScopeNodes).find((p) => p.id === edge.fromPort)
             const color = fromPort ? getPortType(fromPort.type).color : '#999'
             out.push({ id: edge.id, from, to, color })
         }
         return out
     }, [edges, nodeById])
 
-    const pendingFromPos = pendingWire ? outputPortCenter(nodeById.get(pendingWire.fromNodeId) || {}, pendingWire.fromPort) : null
+    const pendingFromPos = pendingWire ? outputPortCenter(nodeById.get(pendingWire.fromNodeId) || {}, pendingWire.fromPort, portScopeNodes) : null
 
     const handleSectionDoubleClick = (event) => {
         if (!onDoubleClick) return
@@ -954,13 +964,13 @@ export default function RawGraphSurface({
                         ) : null}
                     </svg>
                     {nodes.map((node) => {
-                        const inputs = getNodeInputs(node)
-                        const outputs = getNodeOutputs(node)
+                        const inputs = getNodeInputs(node, portScopeNodes)
+                        const outputs = getNodeOutputs(node, portScopeNodes)
                         const childCount = childCounts?.get(node.id) || 0
                         // `h` and the card's left/top/width come from the same
                         // geometry the wires use, at EVERY tier. The tier below
                         // only decides what is drawn inside this box.
-                        const h = cardHeight(node)
+                        const h = cardHeight(node, portScopeNodes)
                         const isSelected = node.id === selectedNodeId
                         const typeDef = getNodeType(node.typeId)
                         const showPorts = tier === 'full' || tier === 'compact'
