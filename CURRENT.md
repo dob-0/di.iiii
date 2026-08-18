@@ -13,8 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a wire can start from a container
-- a door you can see, and something that says where you are
+- doorways: a hole in a container's wall
 
 Full detail: `PROGRESS.md`.
 
