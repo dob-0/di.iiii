@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the node truth audit, and families for a palette that felt messy
+- the example graph was lying in the other direction
 
 Full detail: `PROGRESS.md`.
 
