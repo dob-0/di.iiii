@@ -13,7 +13,8 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- "I want to build world but can't connect or go inside": the map and the stage were showing two different rooms
+- a wire can start from a container
+- a door you can see, and something that says where you are
 
 Full detail: `PROGRESS.md`.
 
