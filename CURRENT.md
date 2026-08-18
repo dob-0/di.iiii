@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- Raw could not open a file. Model / Video / Sound, and a door to put them through
+- "I want to build world but can't connect or go inside": the map and the stage were showing two different rooms
 
 Full detail: `PROGRESS.md`.
 
