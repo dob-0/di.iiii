@@ -272,6 +272,83 @@ describe('projectSchema', () => {
         expect(afterDelete.edges).toHaveLength(0)
     })
 
+    describe('reparentNode', () => {
+        const withDeskAndCube = () => applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'desk', typeId: 'universe.desk.3d', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'cube', typeId: 'geom.cube', graphX: 10, graphY: 20, values: {} } } }
+        ])
+
+        it('moves a node into a container, with its new coordinates', () => {
+            const moved = applyProjectOps(withDeskAndCube(), [
+                { type: 'reparentNode', payload: { nodeId: 'cube', parentId: 'desk', graphX: 60, graphY: 80 } }
+            ])
+            const cube = moved.nodes.find((node) => node.id === 'cube')
+            expect(cube.parentId).toBe('desk')
+            expect(cube.graphX).toBe(60)
+            expect(cube.graphY).toBe(80)
+        })
+
+        // The whole reason this is one op rather than four. As loose ops the
+        // reducer refuses the parentId and STILL applies the coordinates, and a
+        // 409'd batch is resubmitted verbatim — leaving the node replanted at a
+        // coordinate meaningless in its scope with nothing said.
+        it('applies nothing at all when the destination does not exist', () => {
+            const before = withDeskAndCube()
+            const after = applyProjectOps(before, [
+                { type: 'reparentNode', payload: { nodeId: 'cube', parentId: 'ghost', graphX: 999, graphY: 999 } }
+            ])
+            const cube = after.nodes.find((node) => node.id === 'cube')
+            expect(cube.parentId).toBeFalsy()
+            expect(cube.graphX).toBe(10)
+            expect(cube.graphY).toBe(20)
+        })
+
+        it('refuses to make a node its own ancestor', () => {
+            const nested = applyProjectOps(withDeskAndCube(), [
+                { type: 'createNode', payload: { node: { id: 'inner', typeId: 'universe.desk.3d', parentId: 'desk', values: {} } } }
+            ])
+            // desk -> inner -> desk would be unreachable, undeletable and would
+            // recurse on every traversal.
+            const after = applyProjectOps(nested, [
+                { type: 'reparentNode', payload: { nodeId: 'desk', parentId: 'inner' } }
+            ])
+            expect(after.nodes.find((node) => node.id === 'desk').parentId).toBeFalsy()
+        })
+
+        it('undoes back to the scope AND the position it came from', () => {
+            const before = withDeskAndCube()
+            const op = { type: 'reparentNode', payload: { nodeId: 'cube', parentId: 'desk', graphX: 60, graphY: 80 } }
+            const inverse = invertProjectOps(before, [op])
+            const after = applyProjectOps(applyProjectOps(before, [op]), inverse)
+            const cube = after.nodes.find((node) => node.id === 'cube')
+            expect(cube.parentId).toBeFalsy()
+            expect(cube.graphX).toBe(10)
+            expect(cube.graphY).toBe(20)
+        })
+    })
+
+    // Found by reading invertSingleOp, not by a failing test: a doorway's
+    // exterior wire names the CONTAINER and the door's id, and the container is
+    // not among the deleted nodes — so the delete sweep removed the wire while
+    // the inverse's filter would never have restored it, and one Ctrl+Z would
+    // silently drop a wire the user still had.
+    it('restores the wire to a doorway socket when the delete is undone', () => {
+        const base = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'desk', typeId: 'universe.desk.3d', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'door', typeId: 'port.in', parentId: 'desk', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'sky', typeId: 'value.color', values: {} } } },
+            { type: 'createEdge', payload: { edge: { id: 'e1', fromNodeId: 'sky', fromPort: 'out', toNodeId: 'desk', toPort: 'door' } } }
+        ])
+        const op = { type: 'deleteNode', payload: { nodeId: 'door' } }
+        const inverse = invertProjectOps(base, [op])
+        const afterDelete = applyProjectOps(base, [op])
+        expect(afterDelete.edges).toHaveLength(0)
+
+        const restored = applyProjectOps(afterDelete, inverse)
+        expect(restored.nodes.find((node) => node.id === 'door')).toBeDefined()
+        expect(restored.edges.map((edge) => edge.id)).toEqual(['e1'])
+    })
+
     it('accepts unknown typeIds (matches the server, which never validates them)', () => {
         const base = normalizeProjectDocument({})
         // shared/projectSchema.cjs (the server's authoritative mirror) intentionally

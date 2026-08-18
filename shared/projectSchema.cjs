@@ -845,6 +845,39 @@ const applyProjectOps = (document, ops = []) => {
         if (normalized) nodes.set(nodeId, normalized)
         break
       }
+      case 'reparentNode': {
+        const nodeId = ensureString(payload.nodeId)
+        if (!nodeId || !nodes.has(nodeId)) break
+        const nextParentId = payload.parentId ? ensureString(payload.parentId) : null
+        // The destination must exist. A parentId naming nothing puts the node in
+        // no scope's child list, reachable from no Enter and visible on no
+        // canvas — silent loss, not an error.
+        if (nextParentId && !nodes.has(nextParentId)) break
+        // …and the node must not become its own ancestor. deleteNode's collect()
+        // guards against cycles it FINDS; this stops one being made.
+        let cursor = nextParentId
+        let cycles = false
+        const seen = new Set()
+        while (cursor) {
+          if (cursor === nodeId) { cycles = true; break }
+          if (seen.has(cursor)) break
+          seen.add(cursor)
+          cursor = nodes.get(cursor)?.parentId || null
+        }
+        if (cycles) break
+        // ONE op, applied whole or not at all — mirror of
+        // src/shared/projectSchema.js. As four loose ops the reducer would
+        // refuse the parentId while still applying the coordinates, and a 409'd
+        // batch is resubmitted verbatim.
+        const existing = nodes.get(nodeId)
+        nodes.set(nodeId, normalizeProjectNode({
+          ...existing,
+          parentId: nextParentId,
+          ...(payload.graphX !== undefined ? { graphX: ensureNumber(payload.graphX, existing.graphX) } : {}),
+          ...(payload.graphY !== undefined ? { graphY: ensureNumber(payload.graphY, existing.graphY) } : {})
+        }))
+        break
+      }
       case 'deleteNode': {
         const nodeId = ensureString(payload.nodeId)
         if (!nodeId) break
@@ -1102,6 +1135,22 @@ const invertSingleOp = (document, op) => {
       if (!Object.keys(inversePatch).length) break
       return [{ type: 'updateNode', payload: { nodeId, patch: inversePatch } }]
     }
+    case 'reparentNode': {
+      const nodeId = ensureString(payload.nodeId)
+      const existing = nodeId ? nodes.get(nodeId) : null
+      if (!existing) break
+      // Puts the node back in the scope it came FROM, and back where it sat
+      // there. Mirror of src/shared/projectSchema.js.
+      return [{
+        type: 'reparentNode',
+        payload: {
+          nodeId,
+          parentId: existing.parentId || null,
+          graphX: existing.graphX,
+          graphY: existing.graphY
+        }
+      }]
+    }
     case 'deleteNode': {
       const nodeId = ensureString(payload.nodeId)
       if (!nodeId) break
@@ -1115,8 +1164,21 @@ const invertSingleOp = (document, op) => {
       }
       collect(nodeId)
       const restoredNodes = Array.from(toDelete).filter((id) => nodes.has(id)).map((id) => nodes.get(id))
+      // A doorway's exterior wire names the CONTAINER and the door's id, and
+      // the container is not in toDelete — so the delete sweep removes it while
+      // this filter alone would never restore it, and undo would silently drop
+      // a wire the user still had. Mirror of src/shared/projectSchema.js.
+      const doorwaySockets = new Set(
+        Array.from(toDelete)
+          .map((id) => nodes.get(id))
+          .filter((node) => node && (node.typeId === 'port.in' || node.typeId === 'port.out') && node.parentId)
+          .map((node) => `${node.parentId}:${node.id}`)
+      )
       const restoredEdges = Array.from(edges.values())
-        .filter((edge) => toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId))
+        .filter((edge) => toDelete.has(edge.fromNodeId)
+          || toDelete.has(edge.toNodeId)
+          || doorwaySockets.has(`${edge.toNodeId}:${edge.toPort}`)
+          || doorwaySockets.has(`${edge.fromNodeId}:${edge.fromPort}`))
       if (!restoredNodes.length && !restoredEdges.length) break
       const inverse = [
         ...restoredNodes.map((node) => ({ type: 'createNode', payload: { node: cloneValue(node) } })),
