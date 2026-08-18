@@ -25,7 +25,7 @@ import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSy
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
-import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.js'
+import { createEdge, createNode, getNodeFamily, getNodeType } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
@@ -1481,12 +1481,18 @@ export default function RawEditor({
                 {/* Panel nodes float above the graph as viewport-fixed windows */}
                 {visibleViewNodes.map((node, index) => {
                     const windowState = buildWindowStateFromNode(node, index, graphContext)
+                    // The family, not the type id: the cards say "the room" and
+                    // the windows used to say UNIVERSE.WORLD. Same node, two
+                    // vocabularies — and the colour is what ties the window to
+                    // its card on the canvas behind it.
+                    const family = getNodeFamily(node.typeId)
                     return (
                         <DesktopWindow
                             key={node.id}
                             windowState={windowState}
                             title={windowState.title}
-                            kicker={node.typeId}
+                            kicker={family?.label || node.typeId}
+                            accent={family?.color || null}
                             allowOverflowLeft
                             allowOverflowTop
                             onFocus={() => {

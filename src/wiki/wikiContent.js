@@ -694,6 +694,25 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'workspace', 'zen', 'minimal', 'palette', 'shortcuts', 'ui', 'starter'],
         updated: '2026-08-18'
+    },
+    {
+        id: 'reading-the-workspace',
+        category: 'Editing',
+        title: 'Reading the workspace: what each colour means',
+        summary: 'Grey is furniture, colour is your work, and cyan means you touched it. Once you know the three, you can read a workspace without reading a word.',
+        body: [
+            'Everything on the surface belongs to one of two worlds. Your work — the nodes, their wires, the scene — carries colour. The furniture around it — windows, the palette, the toolbar, the zoom buttons — is grey and stays out of the way. Before 18 August 2026 they all wore the same cyan outline, so a floating window looked exactly like a node card and nothing showed which was in front.',
+            { list: [
+                'Grey edge — furniture. A window, the palette, the toolbar, a button waiting to be used. It floats above your work and it is not part of it.',
+                'Coloured edge — a node, in its family\'s colour: yellow for values, purple for rooms and worlds, pink for the panels that watch, blue for what you bring in, and so on. The card\'s little square icon carries the same colour, so the family is readable at a glance instead of spelled out in small type.',
+                'Cyan — you. Selected, hovered, or focused. Because nothing else is cyan any more, the thing you are working on is the brightest thing on screen.',
+                'Port colours — the kind of value a wire carries: a colour, a number, a texture. Unchanged, and the wires match their ports.'
+            ] },
+            'A window shows a stripe along its top edge in the colour of the node it belongs to, and names that family above its title — "the room", not the code\'s internal name. So when you open a World node\'s window, the purple stripe ties it back to the purple card sitting on the canvas behind it: one node, two views of it.',
+            'Windows also tell you their state now: a pinned window says so in its header, and the buttons in a window header are quiet until you reach for them, with Close turning red so it never gets pressed by accident.'
+        ],
+        tags: ['raw', 'ui', 'colour', 'families', 'windows', 'nodes', 'reading', 'design'],
+        updated: '2026-08-18'
     }
 ]
 

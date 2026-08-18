@@ -5,6 +5,12 @@ export default function DesktopWindow({
     windowState,
     title,
     kicker = '',
+    // The family colour of the node this window belongs to, if it belongs to
+    // one. Drives the stripe along the top edge and the kicker's colour, which
+    // is what makes a window and its graph card legible as ONE node rather
+    // than two identical rectangles. Windows that are tools rather than nodes
+    // (Outliner, Chat) pass nothing and keep the neutral furniture edge.
+    accent = null,
     children,
     onFocus,
     onPatch,
@@ -168,7 +174,12 @@ export default function DesktopWindow({
                 width: draft.width,
                 height: windowState.minimized ? 'auto' : draft.height,
                 zIndex: windowState.zIndex,
-                cursor: sectionCursor
+                cursor: sectionCursor,
+                // A custom property, not a direct border/colour: raw.css owns
+                // the treatment (stripe width, fallback edge, kicker colour)
+                // and this only says which hue. Undefined leaves every
+                // fallback in the stylesheet intact.
+                ...(accent ? { '--window-accent': accent } : {})
             }}
         >
             <header

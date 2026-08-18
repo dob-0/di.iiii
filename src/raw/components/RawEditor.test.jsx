@@ -543,6 +543,46 @@ describe('RawEditor view.browser panel', () => {
     })
 })
 
+// A window and its graph card are two views of ONE node, and nothing used to
+// say so: the card said "the room" in the family's colour while the window said
+// UNIVERSE.WORLD in grey, and both wore the same cyan frame. The window now
+// carries the family's word and the family's hue.
+describe('RawEditor window identity', () => {
+    const IDENTITY_KEY = 'test-window-identity'
+
+    afterEach(() => {
+        window.localStorage.removeItem(IDENTITY_KEY)
+    })
+
+    it('names the family on the window, not the internal type id', () => {
+        window.localStorage.setItem(
+            IDENTITY_KEY,
+            makeWorkspaceDoc([
+                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+            ])
+        )
+        render(<RawEditor localStorageKey={IDENTITY_KEY} />)
+
+        const dialog = screen.getByRole('dialog', { name: 'World' })
+        expect(dialog.textContent).toContain('the room')
+        expect(dialog.textContent).not.toContain('universe.world')
+    })
+
+    it('hands the window its node\'s family colour, so it matches its card', () => {
+        window.localStorage.setItem(
+            IDENTITY_KEY,
+            makeWorkspaceDoc([
+                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+            ])
+        )
+        render(<RawEditor localStorageKey={IDENTITY_KEY} />)
+
+        const dialog = screen.getByRole('dialog', { name: 'World' })
+        // getNodeFamily('universe.world') → the 'room' family
+        expect(dialog.style.getPropertyValue('--window-accent')).toBe('#bd93f9')
+    })
+})
+
 // Create is the Studio panel that carries a verb: the Outliner lists and the
 // Inspector edits, but before view.library existed a visitor could enter the
 // Studio node, look at an empty scene, and have no way to put anything in it.

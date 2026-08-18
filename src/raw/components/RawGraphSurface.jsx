@@ -918,7 +918,14 @@ export default function RawGraphSurface({
                                     top: node.graphY,
                                     width: CARD_WIDTH,
                                     height: h,
-                                    cursor: draggingNodeId === node.id ? 'grabbing' : 'grab'
+                                    cursor: draggingNodeId === node.id ? 'grabbing' : 'grab',
+                                    // One hue per card, handed to the stylesheet, which
+                                    // decides where it lands (edge, icon) and at what
+                                    // strength. Omitted when the type has no family, so
+                                    // every fallback in raw.css still applies.
+                                    ...(getNodeFamily(node.typeId)?.color
+                                        ? { '--card-family': getNodeFamily(node.typeId).color }
+                                        : {})
                                 }}
                                 role="button"
                                 tabIndex={0}

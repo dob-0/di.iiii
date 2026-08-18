@@ -168,12 +168,16 @@
     z-index: 1800;
 }
 
+/* Furniture, like the windows: the palette is summoned, used and dismissed —
+   it is never the work. Its family accent bars on the rows carry the colour
+   here, so its frame does not need to. */
 .raw-node-palette {
     position: fixed;
     width: 280px;
     border-radius: 0;
-    background: #0a0a0a;
-    border: 1px solid var(--di-cyan-border);
+    background: #101418;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9);
 
     overflow: hidden;
     z-index: 1801;
@@ -747,13 +751,6 @@
     margin: 0;
 }
 
-.raw-card {
-    background: var(--di-card);
-    border: 1px solid var(--di-cyan-border);
-    border-radius: 0;
-    box-shadow: none;
-}
-
 .raw-chip,
 .raw-status-pill,
 .raw-user-pill,
@@ -802,10 +799,6 @@
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 18px;
-}
-
-.raw-card {
-    padding: 24px;
 }
 
 .raw-inline-list,
@@ -912,7 +905,6 @@
 .raw-topbar-actions button,
 .raw-hub-actions button,
 .raw-primitive-row button,
-.raw-window-actions button,
 .raw-assets-list button {
     -webkit-appearance: none;
     appearance: none;
@@ -930,11 +922,46 @@
 .raw-topbar-actions button:hover,
 .raw-hub-actions button:hover,
 .raw-primitive-row button:hover,
-.raw-window-actions button:hover,
 .raw-assets-list button:hover {
     border-color: var(--di-cyan);
     background: var(--di-cyan-dim);
     color: var(--di-cyan);
+}
+
+/* Window controls are NOT in the bordered-button family above, and that was
+   most of why a window read as a card containing four smaller cards: every
+   button repeated the frame's own edge. They are the window's furniture —
+   quiet until touched. They also declared no font, so they rendered in the
+   browser's default Arial while every other word in the lane is Inter, and
+   sat at 37px against the 44px floor the rest of the lane keeps. */
+.raw-window-actions button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.42);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 10px;
+    cursor: pointer;
+    transition: color 0.1s, background 0.1s;
+}
+
+.raw-window-actions button:hover,
+.raw-window-actions button:focus-visible {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Close is the one that cannot be undone; it should not look like Pin. */
+.raw-window-actions button:last-child:hover,
+.raw-window-actions button:last-child:focus-visible {
+    color: var(--di-danger);
+    background: rgba(242, 95, 92, 0.12);
 }
 
 .raw-topbar-actions button.is-active {
@@ -969,7 +996,8 @@
 .raw-topbar.is-seeded {
     height: 48px;
     padding: 0 16px;
-    border-bottom: 1px solid var(--di-cyan-border);
+    /* Furniture (see the window rule). */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     pointer-events: auto;
     overflow: visible;
     animation: rawTopbarReveal 0.35s ease both;
@@ -1220,7 +1248,8 @@
     appearance: none;
     border: none;
     border-radius: 0;
-    background: rgba(63, 105, 246, 0.12);
+    /* Was a blue-violet nobody else in the lane uses — a hue with no job. */
+    background: rgba(255, 255, 255, 0.06);
     color: #f4f7fb;
     padding: 4px 8px;
     font-size: 11px;
@@ -1369,16 +1398,32 @@
     color: #ffb0aa;
 }
 
+/* ONE JOB PER COLOUR (2026-08-18). A window and a graph card used to be the
+   same rectangle — the same cyan hairline, the same square corner, the same
+   near-black fill, neither casting a shadow — so nothing in the picture said
+   which one lay on the canvas and which floated above it. The fix is not a
+   nicer frame, it is giving each colour a single job:
+     neutral   — furniture (this window, the palette, the topbar, the HUD)
+     family    — what a node IS (its card's edge and icon; the stripe below)
+     cyan      — interaction only (selected, hover, focus)
+     port hue  — data type (wires, unchanged)
+   A shadow cannot carry depth here: black on black is invisible (measured).
+   Depth comes from the lifted fill plus the one-pixel top highlight.
+   `--window-accent` is set per window by DesktopWindow from its node's family,
+   so a window and its card are visibly the same node. Windows with no node
+   behind them (Outliner, Chat) fall back to the neutral edge, which is honest:
+   they are tools, not nodes. */
 .raw-window {
     position: fixed;
     top: 0;
     left: 0;
     display: flex;
     flex-direction: column;
-    background: #0a0a0a;
-    border: 1px solid var(--di-cyan-border);
+    background: #101418;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-top: 2px solid var(--window-accent, rgba(255, 255, 255, 0.14));
     border-radius: 0;
-
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 60px rgba(0, 0, 0, 0.9);
     overflow: hidden;
 }
 
@@ -1389,28 +1434,58 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
-    padding: 14px 16px;
+    padding: 8px 10px 8px 13px;
     cursor: grab;
-    border-bottom: 1px solid var(--di-cyan-border);
-    background: rgba(77, 249, 255, 0.04);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.025);
     touch-action: none;
     -webkit-user-select: none;
     user-select: none;
 }
 
-.raw-window-header h3,
-.raw-property-sheet-header h4,
-.raw-card h2 {
+/* Both classes have been on the markup since windows existed and neither had
+   a single rule, so a pinned window looked exactly like an unpinned one and a
+   minimized one kept a divider under a body that was no longer there. */
+.raw-window.is-pinned .raw-window-header::after {
+    content: 'pinned';
+    font-family: var(--di-mono);
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    color: rgba(255, 255, 255, 0.3);
+    order: 3;
+    flex: 0 0 auto;
+}
+
+.raw-window.is-minimized .raw-window-header {
+    border-bottom-color: transparent;
+}
+
+/* The window title used to be nothing but this zero margin, which left its
+   size and weight to the browser's built-in h3 — 18.72px, louder than any
+   authored label in the lane and the reason a window shouted while its card
+   whispered at 12px. */
+.raw-window-header h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.25;
+}
+
+.raw-property-sheet-header h4 {
     margin: 0;
 }
 
+/* Says the family, in the family's colour — "the room", not UNIVERSE.WORLD.
+   The cards started speaking plainly when families landed; the windows were
+   the half left behind, still showing the code's internal type id. Lowercase,
+   because that is how the palette and the cards write these words. */
 .raw-window-kicker {
     display: block;
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgba(244, 247, 251, 0.42);
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--window-accent, rgba(244, 247, 251, 0.42));
+    font-family: var(--di-mono);
 }
 
 .raw-window-actions {
@@ -1459,12 +1534,15 @@
     z-index: 10;
 }
 
+/* Controls sitting ON the live 3D content: furniture at rest (see the window
+   rule), cyan only under the pointer. Three permanently-cyan buttons over a
+   scene pull the eye away from the scene. */
 .raw-world-panel-btn {
     -webkit-appearance: none;
     appearance: none;
-    border: 1px solid var(--di-cyan-border);
-    background: rgba(10, 10, 10, 0.72);
-    color: var(--di-cyan);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(10, 12, 14, 0.72);
+    color: rgba(255, 255, 255, 0.62);
     width: 28px;
     height: 28px;
     cursor: pointer;
@@ -1477,8 +1555,11 @@
     transition: background 0.1s;
 }
 
-.raw-world-panel-btn:hover {
+.raw-world-panel-btn:hover,
+.raw-world-panel-btn:focus-visible {
     background: var(--di-cyan-dim);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
 }
 
 .raw-world-panel-btn.is-live {
@@ -1846,18 +1927,22 @@
     min-height: 56px;
     padding: 8px 4px;
     background: transparent;
-    border: 1px solid var(--di-cyan-border);
+    /* Neutral at rest, cyan under the pointer — the same rule the windows, the
+       zoom cluster and the viewport buttons follow. Fifteen permanently-cyan
+       boxes would out-shout the scene they are for putting things into. */
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 0;
-    color: var(--di-text);
+    color: rgba(255, 255, 255, 0.78);
     font-size: 11px;
     cursor: pointer;
-    transition: border-color 0.1s, background 0.1s;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
 }
 
 .raw-create-btn:hover,
 .raw-create-btn:focus-visible {
     background: rgba(77, 249, 255, 0.08);
     border-color: var(--di-cyan);
+    color: var(--di-cyan);
 }
 
 .raw-create-icon {
@@ -2174,9 +2259,12 @@
 .raw-topbar-help-action {
     -webkit-appearance: none;
     appearance: none;
-    border: 1px solid rgba(77, 249, 255, 0.3);
-    background: rgba(77, 249, 255, 0.08);
-    color: #f4f7fb;
+    /* Furniture at rest, cyan only under the pointer (see the window rule):
+       a topbar button that is permanently accent-coloured competes with the
+       selected node for the eye and wins, which is exactly backwards. */
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.72);
     padding: 10px 14px;
     font-size: 12px;
     cursor: pointer;
@@ -2339,17 +2427,26 @@
     align-items: center;
     gap: 8px;
     padding: 6px 8px;
-    border: 1px solid var(--di-cyan-border);
-    background: rgba(6, 10, 18, 0.92);
+    /* Furniture (see the window rule): the zoom cluster is a tool for looking
+       at the work, not part of it. */
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(16, 20, 24, 0.94);
 }
 
 .raw-graph-zoom-controls button {
     min-width: 44px;
     height: 44px;
-    border: 1px solid var(--di-cyan-border);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     background: var(--di-black);
-    color: var(--di-text);
+    color: rgba(255, 255, 255, 0.62);
     cursor: pointer;
+    transition: border-color 0.1s, color 0.1s;
+}
+
+.raw-graph-zoom-controls button:hover,
+.raw-graph-zoom-controls button:focus-visible {
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
 }
 
 .raw-graph-zoom-value {
@@ -2367,9 +2464,16 @@
     padding: 0 32px 32px;
 }
 
+/* The card's edge is its FAMILY, not the lane's accent. `--card-family` is set
+   per card by RawGraphSurface; the plain cyan declaration above it is the
+   fallback for engines without color-mix() and for a node whose type has no
+   family yet. Before this, every card in every family wore the same cyan edge
+   and the family was a 10px word on the right — unreadable at arm's length,
+   invisible at half zoom, and identical to the chrome around it. */
 .raw-graph-node-card {
     background: var(--di-black);
     border: 1px solid var(--di-cyan-border);
+    border-color: color-mix(in srgb, var(--card-family, #4df9ff) 46%, transparent);
     border-radius: 0;
     color: var(--di-text);
     cursor: pointer;
@@ -2394,11 +2498,13 @@
     box-shadow: 0 0 0 1px var(--di-cyan), 0 0 18px rgba(77, 249, 255, 0.15);
 }
 
-/* di.i hollow-square icon — the brand node motif */
+/* di.i hollow-square icon — the brand node motif, now in the node's own family
+   colour so the swatch says what the card is. Cyan remains the fallback for a
+   type with no family. */
 .raw-graph-node-icon {
     width: 14px;
     height: 14px;
-    border: 3px solid var(--di-cyan);
+    border: 3px solid var(--card-family, var(--di-cyan));
     background: transparent;
     flex-shrink: 0;
 }
@@ -2488,9 +2594,14 @@
 @media (hover: none) {
     .raw-graph-node-enter-hint {
         color: rgba(77, 249, 255, 0.7);
-        min-width: 32px;
-        min-height: 32px;
-        margin: -10px -8px -10px 0;
+        /* 44, not 32. This is the ONLY way into a container node on a phone —
+           double-click is not a gesture a finger has — so it has no business
+           being the one control in the lane under the floor everything else
+           is held to. It fills the 44px card header exactly; the negative
+           margins keep the header's own height unchanged. */
+        min-width: 44px;
+        min-height: 44px;
+        margin: -14px -10px -14px 0;
         display: inline-flex;
         align-items: center;
         justify-content: center;
