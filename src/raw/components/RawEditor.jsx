@@ -1188,7 +1188,13 @@ export default function RawEditor({
                     onCursorMove={presence.emitCursor}
                     onCursorLeave={presence.clearCursor}
                     nodeScale={nodeScale}
-                    scopeId={node.id}
+                    // The room this World belongs to, not the World's own
+                    // interior. A World is render:'panel-2d' — a window onto a
+                    // room, and its own live-marker is keyed by its PARENT
+                    // scope (see isLive just below), so the room it shows is
+                    // the room it stands in. Showing node.id instead meant a
+                    // cube placed beside the World was never drawn by it.
+                    scopeId={currentScopeId}
                     worldNode={node}
                     liveOutputs={liveOutputs}
                     isLive={(document.workspaceState?.liveWorldNodeIdByScope || {})[node.parentId || ''] === node.id}
@@ -1746,7 +1752,15 @@ export default function RawEditor({
                         onCursorLeave={presence.clearCursor}
                         nodeScale={nodeScale}
                         showEmptyHint={false}
-                        scopeId={worldNode?.id}
+                        // The room you are STANDING IN, not the inside of the
+                        // live World. The graph canvas filters on
+                        // currentScopeId and the palette creates with
+                        // parentId: currentScopeId — while this said
+                        // worldNode.id, the two halves of the screen named
+                        // different rooms, so anything placed at root landed
+                        // somewhere real and was never drawn. worldNode is
+                        // still passed, for sky and lighting.
+                        scopeId={currentScopeId}
                         worldNode={worldNode}
                         liveOutputs={liveOutputs}
                     />
@@ -1771,7 +1785,15 @@ export default function RawEditor({
                         onCursorLeave={presence.clearCursor}
                         nodeScale={nodeScale}
                         showEmptyHint={false}
-                        scopeId={worldNode?.id}
+                        // The room you are STANDING IN, not the inside of the
+                        // live World. The graph canvas filters on
+                        // currentScopeId and the palette creates with
+                        // parentId: currentScopeId — while this said
+                        // worldNode.id, the two halves of the screen named
+                        // different rooms, so anything placed at root landed
+                        // somewhere real and was never drawn. worldNode is
+                        // still passed, for sky and lighting.
+                        scopeId={currentScopeId}
                         worldNode={worldNode}
                         liveOutputs={liveOutputs}
                     />

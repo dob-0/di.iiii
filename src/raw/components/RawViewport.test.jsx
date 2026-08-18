@@ -207,6 +207,92 @@ describe('RawViewport', () => {
         expect(body.type).toBe('group')
     })
 
+    // A container carries what stands inside it. Before this, a node whose
+    // parentId was a 3D Desk was simply not rendered in the desk's own scope —
+    // the desk drew an empty shell and nothing ever moved with it.
+    describe('containment', () => {
+        const desk = { id: 'desk-1', typeId: 'universe.desk.3d', parentId: null, label: 'Desk', values: { position: [3, 0, 0], scale: [2, 2, 2] } }
+        const cubeInside = { id: 'cube-1', typeId: 'geom.cube', parentId: 'desk-1', label: 'Cube', values: { size: [1, 1, 1], position: [0, 0.5, 0] } }
+
+        it('renders a child inside its container, not as a sibling', () => {
+            boxObjectSpy.mockClear()
+            const { container } = render(
+                <RawViewport
+                    document={{ worldState: {}, entities: [], edges: [], nodes: [desk, cubeInside] }}
+                    scopeId={null}
+                    onWorldDoubleClick={() => {}}
+                />
+            )
+            // The cube renders at all — it did not before.
+            expect(boxObjectSpy).toHaveBeenCalled()
+            // …and it renders BENEATH the desk's own group, so the desk's
+            // position/scale apply to it. A sibling would not be nested.
+            const deskGroup = [...container.querySelectorAll('group')]
+                .find((g) => g.getAttribute('position') === '3,0,0')
+            expect(deskGroup, 'the desk group is on screen').toBeTruthy()
+            expect(deskGroup.querySelector('group'), 'the cube is inside it').toBeTruthy()
+        })
+
+        it('does not render a child twice — once nested and once flat', () => {
+            boxObjectSpy.mockClear()
+            render(
+                <RawViewport
+                    document={{ worldState: {}, entities: [], edges: [], nodes: [desk, cubeInside] }}
+                    scopeId={null}
+                    onWorldDoubleClick={() => {}}
+                />
+            )
+            expect(boxObjectSpy).toHaveBeenCalledTimes(1)
+        })
+
+        // The guard that matters most: NodeVisual reads node.values directly,
+        // so a nested node's wires have to be resolved before it is handed
+        // down, or going inside a container silently freezes the graph.
+        it('resolves a nested child\'s wired inputs, so going inside does not freeze it', () => {
+            sphereObjectSpy.mockClear()
+            render(
+                <RawViewport
+                    document={{
+                        worldState: {},
+                        entities: [],
+                        nodes: [
+                            desk,
+                            { id: 'color-1', typeId: 'value.color', parentId: null, label: 'Color', values: { value: '#ff8800' } },
+                            { id: 'sphere-1', typeId: 'geom.sphere', parentId: 'desk-1', label: 'Sphere', values: { radius: 0.5 } }
+                        ],
+                        edges: [{ id: 'e1', fromNodeId: 'color-1', fromPort: 'out', toNodeId: 'sphere-1', toPort: 'color' }]
+                    }}
+                    scopeId={null}
+                    onWorldDoubleClick={() => {}}
+                />
+            )
+            expect(sphereObjectSpy).toHaveBeenCalled()
+            expect(sphereObjectSpy.mock.calls[0][0].color).toBe('#ff8800')
+        })
+
+        // A World is its own stage. Seeing through one into another is a
+        // different feature and would change what every existing space shows.
+        it('does not see through a nested World into its contents', () => {
+            boxObjectSpy.mockClear()
+            render(
+                <RawViewport
+                    document={{
+                        worldState: {},
+                        entities: [],
+                        edges: [],
+                        nodes: [
+                            { id: 'world-1', typeId: 'universe.world', parentId: null, label: 'World', values: {} },
+                            { ...cubeInside, parentId: 'world-1' }
+                        ]
+                    }}
+                    scopeId={null}
+                    onWorldDoubleClick={() => {}}
+                />
+            )
+            expect(boxObjectSpy).not.toHaveBeenCalled()
+        })
+    })
+
     // The file-backed nodes resolve an assetId through the assetMap. Before
     // this existed, renderNodeBody was never handed the map at all, so a node
     // could not reach a file even in principle.
