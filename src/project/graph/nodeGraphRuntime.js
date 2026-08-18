@@ -6,6 +6,18 @@ const asNumber = (value, fallback = 0) => {
 }
 
 const asVec3 = (value, fallback = [0, 0, 0]) => {
+    // A hex colour IS a vector — arePortsCompatible has always allowed
+    // color -> vec3 and the input dot lights up as compatible, but this
+    // returned the fallback for any non-array, so the wire drew, reported the
+    // string through evaluateNodeInputs, and quietly produced [0,0,0].
+    // Nothing reached it before because no container had a colour OUTPUT; the
+    // World's Sky output makes it reachable, so the promise is kept instead.
+    // Channels are normalised 0..1, which is what a position or a scale can
+    // actually use — 0..255 would put a red sky 255 units off-stage.
+    if (typeof value === 'string') {
+        const rgb = hexToRgb(value)
+        return rgb ? rgb.map((channel) => channel / 255) : fallback
+    }
     if (!Array.isArray(value)) return fallback
     return [
         asNumber(value[0], fallback[0]),
@@ -247,6 +259,35 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
                 const min = asNumber(evaluateNodeInput(node, 'min', context, nextStack))
                 const max = asNumber(evaluateNodeInput(node, 'max', context, nextStack), 1)
                 return Math.min(max, Math.max(min, value))
+            }
+            break
+        // --- containers ------------------------------------------------------
+        // A container's outputs mirror its OWN settings, so they must be read
+        // through evaluateNodeInput rather than off node.values: wire a String
+        // node into a World's Title and the World's Title output has to carry
+        // the wired value, not the stale local one.
+        //
+        // Without a case here the fallthrough below would return the local value
+        // and silently ignore any wire into the matching input — a port that
+        // looks alive, persists, survives a reload, and lies. That is worse than
+        // the undefined it replaces, and it is why every port added in this
+        // change ships with its case in the same commit.
+        case 'universe.world':
+            if (portId === 'title' || portId === 'bgColor') {
+                return evaluateNodeInput(node, portId, context, nextStack)
+            }
+            break
+        case 'universe.desk.3d':
+            if (portId === 'position' || portId === 'rotation' || portId === 'scale') {
+                return asVec3(evaluateNodeInput(node, portId, context, nextStack))
+            }
+            break
+        // The literal, not STUDIO_TYPE_ID: studioNode.js reaches back into the
+        // authoring layer, and importing it here would close an import cycle
+        // through this file. Every other case in this switch is a literal too.
+        case 'studio':
+            if (portId === 'title') {
+                return evaluateNodeInput(node, portId, context, nextStack)
             }
             break
         default:

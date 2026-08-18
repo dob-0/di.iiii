@@ -221,6 +221,15 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('numB', 'out', 'pow', 'b'),
         wire('pow', 'out', 'light', 'directionalIntensity'),
 
+        // A wire OUT of a container — new on 2026-08-19, and the thing that
+        // used to be impossible: every container declared zero outputs, so
+        // press-and-pull on a World card silently dragged the card. The World
+        // names the text panel standing beside it, and renaming the World
+        // renames the panel. Note the panel is a SIBLING of the World, not
+        // inside it: a container still outputs only its own settings, and an
+        // edge that crosses a scope boundary remains unauthorable.
+        wire('world', 'title', 'text', 'content'),
+
         // Static world settings.
         wire('colorA', 'out', 'light', 'ambientColor'),
         wire('numB', 'out', 'light', 'ambientIntensity'),

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render } from '@testing-library/react'
 import RawGraphSurface, { LOD_TIERS, lodTierForZoom } from './RawGraphSurface.jsx'
-import { createNode } from '../../project/nodeRegistry.js'
+import { createNode, getNodeType } from '../../project/nodeRegistry.js'
 
 // THE invariant behind semantic zoom.
 //
@@ -97,3 +97,36 @@ describe('lodTierForZoom', () => {
 // Mirrors the module's LOD_LABELS. Kept local so the test fails loudly if the
 // production threshold moves without the test being reconsidered.
 const LOD_LABELS_BOUNDARY = 0.62
+
+// A card's height is Math.max(inputs, outputs, 1) rows. Containers gained
+// outputs in 2026-08-19's "a wire can start from a container" change, and every
+// one of them still has outputs <= inputs — so no card grew, no port centre
+// moved, and no wire on any saved document detached.
+//
+// This is not decoration. A third output on universe.world would push every
+// World card one row taller, shift every port centre below it, and the wires on
+// every existing document would visibly detach — which reads as a rendering
+// glitch rather than as a bug, and would be found late.
+describe('containers did not change shape when they gained outputs', () => {
+    it.each([
+        ['universe.world', 2, 2],
+        ['universe.desk.3d', 5, 3],
+        ['universe.space', 1, 0],
+        ['studio', 1, 1]
+    ])('%s keeps outputs (%i) at or under inputs (%i)', (typeId, inputs, outputs) => {
+        const type = getNodeType(typeId)
+        expect(type.inputs.length).toBe(inputs)
+        expect(type.outputs.length).toBe(outputs)
+        expect(type.outputs.length).toBeLessThanOrEqual(type.inputs.length)
+    })
+
+    it('renders a World card at the same height it did with no outputs at all', () => {
+        const world = createNode('universe.world', { id: 'w' })
+        const { container } = render(
+            <RawGraphSurface nodes={[world]} edges={[]} initialZoom={1} />
+        )
+        // 44 header + 2 rows of 22 + 8 — the same arithmetic as before, because
+        // two outputs cannot exceed two inputs.
+        expect(container.querySelector('.raw-graph-node-card').style.height).toBe('96px')
+    })
+})
