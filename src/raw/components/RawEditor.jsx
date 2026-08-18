@@ -8,6 +8,7 @@ import TextPanelWindow from './TextPanelWindow.jsx'
 import ImagePanelWindow from './ImagePanelWindow.jsx'
 import WorldPanelWindow from './WorldPanelWindow.jsx'
 import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
+import CreatePanelWindow from './CreatePanelWindow.jsx'
 import ChatPanelWindow from './ChatPanelWindow.jsx'
 import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
@@ -23,7 +24,7 @@ import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
-import { getInspectorSections } from '../../project/entityRegistry.js'
+import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
@@ -81,6 +82,7 @@ const WINDOW_DEFAULT_POSITIONS = {
     'agent':           { x: 96,   y: 140, width: 420, height: 480 },
     'view.assets':     { x: 24,   y: 56, width: 280, height: 380 },
     'view.outliner':   { x: 24,   y: 56, width: 240, height: 360 },
+    'view.library':    { x: 24,   y: 56, width: 260, height: 380 },
     'view.activity':   { x: 24,   y: 56, width: 280, height: 300 },
     'view.project':    { x: 24,   y: 56, width: 280, height: 320 },
     'legacy-world.inspector': { x: 24,   y: 56, width: 320, height: 420 },
@@ -618,6 +620,31 @@ export default function RawEditor({
         }
     }
 
+    // Raw could render entities and edit them (the inspector has handled a
+    // selected entity since the lane was forked) and delete them — it simply
+    // had no way to make one. `createEntity` is a shared-schema op, so this is
+    // the missing verb, not a new model: the same op Studio's Create window
+    // sends, into the same document, undoable through the same history.
+    //
+    // Placement is the plain grid, not Studio's look-where-the-camera-is
+    // version: the orbit controls live inside RawViewport's Canvas and are not
+    // reachable from here. A ring around a target this component cannot read
+    // would just be origin with extra steps.
+    const handleCreateEntity = useCallback((type) => {
+        const count = (state.document.entities || []).length
+        const entity = createEntityOfType(type, {
+            components: {
+                transform: { position: [((count % 4) - 1.5) * 1.4, 0, Math.floor(count / 4) * -1.8] }
+            }
+        })
+        if (!entity) return
+        applyLocalOps({
+            type: 'createEntity',
+            payload: { entity }
+        }, { activityMessage: `Created ${entity.type}.` })
+        dispatch({ type: 'select-entity', entityId: entity.id })
+    }, [applyLocalOps, dispatch, state.document.entities])
+
     const handleDeleteSelected = useCallback(() => {
         if (surfaceSelectedNode) {
             applyLocalOps([
@@ -1140,6 +1167,9 @@ export default function RawEditor({
                     onSelectNode={(nodeId) => selectNode(nodeId)}
                 />
             )
+        }
+        if (node.typeId === 'view.library') {
+            return <CreatePanelWindow onCreateEntity={handleCreateEntity} />
         }
         if (node.typeId === 'view.inspector') {
             return (

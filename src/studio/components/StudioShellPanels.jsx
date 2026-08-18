@@ -54,7 +54,7 @@ import { getApiAuthProviders, getOAuthUrl } from '../../services/apiClient.js'
 import { listCommonsAssets } from '../../services/serverSpaces.js'
 import { formatAssetSize } from '../utils/assetOptimization.js'
 import { ASSET_FORMAT_HINT, canPlaceInScene } from '../utils/assetFormats.js'
-import { LIGHTS, PRIMITIVES } from '../utils/entityPalette.js'
+import { LIGHTS, PRIMITIVES } from '../../project/entityPalette.js'
 
 const formatTimestamp = (value) => {
     if (!value) return 'Not yet'

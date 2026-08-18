@@ -1,6 +1,8 @@
-// Single source for "what can I create" — consumed by the Create window's
-// Library sections and the double-click Quick Insert popup, so the two never
-// drift apart again.
+// Single source for "what can I create" — consumed by Studio's Create window,
+// the double-click Quick Insert popup, and Raw's `view.library` panel node, so
+// the three never drift apart again. Lives in the shared project layer rather
+// than under src/studio/ for exactly that last reason: both lanes create the
+// same entities into the same document.
 
 export const PRIMITIVES = [
     { key: 'box', label: 'box', icon: '◻' },

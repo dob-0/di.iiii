@@ -1816,6 +1816,55 @@
     padding: 16px;
 }
 
+/* view.library — Studio's Create window as a panel node. */
+.raw-create-section + .raw-create-section {
+    margin-top: 18px;
+}
+
+.raw-create-label {
+    font-family: var(--di-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+    margin-bottom: 8px;
+}
+
+.raw-create-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+    gap: 6px;
+}
+
+.raw-create-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    /* 44px is the one-finger floor this project holds every control to; a
+       shape grid is exactly where a phone visitor taps first. */
+    min-height: 56px;
+    padding: 8px 4px;
+    background: transparent;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    color: var(--di-text);
+    font-size: 11px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s;
+}
+
+.raw-create-btn:hover,
+.raw-create-btn:focus-visible {
+    background: rgba(77, 249, 255, 0.08);
+    border-color: var(--di-cyan);
+}
+
+.raw-create-icon {
+    font-size: 17px;
+    line-height: 1;
+}
+
 .raw-text-panel {
     display: flex;
     align-items: flex-start;
@@ -1829,6 +1878,16 @@
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     max-width: 100%;
+}
+
+/* 20px is a presentation size on a desk; on a 390px phone it turns three
+   sentences into a scrolling column, which is how the starter desk's last
+   line — the one naming the way into Studio — ended up below the fold. */
+@media (max-width: 640px) {
+    .raw-text-panel-content {
+        font-size: 17px;
+        line-height: 1.45;
+    }
 }
 
 .raw-chat-panel {

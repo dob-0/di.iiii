@@ -70,6 +70,8 @@ export const FAMILY_BY_TYPE = {
     'geom.sphere': 'make',
     'geom.plane': 'make',
     'view.text': 'make',
+    // Create sits with the things it makes, not with the panels it looks like.
+    'view.library': 'make',
     'view.image': 'make',
     'view.browser': 'make',
     'node.null': 'make',
@@ -1027,6 +1029,27 @@ export const NODE_TYPES = {
         singleton: false,
         inputs: [
             { id: 'title', type: 'string', label: 'Title', default: 'Outliner' },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'panel-2d',
+    },
+
+    // Studio's Create window, as a node — the verb the other two were missing.
+    // An Outliner lists what exists and an Inspector edits what is selected;
+    // without this one, a visitor who enters the Studio node can look at an
+    // empty scene and change nothing about it. What it offers comes from
+    // entityPalette.js, shared with Studio's own Create window and Quick
+    // Insert, so the three lists cannot drift.
+    'view.library': {
+        id: 'view.library',
+        label: 'Create',
+        category: 'view',
+        keywords: ['create', 'add', 'library', 'shape', 'primitive', 'light', 'cube', 'box'],
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Create' },
         ],
         outputs: [],
         defaultValues: {},

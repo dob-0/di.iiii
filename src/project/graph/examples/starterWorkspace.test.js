@@ -56,6 +56,32 @@ describe('starter workspace', () => {
         expect(inPorts).toContain(edge.toPort)
     })
 
+    // The bug this guards, found by looking at a 390×844 phone at DPR 3: both
+    // seeded windows stacked from the top and between them covered the whole
+    // screen, so every graph card sat behind them — including the Studio card
+    // that the welcome text tells the visitor to enter. The graph surface
+    // centres the card cluster vertically, so a clear band down the MIDDLE is
+    // the only thing that makes the cards reachable.
+    it('leaves a clear band across the middle of a phone, where the cards are centred', () => {
+        const vw = 390
+        const vh = 844
+        const { nodes } = build({ viewportWidth: vw, viewportHeight: vh })
+        const windows = nodes
+            .map((node) => node.values?.frame)
+            .filter((frame) => frame?.visible)
+        expect(windows.length).toBeGreaterThan(1)
+
+        // The band the surface centres cards into: a generous middle third.
+        const bandTop = vh * 0.36
+        const bandBottom = vh * 0.64
+        for (const frame of windows) {
+            const covers = frame.y < bandBottom && frame.y + frame.height > bandTop
+            expect(covers, `window at y=${frame.y} h=${frame.height} covers the card band`).toBe(false)
+        }
+        // …and the band is worth having: two cards' worth of room.
+        expect(bandBottom - bandTop).toBeGreaterThan(180)
+    })
+
     it('keeps both windows inside a phone viewport', () => {
         const vw = 390
         const vh = 844

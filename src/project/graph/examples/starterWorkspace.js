@@ -28,6 +28,15 @@ export const STARTER_WELCOME_TEXT = [
     'double-tap for the palette. enter Studio › for the room.'
 ].join('\n\n')
 
+// A phone gets the same three ideas in less text, because its welcome window
+// has to be short enough to leave the cards a clear band (see the layout note
+// below) — and because a window that needs scrolling to finish a sentence is a
+// worse first sight than one that does not.
+export const STARTER_WELCOME_TEXT_NARROW = [
+    'a workspace, not a file. Sky is wired into World — change the color, the room follows.',
+    'tap Studio › for the room.'
+].join('\n\n')
+
 const clamp = (min, value, max) => Math.min(max, Math.max(min, value))
 
 /**
@@ -53,7 +62,7 @@ export function buildStarterWorkspaceDocument({
         ? viewportWidth - pad * 2
         : clamp(320, Math.round(viewportWidth * 0.42), 560)
     const worldHeight = narrow
-        ? clamp(200, Math.round(viewportHeight * 0.3), 280)
+        ? clamp(180, Math.round(viewportHeight * 0.24), 220)
         : Math.round(worldWidth * 0.7)
     const worldFrame = {
         x: narrow ? pad : viewportWidth - worldWidth - pad,
@@ -63,11 +72,21 @@ export function buildStarterWorkspaceDocument({
     }
 
     const textWidth = narrow ? viewportWidth - pad * 2 : clamp(280, Math.round(viewportWidth * 0.26), 340)
-    const textHeight = narrow ? 390 : 380
+    // Derived from the clear band, not picked: the window sits against the
+    // bottom edge, so its height is what is left below the band's lower edge
+    // (0.64 of the viewport) minus the two gaps.
+    const textHeight = narrow ? clamp(200, Math.floor(viewportHeight * 0.36) - 24, 300) : 380
+    // On a phone the two windows used to stack from the top and, between them,
+    // cover the whole screen — so the cards sat behind them and "enter Studio ›
+    // for the room" pointed at something invisible. The surface CENTRES the card
+    // cluster vertically, so the only layout that leaves cards reachable is
+    // windows at the two edges and a clear band down the middle. Seen on a 390×844
+    // phone at DPR 3, which is how the bug was found; guarded by the
+    // clear-band test in starterWorkspace.test.js.
     const textFrame = {
         x: pad,
         y: narrow
-            ? worldFrame.y + worldHeight + 12
+            ? viewportHeight - textHeight - 16
             : Math.max(windowTop, viewportHeight - textHeight - 72),
         width: textWidth,
         height: textHeight
@@ -79,12 +98,15 @@ export function buildStarterWorkspaceDocument({
     // column (200px cards) stays in the corridor between the welcome window
     // (lower-left) and the World window (right) on a desktop, and simply sits
     // beneath both windows on a phone.
-    const cardTop = narrow ? textFrame.y + textHeight + 40 : workspaceTop
+    // Tighter on a phone: the cluster has to fit the band between the two
+    // windows, and the surface zooms to fit rather than to these numbers.
+    const cardGap = narrow ? 88 : 140
+    const cardTop = narrow ? worldFrame.y + worldHeight + 24 : workspaceTop
     const positions = {
         sky: [0, cardTop],
-        world: [0, cardTop + 140],
-        studio: [0, cardTop + 280],
-        text: [0, cardTop + 420]
+        world: [0, cardTop + cardGap],
+        studio: [0, cardTop + cardGap * 2],
+        text: [0, cardTop + cardGap * 3]
     }
 
     const skyNode = createNode('value.color', {
@@ -110,7 +132,7 @@ export function buildStarterWorkspaceDocument({
 
     const textValues = buildNodeValues(
         'view.text',
-        { content: STARTER_WELCOME_TEXT },
+        { content: narrow ? STARTER_WELCOME_TEXT_NARROW : STARTER_WELCOME_TEXT },
         { clientX: textFrame.x, clientY: textFrame.y },
         { workspaceTop }
     )

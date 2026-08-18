@@ -543,6 +543,53 @@ describe('RawEditor view.browser panel', () => {
     })
 })
 
+// Create is the Studio panel that carries a verb: the Outliner lists and the
+// Inspector edits, but before view.library existed a visitor could enter the
+// Studio node, look at an empty scene, and have no way to put anything in it.
+describe('RawEditor view.library panel', () => {
+    const LIBRARY_STORAGE_KEY = 'test-view-library'
+
+    afterEach(() => {
+        window.localStorage.removeItem(LIBRARY_STORAGE_KEY)
+        mockApplyLocalOps.mockClear()
+    })
+
+    const renderWithLibrary = () => {
+        window.localStorage.setItem(
+            LIBRARY_STORAGE_KEY,
+            makeWorkspaceDoc([
+                { id: 'lib-1', typeId: 'view.library', label: 'Create', parentId: null, values: {} }
+            ])
+        )
+        render(<RawEditor localStorageKey={LIBRARY_STORAGE_KEY} />)
+    }
+
+    it('offers the shared entity palette, not the generic text-panel fallback', () => {
+        renderWithLibrary()
+
+        expect(screen.getByRole('button', { name: /box/ })).toBeTruthy()
+        expect(screen.getByRole('button', { name: /Ambient/ })).toBeTruthy()
+        expect(screen.queryByText('This panel is ready for authored UI.')).toBeNull()
+    })
+
+    it('creates a real entity through the shared createEntity op', () => {
+        renderWithLibrary()
+        mockApplyLocalOps.mockClear()
+
+        fireEvent.click(screen.getByRole('button', { name: /box/ }))
+
+        const created = mockApplyLocalOps.mock.calls
+            .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
+            .flat()
+            .find((op) => op.type === 'createEntity')
+        expect(created).toBeTruthy()
+        expect(created.payload.entity.type).toBe('box')
+        // A shape dropped at the world origin every time reads as broken the
+        // second time you press the same button.
+        expect(created.payload.entity.components?.transform?.position).toBeTruthy()
+    })
+})
+
 // Regression: universe.world (and every other panel-2d node type) never
 // rendered as an enterable graph card, so scopeEnterNode was unreachable for
 // them — nodes created while "inside" a World always landed as siblings at
