@@ -56,13 +56,17 @@ describe('starter workspace', () => {
         expect(inPorts).toContain(edge.toPort)
     })
 
-    // The bug this guards, found by looking at a 390×844 phone at DPR 3: both
-    // seeded windows stacked from the top and between them covered the whole
-    // screen, so every graph card sat behind them — including the Studio card
-    // that the welcome text tells the visitor to enter. The graph surface
-    // centres the card cluster vertically, so a clear band down the MIDDLE is
-    // the only thing that makes the cards reachable.
-    it('leaves a clear band across the middle of a phone, where the cards are centred', () => {
+    // Two bugs in one day taught this contract, both found by looking at a
+    // 390×844 phone at DPR 3 and neither catchable by any other test:
+    //   1. windows stacked from the top covered the whole screen, so the cards —
+    //      including the Studio one the welcome text says to tap — sat behind
+    //      them;
+    //   2. the fix for that, docking one window to each edge, left the
+    //      inset-aware fit a pinched corridor and it zoomed the graph to 34%,
+    //      below the zoom at which the enter chevron renders at all. Untappable
+    //      again, by the opposite route.
+    // What the fit actually needs is ONE contiguous band, wide open, at one end.
+    it('leaves one contiguous band on a phone, not a pinched corridor', () => {
         const vw = 390
         const vh = 844
         const { nodes } = build({ viewportWidth: vw, viewportHeight: vh })
@@ -71,15 +75,37 @@ describe('starter workspace', () => {
             .filter((frame) => frame?.visible)
         expect(windows.length).toBeGreaterThan(1)
 
-        // The band the surface centres cards into: a generous middle third.
-        const bandTop = vh * 0.36
-        const bandBottom = vh * 0.64
+        const lowest = Math.max(...windows.map((frame) => frame.y + frame.height))
+        const band = vh - lowest
+        // Room for a couple of cards at a zoom where their controls still
+        // render — a band that only fits the cluster at 34% is not a band.
+        expect(band, `only ${Math.round(band)}px left below the windows`).toBeGreaterThan(vh * 0.28)
+
+        // Every window must read as TOP-docked to getGraphEdgeInsets, which
+        // files a full-width window under whichever edge it sits nearer:
+        // distance-to-top (y) against distance-to-bottom (vh - y - h). A window
+        // that comes out nearer the bottom is filed there, the two insets then
+        // claim more than the whole surface, the fit discards them, and the
+        // cards land back on top of the windows. That is the same 2y + h ≤ vh
+        // the seed derives its phone height from.
         for (const frame of windows) {
-            const covers = frame.y < bandBottom && frame.y + frame.height > bandTop
-            expect(covers, `window at y=${frame.y} h=${frame.height} covers the card band`).toBe(false)
+            expect(
+                frame.y * 2 + frame.height,
+                `window at y=${frame.y} h=${frame.height} is nearer the bottom edge and will be filed as bottom-docked`
+            ).toBeLessThanOrEqual(vh)
         }
-        // …and the band is worth having: two cards' worth of room.
-        expect(bandBottom - bandTop).toBeGreaterThan(180)
+    })
+
+    // Same contract on a small phone, where the room and the note have to give
+    // up height rather than push each other past the halfway line.
+    it('keeps both windows top-docked on a 375x667 phone too', () => {
+        const vh = 667
+        const { nodes } = build({ viewportWidth: 375, viewportHeight: vh })
+        const windows = nodes.map((node) => node.values?.frame).filter((frame) => frame?.visible)
+        expect(windows.length).toBeGreaterThan(1)
+        for (const frame of windows) {
+            expect(frame.y * 2 + frame.height, `window at y=${frame.y} h=${frame.height}`).toBeLessThanOrEqual(vh)
+        }
     })
 
     it('keeps both windows inside a phone viewport', () => {

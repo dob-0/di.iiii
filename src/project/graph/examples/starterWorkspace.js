@@ -78,7 +78,7 @@ export function buildStarterWorkspaceDocument({
         ? viewportWidth - pad * 2
         : clamp(320, Math.min(Math.round(viewportWidth * 0.42), edgeWindowMax), 560)
     const worldHeight = narrow
-        ? clamp(180, Math.round(viewportHeight * 0.24), 220)
+        ? clamp(150, Math.round(viewportHeight * 0.22), 220)
         : Math.round(worldWidth * 0.7)
     const worldFrame = {
         x: narrow ? pad : viewportWidth - worldWidth - pad,
@@ -90,21 +90,41 @@ export function buildStarterWorkspaceDocument({
     const textWidth = narrow
         ? viewportWidth - pad * 2
         : clamp(280, Math.min(Math.round(viewportWidth * 0.26), edgeWindowMax), 340)
-    // Derived from the clear band, not picked: the window sits against the
-    // bottom edge, so its height is what is left below the band's lower edge
-    // (0.64 of the viewport) minus the two gaps.
-    const textHeight = narrow ? clamp(200, Math.floor(viewportHeight * 0.36) - 24, 300) : 380
-    // On a phone the two windows used to stack from the top and, between them,
-    // cover the whole screen — so the cards sat behind them and "enter Studio ›
-    // for the room" pointed at something invisible. The surface CENTRES the card
-    // cluster vertically, so the only layout that leaves cards reachable is
-    // windows at the two edges and a clear band down the middle. Seen on a 390×844
-    // phone at DPR 3, which is how the bug was found; guarded by the
-    // clear-band test in starterWorkspace.test.js.
+    // On a phone this is DERIVED, not chosen — see the note on textFrame below.
+    // The fit classifies a full-width window by whichever edge it sits nearer,
+    // so this window must end above the viewport's middle or it is read as
+    // bottom-docked and the whole inset calculation is discarded.
+    const narrowTextTop = windowTop + worldHeight + 12
+    const textHeight = narrow
+        ? clamp(120, Math.min(240, viewportHeight - narrowTextTop * 2), 240)
+        : 380
+    // PHONE LAYOUT, and why it changed twice in one day.
+    //
+    // First the two windows stacked from the top and between them covered the
+    // whole screen; the fit CENTRED the cards, so every card — including the
+    // Studio one the welcome text says to tap — sat behind a window. The fix
+    // then was to dock the windows to the top and bottom edges and leave a
+    // clear band down the middle.
+    //
+    // That workaround is now actively harmful: the fit reads docked windows as
+    // edge insets (getGraphEdgeInsets), so a window on each edge leaves a
+    // pinched corridor, and fitting four cards into it zoomed the graph to 34%
+    // — where cards are unreadable and, below CARD_CONTROL_MIN_ZOOM, the enter
+    // chevron is not rendered at all. The instruction pointed at something
+    // untappable again, by the opposite route.
+    //
+    // So: stack from the top and leave ONE contiguous band at the bottom — but
+    // stacking alone is not enough. getGraphEdgeInsets classifies a full-width
+    // window by whichever edge it is NEARER, so a second window whose middle
+    // has slipped past the halfway line is filed as bottom-docked; the two
+    // insets then claim more than the whole surface and the fit throws them
+    // away, leaving the cards centred over the windows exactly as before. Hence
+    // the derived height above: both windows must finish in the top half, and
+    // the test asserts it. Seen on a 390×844 phone at DPR 3 all three times.
     const textFrame = {
         x: pad,
         y: narrow
-            ? viewportHeight - textHeight - 16
+            ? narrowTextTop
             : Math.max(windowTop, viewportHeight - textHeight - 72),
         width: textWidth,
         height: textHeight
