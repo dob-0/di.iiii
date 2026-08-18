@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- di sync phase 2, PR 3: link, ledger, and an audit that refuses what it cannot prove
+- the node truth audit, and families for a palette that felt messy
 
 Full detail: `PROGRESS.md`.
 
