@@ -318,6 +318,19 @@ export default function RawEditor({
     // of one node — the window is the panel, the card is the node — which is
     // the same split TouchDesigner draws between a Panel COMP in the network
     // editor and the panel it renders.
+    // How many nodes each node contains. A card with contents is a place you
+    // can go; one without is not, and until now they looked identical — every
+    // card wore the same chevron, so the chevron said nothing.
+    const childCounts = useMemo(() => {
+        const counts = new Map()
+        for (const node of authoredNodes) {
+            const parentId = node.parentId || null
+            if (!parentId) continue
+            counts.set(parentId, (counts.get(parentId) || 0) + 1)
+        }
+        return counts
+    }, [authoredNodes])
+
     const graphCardNodes = useMemo(
         () => nodes.filter((node) => (node.parentId || null) === currentScopeId),
         [nodes, currentScopeId]
@@ -1635,6 +1648,7 @@ export default function RawEditor({
                     bottomInset={graphBottomInset}
                     contentInsets={graphContentInsets}
                     nodes={graphCardNodes}
+                    childCounts={childCounts}
                     emptyHint={`${pointerVerb} to place your first node.`}
                     edges={graphCardEdges}
                     selectedNodeId={workspaceState.selectedNodeId}
@@ -1733,6 +1747,48 @@ export default function RawEditor({
                     )
                 })}
             </section>
+
+            {/* Where you are, and the way back out. Deliberately OUTSIDE the
+                chromeVisible gate: chromeVisible starts with `if (zen) return
+                false`, and a fresh workspace opens in zen, so the breadcrumb
+                that already exists is hidden exactly when someone first walks
+                into a container. Entering a World additionally goes fullscreen
+                and strips the rest. The result was an empty grid with no name
+                and no visible exit — indistinguishable from having destroyed
+                your work. This is the one thing that must never be hidden. */}
+            {navStack.length > 1 && (
+                <div
+                    className="raw-scope-marker"
+                    role="status"
+                    aria-live="polite"
+                    // Below the topbar when there is one, near the top when
+                    // there is not. Measured: the topbar is 49px and full-width,
+                    // so a fixed top:12px sat inside it with chrome on.
+                    style={{ top: `${(chromeVisible ? workspaceTop : 12) + 8}px` }}
+                >
+                    <button
+                        type="button"
+                        className="raw-scope-marker-out"
+                        onClick={() => handleNavigateToScope(navStack.length - 2)}
+                        title="Leave"
+                    >
+                        ‹
+                    </button>
+                    <span className="raw-scope-marker-label">
+                        inside <strong>{authoredNodes.find((n) => n.id === currentScopeId)?.label || 'a node'}</strong>
+                    </span>
+                    {navStack.length > 2 && (
+                        <button
+                            type="button"
+                            className="raw-scope-marker-root"
+                            onClick={() => handleNavigateToScope(0)}
+                            title="All the way out"
+                        >
+                            ◈
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* Fullscreen world — takes over the full viewport */}
             {hasWorldNode && isWorldFullscreen && (

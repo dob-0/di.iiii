@@ -65,6 +65,14 @@ export function buildStarterWorkspaceDocument({
     // layout is the only one that leaves the cards reachable.
     const CARD_LANE_HALF = 101
     const CARD_LANE_GUTTER = 24
+    // Pixels below the windows that the cards need to be reachable, not a
+    // fraction of the viewport: a card's height is absolute, so the same 37%
+    // of an 844px phone and of a 664px one are not the same amount of room.
+    // Three cards' worth. Below this the welcome note opens as a header only —
+    // measured on iPhone 13 (664 tall, 250px band) and iPhone SE (568, 198),
+    // where three of four cards sat behind it, against Pixel 7 (839, 314) and
+    // a 390x844 phone (318) where all four are reachable with it open.
+    const CARD_BAND_MIN = 300
     const padWide = 24
     const edgeWindowMax = Math.floor(viewportWidth / 2) - CARD_LANE_HALF - CARD_LANE_GUTTER - padWide
     const narrow = viewportWidth < 640 || edgeWindowMax < 320
@@ -127,7 +135,24 @@ export function buildStarterWorkspaceDocument({
             ? narrowTextTop
             : Math.max(windowTop, viewportHeight - textHeight - 72),
         width: textWidth,
-        height: textHeight
+        height: textHeight,
+        // …and a fourth time, for the reason the third fix assumed away. The
+        // invariant above — both windows finish in the top half — was checked
+        // at viewportHeight 844. A real iPhone 13 hands the page 664 once
+        // browser chrome is taken, and at 664 the arithmetic does not land
+        // there: the welcome ends at 414 against a halfway line of 332, the
+        // insets are discarded, and MEASURED on three devices, three of the
+        // four cards were unreachable behind it — including the Studio card
+        // this window's own text tells you to tap.
+        //
+        // Below that height the two windows genuinely cannot both be open and
+        // leave a band for the cards; there is no arithmetic that fits them.
+        // So the second one opens as a header only. Its title bar stays on
+        // screen and expands with one tap, the fit stops counting it (RawEditor
+        // drops minimized frames before getGraphEdgeInsets), and the cards get
+        // the room. An instruction you can reach beats an instruction you can
+        // read but cannot follow.
+        minimized: narrow && (viewportHeight - (narrowTextTop + textHeight)) < CARD_BAND_MIN
     }
 
     // The graph surface auto-fits and CENTRES the card cluster in the visible
