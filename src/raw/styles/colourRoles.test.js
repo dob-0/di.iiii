@@ -66,10 +66,30 @@ describe('raw colour roles', () => {
 
     it('holds the only way into a node on a phone to the same floor', () => {
         // Inside @media (hover: none) — the coarse-pointer branch, where the
-        // chevron is the sole affordance for entering a container node.
+        // door is the sole affordance for entering a container node.
+        //
+        // Look the selector up EXPLICITLY rather than slicing on indexOf: a
+        // rename made indexOf return -1, slice(-1) then read one character, and
+        // the failure surfaced as a baffling regex mismatch instead of "that
+        // selector is gone". Renaming this control should fail loudly here.
         const coarse = css.slice(css.indexOf('@media (hover: none)'))
-        const hint = coarse.slice(coarse.indexOf('.raw-graph-node-enter-hint'))
-        expect(hint.slice(0, hint.indexOf('}'))).toMatch(/min-height:\s*44px/)
+        const at = coarse.indexOf('.raw-graph-node-door')
+        expect(at, 'the coarse-pointer branch no longer mentions .raw-graph-node-door').toBeGreaterThan(-1)
+        const rule = coarse.slice(at, coarse.indexOf('}', at))
+        expect(rule).toMatch(/min-height:\s*44px/)
+        expect(rule).toMatch(/min-width:\s*44px/)
+    })
+
+    // The door is counter-scaled by the surface's zoom, so its size in the
+    // stylesheet is a SCREEN size at every zoom. It lived in the card header
+    // inside the graph transform before, where the fit shrank it to 7x7 real
+    // pixels while every DOM-presence test kept passing.
+    it('anchors the door outside the card so it can be counter-scaled', () => {
+        const anchor = css.slice(css.indexOf('.raw-graph-node-door-anchor'))
+        const rule = anchor.slice(0, anchor.indexOf('}'))
+        expect(rule).toMatch(/position:\s*absolute/)
+        expect(rule).toMatch(/right:\s*100%/)
+        expect(rule).toMatch(/transform-origin:\s*100%\s*50%/)
     })
 
     it('gives pinned and minimized windows a visible difference', () => {

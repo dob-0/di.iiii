@@ -1,5 +1,7 @@
 import { fireEvent, render } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+// The floor the auto-fit will not go below; the door must survive it.
+const FIT_MIN_USEFUL_ZOOM_FOR_TEST = 0.34
 import RawGraphSurface from './RawGraphSurface.jsx'
 import { createNode } from '../../project/nodeRegistry.js'
 
@@ -285,21 +287,47 @@ describe('RawGraphSurface', () => {
         expect(onEnterNode).toHaveBeenCalledWith('cube-1')
     })
 
-    // At fit-zoom on a phone a whole card is a few pixels across, so a tap
-    // aimed at a port landed on the enter control and changed scope instead of
-    // starting a wire — you ended up inside an empty node.
-    it('hides the enter control when cards are too small to aim at', () => {
+    // This used to assert the opposite: the enter control was HIDDEN when
+    // zoomed out, because at fit-zoom a whole card is a few pixels across and a
+    // tap aimed at a port landed on the control and changed scope instead of
+    // starting a wire. That collision was real, but hiding the only way into a
+    // container at exactly the zoom the auto-fit lands on is the wrong cure —
+    // and the intermediate fix, rendering it anyway, made it 7x7 real pixels.
+    //
+    // The door now hangs off the card's LEFT edge, counter-scaled, so it is
+    // nowhere near nearestOutputPort's 28-SCREEN-pixel grab radius on the right.
+    // The collision is structural now, not a threshold, so this asserts the
+    // thing the threshold was protecting instead.
+    it('keeps the way in at the zoom the fit lands on, without eating a wire grab', () => {
         const node = makeNode('geom.cube', { id: 'cube-1' })
-        const { getByRole, queryByRole } = render(
-            <RawGraphSurface nodes={[node]} edges={[]} onEnterNode={vi.fn()} />
+        const onEnterNode = vi.fn()
+        const onCreateEdge = vi.fn()
+        const { queryByRole, container } = render(
+            <RawGraphSurface
+                nodes={[node]}
+                edges={[]}
+                onEnterNode={onEnterNode}
+                onCreateEdge={onCreateEdge}
+                // Pinned to the exact zoom the auto-fit refuses to go below,
+                // rather than counting zoom-out clicks — the fit's starting
+                // point depends on how many nodes there are, which made the
+                // old version of this test measure something else.
+                initialZoom={FIT_MIN_USEFUL_ZOOM_FOR_TEST}
+            />
         )
 
+        // Still there — this is the regression that shipped in the first pass.
         expect(queryByRole('button', { name: /^Enter / })).toBeTruthy()
-        // Six steps of 0.1 take 1.0 down to 0.4, below the 0.5 threshold.
-        for (let i = 0; i < 6; i += 1) {
-            fireEvent.click(getByRole('button', { name: 'Zoom out' }))
-        }
-        expect(queryByRole('button', { name: /^Enter / })).toBeNull()
+
+        // And it is nowhere near the output end of the card, which is what the
+        // old zoom threshold was really protecting: the anchor is positioned
+        // OUTSIDE the card's left edge (right: 100%), so nearestOutputPort's
+        // grab radius on the right cannot reach it at any zoom.
+        const anchor = container.querySelector('.raw-graph-node-door-anchor')
+        expect(anchor).toBeTruthy()
+        expect(anchor.parentElement.classList.contains('raw-graph-node-card')).toBe(true)
+        expect(onEnterNode).not.toHaveBeenCalled()
+        expect(onCreateEdge).not.toHaveBeenCalled()
     })
 
     it('does not start a node drag when the enter control is pressed', () => {
@@ -587,29 +615,70 @@ describe('RawGraphSurface', () => {
                 <RawGraphSurface
                     nodes={[makeNode('studio', { id: 'studio-1' })]}
                     edges={[]}
+                    onEnterNode={() => {}}
                     childCounts={new Map([['studio-1', 4]])}
                 />
             )
             const badge = container.querySelector('.raw-graph-node-child-count')
             expect(badge?.textContent).toBe('4')
-            expect(container.querySelector('.raw-graph-node-enter-hint.has-contents')).toBeTruthy()
+            expect(container.querySelector('.raw-graph-node-door.has-contents')).toBeTruthy()
         })
 
         it('marks nothing on a card that holds nothing', () => {
             const { container } = render(
-                <RawGraphSurface nodes={[makeNode('geom.cube', { id: 'cube-1' })]} edges={[]} />
+                <RawGraphSurface
+                    nodes={[makeNode('geom.cube', { id: 'cube-1' })]}
+                    edges={[]}
+                    onEnterNode={() => {}}
+                />
             )
+            expect(container.querySelector('.raw-graph-node-door')).toBeTruthy()
             expect(container.querySelector('.raw-graph-node-child-count')).toBeNull()
-            expect(container.querySelector('.raw-graph-node-enter-hint.has-contents')).toBeNull()
+            expect(container.querySelector('.raw-graph-node-door.has-contents')).toBeNull()
         })
 
-        // Studio wraps this component read-only and passes no childCounts.
-        it('renders unchanged when childCounts is not passed at all', () => {
+        // Studio wraps this component read-only: no childCounts, and no
+        // onEnterNode either — so it must get a card and no door at all,
+        // rather than a door that goes nowhere.
+        it('renders a card with no door when nothing can be entered', () => {
             const { container } = render(
                 <RawGraphSurface nodes={[makeNode('studio', { id: 'studio-1' })]} edges={[]} />
             )
             expect(container.querySelector('.raw-graph-node-card')).toBeTruthy()
+            expect(container.querySelector('.raw-graph-node-door')).toBeNull()
             expect(container.querySelector('.raw-graph-node-child-count')).toBeNull()
+        })
+
+        // The defect this whole rework exists for: in the card header the door
+        // rode the graph's transform and measured 7x7 REAL pixels at the zoom
+        // the fit lands on, while a DOM-presence test passed the entire time.
+        // The anchor is counter-scaled, so the door's own box stays constant.
+        it('counter-scales the door so it does not shrink with the graph', () => {
+            const { container } = render(
+                <RawGraphSurface
+                    nodes={[makeNode('studio', { id: 'studio-1' })]}
+                    edges={[]}
+                    onEnterNode={() => {}}
+                    initialZoom={0.34}
+                />
+            )
+            const anchor = container.querySelector('.raw-graph-node-door-anchor')
+            expect(anchor).toBeTruthy()
+            // 1 / 0.34 — the exact inverse of the surface's own scale.
+            const scale = Number(/scale\(([^)]+)\)/.exec(anchor.getAttribute('style'))?.[1])
+            expect(scale).toBeCloseTo(1 / 0.34, 4)
+        })
+
+        it('still offers the door at the zoom the fit actually lands on', () => {
+            const { container } = render(
+                <RawGraphSurface
+                    nodes={[makeNode('studio', { id: 'studio-1' })]}
+                    edges={[]}
+                    onEnterNode={() => {}}
+                    initialZoom={0.34}
+                />
+            )
+            expect(container.querySelector('.raw-graph-node-door')).toBeTruthy()
         })
     })
 })

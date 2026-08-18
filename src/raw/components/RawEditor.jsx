@@ -1757,7 +1757,15 @@ export default function RawEditor({
                 and no visible exit — indistinguishable from having destroyed
                 your work. This is the one thing that must never be hidden. */}
             {navStack.length > 1 && (
-                <div className="raw-scope-marker" role="status" aria-live="polite">
+                <div
+                    className="raw-scope-marker"
+                    role="status"
+                    aria-live="polite"
+                    // Below the topbar when there is one, near the top when
+                    // there is not. Measured: the topbar is 49px and full-width,
+                    // so a fixed top:12px sat inside it with chrome on.
+                    style={{ top: `${(chromeVisible ? workspaceTop : 12) + 8}px` }}
+                >
                     <button
                         type="button"
                         className="raw-scope-marker-out"

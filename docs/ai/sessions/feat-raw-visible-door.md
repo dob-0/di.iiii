@@ -42,9 +42,37 @@
 - Two wrong rules were tried and discarded by measurement before this one: "finishes in the
   top half" (minimised the note on roomy phones too) and the file's own `2y+h` invariant
   (left iPhone 13 at 1 of 4). Neither was shipped.
-- **Seen**: desktop and iPhone 13. Entered Studio, saw `‹ inside Studio`, clicked out, got all
-  four cards back. Entered a World on the phone — the case that used to blank the screen — and
-  the marker is there over the fullscreen grid, 34x34, reachable, and gets you out.
+- **The first version of this stage was wrong, and adversarial review caught it.** Three
+  defects, each verified against the running app before being fixed:
+  1. The door stayed in the card header, inside the graph's own transform. **Measured 7x7
+     SCREEN PIXELS** at the zoom the fit lands on — present in the DOM, unusable in the
+     browser, and a pixel-perfect scripted click on its exact centre did nothing. The test
+     asserted DOM presence and passed the whole time. That is the trap: *a DOM-presence test
+     for a defect whose signature is a wrong number of screen pixels.*
+  2. It also sat inside `nearestOutputPort`'s 28-SCREEN-pixel grab radius, which covers the
+     card's right-hand end once zoomed out — the very collision the old zoom gate existed to
+     prevent, reintroduced by removing the gate.
+  3. The scope marker was fixed at `top: 12px` — **inside `.raw-topbar`**, which is 49px tall
+     and full-width, whenever chrome was on; and on `.raw-graph-fit-notice` (also top:12px) in
+     zen. Verified only in zen the first time, which is why it looked fine.
+  Rebuilt: the door hangs off the card's LEFT edge on a **counter-scaled** anchor
+  (`scale(1/zoom)`), so it is a constant size on screen — **28x22 desktop, 44x44 on touch** —
+  at every zoom, and is structurally clear of the output-port grab zone. Never gated on having
+  contents: the same control reopens a closed panel window, and an un-enterable empty container
+  is a box that can never be filled. The marker moved below the topbar (`collidesWithTopbar:
+  false`, measured), and its controls went 34px -> 44px, the lane's own floor. The fit now
+  reserves the door's width so it is not clipped: **0 of 41 doors clipped** after a fit-all,
+  where the leftmost was half off-screen before.
+- **Seen**: desktop, iPhone 13, iPhone SE, Pixel 7. Entered Studio, saw `‹ inside Studio`,
+  left, got the cards back. Entered a World on the phone — the case that used to blank the
+  screen — and the marker is there over the fullscreen grid, 44x44, reachable.
+- **Accepted, named, not hidden**: the bottom-most card's door can land under the zoom cluster
+  (`.raw-graph-zoom-controls`, bottom-left, opaque). Pixel 7 went 4/4 -> 3/4 on that alone. The
+  surface's own doctrine is that a corner occlusion must not push the whole graph up — only a
+  bottom-anchored band does — and the same trade already exists for the delete FAB at
+  bottom-right. `pointer-events: none` would be worse: the door would be invisible AND
+  clickable. The card is still enterable by double-click; only its door is covered, and only
+  in that one corner.
 - Verified: lint 0 errors · 2246 tests · build clean.
 - Still open, and unchanged by this: every container declares zero outputs, so a wire cannot
   start from one. That is the In/Out doorway work.

@@ -2565,70 +2565,98 @@
     font-family: 'JetBrains Mono', monospace;
 }
 
-.raw-graph-node-enter-hint {
+/* THE DOOR — the way into a container.
+   It hangs off the card's LEFT edge and is counter-scaled by the surface's zoom,
+   so it is the same size on screen whatever the graph is doing. It used to live
+   in the card header inside the graph's own transform: at the zoom the auto-fit
+   lands an oversized graph on, that measured 7x7 SCREEN PIXELS — in the DOM,
+   invisible in the browser, and passing a DOM-presence test the whole time.
+   Left rather than right because nearestOutputPort's grab radius is 28 screen
+   pixels and covers the card's right-hand end when zoomed out, so a door there
+   fights with starting a wire. */
+.raw-graph-node-door-anchor {
+    position: absolute;
+    right: 100%;
+    top: 22px;
+    width: 0;
+    height: 0;
+    transform-origin: 100% 50%;
+    pointer-events: none;
+}
+
+.raw-graph-node-door {
     -webkit-appearance: none;
     appearance: none;
-    border: none;
-    background: transparent;
-    padding: 0 4px;
-    margin: -8px -4px -8px 0;
-    font-size: 13px;
-    font-family: inherit;
-    /* Was rgba(244,247,251,0.2) — about 1.6:1 on --di-black, under the 3:1
-       floor for a non-text control, so the way into a container was barely
-       there even at full zoom. */
-    color: rgba(244, 247, 251, 0.45);
-    flex-shrink: 0;
-    line-height: 1;
-    cursor: pointer;
-    touch-action: manipulation;
-    transition: color 0.15s;
+    position: absolute;
+    right: 3px;
+    top: 50%;
+    transform: translateY(-50%);
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    min-height: 22px;
+    padding: 3px 5px;
+    border: 1px solid rgba(244, 247, 251, 0.28);
+    border-radius: 6px;
+    background: rgba(10, 14, 22, 0.92);
+    /* Was rgba(244,247,251,0.2) on --di-black — about 1.6:1, under the 3:1
+       floor for a non-text control. */
+    color: rgba(244, 247, 251, 0.62);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+    pointer-events: auto;
+    transition: color 0.15s, border-color 0.15s;
 }
 
-/* A card that actually holds something says so, and says how much. Without
-   this every node wore the same chevron whether or not there was anything
-   behind it, so the chevron carried no information at all. */
-.raw-graph-node-enter-hint.has-contents {
-    color: rgba(77, 249, 255, 0.85);
+.raw-graph-node-card:hover .raw-graph-node-door,
+.raw-graph-node-card.is-selected .raw-graph-node-door,
+.raw-graph-node-door:focus-visible {
+    color: rgba(77, 249, 255, 0.95);
+    border-color: rgba(77, 249, 255, 0.5);
+}
+
+/* A card that actually holds something says so, and says how much. Every card
+   used to wear the same mark whether or not there was anything behind it, so
+   the mark carried no information at all. Never a GATE on the door: the same
+   control reopens a closed panel window, and an un-enterable empty container is
+   a box that can never be filled. */
+.raw-graph-node-door.has-contents {
+    color: var(--card-family, rgba(77, 249, 255, 0.95));
+    border-color: var(--card-family, rgba(77, 249, 255, 0.55));
 }
 
 .raw-graph-node-child-count {
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
     line-height: 1;
-    padding: 2px 5px;
-    border-radius: 999px;
-    background: rgba(77, 249, 255, 0.18);
-    border: 1px solid rgba(77, 249, 255, 0.45);
-    color: var(--di-cyan);
 }
 
-.raw-graph-node-card:hover .raw-graph-node-enter-hint,
-.raw-graph-node-card.is-selected .raw-graph-node-enter-hint,
-.raw-graph-node-enter-hint:focus-visible {
-    color: rgba(77, 249, 255, 0.7);
+/* The 44px finger target, extended LEFT ONLY into the column gutter — a
+   symmetric halo would cover the card's own drag area at low zoom. Gated above
+   DOOR_HALO_MIN_ZOOM in the component, because below that it would reach into
+   the previous column's output ports. */
+.raw-graph-node-door.has-halo::after {
+    content: "";
+    position: absolute;
+    inset: -11px 0 -11px -22px;
 }
 
-/* Coarse pointers get no hover, so the chevron was invisible and entering a
-   node had no affordance at all — fatal for container nodes, whose entire
-   purpose is being entered. Show it always, and give it a real tap target. */
+/* Coarse pointers get no hover, and this is the ONLY way into a container on a
+   phone — double-click is not a gesture a finger has. So the plate itself is a
+   full 44px target rather than relying on the halo, which is gated by zoom.
+   Because the anchor is counter-scaled by the surface's zoom, 44 here is 44
+   SCREEN pixels at every zoom, not 44 graph units that shrink with the view. */
 @media (hover: none) {
-    .raw-graph-node-enter-hint {
-        color: rgba(77, 249, 255, 0.7);
-        /* 44, not 32. This is the ONLY way into a container node on a phone —
-           double-click is not a gesture a finger has — so it has no business
-           being the one control in the lane under the floor everything else
-           is held to. It fills the 44px card header exactly; the negative
-           margins keep the header's own height unchanged. */
-        min-width: 44px;
+    .raw-graph-node-door {
         min-height: 44px;
-        margin: -14px -10px -14px 0;
-        display: inline-flex;
-        align-items: center;
+        min-width: 44px;
         justify-content: center;
+        color: rgba(77, 249, 255, 0.9);
+        border-color: rgba(77, 249, 255, 0.45);
     }
 }
 
@@ -4431,13 +4459,15 @@
 }
 
 /* You are inside something. Never hidden — not by zen, not by fullscreen.
-   Sits top-centre, clear of the delete FAB and the zoom controls at the
-   bottom and of the topbar's own left/right slots. */
+   Every corner is already taken, and each one was checked by measuring, not by
+   eye: .raw-topbar is 49px tall and full-width (so top:12px sat INSIDE it
+   whenever chrome was on), .raw-graph-fit-notice is top:12px/left:50%, the zoom
+   cluster is bottom-left and .raw-delete-fab bottom-right. What is free is the
+   top-left BELOW the topbar — the component supplies the offset, since the
+   topbar's height is 0 in zen and ~49px with chrome. */
 .raw-scope-marker {
     position: fixed;
-    top: 12px;
-    left: 50%;
-    transform: translateX(-50%);
+    left: 14px;
     display: flex;
     align-items: center;
     gap: 4px;
@@ -4474,8 +4504,10 @@
     justify-content: center;
     /* A finger's target, because leaving is the one thing a lost person needs
        and there is no keyboard on a phone. */
-    min-width: 34px;
-    min-height: 34px;
+    /* 44, not 34: raw.css's own floor for the controls in this lane, and this
+       is the one control a lost person needs on a phone. */
+    min-width: 44px;
+    min-height: 44px;
     border: none;
     border-radius: 999px;
     background: rgba(77, 249, 255, 0.14);
