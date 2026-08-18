@@ -198,6 +198,43 @@ describe('applyProjectOps', () => {
     expect(afterDelete.edges.find((e) => e.id === 'e1')).toBeUndefined()
   })
 
+  // The atomic move. As four loose ops the reducer refuses the parentId and
+  // STILL applies the coordinates — and useProjectDocumentSync resubmits a
+  // 409'd batch verbatim, so a lost race leaves the node replanted at a
+  // coordinate meaningless in its scope with nothing said. Whole or nothing.
+  it('reparentNode moves a node atomically, or not at all', () => {
+    const base = applyProjectOps({}, [
+      { type: 'createNode', payload: { node: { id: 'desk', typeId: 'universe.desk.3d', label: 'Desk', values: {} } } },
+      { type: 'createNode', payload: { node: { id: 'cube', typeId: 'geom.cube', label: 'Cube', graphX: 10, graphY: 20, values: {} } } },
+    ])
+
+    const moved = applyProjectOps(base, [
+      { type: 'reparentNode', payload: { nodeId: 'cube', parentId: 'desk', graphX: 60, graphY: 80 } }
+    ])
+    const cube = moved.nodes.find((n) => n.id === 'cube')
+    expect(cube.parentId).toBe('desk')
+    expect(cube.graphX).toBe(60)
+
+    // Destination missing: NOTHING applies, coordinates included.
+    const refused = applyProjectOps(base, [
+      { type: 'reparentNode', payload: { nodeId: 'cube', parentId: 'ghost', graphX: 999, graphY: 999 } }
+    ])
+    const untouched = refused.nodes.find((n) => n.id === 'cube')
+    expect(untouched.parentId).toBeFalsy()
+    expect(untouched.graphX).toBe(10)
+  })
+
+  it('reparentNode refuses to make a node its own ancestor', () => {
+    const nested = applyProjectOps({}, [
+      { type: 'createNode', payload: { node: { id: 'outer', typeId: 'universe.desk.3d', label: 'Outer', values: {} } } },
+      { type: 'createNode', payload: { node: { id: 'inner', typeId: 'universe.desk.3d', label: 'Inner', parentId: 'outer', values: {} } } },
+    ])
+    const after = applyProjectOps(nested, [
+      { type: 'reparentNode', payload: { nodeId: 'outer', parentId: 'inner' } }
+    ])
+    expect(after.nodes.find((n) => n.id === 'outer').parentId).toBeFalsy()
+  })
+
   it('setWorldState patch merges correctly', () => {
     const doc = applyProjectOps({}, [{
       type: 'setWorldState',
