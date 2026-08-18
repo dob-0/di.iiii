@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the example graph was lying in the other direction
+- "there are no in/out connectors": the fit centred cards under a window
 
 Full detail: `PROGRESS.md`.
 
