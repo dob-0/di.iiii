@@ -36,7 +36,11 @@ export default function StudioWorldSurface({ document }) {
         <div className="ssws-root">
             <RawViewport
                 document={document}
-                scopeId={worldNode.id}
+                // The room the live World stands in — the same room Raw's own
+                // World panel shows. Passing worldNode.id here would show the
+                // World's interior instead, so the identical document rendered
+                // as two different rooms depending on which lane opened it.
+                scopeId={worldNode.parentId || null}
                 worldNode={worldNode}
                 showEmptyHint={false}
             />

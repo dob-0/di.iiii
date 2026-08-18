@@ -27,8 +27,43 @@ describe('resolveScopeWorldNode', () => {
         expect(resolveScopeWorldNode(nodes, 'world-1', {}).id).toBe('world-1')
     })
 
-    it('returns null in a non-world scope with no world children', () => {
-        expect(resolveScopeWorldNode(nodes, 'root-child', {})).toBeNull()
+    // Changed deliberately 2026-08-19 (was: returns null here). A scope with
+    // no World of its own — standing inside a 3D Desk or a Studio — is still
+    // somewhere you look around from, and returning null gated the whole 3D
+    // surface off, so entering a desk blanked the stage. Now the nearest
+    // ancestor's World lights the room you are standing in.
+    it('falls back to the nearest ancestor world when the scope has none of its own', () => {
+        expect(resolveScopeWorldNode(nodes, 'root-child', {}).id).toBe('world-1')
+    })
+
+    it('still honours the live marker of the ancestor it fell back to', () => {
+        expect(resolveScopeWorldNode(nodes, 'root-child', { '': 'world-2' }).id).toBe('world-2')
+    })
+
+    it('prefers a world in the scope itself over an ancestor\'s', () => {
+        const nested = [
+            ...nodes,
+            { id: 'desk', typeId: 'universe.desk.3d', parentId: null, values: {} },
+            { id: 'desk-world', typeId: 'universe.world', parentId: 'desk', values: {} }
+        ]
+        expect(resolveScopeWorldNode(nested, 'desk', {}).id).toBe('desk-world')
+    })
+
+    it('returns null when no ancestor has a world at all', () => {
+        const worldless = [
+            { id: 'a', typeId: 'math.add', parentId: null, values: {} },
+            { id: 'b', typeId: 'math.add', parentId: 'a', values: {} }
+        ]
+        expect(resolveScopeWorldNode(worldless, 'b', {})).toBeNull()
+    })
+
+    // A damaged document must not hang the viewport.
+    it('survives a parentId cycle', () => {
+        const cyclic = [
+            { id: 'x', typeId: 'math.add', parentId: 'y', values: {} },
+            { id: 'y', typeId: 'math.add', parentId: 'x', values: {} }
+        ]
+        expect(resolveScopeWorldNode(cyclic, 'x', {})).toBeNull()
     })
 })
 

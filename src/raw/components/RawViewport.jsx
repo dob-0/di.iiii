@@ -19,6 +19,9 @@ import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.
 
 const isSpatialNode = (node) => getNodeType(node?.typeId)?.render === 'spatial-3d'
 
+// A mesh that is drawn but never picked.
+const NO_RAYCAST = () => null
+
 const asFiniteNumber = (value, fallback = 0) => {
     const next = Number(value)
     return Number.isFinite(next) ? next : fallback
@@ -161,13 +164,16 @@ export function renderNodeBody(node, values, assetMap = null) {
         // gridVisible is on - values.scale already sizes it via the outer
         // group transform (see NodeVisual), so this only needs a unit body.
         case 'universe.desk.3d':
+            // The shell takes no clicks: it wraps whatever stands inside it, so
+            // a pickable skin would swallow every pointer aimed at its contents
+            // and nothing in the desk could be selected or dragged.
             return (
                 <group>
-                    <mesh>
+                    <mesh raycast={NO_RAYCAST}>
                         <boxGeometry args={[1, 1, 1]} />
                         <meshStandardMaterial color={asColor(values.bgColor, '#0a0e16')} transparent opacity={0.35} />
                     </mesh>
-                    <mesh>
+                    <mesh raycast={NO_RAYCAST}>
                         <boxGeometry args={[1, 1, 1]} />
                         <meshBasicMaterial color={asColor(values.bgColor, '#0a0e16')} wireframe />
                     </mesh>
@@ -181,7 +187,26 @@ export function renderNodeBody(node, values, assetMap = null) {
     }
 }
 
-function NodeVisual({ node, selected, onSelect, onPointerDown, nodeScale = 1, assetMap = null }) {
+// A node and everything standing on it. A container's children render INSIDE
+// its own <group>, so moving, turning or scaling the container carries its
+// contents with it — the geo-COMP behaviour, and the reason a table can have
+// props on it.
+//
+// nodeScale is the workspace's own zoom and belongs to the whole scene, not to
+// each object: applied per level it would compound with depth, so it is folded
+// in at the roots only and passed down as 1.
+function NodeVisual({
+    node,
+    selected,
+    onSelect,
+    onPointerDown,
+    nodeScale = 1,
+    assetMap = null,
+    childMap = null,
+    selectedNodeId = null,
+    onSelectNode = null,
+    depth = 0
+}) {
     const values = node.values || {}
     const scale = asPositiveVec3(values.scale, [1, 1, 1], 0.001, 20)
     const safeNodeScale = Math.min(4, Math.max(0.25, asFiniteNumber(nodeScale, 1)))
@@ -191,7 +216,11 @@ function NodeVisual({ node, selected, onSelect, onPointerDown, nodeScale = 1, as
         scale[2] * safeNodeScale
     ]
     const body = renderNodeBody(node, values, assetMap)
-    if (!body) return null
+    const children = childMap?.get(node.id) || []
+    // A container with no body of its own is still a place. Returning null on
+    // an empty body used to be right; now it would swallow everything standing
+    // inside it.
+    if (!body && !children.length) return null
 
     return (
         <group
@@ -205,6 +234,29 @@ function NodeVisual({ node, selected, onSelect, onPointerDown, nodeScale = 1, as
             }}
         >
             {body}
+            {children.map((child) => (
+                <SceneEntityErrorBoundary key={child.id} resetKey={child.id}>
+                    <NodeVisual
+                        node={child}
+                        selected={child.id === selectedNodeId}
+                        onSelect={onSelectNode}
+                        onSelectNode={onSelectNode}
+                        selectedNodeId={selectedNodeId}
+                        assetMap={assetMap}
+                        childMap={childMap}
+                        depth={depth + 1}
+                        // Deliberately no onPointerDown below the top level.
+                        // The drag writes a world-space raycast point into
+                        // values.position, which is read as a position LOCAL to
+                        // the parent — so dragging a nested node would teleport
+                        // it by the parent's transform, silently. StudioViewport
+                        // refuses the same move for the same reason
+                        // (`!entity.parentId`). Nested position is editable in
+                        // the inspector until there is a real gizmo.
+                        nodeScale={1}
+                    />
+                </SceneEntityErrorBoundary>
+            ))}
             {selected ? (
                 <Html position={[0, 1.5, 0]} center>
                     <span className="raw-selection-pill">{node.label}</span>
@@ -247,6 +299,31 @@ function SceneContent({
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [document.nodes, scopeId]
     )
+    // Everything standing inside a container, keyed by the container it stands
+    // in. Descent stops at a nested universe.world: a World is its own stage,
+    // and seeing through one into another would be a different feature.
+    //
+    // Values are resolved for the WHOLE subtree here, not only the top row —
+    // NodeVisual reads node.values directly, so a nested node whose position is
+    // wired to a Time node would otherwise freeze the moment it went inside
+    // something. That would be the "can't connect" complaint, newly caused by
+    // the fix for the other one.
+    const childMap = useMemo(() => {
+        const spatial = (document.nodes || []).filter(isSpatialNode)
+        const byParent = new Map()
+        for (const node of spatial) {
+            const parentId = node.parentId || null
+            if (!parentId) continue
+            if (!byParent.has(parentId)) byParent.set(parentId, [])
+            byParent.get(parentId).push({ ...node, values: evaluateNodeInputs(node, graphContext) })
+        }
+        for (const [parentId, kids] of byParent) {
+            const parent = spatial.find((node) => node.id === parentId)
+            if (parent?.typeId === 'universe.world') byParent.set(parentId, [])
+            else byParent.set(parentId, kids)
+        }
+        return byParent
+    }, [document.nodes, graphContext])
     const lightNode = useMemo(
         () => pickActiveTypeNode(document.nodes, 'world.light', { scopeId, activeMap: document.workspaceState?.activeNodeIdByTypeScope }),
         [document.nodes, document.workspaceState?.activeNodeIdByTypeScope, scopeId]
@@ -351,6 +428,9 @@ function SceneContent({
                             node={{ ...node, values: evaluateNodeInputs(node, graphContext) }}
                             selected={node.id === selectedNodeId}
                             onSelect={onSelectNode}
+                            onSelectNode={onSelectNode}
+                            selectedNodeId={selectedNodeId}
+                            childMap={childMap}
                             nodeScale={nodeScale}
                             assetMap={assetMap}
                             onPointerDown={(event) => {
