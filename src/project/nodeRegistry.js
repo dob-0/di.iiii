@@ -1235,8 +1235,11 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'a', type: 'any',    label: 'A'      },
-            { id: 'b', type: 'any',    label: 'B'      },
+            // Defaults so an unwired Mix answers 0 like every other math node
+            // rather than undefined — it was the one placeable output in the
+            // registry that produced nothing at rest (2026-08-18 port audit).
+            { id: 'a', type: 'any',    label: 'A',      default: 0   },
+            { id: 'b', type: 'any',    label: 'B',      default: 0   },
             { id: 't', type: 'number', label: 'Factor', default: 0.5 },
         ],
         outputs: [

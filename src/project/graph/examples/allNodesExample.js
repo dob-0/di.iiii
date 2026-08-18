@@ -5,15 +5,23 @@
 // a single place where the whole registry can be looked at, on a desktop and on
 // a phone, instead of being inferred from the registry file.
 //
-// It is deliberately honest about what does NOT work. The 2026-08-06 audit found
-// that `docs/roadmaps/NODE_BACKLOG.md` listed all 27 palette types as "works
-// today", while at port level only 17 are complete. The gap is structural:
-// `computeNodeOutput` in ../nodeGraphRuntime.js only has cases for the `value.*`
-// and `math.*` families plus `time`; every other type falls to a default that
-// returns `node.values[portId]`. So no `geometry`, `texture`, `signal` or
-// `state` output on ANY node ever produces a value, and an edge out of one is
-// decoration. Those ports are listed in UNWIRABLE_PORTS below rather than being
-// quietly wired up to look complete.
+// It is deliberately honest about what does NOT work — and honesty cuts both
+// ways. The 2026-08-06 audit found `docs/roadmaps/NODE_BACKLOG.md` OVERclaiming;
+// by 2026-08-18 this file was UNDERclaiming just as badly. Its header used to
+// say that no `geometry`, `texture` or `signal` output ever produces a value and
+// that "an edge out of one is decoration", and UNWIRABLE_PORTS named
+// `time.beat`, `geom.cube.bounds` and `view.image.src` as dead. All three had
+// become real — the runtime grew cases for them, and `source.webcam.frame`
+// publishes a live texture through `context.liveOutputs` — but the staleness
+// test only checked that the named ports still EXISTED, never that the claim
+// was still true. So the list rotted silently, and this file, which the Raw ⋯
+// menu opens as the portrait of the whole registry, told every reader that
+// working ports were fake.
+//
+// The 2026-08-18 port audit evaluated every declared output of every placeable
+// type against the runtime: NONE of them are dead. The test now derives that
+// from the runtime instead of trusting this comment, so the day a port does go
+// inert it fails there rather than quietly misinforming someone.
 //
 // The existing "Streaming Prototype" preset is the counter-example to avoid: it
 // builds nine nodes that are all in UNIMPLEMENTED_NODE_TYPES, bypassing the
@@ -26,13 +34,14 @@ import { buildNodeValues } from '../nodeGraphAuthoring.js'
 const COL = 300
 const ROW = 130
 
-// Ports that cannot be fed or read today, and why. Asserted against the registry
-// by the test, so this list rots loudly instead of silently.
-export const UNWIRABLE_PORTS = [
-    { port: 'time.beat', reason: 'signal outputs are never computed by the runtime' },
-    { port: 'geom.cube.bounds', reason: 'declared vec3 output, but geometry nodes have no runtime case' },
-    { port: 'view.image.src', reason: 'texture inputs need an asset, and no node produces a texture' }
-]
+// Ports that cannot be fed or read today, and why.
+//
+// EMPTY as of the 2026-08-18 port audit: every declared output of every
+// placeable type resolves to a real value through the runtime. The test does
+// not take this list's word for it — it evaluates each output and fails if a
+// port is dead but unlisted, or listed but alive. Adding an entry here is a
+// claim about the runtime that has to survive that check.
+export const UNWIRABLE_PORTS = []
 
 // Ports that are declared and accept a value, but whose value is ignored by the
 // renderer — wiring them proves nothing, so the example leaves them alone.
@@ -222,6 +231,15 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('numB', 'out', 'plane', 'height'),
         // Live texture wins over textureUrl — see geom.plane's own comment.
         wire('webcam', 'frame', 'plane', 'texture'),
+        // The same live frame into a 2D panel. This edge was called impossible
+        // by this file's own UNWIRABLE_PORTS until 2026-08-18 ("no node produces
+        // a texture"); source.webcam has produced one for weeks, and the image
+        // panel now draws it.
+        wire('webcam', 'frame', 'image', 'src'),
+        // geom.cube.bounds — likewise documented as dead, in fact a real vec3
+        // of the cube's size. Wired to the desk's scale so the marker box grows
+        // with the cube it is measuring.
+        wire('cube', 'bounds', 'desk', 'scale'),
 
         // Containers and panels.
         wire('str', 'out', 'world', 'title'),
