@@ -576,4 +576,40 @@ describe('RawGraphSurface', () => {
 
         expect(onDeleteNode).toHaveBeenCalledWith('cube-1')
     })
+
+    // A card that holds something is a place you can go; one that does not is
+    // not. Before this every card wore the same chevron, so the chevron said
+    // nothing — and it disappeared entirely below CARD_CONTROL_MIN_ZOOM, which
+    // is exactly where the auto-fit lands an oversized graph.
+    describe('containers are legible as containers', () => {
+        it('shows how many nodes a card holds', () => {
+            const { container } = render(
+                <RawGraphSurface
+                    nodes={[makeNode('studio', { id: 'studio-1' })]}
+                    edges={[]}
+                    childCounts={new Map([['studio-1', 4]])}
+                />
+            )
+            const badge = container.querySelector('.raw-graph-node-child-count')
+            expect(badge?.textContent).toBe('4')
+            expect(container.querySelector('.raw-graph-node-enter-hint.has-contents')).toBeTruthy()
+        })
+
+        it('marks nothing on a card that holds nothing', () => {
+            const { container } = render(
+                <RawGraphSurface nodes={[makeNode('geom.cube', { id: 'cube-1' })]} edges={[]} />
+            )
+            expect(container.querySelector('.raw-graph-node-child-count')).toBeNull()
+            expect(container.querySelector('.raw-graph-node-enter-hint.has-contents')).toBeNull()
+        })
+
+        // Studio wraps this component read-only and passes no childCounts.
+        it('renders unchanged when childCounts is not passed at all', () => {
+            const { container } = render(
+                <RawGraphSurface nodes={[makeNode('studio', { id: 'studio-1' })]} edges={[]} />
+            )
+            expect(container.querySelector('.raw-graph-node-card')).toBeTruthy()
+            expect(container.querySelector('.raw-graph-node-child-count')).toBeNull()
+        })
+    })
 })

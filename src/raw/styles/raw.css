@@ -2574,12 +2574,36 @@
     margin: -8px -4px -8px 0;
     font-size: 13px;
     font-family: inherit;
-    color: rgba(244, 247, 251, 0.2);
+    /* Was rgba(244,247,251,0.2) — about 1.6:1 on --di-black, under the 3:1
+       floor for a non-text control, so the way into a container was barely
+       there even at full zoom. */
+    color: rgba(244, 247, 251, 0.45);
     flex-shrink: 0;
     line-height: 1;
     cursor: pointer;
     touch-action: manipulation;
     transition: color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+/* A card that actually holds something says so, and says how much. Without
+   this every node wore the same chevron whether or not there was anything
+   behind it, so the chevron carried no information at all. */
+.raw-graph-node-enter-hint.has-contents {
+    color: rgba(77, 249, 255, 0.85);
+}
+
+.raw-graph-node-child-count {
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 999px;
+    background: rgba(77, 249, 255, 0.18);
+    border: 1px solid rgba(77, 249, 255, 0.45);
+    color: var(--di-cyan);
 }
 
 .raw-graph-node-card:hover .raw-graph-node-enter-hint,
@@ -4404,6 +4428,67 @@
 
 .raw-drop-notice.is-warning {
     border-color: var(--di-amber, #ffb86c);
+}
+
+/* You are inside something. Never hidden — not by zen, not by fullscreen.
+   Sits top-centre, clear of the delete FAB and the zoom controls at the
+   bottom and of the topbar's own left/right slots. */
+.raw-scope-marker {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: min(420px, calc(100vw - 24px));
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.78);
+    background: rgba(10, 14, 22, 0.92);
+    border: 1px solid rgba(77, 249, 255, 0.35);
+    border-radius: 999px;
+    padding: 2px 4px 2px 2px;
+    z-index: 1400;
+    pointer-events: auto;
+}
+
+.raw-scope-marker-label {
+    padding: 0 8px 0 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.raw-scope-marker-label strong {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.raw-scope-marker-out,
+.raw-scope-marker-root {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* A finger's target, because leaving is the one thing a lost person needs
+       and there is no keyboard on a phone. */
+    min-width: 34px;
+    min-height: 34px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(77, 249, 255, 0.14);
+    color: var(--di-cyan);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-scope-marker-out:hover,
+.raw-scope-marker-root:hover {
+    background: rgba(77, 249, 255, 0.28);
 }
 
 .raw-inspector-asset-field {

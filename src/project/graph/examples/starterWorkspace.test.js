@@ -108,6 +108,48 @@ describe('starter workspace', () => {
         }
     })
 
+    // The band guarantee above is checked at 844px tall. A real iPhone 13 hands
+    // the page 664 once browser chrome is taken, and the 2y+h invariant still
+    // HOLDS at 664 — it is necessary and not sufficient. Measured on three
+    // devices with both windows open: iPhone 13 (664, 250px band) and iPhone SE
+    // (568, 198px) left three of four cards unreachable behind the welcome
+    // window, including the Studio card its own text says to tap, while Pixel 7
+    // (839, 314px) and a 390x844 phone (318px) were fine. What separates them is
+    // absolute pixels, not a fraction: a card's height does not scale with the
+    // phone. Below CARD_BAND_MIN the note opens as a header only.
+    it('leaves a real band of pixels below the open windows on every phone', () => {
+        for (const [vw, vh] of [[320, 568], [375, 667], [390, 664], [390, 844], [412, 839]]) {
+            const { nodes } = build({ viewportWidth: vw, viewportHeight: vh })
+            const open = nodes
+                .map((node) => node.values?.frame)
+                .filter((frame) => frame?.visible && frame.minimized !== true)
+            const lowest = Math.max(...open.map((frame) => frame.y + frame.height))
+            expect(
+                vh - lowest,
+                `${vw}x${vh}: only ${vh - lowest}px left below the open windows`
+            ).toBeGreaterThanOrEqual(300)
+        }
+    })
+
+    it('folds the note to a header rather than hiding it, when it has to give way', () => {
+        const { nodes } = build({ viewportWidth: 390, viewportHeight: 664 })
+        const text = nodes.find((n) => n.typeId === 'view.text')
+        expect(text.values.frame.minimized).toBe(true)
+        // Still a real window with a real header to tap — not gone.
+        expect(text.values.frame.visible).toBe(true)
+        expect(text.values.frame.height).toBeGreaterThan(0)
+    })
+
+    it('leaves the note open wherever there is genuinely room for it', () => {
+        for (const [vw, vh] of [[390, 844], [412, 839], [1440, 900]]) {
+            const { nodes } = build({ viewportWidth: vw, viewportHeight: vh })
+            expect(
+                nodes.find((n) => n.typeId === 'view.text').values.frame.minimized,
+                `${vw}x${vh} has room and should keep the note open`
+            ).toBe(false)
+        }
+    })
+
     it('keeps both windows inside a phone viewport', () => {
         const vw = 390
         const vh = 844

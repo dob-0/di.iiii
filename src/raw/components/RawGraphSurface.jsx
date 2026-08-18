@@ -135,6 +135,10 @@ export default function RawGraphSurface({
     initialZoom = null,
     nodes = [],
     edges = [],
+    // How many nodes each node contains, by node id. Optional and defaulted:
+    // Studio wraps this component read-only and passes nothing, and must keep
+    // rendering exactly as before.
+    childCounts = null,
     selectedNodeId = null,
     emptyHint = 'Cursor is material. Double-click to place nodes.',
     onSelectNode,
@@ -941,6 +945,7 @@ export default function RawGraphSurface({
                     {nodes.map((node) => {
                         const inputs = getNodeInputs(node)
                         const outputs = getNodeOutputs(node)
+                        const childCount = childCounts?.get(node.id) || 0
                         // `h` and the card's left/top/width come from the same
                         // geometry the wires use, at EVERY tier. The tier below
                         // only decides what is drawn inside this box.
@@ -1032,15 +1037,29 @@ export default function RawGraphSurface({
                                         `studio` node you cannot enter is an empty box. This is
                                         a real button now, always visible on coarse pointers —
                                         but not when the card is too small to aim at. */}
-                                    {zoom >= CARD_CONTROL_MIN_ZOOM ? (
+                                    {/* The gate used to be CARD_CONTROL_MIN_ZOOM (0.5) while
+                                        the auto-fit lands an oversized graph at
+                                        FIT_MIN_USEFUL_ZOOM (0.34) — so the moment the
+                                        "showing N of M" notice appeared, the only way into a
+                                        container was missing from every card on screen.
+                                        A card that HOLDS something keeps its way in at any
+                                        zoom the cards are legible at. */}
+                                    {(childCount > 0 || zoom >= CARD_CONTROL_MIN_ZOOM) ? (
                                         <button
                                             type="button"
-                                            className="raw-graph-node-enter-hint"
-                                            title={`Enter ${node.label}`}
-                                            aria-label={`Enter ${node.label}`}
+                                            className={`raw-graph-node-enter-hint${childCount > 0 ? ' has-contents' : ''}`}
+                                            title={childCount > 0
+                                                ? `Enter ${node.label} — holds ${childCount} node${childCount === 1 ? '' : 's'}`
+                                                : `Enter ${node.label}`}
+                                            aria-label={childCount > 0
+                                                ? `Enter ${node.label}, holds ${childCount} node${childCount === 1 ? '' : 's'}`
+                                                : `Enter ${node.label}`}
                                             onPointerDown={(event) => event.stopPropagation()}
                                             onClick={(event) => { event.stopPropagation(); onEnterNode?.(node.id) }}
                                         >
+                                            {childCount > 0 ? (
+                                                <span className="raw-graph-node-child-count">{childCount}</span>
+                                            ) : null}
                                             ›
                                         </button>
                                     ) : null}
