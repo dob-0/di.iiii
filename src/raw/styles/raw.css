@@ -3850,6 +3850,7 @@
     line-height: 1.4;
     white-space: pre-wrap;
     word-break: break-word;
+}
 
 /* --- Timeline panel (view.timeline) --- */
 
@@ -4110,4 +4111,28 @@
     border-top: none;
     backdrop-filter: none;
     background: transparent;
+}
+
+/* Zen's third resident — the wordmark, ambient on the workspace surface.
+   Fixed so it neither pans with the graph nor collides with the windows;
+   bottom-centre keeps it clear of the zoom cluster (left), the account
+   button and delete FAB (right). Non-interactive by design. */
+.raw-surface-wordmark {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: -0.02em;
+    color: rgba(255, 255, 255, 0.28);
+    pointer-events: none;
+    user-select: none;
+    z-index: 1200;
+}
+
+.raw-surface-wordmark span {
+    color: var(--di-cyan);
+    opacity: 0.75;
 }

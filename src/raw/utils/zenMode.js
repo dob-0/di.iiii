@@ -18,7 +18,7 @@ const storageKey = (workspaceKey) => `${KEY_PREFIX}${workspaceKey || 'default'}`
  */
 export const defaultZenFor = ({ nodeCount = 0 } = {}) => nodeCount === 0
 
-export const readZenPreference = (workspaceKey, { nodeCount = 0, storage } = {}) => {
+export const readZenPreference = (workspaceKey, { nodeCount = 0, defaultZen, storage } = {}) => {
     const store = storage ?? (typeof window !== 'undefined' ? window.localStorage : null)
     let stored = null
     try {
@@ -29,6 +29,10 @@ export const readZenPreference = (workspaceKey, { nodeCount = 0, storage } = {})
     }
     if (stored === 'on') return true
     if (stored === 'off') return false
+    // A caller that seeded the workspace itself may override the default: the
+    // starter constellation is not "an arrangement somebody already built", so
+    // a seeded first visit still opens bare. A stored choice always wins.
+    if (typeof defaultZen === 'boolean') return defaultZen
     return defaultZenFor({ nodeCount })
 }
 
@@ -48,8 +52,8 @@ export const writeZenPreference = (workspaceKey, zen, { storage } = {}) => {
  * an empty workspace opens zen and then the chrome reappears by itself as soon
  * as the workspace has a node in it — a setting that changes itself.
  */
-export const resolveZenPreference = (workspaceKey, { nodeCount = 0, storage } = {}) => {
-    const resolved = readZenPreference(workspaceKey, { nodeCount, storage })
+export const resolveZenPreference = (workspaceKey, { nodeCount = 0, defaultZen, storage } = {}) => {
+    const resolved = readZenPreference(workspaceKey, { nodeCount, defaultZen, storage })
     writeZenPreference(workspaceKey, resolved, { storage })
     return resolved
 }

@@ -32,6 +32,7 @@ import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.j
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
+import { buildStarterWorkspaceDocument } from '../../project/graph/examples/starterWorkspace.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
 import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
@@ -135,7 +136,8 @@ function BrowserPanelWindow({ node }) {
 export default function RawEditor({
     projectId,
     spaceId = DEFAULT_PROJECT_SPACE_ID,
-    localStorageKey = ''
+    localStorageKey = '',
+    seedOnFirstVisit = false
 }) {
     const [displayName] = useState(() => {
         try {
@@ -169,11 +171,29 @@ export default function RawEditor({
     // next to the selection state it depends on.
     const scaffoldRef = useRef(null)
 
+    // Whether THIS mount seeded the starter constellation — read once by the
+    // zen effect below, so a seeded (but brand-new) workspace still opens bare.
+    const seededStarterRef = useRef(false)
+
     const initialStoreState = useMemo(() => {
         if (projectId || !localStorageKey) return undefined
         const savedDocument = readLocalWorkspaceDocument(localStorageKey)
-        return savedDocument ? { document: savedDocument, version: 0 } : undefined
-    }, [localStorageKey, projectId])
+        if (savedDocument) return { document: savedDocument, version: 0 }
+        if (!seedOnFirstVisit) return undefined
+        // First visit to a blank local workspace: seed the starter desk as the
+        // document's ORIGIN (not an op batch), so undo unwinds to nothing
+        // instead of deleting the constellation node by node. The projectId
+        // guard above makes this unreachable for any server-backed document.
+        seededStarterRef.current = true
+        return {
+            document: buildStarterWorkspaceDocument({
+                workspaceTop: 168,
+                viewportWidth: typeof window !== 'undefined' ? window.innerWidth : 1280,
+                viewportHeight: typeof window !== 'undefined' ? window.innerHeight : 800
+            }),
+            version: 0
+        }
+    }, [localStorageKey, projectId, seedOnFirstVisit])
 
     const store = useProjectStore(initialStoreState)
     const { state, dispatch } = store
@@ -660,7 +680,12 @@ export default function RawEditor({
     useEffect(() => {
         if (zenReadRef.current || !document) return
         zenReadRef.current = true
-        setZen(resolveZenPreference(zenWorkspaceKey, { nodeCount: (document.nodes || []).length }))
+        setZen(resolveZenPreference(zenWorkspaceKey, {
+            nodeCount: (document.nodes || []).length,
+            // The starter constellation is seeded, not built by the person —
+            // a seeded first visit still defaults to zen (stored choice wins).
+            defaultZen: seededStarterRef.current ? true : undefined
+        }))
     }, [document, zenWorkspaceKey])
 
     const setZenPreference = useCallback((next) => {
@@ -1419,6 +1444,10 @@ export default function RawEditor({
                     onSetActive={(node) => setActiveNodeId(node.typeId, node.parentId || null, node.id)}
                     activeMarkerTypeIds={activeMarkerTypeIds}
                 />
+                {/* Zen's three residents are surface, nodes, wordmark — this is
+                    the wordmark. Ambient, non-interactive, kept when chrome is
+                    summoned too. */}
+                <div className="raw-surface-wordmark" aria-hidden="true">di<span>.</span>iiii</div>
                 {/* Panel nodes float above the graph as viewport-fixed windows */}
                 {visibleViewNodes.map((node, index) => {
                     const windowState = buildWindowStateFromNode(node, index, graphContext)

@@ -683,13 +683,14 @@ export const WIKI_ARTICLES = [
         summary: 'Raw opens as bare surface and nodes. One gesture summons everything else — panels, the help, even the toolbar itself.',
         body: [
             'A new workspace has no toolbar, no zoom buttons, no help or chat button. There is the surface, whatever nodes you place, and nothing else sitting there waiting to be needed.',
+            'A first visit finds the desk already set: a live World window, a Sky node wired into it (change the color — the room follows), a welcome note, and a Studio node you can step into for the full editor. It is yours — rearrange it, delete it, or undo all the way back to an empty surface.',
             'Everything is one gesture away. Press ⌘K (Ctrl+K) or just / — on a touch screen, double-tap the empty surface. The same panel opens either way: type what you want and press Enter.',
             'That panel creates nodes and summons everything else from the same list. "Help", "Chat", "Outliner", any window you closed, and "Show the chrome" to bring the toolbar back. Summoning rows sit at the top, so with the toolbar hidden they are never more than a keystroke away.',
             'Zoom still works as it always did: the wheel on a computer, and on a phone the zoom buttons stay in the corner — faded until you reach for them, because on a touch screen they are the only way to zoom.',
             'Each workspace remembers its own choice, on this device. A workspace you already arranged keeps its toolbar; only new ones start bare. Turning the toolbar on or off in one workspace never changes another, and never changes what anyone else sees.'
         ],
-        tags: ['raw', 'workspace', 'zen', 'minimal', 'palette', 'shortcuts', 'ui'],
-        updated: '2026-08-08'
+        tags: ['raw', 'workspace', 'zen', 'minimal', 'palette', 'shortcuts', 'ui', 'starter'],
+        updated: '2026-08-18'
     }
 ]
 
