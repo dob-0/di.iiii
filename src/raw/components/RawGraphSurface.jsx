@@ -124,6 +124,12 @@ export default function RawGraphSurface({
     // so on a narrow screen the graph landed jammed against the sheet with an
     // empty band above it — it was fitting a rectangle the user could not see.
     bottomInset = 0,
+    // Where the mounted panel windows are docked, so the fit can land the graph
+    // in the free band instead of centring it underneath one. See
+    // getGraphEdgeInsets — a corridor that is wide enough but off-centre still
+    // buries the cards, which is how a node ends up looking like it has no
+    // connectors. Studio passes nothing and keeps the old full-box behaviour.
+    contentInsets = null,
     // Skips the auto-fit and starts at a fixed zoom. Only for tests and for
     // callers that restore a saved viewport; normal use fits on mount.
     initialZoom = null,
@@ -161,6 +167,8 @@ export default function RawGraphSurface({
     const pinchRef = useRef(null)
     const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
     const hasFitRef = useRef(false)
+    const lastFitViewportRef = useRef(null)
+    const lastFitInsetsRef = useRef(null)
     const [panX, setPanX] = useState(60)
     const [panY, setPanY] = useState(60)
     const [zoom, setZoom] = useState(initialZoom ?? 1)
@@ -232,15 +240,21 @@ export default function RawGraphSurface({
         //
         // bottomInset IS subtracted: the selection sheet is position:fixed
         // against the viewport, so it genuinely overlaps this element's box.
-        const bottom = Math.max(0, bottomInset)
+        // Docked windows are subtracted the same way: the band the graph can
+        // actually occupy is the element minus the chrome AND minus whatever
+        // is parked against its edges.
+        const dockLeft = Math.max(0, contentInsets?.left || 0)
+        const dockRight = Math.max(0, contentInsets?.right || 0)
+        const dockTop = Math.max(0, contentInsets?.top || 0)
+        const bottom = Math.max(0, bottomInset) + Math.max(0, contentInsets?.bottom || 0)
         return {
             width: rect.width,
             height: rect.height,
-            usableWidth: Math.max(1, rect.width - GRAPH_FIT_PADDING_PX * 2),
-            usableHeight: Math.max(1, rect.height - bottom - GRAPH_FIT_PADDING_PX * 2),
-            centerX: rect.width / 2,
+            usableWidth: Math.max(1, rect.width - dockLeft - dockRight - GRAPH_FIT_PADDING_PX * 2),
+            usableHeight: Math.max(1, rect.height - dockTop - bottom - GRAPH_FIT_PADDING_PX * 2),
+            centerX: dockLeft + (rect.width - dockLeft - dockRight) / 2,
             // Centre of the VISIBLE band, not of the element.
-            centerY: (rect.height - bottom) / 2
+            centerY: dockTop + (rect.height - dockTop - bottom) / 2
         }
     }
 
@@ -251,6 +265,9 @@ export default function RawGraphSurface({
         const cx = (bounds.minX + bounds.maxX) / 2
         const cy = (bounds.minY + bounds.maxY) / 2
         applyViewport(box.centerX - cx * nextZoom, box.centerY - cy * nextZoom, nextZoom)
+        // Remembered so a later change in docked windows can tell whether the
+        // person has moved the view since — see the re-fit effect below.
+        lastFitViewportRef.current = { ...viewportRef.current }
     }
 
     const zoomToFitBounds = (bounds, { maxZoom = 1 } = {}) => {
@@ -402,14 +419,38 @@ export default function RawGraphSurface({
     // in here made every create/delete miss the guard and re-fit, which is
     // exactly the yank the comment above forbids.
     const scopeKey = nodes.length ? `scope:${nodes[0]?.parentId || 'root'}` : ''
+    const insetKey = `${contentInsets?.left || 0}:${contentInsets?.right || 0}:${contentInsets?.top || 0}:${contentInsets?.bottom || 0}`
     useEffect(() => {
         if (initialZoom !== null) return
         if (hasFitRef.current === scopeKey || !containerRef.current || nodes.length === 0) return
         if (!visibleBox()) return
         fitGraph()
         hasFitRef.current = scopeKey
+        lastFitInsetsRef.current = insetKey
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [scopeKey])
+
+    // Windows mount a beat after the graph does, so the first fit runs against
+    // the windows that happen to exist YET — on a seeded workspace that was one
+    // of two, and the graph got centred into the space the second window was
+    // about to occupy. Re-fit when the docked edges change, but ONLY while the
+    // view is still exactly where that fit left it: once a person has panned or
+    // zoomed, moving the graph under them is the yank the single-fit guard
+    // above exists to prevent.
+    useEffect(() => {
+        if (initialZoom !== null) return
+        if (hasFitRef.current !== scopeKey) return
+        if (lastFitInsetsRef.current === insetKey) return
+        const settled = lastFitViewportRef.current
+        const now = viewportRef.current
+        const untouched = settled
+            && Math.abs(settled.panX - now.panX) < 0.5
+            && Math.abs(settled.panY - now.panY) < 0.5
+            && Math.abs(settled.zoom - now.zoom) < 0.001
+        lastFitInsetsRef.current = insetKey
+        if (untouched) fitGraph()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [insetKey])
 
     // The fit notice is transient — it reports on one fit, not a state.
     useEffect(() => {
