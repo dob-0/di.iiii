@@ -94,4 +94,40 @@ describe('starter workspace', () => {
             expect(frame.y + frame.height).toBeLessThanOrEqual(vh)
         }
     })
+
+    // Reported 2026-08-18: at ~1050px, the World window sat on top of the card
+    // column and every port on it was ungrabbable — "there are no in/out
+    // connectors". RawGraphSurface centres the card cluster on the VIEWPORT,
+    // not on the gap between the two windows, so a corridor merely wide enough
+    // was not sufficient; it had to straddle the centre line. This is a plain
+    // numeric check against the seed builder's own output, independent of the
+    // surface's insets mechanism (covered separately in windowLayout.test.js) —
+    // belt and suspenders, because the two could drift apart from each other.
+    it('leaves a corridor between the two windows that straddles the centreline, across a range of desktop widths', () => {
+        const CARD_LANE_HALF = 101 // half of RawGraphSurface's 200px card + a hair
+        let sideBySideWidthsSeen = 0
+        for (const vw of [700, 800, 900, 1000, 1050, 1100, 1200, 1280, 1440, 1600, 1920]) {
+            const { nodes } = build({ viewportWidth: vw, viewportHeight: 950 })
+            const frames = nodes.map((node) => node.values?.frame).filter((frame) => frame?.visible)
+            // Below a threshold the seed switches to the stacked (full-width,
+            // top/bottom) layout, where the corridor is vertical, not
+            // horizontal — this check only applies to the side-by-side regime.
+            if (frames.some((frame) => frame.width > vw * 0.9)) continue
+            sideBySideWidthsSeen += 1
+            const centre = vw / 2
+            // Each window sits on whichever side its own centre is on; the
+            // corridor is bounded by the innermost edge of each side.
+            const leftFrames = frames.filter((frame) => frame.x + frame.width / 2 < centre)
+            const rightFrames = frames.filter((frame) => frame.x + frame.width / 2 >= centre)
+            const gapLeft = leftFrames.length ? Math.max(...leftFrames.map((frame) => frame.x + frame.width)) : 0
+            const gapRight = rightFrames.length ? Math.min(...rightFrames.map((frame) => frame.x)) : vw
+            const message = `vw=${vw} gap=[${gapLeft},${gapRight}] centre=${centre}`
+            expect(gapRight - gapLeft, message).toBeGreaterThan(CARD_LANE_HALF * 2)
+            expect(gapLeft, message).toBeLessThanOrEqual(centre - CARD_LANE_HALF)
+            expect(gapRight, message).toBeGreaterThanOrEqual(centre + CARD_LANE_HALF)
+        }
+        // The gate above must not have swallowed the whole test — this is
+        // exactly the case the reported bug lived in (~1050px).
+        expect(sideBySideWidthsSeen).toBeGreaterThan(5)
+    })
 })

@@ -51,8 +51,24 @@ export function buildStarterWorkspaceDocument({
     viewportWidth = 1280,
     viewportHeight = 800
 } = {}) {
-    const narrow = viewportWidth < 640
-    const pad = narrow ? 12 : 24
+    // The corridor has to STRADDLE THE CENTRE LINE, not merely be wide enough.
+    // RawGraphSurface fits and centres the card cluster on the visible area —
+    // the viewport's centre, which knows nothing about these two windows — so a
+    // corridor that is off-centre slides the cards under a window even while
+    // the gap between the windows is technically wider than a card. That is
+    // exactly what happened at ~1050px (reported 2026-08-18 with the World
+    // window sitting on the cards): world 441 + text 280 left a 281px gap, but
+    // it ran 304..585 while the centred 202px card lane ran 424..626, so the
+    // cards' right edge — and every output dot on it — was under the window and
+    // could not be grabbed at all. Capping both edge windows keeps the lane
+    // clear; below the cap's floor there is no honest corridor and the stacked
+    // layout is the only one that leaves the cards reachable.
+    const CARD_LANE_HALF = 101
+    const CARD_LANE_GUTTER = 24
+    const padWide = 24
+    const edgeWindowMax = Math.floor(viewportWidth / 2) - CARD_LANE_HALF - CARD_LANE_GUTTER - padWide
+    const narrow = viewportWidth < 640 || edgeWindowMax < 320
+    const pad = narrow ? 12 : padWide
 
     // The seed opens in zen (no topbar), so windows sit high; if the visitor
     // summons the chrome they can drag them — the first impression wins.
@@ -60,7 +76,7 @@ export function buildStarterWorkspaceDocument({
 
     const worldWidth = narrow
         ? viewportWidth - pad * 2
-        : clamp(320, Math.round(viewportWidth * 0.42), 560)
+        : clamp(320, Math.min(Math.round(viewportWidth * 0.42), edgeWindowMax), 560)
     const worldHeight = narrow
         ? clamp(180, Math.round(viewportHeight * 0.24), 220)
         : Math.round(worldWidth * 0.7)
@@ -71,7 +87,9 @@ export function buildStarterWorkspaceDocument({
         height: worldHeight
     }
 
-    const textWidth = narrow ? viewportWidth - pad * 2 : clamp(280, Math.round(viewportWidth * 0.26), 340)
+    const textWidth = narrow
+        ? viewportWidth - pad * 2
+        : clamp(280, Math.min(Math.round(viewportWidth * 0.26), edgeWindowMax), 340)
     // Derived from the clear band, not picked: the window sits against the
     // bottom edge, so its height is what is left below the band's lower edge
     // (0.64 of the viewport) minus the two gaps.
@@ -100,7 +118,10 @@ export function buildStarterWorkspaceDocument({
     // beneath both windows on a phone.
     // Tighter on a phone: the cluster has to fit the band between the two
     // windows, and the surface zooms to fit rather than to these numbers.
-    const cardGap = narrow ? 88 : 140
+    // Wider than the tallest card in the seed (World carries two ports, so it
+    // is 98px) — at 88 the cards overlapped EACH OTHER, which reads as one
+    // broken card rather than as spacing.
+    const cardGap = narrow ? 112 : 140
     const cardTop = narrow ? worldFrame.y + worldHeight + 24 : workspaceTop
     const positions = {
         sky: [0, cardTop],

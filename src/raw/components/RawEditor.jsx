@@ -43,7 +43,7 @@ const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 
 import { buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
 import { DEFAULT_PROJECT_SPACE_ID } from '../../project/services/projectsApi.js'
-import { getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { clampWindowFrame, getGraphEdgeInsets, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { isPaletteSummons, resolveZenPreference, writeZenPreference } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
@@ -1317,6 +1317,30 @@ export default function RawEditor({
 
     const workspaceTitle = isLocalWorkspace ? 'Blank White Workspace' : (document.projectMeta?.title || 'Raw Project')
     const graphTopInset = chromeVisible ? workspaceTop : 0
+    // Windows float over the graph, so the fit has to dodge the docked ones or
+    // it centres the card cluster underneath one — see getGraphEdgeInsets.
+    // Through the SAME clamp DesktopWindow applies: the stored frame is where a
+    // window wants to be, not where it renders. The bottom reserve alone moved
+    // the seeded welcome window up by 116px, and insets read off the stored
+    // frame put the graph's free band in the wrong place entirely.
+    const graphContentInsets = getGraphEdgeInsets({
+        frames: visibleViewNodes
+            .filter((node) => node.values?.frame?.minimized !== true)
+            .map((node) => node.values?.frame)
+            .filter(Boolean)
+            .map((frame) => clampWindowFrame(frame, {
+                allowOverflowLeft: true,
+                allowOverflowTop: true,
+                viewportWidth: typeof window === 'undefined' ? undefined : window.innerWidth,
+                viewportHeight: typeof window === 'undefined' ? undefined : window.innerHeight
+            })),
+        surfaceRect: {
+            left: 0,
+            top: graphTopInset,
+            width: typeof window === 'undefined' ? 0 : window.innerWidth,
+            height: typeof window === 'undefined' ? 0 : window.innerHeight - graphTopInset
+        }
+    })
 
     return (
         <main className="raw-editor-shell">
@@ -1456,6 +1480,7 @@ export default function RawEditor({
                     chromeless={!chromeVisible}
                     topInset={graphTopInset}
                     bottomInset={graphBottomInset}
+                    contentInsets={graphContentInsets}
                     nodes={graphCardNodes}
                     emptyHint={`${pointerVerb} to place your first node.`}
                     edges={graphCardEdges}
