@@ -385,6 +385,34 @@ body.is-landing .account-btn-wrapper {
     margin: 0 0 40px !important;
 }
 
+/* The line under the single door. Deliberately quieter than .lp-tagline:
+   it carries the second destination, and a second destination that reads as
+   loud as the first is just the three-button hero again in prose. */
+.lp-cta-sub {
+    font-size: 0.82rem !important;
+    /* NOT --di-text-muted (0.4 alpha): this line carries the second real
+       destination, and 0.4 white on the hero's near-black is under 3:1 at
+       13px. Quieter than the tagline, still readable. */
+    color: rgba(255, 255, 255, 0.55) !important;
+    line-height: 1.9 !important;
+    max-width: 400px;
+    margin: 0 0 32px !important;
+    text-align: center;
+}
+
+.lp-cta-sub a {
+    color: var(--di-text);
+    text-decoration: none;
+    border-bottom: 1px solid var(--di-cyan-border);
+    padding-bottom: 1px;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.lp-cta-sub a:hover {
+    color: var(--di-cyan);
+    border-bottom-color: var(--di-cyan);
+}
+
 /* ─── HERO SCENE VISUALISER ───────────────────────────────── */
 
 .lp-scene-grid {

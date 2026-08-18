@@ -20,15 +20,20 @@ import LandingPage from './LandingPage.jsx'
 // restricted 'main' space, where AuthGate's out-of-scope-but-public redirect
 // silently bounces them to the read-only live viewer instead of the editor
 // they clicked for (see docs/ai/known-fixes.md, 2026-07-17).
+// Matched by destination, not by label: the labels are copy and have already
+// been rewritten twice ("Try Beta" → "Open Studio" → the one-door pass), while
+// the trap these guard against lives in the href.
+const internalLinksTo = (fragment) => screen.getAllByRole('link').filter((link) => {
+    const href = link.getAttribute('href') || ''
+    return href.startsWith('/') && href.includes(fragment)
+})
+
 describe('LandingPage CTA routing', () => {
     it('points every Raw link at the open sandbox space, not the bare /raw route', () => {
         // Bare lane routes default to the restricted 'main' space, where a guest
         // has no write scope and gets bounced to the read-only viewer.
         render(<LandingPage />)
-        const rawLinks = [
-            ...screen.getAllByRole('link', { name: 'Raw' }),
-            ...screen.getAllByRole('link', { name: 'Enter Raw' })
-        ]
+        const rawLinks = internalLinksTo('raw')
         expect(rawLinks.length).toBeGreaterThan(0)
         for (const link of rawLinks) {
             expect(link.getAttribute('href')).toBe('/open/raw')
@@ -41,10 +46,7 @@ describe('LandingPage CTA routing', () => {
         // top. The label promises the hub; deliver the hub.
         Object.assign(sessionState, { authenticated: false, type: null })
         render(<LandingPage />)
-        const studioLinks = [
-            ...screen.getAllByRole('link', { name: 'Studio' }),
-            ...screen.getAllByRole('link', { name: 'Open Studio' })
-        ]
+        const studioLinks = internalLinksTo('studio')
         expect(studioLinks.length).toBeGreaterThan(0)
         for (const link of studioLinks) {
             expect(link.getAttribute('href')).toBe('/studio')
@@ -62,7 +64,7 @@ describe('LandingPage CTA routing', () => {
         ]) {
             Object.assign(sessionState, session)
             const { unmount } = render(<LandingPage />)
-            for (const link of screen.getAllByRole('link', { name: 'Open Studio' })) {
+            for (const link of internalLinksTo('studio')) {
                 expect(link.getAttribute('href')).toBe('/studio')
             }
             unmount()
@@ -80,6 +82,39 @@ describe('LandingPage CTA routing', () => {
         for (const link of doors) {
             expect(link.getAttribute('href')).toBe('/open/raw')
         }
+    })
+})
+
+// The one-door pass (2026-08-18): the hero used to offer three peer buttons,
+// two of which led somewhere worse than the first — "Open Studio" to a hub
+// that wants an account, "Enter Space" to the restricted 'main' space and its
+// read-only bounce. Studio is depth behind the door now, not a rival to it.
+describe('LandingPage one door', () => {
+    afterEach(() => {
+        serverConfigState.current = {}
+    })
+
+    it('offers exactly one primary entrance, and no second button beside it', async () => {
+        serverConfigState.current = { defaultSpaceId: 'main', local: false, requireAuth: true }
+        render(<LandingPage />)
+
+        // The server's main space resolves asynchronously; "Look around" is
+        // only ever rendered while there is no main space to enter.
+        // Both the hero and the closing section carry it — findBy* would keep
+        // retrying on "multiple elements" until it timed out.
+        await screen.findAllByText(/Already have spaces\?/)
+        expect(screen.queryByRole('button', { name: 'Enter Space' })).not.toBeInTheDocument()
+        expect(screen.queryByRole('button', { name: 'Look around' })).not.toBeInTheDocument()
+        const returnPath = screen.getAllByRole('link', { name: /Open Studio/ })
+        expect(returnPath.length).toBeGreaterThan(0)
+        for (const link of returnPath) expect(link.getAttribute('href')).toBe('/studio')
+    })
+
+    it('keeps the walkable void reachable where there is no main space', async () => {
+        serverConfigState.current = { defaultSpaceId: null, local: false, requireAuth: true }
+        render(<LandingPage />)
+
+        expect(await screen.findByRole('button', { name: 'Look around' })).toBeInTheDocument()
     })
 })
 
