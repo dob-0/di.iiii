@@ -16,6 +16,18 @@ const asVec3 = (value, fallback = [0, 0, 0]) => {
 
 const mixNumbers = (a, b, t) => a + (b - a) * t
 
+const HEX_COLOR = /^#([0-9a-f]{6})$/i
+
+const hexToRgb = (value) => {
+    const match = HEX_COLOR.exec(String(value || ''))
+    if (!match) return null
+    const int = parseInt(match[1], 16)
+    return [(int >> 16) & 255, (int >> 8) & 255, int & 255]
+}
+
+const rgbToHex = (rgb) =>
+    `#${rgb.map((channel) => Math.round(Math.min(255, Math.max(0, channel))).toString(16).padStart(2, '0')).join('')}`
+
 const mixValues = (a, b, t) => {
     if (typeof a === 'number' || typeof b === 'number') {
         return mixNumbers(asNumber(a), asNumber(b), t)
@@ -24,6 +36,13 @@ const mixValues = (a, b, t) => {
         const left = asVec3(a)
         const right = asVec3(b)
         return left.map((entry, index) => mixNumbers(entry, right[index], t))
+    }
+    // Two hex colors lerp per RGB channel — the 'any' port promised blending
+    // and colors used to hard-switch at t=0.5 like any other string.
+    const leftRgb = hexToRgb(a)
+    const rightRgb = hexToRgb(b)
+    if (leftRgb && rightRgb) {
+        return rgbToHex(leftRgb.map((channel, index) => mixNumbers(channel, rightRgb[index], t)))
     }
     return t < 0.5 ? (a ?? b) : (b ?? a)
 }
