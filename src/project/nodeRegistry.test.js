@@ -354,6 +354,25 @@ describe('node families', () => {
         }
     })
 
+    // A real palette test on staging searched these nine words and every one
+    // returned "no match" — the node did not exist. Now it does, and the
+    // words a person actually types have to reach it.
+    it.each([
+        ['model', 'geom.model'], ['glb', 'geom.model'], ['gltf', 'geom.model'],
+        ['mesh', 'geom.model'], ['fbx', 'geom.model'], ['scan', 'geom.model'],
+        ['video', 'media.video'], ['mp4', 'media.video'], ['footage', 'media.video'],
+        ['sound', 'media.audio'], ['audio', 'media.audio'], ['music', 'media.audio']
+    ])('searching the palette for "%s" finds %s', (query, typeId) => {
+        expect(listNodeTypes({ query }).map((type) => type.id)).toContain(typeId)
+    })
+
+    it('"import" and "file" reach all three ways of bringing something in', () => {
+        for (const query of ['import', 'file']) {
+            const found = listNodeTypes({ query }).map((type) => type.id)
+            expect(found, query).toEqual(expect.arrayContaining(['geom.model', 'media.video', 'media.audio']))
+        }
+    })
+
     it('resolves a family with label and color for any placeable type', () => {
         for (const type of listNodeTypes()) {
             const family = getNodeFamily(type.id)

@@ -4355,3 +4355,103 @@
     color: var(--di-cyan);
     opacity: 0.75;
 }
+
+/* Dropping a file in. The veil is the only thing that tells someone mid-drag
+   that this surface will take what they are carrying — without it a drop that
+   works and a drop that does nothing look identical until they let go. */
+.raw-drop-veil {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 14, 22, 0.55);
+    border: 2px dashed var(--di-cyan);
+    pointer-events: none;
+    z-index: 1250;
+}
+
+.raw-drop-veil span {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: #ffffff;
+    background: rgba(10, 14, 22, 0.85);
+    border: 1px solid var(--di-cyan);
+    border-radius: 999px;
+    padding: 10px 18px;
+}
+
+.raw-drop-notice {
+    position: fixed;
+    left: 50%;
+    bottom: 52px;
+    transform: translateX(-50%);
+    max-width: min(520px, calc(100vw - 32px));
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.92);
+    background: rgba(10, 14, 22, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    padding: 10px 16px;
+    pointer-events: none;
+    z-index: 1260;
+}
+
+.raw-drop-notice.is-warning {
+    border-color: var(--di-amber, #ffb86c);
+}
+
+.raw-inspector-asset-field {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    min-width: 0;
+}
+
+.raw-inspector-asset-field select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* 44px so it is a real one-finger target on a phone, where this button is the
+   ONLY way in — there is no dragging a file onto a touch screen. */
+.raw-inspector-asset-add {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    cursor: pointer;
+    color: var(--di-cyan);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.raw-inspector-asset-add:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.raw-inspector-asset-add input[type="file"] {
+    display: none;
+}
+
+.raw-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}

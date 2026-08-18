@@ -42,7 +42,9 @@ const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 
 import { buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
-import { DEFAULT_PROJECT_SPACE_ID } from '../../project/services/projectsApi.js'
+import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
+import { saveAssetFromFile } from '../../storage/assetStore.js'
+import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
 import { clampWindowFrame, getGraphEdgeInsets, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { isPaletteSummons, resolveZenPreference, writeZenPreference } from '../utils/zenMode.js'
 import {
@@ -791,6 +793,143 @@ export default function RawEditor({
         openPalette('world', placement)
     }
 
+    // --- Bringing a file in -------------------------------------------------
+    // Dropping a model/video/sound/image onto the surface stores it and places
+    // the node that plays it. Two storage routes, one behaviour: a server-
+    // backed project uploads (content-addressed, shared with collaborators), a
+    // local workspace keeps the bytes in this browser's IndexedDB — which is
+    // the same place ModelObject/useAssetUrl already look first, so the node
+    // renders identically either way.
+    const [dropState, setDropState] = useState({ over: false, busy: false, notice: '' })
+    const dropDepthRef = useRef(0)
+
+    useEffect(() => {
+        if (!dropState.notice) return undefined
+        const timer = setTimeout(() => setDropState((prev) => ({ ...prev, notice: '' })), 6000)
+        return () => clearTimeout(timer)
+    }, [dropState.notice])
+
+    const handleFilesDropped = useCallback(async (fileList, place = {}, dropScopeId = undefined) => {
+        const targetScopeId = dropScopeId === undefined ? currentScopeId : dropScopeId
+        const { accepted, rejected } = partitionDroppedFiles(fileList)
+        const rejectedNotice = describeRejectedFiles(rejected)
+        if (!accepted.length) {
+            setDropState({ over: false, busy: false, notice: rejectedNotice })
+            return
+        }
+        setDropState({ over: false, busy: true, notice: '' })
+
+        const ops = []
+        const created = []
+        const failed = []
+        for (const [index, { file, typeId }] of accepted.entries()) {
+            try {
+                const asset = projectId
+                    ? await uploadProjectAsset(projectId, file)
+                    : await saveAssetFromFile(file)
+                if (!asset?.id) throw new Error('no asset id')
+                const values = buildNodeValuesForType(typeId, {}, place, { workspaceTop, topZIndex })
+                const node = createNode(typeId, {
+                    values: { ...values, src: asset.id },
+                    // Fan them out so a multi-file drop doesn't stack cards.
+                    graphX: (place.graphX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2) + (index * 32),
+                    graphY: Math.max(20, (place.graphY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2) + (index * 32)),
+                    parentId: targetScopeId
+                })
+                if (!node) throw new Error(`unknown node type ${typeId}`)
+                ops.push({ type: 'upsertAsset', payload: { asset } })
+                ops.push({ type: 'createNode', payload: { node } })
+                created.push({ node, file })
+            } catch (error) {
+                failed.push({ file, error })
+            }
+        }
+
+        if (ops.length) {
+            const last = created[created.length - 1]
+            // Only follow the selection when the node landed in the scope the
+            // graph is showing — otherwise the inspector would describe a node
+            // that isn't on screen.
+            if (targetScopeId === currentScopeId) {
+                ops.push({ type: 'setWorkspaceState', payload: { patch: { selectedNodeId: last.node.id } } })
+            }
+            applyLocalOps(ops, {
+                activityMessage: created.length === 1
+                    ? `Brought in ${created[0].file.name}.`
+                    : `Brought in ${created.length} files.`
+            })
+        }
+
+        const failureNotice = failed.length
+            ? `Could not bring in ${failed.map(({ file }) => file?.name || 'file').join(', ')}.`
+            : ''
+        setDropState({
+            over: false,
+            busy: false,
+            notice: [failureNotice, rejectedNotice].filter(Boolean).join(' ')
+        })
+    }, [applyLocalOps, currentScopeId, projectId, topZIndex, workspaceTop])
+
+    // The inspector's "＋" on an asset port: same storage as a drop, but the
+    // node already exists, so this only fills that port in.
+    const handlePickAssetFile = useCallback(async (file, field) => {
+        if (!file || !surfaceSelectedNode) return
+        setDropState({ over: false, busy: true, notice: '' })
+        try {
+            const asset = projectId
+                ? await uploadProjectAsset(projectId, file)
+                : await saveAssetFromFile(file)
+            if (!asset?.id) throw new Error('no asset id')
+            applyLocalOps([
+                { type: 'upsertAsset', payload: { asset } },
+                {
+                    type: 'updateNode',
+                    payload: {
+                        nodeId: surfaceSelectedNode.id,
+                        patch: { values: { [field?.path?.[0] || 'src']: asset.id } }
+                    }
+                }
+            ], { activityMessage: `Brought in ${file.name}.` })
+            setDropState({ over: false, busy: false, notice: '' })
+        } catch {
+            setDropState({ over: false, busy: false, notice: `Could not bring in ${file.name}.` })
+        }
+    }, [applyLocalOps, projectId, surfaceSelectedNode])
+
+    const handleSurfaceDragEnter = (event) => {
+        if (!Array.from(event.dataTransfer?.types || []).includes('Files')) return
+        event.preventDefault()
+        dropDepthRef.current += 1
+        setDropState((prev) => (prev.over ? prev : { ...prev, over: true }))
+    }
+
+    const handleSurfaceDragOver = (event) => {
+        if (!Array.from(event.dataTransfer?.types || []).includes('Files')) return
+        // Without this the browser navigates away to the dropped file — the
+        // default that makes an unhandled drop look like a crash.
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'copy'
+    }
+
+    const handleSurfaceDragLeave = () => {
+        dropDepthRef.current = Math.max(0, dropDepthRef.current - 1)
+        if (dropDepthRef.current === 0) setDropState((prev) => ({ ...prev, over: false }))
+    }
+
+    const handleSurfaceDrop = (event) => {
+        const files = event.dataTransfer?.files
+        if (!files?.length) return
+        event.preventDefault()
+        dropDepthRef.current = 0
+        const scopeId = resolveDropScopeId(
+            (x, y) => window.document.elementFromPoint(x, y),
+            event.clientX,
+            event.clientY,
+            currentScopeId
+        )
+        handleFilesDropped(files, { graphX: event.clientX, graphY: event.clientY }, scopeId)
+    }
+
     // Every palette-creatable node type in one graph, with the maths chain
     // actually driving the geometry. Unlike the streaming preset below, this one
     // builds nothing that isn't implemented — see the module for which ports are
@@ -963,6 +1102,7 @@ export default function RawEditor({
                 values={inspectorValues}
                 assetOptions={document.assets || []}
                 onSectionChange={handleInspectorChange}
+                onPickAssetFile={handlePickAssetFile}
                 emptyMessage="Double-click the world or the view to start authoring."
             />
         </aside>
@@ -1180,6 +1320,7 @@ export default function RawEditor({
                     values={inspectorValues}
                     assetOptions={document.assets || []}
                     onSectionChange={handleInspectorChange}
+                    onPickAssetFile={handlePickAssetFile}
                     emptyMessage="Select a node to inspect it."
                 />
             )
@@ -1473,7 +1614,13 @@ export default function RawEditor({
                 </button>
             )}
 
-            <section className={`raw-surface-shell${isWorldOverlay && !isWorldFullscreen ? ' is-world-overlay' : ''}${navStack.length > 1 ? ' is-inside-node' : ''}`}>
+            <section
+                className={`raw-surface-shell${isWorldOverlay && !isWorldFullscreen ? ' is-world-overlay' : ''}${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
+                onDragEnter={handleSurfaceDragEnter}
+                onDragOver={handleSurfaceDragOver}
+                onDragLeave={handleSurfaceDragLeave}
+                onDrop={handleSurfaceDrop}
+            >
                 {/* Graph is the primary surface — always visible */}
                 <RawGraphSurface
                     key={currentScopeId || 'root'}
@@ -1503,6 +1650,16 @@ export default function RawEditor({
                     the wordmark. Ambient, non-interactive, kept when chrome is
                     summoned too. */}
                 <div className="raw-surface-wordmark" aria-hidden="true">di<span>.</span>iiii</div>
+                {dropState.over && (
+                    <div className="raw-drop-veil" aria-hidden="true">
+                        <span>drop to bring it in</span>
+                    </div>
+                )}
+                {(dropState.busy || dropState.notice) && (
+                    <div className={`raw-drop-notice${dropState.notice ? ' is-warning' : ''}`} role="status" aria-live="polite">
+                        {dropState.busy ? 'Bringing it in…' : dropState.notice}
+                    </div>
+                )}
                 {/* Panel nodes float above the graph as viewport-fixed windows */}
                 {visibleViewNodes.map((node, index) => {
                     const windowState = buildWindowStateFromNode(node, index, graphContext)
