@@ -157,6 +157,9 @@ export default function RawGraphSurface({
     emptyHint = 'Cursor is material. Double-click to place nodes.',
     onSelectNode,
     onEnterNode,
+    // Optional, like every other handler here: Studio wraps this read-only and
+    // passes none, so no menu is offered there at all.
+    onPromotePort = null,
     onCreateEdge,
     onDeleteEdge,
     onDeleteNode,
@@ -689,9 +692,67 @@ export default function RawGraphSurface({
     const isDraggingWire = Boolean(pendingWire)
     const isDraggingNode = Boolean(draggingNodeId)
 
+    // --- expose a port on the container ------------------------------------
+    // Press and hold a port dot (or right-click it) and offer to put it on the
+    // container's face, which places the doorway node and its wire for you.
+    // Honest about itself: a long press advertises to nobody. It is a shortcut
+    // for the gesture people who know it will reach for, not a discovery
+    // mechanism — placing an In/Out node by hand from the palette remains the
+    // way you FIND this.
+    const [portMenu, setPortMenu] = useState(null)
+    const longPressRef = useRef(null)
+
+    const cancelLongPress = () => {
+        if (!longPressRef.current) return
+        clearTimeout(longPressRef.current.timer)
+        window.removeEventListener('pointerup', longPressRef.current.cancel)
+        window.removeEventListener('pointercancel', longPressRef.current.cancel)
+        window.removeEventListener('pointermove', longPressRef.current.move)
+        longPressRef.current = null
+    }
+
+    const openPortMenu = (next) => {
+        // A press on an output dot has already armed a wire, and a press on an
+        // input dot falls through to the card drag. Left armed, either creates a
+        // plausible-looking wrong edge on the next release anywhere on the
+        // canvas, because resolveWireDrop snaps within 36 screen pixels.
+        pendingWireRef.current = null
+        setPendingWire(null)
+        setDraggingNodeId(null)
+        cancelLongPress()
+        setPortMenu(next)
+    }
+
+    const armLongPress = (event, node, port, dir) => {
+        if (!onPromotePort) return
+        const startX = event.clientX
+        const startY = event.clientY
+        // Window-level, not on the dot: handleOutputPointerDown releases pointer
+        // capture for every non-mouse pointer, so on touch the pointerup is
+        // delivered to whatever is under the finger. An element-level cancel
+        // would leave the timer armed and pop the menu half a second later over
+        // whatever was tapped next.
+        const cancel = () => cancelLongPress()
+        const move = (moveEvent) => {
+            if (Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) > 10) cancelLongPress()
+        }
+        const timer = setTimeout(() => {
+            openPortMenu({ node, port, dir, clientX: startX, clientY: startY })
+        }, 550)
+        longPressRef.current = { timer, cancel, move }
+        window.addEventListener('pointerup', cancel)
+        window.addEventListener('pointercancel', cancel)
+        window.addEventListener('pointermove', move)
+    }
+
+    useEffect(() => cancelLongPress, [])
+
     const shouldStartPan = (event) => {
         const target = event.target
         if (target?.closest?.('.raw-graph-zoom-controls')) return false
+        // The menu is a sibling of .raw-graph-stage, which carries the pan/zoom
+        // transform — without this, tapping an item pans the canvas.
+        if (target?.closest?.('.raw-graph-port-menu')) return false
         if (event.button === 1) return true
         if (event.button !== 0) return false
         return !target?.closest?.('.raw-graph-node-card')
@@ -839,6 +900,9 @@ export default function RawGraphSurface({
         // graph. shouldStartPan already excludes these controls from panning;
         // node creation needs the same exclusion.
         if (event.target?.closest?.('.raw-graph-zoom-controls')) return
+        // …and the port menu, or a double-tap on an item opens the create
+        // palette over the graph behind it.
+        if (event.target?.closest?.('.raw-graph-port-menu')) return
         const graphPoint = clientPointToGraphPoint(event.clientX, event.clientY)
         onDoubleClick({ clientX: event.clientX, clientY: event.clientY, graphX: graphPoint.x, graphY: graphPoint.y })
     }
@@ -1139,8 +1203,15 @@ export default function RawGraphSurface({
                                                 className={`raw-graph-port-dot raw-graph-port-dot--in${pendingWire ? (arePortsCompatible(pendingWire.fromPortType, port.type) ? ' is-compatible' : ' is-incompatible') : ''}`}
                                                 data-node-id={node.id}
                                                 data-port-id={port.id}
+                                                onPointerDown={(event) => armLongPress(event, node, port, 'in')}
+                                                onContextMenu={(event) => {
+                                                    if (!onPromotePort) return
+                                                    event.preventDefault()
+                                                    event.stopPropagation()
+                                                    openPortMenu({ node, port, dir: 'in', clientX: event.clientX, clientY: event.clientY })
+                                                }}
                                                 style={{ background: getPortType(port.type).color, left: -PORT_DOT_RADIUS }}
-                                                title={`${port.label || port.id} (${port.type})`}
+                                                title={`${port.label || port.id} (${port.type})${onPromotePort ? ' — hold to expose on the container' : ''}`}
                                             />
                                             {showPortLabels ? (
                                                 <span className="raw-graph-port-label">{port.label || port.id}</span>
@@ -1160,9 +1231,18 @@ export default function RawGraphSurface({
                                                 className="raw-graph-port-dot raw-graph-port-dot--out"
                                                 data-node-id={node.id}
                                                 data-port-id={port.id}
-                                                onPointerDown={(event) => handleOutputPointerDown(event, node, port)}
+                                                onPointerDown={(event) => {
+                                                    armLongPress(event, node, port, 'out')
+                                                    handleOutputPointerDown(event, node, port)
+                                                }}
+                                                onContextMenu={(event) => {
+                                                    if (!onPromotePort) return
+                                                    event.preventDefault()
+                                                    event.stopPropagation()
+                                                    openPortMenu({ node, port, dir: 'out', clientX: event.clientX, clientY: event.clientY })
+                                                }}
                                                 style={{ background: getPortType(port.type).color, right: -PORT_DOT_RADIUS }}
-                                                title={`${port.label || port.id} (${port.type})`}
+                                                title={`${port.label || port.id} (${port.type})${onPromotePort ? ' — hold to expose on the container' : ''}`}
                                             />
                                         </div>
                                     )) : null}
@@ -1171,6 +1251,35 @@ export default function RawGraphSurface({
                         )
                     })}
                 </div>
+                {/* Outside .raw-graph-stage on purpose: the stage carries the
+                    pan/zoom transform, and position:fixed inside a transformed
+                    ancestor resolves against that ancestor rather than the
+                    viewport — the menu would shrink with the graph and land in
+                    the wrong place. */}
+                {portMenu ? (
+                    <div
+                        className="raw-graph-port-menu"
+                        style={{ left: portMenu.clientX, top: portMenu.clientY }}
+                        role="menu"
+                    >
+                        <p className="raw-graph-port-menu-title">
+                            {portMenu.port.label || portMenu.port.id}
+                        </p>
+                        <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                                onPromotePort?.({ node: portMenu.node, port: portMenu.port, dir: portMenu.dir })
+                                setPortMenu(null)
+                            }}
+                        >
+                            Expose on the container
+                        </button>
+                        <button type="button" role="menuitem" onClick={() => setPortMenu(null)}>
+                            Cancel
+                        </button>
+                    </div>
+                ) : null}
         </div>
     )
 }
