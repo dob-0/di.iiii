@@ -207,6 +207,54 @@ describe('RawViewport', () => {
         expect(body.type).toBe('group')
     })
 
+    // The file-backed nodes resolve an assetId through the assetMap. Before
+    // this existed, renderNodeBody was never handed the map at all, so a node
+    // could not reach a file even in principle.
+    describe('file-backed nodes', () => {
+        const assetMap = new Map([
+            ['asset-model', { id: 'asset-model', name: 'scan.glb', mimeType: 'model/gltf-binary', url: '/api/a/scan.glb' }],
+            ['asset-video', { id: 'asset-video', name: 'clip.mp4', mimeType: 'video/mp4', url: '/api/a/clip.mp4' }],
+            ['asset-audio', { id: 'asset-audio', name: 'score.wav', mimeType: 'audio/wav', url: '/api/a/score.wav' }]
+        ])
+
+        it.each([
+            ['geom.model', 'asset-model'],
+            ['media.video', 'asset-video'],
+            ['media.audio', 'asset-audio']
+        ])('%s renders a body once its file is chosen', (typeId, assetId) => {
+            const body = renderNodeBody({ id: 'n', typeId }, { src: assetId }, assetMap)
+            expect(body).not.toBeNull()
+            expect(body.props.assetRef.id).toBe(assetId)
+        })
+
+        it('passes the resolved url through, so a server-stored asset loads', () => {
+            const body = renderNodeBody({ id: 'n', typeId: 'geom.model' }, { src: 'asset-model' }, assetMap)
+            expect(body.props.data).toBe('/api/a/scan.glb')
+            expect(body.props.modelFormat).toBe('gltf')
+        })
+
+        it('renders nothing — not an error — before a file is chosen', () => {
+            expect(renderNodeBody({ id: 'n', typeId: 'geom.model' }, {}, assetMap)).toBeNull()
+            expect(renderNodeBody({ id: 'n', typeId: 'media.video' }, { src: '' }, assetMap)).toBeNull()
+        })
+
+        // A local workspace stores bytes in IndexedDB, so its asset record has
+        // no url at all; ModelObject/useAssetUrl look the blob up by id. The
+        // node must still render, or dropping a file into a local workspace
+        // would look like nothing happened.
+        it('renders for a local asset that has no url', () => {
+            const localMap = new Map([['local-1', { id: 'local-1', name: 'scan.glb', mimeType: 'model/gltf-binary' }]])
+            const body = renderNodeBody({ id: 'n', typeId: 'geom.model' }, { src: 'local-1' }, localMap)
+            expect(body).not.toBeNull()
+            expect(body.props.data).toBeNull()
+        })
+
+        it('survives an assetId that points at nothing', () => {
+            expect(renderNodeBody({ id: 'n', typeId: 'geom.model' }, { src: 'gone' }, assetMap)).toBeNull()
+            expect(renderNodeBody({ id: 'n', typeId: 'geom.model' }, { src: 'gone' }, null)).toBeNull()
+        })
+    })
+
     it('without a scopeId, renders every spatial node document-wide (unscoped, matches old behavior)', () => {
         boxObjectSpy.mockClear()
         render(

@@ -111,6 +111,21 @@ describe('deriveNodeInspectorSections', () => {
         }
     })
 
+    // Without this the `src` port falls through to a plain text field and the
+    // only way to fill it is to type a sha256 by hand.
+    it.each([
+        ['geom.model', 'model'],
+        ['media.video', 'video'],
+        ['media.audio', 'audio']
+    ])('gives %s an asset picker filtered to %s files', (typeId, assetKind) => {
+        const sections = deriveNodeInspectorSections(createNode(typeId))
+        const src = sections.find((section) => section.id === 'values')
+            ?.fields.find((field) => field.path[0] === 'src')
+        expect(src).toBeDefined()
+        expect(src.type).toBe('asset')
+        expect(src.assetKind).toBe(assetKind)
+    })
+
     it('keeps the Code section\'s values.__code distinct from node.null\'s own values.body', () => {
         const node = createNode('node.null', { values: { body: 'the null node body', portDefs: [] } })
         const sections = deriveNodeInspectorSections(node)

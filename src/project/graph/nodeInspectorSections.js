@@ -6,6 +6,12 @@ const portToInspectorField = (port, node = null) => {
     if (node?.typeId === 'view.image' && port.id === 'src') {
         return { label, path, type: 'asset', portType: 'texture', assetKind: 'image' }
     }
+    // The file-backed nodes pick from the document's assets rather than
+    // typing an id by hand. Kind-filtered so a sound never offers a mesh.
+    const ASSET_PICKERS = { 'geom.model': 'model', 'media.video': 'video', 'media.audio': 'audio' }
+    if (port.id === 'src' && ASSET_PICKERS[node?.typeId]) {
+        return { label, path, type: 'asset', portType: 'string', assetKind: ASSET_PICKERS[node.typeId] }
+    }
     if (port.type === 'color') return { label, path, type: 'color', portType: 'color' }
     if (port.type === 'boolean') return { label, path, type: 'checkbox', portType: 'boolean' }
     if (port.type === 'number') return { label, path, type: 'number', min: port.min, max: port.max, step: port.step, portType: 'number' }

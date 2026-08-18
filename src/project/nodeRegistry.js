@@ -55,7 +55,13 @@ export const NODE_FAMILIES = [
 ]
 
 export const FAMILY_BY_TYPE = {
-    // bring in — cameras, microphones, sensors, input devices
+    // bring in — cameras, microphones, sensors, input devices, and files.
+    // A model/video/sound the person brings from their own disk belongs here,
+    // with the other doors into the graph, not with the primitives Raw makes
+    // out of nothing — that distinction is the whole point of the family.
+    'geom.model': 'bring-in',
+    'media.video': 'bring-in',
+    'media.audio': 'bring-in',
     'source.webcam': 'bring-in',
     'source.mic': 'bring-in',
     'device.midi.in': 'bring-in',
@@ -917,6 +923,83 @@ export const NODE_TYPES = {
             { id: 'texture',    type: 'texture', label: 'Texture'                         },
             { id: 'position',   type: 'vec3',    label: 'Position',    default: [0, 0, 0] },
             { id: 'rotation',   type: 'vec3',    label: 'Rotation',    default: [0, 0, 0] },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    // -----------------------------------------------------------------------
+    // MEDIA — a file the person brought in, placed in space
+    //
+    // `src` carries an assetId string, not the bytes: the same convention
+    // view.image already uses. It is typed `string` (not `texture`, which
+    // means a live THREE.Texture on geom.plane) so the inspector's asset
+    // picker and a wired value.string both work, and so a webcam frame can
+    // never be silently accepted where a file is meant.
+    // -----------------------------------------------------------------------
+
+    'geom.model': {
+        id: 'geom.model',
+        label: 'Model',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        // Searched terms, from a real palette test: every one of these
+        // returned "no match" before this node existed.
+        keywords: ['model', 'glb', 'gltf', 'obj', 'stl', 'fbx', 'mesh', 'import', 'file', 'asset', '3d', 'scan'],
+        inputs: [
+            { id: 'src',            type: 'string',  label: 'Model',      default: ''        },
+            { id: 'position',       type: 'vec3',    label: 'Position',   default: [0, 0, 0] },
+            { id: 'rotation',       type: 'vec3',    label: 'Rotation',   default: [0, 0, 0] },
+            { id: 'scale',          type: 'vec3',    label: 'Scale',      default: [1, 1, 1] },
+            { id: 'playAnimations', type: 'boolean', label: 'Play',       default: true      },
+            { id: 'animationSpeed', type: 'number',  label: 'Speed',      default: 1, step: 0.1 },
+            { id: 'animationClip',  type: 'string',  label: 'Clip',       default: ''        },
+        ],
+        // No `bounds` output on purpose: a model's size is unknown until the
+        // file has loaded, so a port promising it would read as live and be
+        // empty. geom.cube can promise bounds because its size IS its input.
+        outputs: [],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'media.video': {
+        id: 'media.video',
+        label: 'Video',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['video', 'movie', 'footage', 'mp4', 'webm', 'mov', 'clip', 'import', 'file', 'asset', 'play'],
+        inputs: [
+            { id: 'src',      type: 'string',  label: 'Video',    default: ''        },
+            { id: 'position', type: 'vec3',    label: 'Position', default: [0, 0, 0] },
+            { id: 'rotation', type: 'vec3',    label: 'Rotation', default: [0, 0, 0] },
+            { id: 'scale',    type: 'vec3',    label: 'Scale',    default: [1, 1, 1] },
+            { id: 'muted',    type: 'boolean', label: 'Muted',    default: true      },
+            { id: 'volume',   type: 'number',  label: 'Volume',   default: 1, min: 0, max: 1, step: 0.05 },
+            { id: 'loop',     type: 'boolean', label: 'Loop',     default: true      },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'media.audio': {
+        id: 'media.audio',
+        label: 'Sound',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['sound', 'audio', 'music', 'mp3', 'wav', 'ogg', 'speaker', 'import', 'file', 'asset', 'play'],
+        inputs: [
+            { id: 'src',      type: 'string',  label: 'Sound',    default: ''        },
+            { id: 'position', type: 'vec3',    label: 'Position', default: [0, 0, 0] },
+            { id: 'volume',   type: 'number',  label: 'Volume',   default: 1, min: 0, max: 1, step: 0.05 },
+            { id: 'distance', type: 'number',  label: 'Distance', default: 10, min: 0, step: 1 },
+            { id: 'loop',     type: 'boolean', label: 'Loop',     default: true      },
+            { id: 'autoplay', type: 'boolean', label: 'Autoplay', default: true      },
         ],
         outputs: [],
         defaultValues: {},

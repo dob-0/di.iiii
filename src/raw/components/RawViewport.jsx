@@ -3,6 +3,10 @@ import { Canvas } from '@react-three/fiber'
 import { Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
+import ModelObject from '../../objectComponents/ModelObject.jsx'
+import VideoObject from '../../objectComponents/VideoObject.jsx'
+import AudioObject from '../../objectComponents/AudioObject.jsx'
+import { detectModelFormatFromMeta } from '../../utils/modelFormats.js'
 import EntityContent from '../../project/viewport/EntityContent.jsx'
 import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
@@ -72,8 +76,55 @@ function PlaneWithTexture({ w, h, textureUrl }) {
     )
 }
 
-export function renderNodeBody(node, values) {
+// assetMap is optional so the pre-existing two-argument calls (and tests) keep
+// working; only the file-backed cases below need it. Without it those nodes
+// render nothing rather than throwing — a node with no file chosen yet is a
+// normal state, not an error.
+export function renderNodeBody(node, values, assetMap = null) {
     switch (node.typeId) {
+        case 'geom.model': {
+            const asset = values.src ? assetMap?.get(values.src) : null
+            if (!asset) return null
+            return (
+                <ModelObject
+                    assetRef={asset}
+                    data={asset.url || null}
+                    modelFormat={detectModelFormatFromMeta(asset)}
+                    applyModelColor={false}
+                    playAnimations={values.playAnimations !== false}
+                    animationSpeed={asFiniteNumber(values.animationSpeed, 1)}
+                    animationClip={values.animationClip || ''}
+                />
+            )
+        }
+        case 'media.video': {
+            const asset = values.src ? assetMap?.get(values.src) : null
+            if (!asset) return null
+            return (
+                <VideoObject
+                    assetRef={asset}
+                    data={asset.url || null}
+                    muted={values.muted !== false}
+                    volume={Math.min(1, Math.max(0, asFiniteNumber(values.volume, 1)))}
+                    loop={values.loop !== false}
+                />
+            )
+        }
+        case 'media.audio': {
+            const asset = values.src ? assetMap?.get(values.src) : null
+            if (!asset) return null
+            return (
+                <AudioObject
+                    assetRef={asset}
+                    data={asset.url || null}
+                    audioVolume={Math.min(1, Math.max(0, asFiniteNumber(values.volume, 1)))}
+                    audioDistance={Math.max(0, asFiniteNumber(values.distance, 10))}
+                    audioLoop={values.loop !== false}
+                    audioAutoplay={values.autoplay !== false}
+                    audioPaused={false}
+                />
+            )
+        }
         case 'geom.cube':
             return <BoxObject color={values.color || '#5fa8ff'} boxSize={asPositiveVec3(values.size, [1, 1, 1])} />
         case 'geom.sphere':
@@ -130,7 +181,7 @@ export function renderNodeBody(node, values) {
     }
 }
 
-function NodeVisual({ node, selected, onSelect, onPointerDown, nodeScale = 1 }) {
+function NodeVisual({ node, selected, onSelect, onPointerDown, nodeScale = 1, assetMap = null }) {
     const values = node.values || {}
     const scale = asPositiveVec3(values.scale, [1, 1, 1], 0.001, 20)
     const safeNodeScale = Math.min(4, Math.max(0.25, asFiniteNumber(nodeScale, 1)))
@@ -139,7 +190,7 @@ function NodeVisual({ node, selected, onSelect, onPointerDown, nodeScale = 1 }) 
         scale[1] * safeNodeScale,
         scale[2] * safeNodeScale
     ]
-    const body = renderNodeBody(node, values)
+    const body = renderNodeBody(node, values, assetMap)
     if (!body) return null
 
     return (
@@ -291,21 +342,26 @@ function SceneContent({
                         />
                     </SceneEntityErrorBoundary>
                 ))}
+                {/* Boundaried like entities are: a node can now load an
+                    arbitrary file off someone's disk, and a corrupt mesh must
+                    cost that one node, not the whole scene. */}
                 {renderableNodes.map((node) => (
-                    <NodeVisual
-                        key={node.id}
-                        node={{ ...node, values: evaluateNodeInputs(node, graphContext) }}
-                        selected={node.id === selectedNodeId}
-                        onSelect={onSelectNode}
-                        nodeScale={nodeScale}
-                        onPointerDown={(event) => {
-                            if (event.button !== 0) return
-                            event.stopPropagation()
-                            dragNodeYRef.current = node.values?.position?.[1] || 0
-                            setDraggingNodeId(node.id)
-                            onSelectNode?.(node.id)
-                        }}
-                    />
+                    <SceneEntityErrorBoundary key={node.id} resetKey={node.id}>
+                        <NodeVisual
+                            node={{ ...node, values: evaluateNodeInputs(node, graphContext) }}
+                            selected={node.id === selectedNodeId}
+                            onSelect={onSelectNode}
+                            nodeScale={nodeScale}
+                            assetMap={assetMap}
+                            onPointerDown={(event) => {
+                                if (event.button !== 0) return
+                                event.stopPropagation()
+                                dragNodeYRef.current = node.values?.position?.[1] || 0
+                                setDraggingNodeId(node.id)
+                                onSelectNode?.(node.id)
+                            }}
+                        />
+                    </SceneEntityErrorBoundary>
                 ))}
             </Suspense>
         </>

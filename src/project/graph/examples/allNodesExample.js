@@ -123,6 +123,14 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('cube', 'geom.cube', { label: 'Cube', col: 3, row: 0 })
     add('sphere', 'geom.sphere', { label: 'Sphere', col: 3, row: 1 })
     add('plane', 'geom.plane', { label: 'Plane', col: 3, row: 2 })
+    // The file-backed three. They arrive with an empty `src` because this
+    // example ships no bundled media, and a node whose file has not been
+    // chosen renders nothing — the same state you get the moment you place one
+    // from the palette, before dropping a file on it. That is the honest
+    // portrait; seeding a fake asset id would draw a broken model instead.
+    add('model', 'geom.model', { label: 'Model', col: 3, row: 3 })
+    add('video', 'media.video', { label: 'Video', col: 3, row: 4 })
+    add('sound', 'media.audio', { label: 'Sound', col: 3, row: 5 })
 
     // --- column 4: universe containers and panels ------------------------------
     add('world', 'universe.world', { label: 'World', col: 4, row: 0 })

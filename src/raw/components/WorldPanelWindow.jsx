@@ -22,7 +22,11 @@ export default function WorldPanelWindow({
     liveOutputs = null,
 }) {
     return (
-        <div className="raw-world-panel">
+        // The scope a file dropped ON the room should join. Without it a drop
+        // lands in the scope the graph is showing, which for the root World
+        // means the node exists but the room stays empty — the model is a card
+        // nobody can see.
+        <div className="raw-world-panel" data-world-scope-id={scopeId || ''}>
             <RawViewport
                 topInset={0}
                 document={document}
