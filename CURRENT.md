@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- doorways: a hole in a container's wall
+- expose a port on the container
 
 Full detail: `PROGRESS.md`.
 
