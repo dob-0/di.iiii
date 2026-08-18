@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- expose a port on the container
+- the move op: a node can change scope at all
 
 Full detail: `PROGRESS.md`.
 
