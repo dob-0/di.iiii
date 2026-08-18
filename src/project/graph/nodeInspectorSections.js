@@ -1,4 +1,4 @@
-import { getNodeType } from '../nodeRegistry.js'
+import { PORT_TYPES, getNodeType } from '../nodeRegistry.js'
 
 const portToInspectorField = (port, node = null) => {
     const label = port.label || port.id
@@ -11,6 +11,19 @@ const portToInspectorField = (port, node = null) => {
     const ASSET_PICKERS = { 'geom.model': 'model', 'media.video': 'video', 'media.audio': 'audio' }
     if (port.id === 'src' && ASSET_PICKERS[node?.typeId]) {
         return { label, path, type: 'asset', portType: 'string', assetKind: ASSET_PICKERS[node.typeId] }
+    }
+    // A doorway's `portType` decides what its socket on the container will
+    // carry, so it must be CHOSEN from the real list rather than typed — a typo
+    // yields a port type nothing is compatible with, and the only symptom is a
+    // wire that refuses to connect for no visible reason.
+    if (port.id === 'portType' && (node?.typeId === 'port.in' || node?.typeId === 'port.out')) {
+        return {
+            label,
+            path,
+            type: 'select',
+            portType: 'string',
+            options: Object.entries(PORT_TYPES).map(([value, meta]) => ({ value, label: meta.label }))
+        }
     }
     if (port.type === 'color') return { label, path, type: 'color', portType: 'color' }
     if (port.type === 'boolean') return { label, path, type: 'checkbox', portType: 'boolean' }

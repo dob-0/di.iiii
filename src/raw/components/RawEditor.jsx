@@ -1649,6 +1649,12 @@ export default function RawEditor({
                     contentInsets={graphContentInsets}
                     nodes={graphCardNodes}
                     childCounts={childCounts}
+                    // EVERY node, not graphCardNodes. A container's doorways
+                    // live INSIDE it — a different scope from its own card — so
+                    // the scoped list would find none of them and the container
+                    // would simply never grow a socket, silently, with every
+                    // unit test still passing.
+                    portScopeNodes={authoredNodes}
                     emptyHint={`${pointerVerb} to place your first node.`}
                     edges={graphCardEdges}
                     selectedNodeId={workspaceState.selectedNodeId}

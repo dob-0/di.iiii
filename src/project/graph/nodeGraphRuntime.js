@@ -1,4 +1,4 @@
-import { getNodeInputs } from '../nodeRegistry.js'
+import { DOORWAY_OUT_TYPE_ID, getNodeInputs } from '../nodeRegistry.js'
 
 const asNumber = (value, fallback = 0) => {
     const next = Number(value)
@@ -87,10 +87,21 @@ const buildEdgesByTarget = (edges) => {
 // owns the live resource, read generically by computeNodeOutput/evaluateNodeInput.
 export const createNodeGraphContext = (document = {}, { now = 0, liveOutputs = null } = {}) => {
     const edges = document.edges || []
+    const nodes = document.nodes || []
+    // Every `Out` door, by the container it makes a hole in. Built once per pass
+    // rather than scanned per read: reading a container's socket happens inside
+    // the render loop, and a scan would be O(nodes) every time.
+    const doorwayOutByParent = new Map()
+    for (const node of nodes) {
+        if (node?.typeId !== DOORWAY_OUT_TYPE_ID || !node.parentId) continue
+        if (!doorwayOutByParent.has(node.parentId)) doorwayOutByParent.set(node.parentId, new Map())
+        doorwayOutByParent.get(node.parentId).set(node.id, node)
+    }
     return {
-        nodesById: new Map((document.nodes || []).map((node) => [node.id, node])),
+        nodesById: new Map(nodes.map((node) => [node.id, node])),
         edges,
         edgesByTarget: buildEdgesByTarget(edges),
+        doorwayOutByParent,
         outputCache: new Map(),
         now: Number.isFinite(now) ? now : 0,
         liveOutputs
@@ -126,6 +137,12 @@ export const evaluateNodeOutput = (node, portId, context, stack = new Set()) => 
 const TAU = Math.PI * 2
 
 const computeNodeOutput = (node, portId, context, nextStack) => {
+    // A socket a doorway made, read from OUTSIDE the container. Checked before
+    // the type switch because it applies to any container regardless of type,
+    // and because a doorway's id can never collide with a declared port id.
+    const door = context?.doorwayOutByParent?.get(node.id)?.get(portId)
+    if (door) return evaluateNodeInput(door, 'value', context, nextStack)
+
     switch (node.typeId) {
         case 'time': {
             // Declared four outputs and evaluated none — it fell through to
@@ -261,6 +278,24 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
                 return Math.min(max, Math.max(min, value))
             }
             break
+        // --- doorways --------------------------------------------------------
+        // An `In` door inside container C hands out whatever is wired to C's
+        // socket of the same id, from OUTSIDE C. This is the only place the two
+        // sides of a container wall meet, and it meets them without any edge
+        // crossing a scope: the outer wire joins two siblings in C's scope, the
+        // inner wire joins two siblings inside C.
+        case 'port.in': {
+            if (portId !== 'value') break
+            const container = node.parentId ? context?.nodesById?.get(node.parentId) : null
+            // A door with no container is just a node sitting on the canvas. Its
+            // fallback is the honest answer — not undefined, which the consumer
+            // would silently paper over with its own local value.
+            if (!container) return evaluateNodeInput(node, 'fallback', context, nextStack)
+            const outside = evaluateNodeInput(container, node.id, context, nextStack)
+            return outside === undefined || outside === null
+                ? evaluateNodeInput(node, 'fallback', context, nextStack)
+                : outside
+        }
         // --- containers ------------------------------------------------------
         // A container's outputs mirror its OWN settings, so they must be read
         // through evaluateNodeInput rather than off node.values: wire a String

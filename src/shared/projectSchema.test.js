@@ -242,6 +242,36 @@ describe('projectSchema', () => {
         expect(afterDeleteNode.edges).toHaveLength(0)
     })
 
+    // The one edge the ordinary cascade cannot catch: a doorway's wire names the
+    // CONTAINER and a port id, not the door, so both endpoint nodes survive the
+    // delete. createEdge validates endpoint nodes only and normalizeEdgesList
+    // drops edges by missing node id, never by missing port — so without the
+    // sweep this is a permanent orphan that no reload, normalisation or gesture
+    // can remove, parked at the corner of a card by inputPortCenter's idx<0
+    // branch. Mirrored in shared/projectSchema.cjs and covered there too: with
+    // the sweep on the client only, the wire vanishes locally and the server's
+    // replay resurrects it on the next sync.
+    it('sweeps the wire to a socket when the doorway that made it is deleted', () => {
+        const base = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'desk', typeId: 'universe.desk.3d', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'door', typeId: 'port.in', parentId: 'desk', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'sky', typeId: 'value.color', values: { value: '#ff0000' } } } },
+            {
+                type: 'createEdge',
+                payload: { edge: { id: 'e1', fromNodeId: 'sky', fromPort: 'out', toNodeId: 'desk', toPort: 'door' } }
+            }
+        ])
+        expect(base.edges).toHaveLength(1)
+
+        const afterDelete = applyProjectOps(base, [
+            { type: 'deleteNode', payload: { nodeId: 'door' } }
+        ])
+        // Both endpoints of the wire are still here — which is exactly why the
+        // ordinary cascade would have kept it.
+        expect(afterDelete.nodes.map((node) => node.id).sort()).toEqual(['desk', 'sky'])
+        expect(afterDelete.edges).toHaveLength(0)
+    })
+
     it('accepts unknown typeIds (matches the server, which never validates them)', () => {
         const base = normalizeProjectDocument({})
         // shared/projectSchema.cjs (the server's authoritative mirror) intentionally
