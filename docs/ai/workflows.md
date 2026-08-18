@@ -1,3 +1,6 @@
+> **SUPERSEDED by [docs/deploy/LIVE_DEPLOY.md](../deploy/LIVE_DEPLOY.md)** for anything deploy- or workflow-order related.
+> Do not update this page; treat anything below that disagrees with LIVE_DEPLOY.md as wrong. (2026-08 estate audit)
+
 # AI Workflow Guide
 
 This page tells an agent where to start and what to check next.

@@ -1,3 +1,6 @@
+> **SUPERSEDED by [docs/ai/shortcuts.md](ai/shortcuts.md)** — the canonical shortcut reference, kept in sync with the in-app Shift+? overlay.
+> This page describes surfaces that have since changed; do not update it. (2026-08 estate audit)
+
 # Keyboard Shortcuts
 
 Reference for keyboard shortcuts across the two editor lanes. Keys are ignored

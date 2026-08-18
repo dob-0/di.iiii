@@ -1,3 +1,7 @@
+> **STALE — marked for removal by the 2026-08 estate audit.**
+> Retained only because AGENTS.md routing and `.github/copilot-instructions.md` still point here.
+> Update those references before deleting; AGENTS.md remains the routing authority.
+
 # Documentation Engineer — Role Card
 
 **Code:** DE  

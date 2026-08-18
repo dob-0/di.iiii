@@ -1,3 +1,6 @@
+> **SUPERSEDED by [README.md](README.md)** — the root README is the canonical project readme.
+> This copy is kept for link stability only and is no longer maintained. (2026-08 estate audit)
+
 # di.iiii
 
 **Web XR Node-Based Reality Creation Language**

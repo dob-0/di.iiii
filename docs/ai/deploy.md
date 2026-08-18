@@ -1,3 +1,6 @@
+> **SUPERSEDED by [docs/deploy/LIVE_DEPLOY.md](../deploy/LIVE_DEPLOY.md)** — that file is the deploy authority and is kept current.
+> Do not update this page; treat anything below that disagrees with LIVE_DEPLOY.md as wrong. (2026-08 estate audit)
+
 # AI Deploy Guide
 
 This page is the AI-safe deployment map. Keep host-specific or secret material out of it.

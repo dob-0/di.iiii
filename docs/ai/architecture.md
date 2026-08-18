@@ -1,3 +1,7 @@
+> **STALE — marked for removal by the 2026-08 estate audit.**
+> Current repo orientation lives in [docs/architecture/ORIENTATION_MAP.md](../architecture/ORIENTATION_MAP.md).
+> Kept only because [docs/ai/index.md](index.md) still links here; update that link before deleting.
+
 # AI Architecture Guide
 
 This page explains how the repo is organized so an agent can route changes quickly.

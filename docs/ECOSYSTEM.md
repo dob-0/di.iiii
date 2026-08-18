@@ -14,7 +14,7 @@ di.iiii platform  (dob-0/di.iiii)
 
 Spaces live on di-studio.xyz (queried prod 2026-08-10):
 ├── main            default space
-├── br-id-ge        tele-symbiotic XR performance  (linked repo dob-0/br_id_ge)
+├── br-id-ge        Armenian XR rite (կամուրջ) — door / rite / field  (linked repo dob-0/br_id_ge)
 ├── wcc             World Creative Commons  (public landing → live scene, src/wcc/)
 ├── beyond-form     Gyumri Art Week exhibition page
 ├── platform-recordar  RecordAR landing
@@ -32,6 +32,10 @@ Support tools:
 | `dob-0/br_id_ge` | Performance prototype, GitHub Pages site | Vanilla JS + Three.js (index.html SPA) + Node ws | `main` |
 | `dob-0/_ii` | Live terminal VJ engine | Python 3 + curses | `main` |
 | `emilyanikoghosyan/di.iiii` | WCC fork (contributes via task branches → auto-PR to upstream `dev`) | Same as di.iiii | task branches |
+
+The table above lists only the repos this platform touches directly. The estate record for
+all satellite repos — what each one is, its status, and how it relates to the rest — is the
+private `dob-0/di-atlas` repo; consult it before adding rows here.
 
 ## Data flow
 

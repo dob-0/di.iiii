@@ -1,3 +1,7 @@
+> **STALE — marked for removal by the 2026-08 estate audit.**
+> No successor doc; do not treat as current guidance.
+> Kept only because [docs/ai/index.md](index.md) still links here; update that link before deleting.
+
 # Private Overrides Guide
 
 This page defines what belongs in checked-in AI docs versus local overrides.

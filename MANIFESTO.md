@@ -1,4 +1,4 @@
-# di.i Manifesto
+# di.iiii Manifesto
 
 This document is the permanent record of what di.i is, what it is becoming, and what cannot be traded away. Read it before making product or architecture decisions. Update it when a fundamental truth changes — not when a task changes.
 

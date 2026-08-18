@@ -1,3 +1,7 @@
+> **STALE — marked for removal by the 2026-08 estate audit.**
+> Current validation commands live in CURRENT.md ("Deploy & validation") and [docs/ai/known-fixes.md](known-fixes.md).
+> Kept only because `.github/skills/dii-ai-doc-maintenance/SKILL.md` and [index.md](index.md) still link here.
+
 # AI Testing Guide
 
 This page maps repo changes to validation steps.
