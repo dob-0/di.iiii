@@ -814,6 +814,9 @@ export default function RawEditor({
     // the same place ModelObject/useAssetUrl already look first, so the node
     // renders identically either way.
     const [dropState, setDropState] = useState({ over: false, busy: false, notice: '' })
+    // "Studio now has a Colour socket" — because the socket it is talking about
+    // is one scope up and nowhere on screen.
+    const [promotedNotice, setPromotedNotice] = useState(null)
     const dropDepthRef = useRef(0)
 
     useEffect(() => {
@@ -1165,6 +1168,61 @@ export default function RawEditor({
         type: 'createEdge',
         payload: { edge: payload }
     }), [applyLocalOps])
+    // Put an interior port on the container's face: place the doorway node and
+    // its wire in ONE op batch, so a single undo takes both away and no
+    // intermediate state exists where a door sits there wired to nothing.
+    //
+    // Honest about what this is: a long press advertises itself to nobody. This
+    // is a shortcut for the gesture, not the way anyone DISCOVERS it — placing
+    // an In/Out node from the palette by hand remains that.
+    const handlePromotePort = useCallback(({ node, port, dir }) => {
+        if (!node || !port) return
+        const container = currentScopeId ? authoredNodes.find((n) => n.id === currentScopeId) : null
+        if (!container) {
+            setDropState({
+                over: false,
+                busy: false,
+                notice: 'Go inside a container first — a doorway makes a socket on the container it is in.'
+            })
+            return
+        }
+        // An OUT door carries a value from an interior output to the outside; an
+        // IN door brings a value from outside into an interior input.
+        const doorTypeId = dir === 'out' ? 'port.out' : 'port.in'
+        const door = createNode(doorTypeId, {
+            values: {
+                // ONLY values.label. The card keeps the type's own name ("In"/
+                // "Out"); the socket's name lives here and the inspector edits
+                // exactly this field. Writing both would let a rename diverge
+                // them permanently, and the socket would then be named by
+                // whichever one happened to be read.
+                label: port.label || port.id,
+                // Inherited from the port it came from, so most doors never
+                // need the type picker touched.
+                portType: port.type || 'any'
+            },
+            graphX: (node.graphX ?? 0) + (dir === 'out' ? 260 : -260),
+            graphY: node.graphY ?? 0,
+            parentId: currentScopeId
+        })
+        if (!door) return
+        const edge = dir === 'out'
+            ? createEdge(node.id, port.id, door.id, 'value')
+            : createEdge(door.id, 'value', node.id, port.id)
+        applyLocalOps([
+            { type: 'createNode', payload: { node: door } },
+            { type: 'createEdge', payload: { edge } },
+            { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: door.id } } }
+        ], { activityMessage: `Exposed ${port.label || port.id} on ${container.label}.` })
+        // The new socket is one level up, off-screen from here — say so, or the
+        // gesture appears to have done nothing.
+        setPromotedNotice({
+            containerId: container.id,
+            containerLabel: container.label,
+            portLabel: port.label || port.id
+        })
+    }, [applyLocalOps, authoredNodes, currentScopeId])
+
     const handleDeleteEdge = useCallback((edgeId) => applyLocalOps({
         type: 'deleteEdge',
         payload: { edgeId }
@@ -1655,6 +1713,7 @@ export default function RawEditor({
                     // would simply never grow a socket, silently, with every
                     // unit test still passing.
                     portScopeNodes={authoredNodes}
+                    onPromotePort={handlePromotePort}
                     emptyHint={`${pointerVerb} to place your first node.`}
                     edges={graphCardEdges}
                     selectedNodeId={workspaceState.selectedNodeId}
@@ -1753,6 +1812,34 @@ export default function RawEditor({
                     )
                 })}
             </section>
+
+            {/* The socket this made is one level up and off-screen, so the
+                gesture would otherwise look like it did nothing. */}
+            {promotedNotice && (
+                <div className="raw-promoted-notice" role="status" aria-live="polite">
+                    <span>
+                        <strong>{promotedNotice.containerLabel}</strong> now has a{' '}
+                        <strong>{promotedNotice.portLabel}</strong> socket
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            // Navigate by the container's OWN scope, never
+                            // navStack.length - 2: at the root that is index -1,
+                            // which truncates the stack to empty and takes the
+                            // trail, the Escape exit and the marker with it.
+                            const parentId = authoredNodes.find((n) => n.id === promotedNotice.containerId)?.parentId || null
+                            const index = navStack.indexOf(parentId)
+                            handleNavigateToScope(index >= 0 ? index : 0)
+                            selectNode(promotedNotice.containerId)
+                            setPromotedNotice(null)
+                        }}
+                    >
+                        Go and see
+                    </button>
+                    <button type="button" className="raw-promoted-notice-close" onClick={() => setPromotedNotice(null)}>×</button>
+                </div>
+            )}
 
             {/* Where you are, and the way back out. Deliberately OUTSIDE the
                 chromeVisible gate: chromeVisible starts with `if (zen) return

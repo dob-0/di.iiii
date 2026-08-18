@@ -682,3 +682,79 @@ describe('RawGraphSurface', () => {
         })
     })
 })
+
+// Long-press or right-click a port dot and offer to put it on the container's
+// face. Honest about itself: a long press advertises to nobody, so this is a
+// shortcut for people who know it, not the way anyone discovers doorways.
+describe('exposing a port on the container', () => {
+    const openMenu = (container) => {
+        const dot = container.querySelector('.raw-graph-port-dot--out')
+        fireEvent.contextMenu(dot, { clientX: 100, clientY: 100 })
+        return container.querySelector('.raw-graph-port-menu')
+    }
+
+    it('offers nothing at all when the surface cannot promote', () => {
+        // Studio wraps this read-only and passes no handler.
+        const { container } = render(
+            <RawGraphSurface nodes={[makeNode('value.color', { id: 'c' })]} edges={[]} />
+        )
+        expect(openMenu(container)).toBeNull()
+    })
+
+    it('hands back the port that was held', () => {
+        const onPromotePort = vi.fn()
+        const node = makeNode('value.color', { id: 'c' })
+        const { container } = render(
+            <RawGraphSurface nodes={[node]} edges={[]} onPromotePort={onPromotePort} />
+        )
+        expect(openMenu(container)).toBeTruthy()
+        fireEvent.click([...container.querySelectorAll('.raw-graph-port-menu button')]
+            .find((button) => /Expose/.test(button.textContent)))
+        expect(onPromotePort).toHaveBeenCalledWith(expect.objectContaining({
+            dir: 'out',
+            port: expect.objectContaining({ id: 'out' })
+        }))
+        expect(container.querySelector('.raw-graph-port-menu')).toBeNull()
+    })
+
+    // A press on an output dot arms a wire. If the menu leaves it armed, the
+    // next release anywhere on the canvas snaps it to a port within 36px and
+    // creates a plausible-looking edge nobody asked for.
+    it('disarms any half-started wire when the menu opens', () => {
+        const onCreateEdge = vi.fn()
+        const colour = makeNode('value.color', { id: 'c', graphX: 0 })
+        const cube = makeNode('geom.cube', { id: 'cube', graphX: 320 })
+        const { container } = render(
+            <RawGraphSurface
+                nodes={[colour, cube]}
+                edges={[]}
+                onCreateEdge={onCreateEdge}
+                onPromotePort={vi.fn()}
+            />
+        )
+        const dot = container.querySelector('.raw-graph-port-dot--out')
+        fireEvent.pointerDown(dot, { button: 0, clientX: 100, clientY: 100 })
+        fireEvent.contextMenu(dot, { clientX: 100, clientY: 100 })
+        // Release right on the cube's Color input — which WOULD have connected.
+        const port = inputPortGraphPoint(cube, 0)
+        fireEvent.pointerUp(window, clientForGraphPoint(container, port.x, port.y))
+        expect(onCreateEdge).not.toHaveBeenCalled()
+    })
+
+    it('closes on cancel without promoting anything', () => {
+        const onPromotePort = vi.fn()
+        const { container } = render(
+            <RawGraphSurface
+                nodes={[makeNode('value.color', { id: 'c' })]}
+                edges={[]}
+                onPromotePort={onPromotePort}
+            />
+        )
+        openMenu(container)
+        fireEvent.click([...container.querySelectorAll('.raw-graph-port-menu button')]
+            .find((button) => /Cancel/.test(button.textContent)))
+        expect(onPromotePort).not.toHaveBeenCalled()
+        expect(container.querySelector('.raw-graph-port-menu')).toBeNull()
+    })
+})
+
