@@ -67,10 +67,11 @@ export const WIKI_ARTICLES = [
             'For a live jam — an event, a workshop, a projected wall — share the short link di-studio.xyz/open_jam (or turn it into a QR code). It opens the shared Open Jam directly, and a one-line welcome shows first-timers how to add their visual. Anyone who scans can drop in an image, video or 3D model on the spot, no account needed.',
             'The Open Jam opens in a simple mode: one Create window with file upload and a few basic shapes — the full editor’s other windows and import options stay out of the way. Tapping an object opens a small Edit window (change your text, pick a color, or remove it). Anyone who wants the complete toolset can press “⚒ All tools” in the control cluster (and “◱ Simple” switches back); the choice is remembered on that device.',
             'For admins: /admin → Manage can repoint the communal space (the guest entry), and the Open Space can be restored from its latest daily snapshot if someone wrecks it.',
-            'The landing page’s “Enter Space” button (distinct from “Step inside”) opens whichever space is set as "Main" under /admin → Manage → a space → “Set as main”. That space needs a published project to show anything; until one is set as Main, “Enter Space” falls back to a decorative walkable preview instead.'
+            'The landing page has one door. It used to offer three side by side — “Step inside”, “Open Studio” and “Enter Space” — which asked a first-time visitor to choose a lane before they knew what a lane was. Studio is not a rival to the door now, it is a room on the same desk: step inside, and Studio is there to walk into. The quiet “Already have spaces? Open Studio →” line under the button is the return path for people who already have work of their own.',
+            'The “Set as main” switch under /admin → Manage → a space no longer puts its own button on the landing page. Where no Main space is set at all, the landing offers “Look around” instead — a decorative walkable preview of its own hero, not a real space.'
         ],
         tags: ['guest', 'sandbox', 'open space', 'access', 'jam', 'qr'],
-        updated: '2026-07-21'
+        updated: '2026-08-18'
     },
     {
         id: 'joining-a-space',
@@ -372,6 +373,20 @@ export const WIKI_ARTICLES = [
         updated: '2026-07-19'
     },
     {
+        id: 'privacy-and-terms',
+        category: 'Spaces & access',
+        title: 'Privacy & terms',
+        summary: 'What the platform stores about you and under which terms — plainly, at /privacy and /terms.',
+        body: [
+            'Two pages disclose how the platform treats you: /privacy describes exactly what is collected (the session cookie, OAuth profile fields, uploads, retention) and what is deliberately not (no third-party analytics, no stored IP addresses, no tracking that links visits together) — including the parts that are not built yet, named as gaps rather than hidden.',
+            '/terms covers the AGPL-3.0 license, the 3-free-spaces limit, and the append-only nature of anonymous inscriptions.',
+            'Visits are counted anonymously first-party: one event per page load with path, time, and referring site — no cookie, no IP, nothing identifying.',
+            'For anything the pages do not answer, or to request account or data removal by hand: info@thedi.studio.'
+        ],
+        tags: ['privacy', 'terms', 'legal', 'data', 'contact'],
+        updated: '2026-08-18'
+    },
+    {
         id: 'github-sync',
         category: 'For developers',
         title: 'GitHub sync',
@@ -490,7 +505,12 @@ export const WIKI_ARTICLES = [
                 'Reached from a space at /<space>/raw (same sign-in rules as Studio); /open/raw opens it on the communal open space.',
                 'Enter any node with its “Enter ›” button; the breadcrumb tracks your depth and Escape steps back out one level at a time.',
                 'Entering a World node opens its 3D viewport fullscreen; the ← World button in the topbar drops back to the graph.',
-                'The palette only lists node types that actually compute or render — anything still marked “authoring only” is a declared-but-unbuilt placeholder.',
+                'The palette groups its nodes into seven families by what you are doing — bring in, make, numbers, the room, watch, send out, agents — each with its own colour, the same colour the node’s card wears on the canvas. Typing dissolves the groups into a flat search. It only lists node types that actually compute or render; a “shell” tag marks anything that places but carries nothing yet, and “local dev” marks nodes that only work against a local dev server.',
+                'While you drag a wire, every input that can take it lights up and every input that cannot goes quiet — an incompatible drop no longer fails silently.',
+                'Starting from nothing: a blank Raw workspace shows a “Make me a scene” button in the middle of the canvas. It builds a room with a light, a cube, a colour wired into that cube, and an empty Model node waiting for your own file — plus a note giving the moves in plain words. It is there because a blank workspace opens with no toolbar at all, so the ⋯ menu (which also offers it) does not exist for the person most likely to want it.',
+                'A container has a wall, and you make holes in it. Enter a World, a 3D Desk or a Studio, place an In node inside it, and a socket with that name appears on the container’s outer face — wire something into it from outside and the In node hands that value to whatever it feeds inside. An Out node does the same in reverse. This is how TouchDesigner, Blender, Max and Unreal all do it, and it is the answer to “I can’t connect anything to a World”. Renaming a doorway never breaks its wire: the socket is identified by the node itself, not by its name. Two limits worth knowing — a doorway only makes a socket on the container it is INSIDE, and a Code node (node.null) cannot grow one, because its ports are already fully hand-declared.',
+                'A container also gives out its own settings, and only those: a World offers its Title and Sky, a 3D Desk its Position, Rotation and Scale, a Studio its Title. Nothing about what is inside a container leaks through its wall by itself — that is what the doorways are for, and it is deliberate. Assuming otherwise is the most common mistake people make with containers in every tool that has them.',
+                'Your own files come in through three “bring in” nodes: Model (.glb/.gltf incl. Draco and Meshopt, .obj, .stl, .fbx — with its animations, which Play/Speed/Clip control), Video and Sound. Drag a file straight onto the workspace and the node arrives holding it; drop it onto a room and it lands in that room, already visible. On a phone, where there is nothing to drag, the ＋ beside the node’s file picker opens the same door. In a saved project the file uploads and your collaborators get it; in a local workspace it stays in that browser.',
                 'Webcam is the first real capture node: it asks for camera permission, shows a live preview on the node itself (with a visible message if access is denied or no camera is found), and its Frame output can be wired into a Plane’s Texture input to project the live feed onto geometry.',
                 'Microphone is the second: it shows a live level meter on the node itself, and its Volume/Frequency outputs update continuously for anything wired to read them.',
                 'Work Status reads your local dev setup — recent sessions, worktree branches and dirty state, open PRs, recent deploys — and outputs a running count, a dirty flag, an open-PR count and a text summary. Local dev only; it 404s on a deployed server.',
@@ -499,8 +519,8 @@ export const WIKI_ARTICLES = [
                 'A Director node (view.director) is a timeline editor for code-authored pieces, moved out of algovrithm into Raw on 2026-08-05 and generalised the same day — it takes the piece as input rather than being welded to one, so a future piece is a registration rather than a fork. For algovrithm it can retime and reorder its beats, edit each room’s colour, fog and lights, and drop assets onto the timeline — the same panel Studio’s code-space director page opens embedded in the piece, so this is a second way to reach it, not the only one. “Save to source” writes src/algoVrithm/sequences/index.js in place with its comments intact from either one.'
             ] }
         ],
-        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director'],
-        updated: '2026-08-06'
+        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director', 'model', 'glb', 'video', 'sound', 'import', 'containers', 'doorways', 'ports', 'scene', 'example', 'getting-started'],
+        updated: '2026-08-19'
     },
     {
         id: 'studio-node',
@@ -508,17 +528,18 @@ export const WIKI_ARTICLES = [
         title: 'The Studio node: an editor you can place in a graph',
         summary: 'Studio is one entry in Raw’s palette. Place it like any other node, enter it, and you find the panels it is assembled from — the same container idea you would use to build your own node later.',
         body: [
-            'In Raw’s palette, Studio sits next to Color, Browser and Cube. Placing it gives you a single card on the canvas. Entering that card — the “›” control on its header — takes you inside, where you find the nodes it is made of: an Outliner, a Scene, and an Inspector. It is one node from the outside and a graph from the inside.',
+            'In Raw’s palette, Studio sits next to Color, Browser and Cube. Placing it gives you a single card on the canvas. Entering that card — the “›” control on its header — takes you inside, where you find the nodes it is made of: an Outliner, a Scene, an Inspector, and Create. It is one node from the outside and a graph from the inside.',
+            'Create (added 2026-08-18) is the panel that makes the room usable: the same shapes, text and lights Studio’s own Create window offers — box, sphere, cone, cylinder, plane, torus, capsule, ring, text, group, portal, and the four lights — placed straight into the scene. It is the same list Studio uses, kept in one place so the two can never drift apart, and what it makes is a real object in the document: selectable, editable in the Inspector, undoable, and visible to everyone else in the space.',
             'This is the same shape TouchDesigner uses for a Component and Nuke uses for a Group: a container whose contents are a normal subgraph. That is the point of building it this way rather than hard-wiring Studio into the editor — the mechanism that makes Studio a node is the mechanism that will let you wrap your own patch into a palette item and place it beside the built-in ones.',
             { list: [
                 'Every node in a scope now appears on the canvas, panels included. Previously a panel existed only as a floating window, so you could not select, move, wire or delete it from the graph, and a wire feeding a panel was invisible even though it was carrying a value.',
                 'A panel window and its card are two views of one node: close the window and the card remains; open it from the Windows menu and the panel comes back.',
                 'Studio’s panels start closed so that entering the node shows you its graph rather than three windows over it.'
             ] },
-            'What is not there yet: Studio’s other panels — assets, code, share, projects — are still hardcoded chrome rather than nodes, because their bodies need a large amount of editor state that has not been re-plumbed yet. Two design questions are also deliberately still open: which of a container’s inner ports should show on the outside, and whether a saved palette item stays linked to the graph it came from or becomes a frozen copy.'
+            'What is not there yet: Studio’s remaining panels — assets, code, share, projects — are still hardcoded chrome rather than nodes, because their bodies need a large amount of editor state that has not been re-plumbed yet. Two design questions are also deliberately still open: which of a container’s inner ports should show on the outside, and whether a saved palette item stays linked to the graph it came from or becomes a frozen copy.'
         ],
-        tags: ['raw', 'studio', 'nodes', 'container', 'palette', 'nesting', 'touchdesigner'],
-        updated: '2026-08-06'
+        tags: ['raw', 'studio', 'nodes', 'container', 'palette', 'nesting', 'touchdesigner', 'create'],
+        updated: '2026-08-18'
     },
     {
         id: 'raw-on-a-phone',
@@ -669,13 +690,33 @@ export const WIKI_ARTICLES = [
         summary: 'Raw opens as bare surface and nodes. One gesture summons everything else — panels, the help, even the toolbar itself.',
         body: [
             'A new workspace has no toolbar, no zoom buttons, no help or chat button. There is the surface, whatever nodes you place, and nothing else sitting there waiting to be needed.',
+            'A first visit finds the desk already set: a live World window, a Sky node wired into it (change the color — the room follows), a welcome note, and a Studio node you can step into for the full editor. It is yours — rearrange it, delete it, or undo all the way back to an empty surface.',
             'Everything is one gesture away. Press ⌘K (Ctrl+K) or just / — on a touch screen, double-tap the empty surface. The same panel opens either way: type what you want and press Enter.',
             'That panel creates nodes and summons everything else from the same list. "Help", "Chat", "Outliner", any window you closed, and "Show the chrome" to bring the toolbar back. Summoning rows sit at the top, so with the toolbar hidden they are never more than a keystroke away.',
             'Zoom still works as it always did: the wheel on a computer, and on a phone the zoom buttons stay in the corner — faded until you reach for them, because on a touch screen they are the only way to zoom.',
             'Each workspace remembers its own choice, on this device. A workspace you already arranged keeps its toolbar; only new ones start bare. Turning the toolbar on or off in one workspace never changes another, and never changes what anyone else sees.'
         ],
-        tags: ['raw', 'workspace', 'zen', 'minimal', 'palette', 'shortcuts', 'ui'],
-        updated: '2026-08-08'
+        tags: ['raw', 'workspace', 'zen', 'minimal', 'palette', 'shortcuts', 'ui', 'starter'],
+        updated: '2026-08-18'
+    },
+    {
+        id: 'reading-the-workspace',
+        category: 'Editing',
+        title: 'Reading the workspace: what each colour means',
+        summary: 'Grey is furniture, colour is your work, and cyan means you touched it. Once you know the three, you can read a workspace without reading a word.',
+        body: [
+            'Everything on the surface belongs to one of two worlds. Your work — the nodes, their wires, the scene — carries colour. The furniture around it — windows, the palette, the toolbar, the zoom buttons — is grey and stays out of the way. Before 18 August 2026 they all wore the same cyan outline, so a floating window looked exactly like a node card and nothing showed which was in front.',
+            { list: [
+                'Grey edge — furniture. A window, the palette, the toolbar, a button waiting to be used. It floats above your work and it is not part of it.',
+                'Coloured edge — a node, in its family\'s colour: yellow for values, purple for rooms and worlds, pink for the panels that watch, blue for what you bring in, and so on. The card\'s little square icon carries the same colour, so the family is readable at a glance instead of spelled out in small type.',
+                'Cyan — you. Selected, hovered, or focused. Because nothing else is cyan any more, the thing you are working on is the brightest thing on screen.',
+                'Port colours — the kind of value a wire carries: a colour, a number, a texture. Unchanged, and the wires match their ports.'
+            ] },
+            'A window shows a stripe along its top edge in the colour of the node it belongs to, and names that family above its title — "the room", not the code\'s internal name. So when you open a World node\'s window, the purple stripe ties it back to the purple card sitting on the canvas behind it: one node, two views of it.',
+            'Windows also tell you their state now: a pinned window says so in its header, and the buttons in a window header are quiet until you reach for them, with Close turning red so it never gets pressed by accident.'
+        ],
+        tags: ['raw', 'ui', 'colour', 'families', 'windows', 'nodes', 'reading', 'design'],
+        updated: '2026-08-18'
     }
 ]
 

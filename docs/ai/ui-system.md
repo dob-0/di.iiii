@@ -4,6 +4,28 @@ The single source of truth for every visual decision in the Studio editor and al
 Read this before touching any color, spacing, radius, blur, or shadow. Do not derive values from
 inspection — copy them from this table. The goal is a single visual family across every surface.
 
+## Scope: the Raw canvas is governed elsewhere (2026-08-18)
+
+This document governs Studio's editor and the panels around it. It does **not** govern the Raw
+lane's canvas surfaces — the graph cards, the floating panel windows, the node palette, the
+canvas HUD. Those are square by design and are governed by one rule, stated and enforced in
+`src/raw/styles/colourRoles.test.js`:
+
+| Role | Meaning |
+|------|---------|
+| Neutral edge over a lifted fill | furniture — windows, palette, topbar, HUD, resting controls |
+| Family hue | what a node **is** — card edge + icon (`--card-family`), and the top stripe of the window hosting it (`--window-accent`) |
+| Cyan | interaction only — selected, hover, focus |
+| Port hue | data type — wires and port dots |
+
+Why the split rather than one table for everything: on Raw's black canvas a shadow carries no
+depth (measured — a black shadow on a black ground is invisible), so the Panel family's
+`0 12px 40px rgba(0,0,0,0.55)` cannot do the work it does over Studio's lighter chrome; depth
+there comes from a lifted fill plus a 1px top highlight. And a rounded, blurred window would
+read as a *different kind of object from the cards it sits among*, which is the ambiguity the
+rule exists to remove. Do not "fix" Raw's `border-radius: 0` to `6px` by pointing at the radius
+table below; that table applies to Studio surfaces.
+
 ---
 
 ## The Two Surface Families

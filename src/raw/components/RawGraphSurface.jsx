@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
     arePortsCompatible,
+    getNodeFamily,
     getNodeInputs,
     getNodeOutputs,
     getNodeType,
@@ -71,22 +72,30 @@ export const lodTierForZoom = (zoom, previous = null) => {
     if (zoom < bump(LOD_LABELS)) return 'compact'
     return 'full'
 }
-// Below this zoom a whole card is a few pixels across, so every control on it
-// lands under the same fingertip. The enter control is hidden there: it is a
-// single tap and it changes scope, so a mis-hit while reaching for a port sent
-// you inside a node instead of starting a wire. Fitting a large graph to a
-// phone lands around 0.2, well inside this.
-const CARD_CONTROL_MIN_ZOOM = 0.5
+// The door's touch halo only ever extends LEFT, into the gutter between
+// columns. That gutter is 100 graph units (COL 300 minus CARD_WIDTH 200), and a
+// 44-screen-pixel halo is 44/zoom graph units — below this zoom it would reach
+// across into the previous column's output-port strip, and because the door
+// stops propagation the press would enter the wrong node. Below it the door is
+// still there and still clickable; it just has no halo.
+const DOOR_HALO_MIN_ZOOM = 0.44
+// Screen width the door occupies to the left of its card, reserved by the fit
+// so the leftmost card's door is not clipped by the surface's overflow.
+const DOOR_WIDTH_PX = 34
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
-const cardHeight = (node) => {
-    const rows = Math.max(getNodeInputs(node).length, getNodeOutputs(node).length, 1)
+// scopeNodes is threaded through every geometry helper because a container's
+// ports are DERIVED from the doorway nodes inside it — see getNodeInputs. Miss
+// one of these call sites and the container grows a socket the card does not
+// draw, or draws one the wires do not land on.
+const cardHeight = (node, scopeNodes = null) => {
+    const rows = Math.max(getNodeInputs(node, scopeNodes).length, getNodeOutputs(node, scopeNodes).length, 1)
     return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + 8
 }
 
-const inputPortCenter = (node, portId) => {
-    const inputs = getNodeInputs(node)
+const inputPortCenter = (node, portId, scopeNodes = null) => {
+    const inputs = getNodeInputs(node, scopeNodes)
     const idx = inputs.findIndex((p) => p.id === portId)
     if (idx < 0) return { x: node.graphX, y: node.graphY + HEADER_HEIGHT }
     return {
@@ -95,8 +104,8 @@ const inputPortCenter = (node, portId) => {
     }
 }
 
-const outputPortCenter = (node, portId) => {
-    const outputs = getNodeOutputs(node)
+const outputPortCenter = (node, portId, scopeNodes = null) => {
+    const outputs = getNodeOutputs(node, scopeNodes)
     const idx = outputs.findIndex((p) => p.id === portId)
     if (idx < 0) return { x: node.graphX + CARD_WIDTH, y: node.graphY + HEADER_HEIGHT }
     return {
@@ -123,15 +132,37 @@ export default function RawGraphSurface({
     // so on a narrow screen the graph landed jammed against the sheet with an
     // empty band above it — it was fitting a rectangle the user could not see.
     bottomInset = 0,
+    // Where the mounted panel windows are docked, so the fit can land the graph
+    // in the free band instead of centring it underneath one. See
+    // getGraphEdgeInsets — a corridor that is wide enough but off-centre still
+    // buries the cards, which is how a node ends up looking like it has no
+    // connectors. Studio passes nothing and keeps the old full-box behaviour.
+    contentInsets = null,
     // Skips the auto-fit and starts at a fixed zoom. Only for tests and for
     // callers that restore a saved viewport; normal use fits on mount.
     initialZoom = null,
     nodes = [],
     edges = [],
+    // How many nodes each node contains, by node id. Optional and defaulted:
+    // Studio wraps this component read-only and passes nothing, and must keep
+    // rendering exactly as before.
+    childCounts = null,
+    // EVERY node in the document, not the scoped card list. A container's ports
+    // come from the doorway nodes INSIDE it, and those live in a different
+    // scope from the container's own card — so the scoped list would find none
+    // of them and the feature would fail in total silence, with every unit test
+    // still green. Optional and defaulted: Studio wraps this read-only.
+    portScopeNodes = null,
     selectedNodeId = null,
     emptyHint = 'Cursor is material. Double-click to place nodes.',
     onSelectNode,
     onEnterNode,
+    // Optional, like every other handler here: Studio wraps this read-only and
+    // passes none, so no menu is offered there at all.
+    onPromotePort = null,
+    // Builds a worked example on a blank canvas. Optional: Studio wraps this
+    // read-only and offers nothing.
+    onMakeScene = null,
     onCreateEdge,
     onDeleteEdge,
     onDeleteNode,
@@ -160,6 +191,8 @@ export default function RawGraphSurface({
     const pinchRef = useRef(null)
     const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 })
     const hasFitRef = useRef(false)
+    const lastFitViewportRef = useRef(null)
+    const lastFitInsetsRef = useRef(null)
     const [panX, setPanX] = useState(60)
     const [panY, setPanY] = useState(60)
     const [zoom, setZoom] = useState(initialZoom ?? 1)
@@ -209,12 +242,19 @@ export default function RawGraphSurface({
     }
 
     // Bounding box of a set of nodes, in graph coordinates.
+    //
+    // The left edge includes the door, which hangs OUTSIDE the card. Without
+    // this the leftmost card's door is half off-screen after a fit-all, because
+    // .raw-graph-surface clips overflow and the bounds knew nothing about it.
+    // The door is counter-scaled, so its width in graph units grows as the view
+    // shrinks — hence the division rather than a constant.
+    const doorGutter = () => DOOR_WIDTH_PX / Math.max(viewportRef.current.zoom, FIT_MIN_USEFUL_ZOOM)
     const boundsOf = (subset) => {
         if (!subset.length) return null
-        const minX = Math.min(...subset.map((n) => n.graphX ?? 0))
+        const minX = Math.min(...subset.map((n) => (n.graphX ?? 0) - doorGutter()))
         const minY = Math.min(...subset.map((n) => n.graphY ?? 0))
         const maxX = Math.max(...subset.map((n) => (n.graphX ?? 0) + CARD_WIDTH))
-        const maxY = Math.max(...subset.map((n) => (n.graphY ?? 0) + cardHeight(n)))
+        const maxY = Math.max(...subset.map((n) => (n.graphY ?? 0) + cardHeight(n, portScopeNodes)))
         return { minX, minY, maxX, maxY, width: Math.max(1, maxX - minX), height: Math.max(1, maxY - minY) }
     }
 
@@ -231,15 +271,21 @@ export default function RawGraphSurface({
         //
         // bottomInset IS subtracted: the selection sheet is position:fixed
         // against the viewport, so it genuinely overlaps this element's box.
-        const bottom = Math.max(0, bottomInset)
+        // Docked windows are subtracted the same way: the band the graph can
+        // actually occupy is the element minus the chrome AND minus whatever
+        // is parked against its edges.
+        const dockLeft = Math.max(0, contentInsets?.left || 0)
+        const dockRight = Math.max(0, contentInsets?.right || 0)
+        const dockTop = Math.max(0, contentInsets?.top || 0)
+        const bottom = Math.max(0, bottomInset) + Math.max(0, contentInsets?.bottom || 0)
         return {
             width: rect.width,
             height: rect.height,
-            usableWidth: Math.max(1, rect.width - GRAPH_FIT_PADDING_PX * 2),
-            usableHeight: Math.max(1, rect.height - bottom - GRAPH_FIT_PADDING_PX * 2),
-            centerX: rect.width / 2,
+            usableWidth: Math.max(1, rect.width - dockLeft - dockRight - GRAPH_FIT_PADDING_PX * 2),
+            usableHeight: Math.max(1, rect.height - dockTop - bottom - GRAPH_FIT_PADDING_PX * 2),
+            centerX: dockLeft + (rect.width - dockLeft - dockRight) / 2,
             // Centre of the VISIBLE band, not of the element.
-            centerY: (rect.height - bottom) / 2
+            centerY: dockTop + (rect.height - dockTop - bottom) / 2
         }
     }
 
@@ -250,6 +296,9 @@ export default function RawGraphSurface({
         const cx = (bounds.minX + bounds.maxX) / 2
         const cy = (bounds.minY + bounds.maxY) / 2
         applyViewport(box.centerX - cx * nextZoom, box.centerY - cy * nextZoom, nextZoom)
+        // Remembered so a later change in docked windows can tell whether the
+        // person has moved the view since — see the re-fit effect below.
+        lastFitViewportRef.current = { ...viewportRef.current }
     }
 
     const zoomToFitBounds = (bounds, { maxZoom = 1 } = {}) => {
@@ -370,7 +419,7 @@ export default function RawGraphSurface({
                 const x = (node.graphX ?? 0) * vp.zoom + vp.panX
                 const y = (node.graphY ?? 0) * vp.zoom + vp.panY
                 const w = CARD_WIDTH * vp.zoom
-                const h = cardHeight(node) * vp.zoom
+                const h = cardHeight(node, portScopeNodes) * vp.zoom
                 return x + w > 0 && x < box.width && y + h > 0 && y < box.height - Math.max(0, bottomInset)
             }).length
             : 0
@@ -401,14 +450,38 @@ export default function RawGraphSurface({
     // in here made every create/delete miss the guard and re-fit, which is
     // exactly the yank the comment above forbids.
     const scopeKey = nodes.length ? `scope:${nodes[0]?.parentId || 'root'}` : ''
+    const insetKey = `${contentInsets?.left || 0}:${contentInsets?.right || 0}:${contentInsets?.top || 0}:${contentInsets?.bottom || 0}`
     useEffect(() => {
         if (initialZoom !== null) return
         if (hasFitRef.current === scopeKey || !containerRef.current || nodes.length === 0) return
         if (!visibleBox()) return
         fitGraph()
         hasFitRef.current = scopeKey
+        lastFitInsetsRef.current = insetKey
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [scopeKey])
+
+    // Windows mount a beat after the graph does, so the first fit runs against
+    // the windows that happen to exist YET — on a seeded workspace that was one
+    // of two, and the graph got centred into the space the second window was
+    // about to occupy. Re-fit when the docked edges change, but ONLY while the
+    // view is still exactly where that fit left it: once a person has panned or
+    // zoomed, moving the graph under them is the yank the single-fit guard
+    // above exists to prevent.
+    useEffect(() => {
+        if (initialZoom !== null) return
+        if (hasFitRef.current !== scopeKey) return
+        if (lastFitInsetsRef.current === insetKey) return
+        const settled = lastFitViewportRef.current
+        const now = viewportRef.current
+        const untouched = settled
+            && Math.abs(settled.panX - now.panX) < 0.5
+            && Math.abs(settled.panY - now.panY) < 0.5
+            && Math.abs(settled.zoom - now.zoom) < 0.001
+        lastFitInsetsRef.current = insetKey
+        if (untouched) fitGraph()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [insetKey])
 
     // The fit notice is transient — it reports on one fit, not a state.
     useEffect(() => {
@@ -559,8 +632,8 @@ export default function RawGraphSurface({
         const radius = PORT_GRAB_RADIUS_PX / viewportRef.current.zoom
         let best = null
         let bestDistance = radius
-        for (const port of getNodeOutputs(node)) {
-            const centre = outputPortCenter(node, port.id)
+        for (const port of getNodeOutputs(node, portScopeNodes)) {
+            const centre = outputPortCenter(node, port.id, portScopeNodes)
             const distance = Math.hypot(centre.x - point.x, centre.y - point.y)
             if (distance > bestDistance) continue
             bestDistance = distance
@@ -607,9 +680,9 @@ export default function RawGraphSurface({
         let bestDistance = radius
         for (const node of nodes) {
             if (node.id === wire.fromNodeId) continue
-            for (const port of getNodeInputs(node)) {
+            for (const port of getNodeInputs(node, portScopeNodes)) {
                 if (!arePortsCompatible(wire.fromPortType, port.type)) continue
-                const center = inputPortCenter(node, port.id)
+                const center = inputPortCenter(node, port.id, portScopeNodes)
                 const distance = Math.hypot(center.x - point.x, center.y - point.y)
                 if (distance > bestDistance) continue
                 bestDistance = distance
@@ -622,9 +695,67 @@ export default function RawGraphSurface({
     const isDraggingWire = Boolean(pendingWire)
     const isDraggingNode = Boolean(draggingNodeId)
 
+    // --- expose a port on the container ------------------------------------
+    // Press and hold a port dot (or right-click it) and offer to put it on the
+    // container's face, which places the doorway node and its wire for you.
+    // Honest about itself: a long press advertises to nobody. It is a shortcut
+    // for the gesture people who know it will reach for, not a discovery
+    // mechanism — placing an In/Out node by hand from the palette remains the
+    // way you FIND this.
+    const [portMenu, setPortMenu] = useState(null)
+    const longPressRef = useRef(null)
+
+    const cancelLongPress = () => {
+        if (!longPressRef.current) return
+        clearTimeout(longPressRef.current.timer)
+        window.removeEventListener('pointerup', longPressRef.current.cancel)
+        window.removeEventListener('pointercancel', longPressRef.current.cancel)
+        window.removeEventListener('pointermove', longPressRef.current.move)
+        longPressRef.current = null
+    }
+
+    const openPortMenu = (next) => {
+        // A press on an output dot has already armed a wire, and a press on an
+        // input dot falls through to the card drag. Left armed, either creates a
+        // plausible-looking wrong edge on the next release anywhere on the
+        // canvas, because resolveWireDrop snaps within 36 screen pixels.
+        pendingWireRef.current = null
+        setPendingWire(null)
+        setDraggingNodeId(null)
+        cancelLongPress()
+        setPortMenu(next)
+    }
+
+    const armLongPress = (event, node, port, dir) => {
+        if (!onPromotePort) return
+        const startX = event.clientX
+        const startY = event.clientY
+        // Window-level, not on the dot: handleOutputPointerDown releases pointer
+        // capture for every non-mouse pointer, so on touch the pointerup is
+        // delivered to whatever is under the finger. An element-level cancel
+        // would leave the timer armed and pop the menu half a second later over
+        // whatever was tapped next.
+        const cancel = () => cancelLongPress()
+        const move = (moveEvent) => {
+            if (Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) > 10) cancelLongPress()
+        }
+        const timer = setTimeout(() => {
+            openPortMenu({ node, port, dir, clientX: startX, clientY: startY })
+        }, 550)
+        longPressRef.current = { timer, cancel, move }
+        window.addEventListener('pointerup', cancel)
+        window.addEventListener('pointercancel', cancel)
+        window.addEventListener('pointermove', move)
+    }
+
+    useEffect(() => cancelLongPress, [])
+
     const shouldStartPan = (event) => {
         const target = event.target
         if (target?.closest?.('.raw-graph-zoom-controls')) return false
+        // The menu is a sibling of .raw-graph-stage, which carries the pan/zoom
+        // transform — without this, tapping an item pans the canvas.
+        if (target?.closest?.('.raw-graph-port-menu')) return false
         if (event.button === 1) return true
         if (event.button !== 0) return false
         return !target?.closest?.('.raw-graph-node-card')
@@ -752,16 +883,16 @@ export default function RawGraphSurface({
             const fromNode = nodeById.get(edge.fromNodeId)
             const toNode = nodeById.get(edge.toNodeId)
             if (!fromNode || !toNode) continue
-            const from = outputPortCenter(fromNode, edge.fromPort)
-            const to = inputPortCenter(toNode, edge.toPort)
-            const fromPort = getNodeOutputs(fromNode).find((p) => p.id === edge.fromPort)
+            const from = outputPortCenter(fromNode, edge.fromPort, portScopeNodes)
+            const to = inputPortCenter(toNode, edge.toPort, portScopeNodes)
+            const fromPort = getNodeOutputs(fromNode, portScopeNodes).find((p) => p.id === edge.fromPort)
             const color = fromPort ? getPortType(fromPort.type).color : '#999'
             out.push({ id: edge.id, from, to, color })
         }
         return out
     }, [edges, nodeById])
 
-    const pendingFromPos = pendingWire ? outputPortCenter(nodeById.get(pendingWire.fromNodeId) || {}, pendingWire.fromPort) : null
+    const pendingFromPos = pendingWire ? outputPortCenter(nodeById.get(pendingWire.fromNodeId) || {}, pendingWire.fromPort, portScopeNodes) : null
 
     const handleSectionDoubleClick = (event) => {
         if (!onDoubleClick) return
@@ -772,6 +903,9 @@ export default function RawGraphSurface({
         // graph. shouldStartPan already excludes these controls from panning;
         // node creation needs the same exclusion.
         if (event.target?.closest?.('.raw-graph-zoom-controls')) return
+        // …and the port menu, or a double-tap on an item opens the create
+        // palette over the graph behind it.
+        if (event.target?.closest?.('.raw-graph-port-menu')) return
         const graphPoint = clientPointToGraphPoint(event.clientX, event.clientY)
         onDoubleClick({ clientX: event.clientX, clientY: event.clientY, graphX: graphPoint.x, graphY: graphPoint.y })
     }
@@ -844,7 +978,16 @@ export default function RawGraphSurface({
                 </button>
             ) : null}
             {nodes.length === 0 ? (
-                <div className="raw-empty-state" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', color: '#aaa', pointerEvents: 'none' }}>{emptyHint}</div>
+                // A blank workspace opens in ZEN, where there is NO topbar — so
+                // the ⋯ menu, and everything in it, does not exist for the
+                // person most likely to need it. The one offer that matters has
+                // to live here, on the canvas they are actually looking at.
+                <div className="raw-empty-state">
+                    <p>{emptyHint}</p>
+                    {onMakeScene ? (
+                        <button type="button" onClick={onMakeScene}>Make me a scene</button>
+                    ) : null}
+                </div>
             ) : null}
             <div
                 className="raw-graph-stage"
@@ -897,12 +1040,13 @@ export default function RawGraphSurface({
                         ) : null}
                     </svg>
                     {nodes.map((node) => {
-                        const inputs = getNodeInputs(node)
-                        const outputs = getNodeOutputs(node)
+                        const inputs = getNodeInputs(node, portScopeNodes)
+                        const outputs = getNodeOutputs(node, portScopeNodes)
+                        const childCount = childCounts?.get(node.id) || 0
                         // `h` and the card's left/top/width come from the same
                         // geometry the wires use, at EVERY tier. The tier below
                         // only decides what is drawn inside this box.
-                        const h = cardHeight(node)
+                        const h = cardHeight(node, portScopeNodes)
                         const isSelected = node.id === selectedNodeId
                         const typeDef = getNodeType(node.typeId)
                         const showPorts = tier === 'full' || tier === 'compact'
@@ -917,7 +1061,14 @@ export default function RawGraphSurface({
                                     top: node.graphY,
                                     width: CARD_WIDTH,
                                     height: h,
-                                    cursor: draggingNodeId === node.id ? 'grabbing' : 'grab'
+                                    cursor: draggingNodeId === node.id ? 'grabbing' : 'grab',
+                                    // One hue per card, handed to the stylesheet, which
+                                    // decides where it lands (edge, icon) and at what
+                                    // strength. Omitted when the type has no family, so
+                                    // every fallback in raw.css still applies.
+                                    ...(getNodeFamily(node.typeId)?.color
+                                        ? { '--card-family': getNodeFamily(node.typeId).color }
+                                        : {})
                                 }}
                                 role="button"
                                 tabIndex={0}
@@ -949,6 +1100,44 @@ export default function RawGraphSurface({
                                 onKeyDown={(event) => handleNodeKeyDown(event, node.id)}
                                 onDoubleClick={(event) => { event.stopPropagation(); onEnterNode?.(node.id) }}
                             >
+                                {/* The door. Hangs off the card's LEFT edge, counter-scaled so
+                                    it is the same size on screen at every zoom — a control that
+                                    shrinks with the graph is the bug this replaces. Left, not
+                                    in the header, because nearestOutputPort's grab radius is 28
+                                    SCREEN pixels and covers the card's right-hand end once the
+                                    graph is zoomed out, so a door there competes with starting
+                                    a wire. Never gated on having contents: RawEditor routes this
+                                    same control to reopen a closed panel window, and an
+                                    un-enterable empty container is a box that can never be
+                                    filled. */}
+                                {onEnterNode && tier !== 'block' ? (
+                                    <div
+                                        className="raw-graph-node-door-anchor"
+                                        style={{ transform: `scale(${1 / Math.max(zoom, FIT_MIN_USEFUL_ZOOM)})` }}
+                                    >
+                                        <button
+                                            type="button"
+                                            className={`raw-graph-node-door${childCount > 0 ? ' has-contents' : ''}${zoom >= DOOR_HALO_MIN_ZOOM ? ' has-halo' : ''}`}
+                                            title={childCount > 0
+                                                ? `Enter ${node.label} — holds ${childCount} node${childCount === 1 ? '' : 's'}`
+                                                : `Enter ${node.label}`}
+                                            aria-label={childCount > 0
+                                                ? `Enter ${node.label}, holds ${childCount} node${childCount === 1 ? '' : 's'}`
+                                                : `Enter ${node.label}`}
+                                            onPointerDown={(event) => event.stopPropagation()}
+                                            // The card's own dblclick also enters; without this
+                                            // a double-tap on the door pushes the same scope
+                                            // twice and takes two presses to leave.
+                                            onDoubleClick={(event) => event.stopPropagation()}
+                                            onClick={(event) => { event.stopPropagation(); onEnterNode?.(node.id) }}
+                                        >
+                                            {childCount > 0 ? (
+                                                <span className="raw-graph-node-child-count">{childCount}</span>
+                                            ) : null}
+                                            <span aria-hidden="true">›</span>
+                                        </button>
+                                    </div>
+                                ) : null}
                                 <header className="raw-graph-node-header">
                                     {activeMarkerTypeIds.includes(node.typeId) && (
                                         <button
@@ -966,7 +1155,15 @@ export default function RawGraphSurface({
                                         <span className="raw-graph-node-label">{node.label}</span>
                                     ) : null}
                                     {tier === 'full' ? (
-                                        <span className="raw-graph-node-category">{typeDef?.category || ''}</span>
+                                        // The family, not the category: a studio card used to
+                                        // say "universe" here — the raw code taxonomy leaking
+                                        // onto the canvas. One vocabulary with the palette.
+                                        <span
+                                            className="raw-graph-node-category"
+                                            style={{ color: getNodeFamily(node.typeId)?.color || undefined }}
+                                        >
+                                            {getNodeFamily(node.typeId)?.label || typeDef?.category || ''}
+                                        </span>
                                     ) : null}
                                     {/* Entering a node used to be double-click only, cued by a
                                         hover-revealed chevron — so on a phone there was no
@@ -975,18 +1172,14 @@ export default function RawGraphSurface({
                                         `studio` node you cannot enter is an empty box. This is
                                         a real button now, always visible on coarse pointers —
                                         but not when the card is too small to aim at. */}
-                                    {zoom >= CARD_CONTROL_MIN_ZOOM ? (
-                                        <button
-                                            type="button"
-                                            className="raw-graph-node-enter-hint"
-                                            title={`Enter ${node.label}`}
-                                            aria-label={`Enter ${node.label}`}
-                                            onPointerDown={(event) => event.stopPropagation()}
-                                            onClick={(event) => { event.stopPropagation(); onEnterNode?.(node.id) }}
-                                        >
-                                            ›
-                                        </button>
-                                    ) : null}
+                                    {/* The way in is NOT here any more — see the door on the
+                                        card's left edge below. In the header it lived inside
+                                        the graph's own transform, so at the zoom the auto-fit
+                                        lands an oversized graph on it measured 7x7 screen
+                                        pixels: present in the DOM, unusable in the browser, and
+                                        a DOM-presence test passes anyway. It also sat inside
+                                        nearestOutputPort's 28-screen-pixel grab radius, which
+                                        covers the card's right-hand end at low zoom. */}
                                 </header>
                                 {/* This box keeps its exact height at every tier — it is
                                     part of the geometry the wires are drawn from. Only its
@@ -1015,11 +1208,22 @@ export default function RawGraphSurface({
                                             style={{ top: idx * PORT_ROW_HEIGHT }}
                                         >
                                             <span
-                                                className="raw-graph-port-dot raw-graph-port-dot--in"
+                                                // While a wire is being dragged, every input dot
+                                                // says whether it can take it — before this, an
+                                                // incompatible drop was pure silence and the only
+                                                // feedback was nothing happening.
+                                                className={`raw-graph-port-dot raw-graph-port-dot--in${pendingWire ? (arePortsCompatible(pendingWire.fromPortType, port.type) ? ' is-compatible' : ' is-incompatible') : ''}`}
                                                 data-node-id={node.id}
                                                 data-port-id={port.id}
+                                                onPointerDown={(event) => armLongPress(event, node, port, 'in')}
+                                                onContextMenu={(event) => {
+                                                    if (!onPromotePort) return
+                                                    event.preventDefault()
+                                                    event.stopPropagation()
+                                                    openPortMenu({ node, port, dir: 'in', clientX: event.clientX, clientY: event.clientY })
+                                                }}
                                                 style={{ background: getPortType(port.type).color, left: -PORT_DOT_RADIUS }}
-                                                title={`${port.label || port.id} (${port.type})`}
+                                                title={`${port.label || port.id} (${port.type})${onPromotePort ? ' — hold to expose on the container' : ''}`}
                                             />
                                             {showPortLabels ? (
                                                 <span className="raw-graph-port-label">{port.label || port.id}</span>
@@ -1039,9 +1243,18 @@ export default function RawGraphSurface({
                                                 className="raw-graph-port-dot raw-graph-port-dot--out"
                                                 data-node-id={node.id}
                                                 data-port-id={port.id}
-                                                onPointerDown={(event) => handleOutputPointerDown(event, node, port)}
+                                                onPointerDown={(event) => {
+                                                    armLongPress(event, node, port, 'out')
+                                                    handleOutputPointerDown(event, node, port)
+                                                }}
+                                                onContextMenu={(event) => {
+                                                    if (!onPromotePort) return
+                                                    event.preventDefault()
+                                                    event.stopPropagation()
+                                                    openPortMenu({ node, port, dir: 'out', clientX: event.clientX, clientY: event.clientY })
+                                                }}
                                                 style={{ background: getPortType(port.type).color, right: -PORT_DOT_RADIUS }}
-                                                title={`${port.label || port.id} (${port.type})`}
+                                                title={`${port.label || port.id} (${port.type})${onPromotePort ? ' — hold to expose on the container' : ''}`}
                                             />
                                         </div>
                                     )) : null}
@@ -1050,6 +1263,35 @@ export default function RawGraphSurface({
                         )
                     })}
                 </div>
+                {/* Outside .raw-graph-stage on purpose: the stage carries the
+                    pan/zoom transform, and position:fixed inside a transformed
+                    ancestor resolves against that ancestor rather than the
+                    viewport — the menu would shrink with the graph and land in
+                    the wrong place. */}
+                {portMenu ? (
+                    <div
+                        className="raw-graph-port-menu"
+                        style={{ left: portMenu.clientX, top: portMenu.clientY }}
+                        role="menu"
+                    >
+                        <p className="raw-graph-port-menu-title">
+                            {portMenu.port.label || portMenu.port.id}
+                        </p>
+                        <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                                onPromotePort?.({ node: portMenu.node, port: portMenu.port, dir: portMenu.dir })
+                                setPortMenu(null)
+                            }}
+                        >
+                            Expose on the container
+                        </button>
+                        <button type="button" role="menuitem" onClick={() => setPortMenu(null)}>
+                            Cancel
+                        </button>
+                    </div>
+                ) : null}
         </div>
     )
 }

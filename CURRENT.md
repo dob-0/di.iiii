@@ -13,8 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- a free-disk floor for every write: 507 with headroom, never ENOSPC mid-file
-- the owed source.mic look: the probe was reading the meter's track, not its fill
+- "Make me a scene": something to open and copy
 
 Full detail: `PROGRESS.md`.
 

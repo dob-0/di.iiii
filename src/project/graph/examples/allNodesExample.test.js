@@ -7,11 +7,12 @@ import {
 } from './allNodesExample.js'
 import {
     arePortsCompatible,
+    createNode,
     getNodeInputs,
     getNodeOutputs,
     getNodeType
 } from '../../nodeRegistry.js'
-import { createNodeGraphContext, evaluateNodeInputs } from '../nodeGraphRuntime.js'
+import { createNodeGraphContext, evaluateNodeInputs, evaluateNodeOutput } from '../nodeGraphRuntime.js'
 
 const example = () => buildAllNodesExample({ workspaceTop: 64 })
 
@@ -100,6 +101,33 @@ describe('all-nodes example graph', () => {
             if (!exists) stale.push(entry.port)
         }
         expect(stale).toEqual([])
+    })
+
+    // The check that was missing, and whose absence let this file lie for
+    // twelve days: the old test only asked whether a port named in
+    // UNWIRABLE_PORTS still EXISTED, never whether it was still dead. So when
+    // the runtime grew cases for time.beat and geom.cube.bounds and webcam
+    // started publishing a live texture, the list stayed green while telling
+    // readers that working ports were decoration. Ask the runtime instead.
+    it('derives port liveness from the runtime, in both directions', () => {
+        const listed = new Set(UNWIRABLE_PORTS.map((entry) => entry.port))
+        const deadButUnlisted = []
+        const listedButAlive = []
+
+        for (const typeId of paletteTypeIds()) {
+            const type = getNodeType(typeId)
+            for (const port of (type?.outputs || [])) {
+                const node = createNode(typeId, { id: `probe-${typeId}` })
+                const context = createNodeGraphContext({ nodes: [node], edges: [] })
+                const isDead = evaluateNodeOutput(node, port.id, context) === undefined
+                const key = `${typeId}.${port.id}`
+                if (isDead && !listed.has(key)) deadButUnlisted.push(key)
+                if (!isDead && listed.has(key)) listedButAlive.push(key)
+            }
+        }
+
+        expect(deadButUnlisted, 'a placeable output carries nothing and is not documented as such').toEqual([])
+        expect(listedButAlive, 'documented as unwirable, but the runtime returns a value').toEqual([])
     })
 
     // The live part of the graph: the maths chain must actually resolve to
