@@ -51,7 +51,7 @@ describe('RawGraphSurface', () => {
         expect(cubeCard).toBeTruthy()
 
         const outputDot = colorCard.querySelector('span[title*="(color)"]')
-        const cubeColorDot = cubeCard.querySelector('span[title="Color (color)"]')
+        const cubeColorDot = cubeCard.querySelector('span[title="Colour (color)"]')
         expect(outputDot).toBeTruthy()
         expect(cubeColorDot).toBeTruthy()
 
@@ -767,7 +767,7 @@ describe('the blank canvas', () => {
         const { getByRole } = render(
             <RawGraphSurface nodes={[]} edges={[]} onMakeScene={onMakeScene} />
         )
-        fireEvent.click(getByRole('button', { name: /Make me a/ }))
+        fireEvent.click(getByRole('button', { name: /Build an example/ }))
         expect(onMakeScene).toHaveBeenCalledTimes(1)
     })
 
@@ -779,13 +779,13 @@ describe('the blank canvas', () => {
                 onMakeScene={vi.fn()}
             />
         )
-        expect(queryByRole('button', { name: /Make me a/ })).toBeNull()
+        expect(queryByRole('button', { name: /Build an example/ })).toBeNull()
     })
 
     // Studio wraps this read-only and passes no handler.
     it('offers nothing when there is nothing to offer', () => {
         const { queryByRole } = render(<RawGraphSurface nodes={[]} edges={[]} />)
-        expect(queryByRole('button', { name: /Make me a/ })).toBeNull()
+        expect(queryByRole('button', { name: /Build an example/ })).toBeNull()
     })
 })
 

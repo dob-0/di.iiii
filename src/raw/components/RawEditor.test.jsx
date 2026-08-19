@@ -227,7 +227,7 @@ describe('RawEditor canvas mode', () => {
 
 // Product decision 2026-07-17: Node 0 is an ordinary node — deleting it (via
 // either the Delete FAB or the graph canvas's own delete path) behaves exactly
-// like deleting any other node, no special confirmation. Only Reset Workspace
+// like deleting any other node, no special confirmation. Only Clear the canvas
 // (a document-wide wipe) still confirms.
 describe('RawEditor delete/reset confirmations', () => {
     const GUARD_STORAGE_KEY = 'test-node0-delete-guard'
@@ -280,28 +280,28 @@ describe('RawEditor delete/reset confirmations', () => {
         expect(deletedNode0).toBe(true)
     })
 
-    // Regression test for the 2026-07-17 audit: "Reset Workspace" wipes the
+    // Regression test for the 2026-07-17 audit: "Clear the canvas" wipes the
     // entire local document (every node/edge/window) and previously had NO
     // confirmation at all — this guard is unrelated to Node 0 and stays.
-    it('asks for confirmation before Reset Workspace, and aborts on cancel', () => {
+    it('asks for confirmation before clearing the canvas, and aborts on cancel', () => {
         seedSelectedNodeZero()
         const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
         render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
 
         fireEvent.click(screen.getByText('⋯'))
-        fireEvent.click(screen.getByText('Reset Workspace'))
+        fireEvent.click(screen.getByText('Clear the canvas'))
 
-        expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/Reset Workspace/))
+        expect(confirmSpy).toHaveBeenCalledWith(expect.stringMatching(/Clear this canvas/))
         expect(window.localStorage.getItem(GUARD_STORAGE_KEY)).not.toBeNull()
     })
 
-    it('resets the workspace via the overflow menu once the user confirms', () => {
+    it('clears the canvas via the overflow menu once the user confirms', () => {
         seedSelectedNodeZero()
         vi.spyOn(window, 'confirm').mockReturnValue(true)
         render(<RawEditor localStorageKey={GUARD_STORAGE_KEY} />)
 
         fireEvent.click(screen.getByText('⋯'))
-        fireEvent.click(screen.getByText('Reset Workspace'))
+        fireEvent.click(screen.getByText('Clear the canvas'))
 
         expect(screen.queryByText('Node 0')).toBeNull()
     })
@@ -340,7 +340,7 @@ describe('RawEditor live-world toggle', () => {
     const makeWorldNode = (id, parentId = null) => ({
         id,
         typeId: 'universe.world',
-        label: 'World',
+        label: 'Scene',
         parentId,
         values: { frame: { x: 0, y: 0, width: 200, height: 200, visible: true } }
     })
@@ -353,7 +353,7 @@ describe('RawEditor live-world toggle', () => {
         mockApplyLocalOps.mockClear()
         render(<RawEditor localStorageKey={LIVE_STORAGE_KEY} />)
 
-        fireEvent.click(screen.getByRole('button', { name: /Mark as live output for this scope/i }))
+        fireEvent.click(screen.getByRole('button', { name: /Make this the live Scene here/i }))
 
         const setLiveOp = mockApplyLocalOps.mock.calls
             .map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
@@ -373,7 +373,7 @@ describe('RawEditor live-world toggle', () => {
         )
         render(<RawEditor localStorageKey={LIVE_STORAGE_KEY} />)
 
-        expect(screen.getByRole('button', { name: /^Live output for this scope/i })).toBeTruthy()
+        expect(screen.getByRole('button', { name: /^The live Scene here/i })).toBeTruthy()
     })
 })
 
@@ -521,14 +521,14 @@ describe('RawEditor free-nesting palette create', () => {
         window.localStorage.setItem(
             FREE_NEST_STORAGE_KEY,
             makeWorkspaceDoc([
-                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+                { id: 'world-1', typeId: 'universe.world', label: 'Scene', parentId: null, values: {} }
             ])
         )
         mockApplyLocalOps.mockClear()
         render(<RawEditor localStorageKey={FREE_NEST_STORAGE_KEY} />)
 
         fireEvent.doubleClick(screen.getByTestId('mock-graph'))
-        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'World' } })
+        fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: 'Scene' } })
         fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
 
         expect(screen.queryByText(/Only one World per scope/)).toBeNull()
@@ -597,7 +597,7 @@ describe('RawEditor world title wiring', () => {
             makeWorkspaceDoc(
                 [
                     { id: 'title-1', typeId: 'value.string', label: 'Title', parentId: null, values: { value: 'Wired Title' } },
-                    { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: { title: 'Static Title' } }
+                    { id: 'world-1', typeId: 'universe.world', label: 'Scene', parentId: null, values: { title: 'Static Title' } }
                 ]
             ).replace('"edges":[]', '"edges":[{"id":"e1","fromNodeId":"title-1","fromPort":"out","toNodeId":"world-1","toPort":"title"}]')
         )
@@ -664,7 +664,7 @@ describe('RawEditor stream.monitor panel', () => {
 })
 
 // A window and its graph card are two views of ONE node, and nothing used to
-// say so: the card said "the room" in the family's colour while the window said
+// say so: the card said "the scene" in the family's colour while the window said
 // UNIVERSE.WORLD in grey, and both wore the same cyan frame. The window now
 // carries the family's word and the family's hue.
 describe('RawEditor window identity', () => {
@@ -678,13 +678,13 @@ describe('RawEditor window identity', () => {
         window.localStorage.setItem(
             IDENTITY_KEY,
             makeWorkspaceDoc([
-                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+                { id: 'world-1', typeId: 'universe.world', label: 'Scene', parentId: null, values: {} }
             ])
         )
         render(<RawEditor localStorageKey={IDENTITY_KEY} />)
 
-        const dialog = screen.getByRole('dialog', { name: 'World' })
-        expect(dialog.textContent).toContain('the room')
+        const dialog = screen.getByRole('dialog', { name: 'Scene' })
+        expect(dialog.textContent).toContain('the scene')
         expect(dialog.textContent).not.toContain('universe.world')
     })
 
@@ -692,12 +692,12 @@ describe('RawEditor window identity', () => {
         window.localStorage.setItem(
             IDENTITY_KEY,
             makeWorkspaceDoc([
-                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+                { id: 'world-1', typeId: 'universe.world', label: 'Scene', parentId: null, values: {} }
             ])
         )
         render(<RawEditor localStorageKey={IDENTITY_KEY} />)
 
-        const dialog = screen.getByRole('dialog', { name: 'World' })
+        const dialog = screen.getByRole('dialog', { name: 'Scene' })
         // getNodeFamily('universe.world') → the 'room' family
         expect(dialog.style.getPropertyValue('--window-accent')).toBe('#bd93f9')
     })
@@ -768,7 +768,7 @@ describe('RawEditor world scope entry', () => {
         window.localStorage.setItem(
             ENTER_STORAGE_KEY,
             makeWorkspaceDoc([
-                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+                { id: 'world-1', typeId: 'universe.world', label: 'Scene', parentId: null, values: {} }
             ])
         )
         render(<RawEditor localStorageKey={ENTER_STORAGE_KEY} />)
@@ -784,7 +784,7 @@ describe('RawEditor world scope entry', () => {
         window.localStorage.setItem(
             ENTER_STORAGE_KEY,
             makeWorkspaceDoc([
-                { id: 'world-1', typeId: 'universe.world', label: 'World', parentId: null, values: {} }
+                { id: 'world-1', typeId: 'universe.world', label: 'Scene', parentId: null, values: {} }
             ])
         )
         mockApplyLocalOps.mockClear()

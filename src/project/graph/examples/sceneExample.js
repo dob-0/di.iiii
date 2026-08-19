@@ -23,11 +23,11 @@ const WINDOW_BAND = 300
 
 export const SCENE_EXAMPLE_CUBE_COLOR = '#ff8a3d'
 
-const HOW = `A room, with things standing in it.
+const HOW = `A scene, with things standing in it.
 
-· double-tap the canvas → add a cube
+· double-tap the canvas for the palette
 · drag your own .glb onto the canvas
-· drag dot to dot to wire two cards
+· drag port to port to wire two cards
 · press › on a card to go inside it`
 
 /**
@@ -59,11 +59,11 @@ export function buildSceneExample({ parentId = null, workspaceTop = 160 } = {}) 
 
     // The room itself, open so the scene is visible the moment it is made.
     add('world', 'universe.world', {
-        label: 'The room',
+        label: 'Scene',
         col: 2,
         row: 0,
         values: {
-            title: 'The room',
+            title: 'Scene',
             bgColor: '#0b2330',
             frame: { x: 512, y: 88, width: 560, height: 330, visible: true, zIndex: 7 }
         }
@@ -82,7 +82,7 @@ export function buildSceneExample({ parentId = null, workspaceTop = 160 } = {}) 
     // A light, so the room is lit rather than flat. Its own defaults are fine;
     // it exists here so that "type light, pick it" has something to point at.
     add('light', 'world.light', {
-        label: 'The light',
+        label: 'Light',
         col: 0,
         row: 2,
         values: {
@@ -95,14 +95,14 @@ export function buildSceneExample({ parentId = null, workspaceTop = 160 } = {}) 
     })
 
     add('colour', 'value.color', {
-        label: 'A colour',
+        label: 'Colour',
         col: 0,
         row: 3,
         values: { value: SCENE_EXAMPLE_CUBE_COLOR }
     })
 
     add('cube', 'geom.cube', {
-        label: 'A cube',
+        label: 'Cube',
         col: 1,
         row: 2,
         values: {
@@ -116,7 +116,7 @@ export function buildSceneExample({ parentId = null, workspaceTop = 160 } = {}) 
     // exactly the state a person meets after placing one — better met here,
     // beside an instruction, than alone on a blank canvas.
     add('model', 'geom.model', {
-        label: 'Your own model goes here',
+        label: 'Model',
         col: 1,
         row: 3,
         values: {
