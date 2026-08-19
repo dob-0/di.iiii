@@ -74,7 +74,52 @@ advisory resolved. Then it's a genuinely free upgrade — take it.
 
 ---
 
-## eslint 9 → 10 / the 7 `brace-expansion` "high" findings — dev-only, blocked upstream
+## eslint 9 → 10 — TAKEN 2026-08-19 (was parked; taken on a narrower route than the park allowed)
+
+**Resolved. 10.8.1 is in, and it clears 6 of the 7 highs — not all 7.**
+`npm audit` in this tree now reports **one** `brace-expansion` high, down from
+seven. eslint's own chain (`eslint`, `@eslint/eslintrc`, `@eslint/config-array`,
+`minimatch@10`) resolves `brace-expansion@5.0.9`, which is patched. The survivor
+is `eslint-plugin-jsx-a11y` and `eslint-plugin-react` → `minimatch@3.1.5` →
+`brace-expansion@1.1.16`, and it stays until those two plugins drop minimatch 3.
+Still dev-only, still never bundled, still outside the CI gate.
+
+**The park condition did NOT fire — this was taken anyway, deliberately.** Neither
+plugin declares an eslint 10 peer: `eslint-plugin-react@7.37.5` (latest) still
+caps at `^9.7`, `eslint-plugin-jsx-a11y@6.10.2` (latest) at `^9`. Instead of
+`--legacy-peer-deps` — which the old verdict forbade, and rightly, because it
+disables peer checking for the *whole* install — the peer is forced for exactly
+those two packages:
+
+```json
+"overrides": {
+    "eslint-plugin-jsx-a11y": { "eslint": "$eslint" },
+    "eslint-plugin-react":    { "eslint": "$eslint" }
+}
+```
+
+This is what the old verdict's ban was protecting against, scoped down to two
+packages instead of the whole tree. The `brace-expansion` override it also
+banned is still not present — that ban stands untouched.
+
+**One real incompatibility surfaced and was fixed.** `eslint-plugin-react`'s
+`version: 'detect'` auto-detection calls `context.getFilename()`, removed in
+ESLint 10, so lint died on the first file. `eslint.config.js` now pins
+`react: { version: '18.3' }` to match `package.json`. Keep the two in step.
+
+**The residual risk, stated plainly:** the plugins are running against a major
+they do not claim to support. `npm run lint` across `src serverXR scripts shared`
+is green — 0 errors, 31 pre-existing warnings, same as on eslint 9 — so every
+rule this repo actually exercises works. A rule that isn't currently triggered
+could still break on some future file. That failure mode is a **loud lint error
+in CI**, never a silent production bug; eslint does not ship.
+
+**Re-check when:** `eslint-plugin-react` and `eslint-plugin-jsx-a11y` declare an
+eslint 10 peer. Then delete both `overrides` entries — not before, or the install
+goes back to failing peer resolution.
+
+**Historical — why it was parked (2026-07-28):**
+
 
 Bare `npm audit` reports 7 highs. All 7 are one root cause —
 [GHSA-mh99-v99m-4gvg](https://github.com/advisories/GHSA-mh99-v99m-4gvg),
@@ -98,12 +143,13 @@ Both escape routes are closed:
   releases*. Upgrading means `--legacy-peer-deps` on the lint toolchain to
   silence a dev-only DoS. Not worth it.
 
-Verdict: **accept.** Do not add `--legacy-peer-deps`, and do not add an
-`overrides` entry for `brace-expansion` — it has already been proven to break
-`npm run lint`.
+Verdict at the time: **accept.** Do not add `--legacy-peer-deps`, and do not
+add an `overrides` entry for `brace-expansion` — it has already been proven to
+break `npm run lint`.
 
-**Re-check when:** `eslint-plugin-react` and `eslint-plugin-jsx-a11y` both
-declare an eslint 10 peer. Then upgrade all three together in one commit.
+**Re-check trigger (superseded 2026-08-19):** `eslint-plugin-react` and
+`eslint-plugin-jsx-a11y` both declare an eslint 10 peer. It never fired; the
+bump was taken via scoped overrides instead — see the top of this section.
 
 ---
 
