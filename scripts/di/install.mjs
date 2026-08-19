@@ -34,6 +34,36 @@ const run = (command, args, options = {}) => new Promise((resolve, reject) => {
 // wait on, while the once-a-day notice after `di up` must never hold the
 // terminal. Unbounded is the default only because that is what an explicit
 // install already was; nothing should call it unbounded from a start path.
+// Is `candidate` actually newer than `current`?
+//
+// The once-a-day notice compared the two strings for inequality, so any machine
+// whose version was not the latest release — including one AHEAD of it — was
+// told an update was available, and `di update` would have walked it backwards.
+// That is not hypothetical: the doc's own USB-stick path installs from a
+// `file://` artifact that no release feed knows about, and every test install is
+// in the same position.
+//
+// Numeric parts compare numerically; a prerelease loses to its own release
+// (0.4.0-rc is older than 0.4.0, newer than 0.3.1). Anything unparseable
+// compares as not-newer — a notice we cannot justify is one we do not print.
+export const isNewerVersion = (candidate, current) => {
+    const parse = (value) => {
+        const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/.exec(String(value || '').trim())
+        return match ? { nums: [+match[1], +match[2], +match[3]], pre: match[4] || null } : null
+    }
+    const a = parse(candidate)
+    const b = parse(current)
+    if (!a || !b) return false
+    for (let i = 0; i < 3; i += 1) {
+        if (a.nums[i] !== b.nums[i]) return a.nums[i] > b.nums[i]
+    }
+    if (a.pre === b.pre) return false
+    // Same numbers: the one without a prerelease tag is the released one.
+    if (!a.pre) return true
+    if (!b.pre) return false
+    return a.pre > b.pre
+}
+
 export const latestRelease = async ({ timeoutMs = 0 } = {}) => {
     const controller = timeoutMs > 0 ? new AbortController() : null
     const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null

@@ -396,6 +396,10 @@ app.use((req, res, next) => {
 const router = express.Router()
 router.use(express.static(PUBLIC_DIR))
 
+// `di up` sets DI_LOCAL=1. Read at request time rather than at boot so tests
+// can toggle it, which is why it is a function and not a constant.
+const isLocalInstall = () => process.env.DI_LOCAL === '1'
+
 const buildAuthState = ({
   authenticated = false,
   type = null,
@@ -840,7 +844,7 @@ router.get('/api/auth/session', async (req, res, next) => {
       // is a `di up` install on the artist's own machine (the CLI runner sets
       // DI_LOCAL=1). The client uses it to stop speaking hosted-product copy
       // ("sign in to edit", space quotas) to someone who owns the whole disk.
-      local: process.env.DI_LOCAL === '1',
+      local: isLocalInstall(),
       authenticated: Boolean(state.authenticated),
       type: isGuest ? 'guest' : (state.type || null),
       role: state.role || null,
@@ -851,7 +855,14 @@ router.get('/api/auth/session', async (req, res, next) => {
       expiresAt: state.session?.expiresAt || null,
       openSpaceId: getCommunalSpaceId(),
       sandboxSpaceId,
-      spaceLimit,
+      // null, not 3, on a local install. The comment above promises this page
+      // stops speaking quotas to someone who owns the disk, and canCreateSpace
+      // already ignores the limit here (requireAuth is off) — but the number
+      // was still sent, and SpaceHub renders it: "+ Create · 0/3" on a machine
+      // with no quota at all. SpaceHub already guards on Number.isFinite, so
+      // null is the value that makes the counter disappear rather than a
+      // second branch in the client.
+      spaceLimit: isLocalInstall() ? null : spaceLimit,
       ownedSpaceCount,
       canCreateSpace
     })

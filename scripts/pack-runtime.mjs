@@ -14,6 +14,14 @@
  *
  * What stays out: the root dependency tree (~1 GB with three.js, MUI, pdfjs and
  * playwright), every test, every doc, .git. An artist installs a product.
+ *
+ * And what a product is NOT: the studio's own pieces. The build runs under
+ * DI_PROFILE=local, which leaves out algovrithm (88 MB), the wcc microsite
+ * (25 MB) and di-studio.xyz's hosting furniture — see the local profile in
+ * vite.config.js for how, and why it cuts at the graph rather than deleting
+ * files after the fact. 123 MB of dist becomes 11 MB. `--full` builds the
+ * hosted shape instead, for anyone who wants the complete pieces on their own
+ * machine.
  */
 
 import { spawnSync } from 'node:child_process'
@@ -29,6 +37,8 @@ const OUT_DIR = path.join(ROOT, 'dist-runtime')
 
 const args = process.argv.slice(2)
 const skipBuild = args.includes('--no-build')
+const full = args.includes('--full')
+const profile = full ? 'hosted' : 'local'
 
 const log = (message) => process.stdout.write(`[pack] ${message}\n`)
 const die = (message) => { process.stderr.write(`[pack] ERROR: ${message}\n`); process.exit(1) }
@@ -56,11 +66,32 @@ const main = async () => {
     const archive = path.join(OUT_DIR, `${stageName}.tar.gz`)
 
     if (!skipBuild) {
-        log('building the app…')
-        run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build'], { shell: process.platform === 'win32' })
+        log(`building the app (${profile} profile)…`)
+        run(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build'], {
+            shell: process.platform === 'win32',
+            // DI_VERSION so the app announces the version it is actually
+            // packed as — the landing's identity card reads it at build time,
+            // and package.json is not the released number.
+            env: { ...process.env, DI_PROFILE: full ? '' : 'local', DI_VERSION: version }
+        })
     }
     if (!fs.existsSync(path.join(ROOT, 'dist', 'index.html'))) {
         die('dist/index.html is missing — build first, or drop --no-build')
+    }
+    // --no-build reuses whatever dist/ happens to be there, and the two
+    // profiles produce the same filenames. `npm run dev` or a deploy build
+    // leaves the hosted shape behind, so without this check `--no-build` would
+    // quietly pack 123 MB of the studio's own work into an artist's install
+    // and report the local profile in release.json.
+    const distHasHostedPieces = fs.existsSync(path.join(ROOT, 'dist', 'wcc'))
+        || fs.readdirSync(path.join(ROOT, 'dist', 'assets')).some(name => name.endsWith('.mp4'))
+    if (!full && distHasHostedPieces) {
+        die('dist/ was built without DI_PROFILE=local — it still carries the studio pieces.\n'
+            + '  rebuild:  DI_PROFILE=local npm run build\n'
+            + '  or pack the hosted shape on purpose:  npm run di:pack -- --full')
+    }
+    if (full && !distHasHostedPieces) {
+        die('--full asked for the complete pieces, but dist/ was built under DI_PROFILE=local. Rebuild without it.')
     }
 
     await fsp.rm(stage, { recursive: true, force: true })
@@ -88,31 +119,16 @@ const main = async () => {
     }
 
     // ── media ──
-    // The artifact ships complete: algovrithm's reels are part of the piece, and
-    // a build that renders a surface broken to save a download is not a product.
-    // That is affordable because those videos were re-encoded to the ~540p the
-    // piece actually shows (189 MB -> 65 MB); before that they were 205 MB of a
-    // 232 MB dist and leaving them out was the lesser evil.
-    // --lean drops them anyway, for a small artifact, and says exactly what it cost.
+    // Nothing to strip here any more. The build decided what exists: under the
+    // local profile the studio's pieces were never part of the graph, so there
+    // is no file to delete and no surface left referring to one. The old
+    // --lean removed .mp4 files afterwards and had to warn that the algovrithm
+    // surface would show missing media; that warning was the sign the cut was
+    // in the wrong place.
     if (args.includes('--lean')) {
-        const assetsDir = path.join(stage, 'dist', 'assets')
-        let dropped = 0
-        let bytes = 0
-        for (const entry of await fsp.readdir(assetsDir, { withFileTypes: true })) {
-            if (!entry.isFile() || !entry.name.endsWith('.mp4')) continue
-            const full = path.join(assetsDir, entry.name)
-            bytes += (await fsp.stat(full)).size
-            await fsp.rm(full, { force: true })
-            dropped += 1
-        }
-        if (dropped) {
-            log(`--lean: dropped ${dropped} videos (${(bytes / 1024 / 1024).toFixed(0)} MB) — the algovrithm reels`)
-            log('  that surface will show missing media in this build.')
-            await fsp.writeFile(path.join(stage, 'MISSING_MEDIA.txt'),
-                `${dropped} .mp4 files from src/algoVrithm/assets were left out of this build to keep the download small.\n`
-                + 'Everything else is complete. The algovrithm surface will show missing media.\n'
-                + 'Build without --lean to include them.\n')
-        }
+        die('--lean is gone: the default build no longer carries the studio pieces at all.\n'
+            + '  clean (11 MB):  npm run di:pack\n'
+            + '  everything:     npm run di:pack -- --full')
     }
 
     // Tests ship in the same directories as the code they cover — they are not
@@ -126,8 +142,12 @@ const main = async () => {
     }
     await dropTests(stage)
 
+    // profile is recorded because it is the difference between two artifacts
+    // with identical filenames, and `di status` has no other way to tell an
+    // artist which one they are running.
     await fsp.writeFile(path.join(stage, 'release.json'), `${JSON.stringify({
         version,
+        profile,
         packedAt: new Date().toISOString(),
         node: process.version
     }, null, 2)}\n`)
@@ -142,7 +162,7 @@ const main = async () => {
     await fsp.writeFile(path.join(OUT_DIR, 'checksums.txt'), `${digest}  ${path.basename(archive)}\n`)
 
     const { size } = await fsp.stat(archive)
-    log(`${path.relative(ROOT, archive)} — ${(size / 1024 / 1024).toFixed(1)} MB`)
+    log(`${path.relative(ROOT, archive)} — ${(size / 1024 / 1024).toFixed(1)} MB (${profile} profile)`)
     log(`sha256 ${digest}`)
 }
 

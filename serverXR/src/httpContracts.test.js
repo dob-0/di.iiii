@@ -2699,6 +2699,24 @@ describe('local-install truth (DI_LOCAL)', () => {
         expect(config.config.requireAuth).toBe(false)
     })
 
+    // The quota is the other half of the sentence this describe block is about,
+    // and it was still being sent: SpaceHub renders `spaceLimit` as "+ Create ·
+    // 0/3" whenever the number is finite, so a local install advertised a free
+    // tier it does not have. null is the value that removes the counter — the
+    // client already guards on Number.isFinite.
+    it('reports no space quota on a local install', async () => {
+        const server = await startServer({ requireAuth: false, extraEnv: { DI_LOCAL: '1' } })
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`)).json()
+        expect(session.spaceLimit).toBeNull()
+        expect(session.canCreateSpace).toBe(true)
+    })
+
+    it('still reports the free-tier quota on a hosted boot', async () => {
+        const server = await startServer({ requireAuth: true })
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`)).json()
+        expect(Number.isFinite(session.spaceLimit)).toBe(true)
+    })
+
     it('reports local: false on a hosted-style boot, with requireAuth mirrored on config', async () => {
         const server = await startServer({ requireAuth: true })
         const session = await (await fetch(`${server.baseUrl}/api/auth/session`)).json()

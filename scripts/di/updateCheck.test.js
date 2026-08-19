@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { latestRelease } from './install.mjs'
+import { isNewerVersion, latestRelease } from './install.mjs'
 // ?raw hands us the file's text without executing it — the ordering below is a
 // property of the source, and vitest serves this module over an http-scheme URL
 // so import.meta.url cannot be given to fs.
@@ -81,5 +81,42 @@ describe('the once-a-day update notice', () => {
         expect(body).not.toMatch(/await latestRelease\(\)/)
         // and the explicit command keeps its unbounded call
         expect(source.slice(end)).toMatch(/await latestRelease\(\)/)
+    })
+})
+
+// The notice used to fire on any string inequality, so a machine running
+// something the release feed has never heard of — a `file://` install from a
+// USB stick, a test build, anything ahead of the tag — was told to update, and
+// `di update` would have walked it backwards.
+describe('the update notice only fires forwards', () => {
+    it('announces a genuinely newer release', () => {
+        expect(isNewerVersion('0.4.0', '0.3.1')).toBe(true)
+        expect(isNewerVersion('v0.4.0', '0.3.1')).toBe(true)
+        expect(isNewerVersion('0.3.2', '0.3.1')).toBe(true)
+        expect(isNewerVersion('1.0.0', '0.99.99')).toBe(true)
+    })
+
+    it('stays quiet about the same version or an older one', () => {
+        expect(isNewerVersion('0.3.1', '0.3.1')).toBe(false)
+        expect(isNewerVersion('0.3.1', '0.4.0')).toBe(false)
+        expect(isNewerVersion('0.3.1', '0.4.0-rc')).toBe(false)
+        expect(isNewerVersion('0.9.9', '1.0.0')).toBe(false)
+    })
+
+    it('orders a prerelease against its own release', () => {
+        expect(isNewerVersion('0.4.0', '0.4.0-rc')).toBe(true)
+        expect(isNewerVersion('0.4.0-rc', '0.4.0')).toBe(false)
+    })
+
+    it('says nothing rather than guess at an unparseable version', () => {
+        expect(isNewerVersion('main', '0.3.1')).toBe(false)
+        expect(isNewerVersion('0.4.0', 'dev-local')).toBe(false)
+        expect(isNewerVersion('', '0.3.1')).toBe(false)
+    })
+
+    it('is what cli.mjs actually calls', () => {
+        const source = cliSource()
+        expect(source).toContain('isNewerVersion(release.version, current)')
+        expect(source).not.toContain('release.version !== current')
     })
 })

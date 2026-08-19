@@ -49,11 +49,21 @@ venue with no wifi runs exactly the same as one at a desk.
 uninstall physically cannot reach it. `di uninstall` removes the app and keeps
 your work; `di uninstall --with-data` is the only thing that deletes it.
 
-About 170 MB installed — a 103 MB download plus serverXR's production
-dependencies. (`npm run di:pack -- --lean` drops algovrithm's reels for a 32 MB
-artifact, and says so; that surface then shows missing media.) The repo's own
-`node_modules` is 877 MB, which is why an artist gets a built runtime rather
-than a checkout.
+About 70 MB installed — a 3.1 MB download plus serverXR's production
+dependencies. The repo's own `node_modules` is 877 MB, which is why an artist
+gets a built runtime rather than a checkout.
+
+It used to be 170 MB from a 103 MB download, because the artifact carried
+di-studio.xyz along with the program: algovrithm's 31 reels and scan (88 MB),
+the wcc exhibition microsite (25 MB), and the site's own hosting furniture —
+against ~10 MB of di.iiii. The build now runs under `DI_PROFILE=local`, which
+leaves those out of the graph rather than deleting the files afterwards (see
+the local profile in `vite.config.js` — the reels were reached through
+`raw/director/pieces.js`, the general tool, not through the piece's own route,
+which is why the old `--lean` had to warn that a surface would show missing
+media). `npm run di:pack -- --full` builds the complete hosted shape for
+anyone who wants the pieces on their own machine; `--lean` is gone, and says
+so if you pass it.
 
 Nothing is written outside `$HOME`. Nothing asks for sudo, on any OS.
 
@@ -215,7 +225,12 @@ looked nothing like a real install — see below.
 
 ## Not here yet
 
-`di sync` (phase 2), `di venue` with a QR for the room (phase 3), and the VJ
-output nodes (phase 4). Sync's hard part is not transport — it is that
-`PUT /scene` replaces a space wholesale and wipes its op-log, and `PUT /document`
-is last-write-wins with no version check.
+`di venue` with a QR for the room (phase 3) and the VJ output nodes (phase 4).
+
+`di sync` (phase 2) has landed — `di link` verifies a sync key against the
+remote and stores it 0600 with a ledger, `di sync <space>` reads both sides
+verbatim-or-refuses, and a diverged pair is refused in both directions. What
+made it hard was real and is fixed: `PUT /scene` replaced a space wholesale and
+wiped its op-log both ways, and `GET /scene` returned a rendering rather than
+the stored scene, so pull-then-push permanently deleted upstream entries this
+machine had merely not downloaded.

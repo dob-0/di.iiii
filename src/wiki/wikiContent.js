@@ -632,6 +632,7 @@ export const WIKI_ARTICLES = [
                 'Windows (PowerShell) — irm https://di-studio.xyz/get.ps1 | iex'
             ] },
             'Then type di up. It starts, opens in your browser, and you are in a Studio that looks exactly like the one online, with an empty Main Space waiting. di down stops it. di help lists the rest.',
+            'What arrives is di.iiii itself and nothing else — about a 3 MB download. The exhibitions and pieces that live on di-studio.xyz are not part of it: they are work made with di.iiii, not part of the tool, and carrying them would have made the download forty times larger for things you did not ask for. Your copy starts empty and fills with your own.',
             'This is meant for a laptop at a venue with bad wifi, a studio that would rather not keep its work on someone else’s server, and anyone who wants the piece to still open in ten years. Offline is the normal state, not a broken one. Nothing is sent anywhere: the one outbound request is a version check, at most once a day, which gives up after three seconds and never blocks anything — and the page loads no fonts or scripts from anywhere else, down to the 3D text labels, whose font ships with the install.',
             'Your work lives in a folder called .di in your home directory, deliberately kept apart from the app itself — so updating, rolling back, or removing di.iiii cannot touch it. di uninstall says as much, and leaves your spaces where they are.',
             { list: [
@@ -642,10 +643,10 @@ export const WIKI_ARTICLES = [
                 'di doctor — what this machine can and cannot do, and what to install if something is missing'
             ] },
             'It does not need admin rights, and it does not ask for a password. It runs as a single ordinary program, and if there is no suitable Node it quietly fetches its own rather than sending you away. Docker is there too, but only if you ask for it (di install --docker) — a container cannot reach things on your machine, so the surfaces that talk to your own tools (the agent board, a Claude installed on this computer) work in the ordinary mode and not in the container one.',
-            'Syncing a local space with di-studio.xyz is not here yet — for now, di backup and the space bundles on the Spaces page are how work moves between the two.'
+            'A local space can now be linked to one on di-studio.xyz: di link connects the two, and di sync compares them and moves work in whichever direction is safe — it refuses rather than guess when both sides have changed. di backup and the space bundles on the Spaces page are still there when you would rather carry a file.'
         ],
         tags: ['install', 'local', 'offline', 'cli', 'di', 'self-host', 'venue', 'backup'],
-        updated: '2026-08-10'
+        updated: '2026-08-19'
     },
     {
         id: 'keeper-node',

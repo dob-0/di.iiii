@@ -22,7 +22,7 @@ import path from 'node:path'
 import process from 'node:process'
 
 import { decideMode } from './detect.mjs'
-import { activate, latestRelease, pruneVersions, rollback, smokeTest, stageVersion } from './install.mjs'
+import { activate, isNewerVersion, latestRelease, pruneVersions, rollback, smokeTest, stageVersion } from './install.mjs'
 import { isWindows, paths } from './paths.mjs'
 import { probeAll, probeHealth } from './probe.mjs'
 import * as docker from './runner-docker.mjs'
@@ -145,7 +145,7 @@ const noticeNewVersion = async (home) => {
         // already running and printed.
         const release = await latestRelease({ timeoutMs: UPDATE_CHECK_TIMEOUT_MS })
         const current = installedVersion(home)
-        if (release.version && current && release.version !== current) {
+        if (release.version && current && isNewerVersion(release.version, current)) {
             say(ui.updateAvailable(current, release.version))
         }
     } catch {

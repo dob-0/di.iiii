@@ -31,7 +31,22 @@ const readGitValue = (args) => {
     }
 }
 
-const APP_VERSION = String(APP_PACKAGE?.version || '').trim() || '0.0.0'
+// package.json's version is not the released one — release.yml packs with
+// `--version=${tag}` so the artifact filename matches the tag the installer
+// resolves, and package.json was last touched at 0.2.0 while v0.3.1 shipped.
+// The landing's identity card reads this constant, so it announced 0.2.0 to
+// everyone on the released build. DI_VERSION (set by pack-runtime) and
+// GITHUB_REF_NAME (set by the tag build) are the versions that actually got
+// published; package.json stays the fallback for a plain dev build.
+// GITHUB_REF_NAME is the BRANCH on an ordinary push — the deploy workflow runs
+// on main, so an unguarded read would put "version: main" on the live landing.
+// Only a tag-shaped ref counts.
+const versionish = (value) => {
+    const cleaned = String(value || '').trim().replace(/^v/, '')
+    return /^\d+\.\d+\.\d+/.test(cleaned) ? cleaned : ''
+}
+const RELEASE_VERSION = versionish(process.env.DI_VERSION) || versionish(process.env.GITHUB_REF_NAME)
+const APP_VERSION = RELEASE_VERSION || String(APP_PACKAGE?.version || '').trim() || '0.0.0'
 const APP_GIT_BRANCH = readGitValue('branch --show-current') || readGitValue('rev-parse --abbrev-ref HEAD')
 const APP_GIT_COMMIT = readGitValue('rev-parse --short HEAD')
 
@@ -66,11 +81,138 @@ const emitInstallScriptsPlugin = () => ({
     name: 'emit-install-scripts',
     apply: 'build',
     generateBundle() {
+        // The install scripts are how a stranger reaches di-studio.xyz. Inside
+        // an install they would offer to install what is already installed.
+        if (LOCAL_PROFILE) return
         for (const [source, fileName] of [['install.sh', 'get.sh'], ['install.ps1', 'get.ps1']]) {
             const full = path.resolve(ROOT_DIR, source)
             if (!fs.existsSync(full)) continue
             this.emitFile({ type: 'asset', fileName, source: fs.readFileSync(full, 'utf8') })
         }
+    }
+})
+
+// ── the local profile ────────────────────────────────────────────────────────
+//
+// `DI_PROFILE=local` builds di.iiii the PROGRAM. The default build is
+// di-studio.xyz — the program plus the studio's own pieces, plus the hosting
+// furniture that only means anything on that domain — and that is 92% of the
+// download an artist gets from `curl … /get | sh`.
+//
+// What the studio's pieces cost, measured on a full build:
+//   88 MB   algovrithm — 31 reels (80.6) and scan.glb (7.4)
+//   25 MB   public/wcc — the Alla Virabyan exhibition microsite
+//   ~10 MB  di.iiii itself: js, wasm, css, fonts, draco, basis
+//
+// The reels are NOT pulled in by the algovrithm route. assetLibrary.js globs
+// its own assets/ folder eagerly, and raw/director/pieces.js imports that glob
+// — so the media bin rides in the main graph via the Raw director, a general
+// tool, and is emitted whether or not anything ever renders the piece. That is
+// why deleting .mp4 files after the build (the old --lean) was the only thing
+// that appeared to work, and why it had to print "this surface will show
+// missing media": it cut the files out from under a graph that still referred
+// to them.
+//
+// This cuts at the seams the code already has instead:
+//   the glob                → nothing to emit
+//   the piece's asset URLs  → nothing to fetch
+//   the piece's entry point → nothing to mount, so nothing looks broken
+//
+// The hosted build is untouched — no flag, no change. And a cut that misses is
+// an error, never a quiet full-size build: the transform below refuses rather
+// than shipping 88 MB while reporting success.
+const LOCAL_PROFILE = process.env.DI_PROFILE === 'local'
+
+const HOSTED_PIECE_STUB = '\0di-local:hosted-piece'
+const HOSTED_ASSET_STUB = '\0di-local:hosted-asset'
+
+// Entry points of pieces that belong to di-studio.xyz, not to a copy of the
+// program. Each is already a lazy() import, so stubbing one drops its whole
+// subtree — and, for algovrithm, closes the only path that could mount a
+// sequence whose model no longer has a URL.
+const HOSTED_PIECE_ENTRIES = [
+    'src/algoVrithm/AlgoVrithmExperience.jsx',
+    'src/algoVrithm/landing/AlgoVrithmLanding.jsx',
+    'src/wcc/WccExperience.jsx'
+]
+
+// A piece's space does not exist in a fresh local install, so these routes are
+// unreachable there by the same rule as any other space you do not have. The
+// card is for the one case that can still reach them: someone who makes a
+// space with that id themselves.
+const HOSTED_PIECE_SOURCE = `import { createElement } from 'react'
+export default function HostedPiece() {
+    return createElement('div', {
+        style: {
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            minHeight: '100vh', padding: '2rem', textAlign: 'center',
+            font: '400 0.95rem/1.6 system-ui, sans-serif',
+            color: 'rgba(255,255,255,0.72)', background: '#0a0a0a'
+        }
+    }, createElement('p', { style: { maxWidth: '30rem', margin: 0 } },
+        'This piece is part of di-studio.xyz, not of di.iiii itself, so it was left out of this copy. Everything else is here.'))
+}
+`
+
+// public/ under the local profile: an include-list.
+//
+// vite copies publicDir wholesale and offers no filter, so the choice is
+// between copying everything and deleting afterwards, or naming what belongs.
+// Naming it means the next thing dropped into public/ for the website does not
+// silently become part of every artist's install — which is how the 25 MB wcc
+// microsite, the cPanel php shims and the site's OpenGraph images got there.
+const LOCAL_PUBLIC_INCLUDE = ['fonts', 'draco', 'basis', 'brand']
+
+const localPublicDirPlugin = () => ({
+    name: 'di-local-public-dir',
+    apply: 'build',
+    async writeBundle(options) {
+        const outDir = options.dir || path.resolve(ROOT_DIR, 'dist')
+        const from = path.resolve(ROOT_DIR, 'public')
+        for (const name of LOCAL_PUBLIC_INCLUDE) {
+            const source = path.join(from, name)
+            if (!fs.existsSync(source)) {
+                this.error(`di-local-public-dir: public/${name} is gone. Update the include list — do not ship a build missing it.`)
+            }
+            fs.cpSync(source, path.join(outDir, name), { recursive: true })
+        }
+    }
+})
+
+const localProfilePlugin = () => ({
+    name: 'di-local-profile',
+    enforce: 'pre',
+    apply: 'build',
+
+    async resolveId(source, importer, options) {
+        if (!importer) return null
+        const resolved = await this.resolve(source, importer, { ...options, skipSelf: true })
+        if (!resolved) return null
+        const id = resolved.id.split('\\').join('/')
+        if (id.includes('/src/algoVrithm/assets/')) return HOSTED_ASSET_STUB
+        if (HOSTED_PIECE_ENTRIES.some((entry) => id.endsWith(`/${entry}`))) return HOSTED_PIECE_STUB
+        return null
+    },
+
+    load(id) {
+        if (id === HOSTED_ASSET_STUB) return 'export default ""\n'
+        if (id === HOSTED_PIECE_STUB) return HOSTED_PIECE_SOURCE
+        return null
+    },
+
+    // The eager glob is the whole media bin, and it is reached from the Raw
+    // director rather than from the piece. Emptying it here leaves every
+    // helper in that module intact and gives the panel an empty bin, which is
+    // the truth about this build.
+    transform(code, id) {
+        if (!id.split('\\').join('/').endsWith('/src/algoVrithm/assetLibrary.js')) return null
+        const glob = /const ASSET_MODULES = import\.meta\.glob\([\s\S]*?\n\}\)/
+        if (!glob.test(code)) {
+            // Silence here would ship the full-size artifact and report
+            // success — the one failure mode this profile exists to prevent.
+            this.error('di-local-profile: assetLibrary.js no longer matches the glob this profile removes. Update vite.config.js — do not ship.')
+        }
+        return { code: code.replace(glob, 'const ASSET_MODULES = /* DI_PROFILE=local */ {}'), map: null }
     }
 })
 
@@ -191,7 +333,11 @@ const resolveOpenPath = () => {
 
 export default {
     root: 'src/',
-    publicDir: '../public/',
+    // An include-list, not a delete-list: under the local profile the public
+    // directory is copied by localPublicDirPlugin, which names what a copy of
+    // the program needs (fonts, draco, basis, brand) and therefore cannot
+    // silently start shipping whatever gets dropped into public/ next.
+    publicDir: LOCAL_PROFILE ? false : '../public/',
     envDir: '../',
     // Keep the dep-optimizer cache in the WORKTREE, not in node_modules.
     //
@@ -219,6 +365,9 @@ export default {
     },
     plugins:
     [
+        // DI_PROFILE=local — di.iiii without the studio's own pieces
+        ...(LOCAL_PROFILE ? [localProfilePlugin(), localPublicDirPlugin()] : []),
+
         stubXrEmulatorPlugin(),
         // Restart server on static/public file change
         restartOnPublicChangePlugin(),
