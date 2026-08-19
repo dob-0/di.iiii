@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the Geo: a clear place to collect a scene
+- What changed
 
 Full detail: `PROGRESS.md`.
 
