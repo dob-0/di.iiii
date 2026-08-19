@@ -31,6 +31,7 @@ import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSe
 import { readNode } from '../../project/graph/nodeReading.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
+import { scopeHasRoomContent } from '../utils/roomContent.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
@@ -354,6 +355,10 @@ export default function RawEditor({
         [authoredNodes, currentScopeId, document.workspaceState?.liveWorldNodeIdByScope]
     )
     const hasWorldNode = Boolean(worldNode)
+    const roomHasContent = useMemo(
+        () => scopeHasRoomContent(nodes, currentScopeId),
+        [nodes, currentScopeId]
+    )
     // Generalizes the World live-toggle above to any scope-repeatable type
     // where exactly one "active" result is wanted (world.light/world.
     // background/world.grid) — same hierarchy-as-connection idea, same
@@ -1850,23 +1855,28 @@ export default function RawEditor({
             )}
 
             <section
-                className={`raw-surface-shell is-world-overlay${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
+                className={`raw-surface-shell${roomHasContent ? ' is-world-overlay' : ''}${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
                 onDragEnter={handleSurfaceDragEnter}
                 onDragOver={handleSurfaceDragOver}
                 onDragLeave={handleSurfaceDragLeave}
                 onDrop={handleSurfaceDrop}
             >
-            {/* THE ROOM BEHIND THE GRAPH — always, in every scope.
+            {/* THE ROOM BEHIND THE GRAPH — whenever something stands in it.
                 TouchDesigner's answer to "watch the result while editing the
                 graph" is the backdrop: the output drawn full-frame behind the
                 network, nodes floating on top. Raw cannot afford TD's other
                 mechanism (a live viewer on every tile — WebGL caps contexts
-                around sixteen a page), so this one backdrop carries the whole
-                you-always-see-consequences contract, which is exactly why it
-                is no longer opt-in: the owner built scenes BLIND inside every
-                non-World scope and concluded nesting did not work, while the
-                renderer was doing it correctly the entire time. */}
-            {!isWorldFullscreen && (
+                around sixteen a page), so this one backdrop carries the
+                you-always-see-consequences contract: the owner built scenes
+                BLIND inside every non-World scope and concluded nesting did
+                not work, while the renderer was doing it correctly the whole
+                time. But an EMPTY room is not a consequence — always-on, a
+                clear desk posed as an empty stage whose floor rejected every
+                click (owner, 2026-08-20: "why the world is backdrop by
+                def?"). So the room mounts the moment the first thing stands
+                at this level (scopeHasRoomContent) and the desk is flat
+                paper — the graph surface's own grid — until then. */}
+            {!isWorldFullscreen && roomHasContent && (
                 <div className="raw-world-overlay">
                     <RawViewport
                         // Zen has no topbar; honouring workspaceTop there
