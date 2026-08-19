@@ -7,6 +7,7 @@ import RawGraphSurface from './RawGraphSurface.jsx'
 import NodePalette from './NodePalette.jsx'
 import TextPanelWindow from './TextPanelWindow.jsx'
 import ImagePanelWindow from './ImagePanelWindow.jsx'
+import MonitorPanelWindow from './MonitorPanelWindow.jsx'
 import WorldPanelWindow from './WorldPanelWindow.jsx'
 import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
 import CreatePanelWindow from './CreatePanelWindow.jsx'
@@ -1438,6 +1439,9 @@ export default function RawEditor({
         }
         if (node.typeId === 'view.image') {
             return <ImagePanelWindow node={node} values={resolvedValues} assetMap={assetMap} />
+        }
+        if (node.typeId === 'stream.monitor') {
+            return <MonitorPanelWindow node={node} values={resolvedValues} />
         }
         if (node.typeId === 'source.webcam') {
             return <WebcamSourcePanel node={node} onFrameChange={handleFrameOutputChange} />

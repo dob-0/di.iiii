@@ -194,6 +194,13 @@ them — capture on the output machine itself, or drive numbers only; and
 Time-driven motion runs on each window's own clock, so two windows can be
 offset. Both are known and on the list.
 
+## The Monitor — watch a wire
+
+Place a **Monitor** and wire any texture into its Source (a Webcam's Frame,
+for now). The window shows the feed live while you keep wiring — the viewer
+TouchDesigner puts on every tile, as one window you place where you want it.
+It only watches: rooms have the World window, the Room button, and `/out`.
+
 ## What to do when something feels broken
 
 - Created a node and see nothing? Check whether it is a visible World/View node

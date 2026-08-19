@@ -660,17 +660,19 @@ export const NODE_TYPES = {
 
     'stream.monitor': {
         id: 'stream.monitor',
-        label: 'Program Monitor',
+        label: 'Monitor',
         category: 'stream',
         runtime: 'any',
         authoringOnly: true,
         singleton: false,
+        // TouchDesigner's viewer, as a window: wire any texture into Source
+        // and watch it live while you keep wiring. Implemented 2026-08-20 —
+        // it was declared as "Program Monitor" with position/width/height
+        // ports no runtime carried; those fell to the dead-port rule and the
+        // label to one-word vocabulary.
         inputs: [
-            { id: 'src',      type: 'texture', label: 'Source'                 },
-            { id: 'title',    type: 'string',  label: 'Title', default: 'Live Monitor' },
-            { id: 'position', type: 'vec3',    label: 'Position', default: [0, 1.5, 0] },
-            { id: 'width',    type: 'number',  label: 'Width', default: 640     },
-            { id: 'height',   type: 'number',  label: 'Height', default: 360    },
+            { id: 'src',   type: 'texture', label: 'Source'                    },
+            { id: 'title', type: 'string',  label: 'Title', default: 'Monitor' },
         ],
         outputs: [],
         defaultValues: {},
@@ -1816,7 +1818,6 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
     'stream.switcher',
     'stream.output',
     'stream.recorder',
-    'stream.monitor',
     'stream.controller',
     // structure — zero consumers outside this file
     'universe.node0',

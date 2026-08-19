@@ -5073,3 +5073,25 @@
     color: rgba(255, 255, 255, 0.55);
     font-size: 14px;
 }
+
+/* The Monitor: a window that watches a texture wire. The canvas letterboxes
+   inside whatever frame the window is dragged to. */
+.raw-monitor-panel {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    background: #05070c;
+}
+
+.raw-monitor-panel canvas {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.raw-monitor-panel.is-empty p {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 13px;
+    padding: 0 18px;
+    text-align: center;
+}

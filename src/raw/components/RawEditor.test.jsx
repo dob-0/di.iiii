@@ -597,6 +597,30 @@ describe('RawEditor view.browser panel', () => {
     })
 })
 
+describe('RawEditor stream.monitor panel', () => {
+    const MONITOR_STORAGE_KEY = 'test-stream-monitor'
+
+    afterEach(() => {
+        window.localStorage.removeItem(MONITOR_STORAGE_KEY)
+    })
+
+    // Implemented 2026-08-20 (was a gated shell since 2026-07-30). With no
+    // texture wired it must say so quietly rather than fall through to the
+    // generic text-panel placeholder — the exact trap the audit counted.
+    it('renders its own empty state, not the generic text-panel fallback', () => {
+        window.localStorage.setItem(
+            MONITOR_STORAGE_KEY,
+            makeWorkspaceDoc([
+                { id: 'mon-1', typeId: 'stream.monitor', label: 'Monitor', parentId: null, values: {} }
+            ])
+        )
+        render(<RawEditor localStorageKey={MONITOR_STORAGE_KEY} />)
+
+        expect(screen.getByText(/Wire a texture into Source/)).toBeInTheDocument()
+        expect(screen.queryByText('This panel is ready for authored UI.')).toBeNull()
+    })
+})
+
 // A window and its graph card are two views of ONE node, and nothing used to
 // say so: the card said "the room" in the family's colour while the window said
 // UNIVERSE.WORLD in grey, and both wore the same cyan frame. The window now
