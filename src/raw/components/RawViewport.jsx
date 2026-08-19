@@ -266,6 +266,58 @@ export function renderNodeBody(node, values, assetMap = null) {
                     </mesh>
                 </group>
             )
+        case 'geom.geo':
+            // A PLACE, visibly, even empty. The faint floor tile is the geo's
+            // footprint — "no even grid, nothing in it" was the owner's exact
+            // report of an empty container reading as void. Children render
+            // through the childMap like any spatial parent's; this body adds
+            // nothing else, which is the whole point of the type.
+            return (
+                <group>
+                    {/* the pickable ground of the place — near-invisible but
+                        clickable, so an empty geo can still be selected and
+                        dragged in the room */}
+                    <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                        <planeGeometry args={[2, 2]} />
+                        <meshBasicMaterial color="#4df9ff" transparent opacity={0.05} side={2} />
+                    </mesh>
+                    <Grid
+                        args={[2, 2]}
+                        position={[0, 0.02, 0]}
+                        cellSize={0.25}
+                        sectionSize={1}
+                        cellColor="rgba(77,249,255,0.35)"
+                        sectionColor="rgba(77,249,255,0.6)"
+                        fadeDistance={14}
+                        infiniteGrid={false}
+                    />
+                </group>
+            )
+        case 'world.light':
+            // Standing INSIDE a container, a Light is a real point light plus
+            // a small glowing marker — "collect what you need: object,
+            // light…". Unparented at root it draws nothing, so every existing
+            // document keeps exactly the look it had (there, Light is the
+            // per-scope ambient/directional settings card it always was).
+            if (!node.parentId) return null
+            return (
+                <group>
+                    <pointLight
+                        color={asColor(values.color, '#ffe9c4')}
+                        intensity={Math.max(0, asFiniteNumber(values.intensity, 6))}
+                        distance={0}
+                        decay={2}
+                    />
+                    <mesh>
+                        <sphereGeometry args={[0.07, 12, 12]} />
+                        <meshStandardMaterial
+                            color={asColor(values.color, '#ffe9c4')}
+                            emissive={asColor(values.color, '#ffe9c4')}
+                            emissiveIntensity={2}
+                        />
+                    </mesh>
+                </group>
+            )
         case 'universe.desk.3d':
             // The shell takes no clicks: it wraps whatever stands inside it, so
             // a pickable skin would swallow every pointer aimed at its contents

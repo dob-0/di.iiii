@@ -170,6 +170,12 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('doorIn', 'port.in', { label: 'In · a way through the wall', col: 3, row: 6, insideKey: 'desk', values: { label: 'Tint', portType: 'color' } })
     add('doorOut', 'port.out', { label: 'Out · a way back through', col: 3, row: 7, insideKey: 'desk', values: { label: 'Size', portType: 'vec3' } })
 
+    // The Geo: the plain place. It gets a resident — the example's job is
+    // showing what a thing IS, and an empty geo is a footprint tile, which is
+    // true but teaches less than a geo with something standing in it.
+    add('geo', 'geom.geo', { label: 'Geo', col: 5, row: 7, values: { position: [-2.5, 0, 0] } })
+    add('geoCube', 'geom.cube', { label: 'Cube', col: 4, row: 10, insideKey: 'geo', values: { size: [0.6, 0.6, 0.6], color: '#8be9fd', position: [0, 0.3, 0] } })
+
     // --- the constructor cluster: a node made of nodes -----------------------
     // WIRED, unlike the desk's doorways above, because here the wiring IS the
     // point: the Merge's `out` must demonstrably carry something (the liveness
