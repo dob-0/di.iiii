@@ -832,6 +832,14 @@ export default function RawEditor({
         // as findFreeSpot in the room, in card coordinates.
         let cardX = (place.graphX ?? place.clientX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2)
         let cardY = Math.max(20, (place.graphY ?? place.clientY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2))
+        // A spatial node lands IN THE ROOM at the click — and its card used to
+        // land centred on the very same click, burying the thing it had just
+        // made (the audit watched a cube vanish behind its own card; owner:
+        // "still conflict with backdrop display and geo"). The card steps
+        // below the click instead, so what you placed stays visible above it.
+        if (getNodeType(definition.id)?.render === 'spatial-3d') {
+            cardY = Math.max(20, (place.graphY ?? place.clientY ?? 160) + 90)
+        }
         const siblings = authoredNodes.filter((node) => (node.parentId || null) === (currentScopeId || null))
         const collides = (x, y) => siblings.some((node) =>
             Math.abs((node.graphX ?? 0) - x) < ROOT_WORLD_CARD_WIDTH + 16
@@ -1883,6 +1891,10 @@ export default function RawEditor({
             {!isWorldFullscreen && roomHasContent && (
                 <div className="raw-world-overlay">
                     <RawViewport
+                        // The cards are the selection feedback here; a name
+                        // pill floating in the room's sky duplicated them,
+                        // detached from its object.
+                        showSelectionPills={false}
                         // Zen has no topbar; honouring workspaceTop there
                         // painted a dead black band across the top of the
                         // room (seen on the first-visit screen).

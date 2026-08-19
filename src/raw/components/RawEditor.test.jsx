@@ -453,6 +453,30 @@ describe('RawEditor make-me-a-scene scoping', () => {
     })
 })
 
+// A spatial node lands IN THE ROOM at the click — its card used to land
+// centred on the very same click, burying the thing it had just made.
+describe('RawEditor spatial card placement', () => {
+    it('a spatial card steps below the click; a hidden card stays centred', () => {
+        mockApplyLocalOps.mockClear()
+        render(<RawEditor localStorageKey="test-card-offset" canvasMode />)
+        const create = (query) => {
+            fireEvent.doubleClick(screen.getByTestId('mock-graph'))
+            fireEvent.change(screen.getByPlaceholderText('type a node or panel name…'), { target: { value: query } })
+            fireEvent.keyDown(screen.getByPlaceholderText('type a node or panel name…'), { key: 'Enter' })
+            const batches = mockApplyLocalOps.mock.calls.map(([ops]) => (Array.isArray(ops) ? ops : [ops]))
+            return batches.flat().filter((op) => op.type === 'createNode').at(-1).payload.node
+        }
+        const cube = create('Cube')
+        const number = create('Number')
+        expect(cube.typeId).toBe('geom.cube')
+        expect(number.typeId).toBe('value.number')
+        // Same (defaulted) click point for both — the spatial card must sit
+        // clearly lower than the code card.
+        expect(cube.graphY).toBeGreaterThan(number.graphY + 60)
+        window.localStorage.removeItem('test-card-offset')
+    })
+})
+
 describe('RawEditor per-universe chrome visibility', () => {
     const CHROME_STORAGE_KEY = 'test-chrome-visibility'
 

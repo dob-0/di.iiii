@@ -595,3 +595,22 @@ describe('the Camera', () => {
         expect(container.querySelectorAll('conegeometry').length).toBe(1)
     })
 })
+
+// In the backdrop the graph card IS the selection feedback — the floating
+// name pill duplicated it in the sky, detached from its object (the "GEO"
+// chip). Fullscreen keeps pills; the cards are gone there.
+describe('selection pills', () => {
+    const doc = { worldState: {}, entities: [], edges: [], nodes: [
+        { id: 'c1', typeId: 'geom.cube', parentId: null, label: 'A cube', values: {} }
+    ] }
+
+    it('renders a pill for the selected node by default (the fullscreen room)', () => {
+        const { container } = render(<RawViewport document={doc} scopeId={null} selectedNodeId="c1" onWorldDoubleClick={() => {}} />)
+        expect(container.querySelector('.raw-selection-pill')).toBeTruthy()
+    })
+
+    it('renders none when pills are off (the backdrop behind the cards)', () => {
+        const { container } = render(<RawViewport document={doc} scopeId={null} selectedNodeId="c1" showSelectionPills={false} onWorldDoubleClick={() => {}} />)
+        expect(container.querySelector('.raw-selection-pill')).toBeNull()
+    })
+})

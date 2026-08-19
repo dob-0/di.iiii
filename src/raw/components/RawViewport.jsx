@@ -61,7 +61,7 @@ const asPositiveVec3 = (value, fallback = [1, 1, 1], min = 0.001, max = 100) => 
 }
 
 
-function EntityVisual({ entity, assetMap, selected, onSelect }) {
+function EntityVisual({ entity, assetMap, selected, onSelect, showSelectionPills = true }) {
     const transform = entity.components?.transform || {}
     const content = <EntityContent entity={entity} assetMap={assetMap} />
 
@@ -76,7 +76,7 @@ function EntityVisual({ entity, assetMap, selected, onSelect }) {
             }}
         >
             {content}
-            {selected && (
+            {selected && showSelectionPills && (
                 <Html position={[0, 1.8, 0]} center>
                     <span className="raw-selection-pill">{entity.name}</span>
                 </Html>
@@ -402,7 +402,8 @@ function NodeVisual({
     childMap = null,
     selectedNodeId = null,
     onSelectNode = null,
-    depth = 0
+    depth = 0,
+    showSelectionPills = true
 }) {
     const values = node.values || {}
     const scale = asPositiveVec3(values.scale, [1, 1, 1], 0.001, 20)
@@ -442,6 +443,7 @@ function NodeVisual({
                         assetMap={assetMap}
                         childMap={childMap}
                         depth={depth + 1}
+                        showSelectionPills={showSelectionPills}
                         // Deliberately no onPointerDown below the top level.
                         // The drag writes a world-space raycast point into
                         // values.position, which is read as a position LOCAL to
@@ -454,7 +456,7 @@ function NodeVisual({
                     />
                 </SceneEntityErrorBoundary>
             ))}
-            {selected ? (
+            {selected && showSelectionPills ? (
                 <Html position={[0, 1.5, 0]} center>
                     <span className="raw-selection-pill">{node.label}</span>
                 </Html>
@@ -475,7 +477,8 @@ function SceneContent({
     nodeScale = 1,
     scopeId,
     worldNode,
-    liveOutputs = null
+    liveOutputs = null,
+    showSelectionPills = true
 }) {
     // Keyed on assets + project id so the map only rebuilds when assets change,
     // not on every document identity change from a sync tick.
@@ -711,6 +714,7 @@ function SceneContent({
                             assetMap={assetMap}
                             selected={entity.id === selectedEntityId}
                             onSelect={onSelectEntity}
+                            showSelectionPills={showSelectionPills}
                         />
                     </SceneEntityErrorBoundary>
                 ))}
@@ -728,6 +732,7 @@ function SceneContent({
                             childMap={childMap}
                             nodeScale={nodeScale}
                             assetMap={assetMap}
+                            showSelectionPills={showSelectionPills}
                             onPointerDown={(event) => {
                                 if (event.button !== 0) return
                                 event.stopPropagation()
@@ -783,7 +788,12 @@ export default function RawViewport({
     showEmptyHint = true,
     scopeId,
     worldNode,
-    liveOutputs = null
+    liveOutputs = null,
+    // In the backdrop the graph card IS the selection feedback; a floating
+    // name pill duplicated it in the room's sky, detached from its object
+    // (the "GEO" chip the audit photographed). Fullscreen keeps pills — the
+    // cards are gone there.
+    showSelectionPills = true
 }) {
     const viewportRef = useRef(null)
     const { canvasKey, contextLost, bindContextGuard, restoreContext } = useWebglContextGuard()
@@ -892,6 +902,7 @@ export default function RawViewport({
             >
                 {!hasAuthoredCamera && <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />}
                 <SceneContent
+                    showSelectionPills={showSelectionPills}
                     document={document}
                     selectedEntityId={selectedEntityId}
                     selectedNodeId={selectedNodeId}
