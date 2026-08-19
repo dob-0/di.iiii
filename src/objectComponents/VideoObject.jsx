@@ -1,8 +1,14 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Html } from '@react-three/drei'
+import { useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { useAssetUrl } from '../hooks/useAssetUrl.js'
 import { attachVideoPlaybackRetry, attachVideoSound, configureVideoElement } from '../utils/videoPlayback.js'
+import {
+    attachPositionalVideoSound,
+    getOrCreateAudioListener,
+    resumeContextOnGesture
+} from '../utils/positionalVideoSound.js'
 
 const DEFAULT_SIZE = [1, 1]
 
@@ -85,12 +91,12 @@ const releaseVideo = (entry) => {
 }
 
 export function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loop = true } = {}) {
-    const [state, setState] = useState({ texture: null, playbackBlocked: false, size: DEFAULT_SIZE })
+    const [state, setState] = useState({ texture: null, playbackBlocked: false, size: DEFAULT_SIZE, video: null })
 
     useEffect(() => {
         const resolvedSrc = typeof sourceUrl === 'string' ? sourceUrl.trim() : ''
         if (!resolvedSrc || resolvedSrc === 'blob:null') {
-            setState({ texture: null, playbackBlocked: false, size: DEFAULT_SIZE })
+            setState({ texture: null, playbackBlocked: false, size: DEFAULT_SIZE, video: null })
             return undefined
         }
 
@@ -98,7 +104,10 @@ export function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loo
         const sync = () => setState({
             texture: entry.ready ? entry.texture : null,
             playbackBlocked: entry.blocked,
-            size: entry.size
+            size: entry.size,
+            // The element itself, for callers that need to route its audio
+            // (positional sound). Owned by the cache — do not mutate it here.
+            video: entry.video
         })
         entry.subscribers.add(sync)
         sync()
@@ -112,19 +121,58 @@ export function useVideoTextureSource(sourceUrl, { muted = true, volume = 1, loo
     return state
 }
 
-export default function VideoObject({ assetRef, data, opacity = 1, linkActive, muted = true, volume = 1, loop = true }) {
+// Spatial sound is opt-in: routing every video through a panner would change
+// how every existing space sounds. A muted video has no audio to place.
+//
+// A separate component rather than an effect in VideoObject because useThree()
+// only works inside a Canvas, and VideoObject is also rendered by plain
+// react-dom tests that never open one. Mounted only when a video actually asks
+// for spatial sound, so those tests never reach the hook.
+//
+// The element is shared per (source, muted, volume, loop) by the cache above,
+// and a media element can be routed into Web Audio only ONCE — so when two
+// spatial objects genuinely collapse onto one element, the second gets null
+// back and keeps the flat path rather than both going silent.
+function SpatialVideoSound({ targetRef, video, volume, distance, maxDistance }) {
+    const { camera } = useThree()
+
+    useEffect(() => {
+        const target = targetRef.current
+        if (!target || !video) return undefined
+
+        const listener = getOrCreateAudioListener(camera)
+        const stopWaiting = resumeContextOnGesture(listener)
+        const detach = attachPositionalVideoSound(target, video, listener, {
+            volume,
+            refDistance: distance,
+            maxDistance
+        })
+        return () => {
+            stopWaiting()
+            detach?.()
+        }
+    }, [targetRef, video, camera, volume, distance, maxDistance])
+
+    return null
+}
+
+export default function VideoObject({
+    assetRef, data, opacity = 1, linkActive, muted = true, volume = 1, loop = true,
+    spatial = false, distance, maxDistance
+}) {
     const assetUrl = useAssetUrl(assetRef, { preferRemoteSource: true })
     const isVideoType = !assetRef?.mimeType || assetRef.mimeType.startsWith('video/')
     const rawSource = (isVideoType ? assetUrl : null) || data || null
     const sourceUrl = typeof rawSource === 'string' ? rawSource.trim() : null
-    const { texture, playbackBlocked, size } = useVideoTextureSource(sourceUrl, { muted, volume, loop })
+    const { texture, playbackBlocked, size, video } = useVideoTextureSource(sourceUrl, { muted, volume, loop })
+    const meshRef = useRef(null)
 
     if (!texture) {
         return null
     }
 
     return (
-        <mesh position-y={0.01} rotation-x={-Math.PI / 2}>
+        <mesh ref={meshRef} position-y={0.01} rotation-x={-Math.PI / 2}>
             <planeGeometry args={size} />
             <meshBasicMaterial map={texture} toneMapped={false} transparent opacity={opacity} side={THREE.DoubleSide} />
             {playbackBlocked && (
@@ -137,6 +185,15 @@ export default function VideoObject({ assetRef, data, opacity = 1, linkActive, m
                     <span className="link-label">🔗</span>
                 </Html>
             )}
+            {spatial && muted === false && video ? (
+                <SpatialVideoSound
+                    targetRef={meshRef}
+                    video={video}
+                    volume={volume}
+                    distance={distance}
+                    maxDistance={maxDistance}
+                />
+            ) : null}
         </mesh>
     )
 }

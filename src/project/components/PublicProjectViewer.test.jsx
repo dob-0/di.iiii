@@ -55,11 +55,12 @@ vi.mock('../../raw/PublicGraphSurface.jsx', () => ({
 }))
 
 vi.mock('../../studio/components/StudioViewport.jsx', () => ({
-    default: function MockStudioViewport({ document, enableNavigation, showChrome, lowPower }) {
+    default: function MockStudioViewport({ document, enableNavigation, showChrome, lowPower, playTimelines }) {
         return (
             <div>
                 <div>viewer-scene:{document.presentationState?.entryView || 'scene'}</div>
                 <div data-testid="viewport-flags">{`nav:${enableNavigation} chrome:${showChrome} low:${lowPower}`}</div>
+                <div data-testid="viewport-timelines">{`play:${Boolean(playTimelines)}`}</div>
             </div>
         )
     }
@@ -367,6 +368,22 @@ describe('PublicProjectViewer', () => {
         expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
         expect(screen.getByTestId('viewport-flags').textContent).toBe('nav:true chrome:true low:false')
         expect(await screen.findByRole('button', { name: 'Walk / Fly' })).toBeInTheDocument()
+    })
+
+    // Regression guard: the published viewer's default (orbit) view is
+    // StudioViewport, where authored keyframes used to play ONLY while the
+    // editor's Timeline scrubber was being dragged. Published scenes therefore
+    // sat frozen on their authored pose forever, and the failure was invisible
+    // -- the scene rendered perfectly, it just never moved. Walk mode animated
+    // fine, which made it read as a data problem rather than a viewer one.
+    it('tells the scene viewport to play authored timelines when published', async () => {
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+        expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+        expect(screen.getByTestId('viewport-timelines').textContent).toBe('play:true')
     })
 
     // Regression guard: walking/flying then clicking the scene's own exit

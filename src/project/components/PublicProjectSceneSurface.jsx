@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import useXrAr from '../../hooks/useXrAr.js'
 import { computeFramingCamera, getPointsBoundingSphere, getViewportAspect } from '../../utils/cameraFraming.js'
-import { overlayButtonStyle } from './publicViewerStyles.js'
+import { overlayButtonStyle, overlayCardStyle } from './publicViewerStyles.js'
+import { XR_READY, xrAvailability } from '../../algoVrithm/xrAvailability.js'
 import lazyWithReload from '../../utils/lazyWithReload.js'
 
 // Everything in this module -- the XR store, the camera framing math, the two
@@ -119,6 +120,9 @@ export default function PublicProjectSceneSurface({
 
     const wantsVr = xrDefaultMode === 'vr'
     const xrEntrySupported = wantsVr ? xr.supportedXrModes.vr : xr.supportedXrModes.ar
+    // Same opt-in shape as the walker's `?inputdebug=1`.
+    const xrDebug = typeof window !== 'undefined'
+        && new URLSearchParams(window.location.search).has('xrdebug')
 
     // A document carries both lanes (`nodes` and `entities`) and either may be
     // empty. Whichever renderer we pick has to be the one that can show
@@ -159,6 +163,11 @@ export default function PublicProjectSceneSurface({
                     enableNavigation={entryView !== 'fixed-camera' && !isPreview}
                     showChrome={!isPreview}
                     lowPower={isPreview}
+                    // Authored keyframes used to play ONLY while the editor's
+                    // Timeline scrubber was being dragged, so a published scene
+                    // sat frozen on its authored pose forever -- invisibly, since
+                    // it rendered perfectly and only walk mode animated.
+                    playTimelines
                 />
             )}
 
@@ -193,6 +202,35 @@ export default function PublicProjectSceneSurface({
                     </button>
                 </div>
             ) : null}
+
+            {/* An absent button is the same picture whether the cause is a
+                missing headset, plain http, or a browser without WebXR -- which
+                reads as "the VR is broken" when usually nothing is. `?xrdebug=1`
+                turns that silence into a sentence, on the headset itself where
+                no console is reachable. Opt-in, so an exhibition audience still
+                gets the clean chrome. */}
+            {canOfferXrEntry && !xrEntrySupported && xrDebug ? (() => {
+                const availability = xrAvailability(
+                    xr.getXrDiagnosticsSnapshot().environment,
+                    xr.supportedXrModes
+                )
+                if (availability.state === XR_READY) return null
+                return (
+                    <div style={{ position: 'absolute', right: '1rem', bottom: '1rem', maxWidth: '22rem', zIndex: 20 }}>
+                        <div style={overlayCardStyle}>
+                            <strong>No {wantsVr ? 'VR' : 'AR'} here — {availability.reason}</strong>
+                            <div style={{ marginTop: '0.4rem', opacity: 0.8 }}>{availability.fix}</div>
+                            <button
+                                type="button"
+                                style={{ ...overlayButtonStyle, marginTop: '0.6rem' }}
+                                onClick={() => xr.refreshXrSupport()}
+                            >
+                                Recheck
+                            </button>
+                        </div>
+                    </div>
+                )
+            })() : null}
         </>
     )
 }

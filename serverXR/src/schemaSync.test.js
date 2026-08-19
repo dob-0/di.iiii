@@ -333,6 +333,35 @@ describe('ESM/CJS mirror equivalence', () => {
         { id: 'n1', typeId: 'some.type', values: { x: 2 } }
       ],
       edges: [{ id: 'edge1', fromNodeId: 'n1', fromPort: 'out', toNodeId: 'ghost', toPort: 'in' }]
+    },
+    // Portal label styling and text reveal: both were added to the ESM source
+    // and the mirror by hand, and neither was covered by any fixture, so the
+    // mirror could have drifted on them without a single test noticing.
+    {
+      entities: [
+        {
+          id: 'p1',
+          type: 'portal',
+          components: {
+            reference: {
+              spaceId: 'wcc', projectId: 'alla-virabyan', mode: 'embed', label: 'Alla Virabyan',
+              labelColor: '#000000', labelPlate: false, labelFont: 'helvetica'
+            }
+          }
+        },
+        // Defaults must survive: a portal authored before label styling existed.
+        { id: 'p2', type: 'portal', components: { reference: { spaceId: 's', projectId: 'p', mode: 'portal', label: 'Old' } } },
+        // An unknown font name must fall back rather than reach a strange URL.
+        { id: 'p3', type: 'portal', components: { reference: { spaceId: 's', projectId: 'p', label: 'X', labelFont: 'https://evil.example/f.woff' } } },
+        { id: 't1', type: 'text', components: { text: { value: 'a\nb', reveal: { mode: 'typewriter', speed: 999, delay: -5 } } } },
+        { id: 't2', type: 'text', components: { text: { value: 'plain' } } },
+        // Spatial video sound: a zero refDistance would make the panner divide
+        // by zero, and maxDistance below refDistance is incoherent.
+        { id: 'v1', type: 'video', components: { media: { assetId: 'a', spatial: true, distance: 0, maxDistance: 2 } } },
+        { id: 'v2', type: 'video', components: { media: { assetId: 'a' } } },
+        // An image's media object must NOT grow spatial fields.
+        { id: 'i1', type: 'image', components: { media: { assetId: 'a' } } }
+      ]
     }
   ]
 

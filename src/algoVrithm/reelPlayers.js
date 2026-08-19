@@ -30,26 +30,44 @@ import { ASSET_LIBRARY } from './assetLibrary.js'
 // resource, reused by everything that needs it.
 
 // EVERY clip in the folder gets its own decoder, on direction: "use all reels in
-// folder". The pool is therefore as large as the library, capped only by the
-// ceiling below.
+// folder" — as far as the device allows.
 //
 // This is the expensive decision in the whole piece and it should be made
-// knowingly. Nine decoders was not a guess — it was chosen because these are
-// full-resolution phone captures and a browser decoding thirty-one of those at
-// once is doing thirty-one times the work. On a desktop with a discrete GPU that
-// is usually fine. On a standalone headset it is the thing most likely to drop
-// the frame rate, and dropped frames in a headset are nausea rather than an
-// aesthetic problem.
+// knowingly. A browser decoding thirty-one full-resolution phone captures at
+// once is doing thirty-one times the work. On a desktop that is usually fine.
+// On a standalone headset it is the thing most likely to drop the frame rate,
+// and dropped frames in a headset are nausea rather than an aesthetic problem.
 //
-// So: MAX_PLAYERS is the knob. Lower it and the globe simply repeats clips more
-// often; nothing else in the piece changes. The other half of the answer is
-// DONE: the sources are 360x640 since 2026-08-08 (scripts/compress-reels.mjs
-// --replace), which took the pool from 25.9 to 7.1 megapixels per frame — keep
-// running that script over anything new dropped in the folder.
-const MAX_PLAYERS = 32
+// TWO CEILINGS, because "every clip in the folder" is a direction a desktop can
+// keep and a standalone headset cannot.
+//
+// A decoder that cannot be allocated does not fail loudly — the element simply
+// never produces a frame, so its VideoTexture stays at its initial black and the
+// cells showing that clip are black rectangles scattered over the shell. On a
+// desktop a few go; in a headset, where the budget is single digits, most of
+// them do, and turning your head sweeps past patches of black. That is the
+// symptom this cap exists to prevent, and it reads as a hole in the globe rather
+// than as a decoding limit, which is what makes it worth a comment this long.
+//
+// The direction is kept wherever the device can honour it: the full folder on a
+// desktop, and in a headset the largest number that reliably decodes. Lower it
+// and the globe simply repeats clips more often — which is what a feed is —
+// and nothing else in the piece changes.
+//
+// NINE is not a new guess: it is the number the pool was originally built at,
+// chosen for these being full-resolution phone captures.
+//
+// OPEN, and deliberately left conservative at the merge: the source half of the
+// answer has since been DONE on dev — the reels are 360x640 since 2026-08-08
+// (scripts/compress-reels.mjs --replace), 25.9 → 7.1 megapixels per frame, and
+// keep running that script over anything new dropped in the folder. Nine was
+// measured against the old full-resolution sources, so the headset ceiling is
+// very likely raisable now; it wants measuring on the device before it moves.
+export const DESKTOP_MAX_PLAYERS = 32
+export const HEADSET_MAX_PLAYERS = 9
 
-export const playerCount = () => Math.min(
-    MAX_PLAYERS,
+export const playerCount = (maxPlayers = DESKTOP_MAX_PLAYERS) => Math.min(
+    maxPlayers,
     ASSET_LIBRARY.filter((asset) => asset.kind === 'video').length
 )
 
@@ -57,15 +75,16 @@ const PLAYER_SEED = 20260730
 
 let sharedPlayers = null
 
-const createPlayers = () => {
+const createPlayers = (maxPlayers) => {
     const videos = ASSET_LIBRARY.filter((asset) => asset.kind === 'video')
     if (videos.length === 0) return []
 
     const random = createRandom(PLAYER_SEED)
 
-    // Every clip, in library order. No stride and no selection any more — the
-    // pool IS the folder, so nothing has to be chosen and nothing is left out.
-    return Array.from({ length: playerCount() }, (_, index) => {
+    // Every clip, in library order, up to whatever this device can decode. No
+    // stride and no selection — under the desktop ceiling the pool IS the
+    // folder, so nothing has to be chosen and nothing is left out.
+    return Array.from({ length: playerCount(maxPlayers) }, (_, index) => {
         const asset = videos[index % videos.length]
 
         const video = document.createElement('video')
@@ -108,9 +127,32 @@ const createPlayers = () => {
     })
 }
 
-/** The pool, built on first use and shared for the life of the page. */
-export const reelPlayers = () => {
-    if (!sharedPlayers) sharedPlayers = createPlayers()
+/**
+ * The pool, built on first use and shared for the life of the page.
+ *
+ * `maxPlayers` is honoured by the FIRST caller only, which is the warm-up in
+ * AlgoVrithmExperience — by the time the footage beat mounts and calls this
+ * with no argument, the pool exists and the ceiling has already been chosen.
+ * That ordering is the point: the device question is answered once, early,
+ * rather than being re-asked by whoever happens to be on screen.
+ */
+export const reelPlayers = (maxPlayers = DESKTOP_MAX_PLAYERS) => {
+    if (!sharedPlayers) {
+        sharedPlayers = createPlayers(maxPlayers)
+        // THE POOL CAN BE BUILT AFTER THE GESTURE THAT UNLOCKED AUDIO, and then
+        // nothing would ever unmute it. unlock() below unmutes the players that
+        // EXIST when it fires, and the warm-up is deliberately deferred to idle
+        // (up to 2.5s after mount — see AlgoVrithmExperience). A headset loses
+        // that race almost every time: the page finishes loading, the visitor
+        // taps Enter VR straight away, and that tap arrives while sharedPlayers
+        // is still undefined. The synth score is unaffected — it only needs the
+        // context resumed — so the symptom is a scored piece with silent reels,
+        // which is exactly what it looked like.
+        //
+        // Unmuting here is safe precisely because audioUnlocked means a real
+        // gesture has already happened, so autoplay-with-sound is permitted.
+        if (audioUnlocked) applyUnlockedAudio(sharedPlayers)
+    }
     return sharedPlayers
 }
 
@@ -140,16 +182,54 @@ let audioUnlocked = false
 let unlockArmed = false
 const unlockWaiters = new Set()
 
+/**
+ * Turn the sound on for a set of players. Called from the gesture handler for
+ * whatever exists then, and again from reelPlayers() for a pool built later.
+ *
+ * The re-play is guarded on `paused` on purpose: at unlock time NONE of these
+ * are playing, and calling play() on all of them would start thirty-one
+ * decoders twenty seconds before the beat that needs them — the exact budget
+ * this pool exists to protect. It only matters for a player already on screen
+ * when the gesture lands, where some mobile builds want the element poked
+ * before they will emit audio it started muted without.
+ */
+const applyUnlockedAudio = (players) => {
+    players?.forEach((player) => {
+        player.video.muted = false
+        player.video.defaultMuted = false
+        // play() returns undefined rather than a promise in some environments
+        // (jsdom among them), so the result is not assumed to be thenable.
+        if (!player.video.paused) player.video.play?.()?.catch?.(() => {})
+    })
+}
+
 const unlock = () => {
     if (audioUnlocked) return
     audioUnlocked = true
     // Unmuting is what actually turns the sound on. It has to happen INSIDE the
     // gesture handler — deferring it by even a task can lose the user-activation
     // window in some browsers.
-    sharedPlayers?.forEach((player) => { player.video.muted = false })
+    applyUnlockedAudio(sharedPlayers)
     unlockWaiters.forEach((waiter) => waiter())
     unlockWaiters.clear()
 }
+
+/**
+ * Unlock imperatively, for a gesture the window listeners cannot see.
+ *
+ * ENTERING AN IMMERSIVE SESSION IS A USER ACTIVATION, but it does not have to
+ * arrive as a DOM event on this window — a session can be started from an XR
+ * button in an overlay, resumed by the headset, or entered without the tap ever
+ * reaching `window`. The listeners in armAudioUnlock() would miss all of those
+ * and the piece would play silent inside the headset while being perfectly
+ * unlockable on the flat page, which is the hardest version of this bug to
+ * reproduce at a desk.
+ *
+ * So SpatialScore calls this on `sessionstart`. Idempotent — unlock() returns
+ * immediately once the page has been unlocked, so the ordinary gesture path and
+ * this one cannot double up.
+ */
+export const unlockAudio = () => { unlock() }
 
 /**
  * Arm the gesture unlock. Idempotent; safe to call from every sequence's mount.

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState } from 
 import { useFrame } from '@react-three/fiber'
 import { Billboard, Text } from '@react-three/drei'
 import { TROIKA_FONT_URL } from './troikaFont.js'
+import arimoUrl from '@fontsource/arimo/files/arimo-latin-400-normal.woff'
 import EntityContent from './EntityContent.jsx'
 import { buildAssetMap } from './buildAssetMap.js'
 import { getProjectDocument } from '../services/projectsApi.js'
@@ -92,6 +93,20 @@ function EmbeddedScene({ projectId }) {
     )
 }
 
+// Fonts a document may ask for by NAME, never by URL. troika fetches whatever
+// URL it is handed, and a project document is untrusted input -- an allow-list
+// keeps a document from pointing the renderer at an arbitrary host. Arimo is
+// metrically identical to Helvetica/Arial (OFL-1.1, so it can ship); troika
+// reads .woff but not .woff2.
+//
+// `default` is the vendored face every <Text> in the app names explicitly --
+// NOT the absence of a font prop, which sends troika to a CDN at render time
+// and paints nothing on an offline install (see troikaFont.js).
+const LABEL_FONTS = {
+    default: TROIKA_FONT_URL,
+    helvetica: arimoUrl
+}
+
 // A dark plate behind billboarded label text so it stays legible over
 // whatever the camera happens to be looking through it at (another node's
 // label, a project's own header/legend content) instead of visually merging
@@ -152,13 +167,28 @@ export default function PortalObject({ entity }) {
     const mode = reference.mode === 'embed' ? 'embed' : 'portal'
 
     if (mode === 'embed') {
+        const labelColor = reference.labelColor || '#ffffff'
+        const showPlate = reference.labelPlate !== false
+        // No plate means the label sits directly on the world behind it, where a
+        // dark outline around dark type only thickens it. The outline exists to
+        // separate light type from a light backdrop, so it goes with the plate.
+        const outlineWidth = showPlate ? 0.02 : 0
         return (
             <>
                 <EmbeddedScene projectId={reference.projectId} />
                 {reference.label ? (
                     <Billboard position={[0, 3.4, 0]}>
-                        <LabelPlate text={reference.label} fontSize={0.7} maxWidth={9} />
-                        <Text font={TROIKA_FONT_URL} fontSize={0.7} maxWidth={9} color="#ffffff" outlineWidth={0.02} outlineColor="#000000" anchorX="center" anchorY="middle">
+                        {showPlate ? <LabelPlate text={reference.label} fontSize={0.7} maxWidth={9} /> : null}
+                        <Text
+                            font={LABEL_FONTS[reference.labelFont] || TROIKA_FONT_URL}
+                            fontSize={0.7}
+                            maxWidth={9}
+                            color={labelColor}
+                            outlineWidth={outlineWidth}
+                            outlineColor="#000000"
+                            anchorX="center"
+                            anchorY="middle"
+                        >
                             {reference.label}
                         </Text>
                     </Billboard>
