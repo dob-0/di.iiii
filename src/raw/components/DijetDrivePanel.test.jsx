@@ -23,13 +23,13 @@ const published = (topic) => sockets.flatMap((s) => s.sent).filter((m) => m.op =
 
 beforeEach(() => {
     sockets = []
-    global.WebSocket = FakeWS
+    globalThis.WebSocket = FakeWS
     vi.useFakeTimers({ shouldAdvanceTime: true })
 })
 afterEach(() => {
     vi.useRealTimers()
     __resetLinks()
-    delete global.WebSocket
+    delete globalThis.WebSocket
 })
 
 const connect = async () => {

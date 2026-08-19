@@ -23,13 +23,13 @@ const fakeSocket = () => {
         openIt() { this.readyState = 1; this.onopen?.() }
         deliver(topic, msg) { this.onmessage?.({ data: JSON.stringify({ op: 'publish', topic, msg }) }) }
     }
-    global.WebSocket = FakeWS
+    globalThis.WebSocket = FakeWS
     return sockets
 }
 
 // links are module-level and refcounted, so they must be torn down between
 // cases or one test's socket serves the next one
-afterEach(() => { __resetLinks(); delete global.WebSocket; vi.restoreAllMocks() })
+afterEach(() => { __resetLinks(); delete globalThis.WebSocket; vi.restoreAllMocks() })
 
 describe('nearestReturn', () => {
     it('ignores inf, NaN and out-of-range samples', () => {

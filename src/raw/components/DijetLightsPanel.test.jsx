@@ -16,8 +16,8 @@ class FakeWS {
 }
 const published = (topic) => sockets.flatMap((s) => s.sent).filter((m) => m.op === 'publish' && m.topic === topic)
 
-beforeEach(() => { sockets = []; global.WebSocket = FakeWS; vi.useFakeTimers({ shouldAdvanceTime: true }) })
-afterEach(() => { vi.useRealTimers(); __resetLinks(); delete global.WebSocket })
+beforeEach(() => { sockets = []; globalThis.WebSocket = FakeWS; vi.useFakeTimers({ shouldAdvanceTime: true }) })
+afterEach(() => { vi.useRealTimers(); __resetLinks(); delete globalThis.WebSocket })
 
 const connect = async () => {
     await waitFor(() => expect(sockets.length).toBeGreaterThan(0))
