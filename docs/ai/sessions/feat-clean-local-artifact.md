@@ -94,11 +94,16 @@ commit a human already tagged, and will carry on from 0.4.x). There is also no U
 than the "Nothing lives at…" card, because that card lives in `AuthGate` and never
 runs when auth is off.
 
-**Suite note:** the test suite has pre-existing order/parallelism flakiness — on plain
-`origin/dev` a full run failed `httpContracts` "lets a space owner self-manage their
-space"; on this branch a full run failed `PreferencesPage` twice and then passed
-clean at 288 files / 2459 tests. Both pass in isolation. Not introduced here, but
-worth someone's attention.
+**Suite note, corrected.** I first read the `PreferencesPage` failure as part of the
+suite's flakiness. It was not: the test asserted the literal string `0.2.0`, so it was
+really asserting that nobody had touched `package.json` — and it broke the moment the
+version was bumped to 0.4.0 in this branch. It reads `__APP_VERSION__` now. CI caught
+it, having run the full suite on a clean checkout, which is exactly what a local
+"passes on the third try" reading could not.
+
+What IS pre-existing: a full run on plain `origin/dev` failed `httpContracts` "lets a
+space owner self-manage their space", with nothing of this branch in the tree. That
+one passes in isolation and is worth someone's attention separately.
 
 ## 2026-08-19 (later) — two bugs that only a real install could show
 
