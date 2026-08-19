@@ -55,7 +55,10 @@ export default [
         },
         settings: {
             react: {
-                version: 'detect'
+                // Pinned, not 'detect': eslint-plugin-react's auto-detection calls
+                // context.getFilename(), removed in ESLint 10. Keep in step with the
+                // react version in package.json.
+                version: '18.3'
             }
         },
         rules: {
