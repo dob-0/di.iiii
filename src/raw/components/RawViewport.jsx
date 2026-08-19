@@ -12,6 +12,8 @@ import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
 import { getRawWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewportWorldState.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
+import { MAX_GEOMETRY_DEPTH, MAX_GEOMETRY_PIECES, isGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
@@ -83,6 +85,86 @@ function PlaneWithTexture({ w, h, textureUrl }) {
 // working; only the file-backed cases below need it. Without it those nodes
 // render nothing rather than throwing — a node with no file chosen yet is a
 // normal state, not an error.
+// Turns a geometry descriptor — plain data off a wire — into meshes. The
+// counterpart of renderNodeBody's per-type cases, for shapes that arrived by
+// value instead of by standing in the room. Same components as the standing
+// versions (BoxObject, SphereObject), so a cube worn by a Constructor and a
+// cube standing beside it are pixel-identical by construction.
+//
+// `budget` is one shared countdown across the whole walk (an object so the
+// count survives recursion), because MAX_GEOMETRY_PIECES caps the DESCRIPTOR,
+// not each branch — see geometryDescriptor.js for why the caps exist at all.
+//
+// Mutating it during render is safe TODAY only because this renders inside
+// R3F v8's own reconciler root, which hardcodes strictness off — StrictMode
+// does not cross that boundary, so nothing double-invokes this body. R3F v9
+// inherits StrictMode into the Canvas; on that upgrade this must move to a
+// plain recursive walk with a local counter or the cap silently halves in dev.
+function GeometryPieces({ descriptor, depth = 0, budget = null }) {
+    const spent = budget || { left: MAX_GEOMETRY_PIECES }
+    if (!isGeometryDescriptor(descriptor) || depth >= MAX_GEOMETRY_DEPTH || spent.left <= 0) return null
+    if (descriptor.kind === 'group') {
+        return (
+            <group
+                position={asVec3(descriptor.position, [0, 0, 0])}
+                rotation={asVec3(descriptor.rotation, [0, 0, 0])}
+                scale={asPositiveVec3(descriptor.scale, [1, 1, 1], 0.001, 20)}
+            >
+                {descriptor.children.map((child, index) => (
+                    <GeometryPieces key={index} descriptor={child} depth={depth + 1} budget={spent} />
+                ))}
+            </group>
+        )
+    }
+    spent.left -= 1
+    const place = {
+        position: asVec3(descriptor.position, [0, 0, 0]),
+        rotation: asVec3(descriptor.rotation, [0, 0, 0])
+    }
+    switch (descriptor.kind) {
+        case 'box':
+            return (
+                <group {...place}>
+                    <BoxObject color={asColor(descriptor.color, '#5fa8ff')} boxSize={asPositiveVec3(descriptor.size, [1, 1, 1])} />
+                </group>
+            )
+        case 'sphere':
+            return (
+                <group {...place}>
+                    <SphereObject
+                        color={asColor(descriptor.color, '#5fa8ff')}
+                        sphereRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptor.radius, 0.5))))}
+                    />
+                </group>
+            )
+        case 'plane':
+            return (
+                <mesh {...place}>
+                    <planeGeometry args={[
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptor.width, 2)))),
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptor.height, 2))))
+                    ]} />
+                    <meshStandardMaterial color={asColor(descriptor.color, '#ffffff')} side={2} />
+                </mesh>
+            )
+        default:
+            return null
+    }
+}
+
+// evaluateNodeInputs plus the one value no input carries: what a Constructor
+// is wearing, read off its own Out doors. Computed HERE, where the whole
+// document and the running context both exist, because renderNodeBody gets
+// only (node, values, assetMap) and threading a context through every call
+// site for one type's sake would put the plumbing in eleven files.
+const resolveSpatialValues = (node, graphContext, allNodes) => {
+    const values = evaluateNodeInputs(node, graphContext)
+    if (node.typeId === 'geom.constructor') {
+        values.wornGeometry = wearConstructorGeometry(node, allNodes, graphContext)
+    }
+    return values
+}
+
 export function renderNodeBody(node, values, assetMap = null) {
     switch (node.typeId) {
         case 'geom.model': {
@@ -163,6 +245,27 @@ export function renderNodeBody(node, values, assetMap = null) {
         // tinted by its own bgColor field, with a small floor grid when
         // gridVisible is on - values.scale already sizes it via the outer
         // group transform (see NodeVisual), so this only needs a unit body.
+        case 'geom.constructor':
+            // Wearing something: the doors' geometry IS the body. Wearing
+            // nothing: a wireframe placeholder in the geometry port's own hue,
+            // so "not wired yet" and "wired to something invisible" cannot be
+            // confused — an unwired door carries undefined and draws nothing,
+            // this draws a frame saying "shape goes here".
+            if (values.wornGeometry) {
+                return <GeometryPieces descriptor={values.wornGeometry} />
+            }
+            return (
+                <group>
+                    <mesh>
+                        <boxGeometry args={[1, 1, 1]} />
+                        <meshStandardMaterial color="#bd93f9" transparent opacity={0.08} />
+                    </mesh>
+                    <mesh>
+                        <boxGeometry args={[1, 1, 1]} />
+                        <meshBasicMaterial color="#bd93f9" wireframe />
+                    </mesh>
+                </group>
+            )
         case 'universe.desk.3d':
             // The shell takes no clicks: it wraps whatever stands inside it, so
             // a pickable skin would swallow every pointer aimed at its contents
@@ -293,7 +396,20 @@ function SceneContent({
     // scopeId undefined = unscoped, matches the old document-wide behavior; a real
     // scope (including root, `null`) only renders/uses siblings of that scope — see
     // the identical comment in viewportWorldState.js.
-    const inScope = (node) => scopeId === undefined || (node.parentId || null) === scopeId
+    //
+    // With one carve-out either way: a constructor's parts are its DEFINITION,
+    // not standing objects, and the unscoped mode admitted every spatial node
+    // flat — so a legacy caller drew the snowman AND its loose spheres side by
+    // side, the exact double the childMap rule below exists to prevent.
+    const constructorIds = useMemo(
+        () => new Set((document.nodes || []).filter((node) => node.typeId === 'geom.constructor').map((node) => node.id)),
+        [document.nodes]
+    )
+    const inScope = (node) => (
+        scopeId === undefined
+            ? !constructorIds.has(node.parentId || null)
+            : (node.parentId || null) === scopeId
+    )
     const renderableNodes = useMemo(
         () => (document.nodes || []).filter((node) => isSpatialNode(node) && inScope(node)),
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -315,11 +431,16 @@ function SceneContent({
             const parentId = node.parentId || null
             if (!parentId) continue
             if (!byParent.has(parentId)) byParent.set(parentId, [])
-            byParent.get(parentId).push({ ...node, values: evaluateNodeInputs(node, graphContext) })
+            byParent.get(parentId).push({ ...node, values: resolveSpatialValues(node, graphContext, document.nodes) })
         }
         for (const [parentId, kids] of byParent) {
             const parent = spatial.find((node) => node.id === parentId)
-            if (parent?.typeId === 'universe.world') byParent.set(parentId, [])
+            // A World is its own stage. A Constructor's inside is a WORKSHOP:
+            // the parts standing in it are its definition, and only what
+            // reaches a door is its result — drawing both would show a snowman
+            // AND its three loose spheres. Same split TouchDesigner draws
+            // between a COMP's network and its output.
+            if (parent?.typeId === 'universe.world' || parent?.typeId === 'geom.constructor') byParent.set(parentId, [])
             else byParent.set(parentId, kids)
         }
         return byParent
@@ -425,7 +546,7 @@ function SceneContent({
                 {renderableNodes.map((node) => (
                     <SceneEntityErrorBoundary key={node.id} resetKey={node.id}>
                         <NodeVisual
-                            node={{ ...node, values: evaluateNodeInputs(node, graphContext) }}
+                            node={{ ...node, values: resolveSpatialValues(node, graphContext, document.nodes) }}
                             selected={node.id === selectedNodeId}
                             onSelect={onSelectNode}
                             onSelectNode={onSelectNode}

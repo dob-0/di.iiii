@@ -50,6 +50,14 @@ describe('formatPortValue', () => {
         expect(formatPortValue({ isTexture: true }, 'texture').text).toBe('a picture')
     })
 
+    it('describes a shape by its piece count', () => {
+        expect(formatPortValue({ kind: 'box', size: [1, 1, 1] }, 'geometry').text).toBe('a shape — 1 piece')
+        expect(formatPortValue({
+            kind: 'group',
+            children: [{ kind: 'sphere', radius: 1 }, { kind: 'sphere', radius: 2 }, { kind: 'box', size: [1, 1, 1] }]
+        }, 'any').text).toBe('a shape — 3 pieces')
+    })
+
     it('admits when it cannot read a value instead of printing [object Object]', () => {
         expect(formatPortValue({ some: 'stream' }, 'any').text).toBe('something this sheet cannot read')
         expect(formatPortValue(new Map(), 'any').text).toBe('something this sheet cannot read')

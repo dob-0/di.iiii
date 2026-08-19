@@ -423,3 +423,73 @@ describe('RawViewport', () => {
         expect(pills).toEqual(['Chosen'])
     })
 })
+
+describe('the Constructor', () => {
+    // A full snowman document, built the way a person builds one: two spheres
+    // and a merge standing INSIDE the constructor, wired to an Out door.
+    // Nothing here is mocked below the object components — the runtime
+    // resolves the descriptor through the real doorway mechanism.
+    const snowman = () => ({
+        worldState: {},
+        entities: [],
+        nodes: [
+            { id: 'ctor', typeId: 'geom.constructor', parentId: null, label: 'Snowman', values: { position: [2, 0, 0] } },
+            { id: 'head', typeId: 'geom.sphere', parentId: 'ctor', label: 'Head', values: { radius: 0.3, color: '#ffffff', position: [0, 1.2, 0] } },
+            { id: 'body', typeId: 'geom.sphere', parentId: 'ctor', label: 'Body', values: { radius: 0.5, color: '#eeeeff', position: [0, 0.5, 0] } },
+            { id: 'merge', typeId: 'shape.merge', parentId: 'ctor', label: 'Merge', values: {} },
+            { id: 'door', typeId: 'port.out', parentId: 'ctor', label: 'Out', values: { label: 'Shape' } }
+        ],
+        edges: [
+            { id: 'e1', fromNodeId: 'head', fromPort: 'geometry', toNodeId: 'merge', toPort: 'a' },
+            { id: 'e2', fromNodeId: 'body', fromPort: 'geometry', toNodeId: 'merge', toPort: 'b' },
+            { id: 'e3', fromNodeId: 'merge', fromPort: 'out', toNodeId: 'door', toPort: 'value' }
+        ]
+    })
+
+    it('wears what its doors carry — two spheres, through a Merge, end to end', () => {
+        sphereObjectSpy.mockClear()
+        render(<RawViewport document={snowman()} scopeId={null} onWorldDoubleClick={() => {}} />)
+        expect(sphereObjectSpy).toHaveBeenCalledTimes(2)
+        expect(sphereObjectSpy.mock.calls.map((call) => call[0].sphereRadius).sort()).toEqual([0.3, 0.5])
+    })
+
+    // The inside is a workshop, not a room: the parts must not ALSO stand as
+    // objects, or a person sees their snowman and its two loose spheres. The
+    // count-of-2 above is that guard — watched red with the childMap rule
+    // removed: four sphere renders, two worn and two standing.
+    //
+    // But standing INSIDE the constructor, the parts are exactly what you are
+    // there to arrange — the scoped room shows them as objects again.
+    it('shows the parts as objects when you stand inside it', () => {
+        sphereObjectSpy.mockClear()
+        render(<RawViewport document={snowman()} scopeId="ctor" onWorldDoubleClick={() => {}} />)
+        expect(sphereObjectSpy.mock.calls.length).toBeGreaterThanOrEqual(2)
+    })
+
+    it('a wired colour reaches the worn shape live', () => {
+        sphereObjectSpy.mockClear()
+        const doc = snowman()
+        doc.nodes.push({ id: 'red', typeId: 'value.color', parentId: 'ctor', label: 'Red', values: { value: '#ff0000' } })
+        doc.edges.push({ id: 'e4', fromNodeId: 'red', fromPort: 'out', toNodeId: 'head', toPort: 'color' })
+        render(<RawViewport document={doc} scopeId={null} onWorldDoubleClick={() => {}} />)
+        const head = sphereObjectSpy.mock.calls.find((call) => call[0].sphereRadius === 0.3)
+        expect(head[0].color).toBe('#ff0000')
+    })
+
+    it('renders a placeholder frame when nothing reaches a door', () => {
+        sphereObjectSpy.mockClear()
+        const doc = snowman()
+        doc.edges = [] // parts exist, nothing wired
+        const { container } = render(<RawViewport document={doc} scopeId={null} onWorldDoubleClick={() => {}} />)
+        expect(sphereObjectSpy).not.toHaveBeenCalled()
+        // The wireframe placeholder in the geometry hue — "shape goes here".
+        const frames = [...container.querySelectorAll('meshbasicmaterial')]
+            .filter((el) => el.getAttribute('color') === '#bd93f9')
+        expect(frames.length).toBeGreaterThan(0)
+    })
+
+    it('renderNodeBody draws a bare constructor as the placeholder, without a document', () => {
+        const body = renderNodeBody({ id: 'c', typeId: 'geom.constructor' }, {})
+        expect(body).toBeTruthy()
+    })
+})

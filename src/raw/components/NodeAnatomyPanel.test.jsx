@@ -96,6 +96,23 @@ describe('NodeAnatomyPanel', () => {
         expect(text).toContain('It holds 3 nodes. You are standing in them.')
     })
 
+    // Slot 2 says "a door"; the generic room sentence then claimed the body
+    // comes from "a different piece of code". Two slots, one screen,
+    // contradicting each other — the review caught it, this keeps it out.
+    it('does not claim code draws a container that wears its doors', () => {
+        const ctor = createNode('geom.constructor', { label: 'Snowman' })
+        const cube = createNode('geom.cube', { parentId: ctor.id })
+        const door = createNode('port.out', { parentId: ctor.id })
+        const { text } = sheetFor(
+            ctor,
+            [ctor, cube, door],
+            [createEdge(cube.id, 'geometry', door.id, 'value')],
+            { childCount: 2 }
+        )
+        expect(text).toContain('wearing whatever its doors carry')
+        expect(text).not.toContain('a different piece of code')
+    })
+
     it('says an empty container is empty rather than saying it has no inside', () => {
         const box = createNode('universe.space')
         const { text } = sheetFor(box, [box], [], { childCount: 0 })

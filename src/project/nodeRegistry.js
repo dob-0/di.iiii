@@ -78,6 +78,8 @@ export const FAMILY_BY_TYPE = {
     'geom.cube': 'make',
     'geom.sphere': 'make',
     'geom.plane': 'make',
+    'shape.merge': 'make',
+    'geom.constructor': 'make',
     'view.text': 'make',
     // Create sits with the things it makes, not with the panels it looks like.
     'view.library': 'make',
@@ -926,7 +928,12 @@ export const NODE_TYPES = {
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
         ],
         outputs: [
-            { id: 'bounds', type: 'vec3', label: 'Bounds' },
+            { id: 'bounds',   type: 'vec3',     label: 'Bounds'   },
+            // The shape itself, as a value. What makes a Cube more than a
+            // thing standing in the room: wired into a Merge or a
+            // Constructor's Out door, the cube IS data — the first carrier of
+            // the `geometry` port type since it was declared.
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
         ],
         defaultValues: {},
         render: 'spatial-3d',
@@ -944,7 +951,9 @@ export const NODE_TYPES = {
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
         ],
-        outputs: [],
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
         defaultValues: {},
         render: 'spatial-3d',
     },
@@ -968,6 +977,66 @@ export const NODE_TYPES = {
             { id: 'position',   type: 'vec3',    label: 'Position',    default: [0, 0, 0] },
             { id: 'rotation',   type: 'vec3',    label: 'Rotation',    default: [0, 0, 0] },
         ],
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    // -----------------------------------------------------------------------
+    // THE CONSTRUCTOR — a node made of nodes
+    //
+    // The owner's sentence, made a palette entry: "we all have as a
+    // constructor". A container that WEARS whatever shape the nodes inside it
+    // build: enter it, place shapes, wire them (through Merge if there are
+    // several) into an Out door, walk out — and the Constructor stands in the
+    // room being that shape. Its inside is its definition; its outside is the
+    // result. The inside is a workshop, not a room: the parts standing in it
+    // are not drawn as objects, only what reaches a door is drawn — the same
+    // split TouchDesigner makes between a COMP's network and its output, and
+    // the reason building a snowman does not show three loose spheres AND the
+    // snowman.
+    //
+    // Deliberately a NEW type rather than a change to 3D Desk: the desk shows
+    // its contents, the constructor shows its result, and one container doing
+    // both depending on wiring would be a surface nobody could predict.
+    // -----------------------------------------------------------------------
+
+    'shape.merge': {
+        id: 'shape.merge',
+        label: 'Merge',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['merge', 'combine', 'together', 'join', 'group', 'shape', 'geometry'],
+        // Two, chained for more — the same convention every math node here
+        // uses, and an input can carry a group that is itself a merge.
+        inputs: [
+            { id: 'a', type: 'geometry', label: 'A' },
+            { id: 'b', type: 'geometry', label: 'B' },
+        ],
+        outputs: [
+            { id: 'out', type: 'geometry', label: 'Out' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'geom.constructor': {
+        id: 'geom.constructor',
+        label: 'Constructor',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['constructor', 'build', 'built', 'own', 'shape', 'graph', 'assemble', 'compose', 'make'],
+        inputs: [
+            { id: 'position', type: 'vec3', label: 'Position', default: [0, 0, 0] },
+            { id: 'rotation', type: 'vec3', label: 'Rotation', default: [0, 0, 0] },
+            { id: 'scale',    type: 'vec3', label: 'Scale',    default: [1, 1, 1] },
+        ],
+        // No declared outputs: everything it gives leaves through the doors
+        // standing inside it, which is the whole idea.
         outputs: [],
         defaultValues: {},
         render: 'spatial-3d',
@@ -1702,7 +1771,11 @@ export const CONTAINER_TYPE_IDS = new Set([
     'universe.desk.3d',
     'universe.node0',
     'studio',
-    'node.null'
+    'node.null',
+    // The first container whose inside DEFINES its outside — see its
+    // registry entry. The long-term intention stated below (this set
+    // shrinking as nodes become graphs) starts here.
+    'geom.constructor'
 ])
 
 // …and everything else, which is made of CODE: a case in a JavaScript switch,
@@ -1716,9 +1789,11 @@ export const CONTAINER_TYPE_IDS = new Set([
 // entering a node feel broken.
 //
 // The long-term intention is for this set to shrink: a cube defined by its own
-// interior graph is the "everything is a constructor" direction, and the
-// `geometry` port type already declared in PORT_TYPES — and used by nothing —
-// is where that was started and abandoned.
+// interior graph is the "everything is a constructor" direction. The first
+// step exists — `geom.constructor` wears the geometry its doors carry, and the
+// `geometry` port type finally has carriers — but the built-in Cube is still a
+// case in a switch; REDEFINING the built-ins as constructor graphs is the part
+// still ahead.
 export const isNodeMadeOfCode = (typeId) => Boolean(NODE_TYPES[typeId]) && !CONTAINER_TYPE_IDS.has(typeId)
 
 export const isNodeTypeImplemented = (typeId) => !UNIMPLEMENTED_NODE_TYPES.has(typeId)

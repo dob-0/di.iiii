@@ -140,6 +140,21 @@ outright if the running page and its code ever disagree.
 
 It only reads. Changing a value is still the inspector's job.
 
+## Building a node out of nodes
+
+The **Constructor** (palette, with the other "make" nodes) is a container that
+wears whatever shape the nodes inside it build. Until something is wired it
+stands as a violet wireframe.
+
+1. Enter it. Place a Cube (or Sphere, or Plane) and an `Out` node inside.
+2. Wire the shape's **Geometry** output into the door's Value.
+3. Walk out — the Constructor is standing in the room wearing that shape.
+
+Several parts go through a **Merge** (two Geometry wires in, one out; chain for
+more). Each part keeps its own Position and colour, and everything stays live —
+wire a colour into a part's Colour, or the clock's Sin into a Sphere's Radius,
+and the worn shape follows.
+
 ## What to do when something feels broken
 
 - Created a node and see nothing? Check whether it is a visible World/View node
