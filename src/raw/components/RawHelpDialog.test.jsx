@@ -26,7 +26,7 @@ describe('RawHelpDialog', () => {
         fireEvent.click(screen.getByRole('tab', { name: 'All Controls' }))
 
         expect(screen.getByText('Add node')).toBeTruthy()
-        expect(screen.getAllByText('Double-click world').length).toBeGreaterThan(0)
+        expect(screen.getAllByText('Double-click the scene').length).toBeGreaterThan(0)
     })
 
     it('closes when escape is pressed', () => {

@@ -2,10 +2,10 @@ export const getSurfaceWorkflow = (surface = 'graph') => {
     switch (surface) {
         case 'world':
             return {
-                title: 'World builds the scene',
-                description: 'Place geometry and tune shared world controls. Use Graph when you want values to drive them.',
+                title: 'Room builds the 3D place',
+                description: 'Place objects and tune the shared room controls. Use Graph when you want values to drive them.',
                 actionLabel: 'Place Node',
-                surfaceLabel: 'World'
+                surfaceLabel: 'Scene'
             }
         case 'view':
             return {
@@ -18,7 +18,7 @@ export const getSurfaceWorkflow = (surface = 'graph') => {
         default:
             return {
                 title: 'Graph connects everything',
-                description: 'Create sources and math nodes here, then wire them into World and View nodes.',
+                description: 'Create sources and math nodes here, then wire them into Room and View nodes.',
                 actionLabel: 'Place Node',
                 surfaceLabel: 'Graph'
             }

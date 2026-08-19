@@ -27,7 +27,7 @@ export default function StudioGraphSurface({ document }) {
                 edges={edges}
                 selectedNodeId={selectedNodeId}
                 onSelectNode={setSelectedNodeId}
-                emptyHint="This project has no graph nodes yet — create them from Raw."
+                emptyHint="No nodes in this project yet — add them in the node editor."
             />
             <div className="ssgs-readonly-badge">Read-only preview</div>
             {selectedNode && (

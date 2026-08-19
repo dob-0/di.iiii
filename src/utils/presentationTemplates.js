@@ -3,7 +3,7 @@ export const STUDIO_DEPLOY_PRESENTATION_HTML = `<!doctype html>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>XR Studio / Deploy View</title>
+    <title>Your space — di.iiii</title>
     <style>
       :root {
         color-scheme: dark;
@@ -187,11 +187,11 @@ export const STUDIO_DEPLOY_PRESENTATION_HTML = `<!doctype html>
     <main class="shell">
       <section class="hero">
         <div>
-          <div class="kicker">XR Studio / Code View / Deploy Ready</div>
+          <div class="kicker">di.iiii</div>
           <h1>Build the space like a launch page.</h1>
           <p class="lead">
-            This starter is for artist microsites, public programme pages, open calls, and client-facing launches.
-            Replace the copy, colors, links, and sections below while keeping everything in one portable HTML file.
+            This starter is for artist pages, public programme pages, open calls, and client-facing launches.
+            Replace the copy, colors, links, and sections below while keeping everything in one HTML file.
           </p>
         </div>
 
@@ -203,13 +203,13 @@ export const STUDIO_DEPLOY_PRESENTATION_HTML = `<!doctype html>
           </article>
           <article class="metric">
             <div class="label">Studio</div>
-            <strong>Artist + XR Workflow</strong>
+            <strong>Artist pages</strong>
             <span>Good for bespoke client pages that still live inside the editor.</span>
           </article>
           <article class="metric">
             <div class="label">Delivery</div>
             <strong>Preview, export, publish</strong>
-            <span>Paste custom code or move this file into a real deploy pipeline later.</span>
+            <span>Paste your own code, or move this file to a host of its own later.</span>
           </article>
         </div>
       </section>
@@ -226,11 +226,11 @@ export const STUDIO_DEPLOY_PRESENTATION_HTML = `<!doctype html>
         </section>
 
         <section class="panel">
-          <div class="label">Deploy Notes</div>
+          <div class="label">Notes on publishing</div>
           <h2>Keep this handoff clean</h2>
           <p>
-            Static HTML is the lowest-friction path inside this sandbox. Full React, Babel, or CDN-heavy experiments
-            can still work, but they are better once the project already has its own public host.
+            Plain HTML works best here. React, Babel, or pages that pull scripts from elsewhere can still run,
+            but they are happier once the project has a home of its own on the web.
           </p>
         </section>
 
@@ -238,11 +238,11 @@ export const STUDIO_DEPLOY_PRESENTATION_HTML = `<!doctype html>
           <div class="label">Actions</div>
           <h2>Next steps</h2>
           <div class="cta-row">
-            <a class="button primary" href="mailto:studio@example.com?subject=Space%20launch">Launch Inquiry</a>
+            <a class="button primary" href="mailto:you@example.com?subject=About%20this%20space">Get in touch</a>
             <a class="button" href="https://example.com">Public Link</a>
           </div>
           <p class="code" style="margin-top: 14px;">
-            Tip: keep this file self-contained while the design is moving quickly.
+            Replace you@example.com and example.com with your own before you publish this page.
           </p>
         </section>
       </aside>
@@ -437,11 +437,11 @@ export const ARTIST_OPEN_CALL_PRESENTATION_HTML = `<!doctype html>
     <main class="frame">
       <section class="hero">
         <div>
-          <div class="eyebrow">XR Studio / Artist Project / Open Call</div>
+          <div class="eyebrow">Artist Project / Open Call</div>
           <h1>WCC<br />Women Creating Change</h1>
           <p class="intro">
-            A flexible single-file starter inspired by your artist example. Use it for an open call, residency page,
-            public programme announcement, or exhibition microsite while keeping the project easy to preview and deploy.
+            A flexible single-file starter. Use it for an open call, residency page, public programme
+            announcement, or exhibition page while keeping the project easy to preview and publish.
           </p>
         </div>
 
@@ -458,8 +458,8 @@ export const ARTIST_OPEN_CALL_PRESENTATION_HTML = `<!doctype html>
           </article>
           <article class="stat">
             <div class="label">Delivery</div>
-            <strong>Code View Ready</strong>
-            <span>Good for fast artist edits before a full production deploy.</span>
+            <strong>Written as a web page</strong>
+            <span>Good for fast artist edits before anything bigger gets built.</span>
           </article>
         </div>
       </section>
@@ -494,12 +494,12 @@ export const ARTIST_OPEN_CALL_PRESENTATION_HTML = `<!doctype html>
           <div class="label">Actions</div>
           <h2>Ready for the next step</h2>
           <div class="actions">
-            <a class="button primary" href="mailto:studio@example.com?subject=WCC%20Open%20Call">Apply to the open call</a>
+            <a class="button primary" href="mailto:you@example.com?subject=Open%20call%20application">Apply to the open call</a>
             <a class="button" href="https://example.com">Read full programme</a>
           </div>
           <div class="code-note">
-            Keep this file self-contained while the concept is moving. Move to a full build pipeline later if the
-            project grows into React, Three.js, or a custom deployment stack.
+            Replace you@example.com and example.com with your own before you publish this page, or nobody's
+            application reaches you.
           </div>
         </section>
       </aside>
@@ -574,10 +574,9 @@ export const BLANK_PRESENTATION_HTML = `<!doctype html>
   </head>
   <body>
     <article class="card">
-      <p class="eyebrow">Code View</p>
       <h1>Design this space like a web page.</h1>
       <p>Replace this HTML with your own layout, sections, typography, and links.</p>
-      <p>Our editor UI can still sit on top of it when you want to debug or publish.</p>
+      <p>The editor can still sit on top of it when you want to change something or publish.</p>
     </article>
   </body>
 </html>`
@@ -585,21 +584,21 @@ export const BLANK_PRESENTATION_HTML = `<!doctype html>
 export const presentationStarterTemplates = [
     {
         id: 'studio-deploy',
-        name: 'XR Studio Deploy',
+        name: 'Launch page',
         eyebrow: 'Studio starter',
-        description: 'A dark deploy-ready launch page for artist work, clients, or XR announcements.',
+        description: 'A dark page for artist work, clients, or announcements.',
         html: STUDIO_DEPLOY_PRESENTATION_HTML
     },
     {
         id: 'artist-open-call',
         name: 'Artist Open Call',
         eyebrow: 'Artist template',
-        description: 'A distilled microsite starter inspired by your pasted open-call example.',
+        description: 'A one-page starter for an open call — deadline, brief, and an apply button.',
         html: ARTIST_OPEN_CALL_PRESENTATION_HTML
     },
     {
         id: 'blank-canvas',
-        name: 'Blank Canvas',
+        name: 'Blank page',
         eyebrow: 'Minimal starter',
         description: 'A light barebones page when you want to design every section from scratch.',
         html: BLANK_PRESENTATION_HTML

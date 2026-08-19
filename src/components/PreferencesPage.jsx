@@ -336,7 +336,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                     {activeSection === 'inspect' && (
                         <>
                             <div className="preferences-objects-top">
-                                <ModuleSection title="Scene Radar" subtitle={`${objects?.length || 0} objects`}>
+                                <ModuleSection title="Object Radar" subtitle={`${objects?.length || 0} objects`}>
                                     <div className="preferences-stage-radar">
                                         <ScenePreviewMap
                                             dots={scenePreviewDots}
@@ -458,7 +458,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                 </div>
                             </ModuleSection>
 
-                            <ModuleSection title="Operator Links" subtitle="Open support surfaces">
+                            <ModuleSection title="Operator Links" subtitle="Open the other views of this space">
                                 <div className="preferences-link-list">
                                     {operatorLinks.map((link) => (
                                         <OperatorLinkCard key={link.key} label={link.label} href={link.href} />
@@ -514,7 +514,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                 </div>
                             </ModuleSection>
 
-                            <ModuleSection title="Panel Matrix" subtitle="Dock and workspace visibility">
+                            <ModuleSection title="Panel Matrix" subtitle="Which panels and docks are showing">
                                 <div className="preferences-panel-grid">
                                     {panelButtons.map((button) => (
                                         <button
@@ -532,7 +532,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                 </div>
                             </ModuleSection>
 
-                            <ModuleSection title="Scene Config" subtitle="Live scene values">
+                            <ModuleSection title="Room Config" subtitle="Live room values">
                                 <InfoPair label="Background" value={sceneSettings?.backgroundColor || 'n/a'} mono />
                                 <InfoPair label="Grid Size" value={String(sceneSettings?.gridSize ?? 'n/a')} />
                                 <InfoPair label="Ambient Light" value={ambientLightSummary} mono />
@@ -581,7 +581,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                             <ModuleSection title="Project Snapshot" subtitle={sync?.spaceId || 'main'}>
                                 <InfoPair label="Public Path" value={currentSpaceRoutes.publicPath} mono />
                                 <InfoPair label="Studio Path" value={currentSpaceRoutes.studioPath} mono />
-                                <InfoPair label="Raw Path" value={currentSpaceRoutes.rawPath} mono />
+                                <InfoPair label="Node Editor Path" value={currentSpaceRoutes.rawPath} mono />
                                 <InfoPair label="Admin Path" value={currentSpaceRoutes.adminPath || 'n/a'} mono />
                                 <InfoPair label="Scene Version" value={String(projectSnapshot.scene?.version ?? 'n/a')} />
                                 <InfoPair label="Display Name" value={sync?.effectiveDisplayName || 'n/a'} />
@@ -593,7 +593,7 @@ export default function PreferencesPage({ onNavigateToEditor }) {
                                 <InfoPair label="Server Sync" value={sync?.serverSyncInfo?.label || 'n/a'} />
                             </ModuleSection>
 
-                            <ModuleSection title="Storage & Raw Snapshot" subtitle={`${localStorageKeys.length} local keys`}>
+                            <ModuleSection title="Storage & JSON Snapshot" subtitle={`${localStorageKeys.length} local keys`}>
                                 <div className="preferences-storage-list">
                                     {localStorageKeys.length ? (
                                         localStorageKeys.map((key) => (

@@ -110,8 +110,8 @@ function registerOgRoutes(router, { loadSpaceMeta, siteOrigin }) {
           // The platform's own front door, not the path that missed — sending a
           // crawler back to a URL we just failed to resolve is a loop.
           url: origin || undefined,
-          title: 'di.iiii — browser-native XR authoring',
-          description: 'Build and publish spatial XR experiences without leaving the web.',
+          title: 'di.iiii — make a space in your browser',
+          description: 'Make a space of your own, build projects inside it out of nodes and objects, and share the link.',
           // Absolute, like the per-space branch. A relative image resolves
           // against og:url, so on the fallback path it used to resolve against
           // the internal address and reach nothing.

@@ -44,8 +44,8 @@ export default function StudioCodeSpaceDirector({ spaceId }) {
                 <div className="scsd-empty">
                     <p>
                         {codeSpace
-                            ? 'This space is code-backed, but this build has no authoring surface for it.'
-                            : 'This space keeps its scenes as project documents. Open one from Projects.'}
+                            ? 'This space is built from code, and there is no editor for it here yet.'
+                            : 'This space keeps its work as projects. Open one from Projects.'}
                     </p>
                     <button className="sh-link" onClick={() => appNavigate(buildStudioHubPath(spaceId))}>
                         ← Projects

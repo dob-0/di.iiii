@@ -6,8 +6,8 @@ import { usePanelDrag } from '../../hooks/usePanelDrag.js'
 // hopping between and managing the space's projects without the hub detour.
 const PANEL_BUTTONS = [
     { key: 'create', label: 'Create' },
-    { key: 'scene', label: 'Scene' },
-    { key: 'world', label: 'World' },
+    { key: 'scene', label: 'Objects' },
+    { key: 'world', label: 'Scene' },
     { key: 'publish', label: 'Share' },
     { key: 'files', label: 'Code' },
     { key: 'projects', label: 'Projects' },
@@ -80,7 +80,7 @@ export default function StudioControlCluster({
                 {!collapsed && (
                     <>
                         <div className="scc-section">
-                            <div className="scc-section-label">Scene</div>
+                            <div className="scc-section-label">Tools</div>
                             <div className="scc-buttons">
                                 <button
                                     className={`scc-btn ${editMode === 'navigate' ? 'active' : ''}`}

@@ -27,7 +27,7 @@ const TRANSFORM_FIELDS = [
 ]
 
 const APPEARANCE_FIELDS = [
-    { label: 'Color', component: 'appearance', path: ['color'], type: 'color' },
+    { label: 'Colour', component: 'appearance', path: ['color'], type: 'color' },
     { label: 'Opacity', component: 'appearance', path: ['opacity'], type: 'number', min: 0, max: 1, step: 0.05 }
 ]
 
@@ -318,7 +318,7 @@ const DEFINITIONS = {
                 VECTOR_FIELD('Position Z', 'transform', ['position', 2])
             ]},
             { id: 'light', label: 'Light', fields: [
-                { label: 'Color', component: 'light', path: ['color'], type: 'color' },
+                { label: 'Colour', component: 'light', path: ['color'], type: 'color' },
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 20, step: 0.1 },
                 { label: 'Distance', component: 'light', path: ['distance'], type: 'number', min: 0, max: 100, step: 0.5 },
                 { label: 'Decay', component: 'light', path: ['decay'], type: 'number', min: 0, max: 4, step: 0.1 }
@@ -334,7 +334,7 @@ const DEFINITIONS = {
                 VECTOR_FIELD('Position Z', 'transform', ['position', 2])
             ]},
             { id: 'light', label: 'Light', fields: [
-                { label: 'Color', component: 'light', path: ['color'], type: 'color' },
+                { label: 'Colour', component: 'light', path: ['color'], type: 'color' },
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 20, step: 0.1 },
                 { label: 'Distance', component: 'light', path: ['distance'], type: 'number', min: 0, max: 100, step: 0.5 },
                 { label: 'Angle (rad)', component: 'light', path: ['angle'], type: 'number', min: 0.01, max: 1.57, step: 0.01 },
@@ -352,7 +352,7 @@ const DEFINITIONS = {
                 VECTOR_FIELD('Position Z', 'transform', ['position', 2])
             ]},
             { id: 'light', label: 'Light', fields: [
-                { label: 'Color', component: 'light', path: ['color'], type: 'color' },
+                { label: 'Colour', component: 'light', path: ['color'], type: 'color' },
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 20, step: 0.1 }
             ]}
         ]
@@ -361,7 +361,7 @@ const DEFINITIONS = {
         label: 'Ambient Light',
         sections: [
             { id: 'light', label: 'Light', fields: [
-                { label: 'Color', component: 'light', path: ['color'], type: 'color' },
+                { label: 'Colour', component: 'light', path: ['color'], type: 'color' },
                 { label: 'Intensity', component: 'light', path: ['intensity'], type: 'number', min: 0, max: 4, step: 0.05 }
             ]}
         ]

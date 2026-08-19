@@ -12,7 +12,7 @@ function SurfaceDiagram({ sectionId = 'start' }) {
                 <div className="raw-help-diagram-grid" />
                 <div className="raw-help-diagram-cube raw-help-diagram-world-node" />
                 <div className="raw-help-diagram-sphere raw-help-diagram-world-node" />
-                <div className="raw-help-diagram-pill raw-help-diagram-label-world">World</div>
+                <div className="raw-help-diagram-pill raw-help-diagram-label-world">Room</div>
             </div>
         )
     }
@@ -94,7 +94,7 @@ export default function RawHelpDialog({
                 aria-label="Close help"
                 onClick={onClose}
             />
-            <section className="raw-help-dialog" role="dialog" aria-modal="true" aria-label="Raw help">
+            <section className="raw-help-dialog" role="dialog" aria-modal="true" aria-label="Help">
                 <header className="raw-help-header">
                     <div className="raw-help-header-mark" aria-hidden="true">
                         <span>{activeSection.icon}</span>

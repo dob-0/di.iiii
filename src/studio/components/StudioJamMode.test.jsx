@@ -37,7 +37,7 @@ describe('minimal jam mode', () => {
     describe('StudioControlCluster', () => {
         it('renders all six windows and the Arrange section by default', () => {
             render(<StudioControlCluster {...clusterProps} />)
-            for (const label of ['Create', 'Scene', 'World', 'Share', 'Code', 'Projects']) {
+            for (const label of ['Create', 'Objects', 'Scene', 'Share', 'Code', 'Projects']) {
                 expect(screen.getByRole('button', { name: label })).toBeTruthy()
             }
             expect(screen.getByText('Arrange')).toBeTruthy()
@@ -54,7 +54,7 @@ describe('minimal jam mode', () => {
                 />
             )
             expect(screen.getByRole('button', { name: 'Create' })).toBeTruthy()
-            for (const gone of ['Scene', 'World', 'Share', 'Code', 'Projects']) {
+            for (const gone of ['Objects', 'Scene', 'Share', 'Code', 'Projects']) {
                 expect(screen.queryByRole('button', { name: gone })).toBeNull()
             }
             expect(screen.queryByText('Arrange')).toBeNull()
@@ -122,7 +122,7 @@ describe('minimal jam mode', () => {
             const onInspectorChange = vi.fn()
             const onDeleteSelected = vi.fn()
             render(<JamEditPanel entity={textEntity} onInspectorChange={onInspectorChange} onDeleteSelected={onDeleteSelected} />)
-            fireEvent.change(screen.getByLabelText('Color'), { target: { value: '#00ff00' } })
+            fireEvent.change(screen.getByLabelText('Colour'), { target: { value: '#00ff00' } })
             expect(onInspectorChange).toHaveBeenCalledWith('appearance', { color: '#00ff00' })
             fireEvent.click(screen.getByRole('button', { name: /Remove/ }))
             expect(onDeleteSelected).toHaveBeenCalledTimes(1)
@@ -132,12 +132,12 @@ describe('minimal jam mode', () => {
             const box = { id: 'e2', type: 'box', components: { appearance: { color: '#123456' } } }
             const { unmount } = render(<JamEditPanel entity={box} onInspectorChange={vi.fn()} onDeleteSelected={vi.fn()} />)
             expect(screen.queryByLabelText('Your text')).toBeNull()
-            expect(screen.getByLabelText('Color')).toBeTruthy()
+            expect(screen.getByLabelText('Colour')).toBeTruthy()
             unmount()
 
             const media = { id: 'e3', type: 'image', components: { media: {} } }
             render(<JamEditPanel entity={media} onInspectorChange={vi.fn()} onDeleteSelected={vi.fn()} />)
-            expect(screen.queryByLabelText('Color')).toBeNull()
+            expect(screen.queryByLabelText('Colour')).toBeNull()
             expect(screen.getByRole('button', { name: /Remove/ })).toBeTruthy()
         })
 

@@ -27,7 +27,7 @@ export const CODE_SPACES = [
         label: ALGO_VRITHM_LABEL,
         path: ALGO_VRITHM_PATH,
         // Shown on the card. Say what the thing IS, not that it is unusual.
-        blurb: 'A 30–60 second installation on hyperreality. Its scene is code, not a project document — open it to play, or open the director to retime the edit.',
+        blurb: 'A 30–60 second installation on hyperreality. It is built from code, not a project — open it to play, or open the director to retime the edit.',
         // The authoring surface for a code space, inside Studio — the piece's
         // own timeline panel, under Studio's chrome, reached from the Spaces
         // list like any other editor.

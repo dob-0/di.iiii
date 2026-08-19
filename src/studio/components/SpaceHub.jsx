@@ -712,10 +712,10 @@ export default function SpaceHub() {
 
                                     {isLinking && (
                                         <div className="ssh-project-linker" role="presentation" onClick={e => e.stopPropagation()} onKeyDown={e => e.stopPropagation()}>
-                                            {linker.loading && <p className="ssh-linker-status">Loading projects...</p>}
+                                            {linker.loading && <p className="ssh-linker-status">Loading projects…</p>}
                                             {linker.error && <p className="ssh-linker-status ssh-linker-error">{linker.error}</p>}
                                             {!linker.loading && !linker.error && linker.projects.length === 0 && (
-                                                <p className="ssh-linker-status">No projects yet. Open this space in Studio to create one.</p>
+                                                <p className="ssh-linker-status">No projects yet — open this space to make one.</p>
                                             )}
                                             {!linker.loading && linker.projects.length > 0 && (
                                                 <div className="ssh-linker-list">

@@ -7,8 +7,8 @@
 
 ## Start Here
 
-- main authoring lane: `Studio`
-- experimental node-first lane: `Raw`
+- main editor: `Studio`
+- node editor: `/<space>/raw` (`src/raw/`)
 - compatibility lane: `V1`
 - backend authority: `serverXR`
 - public unit: `space`
@@ -35,10 +35,10 @@ Project links:
 This is the shipped, working reality of the repo today.
 
 - `Studio` is the stable main editor.
-- `Beta` is the experimental recursive node-first editor lane.
+- the node editor at `/<space>/raw` (`src/raw/`) is where recursive node-first work happens.
 - `V1` remains for compatibility, fallback behavior, and migration-sensitive work.
 - `serverXR` is authoritative for spaces, projects, assets, ops, SSE, presence, and edit enforcement.
-- public routes use `/<space>` for the live published view, with `/<space>/studio`, `/<space>/beta`, and `/admin?space=<space>` for editing and ops surfaces
+- public routes use `/<space>` for the live published view, with `/<space>/studio`, `/<space>/raw`, and `/admin?space=<space>` for editing and ops
 - persistence is still single-host filesystem storage
 - writes are protected by session/token-based auth, not a full multi-user identity and audit model yet
 
@@ -56,8 +56,8 @@ This is where the project is going, but not all of it is fully shipped yet.
 Use this as the default path for new work in a space:
 
 1. Create or open a space from the admin surface or the spaces panel. Space creation provisions the server record and a blank scene.
-2. Open `/<space>/studio` for the main development lane. Create new projects there, import legacy scenes, and keep the long-term working copy.
-3. Use `/<space>/beta` for experimental or node-first work when the project needs research-style iteration.
+2. Open `/<space>/studio` for the main editor. Create new projects there, import legacy scenes, and keep the long-term working copy.
+3. Use `/<space>/raw` for node-first work when the project needs research-style iteration.
 4. Publish the chosen project to the public route by setting `publishedProjectId` for the space; `/<space>` then shows the live project viewer.
 
 Important distinction:
@@ -70,7 +70,7 @@ Important distinction:
 
 - `space`
   - the public and management unit
-  - owns routes like `/<space>`, `/<space>/studio`, and `/<space>/beta`
+  - owns routes like `/<space>`, `/<space>/studio`, and `/<space>/raw`
 - `project`
   - the editable document inside a space
   - stored independently from the public route
@@ -88,8 +88,8 @@ Important distinction:
 
 | Path | Role | Use It For |
 | --- | --- | --- |
-| `src/studio/` | stable main editor lane | main user-facing product work |
-| `src/beta/` | experimental node-first lane | research, editor-v2, recursive-node work |
+| `src/studio/` | stable main editor | main user-facing product work |
+| `src/raw/` | the node editor | research and recursive-node work |
 | `src/project/` | shared project logic center | document state, sync, presence, asset flow, shared editor/viewer logic |
 | `src/shared/` and `shared/` | cross-runtime schema and contracts | canonical schema/runtime definitions |
 | `serverXR/` | backend runtime | auth, persistence, assets, presence, SSE, publish state |
@@ -102,14 +102,14 @@ Use these defaults unless the task clearly says otherwise.
 
 - default to `Studio` for main product work
 - default to `src/project/` for shared document or collaboration logic
-- use `Beta` only when the task is intentionally experimental or node-first
+- use the node editor (`src/raw/`) only when the task is intentionally node-first
 - prefer node-first behavior over growing legacy object/window systems
 - treat `worldState`, `windowLayout`, and older entity structures as compatibility bridges
 - treat `V1` work as compatibility work unless the task is explicitly about migration or legacy support
 
 Common mistakes to avoid:
 
-- do not describe `Beta` as the main shipped lane
+- do not describe the node editor as the main shipped editor — that is `Studio`
 - do not describe physical sync or hardware-linked workflows as fully productized repo capability
 - do not assume older orchestration files are the right long-term home for new canonical behavior
 - do not push private ops material, raw staging details, `.env` files, or host-specific deployment secrets into the public repo
@@ -148,7 +148,7 @@ Useful local routes:
 
 - `http://localhost:5173/main`
 - `http://localhost:5173/main/studio`
-- `http://localhost:5173/main/beta`
+- `http://localhost:5173/main/raw`
 - `http://localhost:5173/admin?space=main`
 - `http://localhost:4000/serverXR/api/health`
 

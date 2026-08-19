@@ -4,7 +4,7 @@ import { getSurfaceWorkflow } from './surfaceWorkflow.js'
 describe('getSurfaceWorkflow', () => {
     it('returns world guidance', () => {
         expect(getSurfaceWorkflow('world')).toMatchObject({
-            title: 'World builds the scene',
+            title: 'Room builds the 3D place',
             actionLabel: 'Place Node'
         })
     })

@@ -97,7 +97,7 @@ export default function PrivacyPage() {
                     <h2>in your browser</h2>
                     <p>
                         The app sets around 15 localStorage keys — a persistent pseudonymous id,
-                        display names, and your workspace documents. They stay on your machine.
+                        display names, and your projects. They stay on your machine.
                         There is no consent banner; this page is the disclosure. The keys are listed,
                         and clearable, in Preferences.
                     </p>
@@ -143,7 +143,7 @@ export default function PrivacyPage() {
                         <li>Idle spaces expire after 30 days. Guest sandboxes after 7. Account
                             sandboxes archive to a snapshot after 180 days and revive on your next
                             visit.</li>
-                        <li>Edit history is capped at 500 operations per document.</li>
+                        <li>Edit history is capped at 500 operations per project.</li>
                         <li>Accounts, open-call applications, and published assets currently have no
                             retention limit — they persist until removed by hand.</li>
                         <li>Nightly backups are kept on the server for 14 days, nowhere else. A

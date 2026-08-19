@@ -107,7 +107,7 @@ export default function SpacesPanel({
                         className="text-input"
                     >
                         <option value="public">Public route</option>
-                        <option value="studio">Studio workspace</option>
+                        <option value="studio">Studio</option>
                         <option value="admin">Admin page</option>
                     </select>
                 </div>

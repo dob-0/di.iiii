@@ -6,11 +6,11 @@ export const GUIDE_AUDIENCES = [
         label: 'For Visitors',
         glyph: '◧',
         title: 'Look first',
-        description: 'See scene and panels fast.',
-        tags: ['Public', 'View', 'World'],
+        description: 'See the room and the panels fast.',
+        tags: ['Public', 'View', 'Scene'],
         steps: [
             'Open public',
-            'Switch View / World',
+            'Switch View / Room',
             'Tap Help'
         ],
         actionLabel: 'Open Public Space'
@@ -39,7 +39,7 @@ export const GUIDE_SECTIONS = [
         title: 'Start small',
         description: 'Start empty. Double-click to create node 0.',
         callouts: [
-            { icon: '◫', title: 'World', detail: 'Place scene nodes' },
+            { icon: '◫', title: 'Scene', detail: 'Place objects' },
             { icon: '▤', title: 'View', detail: 'Make panels' },
             { icon: '⋯', title: 'Graph', detail: 'Wire values' }
         ],
@@ -61,17 +61,17 @@ export const GUIDE_SECTIONS = [
     },
     {
         id: 'world',
-        label: 'World',
+        label: 'Scene',
         icon: '◫',
-        title: 'Place scene nodes',
+        title: 'Place objects',
         description: 'Objects, light, background.',
         callouts: [
-            { icon: '◧', title: 'Orbit', detail: 'Drag scene' },
-            { icon: '◎', title: 'Add', detail: 'Double-click world' },
+            { icon: '◧', title: 'Orbit', detail: 'Drag to look around' },
+            { icon: '◎', title: 'Add', detail: 'Double-click the scene' },
             { icon: '▣', title: 'Tune', detail: 'Use inspector' }
         ],
         controls: [
-            ['Add node', 'Double-click world'],
+            ['Add node', 'Double-click the scene'],
             ['Select', 'Click object'],
             ['Move', 'Drag selected node'],
             ['Delete', 'Delete or Backspace']
@@ -83,7 +83,7 @@ export const GUIDE_SECTIONS = [
             'Use Graph when you need values.'
         ],
         tips: [
-            'World is the 3D scene.',
+            'The room is the 3D place your objects stand in.',
             'Background, light, grid affect all.'
         ]
     },
@@ -124,7 +124,7 @@ export const GUIDE_SECTIONS = [
         callouts: [
             { icon: '◌', title: 'Source', detail: 'Add value node' },
             { icon: '→', title: 'Wire', detail: 'Drag port to port' },
-            { icon: '◎', title: 'Result', detail: 'Watch surfaces update' }
+            { icon: '◎', title: 'Result', detail: 'Watch it update' }
         ],
         controls: [
             ['Add node', 'Double-click graph'],

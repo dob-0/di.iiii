@@ -123,7 +123,7 @@ export function LibraryPanel({ onCreateEntity, primitives = PRIMITIVES, lights =
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/
 export function JamEditPanel({ entity, onInspectorChange, onDeleteSelected }) {
     if (!entity) {
-        return <p className="sfp-empty">Tap an object in the scene to edit it.</p>
+        return <p className="sfp-empty">Tap an object to edit it.</p>
     }
     const textValue = entity.components?.text?.value ?? ''
     const appearance = entity.components?.appearance
@@ -144,7 +144,7 @@ export function JamEditPanel({ entity, onInspectorChange, onDeleteSelected }) {
             )}
             {appearance && (
                 <ColorField
-                    label="Color"
+                    label="Colour"
                     value={colorValue}
                     onChange={(next) => onInspectorChange?.('appearance', { color: next })}
                 />
@@ -421,7 +421,7 @@ export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateF
             <CollapsibleSection title={`Files (${libraryItems.length})`}>
                 {shareNotice && <p className="spa-drive-notice is-error">{shareNotice}</p>}
                 {libraryItems.length === 0 ? (
-                    <p className="sfp-empty">No files yet — import above, or pull from Drive or the Commons.</p>
+                    <p className="sfp-empty">No files yet — import above, or pull from Drive or the commons.</p>
                 ) : (
                     <div className="spa-list">
                         {libraryItems.map((item) => (
@@ -447,7 +447,7 @@ export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateF
                                 <span className="spa-name" title={`${item.name} — ${residencyLabel(item)}`}>
                                     {item.name}
                                     <span className="spa-badges">
-                                        {item.usedByCount > 0 && <span className="spa-badge">in scene ×{item.usedByCount}</span>}
+                                        {item.usedByCount > 0 && <span className="spa-badge">placed ×{item.usedByCount}</span>}
                                         {item.shared && <span className="spa-badge spa-badge--public">public</span>}
                                     </span>
                                 </span>
@@ -458,7 +458,7 @@ export function AssetsPanel({ libraryItems = [], onAssetFilesSelected, onCreateF
                                         disabled={!canPlaceInScene(item)}
                                         title={canPlaceInScene(item)
                                             ? 'Add to the scene'
-                                            : 'This file type can’t be placed in the scene — reference it by URL instead'}
+                                            : 'This file type can’t be placed in the room — link to it by URL instead'}
                                     >
                                         + Add
                                     </button>
@@ -529,7 +529,7 @@ function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, 
                         className="insp-input"
                         value={nameDraft}
                         ref={(el) => el?.focus()}
-                        aria-label="Entity name"
+                        aria-label="Object name"
                         onChange={(e) => setNameDraft(e.target.value)}
                         onBlur={commitRename}
                         onKeyDown={(e) => {
@@ -552,7 +552,7 @@ function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, 
                         else onSelectEntity(entity.id)
                     }}
                     onDoubleClick={startRename}
-                    title={isGroup ? 'Double-click to rename · drop entities here to nest them' : 'Double-click to rename · drag onto a group to nest'}
+                    title={isGroup ? 'Double-click to rename · drop objects here to nest them' : 'Double-click to rename · drag onto a group to nest'}
                     draggable={Boolean(onReparentEntity)}
                     onDragStart={(e) => {
                         e.dataTransfer.setData('application/x-dii-entity', entity.id)
@@ -595,7 +595,7 @@ function StructureRow({ entity, depth, childMap, selectedIds, selectedEntityId, 
                             className="spa-fold"
                             aria-label={hidden ? 'Show' : 'Hide'}
                             aria-pressed={hidden}
-                            title={hidden ? 'Show in scene' : 'Hide from scene'}
+                            title={hidden ? 'Show' : 'Hide'}
                             style={hidden ? undefined : { opacity: 0.55 }}
                             onClick={(e) => { e.stopPropagation(); onToggleEntityVisible(entity.id) }}
                         >
@@ -657,7 +657,7 @@ export function StructurePanel({ entities = [], selectedEntityId, selectedEntity
     return (
         <div className="scc-section">
             <div className="scc-section-label" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>Entities ({entities.length})</span>
+                <span>Objects ({entities.length})</span>
                 <span style={{ display: 'flex', gap: 4 }}>
                     {canGroup && onGroupSelected && (
                         <button className="scc-btn scc-btn--xs" onClick={onGroupSelected} title="Group selected (Ctrl+G)">Group</button>
@@ -668,7 +668,7 @@ export function StructurePanel({ entities = [], selectedEntityId, selectedEntity
                 </span>
             </div>
             {entities.length === 0 ? (
-                <p className="sfp-empty">No entities yet.</p>
+                <p className="sfp-empty">No objects yet.</p>
             ) : (
                 // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- drop-to-root target; rows stay native buttons
                 <div
@@ -855,7 +855,7 @@ export function ProjectPanel({
                 </div>
             </CollapsibleSection>
 
-            <CollapsibleSection title="World">
+            <CollapsibleSection title="Scene">
                 <ColorField label="Background" value={world.backgroundColor} onChange={(v) => onWorldPatch({ backgroundColor: v })} />
                 <ToggleField label="Atmosphere blend" checked={world.atmosphereBlend === true} onChange={(v) => onWorldPatch({ atmosphereBlend: v })} />
                 <ToggleField label="Hub decor (rings + spokes)" checked={world.hubDecor === true} onChange={(v) => onWorldPatch({ hubDecor: v })} />
@@ -867,8 +867,8 @@ export function ProjectPanel({
                 <NumberField label="Section Thickness" value={world.gridSectionThickness} min={0} step={0.05} onChange={(v) => onWorldPatch({ gridSectionThickness: v })} />
                 <NumberField label="Fade Distance" value={world.gridFadeDistance} min={0} step={1} onChange={(v) => onWorldPatch({ gridFadeDistance: v })} />
                 <NumberField label="Fade Strength" value={world.gridFadeStrength} min={0} step={0.05} onChange={(v) => onWorldPatch({ gridFadeStrength: v })} />
-                <ColorField label="Grid cell color" value={world.gridCellColor} onChange={(v) => onWorldPatch({ gridCellColor: v })} />
-                <ColorField label="Grid section color" value={world.gridSectionColor} onChange={(v) => onWorldPatch({ gridSectionColor: v })} />
+                <ColorField label="Grid cell colour" value={world.gridCellColor} onChange={(v) => onWorldPatch({ gridCellColor: v })} />
+                <ColorField label="Grid section colour" value={world.gridSectionColor} onChange={(v) => onWorldPatch({ gridSectionColor: v })} />
             </CollapsibleSection>
 
             <CollapsibleSection title="Lighting">
@@ -889,9 +889,9 @@ export function ProjectPanel({
                 {world.environmentAssetId && (
                     <SliderField label="Environment intensity" value={world.environmentIntensity ?? 1} min={0} max={3} step={0.05} onChange={(v) => onWorldPatch({ environmentIntensity: v })} />
                 )}
-                <ColorField label="Ambient color" value={world.ambientLight?.color} onChange={(v) => onWorldPatch({ ambientLight: { color: v } })} />
+                <ColorField label="Ambient colour" value={world.ambientLight?.color} onChange={(v) => onWorldPatch({ ambientLight: { color: v } })} />
                 <SliderField label="Ambient intensity" value={world.ambientLight?.intensity ?? 0.85} min={0} max={2} step={0.05} onChange={(v) => onWorldPatch({ ambientLight: { intensity: v } })} />
-                <ColorField label="Sun color" value={world.directionalLight?.color} onChange={(v) => onWorldPatch({ directionalLight: { color: v } })} />
+                <ColorField label="Sun colour" value={world.directionalLight?.color} onChange={(v) => onWorldPatch({ directionalLight: { color: v } })} />
                 <SliderField label="Sun intensity" value={world.directionalLight?.intensity ?? 1.15} min={0} max={3} step={0.05} onChange={(v) => onWorldPatch({ directionalLight: { intensity: v } })} />
                 <div className="insp-vec3-group">
                     <span className="insp-label">Sun position</span>
@@ -1384,7 +1384,7 @@ export function FilesPanel({
                     variant={previewMode === 'scene' ? 'contained' : 'outlined'}
                     onClick={() => onPresentationPatch?.({ mode: 'scene' })}
                 >
-                    3D scene
+                    3D room
                 </Button>
                 <Button
                     size="small"
@@ -1662,9 +1662,9 @@ export function PublishPanel({
             />
             <Card variant="outlined" sx={{ p: 1.5 }}>
                 <Stack spacing={1}>
-                    <Typography variant="subtitle2">Live space route</Typography>
+                    <Typography variant="subtitle2">Live space link</Typography>
                     <Typography variant="body2" color="text.secondary">
-                        Public route: `/{liveProjectState?.spaceId || 'main'}`
+                        Public link: `/{liveProjectState?.spaceId || 'main'}`
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                         {liveProjectState?.isLiveProject
@@ -1675,7 +1675,7 @@ export function PublishPanel({
                     </Typography>
                     {liveProjectState?.isPublic === true ? (
                         <Typography variant="body2" color="success.main">
-                            Space is public — visitors can enter at the route above.
+                            Space is public — visitors can enter at the link above.
                         </Typography>
                     ) : liveProjectState?.isPublic === false ? (
                         <Stack spacing={1} alignItems="flex-start">
@@ -1711,7 +1711,7 @@ export function PublishPanel({
                     </Stack>
                     {!publishState.shareEnabled ? (
                         <Typography variant="caption" color="warning.main">
-                            Enable sharing before setting this project live for the public space route.
+                            Enable sharing before setting this project live for the public space link.
                         </Typography>
                     ) : null}
                 </Stack>
@@ -1720,7 +1720,7 @@ export function PublishPanel({
                 <Stack spacing={1.5}>
                     <Typography variant="subtitle2">Presentation</Typography>
                     <Typography variant="caption" color="text.secondary">
-                        The session preview toggle (3D scene ↔ Code view) lives in the Code window.
+                        The session preview toggle (3D room ↔ Code view) lives in the Code window.
                     </Typography>
                     <FormControl fullWidth size="small">
                         <InputLabel>Public entry view</InputLabel>
@@ -1729,7 +1729,7 @@ export function PublishPanel({
                             value={presentationState?.entryView || 'scene'}
                             onChange={(event) => onPresentationPatch?.({ entryView: event.target.value })}
                         >
-                            <MenuItem value="scene">3D scene</MenuItem>
+                            <MenuItem value="scene">3D room</MenuItem>
                             <MenuItem value="code">Code view</MenuItem>
                         </Select>
                     </FormControl>

@@ -10,7 +10,7 @@ export function useControlSections({
 }) {
     return useMemo(() => {
         const sections = []
-        if (isUiVisible && sceneButtons.length) sections.push({ key: 'scene', label: 'Scene', buttons: sceneButtons })
+        if (isUiVisible && sceneButtons.length) sections.push({ key: 'scene', label: 'Project', buttons: sceneButtons })
         if (isUiVisible && panelButtons.length) sections.push({ key: 'panels', label: 'Panels', buttons: panelButtons })
         if (isUiVisible && adminButtons.length) sections.push({ key: 'admin', label: 'Admin', buttons: adminButtons })
         if (isUiVisible && displayButtons.length) sections.push({ key: 'display', label: 'Display', buttons: displayButtons })

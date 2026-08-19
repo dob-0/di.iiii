@@ -7,7 +7,7 @@ import { generateId } from '../shared/projectSchema.js'
 export const PORT_TYPES = {
     number:   { label: 'Number',   color: '#a8d8ff' },
     vec3:     { label: 'Vector',   color: '#ffb86c' },
-    color:    { label: 'Color',    color: '#ff79c6' },
+    color:    { label: 'Colour',    color: '#ff79c6' },
     boolean:  { label: 'Boolean',  color: '#50fa7b' },
     string:   { label: 'String',   color: '#f1fa8c' },
     geometry: { label: 'Geometry', color: '#bd93f9' },
@@ -17,7 +17,11 @@ export const PORT_TYPES = {
 }
 
 // --- Categories ---
-// Used for palette grouping and filtering.
+// ONLY the colors are live. The palette groups by NODE_FAMILIES (the plain-word
+// names a person reads: "bring in", "make", "the scene"), not by these — and no
+// surface renders a `label` from this array. Left in place because
+// getCategoryColor reads `color`; do not trust the labels, and do not add a
+// user-visible one here. Checked 2026-08-19: zero consumers outside this file.
 
 export const NODE_CATEGORIES = [
     { id: 'source',   label: 'Source',   color: '#5fa8ff' },
@@ -48,7 +52,7 @@ export const NODE_FAMILIES = [
     { id: 'bring-in', label: 'bring in', color: '#5fa8ff' },
     { id: 'make',     label: 'make',     color: '#8be9fd' },
     { id: 'numbers',  label: 'numbers',  color: '#f1fa8c' },
-    { id: 'room',     label: 'the room', color: '#bd93f9' },
+    { id: 'room',     label: 'the scene', color: '#bd93f9' },
     { id: 'watch',    label: 'watch',    color: '#ff79c6' },
     { id: 'send-out', label: 'send out', color: '#ffb86c' },
     { id: 'agents',   label: 'agents',   color: '#a8ff9e' },
@@ -102,7 +106,7 @@ export const FAMILY_BY_TYPE = {
     'math.sin': 'numbers',
     'math.mix': 'numbers',
     'math.clamp': 'numbers',
-    // the room — light, sky, grid, worlds, desks, containers
+    // the scene — light, sky, grid, scenes, desks, containers
     'world.light': 'room',
     'world.camera': 'room',
     'world.background': 'room',
@@ -188,13 +192,13 @@ export const NODE_TYPES = {
 
     'value.color': {
         id: 'value.color',
-        label: 'Color',
+        label: 'Colour',
         category: 'source',
         runtime: 'any',
         singleton: false,
         inputs: [],
         outputs: [
-            { id: 'out', type: 'color', label: 'Color' },
+            { id: 'out', type: 'color', label: 'Colour' },
         ],
         defaultValues: { value: '#5fa8ff' },
         render: 'hidden',
@@ -718,7 +722,7 @@ export const NODE_TYPES = {
         // top-level "root dir" entry, placeable multiple times like any other type.
         inputs: [
             { id: 'title',       type: 'string',  label: 'Title',       default: 'Node 0' },
-            { id: 'description', type: 'string',  label: 'Description', default: 'Root seed node for this space' },
+            { id: 'description', type: 'string',  label: 'Description', default: 'The first node in this space' },
             { id: 'active',      type: 'boolean', label: 'Active',      default: true },
         ],
         outputs: [
@@ -728,7 +732,7 @@ export const NODE_TYPES = {
         ],
         defaultValues: {
             title: 'Node 0',
-            description: 'Root seed node for this space',
+            description: 'The first node in this space',
             active: true,
             hostHint: 'any',
         },
@@ -737,7 +741,7 @@ export const NODE_TYPES = {
 
     'universe.world': {
         id: 'universe.world',
-        label: 'World',
+        label: 'Scene',
         category: 'universe',
         runtime: 'any',
         // Free-form, not a singleton (product decision 2026-07-19) — any number
@@ -746,7 +750,7 @@ export const NODE_TYPES = {
         // liveWorldNodeIdByScope / activeNodeIdByTypeScope), not a schema-level
         // restriction — see src/shared/projectSchema.js.
         inputs: [
-            { id: 'title',    type: 'string',  label: 'Title',    default: 'World'    },
+            { id: 'title',    type: 'string',  label: 'Title',    default: 'Scene'    },
             { id: 'bgColor',  type: 'color',   label: 'Sky',      default: '#0a0e16'  },
         ],
         // A CONTAINER OUTPUTS ITS OWN SETTINGS, NEVER ITS CONTENTS.
@@ -773,7 +777,7 @@ export const NODE_TYPES = {
             { id: 'bgColor', type: 'color',  label: 'Sky'   },
         ],
         defaultValues: {
-            title: 'World',
+            title: 'Scene',
             bgColor: '#0a0e16',
             hostHint: 'any',
         },
@@ -782,7 +786,7 @@ export const NODE_TYPES = {
 
     'universe.space': {
         id: 'universe.space',
-        label: 'Universe',
+        label: 'Container',
         category: 'universe',
         runtime: 'any',
         // Not authoringOnly: showChrome is consumed for real (RawEditor's
@@ -797,7 +801,7 @@ export const NODE_TYPES = {
             // RawEditor walks up from the current scope to the nearest
             // ancestor universe.space node and reads this; Esc always pops
             // back up a scope regardless (unrelated to this flag).
-            { id: 'showChrome', type: 'boolean', label: 'Show Chrome', default: true },
+            { id: 'showChrome', type: 'boolean', label: 'Show the toolbar', default: true },
         ],
         // NO outputs, and this is a decision rather than an oversight. Its one
         // setting is showChrome, read by RawEditor's chrome walk and by nothing
@@ -896,14 +900,14 @@ export const NODE_TYPES = {
 
     'universe.link': {
         id: 'universe.link',
-        label: 'Universe Link',
+        label: 'Container Link',
         category: 'universe',
         runtime: 'any',
         authoringOnly: true,
         singleton: false,
         inputs: [
-            { id: 'from', type: 'string', label: 'From Universe', default: '' },
-            { id: 'to',   type: 'string', label: 'To Universe',   default: '' },
+            { id: 'from', type: 'string', label: 'From Container', default: '' },
+            { id: 'to',   type: 'string', label: 'To Container',   default: '' },
         ],
         outputs: [
             { id: 'route',  type: 'string', label: 'Route'  },
@@ -926,7 +930,7 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'color',    type: 'color',  label: 'Color',    default: '#5fa8ff'  },
+            { id: 'color',    type: 'color',  label: 'Colour',    default: '#5fa8ff'  },
             { id: 'size',     type: 'vec3',   label: 'Size',     default: [1, 1, 1]  },
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
@@ -950,7 +954,7 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'color',    type: 'color',  label: 'Color',    default: '#5fa8ff'   },
+            { id: 'color',    type: 'color',  label: 'Colour',    default: '#5fa8ff'   },
             { id: 'radius',   type: 'number', label: 'Radius',   default: 0.5         },
             { id: 'position', type: 'vec3',   label: 'Position', default: [0, 0.5, 0] },
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
@@ -969,7 +973,7 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'color',      type: 'color',   label: 'Color',       default: '#ffffff' },
+            { id: 'color',      type: 'color',   label: 'Colour',       default: '#ffffff' },
             { id: 'width',      type: 'number',  label: 'Width',       default: 2         },
             { id: 'height',     type: 'number',  label: 'Height',      default: 2         },
             { id: 'textureUrl', type: 'string',  label: 'Texture URL', default: ''        },
@@ -1121,7 +1125,7 @@ export const NODE_TYPES = {
         // change freely — the socket's identity is this node's id, so renaming
         // never touches a wire.
         configInputs: [
-            { id: 'label',    type: 'string', label: 'Socket name' },
+            { id: 'label',    type: 'string', label: 'Port name' },
             { id: 'portType', type: 'string', label: 'Carries' },
         ],
         defaultValues: { label: 'In', portType: 'any', fallback: null },
@@ -1141,7 +1145,7 @@ export const NODE_TYPES = {
         // No outputs: what goes OUT leaves through the container's outer face.
         outputs: [],
         configInputs: [
-            { id: 'label',    type: 'string', label: 'Socket name' },
+            { id: 'label',    type: 'string', label: 'Port name' },
             { id: 'portType', type: 'string', label: 'Carries' },
         ],
         defaultValues: { label: 'Out', portType: 'any' },
@@ -1659,7 +1663,7 @@ export const NODE_TYPES = {
         category: 'world',
         runtime: 'any',
         inputs: [
-            { id: 'color', type: 'color', label: 'Color' },
+            { id: 'color', type: 'color', label: 'Colour' },
         ],
         defaultValues: { color: '#0a0e16' },
         outputs: [],
@@ -1674,7 +1678,7 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'visible', type: 'boolean', label: 'Visible', default: true     },
             { id: 'size',    type: 'number',  label: 'Size',    default: 24       },
-            { id: 'color',   type: 'color',   label: 'Color',   default: '#333333'},
+            { id: 'color',   type: 'color',   label: 'Colour',   default: '#333333'},
         ],
         outputs: [],
         defaultValues: {},

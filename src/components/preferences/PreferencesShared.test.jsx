@@ -22,7 +22,7 @@ describe('SpacePreviewRow', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Studio' }))
         expect(onOpenRoute).toHaveBeenCalledWith('/alpha/studio')
 
-        fireEvent.click(screen.getByRole('button', { name: 'Raw' }))
+        fireEvent.click(screen.getByRole('button', { name: 'Nodes' }))
         expect(onOpenRoute).toHaveBeenCalledWith('/alpha/raw')
 
         fireEvent.click(screen.getByRole('button', { name: 'Admin' }))
