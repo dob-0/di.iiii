@@ -5,15 +5,23 @@
 // a single place where the whole registry can be looked at, on a desktop and on
 // a phone, instead of being inferred from the registry file.
 //
-// It is deliberately honest about what does NOT work. The 2026-08-06 audit found
-// that `docs/roadmaps/NODE_BACKLOG.md` listed all 27 palette types as "works
-// today", while at port level only 17 are complete. The gap is structural:
-// `computeNodeOutput` in ../nodeGraphRuntime.js only has cases for the `value.*`
-// and `math.*` families plus `time`; every other type falls to a default that
-// returns `node.values[portId]`. So no `geometry`, `texture`, `signal` or
-// `state` output on ANY node ever produces a value, and an edge out of one is
-// decoration. Those ports are listed in UNWIRABLE_PORTS below rather than being
-// quietly wired up to look complete.
+// It is deliberately honest about what does NOT work — and honesty cuts both
+// ways. The 2026-08-06 audit found `docs/roadmaps/NODE_BACKLOG.md` OVERclaiming;
+// by 2026-08-18 this file was UNDERclaiming just as badly. Its header used to
+// say that no `geometry`, `texture` or `signal` output ever produces a value and
+// that "an edge out of one is decoration", and UNWIRABLE_PORTS named
+// `time.beat`, `geom.cube.bounds` and `view.image.src` as dead. All three had
+// become real — the runtime grew cases for them, and `source.webcam.frame`
+// publishes a live texture through `context.liveOutputs` — but the staleness
+// test only checked that the named ports still EXISTED, never that the claim
+// was still true. So the list rotted silently, and this file, which the Raw ⋯
+// menu opens as the portrait of the whole registry, told every reader that
+// working ports were fake.
+//
+// The 2026-08-18 port audit evaluated every declared output of every placeable
+// type against the runtime: NONE of them are dead. The test now derives that
+// from the runtime instead of trusting this comment, so the day a port does go
+// inert it fails there rather than quietly misinforming someone.
 //
 // The existing "Streaming Prototype" preset is the counter-example to avoid: it
 // builds nine nodes that are all in UNIMPLEMENTED_NODE_TYPES, bypassing the
@@ -26,13 +34,14 @@ import { buildNodeValues } from '../nodeGraphAuthoring.js'
 const COL = 300
 const ROW = 130
 
-// Ports that cannot be fed or read today, and why. Asserted against the registry
-// by the test, so this list rots loudly instead of silently.
-export const UNWIRABLE_PORTS = [
-    { port: 'time.beat', reason: 'signal outputs are never computed by the runtime' },
-    { port: 'geom.cube.bounds', reason: 'declared vec3 output, but geometry nodes have no runtime case' },
-    { port: 'view.image.src', reason: 'texture inputs need an asset, and no node produces a texture' }
-]
+// Ports that cannot be fed or read today, and why.
+//
+// EMPTY as of the 2026-08-18 port audit: every declared output of every
+// placeable type resolves to a real value through the runtime. The test does
+// not take this list's word for it — it evaluates each output and fails if a
+// port is dead but unlisted, or listed but alive. Adding an entry here is a
+// claim about the runtime that has to survive that check.
+export const UNWIRABLE_PORTS = []
 
 // Ports that are declared and accept a value, but whose value is ignored by the
 // renderer — wiring them proves nothing, so the example leaves them alone.
@@ -54,7 +63,7 @@ export const INERT_INPUTS = []
 export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}) {
     const made = new Map()
 
-    const add = (key, typeId, { label, col, row, values = {} } = {}) => {
+    const add = (key, typeId, { label, col, row, values = {}, insideKey = null } = {}) => {
         const graphX = col * COL
         const graphY = workspaceTop + row * ROW
         const seeded = buildNodeValues(
@@ -65,7 +74,15 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
             { clientX: 120 + col * 60, clientY: 120 + row * 40 },
             { workspaceTop }
         )
-        const node = createNode(typeId, { label, graphX, graphY, values: seeded, parentId })
+        const node = createNode(typeId, {
+            label,
+            graphX,
+            graphY,
+            values: seeded,
+            // A doorway only means anything INSIDE a container, so this example
+            // has to be able to parent one.
+            parentId: insideKey ? (made.get(insideKey)?.id || parentId) : parentId
+        })
         if (node) {
             // Panel nodes mount as floating windows the instant they exist, and
             // four of them cover a 393px phone screen completely — the graph
@@ -114,11 +131,30 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('cube', 'geom.cube', { label: 'Cube', col: 3, row: 0 })
     add('sphere', 'geom.sphere', { label: 'Sphere', col: 3, row: 1 })
     add('plane', 'geom.plane', { label: 'Plane', col: 3, row: 2 })
+    // The file-backed three. They arrive with an empty `src` because this
+    // example ships no bundled media, and a node whose file has not been
+    // chosen renders nothing — the same state you get the moment you place one
+    // from the palette, before dropping a file on it. That is the honest
+    // portrait; seeding a fake asset id would draw a broken model instead.
+    add('model', 'geom.model', { label: 'Model', col: 3, row: 3 })
+    add('video', 'media.video', { label: 'Video', col: 3, row: 4 })
+    add('sound', 'media.audio', { label: 'Sound', col: 3, row: 5 })
 
     // --- column 4: universe containers and panels ------------------------------
     add('world', 'universe.world', { label: 'World', col: 4, row: 0 })
     add('space', 'universe.space', { label: 'Space', col: 4, row: 1 })
     add('desk', 'universe.desk.3d', { label: '3D Desk', col: 4, row: 2 })
+
+    // The doorways. They sit INSIDE the 3D Desk, which is what makes them mean
+    // anything: each one puts a socket on that desk's outer face, so a wire can
+    // reach through the wall. Deliberately UNWIRED here — this file's port tests
+    // call getNodeInputs/getNodeOutputs with no node list, which is the correct
+    // behaviour for every existing caller, so a promoted socket does not exist
+    // from their point of view and an edge into one would look like a wire to
+    // nowhere. The desk is the portrait; the wiring is the wiki's job.
+    add('doorIn', 'port.in', { label: 'In · a way through the wall', col: 3, row: 6, insideKey: 'desk', values: { label: 'Tint', portType: 'color' } })
+    add('doorOut', 'port.out', { label: 'Out · a way back through', col: 3, row: 7, insideKey: 'desk', values: { label: 'Size', portType: 'vec3' } })
+
     add('text', 'view.text', { label: 'Text panel', col: 4, row: 3, values: { content: 'Every node type, one graph.' } })
     // Same-origin on purpose: the example must also open on a local install
     // with no network, where an iframe of di-studio.xyz is a dead panel.
@@ -133,9 +169,10 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('studio', 'studio', { label: 'Studio', col: 5, row: 0, values: { title: 'Studio' } })
     add('outliner', 'view.outliner', { label: 'Outliner panel', col: 5, row: 1 })
     add('inspector', 'view.inspector', { label: 'Inspector panel', col: 5, row: 2 })
-    add('timeline', 'view.timeline', { label: 'Timeline panel', col: 5, row: 3 })
-    add('director', 'view.director', { label: 'Director panel', col: 5, row: 4 })
-    add('agent', 'agent', { label: 'Agent', col: 5, row: 5 })
+    add('library', 'view.library', { label: 'Create panel', col: 5, row: 3 })
+    add('timeline', 'view.timeline', { label: 'Timeline panel', col: 5, row: 4 })
+    add('director', 'view.director', { label: 'Director panel', col: 5, row: 5 })
+    add('agent', 'agent', { label: 'Agent', col: 5, row: 6 })
 
     // --- column 6: live capture sources -----------------------------------------
     // Unlike the rest of the registry, these two DO carry real data: their panel
@@ -203,6 +240,15 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('numB', 'out', 'pow', 'b'),
         wire('pow', 'out', 'light', 'directionalIntensity'),
 
+        // A wire OUT of a container — new on 2026-08-19, and the thing that
+        // used to be impossible: every container declared zero outputs, so
+        // press-and-pull on a World card silently dragged the card. The World
+        // names the text panel standing beside it, and renaming the World
+        // renames the panel. Note the panel is a SIBLING of the World, not
+        // inside it: a container still outputs only its own settings, and an
+        // edge that crosses a scope boundary remains unauthorable.
+        wire('world', 'title', 'text', 'content'),
+
         // Static world settings.
         wire('colorA', 'out', 'light', 'ambientColor'),
         wire('numB', 'out', 'light', 'ambientIntensity'),
@@ -222,6 +268,15 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         wire('numB', 'out', 'plane', 'height'),
         // Live texture wins over textureUrl — see geom.plane's own comment.
         wire('webcam', 'frame', 'plane', 'texture'),
+        // The same live frame into a 2D panel. This edge was called impossible
+        // by this file's own UNWIRABLE_PORTS until 2026-08-18 ("no node produces
+        // a texture"); source.webcam has produced one for weeks, and the image
+        // panel now draws it.
+        wire('webcam', 'frame', 'image', 'src'),
+        // geom.cube.bounds — likewise documented as dead, in fact a real vec3
+        // of the cube's size. Wired to the desk's scale so the marker box grows
+        // with the cube it is measuring.
+        wire('cube', 'bounds', 'desk', 'scale'),
 
         // Containers and panels.
         wire('str', 'out', 'world', 'title'),

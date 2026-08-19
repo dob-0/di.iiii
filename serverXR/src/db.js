@@ -219,6 +219,19 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS idx_pending_actions_status ON pending_actions(status, expires_at);
   CREATE INDEX IF NOT EXISTS idx_pending_actions_actor ON pending_actions(actor_subject, created_at);
+
+  -- Anonymous usage counts, aggregate-only by design: no IP, no user agent,
+  -- no session/user id, no cookie — nothing linkable to a person. path is
+  -- pathname-only, referrer_host is hostname-only. See trackRoutes.js and
+  -- docs/ai/privacy-data-inventory.md.
+  CREATE TABLE IF NOT EXISTS page_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    event_type TEXT NOT NULL,
+    path TEXT,
+    referrer_host TEXT,
+    created_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_page_events_type_created ON page_events(event_type, created_at);
 `
 
 // Patch a DatabaseSync instance to expose the better-sqlite3 surface used

@@ -136,6 +136,10 @@ const requireAuth = parseBool(process.env.REQUIRE_AUTH, isProduction)
 const corsOrigins = expandLoopbackOrigins(parseList(process.env.CORS_ORIGINS))
 const maxUploadMb = parseNumber(process.env.MAX_UPLOAD_MB, 100)
 const maxUploadBytes = Math.max(1, maxUploadMb) * 1024 * 1024
+// Floor of free disk below which state-changing requests get a 507 instead of
+// running the volume to ENOSPC mid-write (see diskGuard.js). 0 disables.
+const minFreeDiskMb = parseNumber(process.env.MIN_FREE_DISK_MB, 512)
+const minFreeDiskBytes = Math.max(0, minFreeDiskMb) * 1024 * 1024
 const dataDir = resolveDir(process.env.DATA_ROOT, DEFAULT_DATA_DIR)
 const clientDir = process.env.CLIENT_DIR ? resolveDir(process.env.CLIENT_DIR, null) : null
 const spacesDir = resolveDir(process.env.SPACES_DIR, path.join(dataDir, 'spaces'))
@@ -264,6 +268,7 @@ const config = {
   requireAuth,
   corsOrigins,
   maxUploadBytes,
+  minFreeDiskBytes,
   authSession: {
     cookieName: authSessionCookieName || 'dii_serverxr_session',
     cookiePath: basePath || '/',

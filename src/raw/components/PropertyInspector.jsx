@@ -15,12 +15,20 @@ const setNestedValue = (value, path, nextValue) => {
 
 const readNestedValue = (value, path = []) => path.reduce((current, key) => current?.[key], value)
 
+// Narrows the phone's file chooser to what the port can actually take.
+const ASSET_FIELD_ACCEPT = {
+    model: '.glb,.gltf,.obj,.stl,.fbx,model/*',
+    image: 'image/*',
+    video: 'video/*',
+    audio: 'audio/*'
+}
+
 const getAssetOptionsForField = (field, assetOptions = []) => {
     if (!field?.assetKind) return assetOptions
     return assetOptions.filter((asset) => detectAssetMediaKind(asset) === field.assetKind)
 }
 
-function PropertyField({ field, value, onChange, assetOptions = [] }) {
+function PropertyField({ field, value, onChange, assetOptions = [], onPickAssetFile = null }) {
     if (field.type === 'textarea') {
         return <textarea value={value || ''} onChange={(event) => onChange(event.target.value)} rows={4} />
     }
@@ -40,13 +48,37 @@ function PropertyField({ field, value, onChange, assetOptions = [] }) {
         )
     }
     if (field.type === 'asset') {
+        // The picker alone only offers files that are already here, so on a
+        // phone — where there is no drag-and-drop — a fresh workspace has no
+        // route to a file at all. The button is that route.
+        //
+        // It sits on the LEFT because the floating scope button is pinned to
+        // the workspace's bottom-right and, on a 390px phone, lands exactly on
+        // top of a right-hand button in this row — measured, not guessed.
         return (
-            <select value={value || ''} onChange={(event) => onChange(event.target.value || null)}>
-                <option value="">Unassigned</option>
-                {getAssetOptionsForField(field, assetOptions).map((asset) => (
-                    <option key={asset.id} value={asset.id}>{asset.name}</option>
-                ))}
-            </select>
+            <div className="raw-inspector-asset-field">
+                {onPickAssetFile ? (
+                    <label className="raw-inspector-asset-add" title="Bring in a file">
+                        <span aria-hidden="true">＋</span>
+                        <span className="raw-visually-hidden">Bring in a file</span>
+                        <input
+                            type="file"
+                            accept={ASSET_FIELD_ACCEPT[field.assetKind] || undefined}
+                            onChange={(event) => {
+                                const file = event.target.files?.[0]
+                                event.target.value = ''
+                                if (file) onPickAssetFile(file, field)
+                            }}
+                        />
+                    </label>
+                ) : null}
+                <select value={value || ''} onChange={(event) => onChange(event.target.value || null)}>
+                    <option value="">Unassigned</option>
+                    {getAssetOptionsForField(field, assetOptions).map((asset) => (
+                        <option key={asset.id} value={asset.id}>{asset.name}</option>
+                    ))}
+                </select>
+            </div>
         )
     }
     if (field.type === 'number') {
@@ -103,6 +135,7 @@ export default function PropertyInspector({
     assetOptions = [],
     values = {},
     onSectionChange,
+    onPickAssetFile = null,
     emptyMessage = 'Nothing selected yet.'
 }) {
     if (!sections.length) {
@@ -135,6 +168,7 @@ export default function PropertyInspector({
                                                 field={field}
                                                 value={value}
                                                 assetOptions={assetOptions}
+                                                onPickAssetFile={onPickAssetFile}
                                                 onChange={(nextValue) => {
                                                     const nextSectionValue = setNestedValue(sectionValue, field.path, nextValue)
                                                     onSectionChange?.(field.component || section.id, nextSectionValue)

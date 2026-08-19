@@ -42,6 +42,16 @@ describe('readZenPreference', () => {
         expect(readZenPreference('w', { nodeCount: 0, storage: hostile })).toBe(true)
         expect(readZenPreference('w', { nodeCount: 3, storage: hostile })).toBe(false)
     })
+
+    it('lets a seeding caller override the default, but never a stored choice', () => {
+        // A seeded starter workspace has nodes it did not earn — still zen.
+        expect(readZenPreference('w', { nodeCount: 5, defaultZen: true, storage: fakeStorage() })).toBe(true)
+        expect(readZenPreference('w', {
+            nodeCount: 5,
+            defaultZen: true,
+            storage: fakeStorage({ 'dii.raw.zen.w': 'off' })
+        })).toBe(false)
+    })
 })
 
 describe('writeZenPreference', () => {

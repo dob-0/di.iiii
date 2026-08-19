@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { LIGHTS, PRIMITIVES } from '../utils/entityPalette.js'
+import { LIGHTS, PRIMITIVES } from '../../project/entityPalette.js'
 
 // Double-click popup: the fast subset of the Create window. Same palette, same
 // create pipeline (onCreateFromAsset adopts space assets / converts PDFs), plus

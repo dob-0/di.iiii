@@ -841,6 +841,42 @@ export const applyProjectOps = (document, ops = []) => {
                 if (normalized) nodes.set(nodeId, normalized)
                 break
             }
+            case 'reparentNode': {
+                const nodeId = ensureString(payload.nodeId)
+                if (!nodeId || !nodes.has(nodeId)) break
+                const nextParentId = payload.parentId ? ensureString(payload.parentId) : null
+                // The destination must exist. A parentId naming nothing puts the
+                // node in no scope's child list, reachable from no Enter and
+                // visible on no canvas — silent loss, not an error.
+                if (nextParentId && !nodes.has(nextParentId)) break
+                // …and the node must not become its own ancestor. deleteNode's
+                // collect() guards against cycles it FINDS; this stops one being
+                // made. Without it the cycle is unreachable, undeletable and
+                // recurses on every traversal.
+                let cursor = nextParentId
+                let cycles = false
+                const seen = new Set()
+                while (cursor) {
+                    if (cursor === nodeId) { cycles = true; break }
+                    if (seen.has(cursor)) break
+                    seen.add(cursor)
+                    cursor = nodes.get(cursor)?.parentId || null
+                }
+                if (cycles) break
+                // ONE op, applied whole or not at all. As four loose ops the
+                // reducer would refuse the parentId while still applying the
+                // coordinates — and useProjectDocumentSync resubmits a 409'd
+                // batch verbatim, so a lost race left the node replanted at a
+                // coordinate meaningless in its scope, with nothing said.
+                const existing = nodes.get(nodeId)
+                nodes.set(nodeId, normalizeProjectNode({
+                    ...existing,
+                    parentId: nextParentId,
+                    ...(payload.graphX !== undefined ? { graphX: ensureNumber(payload.graphX, existing.graphX) } : {}),
+                    ...(payload.graphY !== undefined ? { graphY: ensureNumber(payload.graphY, existing.graphY) } : {})
+                }))
+                break
+            }
             case 'deleteNode': {
                 const nodeId = ensureString(payload.nodeId)
                 if (!nodeId) break
@@ -857,9 +893,30 @@ export const applyProjectOps = (document, ops = []) => {
                     }
                 }
                 collect(nodeId)
+                // A doorway node puts a socket on its CONTAINER's outer face,
+                // and the wire to that socket names the container, not the door
+                // — so deleting the door leaves an edge whose endpoints both
+                // still exist. Nothing else would ever remove it: createEdge
+                // validates endpoint nodes only, and normalizeEdgesList drops
+                // edges by missing node id, never by missing port. It would be a
+                // permanent orphan, parked at the corner of a card by
+                // inputPortCenter's idx<0 branch, that no reload or gesture
+                // could clear. Swept here, where the door's id is still known.
+                const deletedDoorwaySockets = new Set()
+                for (const id of toDelete) {
+                    const doomed = nodes.get(id)
+                    if (doomed && (doomed.typeId === 'port.in' || doomed.typeId === 'port.out') && doomed.parentId) {
+                        deletedDoorwaySockets.add(`${doomed.parentId}:${doomed.id}`)
+                    }
+                }
                 for (const id of toDelete) nodes.delete(id)
                 for (const [edgeId, edge] of edges) {
-                    if (toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId)) edges.delete(edgeId)
+                    if (toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId)) {
+                        edges.delete(edgeId)
+                    } else if (deletedDoorwaySockets.has(`${edge.toNodeId}:${edge.toPort}`)
+                        || deletedDoorwaySockets.has(`${edge.fromNodeId}:${edge.fromPort}`)) {
+                        edges.delete(edgeId)
+                    }
                 }
                 if (toDelete.has(nextDocument.workspaceState.selectedNodeId)) {
                     nextDocument.workspaceState = normalizeWorkspaceState({
@@ -1074,6 +1131,24 @@ const invertSingleOp = (document, op) => {
             if (!Object.keys(inversePatch).length) break
             return [{ type: 'updateNode', payload: { nodeId, patch: inversePatch } }]
         }
+        case 'reparentNode': {
+            const nodeId = ensureString(payload.nodeId)
+            const existing = nodeId ? nodes.get(nodeId) : null
+            if (!existing) break
+            // Puts the node back in the scope it came FROM, and back where it
+            // sat there. Without the coordinates the undo returns it to the
+            // right room at the drop point's coordinates, which mean nothing in
+            // that room.
+            return [{
+                type: 'reparentNode',
+                payload: {
+                    nodeId,
+                    parentId: existing.parentId || null,
+                    graphX: existing.graphX,
+                    graphY: existing.graphY
+                }
+            }]
+        }
         case 'deleteNode': {
             const nodeId = ensureString(payload.nodeId)
             if (!nodeId) break
@@ -1087,8 +1162,23 @@ const invertSingleOp = (document, op) => {
             }
             collect(nodeId)
             const restoredNodes = Array.from(toDelete).filter((id) => nodes.has(id)).map((id) => nodes.get(id))
+            // A doorway's exterior wire names the CONTAINER and the door's id,
+            // and the container is not in toDelete — so the delete sweep
+            // removes it while this filter alone would never restore it, and
+            // undo would silently drop a wire the user still had. Found by
+            // reading the inverse rather than by a failing test; guarded by one
+            // now.
+            const doorwaySockets = new Set(
+                Array.from(toDelete)
+                    .map((id) => nodes.get(id))
+                    .filter((node) => node && (node.typeId === 'port.in' || node.typeId === 'port.out') && node.parentId)
+                    .map((node) => `${node.parentId}:${node.id}`)
+            )
             const restoredEdges = Array.from(edges.values())
-                .filter((edge) => toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId))
+                .filter((edge) => toDelete.has(edge.fromNodeId)
+                    || toDelete.has(edge.toNodeId)
+                    || doorwaySockets.has(`${edge.toNodeId}:${edge.toPort}`)
+                    || doorwaySockets.has(`${edge.fromNodeId}:${edge.fromPort}`))
             if (!restoredNodes.length && !restoredEdges.length) break
             const inverse = [
                 ...restoredNodes.map((node) => ({ type: 'createNode', payload: { node: cloneValue(node) } })),

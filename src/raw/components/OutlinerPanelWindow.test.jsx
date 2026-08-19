@@ -11,9 +11,9 @@ vi.mock('../../project/nodeRegistry.js', () => ({
         }
         return map[typeId] || null
     },
-    getCategoryColor: (categoryId) => {
-        const map = { geometry: '#8be9fd', view: '#ff79c6', math: '#f1fa8c' }
-        return map[categoryId] || '#aaaaaa'
+    getFamilyColorForType: (typeId) => {
+        const map = { 'geom.cube': '#8be9fd', 'view.text': '#ff79c6', 'value.color': '#f1fa8c' }
+        return map[typeId] || '#aaaaaa'
     }
 }))
 
@@ -56,7 +56,7 @@ describe('OutlinerPanelWindow', () => {
         expect(buttons[1].classList.contains('is-selected')).toBe(true)
     })
 
-    it('renders a coloured dot using the category colour', () => {
+    it('renders a coloured dot using the family colour', () => {
         const nodes = [makeNode('n1', 'geom.cube', 'Cube')]
         const { container } = render(
             <OutlinerPanelWindow nodes={nodes} selectedNodeId={null} onSelectNode={vi.fn()} />

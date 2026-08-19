@@ -1,4 +1,4 @@
-import { getNodeType } from '../nodeRegistry.js'
+import { PORT_TYPES, getNodeType } from '../nodeRegistry.js'
 
 const portToInspectorField = (port, node = null) => {
     const label = port.label || port.id
@@ -6,11 +6,30 @@ const portToInspectorField = (port, node = null) => {
     if (node?.typeId === 'view.image' && port.id === 'src') {
         return { label, path, type: 'asset', portType: 'texture', assetKind: 'image' }
     }
+    // The file-backed nodes pick from the document's assets rather than
+    // typing an id by hand. Kind-filtered so a sound never offers a mesh.
+    const ASSET_PICKERS = { 'geom.model': 'model', 'media.video': 'video', 'media.audio': 'audio' }
+    if (port.id === 'src' && ASSET_PICKERS[node?.typeId]) {
+        return { label, path, type: 'asset', portType: 'string', assetKind: ASSET_PICKERS[node.typeId] }
+    }
+    // A doorway's `portType` decides what its socket on the container will
+    // carry, so it must be CHOSEN from the real list rather than typed — a typo
+    // yields a port type nothing is compatible with, and the only symptom is a
+    // wire that refuses to connect for no visible reason.
+    if (port.id === 'portType' && (node?.typeId === 'port.in' || node?.typeId === 'port.out')) {
+        return {
+            label,
+            path,
+            type: 'select',
+            portType: 'string',
+            options: Object.entries(PORT_TYPES).map(([value, meta]) => ({ value, label: meta.label }))
+        }
+    }
     if (port.type === 'color') return { label, path, type: 'color', portType: 'color' }
     if (port.type === 'boolean') return { label, path, type: 'checkbox', portType: 'boolean' }
     if (port.type === 'number') return { label, path, type: 'number', min: port.min, max: port.max, step: port.step, portType: 'number' }
     if (port.type === 'string') {
-        const isMultiline = port.id === 'body' || port.id === 'text'
+        const isMultiline = port.id === 'body' || port.id === 'text' || port.id === 'content'
         return { label, path, type: isMultiline ? 'textarea' : 'text', portType: 'string' }
     }
     if (port.type === 'vec3') return { label, path, type: 'vec3', portType: 'vec3' }
@@ -37,7 +56,11 @@ const portToInspectorField = (port, node = null) => {
 // for its own fields.
 const CODE_SECTION = {
     id: 'code',
-    label: 'Code',
+    // The label says what the box actually does: nothing executes this yet.
+    // Before, an editable "Code / Body" with no caveat was the whole
+    // inspector for input-less nodes — the single most dishonest surface the
+    // 2026-08-18 node truth audit found.
+    label: 'Code — stored, not run',
     component: 'values',
     fields: [{ label: 'Body', path: ['__code'], type: 'textarea', portType: 'string', component: 'values' }]
 }

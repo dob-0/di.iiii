@@ -5,6 +5,631 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-19 — "Make me a scene": something to open and copy
+
+- The owner, after six stages of container work all shipping green: *"i still cannot connect and
+  understand how work"*, then *"i mean i want to create scene with the objects i mean cube light
+  or i want upload mine"*. Every single one of those was already possible. None of it was
+  legible. The answer is not another feature.
+- **The finding that mattered, and it took a browser to see it: a blank Raw workspace opens in
+  ZEN, so there is no topbar at all.** No ⋯ menu, no breadcrumb, nothing to press but the
+  canvas. Every example, every command, everything the lane can do was behind a menu that does
+  not exist for a first-time visitor. Measured: `topbar: false` on a blank workspace.
+- **Shipped**: a "Make me a scene" button in the middle of the blank canvas (and the same entry
+  in the ⋯ menu for anyone who has chrome). It builds:
+  - a room, open, so the scene is visible the moment it is made
+  - a light, so the room is lit rather than flat
+  - a cube, with a colour node wired into it — the one wire, chosen because its effect is
+    unmissable
+  - an empty Model node labelled "Your own model goes here"
+  - a note giving four moves in plain words: double-tap to add, drag your own file on, drag dot
+    to dot to wire, press › to go inside
+- **The Model node is deliberately EMPTY.** That is the state a person meets after placing one,
+  so the example meets it too — beside an instruction rather than alone. Seeding a fake asset id
+  would draw a broken model and teach the opposite.
+- **The note is written to the size of its own window, not the other way round.** Three passes,
+  each looked at: 17 lines showed 5 and cut mid-sentence; a taller window put the windows back
+  over the cards; widening it so the lines do not WRAP was the fix — wrapping, not line count,
+  was what pushed the last line below the fold. Windows are top-docked with a card band below,
+  the same lesson the starter workspace had to learn twice.
+- **Seen**: from a genuinely blank workspace, pressed the button, watched the scene build, then
+  dropped a 7.7MB `scan.glb` onto the canvas and watched it arrive in the room beside the cube.
+  Zero console errors.
+- **Shared-checkout note.** This landed from an isolated clone at `origin/dev`, not from
+  `/home/dob/di.iiii`: another session had 70+ files modified in that tree mid-flight, including
+  a vocabulary pass that had already renamed this button and the doorway menu items. Committing
+  from the shared tree would have taken their unfinished work with it. The 14 test failures seen
+  there were theirs; this change is green on 2304 in a clean copy. Expect a trivial wording
+  conflict when their pass lands — their naming wins.
+- Verified: lint 0 errors · 2304 tests · build clean.
+
+## 2026-08-19 — the move op: a node can change scope at all
+
+- Stage 3a. `parentId` was written once at `createNode` and **never mutated by any code path** —
+  `applyProjectOps`' `updateNode` builds from an explicit allow-list (label, graphX, graphY,
+  runtimeId, assetRef, values) that omits it, so a node's scope was fixed for life. This adds
+  the op. **The drag gesture is deliberately NOT in this change** (3b): the schema half lands
+  cleanly on its own and the gesture has conditions that are not met yet.
+- **ONE atomic op, `reparentNode`, not four loose ones.** As separate ops the reducer refuses
+  the `parentId` while still applying `graphX`/`graphY` and any edge deletes — and
+  `useProjectDocumentSync` resubmits a 409'd batch **verbatim** after catch-up, so a lost race
+  left the wires cut, the node not moved, and the node replanted at a coordinate meaningless in
+  its scope, with nothing said. Whole or nothing. Tested in both reducers, including that a
+  refused move leaves the coordinates untouched.
+- **Two guards, both about silent loss rather than errors:**
+  - The destination must exist. A `parentId` naming nothing puts the node in no scope's child
+    list, reachable from no Enter and visible on no canvas.
+  - A node may not become its own ancestor. `deleteNode`'s `collect()` guards against cycles it
+    FINDS; this stops one being made. An unguarded cycle is unreachable, undeletable, and
+    recurses on every traversal.
+- **The inverse restores the scope AND the position.** Without the coordinates, undo returns the
+  node to the right room at the drop point's coordinates — which mean nothing in that room.
+- **A bug I shipped in stage 5, found by reading the inverse rather than by a failing test.** A
+  doorway's exterior wire names the CONTAINER and the door's id, and the container is not among
+  the deleted nodes — so the delete sweep removed the wire while `invertSingleOp`'s
+  `restoredEdges` filter (which matches on node ids only) would never have restored it. One
+  Ctrl+Z would have silently dropped a wire the user still had. Fixed in both copies, guarded by
+  a test that deletes a door, undoes, and asserts the edge comes back.
+- Mirrored into `shared/projectSchema.cjs` and covered by `schemaSync` fixtures, because that
+  suite is fixture-driven: an ESM-only edit passes green until something exercises the path, and
+  a client-only reparent is silently dropped by the server reducer until the next full load.
+- **DEPLOY ORDER MATTERS for this one: serverXR FIRST, then the static bundle.** Ship the bundle
+  first and every move works locally and is silently discarded by the server until a reload. A
+  stale open tab drops the `parentId` key with no version conflict to trigger a resync.
+- **What 3b (the gesture) must not do, recorded now so it is not rediscovered:**
+  - Restrict the drop target to `universe.desk.3d`. Of the four container types only that one is
+    `render: 'spatial-3d'`; `studio` and `universe.space` are `hidden` and `universe.world` is
+    `panel-2d`, and `RawViewport`'s childMap is built from `filter(isSpatialNode)` — so dropping
+    a Cube into a Studio makes it vanish from the viewport and read as deletion.
+  - Derive the parent scope as `authoredNodes.find(n => n.id === currentScopeId)?.parentId`,
+    never `navStack[length - 2]`: `goToRoot` sets the stack to `[null, nodeId]` unconditionally
+    for the RawHub handoff, so a nested container would report the document root and "move out"
+    would yank the node through a scope the user never entered.
+  - Do NOT cut edges that become cross-scope. `nodeGraphRuntime` has no `parentId` awareness, so
+    they keep evaluating correctly — they are undrawable only because of RawEditor's
+    both-endpoints filter. Deleting live user data to work around a client-side render filter
+    replicates to every peer and is invisible to the collaborator who did not drag.
+  - The undo truth: the drag commits `graphX`/`graphY` every animation frame and those coalesce
+    into their own history entry, so ONE Ctrl+Z takes the node out of the box but leaves it at
+    the drop point. Do not claim "one batch, one undo step".
+  - `selectedNodeId` will still name a node no longer on the canvas after a drop, and a panel-2d
+    card dragged into a container silently unmounts its floating window (`windowLayout` scopes
+    mounted panels by `parentId`).
+- Verified: lint 0 errors · 2293 tests · schema parity green · build clean.
+
+## 2026-08-19 — expose a port on the container
+
+- Stage 6, the last of the container work. Doorways (stage 5) work but had to be placed and
+  wired by hand. Now: stand inside a container, hold a port dot for half a second — or
+  right-click it — and choose **Expose on the container**. The doorway node and its wire are
+  created in ONE op batch, so a single undo takes both and there is no intermediate state
+  where a door sits wired to nothing.
+- **Reported honestly: this does not solve discovery.** A long press advertises itself to
+  nobody. It is a shortcut for the gesture someone already knows, not the way anyone finds out
+  doorways exist — placing an In/Out node from the palette by hand remains that. The port dot's
+  tooltip carries the hint, which is the most a dot can do.
+- **The socket it makes is one scope up and off-screen**, so the gesture would otherwise look
+  like it did nothing. A notice says *"Desk now has a Color socket"* with a **Go and see**
+  button that navigates to the container's own scope and selects it.
+- **Corrections applied, each one a real failure mode:**
+  - The long press registers `pointerup`/`pointercancel`/`pointermove` on the WINDOW, not the
+    dot. `handleOutputPointerDown` releases pointer capture for every non-mouse pointer, so on
+    touch the pointerup goes to whatever is under the finger — element-level handlers would
+    leave the timer armed and pop the menu half a second later over whatever was tapped next.
+  - Opening the menu clears `pendingWireRef`, `pendingWire` and `draggingNodeId`. A press on an
+    output dot has already armed a wire; left armed, the next release anywhere on the canvas
+    snaps within 36 screen pixels and creates a plausible-looking edge nobody asked for. Tested.
+  - **Go and see** navigates by the container's own parent id, never `navStack.length - 2`. At
+    the root that index is -1, which truncates the stack to empty and takes the trail, the
+    Escape exit and the scope marker with it.
+  - `.raw-graph-port-menu` is excluded from BOTH `shouldStartPan` and
+    `handleSectionDoubleClick`, or tapping an item pans the canvas and a double-tap opens the
+    create palette behind it. It renders outside `.raw-graph-stage`, which carries the pan/zoom
+    transform — `position: fixed` inside a transformed ancestor resolves against that ancestor,
+    so the menu would shrink with the graph and land in the wrong place. z-index 1250, under
+    `.raw-topbar`'s band.
+  - **One label field, not two.** The promote writes only `values.label` — the socket's name,
+    and exactly what the inspector edits. The card keeps the type's own name ("In"/"Out").
+    Writing both would let a rename diverge them permanently, and the socket would end up named
+    by whichever happened to be read.
+  - The port type is inherited from the port it came from, so the type picker is usually
+    untouched.
+  - The exterior-wire sweep needed no work here: it lives in the reducer's `deleteNode`
+    (stage 5), so it already covers the Delete key, the delete FAB and any future route.
+- **Seen, not assumed**: went inside a Desk holding a Cube, right-clicked the Cube's Color
+  input, chose Expose — an `In` node appeared already wired (`port.in.value → geom.cube.color`,
+  both inside the desk, no scope crossed), the notice read *"Desk now has a Color socket"*, and
+  **Go and see** took me up to the root where the Desk card showed **Color (color)** after its
+  five declared inputs. Zero console errors.
+- Verified: lint 0 errors · 2286 tests · build clean.
+
+## 2026-08-19 — doorways: a hole in a container's wall
+
+- Stage 5, and the thing the owner actually asked for: *"how it in touchdesigner where you
+  can put the geometry and inside it objects"*. Place an **In** or **Out** node inside a
+  container and a socket with that name appears on the container's outer face. One interior
+  node, one exterior port — the mechanism TouchDesigner (In/Out operators), Blender (Group
+  Input/Output), Max (inlet/outlet), Unreal (tunnel nodes) and Houdini (subnet inputs) all
+  arrived at independently.
+- **The property that makes it safe: no edge ever crosses a scope boundary.** The wire
+  outside joins two siblings in the parent scope; the wire inside joins two siblings within
+  the container. RawEditor's both-endpoints-in-scope filter stays exactly as written, and the
+  runtime needs no notion of scope at all. Demonstrated live, not argued:
+  `sky.out → desk.door [root/root]` and `door.value → cube.color [desk/desk]`.
+- **The socket's identity is the doorway node's own id, never its label.** One choice, three
+  defects removed: renaming a door cannot break its wire, two people adding doors at once
+  cannot collide on a name, and deleting a door then adding another cannot resurrect the old
+  wire onto new plumbing. Order is DOCUMENT order, never `graphX` — dragging a card commits
+  an op per animation frame, so position-ordering would re-index a container's face while
+  someone drags an unrelated node inside it, detaching every wire outside it in a scope nobody
+  is looking at.
+- **The delete sweep, in both reducers.** A doorway's wire names the CONTAINER and a port id,
+  so deleting the door leaves an edge whose endpoints both still exist. `createEdge` validates
+  endpoint nodes only and `normalizeEdgesList` drops edges by missing node id, never by missing
+  port — it would be a permanent orphan no reload, normalisation or gesture could clear, parked
+  at a card's corner by `inputPortCenter`'s `idx<0` branch. Swept in `src/shared/projectSchema.js`
+  AND hand-mirrored into `shared/projectSchema.cjs`: with the client copy alone, the wire
+  vanishes locally and the server's replay resurrects it on the next sync. Both copies are
+  covered by fixtures, because the parity suite is fixture-driven and an ESM-only edit passes
+  green until something exercises the path.
+- **Eight call sites.** A container's ports are DERIVED, so `getNodeInputs`/`getNodeOutputs`
+  take an optional trailing node list and `cardHeight`/`inputPortCenter`/`outputPortCenter`
+  thread it too. Miss one and the container grows a socket the card does not draw, or draws one
+  the wires do not land on. `portScopeNodes` is the FULL node list, never `graphCardNodes`: a
+  container's doorways live inside it, a different scope from its own card, so the scoped list
+  would find none of them and the feature would fail in total silence with every unit test
+  still green.
+- **Defaults are load-bearing.** Both doorway types carry a real default; without one a freshly
+  placed door hands its container a socket that draws, persists, survives a reload and carries
+  `undefined`, and the consumer downstream quietly falls back to its own local value — which
+  looks *exactly* like a door that works.
+- **Known limits, stated rather than discovered:**
+  - `node.null` cannot grow doors: its dynamic `portDefs` branch returns before the promotion
+    merge. Every node in production today is a `node.null`. Tested as a limit, not a bug.
+  - Studio's read-only flat surface shows a promoted port twice — once as a socket on the
+    container, once as a separate In/Out card in the same plane — with no line joining them.
+  - Document order is server-sequence order after reconciliation, so a door created
+    optimistically can change row on sync. Identity is stable; row is not.
+  - Deliberately NOT done: dropping edges whose ports cannot be resolved from the wire memo.
+    It would also silence every edge into a legacy or removed type, and "my wires disappeared"
+    on an old document is a worse failure than the one it fixes. The delete sweep covers the
+    doorway case at its source instead.
+- **Seen, not assumed**: seeded a desk holding a cube and an In door, dragged a wire from an
+  orange colour node into the desk's new **Tint** socket, and watched the cube inside the desk
+  turn orange. The Desk card shows its five declared inputs plus Tint, and its three outputs.
+  Zero console errors.
+- Verified: lint 0 errors · 2282 tests · schema parity green · build clean.
+
+## 2026-08-19 — a wire can start from a container
+
+- Stage 4 of the container work, and the first half of the owner's second
+  complaint: *"cant connect"*. It was literally true. **Every container type
+  declared zero outputs** — World 2 in/0 out, Space 1/0, 3D Desk 5/0, Studio 1/1
+  — so `nearestOutputPort` had an empty list to iterate, the press fell through to
+  the card-drag branch, and pressing-and-pulling on a World **silently moved the
+  card**. Not a UX gap: a data-layer one.
+- **The rule this change commits to, in one line: A CONTAINER OUTPUTS ITS OWN
+  SETTINGS, NEVER ITS CONTENTS.** Reaching inside is port promotion — sentinel
+  nodes placed in the container, one per exterior port — and is deliberately a
+  separate stage. Research across TouchDesigner, Houdini, Max/MSP, LabVIEW and
+  ComfyUI found that assuming wires pass through a container automatically is the
+  single most repeated user complaint about containers *in every one of them*, so
+  the boundary is drawn hard and said out loud in the code.
+- **Shipped**: `universe.world` → Title (string), Sky (color). `universe.desk.3d`
+  → Position, Rotation, Scale (vec3), so something OUTSIDE the desk can follow the
+  desk; things inside already move with it through the scene graph. `studio` →
+  Title.
+- **Rejected, with the reason recorded in place rather than deferred vaguely**:
+  - `universe.space` keeps zero outputs. Its one setting is showChrome, and no
+    input anywhere in the registry could consume a chrome boolean to a visible
+    result — the exact dead-wire disease.
+  - World bounds/size: not honestly computable. `geom.cube.bounds` comes from its
+    own `size` input; a World has no size and nothing in `src/` measures a
+    subtree's extent.
+  - World `live`: computable, but the codebase holds two conflicting definitions
+    of live (RawEditor's strict marked-check vs `resolveScopeWorldNode`'s
+    first-created fallback), and shipping a port would bless one and make the
+    other read as a bug. No consumer either — boolean→string is incompatible.
+  - Desk gridVisible/bgColor echoes: no observable consumer.
+- **Every output ships with its `computeNodeOutput` case in the same commit.**
+  Without one, the fallthrough returns the node's own stored value and silently
+  ignores any wire into the matching input — a port that draws, persists, survives
+  a reload and lies, which is strictly worse than the undefined it replaces. 34 of
+  the registry's 70 existing outputs are already in that state; this adds none.
+- **A footgun made real, then made true.** `arePortsCompatible` has always allowed
+  `color → vec3` and the input dot lights up as compatible, but `asVec3` returned
+  its fallback for any non-array — so the wire drew and quietly produced
+  `[0,0,0]`. Nothing reached it because no container had a colour OUTPUT. The
+  World's Sky makes it reachable, so `asVec3` now reads hex, normalised 0..1
+  (0..255 would put a red sky 255 units off-stage).
+- **A tested behaviour deliberately reversed**: `studioNode.test.js` asserted
+  `outputs` must be `[]`, on the grounds that the runtime could not compute one.
+  True then — and the answer was to add the case, not to leave the card unwireable
+  forever. The test now asserts the rule that actually matters, against the real
+  runtime: every declared output must produce something, AND must carry the
+  **wired** value rather than the stored one. The second half is load-bearing; a
+  "did something come out" check passes against the very fallthrough it should
+  catch.
+- **Card geometry did not move.** Outputs are at or under the input count on every
+  container (2/2, 5/3, 1/0, 1/1), so `Math.max(inputs, outputs, 1)` is unchanged
+  and no port centre shifted. A third output on `universe.world` would grow every
+  World card by a row and visibly detach every wire on every saved document — it
+  would read as a rendering glitch, not a bug. Guarded by a test.
+- **Seen, not assumed**: in a real browser, dragged from a World's Title output —
+  a dot that did not exist before — onto a text panel's Content, and watched the
+  panel read *"The rehearsal room"*. Edge persisted as `world.title → note.content`,
+  zero console errors.
+- Honest scope note for the PR: that demo works with the panel standing **beside**
+  the World. Cross-scope edges are still unauthorable, so "the panel in the room
+  names the room" is not yet what ships.
+- Verified: lint 0 errors · 2267 tests · build clean.
+
+## 2026-08-19 — a door you can see, and something that says where you are
+
+- Stage 2 of the container work. Stage 1 fixed "can't put the geometry in"; this fixes the
+  other half of "can't go inside" — which turned out not to be blocked at all. You could
+  always go inside. Nothing ever told you that you had.
+- **What entering a World looked like before**: a chromeless fullscreen empty grid with one
+  20px icon in a corner. No name, no breadcrumb, no visible exit, every card gone from view.
+  A person doing that does not think "I am inside the World"; they think they have destroyed
+  their workspace. Screenshotted before touching anything.
+- **Why**: the breadcrumb EXISTS. `chromeVisible` starts with `if (zen) return false` and a
+  fresh workspace opens in zen, so the whole topbar is hidden; and `handleEnterNode` sets
+  `isWorldFullscreen(true)` for `universe.world`, stripping what was left. Machinery present,
+  never on screen.
+- **What shipped**
+  1. A scope marker — `‹ inside <name>` with a real exit — rendered whenever `navStack.length
+     > 1`, deliberately OUTSIDE the chromeVisible gate so zen and fullscreen cannot hide it.
+     34px controls, because leaving is the one thing a lost person needs and a phone has no
+     Escape key.
+  2. Cards say what they hold. `childCounts` (optional, defaulted — Studio wraps this
+     component read-only and passes nothing) puts a count badge on a card with contents and
+     brightens its chevron. Before, `math.add` and `studio` wore the identical mark.
+  3. The enter control is no longer gated at `CARD_CONTROL_MIN_ZOOM` (0.5) for a card that
+     holds something. The auto-fit lands an oversized graph at `FIT_MIN_USEFUL_ZOOM` (0.34),
+     so the way into a container vanished exactly when the "showing N of M" notice appeared.
+  4. Chevron contrast raised from rgba(244,247,251,0.2) — about 1.6:1, under the 3:1 floor
+     for a non-text control.
+- **The measured phone bug, and the assumption that hid it.** `starterWorkspace.js` says in
+  its own comment that both windows must finish in the top half and "the test asserts it" —
+  asserted at viewportHeight 844. A real iPhone 13 hands the page **664** once browser chrome
+  is taken. Measured with `elementFromPoint` on three devices:
+  - iPhone 13 (390x664): 1 of 4 cards reachable — Studio, the card the welcome text tells you
+    to tap, sat under the welcome window
+  - iPhone SE (320x568): 1 of 4
+  - Pixel 7 (412x839): 4 of 4
+  The seed's own `2y + h <= vh` invariant HOLDS at 664 — it is necessary, not sufficient. What
+  separates the working sizes from the broken ones is absolute pixels below the windows
+  (318/314 vs 250/198), not a fraction: a card's height does not scale with the phone. So
+  `CARD_BAND_MIN = 300`, below which the welcome note opens as a header only — still there,
+  still one tap from expanding, and no longer sitting on the instruction it gives.
+  After: iPhone 13 3/4, iPhone SE 2/4, Pixel 7 4/4, and **Studio reachable on all three**. The
+  one still covered is Sky, a colour value with nothing inside it, whose door means nothing.
+- Two wrong rules were tried and discarded by measurement before this one: "finishes in the
+  top half" (minimised the note on roomy phones too) and the file's own `2y+h` invariant
+  (left iPhone 13 at 1 of 4). Neither was shipped.
+- **The first version of this stage was wrong, and adversarial review caught it.** Three
+  defects, each verified against the running app before being fixed:
+  1. The door stayed in the card header, inside the graph's own transform. **Measured 7x7
+     SCREEN PIXELS** at the zoom the fit lands on — present in the DOM, unusable in the
+     browser, and a pixel-perfect scripted click on its exact centre did nothing. The test
+     asserted DOM presence and passed the whole time. That is the trap: *a DOM-presence test
+     for a defect whose signature is a wrong number of screen pixels.*
+  2. It also sat inside `nearestOutputPort`'s 28-SCREEN-pixel grab radius, which covers the
+     card's right-hand end once zoomed out — the very collision the old zoom gate existed to
+     prevent, reintroduced by removing the gate.
+  3. The scope marker was fixed at `top: 12px` — **inside `.raw-topbar`**, which is 49px tall
+     and full-width, whenever chrome was on; and on `.raw-graph-fit-notice` (also top:12px) in
+     zen. Verified only in zen the first time, which is why it looked fine.
+  Rebuilt: the door hangs off the card's LEFT edge on a **counter-scaled** anchor
+  (`scale(1/zoom)`), so it is a constant size on screen — **28x22 desktop, 44x44 on touch** —
+  at every zoom, and is structurally clear of the output-port grab zone. Never gated on having
+  contents: the same control reopens a closed panel window, and an un-enterable empty container
+  is a box that can never be filled. The marker moved below the topbar (`collidesWithTopbar:
+  false`, measured), and its controls went 34px -> 44px, the lane's own floor. The fit now
+  reserves the door's width so it is not clipped: **0 of 41 doors clipped** after a fit-all,
+  where the leftmost was half off-screen before.
+- **Seen**: desktop, iPhone 13, iPhone SE, Pixel 7. Entered Studio, saw `‹ inside Studio`,
+  left, got the cards back. Entered a World on the phone — the case that used to blank the
+  screen — and the marker is there over the fullscreen grid, 44x44, reachable.
+- **Accepted, named, not hidden**: the bottom-most card's door can land under the zoom cluster
+  (`.raw-graph-zoom-controls`, bottom-left, opaque). Pixel 7 went 4/4 -> 3/4 on that alone. The
+  surface's own doctrine is that a corner occlusion must not push the whole graph up — only a
+  bottom-anchored band does — and the same trade already exists for the delete FAB at
+  bottom-right. `pointer-events: none` would be worse: the door would be invisible AND
+  clickable. The card is still enterable by double-click; only its door is covered, and only
+  in that one corner.
+- Verified: lint 0 errors · 2246 tests · build clean.
+- Still open, and unchanged by this: every container declares zero outputs, so a wire cannot
+  start from one. That is the In/Out doorway work.
+
+## 2026-08-19 — "I want to build world but can't connect or go inside": the map and the stage were showing two different rooms
+
+- Owner, on Raw vs TouchDesigner: *"i want to build world but cant connect or go inside how it in
+  touchdesigner where you can put the geometry and inside it objects"*. Two complaints, both
+  reproduced first-hand before touching anything, and the cause of the first was NOT what the
+  first look suggested.
+- **The mechanism.** The graph canvas filters cards on `currentScopeId` and the palette creates
+  with `parentId: currentScopeId`, while every 3D viewport was handed `scopeId={worldNode?.id}`
+  — the inside of the live World. At root those are different rooms, so a cube placed at root
+  landed somewhere perfectly real and the stage never drew it. One word's disagreement between
+  two filters, not a missing feature. Found by a design workflow reading the code, after my own
+  first pass wrongly concluded "you must enter the World first".
+- **What shipped (stage 1 of six).**
+  1. All three viewport mounts now take `scopeId={currentScopeId}` — the room you are standing
+     in. `worldNode` is still passed, for sky and lighting. The docked World panel included: a
+     World is `render:'panel-2d'` and its live-marker is keyed by its PARENT scope, so it is a
+     window onto the room it stands in, not a box things go inside.
+  2. `RawViewport` builds a `childMap` by `parentId` and `NodeVisual` recurses, so a container's
+     children render INSIDE its own `<group>`. Move, turn or scale a desk and everything standing
+     on it travels with it — the geo-COMP behaviour the owner described. Shape copied from
+     `StudioViewport.jsx:520-530`, already proven twice in this repo for entities.
+  3. Descent stops at a nested `universe.world`: a World is its own stage, and seeing through one
+     into another would change what existing spaces show.
+  4. `resolveScopeWorldNode` walks up to the nearest ancestor World, so standing in a Desk or a
+     Studio no longer gates the 3D off entirely. Cycle-guarded rather than trusting the data.
+  5. `StudioWorldSurface` moved to the world's own scope too, or the identical document rendered
+     as two different rooms depending on which lane opened it.
+- **Four guards, in the same commit, each one a way this silently corrupts work if omitted** —
+  every one named by an adversarial pass before it was written, not found afterwards:
+  - values resolved for the WHOLE rendered subtree, not just the top row. `NodeVisual` reads
+    `node.values` directly, so a nested node wired to a Time node would have frozen the moment it
+    went inside something — the "can't connect" complaint, newly caused by fixing the other one.
+  - no drag handler below the top level. The drag writes a world-space raycast point into
+    `values.position`, which is read as parent-LOCAL; nested drag would teleport a node by its
+    parent's transform with no error. `StudioViewport.jsx:542` refuses the same move for the same
+    reason. Nested position stays editable in the inspector until there is a gizmo.
+  - `nodeScale` (the workspace zoom) folded in at the roots only, passed down as 1, or it
+    compounds with depth.
+  - a container with no body of its own keeps its `<group>`. The old `if (!body) return null`
+    would have swallowed everything standing inside it.
+  - the 3D Desk shell stops raycasting, or its skin swallows every pointer aimed at its contents.
+- **Seen, not assumed.** Placed a cube at root and watched it appear in the room — it did not
+  before. Seeded a desk with a cube standing on it, then moved the desk right and scaled it 1.6×:
+  the cube travelled with it and grew in proportion, still on the desk's top face. Opened Studio's
+  Open Jam locally afterwards: renders as before, zero console errors.
+- **A documented behaviour was deliberately changed**, not worked around:
+  `resolveScopeWorldNode` used to return null for a scope with no World of its own, and a test
+  asserted it. That null gated the whole 3D surface off. The test now encodes the new intent and
+  says why, plus ancestor-preference, no-world-anywhere, and parentId-cycle cases.
+- **The other complaint is NOT fixed by this.** Every container type still declares ZERO outputs
+  (World 2 in/0 out, Space 1/0, 3D Desk 5/0, Studio 1/0), so a wire cannot start from one, and
+  nothing inside a container can be reached from outside. That is stages 4-6: real outputs each
+  paired with a runtime case, then TouchDesigner-style In/Out nodes placed inside a container to
+  give it ports, then the gesture that promotes an interior port to the surface. Research across
+  TouchDesigner, Houdini, Max, Blender, Cables.gl, vvvv and Unreal found one unanimous mechanism
+  for this — a container's outer ports exist because sentinel nodes sit inside it — and found that
+  the single most repeated user complaint about containers, in every one of those tools, is this
+  exact sentence.
+- Risk audit, before any of it: production holds 13 nodes across 8 spaces, every one `node.null`,
+  zero nested, zero spatial; br_id_ge's four live documents have `nodes: []`; and
+  `LiveProjectScene.jsx` never reads `doc.nodes`. This work cannot reach an exhibition visitor.
+- Verified: lint 0 errors · 2243 tests · build clean.
+
+## 2026-08-18 — Raw could not open a file. Model / Video / Sound, and a door to put them through
+
+- Owner: "if want to add models there it still not working full — analyze TouchDesigner and
+  other similars and rebuild all." The first half is a fact, checked before touching
+  anything: Raw's registry had **no model node, no video node, no audio node**. A live guest
+  test on staging searched the palette for *model, glb, gltf, mesh, import, file, video,
+  asset, audio* and every single term returned "no match"; a real `.glb` dropped on the
+  canvas did nothing at all — no node, no error, no request. Meanwhile Studio, one URL over,
+  uploaded and rendered a 7.7MB photogrammetry scan for the same guest with no login.
+- **The capability was already finished and simply not wired to Raw.** `ModelObject.jsx` is a
+  serious loader (GLB + Draco/Meshopt/KTX2, OBJ+MTL, STL, FBX, skeletal animation, explicit
+  GPU disposal); `EntityContent.jsx` renders fifteen object kinds including model/video/audio.
+  Raw's node lane had its own hardcoded four-shape switch in `renderNodeBody` and never met
+  any of it. `document.assets` and `buildAssetMap` were already in Raw's viewport.
+- **What shipped**
+  1. `geom.model`, `media.video`, `media.audio` in `nodeRegistry.js`, family `bring-in` — a
+     file from your disk is a door into the graph, like the webcam, not something Raw makes.
+     Each carries `keywords` so the nine words that returned "no match" now land; there is a
+     test asserting exactly those words.
+  2. `renderNodeBody(node, values, assetMap)` — it previously had **no access to the asset
+     map at all**, so a node could not resolve a file even in principle. Threaded from
+     `SceneContent` through `NodeVisual`. Node visuals are now wrapped in
+     `SceneEntityErrorBoundary` like entities: a node can now load an arbitrary file, and a
+     corrupt mesh must cost that node, not the scene.
+  3. Drag-and-drop on the workspace (`dropAsset.js` + handlers in `RawEditor`). Server-backed
+     projects upload through `uploadProjectAsset`; local workspaces store the bytes in
+     IndexedDB, which is where `useAssetUrl`/`ModelObject` already look first — so both
+     render identically. Unsupported files are NAMED back to the person; a silent drop is the
+     failure this whole change exists to remove.
+  4. Dropping **onto a room** puts the node in that room (`data-world-scope-id` +
+     `resolveDropScopeId`). Without it a drop at root makes a node the World window will
+     never show, because the World renders its own scope — verified: a Cube placed from the
+     root World surface is invisible there too, which is existing behaviour, not a regression.
+  5. A ＋ beside the inspector's asset picker, because drag-and-drop does not exist on a
+     phone and the picker alone only offers files that are already here.
+- **Seen, not assumed.** Headless Chromium at DPR 2 against a local dev server: dropped the
+  real 7.7MB `scan.glb` and **watched it render textured in the room**; dropped a 673KB mp4
+  and a 265KB wav and watched the video plane play and the sound's marker appear. Zero
+  console errors throughout. On an iPhone 13 viewport the ＋ measured 46×46 and — first
+  attempt — `reachable: false`: the floating scope button sits exactly on top of it at 390px.
+  Moved the button to the left of the picker and re-measured to `reachable: true`, then drove
+  the real file chooser and confirmed `scan.glb` stored (7,726,720 B) and the port filled.
+- **What was researched and NOT built.** TouchDesigner, Houdini, Blender, Cables.gl, vvvv and
+  Max all type wires by the *shape of the data*, not the artist's intent, and refuse an
+  incompatible connection outright; Notch's "anything to anything" is the cautionary tale —
+  its failures show as grey nodes after render. Raw's seven verb families are a good menu and
+  a poor type system. `PORT_TYPES` even declares a `geometry` type that **zero ports use** —
+  designed, never built. The recommended second axis (geometry / texture / material /
+  transform / audio / trigger, colour-coded, refusing bad drops) is deliberately left for its
+  own change: it touches every node's ports, and this one had to make files work first.
+- Verified: lint 0 errors · 2234 tests · build clean.
+
+## 2026-08-18 — "there are no in/out connectors": the fit centred cards under a window
+
+- Owner report with a screenshot at ~1050px: too much overlap, and World had no visible
+  connectors at all. Reproduced exactly: at that width the World window sat on top of the
+  card column and its output dot was covered by `raw-window-header` — not a rendering
+  glitch, the port was genuinely unclickable.
+- **Root cause**: `RawGraphSurface`'s auto-fit centres the card cluster on the viewport's
+  own centre, with zero awareness of the two floating windows the starter seed opens. A
+  corridor between the windows can be technically wide enough for the cards and still bury
+  them if it isn't centred — which is exactly what happened: world+text left a 281px gap
+  that ran 304..585, while the centred 202px card lane ran 424..626.
+- **Fix, in three parts**:
+  1. `getWindowLayout.getGraphEdgeInsets` (new, pure) turns docked window frames into
+     left/right/top/bottom insets, charging each window to the edge it hugs. Reports the
+     TRUE footprint — an earlier draft scaled insets down to cap them, which understated a
+     window's real size and let cards spill into it anyway (caught before shipping, at
+     800x950 in the phone-narrow stacked layout). Only gives up on an axis when there is
+     truly no room (an absolute floor, not a fraction of the viewport — a fractional floor
+     wrongly disabled dodging on a real phone where two edge windows leave ~17% free).
+  2. `RawGraphSurface` accepts `contentInsets` and folds them into `visibleBox()`, so the
+     fit centres on the free band, not the whole container. Windows mount a beat after the
+     graph does, so a second effect re-fits when the insets change — but ONLY while the
+     view is still exactly where the first fit left it, so a person who has already panned
+     is never yanked.
+  3. `starterWorkspace.js`: `math.mix`-unrelated — the seed's own window sizing is capped
+     so the two edge windows can never eat more than half the width minus the card lane's
+     half-width and a gutter, and the narrow-layout card gap widened from 88 to 112 (it was
+     smaller than World's own 98px card height, so cards overlapped EACH OTHER).
+- Verified with a pixel-measuring Playwright harness across 700–1920px: **zero overlaps,
+  5/5 ports reachable at every desktop width**, including the exact ~1050px from the
+  report. Did a real interactive test at that width too: placed a fresh `value.string` node
+  from empty canvas and dragged a new wire onto World's Title port — it connected.
+- New tests: `getGraphEdgeInsets` unit coverage (edge-charging, the historical bug's exact
+  numbers, the truthful-vs-scaled-inset regression, the give-up floor) in
+  `windowLayout.test.js`; a numeric corridor-straddles-centreline check against the real
+  seed builder across 11 widths in `starterWorkspace.test.js`.
+- Verified: lint 0 errors · 2188 tests · build clean.
+- **Not fully closed**: a real 390×844 phone still shows one self-overlap — the seeded
+  `welcome` window sits over its own card's `content` port when the graph is small enough
+  to hit `FIT_MIN_USEFUL_ZOOM`'s neighbourhood-fit fallback, which centres on the seed
+  node's position rather than the whole cluster's centroid, so a card near the cluster's
+  edge can still poke past a docked window. Pre-existing (baseline was 3/5 reachable before
+  today, worse than this); now 4/5. Left as a named follow-up rather than touched blind —
+  fixing it means changing how EVERY graph centres on a phone, not just the seed.
+
+## 2026-08-18 — the example graph was lying in the other direction
+
+- Follow-up to the node families work: I went back for the audit's parked PARTIAL items and
+  found the bigger thing first. `allNodesExample.js` — the graph Raw's ⋯ menu opens as the
+  portrait of the whole registry — declared `time.beat`, `geom.cube.bounds` and
+  `view.image.src` **unwirable**, with a header saying no geometry/texture/signal output
+  ever produces a value and "an edge out of one is decoration". Every word of that had
+  become false. The 2026-08-06 audit caught NODE_BACKLOG overclaiming; this file was
+  underclaiming just as hard, and it is the file a curious person actually opens.
+- **Why it rotted:** its staleness test only asserted the named ports still EXISTED, never
+  that the claim was still true. So the runtime grew cases (time.beat, geom.cube.bounds)
+  and webcam started publishing a live texture, and the list stayed green while
+  misinforming every reader.
+- **Evaluated every declared output of every placeable type against the runtime: none are
+  dead.** One exception found and fixed — `math.mix` returned undefined at rest because its
+  `a`/`b` inputs had no defaults, the only placeable output in the registry producing
+  nothing unwired; defaults of 0 make it behave like every sibling math node.
+- **The guard now derives liveness from the runtime, both directions** — a port that is
+  dead but undocumented fails, and a port documented as unwirable that actually returns a
+  value fails. Watched it go red on the exact historical drift (re-adding the old
+  `time.beat` claim) before going green, per the repo rule about guards never seen red.
+- **`view.image` now renders a wired live texture** (audit PARTIAL closed): a DOM element
+  can't be mounted twice, so the frame is copied to a canvas per rAF. Verified in a real
+  browser — dragged webcam `Frame` → image `Source`, read the canvas back: 640x480, 100%
+  non-black, and the panel's timecode advances independently of the webcam panel's. The
+  example graph now wires that edge, plus `cube.bounds → desk.scale`, so it demonstrates
+  what it used to deny.
+- Verified: lint 0 errors · 2177 tests · build clean · looked at.
+- Still parked from the audit: `universe.desk.3d` renders a marker box rather than its
+  child scope (its card claims more than it draws), and `view.director`'s placement
+  affordance dangles without a mounted canvas.
+
+## 2026-08-18 — the node truth audit, and families for a palette that felt messy
+
+- "Raw feels not real" — audited every one of the 39 placeable types: 8-agent code-truth
+  pass (per family + palette/wiring plumbing) plus a real-browser pass placing each node
+  one by one, screenshots looked at. Verdict: 33 REAL end to end, 6 PARTIAL, 0 true
+  shells. The unreal FEELING was presentation: a flat 39-row palette in code-declaration
+  order, families invisible (NODE_CATEGORIES' "used for palette grouping" comment was
+  never implemented), wires that draw in full colour into anything, a "Code / Body"
+  inspector box that stores-but-never-runs with no caveat, a complete timeline editor
+  nothing could reach, and universe.space wearing an authoringOnly tag its working
+  showChrome disproves.
+- **Families.** Seven artist-facing families by task (bring in / make / numbers / the room
+  / watch / send out / agents) — NODE_FAMILIES + FAMILY_BY_TYPE in the registry, additive,
+  categories untouched underneath, coverage enforced both directions by test. The palette
+  browse groups under sticky headers with counts and a family colour bar per row; any
+  typed character dissolves to the flat ranked list; keyboard highlight skips headers;
+  commands stay pinned first. Cards and the outliner dot wear the same family colour and
+  label — a studio card no longer says "universe".
+- **Honesty.** "authoring only" tag → "shell" (dimmed row); work.status/work.agent carry a
+  registry devLocalOnly flag and a "local dev" tag; the inspector CODE section is labeled
+  "Code — stored, not run"; wire-drag now lights every input that can take the wire and
+  quiets every one that cannot (colour↔vec3 interchange included) — an incompatible drop
+  used to be pure silence.
+- **Quick reals from the audit:** timeline gets an add-clip button (the whole built editor
+  — drag/trim/razor/ripple/retime — was unreachable: no way to create a clip existed);
+  math.mix lerps two hex colours per RGB channel instead of hard-switching at t=0.5;
+  value.boolean got its first test; view.text content edits in a textarea.
+- Verified: lint 0 errors · 2171 tests · build clean · looked at on desktop 1440px and
+  phone 393px, browse/scroll/query/wire-drag screenshots opened. Audit artifacts: family
+  truth table in the PR description; per-node screenshots were session-local.
+- Not done, deliberately: per-node port-level liveness marking on cards, ImagePanelWindow
+  rendering a wired live texture, universe.desk.3d rendering its child scope — audit
+  quickFixes recorded for a later pass.
+
+## 2026-08-18 — di sync phase 2, PR 3: link, ledger, and an audit that refuses what it cannot prove
+
+- `di link <space> --remote <url>` — pastes a `dii_sync_*` key, verifies it against the
+  remote BEFORE storing anything (reachability, key accepted, space exists, verbatim
+  supported — a peer without `?verbatim=1` is refused at link time, not discovered at
+  write time). Writes the key 0600 into `~/.di/credentials.json` (now also swept by
+  `di uninstall` — secrets are not "your work") and an initial ledger.
+- The ledger (`~/.di/data/sync/<remote>/<space>.json` — under data/ so backup carries it
+  and update can't touch it) is the origin field ops don't have: installId minted once
+  into state.json, version cursors null until a real sync, opId dedupe lists, and the
+  assetIdRemap that stops EXIF-re-encoded images double-counting forever.
+- `di sync <space>` — reads both sides verbatim-or-refuses, prints what it can prove,
+  writes NOTHING. Relation is anchored only by cursors (unknown / in-sync / local-ahead /
+  remote-ahead / diverged); diverged refuses both directions since scene ops have no
+  inverse. The retention wall is reported up front per direction. All decisions live in
+  pure `sync-plan.mjs` (no server needed to test); all I/O in `sync.mjs`; all words in
+  `ui.mjs`.
+- Verified end-to-end against two real serverXR instances with separate data roots and a
+  DI_HOME with a dot in it: link (bare URL auto-resolves to /serverXR), unknown-relation
+  refusal, divergence report (v1/1-object vs v0/0), baseline → local-ahead with push
+  possible, revoked-key denial (seen on the auth-on instance), remote-down. 25 new unit
+  tests across syncPlan/syncLedger/credentialsStore; whole scripts/di suite green; lint 0.
+- Spec: `docs/architecture/SPEC_di_sync.md`. No new server endpoints — the #119 surface
+  is the whole protocol. Next: PR 4 `--push`/`--pull` over ops; PR 5 `--replace-*` bundles.
+
+## 2026-08-18 — a free-disk floor for every write: 507 with headroom, never ENOSPC mid-file
+
+- Closes CURRENT.md's "no byte quota / ENOSPC pre-check anywhere". One app-level guard
+  (`serverXR/src/diskGuard.js`) mounted before the body parsers: POST/PUT/PATCH are refused
+  with `507 { code: 'insufficient_storage' }` when the data volume's free space is under a
+  floor — checked before multer spools a temp file or a body is parsed, so a full disk can
+  no longer be hit halfway through an asset, an op-log append, or a SQLite write. GET/HEAD
+  and DELETE always pass (DELETE is how a full disk empties).
+- `Content-Length` counts against the headroom, so a 300 MB upload is refused while small
+  writes still clear; statfs is cached ~5s, the cache drops on refusal so freeing space
+  recovers immediately; statfs failure fails OPEN with one loud warn, never takes writes down.
+- `MIN_FREE_DISK_MB` (default 512, `0` disables) — documented in serverXR/README.md's env
+  table. Verified live on a real boot: impossible floor → 507 with the message; normal floor
+  → requests reach routing/auth untouched. 7 unit tests; serverXR suite 405 + contracts 96 green.
+- Deliberately NOT a per-space byte quota — that needs a policy number the owner hasn't set.
+  The chokepoint is in place for it; a quota can ride the same refusal shape later.
+
+## 2026-08-18 — the owed source.mic look: the probe was reading the meter's track, not its fill
+
+- `npm run verify:capture` on Linux (aylmo), the one real-browser look CURRENT.md still
+  owed. First run: webcam OK, mic FAIL (flat) — same signature as the suspended-AudioContext
+  class the script hunts. A raw getUserMedia+analyser probe against the same page showed the
+  fake device delivering varying signal, so the app was suspect — until an A/B isolated it:
+  the meter moves fine with the app untouched.
+- The actual bug was in the probe: `[class*="mic"][class*="meter"]` also matches
+  `.raw-mic-panel-meter` — the TRACK, which precedes the fill in DOM order — so `.first()`
+  sampled an element whose transform is `none` forever. The selector now targets the fill.
+  source.mic verified moving: 25/25 distinct scaleX samples, screenshots looked at.
+- Kept a hardening in `useMicCapture` anyway: the AudioContext is created in getUserMedia's
+  continuation — outside any gesture call stack — so on a gestureless mount (a restored
+  workspace, an embed) Chrome starts it suspended and the meter reads silence while status
+  says active. The hook now resumes immediately and, failing that, on the next
+  pointerdown/keydown, detaching once running. Palette-placed nodes were never affected
+  (sticky activation from the double-click), which is why verify:capture couldn't see it.
+- Not done: nothing pushed to staging; this branch waits behind the #151 merge freeze.
+
 ## 2026-08-09 — sync could not lose your work quietly; now it cannot lose it at all
 
 Groundwork for `di sync` (phase 2 of the CLI), but it landed alone and first because the
