@@ -16,6 +16,8 @@ import {
     getNodeType,
     getNodeInputs,
     getNodeOutputs,
+    isNodeMadeOfCode,
+    CONTAINER_TYPE_IDS,
 } from './nodeRegistry.js'
 
 describe('PORT_TYPES', () => {
@@ -381,3 +383,34 @@ describe('node families', () => {
         }
     })
 })
+
+// An empty canvas means two different things and used to show one screen for
+// both: an empty ROOM, or a thing that HAS no room. Going inside a Cube gave
+// the same blank grid as a fresh workspace, with nothing to say that a Cube is
+// a case in a JavaScript switch and has no insides to look at.
+describe('what a node is made of', () => {
+    it('calls a cube, a light and a number made of code', () => {
+        for (const typeId of ['geom.cube', 'geom.sphere', 'world.light', 'value.number', 'math.add', 'view.text']) {
+            expect(isNodeMadeOfCode(typeId), typeId).toBe(true)
+        }
+    })
+
+    it('does not say that of the things whose whole point is having an inside', () => {
+        for (const typeId of ['universe.world', 'universe.desk.3d', 'studio', 'universe.space']) {
+            expect(isNodeMadeOfCode(typeId), typeId).toBe(false)
+        }
+    })
+
+    it('says nothing about a type it has never heard of', () => {
+        expect(isNodeMadeOfCode('not.a.real.type')).toBe(false)
+        expect(isNodeMadeOfCode(undefined)).toBe(false)
+    })
+
+    // Derived, not listed, so it cannot rot as types are added.
+    it('covers every registered type one way or the other', () => {
+        for (const typeId of Object.keys(NODE_TYPES)) {
+            expect(isNodeMadeOfCode(typeId) || CONTAINER_TYPE_IDS.has(typeId), typeId).toBe(true)
+        }
+    })
+})
+

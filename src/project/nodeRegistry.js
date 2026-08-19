@@ -1692,6 +1692,35 @@ export const UNIMPLEMENTED_NODE_TYPES = new Set([
     'node.null'
 ])
 
+// Nodes that are MEANT to hold other nodes. Not a capability — `parentId` lets
+// any node hold any other, and that is deliberate (product decision
+// 2026-07-19) — but an intention: these are the ones whose whole point is
+// having an inside.
+export const CONTAINER_TYPE_IDS = new Set([
+    'universe.world',
+    'universe.space',
+    'universe.desk.3d',
+    'universe.node0',
+    'studio',
+    'node.null'
+])
+
+// …and everything else, which is made of CODE: a case in a JavaScript switch,
+// not a graph of other nodes. Going inside a Cube shows an empty canvas — not
+// because you have not built it yet, but because there is nothing there to
+// build, and today there is no way for there to be.
+//
+// Derived rather than listed so it cannot rot as types are added. Stated at all
+// so the UI can say WHICH of those two facts an empty canvas is: an empty room,
+// or a thing that has no room. Showing one blank screen for both is what makes
+// entering a node feel broken.
+//
+// The long-term intention is for this set to shrink: a cube defined by its own
+// interior graph is the "everything is a constructor" direction, and the
+// `geometry` port type already declared in PORT_TYPES — and used by nothing —
+// is where that was started and abandoned.
+export const isNodeMadeOfCode = (typeId) => Boolean(NODE_TYPES[typeId]) && !CONTAINER_TYPE_IDS.has(typeId)
+
 export const isNodeTypeImplemented = (typeId) => !UNIMPLEMENTED_NODE_TYPES.has(typeId)
 
 export const listNodeTypes = ({ category = 'all', query = '', runtime = 'any', includeUnimplemented = false } = {}) => {

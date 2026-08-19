@@ -25,7 +25,7 @@ import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSy
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
-import { createEdge, createNode, getNodeFamily, getNodeType } from '../../project/nodeRegistry.js'
+import { createEdge, createNode, getNodeFamily, getNodeType, isNodeMadeOfCode } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
@@ -765,8 +765,34 @@ export default function RawEditor({
         })
     }
 
+    // What an empty canvas MEANS depends on where you are standing.
+    //
+    // Entering a Cube used to show the same blank grid as an empty workspace,
+    // with nothing to say that a Cube has no insides — it is a case in a
+    // JavaScript switch, not a graph. An empty room and a thing that cannot
+    // have a room are not the same fact, and showing one screen for both is the
+    // lie that made entering a node feel broken.
+    const scopeEmptyHint = useMemo(() => {
+        if (!currentScopeId) return `${pointerVerb} to place your first node.`
+        const scopeNode = authoredNodes.find((node) => node.id === currentScopeId)
+        const label = scopeNode?.label || 'this node'
+        return isNodeMadeOfCode(scopeNode?.typeId)
+            ? `${label} is made of code, not of other nodes — there is nothing inside it to see. ${pointerVerb} to put something in anyway.`
+            : `Inside ${label}. ${pointerVerb} to place the first node in it.`
+    }, [authoredNodes, currentScopeId, pointerVerb])
+
     const buildNodeValues = (definitionId, params, place) =>
-        buildNodeValuesForType(definitionId, params, place, { workspaceTop, topZIndex })
+        buildNodeValuesForType(definitionId, params, place, {
+            workspaceTop,
+            topZIndex,
+            // What is already standing in the room this node is joining, so a
+            // new object steps aside instead of landing inside the last one.
+            occupied: authoredNodes
+                .filter((node) => (node.parentId || null) === (currentScopeId || null)
+                    && getNodeType(node.typeId)?.render === 'spatial-3d')
+                .map((node) => node.values?.position)
+                .filter(Boolean)
+        })
 
     const handlePaletteCreate = ({ definition, params, placement: palettePlace }) => {
         if (!definition) return
@@ -1739,7 +1765,7 @@ export default function RawEditor({
                     portScopeNodes={authoredNodes}
                     onPromotePort={handlePromotePort}
                     onMakeScene={handleCreateSceneExample}
-                    emptyHint={`${pointerVerb} to place your first node.`}
+                    emptyHint={scopeEmptyHint}
                     edges={graphCardEdges}
                     selectedNodeId={workspaceState.selectedNodeId}
                     onEnterNode={handleEnterNode}
