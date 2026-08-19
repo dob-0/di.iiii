@@ -5024,7 +5024,10 @@
     -webkit-appearance: none;
     appearance: none;
     position: absolute;
-    top: 20px;
+    /* Bottom-left, where the zoom cluster lives in graph mode — the top-left
+       corner belongs to the scope marker, and the first render put the two
+       ‹ buttons on top of each other (seen). */
+    bottom: 24px;
     left: 14px;
     z-index: 10;
     display: inline-flex;
