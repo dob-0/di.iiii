@@ -3,6 +3,10 @@ import { createBasePathHelpers, joinPath } from '../../project/routing/laneBaseP
 export const RAW_PAGE_HUB = 'hub'
 export const RAW_PAGE_PROJECT = 'project'
 export const RAW_PAGE_PROJECTS = 'projects'
+// The projector cable: /out renders just-the-room of a project (or of the
+// space's local canvas), read-only, zero chrome — a URL a show machine can
+// hold fullscreen. ?scope=<nodeId> aims it at a container's room.
+export const RAW_PAGE_OUT = 'out'
 export const RAW_RESERVED_SEGMENT = 'raw'
 // The lane was called Seed until 2026-07-30. Old links stay alive: a /seed path
 // still resolves, and RootApp rewrites it to the /raw equivalent so the address
@@ -28,6 +32,21 @@ export const buildRawProjectsPath = (spaceId = null) => {
     return joinPath(prefix, spaceId, RAW_RESERVED_SEGMENT, 'projects')
 }
 
+export const buildRawOutPath = (projectId = null, spaceId = null, { scopeId = null } = {}) => {
+    const prefix = getBasePrefix()
+    const query = scopeId ? `?scope=${encodeURIComponent(scopeId)}` : ''
+    if (projectId) {
+        const base = spaceId
+            ? joinPath(prefix, spaceId, RAW_RESERVED_SEGMENT, 'projects', projectId, 'out')
+            : joinPath(prefix, RAW_RESERVED_SEGMENT, 'projects', projectId, 'out')
+        return base + query
+    }
+    const base = spaceId
+        ? joinPath(prefix, spaceId, RAW_RESERVED_SEGMENT, 'out')
+        : joinPath(prefix, RAW_RESERVED_SEGMENT, 'out')
+    return base + query
+}
+
 export const buildRawProjectPath = (projectId, spaceId = null) => {
     const prefix = getBasePrefix()
     if (!spaceId) {
@@ -49,12 +68,40 @@ export const getRawLocationState = (
         .replace(/^\/+/g, '')
         .replace(/\/+$/g, '')
     const segments = relative ? relative.split('/') : []
+    let outScopeId = null
+    try {
+        outScopeId = new URLSearchParams(resolvedLocation.search || '').get('scope') || null
+    } catch {
+        outScopeId = null
+    }
     const isLaneSegment = (segment) => segment === RAW_RESERVED_SEGMENT || segment === LEGACY_RAW_SEGMENT
     const isLegacyPath = segments[0] === LEGACY_RAW_SEGMENT || segments[1] === LEGACY_RAW_SEGMENT
 
     if (!isLaneSegment(segments[0])) {
         if (!isLaneSegment(segments[1]) || !segments[0]) {
             return { isRaw: false, page: null, projectId: null, spaceId: null }
+        }
+
+        if (segments[2] === 'projects' && segments[3] && segments[4] === 'out') {
+            return {
+                isRaw: true,
+                isLegacyPath,
+                page: RAW_PAGE_OUT,
+                projectId: segments[3],
+                spaceId: segments[0],
+                scopeId: outScopeId
+            }
+        }
+
+        if (segments[2] === 'out') {
+            return {
+                isRaw: true,
+                isLegacyPath,
+                page: RAW_PAGE_OUT,
+                projectId: null,
+                spaceId: segments[0],
+                scopeId: outScopeId
+            }
         }
 
         if (segments[2] === 'projects' && segments[3]) {
@@ -83,6 +130,30 @@ export const getRawLocationState = (
             page: RAW_PAGE_HUB,
             projectId: null,
             spaceId: segments[0]
+        }
+    }
+
+    if (segments[1] === 'projects' && segments[2] && segments[3] === 'out') {
+        return {
+            isRaw: true,
+            isLegacyPath,
+            page: RAW_PAGE_OUT,
+            projectId: segments[2],
+            spaceId: defaultSpaceId,
+            isDefaultSpace: true,
+            scopeId: outScopeId
+        }
+    }
+
+    if (segments[1] === 'out') {
+        return {
+            isRaw: true,
+            isLegacyPath,
+            page: RAW_PAGE_OUT,
+            projectId: null,
+            spaceId: defaultSpaceId,
+            isDefaultSpace: true,
+            scopeId: outScopeId
         }
     }
 

@@ -3,8 +3,10 @@ import {
     DEFAULT_RAW_SPACE_ID,
     RAW_PAGE_HUB,
     RAW_PAGE_PROJECT,
+    RAW_PAGE_OUT,
     RAW_PAGE_PROJECTS,
     buildRawHubPath,
+    buildRawOutPath,
     buildRawProjectPath,
     buildRawProjectsPath,
     getRawLocationState
@@ -130,5 +132,52 @@ describe('isDefaultSpace', () => {
         expect(getRawLocationState({ pathname: '/raw/projects' }).isDefaultSpace).toBe(true)
         expect(getRawLocationState({ pathname: '/gallery/raw' }).isDefaultSpace).toBeUndefined()
         expect(getRawLocationState({ pathname: '/gallery/raw/projects/abc' }).isDefaultSpace).toBeUndefined()
+    })
+})
+
+// The projector cable: /out is an address a show machine can hold fullscreen.
+describe('the /out route', () => {
+    it('parses a project out route, spaceful and default-space', () => {
+        expect(getRawLocationState({ pathname: '/gallery/raw/projects/abc/out' })).toMatchObject({
+            isRaw: true,
+            page: RAW_PAGE_OUT,
+            projectId: 'abc',
+            spaceId: 'gallery'
+        })
+        expect(getRawLocationState({ pathname: '/raw/projects/abc/out' })).toMatchObject({
+            page: RAW_PAGE_OUT,
+            projectId: 'abc',
+            spaceId: DEFAULT_RAW_SPACE_ID,
+            isDefaultSpace: true
+        })
+    })
+
+    it("parses a space canvas out route — the local desk's own projector", () => {
+        expect(getRawLocationState({ pathname: '/open/raw/out' })).toMatchObject({
+            page: RAW_PAGE_OUT,
+            projectId: null,
+            spaceId: 'open'
+        })
+        expect(getRawLocationState({ pathname: '/raw/out' })).toMatchObject({
+            page: RAW_PAGE_OUT,
+            projectId: null,
+            spaceId: DEFAULT_RAW_SPACE_ID
+        })
+    })
+
+    it('carries ?scope= through so a container room can be the output', () => {
+        expect(getRawLocationState({ pathname: '/open/raw/out', search: '?scope=node-9' }).scopeId).toBe('node-9')
+        expect(getRawLocationState({ pathname: '/gallery/raw/projects/abc/out', search: '' }).scopeId).toBeNull()
+    })
+
+    it('builds out paths with and without a project and scope', () => {
+        expect(buildRawOutPath('abc', 'gallery')).toBe('/gallery/raw/projects/abc/out')
+        expect(buildRawOutPath('abc')).toBe('/raw/projects/abc/out')
+        expect(buildRawOutPath(null, 'open')).toBe('/open/raw/out')
+        expect(buildRawOutPath(null, 'open', { scopeId: 'geo-1' })).toBe('/open/raw/out?scope=geo-1')
+    })
+
+    it('an /out segment never bleeds into the project route parse', () => {
+        expect(getRawLocationState({ pathname: '/gallery/raw/projects/abc' }).page).toBe(RAW_PAGE_PROJECT)
     })
 })
