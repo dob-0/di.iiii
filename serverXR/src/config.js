@@ -308,6 +308,15 @@ const config = {
       clientSecret: (process.env.GOOGLE_CLIENT_SECRET || '').trim(),
       enabled: Boolean((process.env.GOOGLE_CLIENT_ID || '').trim())
     }
+  },
+  osc: {
+    // Outbound OSC/UDP egress for device.osc.out nodes (oscOutput.js).
+    // Local/dev feature — leave unset in production compose so it stays inert;
+    // a containerized server usually can't reach LAN OSC targets anyway.
+    enabled: String(process.env.OSC_OUTPUT_ENABLED || '').trim() === 'true',
+    // Targets are limited to loopback/private-range IPv4 unless this is set —
+    // the relay must not be usable as an open UDP proxy.
+    allowAnyHost: String(process.env.OSC_ALLOW_ANY_HOST || '').trim() === 'true'
   }
 }
 

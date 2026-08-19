@@ -94,6 +94,27 @@ describe('NODE_TYPES', () => {
         expect(node.values.showChrome).toBe(true)
     })
 
+    it('control nodes are performable sources with real outputs', () => {
+        const fader = NODE_TYPES['control.fader']
+        expect(fader.category).toBe('control')
+        expect(fader.authoringOnly).toBeFalsy()
+        expect(fader.outputs.map(p => p.id)).toEqual(['out'])
+        expect(fader.defaultValues).toMatchObject({ value: 0, min: 0, max: 1 })
+
+        const xy = NODE_TYPES['control.xy']
+        expect(xy.outputs.map(p => p.id)).toEqual(['x', 'y'])
+
+        const button = NODE_TYPES['control.button']
+        expect(button.outputs.map(p => p.id)).toEqual(['pressed', 'trigger'])
+        expect(button.defaultValues.mode).toBe('momentary')
+    })
+
+    it('device egress nodes are no longer authoring-only stubs', () => {
+        expect(NODE_TYPES['device.osc.out'].authoringOnly).toBeFalsy()
+        expect(NODE_TYPES['device.midi.out'].authoringOnly).toBeFalsy()
+        expect(NODE_TYPES['device.midi.out'].defaultValues).toHaveProperty('midiPortName')
+    })
+
     it('node.null is the extensibility primitive', () => {
         const nullType = NODE_TYPES['node.null']
         expect(nullType.isNull).toBe(true)

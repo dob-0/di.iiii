@@ -12,6 +12,7 @@ import ChatPanelWindow from './ChatPanelWindow.jsx'
 import SeedHelpDialog from './SeedHelpDialog.jsx'
 import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
+import { useDeviceEgress } from '../../project/hooks/useDeviceEgress.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { getInspectorSections } from '../../project/entityRegistry.js'
@@ -169,6 +170,9 @@ export default function SeedEditor({
     })
 
     const document = state.document
+    // Ships device.osc.out / device.midi.out values to the outside world
+    // (OSC via serverXR relay, MIDI via Web MIDI) whenever the document changes.
+    useDeviceEgress({ document })
     const isLocalWorkspace = !projectId
     const resolvedSpaceId = spaceId || document.projectMeta?.spaceId || DEFAULT_PROJECT_SPACE_ID
     const entities = document.entities || []
@@ -933,6 +937,10 @@ export default function SeedEditor({
                     onMoveNode={(nodeId, nextX, nextY) => applyLocalOps({
                         type: 'updateNode',
                         payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
+                    })}
+                    onChangeNodeValues={(nodeId, valuesPatch) => applyLocalOps({
+                        type: 'updateNode',
+                        payload: { nodeId, patch: { values: valuesPatch } }
                     })}
                     onDoubleClick={(placement) => openPalette('graph', placement)}
                     isNodeActive={(node) =>

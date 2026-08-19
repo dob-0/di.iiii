@@ -6,6 +6,9 @@ import {
     getNodeType,
     getPortType
 } from '../../project/nodeRegistry.js'
+import FaderControl from './nodeControls/FaderControl.jsx'
+import XYPadControl from './nodeControls/XYPadControl.jsx'
+import ButtonControl from './nodeControls/ButtonControl.jsx'
 
 const CARD_WIDTH = 200
 const HEADER_HEIGHT = 44
@@ -15,11 +18,20 @@ const GRAPH_MIN_ZOOM = 0.05
 const GRAPH_MAX_ZOOM = 8
 const GRAPH_ZOOM_STEP = 0.1
 
+// control.* cards embed a performable widget below their port rows —
+// the card is the instrument, not just a wiring box.
+const CONTROL_WIDGETS = {
+    'control.fader':  { height: 32,  Component: FaderControl },
+    'control.xy':     { height: 108, Component: XYPadControl },
+    'control.button': { height: 40,  Component: ButtonControl }
+}
+
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
 
 const cardHeight = (node) => {
     const rows = Math.max(getNodeInputs(node).length, getNodeOutputs(node).length, 1)
-    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + 8
+    const widgetHeight = CONTROL_WIDGETS[node.typeId]?.height || 0
+    return HEADER_HEIGHT + rows * PORT_ROW_HEIGHT + widgetHeight + 8
 }
 
 const inputPortCenter = (node, portId) => {
@@ -59,6 +71,7 @@ export default function SeedGraphSurface({
     onDeleteEdge,
     onDeleteNode,
     onMoveNode,
+    onChangeNodeValues,
     onDoubleClick,
     // Kantan Mapper-style active marker: for scope-repeatable types where
     // exactly one "active" result is wanted (world.light/background/grid),
@@ -494,6 +507,18 @@ export default function SeedGraphSurface({
                                             />
                                         </div>
                                     ))}
+                                    {CONTROL_WIDGETS[node.typeId] ? (() => {
+                                        const { Component } = CONTROL_WIDGETS[node.typeId]
+                                        const rows = Math.max(inputs.length, outputs.length, 1)
+                                        return (
+                                            <div style={{ position: 'absolute', top: rows * PORT_ROW_HEIGHT, left: 0, right: 0 }}>
+                                                <Component
+                                                    node={node}
+                                                    onChangeValues={(patch) => onChangeNodeValues?.(node.id, patch)}
+                                                />
+                                            </div>
+                                        )
+                                    })() : null}
                                 </div>
                             </div>
                         )

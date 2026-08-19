@@ -89,6 +89,42 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
         case 'value.string':
             if (portId === 'out') return node.values?.value
             break
+        case 'control.fader':
+            if (portId === 'out') {
+                const min = asNumber(node.values?.min, 0)
+                const max = asNumber(node.values?.max, 1)
+                const lo = Math.min(min, max)
+                const hi = Math.max(min, max)
+                return Math.min(hi, Math.max(lo, asNumber(node.values?.value, lo)))
+            }
+            break
+        case 'control.xy': {
+            const clampAxis = (value, min, max) => {
+                const lo = Math.min(min, max)
+                const hi = Math.max(min, max)
+                return Math.min(hi, Math.max(lo, value))
+            }
+            if (portId === 'x') {
+                return clampAxis(
+                    asNumber(node.values?.x, 0),
+                    asNumber(node.values?.minX, 0),
+                    asNumber(node.values?.maxX, 1)
+                )
+            }
+            if (portId === 'y') {
+                return clampAxis(
+                    asNumber(node.values?.y, 0),
+                    asNumber(node.values?.minY, 0),
+                    asNumber(node.values?.maxY, 1)
+                )
+            }
+            break
+        }
+        case 'control.button':
+            if (portId === 'pressed' || portId === 'trigger') {
+                return Boolean(node.values?.pressed)
+            }
+            break
         case 'math.add':
             if (portId === 'out') {
                 return asNumber(evaluateNodeInput(node, 'a', context, nextStack))

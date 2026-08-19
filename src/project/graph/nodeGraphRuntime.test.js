@@ -121,6 +121,48 @@ describe('nodeGraphRuntime', () => {
         expect(evaluateNodeInputs(panel, context).content).toBe('Hello graph')
     })
 
+    it('control.fader outputs its value clamped to [min, max]', () => {
+        const fader = createNode('control.fader', { id: 'fader', values: { value: 0.42 } })
+        const context = createNodeGraphContext({ nodes: [fader], edges: [] })
+        expect(evaluateNodeOutput(fader, 'out', context)).toBe(0.42)
+
+        const over = createNode('control.fader', { id: 'over', values: { value: 250, min: 0, max: 127 } })
+        expect(evaluateNodeOutput(over, 'out', createNodeGraphContext({ nodes: [over], edges: [] }))).toBe(127)
+
+        const under = createNode('control.fader', { id: 'under', values: { value: -3 } })
+        expect(evaluateNodeOutput(under, 'out', createNodeGraphContext({ nodes: [under], edges: [] }))).toBe(0)
+    })
+
+    it('control.xy outputs x/y clamped to their axis ranges', () => {
+        const xy = createNode('control.xy', {
+            id: 'xy',
+            values: { x: 2, y: 0.25, minX: 0, maxX: 1, minY: 0, maxY: 1 }
+        })
+        const context = createNodeGraphContext({ nodes: [xy], edges: [] })
+        expect(evaluateNodeOutput(xy, 'x', context)).toBe(1)
+        expect(evaluateNodeOutput(xy, 'y', context)).toBe(0.25)
+    })
+
+    it('control.button outputs pressed as a boolean on both ports', () => {
+        const button = createNode('control.button', { id: 'button', values: { pressed: true } })
+        const context = createNodeGraphContext({ nodes: [button], edges: [] })
+        expect(evaluateNodeOutput(button, 'pressed', context)).toBe(true)
+        expect(evaluateNodeOutput(button, 'trigger', context)).toBe(true)
+
+        const idle = createNode('control.button', { id: 'idle' })
+        expect(evaluateNodeOutput(idle, 'pressed', createNodeGraphContext({ nodes: [idle], edges: [] }))).toBe(false)
+    })
+
+    it('control.fader feeds downstream device inputs through edges', () => {
+        const fader = createNode('control.fader', { id: 'fader', values: { value: 0.7 } })
+        const osc = createNode('device.osc.out', { id: 'osc' })
+        const context = createNodeGraphContext({
+            nodes: [fader, osc],
+            edges: [createEdge('fader', 'out', 'osc', 'value')]
+        })
+        expect(evaluateNodeInput(osc, 'value', context)).toBe(0.7)
+    })
+
     // Regression test for audit finding #23: a shared upstream node (here,
     // `sin` feeding both `left` and `right`) was recomputed once per
     // consumer within a single evaluation pass instead of once per pass.

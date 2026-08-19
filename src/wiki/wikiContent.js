@@ -350,6 +350,23 @@ export const WIKI_ARTICLES = [
         updated: '2026-07-15'
     },
     {
+        id: 'control-surface-osc-midi',
+        category: 'Editing',
+        title: 'Control nodes: drive TouchDesigner & Ableton from the graph',
+        summary: 'Seed has performable Fader / XY Pad / Button nodes — wire them into OSC Out or MIDI Out to control external software like TouchDesigner (OSC) and Ableton Live (MIDI), TouchOSC-style.',
+        body: [
+            'The Seed editor’s node palette has a Control category: Fader, XY Pad, and Button. Each card carries a playable widget right on the node — drag the fader, sweep the pad, hit the button — and outputs live values into the graph.',
+            'Wire a control into the device nodes to reach the outside world:',
+            { list: [
+                'OSC Out — sends the wired value as an OSC message over UDP (e.g. into a TouchDesigner OSC In CHOP). Set the target host, port, and address on the node; the dev server relays it (start serverXR with OSC_OUTPUT_ENABLED=true). Targets are restricted to your local/private network.',
+                'MIDI Out — sends MIDI CC (value input) and notes (trigger input) straight from the browser via Web MIDI (Chrome/Edge). Pick the MIDI port and channel on the node; on macOS, enable the IAC Driver bus and MIDI-Learn it in Ableton Live.',
+                'Values only send when they change, and nothing is sent on project load — opening a project won’t jerk your mapped parameters.'
+            ] }
+        ],
+        tags: ['seed', 'nodes', 'osc', 'midi', 'touchdesigner', 'ableton', 'control'],
+        updated: '2026-07-21'
+    },
+    {
         id: 'wcc-exhibition',
         category: 'Spaces & access',
         title: 'WCC: Women Creating Change — a virtual exhibition space',

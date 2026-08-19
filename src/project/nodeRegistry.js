@@ -21,6 +21,7 @@ export const PORT_TYPES = {
 
 export const NODE_CATEGORIES = [
     { id: 'source',   label: 'Source',   color: '#5fa8ff' },
+    { id: 'control',  label: 'Control',  color: '#ffd166' },
     { id: 'device',   label: 'Device',   color: '#50fa7b' },
     { id: 'stream',   label: 'Stream',   color: '#ffb86c' },
     { id: 'universe', label: 'Universe', color: '#bd93f9' },
@@ -254,6 +255,70 @@ export const NODE_TYPES = {
     },
 
     // -----------------------------------------------------------------------
+    // CONTROL — performable inputs (TouchOSC-style surface controls).
+    // The user's gesture is the source: the widget writes values.* via
+    // updateNode ops, the runtime only reads/clamps. Wire them into
+    // device.osc.out / device.midi.out to drive external software.
+    // -----------------------------------------------------------------------
+
+    'control.fader': {
+        id: 'control.fader',
+        label: 'Fader',
+        category: 'control',
+        runtime: 'any',
+        singleton: false,
+        inputs: [],
+        outputs: [
+            { id: 'out', type: 'number', label: 'Value' },
+        ],
+        defaultValues: { value: 0, min: 0, max: 1 },
+        configInputs: [
+            { id: 'min', type: 'number', label: 'Min' },
+            { id: 'max', type: 'number', label: 'Max' },
+        ],
+        render: 'hidden',
+    },
+
+    'control.xy': {
+        id: 'control.xy',
+        label: 'XY Pad',
+        category: 'control',
+        runtime: 'any',
+        singleton: false,
+        inputs: [],
+        outputs: [
+            { id: 'x', type: 'number', label: 'X' },
+            { id: 'y', type: 'number', label: 'Y' },
+        ],
+        defaultValues: { x: 0.5, y: 0.5, minX: 0, maxX: 1, minY: 0, maxY: 1 },
+        configInputs: [
+            { id: 'minX', type: 'number', label: 'Min X' },
+            { id: 'maxX', type: 'number', label: 'Max X' },
+            { id: 'minY', type: 'number', label: 'Min Y' },
+            { id: 'maxY', type: 'number', label: 'Max Y' },
+        ],
+        render: 'hidden',
+    },
+
+    'control.button': {
+        id: 'control.button',
+        label: 'Button',
+        category: 'control',
+        runtime: 'any',
+        singleton: false,
+        inputs: [],
+        outputs: [
+            { id: 'pressed', type: 'boolean', label: 'Pressed' },
+            { id: 'trigger', type: 'signal',  label: 'Trigger' },
+        ],
+        defaultValues: { pressed: false, mode: 'momentary' },
+        configInputs: [
+            { id: 'mode', type: 'string', label: 'Mode (momentary/toggle)' },
+        ],
+        render: 'hidden',
+    },
+
+    // -----------------------------------------------------------------------
     // DEVICE — hardware endpoints
     // -----------------------------------------------------------------------
 
@@ -313,7 +378,6 @@ export const NODE_TYPES = {
         label: 'OSC Out',
         category: 'device',
         runtime: 'local',
-        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'address', type: 'string', label: 'Address', default: '/control' },
@@ -362,7 +426,6 @@ export const NODE_TYPES = {
         label: 'MIDI Out',
         category: 'device',
         runtime: 'local',
-        authoringOnly: true,
         singleton: false,
         inputs: [
             { id: 'note',     type: 'number', label: 'Note',     default: 60 },
@@ -377,7 +440,12 @@ export const NODE_TYPES = {
         defaultValues: {
             hostHint: 'windows',
             channel: 1,
+            midiPortName: '',
         },
+        configInputs: [
+            { id: 'channel',      type: 'number', label: 'MIDI Channel' },
+            { id: 'midiPortName', type: 'string', label: 'MIDI Port (name match, empty = first)' },
+        ],
         render: 'hidden',
     },
 

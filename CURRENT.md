@@ -3,12 +3,38 @@
 **Every AI reads this before anything else. ≤50 lines. Read in full.**
 Updated at the end of every session. Replace content — do not append.
 
-active_branch: dev
+active_branch: feat/control-surface-osc-midi (off dev)
 lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (live) — promote only after staging verify
 
 ---
 
-## This session (2026-07-21 later — minimal jam mode UI)
+## This session (2026-07-21 evening — TouchOSC-style control surface: OSC/MIDI egress)
+
+- Shipped performable **control nodes** (Seed lane) + real egress for the
+  `device.osc.out` / `device.midi.out` stubs (were `authoringOnly`, now live):
+  - Registry (`src/project/nodeRegistry.js`): new `control` category —
+    `control.fader`, `control.xy`, `control.button`; pure clamp evaluators in
+    `nodeGraphRuntime.js`. `device.midi.out` gained `channel`/`midiPortName`
+    configInputs.
+  - Seed graph cards embed playable widgets (`src/seed/components/nodeControls/`,
+    wired in `SeedGraphSurface.jsx` via `CONTROL_WIDGETS`; ops rAF-throttled).
+  - Egress hook `src/project/hooks/useDeviceEgress.js` (mounted in SeedEditor):
+    diffs egress-node inputs per document change; MIDI via Web MIDI (browser →
+    IAC → Ableton), OSC via socket.io `control-value` → serverXR.
+  - serverXR: `src/oscOutput.js` (zero-dep dgram UDP + hand-rolled OSC encoder,
+    meshHub-style optional module), gated by `OSC_OUTPUT_ENABLED` (default off —
+    prod stays inert), private-range-only targets unless `OSC_ALLOW_ANY_HOST`.
+    Wire-in in `index.js`; `control-value` handler in `socketHandlers.js`.
+- Validation: lint 0 errors (7 pre-existing warnings), build ok, 917 tests
+  (1 BetaHelpDialog flake under load, passes isolated), server-contracts 64/64,
+  new tests in nodeRegistry/nodeGraphRuntime/oscOutput. Live-verified the OSC
+  path end-to-end: socket.io emit → UDP listener on 9000 got `/fader1 ,f 0.42`,
+  public-host target correctly dropped. MIDI + in-browser widgets not yet
+  live-clicked — owed: Seed click-through, TD + Ableton hookup.
+- NOT committed yet — whole feature sits uncommitted on this branch. Wiki
+  article `control-surface-osc-midi` added.
+
+## Earlier session (2026-07-21 later — minimal jam mode UI)
 
 - User feedback: the full Studio editor overwhelms QR newbies at `/open_jam`.
   Shipped **minimal jam mode** — same floating-window UI, auto-on at the

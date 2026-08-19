@@ -34,6 +34,7 @@ const { config, buildCorsOriginHandler } = require('./config')
 const { ensureDir, readJson, writeJson } = require('./jsonStore')
 const { initializeSocket } = require('./socketHandlers')
 const { initializeMesh } = require('./meshHub')
+const { initializeOscOutput } = require('./oscOutput')
 const { loadReleaseInfo } = require('./releaseInfo')
 const { registerProjectRoutes } = require('./routes/projectRoutes')
 const { registerSpaceRoutes } = require('./routes/spaceRoutes')
@@ -1672,8 +1673,11 @@ initStorage()
 
     const httpServer = http.createServer(app)
 
+    const oscOutput = config.osc?.enabled ? initializeOscOutput(config) : null
+
     initializeSocket(httpServer, {
       ...config,
+      oscOutput,
       canEditSpace: async (spaceId) => {
         const normalized = normalizeSpaceId(spaceId)
         if (!normalized) return false

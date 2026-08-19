@@ -445,6 +445,13 @@ function initializeSocket(httpServer, config) {
       })
     })
 
+    // Control-surface egress: forward a control value to the OSC/UDP sender
+    // (oscOutput.js). No-op unless OSC_OUTPUT_ENABLED gated the module on;
+    // target validation (private-range hosts only) lives in oscOutput itself.
+    socket.on('control-value', (data) => {
+      config.oscOutput?.handleControlValue(data)
+    })
+
     // Disconnect
     socket.on('disconnect', () => {
       logger.info(`[Socket] Disconnected: ${socket.id}`)
