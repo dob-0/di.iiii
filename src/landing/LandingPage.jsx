@@ -46,7 +46,7 @@ const FEATURED_SPACES = [
 // disk. Not a separate "mode": one boolean, and the two hosted sentences
 // below get local-truthful variants. Voice matches the wiki's local-install
 // article ("Run di.iiii on your own machine").
-const LOCAL_STEP_OPEN = { n: '01', title: 'Open a space', body: 'Click "Open Studio" or go to any space URL. This is your machine — everything here is yours to edit, no account involved.' }
+const LOCAL_STEP_OPEN = { n: '01', title: 'Open a space', body: 'Click "Step inside" or go to any space URL. This is your machine — everything here is yours to edit, no account involved.' }
 const LOCAL_FEATURE_SPACES = { icon: '✦', title: 'Your machine, your spaces', desc: 'This di.iiii runs locally. Create as many spaces as you like — no sign-in, no quota, and your work stays in your own home folder.' }
 
 const STEPS = [
@@ -241,12 +241,16 @@ export default function LandingPage() {
             {!entered && (
                 <nav className="lp-nav">
                     <a href="/" className="lp-nav-logo">di<span className="lp-dot">.</span>iiii</a>
+                    {/* "Raw" and "Enter Raw" were the same URL twice, and the
+                        lane name is vocabulary a first visitor does not have
+                        yet. The nav now carries the same one door as the hero,
+                        plus the return path for people who already have work. */}
                     <div className="lp-nav-links">
-                        <a href={RAW_LANE_HREF} className="lp-nav-link">Raw</a>
+                        <a href={studioHref} className="lp-nav-link">Spaces</a>
                         <a href={buildWikiPath()} className="lp-nav-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
                     </div>
-                    <a href={RAW_LANE_HREF} className="lp-nav-cta">Enter Raw</a>
+                    <a href={RAW_LANE_HREF} className="lp-nav-cta">Step inside</a>
                 </nav>
             )}
 
@@ -274,17 +278,33 @@ export default function LandingPage() {
                         No download. No install. Just open and create.
                     </Typography>
 
+                    {/* One door. Three peer buttons asked a stranger to pick a
+                        lane before they knew what a lane was, and two of the
+                        three led somewhere worse than the first: "Open Studio"
+                        to a hub that wants an account, "Enter Space" to the
+                        restricted 'main' space, where a guest is bounced to the
+                        read-only viewer. Studio is now depth behind the one
+                        door (it is a room on the seeded desk), not a rival to
+                        it. "Look around" is the decorative walkable void this
+                        page renders itself — it only exists where there is no
+                        real main space to enter, otherwise it is another door
+                        wearing a preview's clothes. */}
                     <Stack direction="row" spacing={2} sx={{ pt: 1, pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
                         <Button className="landing-cta-primary" variant="contained" size="large" href={RAW_LANE_HREF}>
                             Step inside
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref}>
-                            Open Studio
-                        </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
-                            Enter Space
-                        </Button>
+                        {!mainSpaceId && (
+                            <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
+                                Look around
+                            </Button>
+                        )}
                     </Stack>
+
+                    <Typography className="lp-cta-sub">
+                        no account, no install. Studio is a room on the same desk.
+                        <br />
+                        <a href={studioHref}>Already have spaces? Open Studio →</a>
+                    </Typography>
 
                     <Stack direction="row" spacing={1.5} sx={{ pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
                         {FEATURED_SPACES.map((space) => (
@@ -556,26 +576,20 @@ export default function LandingPage() {
                         Start building your space.
                     </Typography>
                     <Typography className="lp-enter-body">
-                        Step inside to build with everyone in the Open Space, or open Studio for the
-                        classic panel-based editor.
+                        The desk is already set: a live 3D room, the node that drives its sky,
+                        and Studio as a room you can walk into.
                         Everything runs in your browser — no sign-up required to explore.
                     </Typography>
                     <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', justifyContent: 'center', mb: 2 }}>
                         <Button className="landing-cta-primary" variant="contained" size="large" href={RAW_LANE_HREF}>
                             Step inside
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={studioHref}>
-                            Open Studio
-                        </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
-                            Enter Space
-                        </Button>
-                        <Button className="lp-btn-link" href="/serverXR/api/health">
-                            Check backend status ↗
-                        </Button>
                     </Stack>
+                    <Typography className="lp-cta-sub" sx={{ mb: 3 }}>
+                        <a href={studioHref}>Already have spaces? Open Studio →</a>
+                    </Typography>
                     <Typography className="lp-enter-note">
-                        Armenia &nbsp;·&nbsp; Web XR &nbsp;·&nbsp; thedi.studio
+                        Armenia &nbsp;·&nbsp; Web XR &nbsp;·&nbsp; <a href="https://thedi.studio" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>thedi.studio</a>
                     </Typography>
                 </Box>
             </Box>
@@ -584,14 +598,20 @@ export default function LandingPage() {
             <footer className="lp-footer">
                 <div className="lp-footer-inner">
                     <span className="lp-footer-brand">di<span className="lp-dot">.</span>iiii</span>
-                    <nav className="lp-footer-nav" aria-label="Footer navigation">
+                    {/* inline flex-wrap: the nav row outgrew its one-line CSS
+                        when Privacy/Terms/Instagram joined; .lp-footer-inner
+                        already wraps, this lets the links themselves follow */}
+                    <nav className="lp-footer-nav" aria-label="Footer navigation" style={{ flexWrap: 'wrap' }}>
                         <a href={RAW_LANE_HREF} className="lp-footer-link">Raw</a>
                         <a href={studioHref} className="lp-footer-link">Studio</a>
                         <a href={buildWikiPath()} className="lp-footer-link">Wiki</a>
+                        <a href="/privacy" className="lp-footer-link">Privacy</a>
+                        <a href="/terms" className="lp-footer-link">Terms</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
+                        <a href="https://www.instagram.com/di.iiiiiiiiiiiiiiiiiiiii/" target="_blank" rel="noopener noreferrer" className="lp-footer-link">Instagram</a>
                         <a href="/serverXR/api/health" className="lp-footer-link">API</a>
                     </nav>
-                    <span className="lp-footer-note">Open source · Web XR · thedi.studio</span>
+                    <span className="lp-footer-note">Open source · Web XR · <a href="https://thedi.studio" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>thedi.studio</a></span>
                 </div>
             </footer>
             </>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { listNodeTypes } from '../../project/nodeRegistry.js'
+import { listNodeTypes, NODE_FAMILIES, FAMILY_BY_TYPE } from '../../project/nodeRegistry.js'
 import { filterNodeTypesForSurface } from '../../project/graph/nodeSurfaceFilters.js'
 
 const PALETTE_WIDTH = 280
@@ -23,10 +23,11 @@ const toDefinitionShim = (type) => {
     return {
         id: type.id,
         label: type.label,
-        family: type.category,
+        family: FAMILY_BY_TYPE[type.id] || null,
         surface,
         mode,
         authoringOnly: Boolean(type.authoringOnly),
+        devLocalOnly: Boolean(type.devLocalOnly),
         defaultParams: defaults
     }
 }
@@ -82,17 +83,40 @@ export default function NodePalette({
 
     // Commands first: with the chrome hidden they are the only way back to it,
     // so they must not be below a scroll of node types.
-    const entries = [...commandEntries, ...nodeEntries]
+    //
+    // With no query the node list is a browse, and 39 rows in registry
+    // declaration order is where "raw feels messy" lived — so browse mode
+    // groups by family, in the declared task order, with a sticky header per
+    // family. Any typed character dissolves the grouping into the flat ranked
+    // list: type-to-place stays exactly what it was.
+    const groupedNodeEntries = q
+        ? nodeEntries
+        : NODE_FAMILIES.flatMap((family) => {
+            const members = nodeEntries.filter((entry) => entry.definition.family === family.id)
+            if (!members.length) return []
+            return [
+                { kind: 'header', id: `family:${family.id}`, label: family.label, count: members.length, color: family.color },
+                ...members
+            ]
+        })
+    const entries = [...commandEntries, ...groupedNodeEntries]
+
+    // Family headers are rows but not choices — the highlight and Enter must
+    // never land on one.
+    const isSelectable = (entry) => Boolean(entry) && entry.kind !== 'header'
+    const firstSelectableIndex = Math.max(0, entries.findIndex(isSelectable))
 
     useEffect(() => {
         if (!open) return
         setQuery('')
-        setActiveIndex(0)
+        setActiveIndex(firstSelectableIndex)
         requestAnimationFrame(() => inputRef.current?.focus())
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [open])
 
     useEffect(() => {
-        setActiveIndex(0)
+        setActiveIndex(firstSelectableIndex)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [query])
 
     if (!open || !placement) return null
@@ -100,7 +124,7 @@ export default function NodePalette({
     const pos = getPalettePosition(placement.clientX || 0, placement.clientY || 0)
 
     const handleConfirm = (entry) => {
-        if (!entry) return
+        if (!entry || entry.kind === 'header') return
         if (entry.kind === 'command') {
             // Closing first: a command that opens a panel would otherwise put it
             // behind the palette's own backdrop.
@@ -123,7 +147,10 @@ export default function NodePalette({
         if (event.key === 'ArrowDown') {
             event.preventDefault()
             setActiveIndex((i) => {
-                const next = Math.min(i + 1, entries.length - 1)
+                let next = i
+                for (let candidate = i + 1; candidate < entries.length; candidate += 1) {
+                    if (isSelectable(entries[candidate])) { next = candidate; break }
+                }
                 scrollActiveIntoView(next)
                 return next
             })
@@ -132,7 +159,10 @@ export default function NodePalette({
         if (event.key === 'ArrowUp') {
             event.preventDefault()
             setActiveIndex((i) => {
-                const next = Math.max(i - 1, 0)
+                let next = i
+                for (let candidate = i - 1; candidate >= 0; candidate -= 1) {
+                    if (isSelectable(entries[candidate])) { next = candidate; break }
+                }
                 scrollActiveIntoView(next)
                 return next
             })
@@ -175,9 +205,16 @@ export default function NodePalette({
                     <ul ref={listRef} className="raw-node-palette-list">
                         {entries.map((entry, index) => (
                             <li key={`${entry.kind}:${entry.id}`}>
+                                {entry.kind === 'header' ? (
+                                    <div className="raw-node-palette-group" style={{ '--family-color': entry.color }}>
+                                        <span>{entry.label}</span>
+                                        <span className="raw-node-palette-group-count">{entry.count}</span>
+                                    </div>
+                                ) : (
                                 <button
                                     type="button"
-                                    className={`raw-node-palette-item${index === activeIndex ? ' is-active' : ''}`}
+                                    className={`raw-node-palette-item${index === activeIndex ? ' is-active' : ''}${entry.kind === 'node' && entry.definition.authoringOnly ? ' is-shell' : ''}`}
+                                    style={entry.kind === 'node' ? { '--family-color': NODE_FAMILIES.find((f) => f.id === entry.definition.family)?.color || 'transparent' } : undefined}
                                     onPointerEnter={(event) => {
                                         // Touch synthesises a pointerenter right
                                         // before the tap; moving the active row
@@ -207,11 +244,17 @@ export default function NodePalette({
                                         <span className="raw-node-palette-tag is-command">panel</span>
                                     )}
                                     {entry.kind === 'node' && entry.definition.authoringOnly && (
-                                        <span className="raw-node-palette-tag" title="Placeable and editable, but doesn't compute or render anything yet">
-                                            authoring only
+                                        <span className="raw-node-palette-tag" title="Places and holds its ports — computes nothing yet">
+                                            shell
+                                        </span>
+                                    )}
+                                    {entry.kind === 'node' && entry.definition.devLocalOnly && (
+                                        <span className="raw-node-palette-tag" title="Only works against a local dev server on this machine">
+                                            local dev
                                         </span>
                                     )}
                                 </button>
+                                )}
                             </li>
                         ))}
                     </ul>

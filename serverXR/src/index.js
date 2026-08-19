@@ -52,6 +52,7 @@ const { registerAiChatRoutes } = require('./routes/aiChatRoutes')
 const { registerUserRoutes } = require('./routes/userRoutes')
 const { registerOpenCallRoutes } = require('./routes/openCallRoutes')
 const { registerEstateRoutes } = require('./routes/estateRoutes')
+const { registerTrackRoutes } = require('./routes/trackRoutes')
 const openCallStore = require('./openCallStore')
 const {
   listUsers,
@@ -752,6 +753,9 @@ const uploadLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, name: 
 // route already had one for (audit finding #9).
 const syncLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'space sync' })
 const openCallSubmitLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 20, name: 'open-call applications' })
+// Generous like the guest cap above (one NAT can be a whole venue) — a real
+// visit fires 1-2 events, so this only bounds deliberate table-filling.
+const trackEventLimiter = createRateLimiter({ windowMs: 60_000, max: 60, name: 'track events' })
 
 // Covers the OAuth start + callback routes registered by registerAuthRoutes below.
 router.use(['/api/auth/github', '/api/auth/google'], authAttemptLimiter)
@@ -1344,6 +1348,15 @@ router.post('/api/open-calls/:callId/applications', openCallSubmitLimiter, (req,
   } catch (error) {
     next(error)
   }
+})
+
+// Public, unauthenticated ingest + admin-only aggregates: anonymous usage
+// counts (no IP/UA/cookie/id — see trackRoutes.js). Registered before the
+// /api auth gates below because a visitor's first page view precedes any
+// session; the stats route carries its own requireAdminAlways gate.
+registerTrackRoutes(router, {
+  trackLimiter: trackEventLimiter,
+  requireAdminAlways
 })
 
 // Shared with registerSpaceRoutes below (same instance, not just the same

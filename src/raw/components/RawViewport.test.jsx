@@ -207,6 +207,140 @@ describe('RawViewport', () => {
         expect(body.type).toBe('group')
     })
 
+    // A container carries what stands inside it. Before this, a node whose
+    // parentId was a 3D Desk was simply not rendered in the desk's own scope —
+    // the desk drew an empty shell and nothing ever moved with it.
+    describe('containment', () => {
+        const desk = { id: 'desk-1', typeId: 'universe.desk.3d', parentId: null, label: 'Desk', values: { position: [3, 0, 0], scale: [2, 2, 2] } }
+        const cubeInside = { id: 'cube-1', typeId: 'geom.cube', parentId: 'desk-1', label: 'Cube', values: { size: [1, 1, 1], position: [0, 0.5, 0] } }
+
+        it('renders a child inside its container, not as a sibling', () => {
+            boxObjectSpy.mockClear()
+            const { container } = render(
+                <RawViewport
+                    document={{ worldState: {}, entities: [], edges: [], nodes: [desk, cubeInside] }}
+                    scopeId={null}
+                    onWorldDoubleClick={() => {}}
+                />
+            )
+            // The cube renders at all — it did not before.
+            expect(boxObjectSpy).toHaveBeenCalled()
+            // …and it renders BENEATH the desk's own group, so the desk's
+            // position/scale apply to it. A sibling would not be nested.
+            const deskGroup = [...container.querySelectorAll('group')]
+                .find((g) => g.getAttribute('position') === '3,0,0')
+            expect(deskGroup, 'the desk group is on screen').toBeTruthy()
+            expect(deskGroup.querySelector('group'), 'the cube is inside it').toBeTruthy()
+        })
+
+        it('does not render a child twice — once nested and once flat', () => {
+            boxObjectSpy.mockClear()
+            render(
+                <RawViewport
+                    document={{ worldState: {}, entities: [], edges: [], nodes: [desk, cubeInside] }}
+                    scopeId={null}
+                    onWorldDoubleClick={() => {}}
+                />
+            )
+            expect(boxObjectSpy).toHaveBeenCalledTimes(1)
+        })
+
+        // The guard that matters most: NodeVisual reads node.values directly,
+        // so a nested node's wires have to be resolved before it is handed
+        // down, or going inside a container silently freezes the graph.
+        it('resolves a nested child\'s wired inputs, so going inside does not freeze it', () => {
+            sphereObjectSpy.mockClear()
+            render(
+                <RawViewport
+                    document={{
+                        worldState: {},
+                        entities: [],
+                        nodes: [
+                            desk,
+                            { id: 'color-1', typeId: 'value.color', parentId: null, label: 'Color', values: { value: '#ff8800' } },
+                            { id: 'sphere-1', typeId: 'geom.sphere', parentId: 'desk-1', label: 'Sphere', values: { radius: 0.5 } }
+                        ],
+                        edges: [{ id: 'e1', fromNodeId: 'color-1', fromPort: 'out', toNodeId: 'sphere-1', toPort: 'color' }]
+                    }}
+                    scopeId={null}
+                    onWorldDoubleClick={() => {}}
+                />
+            )
+            expect(sphereObjectSpy).toHaveBeenCalled()
+            expect(sphereObjectSpy.mock.calls[0][0].color).toBe('#ff8800')
+        })
+
+        // A World is its own stage. Seeing through one into another is a
+        // different feature and would change what every existing space shows.
+        it('does not see through a nested World into its contents', () => {
+            boxObjectSpy.mockClear()
+            render(
+                <RawViewport
+                    document={{
+                        worldState: {},
+                        entities: [],
+                        edges: [],
+                        nodes: [
+                            { id: 'world-1', typeId: 'universe.world', parentId: null, label: 'World', values: {} },
+                            { ...cubeInside, parentId: 'world-1' }
+                        ]
+                    }}
+                    scopeId={null}
+                    onWorldDoubleClick={() => {}}
+                />
+            )
+            expect(boxObjectSpy).not.toHaveBeenCalled()
+        })
+    })
+
+    // The file-backed nodes resolve an assetId through the assetMap. Before
+    // this existed, renderNodeBody was never handed the map at all, so a node
+    // could not reach a file even in principle.
+    describe('file-backed nodes', () => {
+        const assetMap = new Map([
+            ['asset-model', { id: 'asset-model', name: 'scan.glb', mimeType: 'model/gltf-binary', url: '/api/a/scan.glb' }],
+            ['asset-video', { id: 'asset-video', name: 'clip.mp4', mimeType: 'video/mp4', url: '/api/a/clip.mp4' }],
+            ['asset-audio', { id: 'asset-audio', name: 'score.wav', mimeType: 'audio/wav', url: '/api/a/score.wav' }]
+        ])
+
+        it.each([
+            ['geom.model', 'asset-model'],
+            ['media.video', 'asset-video'],
+            ['media.audio', 'asset-audio']
+        ])('%s renders a body once its file is chosen', (typeId, assetId) => {
+            const body = renderNodeBody({ id: 'n', typeId }, { src: assetId }, assetMap)
+            expect(body).not.toBeNull()
+            expect(body.props.assetRef.id).toBe(assetId)
+        })
+
+        it('passes the resolved url through, so a server-stored asset loads', () => {
+            const body = renderNodeBody({ id: 'n', typeId: 'geom.model' }, { src: 'asset-model' }, assetMap)
+            expect(body.props.data).toBe('/api/a/scan.glb')
+            expect(body.props.modelFormat).toBe('gltf')
+        })
+
+        it('renders nothing — not an error — before a file is chosen', () => {
+            expect(renderNodeBody({ id: 'n', typeId: 'geom.model' }, {}, assetMap)).toBeNull()
+            expect(renderNodeBody({ id: 'n', typeId: 'media.video' }, { src: '' }, assetMap)).toBeNull()
+        })
+
+        // A local workspace stores bytes in IndexedDB, so its asset record has
+        // no url at all; ModelObject/useAssetUrl look the blob up by id. The
+        // node must still render, or dropping a file into a local workspace
+        // would look like nothing happened.
+        it('renders for a local asset that has no url', () => {
+            const localMap = new Map([['local-1', { id: 'local-1', name: 'scan.glb', mimeType: 'model/gltf-binary' }]])
+            const body = renderNodeBody({ id: 'n', typeId: 'geom.model' }, { src: 'local-1' }, localMap)
+            expect(body).not.toBeNull()
+            expect(body.props.data).toBeNull()
+        })
+
+        it('survives an assetId that points at nothing', () => {
+            expect(renderNodeBody({ id: 'n', typeId: 'geom.model' }, { src: 'gone' }, assetMap)).toBeNull()
+            expect(renderNodeBody({ id: 'n', typeId: 'geom.model' }, { src: 'gone' }, null)).toBeNull()
+        })
+    })
+
     it('without a scopeId, renders every spatial node document-wide (unscoped, matches old behavior)', () => {
         boxObjectSpy.mockClear()
         render(

@@ -1,4 +1,4 @@
-import { getCategoryColor, getNodeType } from '../../project/nodeRegistry.js'
+import { getFamilyColorForType, getNodeType } from '../../project/nodeRegistry.js'
 
 export default function OutlinerPanelWindow({ nodes, selectedNodeId, onSelectNode }) {
     if (!nodes.length) {
@@ -8,7 +8,7 @@ export default function OutlinerPanelWindow({ nodes, selectedNodeId, onSelectNod
         <ul className="raw-outliner raw-window-stack">
             {nodes.map((node) => {
                 const typeDef = getNodeType(node.typeId)
-                const dot = getCategoryColor(typeDef?.category)
+                const dot = getFamilyColorForType(node.typeId)
                 return (
                     <li key={node.id}>
                         <button

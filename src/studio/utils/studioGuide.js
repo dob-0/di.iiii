@@ -136,13 +136,15 @@ export const STUDIO_SHORTCUT_SECTIONS = [
     }
 ]
 
-// Guest first-run guidance is a sequence of action-completed coach marks
+// First-run guidance is a sequence of action-completed coach marks
 // (StudioCoachMarks) — a hint dies when its action happens, nothing to read
 // past. The visual help dialog it replaced stays available behind ?.
 export const STUDIO_COACH_DONE_KEY = 'di.studio.coachDone'
 
+// Any resolved identity gets the coach once — guest or signed-in. A falsy
+// authType means auth hasn't resolved yet; never flash the coach over that.
 export function shouldShowStudioCoach(authType) {
-    if (authType !== 'guest') return false
+    if (!authType) return false
     try {
         return !window.localStorage.getItem(STUDIO_COACH_DONE_KEY)
     } catch {

@@ -8,6 +8,7 @@ export default function BlankNodeWorkspaceApp({ spaceId = 'main' }) {
             projectId={null}
             spaceId={resolvedSpaceId}
             localStorageKey={`dii.localNodeWorkspace.${resolvedSpaceId}`}
+            seedOnFirstVisit
         />
     )
 }

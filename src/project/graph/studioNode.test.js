@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { STUDIO_INTERIOR, STUDIO_TYPE_ID, buildStudioInterior } from './studioNode.js'
-import { getNodeType, listNodeTypes } from '../nodeRegistry.js'
+import { createEdge, createNode, getNodeType, listNodeTypes } from '../nodeRegistry.js'
+import { createNodeGraphContext, evaluateNodeOutput } from './nodeGraphRuntime.js'
 
 describe('studio container node', () => {
     it('is offered in the palette like any other node type', () => {
@@ -8,17 +9,50 @@ describe('studio container node', () => {
         expect(ids).toContain(STUDIO_TYPE_ID)
     })
 
-    // Load-bearing, not cosmetic: RawEditor's graphCardNodes drops every
-    // `render === 'panel-2d'` node from the canvas, so a panel-2d container
-    // would be invisible on the graph and could never be entered.
+    // Load-bearing, not cosmetic — though not for the reason this comment used
+    // to give. It claimed graphCardNodes drops every `render === 'panel-2d'`
+    // node from the canvas; it does not, it filters on parentId alone, and
+    // panel nodes were deliberately re-admitted precisely BECAUSE dropping them
+    // made containers impossible. A panel-2d Studio would still be wrong: it
+    // would open as a floating window over the very subgraph you entered it to
+    // see, the way its own interior panels are seeded hidden to avoid.
     it('renders as a graph card, not a floating window, so it can be entered', () => {
         expect(getNodeType(STUDIO_TYPE_ID).render).toBe('hidden')
     })
 
-    // computeNodeOutput only has cases for value.*, math.* and time. Declaring a
-    // state/signal output here would look complete and always return undefined.
-    it('declares no outputs the runtime cannot compute', () => {
-        expect(getNodeType(STUDIO_TYPE_ID).outputs).toEqual([])
+    // Was: outputs must be []. computeNodeOutput had no case for anything
+    // outside value.*/math.*/time, so any port here returned undefined — but the
+    // answer to that was to add the case, not to leave the card unwireable
+    // forever. Press-and-pull on a container with no outputs silently drags the
+    // card instead of starting a wire.
+    //
+    // The rule that actually matters is unchanged and now tested directly rather
+    // than by proxy: every declared output must produce something through the
+    // real runtime. A port that draws a wire and carries nothing is worse than
+    // no port, because it persists and survives a reload looking alive.
+    it('declares no output the runtime cannot compute', () => {
+        const node = createNode(STUDIO_TYPE_ID, { values: { title: 'Rehearsal room' } })
+        const context = createNodeGraphContext({ nodes: [node], edges: [] })
+        const outputs = getNodeType(STUDIO_TYPE_ID).outputs
+        expect(outputs.length).toBeGreaterThan(0)
+        for (const port of outputs) {
+            expect(
+                evaluateNodeOutput(node, port.id, context),
+                `${STUDIO_TYPE_ID}.${port.id} draws a wire and carries nothing`
+            ).not.toBeUndefined()
+        }
+    })
+
+    // …and it must carry the WIRED value, not the stale local one. This is the
+    // half that a "did something come out" test would miss: the fallthrough at
+    // the end of computeNodeOutput returns node.values[portId], which passes
+    // that check while silently ignoring every wire into the matching input.
+    it('carries a wired Title out, not the value typed on the node', () => {
+        const source = createNode('value.string', { id: 'src', values: { value: 'Rehearsal room' } })
+        const studio = createNode(STUDIO_TYPE_ID, { id: 'studio-1', values: { title: 'stale' } })
+        const edge = createEdge('src', 'out', 'studio-1', 'title')
+        const context = createNodeGraphContext({ nodes: [source, studio], edges: [edge] })
+        expect(evaluateNodeOutput(studio, 'title', context)).toBe('Rehearsal room')
     })
 
     it('builds an interior parented to the container', () => {

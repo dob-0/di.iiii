@@ -18,12 +18,16 @@
 //     layout is per-browser localStorage and shared with nobody
 //
 // WHAT IS AND IS NOT DONE
-// The interior below is three panels: an outliner, an inspector, and a world.
-// Those are the ones whose bodies already exist as working components in Raw.
-// Studio's other panels (create/assets, files/code, share/publish, projects)
-// are NOT here — their bodies take large callback prop sets (PublishPanel alone
-// takes 17) and re-plumbing them is a separate piece of work, not something to
-// fake with an empty window that looks shipped.
+// The interior below is four panels: an outliner, a world, an inspector and
+// create. The first three list, show and edit; Create (2026-08-18) is the verb
+// that was missing — before it, a visitor could enter Studio, look at an empty
+// scene and change nothing about it. It needed no prop plumbing because entity
+// creation is a shared-schema op (`createEntity`) and the list of what can be
+// made is shared data (entityPalette.js).
+// Studio's remaining panels (assets/files, code, share/publish, projects) are
+// NOT here — those genuinely do take large callback prop sets (PublishPanel
+// alone takes 17) and re-plumbing them is a separate piece of work, not
+// something to fake with an empty window that looks shipped.
 //
 // TWO DECISIONS STILL OPEN, deliberately not pre-empted here:
 //   1. Port promotion. Every prior-art system (TouchDesigner .tox, Nuke gizmos,
@@ -62,6 +66,13 @@ export const STUDIO_INTERIOR = [
         column: 2,
         row: 0,
         values: { title: 'Inspector' }
+    },
+    {
+        typeId: 'view.library',
+        label: 'Create',
+        column: 0,
+        row: 1,
+        values: { title: 'Create' }
     }
 ]
 
