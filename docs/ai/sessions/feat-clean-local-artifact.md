@@ -99,3 +99,26 @@ runs when auth is off.
 space"; on this branch a full run failed `PreferencesPage` twice and then passed
 clean at 288 files / 2459 tests. Both pass in isolation. Not introduced here, but
 worth someone's attention.
+
+## 2026-08-19 (later) — two bugs that only a real install could show
+
+Installed for real at `~/.di` and put di-library, di-funding and di-atlas into it.
+Both of these were invisible on staging, on prod and in the whole suite, and both
+turned up within ten minutes of using it as an artist would.
+
+- **Every uploaded asset 404s on a `di` install.** `res.sendFile(absolutePath)` makes
+  `send` apply `dotfiles: 'ignore'` to every segment, and the install home is `~/.di`.
+  The upload returns 201 with a URL and that URL is dead. Already found once for
+  `index.html` and fixed there; the identical line survived in the project asset
+  route because nothing exercised it from a dotted path. The guard now has a dot in
+  it — `startServer({ hiddenDataRoot: true })`.
+- **The upload rate limiter counted the one person using it.** 60 per 10 minutes,
+  written for a public address, applied to loopback with auth off. The library push
+  died at file 60 with "retry in 587s". Every limiter is exempt on `DI_LOCAL=1`;
+  hosted keeps all of them.
+
+Also worth knowing for anyone doing this next: `di up` treats a healthy port as
+"already running", so a server left over from a previous install — one whose files
+have been deleted out from under it — is indistinguishable from the real one. It
+looked exactly like a working install writing to a database that no longer existed.
+Not fixed here.
