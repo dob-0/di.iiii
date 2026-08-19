@@ -50,8 +50,18 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
+      # The download stalls forever some days (2026-08-20 alone it hung four
+      # runs past 12 minutes and each had to be cancelled by hand — the known
+      # failure in reference_dii_ci_playwright_hang). Two bounded attempts turn
+      # the stall into a self-healing hiccup; if both fail the job goes red in
+      # six minutes instead of sitting as a zombie.
       - name: Install Playwright Chromium
-        run: npx playwright install --with-deps chromium
+        timeout-minutes: 6
+        run: |
+          timeout 150 npx playwright install --with-deps chromium || {
+            echo "first attempt stalled -- retrying once"
+            timeout 150 npx playwright install --with-deps chromium
+          }
 
       - name: Start seeded server + frontend
         run: |
