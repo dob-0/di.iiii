@@ -155,6 +155,7 @@ export default function RawGraphSurface({
     portScopeNodes = null,
     selectedNodeId = null,
     emptyHint = 'Cursor is material. Double-click to place nodes.',
+    onExplainScope = null,
     onSelectNode,
     onEnterNode,
     // Optional, like every other handler here: Studio wraps this read-only and
@@ -1007,9 +1008,19 @@ export default function RawGraphSurface({
                 // to live here, on the canvas they are actually looking at.
                 <div className="raw-empty-state">
                     <p>{emptyHint}</p>
-                    {onMakeScene ? (
-                        <button type="button" onClick={onMakeScene}>Make me a scene</button>
-                    ) : null}
+                    <div className="raw-empty-state-actions">
+                        {/* First, because inside a node that has no inside it is
+                            the answer to the question the person is standing in
+                            front of; the offer to build something is the answer
+                            to a different one. Both optional: Studio wraps this
+                            component read-only and passes no handlers. */}
+                        {onExplainScope ? (
+                            <button type="button" onClick={onExplainScope}>Show me what it&apos;s made of</button>
+                        ) : null}
+                        {onMakeScene ? (
+                            <button type="button" onClick={onMakeScene}>Make me a scene</button>
+                        ) : null}
+                    </div>
                 </div>
             ) : null}
             <div
