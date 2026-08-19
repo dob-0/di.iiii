@@ -99,7 +99,25 @@ export default function NodePalette({
                 ...members
             ]
         })
+    // EXACT MATCH FIRST, absolutely. Typing "Out" and pressing Enter used to
+    // open an Outliner panel: three command rows matched by substring and sat
+    // above the node actually named Out, so the documented door-building flow
+    // detonated on its own palette (watched happen in the UX audit). A row
+    // whose LABEL equals the query outranks every substring match, node or
+    // command; after that, label-prefix matches; the commands-first rule
+    // holds only WITHIN a rank, for its original reason (chrome hidden,
+    // commands must not sink below a scroll of nodes).
+    const rank = (entry) => {
+        if (!q) return 1
+        const label = (entry.label || '').toLowerCase()
+        if (label === q) return 0
+        if (label.startsWith(q)) return 1
+        return 2
+    }
     const entries = [...commandEntries, ...groupedNodeEntries]
+        .map((entry, index) => ({ entry, index }))
+        .sort((a, b) => rank(a.entry) - rank(b.entry) || a.index - b.index)
+        .map(({ entry }) => entry)
 
     // Family headers are rows but not choices — the highlight and Enter must
     // never land on one.

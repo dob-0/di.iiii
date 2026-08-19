@@ -69,3 +69,31 @@ describe('NodePalette as the workspace summons', () => {
         expect(() => open()).not.toThrow()
     })
 })
+
+describe('ranking', () => {
+    // Typing "Out" and pressing Enter used to open an Outliner panel — three
+    // command rows matched by substring above the node actually named Out, so
+    // the documented door-building flow broke on its own palette.
+    it('puts an exact label match above every substring match', () => {
+        const { container } = render(
+            <NodePalette
+                open
+                surface="graph"
+                placement={{ clientX: 200, clientY: 200 }}
+                onClose={() => {}}
+                onCreate={() => {}}
+                commands={[
+                    { id: 'outliner', label: 'Outliner', hint: 'open the outliner', run: () => {} },
+                    { id: 'outliner2', label: 'Outliner open', hint: '', run: () => {} }
+                ]}
+            />
+        )
+        const input = container.querySelector('.raw-node-palette-input')
+        fireEvent.change(input, { target: { value: 'Out' } })
+        const rows = [...container.querySelectorAll('.raw-node-palette-item')]
+            .map((el) => el.textContent)
+        expect(rows.length).toBeGreaterThan(1)
+        expect(rows[0]).toContain('Out')
+        expect(rows[0]).not.toContain('Outliner')
+    })
+})

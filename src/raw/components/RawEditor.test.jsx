@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import TextPanelWindow from './TextPanelWindow.jsx'
 
@@ -856,8 +856,21 @@ describe('RawEditor — what a node is made of', () => {
         expect(sheet.textContent).toContain('this socket is the door \u201cCamera\u201d standing inside it')
     })
 
-    it('opens from the empty canvas as well as from the marker', () => {
+    // The empty-canvas entry point exists only inside CODE-made nodes, where
+    // the empty canvas IS the question; a container's reading stays one tap
+    // away on the marker's ? — two resident buttons for one answer was the
+    // clutter the audit counted.
+    it('offers the empty-canvas way in only inside a code-made node', () => {
         enterTheContainer()
+        expect(screen.queryByRole('button', { name: 'explain-scope' })).toBeNull()
+        cleanup()
+        window.localStorage.setItem(ANATOMY_STORAGE_KEY, JSON.stringify({
+            nodes: [{ id: 'cube', typeId: 'geom.cube', label: 'A cube', values: {} }],
+            edges: [],
+            workspaceState: {}
+        }))
+        render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
         fireEvent.click(screen.getByRole('button', { name: 'explain-scope' }))
         expect(document.querySelector('.raw-anatomy')).toBeTruthy()
     })
