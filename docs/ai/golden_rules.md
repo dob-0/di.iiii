@@ -459,10 +459,22 @@ exists", and thirteen siblings made that false. A rule in a comment is a wish.
   data is stored under, and renaming it would silently orphan every retimed
   space. That needs a migration, not an edit.
 
+**When you get warned:** `scripts/works-boundary.mjs` says the same thing in
+prose, at the moment you are writing the code — on every Edit/Write in a Claude
+session, before every push, and on demand with `npm run check:works`. It warns
+and asks rather than blocking, because "platform or project?" is a judgement
+call and the answer is yours. There are only three answers: it is the **tool**
+(move it to `src/timeline`, `src/hooks`, `src/raw/…` and let the project import
+it), it is the **project's** (hand it to the platform through the descriptor,
+never by import), or it is a **new project** (then it does not belong in this
+repo — give it its own, and let it arrive as a space). Adding an exception to
+the registry is not one of the three.
+
 **Files:** `src/works/works.js`, `src/works/routes.jsx`, `src/works/boundary.test.js`
-(fails the build if the platform imports a work), `scripts/packProfile.test.js`
-(a 15 MB budget on the local build — the backstop that needs no list to be
-right), `src/timeline/`, `src/raw/director/`, `docs/deploy/DI_CLI.md`.
+(fails the build if the platform imports a work), `scripts/works-boundary.mjs`
+(the warning that asks), `scripts/packProfile.test.js` (a 15 MB budget on the
+local build — the backstop that needs no list to be right), `src/timeline/`,
+`src/raw/director/`, `docs/deploy/DI_CLI.md`.
 
 ---
 

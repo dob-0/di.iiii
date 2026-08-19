@@ -59,6 +59,7 @@
         "test": "vitest run",
         "di": "node scripts/di/cli.mjs",
         "di:pack": "node scripts/pack-runtime.mjs",
+        "check:works": "node scripts/works-boundary.mjs",
         "test:server-contracts": "vitest run serverXR/src/httpContracts.test.js serverXR/src/projectContracts.test.js serverXR/src/bundleContracts.test.js serverXR/src/installBundleContracts.test.js serverXR/src/fallbackContracts.test.js serverXR/src/spaHostingContracts.test.js serverXR/src/syncContracts.test.js",
         "verify:surfaces": "node scripts/verify-surfaces.mjs",
         "verify:capture": "node scripts/verify-capture.mjs",
