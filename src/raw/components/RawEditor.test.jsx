@@ -874,3 +874,37 @@ describe('RawEditor — what a node is made of', () => {
         expect(document.querySelector('.raw-anatomy')).toBeNull()
     })
 })
+
+
+describe('RawEditor — the room behind the graph', () => {
+    afterEach(() => {
+        window.localStorage.removeItem(ANATOMY_STORAGE_KEY)
+    })
+
+    // The audit's central finding: inside any non-World scope you built BLIND,
+    // and the owner concluded nesting did not work while the renderer was
+    // doing it correctly. The backdrop is therefore not opt-in: the current
+    // scope's room renders behind the graph in EVERY scope.
+    it('renders the room behind the graph at root and inside a container', () => {
+        window.localStorage.setItem(ANATOMY_STORAGE_KEY, makeDoorwayDoc())
+        render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
+        expect(screen.getAllByTestId('mock-viewport').length).toBeGreaterThanOrEqual(1)
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+        expect(screen.getAllByTestId('mock-viewport').length).toBeGreaterThanOrEqual(1)
+    })
+
+    // Fullscreen used to cancel on every scope step, so the render and the
+    // graph could never be part of one journey. Now a door swaps which room
+    // fills the screen — the TouchDesigner go-inside/come-out feel.
+    it('keeps the fullscreen room across scope navigation', () => {
+        window.localStorage.setItem(ANATOMY_STORAGE_KEY, makeDoorwayDoc())
+        render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Room' }))
+        expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+        expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
+        // …and the on-surface exit works without any chrome at all.
+        fireEvent.click(document.querySelector('.raw-room-exit'))
+        expect(screen.queryByRole('button', { name: '← Graph' })).toBeNull()
+    })
+})

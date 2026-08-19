@@ -111,12 +111,29 @@ describe('what a Constructor wears', () => {
         expect(worn.children.map((child) => child.radius)).toEqual([0.3, 0.5])
     })
 
-    it('wears nothing when the door is unwired, and nothing when there is no door', () => {
+    it('wears nothing while a door is unwired — a door means exactly this, nothing else', () => {
         const { box, nodes } = buildSnowman()
-        // Same nodes, NO edges: the door exists and carries undefined.
+        // Same nodes, NO edges: the door exists and carries undefined, and its
+        // presence SUPPRESSES the automatic path below.
         expect(wearConstructorGeometry(box, nodes, ctxOf(nodes))).toBeNull()
         const bare = createNode('geom.constructor')
         expect(wearConstructorGeometry(bare, [bare], ctxOf([bare]))).toBeNull()
+    })
+
+    // The TouchDesigner flag model: with no doors at all, everything spatial
+    // inside contributes — no Merge, no wiring, place a part and the
+    // constructor wears it. The audit measured the wall this removes: a
+    // two-part build took sixteen actions, all blind.
+    it('wears its spatial children automatically when it has no doors', () => {
+        const box = createNode('geom.constructor')
+        const head = createNode('geom.sphere', { parentId: box.id, values: { radius: 0.3, position: [0, 1.2, 0] } })
+        const body = createNode('geom.sphere', { parentId: box.id, values: { radius: 0.5, position: [0, 0.5, 0] } })
+        // Non-spatial residents do not become geometry by standing there.
+        const colour = createNode('value.color', { parentId: box.id })
+        const nodes = [box, head, body, colour]
+        const worn = wearConstructorGeometry(box, nodes, ctxOf(nodes))
+        expect(worn.kind).toBe('group')
+        expect(worn.children.map((child) => child.radius).sort()).toEqual([0.3, 0.5])
     })
 
     it('refuses a door carrying something that is not a shape', () => {

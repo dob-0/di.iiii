@@ -6,7 +6,7 @@
 // portType requirement: a door typed `any` carrying a box IS carrying
 // geometry, and demanding the person also label it correctly would punish
 // them for something the value already proves.
-import { DOORWAY_OUT_TYPE_ID } from '../nodeRegistry.js'
+import { DOORWAY_OUT_TYPE_ID, getNodeType } from '../nodeRegistry.js'
 import { evaluateNodeOutput } from './nodeGraphRuntime.js'
 import { isGeometryDescriptor, mergeGeometry } from './geometryDescriptor.js'
 
@@ -23,10 +23,25 @@ export function wearConstructorGeometry(node, allNodes, context) {
     const doors = allNodes.filter(
         (other) => other?.typeId === DOORWAY_OUT_TYPE_ID && other.parentId === node.id
     )
-    if (!doors.length) return null
-    const worn = mergeGeometry(doors.map((door) => {
-        const value = evaluateNodeOutput(node, door.id, context)
-        return isGeometryDescriptor(value) ? value : undefined
-    }))
+    if (doors.length) {
+        const worn = mergeGeometry(doors.map((door) => {
+            const value = evaluateNodeOutput(node, door.id, context)
+            return isGeometryDescriptor(value) ? value : undefined
+        }))
+        return worn || null
+    }
+    // NO doors: wear the spatial children directly — TouchDesigner's flag
+    // model, where everything inside contributes unless switched off, and
+    // wires only carry data. Demanding Merge-and-door plumbing before a
+    // single shape showed was the audit's most-measured wall: sixteen blind
+    // actions for a two-part build. Doors still win when present, because a
+    // door is the person saying "exactly this, nothing else".
+    const worn = mergeGeometry(allNodes
+        .filter((other) => other?.parentId === node.id
+            && getNodeType(other.typeId)?.render === 'spatial-3d')
+        .map((child) => {
+            const value = evaluateNodeOutput(child, 'geometry', context)
+            return isGeometryDescriptor(value) ? value : undefined
+        }))
     return worn || null
 }

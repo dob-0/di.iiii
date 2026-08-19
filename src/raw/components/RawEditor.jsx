@@ -177,7 +177,6 @@ export default function RawEditor({
     const [chatFrame, setChatFrame] = useState({ x: 24, y: 432, width: 280, height: 360, zIndex: 20, minimized: false, pinned: false })
     const [readChatCount, setReadChatCount] = useState(0)
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
-    const [isWorldOverlay, setIsWorldOverlay] = useState(false)
     // Declared here because hostInspector's JSX is built partway down the
     // component and needs it; the effect that measures it lives further down,
     // next to the selection state it depends on.
@@ -420,17 +419,11 @@ export default function RawEditor({
     useEffect(() => {
         if (hasAnyNodes) return
         setIsWorldFullscreen(false)
-        setIsWorldOverlay(false)
         setOutlinerOpen(false)
         scopeReset()
     }, [hasAnyNodes, scopeReset])
 
-    useEffect(() => {
-        if (!hasWorldNode) {
-            setIsWorldFullscreen(false)
-            setIsWorldOverlay(false)
-        }
-    }, [hasWorldNode])
+
 
     const pendingLocalSaveRef = useRef(null)
     useEffect(() => {
@@ -579,10 +572,12 @@ export default function RawEditor({
     }, [authoredNodes, scopeEnterNode, applyLocalOps])
 
     const handleNavigateToScope = useCallback((targetIndex) => {
-        const newScopeId = navStack[targetIndex] ?? null
-        if (worldNode && newScopeId !== worldNode.id) setIsWorldFullscreen(false)
+        // Fullscreen SURVIVES scope navigation now: walking through a door
+        // swaps which room fills the screen, which is the TouchDesigner
+        // go-inside/come-out feel. It used to cancel on every step — the
+        // render and the graph could never both be part of one journey.
         scopeNavigateToScope(targetIndex)
-    }, [navStack, scopeNavigateToScope, worldNode])
+    }, [scopeNavigateToScope])
 
     // Browser/hardware BACK pops one scope level. This is the only exit on a
     // phone when a space hides the chrome (showChrome:false removes the back
@@ -787,9 +782,19 @@ export default function RawEditor({
     const scopeEmptyHint = useMemo(() => {
         if (!currentScopeId) return `${pointerVerb} to place your first node.`
         const label = scopeNode?.label || 'this node'
-        return isNodeMadeOfCode(scopeNode?.typeId)
-            ? `${label} is made of code, not of other nodes — there is nothing inside it to see. ${pointerVerb} to put something in anyway.`
-            : `Inside ${label}. ${pointerVerb} to place the first node in it.`
+        // The old sentence for a code-made node — "there is nothing inside it
+        // to see" — taught the owner's exact wrong belief: children placed
+        // inside a spatial node DO render and DO travel with it, and the one
+        // sentence a first-timer read was the one denying it. Say the true
+        // thing, by kind: a spatial node carries what you put in it; only a
+        // non-spatial code node (a colour, a math step) genuinely has no room.
+        if (isNodeMadeOfCode(scopeNode?.typeId)) {
+            const spatial = getNodeType(scopeNode?.typeId)?.render === 'spatial-3d'
+            return spatial
+                ? `Inside ${label}. What you place here becomes part of it.`
+                : `Inside ${label} — code, no room of its own.`
+        }
+        return `Inside ${label}. ${pointerVerb} to place the first node in it.`
     }, [currentScopeId, pointerVerb, scopeNode])
 
     // …and the sentence above is only the first half of the answer. It says
@@ -1389,8 +1394,10 @@ export default function RawEditor({
                         setIsWorldFullscreen(true)
                     }}
                     onEnterOverlay={() => {
+                        // The backdrop is permanent now; "world as background"
+                        // just means: make this the live world and put the
+                        // window away so the backdrop is what you look at.
                         markWorldLive(node)
-                        setIsWorldOverlay(true)
                         applyLocalOps({
                             type: 'updateNode',
                             payload: {
@@ -1714,28 +1721,22 @@ export default function RawEditor({
                             ) : showEmptyHint ? (
                                 <span className="raw-topbar-location" aria-live="polite">{topbarLocationText}</span>
                             ) : null}
-                            {hasWorldNode && (
-                                <div className="raw-topbar-windows">
-                                    <button
-                                        type="button"
-                                        className={isWorldOverlay || isWorldFullscreen ? 'is-active' : ''}
-                                        onClick={() => {
-                                            if (isWorldFullscreen) { setIsWorldFullscreen(false); return }
-                                            if (isWorldOverlay) { setIsWorldOverlay(false); return }
-                                            const currentlyVisible = worldNode?.values?.frame?.visible !== false
-                                            applyLocalOps({
-                                                type: 'updateNode',
-                                                payload: {
-                                                    nodeId: worldNode.id,
-                                                    patch: { values: { frame: { ...(worldNode.values?.frame || {}), visible: !currentlyVisible } } }
-                                                }
-                                            })
-                                        }}
-                                    >
-                                        {isWorldFullscreen ? '← World' : isWorldOverlay ? '← Overlay' : 'World'}
-                                    </button>
-                                </div>
-                            )}
+                            <div className="raw-topbar-windows">
+                                <button
+                                    type="button"
+                                    className={isWorldFullscreen ? 'is-active' : ''}
+                                    // The room of the CURRENT scope, fullscreen —
+                                    // any scope, not only where a World card
+                                    // stands. The old behaviour toggled the root
+                                    // World window's frame, which is unmounted in
+                                    // every other scope: a button that did
+                                    // nothing, silently, exactly where a person
+                                    // most needed to see what they were building.
+                                    onClick={() => setIsWorldFullscreen((current) => !current)}
+                                >
+                                    {isWorldFullscreen ? '← Graph' : 'Room'}
+                                </button>
+                            </div>
                         </div>
                         <div className="raw-topbar-right">
                             <button type="button" className="raw-topbar-help-action" onClick={() => setHelpOpen(true)}>
@@ -1809,12 +1810,53 @@ export default function RawEditor({
             )}
 
             <section
-                className={`raw-surface-shell${isWorldOverlay && !isWorldFullscreen ? ' is-world-overlay' : ''}${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
+                className={`raw-surface-shell is-world-overlay${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
                 onDragEnter={handleSurfaceDragEnter}
                 onDragOver={handleSurfaceDragOver}
                 onDragLeave={handleSurfaceDragLeave}
                 onDrop={handleSurfaceDrop}
             >
+            {/* THE ROOM BEHIND THE GRAPH — always, in every scope.
+                TouchDesigner's answer to "watch the result while editing the
+                graph" is the backdrop: the output drawn full-frame behind the
+                network, nodes floating on top. Raw cannot afford TD's other
+                mechanism (a live viewer on every tile — WebGL caps contexts
+                around sixteen a page), so this one backdrop carries the whole
+                you-always-see-consequences contract, which is exactly why it
+                is no longer opt-in: the owner built scenes BLIND inside every
+                non-World scope and concluded nesting did not work, while the
+                renderer was doing it correctly the entire time. */}
+            {!isWorldFullscreen && (
+                <div className="raw-world-overlay">
+                    <RawViewport
+                        topInset={workspaceTop}
+                        document={document}
+                        selectedEntityId={surfaceSelectedEntity?.id || null}
+                        selectedNodeId={surfaceSelectedNode?.id || null}
+                        onSelectEntity={selectEntity}
+                        onSelectNode={selectNode}
+                        onClearSelection={clearSelection}
+                        onWorldDoubleClick={handleWorldSurfaceDoubleClick}
+                        onMoveNode={handleMoveWorldNode}
+                        cursors={presence.cursors}
+                        onCursorMove={presence.emitCursor}
+                        onCursorLeave={presence.clearCursor}
+                        nodeScale={nodeScale}
+                        showEmptyHint={false}
+                        // The room you are STANDING IN, not the inside of the
+                        // live World. The graph canvas filters on
+                        // currentScopeId and the palette creates with
+                        // parentId: currentScopeId — while this said
+                        // worldNode.id, the two halves of the screen named
+                        // different rooms, so anything placed at root landed
+                        // somewhere real and was never drawn. worldNode is
+                        // still passed, for sky and lighting.
+                        scopeId={currentScopeId}
+                        worldNode={worldNode}
+                        liveOutputs={liveOutputs}
+                    />
+                </div>
+            )}
                 {/* Graph is the primary surface — always visible */}
                 <RawGraphSurface
                     key={currentScopeId || 'root'}
@@ -2019,9 +2061,23 @@ export default function RawEditor({
                 </div>
             )}
 
-            {/* Fullscreen world — takes over the full viewport */}
-            {hasWorldNode && isWorldFullscreen && (
-                <div className="raw-world-fullscreen" style={{ top: `${workspaceTop}px` }}>
+            {/* Fullscreen room — takes over the full viewport. Any scope,
+                not only Worlds: the room you are standing in IS the thing
+                being built, whatever kind of node owns it. */}
+            {isWorldFullscreen && (
+                <div className="raw-world-fullscreen" style={{ top: `${chromeVisible ? workspaceTop : 0}px` }}>
+                    {/* The way back, on the surface itself: zen has no topbar,
+                        and a fullscreen room whose only exit lives in hidden
+                        chrome is a trap (measured: ⤢ in zen stranded you until
+                        you knew to summon the chrome by keyboard). */}
+                    <button
+                        type="button"
+                        className="raw-room-exit"
+                        onClick={() => setIsWorldFullscreen(false)}
+                        title="Back to the graph"
+                    >
+                        ‹ graph
+                    </button>
                     <RawViewport
                         topInset={0}
                         document={document}
@@ -2052,38 +2108,6 @@ export default function RawEditor({
                 </div>
             )}
 
-            {/* Overlay world — 3D scene renders behind the graph */}
-            {hasWorldNode && isWorldOverlay && !isWorldFullscreen && (
-                <div className="raw-world-overlay">
-                    <RawViewport
-                        topInset={workspaceTop}
-                        document={document}
-                        selectedEntityId={surfaceSelectedEntity?.id || null}
-                        selectedNodeId={surfaceSelectedNode?.id || null}
-                        onSelectEntity={selectEntity}
-                        onSelectNode={selectNode}
-                        onClearSelection={clearSelection}
-                        onWorldDoubleClick={handleWorldSurfaceDoubleClick}
-                        onMoveNode={handleMoveWorldNode}
-                        cursors={presence.cursors}
-                        onCursorMove={presence.emitCursor}
-                        onCursorLeave={presence.clearCursor}
-                        nodeScale={nodeScale}
-                        showEmptyHint={false}
-                        // The room you are STANDING IN, not the inside of the
-                        // live World. The graph canvas filters on
-                        // currentScopeId and the palette creates with
-                        // parentId: currentScopeId — while this said
-                        // worldNode.id, the two halves of the screen named
-                        // different rooms, so anything placed at root landed
-                        // somewhere real and was never drawn. worldNode is
-                        // still passed, for sky and lighting.
-                        scopeId={currentScopeId}
-                        worldNode={worldNode}
-                        liveOutputs={liveOutputs}
-                    />
-                </div>
-            )}
 
             {outlinerOpen && (
                 <DesktopWindow
