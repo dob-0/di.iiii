@@ -14,6 +14,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 ## Last session
 
 - What changed
+- What changed
 
 Full detail: `PROGRESS.md`.
 
