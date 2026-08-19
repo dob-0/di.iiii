@@ -1320,6 +1320,36 @@ export default function RawEditor({
         type: 'updateNode',
         payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
     }), [applyLocalOps])
+
+    // Ctrl/Cmd+D. The audit found NO duplication path of any kind — a composed
+    // object could not be stamped twice except by rebuilding it. This clones
+    // the node alone (not its subtree — a container's copy arriving empty is
+    // visible and fixable; a deep clone with re-identified interior wiring is
+    // its own change), stepped aside in both spaces so the copy never lands
+    // exactly on the original.
+    const handleDuplicateSelected = useCallback(() => {
+        const source = workspaceState.selectedNodeId
+            ? authoredNodes.find((node) => node.id === workspaceState.selectedNodeId)
+            : null
+        if (!source) return
+        const values = JSON.parse(JSON.stringify(source.values || {}))
+        if (Array.isArray(values.position)) {
+            values.position = [values.position[0] + 0.6, values.position[1], values.position[2] + 0.6]
+        }
+        const copy = createNode(source.typeId, {
+            label: source.label,
+            parentId: source.parentId || null,
+            graphX: (source.graphX || 0) + 48,
+            graphY: (source.graphY || 0) + 48,
+            values
+        })
+        if (!copy) return
+        applyLocalOps(
+            { type: 'createNode', payload: { node: copy } },
+            { activityMessage: `Duplicated ${source.label || 'a node'}.` }
+        )
+        selectNode(copy.id)
+    }, [applyLocalOps, authoredNodes, selectNode, workspaceState.selectedNodeId])
     const graphContext = useMemo(
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs }),
         [document, clockNow, liveOutputs]
@@ -1593,6 +1623,13 @@ export default function RawEditor({
                 handleNavigateToScope(navStack.length - 2)
                 return
             }
+            if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+                // Browsers bookmark on Ctrl+D; duplicating the selected node
+                // is what a person arranging a scene means by it here.
+                event.preventDefault()
+                handleDuplicateSelected()
+                return
+            }
             const isUndo = (event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey
             const isRedo = (event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))
             if (!isUndo && !isRedo) return
@@ -1609,7 +1646,7 @@ export default function RawEditor({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [handleNavigateToScope, navStack.length, undo, redo])
+    }, [handleDuplicateSelected, handleNavigateToScope, navStack.length, undo, redo])
 
     const handleMoveWorldNode = (nodeId, nextPosition) => {
         applyLocalOps({

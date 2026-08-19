@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
@@ -375,6 +375,7 @@ function SceneContent({
     selectedNodeId,
     onSelectEntity,
     onSelectNode,
+    onClearSelection = null,
     onWorldDoubleClick,
     onMoveNode,
     nodeScale = 1,
@@ -456,7 +457,23 @@ function SceneContent({
     const resolvedLight = lightNode ? evaluateNodeInputs(lightNode, graphContext) : null
     const resolvedGrid = gridNode ? evaluateNodeInputs(gridNode, graphContext) : null
     const [draggingNodeId, setDraggingNodeId] = useState(null)
+    // Orbit yields while a node is being dragged: the controls listen on the
+    // DOM canvas, which R3F stopPropagation never reaches, so without this
+    // every drag moved the object AND spun the camera under it (measured —
+    // the second half of the teleport).
+    const controls = useThree((state) => state.controls)
+    useEffect(() => {
+        if (!controls) return undefined
+        controls.enabled = !draggingNodeId
+        return () => { controls.enabled = true }
+    }, [controls, draggingNodeId])
     const dragNodeYRef = useRef(0)
+    // Where on the ground the grab STARTED, relative to the object — subtracted
+    // on every move. Without it the raw plane-hit was written straight into
+    // position, and a 160px drag MEASURED as a teleport from [0,1.2,0] to
+    // [13.8,1.2,-9.9]: the pointer ray meets the y=0 plane far behind an
+    // elevated object, and that far point became the object's new home.
+    const dragGrabRef = useRef({ offX: 0, offZ: 0, x0: 0, z0: 0 })
     // rAF-gated (2026-07-17 perf audit): R3F's pointer events fire on every
     // raw DOM pointermove, which can exceed the display refresh rate on
     // high-poll-rate input devices -- each call was committing a document op
@@ -493,6 +510,11 @@ function SceneContent({
             <mesh
                 rotation={[-Math.PI / 2, 0, 0]}
                 position={[0, 0, 0]}
+                onClick={(event) => {
+                    if (draggingNodeId) return
+                    if ((event.delta ?? 0) > 4) return
+                    onClearSelection?.()
+                }}
                 onDoubleClick={(event) => {
                     event.stopPropagation()
                     if (draggingNodeId) return
@@ -505,8 +527,44 @@ function SceneContent({
                 onPointerMove={(event) => {
                     if (!draggingNodeId) return
                     event.stopPropagation()
-                    const point = event.point?.toArray?.() || [0, 0, 0]
-                    dragPendingRef.current = [point[0], dragNodeYRef.current, point[2]]
+                    // Same plane the grab measured on — the object's height —
+                    // computed from the ray, not from where the floor mesh was
+                    // hit (the mesh is only the event source).
+                    const { origin: rayOrigin, direction: rayDirection } = event.ray
+                    const th = Math.abs(rayDirection.y) > 1e-6
+                        ? (dragNodeYRef.current - rayOrigin.y) / rayDirection.y
+                        : -1
+                    const point = th > 0
+                        ? [rayOrigin.x + rayDirection.x * th, dragNodeYRef.current, rayOrigin.z + rayDirection.z * th]
+                        : (event.point?.toArray?.() || [0, 0, 0])
+                    const { offX, offZ, x0, z0 } = dragGrabRef.current
+                    if (event.nativeEvent?.shiftKey) {
+                        // Shift lifts. The ray is intersected with a vertical,
+                        // camera-facing plane through the object, so the object
+                        // tracks the pointer up and down the screen at any
+                        // orbit angle — the audit's ask, arranging needs height.
+                        // Anchored to where the drag STARTED, never to the
+                        // pointer: a lift that began with Shift already held
+                        // used to bake a sideways step into its anchor
+                        // (measured: z drifted −1.5 during a pure lift).
+                        const held = dragPendingRef.current || [x0 ?? point[0] + offX, dragNodeYRef.current, z0 ?? point[2] + offZ]
+                        const { origin, direction } = event.ray
+                        const camera = event.camera
+                        let nx = camera ? camera.position.x - held[0] : 0
+                        let nz = camera ? camera.position.z - held[2] : 1
+                        const len = Math.hypot(nx, nz) || 1
+                        nx /= len; nz /= len
+                        const denom = nx * direction.x + nz * direction.z
+                        if (Math.abs(denom) > 1e-6) {
+                            const t = (nx * (held[0] - origin.x) + nz * (held[2] - origin.z)) / denom
+                            if (t > 0) {
+                                dragNodeYRef.current = Math.max(0, origin.y + direction.y * t)
+                                dragPendingRef.current = [held[0], dragNodeYRef.current, held[2]]
+                            }
+                        }
+                    } else {
+                        dragPendingRef.current = [point[0] + offX, dragNodeYRef.current, point[2] + offZ]
+                    }
                     if (dragRafRef.current === null) {
                         dragRafRef.current = requestAnimationFrame(() => {
                             dragRafRef.current = null
@@ -557,7 +615,30 @@ function SceneContent({
                             onPointerDown={(event) => {
                                 if (event.button !== 0) return
                                 event.stopPropagation()
-                                dragNodeYRef.current = node.values?.position?.[1] || 0
+                                const position = node.values?.position || [0, 0, 0]
+                                dragNodeYRef.current = position[1] || 0
+                                // The pointer ray's own ground hit, at grab
+                                // time — the same intersection the move
+                                // handler will keep computing, so the offset
+                                // between it and the object is exactly what
+                                // must be added back on every move.
+                                // Grab on the plane at the OBJECT's height,
+                                // not the floor: an elevated object's ray hits
+                                // the floor far behind it, and that lever arm
+                                // made a 180px drag move it four units
+                                // (measured). At its own height, hand and
+                                // object move one-to-one.
+                                const { origin, direction } = event.ray
+                                const t = Math.abs(direction.y) > 1e-6
+                                    ? (position[1] - origin.y) / direction.y
+                                    : 0
+                                dragGrabRef.current = {
+                                    x0: position[0],
+                                    z0: position[2],
+                                    ...(t > 0
+                                        ? { offX: position[0] - (origin.x + direction.x * t), offZ: position[2] - (origin.z + direction.z * t) }
+                                        : { offX: 0, offZ: 0 })
+                                }
                                 setDraggingNodeId(node.id)
                                 onSelectNode?.(node.id)
                             }}
@@ -693,6 +774,7 @@ export default function RawViewport({
                     selectedNodeId={selectedNodeId}
                     onSelectEntity={onSelectEntity}
                     onSelectNode={onSelectNode}
+                    onClearSelection={onClearSelection}
                     onWorldDoubleClick={onWorldDoubleClick}
                     onMoveNode={onMoveNode}
                     nodeScale={nodeScale}

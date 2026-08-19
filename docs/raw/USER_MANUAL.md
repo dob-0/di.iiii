@@ -156,6 +156,12 @@ several): the moment a door exists, only what reaches a door is worn.
 Everything stays live — wire a colour into a part's Colour, or the clock's Sin
 into a Sphere's Radius, and the worn shape follows.
 
+## Arranging in the room
+
+Click an object to select it; click empty floor to deselect. Drag moves it —
+the camera holds still while you do. Hold **Shift** while dragging to lift it.
+**Ctrl/Cmd+D** duplicates whatever is selected, stepped slightly aside.
+
 ## What to do when something feels broken
 
 - Created a node and see nothing? Check whether it is a visible World/View node
