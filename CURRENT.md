@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- what a node is made of
+- the sheet can show the lines
 
 Full detail: `PROGRESS.md`.
 
