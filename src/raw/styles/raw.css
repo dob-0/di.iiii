@@ -1585,10 +1585,6 @@
     pointer-events: none;
 }
 
-.raw-world-overlay > * {
-    pointer-events: auto;
-}
-
 .raw-surface-shell.is-world-overlay {
     background: transparent;
     pointer-events: none;
@@ -5009,3 +5005,40 @@
     overflow-x: auto;
     white-space: pre;
 }
+
+/* The permanent backdrop: the current scope's room, drawn behind the graph.
+   Non-interactive on purpose (for now): the graph owns every pointer, and the
+   room is consequences, not controls — arranging happens in fullscreen. The
+   old opt-in overlay let its canvas take pointer events and painted OVER the
+   graph (later positioned sibling), which is why cards went unreachable the
+   moment it was on; mounting it as the shell's first child and refusing all
+   events removes both failure modes at once. */
+.raw-world-overlay,
+.raw-world-overlay * {
+    pointer-events: none !important;
+}
+
+/* Fullscreen's own exit — zen has no topbar, and a room with no visible way
+   back is a trap. Same furniture as the scope marker. */
+.raw-room-exit {
+    -webkit-appearance: none;
+    appearance: none;
+    position: absolute;
+    top: 20px;
+    left: 14px;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid rgba(77, 249, 255, 0.35);
+    border-radius: 999px;
+    background: rgba(10, 14, 22, 0.92);
+    color: var(--di-cyan);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-room-exit:hover { background: rgba(77, 249, 255, 0.14); }
