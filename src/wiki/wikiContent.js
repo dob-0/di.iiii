@@ -632,10 +632,16 @@ export const WIKI_ARTICLES = [
                 'Windows (PowerShell) — irm https://di-studio.xyz/get.ps1 | iex'
             ] },
             'Then type di up. It starts, opens in your browser, and you are in a Studio that looks exactly like the one online, with an empty Main Space waiting. di down stops it. di help lists the rest.',
+            'Your work is files. `di save my-show` writes one file — my-show.diiii — holding everything that space is made of: the scene, every edit ever made to it, the projects inside it, the images and models. Copy it to a stick, email it, keep it for ten years; `di open my-show.diiii` puts it back, on this machine or anyone else’s. It is the same idea as a Blender file, with one difference worth knowing: a space is live, so there is nothing to lose by forgetting to save — di.iiii is already keeping it. Saving is how you get a copy you can carry, not how the work survives.',
+            'A file remembers which di.iiii wrote it. An older file opens normally. A file written by a NEWER di.iiii is refused, with the reason, rather than opened halfway — because a half-opened file does not look broken, it looks fine and is quietly wrong.',
             'What arrives is di.iiii itself and nothing else — about a 3 MB download. The exhibitions and pieces that live on di-studio.xyz are not part of it: they are work made with di.iiii, not part of the tool, and carrying them would have made the download forty times larger for things you did not ask for. Your copy starts empty and fills with your own.',
             'This is meant for a laptop at a venue with bad wifi, a studio that would rather not keep its work on someone else’s server, and anyone who wants the piece to still open in ten years. Offline is the normal state, not a broken one. Nothing is sent anywhere: the one outbound request is a version check, at most once a day, which gives up after three seconds and never blocks anything — and the page loads no fonts or scripts from anywhere else, down to the 3D text labels, whose font ships with the install.',
             'Your work lives in a folder called .di in your home directory, deliberately kept apart from the app itself — so updating, rolling back, or removing di.iiii cannot touch it. di uninstall says as much, and leaves your spaces where they are.',
             { list: [
+                'di new NAME — start a new space',
+                'di save SPACE — save one space as a single file you can carry anywhere',
+                'di open FILE — open a file someone saved, here',
+                'di spaces — what is in this di.iiii',
                 'di backup — writes your whole di.iiii to one file you can carry to another machine',
                 'di restore — reads one back in',
                 'di update — installs the newest version, and never touches your work; di update --rollback returns to the one before',

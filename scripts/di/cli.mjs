@@ -62,6 +62,7 @@ const parseArgs = (argv) => {
         if (name === 'port') { args.flags.port = argv[++i]; continue }
         if (name === 'out') { args.flags.out = argv[++i]; continue }
         if (name === 'from') { args.flags.from = argv[++i]; continue }
+        if (name === 'as') { args.flags.as = argv[++i]; continue }
         if (name === 'remote') { args.flags.remote = argv[++i]; continue }
         if (name === 'key') { args.flags.key = argv[++i]; continue }
         args.flags[name] = true
@@ -203,10 +204,152 @@ const cmdStatus = async () => {
 const cmdOpen = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
+    // `di open` opens di.iiii; `di open my-show.diiii` opens that work inside
+    // it. Both read as English and neither is ambiguous — a file argument is
+    // either there or it is not.
+    if (args._[1]) { await cmdOpenFile(args, args._[1]); return }
     const port = resolvePort(home)
     if (!(await probeHealth(port))) { await cmdUp({ ...args, flags: { ...args.flags, 'no-open': false } }); return }
     say(localUrl(port))
     openBrowser(localUrl(port))
+}
+
+/**
+ * THE FILE MENU.
+ *
+ * Blender is the model, and it is closer than it looks: a space bundle already
+ * held everything a piece of work is made of — its scene, its whole op-log,
+ * every project document, its assets, its blobs — portable to any other
+ * install, with host bindings and secrets stripped on the way out. What it did
+ * not have was a door. It was `node scripts/space-bundle.mjs export <id>`, a
+ * maintenance script, which is not a thing anyone saves their work with.
+ *
+ * So: `di new`, `di save`, `di open FILE`, `di spaces`.
+ *
+ * Where the model deliberately stops: a space is LIVE, and someone else may be
+ * standing in it. There is no unsaved buffer to lose and no moment where the
+ * work is only in memory — the server keeps it, continuously. A file is the
+ * PORTABLE FORM of the work, not the place it lives. `di save` therefore never
+ * means "flush", it means "give me a copy I can carry".
+ */
+
+/** The bundle tool, shipped inside the runtime, run against this install's data. */
+const runBundleTool = async (home, toolArgs, { verbose = false } = {}) => {
+    const script = path.join(currentVersionDir(home), 'scripts', 'space-bundle.mjs')
+    if (!fs.existsSync(script)) {
+        fail('this install predates di save/open — run `di update` first.')
+        return 1
+    }
+    const child = spawn(node.nodeBinary(home), [script, ...toolArgs], {
+        stdio: verbose ? 'inherit' : ['ignore', 'pipe', 'pipe'],
+        env: { ...process.env, DATA_ROOT: paths(home).data }
+    })
+    let output = ''
+    if (!verbose) {
+        child.stdout?.on('data', (chunk) => { output += chunk })
+        child.stderr?.on('data', (chunk) => { output += chunk })
+    }
+    const code = await new Promise(resolve => child.on('exit', resolve))
+    if (code !== 0 && !verbose) process.stderr.write(output.replace(/^\[space-bundle\] /gm, '  '))
+    return code
+}
+
+const cmdSave = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const spaceId = args._[1]
+    if (!spaceId) {
+        fail('which space? — di save my-space')
+        const port = resolvePort(home)
+        const names = await spaceNames(port)
+        if (names.length) say(ui.spacesHere(names))
+        process.exitCode = 1
+        return
+    }
+    const out = path.resolve(args.flags.out || `${spaceId}.diiii`)
+    // Reading, not writing: the server can stay up and the artist can keep
+    // working while a copy is taken.
+    const code = await runBundleTool(home, ['export', spaceId, '--out', out], { verbose: Boolean(args.flags.verbose) })
+    if (code !== 0) { fail(`could not save ${spaceId} — run again with --verbose`); process.exitCode = 1; return }
+    let size = null
+    try { size = humanSize((await fsp.stat(out)).size) } catch { /* printed without it */ }
+    say(ui.saved(spaceId, out, size))
+}
+
+const cmdOpenFile = async (args, file) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const resolved = path.resolve(file)
+    if (!fs.existsSync(resolved)) { fail(`no such file: ${resolved}`); process.exitCode = 1; return }
+
+    // Importing writes rows the running server has open. Stop it, put the work
+    // in, start it again if it was up — the artist asked to open a file, not to
+    // manage a server.
+    const port = resolvePort(home)
+    const wasRunning = await probeHealth(port)
+    if (wasRunning) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
+
+    const toolArgs = ['import', resolved]
+    if (args.flags.as) toolArgs.push('--as', args.flags.as)
+    if (args.flags.force) toolArgs.push('--force')
+    const code = await runBundleTool(home, toolArgs, { verbose: Boolean(args.flags.verbose) })
+
+    if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true } })
+    if (code !== 0) {
+        // The tool has already said what was wrong — a space of that name
+        // already here, or a file from a newer di.iiii — and said it in its own
+        // words, which are better than a summary of them. But the server's
+        // restart banner printed after that, so the last thing on screen would
+        // otherwise be "di.iiii is running" on a run that opened nothing.
+        fail(ui.openedNothing(path.basename(resolved)))
+        process.exitCode = 1
+        return
+    }
+    const opened = args.flags.as || path.basename(resolved).replace(/\.diiii$|\.space-bundle\.tar\.gz$/, '')
+    say(ui.opened(opened, `${localUrl(resolvePort(home))}/${opened}`))
+}
+
+const cmdNew = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const name = args._.slice(1).join(' ').trim()
+    if (!name) { fail('what should it be called? — di new "my show"'); process.exitCode = 1; return }
+
+    // Through the API rather than straight into the database: the server owns
+    // what a legal space id is, which words are reserved, and what a new space
+    // starts out containing. A second implementation here would drift from it.
+    const port = resolvePort(home)
+    if (!(await probeHealth(port))) await cmdUp({ _: [], flags: { 'no-open': true } })
+    try {
+        const response = await fetch(`${localUrl(port)}/serverXR/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: name, permanent: true })
+        })
+        const body = await response.json().catch(() => ({}))
+        if (!response.ok) { fail(body?.error || `could not make a space called "${name}"`); process.exitCode = 1; return }
+        const id = body?.space?.id || name
+        say(ui.made(id, `${localUrl(port)}/${id}`))
+    } catch (error) {
+        fail(String(error?.message || error))
+        process.exitCode = 1
+    }
+}
+
+const cmdSpaces = async () => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const port = resolvePort(home)
+    if (!(await probeHealth(port))) { say(ui.notRunning()); return }
+    try {
+        const response = await fetch(`${localUrl(port)}/serverXR/api/spaces`)
+        const body = await response.json()
+        const spaces = (body?.spaces || []).map((space) => space.id)
+        say(spaces.length ? ui.spacesHere(spaces) : ui.noSpacesYet())
+    } catch {
+        fail('could not ask this di.iiii what it has.')
+        process.exitCode = 1
+    }
 }
 
 const cmdLogs = async (args) => {
@@ -533,6 +676,9 @@ const COMMANDS = {
     where: cmdWhere,
     backup: cmdBackup,
     restore: cmdRestore,
+    new: cmdNew,
+    save: cmdSave,
+    spaces: cmdSpaces,
     link: cmdLink,
     sync: cmdSync,
     update: cmdUpdate,

@@ -18,11 +18,60 @@ Then:
 di up          start it, and open it
 di down        stop it
 di status      what is running, where, and how big
+
+di new NAME    start a new space
+di save SPACE  save it as one file you can carry anywhere
+di open FILE   open a file someone saved
+di spaces      what is in this di.iiii
+
 di backup      write your whole di.iiii to one file
 di update      get the newest — never touches your work
 di doctor      what this machine can and cannot do
 di help        the rest
 ```
+
+## Work as files
+
+The model is Blender: you install the app, and your work is files you open, save,
+copy to a stick and still open in ten years.
+
+A **space bundle** is that file — `my-show.diiii`, one tar.gz holding everything a
+space is made of: its scene, its whole op-log, every project document, its assets
+and its blob store. Sync keys and GitHub links are stripped on the way out, so it
+carries no secrets and no host-specific bindings and lands cleanly on any other
+install.
+
+The format is older than the commands. `scripts/space-bundle.mjs` has done this
+since before `di` existed — what it did not have was a door, and
+`node scripts/space-bundle.mjs export <id>` is not a thing anyone saves their work
+with. `di new` / `di save` / `di open` / `di spaces` are that door and nothing more:
+they run the same tool against this install's data root.
+
+**Where the Blender model deliberately stops.** A `.blend` is yours alone and
+"save" means flushing your buffer. A di.iiii space is *live* — someone else may be
+standing in it — so there is no unsaved state and no moment where the work exists
+only in memory. The server keeps it, continuously. A file is therefore the
+**portable form** of the work, not the place it lives, and `di save` never means
+"flush", it means "give me a copy I can carry". `di save` runs against a running
+server for exactly that reason; `di open` stops it, imports, and puts it back,
+because that one does write.
+
+**A file says what wrote it.** The manifest carries `writtenBy` (the di.iiii
+version) and `schemaVersion` (the shape its data was in) alongside the existing
+`format`/`version`. A file from a NEWER di.iiii is refused by name rather than
+half-imported:
+
+```
+this file was written by a newer di.iiii (0.9.0).
+  the file stores work in shape 9; this di.iiii reads 1
+  update first:  di update
+```
+
+Same rule as the database, for the same reason: a partial import does not fail, it
+succeeds and means something slightly different. Files with no stamp at all — every
+bundle written before 2026-08-19 — still open, because unknown must read as "open
+it", never as "shape 0". `.diiii` is the extension now; `.space-bundle.tar.gz` files
+keep opening, which is the entire point of having a format.
 
 Offline is the default state, not a degraded one. The page requests zero
 external origins (down to the 3D text labels, whose font is vendored — troika's

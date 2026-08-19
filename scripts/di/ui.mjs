@@ -56,6 +56,16 @@ export const ui = {
     starting: () => style.dim('starting…'),
     installing: (version) => style.dim(`installing ${version}…`),
 
+    // The file menu. A space bundle is one file holding everything a piece of
+    // work is made of; these are the four sentences that make it feel like one.
+    made: (id, url) => `made ${id}.\n  ${url}`,
+    saved: (id, file, size) => `${id} → ${file}${size ? ` (${size})` : ''}\n`
+        + `  one file, everything in it. open it on any di.iiii with: ${CMD} open ${file}`,
+    opened: (id, url) => `opened ${id}.\n  ${url}`,
+    openedNothing: (name) => `${name} was not opened — see above. Your di.iiii is unchanged.`,
+    spacesHere: (ids) => ['in this di.iiii:', ...ids.map((id) => `  ${id}`)].join('\n'),
+    noSpacesYet: () => `nothing here yet. make one with: ${CMD} new "my show"`,
+
     updated: (from, to) => `${from} → ${to}. your work was not touched.`,
     upToDate: (version) => `${version} — already the newest.`,
     updateAvailable: (current, next) => style.dim(`${current} → ${next} available — ${CMD} update`),
@@ -225,6 +235,10 @@ export const ui = {
         `  ${CMD} status        what is running, where, and how big`,
         `  ${CMD} open          open it in your browser`,
         '',
+        `  ${CMD} new NAME      start a new space`,
+        `  ${CMD} save SPACE    save it as one file you can carry anywhere`,
+        `  ${CMD} open FILE     open a file someone saved (or ${CMD} open, for di.iiii itself)`,
+        `  ${CMD} spaces        what is in this di.iiii`,
         `  ${CMD} backup        write your whole di.iiii to one file`,
         `  ${CMD} restore FILE  read one back in`,
         `  ${CMD} restore --snapshot   the copies taken automatically before an update`,
