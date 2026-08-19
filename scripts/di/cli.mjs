@@ -17,12 +17,28 @@
  */
 
 import { spawn } from 'node:child_process'
+import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
 
 import { decideMode } from './detect.mjs'
-import { activate, isNewerVersion, latestRelease, pruneVersions, rollback, smokeTest, stageVersion } from './install.mjs'
+import {
+    activate,
+    buildSchemaVersion,
+    dataSchemaVersion,
+    isNewerVersion,
+    latestRelease,
+    listSnapshots,
+    pruneVersions,
+    releaseFromFile,
+    rehearseAgainst,
+    restoreSnapshot,
+    rollback,
+    smokeTest,
+    snapshotData,
+    stageVersion
+} from './install.mjs'
 import { isWindows, paths } from './paths.mjs'
 import { probeAll, probeHealth } from './probe.mjs'
 import * as docker from './runner-docker.mjs'
@@ -45,6 +61,7 @@ const parseArgs = (argv) => {
         const name = token.slice(2)
         if (name === 'port') { args.flags.port = argv[++i]; continue }
         if (name === 'out') { args.flags.out = argv[++i]; continue }
+        if (name === 'from') { args.flags.from = argv[++i]; continue }
         if (name === 'remote') { args.flags.remote = argv[++i]; continue }
         if (name === 'key') { args.flags.key = argv[++i]; continue }
         args.flags[name] = true
@@ -264,6 +281,29 @@ const cmdBackup = async (args) => {
 const cmdRestore = async (args) => {
     const home = HOME()
     if (!requireInstalled(home)) return
+
+    // `di restore --snapshot [name]` — the automatic copies, taken before an
+    // update that changes how work is stored. Listed rather than guessed at:
+    // restoring the wrong one is a bad afternoon, and the names carry dates.
+    if (args.flags.snapshot !== undefined) {
+        const snapshots = listSnapshots(home)
+        const wanted = typeof args.flags.snapshot === 'string' ? args.flags.snapshot : args._[1]
+        if (!wanted) { say(ui.snapshotList(snapshots)); return }
+        const found = snapshots.find((entry) => entry.name === wanted)
+        if (!found) {
+            fail(`no snapshot called "${wanted}".`)
+            say(ui.snapshotList(snapshots))
+            process.exitCode = 1
+            return
+        }
+        say(ui.restoreWarning(paths(home).data))
+        if (!args.flags.yes) { say(style.dim('add --yes when you are sure.')); return }
+        try { await runnerFor(home).stop({ home }) } catch { /* already down */ }
+        await restoreSnapshot({ home, dir: found.dir })
+        say(ui.snapshotRestored(found.name))
+        return
+    }
+
     const file = args._[1]
     if (!file) { fail('which file? — di restore my-backup.tar.gz'); process.exitCode = 1; return }
 
@@ -305,6 +345,19 @@ const cmdUpdate = async (args) => {
     const from = installedVersion(home)
 
     if (args.flags.rollback) {
+        // Going back to a build that cannot read the data it is going back TO
+        // is the failure this whole arrangement exists for. Say it before
+        // moving anything, and name the snapshot that fixes it.
+        const p = paths(home)
+        const previousDir = fs.existsSync(p.previous) ? fs.realpathSync(p.previous) : null
+        const dataSchema = dataSchemaVersion(home)
+        const targetSchema = previousDir ? buildSchemaVersion(previousDir) : null
+        if (dataSchema !== null && targetSchema !== null && targetSchema < dataSchema) {
+            const snapshots = listSnapshots(home)
+            fail(ui.rollbackCrossesSchema(dataSchema, targetSchema, snapshots[0]?.name || null))
+            process.exitCode = 1
+            return
+        }
         const to = await rollback({ home })
         say(to ? ui.rolledBack(to) : ui.noPrevious())
         if (!to) process.exitCode = 1
@@ -313,20 +366,47 @@ const cmdUpdate = async (args) => {
 
     let release
     try {
-        release = await latestRelease()
+        // --from is the venue case: a machine with no network, an artifact on a
+        // USB stick. It skips the feed entirely, and with it the "is this newer"
+        // question — someone who names a file has chosen that file.
+        release = args.flags.from
+            ? await releaseFromFile(args.flags.from)
+            : await latestRelease()
     } catch (error) {
         fail(String(error.message || error))
         process.exitCode = 1
         return
     }
     if (release.version === from) { say(ui.upToDate(from)); return }
+    // A machine can be AHEAD of the release feed — a build installed from a
+    // file, an rc, a test install. "Not the same version" is not "newer", and
+    // walking someone backwards is not an update.
+    if (!args.flags.from && !isNewerVersion(release.version, from) && !args.flags.force) {
+        say(ui.aheadOfRelease(from, release.version))
+        return
+    }
 
     say(ui.installing(release.version))
     let staged
+    let rehearsal = null
     try {
         staged = await stageVersion({ home, release, verbose })
-        const healthy = await smokeTest({ home, versionDir: staged.partialDir, nodeBinary: node.nodeBinary(home) })
-        if (!healthy) throw new Error('the new version did not answer on a test port')
+        // The rehearsal: the new build opens a COPY of the artist's own data and
+        // runs its migrations there. An empty scratch directory only ever proved
+        // the binary starts, which is not what an update risks.
+        rehearsal = await rehearseAgainst({ home })
+        if (rehearsal) say(ui.rehearsing())
+        const healthy = await smokeTest({
+            home,
+            versionDir: staged.partialDir,
+            nodeBinary: node.nodeBinary(home),
+            dataRoot: rehearsal
+        })
+        if (!healthy) {
+            throw new Error(rehearsal
+                ? 'the new version could not open your work — nothing has been changed'
+                : 'the new version did not answer on a test port')
+        }
     } catch (error) {
         // Nothing has been stopped and `current` has not moved, so the artist
         // is exactly where they were — say so plainly rather than leaving them
@@ -336,6 +416,21 @@ const cmdUpdate = async (args) => {
         say(ui.updateFailed(from))
         process.exitCode = 1
         return
+    } finally {
+        // The rehearsal was a copy and its migrations are thrown away with it.
+        // The real database is migrated afterwards, by the build that has now
+        // proved it can.
+        if (rehearsal) await fsp.rm(rehearsal, { recursive: true, force: true }).catch(() => {})
+    }
+
+    // Before the flip, not after: if this update moves the schema, `--rollback`
+    // alone cannot undo it, so the way back has to exist first.
+    const dataSchema = dataSchemaVersion(home)
+    const nextSchema = buildSchemaVersion(staged.partialDir)
+    const movesSchema = dataSchema !== null && nextSchema !== null && nextSchema > dataSchema
+    if (movesSchema) {
+        const snapshot = await snapshotData({ home, label: `before-${release.version}` })
+        if (snapshot) say(ui.snapshotTaken(snapshot))
     }
 
     const runner = runnerFor(home)

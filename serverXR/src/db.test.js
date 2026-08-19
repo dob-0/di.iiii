@@ -3,8 +3,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createRequire } from 'node:module'
 
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
+
 const require = createRequire(import.meta.url)
-const { initDb, getDb, closeDb } = require('./db.js')
+const { initDb, getDb, closeDb, SCHEMA_VERSION, readSchemaVersion } = require('./db.js')
 
 afterEach(() => {
     closeDb()
@@ -111,4 +116,50 @@ describe('db: users.token_version migration', () => {
 
         fs.rmSync(path.dirname(dbPath), { recursive: true, force: true })
     })
+})
+
+// An update moves two things: the app, and sometimes the data. `--rollback`
+// only moves one of them back. So the data says how far forward it has come,
+// and a build that cannot read that far stops instead of guessing — because
+// the failure mode of guessing is not a crash, it is a silent misread (see
+// SCHEMA_VERSION's note on v2_user_is_unrestricted).
+describe('schema stamp', () => {
+  it('stamps a fresh database with the version this build writes', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'di-schema-'))
+    const file = path.join(dir, 'di.db')
+    const db = initDb(file)
+    expect(readSchemaVersion(db)).toBe(SCHEMA_VERSION)
+    closeDb()
+  })
+
+  it('refuses to open data written by a newer build, and changes nothing', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'di-schema-'))
+    const file = path.join(dir, 'di.db')
+    let db = initDb(file)
+    db.exec(`PRAGMA user_version = ${SCHEMA_VERSION + 5}`)
+    closeDb()
+
+    expect(() => initDb(file)).toThrow(/older than its data/)
+
+    // The refusal must not have migrated anything on its way out.
+    const after = new DatabaseSync(file)
+    expect(Number(after.prepare('PRAGMA user_version').get().user_version)).toBe(SCHEMA_VERSION + 5)
+    after.close()
+  })
+
+  it('opens it anyway when told to, for a recovery that knows the difference', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'di-schema-'))
+    const file = path.join(dir, 'di.db')
+    let db = initDb(file)
+    db.exec(`PRAGMA user_version = ${SCHEMA_VERSION + 5}`)
+    closeDb()
+
+    process.env.DI_ALLOW_OLDER_CODE = '1'
+    try {
+      expect(() => initDb(file)).not.toThrow()
+      closeDb()
+    } finally {
+      delete process.env.DI_ALLOW_OLDER_CODE
+    }
+  })
 })

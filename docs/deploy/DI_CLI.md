@@ -120,6 +120,78 @@ installs dependencies and health-checks it **on a scratch port** before stopping
 anything. `current` flips last. Any failure leaves you exactly where you were
 and says so. `di update --rollback` returns to `previous`.
 
+### What an update actually risks
+
+An update moves two things: the app, and sometimes the shape the work is stored
+in. `--rollback` only moves one of them back. Four things stand between an
+artist and finding that out afterwards.
+
+**The health check opens your work, not an empty directory.** It used to boot the
+staged build against a fresh `mkdtemp`, which proves the binary starts and
+nothing else. It now copies the whole data root — database, spaces, assets — lets
+the new build open the copy and run its migrations there, and throws the copy
+away. A migration that cannot read *your* database fails before the flip, while
+the old version is still running. `rehearseAgainst()` in `scripts/di/install.mjs`.
+
+**The database says how far forward it has come.** `SCHEMA_VERSION` in
+`serverXR/src/db.js`, written to `PRAGMA user_version` after the migrations run.
+A build that cannot read that far **refuses to open the data** rather than
+guessing — because the failure mode of guessing is not a crash.
+`v2_user_is_unrestricted` rewrote every `spaces = 'null'` (the old spelling of
+"unrestricted") into `'[]'` plus a flag; a build from before that reads `'[]'` as
+"no access to anything" and locks people out of their own spaces, silently. Bump
+`SCHEMA_VERSION` when a change would make an older build MISREAD data — not for
+every schema edit, since adding a column is invisible to older code.
+`DI_ALLOW_OLDER_CODE=1` opens it anyway, for a recovery that knows the difference.
+
+**A copy is taken before the flip, when the schema moves.** Automatic, into
+`~/.di/snapshots/before-<version>-<stamp>/`, and only when the update actually
+moves the schema — otherwise there is nothing rollback cannot undo. `di restore
+--snapshot` lists them; `di restore --snapshot <name> --yes` puts one back, and
+moves what it replaces aside under `replaced-<stamp>` rather than deleting it.
+
+**Rollback refuses to cross a schema boundary**, before moving anything, and
+names the snapshot that fixes it:
+
+```
+that version is older than your work.
+  your work is stored in shape 2; that version reads 1
+  the copy taken before that update:  di restore --snapshot before-0.5.0-...
+```
+
+And `di update` refuses to walk backwards: a machine ahead of the release feed —
+a build installed from a file, an rc, a test install — is told so rather than
+downgraded. `--force` if you mean it.
+
+### Updating with no network
+
+```
+di update --from ./di-runtime-0.5.0.tar.gz
+```
+
+The artifact on a USB stick, at a venue, with nothing to reach. `download()` has
+spoken `file://` since the beginning and this document promised the capability,
+but no command exposed it until 2026-08-19 — a promise no command keeps is not a
+feature. Naming a file skips the feed and the is-this-newer question: someone who
+names a file has chosen that file.
+
+### Where versions come from
+
+**Every `dev → main` promotion is tagged**, by `.github/workflows/tag-on-promotion.yml`,
+which runs *after* the production deploy succeeds — a tag is a promise that this
+code runs, and the honest moment to make it is once it has. It bumps the patch
+from the newest tag, unless the commit is already tagged (someone chose a version
+on purpose) or a `workflow_dispatch` names one.
+
+It then **calls** `release.yml` rather than letting the tag trigger it: a tag
+pushed with `GITHUB_TOKEN` does not fire `on: push: tags`, so waiting would leave
+every automatic tag with no artifact behind it — a version that exists and cannot
+be installed, which is worse than no version at all.
+
+Tagging this often is only reasonable because the artifact is 3.1 MB. At that
+size a release is a small thing to hand someone, and an update over a phone
+hotspot at a venue is realistic.
+
 `di up` mentions a newer version in one dim line and never installs it — silent
 auto-update mid-gig is how you lose a show. That check runs *after* the app is
 already up, swallows every failure, and only looks once a day, so an offline
@@ -148,9 +220,17 @@ anything is stopped, and the artist stays exactly where they were.
 ## Releasing
 
 `.github/workflows/release.yml` builds and attaches `di-runtime-<version>.tar.gz`
-and `checksums.txt` to the GitHub Release for every `v*` tag. The installer reads
-`releases/latest`, so the tag and the artifact filename must agree — the packer
-takes the version from the tag for exactly that reason.
+and `checksums.txt` to the GitHub Release — for every `v*` tag a human pushes, and
+on demand when `tag-on-promotion.yml` calls it (see "Where versions come from"
+above). The installer reads `releases/latest`, so the tag and the artifact
+filename must agree — the packer takes the version from the tag, or from the
+caller's input, for exactly that reason. Never from `package.json`, which is not
+the released number and has read 0.2.0 since v0.2.0.
+
+`release.json` inside the artifact records `version`, `profile` (local or hosted
+— two artifacts with the same filename are otherwise indistinguishable) and
+`schemaVersion`, which is what `di update` compares against the artist's own
+database before it flips anything.
 
 `.github/workflows/install-matrix.yml` is the stranger's-machine test: debian,
 ubuntu, fedora, alpine (busybox ash + musl), node 20 (too old) and node 22, plus

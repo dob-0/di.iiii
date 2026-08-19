@@ -142,12 +142,23 @@ const main = async () => {
     }
     await dropTests(stage)
 
+    // The schema this build can read, lifted out of db.js rather than restated:
+    // `di update` compares it against the artist's own database before it flips
+    // anything, and `di update --rollback` uses it to know whether going back
+    // also means going back to a snapshot. Read by pattern, and a miss is an
+    // error — a missing number would silently disable both checks.
+    const dbSource = await fsp.readFile(path.join(ROOT, 'serverXR', 'src', 'db.js'), 'utf8')
+    const schemaMatch = /const SCHEMA_VERSION = (\d+)/.exec(dbSource)
+    if (!schemaMatch) die('could not read SCHEMA_VERSION out of serverXR/src/db.js — update this packer, do not ship')
+    const schemaVersion = Number(schemaMatch[1])
+
     // profile is recorded because it is the difference between two artifacts
     // with identical filenames, and `di status` has no other way to tell an
     // artist which one they are running.
     await fsp.writeFile(path.join(stage, 'release.json'), `${JSON.stringify({
         version,
         profile,
+        schemaVersion,
         packedAt: new Date().toISOString(),
         node: process.version
     }, null, 2)}\n`)

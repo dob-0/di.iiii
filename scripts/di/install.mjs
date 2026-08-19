@@ -15,7 +15,8 @@ import fsp from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
-import { fileURLToPath } from 'node:url'
+import { createRequire } from 'node:module'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { isWindows, paths, versionLayout } from './paths.mjs'
 import { probeHealth } from './probe.mjs'
@@ -127,6 +128,29 @@ const download = async (url, target) => {
 }
 
 /**
+ * A release described by a file on this machine, for `di update --from`.
+ *
+ * The capability was always there — `download()` speaks file:// precisely so a
+ * venue with no network can update from a USB stick, and the docs said so — but
+ * nothing exposed it, so the only way to reach it was to call stageVersion by
+ * hand. A promise no command keeps is not a feature.
+ *
+ * The version comes from the artifact's own name, which is what the packer
+ * writes and what stageVersion lays out on disk.
+ */
+export const releaseFromFile = async (file) => {
+    const resolved = path.resolve(file)
+    if (!fs.existsSync(resolved)) throw new Error(`no such file: ${resolved}`)
+    const match = /^di-runtime-(.+)\.tar\.gz$/.exec(path.basename(resolved))
+    if (!match) {
+        throw new Error(`${path.basename(resolved)} is not a di.iiii runtime — expected di-runtime-<version>.tar.gz`)
+    }
+    // No checksum: there is no feed to compare against, and inventing one from
+    // the file itself would only prove the file equals itself.
+    return { version: match[1], url: pathToFileURL(resolved).href, checksumsUrl: null }
+}
+
+/**
  * Fetch, verify, unpack and prepare a version — without disturbing anything
  * that is currently installed or running.
  */
@@ -175,8 +199,16 @@ export const stageVersion = async ({ home, release, verbose = false }) => {
     return { partialDir, finalDir }
 }
 
-/** Boot the staged version on a throwaway port and make sure it answers. */
-export const smokeTest = async ({ home, versionDir, nodeBinary }) => {
+/**
+ * Boot the staged version on a throwaway port and make sure it answers.
+ *
+ * `dataRoot` decides WHAT it answers about. Left out, the server gets an empty
+ * scratch directory and the test proves the new build starts — which is not the
+ * question an update actually asks. The question is whether it can open YOUR
+ * spaces, and the only honest way to ask that is to let it try, on a copy.
+ * `rehearseAgainst()` below makes the copy.
+ */
+export const smokeTest = async ({ home, versionDir, nodeBinary, dataRoot = null }) => {
     const layout = versionLayout(versionDir)
     const port = 40000 + Math.floor((Date.now() % 20000))
     const child = spawn(nodeBinary, [layout.serverEntry], {
@@ -188,8 +220,9 @@ export const smokeTest = async ({ home, versionDir, nodeBinary }) => {
             HOST: '127.0.0.1',
             APP_BASE_PATH: '/serverXR',
             CLIENT_DIR: layout.client,
-            // A scratch data root: the smoke test must never touch the real one.
-            DATA_ROOT: await fsp.mkdtemp(path.join(os.tmpdir(), 'di-smoke-')),
+            // Never the real one. Either a copy of it (a rehearsal — see
+            // rehearseAgainst) or an empty scratch directory.
+            DATA_ROOT: dataRoot || await fsp.mkdtemp(path.join(os.tmpdir(), 'di-smoke-')),
             REQUIRE_AUTH: 'false',
             NODE_ENV: 'production'
         }
@@ -278,4 +311,141 @@ export const pruneVersions = async ({ home, keep = [] }) => {
     await Promise.all(entries
         .filter(name => !keep.includes(name))
         .map(name => fsp.rm(path.join(p.versions, name), { recursive: true, force: true })))
+}
+
+/**
+ * A copy of the artist's data, for the new version to open before anything is
+ * committed to.
+ *
+ * The health check used to boot the staged build on an empty directory, which
+ * proves it starts and nothing else. A migration that cannot read THIS
+ * database — the one with three years of a space's op-log in it — failed after
+ * the flip, with the old version already stopped. So: copy, let the new build
+ * open the copy and run its migrations there, and only then touch anything
+ * real.
+ *
+ * The copy is a rehearsal and is thrown away. Whatever the migration did to it
+ * is discarded; the real database is migrated afterwards by the version that
+ * has now proved it can.
+ *
+ * Returns null when there is nothing to rehearse (a first install), which the
+ * caller treats as "no objection" rather than as a pass.
+ */
+export const rehearseAgainst = async ({ home }) => {
+    const p = paths(home)
+    if (!fs.existsSync(p.data)) return null
+    const scratch = await fsp.mkdtemp(path.join(os.tmpdir(), 'di-rehearsal-'))
+    // The whole data root, not just di.db: the server opens assets and space
+    // directories on boot too, and a rehearsal that copied only the database
+    // would pass on an install whose real start would not.
+    await fsp.cp(p.data, scratch, { recursive: true })
+    return scratch
+}
+
+const withoutExperimentalWarning = (fn) => {
+    const original = process.emitWarning
+    process.emitWarning = (warning, ...rest) => {
+        const name = typeof warning === 'object' && warning !== null ? warning.name : rest[0]
+        if (String(name) === 'ExperimentalWarning') return
+        return original.call(process, warning, ...rest)
+    }
+    try {
+        return fn()
+    } finally {
+        process.emitWarning = original
+    }
+}
+
+/**
+ * What the artist's database says about itself, without opening the app.
+ *
+ * Reads `PRAGMA user_version` — the number serverXR stamps after migrating (see
+ * SCHEMA_VERSION in serverXR/src/db.js). Returns 0 for a database that has
+ * never been stamped and null when there is no database at all, so the caller
+ * can tell "fresh install" from "old data".
+ */
+export const dataSchemaVersion = (home) => {
+    const p = paths(home)
+    const file = path.join(p.data, 'di.db')
+    if (!fs.existsSync(file)) return null
+    try {
+        // Required here rather than imported at the top: this module is loaded
+        // by specs that run in a browser-shaped environment, where bundling a
+        // node: builtin fails outright. The one function that needs sqlite is
+        // the only place that should pay for it.
+        //
+        // And quietly: node prints an ExperimentalWarning the first time
+        // node:sqlite is loaded, which would land in the middle of `di update`
+        // as four lines of Node internals an artist cannot act on. Scoped to
+        // this one call and to that one warning — everything else still prints.
+        const { DatabaseSync } = withoutExperimentalWarning(() => createRequire(import.meta.url)('node:sqlite'))
+        const db = new DatabaseSync(file, { readOnly: true })
+        try {
+            return Number(db.prepare('PRAGMA user_version').get()?.user_version ?? 0)
+        } finally {
+            db.close()
+        }
+    } catch {
+        // An unreadable database is not a reason to block an update — the
+        // update may be the thing that fixes it. Unknown, not zero.
+        return null
+    }
+}
+
+/** What schema a staged or installed build can read, from its release.json. */
+export const buildSchemaVersion = (versionDir) => {
+    try {
+        const release = JSON.parse(fs.readFileSync(path.join(versionDir, 'release.json'), 'utf8'))
+        return Number.isInteger(release?.schemaVersion) ? release.schemaVersion : null
+    } catch {
+        // Every build before 2026-08-19 predates the field. Unknown, and the
+        // caller warns rather than pretending it checked.
+        return null
+    }
+}
+
+/**
+ * Copy the artist's work somewhere update cannot reach, and say where.
+ *
+ * Taken before an update that moves the schema forward, because that is the
+ * update `--rollback` cannot undo on its own: it restores the app, and the
+ * database has moved. Cheap — a local install's data is small, and the whole
+ * artifact is 3 MB now.
+ */
+export const snapshotData = async ({ home, label }) => {
+    const p = paths(home)
+    if (!fs.existsSync(p.data)) return null
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+    const dir = path.join(p.snapshots, `${label}-${stamp}`)
+    await fsp.mkdir(p.snapshots, { recursive: true })
+    await fsp.cp(p.data, dir, { recursive: true })
+    return dir
+}
+
+/** The snapshots on this machine, newest first. */
+export const listSnapshots = (home) => {
+    const p = paths(home)
+    if (!fs.existsSync(p.snapshots)) return []
+    return fs.readdirSync(p.snapshots)
+        .map((name) => ({ name, dir: path.join(p.snapshots, name) }))
+        .filter((entry) => fs.statSync(entry.dir).isDirectory())
+        .sort((a, b) => (a.name < b.name ? 1 : -1))
+}
+
+/**
+ * Put a snapshot back. The data it replaces is itself moved aside first, under
+ * `replaced-<stamp>` — restoring the wrong snapshot must not be the end of the
+ * story either.
+ */
+export const restoreSnapshot = async ({ home, dir }) => {
+    const p = paths(home)
+    if (!fs.existsSync(dir)) throw new Error(`no such snapshot: ${dir}`)
+    if (fs.existsSync(p.data)) {
+        const stamp = new Date().toISOString().replace(/[:.]/g, '-')
+        await fsp.mkdir(p.snapshots, { recursive: true })
+        await fsp.cp(p.data, path.join(p.snapshots, `replaced-${stamp}`), { recursive: true })
+        await fsp.rm(p.data, { recursive: true, force: true })
+    }
+    await fsp.cp(dir, p.data, { recursive: true })
+    return p.data
 }

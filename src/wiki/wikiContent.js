@@ -639,9 +639,12 @@ export const WIKI_ARTICLES = [
                 'di backup — writes your whole di.iiii to one file you can carry to another machine',
                 'di restore — reads one back in',
                 'di update — installs the newest version, and never touches your work; di update --rollback returns to the one before',
+                'di update --from FILE — updates from a file on this machine, for a venue with no network',
+                'di restore --snapshot — the copies di.iiii takes of your work by itself, before an update that changes how it is stored',
                 'di status — what is running, on which address, and how much space your work takes',
                 'di doctor — what this machine can and cannot do, and what to install if something is missing'
             ] },
+            'Before an update changes anything, the new version opens a COPY of your work and checks it can read it — if it cannot, the update stops and you are still on the version you were. And when an update changes how the work is stored, di.iiii keeps a copy of it first, so going back is always possible: di restore --snapshot lists them. Going back to a version too old to read your work is refused rather than done, because that would not fail, it would quietly misread it.',
             'It does not need admin rights, and it does not ask for a password. It runs as a single ordinary program, and if there is no suitable Node it quietly fetches its own rather than sending you away. Docker is there too, but only if you ask for it (di install --docker) — a container cannot reach things on your machine, so the surfaces that talk to your own tools (the agent board, a Claude installed on this computer) work in the ordinary mode and not in the container one.',
             'A local space can now be linked to one on di-studio.xyz: di link connects the two, and di sync compares them and moves work in whichever direction is safe — it refuses rather than guess when both sides have changed. di backup and the space bundles on the Spaces page are still there when you would rather carry a file.'
         ],
