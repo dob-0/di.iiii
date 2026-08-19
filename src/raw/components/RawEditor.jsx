@@ -33,6 +33,7 @@ import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.j
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
+import { buildSceneExample } from '../../project/graph/examples/sceneExample.js'
 import { buildStarterWorkspaceDocument } from '../../project/graph/examples/starterWorkspace.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
@@ -970,6 +971,28 @@ export default function RawEditor({
         })
     }
 
+    // A scene made the way a person makes one: a room, a light, a shape, a place
+    // for your own file, and a note saying the moves in plain words. This is the
+    // answer to "I cannot understand how it works" — something to open and copy,
+    // rather than another feature.
+    const handleCreateSceneExample = () => {
+        const { nodes: sceneNodes, edges: sceneEdges } = buildSceneExample({
+            parentId: currentScopeId || null,
+            workspaceTop
+        })
+        if (!sceneNodes.length) return
+
+        dispatch({ type: 'select-entity', entityId: null })
+        applyLocalOps([
+            ...sceneNodes.map((node) => ({ type: 'createNode', payload: { node } })),
+            ...sceneEdges.map((edge) => ({ type: 'createEdge', payload: { edge } })),
+            {
+                type: 'setWorkspaceState',
+                payload: { patch: { activeSurface: 'graph', selectedNodeId: null } }
+            }
+        ], { activityMessage: 'Made a scene: a room, a light, a cube and a place for your own model.' })
+    }
+
     const handleCreateStreamingPrototype = () => {
         const startX = 80
         const startY = workspaceTop + 72
@@ -1665,6 +1688,7 @@ export default function RawEditor({
                                 {overflowOpen && (
                                     <div className="raw-topbar-overflow-menu">
                                         <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
+                                        <button type="button" onClick={() => { handleCreateSceneExample(); setOverflowOpen(false) }}>Make me a scene</button>
                                         <button type="button" onClick={() => { handleCreateAllNodesExample(); setOverflowOpen(false) }}>All Nodes Example</button>
                                         <button type="button" onClick={() => { handleCreateStreamingPrototype(); setOverflowOpen(false) }}>Streaming Prototype</button>
                                         {isLocalWorkspace && (
@@ -1714,6 +1738,7 @@ export default function RawEditor({
                     // unit test still passing.
                     portScopeNodes={authoredNodes}
                     onPromotePort={handlePromotePort}
+                    onMakeScene={handleCreateSceneExample}
                     emptyHint={`${pointerVerb} to place your first node.`}
                     edges={graphCardEdges}
                     selectedNodeId={workspaceState.selectedNodeId}
