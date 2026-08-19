@@ -231,7 +231,7 @@ export const activate = async ({ home, partialDir, finalDir, version, mode }) =>
 
 export const rollback = async ({ home }) => {
     const p = paths(home)
-    let target = null
+    let target
     try { target = await fsp.realpath(p.previous) } catch { return null }
     if (!target) return null
     await linkDir(p.current, target)
@@ -243,7 +243,7 @@ export const rollback = async ({ home }) => {
 /** Keep the current version and the one before it. Older ones are dead weight. */
 export const pruneVersions = async ({ home, keep = [] }) => {
     const p = paths(home)
-    let entries = []
+    let entries
     try { entries = await fsp.readdir(p.versions) } catch { return }
     await Promise.all(entries
         .filter(name => !keep.includes(name))

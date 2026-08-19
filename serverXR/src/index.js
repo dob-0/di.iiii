@@ -562,7 +562,7 @@ const clearAuthSessionCookie = (res) => {
 // re-login). No-op for non-DB identities (API tokens) and unrestricted users.
 const grantSpaceToSessionUser = (req, res, userId, spaceId) => {
   if (!userId || !spaceId) return
-  let user = null
+  let user
   try { user = findUserById(userId) } catch { return }
   if (!user || !Array.isArray(user.spaces) || user.spaces.includes(spaceId)) return
   const nextSpaces = [...user.spaces, spaceId]
@@ -1165,7 +1165,7 @@ async function syncLinkedSpace(link) {
   if (installationId) { try { token = await githubApp.installationToken(installationId) } catch {} }
   if (!token) {
     const got = await githubApp.getInstallationForRepo(link.owner, link.repo)
-    if (got) { token = got.token; installationId = got.installationId }
+    if (got) token = got.token
   }
   if (!token) throw new Error(`No GitHub App installation can access ${link.owner}/${link.repo}`)
   const ref = link.ref || await githubApp.repoDefaultBranch(token, link.owner, link.repo)

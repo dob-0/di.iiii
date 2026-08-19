@@ -383,7 +383,7 @@ function createSpaceStore({
 
   const readLatestSpaceSnapshot = async (spaceId) => {
     const dir = path.join(snapshotsDir, spaceId)
-    let entries = []
+    let entries
     try {
       entries = (await fsp.readdir(dir)).filter(name => name.endsWith('.json')).sort()
     } catch {

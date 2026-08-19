@@ -223,7 +223,7 @@ const collectSessionNoteErrors = async () => {
   if (!branch) return [] // detached HEAD -- nothing to attribute a note to
 
   const sessionsDir = 'docs/ai/sessions'
-  let sessionFiles = []
+  let sessionFiles
   try {
     sessionFiles = (await fs.readdir(toAbsolute(sessionsDir)))
       .filter((name) => name.endsWith('.md') && name !== 'README.md')

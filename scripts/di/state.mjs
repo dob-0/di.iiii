@@ -36,7 +36,7 @@ export const writeState = async (home, patch = {}) => {
 export const readEnv = (home) => {
     const p = paths(home)
     const out = {}
-    let raw = ''
+    let raw
     try {
         raw = fs.readFileSync(p.env, 'utf8')
     } catch {
@@ -98,7 +98,7 @@ export const installedVersion = (home) => {
 export const dirSize = async (dir) => {
     let total = 0
     const walk = async (target) => {
-        let entries = []
+        let entries
         try {
             entries = await fsp.readdir(target, { withFileTypes: true })
         } catch {

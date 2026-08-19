@@ -112,7 +112,7 @@ function createAgentBoardStore({ claudeHome = path.join(os.homedir(), '.claude')
 
   async function listTranscriptFiles() {
     const out = []
-    let projectDirs = []
+    let projectDirs
     try {
       projectDirs = await fsp.readdir(projectsRoot)
     } catch {
@@ -120,7 +120,7 @@ function createAgentBoardStore({ claudeHome = path.join(os.homedir(), '.claude')
     }
     for (const dir of projectDirs) {
       const projectDir = path.join(projectsRoot, dir)
-      let entries = []
+      let entries
       try {
         entries = await fsp.readdir(projectDir)
       } catch {
@@ -142,7 +142,7 @@ function createAgentBoardStore({ claudeHome = path.join(os.homedir(), '.claude')
   // Live overlay from ~/.claude/sessions/<pid>.json — zero subprocesses.
   // A record whose pid is gone is a stale file, not a live session.
   async function readLiveSessions() {
-    let files = []
+    let files
     try {
       files = await fsp.readdir(sessionsRoot)
     } catch {
@@ -235,7 +235,7 @@ function createAgentBoardStore({ claudeHome = path.join(os.homedir(), '.claude')
 
   async function readSubagents(projectDir, sessionId) {
     const subagentsDir = path.join(projectDir, sessionId, 'subagents')
-    let entries = []
+    let entries
     try {
       entries = await fsp.readdir(subagentsDir)
     } catch {

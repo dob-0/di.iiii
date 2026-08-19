@@ -20,7 +20,7 @@ export const defaultZenFor = ({ nodeCount = 0 } = {}) => nodeCount === 0
 
 export const readZenPreference = (workspaceKey, { nodeCount = 0, defaultZen, storage } = {}) => {
     const store = storage ?? (typeof window !== 'undefined' ? window.localStorage : null)
-    let stored = null
+    let stored
     try {
         stored = store?.getItem(storageKey(workspaceKey)) ?? null
     } catch {

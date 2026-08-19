@@ -371,7 +371,7 @@ export function useAssetPipeline({
             // useServerPublishing's syncAssetsForPublish, which ignores the
             // result — a whole failed asset sync still ended in "Scene synced
             // to server." Every caller handles a throw, so fail loudly.
-            throw new Error(`Asset upload failed for "${fallbackName}": ${error?.message || error}`)
+            throw new Error(`Asset upload failed for "${fallbackName}": ${error?.message || error}`, { cause: error })
         } finally {
             if (trackPending) {
                 setServerAssetSyncPending(prev => Math.max(0, prev - 1))
@@ -433,7 +433,7 @@ export function useAssetPipeline({
     const ingestAssetFile = useCallback(async (file) => {
         if (!file) return null
         if (canUploadServerAssets) {
-            let remoteEntry = null
+            let remoteEntry
             try {
                 remoteEntry = await uploadAssetToServer({
                     file,
@@ -441,7 +441,7 @@ export function useAssetPipeline({
                     mimeType: file?.type
                 })
             } catch (error) {
-                throw new Error(`Shared asset upload failed. ${error?.message || ''} Check the server connection and try again.`.replace(/\s+/g, ' '))
+                throw new Error(`Shared asset upload failed. ${error?.message || ''} Check the server connection and try again.`.replace(/\s+/g, ' '), { cause: error })
             }
             if (!remoteEntry?.id) {
                 throw new Error('Shared asset upload failed. Check the server connection and try again.')

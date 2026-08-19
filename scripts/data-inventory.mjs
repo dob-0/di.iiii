@@ -47,7 +47,7 @@ async function remoteInventory(base, token) {
   const { spaces = [] } = await api(base, token, '/api/spaces');
   const bySpace = {};
   for (const s of spaces) {
-    let projects = [];
+    let projects;
     try {
       const r = await api(base, token, `/api/spaces/${s.id}/projects`);
       projects = r.projects || [];

@@ -173,7 +173,7 @@ export function useSpacesController({
                 } catch (error) {
                     const status = typeof error?.status === 'number' ? error.status : null
                     if (status === 403) {
-                        throw new Error("You're signed in but don't have permission to create spaces. Ask an admin to grant you access.")
+                        throw new Error("You're signed in but don't have permission to create spaces. Ask an admin to grant you access.", { cause: error })
                     } else if (status === 401) {
                         fellBackToLocal = true
                         fallbackMessage = 'Server auth required. Created a local space instead.'

@@ -11,7 +11,7 @@ const MAX_PAYLOAD_LENGTH = 20000
 
 const toPublic = (row) => {
   if (!row) return null
-  let payload = {}
+  let payload
   try { payload = JSON.parse(row.payload || '{}') } catch { payload = {} }
   return {
     id: row.id,

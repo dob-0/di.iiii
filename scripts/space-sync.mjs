@@ -147,7 +147,7 @@ const api = async (url, options = {}, retries = 4) => {
     try {
       res = await fetch(url, options)
     } catch (err) {
-      if (attempt >= retries) throw new Error(`${url} — network: ${err.message}`)
+      if (attempt >= retries) throw new Error(`${url} — network: ${err.message}`, { cause: err })
       await sleep(1000 * 2 ** attempt)
       continue
     }

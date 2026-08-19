@@ -220,7 +220,7 @@ const main = async () => {
     } catch (error) {
         if (error.status !== 409) throw error
         if (!force) {
-            throw new Error(`Project "${projectId}" already exists locally. Re-run with --force to overwrite its document.`)
+            throw new Error(`Project "${projectId}" already exists locally. Re-run with --force to overwrite its document.`, { cause: error })
         }
         console.log('  already exists — overwriting (--force)')
     }
