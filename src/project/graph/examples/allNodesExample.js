@@ -174,6 +174,9 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // showing what a thing IS, and an empty geo is a footprint tile, which is
     // true but teaches less than a geo with something standing in it.
     add('geo', 'geom.geo', { label: 'Geo', col: 5, row: 7, values: { position: [-2.5, 0, 0] } })
+    // The authored eye, standing in the example Geo so the census shows it
+    // carried by a container like anything else.
+    add('camera', 'world.camera', { label: 'Camera', col: 5, row: 8, insideKey: 'geo', values: { position: [2, 1.4, 2] } })
     add('geoCube', 'geom.cube', { label: 'Cube', col: 4, row: 10, insideKey: 'geo', values: { size: [0.6, 0.6, 0.6], color: '#8be9fd', position: [0, 0.3, 0] } })
 
     // --- the constructor cluster: a node made of nodes -----------------------

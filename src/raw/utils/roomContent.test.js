@@ -29,6 +29,13 @@ describe('scopeHasRoomContent — the room appears only when something stands in
         expect(scopeHasRoomContent([node('l', 'world.light')], null)).toBe(false)
     })
 
+    // A Camera is the eye, not something to look at — the active one draws
+    // nothing, so a camera alone would summon an empty room.
+    it('a Camera alone does not conjure a room', () => {
+        expect(scopeHasRoomContent([node('cam', 'world.camera')], null)).toBe(false)
+        expect(scopeHasRoomContent([node('cam', 'world.camera'), node('c', 'geom.cube')], null)).toBe(true)
+    })
+
     it('a Light standing inside a container counts in that scope', () => {
         const nodes = [node('g', 'geom.geo'), node('l', 'world.light', 'g')]
         expect(scopeHasRoomContent(nodes, 'g')).toBe(true)

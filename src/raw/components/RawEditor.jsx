@@ -95,7 +95,7 @@ const WINDOW_DEFAULT_POSITIONS = {
     'legacy-world.outliner':  { x: 660,  y: 56, width: 240, height: 360 },
 }
 
-const ACTIVE_MARKER_TYPE_IDS = ['world.light', 'world.background', 'world.grid']
+const ACTIVE_MARKER_TYPE_IDS = ['world.light', 'world.background', 'world.grid', 'world.camera']
 
 const buildWindowStateFromNode = (node, index = 0, graphContext = null) => {
     const def = WINDOW_DEFAULT_POSITIONS[node.typeId] || { x: 96, y: 140, width: 360, height: 280 }

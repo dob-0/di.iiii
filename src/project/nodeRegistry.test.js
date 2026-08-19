@@ -65,13 +65,27 @@ describe('NODE_TYPES', () => {
         expect(NODE_TYPES['view.image'].render).toBe('panel-2d')
     })
 
-    it('world and math nodes are hidden — except Light, which can stand somewhere now', () => {
+    it('world and math nodes are hidden — except Light and Camera, which stand somewhere', () => {
         // world.light went spatial 2026-08-19 so a Light can be COLLECTED
         // inside a container (a real point light with a marker); at root it
-        // still draws nothing and keeps its settings job.
+        // still draws nothing and keeps its settings job. world.camera went in
+        // spatial 2026-08-20: the authored eye stands in the room, carried by
+        // containers like anything else.
         expect(NODE_TYPES['world.light'].render).toBe('spatial-3d')
+        expect(NODE_TYPES['world.camera'].render).toBe('spatial-3d')
         expect(NODE_TYPES['world.background'].render).toBe('hidden')
         expect(NODE_TYPES['math.add'].render).toBe('hidden')
+    })
+
+    it('a fresh Camera is the room\'s own default view — authored without a jump', () => {
+        // These three defaults are byte-identical to RawViewport's built-in
+        // camera (position [0,2.4,6.5], target [0,0.75,0], fov 50). If either
+        // side drifts, placing a Camera would CUT to a different shot the
+        // moment it lands.
+        const inputs = Object.fromEntries(NODE_TYPES['world.camera'].inputs.map((i) => [i.id, i.default]))
+        expect(inputs.position).toEqual([0, 2.4, 6.5])
+        expect(inputs.lookAt).toEqual([0, 0.75, 0])
+        expect(inputs.fov).toBe(50)
     })
 
     // Product decision 2026-07-19: no node type is a singleton — every type,

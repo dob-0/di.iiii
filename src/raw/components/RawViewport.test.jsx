@@ -4,6 +4,7 @@ import RawViewport, { renderNodeBody } from './RawViewport.jsx'
 
 vi.mock('@react-three/fiber', () => ({
     Canvas: ({ children }) => <div data-testid="mock-canvas">{children}</div>,
+    useFrame: () => {},
     useThree: () => ({
         camera: {
             position: { set: vi.fn() },
@@ -16,7 +17,7 @@ const gridSpy = vi.fn(() => null)
 vi.mock('@react-three/drei', () => ({
     Grid: (props) => gridSpy(props),
     Html: ({ children }) => <div>{children}</div>,
-    OrbitControls: () => null,
+    OrbitControls: () => <div data-testid="mock-orbit" />,
     // A live texture must render directly (PlaneWithTexture's useTexture is
     // for loadable URLs only) — if geom.plane ever falls through to this path
     // for a live-texture value, the test should fail loudly, not silently
@@ -542,5 +543,55 @@ describe('the Geo', () => {
             onWorldDoubleClick={() => {}}
         />)
         expect(rootOnly.querySelectorAll('pointlight').length).toBe(0)
+    })
+})
+
+describe('the Camera', () => {
+    const camDoc = (nodes, workspaceState = {}) => ({ worldState: {}, workspaceState, entities: [], edges: [], nodes })
+    const markActive = (id) => ({ activeNodeIdByTypeScope: { 'world.camera::': id } })
+
+    // Activation is EXPLICIT-ONLY: the palette drops nodes at the click point,
+    // so a first-created fallback would cut the room to an accidental
+    // floor-level close-up the moment the card landed (seen 2026-08-20).
+    it('placing a camera never steals the view — orbit stays until ● marks it', () => {
+        const { container } = render(<RawViewport
+            document={camDoc([{ id: 'cam', typeId: 'world.camera', parentId: null, label: 'Camera', values: {} }])}
+            scopeId={null}
+            onWorldDoubleClick={() => {}}
+        />)
+        expect(container.querySelector('[data-testid="mock-orbit"]')).toBeTruthy()
+        // …and unmarked, it stands in the room as a housing marker.
+        expect(container.querySelectorAll('conegeometry').length).toBe(1)
+    })
+
+    it('the ● -marked camera owns the view: orbit unmounts and its body disappears', () => {
+        const { container } = render(<RawViewport
+            document={camDoc(
+                [{ id: 'cam', typeId: 'world.camera', parentId: null, label: 'Camera', values: {} }],
+                markActive('cam')
+            )}
+            scopeId={null}
+            onWorldDoubleClick={() => {}}
+        />)
+        expect(container.querySelector('[data-testid="mock-orbit"]')).toBeNull()
+        expect(container.querySelectorAll('conegeometry').length).toBe(0)
+    })
+
+    it("a camera marked in another scope is not this room's eye", () => {
+        // cam stands INSIDE the geo and is marked active for the geo's scope —
+        // at root, orbit keeps the view and the housing renders inside the geo.
+        const { container } = render(<RawViewport
+            document={camDoc(
+                [
+                    { id: 'geo', typeId: 'geom.geo', parentId: null, label: 'Geo', values: {} },
+                    { id: 'cam', typeId: 'world.camera', parentId: 'geo', label: 'Camera', values: {} }
+                ],
+                { activeNodeIdByTypeScope: { 'world.camera::geo': 'cam' } }
+            )}
+            scopeId={null}
+            onWorldDoubleClick={() => {}}
+        />)
+        expect(container.querySelector('[data-testid="mock-orbit"]')).toBeTruthy()
+        expect(container.querySelectorAll('conegeometry').length).toBe(1)
     })
 })

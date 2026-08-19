@@ -17,6 +17,10 @@ export function scopeHasRoomContent(nodes, scopeId) {
         if ((node.parentId || null) !== scope) return false
         if (getNodeType(node?.typeId)?.render !== 'spatial-3d') return false
         if (node.typeId === 'world.light' && !node.parentId) return false
+        // A Camera is the eye, not something to look at: the active one draws
+        // nothing at all, so a camera alone would summon an empty room — the
+        // exact posing this predicate exists to end.
+        if (node.typeId === 'world.camera') return false
         return true
     })
 }
