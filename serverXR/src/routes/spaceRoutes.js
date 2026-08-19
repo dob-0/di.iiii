@@ -7,6 +7,7 @@ const defaultGoogleDrive = require('../googleDrive')
 const { getOwnSandboxSpaceId, isGuestSubject } = require('../authAccess')
 const driveAccount = require('../googleDriveAccount')
 const commonsStore = require('../commonsStore')
+const logger = require('../logger')
 const { createKeyedLock } = require('../asyncLock')
 const { SENSITIVE_SPACE_PATCH_FIELDS } = require('../approvalGate')
 
@@ -65,7 +66,10 @@ function registerSpaceRoutes(router, {
   upsertSpaceMeta,
   upload,
   writeJson,
-  writeOpsHistory,
+  // writeOpsHistory is deliberately NOT injected here. It is delete-all-then-
+  // insert, and a route that reaches for it destroys a space's history (see
+  // replaceSceneAndBroadcast). Leaving it out means such a route fails loudly
+  // at the call site instead of quietly succeeding.
   onDeleteSpace = null,
   approvalGate = null
 }) {
@@ -493,11 +497,39 @@ function registerSpaceRoutes(router, {
       const scene = await readJson(scenePath, blankScene)
       const assetBaseUrl = `${req.baseUrl || ''}/api/spaces/${spaceId}/assets`
       const meta = await loadSpaceMeta(spaceId)
+      const sceneVersion = meta?.sceneVersion || 0
+
+      // ?verbatim=1 — what is actually STORED, for callers that intend to
+      // write it somewhere else.
+      //
+      // The normal response is a rendering, not the truth: hydrate rewrites
+      // every asset.url to THIS host, and the filter drops manifest entries
+      // whose file is missing here. Both are right for a viewer and wrong for
+      // a copy — PUT that response to another instance and you have deleted
+      // the entries this machine merely hadn't downloaded, and hardcoded this
+      // origin into someone else's scene. `missingAssetIds` reports what the
+      // filter WOULD have dropped, so a sync can refuse instead of guessing.
+      if (req.query?.verbatim === '1' || req.query?.verbatim === 'true') {
+        const filtered = await filterAvailableSceneAssets(spaceId, scene, sceneVersion)
+        const keptIds = new Set((filtered?.assets || []).map((asset) => asset?.id).filter(Boolean))
+        const missingAssetIds = (scene?.assets || [])
+          .map((asset) => asset?.id)
+          .filter((id) => id && !keptIds.has(id))
+        return res.json({
+          scene,
+          version: sceneVersion,
+          verbatim: true,
+          // Informational only — deliberately NOT written into the scene.
+          assetsBaseUrl: assetBaseUrl,
+          missingAssetIds
+        })
+      }
+
       const hydratedScene = hydrateSceneAssetManifest(scene, assetBaseUrl)
-      const filteredScene = await filterAvailableSceneAssets(spaceId, hydratedScene, meta?.sceneVersion || 0)
+      const filteredScene = await filterAvailableSceneAssets(spaceId, hydratedScene, sceneVersion)
       res.json({
         scene: filteredScene,
-        version: meta?.sceneVersion || 0
+        version: sceneVersion
       })
     } catch (error) {
       next(error)
@@ -610,14 +642,31 @@ function registerSpaceRoutes(router, {
   // and by snapshot restore, so connected clients pick either up live.
   // Serialized per space (same lock as POST /ops) so this can't interleave
   // its read-modify-write with a concurrent ops write and silently clobber it.
-  const replaceSceneAndBroadcast = async (spaceId, sceneData) => withSpaceOpsLock(spaceId, async () => {
+  //
+  // `expectedVersion` is optional and, when given, is the same optimistic
+  // concurrency check POST /ops has always had: the caller states the version
+  // it based this scene on, and a mismatch refuses rather than overwrites.
+  // Without it this is still last-write-wins, which is why a `di` install
+  // turns config.sceneReplace.requirePrecondition on (see PUT /scene).
+  const replaceSceneAndBroadcast = async (spaceId, sceneData, { expectedVersion = null } = {}) => withSpaceOpsLock(spaceId, async () => {
     await ensureSpaceWritable(spaceId)
+    const meta = await loadSpaceMeta(spaceId)
+    const currentVersion = meta?.sceneVersion || 0
+
+    if (expectedVersion !== null && expectedVersion !== currentVersion) {
+      // Same shape as POST /ops's 409 on purpose: useLiveSync and
+      // useServerPublishing already know how to apply pendingOps or reload,
+      // so a conditional replace costs no new client code.
+      const history = await readOpsHistory(spaceId)
+      const pendingOps = history.filter(entry => (entry.version || 0) > expectedVersion)
+      return { conflict: true, latestVersion: currentVersion, pendingOps }
+    }
+
     const { spaceDir, scenePath, assetsDir } = getSpacePaths(spaceId)
     await fsp.mkdir(spaceDir, { recursive: true })
     await fsp.mkdir(assetsDir, { recursive: true })
+    const previousScene = await readJson(scenePath, blankScene)
     await writeJson(scenePath, sceneData)
-    const meta = await loadSpaceMeta(spaceId)
-    const currentVersion = meta?.sceneVersion || 0
     const nextVersion = currentVersion + 1
     const resetOp = {
       opId: crypto.randomUUID?.() || `op-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
@@ -627,13 +676,28 @@ function registerSpaceRoutes(router, {
       version: nextVersion,
       timestamp: Date.now()
     }
-    await writeOpsHistory(spaceId, [resetOp])
+    // APPEND, never write-over. This used to call writeOpsHistory, which is
+    // delete-all-then-insert, so one full-scene replace threw away every op
+    // the space had — and `POST /api/sync/spaces/:id/pull` does exactly that
+    // on the artist's own machine. The history is what a catching-up client
+    // replays and what gc-space-blobs.mjs reads to decide a blob is still
+    // referenced, so wiping it strands both. applySceneOps already treats a
+    // replaceScene op mid-log as a full reset, so replay from any earlier
+    // version still converges on the same scene.
+    await appendOpsHistory(spaceId, [resetOp], maxOpHistory, maxOpAgeMs)
     await upsertSpaceMeta(spaceId, { touch: true, sceneVersion: nextVersion })
     broadcastLiveEvent(spaceId, 'scene-op', {
       version: nextVersion,
       ops: [resetOp]
     })
-    return { newVersion: nextVersion }
+    return {
+      newVersion: nextVersion,
+      previousVersion: currentVersion,
+      // So a caller can SEE that it just replaced 40 objects with 3, rather
+      // than finding out from a person looking at an empty space.
+      objectsBefore: Array.isArray(previousScene?.objects) ? previousScene.objects.length : 0,
+      objectsAfter: Array.isArray(sceneData?.objects) ? sceneData.objects.length : 0
+    }
   })
 
   // ── space settings ───────────────────────────────────────────────────────
@@ -700,6 +764,26 @@ function registerSpaceRoutes(router, {
     }
   })
 
+  // The precondition a caller may state before replacing a whole scene:
+  // `If-Match: "12"` or `?baseVersion=12`. Absent is allowed (see below);
+  // PRESENT-BUT-UNPARSEABLE IS NOT. A malformed precondition that quietly
+  // degrades to "no precondition" is the same silent-fallback class this repo
+  // keeps paying for — the caller asked to be protected and would be told it
+  // succeeded.
+  const readScenePrecondition = (req) => {
+    const raw = req.get?.('If-Match') ?? req.headers?.['if-match']
+    const source = raw !== undefined && raw !== null && String(raw).trim() !== ''
+      ? String(raw).trim().replace(/^W\//, '').replace(/^"|"$/g, '')
+      : (req.query?.baseVersion !== undefined ? String(req.query.baseVersion).trim() : null)
+    if (source === null) return { expectedVersion: null }
+    if (source === '*') return { expectedVersion: null } // If-Match: * — "any version", i.e. unconditional
+    const parsed = Number(source)
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      return { error: 'If-Match/baseVersion must be a non-negative integer scene version.' }
+    }
+    return { expectedVersion: parsed }
+  }
+
   router.put('/api/spaces/:spaceId/scene', async (req, res, next) => {
     try {
       const spaceId = normalizeSpaceId(req.params.spaceId)
@@ -708,8 +792,36 @@ function registerSpaceRoutes(router, {
       if (!sceneData || typeof sceneData !== 'object') {
         return res.status(400).json({ error: 'Scene payload required.' })
       }
-      await replaceSceneAndBroadcast(spaceId, sceneData)
-      res.json({ ok: true })
+
+      const { expectedVersion, error: preconditionError } = readScenePrecondition(req)
+      if (preconditionError) return res.status(400).json({ error: preconditionError })
+
+      // Unconditional replaces stay legal by default: this route has many
+      // callers we cannot enumerate (scripts, vendored sync engines, whatever
+      // is running online). A `di` install sets the flag, because a fresh
+      // local install has no legacy callers by construction.
+      if (expectedVersion === null && config.sceneReplace?.requirePrecondition) {
+        return res.status(428).json({
+          error: 'This server requires a scene precondition. Send If-Match: "<version>" (or ?baseVersion=<version>) with the version you based this scene on.'
+        })
+      }
+
+      const result = await replaceSceneAndBroadcast(spaceId, sceneData, { expectedVersion })
+      if (result.conflict) {
+        return res.status(409).json({ latestVersion: result.latestVersion, pendingOps: result.pendingOps })
+      }
+
+      if (expectedVersion === null && result.objectsBefore > result.objectsAfter) {
+        // Not an error — but an unconditional replace that shrank the scene is
+        // the exact shape of a lost update, and when these lines stop appearing
+        // in the online logs the flag above can be turned on there too.
+        logger.warn(
+          `[scene] unconditional replace on "${spaceId}" v${result.previousVersion}→v${result.newVersion} ` +
+          `went from ${result.objectsBefore} to ${result.objectsAfter} objects`
+        )
+      }
+
+      res.json({ ok: true, ...result })
     } catch (error) {
       next(error)
     }
@@ -729,8 +841,11 @@ function registerSpaceRoutes(router, {
       if (!snapshot) {
         return res.status(404).json({ error: 'No snapshot available for this space.' })
       }
-      const { newVersion } = await replaceSceneAndBroadcast(spaceId, snapshot.scene)
-      res.json({ ok: true, restoredFrom: snapshot.takenAt, newVersion })
+      // Deliberately unconditional: restoring a snapshot IS the act of
+      // discarding what is there now. It reports the deltas so an accidental
+      // restore is visible rather than silent.
+      const result = await replaceSceneAndBroadcast(spaceId, snapshot.scene)
+      res.json({ ok: true, restoredFrom: snapshot.takenAt, ...result })
     } catch (error) {
       next(error)
     }

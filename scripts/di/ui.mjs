@@ -124,6 +124,69 @@ export const ui = {
         style.dim(`your work is still at ${dataDir} — delete it yourself, or run: ${CMD} uninstall --with-data`)
     ].join('\n'),
 
+    askForKey: () => 'paste the sync key for this space (minted in its settings online): ',
+    checkingKey: () => style.dim('checking the key against the remote…'),
+
+    linkRefused: (reason, spaceId) => ({
+        unreachable: 'that address is not answering — check the url, and that you are online.',
+        denied: 'the remote refused this key — mint a fresh one in the space settings online.',
+        missing: `the remote answers, but has no space called ${spaceId}.`,
+        'no-verbatim': 'that server is too old to read from safely — update it first.'
+    })[reason] || `could not link: ${reason}`,
+
+    linked: (spaceId, base) => [
+        `${spaceId} is linked to ${style.cyan(base)}`,
+        style.dim(`see where they stand with:  ${CMD} sync ${spaceId}`)
+    ].join('\n'),
+
+    notLinked: (spaceId) => [
+        `${spaceId} is not linked to anything.`,
+        style.dim(`link it with:  ${CMD} link ${spaceId} --remote <url>`)
+    ].join('\n'),
+
+    // The whole point of this report is what it refuses to claim: version
+    // numbers are per-install counters and cannot be compared across sides,
+    // so "in sync" is only ever said relative to a recorded baseline.
+    syncReport: ({ spaceId, remote, local, remote_: online, audit }) => {
+        const sideLine = (side) => !side?.reachable ? style.red('not answering')
+            : !side.exists ? style.dim('no such space')
+            : side.denied ? style.red('access refused')
+            : [
+                `v${side.version}`,
+                `${side.objectCount} object${side.objectCount === 1 ? '' : 's'}`,
+                `${side.assetIds.length} asset${side.assetIds.length === 1 ? '' : 's'}${side.missingAssetIds.length ? style.yellow(` (${side.missingAssetIds.length} missing here)`) : ''}`
+            ].join(style.dim(' · '))
+        const relationLine = {
+            'unknown': 'unknown — nothing proves these two share history yet',
+            'in-sync-as-of-last-sync': 'neither side has changed since the last sync',
+            'local-ahead': 'this machine has changes the remote has not seen',
+            'remote-ahead': 'the remote has changes this machine has not seen',
+            'diverged': style.yellow('both sides changed since the last sync — they have diverged')
+        }[audit.relation]
+        const counts = (only, label) => only.length ? `${only.length} only ${label}` : null
+        const direction = (name, d) => d.allowed
+            ? `${name} — possible`
+            : `${name} — refused: ${d.reasons[0] || 'unknown'}`
+        return [
+            `${style.bold(spaceId)}  ${style.dim(remote)}`,
+            `  here    ${sideLine(local)}`,
+            `  online  ${sideLine(online)}`,
+            '',
+            `  ${relationLine}`,
+            [counts(audit.assets.onlyLocal, 'here'), counts(audit.assets.onlyRemote, 'online')].filter(Boolean).length
+                ? `  assets: ${[counts(audit.assets.onlyLocal, 'here'), counts(audit.assets.onlyRemote, 'online')].filter(Boolean).join(style.dim(' · '))}`
+                : null,
+            [counts(audit.projects.onlyLocal, 'here'), counts(audit.projects.onlyRemote, 'online')].filter(Boolean).length
+                ? `  projects: ${[`${audit.projects.common.length} shared`, counts(audit.projects.onlyLocal, 'here'), counts(audit.projects.onlyRemote, 'online')].filter(Boolean).join(style.dim(' · '))}`
+                : null,
+            '',
+            `  ${style.dim(direction('push', audit.push))}`,
+            `  ${style.dim(direction('pull', audit.pull))}`,
+            '',
+            style.dim('  nothing was written — this command only looks.')
+        ].filter((line) => line !== null).join('\n')
+    },
+
     help: () => [
         style.bold(CMD) + style.dim(' — di.iiii on your own machine'),
         '',
@@ -134,6 +197,9 @@ export const ui = {
         '',
         `  ${CMD} backup        write your whole di.iiii to one file`,
         `  ${CMD} restore FILE  read one back in`,
+        '',
+        `  ${CMD} link SPACE --remote URL   connect one space to an online di.iiii`,
+        `  ${CMD} sync SPACE    compare it with its online copy — writes nothing`,
         '',
         `  ${CMD} update        get the newest version — never touches your work`,
         `  ${CMD} logs [-f]     what the server is saying`,

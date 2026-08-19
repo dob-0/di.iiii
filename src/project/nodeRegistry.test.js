@@ -5,11 +5,14 @@ import { describe, expect, it } from 'vitest'
 import {
     NODE_TYPES,
     PORT_TYPES,
+    NODE_FAMILIES,
+    FAMILY_BY_TYPE,
     createNode,
     createEdge,
     listNodeTypes,
     UNIMPLEMENTED_NODE_TYPES,
     arePortsCompatible,
+    getNodeFamily,
     getNodeType,
     getNodeInputs,
     getNodeOutputs,
@@ -328,6 +331,53 @@ describe('unimplemented node types', () => {
     it('names only types that really exist — a typo here would silently hide nothing', () => {
         for (const id of UNIMPLEMENTED_NODE_TYPES) {
             expect(getNodeType(id), `${id} is listed as unimplemented but is not a real type`).toBeTruthy()
+        }
+    })
+})
+
+// The palette groups by family; a type missing from the map would silently
+// fall out of browse mode while staying searchable — invisible until someone
+// notices a node "disappeared". Both directions are enforced here.
+describe('node families', () => {
+    it('every node type belongs to exactly one declared family', () => {
+        const familyIds = new Set(NODE_FAMILIES.map((family) => family.id))
+        for (const typeId of Object.keys(NODE_TYPES)) {
+            const familyId = FAMILY_BY_TYPE[typeId]
+            expect(familyId, `${typeId} has no family`).toBeTruthy()
+            expect(familyIds.has(familyId), `${typeId} points at unknown family ${familyId}`).toBe(true)
+        }
+    })
+
+    it('the family map names only types that really exist', () => {
+        for (const typeId of Object.keys(FAMILY_BY_TYPE)) {
+            expect(getNodeType(typeId), `${typeId} is mapped to a family but is not a real type`).toBeTruthy()
+        }
+    })
+
+    // A real palette test on staging searched these nine words and every one
+    // returned "no match" — the node did not exist. Now it does, and the
+    // words a person actually types have to reach it.
+    it.each([
+        ['model', 'geom.model'], ['glb', 'geom.model'], ['gltf', 'geom.model'],
+        ['mesh', 'geom.model'], ['fbx', 'geom.model'], ['scan', 'geom.model'],
+        ['video', 'media.video'], ['mp4', 'media.video'], ['footage', 'media.video'],
+        ['sound', 'media.audio'], ['audio', 'media.audio'], ['music', 'media.audio']
+    ])('searching the palette for "%s" finds %s', (query, typeId) => {
+        expect(listNodeTypes({ query }).map((type) => type.id)).toContain(typeId)
+    })
+
+    it('"import" and "file" reach all three ways of bringing something in', () => {
+        for (const query of ['import', 'file']) {
+            const found = listNodeTypes({ query }).map((type) => type.id)
+            expect(found, query).toEqual(expect.arrayContaining(['geom.model', 'media.video', 'media.audio']))
+        }
+    })
+
+    it('resolves a family with label and color for any placeable type', () => {
+        for (const type of listNodeTypes()) {
+            const family = getNodeFamily(type.id)
+            expect(family?.label, `${type.id} resolves no family`).toBeTruthy()
+            expect(family?.color).toMatch(/^#[0-9a-f]{6}$/i)
         }
     })
 })

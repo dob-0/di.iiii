@@ -111,7 +111,41 @@ describe('deriveNodeInspectorSections', () => {
         }
     })
 
-    it('keeps the Code section\'s values.__code distinct from node.null\'s own values.body', () => {
+    // Without this the `src` port falls through to a plain text field and the
+    // only way to fill it is to type a sha256 by hand.
+    it.each([
+        ['geom.model', 'model'],
+        ['media.video', 'video'],
+        ['media.audio', 'audio']
+    ])('gives %s an asset picker filtered to %s files', (typeId, assetKind) => {
+        const sections = deriveNodeInspectorSections(createNode(typeId))
+        const src = sections.find((section) => section.id === 'values')
+            ?.fields.find((field) => field.path[0] === 'src')
+        expect(src).toBeDefined()
+        expect(src.type).toBe('asset')
+        expect(src.assetKind).toBe(assetKind)
+    })
+
+        // A doorway's port type decides what its socket on the container carries.
+    // Typed by hand, a typo produces a type nothing is compatible with and the
+    // only symptom is a wire that silently refuses to connect.
+    it.each(['port.in', 'port.out'])('%s picks its carried type from a list, not a text box', (typeId) => {
+        const fields = deriveNodeInspectorSections(createNode(typeId))
+            .find((section) => section.id === 'values')?.fields || []
+        const portType = fields.find((field) => field.path[0] === 'portType')
+        expect(portType).toBeDefined()
+        expect(portType.type).toBe('select')
+        expect(portType.options.map((option) => option.value)).toContain('color')
+        expect(portType.options.map((option) => option.value)).toContain('vec3')
+    })
+
+    it.each(['port.in', 'port.out'])('%s can be renamed without a wire noticing', (typeId) => {
+        const fields = deriveNodeInspectorSections(createNode(typeId))
+            .find((section) => section.id === 'values')?.fields || []
+        expect(fields.find((field) => field.path[0] === 'label')).toBeDefined()
+    })
+
+it('keeps the Code section\'s values.__code distinct from node.null\'s own values.body', () => {
         const node = createNode('node.null', { values: { body: 'the null node body', portDefs: [] } })
         const sections = deriveNodeInspectorSections(node)
         const bodySection = sections.find((section) => section.id === 'values')

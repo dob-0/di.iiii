@@ -3,11 +3,13 @@
  * `di` — di.iiii on your own machine.
  *
  * Offline is the default state, not a degraded one. Nothing here reaches the
- * network except `di update` and the one-time install; a laptop at a venue with
- * no wifi runs exactly the same as one at a desk.
+ * network except `di update`, the one-time install, and the explicitly online
+ * pair `di link`/`di sync`; a laptop at a venue with no wifi runs exactly the
+ * same as one at a desk.
  *
  *   di up · down · status · open · logs · doctor · where
  *   di backup · restore · update · uninstall
+ *   di link · sync
  *
  * Design rule: this file only routes. What to run is decided in detect.mjs
  * (pure), how to ask the machine in probe.mjs, how to run it in runner-*.mjs,
@@ -29,7 +31,11 @@ import {
     currentVersionDir, dirSize, humanSize, installedVersion, isInstalled,
     localUrl, readState, resolvePort, writeEnv, writeState
 } from './state.mjs'
-import { fail, say, style, ui } from './ui.mjs'
+import { readLink, writeLink } from './credentialsStore.mjs'
+import { createLedger, ensureInstallId, readLedger, writeLedger } from './ledger.mjs'
+import { buildSyncAudit } from './sync-plan.mjs'
+import { gatherLocalSide, gatherSide, verifyLink } from './sync.mjs'
+import { CMD, fail, say, style, ui } from './ui.mjs'
 
 const parseArgs = (argv) => {
     const args = { _: [], flags: {} }
@@ -39,6 +45,8 @@ const parseArgs = (argv) => {
         const name = token.slice(2)
         if (name === 'port') { args.flags.port = argv[++i]; continue }
         if (name === 'out') { args.flags.out = argv[++i]; continue }
+        if (name === 'remote') { args.flags.remote = argv[++i]; continue }
+        if (name === 'key') { args.flags.key = argv[++i]; continue }
         args.flags[name] = true
     }
     return args
@@ -277,7 +285,9 @@ const cmdUninstall = async (args) => {
     const p = paths(home)
     if (isInstalled(home)) { try { await runnerFor(home).stop({ home }) } catch { /* already down */ } }
 
-    for (const target of [p.versions, p.current, p.previous, p.bin, p.runtime, p.run, p.state, p.env]) {
+    // credentials.json holds live editor keys — secrets are not "your work"
+    // and must not outlive the install that minted their links
+    for (const target of [p.versions, p.current, p.previous, p.bin, p.runtime, p.run, p.state, p.env, p.credentials]) {
         await fsp.rm(target, { recursive: true, force: true })
     }
     if (args.flags['with-data']) {
@@ -339,6 +349,80 @@ const cmdUpdate = async (args) => {
     if (wasRunning) await cmdUp({ _: [], flags: { 'no-open': true } })
 }
 
+/**
+ * Connect one local space to the same space on an online di.iiii.
+ *
+ * Writes two local files and nothing else: the key into credentials.json
+ * (0600), and an empty ledger whose null cursors make every later audit
+ * answer "unknown" until a real sync establishes a baseline. The key is
+ * verified against the remote before either write — including that the remote
+ * can serve a verbatim scene, because a peer that cannot is one no future
+ * sync may safely copy from.
+ */
+const cmdLink = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const spaceId = args._[1]
+    if (!spaceId) { fail(`which space? — ${CMD} link my-space --remote https://staging.di-studio.xyz`); process.exitCode = 1; return }
+    const remote = args.flags.remote
+    if (!remote) { fail(`where is it online? — add --remote <url>`); process.exitCode = 1; return }
+    const key = args.flags.key || await promptSecret(ui.askForKey())
+    if (!key) { fail('a sync key is required — mint one in the space settings online'); process.exitCode = 1; return }
+
+    say(ui.checkingKey())
+    const verified = await verifyLink({ remote, spaceId, key })
+    if (!verified.ok) {
+        fail(ui.linkRefused(verified.reason, spaceId))
+        process.exitCode = 1
+        return
+    }
+
+    writeLink(home, spaceId, { remote: verified.base, key })
+    const installId = await ensureInstallId(home)
+    if (!readLedger(home, verified.base, spaceId)) {
+        writeLedger(home, verified.base, spaceId, createLedger({ installId, remote: verified.base, spaceId }))
+    }
+    say(ui.linked(spaceId, verified.base))
+}
+
+/**
+ * The audit `di sync <space>` — reads both sides, prints what it can prove,
+ * and writes NOTHING. There is no default direction because there is no
+ * correct one; --push/--pull are later PRs and each will refuse every case
+ * this report marks unprovable.
+ */
+const cmdSync = async (args) => {
+    const home = HOME()
+    if (!requireInstalled(home)) return
+    const spaceId = args._[1]
+    if (!spaceId) { fail(`which space? — ${CMD} sync my-space`); process.exitCode = 1; return }
+
+    const link = readLink(home, spaceId)
+    if (!link) { say(ui.notLinked(spaceId)); process.exitCode = 1; return }
+
+    const port = resolvePort(home, args.flags.port)
+    const local = (await probeHealth(port))
+        ? await gatherLocalSide({ port, spaceId, token: link.key })
+        : { reachable: false }
+    const remote = await gatherSide({ base: link.remote, spaceId, token: link.key })
+    const ledger = readLedger(home, link.remote, spaceId)
+
+    const audit = buildSyncAudit({ local, remote, ledger })
+    say(ui.syncReport({ spaceId, remote: link.remote, local, remote_: remote, audit }))
+    if (audit.refusals.length) process.exitCode = 1
+}
+
+const promptSecret = (question) => new Promise((resolve) => {
+    process.stdout.write(question)
+    const chunks = []
+    process.stdin.resume()
+    process.stdin.once('data', (data) => {
+        chunks.push(data)
+        process.stdin.pause()
+        resolve(String(Buffer.concat(chunks)).trim())
+    })
+})
+
 const cmdVersion = () => { say(installedVersion(HOME()) || 'not installed') }
 
 // ── routing ───────────────────────────────────────────────────────────────
@@ -354,6 +438,8 @@ const COMMANDS = {
     where: cmdWhere,
     backup: cmdBackup,
     restore: cmdRestore,
+    link: cmdLink,
+    sync: cmdSync,
     update: cmdUpdate,
     uninstall: cmdUninstall,
     version: cmdVersion,

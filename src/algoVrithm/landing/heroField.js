@@ -132,8 +132,10 @@ export const HOLD_FRAME_SEC = 3.2
 // in a headset. On a monitor in a lit room it is a blowout, and the palette's
 // own rule 4 says to brighten within the hue rather than reach for white.
 //
-// The reel globe's world is '#04050A', which also FAILS — hue 230, in the purple
-// gap. The door uses true black. Worth raising against the piece itself.
+// The reel globe's world was '#04050A' — hue 230, in the purple gap — until it
+// was raised against the piece itself and the artist recolored it to '#04080A'
+// (hue 200, cool band) on 2026-08-13. The door keeps its true black regardless:
+// that choice was about the door, not about dodging the failed hex.
 const HEX = {
     white: '#E9F1F5',
     calm: '#F2EFEA',

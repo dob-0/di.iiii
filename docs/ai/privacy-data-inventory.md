@@ -62,6 +62,16 @@ Exceptions live on the **WCC surface only**: Google Fonts CSS
 (`public/wcc/artist-works-land/support.js:988,1423,1425`). Google APIs JS loads only
 when a user opens Drive import (`src/hooks/useDriveImport.js:16`).
 
+**First-party traffic counter** (added 2026-08-18): `page_events` table
+(`serverXR/src/db.js`) fed by `POST /serverXR/api/track`
+(`serverXR/src/routes/trackRoutes.js`), one event per page load from
+`src/index.jsx` via `src/utils/track.js`. Stores event type, pathname (query
+stripped server-side), referrer hostname only (null on same-origin), and a
+server timestamp. **No cookie, no IP, no user agent, no user/session id** — the
+rate limiter's per-IP key is in-memory only. `signup` events fire on every OAuth
+return, so they overcount returning logins (known limitation). Aggregates:
+admin-only `GET /serverXR/api/stats`. Disclosed on `/privacy`.
+
 **Local storage.** ~15 first-party keys set without consent, incl.
 `dii.project.userId` (persistent pseudonymous id), display names, and full
 workspace documents. Enumerated in the audit; surfaced to users at

@@ -136,6 +136,10 @@ const requireAuth = parseBool(process.env.REQUIRE_AUTH, isProduction)
 const corsOrigins = expandLoopbackOrigins(parseList(process.env.CORS_ORIGINS))
 const maxUploadMb = parseNumber(process.env.MAX_UPLOAD_MB, 100)
 const maxUploadBytes = Math.max(1, maxUploadMb) * 1024 * 1024
+// Floor of free disk below which state-changing requests get a 507 instead of
+// running the volume to ENOSPC mid-write (see diskGuard.js). 0 disables.
+const minFreeDiskMb = parseNumber(process.env.MIN_FREE_DISK_MB, 512)
+const minFreeDiskBytes = Math.max(0, minFreeDiskMb) * 1024 * 1024
 const dataDir = resolveDir(process.env.DATA_ROOT, DEFAULT_DATA_DIR)
 const clientDir = process.env.CLIENT_DIR ? resolveDir(process.env.CLIENT_DIR, null) : null
 const spacesDir = resolveDir(process.env.SPACES_DIR, path.join(dataDir, 'spaces'))
@@ -264,6 +268,7 @@ const config = {
   requireAuth,
   corsOrigins,
   maxUploadBytes,
+  minFreeDiskBytes,
   authSession: {
     cookieName: authSessionCookieName || 'dii_serverxr_session',
     cookiePath: basePath || '/',
@@ -306,6 +311,20 @@ const config = {
     // a dev/staging server with the old prod fallback would push there.
     url: (process.env.LIVE_API_URL || '').replace(/\/+$/, ''),
     token: (process.env.LIVE_API_TOKEN || '').trim()
+  },
+  sceneReplace: {
+    // Whether PUT /scene must carry an If-Match/baseVersion precondition.
+    //
+    // OFF by default, because this route has callers we cannot enumerate --
+    // scripts in this repo, the vendored space-sync engines in three other
+    // repos, and whatever is running against production. Turning it on there
+    // would break them at once.
+    //
+    // A `di` install turns it ON (scripts/di/install.mjs writes it into
+    // ~/.di/di.env): a fresh local install has no legacy callers, so the safe
+    // mode is free. When the unconditional-replace warnings stop appearing in
+    // the online logs, the default here can flip.
+    requirePrecondition: String(process.env.SCENE_REPLACE_REQUIRE_PRECONDITION || '').trim() === 'true'
   },
   googleDrive: {
     // Optional. Unlocks folder import + real metadata; keyless single-file import

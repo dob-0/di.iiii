@@ -190,6 +190,24 @@ export default function TimelinePanelWindow({ node, values = null, onChange = nu
                 <button
                     type="button"
                     className="raw-timeline-tool"
+                    disabled={!editable}
+                    onClick={() => {
+                        // The whole editor — drag, trim, razor, ripple, retime —
+                        // was unreachable: nothing anywhere could CREATE a clip
+                        // (no port, no inspector field). One button makes the
+                        // built thing real. Ids follow timelineCore's
+                        // collision-avoiding pattern, not a timestamp.
+                        const used = new Set(clips.map((clip) => clip.id))
+                        let n = clips.length + 1
+                        while (used.has(`clip-${n}`)) n += 1
+                        const id = `clip-${n}`
+                        apply(sortByStart([...clips, { id, at: playhead, dur: fps }]))
+                        setSelectedId(id)
+                    }}
+                >add clip</button>
+                <button
+                    type="button"
+                    className="raw-timeline-tool"
                     disabled={!editable || !selected || !canSplitClip(clips, selectedId, playhead)}
                     onClick={() => apply(splitClip(clips, selectedId, playhead))}
                 >razor</button>

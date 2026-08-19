@@ -1,0 +1,154 @@
+/* Shared shell for /privacy and /terms — plain readable text on the standard
+   dark background. Deliberately no 3D background (the wiki audit flagged that
+   weight) and no search: these pages are short enough to just read. */
+
+.legal-root {
+    position: relative;
+    height: 100%;
+    padding: 0 24px 64px;
+    background: var(--di-black);
+    color: var(--di-text);
+    font-family: 'Inter', 'SF Pro Text', -apple-system, BlinkMacSystemFont, sans-serif;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+}
+
+.legal-dot { color: var(--di-cyan); }
+
+.legal-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 20px 0;
+}
+
+.legal-nav-logo {
+    font-size: 1.1rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--di-text);
+    text-decoration: none;
+}
+
+.legal-nav-links { display: flex; gap: 18px; flex-wrap: wrap; }
+
+.legal-nav-link {
+    color: var(--di-text-muted);
+    font-size: 0.86rem;
+    text-decoration: none;
+    transition: color 0.12s;
+}
+
+.legal-nav-link:hover { color: var(--di-cyan); }
+
+.legal-header {
+    max-width: 720px;
+    margin: 24px auto 0;
+}
+
+.legal-eyebrow {
+    margin: 0 0 8px;
+    color: var(--di-cyan);
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.legal-title {
+    margin: 0;
+    font-size: clamp(1.7rem, 4vw, 2.4rem);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+}
+
+.legal-lede {
+    max-width: 56ch;
+    margin: 12px 0 0;
+    color: var(--di-text-muted);
+    line-height: 1.55;
+}
+
+.legal-content {
+    max-width: 720px;
+    margin: 40px auto 0;
+    /* base.css disables selection globally; a disclosure page you cannot
+       copy an email address out of defeats its own purpose. */
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+.legal-section { margin: 0 0 40px; }
+
+.legal-section h2 {
+    margin: 0 0 14px;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--di-cyan);
+    text-transform: lowercase;
+}
+
+.legal-section p {
+    margin: 0 0 12px;
+    max-width: 68ch;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.94rem;
+}
+
+.legal-section ul {
+    margin: 0 0 12px;
+    padding-left: 20px;
+}
+
+.legal-section li {
+    margin: 0 0 8px;
+    max-width: 66ch;
+    line-height: 1.55;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 0.94rem;
+}
+
+.legal-section strong { color: var(--di-text); font-weight: 600; }
+
+.legal-section code {
+    font-family: var(--di-mono);
+    font-size: 0.85em;
+    color: var(--di-text);
+    background: rgba(77, 249, 255, 0.08);
+    padding: 1px 5px;
+}
+
+.legal-section a { color: var(--di-cyan); text-decoration: none; }
+.legal-section a:hover { text-decoration: underline; }
+
+.legal-updated {
+    margin: 0 0 32px;
+    color: var(--di-text-muted);
+    font-size: 0.8rem;
+    font-family: var(--di-mono);
+}
+
+.legal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    max-width: 720px;
+    margin: 24px auto 0;
+    padding-top: 20px;
+    border-top: 1px solid rgba(77, 249, 255, 0.15);
+}
+
+.legal-footer-brand { font-weight: 700; letter-spacing: -0.03em; }
+
+.legal-footer-note { color: var(--di-text-muted); font-size: 0.8rem; }
+
+@media (max-width: 520px) {
+    .legal-root { padding: 0 16px 48px; }
+}

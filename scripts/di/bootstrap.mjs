@@ -23,7 +23,7 @@ import { decideCommandName, decideMode } from './detect.mjs'
 import { unlinkLink } from './install.mjs'
 import { isWindows, paths, versionLayout } from './paths.mjs'
 import { probeAll, probeForeignDi } from './probe.mjs'
-import { writeState } from './state.mjs'
+import { writeEnv, writeState } from './state.mjs'
 import { fail, say, style, ui, warn } from './ui.mjs'
 
 const arg = (name, fallback = null) => {
@@ -190,6 +190,14 @@ const main = async () => {
         nodeOrigin: probes.vendoredNode ? 'di' : 'system',
         installedAt: new Date().toISOString()
     })
+
+    // A whole-scene write here must state the version it replaces, or be
+    // refused. Online this is off, because that route has callers nobody can
+    // enumerate — scripts in the repo, sync engines vendored into other repos,
+    // whatever else is pointed at it. A fresh local install has none of them,
+    // so the safe mode costs nothing and the artist's history cannot be thrown
+    // away by a stale write.
+    await writeEnv(home, { SCENE_REPLACE_REQUIRE_PRECONDITION: 'true' })
 
     const foreign = probeForeignDi(home)
     const naming = decideCommandName({ foreignDiOnPath: foreign.found && foreign.foreign })

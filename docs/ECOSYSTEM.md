@@ -72,6 +72,7 @@ _ii communicates with its own Debian machine via SSH (`scripts/sync.sh`). No con
 | Op-log | append-only in SQLite | Client rewrites, server mutations |
 | AI routing docs | `AGENTS.md` (root + per-scope) | `CLAUDE.md`, `GEMINI.md`, Cursor rules (generated) |
 | br_id_ge project docs | `br_id_ge/docs/PROJECT.md` | Synced from di.iiii, do not edit in br_id_ge directly |
+| Machines / infrastructure | private `dob-0/di-atlas` (`machines/`, incl. the `asuz` Debian box added 2026-08-13) | This file, memory |
 
 ## Key invariants
 

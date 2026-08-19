@@ -9,9 +9,13 @@ export const APP_PAGE_PREFERENCES_ALIASES = [
     'preferances'
 ]
 export const APP_PAGE_WIKI = 'wiki'
+export const APP_PAGE_PRIVACY = 'privacy'
+export const APP_PAGE_TERMS = 'terms'
 export const RESERVED_APP_SEGMENTS = [
     ...APP_PAGE_PREFERENCES_ALIASES,
     APP_PAGE_WIKI,
+    APP_PAGE_PRIVACY,
+    APP_PAGE_TERMS,
     'beta',
     'raw',
     'seed',
@@ -63,6 +67,8 @@ export const buildPreferencesPath = (spaceId) => {
 export const isReservedAppSegment = (value = '') => RESERVED_APP_SEGMENTS.includes((value || '').trim().toLowerCase())
 export const isPreferencesPageSegment = (value = '') => APP_PAGE_PREFERENCES_ALIASES.includes((value || '').trim().toLowerCase())
 export const isWikiPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_WIKI
+export const isPrivacyPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_PRIVACY
+export const isTermsPageSegment = (value = '') => (value || '').trim().toLowerCase() === APP_PAGE_TERMS
 
 export const buildWikiPath = () => {
     const prefix = getAppBasePrefix()
@@ -90,6 +96,21 @@ export const getAppLocationState = (locationLike = null) => {
         if (isWikiPageSegment(segment)) {
             return {
                 page: APP_PAGE_WIKI,
+                spaceId: null
+            }
+        }
+        // /privacy and /terms are plain top-level routes for now; the URL
+        // namespace spec (docs/architecture/SPEC_url_architecture_and_tree_addressing.md)
+        // parks them at /-/privacy — migrate these when that spec is signed off.
+        if (isPrivacyPageSegment(segment)) {
+            return {
+                page: APP_PAGE_PRIVACY,
+                spaceId: null
+            }
+        }
+        if (isTermsPageSegment(segment)) {
+            return {
+                page: APP_PAGE_TERMS,
                 spaceId: null
             }
         }

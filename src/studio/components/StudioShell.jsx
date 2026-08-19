@@ -14,7 +14,7 @@ import '../styles/studio-mobile.css'
 import { canPlaceInScene } from '../utils/assetFormats.js'
 import { useViewportLayout } from '../hooks/useViewportLayout.js'
 import { isJamProject, loadJamAllTools, saveJamAllTools } from '../utils/jamMode.js'
-import { JAM_PRIMITIVES } from '../utils/entityPalette.js'
+import { JAM_PRIMITIVES } from '../../project/entityPalette.js'
 import {
     AssetsPanel,
     FilesPanel,

@@ -8,10 +8,13 @@ import TextPanelWindow from './TextPanelWindow.jsx'
 import ImagePanelWindow from './ImagePanelWindow.jsx'
 import WorldPanelWindow from './WorldPanelWindow.jsx'
 import OutlinerPanelWindow from './OutlinerPanelWindow.jsx'
+import CreatePanelWindow from './CreatePanelWindow.jsx'
 import ChatPanelWindow from './ChatPanelWindow.jsx'
 import AgentChatPanelWindow from './AgentChatPanelWindow.jsx'
 import WebcamSourcePanel from './WebcamSourcePanel.jsx'
 import MicSourcePanel from './MicSourcePanel.jsx'
+import WorkStatusPanel from './WorkStatusPanel.jsx'
+import AgentRunPanel from './AgentRunPanel.jsx'
 import TimelinePanelWindow from './TimelinePanelWindow.jsx'
 import KeeperPanelWindow from './KeeperPanelWindow.jsx'
 import DijetDrivePanel from './DijetDrivePanel.jsx'
@@ -25,8 +28,8 @@ import { useProjectStore } from '../../project/state/projectStore.js'
 import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSync.js'
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
-import { getInspectorSections } from '../../project/entityRegistry.js'
-import { createEdge, createNode, getNodeType } from '../../project/nodeRegistry.js'
+import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
+import { createEdge, createNode, getNodeFamily, getNodeType } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
@@ -34,6 +37,8 @@ import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.j
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
+import { buildSceneExample } from '../../project/graph/examples/sceneExample.js'
+import { buildStarterWorkspaceDocument } from '../../project/graph/examples/starterWorkspace.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
 import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
@@ -42,14 +47,17 @@ const getNodeRender = (node) => getNodeType(node?.typeId)?.render || 'hidden'
 const isPanelNode = (node) => getNodeRender(node) === 'panel-2d'
 
 import { buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
-import { DEFAULT_PROJECT_SPACE_ID } from '../../project/services/projectsApi.js'
-import { getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
+import { saveAssetFromFile } from '../../storage/assetStore.js'
+import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
+import { clampWindowFrame, getGraphEdgeInsets, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { isPaletteSummons, resolveZenPreference, writeZenPreference } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
     readLocalWorkspaceDocument,
     writeLocalWorkspaceDocument
 } from '../utils/localWorkspaceStorage.js'
+import { peekRawEnterNode, clearRawEnterNode } from '../utils/rawEnterNodeHandoff.js'
 import {
     detectDeviceType,
     getDefaultNodeScale,
@@ -81,6 +89,7 @@ const WINDOW_DEFAULT_POSITIONS = {
     'agent':           { x: 96,   y: 140, width: 420, height: 480 },
     'view.assets':     { x: 24,   y: 56, width: 280, height: 380 },
     'view.outliner':   { x: 24,   y: 56, width: 240, height: 360 },
+    'view.library':    { x: 24,   y: 56, width: 260, height: 380 },
     'view.activity':   { x: 24,   y: 56, width: 280, height: 300 },
     'view.project':    { x: 24,   y: 56, width: 280, height: 320 },
     'legacy-world.inspector': { x: 24,   y: 56, width: 320, height: 420 },
@@ -136,7 +145,8 @@ function BrowserPanelWindow({ node }) {
 export default function RawEditor({
     projectId,
     spaceId = DEFAULT_PROJECT_SPACE_ID,
-    localStorageKey = ''
+    localStorageKey = '',
+    seedOnFirstVisit = false
 }) {
     const [displayName] = useState(() => {
         try {
@@ -170,11 +180,29 @@ export default function RawEditor({
     // next to the selection state it depends on.
     const scaffoldRef = useRef(null)
 
+    // Whether THIS mount seeded the starter constellation — read once by the
+    // zen effect below, so a seeded (but brand-new) workspace still opens bare.
+    const seededStarterRef = useRef(false)
+
     const initialStoreState = useMemo(() => {
         if (projectId || !localStorageKey) return undefined
         const savedDocument = readLocalWorkspaceDocument(localStorageKey)
-        return savedDocument ? { document: savedDocument, version: 0 } : undefined
-    }, [localStorageKey, projectId])
+        if (savedDocument) return { document: savedDocument, version: 0 }
+        if (!seedOnFirstVisit) return undefined
+        // First visit to a blank local workspace: seed the starter desk as the
+        // document's ORIGIN (not an op batch), so undo unwinds to nothing
+        // instead of deleting the constellation node by node. The projectId
+        // guard above makes this unreachable for any server-backed document.
+        seededStarterRef.current = true
+        return {
+            document: buildStarterWorkspaceDocument({
+                workspaceTop: 168,
+                viewportWidth: typeof window !== 'undefined' ? window.innerWidth : 1280,
+                viewportHeight: typeof window !== 'undefined' ? window.innerHeight : 800
+            }),
+            version: 0
+        }
+    }, [localStorageKey, projectId, seedOnFirstVisit])
 
     const store = useProjectStore(initialStoreState)
     const { state, dispatch } = store
@@ -234,7 +262,25 @@ export default function RawEditor({
     // is an ordinary node, not an auto-created/auto-entered singleton (product
     // decision 2026-07-17 — see nodeRegistry.js/projectSchema.js comments).
     const scope = useNodeGraphScope({ nodes: authoredNodes })
-    const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, reset: scopeReset } = scope
+    const { navStack, currentScopeId, enterNode: scopeEnterNode, navigateToScope: scopeNavigateToScope, reset: scopeReset, goToRoot: scopeGoToRoot } = scope
+
+    // RawHub's "open studio" shortcut hands off a node to land inside via
+    // sessionStorage (see rawEnterNodeHandoff.js for why this can't live in
+    // the synced document). Peeked (non-destructive — StrictMode's dev-mode
+    // double-invoke of lazy initializers means a destructive read here would
+    // consume the value on the throwaway first pass and never see it on the
+    // real one) once per mount, then re-checked on every `nodes` change until
+    // the handed-off node actually shows up, since the document may still be
+    // syncing from the server on first render. Cleared only once applied.
+    const [pendingEnterNodeId, setPendingEnterNodeId] = useState(() => peekRawEnterNode(projectId))
+    useEffect(() => {
+        if (!pendingEnterNodeId) return
+        if (authoredNodes.some((node) => node.id === pendingEnterNodeId)) {
+            scopeGoToRoot(pendingEnterNodeId)
+            clearRawEnterNode()
+            setPendingEnterNodeId(null)
+        }
+    }, [pendingEnterNodeId, authoredNodes, scopeGoToRoot])
     const activeSurface = workspaceState.activeSurface || 'graph'
     const workflow = getSurfaceWorkflow(activeSurface)
     // Panel windows are scoped exactly like graph cards. Before, this filtered
@@ -277,6 +323,19 @@ export default function RawEditor({
     // of one node — the window is the panel, the card is the node — which is
     // the same split TouchDesigner draws between a Panel COMP in the network
     // editor and the panel it renders.
+    // How many nodes each node contains. A card with contents is a place you
+    // can go; one without is not, and until now they looked identical — every
+    // card wore the same chevron, so the chevron said nothing.
+    const childCounts = useMemo(() => {
+        const counts = new Map()
+        for (const node of authoredNodes) {
+            const parentId = node.parentId || null
+            if (!parentId) continue
+            counts.set(parentId, (counts.get(parentId) || 0) + 1)
+        }
+        return counts
+    }, [authoredNodes])
+
     const graphCardNodes = useMemo(
         () => nodes.filter((node) => (node.parentId || null) === currentScopeId),
         [nodes, currentScopeId]
@@ -581,6 +640,31 @@ export default function RawEditor({
         }
     }
 
+    // Raw could render entities and edit them (the inspector has handled a
+    // selected entity since the lane was forked) and delete them — it simply
+    // had no way to make one. `createEntity` is a shared-schema op, so this is
+    // the missing verb, not a new model: the same op Studio's Create window
+    // sends, into the same document, undoable through the same history.
+    //
+    // Placement is the plain grid, not Studio's look-where-the-camera-is
+    // version: the orbit controls live inside RawViewport's Canvas and are not
+    // reachable from here. A ring around a target this component cannot read
+    // would just be origin with extra steps.
+    const handleCreateEntity = useCallback((type) => {
+        const count = (state.document.entities || []).length
+        const entity = createEntityOfType(type, {
+            components: {
+                transform: { position: [((count % 4) - 1.5) * 1.4, 0, Math.floor(count / 4) * -1.8] }
+            }
+        })
+        if (!entity) return
+        applyLocalOps({
+            type: 'createEntity',
+            payload: { entity }
+        }, { activityMessage: `Created ${entity.type}.` })
+        dispatch({ type: 'select-entity', entityId: entity.id })
+    }, [applyLocalOps, dispatch, state.document.entities])
+
     const handleDeleteSelected = useCallback(() => {
         if (surfaceSelectedNode) {
             applyLocalOps([
@@ -643,7 +727,12 @@ export default function RawEditor({
     useEffect(() => {
         if (zenReadRef.current || !document) return
         zenReadRef.current = true
-        setZen(resolveZenPreference(zenWorkspaceKey, { nodeCount: (document.nodes || []).length }))
+        setZen(resolveZenPreference(zenWorkspaceKey, {
+            nodeCount: (document.nodes || []).length,
+            // The starter constellation is seeded, not built by the person —
+            // a seeded first visit still defaults to zen (stored choice wins).
+            defaultZen: seededStarterRef.current ? true : undefined
+        }))
     }, [document, zenWorkspaceKey])
 
     const setZenPreference = useCallback((next) => {
@@ -722,6 +811,146 @@ export default function RawEditor({
         openPalette('world', placement)
     }
 
+    // --- Bringing a file in -------------------------------------------------
+    // Dropping a model/video/sound/image onto the surface stores it and places
+    // the node that plays it. Two storage routes, one behaviour: a server-
+    // backed project uploads (content-addressed, shared with collaborators), a
+    // local workspace keeps the bytes in this browser's IndexedDB — which is
+    // the same place ModelObject/useAssetUrl already look first, so the node
+    // renders identically either way.
+    const [dropState, setDropState] = useState({ over: false, busy: false, notice: '' })
+    // "Studio now has a Colour socket" — because the socket it is talking about
+    // is one scope up and nowhere on screen.
+    const [promotedNotice, setPromotedNotice] = useState(null)
+    const dropDepthRef = useRef(0)
+
+    useEffect(() => {
+        if (!dropState.notice) return undefined
+        const timer = setTimeout(() => setDropState((prev) => ({ ...prev, notice: '' })), 6000)
+        return () => clearTimeout(timer)
+    }, [dropState.notice])
+
+    const handleFilesDropped = useCallback(async (fileList, place = {}, dropScopeId = undefined) => {
+        const targetScopeId = dropScopeId === undefined ? currentScopeId : dropScopeId
+        const { accepted, rejected } = partitionDroppedFiles(fileList)
+        const rejectedNotice = describeRejectedFiles(rejected)
+        if (!accepted.length) {
+            setDropState({ over: false, busy: false, notice: rejectedNotice })
+            return
+        }
+        setDropState({ over: false, busy: true, notice: '' })
+
+        const ops = []
+        const created = []
+        const failed = []
+        for (const [index, { file, typeId }] of accepted.entries()) {
+            try {
+                const asset = projectId
+                    ? await uploadProjectAsset(projectId, file)
+                    : await saveAssetFromFile(file)
+                if (!asset?.id) throw new Error('no asset id')
+                const values = buildNodeValuesForType(typeId, {}, place, { workspaceTop, topZIndex })
+                const node = createNode(typeId, {
+                    values: { ...values, src: asset.id },
+                    // Fan them out so a multi-file drop doesn't stack cards.
+                    graphX: (place.graphX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2) + (index * 32),
+                    graphY: Math.max(20, (place.graphY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2) + (index * 32)),
+                    parentId: targetScopeId
+                })
+                if (!node) throw new Error(`unknown node type ${typeId}`)
+                ops.push({ type: 'upsertAsset', payload: { asset } })
+                ops.push({ type: 'createNode', payload: { node } })
+                created.push({ node, file })
+            } catch (error) {
+                failed.push({ file, error })
+            }
+        }
+
+        if (ops.length) {
+            const last = created[created.length - 1]
+            // Only follow the selection when the node landed in the scope the
+            // graph is showing — otherwise the inspector would describe a node
+            // that isn't on screen.
+            if (targetScopeId === currentScopeId) {
+                ops.push({ type: 'setWorkspaceState', payload: { patch: { selectedNodeId: last.node.id } } })
+            }
+            applyLocalOps(ops, {
+                activityMessage: created.length === 1
+                    ? `Brought in ${created[0].file.name}.`
+                    : `Brought in ${created.length} files.`
+            })
+        }
+
+        const failureNotice = failed.length
+            ? `Could not bring in ${failed.map(({ file }) => file?.name || 'file').join(', ')}.`
+            : ''
+        setDropState({
+            over: false,
+            busy: false,
+            notice: [failureNotice, rejectedNotice].filter(Boolean).join(' ')
+        })
+    }, [applyLocalOps, currentScopeId, projectId, topZIndex, workspaceTop])
+
+    // The inspector's "＋" on an asset port: same storage as a drop, but the
+    // node already exists, so this only fills that port in.
+    const handlePickAssetFile = useCallback(async (file, field) => {
+        if (!file || !surfaceSelectedNode) return
+        setDropState({ over: false, busy: true, notice: '' })
+        try {
+            const asset = projectId
+                ? await uploadProjectAsset(projectId, file)
+                : await saveAssetFromFile(file)
+            if (!asset?.id) throw new Error('no asset id')
+            applyLocalOps([
+                { type: 'upsertAsset', payload: { asset } },
+                {
+                    type: 'updateNode',
+                    payload: {
+                        nodeId: surfaceSelectedNode.id,
+                        patch: { values: { [field?.path?.[0] || 'src']: asset.id } }
+                    }
+                }
+            ], { activityMessage: `Brought in ${file.name}.` })
+            setDropState({ over: false, busy: false, notice: '' })
+        } catch {
+            setDropState({ over: false, busy: false, notice: `Could not bring in ${file.name}.` })
+        }
+    }, [applyLocalOps, projectId, surfaceSelectedNode])
+
+    const handleSurfaceDragEnter = (event) => {
+        if (!Array.from(event.dataTransfer?.types || []).includes('Files')) return
+        event.preventDefault()
+        dropDepthRef.current += 1
+        setDropState((prev) => (prev.over ? prev : { ...prev, over: true }))
+    }
+
+    const handleSurfaceDragOver = (event) => {
+        if (!Array.from(event.dataTransfer?.types || []).includes('Files')) return
+        // Without this the browser navigates away to the dropped file — the
+        // default that makes an unhandled drop look like a crash.
+        event.preventDefault()
+        event.dataTransfer.dropEffect = 'copy'
+    }
+
+    const handleSurfaceDragLeave = () => {
+        dropDepthRef.current = Math.max(0, dropDepthRef.current - 1)
+        if (dropDepthRef.current === 0) setDropState((prev) => ({ ...prev, over: false }))
+    }
+
+    const handleSurfaceDrop = (event) => {
+        const files = event.dataTransfer?.files
+        if (!files?.length) return
+        event.preventDefault()
+        dropDepthRef.current = 0
+        const scopeId = resolveDropScopeId(
+            (x, y) => window.document.elementFromPoint(x, y),
+            event.clientX,
+            event.clientY,
+            currentScopeId
+        )
+        handleFilesDropped(files, { graphX: event.clientX, graphY: event.clientY }, scopeId)
+    }
+
     // Every palette-creatable node type in one graph, with the maths chain
     // actually driving the geometry. Unlike the streaming preset below, this one
     // builds nothing that isn't implemented — see the module for which ports are
@@ -744,6 +973,28 @@ export default function RawEditor({
         ], {
             activityMessage: `Created the all-nodes example (${exampleNodes.length} nodes, ${exampleEdges.length} edges).`
         })
+    }
+
+    // A scene made the way a person makes one: a room, a light, a shape, a place
+    // for your own file, and a note saying the moves in plain words. This is the
+    // answer to "I cannot understand how it works" — something to open and copy,
+    // rather than another feature.
+    const handleCreateSceneExample = () => {
+        const { nodes: sceneNodes, edges: sceneEdges } = buildSceneExample({
+            parentId: currentScopeId || null,
+            workspaceTop
+        })
+        if (!sceneNodes.length) return
+
+        dispatch({ type: 'select-entity', entityId: null })
+        applyLocalOps([
+            ...sceneNodes.map((node) => ({ type: 'createNode', payload: { node } })),
+            ...sceneEdges.map((edge) => ({ type: 'createEdge', payload: { edge } })),
+            {
+                type: 'setWorkspaceState',
+                payload: { patch: { activeSurface: 'graph', selectedNodeId: null } }
+            }
+        ], { activityMessage: 'Made a scene: a room, a light, a cube and a place for your own model.' })
     }
 
     const handleCreateStreamingPrototype = () => {
@@ -894,6 +1145,7 @@ export default function RawEditor({
                 values={inspectorValues}
                 assetOptions={document.assets || []}
                 onSectionChange={handleInspectorChange}
+                onPickAssetFile={handlePickAssetFile}
                 emptyMessage="Double-click the world or the view to start authoring."
             />
         </aside>
@@ -943,6 +1195,61 @@ export default function RawEditor({
         type: 'createEdge',
         payload: { edge: payload }
     }), [applyLocalOps])
+    // Put an interior port on the container's face: place the doorway node and
+    // its wire in ONE op batch, so a single undo takes both away and no
+    // intermediate state exists where a door sits there wired to nothing.
+    //
+    // Honest about what this is: a long press advertises itself to nobody. This
+    // is a shortcut for the gesture, not the way anyone DISCOVERS it — placing
+    // an In/Out node from the palette by hand remains that.
+    const handlePromotePort = useCallback(({ node, port, dir }) => {
+        if (!node || !port) return
+        const container = currentScopeId ? authoredNodes.find((n) => n.id === currentScopeId) : null
+        if (!container) {
+            setDropState({
+                over: false,
+                busy: false,
+                notice: 'Go inside a container first — a doorway makes a socket on the container it is in.'
+            })
+            return
+        }
+        // An OUT door carries a value from an interior output to the outside; an
+        // IN door brings a value from outside into an interior input.
+        const doorTypeId = dir === 'out' ? 'port.out' : 'port.in'
+        const door = createNode(doorTypeId, {
+            values: {
+                // ONLY values.label. The card keeps the type's own name ("In"/
+                // "Out"); the socket's name lives here and the inspector edits
+                // exactly this field. Writing both would let a rename diverge
+                // them permanently, and the socket would then be named by
+                // whichever one happened to be read.
+                label: port.label || port.id,
+                // Inherited from the port it came from, so most doors never
+                // need the type picker touched.
+                portType: port.type || 'any'
+            },
+            graphX: (node.graphX ?? 0) + (dir === 'out' ? 260 : -260),
+            graphY: node.graphY ?? 0,
+            parentId: currentScopeId
+        })
+        if (!door) return
+        const edge = dir === 'out'
+            ? createEdge(node.id, port.id, door.id, 'value')
+            : createEdge(door.id, 'value', node.id, port.id)
+        applyLocalOps([
+            { type: 'createNode', payload: { node: door } },
+            { type: 'createEdge', payload: { edge } },
+            { type: 'setWorkspaceState', payload: { patch: { selectedNodeId: door.id } } }
+        ], { activityMessage: `Exposed ${port.label || port.id} on ${container.label}.` })
+        // The new socket is one level up, off-screen from here — say so, or the
+        // gesture appears to have done nothing.
+        setPromotedNotice({
+            containerId: container.id,
+            containerLabel: container.label,
+            portLabel: port.label || port.id
+        })
+    }, [applyLocalOps, authoredNodes, currentScopeId])
+
     const handleDeleteEdge = useCallback((edgeId) => applyLocalOps({
         type: 'deleteEdge',
         payload: { edgeId }
@@ -979,7 +1286,13 @@ export default function RawEditor({
                     onCursorMove={presence.emitCursor}
                     onCursorLeave={presence.clearCursor}
                     nodeScale={nodeScale}
-                    scopeId={node.id}
+                    // The room this World belongs to, not the World's own
+                    // interior. A World is render:'panel-2d' — a window onto a
+                    // room, and its own live-marker is keyed by its PARENT
+                    // scope (see isLive just below), so the room it shows is
+                    // the room it stands in. Showing node.id instead meant a
+                    // cube placed beside the World was never drawn by it.
+                    scopeId={currentScopeId}
                     worldNode={node}
                     liveOutputs={liveOutputs}
                     isLive={(document.workspaceState?.liveWorldNodeIdByScope || {})[node.parentId || ''] === node.id}
@@ -1101,6 +1414,19 @@ export default function RawEditor({
                 />
             )
         }
+        if (node.typeId === 'work.status') {
+            return <WorkStatusPanel node={node} onValuesChange={handleLiveOutputChange} />
+        }
+        if (node.typeId === 'work.agent') {
+            return (
+                <AgentRunPanel
+                    node={node}
+                    prompt={resolvedValues.prompt}
+                    trigger={resolvedValues.trigger}
+                    onValuesChange={handleLiveOutputChange}
+                />
+            )
+        }
         if (node.typeId === 'agent.keeper') {
             return (
                 <KeeperPanelWindow
@@ -1148,6 +1474,9 @@ export default function RawEditor({
                 />
             )
         }
+        if (node.typeId === 'view.library') {
+            return <CreatePanelWindow onCreateEntity={handleCreateEntity} />
+        }
         if (node.typeId === 'view.inspector') {
             return (
                 <PropertyInspector
@@ -1157,6 +1486,7 @@ export default function RawEditor({
                     values={inspectorValues}
                     assetOptions={document.assets || []}
                     onSectionChange={handleInspectorChange}
+                    onPickAssetFile={handlePickAssetFile}
                     emptyMessage="Select a node to inspect it."
                 />
             )
@@ -1294,6 +1624,30 @@ export default function RawEditor({
 
     const workspaceTitle = isLocalWorkspace ? 'Blank White Workspace' : (document.projectMeta?.title || 'Raw Project')
     const graphTopInset = chromeVisible ? workspaceTop : 0
+    // Windows float over the graph, so the fit has to dodge the docked ones or
+    // it centres the card cluster underneath one — see getGraphEdgeInsets.
+    // Through the SAME clamp DesktopWindow applies: the stored frame is where a
+    // window wants to be, not where it renders. The bottom reserve alone moved
+    // the seeded welcome window up by 116px, and insets read off the stored
+    // frame put the graph's free band in the wrong place entirely.
+    const graphContentInsets = getGraphEdgeInsets({
+        frames: visibleViewNodes
+            .filter((node) => node.values?.frame?.minimized !== true)
+            .map((node) => node.values?.frame)
+            .filter(Boolean)
+            .map((frame) => clampWindowFrame(frame, {
+                allowOverflowLeft: true,
+                allowOverflowTop: true,
+                viewportWidth: typeof window === 'undefined' ? undefined : window.innerWidth,
+                viewportHeight: typeof window === 'undefined' ? undefined : window.innerHeight
+            })),
+        surfaceRect: {
+            left: 0,
+            top: graphTopInset,
+            width: typeof window === 'undefined' ? 0 : window.innerWidth,
+            height: typeof window === 'undefined' ? 0 : window.innerHeight - graphTopInset
+        }
+    })
 
     return (
         <main className="raw-editor-shell">
@@ -1400,6 +1754,7 @@ export default function RawEditor({
                                 {overflowOpen && (
                                     <div className="raw-topbar-overflow-menu">
                                         <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
+                                        <button type="button" onClick={() => { handleCreateSceneExample(); setOverflowOpen(false) }}>Make me a scene</button>
                                         <button type="button" onClick={() => { handleCreateAllNodesExample(); setOverflowOpen(false) }}>All Nodes Example</button>
                                         <button type="button" onClick={() => { handleCreateStreamingPrototype(); setOverflowOpen(false) }}>Streaming Prototype</button>
                                         {isLocalWorkspace && (
@@ -1426,14 +1781,30 @@ export default function RawEditor({
                 </button>
             )}
 
-            <section className={`raw-surface-shell${isWorldOverlay && !isWorldFullscreen ? ' is-world-overlay' : ''}${navStack.length > 1 ? ' is-inside-node' : ''}`}>
+            <section
+                className={`raw-surface-shell${isWorldOverlay && !isWorldFullscreen ? ' is-world-overlay' : ''}${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
+                onDragEnter={handleSurfaceDragEnter}
+                onDragOver={handleSurfaceDragOver}
+                onDragLeave={handleSurfaceDragLeave}
+                onDrop={handleSurfaceDrop}
+            >
                 {/* Graph is the primary surface — always visible */}
                 <RawGraphSurface
                     key={currentScopeId || 'root'}
                     chromeless={!chromeVisible}
                     topInset={graphTopInset}
                     bottomInset={graphBottomInset}
+                    contentInsets={graphContentInsets}
                     nodes={graphCardNodes}
+                    childCounts={childCounts}
+                    // EVERY node, not graphCardNodes. A container's doorways
+                    // live INSIDE it — a different scope from its own card — so
+                    // the scoped list would find none of them and the container
+                    // would simply never grow a socket, silently, with every
+                    // unit test still passing.
+                    portScopeNodes={authoredNodes}
+                    onPromotePort={handlePromotePort}
+                    onMakeScene={handleCreateSceneExample}
                     emptyHint={`${pointerVerb} to place your first node.`}
                     edges={graphCardEdges}
                     selectedNodeId={workspaceState.selectedNodeId}
@@ -1451,15 +1822,35 @@ export default function RawEditor({
                     onSetActive={(node) => setActiveNodeId(node.typeId, node.parentId || null, node.id)}
                     activeMarkerTypeIds={activeMarkerTypeIds}
                 />
+                {/* Zen's three residents are surface, nodes, wordmark — this is
+                    the wordmark. Ambient, non-interactive, kept when chrome is
+                    summoned too. */}
+                <div className="raw-surface-wordmark" aria-hidden="true">di<span>.</span>iiii</div>
+                {dropState.over && (
+                    <div className="raw-drop-veil" aria-hidden="true">
+                        <span>drop to bring it in</span>
+                    </div>
+                )}
+                {(dropState.busy || dropState.notice) && (
+                    <div className={`raw-drop-notice${dropState.notice ? ' is-warning' : ''}`} role="status" aria-live="polite">
+                        {dropState.busy ? 'Bringing it in…' : dropState.notice}
+                    </div>
+                )}
                 {/* Panel nodes float above the graph as viewport-fixed windows */}
                 {visibleViewNodes.map((node, index) => {
                     const windowState = buildWindowStateFromNode(node, index, graphContext)
+                    // The family, not the type id: the cards say "the room" and
+                    // the windows used to say UNIVERSE.WORLD. Same node, two
+                    // vocabularies — and the colour is what ties the window to
+                    // its card on the canvas behind it.
+                    const family = getNodeFamily(node.typeId)
                     return (
                         <DesktopWindow
                             key={node.id}
                             windowState={windowState}
                             title={windowState.title}
-                            kicker={node.typeId}
+                            kicker={family?.label || node.typeId}
+                            accent={family?.color || null}
                             allowOverflowLeft
                             allowOverflowTop
                             onFocus={() => {
@@ -1513,6 +1904,76 @@ export default function RawEditor({
                 })}
             </section>
 
+            {/* The socket this made is one level up and off-screen, so the
+                gesture would otherwise look like it did nothing. */}
+            {promotedNotice && (
+                <div className="raw-promoted-notice" role="status" aria-live="polite">
+                    <span>
+                        <strong>{promotedNotice.containerLabel}</strong> now has a{' '}
+                        <strong>{promotedNotice.portLabel}</strong> socket
+                    </span>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            // Navigate by the container's OWN scope, never
+                            // navStack.length - 2: at the root that is index -1,
+                            // which truncates the stack to empty and takes the
+                            // trail, the Escape exit and the marker with it.
+                            const parentId = authoredNodes.find((n) => n.id === promotedNotice.containerId)?.parentId || null
+                            const index = navStack.indexOf(parentId)
+                            handleNavigateToScope(index >= 0 ? index : 0)
+                            selectNode(promotedNotice.containerId)
+                            setPromotedNotice(null)
+                        }}
+                    >
+                        Go and see
+                    </button>
+                    <button type="button" className="raw-promoted-notice-close" onClick={() => setPromotedNotice(null)}>×</button>
+                </div>
+            )}
+
+            {/* Where you are, and the way back out. Deliberately OUTSIDE the
+                chromeVisible gate: chromeVisible starts with `if (zen) return
+                false`, and a fresh workspace opens in zen, so the breadcrumb
+                that already exists is hidden exactly when someone first walks
+                into a container. Entering a World additionally goes fullscreen
+                and strips the rest. The result was an empty grid with no name
+                and no visible exit — indistinguishable from having destroyed
+                your work. This is the one thing that must never be hidden. */}
+            {navStack.length > 1 && (
+                <div
+                    className="raw-scope-marker"
+                    role="status"
+                    aria-live="polite"
+                    // Below the topbar when there is one, near the top when
+                    // there is not. Measured: the topbar is 49px and full-width,
+                    // so a fixed top:12px sat inside it with chrome on.
+                    style={{ top: `${(chromeVisible ? workspaceTop : 12) + 8}px` }}
+                >
+                    <button
+                        type="button"
+                        className="raw-scope-marker-out"
+                        onClick={() => handleNavigateToScope(navStack.length - 2)}
+                        title="Leave"
+                    >
+                        ‹
+                    </button>
+                    <span className="raw-scope-marker-label">
+                        inside <strong>{authoredNodes.find((n) => n.id === currentScopeId)?.label || 'a node'}</strong>
+                    </span>
+                    {navStack.length > 2 && (
+                        <button
+                            type="button"
+                            className="raw-scope-marker-root"
+                            onClick={() => handleNavigateToScope(0)}
+                            title="All the way out"
+                        >
+                            ◈
+                        </button>
+                    )}
+                </div>
+            )}
+
             {/* Fullscreen world — takes over the full viewport */}
             {hasWorldNode && isWorldFullscreen && (
                 <div className="raw-world-fullscreen" style={{ top: `${workspaceTop}px` }}>
@@ -1531,7 +1992,15 @@ export default function RawEditor({
                         onCursorLeave={presence.clearCursor}
                         nodeScale={nodeScale}
                         showEmptyHint={false}
-                        scopeId={worldNode?.id}
+                        // The room you are STANDING IN, not the inside of the
+                        // live World. The graph canvas filters on
+                        // currentScopeId and the palette creates with
+                        // parentId: currentScopeId — while this said
+                        // worldNode.id, the two halves of the screen named
+                        // different rooms, so anything placed at root landed
+                        // somewhere real and was never drawn. worldNode is
+                        // still passed, for sky and lighting.
+                        scopeId={currentScopeId}
                         worldNode={worldNode}
                         liveOutputs={liveOutputs}
                     />
@@ -1556,7 +2025,15 @@ export default function RawEditor({
                         onCursorLeave={presence.clearCursor}
                         nodeScale={nodeScale}
                         showEmptyHint={false}
-                        scopeId={worldNode?.id}
+                        // The room you are STANDING IN, not the inside of the
+                        // live World. The graph canvas filters on
+                        // currentScopeId and the palette creates with
+                        // parentId: currentScopeId — while this said
+                        // worldNode.id, the two halves of the screen named
+                        // different rooms, so anything placed at root landed
+                        // somewhere real and was never drawn. worldNode is
+                        // still passed, for sky and lighting.
+                        scopeId={currentScopeId}
                         worldNode={worldNode}
                         liveOutputs={liveOutputs}
                     />
