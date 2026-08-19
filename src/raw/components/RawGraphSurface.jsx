@@ -160,6 +160,9 @@ export default function RawGraphSurface({
     // Optional, like every other handler here: Studio wraps this read-only and
     // passes none, so no menu is offered there at all.
     onPromotePort = null,
+    // Builds a worked example on a blank canvas. Optional: Studio wraps this
+    // read-only and offers nothing.
+    onMakeScene = null,
     onCreateEdge,
     onDeleteEdge,
     onDeleteNode,
@@ -975,7 +978,16 @@ export default function RawGraphSurface({
                 </button>
             ) : null}
             {nodes.length === 0 ? (
-                <div className="raw-empty-state" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', color: '#aaa', pointerEvents: 'none' }}>{emptyHint}</div>
+                // A blank workspace opens in ZEN, where there is NO topbar — so
+                // the ⋯ menu, and everything in it, does not exist for the
+                // person most likely to need it. The one offer that matters has
+                // to live here, on the canvas they are actually looking at.
+                <div className="raw-empty-state">
+                    <p>{emptyHint}</p>
+                    {onMakeScene ? (
+                        <button type="button" onClick={onMakeScene}>Make me a scene</button>
+                    ) : null}
+                </div>
             ) : null}
             <div
                 className="raw-graph-stage"

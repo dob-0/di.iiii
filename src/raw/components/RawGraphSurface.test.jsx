@@ -758,3 +758,34 @@ describe('exposing a port on the container', () => {
     })
 })
 
+// A blank workspace opens in ZEN — no topbar, so the ⋯ menu and everything in
+// it does not exist for the person most likely to need it. The one offer that
+// matters has to live on the canvas they are actually looking at.
+describe('the blank canvas', () => {
+    it('offers to build a scene when there is nothing at all', () => {
+        const onMakeScene = vi.fn()
+        const { getByRole } = render(
+            <RawGraphSurface nodes={[]} edges={[]} onMakeScene={onMakeScene} />
+        )
+        fireEvent.click(getByRole('button', { name: /Make me a/ }))
+        expect(onMakeScene).toHaveBeenCalledTimes(1)
+    })
+
+    it('offers nothing once there is something on the canvas', () => {
+        const { queryByRole } = render(
+            <RawGraphSurface
+                nodes={[makeNode('geom.cube', { id: 'c' })]}
+                edges={[]}
+                onMakeScene={vi.fn()}
+            />
+        )
+        expect(queryByRole('button', { name: /Make me a/ })).toBeNull()
+    })
+
+    // Studio wraps this read-only and passes no handler.
+    it('offers nothing when there is nothing to offer', () => {
+        const { queryByRole } = render(<RawGraphSurface nodes={[]} edges={[]} />)
+        expect(queryByRole('button', { name: /Make me a/ })).toBeNull()
+    })
+})
+
