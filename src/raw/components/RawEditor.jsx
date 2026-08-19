@@ -32,7 +32,6 @@ import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSe
 import { readNode } from '../../project/graph/nodeReading.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
-import { scopeHasRoomContent } from '../utils/roomContent.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
@@ -356,10 +355,6 @@ export default function RawEditor({
         [authoredNodes, currentScopeId, document.workspaceState?.liveWorldNodeIdByScope]
     )
     const hasWorldNode = Boolean(worldNode)
-    const roomHasContent = useMemo(
-        () => scopeHasRoomContent(nodes, currentScopeId),
-        [nodes, currentScopeId]
-    )
     // Generalizes the World live-toggle above to any scope-repeatable type
     // where exactly one "active" result is wanted (world.light/world.
     // background/world.grid) — same hierarchy-as-connection idea, same
@@ -1676,6 +1671,11 @@ export default function RawEditor({
             hint: zen ? 'topbar, controls' : 'zen — surface and nodes only',
             run: () => setZenPreference(!zen)
         },
+        // The room must stay one keystroke away everywhere — with the
+        // backdrop retired (the desk is clear, always) this is the zen
+        // route in; the audit called its absence critical back when the
+        // backdrop still papered over it.
+        { id: 'room', label: 'Room', hint: 'the 3D view, fullscreen', run: () => setIsWorldFullscreen(true) },
         { id: 'help', label: 'Help', hint: 'what the keys do', run: () => setHelpOpen(true) },
         { id: 'chat', label: 'Chat', hint: 'talk to whoever is here', run: () => setChatOpen(true) },
         { id: 'outliner', label: 'Outliner', hint: 'every node in this scope', run: () => setOutlinerOpen(true) },
@@ -1867,65 +1867,19 @@ export default function RawEditor({
             )}
 
             <section
-                className={`raw-surface-shell${roomHasContent ? ' is-world-overlay' : ''}${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
+                className={`raw-surface-shell${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
                 onDragEnter={handleSurfaceDragEnter}
                 onDragOver={handleSurfaceDragOver}
                 onDragLeave={handleSurfaceDragLeave}
                 onDrop={handleSurfaceDrop}
             >
-            {/* THE ROOM BEHIND THE GRAPH — whenever something stands in it.
-                TouchDesigner's answer to "watch the result while editing the
-                graph" is the backdrop: the output drawn full-frame behind the
-                network, nodes floating on top. Raw cannot afford TD's other
-                mechanism (a live viewer on every tile — WebGL caps contexts
-                around sixteen a page), so this one backdrop carries the
-                you-always-see-consequences contract: the owner built scenes
-                BLIND inside every non-World scope and concluded nesting did
-                not work, while the renderer was doing it correctly the whole
-                time. But an EMPTY room is not a consequence — always-on, a
-                clear desk posed as an empty stage whose floor rejected every
-                click (owner, 2026-08-20: "why the world is backdrop by
-                def?"). So the room mounts the moment the first thing stands
-                at this level (scopeHasRoomContent) and the desk is flat
-                paper — the graph surface's own grid — until then. */}
-            {!isWorldFullscreen && roomHasContent && (
-                <div className="raw-world-overlay">
-                    <RawViewport
-                        // The cards are the selection feedback here; a name
-                        // pill floating in the room's sky duplicated them,
-                        // detached from its object.
-                        showSelectionPills={false}
-                        // Zen has no topbar; honouring workspaceTop there
-                        // painted a dead black band across the top of the
-                        // room (seen on the first-visit screen).
-                        topInset={chromeVisible ? workspaceTop : 0}
-                        document={document}
-                        selectedEntityId={surfaceSelectedEntity?.id || null}
-                        selectedNodeId={surfaceSelectedNode?.id || null}
-                        onSelectEntity={selectEntity}
-                        onSelectNode={selectNode}
-                        onClearSelection={clearSelection}
-                        onWorldDoubleClick={handleWorldSurfaceDoubleClick}
-                        onMoveNode={handleMoveWorldNode}
-                        cursors={presence.cursors}
-                        onCursorMove={presence.emitCursor}
-                        onCursorLeave={presence.clearCursor}
-                        nodeScale={nodeScale}
-                        showEmptyHint={false}
-                        // The room you are STANDING IN, not the inside of the
-                        // live World. The graph canvas filters on
-                        // currentScopeId and the palette creates with
-                        // parentId: currentScopeId — while this said
-                        // worldNode.id, the two halves of the screen named
-                        // different rooms, so anything placed at root landed
-                        // somewhere real and was never drawn. worldNode is
-                        // still passed, for sky and lighting.
-                        scopeId={currentScopeId}
-                        worldNode={worldNode}
-                        liveOutputs={liveOutputs}
-                    />
-                </div>
-            )}
+            {/* THE DESK IS CLEAR — always. The backdrop room lived here from
+                2026-08-19 to 2026-08-20: first always-on, then only when
+                something stood in it, and the owner's verdict stayed the
+                same ("i don't want to backdrop display of geo… i mean clear
+                desk"). The room is seen through the Scene window (resizable),
+                the fullscreen Room (topbar and palette), and /out — never as
+                wallpaper behind the cards. */}
                 {/* Graph is the primary surface — always visible */}
                 <RawGraphSurface
                     key={currentScopeId || 'root'}

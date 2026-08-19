@@ -27,12 +27,12 @@ const portToInspectorField = (port, node = null) => {
     }
     if (port.type === 'color') return { label, path, type: 'color', portType: 'color' }
     if (port.type === 'boolean') return { label, path, type: 'checkbox', portType: 'boolean' }
-    if (port.type === 'number') return { label, path, type: 'number', min: port.min, max: port.max, step: port.step, portType: 'number' }
+    if (port.type === 'number') return { label, path, type: 'number', min: port.min, max: port.max, step: port.step, portType: 'number', default: port.default }
     if (port.type === 'string') {
         const isMultiline = port.id === 'body' || port.id === 'text' || port.id === 'content'
         return { label, path, type: isMultiline ? 'textarea' : 'text', portType: 'string' }
     }
-    if (port.type === 'vec3') return { label, path, type: 'vec3', portType: 'vec3' }
+    if (port.type === 'vec3') return { label, path, type: 'vec3', portType: 'vec3', default: port.default }
     if (port.type === 'geometry' || port.type === 'texture' || port.type === 'signal') {
         return { label, path, type: 'connection', portType: port.type }
     }

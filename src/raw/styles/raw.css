@@ -1504,16 +1504,30 @@
 
 .raw-window-resizer {
     position: absolute;
-    right: 8px;
-    bottom: 8px;
-    width: 16px;
-    height: 16px;
+    right: 2px;
+    bottom: 2px;
+    width: 22px;
+    height: 22px;
     cursor: nwse-resize;
     border-radius: 0;
-    background: rgba(77, 249, 255, 0.04);
+    /* Two visible corner strokes: the handle existed for weeks as a 16px
+       4%-alpha square nobody could find, wedged against the window's own
+       corner buttons over a pointer-hungry canvas ("i can't change size",
+       2026-08-20). An affordance that cannot be seen is not an affordance. */
+    background:
+        linear-gradient(135deg,
+            transparent 52%, rgba(77, 249, 255, 0.45) 52%, rgba(77, 249, 255, 0.45) 60%,
+            transparent 60%, transparent 70%,
+            rgba(77, 249, 255, 0.45) 70%, rgba(77, 249, 255, 0.45) 78%, transparent 78%);
+    opacity: 0.75;
+    /* Above every panel's own corner chrome — the handle owns this corner. */
+    z-index: 12;
     touch-action: none;
     -webkit-user-select: none;
-    user-select: none;
+}
+
+.raw-window-resizer:hover {
+    opacity: 1;
 }
 
 /* ── World panel window ── */
@@ -1528,7 +1542,10 @@
 .raw-world-panel-actions {
     position: absolute;
     bottom: 10px;
-    right: 10px;
+    /* Clear of the window's resize corner: at right:10 the ⤢/● cluster sat
+       exactly ON the resize handle and swallowed its pointer — the literal
+       "i can't change size" of the room window (2026-08-20). */
+    right: 34px;
     display: flex;
     gap: 6px;
     z-index: 10;
@@ -1576,27 +1593,6 @@
     z-index: 1200;
 }
 
-/* ── World overlay mode (3D behind graph) ── */
-
-.raw-world-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 0;
-    pointer-events: none;
-}
-
-.raw-surface-shell.is-world-overlay {
-    background: transparent;
-    pointer-events: none;
-}
-
-.raw-surface-shell.is-world-overlay > * {
-    pointer-events: auto;
-}
-
-.raw-surface-shell.is-world-overlay .raw-graph-surface {
-    background: transparent;
-}
 
 .raw-viewport-shell,
 .raw-cursor-layer {
@@ -5023,37 +5019,6 @@
    graph (later positioned sibling), which is why cards went unreachable the
    moment it was on; mounting it as the shell's first child and refusing all
    events removes both failure modes at once. */
-.raw-world-overlay,
-.raw-world-overlay * {
-    pointer-events: none !important;
-}
-
-/* Fullscreen's own exit — zen has no topbar, and a room with no visible way
-   back is a trap. Same furniture as the scope marker. */
-.raw-room-exit {
-    -webkit-appearance: none;
-    appearance: none;
-    position: absolute;
-    /* Bottom-left, where the zoom cluster lives in graph mode — the top-left
-       corner belongs to the scope marker, and the first render put the two
-       ‹ buttons on top of each other (seen). */
-    bottom: 24px;
-    left: 14px;
-    z-index: 10;
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-    padding: 0 16px;
-    border: 1px solid rgba(77, 249, 255, 0.35);
-    border-radius: 999px;
-    background: rgba(10, 14, 22, 0.92);
-    color: var(--di-cyan);
-    font-family: 'Inter', 'Segoe UI', sans-serif;
-    font-size: 12px;
-    cursor: pointer;
-    touch-action: manipulation;
-}
-
 .raw-room-exit:hover { background: rgba(77, 249, 255, 0.14); }
 
 /* The projector cable: /out is a room and nothing else. Fixed and black so a
