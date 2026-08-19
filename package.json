@@ -17,6 +17,8 @@
         "build": "vite build",
         "docs:ai:sync": "node scripts/sync-agent-docs.mjs",
         "docs:ai:check": "node scripts/check-agent-docs.mjs",
+        "docs:anatomy:sync": "node scripts/sync-node-anatomy.mjs",
+        "check:node-anatomy": "node scripts/check-node-anatomy.mjs",
         "state": "node scripts/repo-state.mjs",
         "state:brief": "node scripts/repo-state.mjs --brief",
         "state:sweep": "node scripts/repo-state.mjs --sweep",
@@ -74,6 +76,8 @@
         "check:responsive": "node scripts/responsive-check.mjs"
     },
     "devDependencies": {
+        "acorn": "^8.17.0",
+        "acorn-jsx": "^5.3.2",
         "@testing-library/jest-dom": "^6.9.1",
         "@testing-library/react": "^16.3.0",
         "@testing-library/user-event": "^14.6.1",
