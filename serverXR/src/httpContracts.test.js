@@ -75,10 +75,16 @@ const startServer = async ({
     apiToken = 'test-token',
     requireAuth,
     releaseManifest = null,
+    // The default install lives in ~/.di, and `send` applies dotfiles:'ignore'
+    // to every segment of an absolute path — so a hidden directory anywhere in
+    // the data root is a real, shipped condition, not an exotic one.
+    hiddenDataRoot = false,
     extraEnv = {}
 } = {}) => {
     const sandboxCwd = await mkdtemp(path.join(os.tmpdir(), 'dii-server-cwd-'))
-    const sandboxDataRoot = await mkdtemp(path.join(os.tmpdir(), 'dii-server-data-'))
+    const sandboxDataRoot = hiddenDataRoot
+        ? await mkdtemp(path.join(os.tmpdir(), '.dii-hidden-data-'))
+        : await mkdtemp(path.join(os.tmpdir(), 'dii-server-data-'))
     const port = await getFreePort()
     const releaseFilePath = path.join(sandboxDataRoot, 'release.json')
 
@@ -2878,5 +2884,53 @@ describe('saving and opening a space as a file', () => {
         const response = await fetch(`${server.baseUrl}/api/spaces/bundle`, { method: 'POST', body: form })
         const body = await response.json()
         expect(body.error).not.toMatch(/ExperimentalWarning|\(node:\d+\)/)
+    })
+})
+
+
+// THE DOTFILE TRAP, which has now bitten twice.
+//
+// `res.sendFile(absolutePath)` looks harmless and is not: `send` applies
+// dotfiles: 'ignore' to EVERY segment of the path, and the default install
+// lives in `~/.di`. So on a real `di` install every asset anyone uploaded
+// 404'd — while the API answered, the app loaded and the upload itself
+// returned 201 with a URL. It reads as a routing bug and it is not one.
+//
+// It was found and fixed once for index.html (index.js serves it with `root`),
+// and the same line was left in the project asset route, where it survived
+// until someone put a real library into a real install. Hence a test with a
+// dot in the path rather than a note in a doc.
+describe('assets serve from a hidden directory (~/.di is one)', () => {
+    it('serves an uploaded project asset back, byte for byte', async () => {
+        const server = await startServer({ requireAuth: false, hiddenDataRoot: true })
+        expect(server.dataRoot).toContain('/.dii-hidden-data-')
+
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'dotted', permanent: true })
+        })
+        const created = await (await fetch(`${server.baseUrl}/api/spaces/dotted/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'dotted project' })
+        })).json()
+        const projectId = created?.project?.id
+        expect(projectId).toBeTruthy()
+
+        const bytes = Buffer.from('%PDF-1.4 a small but real file\n')
+        const form = new FormData()
+        form.append('asset', new Blob([bytes], { type: 'application/pdf' }), 'paper.pdf')
+        const uploaded = await (await fetch(`${server.baseUrl}/api/projects/${projectId}/assets`, {
+            method: 'POST',
+            body: form
+        })).json()
+        const url = uploaded?.asset?.url
+        expect(url).toBeTruthy()
+
+        // The whole point: the URL the server just handed out must serve.
+        const fetched = await fetch(new URL(url, server.baseUrl.replace(/\/serverXR$/, '')))
+        expect(fetched.status).toBe(200)
+        expect(Buffer.from(await fetched.arrayBuffer()).equals(bytes)).toBe(true)
     })
 })
