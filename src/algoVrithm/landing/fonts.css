@@ -1,0 +1,46 @@
+/* Self-hosted Space Mono, following the pattern WCC established in
+ * src/wcc/landing/fonts.css — same reasoning, which is worth repeating: loading
+ * this from Google would hand every visitor's IP address and user agent to a
+ * third party on page load, with no consent and no way to opt out.
+ *
+ * Before this file existed the page ASKED for 'Space Mono' and never shipped
+ * it. There is no @font-face for it anywhere else in the repo, so the family
+ * resolved to the fallback chain and the page was rendering in whatever
+ * monospace the visitor's OS supplies. That was true on the machine it was
+ * designed on too: the only Space Mono installed there is "SpaceMono Nerd
+ * Font", a different family name, which 'Space Mono' does not match. So every
+ * letter-spacing value in algoVrithmLanding.css — -0.03em on the title, 0.06em
+ * on the button, 0.16em on the hold — was tuned against a typeface nobody had
+ * ever seen the page in, including its author.
+ *
+ * Latin only, two weights, ~33 KB total. 700 is not optional: .avl-title and
+ * .avl-enter both set font-weight: 700, and without a real bold face the
+ * browser synthesises one by smearing the regular, which on a page this bare
+ * is the most visible thing on it.
+ *
+ * Space Mono is Colophon Foundry, SIL OFL 1.1 — see fonts/OFL-Space-Mono.txt.
+ * unicode-range values are copied verbatim from Google's own stylesheet; do not
+ * hand-edit them.
+ */
+
+@font-face {
+    font-family: 'Space Mono';
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url('./fonts/space-mono-400-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+        U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+        U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+    font-family: 'Space Mono';
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url('./fonts/space-mono-700-latin.woff2') format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+        U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191,
+        U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}

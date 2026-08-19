@@ -47,17 +47,17 @@ jobs:
             dockerfile: Dockerfile
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Lowercase image owner
         id: owner
         run: echo "name=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
       - name: Log in to GHCR
-        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -68,13 +68,13 @@ jobs:
         run: echo "utc=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Build and push ${{ matrix.image }}
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: ${{ matrix.dockerfile }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:prod-${{ github.sha }}
             ${{ env.REGISTRY }}/${{ steps.owner.outputs.name }}/${{ matrix.image }}:latest
           # release.json is baked in by serverXR/Dockerfile only -- the client's Dockerfile
           # doesn't declare these ARGs, so build-push-action just passes them through unused.
@@ -95,11 +95,12 @@ jobs:
       VPS_SSH_USER: ${{ secrets.VPS_SSH_USER }}
       VPS_SSH_PORT: ${{ secrets.VPS_SSH_PORT }}
       VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      VPS_HOST_KEY: ${{ vars.VPS_HOST_KEY }}
       VPS_DEPLOY_PATH: ${{ vars.VPS_DEPLOY_PATH }}
       REGISTRY_USER: ${{ vars.REGISTRY_USER }}
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Check SSH deploy configuration
         run: |
@@ -124,7 +125,19 @@ jobs:
           chmod 700 ~/.ssh
           printf '%s\n' "${VPS_SSH_KEY}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "${VPS_SSH_PORT:-22}" "${VPS_HOST}" >> ~/.ssh/known_hosts
+          # Pin the host key. ssh-keyscan here was trust-on-first-use repeated
+          # on EVERY deploy: it blessed whatever host answered seconds before
+          # connecting, which made StrictHostKeyChecking=yes decorative — an
+          # on-path attacker could take the deploy session (and the key it
+          # carries) while faking a successful run. Set VPS_HOST_KEY to the
+          # VPS's real public key ("ssh-keyscan -p <port> <host>" run once,
+          # from a trusted machine).
+          if [ -n "${VPS_HOST_KEY:-}" ]; then
+            printf '%s\n' "${VPS_HOST_KEY}" >> ~/.ssh/known_hosts
+          else
+            echo "::warning::VPS_HOST_KEY is not set — falling back to ssh-keyscan (trust-on-first-use). Set the VPS_HOST_KEY repository variable to pin it."
+            ssh-keyscan -p "${VPS_SSH_PORT:-22}" "${VPS_HOST}" >> ~/.ssh/known_hosts
+          fi
 
       - name: Pull and restart the stack on the VPS
         run: |
@@ -133,7 +146,10 @@ jobs:
           REMOTE="${VPS_SSH_USER}@${VPS_HOST}"
           SSH=(ssh -p "${SSH_PORT}" -o StrictHostKeyChecking=yes "${REMOTE}")
 
-          "${SSH[@]}" "REGISTRY_USER=$(printf '%q' "${REGISTRY_USER}") IMAGE_TAG=$(printf '%q' "${GITHUB_SHA}") DEPLOY_PATH=$(printf '%q' "${VPS_DEPLOY_PATH}") bash -s" <<'REMOTE_SCRIPT'
+          # IMAGE_TAG is the ENVIRONMENT-NAMESPACED image tag; GIT_SHA is the
+          # plain commit and is what `git checkout` below needs. See the staging
+          # workflow for why these had to stop being the same value.
+          "${SSH[@]}" "REGISTRY_USER=$(printf '%q' "${REGISTRY_USER}") IMAGE_TAG=$(printf '%q' "prod-${GITHUB_SHA}") GIT_SHA=$(printf '%q' "${GITHUB_SHA}") DEPLOY_PATH=$(printf '%q' "${VPS_DEPLOY_PATH}") bash -s" <<'REMOTE_SCRIPT'
           set -euo pipefail
           cd "${DEPLOY_PATH}"
           export REGISTRY_USER
@@ -143,7 +159,7 @@ jobs:
           # exact commit being deployed. Everything else on this checkout
           # (.env, data volumes, etc.) is untouched.
           git fetch --quiet origin
-          git checkout --quiet "${IMAGE_TAG}" -- docker-compose.yml docker-compose.prod.yml docker-compose.caddy-hardened.yml Caddyfile
+          git checkout --quiet "${GIT_SHA}" -- docker-compose.yml docker-compose.prod.yml docker-compose.caddy-hardened.yml Caddyfile
 
           COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.prod.yml)
           if [ -f docker-compose.caddy-hardened.yml ]; then
@@ -151,6 +167,20 @@ jobs:
           fi
           docker compose --profile https "${COMPOSE_FILES[@]}" pull
           docker compose --profile https "${COMPOSE_FILES[@]}" up -d
+
+          # Persist the tag this deploy actually ran, so a LATER manual
+          # `docker compose up -d` in this directory reproduces this exact
+          # image. Without it the host falls back to `${IMAGE_TAG:-latest}`
+          # and resolves it from the LOCAL cache -- and the host only ever
+          # pulls `prod-<sha>`, so its `latest` is whatever was pulled when
+          # the tag was last used, months stale. That silently downgraded
+          # production by two weeks during a manual restart on 2026-08-04.
+          # (The registry's `latest` is current; the host's copy is not.)
+          if grep -q '^IMAGE_TAG=' .env 2>/dev/null; then
+            sed -i "s|^IMAGE_TAG=.*|IMAGE_TAG=${IMAGE_TAG}|" .env
+          else
+            echo "IMAGE_TAG=${IMAGE_TAG}" >> .env
+          fi
           # Caddyfile is a read-only bind mount -- content-only edits don't
           # trigger a recreate on their own, so reload it explicitly.
           docker compose --profile https "${COMPOSE_FILES[@]}" exec -T caddy caddy reload --config /etc/caddy/Caddyfile --force || \

@@ -32,13 +32,15 @@ vi.mock('../../studio/utils/studioRouting.js', () => ({
 }))
 vi.mock('../../utils/spaceRouting.js', () => ({
     buildAppSpacePath: (s) => `/${s}`,
-    buildVanityProjectPath: (s, p) => `/${s}/${p}`
+    buildVanityProjectPath: (s, p) => `/${s}/${p}`,
+    buildPublicProjectPath: (s, p) => `/${s}/p/${p}`
 }))
 
 import AdminManageSection from './AdminManageSection.jsx'
 import {
     listServerSpaces,
     getServerConfig,
+    updateServerSpace,
     getGithubAppInfo,
     listGithubRepos,
     connectSpaceGithub
@@ -91,6 +93,23 @@ describe('AdminManageSection', () => {
         expect(await screen.findByText('dob-0/br_id_ge')).toBeTruthy()
     })
 
+    // Regression guard: ownership used to be write-once, set only from the
+    // session that created the space. Every repo-synced space is provisioned
+    // over an API token, so they all arrived ownerless with no way to adopt
+    // them — and each owner-gated action fell back to a platform admin.
+    it('names the missing owner and hands a space over in one click', async () => {
+        listUsers.mockResolvedValue([
+            { id: 'u-emilya', displayName: 'Emilya', role: 'editor', spaces: [] }
+        ])
+        render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+
+        expect(await screen.findByText('No owner — only an admin can manage this space')).toBeTruthy()
+
+        fireEvent.click(await screen.findByRole('button', { name: 'Make owner' }))
+        await waitFor(() => expect(updateServerSpace).toHaveBeenCalledWith('demo', { ownerUserId: 'u-emilya' }))
+    })
+
     it('lazy-loads a space\'s projects when selected', async () => {
         render(<AdminManageSection />)
         const spaceRow = await screen.findByText('Demo')
@@ -133,5 +152,29 @@ describe('AdminManageSection', () => {
         await waitFor(() => expect(updateProject).toHaveBeenCalledWith('p1', { slug: 'artistplace' }))
         // Title must not have been touched by the slug-only edit.
         expect(updateProject).not.toHaveBeenCalledWith('p1', expect.objectContaining({ title: expect.anything() }))
+    })
+
+    // Regression test for audit batch 2: project ids are minted from the title
+    // with no reserved-word check, so a project titled "Studio" gets id
+    // "studio" — and putting a raw id in the vanity slot produced
+    // /demo/studio, which the router sends to the Studio hub, not the project.
+    // Only a real slug is safe there; ProjectSwitcher already did this.
+    it('uses the stable /p/{id} public link when a project has no slug', async () => {
+        listProjects.mockResolvedValue([{ id: 'studio', title: 'Studio', spaceId: 'demo' }])
+        render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+        fireEvent.click((await screen.findAllByText('Studio'))[0])
+
+        expect(await screen.findByText('/demo/p/studio')).toBeTruthy()
+        expect(screen.queryByText('/demo/studio')).toBeNull()
+    })
+
+    it('uses the vanity link once a slug is set', async () => {
+        listProjects.mockResolvedValue([{ id: 'studio', title: 'Studio', spaceId: 'demo', slug: 'artistplace' }])
+        render(<AdminManageSection />)
+        fireEvent.click(await screen.findByText('Demo'))
+        fireEvent.click((await screen.findAllByText('Studio'))[0])
+
+        expect(await screen.findByText('/demo/artistplace')).toBeTruthy()
     })
 })

@@ -337,18 +337,20 @@ export function useAssetPipeline({
 
     const uploadAssetToServer = useCallback(async ({ file, assetId, name, mimeType, trackPending = true } = {}) => {
         if (!canUploadServerAssets || !spaceId || !file) return null
+        const fallbackName = name || assetId || (file?.name) || 'asset.bin'
         if (trackPending) {
             setServerAssetSyncPending(prev => prev + 1)
         }
         try {
-            const fallbackName = name || assetId || (file?.name) || 'asset.bin'
             const fallbackType = mimeType || file?.type || 'application/octet-stream'
             const uploadBlob = file instanceof Blob ? file : new Blob([file], { type: fallbackType })
             const response = await uploadServerAsset(spaceId, uploadBlob, {
                 assetId,
                 filename: fallbackName
             })
-            if (!response?.assetId) return null
+            if (!response?.assetId) {
+                throw new Error('the server returned no asset id')
+            }
             const resolvedBase = serverAssetBaseUrl ? serverAssetBaseUrl.replace(/\/+$/, '') : ''
             const responseUrl = response.url || ''
             const responseIsAbsolute = /^https?:\/\//i.test(responseUrl)
@@ -364,8 +366,12 @@ export function useAssetPipeline({
             }
             upsertRemoteAssetEntry?.(entry, serverAssetBaseUrl)
             return entry
-        } catch {
-            return null
+        } catch (error) {
+            // Returning null here read as "nothing uploaded, carry on" to
+            // useServerPublishing's syncAssetsForPublish, which ignores the
+            // result — a whole failed asset sync still ended in "Scene synced
+            // to server." Every caller handles a throw, so fail loudly.
+            throw new Error(`Asset upload failed for "${fallbackName}": ${error?.message || error}`)
         } finally {
             if (trackPending) {
                 setServerAssetSyncPending(prev => Math.max(0, prev - 1))
@@ -427,11 +433,16 @@ export function useAssetPipeline({
     const ingestAssetFile = useCallback(async (file) => {
         if (!file) return null
         if (canUploadServerAssets) {
-            const remoteEntry = await uploadAssetToServer({
-                file,
-                name: file?.name,
-                mimeType: file?.type
-            })
+            let remoteEntry = null
+            try {
+                remoteEntry = await uploadAssetToServer({
+                    file,
+                    name: file?.name,
+                    mimeType: file?.type
+                })
+            } catch (error) {
+                throw new Error(`Shared asset upload failed. ${error?.message || ''} Check the server connection and try again.`.replace(/\s+/g, ' '))
+            }
             if (!remoteEntry?.id) {
                 throw new Error('Shared asset upload failed. Check the server connection and try again.')
             }

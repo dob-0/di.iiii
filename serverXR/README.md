@@ -74,6 +74,20 @@ Monitor and status:
 - `GET /api/health`
 - `GET /api/events`
 
+Agent board (operator-only: non-production + loopback, 404 otherwise — reads the local `~/.claude`):
+
+- `GET /api/agent-board`
+- `GET /api/agent-board/session/:sessionId`
+
+AI chat (signed-in accounts only, uses the user's connected Claude key server-side; the browser never talks to Anthropic):
+
+- `GET /api/ai/chats`
+- `POST /api/ai/chats`
+- `GET /api/ai/chats/:chatId`
+- `PATCH /api/ai/chats/:chatId`
+- `DELETE /api/ai/chats/:chatId`
+- `POST /api/ai/chats/:chatId/messages` (SSE response: `accepted` / `delta` / `done` / `error`)
+
 Browser auth session:
 
 - `GET /api/auth/session`
@@ -177,6 +191,7 @@ Behavior rules:
 | `AUTH_SESSION_COOKIE_NAME` | Cookie name for edit sessions. | `dii_serverxr_session` |
 | `CORS_ORIGINS` | Comma-separated allowlist of origins. | _none_ |
 | `MAX_UPLOAD_MB` | Max asset upload size in MB. | `100` |
+| `MIN_FREE_DISK_MB` | Free-disk floor below which POST/PUT/PATCH get a `507` instead of writing toward ENOSPC (`0` disables). | `512` |
 | `SHARED_ROOT` | Override for shared schema loading. Use this when staging and production keep separate shared folders outside the repo. | repo-local `shared/` fallback |
 
 Security notes:

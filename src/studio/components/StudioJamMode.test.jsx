@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import StudioControlCluster from './StudioControlCluster.jsx'
 import { JamEditPanel, LibraryPanel } from './StudioShellPanels.jsx'
-import { JAM_PRIMITIVES, PRIMITIVES } from '../utils/entityPalette.js'
+import { JAM_PRIMITIVES, PRIMITIVES } from '../../project/entityPalette.js'
 import { JAM_ALL_TOOLS_KEY, isJamProject, loadJamAllTools, saveJamAllTools } from '../utils/jamMode.js'
 
 // Minimal jam mode: at the communal open-jam project the same floating-window

@@ -2,8 +2,11 @@ const path = require('node:path')
 const fsp = require('node:fs/promises')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
+const { scrubImageMetadata } = require('../assetScrub')
 const { getSpaceBlobPaths, storeBlobFromFile } = require('../blobStore')
 const { createKeyedLock } = require('../asyncLock')
+const { applyAssetSafetyHeaders } = require('../spaceStore')
+const { findIdlessCreateOp } = require('../opValidation')
 
 const withProjectLock = createKeyedLock()
 
@@ -22,6 +25,7 @@ function registerProjectRoutes(router, {
   isValidAssetId,
   listProjectsInSpace,
   maxOpHistory,
+  maxOpAgeMs = 0,
   normalizeIncomingOps,
   normalizeProjectDocument,
   normalizeProjectId,
@@ -225,7 +229,7 @@ function registerProjectRoutes(router, {
           version: nextVersion,
           timestamp: Date.now()
         }
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory)
+        await appendProjectOps(spacesDir, project.spaceId, project.projectId, [resetOp], maxOpHistory, maxOpAgeMs)
         const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
           title: document.projectMeta.title,
           documentVersion: nextVersion
@@ -290,6 +294,16 @@ function registerProjectRoutes(router, {
       if (!normalizedOps.length) {
         return res.status(400).json({ error: 'No operations provided.' })
       }
+      // An id-less create is applied with a server-minted id but broadcast
+      // verbatim, so every peer mints a different one and the documents fork
+      // silently. Reject rather than persist a batch that can't converge.
+      const idless = findIdlessCreateOp(normalizedOps)
+      if (idless) {
+        return res.status(400).json({
+          error: `Op "${idless.type}" is missing a stable id — create ops must carry one.`,
+          code: 'op_missing_id'
+        })
+      }
 
       // Serialized per project: the version check and the read-modify-write
       // it guards must be one atomic step, or two concurrent requests at the
@@ -300,7 +314,12 @@ function registerProjectRoutes(router, {
         if (!fresh) return { notFound: true }
         const currentVersion = Number(fresh.meta?.documentVersion) || 0
         if (baseVersion !== currentVersion) {
-          const pendingOps = await readProjectOps(spacesDir, project.spaceId, project.projectId)
+          // Read only the ops the client is actually behind by. The response
+          // was always filtered to `> baseVersion`, but reading via
+          // readProjectOps pulled the whole retained window (up to 500 ops)
+          // out of storage on every conflict just to throw most of it away —
+          // and conflicts are exactly when the editor is busiest.
+          const pendingOps = await readProjectOpsSince(spacesDir, project.spaceId, project.projectId, baseVersion)
           return {
             conflict: true,
             latestVersion: currentVersion,
@@ -341,7 +360,7 @@ function registerProjectRoutes(router, {
           updatedAt: Date.now()
         }
         await writeProjectDocument(spacesDir, project.spaceId, project.projectId, nextDocument)
-        await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory)
+        await appendProjectOps(spacesDir, project.spaceId, project.projectId, versionedOps, maxOpHistory, maxOpAgeMs)
         const nextMeta = await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, {
           title: nextDocument.projectMeta.title,
           documentVersion: nextVersion
@@ -386,7 +405,17 @@ function registerProjectRoutes(router, {
       await ensureSpaceWritable(project.spaceId)
       const { assetsDir } = getProjectPaths(spacesDir, project.spaceId, project.projectId)
       await fsp.mkdir(assetsDir, { recursive: true })
-      let assetId = req.body?.assetId ? String(req.body.assetId).trim() : ''
+      // Strip EXIF/GPS before anything hashes the file — the id must address
+      // the bytes we actually store and serve.
+      const scrub = await scrubImageMetadata(req.file.path)
+      // multer's recorded size is stale once scrubbing rewrites the file, and
+      // the upload is moved into the blob store below — stat it while it's here
+      const scrubbedSize = await fsp.stat(req.file.path).then((s) => s.size).catch(() => req.file.size)
+      // A scrubbed file no longer hashes to the id the client computed from the
+      // original, so its requested id is dropped and the content address is
+      // recomputed below. Callers already remap ids from the response (bundle
+      // import in StudioEditor/RawHub). Un-rewritten files keep the strict check.
+      let assetId = (req.body?.assetId && !scrub.scrubbed) ? String(req.body.assetId).trim() : ''
       if (assetId) {
         if (!isValidAssetId(assetId)) {
           await fsp.rm(req.file.path, { force: true }).catch(() => {})
@@ -428,7 +457,11 @@ function registerProjectRoutes(router, {
         await fsp.rm(finalPath, { force: true })
         await fsp.rename(req.file.path, finalPath)
       }
-      const assetMeta = buildProjectAssetMeta({ assetId, file: req.file, source: 'server' })
+      const assetMeta = buildProjectAssetMeta({
+        assetId,
+        file: { ...req.file, size: scrubbedSize },
+        source: 'server'
+      })
       await writeJson(metaPath, assetMeta)
       const url = `${req.baseUrl || ''}/api/projects/${project.projectId}/assets/${assetId}`
       await upsertProjectMeta(spacesDir, project.spaceId, project.projectId, { touch: true })
@@ -509,6 +542,7 @@ function registerProjectRoutes(router, {
         await fsp.access(servePath)
       }
       res.setHeader('Content-Type', meta?.mimeType || 'application/octet-stream')
+      applyAssetSafetyHeaders(res, meta?.mimeType)
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
       res.sendFile(servePath)
     } catch (error) {
@@ -556,6 +590,12 @@ function registerProjectRoutes(router, {
         return res.status(404).json({ error: 'Project not found.' })
       }
       res.setHeader('Content-Type', 'text/event-stream')
+      // nginx proxies this through the generic /serverXR/ block with
+      // proxy_buffering on, which is free to hold small SSE writes — the
+      // same class of miss as the mesh websocket upgrade. This header
+      // disables buffering per-response, so collaborators' events arrive
+      // immediately on the Docker/VPS deploy, not just under the Vite proxy.
+      res.setHeader('X-Accel-Buffering', 'no')
       res.setHeader('Cache-Control', 'no-cache')
       res.setHeader('Connection', 'keep-alive')
       res.flushHeaders?.()

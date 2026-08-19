@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Box, Container } from '@mui/material'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { buildAppSpacePath, buildPreferencesPath } from '../../utils/spaceRouting.js'
-import { buildBetaHubPath } from '../../beta/utils/betaRouting.js'
+import { buildRawHubPath } from '../../raw/utils/rawRouting.js'
 import { importLegacySceneFile } from '../../project/import/importLegacyScene.js'
 import GridFloorBackground from '../../components/GridFloorBackground.jsx'
 import useAuthSession from '../../hooks/useAuthSession.js'
@@ -17,6 +17,7 @@ import {
 } from '../../project/services/projectsApi.js'
 import { getServerSpace, updateServerSpace } from '../../services/serverSpaces.js'
 import { buildStudioProjectPath, buildStudioSpacesPath, navigateToStudioPath } from '../utils/studioRouting.js'
+import { getCodeSpace } from '../utils/codeSpaces.js'
 import '../styles/studio-hub.css'
 
 const formatRelativeDate = (iso) => {
@@ -52,6 +53,9 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     const [renameValue, setRenameValue] = useState('')
     const [showArchived, setShowArchived] = useState(false)
 
+    // Non-null when this space's scene is code rather than a project document.
+    const codeSpace = useMemo(() => getCodeSpace(spaceId), [spaceId])
+
     const mostRecentProject = useMemo(() => projects[0] || null, [projects])
     const archivedProjects = useMemo(() => projects.filter(p => isArchivedTitle(p.title)), [projects])
     const visibleProjects = useMemo(
@@ -82,11 +86,14 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
     // The open space is a door, not a lobby: forward straight into the shared
     // jam project so "step inside" lands in 3D. ?browse=1 keeps the project
     // list reachable for management.
+    // The forward REPLACES its history entry — pushing left the door itself in
+    // history, so browser Back returned to /open/studio, which immediately
+    // re-forwarded: visitors could never get back to where they came from.
     useEffect(() => {
         if (!openSpaceId || spaceId !== openSpaceId) return
         if (new URLSearchParams(window.location.search).has('browse')) return
         const jam = projects.find(p => p.id === 'open-jam') || projects[0]
-        if (jam) navigateToStudioPath(buildStudioProjectPath(jam.id, spaceId))
+        if (jam) navigateToStudioPath(buildStudioProjectPath(jam.id, spaceId), { replace: true })
     }, [projects, spaceId, openSpaceId])
 
     const openProject = (projectId) =>
@@ -201,9 +208,18 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                         <h1 className="sh-title">Projects</h1>
                     </div>
                     {creatingTitle === null ? (
-                        <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
-                            + New
-                        </button>
+                        <div className="sh-top-actions">
+                            <button
+                                className="sh-btn-outline"
+                                title="Raw — the experimental node-first editor"
+                                onClick={() => appNavigate(buildRawHubPath(spaceId))}
+                            >
+                                Raw
+                            </button>
+                            <button className="sh-btn-new" onClick={handleNew} disabled={isBusy}>
+                                + New
+                            </button>
+                        </div>
                     ) : (
                         <form
                             className="sh-new-form"
@@ -247,8 +263,6 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                             </button>
                         </>
                     )}
-                    <span className="sh-sep">·</span>
-                    <button className="sh-link" onClick={() => appNavigate(buildBetaHubPath(spaceId))}>Beta</button>
                     {/* /admin gates non-admins out — showing this to everyone
                         was the audit's "Settings dead-end" (labeled Settings, led
                         to an admin wall, bounced the user back). Admin-only now. */}
@@ -277,8 +291,11 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     </p>
                 )}
 
-                {/* Empty state — first visit to a fresh space */}
-                {projects.length === 0 && !status && creatingTitle === null && (
+                {/* Empty state — first visit to a fresh space. Suppressed for a
+                    code space: "No projects yet" beside a finished installation
+                    is simply untrue, and the invitation to create one leads
+                    nowhere useful. */}
+                {projects.length === 0 && !codeSpace && !status && creatingTitle === null && (
                     <div className="sh-empty-state">
                         <p className="sh-empty-title">No projects yet</p>
                         <p className="sh-empty-hint">
@@ -291,9 +308,42 @@ export default function StudioHub({ spaceId = DEFAULT_PROJECT_SPACE_ID }) {
                     </div>
                 )}
 
-                {/* Projects */}
-                {visibleProjects.length > 0 && (
+                {/* Projects. A space whose scene is code has content even with
+                    zero projects, and it shares the grid rather than sitting in
+                    one of its own — it is one of this space's things, not a
+                    separate category. See utils/codeSpaces.js. */}
+                {(codeSpace || visibleProjects.length > 0) && (
                     <div className="sh-projects-grid">
+                        {codeSpace && (
+                            <div
+                                className="sh-project-card sh-project-card--code"
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => appNavigate(codeSpace.path)}
+                                onKeyDown={e => e.key === 'Enter' && appNavigate(codeSpace.path)}
+                            >
+                                <p className="sh-project-title">{codeSpace.label}</p>
+                                <span className="sh-code-badge">code space</span>
+                                <p className="sh-code-blurb">{codeSpace.blurb}</p>
+                                <div className="sh-code-actions">
+                                    <button
+                                        className="sh-link"
+                                        type="button"
+                                        onClick={e => { e.stopPropagation(); appNavigate(codeSpace.path) }}
+                                    >
+                                        Open
+                                    </button>
+                                    <span className="sh-sep">·</span>
+                                    <button
+                                        className="sh-link"
+                                        type="button"
+                                        onClick={e => { e.stopPropagation(); appNavigate(codeSpace.directorPath) }}
+                                    >
+                                        {codeSpace.directorLabel}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                         {visibleProjects.map((project) => {
                             const isRenaming = renamingId === project.id
                             return (

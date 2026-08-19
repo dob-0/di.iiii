@@ -1,7 +1,13 @@
 import React from 'react'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import StudioHub from './StudioHub.jsx'
+import { setAppNavigate } from '../../utils/appNavigate.js'
+import { ALGO_VRITHM_PATH, ALGO_VRITHM_SCENE_PATH } from '../../algoVrithm/algoVrithmRouting.js'
+// Resolves to the mock declared below, which is the point: the assertion then
+// checks that the button and codeSpaces.js agree on a destination, rather than
+// restating a literal that both could drift away from together.
+import { buildStudioDirectorPath } from '../utils/studioRouting.js'
 
 const createProject = vi.fn()
 const deleteProject = vi.fn()
@@ -40,6 +46,13 @@ vi.mock('../../project/import/importLegacyScene.js', () => ({
 
 vi.mock('../utils/studioRouting.js', () => ({
     buildStudioProjectPath: (projectId, spaceId) => `/${spaceId}/studio/projects/${projectId}`,
+    // codeSpaces.js builds the Director destination from this, at module scope.
+    // A mock that omits it does not fail where it is missing — it fails the
+    // whole suite at import, which is why this list has to track the real
+    // module rather than only the calls the component makes directly.
+    buildStudioDirectorPath: (spaceId) => `/${spaceId}/studio/director`,
+    buildStudioSpacesPath: () => '/studio',
+    buildStudioHubPath: (spaceId) => `/${spaceId}/studio`,
     navigateToStudioPath: (...args) => navigateToStudioPath(...args)
 }))
 
@@ -65,7 +78,9 @@ describe('StudioHub', () => {
         vi.spyOn(window, 'confirm').mockImplementation(() => true)
     })
 
-    it('forwards the open-space hub straight into the shared jam project', async () => {
+    // The replace matters as much as the forward: pushing left /open/studio in
+    // history, so Back re-entered the door and bounced forward again — a trap.
+    it('forwards the open-space hub straight into the shared jam project, replacing history', async () => {
         authState = { role: null, openSpaceId: 'open' }
         listProjects.mockResolvedValue([
             { id: 'open-jam', title: 'Open Jam', updatedAt: Date.now(), source: 'studio-v3' }
@@ -74,7 +89,10 @@ describe('StudioHub', () => {
         render(<StudioHub spaceId="open" />)
 
         await waitFor(() =>
-            expect(navigateToStudioPath).toHaveBeenCalledWith('/open/studio/projects/open-jam')
+            expect(navigateToStudioPath).toHaveBeenCalledWith(
+                '/open/studio/projects/open-jam',
+                { replace: true }
+            )
         )
     })
 
@@ -101,6 +119,79 @@ describe('StudioHub', () => {
         await waitFor(() => {
             expect(updateServerSpace).toHaveBeenCalledWith('gallery', { publishedProjectId: null })
             expect(deleteProject).toHaveBeenCalledWith('live-project')
+        })
+    })
+
+    describe('code spaces', () => {
+        // algovrithm's scene is a React route, not a project document, so the
+        // server correctly reports zero projects for it. Without the registry
+        // Studio then tells the author their finished installation is an empty
+        // space and offers to create a project that could never render it.
+        const navigate = vi.fn()
+
+        beforeEach(() => {
+            navigate.mockReset()
+            setAppNavigate(navigate)
+        })
+
+        afterEach(() => setAppNavigate(null))
+
+        it('lists the code space instead of the empty state', async () => {
+            listProjects.mockResolvedValue([])
+
+            render(<StudioHub spaceId="algovrithm" />)
+
+            expect(await screen.findByText('algovrithm')).toBeTruthy()
+            expect(screen.getByText('code space')).toBeTruthy()
+            expect(screen.queryByText('No projects yet')).toBeNull()
+            expect(screen.queryByRole('button', { name: '+ Create your first project' })).toBeNull()
+        })
+
+        it('opens the piece from the card', async () => {
+            listProjects.mockResolvedValue([])
+
+            render(<StudioHub spaceId="algovrithm" />)
+
+            fireEvent.click(await screen.findByRole('button', { name: 'Open' }))
+            // Open goes to the front door; Director goes past it, to the scene.
+            expect(navigate).toHaveBeenCalledWith(ALGO_VRITHM_PATH, { replace: false })
+        })
+
+        it('opens the director without also firing the card underneath', async () => {
+            // The action sits inside a clickable card; without stopPropagation
+            // the click would navigate twice and the last one would win.
+            listProjects.mockResolvedValue([])
+
+            render(<StudioHub spaceId="algovrithm" />)
+
+            fireEvent.click(await screen.findByRole('button', { name: 'Director' }))
+            expect(navigate).toHaveBeenCalledTimes(1)
+            // Studio's OWN director page — `/algovrithm/studio/director`, which
+            // is Studio chrome around the piece's timeline panel.
+            //
+            // Two fixes landed on this line at once and both were right about
+            // the bug: it asserted `${ALGO_VRITHM_PATH}?director`, the front
+            // door, for as long as the door existed, which is exactly how the
+            // button went on opening a page with no director on it — the
+            // landing ignores an unknown query param, so nothing failed. The
+            // other fix pointed it at the scene; this one gives the director a
+            // home instead, and keeps the scene reachable from that page as
+            // "Open the piece".
+            //
+            // Built from the path builder, not a literal, so moving the route
+            // again cannot leave this stale and green.
+            expect(navigate).toHaveBeenCalledWith(buildStudioDirectorPath('algovrithm'), { replace: false })
+            expect(navigate).not.toHaveBeenCalledWith(`${ALGO_VRITHM_PATH}?director`, expect.anything())
+            expect(navigate).not.toHaveBeenCalledWith(`${ALGO_VRITHM_SCENE_PATH}?director`, expect.anything())
+        })
+
+        it('leaves an ordinary empty space alone', async () => {
+            listProjects.mockResolvedValue([])
+
+            render(<StudioHub spaceId="gallery" />)
+
+            expect(await screen.findByText('No projects yet')).toBeTruthy()
+            expect(screen.queryByText('code space')).toBeNull()
         })
     })
 

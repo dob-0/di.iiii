@@ -6,10 +6,11 @@
  *
  * Reads:   spaces/{spaceId}/code/** (html, css, js, ts, json, svg, txt, md)
  * Finds:   live space's publishedProjectId (or first project if unset)
- * Patches: PATCH {LIVE_API_URL}/api/projects/{projectId}/document
+ * Patches: PATCH {target}/api/projects/{projectId}/document
  *          sets presentationState.codeFiles and presentationState.mode = 'code'
  *
- * Requires LIVE_API_URL and LIVE_API_TOKEN in serverXR/.env.local.
+ * Requires a target (--to, or LIVE_API_URL / STAGING_API_URL in
+ * serverXR/.env.local) and LIVE_API_TOKEN. There is no default target.
  */
 
 import fs from 'node:fs/promises'
@@ -17,7 +18,6 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'
 
 const CODE_EXTENSIONS = new Set(['.html', '.css', '.js', '.ts', '.json', '.svg', '.txt', '.md'])
 
@@ -99,7 +99,18 @@ const main = async () => {
         return
     }
 
-    const liveBase = (args.to || getEnv('LIVE_API_URL') || DEFAULT_LIVE_URL).replace(/\/+$/, '')
+    // No default target. `DEFAULT_LIVE_URL = 'https://di-studio.xyz/serverXR'`
+    // meant a push with no --to and no LIVE_API_URL wrote code straight to the
+    // live site — the same silent-fallback bug already fixed in space-sync.mjs.
+    const target = args.to || getEnv('STAGING_API_URL') || getEnv('LIVE_API_URL')
+    if (!target) {
+        console.error('Error: no target. Pass --to <url> or set LIVE_API_URL / STAGING_API_URL.')
+        console.error('  staging: https://staging.di-studio.xyz/serverXR')
+        console.error('  prod:    https://di-studio.xyz/serverXR')
+        process.exitCode = 1
+        return
+    }
+    const liveBase = target.replace(/\/+$/, '')
     const token = args.token || getEnv('LIVE_API_TOKEN') || ''
     const { spaceId, dryRun } = args
 

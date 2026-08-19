@@ -6,14 +6,12 @@ Burn the cheapest model that can do the job correctly. Use the most expensive on
 
 ## Tier Table
 
-The models below must match what `scripts/ollama-task.sh` actually invokes — this table drifted
-once (promised a 30B tier that no script ran).
+There is no local tier. Ollama was removed from every machine on 2026-08-05: the box that
+held the models goes offline, which made the free fallback the least available thing in the
+stack rather than the most. Cheap now means Haiku, not free.
 
 | Tier | Model | Cost | Use When |
 |------|-------|------|----------|
-| 0 — Local | Ollama `fast` → dob-fast (qwen3:8b) | **Free** | Read-only analysis, docs, PROGRESS.md, golden rules, Q&A |
-| 0 — Local | Ollama `tiny` → qwen2.5-coder:1.5b | **Free** | Grep assistance, test stub generation, symbol search |
-| 0 — Local | Ollama `deep` → dob-deep (qwen3:8b) / `coder` → qwen2.5-coder:7b | **Free** | Code explanation, architecture Q&A, refactor plans (no file edits) |
 | 1 — Cheap | Claude Haiku | Low | Simple single-file edits, small test additions, obvious lint fixes |
 | 2 — Medium | Claude Sonnet | Medium | Feature work, multi-file bugs, UI layout changes, node registry changes |
 | 3 — Expensive | Claude Opus / Fable | High | Only: architecture decisions, non-negotiable reviews, security audits, cross-system refactors, full audits |
@@ -28,11 +26,11 @@ this table.
 ## Task → Model Quick Routing
 
 ```text
-"What does X do?" / "Where is Y defined?"          → Ollama dob-fast or qwen2.5-coder:1.5b
-"Write PROGRESS.md session entry"                  → Ollama dob-fast
-"Add a golden rule"                                → Ollama dob-fast
-"Explain why this bug happened"                    → Ollama dob-deep or qwen2.5-coder:7b
-"Write tests for this utility function"            → Ollama qwen2.5-coder:7b or Haiku
+"What does X do?" / "Where is Y defined?"          → Haiku
+"Write PROGRESS.md session entry"                  → Haiku
+"Add a golden rule"                                → Haiku
+"Explain why this bug happened"                    → Sonnet — root cause, not restatement
+"Write tests for this utility function"            → Haiku
 "Fix a lint warning in one file"                   → Haiku
 "Add a small UI tweak (color, spacing)"            → Haiku
 "Fix a layout bug (measured heights, insets)"      → Sonnet — layout precision required
@@ -59,8 +57,7 @@ this table.
 | Infrastructure Engineer | Haiku | Sonnet for new workflows |
 | QA/Test Engineer | Haiku | Sonnet for complex test scenarios |
 | Security Auditor | Opus | — |
-| Documentation Engineer | Ollama dob-fast | Haiku for structured docs |
-| Ollama Agent | Ollama (free) | Never escalates — delegates instead |
+| Documentation Engineer | Haiku | Sonnet for structured docs |
 
 ---
 
@@ -93,37 +90,6 @@ The biggest token burn is agents loading everything at session start. The correc
 5. **Stop. Execute the task. Read more only if blocked.**
 
 Do NOT pre-read: golden_rules.md, architecture.md, every component in the area, test files "just in case". Read them if the task demands it.
-
----
-
-## How to Delegate to Ollama
-
-Use `scripts/ollama-task.sh` to delegate free-tier work:
-
-```bash
-# Analysis / Q&A
-bash scripts/ollama-task.sh fast "Explain what getWorkspaceTopInset does in windowLayout.js"
-
-# Code search
-bash scripts/ollama-task.sh tiny "Find all files that import nodeRegistry"
-
-# Documentation draft
-bash scripts/ollama-task.sh fast "Write a PROGRESS.md entry for: fixed workflow strip height fallback"
-
-# Complex code explanation
-bash scripts/ollama-task.sh deep "Explain the layout data flow from BetaEditor to BetaGraphSurface"
-```
-
-Ollama output is read-only advice — Claude Code reviews it and decides whether to act.
-
----
-
-## What Never Goes to Ollama
-
-- CSS or layout edits — precision required, use Sonnet minimum
-- Auth or security code — use Opus
-- Schema or op-log changes — use Opus
-- Any task that requires file edits — Ollama is analysis-only
 
 ---
 

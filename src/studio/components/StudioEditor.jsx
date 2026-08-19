@@ -6,7 +6,9 @@ import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSy
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { useProjectStore } from '../../project/state/projectStore.js'
-import { DEFAULT_PROJECT_SPACE_ID, deleteProjectAsset, uploadProjectAsset } from '../../project/services/projectsApi.js'
+import { DEFAULT_PROJECT_SPACE_ID, buildProjectAssetUrl, deleteProjectAsset, uploadProjectAsset } from '../../project/services/projectsApi.js'
+import { mountRelativeApiUrl } from '../../services/assetSources.js'
+import { isHtmlLikeMimeType } from '../../utils/assetContentType.js'
 import { createStudioProjectBundle, readStudioProjectBundle } from '../../project/transfer/studioProjectBundle.js'
 import { defaultWorldState, normalizeProjectDocument } from '../../shared/projectSchema.js'
 import useXrAr from '../../hooks/useXrAr.js'
@@ -317,8 +319,17 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
     const handleCreateFromAsset = async (asset, position = null) => {
         if (isPdfAsset(asset)) {
             try {
-                const res = await fetch(asset.url, { credentials: 'include' })
+                // Project-document assets store mount-relative `/api/…` urls
+                // (and legacy imports can carry an empty one). Fetching those
+                // verbatim on the deployed stack hits nginx's SPA fallback and
+                // returns 200 text/html, which pdfToImageFiles then fails to
+                // parse — "works on localhost, broken on prod".
+                const pdfUrl = mountRelativeApiUrl(asset.url) || buildProjectAssetUrl(projectId, asset.id)
+                const res = await fetch(pdfUrl, { credentials: 'include' })
                 if (!res.ok) throw new Error(`fetch failed (${res.status})`)
+                if (isHtmlLikeMimeType(res.headers?.get?.('content-type') || '')) {
+                    throw new Error('asset URL returned HTML, not a PDF')
+                }
                 const blob = await res.blob()
                 await importPdfAsImagePages(new File([blob], asset.name || 'document.pdf', { type: 'application/pdf' }))
             } catch (error) {
@@ -706,8 +717,11 @@ export default function StudioEditor({ projectId, spaceId = DEFAULT_PROJECT_SPAC
                 handleDeleteSelected()
                 return
             }
-            // Frame selected — F (Maya/Unity) or "." (Blender numpad). Both supported.
-            if (event.key === 'f' || event.key === 'F' || event.key === '.') {
+            // Frame selected — F (Maya/Unity) or "." (Blender numpad). Both
+            // supported. The !meta guard matches the sibling Delete/A branches:
+            // without it, Ctrl/Cmd+F (find-in-page, preventable in Chrome and
+            // Firefox) was swallowed and the camera jumped instead.
+            if (!meta && (event.key === 'f' || event.key === 'F' || event.key === '.')) {
                 if (!selectedEntity) return
                 event.preventDefault()
                 handleFrameSelected()

@@ -1,0 +1,292 @@
+@import url("./fonts.css");
+
+/* Every colour here is legal in the piece — run palette.js's own paletteWarning()
+   over them and they pass. That claim has now been CHECKED rather than asserted,
+   and when it was first written it was false twice over: --avl-void was #05060f
+   (hue 234, the purple gap) and --avl-ink was #f2f5f7 (lighter than the strobe).
+   The accent was worse still — #4df9ff,
+   which is the DIRECTOR PANEL's chrome (algoVrithm.css), and the piece's palette
+   file rejects it outright — "Hue 182 sits in the green/yellow gap. The piece
+   only uses 195-215 and 350-40." The front door was wearing the tool's colours,
+   not the work's.
+
+   The replacements are the piece's own: iceBlue #CFE3EC is what the closing
+   sphere's iris ramp opens on, deepSky #5F92B8 is the palette's named structure
+   colour, and both sit inside the cool band. Which is as much colour as this
+   page has any business showing — 44 of the work's 53 seconds are black and
+   white, and hue arrives exactly once, in the last beat. No card chrome, no
+   gradients: the work is white light in black air. */
+.avl-root {
+    /* PALETTE.void. Was #05060f, which palette.js rejects outright — "Hue 234
+       sits in the purple gap" — so the page's ground was the one hue family the
+       whole work is built to exclude, under a comment claiming it passed. */
+    --avl-void: #0d1114;
+    /* PALETTE.offWhite. Was #f2f5f7, which fails as "lighter than the strobe":
+       in this work white is a highlight, not a brightener, and the reading
+       colour must not out-glare the one white the piece opens and closes on. */
+    --avl-ink: #f2efea;
+    --avl-dim: #7d8894;
+    /* iceBlue. */
+    --avl-lit: #cfe3ec;
+    --avl-rule: rgba(207, 227, 236, 0.14);
+
+    /* html/body/#root are position:fixed (base.css), so the document never
+       scrolls and a page root that only sets min-height silently overflows:
+       the head and the poster were the whole visible page and the timeline,
+       the beats and the note below them could not be reached at all. This
+       root owns its scroll, same as .wcc-landing and .ssh-root. */
+    height: 100vh;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    box-sizing: border-box;
+    padding: clamp(2rem, 6vw, 5rem) clamp(1.1rem, 5vw, 4rem) 5rem;
+    background: var(--avl-void);
+    color: var(--avl-ink);
+    font-family: 'Space Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* base.css sets user-select: none on html/body/#root, which is right for an
+       editor and wrong here: this page is one long quotation and none of it
+       could be selected or copied. Same opt-back-in the main landing does. */
+    -webkit-user-select: text;
+    user-select: text;
+}
+
+/* The root takes focus on mount so the reading keys work (see the note in the
+   component). It is not a control, so it shows no ring for that programmatic
+   focus — :focus-visible is left alone, so a keyboard user who deliberately
+   tabs here still gets one. */
+.avl-root:focus:not(:focus-visible) {
+    outline: none;
+}
+
+.avl-root *,
+.avl-root *::before,
+.avl-root *::after {
+    box-sizing: border-box;
+}
+
+.avl-head {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: min(78vh, 44rem);
+    max-width: 54rem;
+    margin: 0 auto clamp(3rem, 8vw, 6rem);
+}
+
+.avl-title {
+    margin: 0 0 1rem;
+    font-size: clamp(2.6rem, 11vw, 6rem);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 0.92;
+}
+
+.avl-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.9rem 1.4rem;
+    margin-top: 1.8rem;
+}
+
+.avl-enter {
+    padding: 0.85rem 2.1rem;
+    border: 2px solid var(--avl-lit);
+    border-radius: 0;
+    /* Its own ground, so its contrast does not move with the scrim. */
+    background: rgba(13, 17, 20, 0.72);
+    color: var(--avl-lit);
+    font: inherit;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 140ms ease, color 140ms ease;
+}
+
+.avl-enter:hover,
+.avl-enter:focus-visible {
+    background: var(--avl-lit);
+    color: var(--avl-void);
+}
+
+/* The piece is the page's ground. Fixed and full-viewport rather than a boxed
+   16:9 frame: a rectangle made the work an illustration of itself, and the
+   statement it sits under is about living inside a composed environment rather
+   than looking at one. */
+.avl-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    background: #000;
+    pointer-events: none;
+}
+
+/* Legibility, not decoration. Two of the seven beats declare a WHITE world and
+   fill the frame with it for seconds at a time, so text over a raw canvas
+   vanishes completely — and a full-viewport luminance flip is a far harsher
+   thing to sit in front of than the same flip inside a small rectangle.
+   Both values are measured, not chosen.
+
+   It has two strengths because the page has two jobs. On arrival there is one
+   line of 96px type on the screen and the piece should be the loudest thing
+   there: 0.62 holds the title above the 3:1 large-text floor and lets the work
+   through. Once the statement is on screen it becomes five paragraphs of body
+   prose, and 0.9 is what keeps the worst white frame — compositing to about
+   #1b1c24 — above 4.5:1. The field receding as you begin to read is also the
+   right gesture for the sentence you are reading it under. */
+.avl-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background: rgba(13, 17, 20, 0.62);
+    transition: background 700ms ease;
+    pointer-events: none;
+}
+
+.avl-root.is-reading .avl-scrim {
+    background: rgba(13, 17, 20, 0.9);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .avl-scrim {
+        transition: none;
+    }
+}
+
+/* Everything readable sits above both. */
+.avl-head,
+.avl-statement,
+.avl-hold {
+    position: relative;
+    z-index: 1;
+}
+
+/* The only control, kept out of the reading column: an obligation rather than
+   part of the page.
+
+   It is FIXED and the statement scrolls under it, and on desktop that is fine
+   because the reading column starts 288px in and the control sits in the left
+   margin. Every viewport without that gutter — phone, tablet — put PAUSE on top
+   of a line of the statement and made both unreadable.
+
+   So the page dims toward its bottom edge, and the control sits in the dim.
+   That is the same scrim vocabulary the reading state already uses rather than
+   a new bar or a new surface, and it fixes the general case too: text no longer
+   runs off the bottom edge mid-sentence on any viewport. */
+.avl-hold::before {
+    content: '';
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: clamp(5rem, 13vh, 7.5rem);
+    z-index: -1;
+    pointer-events: none;
+    /* Opaque up to 45%, which is above the control's own cap height at every
+       viewport in the sweep — a partial fade there still let a line of the
+       statement read THROUGH the word PAUSE, which is the same collision in a
+       politer register. Only the top half of the strip fades. */
+    background: linear-gradient(
+        to top,
+        var(--avl-void) 0 45%,
+        rgba(13, 17, 20, 0.9) 62%,
+        rgba(13, 17, 20, 0)
+    );
+}
+
+.avl-hold {
+    position: fixed;
+    left: clamp(1.1rem, 5vw, 4rem);
+    bottom: clamp(1.1rem, 3vw, 2rem);
+    z-index: 2;
+    padding: 0.4rem 0;
+    border: 0;
+    background: none;
+    color: var(--avl-dim);
+    font: inherit;
+    font-size: 0.74rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.avl-hold:hover,
+.avl-hold:focus-visible {
+    color: var(--avl-lit);
+}
+
+.avl-hold:focus-visible {
+    outline: 2px solid var(--avl-lit);
+    outline-offset: 4px;
+}
+
+/* Off-screen but in the accessibility tree — the two section headings and the
+   live region. role="status" is announced whether or not it is painted, and the
+   movement names it carries are already set visibly, and at leisure, in the
+   score. It is not decoration and must not be display:none'd. */
+.avl-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    border: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+/* The statement is the only long-form voice on the page and the only place a
+   first person speaks. No card, no panel, no accent, and since the redesign no
+   visible "The concept" label either — a paragraph that opens "I belong to a
+   generation..." does not need to be introduced.
+
+   54rem like every other section, with the reading measure nested inside it —
+   the pattern .avl-head/.avl-lede already use. Given `margin: auto` on a 42rem
+   section this block sat 96px inboard of the whole page, and its hairline ran
+   96px short of the canvas border directly above it.
+
+   The measure is in ch, not rem: 42rem was inherited from .avl-lede, where at
+   1.02rem it is 69 characters. At the smaller size used here the same token
+   silently became 80 — and the 1.85 leading was compensation for a measure
+   that should never have been that wide. */
+.avl-statement {
+    max-width: 54rem;
+    margin: clamp(2.4rem, 5vw, 3.4rem) auto;
+    /* Clears the bottom fade, so the last sentence of the statement can be
+       scrolled fully out from under it rather than resting in the dim. */
+    padding-bottom: clamp(5.5rem, 14vh, 8rem);
+    color: var(--avl-ink);
+    font-size: clamp(0.94rem, 2.2vw, 1.02rem);
+    line-height: 1.7;
+}
+
+.avl-statement p {
+    max-width: 66ch;
+    margin: 0 0 1.1rem;
+}
+
+/* The six gestures are the piece's subject, so they are the one line here that
+   is set rather than merely typed: full ink, and given the room the repetition
+   needs to land as repetition. */
+.avl-gestures {
+    display: grid;
+    gap: 0.1em;
+    margin: 2rem 0;
+    color: var(--avl-ink);
+    font-size: clamp(1.05rem, 3.4vw, 1.5rem);
+    line-height: 1.18;
+    letter-spacing: 0.02em;
+}
+
+
+/* Reduced motion is handled in the component, not here: the frame is painted
+   by canvas, so there is no animation for CSS to switch off. See
+   prefersReducedMotion() in AlgoVrithmLanding.jsx — the page opens paused and
+   the rAF loop never starts. */
+

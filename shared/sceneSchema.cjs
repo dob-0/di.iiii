@@ -195,7 +195,9 @@ const applySceneOps = (scene, ops = []) => {
         const targetId = payload.objectId
         if (!targetId || !objectsById.has(targetId)) break
         const existing = objectsById.get(targetId)
-        objectsById.set(targetId, normalizeObject(applyPatch(existing, payload.patch || {})))
+        // Pin the id — a patch carrying `id` would desync map key and object
+        // id (duplicate ids, silent object loss on next apply).
+        objectsById.set(targetId, normalizeObject({ ...applyPatch(existing, payload.patch || {}), id: targetId }))
         break
       }
       case 'deleteObject': {

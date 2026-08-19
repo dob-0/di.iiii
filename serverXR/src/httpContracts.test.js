@@ -4,10 +4,26 @@ import { spawn } from 'node:child_process'
 import { mkdtemp, mkdir, readdir, rm, writeFile } from 'node:fs/promises'
 import fs from 'node:fs'
 import net from 'node:net'
+import { createRequire } from 'node:module'
 import os from 'node:os'
 import path from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+const require = createRequire(import.meta.url)
+const { createAuthSessionValue } = require('./authSession.js')
+const { io: ioClient } = require('socket.io-client')
+
+// Every test in this file boots a real serverXR process and talks to it over
+// the loopback. Vitest's default 5s per-test budget covers the *machine*, not
+// the behavior under test: with the suite running in parallel (or beside a
+// second suite -- how this was reproduced) a spawn + listen + first request
+// can cross 5s with nothing wrong. Two tests here failed exactly that way at
+// 5074ms and 5095ms. waitForHealth already allows 15s for the boot alone, so
+// the per-test budget has to be larger than that or the health wait can never
+// finish. Hooks get more again: afterEach stops every server it started.
+vi.setConfig({ testTimeout: 25_000, hookTimeout: 40_000 })
 
 const SERVER_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SERVER_ENTRY = path.join(SERVER_ROOT, 'src/index.js')
@@ -193,6 +209,57 @@ const createSpaceWithScene = async (server, {
         expect(sceneRes.status).toBe(200)
     }
     return spaceId
+}
+
+// Accounts only ever come from an OAuth callback, which a spawned fixture can't
+// perform — seed the row straight into the server's DB and mint the cookie its
+// own signer would have produced (startServer pins AUTH_SESSION_SECRET).
+const SESSION_SECRET = 'test-session-secret'
+
+const seedAccount = (server, id) => {
+    const db = new DatabaseSync(path.join(server.dataRoot, 'di.db'))
+    const now = Date.now()
+    db.prepare(`
+        INSERT INTO users (id, provider, provider_id, email, display_name, role, spaces, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, 'github', id, `${id}@example.com`, id, 'editor', '[]', now, now)
+    db.close()
+}
+
+const mintSessionCookie = (subject) => {
+    const { value } = createAuthSessionValue({
+        secret: SESSION_SECRET,
+        session: { subject, label: subject, role: 'editor', spaces: [], tokenVersion: 0 }
+    })
+    return `dii_serverxr_session=${value}`
+}
+
+// Socket.IO carries the same session cookie as the HTTP routes, so it needs the
+// same revocation check — the client half follows meshHub.test.js, the server
+// half is the real spawned process, which is what makes the wiring at the
+// initializeSocket call site part of what this exercises.
+const connectSocket = (server, cookie) => new Promise((resolve) => {
+    const url = new URL(server.baseUrl)
+    const socket = ioClient(url.origin, {
+        path: `${url.pathname}/socket.io`,
+        transports: ['websocket'],
+        reconnection: false,
+        extraHeaders: { Cookie: cookie }
+    })
+    const settle = (outcome) => {
+        clearTimeout(timer)
+        socket.close()
+        resolve(outcome)
+    }
+    const timer = setTimeout(() => settle({ connected: false, error: 'timeout' }), 5000)
+    socket.on('connect', () => settle({ connected: true, error: null }))
+    socket.on('connect_error', (error) => settle({ connected: false, error: error.message }))
+})
+
+const readSession = async (server, cookie) => {
+    const response = await fetch(`${server.baseUrl}/api/auth/session`, { headers: { Cookie: cookie } })
+    expect(response.status).toBe(200)
+    return response.json()
 }
 
 afterEach(async () => {
@@ -625,6 +692,143 @@ describe('server write contracts', () => {
         })
         expect(deletedSpace.status).toBe(200)
         await expect(deletedSpace.json()).resolves.toMatchObject({ ok: true })
+    })
+
+    // Ownership used to be write-once — set from the creating session and
+    // reachable by no other route. Every space provisioned by an API token (how
+    // the linked repos sync theirs) was born ownerless and could never be
+    // adopted, so owner-gated actions all fell through to global admin.
+    it('lets an admin assign and clear the owner of an already-created space', async () => {
+        const editorToken = 'adopt-editor-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                EDITOR_API_TOKEN: editorToken,
+                EDITOR_ALLOWED_SPACES: 'orphan-space,mine-space'
+            }
+        })
+
+        // Provisioned by an API token: no session, therefore no owner.
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ label: 'Orphan', slug: 'orphan-space' })
+        })
+        expect(created.status).toBe(201)
+        await expect(created.json()).resolves.toMatchObject({ space: { ownerUserId: null } })
+
+        // Handing someone a space is a grant, not a preference — editors can't.
+        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: editorToken })
+        })
+        const cookie = (login.headers.get('set-cookie') || '').split(';')[0]
+        const mine = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ label: 'Mine', slug: 'mine-space' })
+        })
+        expect(mine.status).toBe(201)
+        // Owning a space does not let you give it away.
+        const denied = await fetch(`${server.baseUrl}/api/spaces/mine-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ ownerUserId: 'somebody' })
+        })
+        expect(denied.status).toBe(403)
+        await expect(denied.json()).resolves.toMatchObject({
+            error: 'Only an admin can change the owner of a space.'
+        })
+
+        // An id that belongs to no account is a typo, not a new owner.
+        const unknown = await fetch(`${server.baseUrl}/api/spaces/orphan-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ ownerUserId: 'no-such-user' })
+        })
+        expect(unknown.status).toBe(404)
+        await expect(unknown.json()).resolves.toMatchObject({ error: 'Owner account not found.' })
+
+        // A guest subject is a cookie, not an account.
+        const guestOwner = await fetch(`${server.baseUrl}/api/spaces/orphan-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ ownerUserId: 'guest:abc123' })
+        })
+        expect(guestOwner.status).toBe(400)
+        await expect(guestOwner.json()).resolves.toMatchObject({
+            error: 'A guest identity cannot own a space.'
+        })
+
+        // Explicit null is the release valve: a space can be returned to the
+        // platform without deleting it.
+        const cleared = await fetch(`${server.baseUrl}/api/spaces/orphan-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ ownerUserId: null })
+        })
+        expect(cleared.status).toBe(200)
+        await expect(cleared.json()).resolves.toMatchObject({ space: { ownerUserId: null } })
+
+        // An unrelated PATCH must not clear ownership as a side effect.
+        const renamed = await fetch(`${server.baseUrl}/api/spaces/orphan-space`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ label: 'Still Orphan' })
+        })
+        expect(renamed.status).toBe(200)
+        await expect(renamed.json()).resolves.toMatchObject({
+            space: { label: 'Still Orphan', ownerUserId: null }
+        })
+    })
+
+    // A CODE space's piece is React in src/, so it has no project document and
+    // nowhere on the server to keep what its author tunes. The algovrithm
+    // Director could save only through a Vite dev-server middleware: openable
+    // on the live site, unsavable from it.
+    it('keeps a small settings blob per space, bounded and shaped', async () => {
+        const server = await startServer({ nodeEnv: 'production' })
+        const auth = { 'Content-Type': 'application/json', ...withAuth(server.apiToken) }
+
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST', headers: auth,
+            body: JSON.stringify({ label: 'Code Space', slug: 'code-space' })
+        })
+
+        // Never tuned reads as {}, not 404 — callers need no "not yet" case.
+        const empty = await fetch(`${server.baseUrl}/api/spaces/code-space/settings`, { headers: withAuth(server.apiToken) })
+        expect(empty.status).toBe(200)
+        await expect(empty.json()).resolves.toEqual({ settings: {} })
+
+        const timing = { algovrithm: { timing: { 's01-white-tunnel': { startSec: 0, endSec: 6.2 } } } }
+        const saved = await fetch(`${server.baseUrl}/api/spaces/code-space/settings`, {
+            method: 'PUT', headers: auth, body: JSON.stringify({ settings: timing })
+        })
+        expect(saved.status).toBe(200)
+        const read = await fetch(`${server.baseUrl}/api/spaces/code-space/settings`, { headers: withAuth(server.apiToken) })
+        await expect(read.json()).resolves.toEqual({ settings: timing })
+
+        // An array is an object to typeof and would round-trip as a shape no
+        // reader expects.
+        const asArray = await fetch(`${server.baseUrl}/api/spaces/code-space/settings`, {
+            method: 'PUT', headers: auth, body: JSON.stringify({ settings: [1, 2, 3] })
+        })
+        expect(asArray.status).toBe(400)
+
+        // Arbitrary JSON with no ceiling is a way to fill a disk.
+        const huge = await fetch(`${server.baseUrl}/api/spaces/code-space/settings`, {
+            method: 'PUT', headers: auth, body: JSON.stringify({ settings: { blob: 'x'.repeat(70_000) } })
+        })
+        expect(huge.status).toBe(413)
+
+        // The rejected writes changed nothing.
+        const after = await fetch(`${server.baseUrl}/api/spaces/code-space/settings`, { headers: withAuth(server.apiToken) })
+        await expect(after.json()).resolves.toEqual({ settings: timing })
+
+        const missing = await fetch(`${server.baseUrl}/api/spaces/no-such-space/settings`, { headers: withAuth(server.apiToken) })
+        expect(missing.status).toBe(404)
     })
 
     it('gives every session the communal open space plus one private sandbox', async () => {
@@ -1899,6 +2103,120 @@ describe('server write contracts', () => {
         expect(secondBody.offset).toBe(2)
         expect(secondBody.spaces).toEqual(unpagedBody.spaces.slice(2, 4))
     })
+
+    // Stored XSS: uploads pass on filename extension alone, so an SVG (or an
+    // `.png` declared text/html) lands with a script-bearing body and a
+    // client-chosen mimeType, then gets served same-origin. Assets must never
+    // reach the browser as a document.
+    it('serves script-capable assets as downloads, never as same-origin documents', async () => {
+        const server = await startServer()
+        const spaceId = 'xss-space'
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...withAuth(server.apiToken) },
+            body: JSON.stringify({ slug: spaceId, label: 'XSS Space', permanent: true })
+        })
+        expect(created.status).toBe(201)
+
+        const svgBody = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>'
+        const uploadAsset = async (blob, filename) => {
+            const form = new FormData()
+            form.append('asset', blob, filename)
+            const res = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets`, {
+                method: 'POST',
+                headers: withAuth(server.apiToken),
+                body: form
+            })
+            expect(res.status).toBe(200)
+            return (await res.json()).assetId
+        }
+
+        const svgId = await uploadAsset(new Blob([svgBody], { type: 'image/svg+xml' }), 'poster.svg')
+        const svgRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${svgId}`)
+        expect(svgRes.status).toBe(200)
+        expect(svgRes.headers.get('x-content-type-options')).toBe('nosniff')
+        expect(svgRes.headers.get('content-disposition')).toBe('attachment')
+
+        // Extension-only acceptance: `.png` is on the allowlist, so a declared
+        // text/html sails through the filter and would be echoed back as HTML.
+        const htmlId = await uploadAsset(new Blob([svgBody], { type: 'text/html' }), 'looks-like.png')
+        const htmlRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${htmlId}`)
+        expect(htmlRes.status).toBe(200)
+        expect(htmlRes.headers.get('content-type')).toBe('application/octet-stream')
+        expect(htmlRes.headers.get('content-disposition')).toBe('attachment')
+
+        // A real image keeps its type (and renders) — only nosniff is added.
+        const pngId = await uploadAsset(new Blob(['png-bytes'], { type: 'image/png' }), 'flat.png')
+        const pngRes = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/assets/${pngId}`)
+        expect(pngRes.headers.get('content-type')).toContain('image/png')
+        expect(pngRes.headers.get('content-disposition')).toBe(null)
+        expect(pngRes.headers.get('x-content-type-options')).toBe('nosniff')
+
+        // The project asset route serves the same blob store and needs the
+        // same headers.
+        const project = await createServerProject(server, spaceId, { title: 'XSS Project', slug: 'xss-project' })
+        const projForm = new FormData()
+        projForm.append('asset', new Blob([svgBody], { type: 'image/svg+xml' }), 'poster.svg')
+        const projUpload = await fetch(`${server.baseUrl}/api/projects/${project.id}/assets`, {
+            method: 'POST',
+            headers: withAuth(server.apiToken),
+            body: projForm
+        })
+        expect(projUpload.status).toBe(200)
+        const projAssetId = (await projUpload.json()).asset.id
+        const projRes = await fetch(`${server.baseUrl}/api/projects/${project.id}/assets/${projAssetId}`)
+        expect(projRes.status).toBe(200)
+        expect(projRes.headers.get('x-content-type-options')).toBe('nosniff')
+        expect(projRes.headers.get('content-disposition')).toBe('attachment')
+    })
+
+    // Sandboxes are created with no ownerUserId (they must not count toward the
+    // owned-space quota), and owner gating keyed on ownerUserId alone — so an
+    // account was 403'd from managing its own sandbox.
+    it('lets a signed-in account manage its own sandbox space', async () => {
+        const editorToken = 'sandbox-owner-token'
+        const server = await startServer({
+            nodeEnv: 'production',
+            extraEnv: {
+                AUTH_SESSION_COOKIE_SECURE: 'false',
+                EDITOR_API_TOKEN: editorToken,
+                EDITOR_ALLOWED_SPACES: 'seed-space'
+            }
+        })
+
+        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: editorToken })
+        })
+        expect(login.status).toBe(200)
+        const cookie = (login.headers.get('set-cookie') || '').split(';')[0]
+        const status = await fetch(`${server.baseUrl}/api/auth/session`, { headers: { Cookie: cookie } })
+        const { sandboxSpaceId } = await status.json()
+        expect(sandboxSpaceId).toMatch(/^sandbox-/)
+
+        // First access provisions it.
+        const scene = await fetch(`${server.baseUrl}/api/spaces/${sandboxSpaceId}/scene`, { headers: { Cookie: cookie } })
+        expect(scene.status).toBe(200)
+
+        const renamed = await fetch(`${server.baseUrl}/api/spaces/${sandboxSpaceId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ label: 'My Sandbox' })
+        })
+        expect(renamed.status).toBe(200)
+        await expect(renamed.json()).resolves.toMatchObject({ space: { label: 'My Sandbox' } })
+
+        // Someone else's sandbox stays someone else's.
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guestSandboxId = (await guest.json()).sandboxSpaceId
+        const stranger = await fetch(`${server.baseUrl}/api/spaces/${guestSandboxId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json', Cookie: cookie },
+            body: JSON.stringify({ label: 'Not Mine' })
+        })
+        expect(stranger.status).toBe(403)
+    })
 })
 
 describe('open-call application contracts', () => {
@@ -2181,6 +2499,9 @@ describe('open inscriptions (append-only portal writes)', () => {
         expect(inscribed.ok).toBe(true)
         expect(inscribed.id.startsWith('insc-')).toBe(true)
         expect(inscribed.total).toBe(1)
+        // one-time proof of authorship comes back raw, exactly once
+        expect(typeof inscribed.proof).toBe('string')
+        expect(inscribed.proof.length).toBeGreaterThanOrEqual(24)
 
         const sceneRes = await fetch(`${server.baseUrl}/api/spaces/vi-field/scene`)
         expect(sceneRes.status).toBe(200)
@@ -2189,6 +2510,43 @@ describe('open inscriptions (append-only portal writes)', () => {
         expect(stones.length).toBe(1)
         expect(stones[0].type).toBe('text-2d')
         expect(stones[0].data).toBe('anna · thread across')
+        // the publicly readable object carries only the sha256, never the raw proof
+        const { createHash } = await import('node:crypto')
+        expect(stones[0].proofHash).toBe(createHash('sha256').update(inscribed.proof, 'utf8').digest('hex'))
+        expect(JSON.stringify(scenePayload)).not.toContain(inscribed.proof)
+
+        // self-unmake: wrong proof 403, unknown id 404, right proof removes the stone
+        const wrongProof = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions/${inscribed.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ proof: 'not-the-proof' })
+        })
+        expect(wrongProof.status).toBe(403)
+        const unknownId = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions/insc-does-not-exist`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ proof: inscribed.proof })
+        })
+        expect(unknownId.status).toBe(404)
+        const deletePreflight = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions/${inscribed.id}`, {
+            method: 'OPTIONS',
+            headers: { Origin: 'null', 'Access-Control-Request-Method': 'DELETE', 'Access-Control-Request-Headers': 'Content-Type' }
+        })
+        expect(deletePreflight.status).toBe(204)
+        expect(deletePreflight.headers.get('access-control-allow-origin')).toBe('*')
+        const versionBefore = (await (await fetch(`${server.baseUrl}/api/spaces/vi-field`, { headers: withAuth(server.apiToken) })).json()).space.sceneVersion
+        const unmade = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions/${inscribed.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ proof: inscribed.proof })
+        })
+        expect(unmade.status).toBe(200)
+        const unmadeBody = await unmade.json()
+        expect(unmadeBody).toEqual({ ok: true, id: inscribed.id, total: 0 })
+        const sceneAfter = await (await fetch(`${server.baseUrl}/api/spaces/vi-field/scene`)).json()
+        expect((sceneAfter.scene?.objects || []).filter((obj) => obj.id.startsWith('insc-')).length).toBe(0)
+        const versionAfter = (await (await fetch(`${server.baseUrl}/api/spaces/vi-field`, { headers: withAuth(server.apiToken) })).json()).space.sceneVersion
+        expect(versionAfter).toBe(versionBefore + 1)
 
         // a word is required
         const empty = await fetch(`${server.baseUrl}/api/spaces/vi-field/inscriptions`, {
@@ -2228,5 +2586,178 @@ describe('open inscriptions (append-only portal writes)', () => {
             body: JSON.stringify({ name: 'b', word: 'later' })
         })
         expect(killed.status).toBe(403)
+    })
+})
+
+describe('session revocation (logout)', () => {
+    it('rejects a session that was issued before logout', async () => {
+        const server = await startServer({ requireAuth: true })
+        seedAccount(server, 'revoke-one')
+        const cookie = mintSessionCookie('revoke-one')
+
+        await expect(readSession(server, cookie)).resolves.toMatchObject({
+            authenticated: true,
+            type: 'session',
+            subject: 'revoke-one'
+        })
+
+        const logout = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'DELETE',
+            headers: { Cookie: cookie }
+        })
+        expect(logout.status).toBe(204)
+
+        const after = await readSession(server, cookie)
+        expect(after.subject).not.toBe('revoke-one')
+        expect(after.type).toBe('guest')
+    })
+
+    it('rejects a second device holding a session for the same account', async () => {
+        const server = await startServer({ requireAuth: true })
+        seedAccount(server, 'revoke-two')
+        const phone = mintSessionCookie('revoke-two')
+        const laptop = mintSessionCookie('revoke-two')
+
+        await expect(readSession(server, laptop)).resolves.toMatchObject({ subject: 'revoke-two' })
+
+        const logout = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'DELETE',
+            headers: { Cookie: phone }
+        })
+        expect(logout.status).toBe(204)
+
+        const after = await readSession(server, laptop)
+        expect(after.subject).not.toBe('revoke-two')
+        expect(after.type).toBe('guest')
+    })
+
+    it('keeps verifying a session whose subject has no user row, and logs it out without error', async () => {
+        const server = await startServer({ requireAuth: true })
+        const cookie = mintSessionCookie('sandbox-only-subject')
+
+        await expect(readSession(server, cookie)).resolves.toMatchObject({
+            authenticated: true,
+            type: 'session',
+            subject: 'sandbox-only-subject'
+        })
+
+        const logout = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'DELETE',
+            headers: { Cookie: cookie }
+        })
+        expect(logout.status).toBe(204)
+
+        // Nothing to revoke without a user row: the same cookie still verifies,
+        // exactly as it did before token_version existed.
+        await expect(readSession(server, cookie)).resolves.toMatchObject({
+            authenticated: true,
+            subject: 'sandbox-only-subject'
+        })
+    })
+})
+
+describe('session revocation reaches the realtime layer', () => {
+    it('refuses a Socket.IO connection made with a cookie that was revoked by logout', async () => {
+        const server = await startServer({ requireAuth: true })
+        seedAccount(server, 'revoke-socket')
+        const cookie = mintSessionCookie('revoke-socket')
+
+        // Positive case first, so a suite that simply broke sockets cannot pass.
+        await expect(connectSocket(server, cookie)).resolves.toMatchObject({ connected: true })
+
+        const logout = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'DELETE',
+            headers: { Cookie: cookie }
+        })
+        expect(logout.status).toBe(204)
+
+        // The cookie is still signature-valid and unexpired — only token_version
+        // has moved. Without the check on the socket entry point a logged-out
+        // cookie could still open a realtime connection and keep writing.
+        await expect(connectSocket(server, cookie)).resolves.toMatchObject({
+            connected: false,
+            error: 'Unauthorized'
+        })
+    })
+})
+
+// A local install (`di up`, DI_LOCAL=1 from the CLI runner) must be able to
+// say so to the client — otherwise the browser keeps speaking hosted-product
+// copy ("sign in to edit", "3 free spaces") to the person who owns the whole
+// machine. One boolean, surfaced twice: on the session (the app's contract)
+// and on /api/config (which the landing page already fetches — it must never
+// have to mint a guest session just to learn where it is running).
+describe('local-install truth (DI_LOCAL)', () => {
+    it('reports local: true on session and config when DI_LOCAL=1', async () => {
+        const server = await startServer({ requireAuth: false, extraEnv: { DI_LOCAL: '1' } })
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`)).json()
+        expect(session.local).toBe(true)
+        expect(session.requireAuth).toBe(false)
+
+        const config = await (await fetch(`${server.baseUrl}/api/config`)).json()
+        expect(config.config.local).toBe(true)
+        expect(config.config.requireAuth).toBe(false)
+    })
+
+    it('reports local: false on a hosted-style boot, with requireAuth mirrored on config', async () => {
+        const server = await startServer({ requireAuth: true })
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`)).json()
+        expect(session.local).toBe(false)
+        expect(session.requireAuth).toBe(true)
+
+        const config = await (await fetch(`${server.baseUrl}/api/config`)).json()
+        expect(config.config.local).toBe(false)
+        expect(config.config.requireAuth).toBe(true)
+    })
+})
+
+// The guest cookie must not outlive the room it is scoped to: guest sandboxes
+// are swept after 7 idle days (config.sandboxTtlMs) and guest snapshots are
+// never revived, but the cookie used to claim 30 days — a promise the sweep
+// could not keep. The session's expiresAt now tracks the sandbox TTL.
+describe('guest session TTL matches the sandbox sweep', () => {
+    it('issues guest sessions that expire with the sandbox TTL, not after it', async () => {
+        const server = await startServer({ requireAuth: true })
+        const session = await (await fetch(`${server.baseUrl}/api/auth/session`)).json()
+        expect(session.type).toBe('guest')
+        // expiresAt is a ms epoch (authSession.js), not an ISO string
+        const ttlMs = Number(session.expiresAt) - Date.now()
+        const sevenDays = 7 * 24 * 60 * 60 * 1000
+        expect(ttlMs).toBeGreaterThan(sevenDays - 60 * 60 * 1000)
+        expect(ttlMs).toBeLessThanOrEqual(sevenDays + 60 * 60 * 1000)
+    })
+})
+
+// A mistyped space id must be distinguishable from a locked door: the client's
+// restricted card says "nothing lives at this address" only if the server
+// answers 404 for a space that was never created, instead of the scope error
+// it used to send for existent and nonexistent spaces alike.
+describe('nonexistent space vs restricted space', () => {
+    it('404s a guest GET for a space that never existed, 403s one that exists but is out of scope', async () => {
+        const server = await startServer({ requireAuth: true, extraEnv: { GITHUB_CLIENT_ID: 'd', GITHUB_CLIENT_SECRET: 'd' } })
+        // admin creates a private space
+        const login = await fetch(`${server.baseUrl}/api/auth/session`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: 'test-token' })
+        })
+        expect(login.status).toBe(200)
+        const adminCookie = (login.headers.get('set-cookie') || '').split(';')[0]
+        const created = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: adminCookie },
+            body: JSON.stringify({ label: 'secret-lab' })
+        })
+        expect(created.status).toBe(201)
+
+        // a fresh guest session
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
+
+        const missing = await fetch(`${server.baseUrl}/api/spaces/br-id-gr`, { headers: { Cookie: guestCookie } })
+        expect(missing.status).toBe(404)
+
+        const locked = await fetch(`${server.baseUrl}/api/spaces/secret-lab`, { headers: { Cookie: guestCookie } })
+        expect(locked.status).toBe(403)
     })
 })

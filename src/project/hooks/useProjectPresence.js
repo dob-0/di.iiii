@@ -45,13 +45,18 @@ const getOrCreateUserId = ({
     return next
 }
 
+// Module-level constants, not inline [] defaults: a fresh array literal per
+// call defeated the useMemo deps below, re-running getOrCreateUserId — which
+// WRITES localStorage — on every single render of every consumer.
+const NO_LEGACY_KEYS = Object.freeze([])
+
 export function useProjectPresence({
     projectId,
     displayName,
     displayNameStorageKey = DEFAULT_DISPLAY_NAME_STORAGE_KEY,
     userIdStorageKey = DEFAULT_USER_ID_STORAGE_KEY,
-    legacyDisplayNameStorageKeys = [],
-    legacyUserIdStorageKeys = [],
+    legacyDisplayNameStorageKeys = NO_LEGACY_KEYS,
+    legacyUserIdStorageKeys = NO_LEGACY_KEYS,
     anonymousLabel = 'Project',
     userIdPrefix = 'project-user'
 } = {}) {
@@ -92,7 +97,12 @@ export function useProjectPresence({
         const socket = io(serverUrl, {
             path,
             auth,
-            reconnection: true
+            reconnection: true,
+            // Cap the retry cadence against a server that is simply off (a
+            // local install after `di down`): socket.io's default backoff
+            // tops out at 5s forever. 15s matches apiClient's
+            // SERVER_UNAVAILABLE_COOLDOWN_MS and useSpaceSocket's idiom.
+            reconnectionDelayMax: 15000
         })
 
         socket.on('connect', () => {

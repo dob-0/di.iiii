@@ -4,6 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import * as THREE from 'three'
 import { appNavigate } from '../../utils/appNavigate.js'
 import { useViewportMode } from '../../hooks/useViewportMode.js'
+import { useKeyboardPageScroll } from '../../hooks/useKeyboardPageScroll.js'
 import { landingContent } from './content.js'
 import './landing.css'
 
@@ -536,6 +537,11 @@ export default function LandingPage({ onEnterExhibition = null, lang: controlled
     const [internalLang, setInternalLang] = useState('en')
     const lang = controlledLang || internalLang
     const setLang = onLangChange || setInternalLang
+
+    // .wcc-landing is the scroller and cannot take focus, so the reading keys
+    // are dead without this. ScrollTrigger listens to the scroller's own scroll
+    // events, so the pinned horizontal track follows a keyed scroll too.
+    useKeyboardPageScroll(rootRef)
     const { prefersReducedMotion } = useViewportMode()
 
     const openRouteSection = (sectionId) => {

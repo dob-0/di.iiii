@@ -6,6 +6,33 @@ How to run more than one agent or person on `di.iiii` at the same time without a
 
 Two agents (or people) must never write to the same working directory at the same time. A single shared working tree means uncommitted edits from one look like stray/conflicting changes to the other (this happened — see golden_rules.md). Pick one of the three isolation modes below based on how close the collaboration needs to be.
 
+## The Parking Rule
+
+The main checkout is the user's **viewing surface**, not a workbench. Before a session
+ends, leave it detached at (or on) `origin/dev`:
+
+```bash
+git fetch && git checkout --detach origin/dev
+```
+
+All branch work lives in worktrees under `.claude/worktrees/` — never park the main
+checkout on a task branch. A session that left it on a merged feature branch had
+`npm run dev:browser` silently serving code 115 commits behind `origin/dev` for two
+days (caught 2026-08-10). `npm run dev` and `npm run state` now print a stale-tree
+warning, but the warning is the backstop — parking is the rule.
+
+## The Holding Rule
+
+**No side worktree ever checks out `dev` or `main`.** The flow branches belong to
+nobody: the main checkout parks *detached* at `origin/dev` (above), side trees hold
+task branches only. A side tree that holds `dev` blocks `git switch dev` everywhere
+else ("'dev' is already used by worktree at …") and — worse — lets the branch pointer
+go stale while the name stays authoritative: on 2026-08-10 `di.iiii-algomerge` held
+`dev` 10 commits behind `origin/dev`, so "we're on dev" meant two different trees
+depending on who said it. If you find a side tree holding a flow branch, free it
+(`git -C <tree> switch --detach`) or remove the tree if it's finished; `npm run state`
+names the holder of each branch and its drift from origin.
+
 ## Choosing A Mode
 
 | Mode | Use when | Sync mechanism |
@@ -57,20 +84,56 @@ If you are working **in `dob-0/di.iiii` itself** (not a fork), this is how fork 
 
 Each agent gets its own checkout of the repo, sharing the same `.git` history, on its own branch.
 
-```bash
-# from the main checkout, create a worktree for agent 2
-git worktree add ../di.iiii-agent2 -b agent2/<short-task-name> dev
+**The actual convention is `.claude/worktrees/<task-name>/`, created by the Claude Code
+harness's `EnterWorktree` tool** — not a `../di.iiii-*` sibling. (An earlier version of this
+doc said "either is fine"; by 2026-08-06 that had produced a mix of both plus four `/tmp`
+scratchpad worktrees, none of them consistently tracked. Sibling checkouts still exist for
+long-lived roles — `di.iiii-algomerge`, `di.iiii-studionode` — but a new *task* worktree
+belongs under `.claude/worktrees/`.)
 
-# agent 2 works entirely inside ../di.iiii-agent2
-# agent 1 keeps working in the original directory on its own branch
+```bash
+# equivalent to what EnterWorktree does, if you need the raw command:
+git worktree add .claude/worktrees/<task-name> -b <task-name> dev
 ```
 
 Rules:
 
-- name the branch after the task, not the agent (`agent2/inspector-sliders`, not `agent2-branch`)
-- each agent commits and pushes its own branch independently
+- name the branch after the task, not the agent (`inspector-sliders`, not `agent2-branch`)
+- **push with `-u` on your first push, no exceptions**: `git push -u origin <branch>`.
+  A branch with no upstream configured exists only on this one disk — two real branches
+  were found in exactly this state on 2026-08-06 (one had never been pushed at all; the
+  other was silently tracking `origin/dev`, so a bare `git push` from it would have landed
+  straight on `dev`). `npm run state --brief`/the SessionStart hook flags any `UNPUSHED`
+  worktree for exactly this reason.
+- write your session's notes to `docs/ai/sessions/<branch-slug>.md` as you go (see its
+  README) — **not** to `CURRENT.md`, which a feature branch may not touch at all
+  (`docs:ai:check` refuses it). This is what stops your notes from being lost if a
+  concurrent branch on `dev` moves first.
+- **run `npm run state` before any fan-out** — it reports how many worktrees and unmerged
+  branches already exist, and (`headSubject`) what each unmerged one is actually about, so
+  a new task doesn't start on top of work someone's already doing (two agents independently
+  fixed the same bug this way on 2026-08-05, unaware of each other)
 - merge each branch into `dev` only when its task is done and validated
-- remove the worktree when finished: `git worktree remove ../di.iiii-agent2`
+- **removal is not a courtesy — it happens automatically.** Whoever runs `npm run land` on
+  `dev` after merging sweeps every worktree that's confirmed merged, clean, and not live.
+  You don't need to remember to run `git worktree remove` yourself unless your worktree
+  needs to go before the next landing (e.g. you're reusing the task name).
+- **…but the sweep only fires if someone lands.** Since merges moved to GitHub PRs
+  (`gh pr merge`), sessions stopped running `npm run land`, and by 2026-08-10 seven
+  finished worktrees had piled up as sediment — several on branches whose remote refs
+  were already pruned. If you merge via `gh`, the sweep is still your job: run
+  `npm run land` (or at least `npm run state` and act on its `finished?` hints) before
+  the session ends. Before removing ANY tree, three checks, no exceptions: its
+  `status --porcelain` is empty (a "finished" tree was found carrying an uncommitted
+  known-fixes entry that had never landed anywhere), no session is sitting in it
+  (name the directory and get an ack — a tree was once removed under a session
+  mid-write), and its unique commits are contained in `origin/dev` or pushed
+  (squash-merges make ancestry lie; a pruned remote ref is the better merged-signal).
+- **the stash stack is shared** — `refs/stash` lives in the common gitdir, so every
+  worktree and every session sees the same list. Never bare `git stash`/`stash pop`:
+  push with a message (`git stash push -u -m "<tag>"`), restore by SHA with `apply`,
+  and triage the stack at land time — three untagged stashes from long-merged
+  branches sat unclaimable for days because nothing tied them to an owner.
 
 ## Mode 2: Role-Scoped Same-Branch Work (lighter weight, higher risk)
 

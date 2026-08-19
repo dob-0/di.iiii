@@ -9,6 +9,9 @@ import {
 } from '../services/collaborativeSceneOps.js'
 
 const MAX_SEEN_OP_IDS = 2000
+// A flush that fails for any non-409 reason is retried after this delay rather
+// than dropped -- same contract as SYNC_RETRY_DELAY_MS in useProjectDocumentSync.
+const LIVE_FLUSH_RETRY_MS = 4000
 
 export function useLiveSync({
     enabled = false,
@@ -42,9 +45,12 @@ export function useLiveSync({
     const filterUnseenOpsRef = useRef(null)
     const handleSceneOpsEventRef = useRef(null)
     const reloadFullSceneRef = useRef(null)
+    const flushRetryTimerRef = useRef(null)
+    const flushLiveOpsRef = useRef(null)
     const sceneSignature = useMemo(() => getSceneSnapshotSignature(sceneSnapshot), [sceneSnapshot])
     const [sceneStreamState, setSceneStreamState] = useState('idle')
     const [sceneStreamError, setSceneStreamError] = useState(null)
+    const [sceneFlushError, setSceneFlushError] = useState(null)
 
     const resolveAssetsBaseUrl = useCallback((sceneData = null) => {
         return preferLocalAssetsBaseUrl({
@@ -232,6 +238,7 @@ export function useLiveSync({
                     if (typeof response?.newVersion === 'number') {
                         setSceneVersionValue(response.newVersion)
                     }
+                    setSceneFlushError(null)
                 } catch (error) {
                     if (error?.status === 409) {
                         const pendingOps = Array.isArray(error?.data?.pendingOps) ? error.data.pendingOps : []
@@ -250,7 +257,16 @@ export function useLiveSync({
                             continue
                         }
                     } else {
+                        // Never drop an edit: this used to warn-and-break with
+                        // no retry, so a transient POST failure left the change
+                        // visible locally, never persisted, and gone on reload.
+                        // Mirrors the useProjectDocumentSync retry contract.
                         console.warn('[sync] Op flush failed:', error?.message)
+                        setSceneFlushError(error?.message || 'Scene sync failed.')
+                        clearTimeout(flushRetryTimerRef.current)
+                        flushRetryTimerRef.current = setTimeout(() => {
+                            void flushLiveOpsRef.current?.()
+                        }, LIVE_FLUSH_RETRY_MS)
                     }
                     break
                 }
@@ -277,6 +293,14 @@ export function useLiveSync({
         submitSceneOps,
         supportsServerSpaces
     ])
+
+    useEffect(() => {
+        flushLiveOpsRef.current = flushLiveOps
+    }, [flushLiveOps])
+
+    useEffect(() => () => {
+        clearTimeout(flushRetryTimerRef.current)
+    }, [])
 
     const handleSceneOpsEvent = useCallback((payload) => {
         if (!payload) return
@@ -433,7 +457,8 @@ export function useLiveSync({
     return {
         isSceneStreamConnected: sceneStreamState === 'connected',
         sceneStreamState,
-        sceneStreamError
+        sceneStreamError,
+        sceneFlushError
     }
 }
 

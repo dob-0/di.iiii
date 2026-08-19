@@ -9,11 +9,32 @@ export const PREVIEW_ISSUE_CODES = {
 const STORAGE_ERROR_PATTERN = /(localstorage|sessionstorage|allow-same-origin|sandboxed document|securityerror|forbidden)/i
 const SANDBOX_ERROR_PATTERN = /(sandbox|denied|securityerror|not allowed|blocked)/i
 
-const PREVIEW_BOOTSTRAP_SCRIPT = `(() => {
+// the query comes off the address bar, so it is attacker-controllable: escaping
+// `<` keeps a `</script>` in it from closing the bootstrap tag
+const inlineJson = (value) => JSON.stringify(value ?? '').replace(/</g, '\\u003c')
+
+const buildBootstrapScript = (pageQuery, pageOrigin) => `(() => {
     const MESSAGE_TYPE = ${JSON.stringify(PREVIEW_HOST_MESSAGE_TYPE)};
     const ENTER_EXHIBITION_KIND = ${JSON.stringify(PREVIEW_ENTER_EXHIBITION_KIND)};
     const ISSUE_CODES = ${JSON.stringify(PREVIEW_ISSUE_CODES)};
     const issueState = new Set();
+
+    // srcdoc documents have no URL of their own, so location.search is always
+    // empty inside a published page — a hand-over like /field?just=<word> would
+    // arrive stripped. Hand the shell's query down explicitly instead.
+    window.diiPageQuery = ${inlineJson(pageQuery)};
+    try {
+        window.diiPageParams = new URLSearchParams(window.diiPageQuery);
+    } catch {
+        window.diiPageParams = new URLSearchParams();
+    }
+
+    // …and for the same reason it cannot read its own host. A page that links
+    // to a sibling page had no choice but to hardcode one, which is why
+    // br_id_ge's rite embedded PRODUCTION's field even when the rite itself
+    // was running on staging — the tier could never rehearse itself. Read
+    // this instead of writing a hostname down.
+    window.diiPageOrigin = ${inlineJson(pageOrigin)};
 
     window.diiEnterExhibition = () => {
         try {
@@ -99,8 +120,27 @@ const PREVIEW_BOOTSTRAP_SCRIPT = `(() => {
         return true;
     };
 
-    installStorageShim('localStorage');
-    installStorageShim('sessionStorage');
+    // The shim guards pages in OPAQUE frames, where touching window.localStorage
+    // throws. With deviceAccess the frame has a real origin and real storage —
+    // shimming there shadows it, so everything a page saves (the rite's last
+    // crossing, any progress) evaporates on every load. Probe by WRITING —
+    // some policies expose a Storage object that only throws on setItem —
+    // and shim only where the native storage actually refuses.
+    const nativeStorageWorks = (name) => {
+        try {
+            const storage = window[name];
+            if (!storage) return false;
+            const probeKey = '__dii_storage_probe__';
+            storage.setItem(probeKey, '1');
+            storage.removeItem(probeKey);
+            return true;
+        } catch {
+            return false;
+        }
+    };
+
+    if (!nativeStorageWorks('localStorage')) installStorageShim('localStorage');
+    if (!nativeStorageWorks('sessionStorage')) installStorageShim('sessionStorage');
 
     // srcdoc documents inherit the parent shell's base URL, so a plain
     // href="#id" click would navigate this sandboxed iframe to the shell URL
@@ -157,8 +197,8 @@ const PREVIEW_BOOTSTRAP_SCRIPT = `(() => {
     sendIssues();
 })();`
 
-const injectBootstrap = (documentSource) => {
-    const bootstrapTag = `<script>${PREVIEW_BOOTSTRAP_SCRIPT}</script>`
+const injectBootstrap = (documentSource, pageQuery, pageOrigin) => {
+    const bootstrapTag = `<script>${buildBootstrapScript(pageQuery, pageOrigin)}</script>`
     const openHeadPattern = /<head(\s[^>]*)?>/i
     const openHtmlPattern = /<html(\s[^>]*)?>/i
 
@@ -183,8 +223,8 @@ ${documentSource}
 </html>`
 }
 
-export function buildPresentationPreviewDocument(html = '') {
-    return injectBootstrap(String(html || ''))
+export function buildPresentationPreviewDocument(html = '', pageQuery = '', pageOrigin = '') {
+    return injectBootstrap(String(html || ''), String(pageQuery || ''), String(pageOrigin || ''))
 }
 
 export function getPreviewIssueMessage(code) {

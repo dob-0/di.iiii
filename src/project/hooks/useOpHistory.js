@@ -19,7 +19,14 @@ const entrySignature = (ops) => {
         if (!COALESCIBLE_TYPES.has(op?.type)) return null
         const payload = op.payload || {}
         const target = payload.entityId || payload.nodeId || payload.edgeId || payload.windowId || ''
-        const keys = Object.keys(payload.patch || {}).sort().join(',')
+        let keys = Object.keys(payload.patch || {}).sort().join(',')
+        // For node values the top-level patch key is ALWAYS just 'values', so
+        // any two edits to one node coalesced — a window move and a chatId
+        // write within 800ms would merge, and undo/redo destroyed one of them.
+        // Descend one level so only same-field edits (drags, typing) coalesce.
+        if (payload.patch?.values && typeof payload.patch.values === 'object') {
+            keys += `(${Object.keys(payload.patch.values).sort().join(',')})`
+        }
         parts.push(`${op.type}:${target}:${payload.component || ''}:${keys}`)
     }
     return parts.join('|')

@@ -1,6 +1,6 @@
-// Content model for Studio's visual help (StudioHelpDialog) — same
-// data-driven pattern as Beta's betaGuide.js. Copy stays terse on purpose:
-// the diagrams carry the explanation, the words only anchor them.
+// Content model for Studio's visual help (StudioHelpDialog). Copy stays
+// terse on purpose: the diagrams carry the explanation, the words only
+// anchor them.
 
 export const STUDIO_GUIDE_SECTIONS = [
     {
@@ -136,13 +136,15 @@ export const STUDIO_SHORTCUT_SECTIONS = [
     }
 ]
 
-// Guest first-run guidance is a sequence of action-completed coach marks
+// First-run guidance is a sequence of action-completed coach marks
 // (StudioCoachMarks) — a hint dies when its action happens, nothing to read
 // past. The visual help dialog it replaced stays available behind ?.
 export const STUDIO_COACH_DONE_KEY = 'di.studio.coachDone'
 
+// Any resolved identity gets the coach once — guest or signed-in. A falsy
+// authType means auth hasn't resolved yet; never flash the coach over that.
 export function shouldShowStudioCoach(authType) {
-    if (authType !== 'guest') return false
+    if (!authType) return false
     try {
         return !window.localStorage.getItem(STUDIO_COACH_DONE_KEY)
     } catch {

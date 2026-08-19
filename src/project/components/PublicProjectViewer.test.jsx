@@ -128,6 +128,62 @@ describe('PublicProjectViewer', () => {
             expect(iframe).not.toBeNull()
             expect(iframe?.getAttribute('srcdoc')).toContain('Live code')
             expect(iframe?.getAttribute('srcdoc')).toContain(PREVIEW_HOST_MESSAGE_TYPE)
+            // published pages run getUserMedia (e.g. br_id_ge rite); without
+            // delegation the sandboxed iframe hard-denies camera on mobile
+            expect(iframe?.getAttribute('allow')).toContain('camera')
+            // no deviceAccess opt-in → the page must stay origin-isolated
+            expect(iframe?.getAttribute('sandbox')).not.toContain('allow-same-origin')
+        })
+    })
+
+    it('renders the code-mode page without ever mounting a scene renderer', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'code-only', title: 'Code Only' },
+                presentationState: { mode: 'code', entryView: 'code', codeHtml: '<main>page</main>' },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        const { container } = render(
+            <PublicProjectViewer spaceId="main" projectId="code-only" spaceLabel="Main Space" />
+        )
+
+        await waitFor(() => {
+            expect(container.querySelector('iframe')).not.toBeNull()
+        })
+        expect(screen.queryByText(/^viewer-scene:/)).toBeNull()
+    })
+
+    it('grants a real origin (allow-same-origin) only when the owner opts into deviceAccess', async () => {
+        getProjectDocumentMock.mockResolvedValue({
+            version: 1,
+            document: {
+                projectMeta: { id: 'rite', title: 'the rite' },
+                presentationState: {
+                    mode: 'code',
+                    entryView: 'code',
+                    codeHtml: '<main>the lamp</main>',
+                    deviceAccess: true
+                },
+                entities: []
+            }
+        })
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        const { container } = render(
+            <PublicProjectViewer spaceId="br-id-ge" projectId="rite" spaceLabel="br_id_ge" />
+        )
+
+        await waitFor(() => {
+            const iframe = container.querySelector('iframe')
+            expect(iframe).not.toBeNull()
+            // getUserMedia is impossible in an opaque origin: opted-in pages need both
+            // the permission delegation and a real origin
+            expect(iframe?.getAttribute('allow')).toContain('camera')
+            expect(iframe?.getAttribute('sandbox')).toContain('allow-same-origin')
         })
     })
 
@@ -211,6 +267,84 @@ describe('PublicProjectViewer', () => {
         } finally {
             window.history.replaceState(null, '', '/')
         }
+    })
+
+    // ?embed=1 is what br_id_ge's ending has been asking for since it started
+    // opening the field inside itself. Without it the viewer paints #05070a and
+    // the embedded page can only answer with opaque paper of its own, which is
+    // how a window became a rectangle pasted across the closing words.
+    it('is glass, not paper, in ?embed=1 mode — no shell, no badge, no Walk / Fly', async () => {
+        window.history.replaceState(null, '', '/main?embed=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            const { container } = render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+            expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+            expect(container.querySelector('main').style.background).toBe('transparent')
+            expect(screen.queryByRole('button', { name: 'Walk / Fly' })).toBeNull()
+            expect(screen.queryByText('Made with di.iiii')).toBeNull()
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
+    // A code page is the case that actually matters here: br_id_ge's field is
+    // an HTML project, so the srcdoc iframe is the surface that was opaque.
+    it('leaves a code page its own ground in ?embed=1 mode', async () => {
+        window.history.replaceState(null, '', '/main?embed=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue({
+                version: 1,
+                document: {
+                    projectMeta: { id: 'live-project', title: 'Live Project' },
+                    presentationState: { mode: 'code', entryView: 'code', codeHtml: '<p>the field</p>' },
+                    entities: []
+                }
+            })
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            const { container } = render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+            const frame = await screen.findByTitle('Live Project')
+            expect(frame.style.background).toBe('transparent')
+            expect(container.querySelector('main').style.background).toBe('transparent')
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
+    // The viewer's own shell going transparent was never enough: html/body/#root
+    // carry --di-black, so an embedded page viewed on its own was still a black
+    // box on both tiers after the mode shipped. Guards the class AND the shadow
+    // trap — `document` is rebound inside this component, so a bare reference
+    // would resolve to a project document and quietly do nothing.
+    it('clears the document background in ?embed=1 mode, and gives it back on unmount', async () => {
+        window.history.replaceState(null, '', '/main?embed=1')
+        try {
+            getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+            listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+            const { unmount } = render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+            expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+            expect(window.document.documentElement.classList.contains('dii-embed')).toBe(true)
+            unmount()
+            expect(window.document.documentElement.classList.contains('dii-embed')).toBe(false)
+        } finally {
+            window.history.replaceState(null, '', '/')
+        }
+    })
+
+    it('keeps the dark shell and the badge when nothing asks to be embedded', async () => {
+        getProjectDocumentMock.mockResolvedValue(sceneDocumentResponse)
+        listProjectOpsMock.mockResolvedValue({ ops: [], latestVersion: 1 })
+
+        const { container } = render(<PublicProjectViewer spaceId="main" projectId="live-project" spaceLabel="Main Space" />)
+
+        expect(await screen.findByText('viewer-scene:scene')).toBeInTheDocument()
+        expect(container.querySelector('main').style.background).toBe('rgb(5, 7, 10)')
+        expect(await screen.findByText('Made with di.iiii')).toBeInTheDocument()
     })
 
     it('keeps navigation and Walk / Fly outside preview mode', async () => {

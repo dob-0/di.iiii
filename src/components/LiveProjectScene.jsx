@@ -2,6 +2,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { createPortal } from 'react-dom'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, Text, Billboard } from '@react-three/drei'
+import { TROIKA_FONT_URL } from '../project/viewport/troikaFont.js'
 import { XR, XROrigin, useXR, useXRControllerLocomotion, useXRInputSourceState } from '@react-three/xr'
 import * as THREE from 'three'
 import { useXrAr } from '../hooks/useXrAr.js'
@@ -10,13 +11,13 @@ import { WebglContextLostOverlay, useWebglContextGuard } from './WebglContextGua
 import SceneEntityErrorBoundary from './SceneEntityErrorBoundary.jsx'
 import { createProjectSyncService } from '../project/services/projectSyncService.js'
 import {
-    buildProjectAssetUrl,
     buildProjectEventsUrl,
     getProjectDocument,
     listProjectOps
 } from '../project/services/projectsApi.js'
 import { applyProjectOps, normalizeProjectDocument } from '../shared/projectSchema.js'
-import { getApiSession } from '../services/apiClient.js'
+import { ensureGuestSession } from '../services/guestSession.js'
+import { buildAssetMap } from '../project/viewport/buildAssetMap.js'
 import BoxObject from '../objectComponents/BoxObject.jsx'
 import PlaneObject from '../objectComponents/PlaneObject.jsx'
 import TorusObject from '../objectComponents/TorusObject.jsx'
@@ -60,15 +61,6 @@ const isGateEntity = (entity) => /gate|threshold|entrance/i.test(entity?.name ||
 const COARSE_POINTER = typeof window !== 'undefined' && !!window.matchMedia?.('(pointer: coarse)').matches
 const BILLBOARD_TEXT_SCALE = COARSE_POINTER ? 0.45 : 1
 
-// Same fix as GridFloorBackground: any page that renders a live scene
-// without going through AuthGate has no session cookie yet on first paint.
-let guestSessionPromise = null
-const ensureGuestSession = () => {
-    if (!guestSessionPromise) {
-        guestSessionPromise = getApiSession().catch(() => null)
-    }
-    return guestSessionPromise
-}
 
 function EntityVisual({ entity, assetMap }) {
     const media = entity.components?.media || {}
@@ -252,6 +244,7 @@ function EntityVisual({ entity, assetMap }) {
                         return (
                             <Text
                                 key={i}
+                                font={TROIKA_FONT_URL}
                                 position={[0, y, 0]}
                                 fontSize={ln.fontSize || 0.4}
                                 maxWidth={tc.maxWidth || 16}
@@ -966,6 +959,7 @@ function XrLocomotion({ playerRef, joystickRef, flyMode, vertTouchRef }) {
             {showVrHint && (
                 <group ref={hintGroupRef}>
                     <Text
+                        font={TROIKA_FONT_URL}
                         fontSize={0.055}
                         maxWidth={1.1}
                         lineHeight={1.4}
@@ -1155,8 +1149,17 @@ function useLiveProjectDocument(projectId) {
                     applyIncomingOps(ops || [], Number(version))
                 },
                 onReady: async () => {
-                    const catchUp = await listProjectOps(projectId, versionRef.current)
-                    applyIncomingOps(catchUp.ops || [], Number(catchUp.latestVersion))
+                    // projectSyncService swallows a rejected onReady, so a
+                    // failed catch-up used to disappear with no retry: the
+                    // stream would then deliver op N+5 straight onto a
+                    // version-N document, permanently skipping N+1..N+4 with
+                    // zero output. Fall back to a full reload instead.
+                    try {
+                        const catchUp = await listProjectOps(projectId, versionRef.current)
+                        applyIncomingOps(catchUp.ops || [], Number(catchUp.latestVersion))
+                    } catch {
+                        void reloadDocument()
+                    }
                 },
                 onError: () => {
                     if (!documentRef.current) void reloadDocument()
@@ -1333,10 +1336,7 @@ export default function LiveProjectScene({
     // inside the Studio editor's useAssetRestore hook, never here). Fall back
     // to the direct per-project asset endpoint so media actually streams for
     // any public/live viewer (landing page, WCC, etc.), not just Studio.
-    const assetMap = useMemo(() => new Map((doc?.assets || []).map((asset) => [
-        asset.id,
-        asset.url ? asset : { ...asset, url: buildProjectAssetUrl(projectId, asset.id) }
-    ])), [doc?.assets, projectId])
+    const assetMap = useMemo(() => buildAssetMap(doc, projectId), [doc, projectId])
     const gateEntity = useMemo(() => entities.find(isGateEntity) || null, [entities])
     // Grouped children carry parent-relative transforms — render the hierarchy
     // (roots only at the top level), matching the editor and portal embeds.
@@ -1391,7 +1391,11 @@ export default function LiveProjectScene({
         if (!gateEntity) return
         const pos = gateEntity.components?.transform?.position
         if (!Array.isArray(pos)) return
-        playerRef.current = { x: pos[0], z: pos[2] + 6, yaw: Math.PI, pitch: 0 }
+        // Mutate in place for the same reason as the spawn effect above:
+        // replacing playerRef.current orphans Walker's mount-time look
+        // closure (mouse/touch-look silently dead), and a plain object
+        // literal would also drop altY.
+        Object.assign(playerRef.current, { x: pos[0], z: pos[2] + 6, yaw: Math.PI, pitch: 0 })
     }, [gateEntity, interactive])
 
     const worldState = doc?.worldState || {}

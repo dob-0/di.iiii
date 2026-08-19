@@ -1,12 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(bash scripts/ollama-task.sh *)",
       "Bash(bash scripts/capture-rule.sh *)",
       "Bash(bash scripts/golden-rules-check.sh)",
-      "Bash(ollama list)",
-      "Bash(ollama *)",
-      "Bash(curl -s http://localhost:11434/api/tags)",
       "Bash(npm run *)",
       "Bash(npm install)",
       "Bash(npm install *)",
@@ -62,7 +58,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'printf \"\\n  ● di.iiii session started\\n  CURRENT.md:\\n\\n\"; cat CURRENT.md 2>/dev/null || printf \"  (CURRENT.md not found — run git pull)\\n\"; EXPECTED=$(grep -m1 \"^active_branch:\" CURRENT.md 2>/dev/null | sed \"s/active_branch: *//\"); ACTUAL=$(git branch --show-current 2>/dev/null); if [ -n \"$EXPECTED\" ] && [ -n \"$ACTUAL\" ] && [ \"$EXPECTED\" != \"$ACTUAL\" ]; then printf \"\\n  ⚠  BRANCH MISMATCH: CURRENT.md expects branch \\\"$EXPECTED\\\" but you are on \\\"$ACTUAL\\\"\\n  Switch branch or update active_branch: in CURRENT.md\\n\\n\"; fi'"
+            "command": "bash -c 'printf \"\\n  ● di.iiii session started\\n  CURRENT.md:\\n\\n\"; cat CURRENT.md 2>/dev/null || printf \"  (CURRENT.md not found — run git pull)\\n\"; printf \"\\n\"; node \"${CLAUDE_PROJECT_DIR:-.}/scripts/repo-state.mjs\" 2>/dev/null'"
           }
         ]
       }
@@ -72,7 +68,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash scripts/golden-rules-check.sh"
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/scripts/golden-rules-check.sh\""
           }
         ]
       }
@@ -83,9 +79,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash scripts/pre-push-gate.sh",
+            "command": "bash \"${CLAUDE_PROJECT_DIR:-.}/scripts/pre-push-gate.sh\"",
             "timeout": 180,
-            "statusMessage": "Pre-push gate (lint + schema-sync + wiki)..."
+            "statusMessage": "Pre-push gate (lint + schema-sync + wiki + AI docs)..."
           }
         ]
       },

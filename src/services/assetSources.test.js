@@ -8,12 +8,24 @@ import {
     clearAssetSources,
     getAssetSourceUrl,
     getAssetUrlCandidates,
+    mountRelativeApiUrl,
     registerAssetSources
 } from './assetSources.js'
 
 describe('assetSources', () => {
     beforeEach(() => {
         clearAssetSources()
+    })
+
+    it('remounts relative /api asset urls onto the API base (blank prod images bug)', () => {
+        expect(mountRelativeApiUrl('/api/projects/main-dii-project/assets/a1'))
+            .toBe('https://di-studio.xyz/serverXR/api/projects/main-dii-project/assets/a1')
+    })
+
+    it('leaves absolute and non-api urls alone in mountRelativeApiUrl', () => {
+        expect(mountRelativeApiUrl('https://cdn.example.com/api/projects/p/assets/a1')).toBeNull()
+        expect(mountRelativeApiUrl('/assets/uploads/a1.png')).toBeNull()
+        expect(mountRelativeApiUrl('')).toBeNull()
     })
 
     it('prefers the mounted API base for legacy relative asset urls', () => {

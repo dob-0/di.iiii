@@ -7,7 +7,17 @@ import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { promisify } from 'node:util'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+// Every test in this file boots a real serverXR process and talks to it over
+// the loopback. Vitest's default 5s per-test budget covers the *machine*, not
+// the behavior under test: with the suite running in parallel (or beside a
+// second suite -- how this was reproduced) a spawn + listen + first request
+// can cross 5s with nothing wrong. Two tests here failed exactly that way at
+// 5074ms and 5095ms. waitForHealth already allows 15s for the boot alone, so
+// the per-test budget has to be larger than that or the health wait can never
+// finish. Hooks get more again: afterEach stops every server it started.
+vi.setConfig({ testTimeout: 25_000, hookTimeout: 40_000 })
 
 const execFileAsync = promisify(execFile)
 

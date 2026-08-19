@@ -49,6 +49,26 @@
 .sh-btn-new:hover { background: #fff; }
 .sh-btn-new:disabled { opacity: 0.4; cursor: not-allowed; }
 
+/* Same box model as .sh-btn-new, outlined instead of filled — a second
+   top-row action (Raw) that isn't the primary "create" CTA but still
+   deserves more weight than a .sh-link in the secondary row. */
+.sh-btn-outline {
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: transparent;
+    color: var(--di-cyan);
+    border: 1px solid var(--di-cyan-border);
+    padding: 6px 17px;
+    cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: background 0.1s, border-color 0.1s;
+    border-radius: 0;
+    font-family: inherit;
+    flex-shrink: 0;
+}
+
+.sh-btn-outline:hover { background: rgba(77, 249, 255, 0.08); border-color: var(--di-cyan); }
+
 .sh-new-form {
     display: flex;
     align-items: center;
@@ -80,6 +100,13 @@
 }
 
 .sh-btn-cancel:hover { opacity: 1; }
+
+.sh-top-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
 
 /* ─── SECONDARY ROW ────────────────────────────────────────── */
 .sh-secondary-row {
@@ -273,4 +300,39 @@
     font-size: 0.82rem;
     line-height: 1.5;
     color: var(--di-text-muted, rgba(200, 230, 240, 0.45));
+}
+
+/* A space whose scene is code rather than a project document. Marked with a
+   left edge and a badge so it does not read as a normal project card the
+   editor could open — the pieces it stands for live in src/, not the DB. */
+.sh-project-card--code {
+    border-left: 2px solid var(--di-cyan);
+    cursor: pointer;
+}
+
+.sh-code-badge {
+    align-self: flex-start;
+    font-size: 0.6rem;
+    font-family: var(--di-mono);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--di-cyan);
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 3px;
+    padding: 2px 7px;
+}
+
+.sh-code-blurb {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: var(--di-text-muted);
+}
+
+.sh-code-actions {
+    margin-top: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-top: 4px;
 }

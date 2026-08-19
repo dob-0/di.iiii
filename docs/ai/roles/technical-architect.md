@@ -54,7 +54,7 @@ When any task prompt would break one of these, your job is to refuse, explain th
 
 The platform is moving toward decentralized, creator-owned infrastructure. Every decision should be a step toward this, not away from it.
 
-| Seed | Current state | Direction |
+| Raw | Current state | Direction |
 |------|--------------|-----------|
 | Asset IDs | `crypto.randomUUID()` | SHA-256 of file content |
 | Op-log format | append-only JSON ops | CRDT-compatible (Yjs candidate) |

@@ -1,0 +1,276 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useKeyboardPageScroll } from '../../hooks/useKeyboardPageScroll.js'
+import { appNavigate } from '../../utils/appNavigate.js'
+import { ALGO_VRITHM_SCENE_PATH } from '../algoVrithmRouting.js'
+import { RUN_TIME_SEC, beatsAtSec } from './beatCards.js'
+import { paintFrame } from './beatSketches.js'
+import { createHeroField } from './heroField.js'
+import './algoVrithmLanding.css'
+
+// The front door for algovrithm.
+//
+// The work's name, the way in, the work moving, and the artist's statement.
+// Nothing else. Every word of prose on this page is the artist's, verbatim.
+//
+// Three rounds of cutting got here, and each round removed a vocabulary rather
+// than a decoration. First the repo's: src/algoVrithm/, startSec/endSec, "a new
+// beat is a new file". Then the cutting room's: a draggable timeline of the
+// seven clip windows with their overlaps stacked on two rows, a playhead, a
+// running clock, timecodes on every beat. Then the render pipeline's: the beat
+// names themselves — "Metaball field", "Test pattern", "Dispersion sphere",
+// "Scan" are techniques, and a list of them is a spec sheet however well it is
+// set. None of that is in the concept, and the concept is what this page is
+// built from.
+//
+// What it costs is real and worth stating: a visitor can no longer find out
+// what the piece contains without entering it. That is the trade — the work is
+// 53 seconds long and the door is right there. The beats, their windows and
+// their overlaps live in sequences/index.js and the director panel.
+//
+// Deliberately three.js-free. The piece is a lazy route of its own
+// (/algovrithm/scene) and this page must not pull 1.6 MB of renderer for a
+// visitor who has not decided to enter yet — see the note at beatCards.js for
+// why the edit list is copied rather than imported.
+
+// The piece pulses and carries a photosensitivity warning in the headset.
+// Nobody landing on a URL has consented to that, so the OS setting decides
+// whether this page moves at all: reduced motion means it opens on a held frame
+// and only ever moves if the visitor asks for it.
+const prefersReducedMotion = () => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+// The frame a reduced-motion visitor is held on. NOT zero, which is where this
+// opened for as long as the page has existed: at t=0 the corridor's own fade-in
+// is still at zero, so the whole background was black — mean luminance 1.8 out
+// of 255 — with a Play button under it. Anyone who asks their system for less
+// motion was shown nothing at all.
+//
+// 11.5s is chosen by measurement rather than taste: scoring every frame of the
+// loop for mean luminance and range, the scan beat between 9s and 13.5s is the
+// only stretch that is a real image — mean about 65 of 255, with the full range
+// inside it. The corridor is near-black wherever you stop it, and the test
+// pattern past 14s means 214, which is a white wall to read a statement over.
+const HOLD_FRAME_SEC = 11.5
+
+export default function AlgoVrithmLanding() {
+    const [playheadSec, setPlayheadSec] = useState(() => (prefersReducedMotion() ? HOLD_FRAME_SEC : 0))
+    const [reducedMotion] = useState(prefersReducedMotion)
+    const [playing, setPlaying] = useState(() => !prefersReducedMotion())
+    const [stageVisible, setStageVisible] = useState(true)
+    const canvasRef = useRef(null)
+    const rootRef = useRef(null)
+    const statementRef = useRef(null)
+    // The playhead lives in a ref as well as in state: the rAF loop reads and
+    // advances it every frame, and closing over the state value would pin it to
+    // whatever it was when the effect last ran.
+    const playheadRef = useRef(prefersReducedMotion() ? HOLD_FRAME_SEC : 0)
+    const heroRef = useRef(null)
+
+    // The picture, or null on a machine that cannot draw it — no WebGL, a
+    // blocked context, a driver that refuses one of the seven programs. The 2D
+    // poster stays in the tree for exactly that, which is why beatSketches.js
+    // is not deleted: it is the fallback, not the previous version.
+    //
+    // A canvas can only ever have one kind of context, so this must run before
+    // anything asks it for a 2D one — the paint below checks heroRef first for
+    // that reason as well as the obvious one.
+    useEffect(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return undefined
+        heroRef.current = createHeroField(canvas)
+        return () => {
+            heroRef.current?.dispose()
+            heroRef.current = null
+        }
+    }, [])
+
+    const paint = useCallback(() => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const width = canvas.clientWidth
+        const height = canvas.clientHeight
+        if (!width || !height) return
+
+        const hero = heroRef.current
+        if (hero) {
+            // 1.5x on top of the device ratio, capped at 2. Every edge in the
+            // shader is antialiased analytically, but the test pattern's far
+            // ranks are hard geometry in the piece and get MSAA there; a
+            // full-screen fragment shader has to supersample instead.
+            hero.draw({
+                width,
+                height,
+                ratio: Math.min(2, (window.devicePixelRatio || 1) * 1.5),
+                elapsed: playheadRef.current,
+                live: beatsAtSec(playheadRef.current)
+            })
+            return
+        }
+
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+        const ratio = Math.min(2, window.devicePixelRatio || 1)
+        if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) {
+            canvas.width = Math.round(width * ratio)
+            canvas.height = Math.round(height * ratio)
+        }
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0)
+        paintFrame(ctx, {
+            width,
+            height,
+            elapsed: playheadRef.current,
+            live: beatsAtSec(playheadRef.current)
+        })
+    }, [])
+
+    // The scrim goes from 0.62 to 0.9 once the statement is on screen: the
+    // piece is the loudest thing on arrival and recedes behind the reading.
+    useEffect(() => {
+        const statement = statementRef.current
+        const root = rootRef.current
+        if (!statement || !root || typeof IntersectionObserver === 'undefined') return undefined
+        const observer = new IntersectionObserver(
+            ([entry]) => root.classList.toggle('is-reading', entry.isIntersecting),
+            { threshold: 0, rootMargin: '-25% 0px 0px 0px' }
+        )
+        observer.observe(statement)
+        return () => observer.disconnect()
+    }, [])
+
+    // The canvas is the background now, so it is never scrolled out of view —
+    // but it should still not strobe a full-viewport DPR-scaled repaint in a
+    // tab nobody is looking at.
+    useEffect(() => {
+        const onVisibility = () => setStageVisible(!document.hidden)
+        document.addEventListener('visibilitychange', onVisibility)
+        return () => document.removeEventListener('visibilitychange', onVisibility)
+    }, [])
+
+    // A paused frame still animates by default, because half the beats (the
+    // strobes, the tick) are alive inside one and holding them still would show
+    // something the beat never looks like. Under reduced motion that is exactly
+    // the wrong call, so there the paint happens once per playhead position and
+    // the rAF loop is not started at all.
+    const animating = (playing || !reducedMotion) && stageVisible
+
+    useEffect(() => {
+        if (!animating) return undefined
+        let frame = 0
+        let last = 0
+        let stopped = false
+
+        const tick = (now) => {
+            if (stopped) return
+            const deltaSec = last ? Math.min(0.1, (now - last) / 1000) : 0
+            last = now
+
+            if (playing) {
+                const next = playheadRef.current + deltaSec
+                playheadRef.current = next >= RUN_TIME_SEC ? 0 : next
+                setPlayheadSec(playheadRef.current)
+            }
+
+            paint()
+            frame = window.requestAnimationFrame(tick)
+        }
+
+        frame = window.requestAnimationFrame(tick)
+        return () => {
+            stopped = true
+            window.cancelAnimationFrame(frame)
+        }
+    }, [animating, paint, playing])
+
+    useEffect(() => {
+        if (animating) return
+        paint()
+    }, [animating, paint, playheadSec])
+
+    // Every reading key on this page is dead without this — the shared hook
+    // says why, and /, /wiki and /wcc need it for the same reason.
+    useKeyboardPageScroll(rootRef)
+
+    const enter = useCallback(() => appNavigate(ALGO_VRITHM_SCENE_PATH), [])
+
+    return (
+        <main className="avl-root" ref={rootRef} tabIndex={-1}>
+            <header className="avl-head">
+                <h1 className="avl-title">algovrithm</h1>
+                <div className="avl-actions">
+                    <button type="button" className="avl-enter" onClick={enter}>Enter the piece</button>
+                </div>
+            </header>
+
+            {/* The piece is the page's ground, not a picture on it — fixed,
+                full-viewport, behind everything, with the text reading over it.
+                A boxed 16:9 frame made the work an illustration of itself; this
+                way the visitor is inside the field while they read the sentence
+                about living inside one.
+
+                The scrim is not decoration. Two of the seven beats have a WHITE
+                world and fill the frame with it, so ink-on-void text over a raw
+                canvas would disappear entirely for several seconds at a time.
+                Its opacity is set from a measured worst case — see the note in
+                the stylesheet. */}
+            <canvas ref={canvasRef} className="avl-canvas" aria-hidden="true" />
+            <div className="avl-scrim" aria-hidden="true" />
+
+            {/* The artist's statement, as written. Nothing here is paraphrased. */}
+            <section className="avl-statement" aria-labelledby="avl-statement-h" ref={statementRef}>
+                <h2 className="avl-sr" id="avl-statement-h">The concept</h2>
+                <p>
+                    I belong to a generation that never had to cross the boundary between the
+                    physical and the digital. I grew up inside both at once. My friendships,
+                    memories, work, desires, and anxieties exist across these spaces so seamlessly
+                    that I no longer experience the digital world as separate from reality. It is
+                    simply one of the environments in which my life unfolds.
+                </p>
+                <p>Every day I perform the same gestures:</p>
+                {/* One line per gesture, so the six I's stack on one x-axis. Set
+                    as prose they wrapped wherever the viewport happened to put
+                    them, which reads as a list of habits — the exact thing the
+                    sentence after it says they are not. The trailing space is
+                    inside the span and collapses at the end of a line, but it
+                    keeps textContent readable as a sentence. */}
+                <p className="avl-gestures">
+                    {['I scroll.', 'I swipe.', 'I refresh.', 'I wait.', 'I record.', 'I repeat.']
+                        .map((gesture) => <span key={gesture}>{gesture}{' '}</span>)}
+                </p>
+                <p>
+                    These actions seem ordinary, almost invisible, yet they quietly organize my
+                    attention, emotions, relationships, and sense of time. I began to wonder whether
+                    these repetitive digital behaviors are more than habits. What if they are the
+                    rituals of my generation?
+                </p>
+                <p>
+                    The algorithm is never seen, yet it continuously composes the reality I
+                    experience. It determines what becomes visible, what disappears, what deserves
+                    attention, and what remains in memory. My reality is increasingly assembled
+                    through pixels, code, and computational decisions.
+                </p>
+                <p>
+                    “Hyperreality” as a condition in which simulations become more influential than
+                    the physical world they represent. I don’t experience this as a future scenario
+                    or a warning. It is simply the condition in which I have learned to live—a
+                    reality continuously composed through pixels, code, algorithms.
+                </p>
+            </section>
+
+
+            {/* Not a transport. The canvas starts by itself and strobes for the
+                whole loop, so it has to be stoppable — and under reduced motion
+                it is the only way IN to the motion. In the corner, out of the
+                reading column, because it is an obligation rather than part of
+                the page. */}
+            <button
+                type="button"
+                className="avl-hold"
+                onClick={() => setPlaying((was) => !was)}
+            >
+                {playing ? 'Pause' : 'Play'}
+            </button>
+        </main>
+    )
+}

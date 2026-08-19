@@ -46,4 +46,46 @@ describe('useAssetRestore', () => {
         expect(saveAssetBlobMock).toHaveBeenCalledWith(expect.any(Blob), expect.objectContaining({ id: 'asset-1' }))
         expect(fetchSpy).not.toHaveBeenCalled()
     })
+
+    // Regression test for audit batch 2 (silent HTML-fallback class): a restore
+    // payload carrying a stored server-relative `/api/…` url gets the 200 SPA
+    // shell on prod. Those HTML bytes used to be written into local asset
+    // storage under the asset id — the restore counted it as completed and the
+    // asset rendered as a broken texture with no error anywhere.
+    it('does not store a 200 text/html response as the asset blob', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+            ok: true,
+            headers: { get: () => 'text/html; charset=utf-8' },
+            blob: async () => new Blob(['<!doctype html>'], { type: 'text/html' })
+        })
+
+        const { result } = renderHook(() => useAssetRestore({
+            setAssetRestoreProgress: vi.fn()
+        }))
+
+        const { fallbackAssets } = await result.current.restoreAssetsFromPayload([
+            { id: 'asset-2', name: 'photo.png', mimeType: 'image/png', url: '/api/projects/p/assets/asset-2' }
+        ])
+
+        expect(saveAssetBlobMock).not.toHaveBeenCalled()
+        expect(fallbackAssets).toEqual([])
+    })
+
+    it('still stores a real asset response', async () => {
+        vi.spyOn(globalThis, 'fetch').mockResolvedValue({
+            ok: true,
+            headers: { get: () => 'image/png' },
+            blob: async () => new Blob(['png'], { type: 'image/png' })
+        })
+
+        const { result } = renderHook(() => useAssetRestore({
+            setAssetRestoreProgress: vi.fn()
+        }))
+
+        await result.current.restoreAssetsFromPayload([
+            { id: 'asset-3', name: 'photo.png', mimeType: 'image/png', url: '/api/projects/p/assets/asset-3' }
+        ])
+
+        expect(saveAssetBlobMock).toHaveBeenCalledWith(expect.any(Blob), expect.objectContaining({ id: 'asset-3' }))
+    })
 })

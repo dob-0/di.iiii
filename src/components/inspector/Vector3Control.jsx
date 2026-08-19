@@ -149,6 +149,14 @@ export default function Vector3Control({
                                 }
                             }}
                             onWheel={(e) => {
+                                // The Inspector panel scrolls (panels/inspector.css:
+                                // `.panel-content { overflow: auto }`), and these
+                                // axis inputs are narrow — a wheel gesture aimed at
+                                // scrolling the panel routinely passes over one.
+                                // Only treat the wheel as a value-adjust gesture when
+                                // the field is actually focused (the user clicked into
+                                // it), same guard StudioInspector's number field uses.
+                                if (document.activeElement !== e.currentTarget) return
                                 const direction = e.deltaY < 0 ? 1 : -1
                                 const step = getModifierStep(e)
                                 adjust(axisIndex, direction * step)

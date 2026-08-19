@@ -1,3 +1,23 @@
+/* Self-hosted, not a CDN: the brand typefaces have to survive a laptop at a venue
+   with no network, and a font that only renders when Google is reachable is not
+   the identity — it's a system fallback wearing its name. Variable weight axis,
+   latin subset, ~48 KB and ~40 KB. See public/fonts/README.md for provenance. */
+@font-face {
+    font-family: 'Inter';
+    src: url('/fonts/inter-latin-wght-normal.woff2') format('woff2-variations');
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'JetBrains Mono';
+    src: url('/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2-variations');
+    font-weight: 100 800;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root {
     /* ── canonical design tokens ── */
     --di-cyan: #4df9ff;
@@ -102,3 +122,16 @@ a
 }
 
 
+
+/* ?embed=1 — the page is a window inside someone else's page, so the document
+   itself must not paint. The viewer's own shell and iframes were made
+   transparent when the mode shipped, but html/body/#root kept `--di-black`
+   underneath them: measured on both tiers afterwards, an embedded page viewed
+   on its own was still a black box. br_id_ge's rite only looked right because
+   it injects this same override into the frame itself as a fallback — a
+   workaround the mode exists to retire. Set by PublicProjectViewer. */
+html.dii-embed,
+html.dii-embed body,
+html.dii-embed #root {
+    background: transparent;
+}

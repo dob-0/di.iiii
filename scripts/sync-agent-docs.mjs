@@ -15,7 +15,9 @@ export const REQUIRED_AI_DOC_FILES = [
   'docs/ai/testing.md',
   'docs/ai/deploy.md',
   'docs/ai/agent-support-matrix.md',
-  'docs/ai/private-overrides.md'
+  'docs/ai/private-overrides.md',
+  'docs/ai/sessions/README.md',
+  'docs/ai/space-sync-vendoring.md'
 ]
 
 // primaryRoles: which company roles own files in this scope (see docs/ai/roles/)
@@ -64,17 +66,6 @@ export const AI_DOC_SCOPES = [
     roleCard: 'docs/ai/roles/schema-protocol-engineer.md',
     applyTo: 'src/shared/**/*',
     cursorRuleFile: '30-src-shared.mdc'
-  },
-  {
-    dir: 'src/beta',
-    slug: 'src-beta',
-    title: 'Beta Experimental Lane',
-    role: 'experimental node-first editor workflows and Beta-specific UX',
-    primaryRoles: ['UI/UX Engineer (UX)', 'Node System Engineer (NSE)', '3D/Viewport Engineer (VPE)'],
-    primaryModel: 'Sonnet',
-    roleCard: 'docs/ai/roles/ui-ux-engineer.md',
-    applyTo: 'src/beta/**/*',
-    cursorRuleFile: '40-src-beta.mdc'
   },
   {
     dir: 'serverXR/src',
@@ -175,16 +166,16 @@ Every task has one primary owner. Match the file path to the role, read the role
 
 | Path | Primary Role | Role Card | Min Model |
 |------|-------------|-----------|-----------|
-| \`src/beta/styles/\`, \`src/styles/\`, \`*.css\` | UI/UX Engineer (UX) | \`docs/ai/roles/ui-ux-engineer.md\` | Sonnet |
-| \`src/beta/components/\`, \`src/studio/\` | UI/UX Engineer (UX) | \`docs/ai/roles/ui-ux-engineer.md\` | Sonnet |
-| \`src/beta/components/BetaViewport.jsx\`, \`src/objectComponents/\` | 3D/Viewport Engineer (VPE) | \`docs/ai/roles/viewport-3d-engineer.md\` | Sonnet |
-| \`src/project/nodeRegistry.js\`, \`src/beta/utils/node*.js\` | Node System Engineer (NSE) | \`docs/ai/roles/node-system-engineer.md\` | Sonnet |
+| \`src/raw/styles/\`, \`src/styles/\`, \`*.css\` | UI/UX Engineer (UX) | \`docs/ai/roles/ui-ux-engineer.md\` | Sonnet |
+| \`src/raw/components/\`, \`src/studio/\` | UI/UX Engineer (UX) | \`docs/ai/roles/ui-ux-engineer.md\` | Sonnet |
+| \`src/raw/components/RawViewport.jsx\`, \`src/objectComponents/\` | 3D/Viewport Engineer (VPE) | \`docs/ai/roles/viewport-3d-engineer.md\` | Sonnet |
+| \`src/project/nodeRegistry.js\`, \`src/raw/utils/node*.js\` | Node System Engineer (NSE) | \`docs/ai/roles/node-system-engineer.md\` | Sonnet |
 | \`serverXR/src/\` | Backend/API Engineer (BAE) | \`docs/ai/roles/backend-api-engineer.md\` | Sonnet |
 | \`shared/\`, \`src/shared/\` | Schema/Protocol Engineer (SPE) | \`docs/ai/roles/schema-protocol-engineer.md\` | Opus |
 | \`scripts/\`, \`deploy/\`, \`.github/workflows/\`, \`Dockerfile\` | Infrastructure Engineer (IE) | \`docs/ai/roles/infrastructure-engineer.md\` | Haiku |
 | \`*.test.js\`, \`*.test.jsx\` | QA/Test Engineer (QA) | \`docs/ai/roles/qa-test-engineer.md\` | Haiku |
 | \`AGENTS.md\`, \`MANIFESTO.md\`, \`docs/architecture/\` | Technical Architect (TA) | \`docs/ai/roles/technical-architect.md\` | Opus |
-| \`docs/\`, \`PROGRESS.md\`, \`golden_rules.md\` | Documentation Engineer (DE) | \`docs/ai/roles/documentation-engineer.md\` | Ollama dob-fast |
+| \`docs/\`, \`PROGRESS.md\`, \`golden_rules.md\` | Documentation Engineer (DE) | \`docs/ai/roles/documentation-engineer.md\` | Haiku |
 
 Full guide: \`docs/ai/roles/README.md\` · Model routing: \`docs/ai/roles/model-routing.md\`
 
@@ -195,8 +186,7 @@ const TOKEN_EFFICIENCY_RULES = `## Token / Context Efficiency
 - Read \`AGENTS.md\`, \`PROGRESS.md\`, nearest scoped \`AGENTS.md\`, and your role card — then stop loading files.
 - Do not pre-read docs, architecture files, or tests "just in case". Read them only if blocked.
 - Use targeted grep over directory scans. Stop and summarize every 5 tool calls.
-- Free local analysis: \`bash scripts/ollama-task.sh fast "question"\` — burns zero API credits.
-- Model tiers: Ollama (free, analysis only) → Haiku (simple edits) → Sonnet (features) → Opus (arch/security only).`
+- Model tiers: Haiku (simple edits) → Sonnet (features) → Opus (arch/security only). There is no local tier.`
 
 const renderCopilotRepoInstructions = () => `# GitHub Copilot Repository Instructions
 
@@ -210,7 +200,7 @@ ${generatedHeader('AGENTS.md and docs/ai/')}
 - Preferred defaults:
   - \`src/project/\` for shared project-document logic
   - \`src/studio/\` for the main shipped editor lane
-  - \`src/beta/\` for experimental node-first work
+  - \`src/raw/\` for experimental node-first work
   - \`src/shared/\` for canonical schema/runtime truth
   - \`serverXR/src/\` for auth, persistence, routes, publish state, and realtime behavior
 - After canonical AI-doc changes, run \`npm run docs:ai:sync\` and \`npm run docs:ai:check\`.

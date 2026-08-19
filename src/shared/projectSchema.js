@@ -34,7 +34,7 @@ const LEGACY_ROOT_TYPE_IDS = new Set(['core.project', 'world.root', 'view.root']
 // (2026-07-17); this generalizes it to every remaining former singleton.
 // For scope-repeatable types where exactly one "active" result is wanted
 // (e.g. a World's active Light/Background/Grid), see
-// workspaceState.activeNodeIdByTypeScope in src/seed's editor — a hierarchy-
+// workspaceState.activeNodeIdByTypeScope in src/raw's editor — a hierarchy-
 // as-connection picker, not a schema-level restriction.
 
 export const cloneValue = (value) => {
@@ -160,7 +160,10 @@ export const defaultPresentationState = {
     codeSourceType: 'html',
     codeUrl: '',
     codeFiles: [],
-    entryView: 'scene'
+    entryView: 'scene',
+    // owner opt-in: render the published page without origin-isolating sandbox so
+    // getUserMedia/device APIs work — the page then runs with the site's origin
+    deviceAccess: false
 }
 
 export const defaultPublishState = {
@@ -571,7 +574,8 @@ export const normalizePresentationState = (presentation = {}, worldState = defau
                 .filter((f) => f && typeof f.name === 'string' && typeof f.content === 'string')
                 .map((f) => ({ name: f.name.trim(), content: f.content }))
             : defaultPresentationState.codeFiles,
-        entryView: ['scene', 'fixed-camera', 'code'].includes(entryView) ? entryView : defaultPresentationState.entryView
+        entryView: ['scene', 'fixed-camera', 'code'].includes(entryView) ? entryView : defaultPresentationState.entryView,
+        deviceAccess: source.deviceAccess === true
     }
 }
 
@@ -763,7 +767,10 @@ export const applyProjectOps = (document, ops = []) => {
             case 'updateEntity': {
                 const entityId = ensureString(payload.entityId)
                 if (!entityId || !entities.has(entityId)) break
-                entities.set(entityId, normalizeEntity(mergePatch(entities.get(entityId), payload.patch || {})))
+                // Pin the id: a patch carrying `id` would otherwise store an
+                // entity whose id differs from its map key — serialized out
+                // as a duplicate/orphan id and silently lost on next apply.
+                entities.set(entityId, normalizeEntity({ ...mergePatch(entities.get(entityId), payload.patch || {}), id: entityId }))
                 break
             }
             case 'updateComponent': {
@@ -785,6 +792,10 @@ export const applyProjectOps = (document, ops = []) => {
                 if (!entityId) break
                 const toDelete = new Set()
                 const collect = (id) => {
+                    // parentId is patchable to anything, so cycles can exist —
+                    // without this guard a cycle recurses to RangeError and the
+                    // involved entities become permanently undeletable.
+                    if (toDelete.has(id)) return
                     toDelete.add(id)
                     for (const [, child] of entities) {
                         if (child.parentId === id) collect(child.id)
@@ -830,21 +841,82 @@ export const applyProjectOps = (document, ops = []) => {
                 if (normalized) nodes.set(nodeId, normalized)
                 break
             }
+            case 'reparentNode': {
+                const nodeId = ensureString(payload.nodeId)
+                if (!nodeId || !nodes.has(nodeId)) break
+                const nextParentId = payload.parentId ? ensureString(payload.parentId) : null
+                // The destination must exist. A parentId naming nothing puts the
+                // node in no scope's child list, reachable from no Enter and
+                // visible on no canvas — silent loss, not an error.
+                if (nextParentId && !nodes.has(nextParentId)) break
+                // …and the node must not become its own ancestor. deleteNode's
+                // collect() guards against cycles it FINDS; this stops one being
+                // made. Without it the cycle is unreachable, undeletable and
+                // recurses on every traversal.
+                let cursor = nextParentId
+                let cycles = false
+                const seen = new Set()
+                while (cursor) {
+                    if (cursor === nodeId) { cycles = true; break }
+                    if (seen.has(cursor)) break
+                    seen.add(cursor)
+                    cursor = nodes.get(cursor)?.parentId || null
+                }
+                if (cycles) break
+                // ONE op, applied whole or not at all. As four loose ops the
+                // reducer would refuse the parentId while still applying the
+                // coordinates — and useProjectDocumentSync resubmits a 409'd
+                // batch verbatim, so a lost race left the node replanted at a
+                // coordinate meaningless in its scope, with nothing said.
+                const existing = nodes.get(nodeId)
+                nodes.set(nodeId, normalizeProjectNode({
+                    ...existing,
+                    parentId: nextParentId,
+                    ...(payload.graphX !== undefined ? { graphX: ensureNumber(payload.graphX, existing.graphX) } : {}),
+                    ...(payload.graphY !== undefined ? { graphY: ensureNumber(payload.graphY, existing.graphY) } : {})
+                }))
+                break
+            }
             case 'deleteNode': {
                 const nodeId = ensureString(payload.nodeId)
                 if (!nodeId) break
                 // Collect the node and all descendants
                 const toDelete = new Set()
                 const collect = (id) => {
+                    // parentId is patchable to anything, so cycles can exist —
+                    // without this guard a cycle recurses to RangeError and the
+                    // involved nodes become permanently undeletable.
+                    if (toDelete.has(id)) return
                     toDelete.add(id)
                     for (const [, child] of nodes) {
                         if (child.parentId === id) collect(child.id)
                     }
                 }
                 collect(nodeId)
+                // A doorway node puts a socket on its CONTAINER's outer face,
+                // and the wire to that socket names the container, not the door
+                // — so deleting the door leaves an edge whose endpoints both
+                // still exist. Nothing else would ever remove it: createEdge
+                // validates endpoint nodes only, and normalizeEdgesList drops
+                // edges by missing node id, never by missing port. It would be a
+                // permanent orphan, parked at the corner of a card by
+                // inputPortCenter's idx<0 branch, that no reload or gesture
+                // could clear. Swept here, where the door's id is still known.
+                const deletedDoorwaySockets = new Set()
+                for (const id of toDelete) {
+                    const doomed = nodes.get(id)
+                    if (doomed && (doomed.typeId === 'port.in' || doomed.typeId === 'port.out') && doomed.parentId) {
+                        deletedDoorwaySockets.add(`${doomed.parentId}:${doomed.id}`)
+                    }
+                }
                 for (const id of toDelete) nodes.delete(id)
                 for (const [edgeId, edge] of edges) {
-                    if (toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId)) edges.delete(edgeId)
+                    if (toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId)) {
+                        edges.delete(edgeId)
+                    } else if (deletedDoorwaySockets.has(`${edge.toNodeId}:${edge.toPort}`)
+                        || deletedDoorwaySockets.has(`${edge.fromNodeId}:${edge.fromPort}`)) {
+                        edges.delete(edgeId)
+                    }
                 }
                 if (toDelete.has(nextDocument.workspaceState.selectedNodeId)) {
                     nextDocument.workspaceState = normalizeWorkspaceState({
@@ -865,7 +937,7 @@ export const applyProjectOps = (document, ops = []) => {
             case 'updateEdge': {
                 const edgeId = ensureString(payload.edgeId)
                 if (!edgeId || !edges.has(edgeId)) break
-                const merged = normalizeProjectEdge(mergePatch(edges.get(edgeId), payload.patch || {}))
+                const merged = normalizeProjectEdge({ ...mergePatch(edges.get(edgeId), payload.patch || {}), id: edgeId })
                 if (!merged) break
                 edges.set(edgeId, merged)
                 break
@@ -1031,7 +1103,11 @@ const invertSingleOp = (document, op) => {
             if (!payload.node || !ensureString(payload.node.id)) break
             const node = normalizeProjectNode(payload.node)
             if (!node) break
-            if (nodes.has(node.id)) break
+            // Mirrors createEntity/createEdge: forward apply overwrites a
+            // colliding id (see applyProjectOps) rather than no-op'ing, so
+            // the inverse must restore what was hijacked, not just delete.
+            const prev = nodes.get(node.id)
+            if (prev) return [{ type: 'createNode', payload: { node: cloneValue(prev) } }]
             return [{ type: 'deleteNode', payload: { nodeId: node.id } }]
         }
         case 'updateNode': {
@@ -1055,6 +1131,24 @@ const invertSingleOp = (document, op) => {
             if (!Object.keys(inversePatch).length) break
             return [{ type: 'updateNode', payload: { nodeId, patch: inversePatch } }]
         }
+        case 'reparentNode': {
+            const nodeId = ensureString(payload.nodeId)
+            const existing = nodeId ? nodes.get(nodeId) : null
+            if (!existing) break
+            // Puts the node back in the scope it came FROM, and back where it
+            // sat there. Without the coordinates the undo returns it to the
+            // right room at the drop point's coordinates, which mean nothing in
+            // that room.
+            return [{
+                type: 'reparentNode',
+                payload: {
+                    nodeId,
+                    parentId: existing.parentId || null,
+                    graphX: existing.graphX,
+                    graphY: existing.graphY
+                }
+            }]
+        }
         case 'deleteNode': {
             const nodeId = ensureString(payload.nodeId)
             if (!nodeId) break
@@ -1068,8 +1162,23 @@ const invertSingleOp = (document, op) => {
             }
             collect(nodeId)
             const restoredNodes = Array.from(toDelete).filter((id) => nodes.has(id)).map((id) => nodes.get(id))
+            // A doorway's exterior wire names the CONTAINER and the door's id,
+            // and the container is not in toDelete — so the delete sweep
+            // removes it while this filter alone would never restore it, and
+            // undo would silently drop a wire the user still had. Found by
+            // reading the inverse rather than by a failing test; guarded by one
+            // now.
+            const doorwaySockets = new Set(
+                Array.from(toDelete)
+                    .map((id) => nodes.get(id))
+                    .filter((node) => node && (node.typeId === 'port.in' || node.typeId === 'port.out') && node.parentId)
+                    .map((node) => `${node.parentId}:${node.id}`)
+            )
             const restoredEdges = Array.from(edges.values())
-                .filter((edge) => toDelete.has(edge.fromNodeId) || toDelete.has(edge.toNodeId))
+                .filter((edge) => toDelete.has(edge.fromNodeId)
+                    || toDelete.has(edge.toNodeId)
+                    || doorwaySockets.has(`${edge.toNodeId}:${edge.toPort}`)
+                    || doorwaySockets.has(`${edge.fromNodeId}:${edge.fromPort}`))
             if (!restoredNodes.length && !restoredEdges.length) break
             const inverse = [
                 ...restoredNodes.map((node) => ({ type: 'createNode', payload: { node: cloneValue(node) } })),

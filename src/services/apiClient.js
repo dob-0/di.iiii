@@ -221,12 +221,30 @@ export async function apiFetch(path, {
     return response.json()
 }
 
-export const getApiSession = async (opts = {}) => apiFetch('/api/auth/session', opts)
+// Module-level echo of the session's `local` flag (a `di up` install on the
+// visitor's own machine, server-side DI_LOCAL). For code that must decide
+// synchronously at mount time — the XR store picks its controller-model
+// source once — after the session has resolved at least once. Defaults to
+// false, i.e. hosted behavior.
+let lastSessionWasLocal = false
+export const isLocalInstallSession = () => lastSessionWasLocal
+
+export const getApiSession = async (opts = {}) => {
+    const data = await apiFetch('/api/auth/session', opts)
+    lastSessionWasLocal = Boolean(data?.local)
+    return data
+}
 
 export const loginApiSession = async (token) => apiFetch('/api/auth/session', {
     method: 'POST',
     body: { token: normalizeSessionApiToken(token) }
 })
+
+// The estate map is infrastructure topology and this repo is public, so the file
+// is never in it — the server reads it from ESTATE_MAP_PATH and hands it to
+// admins only. A 404 here is the normal state on any host that has not been
+// given the file, not a fault.
+export const getEstateMap = async (opts = {}) => apiFetch('/api/estate/map', opts)
 
 export const logoutApiSession = async () => apiFetch('/api/auth/session', {
     method: 'DELETE',
@@ -236,3 +254,24 @@ export const logoutApiSession = async () => apiFetch('/api/auth/session', {
 export const getApiAuthProviders = async () => apiFetch('/api/auth/providers')
 
 export const getOAuthUrl = (provider) => `${apiBaseUrl}/api/auth/${provider}`
+
+export const getAiConnectionStatus = async (provider) =>
+    apiFetch(`/api/integrations/ai/status?provider=${encodeURIComponent(provider)}`)
+
+export const connectAiKey = async (provider, apiKey, label) => apiFetch('/api/integrations/ai/connect', {
+    method: 'POST',
+    body: { provider, apiKey, label }
+})
+
+export const disconnectAiKey = async (provider) => apiFetch('/api/integrations/ai/disconnect', {
+    method: 'POST',
+    body: { provider }
+})
+
+// Operator-only agent board (Ops Graph → Agents). 404s everywhere except a
+// local dev serverXR over loopback — callers treat that as "unavailable".
+export const getAgentBoard = async () => apiFetch('/api/agent-board')
+
+export const getAgentBoardSession = async (sessionId) => (
+    apiFetch(`/api/agent-board/session/${encodeURIComponent(sessionId)}`)
+)

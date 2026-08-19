@@ -168,13 +168,24 @@ export function useServerPublishing({
                 const meta = entry.meta
                 const blob = entry.blob
                 if (!blob || !meta?.id) continue
-                await uploadAssetToServer?.({
+                const uploaded = await uploadAssetToServer?.({
                     file: blob,
                     assetId: meta.id,
                     name: meta.name,
                     mimeType: meta.mimeType,
                     trackPending: false
                 })
+                // uploadAssetToServer throws on a failed upload now, but it
+                // still returns null without throwing on its guard clause
+                // (no spaceId, no file). Ignoring the result entirely is what
+                // let a wholly failed asset sync end in "Scene synced to
+                // server." — so check it too, rather than relying on the
+                // throw alone staying true.
+                if (!uploaded?.id) {
+                    throw new Error(
+                        `Asset "${meta.name || meta.id}" did not upload, so the scene was not published.`
+                    )
+                }
                 completed += 1
                 setServerAssetSyncProgress?.(prev => ({
                     ...prev,
@@ -248,10 +259,17 @@ export function useServerPublishing({
                     return
                 }
                 try {
+                    // Condition the overwrite on the version the person was
+                    // just SHOWN, not on sceneVersionRef — that one is stale by
+                    // definition here, it is what caused the 409. If the scene
+                    // moves again while the confirm dialog is open, this 409s
+                    // rather than silently burying a third change nobody saw.
+                    // No latestVersion (older server) means no precondition is
+                    // available, so it stays unconditional as it always was.
                     const response = await overwriteServerScene(spaceId, {
                         ...payload,
                         sceneVersion: sceneVersionRef?.current || payload.sceneVersion || 0
-                    })
+                    }, { expectedVersion: Number.isInteger(latestVersion) ? latestVersion : null })
                     if (typeof response?.newVersion === 'number') {
                         setSceneVersion?.(response.newVersion)
                         markServerSync?.('Published to server (forced)')
@@ -260,6 +278,10 @@ export function useServerPublishing({
                     }
                     alert('Server scene overwritten with your copy.')
                 } catch (forceError) {
+                    if (forceError?.status === 409) {
+                        alert('The server scene changed again while this dialog was open. Nothing was overwritten — reload and try once more.')
+                        return
+                    }
                     alert(forceError?.message || 'Error: Force publish failed.')
                 }
                 return

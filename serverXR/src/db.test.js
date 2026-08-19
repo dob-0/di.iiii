@@ -83,3 +83,32 @@ describe('db: dedupeAndUniqueOps migration', () => {
         fs.rmSync(path.dirname(dbPath), { recursive: true, force: true })
     })
 })
+
+describe('db: users.token_version migration', () => {
+    it('adds the column to a populated pre-migration DB and is idempotent on re-open', () => {
+        const path = require('node:path')
+        const os = require('node:os')
+        const fs = require('node:fs')
+        const dbPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'dii-db-token-version-')), 'test.db')
+
+        const pre = initDb(dbPath)
+        const now = Date.now()
+        pre.prepare(`
+            INSERT INTO users (id, provider, provider_id, email, display_name, role, spaces, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `).run('user-a', 'github', '1', 'a@example.com', 'A', 'editor', '[]', now, now)
+        // Reproduce a production DB from before this column existed, rows and all.
+        try { pre.exec('ALTER TABLE users DROP COLUMN token_version') } catch { /* already absent */ }
+        closeDb()
+
+        const post = initDb(dbPath)
+        expect(post.prepare('SELECT token_version FROM users WHERE id = ?').get('user-a').token_version).toBe(0)
+        closeDb()
+
+        // Second boot on the same file: ensureColumn must skip, not re-ALTER.
+        expect(() => initDb(dbPath)).not.toThrow()
+        expect(getDb().prepare('SELECT token_version FROM users WHERE id = ?').get('user-a').token_version).toBe(0)
+
+        fs.rmSync(path.dirname(dbPath), { recursive: true, force: true })
+    })
+})

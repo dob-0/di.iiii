@@ -1,0 +1,5057 @@
+.raw-editor-shell,
+.raw-hub {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: var(--di-black);
+    color: var(--di-text);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+/* ── Blank root canvas (entry state) ── */
+
+.raw-root-canvas-mode {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    overflow: hidden;
+    min-height: unset;
+}
+
+.raw-root-canvas {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    padding-top: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: crosshair;
+}
+
+.raw-root-canvas-hint {
+    text-align: center;
+    color: rgba(244, 247, 251, 0.2);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 13px;
+    letter-spacing: 0.18em;
+    text-transform: lowercase;
+    -webkit-user-select: none;
+    user-select: none;
+    pointer-events: none;
+}
+
+.raw-root-canvas-hint p {
+    margin: 0;
+}
+
+/* ── World node cards on root canvas ── */
+
+.raw-world-node-layer {
+    position: absolute;
+    inset: 0;
+}
+
+.raw-world-node-card {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: calc(5px * var(--card-scale, 1));
+    width: calc(160px * var(--card-scale, 1));
+    padding: calc(16px * var(--card-scale, 1)) calc(16px * var(--card-scale, 1)) calc(14px * var(--card-scale, 1));
+    background: #0a0a0a;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    cursor: grab;
+    transition: border-color 0.14s, background 0.14s;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.raw-world-node-card:hover {
+    border-color: var(--di-cyan);
+    background: var(--di-cyan-dim);
+
+}
+
+.raw-world-node-card:active {
+    cursor: grabbing;
+}
+
+.raw-world-node-icon {
+    font-size: calc(24px * var(--card-scale, 1));
+    line-height: 1;
+    color: rgba(244, 247, 251, 0.35);
+}
+
+.raw-world-node-title {
+    font-size: calc(13px * var(--card-scale, 1));
+    font-weight: 600;
+    color: #f4f7fb;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.raw-world-node-type {
+    font-size: calc(10px * var(--card-scale, 1));
+    color: rgba(244, 247, 251, 0.38);
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.05em;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.raw-world-node-enter {
+    margin-top: calc(6px * var(--card-scale, 1));
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    background: rgba(63, 105, 246, 0.12);
+    color: var(--di-cyan);
+    padding: calc(5px * var(--card-scale, 1)) calc(12px * var(--card-scale, 1));
+    font-size: calc(11px * var(--card-scale, 1));
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.14s, border-color 0.14s;
+    width: 100%;
+    text-align: center;
+}
+
+.raw-world-node-enter:hover {
+    background: rgba(63, 105, 246, 0.24);
+    border-color: rgba(107, 147, 255, 0.6);
+}
+
+.raw-printer-profile-actions {
+    margin-top: 12px;
+    padding: 10px;
+    border-radius: 0;
+    border: 1px solid var(--di-cyan-border);
+    background: #0a0a0a;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.raw-printer-profile-actions button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid rgba(107, 147, 255, 0.4);
+    background: rgba(63, 105, 246, 0.12);
+    color: #d7e2ff;
+    border-radius: 0;
+    padding: 7px 10px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.raw-printer-profile-actions button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.raw-printer-profile-actions span {
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.5);
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── Node palette (minimalist double-click command input) ── */
+
+.raw-node-palette-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1800;
+}
+
+/* Furniture, like the windows: the palette is summoned, used and dismissed —
+   it is never the work. Its family accent bars on the rows carry the colour
+   here, so its frame does not need to. */
+.raw-node-palette {
+    position: fixed;
+    width: 280px;
+    border-radius: 0;
+    background: #101418;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.9);
+
+    overflow: hidden;
+    z-index: 1801;
+}
+
+.raw-node-palette-input-row {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--di-cyan-border);
+}
+
+.raw-node-palette-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #f4f7fb;
+    font-size: 14px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: 0.03em;
+    caret-color: #4f9eff;
+}
+
+.raw-node-palette-input::placeholder {
+    color: rgba(244, 247, 251, 0.28);
+}
+
+.raw-node-palette-list {
+    list-style: none;
+    margin: 0;
+    padding: 6px;
+    display: grid;
+    gap: 2px;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+/* The rows are flex children of the list, so their default `min-width: auto`
+   let them grow to min-content — 301px inside a 268px content box — and the
+   right-hand tag rode past the palette's edge. Pre-existing; only visible once
+   a tag was wide enough to reach it. */
+.raw-node-palette-list li {
+    min-width: 0;
+    width: 100%;
+}
+
+.raw-node-palette-item {
+    width: 100%;
+    box-sizing: border-box;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 10px;
+    border: none;
+    background: transparent;
+    border-radius: 0;
+    color: #f4f7fb;
+    cursor: pointer;
+    text-align: left;
+    font-size: 13px;
+    transition: background 0.08s;
+}
+
+.raw-node-palette-item-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    /* The row is 280px wide. Without this the title pushed the tag past the
+       palette's right edge and "PANEL" rendered as "PAN" — the hint truncates
+       instead, since the tag is the part that says what the row DOES. */
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.raw-node-palette-item-title > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.raw-node-palette-item strong {
+    font-weight: 600;
+}
+
+.raw-node-palette-item-title span {
+    color: rgba(244, 247, 251, 0.36);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    white-space: nowrap;
+}
+
+.raw-node-palette-item.is-active,
+.raw-node-palette-item:hover {
+    background: var(--di-cyan-dim);
+}
+
+/* Commands sit above node types in the same list; the tag is what tells you a
+   row summons something rather than creating it. */
+.raw-node-palette-tag.is-command {
+    background: rgba(77, 249, 255, 0.14);
+    color: rgba(210, 245, 255, 0.85);
+}
+
+.raw-node-palette-tag {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    background: rgba(244, 247, 251, 0.08);
+    color: rgba(244, 247, 251, 0.4);
+    font-size: 9.5px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.raw-node-palette-empty {
+    padding: 12px 14px;
+    color: rgba(244, 247, 251, 0.32);
+    font-size: 12px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: 0.08em;
+}
+
+/* Family headers exist only in browse mode (empty query) — sticky so the
+   family you are scrolling through stays named. Any typed character removes
+   them entirely. */
+.raw-node-palette-group {
+    position: sticky;
+    top: -6px; /* cancels the list's own padding so the header pins flush */
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px 5px;
+    background: #0a0a0a;
+    color: rgba(210, 245, 255, 0.55);
+    font-size: 10px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: 0.15em;
+    text-transform: lowercase;
+    border-left: 2px solid var(--family-color, transparent);
+}
+
+.raw-node-palette-group-count {
+    color: rgba(244, 247, 251, 0.28);
+    letter-spacing: 0;
+}
+
+/* The same color the family header carries, on every row — one vocabulary
+   between palette and canvas. */
+.raw-node-palette-item {
+    border-left: 2px solid var(--family-color, transparent);
+}
+
+/* A shell places and holds its ports but computes nothing yet — it must not
+   look as alive as a node that does. */
+.raw-node-palette-item.is-shell {
+    opacity: 0.55;
+}
+
+
+
+.raw-world-type-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    gap: 24px;
+}
+
+.raw-world-type-label {
+    font-size: 12px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: 0.16em;
+    text-transform: lowercase;
+    color: rgba(244, 247, 251, 0.3);
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.raw-world-type-cards {
+    display: flex;
+    gap: 16px;
+    padding: 0;
+    align-items: stretch;
+}
+
+.raw-world-type-card {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 220px;
+    min-height: 200px;
+    padding: 28px 24px;
+    background: #0a0a0a;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    color: #f4f7fb;
+    cursor: pointer;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: border-color 0.15s, background 0.15s;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+
+}
+
+.raw-world-type-card:hover {
+    border-color: var(--di-cyan);
+    background: var(--di-cyan-dim);
+}
+
+.raw-world-type-icon {
+    font-size: 24px;
+    line-height: 1;
+    opacity: 0.7;
+}
+
+.raw-world-type-card strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+.raw-world-type-card p {
+    color: rgba(244, 247, 251, 0.44);
+    font-size: 12px;
+    margin: 0;
+    line-height: 1.55;
+}
+
+.raw-hub {
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    overflow-y: auto;
+    padding: 48px 24px 32px;
+}
+
+.raw-hub-layout {
+    width: 100%;
+    max-width: 660px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.raw-hub-header {
+    padding-bottom: 24px;
+}
+
+.raw-hub-title {
+    margin: 16px 0 6px;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--di-text);
+}
+
+.raw-hub-onboarding {
+    display: grid;
+    gap: 16px;
+    padding: 0 0 20px;
+}
+
+.raw-hub-onboarding-copy h2 {
+    margin: 8px 0 6px;
+    font-size: 22px;
+    line-height: 1.15;
+}
+
+.raw-hub-onboarding-copy p {
+    margin: 0;
+    color: rgba(244, 247, 251, 0.62);
+    line-height: 1.5;
+}
+
+.raw-hub-onboarding-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.raw-hub-onboarding-card {
+    display: grid;
+    gap: 10px;
+    padding: 16px;
+    border: 1px solid var(--di-cyan-border);
+    background: #0a0a0a;
+}
+
+.raw-hub-onboarding-mark {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--di-cyan-border);
+    color: var(--di-cyan);
+    font-size: 18px;
+    background: rgba(77, 249, 255, 0.05);
+}
+
+.raw-hub-onboarding-mark span {
+    line-height: 1;
+}
+
+.raw-hub-onboarding-card h3 {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.2;
+}
+
+.raw-hub-onboarding-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.raw-hub-onboarding-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 8px;
+    border: 1px solid var(--di-cyan-border);
+    color: rgba(244, 247, 251, 0.75);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(77, 249, 255, 0.04);
+}
+
+.raw-hub-onboarding-steps {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding-left: 18px;
+    color: rgba(244, 247, 251, 0.84);
+    line-height: 1.4;
+    font-size: 12px;
+}
+
+.raw-hub-onboarding-card button {
+    -webkit-appearance: none;
+    appearance: none;
+    justify-self: start;
+    border: 1px solid rgba(77, 249, 255, 0.3);
+    background: rgba(77, 249, 255, 0.08);
+    color: #f4f7fb;
+    padding: 10px 14px;
+    cursor: pointer;
+}
+
+.raw-hub-onboarding-card button:hover {
+    background: rgba(77, 249, 255, 0.16);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-hub-create-row {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--di-cyan-border);
+    margin-bottom: 1px;
+}
+
+.raw-hub-title-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--di-text);
+    padding: 12px 14px;
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.03em;
+    min-width: 0;
+}
+
+.raw-hub-title-input::placeholder {
+    color: var(--di-text-muted);
+}
+
+.raw-hub-create-btn,
+.raw-hub-import-btn {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    border-left: 1px solid var(--di-cyan-border);
+    background: transparent;
+    color: var(--di-text-muted);
+    padding: 12px 16px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: color 0.1s, background 0.1s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+}
+
+.raw-hub-create-btn:hover,
+.raw-hub-import-btn:hover {
+    color: var(--di-cyan);
+    background: var(--di-cyan-dim);
+}
+
+.raw-hub-create-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.raw-hub-import-btn input {
+    display: none;
+}
+
+.raw-hub-projects {
+    border: 1px solid var(--di-cyan-border);
+    min-height: 180px;
+    max-height: 34vh;
+    overflow: auto;
+    background: #0a0a0a;
+}
+
+.raw-hub-empty {
+    padding: 20px 14px;
+    margin: 0;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--di-text-muted);
+    letter-spacing: 0.04em;
+}
+
+/* Styles src/components/SpaceSyncPanel.jsx (shared, not Raw-only) — it lives
+   here because Raw is currently the only mounted consumer. */
+.space-sync-row {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--di-cyan-border);
+    border-top: none;
+    background: #0a0a0a;
+}
+
+.space-sync-msg {
+    flex: 1;
+    padding: 10px 14px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--di-text-muted);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Two sides, each unbreakable. The row shows both local and live now, and on
+   a phone that string is wider than the column it sits in — it truncated to
+   "local v0 · 0 …", hiding the live side entirely, which is the one thing the
+   row exists to show. */
+.space-sync-side {
+    white-space: nowrap;
+}
+
+.space-sync-side + .space-sync-side {
+    margin-left: 14px;
+}
+
+@media (max-width: 560px) {
+    .space-sync-row {
+        flex-wrap: wrap;
+    }
+    .space-sync-msg {
+        flex: 1 0 100%;
+        white-space: normal;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2px 14px;
+        border-bottom: 1px solid var(--di-cyan-border);
+    }
+    .space-sync-side + .space-sync-side {
+        margin-left: 0;
+    }
+    .space-sync-btn {
+        flex: 1;
+    }
+    .space-sync-btn:first-of-type {
+        border-left: none;
+    }
+}
+
+.space-sync-msg--ok { color: var(--di-cyan); }
+.space-sync-msg--err { color: #e05a5a; }
+
+.space-sync-btn {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    border-left: 1px solid var(--di-cyan-border);
+    background: transparent;
+    color: var(--di-text-muted);
+    padding: 10px 14px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: color 0.1s, background 0.1s;
+    white-space: nowrap;
+}
+
+.space-sync-btn:hover:not(:disabled) {
+    color: var(--di-cyan);
+    background: var(--di-cyan-dim);
+}
+
+.space-sync-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.raw-hub-footer {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--di-cyan-border);
+    border-top: none;
+    background: #0a0a0a;
+}
+
+.raw-hub-footer button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    border-right: 1px solid var(--di-cyan-border);
+    background: transparent;
+    color: var(--di-text-muted);
+    padding: 10px 16px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: color 0.1s, background 0.1s;
+}
+
+.raw-hub-footer button:last-child {
+    border-right: none;
+}
+
+.raw-hub-footer button:hover {
+    color: var(--di-cyan);
+    background: var(--di-cyan-dim);
+}
+
+.raw-hub-warnings {
+    border: 1px solid rgba(220, 80, 70, 0.3);
+    border-top: none;
+    padding: 12px 14px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: #f4877e;
+}
+
+.raw-hub-warnings p {
+    margin: 0;
+}
+
+.raw-chip,
+.raw-status-pill,
+.raw-user-pill,
+.raw-selection-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 0;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.raw-chip,
+.raw-status-pill,
+.raw-user-pill {
+    background: rgba(18, 31, 48, 0.92);
+    color: #f4f7fb;
+}
+
+.raw-status-pill.is-connected {
+    background: #135b47;
+}
+
+.raw-status-pill.is-connecting,
+.raw-status-pill.is-idle {
+    background: #425168;
+}
+
+.raw-status-pill.is-degraded,
+.raw-status-pill.is-disconnected {
+    background: #7a3b35;
+}
+
+.raw-hub-actions,
+.raw-topbar-actions,
+.raw-primitive-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.raw-hub-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.raw-inline-list,
+.raw-project-list,
+.raw-outliner {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 10px;
+}
+
+.raw-project-list li {
+    display: flex;
+    border-bottom: 1px solid var(--di-cyan-border);
+    min-height: 78px;
+}
+
+.raw-project-list li:last-child {
+    border-bottom: none;
+}
+
+.raw-project-list li > button:first-child {
+    flex: 1;
+    text-align: left;
+    background: transparent;
+    border: none;
+    padding: 12px 14px;
+    color: var(--di-text);
+    cursor: pointer;
+    transition: background 0.1s;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.raw-project-list li > button:first-child:hover {
+    background: var(--di-cyan-dim);
+}
+
+.raw-project-list li > button.danger {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    border-left: 1px solid var(--di-cyan-border);
+    background: transparent;
+    color: var(--di-text-muted);
+    padding: 12px 16px;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.1s, background 0.1s;
+    flex-shrink: 0;
+}
+
+.raw-project-list li > button.danger:hover {
+    color: #f4877e;
+    background: rgba(220, 80, 70, 0.1);
+}
+
+.raw-outliner button,
+.raw-asset-row {
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    padding: 10px 12px;
+    color: var(--di-text);
+    transition: border-color 0.1s, background 0.1s;
+    display: grid;
+    grid-template-columns: 8px 1fr;
+    grid-template-rows: auto auto;
+    column-gap: 10px;
+    align-items: center;
+}
+
+.raw-outliner-dot {
+    grid-row: 1 / 3;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.raw-outliner button strong,
+.raw-outliner button span:not(.raw-outliner-dot) {
+    grid-column: 2;
+}
+
+.raw-outliner button:hover {
+    border-color: var(--di-cyan);
+    background: var(--di-cyan-dim);
+}
+
+.raw-outliner button.is-selected {
+    border-color: var(--di-cyan);
+    background: #162338;
+    color: #f4f7fb;
+}
+
+.raw-file-button,
+.raw-topbar-actions button,
+.raw-hub-actions button,
+.raw-primitive-row button,
+.raw-assets-list button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-text);
+    padding: 10px 14px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
+}
+
+.raw-file-button:hover,
+.raw-topbar-actions button:hover,
+.raw-hub-actions button:hover,
+.raw-primitive-row button:hover,
+.raw-assets-list button:hover {
+    border-color: var(--di-cyan);
+    background: var(--di-cyan-dim);
+    color: var(--di-cyan);
+}
+
+/* Window controls are NOT in the bordered-button family above, and that was
+   most of why a window read as a card containing four smaller cards: every
+   button repeated the frame's own edge. They are the window's furniture —
+   quiet until touched. They also declared no font, so they rendered in the
+   browser's default Arial while every other word in the lane is Inter, and
+   sat at 37px against the 44px floor the rest of the lane keeps. */
+.raw-window-actions button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid transparent;
+    border-radius: 0;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.42);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 10px;
+    cursor: pointer;
+    transition: color 0.1s, background 0.1s;
+}
+
+.raw-window-actions button:hover,
+.raw-window-actions button:focus-visible {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+/* Close is the one that cannot be undone; it should not look like Pin. */
+.raw-window-actions button:last-child:hover,
+.raw-window-actions button:last-child:focus-visible {
+    color: var(--di-danger);
+    background: rgba(242, 95, 92, 0.12);
+}
+
+.raw-topbar-actions button.is-active {
+    border-color: var(--di-cyan);
+    background: var(--di-cyan-dim);
+    color: var(--di-cyan);
+}
+
+.raw-file-button input {
+    display: none;
+}
+
+.raw-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1400;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 0;
+    padding: 0;
+    overflow: hidden;
+    background: var(--di-black);
+    border-bottom: none;
+    pointer-events: none;
+    cursor: default;
+    user-select: none;
+}
+
+.raw-topbar.is-seeded {
+    height: 48px;
+    padding: 0 16px;
+    /* Furniture (see the window rule). */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    pointer-events: auto;
+    overflow: visible;
+    animation: rawTopbarReveal 0.35s ease both;
+}
+
+@keyframes rawTopbarReveal {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.raw-topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex-shrink: 0;
+}
+
+.raw-topbar-back {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.52);
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.raw-topbar-back:hover {
+    background: var(--di-cyan-dim);
+    color: var(--di-cyan);
+}
+
+.raw-topbar-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(244, 247, 251, 0.72);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+}
+
+.raw-topbar-center {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    flex: 1;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.raw-topbar-location {
+    display: inline-flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(77, 249, 255, 0.04);
+    color: rgba(244, 247, 251, 0.74);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex-shrink: 1;
+}
+
+/* Below this, Help/Chat/⋯ alone leave the pill ~40px of usable content width
+   (measured on iPhone SE, 320px) — too tight for any hint text to read as
+   more than a few ellipsis-truncated letters, short variant or not. The
+   canvas-center empty-state message (RawGraphSurface's emptyHint) has the
+   whole viewport to work with and already reads fine at this width, so the
+   topbar copy is redundant clutter here rather than useful chrome — same
+   "shed before truncating unreadably" call as raw-topbar-name/scale-control. */
+@media (max-width: 400px) {
+    .raw-topbar-location {
+        display: none;
+    }
+}
+
+.raw-topbar-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.raw-topbar-crumb-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-width: 0;
+}
+
+.raw-topbar-crumb-sep {
+    color: rgba(244, 247, 251, 0.25);
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+}
+
+.raw-topbar-crumb {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.45);
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+}
+
+.raw-topbar-crumb:hover {
+    background: rgba(77, 249, 255, 0.08);
+    color: var(--di-cyan);
+}
+
+.raw-topbar-crumb.is-current {
+    color: rgba(244, 247, 251, 0.9);
+    font-weight: 600;
+    background: rgba(77, 249, 255, 0.06);
+    border: 1px solid var(--di-cyan-border);
+}
+
+/* Depth indicator — subtle inset when inside a node */
+.raw-surface-shell.is-inside-node {
+    box-shadow: inset 0 0 0 2px rgba(77, 249, 255, 0.08);
+}
+
+
+.raw-topbar-surfaces {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    justify-content: center;
+}
+
+.raw-topbar-surfaces button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-text-muted);
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: color 0.1s;
+}
+
+.raw-topbar-surfaces button:hover {
+    color: var(--di-text);
+}
+
+.raw-topbar-surfaces button.is-active {
+    color: var(--di-cyan);
+    border-bottom: 2px solid var(--di-cyan);
+}
+
+.raw-topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: auto;
+}
+
+.raw-topbar-primary-action {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid rgba(77, 249, 255, 0.38);
+    border-radius: 0;
+    background: rgba(77, 249, 255, 0.10);
+    color: #f4f7fb;
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.raw-topbar-primary-action:hover {
+    background: rgba(77, 249, 255, 0.18);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+/* ── Node 0 shortcut — the root entry point ── */
+.raw-topbar-node0-action {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-cyan);
+    padding: 7px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+}
+
+.raw-topbar-node0-action:hover {
+    background: var(--di-cyan-dim);
+    border-color: var(--di-cyan);
+}
+
+.raw-topbar-scale-control {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 0;
+    background: rgba(77, 249, 255, 0.04);
+}
+
+.raw-topbar-scale-control label {
+    font-size: 12px;
+    color: rgba(244, 247, 251, 0.56);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: 0.02em;
+}
+
+.raw-topbar-scale-control select {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    border-radius: 0;
+    /* Was a blue-violet nobody else in the lane uses — a hue with no job. */
+    background: rgba(255, 255, 255, 0.06);
+    color: #f4f7fb;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    cursor: pointer;
+    border: 1px solid rgba(107, 147, 255, 0.28);
+    min-width: 50px;
+}
+
+.raw-topbar-scale-control select:hover {
+    background: rgba(63, 105, 246, 0.18);
+    border-color: rgba(107, 147, 255, 0.48);
+}
+
+.raw-topbar-node-count {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    background: transparent;
+    padding: 0 4px;
+    cursor: pointer;
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.36);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: 0.04em;
+    transition: color 0.1s;
+}
+
+.raw-topbar-node-count:hover,
+.raw-topbar-node-count.is-active {
+    color: rgba(244, 247, 251, 0.8);
+}
+
+.raw-topbar-overflow {
+    position: relative;
+}
+
+/* ── Graph / World surface toggles ── */
+.raw-topbar-windows {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    justify-content: center;
+}
+
+.raw-topbar-windows button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: var(--di-text-muted);
+    padding: 6px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: color 0.1s, background 0.1s;
+    height: 48px;
+}
+
+.raw-topbar-windows button:hover {
+    color: var(--di-text);
+    background: var(--di-cyan-dim);
+}
+
+.raw-topbar-windows button.is-active {
+    color: var(--di-cyan);
+    border-bottom: 2px solid var(--di-cyan);
+}
+
+/* ── Overflow button ── */
+.raw-topbar-overflow-btn {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.48);
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.raw-topbar-overflow-btn:hover {
+    background: var(--di-cyan-dim);
+    color: #f4f7fb;
+}
+
+/* ── Overflow dropdown menu ── */
+.raw-topbar-overflow-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 180px;
+    border-radius: 0;
+    background: #0a0a0a;
+    border: 1px solid var(--di-cyan-border);
+    padding: 6px;
+    display: grid;
+    gap: 2px;
+    z-index: 1500;
+}
+
+.raw-topbar-overflow-menu button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.72);
+    padding: 9px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    width: 100%;
+}
+
+.raw-topbar-overflow-menu button:hover {
+    background: var(--di-cyan-dim);
+    color: var(--di-cyan);
+}
+
+.raw-delete-fab {
+    position: fixed;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    right: calc(24px + env(safe-area-inset-right));
+    z-index: 1300;
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid rgba(220, 80, 70, 0.4);
+    border-radius: 0;
+    background: #1a0807;
+    color: #f4877e;
+    padding: 10px 18px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+
+}
+
+.raw-delete-fab:hover {
+    background: #280b08;
+    color: #ffb0aa;
+}
+
+/* ONE JOB PER COLOUR (2026-08-18). A window and a graph card used to be the
+   same rectangle — the same cyan hairline, the same square corner, the same
+   near-black fill, neither casting a shadow — so nothing in the picture said
+   which one lay on the canvas and which floated above it. The fix is not a
+   nicer frame, it is giving each colour a single job:
+     neutral   — furniture (this window, the palette, the topbar, the HUD)
+     family    — what a node IS (its card's edge and icon; the stripe below)
+     cyan      — interaction only (selected, hover, focus)
+     port hue  — data type (wires, unchanged)
+   A shadow cannot carry depth here: black on black is invisible (measured).
+   Depth comes from the lifted fill plus the one-pixel top highlight.
+   `--window-accent` is set per window by DesktopWindow from its node's family,
+   so a window and its card are visibly the same node. Windows with no node
+   behind them (Outliner, Chat) fall back to the neutral edge, which is honest:
+   they are tools, not nodes. */
+.raw-window {
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    background: #101418;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-top: 2px solid var(--window-accent, rgba(255, 255, 255, 0.14));
+    border-radius: 0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 24px 60px rgba(0, 0, 0, 0.9);
+    overflow: hidden;
+}
+
+.raw-window-header {
+    display: flex;
+    flex: 0 0 auto;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 8px 10px 8px 13px;
+    cursor: grab;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+    background: rgba(255, 255, 255, 0.025);
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Both classes have been on the markup since windows existed and neither had
+   a single rule, so a pinned window looked exactly like an unpinned one and a
+   minimized one kept a divider under a body that was no longer there. */
+.raw-window.is-pinned .raw-window-header::after {
+    content: 'pinned';
+    font-family: var(--di-mono);
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    color: rgba(255, 255, 255, 0.3);
+    order: 3;
+    flex: 0 0 auto;
+}
+
+.raw-window.is-minimized .raw-window-header {
+    border-bottom-color: transparent;
+}
+
+/* The window title used to be nothing but this zero margin, which left its
+   size and weight to the browser's built-in h3 — 18.72px, louder than any
+   authored label in the lane and the reason a window shouted while its card
+   whispered at 12px. */
+.raw-window-header h3 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    line-height: 1.25;
+}
+
+.raw-property-sheet-header h4 {
+    margin: 0;
+}
+
+/* Says the family, in the family's colour — "the room", not UNIVERSE.WORLD.
+   The cards started speaking plainly when families landed; the windows were
+   the half left behind, still showing the code's internal type id. Lowercase,
+   because that is how the palette and the cards write these words. */
+.raw-window-kicker {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    color: var(--window-accent, rgba(244, 247, 251, 0.42));
+    font-family: var(--di-mono);
+}
+
+.raw-window-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+}
+
+.raw-window-body {
+    position: relative;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.raw-window-resizer {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    border-radius: 0;
+    background: rgba(77, 249, 255, 0.04);
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* ── World panel window ── */
+
+.raw-world-panel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.raw-world-panel-actions {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    display: flex;
+    gap: 6px;
+    z-index: 10;
+}
+
+/* Controls sitting ON the live 3D content: furniture at rest (see the window
+   rule), cyan only under the pointer. Three permanently-cyan buttons over a
+   scene pull the eye away from the scene. */
+.raw-world-panel-btn {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(10, 12, 14, 0.72);
+    color: rgba(255, 255, 255, 0.62);
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    transition: background 0.1s;
+}
+
+.raw-world-panel-btn:hover,
+.raw-world-panel-btn:focus-visible {
+    background: var(--di-cyan-dim);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-world-panel-btn.is-live {
+    color: #ff5f5f;
+    border-color: #ff5f5f;
+    background: rgba(255, 95, 95, 0.12);
+}
+
+/* ── World fullscreen mode ── */
+
+.raw-world-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+}
+
+/* ── World overlay mode (3D behind graph) ── */
+
+.raw-world-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.raw-surface-shell.is-world-overlay {
+    background: transparent;
+    pointer-events: none;
+}
+
+.raw-surface-shell.is-world-overlay > * {
+    pointer-events: auto;
+}
+
+.raw-surface-shell.is-world-overlay .raw-graph-surface {
+    background: transparent;
+}
+
+.raw-viewport-shell,
+.raw-cursor-layer {
+    position: absolute;
+    inset: 0;
+}
+
+.raw-viewport-shell {
+    background: #080c14;
+}
+
+.raw-viewport-empty-hint {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+}
+
+.raw-viewport-empty-stage {
+    position: absolute;
+    inset: 32px;
+    border: 1px dashed rgba(77, 249, 255, 0.16);
+    background: radial-gradient(circle at center, rgba(77, 249, 255, 0.05), transparent 54%);
+}
+
+.raw-viewport-empty-grid {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(0deg, rgba(77, 249, 255, 0.07) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(77, 249, 255, 0.07) 1px, transparent 1px);
+    background-size: 36px 36px;
+}
+
+.raw-viewport-empty-crosshair {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 84px;
+    height: 84px;
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(77, 249, 255, 0.24);
+}
+
+.raw-viewport-empty-crosshair::before,
+.raw-viewport-empty-crosshair::after {
+    content: '';
+    position: absolute;
+    background: rgba(77, 249, 255, 0.24);
+}
+
+.raw-viewport-empty-crosshair::before {
+    left: 50%;
+    top: -20px;
+    width: 1px;
+    height: 124px;
+}
+
+.raw-viewport-empty-crosshair::after {
+    top: 50%;
+    left: -20px;
+    width: 124px;
+    height: 1px;
+}
+
+.raw-viewport-empty-panel {
+    position: relative;
+    z-index: 1;
+    justify-self: center;
+    align-self: center;
+    display: grid;
+    gap: 10px;
+    width: min(320px, calc(100vw - 80px));
+    padding: 18px;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(10, 10, 10, 0.88);
+    box-shadow: 0 0 0 1px rgba(77, 249, 255, 0.06);
+    text-align: center;
+}
+
+.raw-viewport-empty-panel strong {
+    font-size: 20px;
+    line-height: 1.2;
+    color: #f4f7fb;
+}
+
+.raw-viewport-empty-panel p {
+    margin: 0;
+    color: rgba(244, 247, 251, 0.62);
+    line-height: 1.5;
+}
+
+.raw-viewport-empty-panel button {
+    -webkit-appearance: none;
+    appearance: none;
+    justify-self: center;
+    border: 1px solid rgba(77, 249, 255, 0.3);
+    background: rgba(77, 249, 255, 0.08);
+    color: #f4f7fb;
+    padding: 10px 14px;
+    cursor: pointer;
+}
+
+.raw-viewport-empty-panel button:hover {
+    background: rgba(77, 249, 255, 0.16);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-cursor-layer {
+    pointer-events: none;
+}
+
+.raw-cursor-marker {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #ff8f47;
+    box-shadow: 0 0 0 3px rgba(255, 143, 71, 0.2);
+}
+
+.raw-cursor-marker span,
+.raw-selection-pill {
+    position: absolute;
+    top: 16px;
+    left: 0;
+    white-space: nowrap;
+    background: #0a0a0a;
+    color: #fff;
+    border-radius: 0;
+    padding: 4px 10px;
+    font-size: 11px;
+}
+
+.raw-selection-pill {
+    position: static;
+}
+
+.raw-property-sheet,
+.raw-window-stack,
+.raw-activity-list {
+    height: 100%;
+    overflow: auto;
+    padding: 0;
+}
+
+.raw-property-sheet {
+    display: flex;
+    flex-direction: column;
+}
+
+.raw-property-sheet-header {
+    padding: 16px 18px 12px;
+    border-bottom: 1px solid var(--di-cyan-border);
+    flex-shrink: 0;
+}
+
+.raw-property-sheet-header h4 {
+    font-size: 15px;
+    font-weight: 600;
+    color: #f4f7fb;
+    margin: 0 0 3px;
+}
+
+.raw-property-sheet-header p {
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.4);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    letter-spacing: 0.04em;
+    margin: 0;
+}
+
+.raw-property-sections-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 18px 18px;
+}
+
+.raw-property-section {
+    padding-top: 12px;
+    border-top: 1px solid var(--di-cyan-border);
+    margin-top: 12px;
+}
+
+.raw-property-section:first-child {
+    border-top: none;
+    margin-top: 0;
+    padding-top: 0;
+}
+
+.raw-property-section h5 {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: rgba(244, 247, 251, 0.36);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    margin: 0 0 10px;
+}
+
+.raw-property-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.raw-property-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 12px;
+}
+
+.raw-property-field > span {
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.45);
+    letter-spacing: 0.02em;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.raw-checkbox-field {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    grid-column: 1 / -1;
+}
+
+.raw-property-field input[type='text'],
+.raw-property-field input[type='number'],
+.raw-property-field textarea,
+.raw-property-field select,
+.raw-hub-actions input {
+    width: 100%;
+    border-radius: 0;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(77, 249, 255, 0.04);
+    color: #f4f7fb;
+    padding: 7px 10px;
+    font-size: 12px;
+    font-family: inherit;
+    -webkit-appearance: none;
+    appearance: none;
+    -moz-appearance: textfield;
+    box-sizing: border-box;
+    transition: border-color 0.12s, background 0.12s;
+}
+
+.raw-property-field input[type='text']:focus,
+.raw-property-field input[type='number']:focus,
+.raw-property-field textarea:focus,
+.raw-property-field select:focus {
+    outline: none;
+    border-color: var(--di-cyan);
+    background: var(--di-cyan-dim);
+}
+
+.raw-property-field input[type='number']::-webkit-inner-spin-button,
+.raw-property-field input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.raw-property-field input[type='color'] {
+    width: 100%;
+    height: 34px;
+    border-radius: 0;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(77, 249, 255, 0.04);
+    padding: 3px 6px;
+    cursor: pointer;
+}
+
+.raw-property-field input[type='checkbox'] {
+    width: 16px;
+    height: 16px;
+    accent-color: #3f69f6;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.raw-full-width-field {
+    grid-column: 1 / -1;
+}
+
+.raw-window-stack {
+    height: 100%;
+    overflow: auto;
+    padding: 16px;
+}
+
+/* view.library — Studio's Create window as a panel node. */
+.raw-create-section + .raw-create-section {
+    margin-top: 18px;
+}
+
+.raw-create-label {
+    font-family: var(--di-mono);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+    margin-bottom: 8px;
+}
+
+.raw-create-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+    gap: 6px;
+}
+
+.raw-create-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    /* 44px is the one-finger floor this project holds every control to; a
+       shape grid is exactly where a phone visitor taps first. */
+    min-height: 56px;
+    padding: 8px 4px;
+    background: transparent;
+    /* Neutral at rest, cyan under the pointer — the same rule the windows, the
+       zoom cluster and the viewport buttons follow. Fifteen permanently-cyan
+       boxes would out-shout the scene they are for putting things into. */
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 0;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 11px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s, color 0.1s;
+}
+
+.raw-create-btn:hover,
+.raw-create-btn:focus-visible {
+    background: rgba(77, 249, 255, 0.08);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-create-icon {
+    font-size: 17px;
+    line-height: 1;
+}
+
+.raw-text-panel {
+    display: flex;
+    align-items: flex-start;
+}
+
+.raw-text-panel-content {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.5;
+    color: #f4f7fb;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+}
+
+/* 20px is a presentation size on a desk; on a 390px phone it turns three
+   sentences into a scrolling column, which is how the starter desk's last
+   line — the one naming the way into Studio — ended up below the fold. */
+@media (max-width: 640px) {
+    .raw-text-panel-content {
+        font-size: 17px;
+        line-height: 1.45;
+    }
+}
+
+.raw-chat-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    height: 100%;
+}
+
+.raw-chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.raw-chat-message {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.raw-chat-message-author {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.raw-chat-message.is-self .raw-chat-message-author {
+    color: var(--di-cyan);
+}
+
+.raw-chat-message-text {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #f4f7fb;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.raw-chat-input-row {
+    display: flex;
+    gap: 8px;
+    /* right padding clears the 16px window resize handle at bottom-right —
+       it paints and hit-tests over the Send button's corner otherwise */
+    padding: 10px 28px 10px 12px;
+    border-top: 1px solid var(--di-cyan-border);
+}
+
+.raw-chat-input {
+    flex: 1;
+    background: transparent;
+    border: 1px solid var(--di-cyan-border);
+    outline: none;
+    color: #f4f7fb;
+    padding: 8px 10px;
+    font-size: 13px;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.raw-chat-input::placeholder {
+    color: rgba(244, 247, 251, 0.28);
+}
+
+.raw-chat-input-row button {
+    flex-shrink: 0;
+}
+
+.raw-image-panel {
+    width: 100%;
+    height: 100%;
+    background: #05080f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.raw-image-panel-empty {
+    align-items: center;
+    justify-content: center;
+}
+
+.raw-image-panel-empty p {
+    margin: 0;
+    color: rgba(244, 247, 251, 0.52);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 12px;
+}
+
+.raw-image-panel-media {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: #05080f;
+}
+
+.raw-assets-list,
+.raw-activity-list {
+    display: grid;
+    gap: 10px;
+}
+
+.raw-asset-row,
+.raw-activity-row {
+    display: grid;
+    gap: 4px;
+}
+
+.raw-activity-row strong,
+.raw-asset-row strong,
+.raw-outliner strong {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.raw-empty-state,
+.raw-overlay-message {
+    padding: 18px;
+    border-radius: 0;
+    background: #0a0a0a;
+    color: rgba(244, 247, 251, 0.48);
+}
+
+/* The blank canvas is where a beginner lands, and it opens in zen — no topbar,
+   no menu, nothing to press. So the one offer that matters lives here — in the
+   LOWER band, because the hint says "double-click", the centre is where people
+   double-click, and the audit watched a double-click land on the button and
+   inject a demo scene into somebody's node. */
+.raw-empty-state {
+    position: absolute;
+    top: auto;
+    bottom: 14%;
+    left: 50%;
+    transform: translate(-50%, 0);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    text-align: center;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.raw-empty-state p {
+    margin: 0;
+    font-size: 13px;
+}
+
+.raw-empty-state button {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 44px;
+    padding: 0 20px;
+    border: 1px solid rgba(77, 249, 255, 0.5);
+    border-radius: 999px;
+    background: rgba(77, 249, 255, 0.12);
+    color: var(--di-cyan);
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-empty-state button:hover {
+    background: rgba(77, 249, 255, 0.26);
+}
+
+.raw-overlay-message {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 1300;
+}
+
+.raw-overlay-message.is-error,
+.raw-activity-row.is-error {
+    background: rgba(131, 49, 44, 0.28);
+    color: #f4877e;
+}
+
+.raw-activity-row.is-warning {
+    background: rgba(164, 109, 18, 0.26);
+    color: #f4c36e;
+}
+
+.raw-view-surface {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #080c14;
+    overflow: hidden;
+    cursor: grab;
+}
+
+.raw-view-canvas-stage {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: 0 0;
+}
+
+.raw-view-zoom-controls {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(6, 10, 18, 0.92);
+}
+
+.raw-view-zoom-controls button {
+    min-width: 28px;
+    height: 28px;
+    border: 1px solid var(--di-cyan-border);
+    background: var(--di-black);
+    color: var(--di-text);
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.raw-view-zoom-controls span {
+    min-width: 44px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--di-text);
+}
+
+.raw-empty-view-state,
+.raw-graph-surface-header {
+    max-width: 34rem;
+    margin: 32px;
+    padding: 24px;
+    border-radius: 0;
+    border: 1px solid var(--di-cyan-border);
+    background: #0a0a0a;
+
+}
+
+.raw-empty-view-state h2,
+.raw-graph-surface-header h2 {
+    margin: 0 0 8px;
+}
+
+.raw-empty-view-state p,
+.raw-graph-surface-header p {
+    margin: 0;
+    color: rgba(244, 247, 251, 0.50);
+}
+
+.raw-surface-shell {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+.raw-surface-workflow {
+    margin: 12px 16px 0;
+    z-index: 4;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 16px;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(8, 12, 20, 0.92);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+}
+
+.raw-surface-workflow-copy {
+    max-width: 44rem;
+}
+
+.raw-surface-workflow-copy strong {
+    display: block;
+    margin: 0 0 4px;
+    font-size: 13px;
+    color: #f4f7fb;
+    letter-spacing: 0.02em;
+}
+
+.raw-surface-workflow-copy p {
+    margin: 0;
+    color: rgba(244, 247, 251, 0.62);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.raw-surface-workflow-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.raw-surface-workflow-actions button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid rgba(77, 249, 255, 0.3);
+    border-radius: 0;
+    background: rgba(77, 249, 255, 0.08);
+    color: #f4f7fb;
+    padding: 8px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.raw-surface-workflow-actions button:hover {
+    background: rgba(77, 249, 255, 0.16);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-topbar-help-action {
+    -webkit-appearance: none;
+    appearance: none;
+    /* Furniture at rest, cyan only under the pointer (see the window rule):
+       a topbar button that is permanently accent-coloured competes with the
+       selected node for the eye and wins, which is exactly backwards. */
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.04);
+    color: rgba(255, 255, 255, 0.72);
+    padding: 10px 14px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.raw-topbar-help-action:hover {
+    background: rgba(77, 249, 255, 0.16);
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+@media (max-width: 900px) {
+    .raw-hub {
+        padding: 32px 16px 24px;
+    }
+
+    .raw-hub-onboarding-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .raw-hub-projects {
+        max-height: none;
+    }
+
+    .raw-surface-workflow {
+        flex-direction: column;
+    }
+
+    .raw-surface-workflow-actions {
+        justify-content: flex-start;
+    }
+
+    .raw-help-body {
+        grid-template-columns: 1fr;
+    }
+
+    .raw-help-callout-row {
+        grid-template-columns: 1fr;
+        min-height: 0;
+    }
+}
+
+.raw-hub-wordmark {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+}
+
+.raw-hub-di-sq {
+    display: block;
+    width: 10px;
+    height: 10px;
+    border: 2px solid var(--di-cyan);
+    background: transparent;
+}
+
+.raw-hub-tagline {
+    font-size: 11px;
+    color: var(--di-text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    margin: 0;
+    letter-spacing: 0.06em;
+}
+
+.raw-topbar h1 {
+    margin: 8px 0 4px;
+    font-size: 30px;
+}
+
+.raw-topbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.raw-selection-scaffold {
+    position: fixed;
+    /* RawEditor supplies the measured workflow-strip height as a custom
+       property instead of an inline `top`, so the phone bottom-sheet rule
+       below can actually win. An inline declaration cannot be overridden by a
+       media query. */
+    top: var(--raw-scaffold-top, 64px);
+    right: 24px;
+    width: min(320px, calc(100vw - 48px));
+    max-height: calc(100vh - 88px);
+    max-height: calc(100dvh - 88px);
+    z-index: 1350;
+    border-radius: 0;
+    background: #0a0a0a;
+    border: 1px solid var(--di-cyan-border);
+
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.raw-graph-surface {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    cursor: crosshair;
+    touch-action: none;
+    user-select: none;
+    background:
+        linear-gradient(0deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+        #060a12;
+    background-size: 36px 36px;
+}
+
+.raw-graph-stage-shell {
+    position: relative;
+}
+
+.raw-graph-stage {
+    position: relative;
+    transform-origin: 0 0;
+}
+
+/* Zen: the zoom controls stop being resident, but are never removed.
+   On a fine pointer the wheel already zooms, so they can go entirely — the
+   palette brings the chrome back. On a coarse pointer there IS no wheel, so
+   they are the only way to zoom: they idle at low opacity and come back the
+   moment a finger or the keyboard reaches them. Removing them there would
+   undo a real touch fix (see known-fixes: zoom buttons vs double-tap). */
+.raw-graph-zoom-controls.is-chromeless {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.18s ease;
+}
+
+@media (pointer: coarse) {
+    .raw-graph-zoom-controls.is-chromeless {
+        opacity: 0.28;
+        pointer-events: auto;
+    }
+    .raw-graph-zoom-controls.is-chromeless:hover,
+    .raw-graph-zoom-controls.is-chromeless:focus-within,
+    .raw-graph-zoom-controls.is-chromeless:active {
+        opacity: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .raw-graph-zoom-controls.is-chromeless { transition: none; }
+}
+
+.raw-graph-zoom-controls {
+    position: absolute;
+    /* Bottom-LEFT: .raw-delete-fab is position:fixed at bottom/right 24px with
+       z-index 1300, so anything in the bottom-right corner sits underneath it. */
+    bottom: calc(16px + var(--raw-bottom-chrome, 0px) + env(safe-area-inset-bottom));
+    left: calc(16px + env(safe-area-inset-left));
+    transition: bottom 0.18s ease;
+    z-index: 2;
+    width: fit-content;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    /* Furniture (see the window rule): the zoom cluster is a tool for looking
+       at the work, not part of it. */
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(16, 20, 24, 0.94);
+}
+
+.raw-graph-zoom-controls button {
+    min-width: 44px;
+    height: 44px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: var(--di-black);
+    color: rgba(255, 255, 255, 0.62);
+    cursor: pointer;
+    transition: border-color 0.1s, color 0.1s;
+}
+
+.raw-graph-zoom-controls button:hover,
+.raw-graph-zoom-controls button:focus-visible {
+    border-color: var(--di-cyan);
+    color: var(--di-cyan);
+}
+
+.raw-graph-zoom-value {
+    min-width: 3.75rem;
+    text-align: center;
+    color: var(--di-text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+}
+
+.raw-graph-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    padding: 0 32px 32px;
+}
+
+/* The card's edge is its FAMILY, not the lane's accent. `--card-family` is set
+   per card by RawGraphSurface; the plain cyan declaration above it is the
+   fallback for engines without color-mix() and for a node whose type has no
+   family yet. Before this, every card in every family wore the same cyan edge
+   and the family was a 10px word on the right — unreadable at arm's length,
+   invisible at half zoom, and identical to the chrome around it. */
+.raw-graph-node-card {
+    background: var(--di-black);
+    border: 1px solid var(--di-cyan-border);
+    border-color: color-mix(in srgb, var(--card-family, #4df9ff) 46%, transparent);
+    border-radius: 0;
+    color: var(--di-text);
+    cursor: pointer;
+    font-size: 12px;
+    touch-action: none;
+    -webkit-user-select: none;
+    user-select: none;
+    overflow: visible;
+    transition: border-color 0.1s;
+}
+
+.raw-graph-node-card:hover {
+    border-color: rgba(77, 249, 255, 0.55);
+}
+
+.raw-graph-node-card:active {
+    cursor: grabbing;
+}
+
+.raw-graph-node-card.is-selected {
+    border-color: var(--di-cyan);
+    box-shadow: 0 0 0 1px var(--di-cyan), 0 0 18px rgba(77, 249, 255, 0.15);
+}
+
+/* di.i hollow-square icon — the brand node motif, now in the node's own family
+   colour so the swatch says what the card is. Cyan remains the fallback for a
+   type with no family. */
+.raw-graph-node-icon {
+    width: 14px;
+    height: 14px;
+    border: 3px solid var(--card-family, var(--di-cyan));
+    background: transparent;
+    flex-shrink: 0;
+}
+
+.raw-graph-node-card.is-selected .raw-graph-node-icon {
+    background: var(--di-cyan-dim);
+}
+
+/* Kantan Mapper-style active marker — which sibling of a scope-repeatable
+   type (Light/Background/Grid) is the one actually in effect. */
+.raw-graph-node-active-toggle {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: rgba(244, 247, 251, 0.22);
+    font-size: 10px;
+    line-height: 16px;
+    text-align: center;
+    cursor: pointer;
+}
+
+.raw-graph-node-active-toggle:hover {
+    color: rgba(244, 247, 251, 0.5);
+}
+
+.raw-graph-node-active-toggle.is-active {
+    color: var(--di-cyan);
+}
+
+.raw-graph-node-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--di-cyan-border);
+    height: 44px;
+    box-sizing: border-box;
+}
+
+.raw-graph-node-label {
+    font-weight: 700;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex: 1;
+    letter-spacing: 0.01em;
+}
+
+.raw-graph-node-category {
+    font-size: 10px;
+    color: var(--di-text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* THE DOOR — the way into a container.
+   It hangs off the card's LEFT edge and is counter-scaled by the surface's zoom,
+   so it is the same size on screen whatever the graph is doing. It used to live
+   in the card header inside the graph's own transform: at the zoom the auto-fit
+   lands an oversized graph on, that measured 7x7 SCREEN PIXELS — in the DOM,
+   invisible in the browser, and passing a DOM-presence test the whole time.
+   Left rather than right because nearestOutputPort's grab radius is 28 screen
+   pixels and covers the card's right-hand end when zoomed out, so a door there
+   fights with starting a wire. */
+.raw-graph-node-door-anchor {
+    position: absolute;
+    right: 100%;
+    top: 22px;
+    width: 0;
+    height: 0;
+    transform-origin: 100% 50%;
+    pointer-events: none;
+}
+
+.raw-graph-node-door {
+    -webkit-appearance: none;
+    appearance: none;
+    position: absolute;
+    right: 3px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 22px;
+    padding: 3px 5px;
+    border: 1px solid rgba(244, 247, 251, 0.28);
+    border-radius: 6px;
+    background: rgba(10, 14, 22, 0.92);
+    /* Was rgba(244,247,251,0.2) on --di-black — about 1.6:1, under the 3:1
+       floor for a non-text control. */
+    color: rgba(244, 247, 251, 0.62);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+    pointer-events: auto;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.raw-graph-node-card:hover .raw-graph-node-door,
+.raw-graph-node-card.is-selected .raw-graph-node-door,
+.raw-graph-node-door:focus-visible {
+    color: rgba(77, 249, 255, 0.95);
+    border-color: rgba(77, 249, 255, 0.5);
+}
+
+/* A card that actually holds something says so, and says how much. Every card
+   used to wear the same mark whether or not there was anything behind it, so
+   the mark carried no information at all. Never a GATE on the door: the same
+   control reopens a closed panel window, and an un-enterable empty container is
+   a box that can never be filled. */
+.raw-graph-node-door.has-contents {
+    color: var(--card-family, rgba(77, 249, 255, 0.95));
+    border-color: var(--card-family, rgba(77, 249, 255, 0.55));
+}
+
+.raw-graph-node-child-count {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+/* The 44px finger target, extended LEFT ONLY into the column gutter — a
+   symmetric halo would cover the card's own drag area at low zoom. Gated above
+   DOOR_HALO_MIN_ZOOM in the component, because below that it would reach into
+   the previous column's output ports. */
+.raw-graph-node-door.has-halo::after {
+    content: "";
+    position: absolute;
+    inset: -11px 0 -11px -22px;
+}
+
+/* Coarse pointers get no hover, and this is the ONLY way into a container on a
+   phone — double-click is not a gesture a finger has. So the plate itself is a
+   full 44px target rather than relying on the halo, which is gated by zoom.
+   Because the anchor is counter-scaled by the surface's zoom, 44 here is 44
+   SCREEN pixels at every zoom, not 44 graph units that shrink with the view. */
+@media (hover: none) {
+    .raw-graph-node-door {
+        min-height: 44px;
+        min-width: 44px;
+        justify-content: center;
+        color: rgba(77, 249, 255, 0.9);
+        border-color: rgba(77, 249, 255, 0.45);
+    }
+}
+
+.raw-graph-port-row {
+    position: absolute;
+    height: 22px;
+    width: 50%;
+    display: flex;
+    align-items: center;
+}
+
+.raw-graph-port-row--in {
+    left: 0;
+    padding-left: 12px;
+}
+
+.raw-graph-port-row--out {
+    right: 0;
+    justify-content: flex-end;
+    padding-right: 12px;
+}
+
+.raw-graph-port-dot {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    border-radius: 0;
+    border: 1.5px solid var(--di-black);
+    pointer-events: auto;
+    touch-action: none;
+}
+
+/* The dot stays 8px because the graph should read as a diagram, but 8px is
+   unhittable with a finger. This pseudo-element widens the HIT box to 44px
+   horizontally without changing anything visible or shifting layout. Vertical
+   growth is capped at the 22px port-row pitch so adjacent ports never overlap
+   each other's targets — the remaining slack is covered by the nearest-port
+   drop resolution in RawGraphSurface.jsx (PORT_DROP_RADIUS_PX). */
+.raw-graph-port-dot::after {
+    content: '';
+    position: absolute;
+    top: -7px;
+    bottom: -7px;
+    left: -18px;
+    right: -18px;
+}
+
+.raw-graph-port-dot--out { cursor: crosshair; }
+.raw-graph-port-dot--in  { cursor: pointer; }
+
+/* Live feedback while a wire is being dragged: an input that can take it
+   glows, one that cannot goes quiet. Before this, an incompatible drop was
+   pure silence. */
+.raw-graph-port-dot--in.is-compatible {
+    box-shadow: 0 0 0 3px rgba(77, 249, 255, 0.35);
+    transform: scale(1.3);
+}
+
+.raw-graph-port-dot--in.is-incompatible {
+    opacity: 0.18;
+}
+
+/* touch-action is NOT inherited — it applies to whichever element the touch
+   hit-tests to. `.raw-graph-surface` sets `none`, but a finger landing on a
+   wire path or a node card hit those elements' own default `auto`, so the
+   browser claimed the gesture as a page pan/zoom and cancelled the pointer
+   stream. The effect: pinch-to-zoom worked perfectly on bare canvas and did
+   nothing at all over an actual graph — which is to say, it did nothing
+   whenever it mattered. Every descendant of the stage is part of the canvas
+   and its gestures are ours to interpret. */
+.raw-graph-stage,
+.raw-graph-stage * {
+    touch-action: none;
+}
+
+/* Semantic zoom. Below ~0.34 a port row cannot be read or hit, but the wires
+   still terminate at exactly those coordinates — so mark them. A tick, not a
+   dot: it reads as "a wire lands here", not as "aim at this". */
+.raw-graph-port-tick {
+    position: absolute;
+    width: 6px;
+    height: 2px;
+    pointer-events: none;
+}
+
+.raw-graph-port-tick--in  { left: -3px; }
+.raw-graph-port-tick--out { right: -3px; }
+
+/* At the smallest tier the card is a solid block: position and topology only.
+   The whole card stays one large select target, which is the point — a tap at
+   this zoom should always do something useful rather than miss three controls. */
+.raw-graph-node-card.is-lod-block .raw-graph-node-header {
+    border-bottom: none;
+}
+
+.raw-graph-node-card.is-lod-header .raw-graph-node-label,
+.raw-graph-node-card.is-lod-compact .raw-graph-node-label {
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: nowrap;
+}
+
+/* Says how much of the graph is on screen when fitting all of it would have
+   been illegible. Reuses the overlay-message look rather than inventing chrome. */
+.raw-graph-fit-notice {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    /* Top, not bottom. The bottom-left corner already holds the zoom cluster
+       and the bottom-right the delete action; a centred notice down there
+       collided with both on a 393px screen. The surface is already offset
+       below the topbar, so 12px here sits just under it. */
+    top: 12px;
+    max-width: calc(100% - 24px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    z-index: 3;
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid var(--di-cyan-border);
+    border-radius: 0;
+    background: rgba(6, 10, 18, 0.92);
+    color: var(--di-text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    min-height: 32px;
+    padding: 0 12px;
+    cursor: pointer;
+}
+
+.raw-graph-fit-notice:hover,
+.raw-graph-fit-notice:focus-visible {
+    color: var(--di-cyan);
+}
+
+@media (hover: none) {
+    .raw-graph-fit-notice { min-height: 44px; }
+}
+
+.raw-graph-port-label {
+    font-size: 11px;
+    color: var(--di-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.raw-op-create-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1500;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.raw-op-create-scrim {
+    position: absolute;
+    inset: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    border: 0;
+    background: transparent;
+    cursor: default;
+}
+
+.raw-op-create-dialog {
+    position: relative;
+    width: min(1080px, calc(100vw - 48px));
+    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    overflow: hidden;
+    border-radius: 0;
+    background: #0a0a0a;
+    border: 1px solid var(--di-cyan-border);
+
+}
+
+.raw-op-create-header,
+.raw-op-create-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--di-cyan-border);
+}
+
+.raw-op-create-footer {
+    border-top: 1px solid var(--di-cyan-border);
+    border-bottom: 0;
+}
+
+.raw-op-create-toolbar {
+    display: grid;
+    gap: 12px;
+    padding: 18px 22px 0;
+}
+
+.raw-op-search {
+    width: 100%;
+    border-radius: 0;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(77, 249, 255, 0.04);
+    color: #f4f7fb;
+    padding: 10px 12px;
+}
+
+.raw-op-family-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.raw-op-family-tabs button,
+.raw-op-create-footer button,
+.raw-op-create-header button,
+.raw-op-list button,
+.raw-help-header button,
+.raw-help-footer button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: none;
+    cursor: pointer;
+    border-radius: 0;
+    background: rgba(77, 249, 255, 0.04);
+    padding: 10px 12px;
+    color: #f4f7fb;
+    font-weight: 600;
+}
+
+.raw-op-family-tabs button.is-active,
+.raw-op-create-footer button:last-child,
+.raw-op-list button.is-selected {
+    background: #162338;
+    color: #f4f7fb;
+}
+
+.raw-op-create-body {
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+    gap: 22px;
+    padding: 22px;
+    overflow: auto;
+}
+
+.raw-op-list {
+    display: grid;
+    gap: 10px;
+    align-content: start;
+}
+
+.raw-op-list button {
+    display: grid;
+    gap: 4px;
+    text-align: left;
+}
+
+.raw-op-list button span,
+.raw-op-preview-browser-bar code {
+    color: rgba(244, 247, 251, 0.44);
+    font-size: 12px;
+}
+
+.raw-help-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1550;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(0, 0, 0, 0.56);
+}
+
+.raw-help-scrim {
+    position: absolute;
+    inset: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    border: 0;
+    background: transparent;
+    cursor: default;
+}
+
+.raw-help-dialog {
+    position: relative;
+    width: min(880px, calc(100vw - 48px));
+    max-height: calc(100vh - 48px);
+    max-height: calc(100dvh - 48px);
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    overflow: hidden;
+    background: #0a0a0a;
+    border: 1px solid var(--di-cyan-border);
+}
+
+.raw-help-header,
+.raw-help-footer {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--di-cyan-border);
+}
+
+.raw-help-header-mark {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 auto;
+    border: 1px solid var(--di-cyan-border);
+    color: var(--di-cyan);
+    font-size: 20px;
+    background: rgba(77, 249, 255, 0.05);
+}
+
+.raw-help-header h3 {
+    margin: 4px 0 8px;
+    font-size: 20px;
+}
+
+.raw-help-header p {
+    margin: 0;
+    color: rgba(244, 247, 251, 0.62);
+    line-height: 1.5;
+}
+
+.raw-help-mode-tabs,
+.raw-help-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 18px 22px 0;
+}
+
+.raw-help-mode-tabs button,
+.raw-help-tabs button {
+    -webkit-appearance: none;
+    appearance: none;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(77, 249, 255, 0.04);
+    color: #f4f7fb;
+    padding: 10px 12px;
+    cursor: pointer;
+}
+
+.raw-help-mode-tabs button.is-active,
+.raw-help-tabs button.is-active {
+    background: #162338;
+}
+
+.raw-help-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(260px, 0.95fr);
+    gap: 22px;
+    padding: 22px;
+    overflow: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(77, 249, 255, 0.3) rgba(77, 249, 255, 0.04);
+}
+
+.raw-help-body::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.raw-help-body::-webkit-scrollbar-track {
+    background: rgba(77, 249, 255, 0.04);
+}
+
+.raw-help-body::-webkit-scrollbar-thumb {
+    background: rgba(77, 249, 255, 0.3);
+    border: 1px solid rgba(10, 10, 10, 0.9);
+}
+
+.raw-help-body::-webkit-scrollbar-thumb:hover {
+    background: rgba(77, 249, 255, 0.5);
+}
+
+.raw-help-visual-stage,
+.raw-help-side {
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(77, 249, 255, 0.03);
+    padding: 18px;
+}
+
+.raw-help-visual-stage {
+    position: relative;
+    overflow: hidden;
+}
+
+.raw-help-diagram {
+    position: absolute;
+    inset: 18px;
+    opacity: 0.28;
+    pointer-events: none;
+}
+
+.raw-help-diagram-pill {
+    position: absolute;
+    left: 18px;
+    bottom: 18px;
+    padding: 4px 8px;
+    border: 1px solid var(--di-cyan-border);
+    color: rgba(244, 247, 251, 0.75);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.raw-help-diagram-start {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+}
+
+.raw-help-diagram-start-col {
+    align-self: center;
+    height: 140px;
+    border: 1px solid rgba(77, 249, 255, 0.18);
+    background: rgba(77, 249, 255, 0.05);
+}
+
+.raw-help-diagram-start-world::before,
+.raw-help-diagram-start-view::before,
+.raw-help-diagram-start-graph::before {
+    content: '';
+    display: block;
+    width: 56%;
+    height: 56%;
+    margin: 24px auto 0;
+    border: 1px solid rgba(77, 249, 255, 0.26);
+}
+
+.raw-help-diagram-grid {
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    bottom: 16%;
+    height: 34%;
+    background:
+        linear-gradient(0deg, rgba(77, 249, 255, 0.18) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(77, 249, 255, 0.18) 1px, transparent 1px);
+    background-size: 26px 26px;
+}
+
+.raw-help-diagram-world-node {
+    position: absolute;
+    border: 1px solid rgba(77, 249, 255, 0.35);
+    background: rgba(77, 249, 255, 0.08);
+}
+
+.raw-help-diagram-cube {
+    width: 88px;
+    height: 88px;
+    left: 18%;
+    top: 24%;
+}
+
+.raw-help-diagram-sphere {
+    width: 76px;
+    height: 76px;
+    right: 18%;
+    top: 31%;
+    border-radius: 999px;
+}
+
+.raw-help-diagram-window {
+    position: absolute;
+    border: 1px solid rgba(77, 249, 255, 0.3);
+    background: rgba(77, 249, 255, 0.06);
+    padding: 12px;
+    display: grid;
+    gap: 8px;
+}
+
+.raw-help-diagram-window span {
+    display: block;
+    height: 12px;
+    background: rgba(77, 249, 255, 0.16);
+}
+
+.raw-help-diagram-window-a {
+    left: 10%;
+    top: 14%;
+    width: 42%;
+    height: 40%;
+}
+
+.raw-help-diagram-window-b {
+    right: 12%;
+    bottom: 18%;
+    width: 34%;
+    height: 32%;
+}
+
+.raw-help-diagram-graph-node {
+    position: absolute;
+    width: 96px;
+    height: 54px;
+    border: 1px solid rgba(77, 249, 255, 0.32);
+    background: rgba(77, 249, 255, 0.06);
+}
+
+.raw-help-diagram-graph-node-a {
+    left: 10%;
+    top: 22%;
+}
+
+.raw-help-diagram-graph-node-b {
+    right: 12%;
+    top: 18%;
+}
+
+.raw-help-diagram-graph-node-c {
+    left: 38%;
+    bottom: 20%;
+}
+
+.raw-help-diagram-wire {
+    position: absolute;
+    height: 2px;
+    background: rgba(77, 249, 255, 0.28);
+    transform-origin: left center;
+}
+
+.raw-help-diagram-wire-a {
+    width: 42%;
+    left: 26%;
+    top: 35%;
+    transform: rotate(-10deg);
+}
+
+.raw-help-diagram-wire-b {
+    width: 24%;
+    left: 32%;
+    top: 54%;
+    transform: rotate(24deg);
+}
+
+.raw-help-callout-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    min-height: 240px;
+    align-items: center;
+}
+
+.raw-help-callout {
+    display: grid;
+    justify-items: center;
+    gap: 10px;
+    text-align: center;
+    position: relative;
+    z-index: 1;
+}
+
+.raw-help-callout-icon {
+    display: grid;
+    place-items: center;
+    width: 68px;
+    height: 68px;
+    border: 1px solid var(--di-cyan-border);
+    color: var(--di-cyan);
+    font-size: 30px;
+    background: rgba(77, 249, 255, 0.05);
+}
+
+.raw-help-callout strong {
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.raw-help-callout p {
+    margin: 0;
+    color: rgba(244, 247, 251, 0.72);
+    line-height: 1.45;
+}
+
+.raw-help-side {
+    display: grid;
+    align-content: start;
+    gap: 16px;
+}
+
+.raw-help-step-grid {
+    display: grid;
+    gap: 10px;
+}
+
+.raw-help-step-card {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 10px;
+    align-items: start;
+    padding: 10px 12px;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(77, 249, 255, 0.02);
+}
+
+.raw-help-step-card span {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    color: var(--di-cyan);
+    border: 1px solid var(--di-cyan-border);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+}
+
+.raw-help-step-card p {
+    margin: 4px 0 0;
+    color: rgba(244, 247, 251, 0.84);
+    line-height: 1.45;
+}
+
+.raw-help-tip-list {
+    display: grid;
+    gap: 8px;
+    margin: 0;
+    padding-left: 18px;
+    color: rgba(244, 247, 251, 0.82);
+    line-height: 1.5;
+}
+
+.raw-help-controls-list {
+    display: grid;
+    gap: 10px;
+}
+
+.raw-help-control-row {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(77, 249, 255, 0.12);
+}
+
+.raw-help-control-row:last-child {
+    border-bottom: 0;
+}
+
+.raw-help-control-row span {
+    color: rgba(244, 247, 251, 0.58);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+}
+
+.raw-help-control-row strong {
+    color: rgba(244, 247, 251, 0.9);
+    font-weight: 500;
+    line-height: 1.45;
+}
+
+.raw-help-chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.raw-help-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 8px;
+    border: 1px solid var(--di-cyan-border);
+    color: rgba(244, 247, 251, 0.75);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    background: rgba(77, 249, 255, 0.04);
+}
+
+.raw-help-footer {
+    border-top: 1px solid var(--di-cyan-border);
+    border-bottom: 0;
+    align-items: center;
+}
+
+.raw-help-footer span {
+    color: rgba(244, 247, 251, 0.56);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    word-break: break-word;
+}
+
+/* Neither the manual path nor "Jump to <section>" overflows at phone widths,
+   but side-by-side both end up wrapped to 2-3 lines in ~130px each — legible
+   in the sense of "not broken", not in the sense of "readable". Stack them. */
+@media (max-width: 480px) {
+    .raw-help-footer {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+
+    .raw-help-footer button {
+        width: 100%;
+    }
+}
+
+.raw-help-audiences {
+    display: grid;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.raw-help-audience-card {
+    display: grid;
+    gap: 10px;
+    padding: 14px;
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(77, 249, 255, 0.03);
+}
+
+.raw-help-audience-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.raw-help-audience-glyph {
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    color: var(--di-cyan);
+    border: 1px solid var(--di-cyan-border);
+    background: rgba(77, 249, 255, 0.04);
+}
+
+.raw-help-audience-card h4 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.raw-help-audience-steps {
+    margin: 0;
+    padding-left: 18px;
+    color: rgba(244, 247, 251, 0.82);
+    line-height: 1.45;
+    font-size: 13px;
+}
+
+.raw-op-details {
+    display: grid;
+    gap: 18px;
+    align-content: start;
+}
+
+.raw-op-preview-card,
+.raw-op-preview-browser-shell {
+    border-radius: 0;
+    border: 1px solid var(--di-cyan-border);
+    background: #0a0a0a;
+
+    overflow: hidden;
+}
+
+.raw-op-preview-card {
+    min-height: 220px;
+    display: grid;
+    place-items: center;
+    gap: 12px;
+    padding: 18px;
+}
+
+.raw-op-preview-cube-shell {
+    background: linear-gradient(180deg, #0d1a30 0%, #0a1224 100%);
+}
+
+.raw-op-preview-cube {
+    width: 96px;
+    height: 96px;
+    border-radius: 0;
+
+}
+
+.raw-op-preview-browser-shell {
+    min-height: 260px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+}
+
+.raw-op-preview-browser-shell iframe,
+.raw-browser-panel-window iframe,
+.raw-world-browser-node iframe {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #ffffff;
+}
+
+.raw-op-preview-browser-bar,
+.raw-browser-panel-bar,
+.raw-world-browser-node-bar {
+    display: grid;
+    gap: 4px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--di-cyan-border);
+    background: rgba(77, 249, 255, 0.04);
+}
+
+.raw-op-param-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.raw-browser-panel-window,
+.raw-world-browser-node {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    background: #080c14;
+}
+
+.raw-world-browser-node {
+    border-radius: 0;
+    overflow: hidden;
+
+}
+
+.raw-webcam-panel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #080c14;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+}
+
+.raw-webcam-panel-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+.raw-webcam-panel-status,
+.raw-mic-panel-status {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 16px;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--di-cyan-dim, #9fd7ff);
+    background: rgba(8, 12, 20, 0.86);
+}
+
+.raw-mic-panel {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    background: #080c14;
+    display: grid;
+    place-items: center;
+    padding: 0 20px;
+}
+
+.raw-mic-panel-meter {
+    width: 100%;
+    height: 10px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(77, 249, 255, 0.08);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+}
+
+.raw-mic-panel-meter-fill {
+    width: 100%;
+    height: 100%;
+    transform-origin: left center;
+    transform: scaleX(0);
+    background: linear-gradient(90deg, #4df9ff, #5fa8ff);
+    /* volume updates go straight to this transform every animation frame
+       (see MicSourcePanel) — a transition here would fight that and lag. */
+}
+
+/* MIDI In — same panel language as the keeper and the capture family. */
+.raw-midi-panel {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    background: #080c14;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--di-cyan-dim, #9fd7ff);
+}
+
+.raw-midi-panel-status {
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: rgba(77, 249, 255, 0.07);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.25));
+}
+
+.raw-midi-panel-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.raw-midi-panel-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.raw-midi-panel-select {
+    width: 100%;
+    box-sizing: border-box;
+    /* Touch target — one finger has to be able to change the channel. */
+    min-height: 34px;
+    padding: 6px 8px;
+    font: inherit;
+    color: #e8f6ff;
+    background: rgba(77, 249, 255, 0.06);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    border-radius: 4px;
+}
+
+.raw-midi-panel-select:focus-visible {
+    outline: 2px solid var(--di-cyan, #4df9ff);
+    outline-offset: 1px;
+}
+
+.raw-midi-panel-last {
+    margin-top: auto;
+    padding: 8px 10px;
+    color: #e8f6ff;
+    background: rgba(8, 12, 20, 0.7);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.22));
+    border-radius: 4px;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+
+/* Keeper — reuses the capture family's ground and cyan accents rather than
+   introducing a second panel language. */
+.raw-keeper-panel {
+    width: 100%;
+    height: 100%;
+    /* This sheet sets box-sizing per rule rather than globally, so width:100%
+       plus padding overflowed the window by exactly the padding — 398px of
+       content in a 368px window, clipped at the right edge on a phone. */
+    box-sizing: border-box;
+    background: #080c14;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--di-cyan-dim, #9fd7ff);
+}
+
+.raw-keeper-panel-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.raw-keeper-panel-setup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.raw-keeper-panel-label {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.raw-keeper-panel-input {
+    width: 100%;
+    box-sizing: border-box;
+    resize: vertical;
+    padding: 7px 9px;
+    font: inherit;
+    color: #e8f6ff;
+    background: rgba(77, 249, 255, 0.06);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    border-radius: 4px;
+}
+
+.raw-keeper-panel-input:focus-visible {
+    outline: 2px solid var(--di-cyan, #4df9ff);
+    outline-offset: 1px;
+}
+
+.raw-keeper-panel-input[readonly] {
+    opacity: 0.75;
+    cursor: default;
+}
+
+.raw-keeper-panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.raw-keeper-panel-ask {
+    padding: 6px 14px;
+    font: inherit;
+    color: #08131a;
+    background: var(--di-cyan, #4df9ff);
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    /* Touch target — a workspace node has to be usable with one finger.
+       See docs/architecture/RAW_WORKSPACE.md §8 q4. */
+    min-height: 34px;
+}
+
+.raw-keeper-panel-ask:disabled {
+    background: rgba(77, 249, 255, 0.22);
+    color: rgba(232, 246, 255, 0.55);
+    cursor: not-allowed;
+}
+
+.raw-keeper-panel-ask:focus-visible {
+    outline: 2px solid #e8f6ff;
+    outline-offset: 2px;
+}
+
+.raw-keeper-panel-state {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    opacity: 0.75;
+}
+
+.raw-keeper-panel-state-unreachable,
+.raw-keeper-panel-state-error {
+    color: #ff9e9e;
+    opacity: 1;
+}
+
+.raw-keeper-panel-state-answered {
+    color: #9effb0;
+    opacity: 1;
+}
+
+/* Not absolutely positioned like the capture family's overlay: the keeper's
+   messages sit in the flow so a reply and an error can be read together. */
+.raw-keeper-panel-status {
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: rgba(77, 249, 255, 0.07);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.25));
+}
+
+.raw-keeper-panel-status-error {
+    color: #ffc9c9;
+    background: rgba(255, 120, 120, 0.1);
+    border-color: rgba(255, 120, 120, 0.35);
+}
+
+.raw-keeper-panel-status code {
+    font-size: 12px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: rgba(8, 12, 20, 0.6);
+    /* A URL is one unbreakable token and the panel is narrow — without this it
+       runs past the edge of its own box. */
+    overflow-wrap: anywhere;
+}
+
+.raw-keeper-panel-reply {
+    flex: 1;
+    min-height: 0;
+    padding: 9px 10px;
+    color: #e8f6ff;
+    background: rgba(8, 12, 20, 0.7);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.22));
+    border-radius: 4px;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.raw-keeper-panel-note {
+    font-size: 11px;
+    opacity: 0.65;
+}
+
+@media (max-width: 1200px) {
+    .raw-hub-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .raw-topbar-name {
+        display: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .raw-topbar-scale-control label {
+        display: none;
+    }
+
+    .raw-topbar-right {
+        gap: 4px;
+    }
+}
+
+@media (max-width: 700px) {
+    .raw-op-create-body {
+        grid-template-columns: 1fr;
+    }
+
+    .raw-topbar-location {
+        max-width: 38vw;
+    }
+
+    .raw-topbar-scale-control {
+        display: none;
+    }
+}
+
+/* Phones. The topbar is a fixed-height single flex row holding the back button,
+   breadcrumb, surface toggles, window list, scale select, node count, chat and
+   overflow — at 390px that overflowed with no wrap and no collapse, and
+   `overflow: hidden` on the seeded state made the overflowing controls
+   unreachable rather than merely cramped. Nothing is removed here (the same
+   controls stay available); the row is simply allowed to scroll, and the fixed
+   chrome is pulled clear of the notch and the home indicator. */
+@media (max-width: 640px) {
+    /* below 16px, mobile Safari auto-zooms the page on input focus — with
+       fixed-position windows that strands the user mid-window after every
+       message. 16px is the no-zoom floor, not a style choice. */
+    .raw-chat-input,
+    .raw-node-palette-input {
+        font-size: 16px;
+    }
+
+    /* breadcrumbs live inside a horizontal scroller here — a ~20px target
+       loses most taps to the scroll gesture. Grow them to a finger size. */
+    .raw-topbar-crumb {
+        padding: 10px 12px;
+    }
+
+    .raw-topbar.is-seeded {
+        overflow-x: auto;
+        overflow-y: hidden;
+        scrollbar-width: none;
+        justify-content: flex-start;
+        padding-left: calc(12px + env(safe-area-inset-left));
+        padding-right: calc(12px + env(safe-area-inset-right));
+    }
+
+    .raw-topbar.is-seeded::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Every cluster keeps its intrinsic width so the row scrolls as one strip
+       instead of squashing the controls into unreadable slivers.
+       .raw-topbar-center needs the full `flex` shorthand, not just
+       flex-shrink: its base rule is `flex: 1`, i.e. flex-basis 0 — with the
+       right-hand cluster already 279px wide on a 393px screen there is no free
+       space to grow into, so the centre collapsed to width 0 while its 299px
+       location chip kept its intrinsic size and spilled to x:-51, painting on
+       top of the back button on one side and the Help/Size controls on the
+       other. Overflow scrolling cannot fix a child escaping a zero-width
+       parent; the parent has to be allowed to measure its content. */
+    .raw-topbar-left,
+    .raw-topbar-right {
+        flex-shrink: 0;
+    }
+
+    .raw-topbar-center {
+        flex: 0 0 auto;
+        justify-content: flex-start;
+    }
+
+    .raw-topbar-location {
+        max-width: 60vw;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* Bottom sheet, not a floating panel. At 320-412px `width: min(320px,
+       100vw - 48px)` is effectively the whole screen and the panel is pinned
+       to the top, so selecting a node covered the node it was inspecting —
+       its header, its enter control and its ports all sat underneath, and the
+       panel swallowed the taps aimed at them. Selecting something must not
+       hide the thing you selected. Same shape Studio already uses for phones
+       (studio-mobile.css), so this is the existing pattern, not new chrome. */
+    .raw-selection-scaffold {
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: auto;
+        max-height: 38dvh;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    /* The Delete FAB lives in the bottom-right corner, which the sheet now
+       occupies — and the sheet is only ever up when something is selected,
+       i.e. exactly when Delete is the button you want. Move it above the
+       sheet's reach. Pinch still zooms the canvas that stays visible, so the
+       zoom controls being covered while a node is selected is survivable;
+       losing Delete is not. */
+    .raw-delete-fab {
+        top: calc(58px + env(safe-area-inset-top));
+        bottom: auto;
+        right: calc(12px + env(safe-area-inset-right));
+    }
+}
+
+/* System windows — full-coverage fixed overlays for Graph and World */
+.raw-system-window {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    background: var(--raw-canvas-bg, #0d0d0d);
+}
+
+.raw-system-window-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    background: var(--raw-topbar-bg, #111);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    flex-shrink: 0;
+    height: 36px;
+}
+
+.raw-system-window-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--di-text-muted);
+    text-transform: uppercase;
+}
+
+.raw-system-window-close {
+    -webkit-appearance: none;
+    appearance: none;
+    background: none;
+    border: none;
+    color: var(--di-text-muted);
+    cursor: pointer;
+    font-size: 20px;
+    line-height: 1;
+    padding: 0 2px;
+    opacity: 0.6;
+    transition: opacity 0.1s;
+}
+
+.raw-system-window-close:hover {
+    opacity: 1;
+    color: var(--di-text);
+}
+
+.raw-system-window > :last-child {
+    flex: 1;
+    min-height: 0;
+}
+
+/* --- work.status / work.agent panels --------------------------------- */
+
+.raw-work-status-panel {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    background: #080c14;
+    padding: 12px 16px;
+    font-size: 12px;
+    color: var(--di-text);
+}
+
+.raw-work-status-panel-loading,
+.raw-work-status-panel-error {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    padding: 16px;
+    text-align: center;
+    color: var(--di-cyan-dim, #9fd7ff);
+}
+
+.raw-work-status-section {
+    margin-bottom: 14px;
+}
+
+.raw-work-status-section h4 {
+    margin: 0 0 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--di-text-muted);
+}
+
+.raw-work-status-section ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.raw-work-status-empty {
+    margin: 0;
+    color: var(--di-text-muted);
+}
+
+.raw-work-status-tree-branch {
+    color: #4df9ff;
+    font-weight: 600;
+}
+
+.raw-work-status-dirty {
+    color: #ffb86c;
+}
+
+.raw-agent-run-panel {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 16px;
+    background: #080c14;
+}
+
+.raw-agent-run-panel-input {
+    flex: 1;
+    min-height: 48px;
+    resize: none;
+    background: rgba(77, 249, 255, 0.05);
+    border: 1px solid var(--di-cyan-border, rgba(77, 249, 255, 0.3));
+    border-radius: 6px;
+    color: var(--di-text);
+    font: inherit;
+    padding: 8px;
+}
+
+.raw-agent-run-panel-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.raw-agent-run-panel-status {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--di-text-muted);
+}
+
+.raw-agent-run-panel-status-running {
+    color: #4df9ff;
+}
+
+.raw-agent-run-panel-status-done {
+    color: #50fa7b;
+}
+
+.raw-agent-run-panel-status-failed,
+.raw-agent-run-panel-status-stopped {
+    color: #ff5555;
+}
+
+.raw-agent-run-panel-error {
+    color: #ff5555;
+    font-size: 12px;
+}
+
+.raw-agent-run-panel-output {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.raw-agent-run-panel-message {
+    margin: 0;
+    padding: 6px 8px;
+    background: rgba(77, 249, 255, 0.04);
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.raw-agent-run-panel-result {
+    margin: 0;
+    padding: 6px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    font-weight: 600;
+    color: #50fa7b;
+    background: rgba(80, 250, 123, 0.08);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.raw-agent-run-panel-result-error {
+    color: #ff5555;
+    background: rgba(255, 85, 85, 0.08);
+}
+
+.raw-agent-run-panel-cost {
+    font-weight: 400;
+    opacity: 0.6;
+}
+
+.raw-agent-run-panel-raw {
+    font-size: 11px;
+    color: var(--di-text-muted);
+}
+
+.raw-agent-run-panel-raw summary {
+    cursor: pointer;
+    padding: 4px 0;
+}
+
+.raw-agent-run-panel-tail {
+    margin: 0;
+    padding: 8px;
+    max-height: 200px;
+    overflow: auto;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    font-size: 11px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* --- Timeline panel (view.timeline) --- */
+
+.raw-timeline-panel {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #05080f;
+    color: #f4f7fb;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    overflow: hidden;
+}
+
+.raw-timeline-bar {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 8px 12px 6px;
+    border-bottom: 1px solid rgba(244, 247, 251, 0.08);
+}
+
+.raw-timeline-title {
+    font-weight: 600;
+    letter-spacing: 0.04em;
+}
+
+.raw-timeline-readout {
+    color: #4f9eff;
+    font-variant-numeric: tabular-nums;
+}
+
+.raw-timeline-meta {
+    margin-left: auto;
+    color: rgba(244, 247, 251, 0.52);
+}
+
+.raw-timeline-ruler {
+    position: relative;
+    height: 16px;
+    flex: none;
+    border-bottom: 1px solid rgba(244, 247, 251, 0.08);
+}
+
+.raw-timeline-tick {
+    position: absolute;
+    top: 2px;
+    transform: translateX(-50%);
+    color: rgba(244, 247, 251, 0.38);
+    font-size: 9px;
+    white-space: nowrap;
+    pointer-events: none;
+}
+
+/* The zero tick has nothing to its left to be centred against. */
+.raw-timeline-tick:first-child {
+    transform: none;
+    left: 3px !important;
+}
+
+.raw-timeline-lane {
+    position: relative;
+    flex: 1;
+    min-height: 56px;
+    margin: 10px 0;
+    background: #080c14;
+    cursor: text;
+    touch-action: none;
+}
+
+.raw-timeline-clip {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    padding: 0 6px;
+    background: rgba(79, 158, 255, 0.16);
+    border: 1px solid rgba(79, 158, 255, 0.5);
+    border-radius: 3px;
+    cursor: grab;
+    overflow: hidden;
+}
+
+.raw-timeline-clip--selected {
+    background: rgba(79, 158, 255, 0.32);
+    border-color: #4f9eff;
+}
+
+.raw-timeline-clip-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    pointer-events: none;
+    font-size: 10px;
+}
+
+.raw-timeline-handle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    /* 6px was measurably hard to hit when driving this with a pointer; a trim
+       handle you miss drags the whole clip instead, which is a destructive
+       edit standing in for a precise one. */
+    width: 9px;
+    cursor: ew-resize;
+}
+
+.raw-timeline-handle--start { left: 0; }
+.raw-timeline-handle--end { right: 0; }
+
+.raw-timeline-handle:hover {
+    background: #4f9eff;
+}
+
+/* A gap is the piece playing to an empty room — invisible in the numbers,
+   obvious as a red band. */
+.raw-timeline-gap {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(255, 95, 95, 0.16) 0 6px,
+        transparent 6px 12px
+    );
+    border-left: 1px solid rgba(255, 95, 95, 0.5);
+    border-right: 1px solid rgba(255, 95, 95, 0.5);
+    pointer-events: none;
+}
+
+/* An overlap is a deliberate cross-fade, not an error. */
+.raw-timeline-overlap {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    background: rgba(244, 195, 110, 0.22);
+    border-left: 1px solid #f4c36e;
+    border-right: 1px solid #f4c36e;
+    pointer-events: none;
+}
+
+.raw-timeline-playhead {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: #f4877e;
+    pointer-events: none;
+}
+
+.raw-timeline-playhead::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -4px;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #f4877e;
+}
+
+.raw-timeline-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px 10px;
+    border-top: 1px solid rgba(244, 247, 251, 0.08);
+    flex-wrap: wrap;
+}
+
+.raw-timeline-tool {
+    background: rgba(244, 247, 251, 0.06);
+    color: #f4f7fb;
+    border: 1px solid rgba(244, 247, 251, 0.16);
+    border-radius: 3px;
+    padding: 3px 9px;
+    font-family: inherit;
+    font-size: 10px;
+    cursor: pointer;
+}
+
+.raw-timeline-tool:hover:not(:disabled) {
+    border-color: #4f9eff;
+    color: #4f9eff;
+}
+
+.raw-timeline-tool:disabled {
+    opacity: 0.32;
+    cursor: default;
+}
+
+.raw-timeline-tool--danger:hover:not(:disabled) {
+    border-color: #ff5f5f;
+    color: #ff5f5f;
+}
+
+.raw-timeline-speed {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: rgba(244, 247, 251, 0.62);
+    font-size: 10px;
+}
+
+.raw-timeline-speed input {
+    width: 84px;
+    accent-color: #4f9eff;
+}
+
+.raw-timeline-speed-value {
+    font-variant-numeric: tabular-nums;
+    color: #f4f7fb;
+    min-width: 34px;
+}
+
+.raw-timeline-status {
+    margin-left: auto;
+    color: rgba(244, 247, 251, 0.52);
+    font-size: 10px;
+}
+
+/* --- Director window (view.director) — hosts the algovrithm editor --- */
+
+.raw-director-window {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: #05080f;
+    overflow: auto;
+}
+
+.raw-director-note {
+    flex: none;
+    padding: 6px 10px;
+    border-bottom: 1px solid rgba(244, 247, 251, 0.08);
+    color: rgba(244, 247, 251, 0.52);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 10px;
+    line-height: 1.5;
+}
+
+.raw-director-note strong { color: #f4f7fb; font-weight: 600; }
+.raw-director-note code { color: #4f9eff; }
+
+/* The director was authored to sit at the bottom of the piece's viewport
+   (position:absolute; bottom:0 in algoVrithm.css). Inside a Raw window there
+   is no viewport to hang off — it has to be a normal block in the flow, or it
+   floats over the window's own header. Scoped here so the artwork's own
+   stylesheet stays exactly as she wrote it. */
+.raw-director-window .algo-vrithm-director {
+    position: static;
+    flex: 1;
+    min-height: 0;
+    border-top: none;
+    backdrop-filter: none;
+    background: transparent;
+}
+
+/* Zen's third resident — the wordmark, ambient on the workspace surface.
+   Fixed so it neither pans with the graph nor collides with the windows;
+   bottom-centre keeps it clear of the zoom cluster (left), the account
+   button and delete FAB (right). Non-interactive by design. */
+/* Ambient, and only where there is room to be ambient: on a phone it sat on
+   top of the cards (measured in the audit). */
+@media (max-width: 640px) {
+    .raw-surface-wordmark { display: none; }
+}
+
+.raw-surface-wordmark {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: -0.02em;
+    color: rgba(255, 255, 255, 0.28);
+    pointer-events: none;
+    user-select: none;
+    z-index: 1200;
+}
+
+.raw-surface-wordmark span {
+    color: var(--di-cyan);
+    opacity: 0.75;
+}
+
+/* Dropping a file in. The veil is the only thing that tells someone mid-drag
+   that this surface will take what they are carrying — without it a drop that
+   works and a drop that does nothing look identical until they let go. */
+.raw-drop-veil {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(10, 14, 22, 0.55);
+    border: 2px dashed var(--di-cyan);
+    pointer-events: none;
+    z-index: 1250;
+}
+
+.raw-drop-veil span {
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    color: #ffffff;
+    background: rgba(10, 14, 22, 0.85);
+    border: 1px solid var(--di-cyan);
+    border-radius: 999px;
+    padding: 10px 18px;
+}
+
+.raw-drop-notice {
+    position: fixed;
+    left: 50%;
+    bottom: 52px;
+    transform: translateX(-50%);
+    max-width: min(520px, calc(100vw - 32px));
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.92);
+    background: rgba(10, 14, 22, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 12px;
+    padding: 10px 16px;
+    pointer-events: none;
+    z-index: 1260;
+}
+
+.raw-drop-notice.is-warning {
+    border-color: var(--di-amber, #ffb86c);
+}
+
+/* You are inside something. Never hidden — not by zen, not by fullscreen.
+   Every corner is already taken, and each one was checked by measuring, not by
+   eye: .raw-topbar is 49px tall and full-width (so top:12px sat INSIDE it
+   whenever chrome was on), .raw-graph-fit-notice is top:12px/left:50%, the zoom
+   cluster is bottom-left and .raw-delete-fab bottom-right. What is free is the
+   top-left BELOW the topbar — the component supplies the offset, since the
+   topbar's height is 0 in zen and ~49px with chrome. */
+.raw-scope-marker {
+    position: fixed;
+    left: 14px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: min(420px, calc(100vw - 24px));
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.78);
+    background: rgba(10, 14, 22, 0.92);
+    border: 1px solid rgba(77, 249, 255, 0.35);
+    border-radius: 999px;
+    padding: 2px 4px 2px 2px;
+    z-index: 1400;
+    pointer-events: auto;
+}
+
+.raw-scope-marker-label {
+    padding: 0 8px 0 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.raw-scope-marker-label strong {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+.raw-scope-marker-out,
+.raw-scope-marker-root {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* A finger's target, because leaving is the one thing a lost person needs
+       and there is no keyboard on a phone. */
+    /* 44, not 34: raw.css's own floor for the controls in this lane, and this
+       is the one control a lost person needs on a phone. */
+    min-width: 44px;
+    min-height: 44px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(77, 249, 255, 0.14);
+    color: var(--di-cyan);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-scope-marker-out:hover,
+.raw-scope-marker-root:hover {
+    background: rgba(77, 249, 255, 0.28);
+}
+
+.raw-inspector-asset-field {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    min-width: 0;
+}
+
+.raw-inspector-asset-field select {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+/* 44px so it is a real one-finger target on a phone, where this button is the
+   ONLY way in — there is no dragging a file onto a touch screen. */
+.raw-inspector-asset-add {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    cursor: pointer;
+    color: var(--di-cyan);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    font-size: 16px;
+    line-height: 1;
+}
+
+.raw-inspector-asset-add:hover {
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.raw-inspector-asset-add input[type="file"] {
+    display: none;
+}
+
+.raw-visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* The port menu. A sibling of .raw-graph-stage, so it does not inherit the
+   pan/zoom transform. z-index deliberately under 1300: .raw-topbar owns that
+   band, and a menu that covers the topbar is worse than one that is covered. */
+.raw-graph-port-menu {
+    position: fixed;
+    z-index: 1250;
+    min-width: 208px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px;
+    background: rgba(10, 14, 22, 0.97);
+    border: 1px solid rgba(77, 249, 255, 0.35);
+    border-radius: 10px;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+}
+
+.raw-graph-port-menu-title {
+    margin: 0;
+    padding: 4px 10px 6px;
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.raw-graph-port-menu button {
+    -webkit-appearance: none;
+    appearance: none;
+    /* A finger's target: this menu is opened by a long press, which is a touch
+       gesture before it is anything else. */
+    min-height: 44px;
+    padding: 0 12px;
+    text-align: left;
+    border: none;
+    border-radius: 7px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.92);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-graph-port-menu button:hover,
+.raw-graph-port-menu button:focus-visible {
+    background: rgba(77, 249, 255, 0.16);
+    color: var(--di-cyan);
+}
+
+/* The socket a promote just made is one scope up and off screen. Bottom-centre,
+   clear of the zoom cluster (bottom-left), the delete FAB (bottom-right) and
+   the scope marker (top-left, below the topbar). */
+.raw-promoted-notice {
+    position: fixed;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1350;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: min(520px, calc(100vw - 32px));
+    padding: 4px 4px 4px 14px;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.9);
+    background: rgba(10, 14, 22, 0.95);
+    border: 1px solid rgba(77, 249, 255, 0.4);
+    border-radius: 999px;
+}
+
+.raw-promoted-notice strong {
+    color: var(--di-cyan);
+    font-weight: 600;
+}
+
+.raw-promoted-notice button {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(77, 249, 255, 0.16);
+    color: var(--di-cyan);
+    font-family: inherit;
+    font-size: 13px;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-promoted-notice button:hover {
+    background: rgba(77, 249, 255, 0.3);
+}
+
+.raw-promoted-notice-close {
+    font-size: 17px;
+    padding: 0 !important;
+    background: transparent !important;
+    color: rgba(255, 255, 255, 0.55) !important;
+}
+
+/* WHAT A NODE IS MADE OF — the anatomy sheet.
+   Lives inside a DesktopWindow, so the furniture (square corners, #101418
+   fill, neutral edge, the 2px family stripe) is inherited and this only owns
+   the reading. Cyan stays on interaction: the one button here is the only
+   thing that gets it, and only on hover or focus. */
+.raw-anatomy {
+    /* The window body is `overflow: hidden` so its children can scroll; four
+       sections of prose is the first thing in this lane that reliably needs to.
+       It is a window, NOT a child of .raw-graph-stage — the graph surface sets
+       touch-action: none on every descendant and calls preventDefault on wheel,
+       so a scroll region rendered there is dead to both a finger and a wheel. */
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px 20px;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 12px;
+    line-height: 1.55;
+    color: rgba(244, 247, 251, 0.72);
+}
+
+.raw-anatomy-banner {
+    margin: 0 0 12px;
+    padding: 8px 10px;
+    border-left: 2px solid var(--di-warning);
+    background: rgba(255, 179, 71, 0.08);
+    color: rgba(255, 213, 153, 0.92);
+}
+
+.raw-anatomy-lede {
+    margin: 0 0 16px;
+    color: rgba(244, 247, 251, 0.86);
+}
+
+.raw-anatomy-lede strong { color: var(--di-text); }
+
+.raw-anatomy-slot {
+    padding: 14px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.raw-anatomy-slot h4 {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 8px;
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(244, 247, 251, 0.5);
+}
+
+/* The badge carries the ANSWER, not decoration — "a door", "its own window",
+   "nothing". It is the one word a person can scan four of and learn the shape
+   of a node from, so it gets the node's own family hue rather than a neutral. */
+.raw-anatomy-badge {
+    flex: 0 0 auto;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: none;
+    color: var(--window-accent, rgba(244, 247, 251, 0.6));
+}
+
+.raw-anatomy-slot h5 {
+    margin: 12px 0 6px;
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(244, 247, 251, 0.34);
+}
+
+.raw-anatomy-slot p { margin: 0; }
+
+.raw-anatomy-ports {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.raw-anatomy-port {
+    padding: 7px 0 8px 10px;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.raw-anatomy-port + .raw-anatomy-port { margin-top: 2px; }
+
+.raw-anatomy-port-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.raw-anatomy-port-head strong {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--di-text);
+}
+
+.raw-anatomy-port-head em {
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 10px;
+    font-style: normal;
+    letter-spacing: 0.06em;
+    color: rgba(244, 247, 251, 0.36);
+}
+
+.raw-anatomy-value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 12px;
+    color: var(--di-text);
+    /* A vector or a long string must not push the window wider than the screen;
+       it wraps, because a horizontal scrollbar on a value is worse than a
+       second line. */
+    overflow-wrap: anywhere;
+}
+
+/* An empty port is a fact, not a missing one. It is dimmed and italic so a
+   glance down the column separates "nothing" from a value that reads as a
+   word — and it is never blank, which would read as a rendering failure. */
+.raw-anatomy-value.is-empty {
+    font-style: italic;
+    color: rgba(244, 247, 251, 0.38);
+}
+
+.raw-anatomy-swatch {
+    width: 12px;
+    height: 12px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.raw-anatomy-origin,
+.raw-anatomy-door {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.46);
+}
+
+.raw-anatomy-door { color: rgba(244, 247, 251, 0.38); }
+
+.raw-anatomy-goto {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-left: 6px;
+    padding: 0 8px;
+    border: 0;
+    background: none;
+    color: rgba(244, 247, 251, 0.6);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-anatomy-goto:hover,
+.raw-anatomy-goto:focus-visible { color: var(--di-cyan); }
+
+.raw-anatomy-none,
+.raw-anatomy-foot {
+    margin: 0;
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-anatomy-foot { margin-top: 10px; }
+
+.raw-anatomy-close {
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+/* Two buttons where there was one. Stacked rather than side by side: at the
+   empty state's centred position a row of two pills is wider than a 320px
+   phone, and the offer that answers the question the person is standing in
+   front of goes first. */
+.raw-empty-state-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+@media (max-width: 640px) {
+    .raw-anatomy { padding: 12px 12px 18px; }
+    /* The window is the full width of the phone here, so the value column has
+       nowhere to overflow to; the port block loses its indent to buy the text
+       back the ten pixels. */
+    .raw-anatomy-port { padding-left: 8px; }
+}
+
+/* "what is it made of", on the scope marker. Text rather than a glyph: ‹ and ◈
+   are directions, and this is a question — there is no symbol for it that a
+   first-time visitor reads correctly. 44px because it sits in the marker, which
+   is the one strip a lost person on a phone reaches for. */
+.raw-scope-marker-what {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(77, 249, 255, 0.1);
+    color: var(--di-cyan);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-scope-marker-what:hover,
+.raw-scope-marker-what:focus-visible { background: rgba(77, 249, 255, 0.26); }
+
+/* The empty state had no max-width and had never carried more than one short
+   sentence; the "made of code" line ran the full 1440px of the canvas as a
+   single stretched row. Capped at a readable measure, and the cap belongs to
+   the block rather than to the paragraph so the two buttons centre under it. */
+.raw-empty-state { max-width: min(520px, calc(100vw - 48px)); }
+.raw-empty-state p { line-height: 1.55; }
+
+/* Where the code lives, and — behind one press — the lines themselves. */
+.raw-anatomy-place { margin-top: 8px; }
+
+.raw-anatomy-loc {
+    display: inline-block;
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.5);
+}
+
+.raw-anatomy-disclosure {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-left: 4px;
+    padding: 0 10px;
+    border: 0;
+    background: none;
+    color: rgba(244, 247, 251, 0.6);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-anatomy-disclosure:hover,
+.raw-anatomy-disclosure:focus-visible { color: var(--di-cyan); }
+
+.raw-anatomy-code-note {
+    margin: 4px 0 0;
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-anatomy-code-note.is-refusal { color: var(--di-warning); }
+
+.raw-anatomy-code {
+    margin: 6px 0 0;
+    padding: 10px 12px;
+    background: #0a0a0a;
+    border-left: 2px solid rgba(255, 255, 255, 0.14);
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 11px;
+    line-height: 1.5;
+    color: rgba(244, 247, 251, 0.78);
+    /* Sideways inside its own box, never wrapped: wrapped code lies about
+       where its lines end, and the window body must not scroll horizontally. */
+    overflow-x: auto;
+    white-space: pre;
+}
+
+/* The permanent backdrop: the current scope's room, drawn behind the graph.
+   Non-interactive on purpose (for now): the graph owns every pointer, and the
+   room is consequences, not controls — arranging happens in fullscreen. The
+   old opt-in overlay let its canvas take pointer events and painted OVER the
+   graph (later positioned sibling), which is why cards went unreachable the
+   moment it was on; mounting it as the shell's first child and refusing all
+   events removes both failure modes at once. */
+.raw-world-overlay,
+.raw-world-overlay * {
+    pointer-events: none !important;
+}
+
+/* Fullscreen's own exit — zen has no topbar, and a room with no visible way
+   back is a trap. Same furniture as the scope marker. */
+.raw-room-exit {
+    -webkit-appearance: none;
+    appearance: none;
+    position: absolute;
+    /* Bottom-left, where the zoom cluster lives in graph mode — the top-left
+       corner belongs to the scope marker, and the first render put the two
+       ‹ buttons on top of each other (seen). */
+    bottom: 24px;
+    left: 14px;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border: 1px solid rgba(77, 249, 255, 0.35);
+    border-radius: 999px;
+    background: rgba(10, 14, 22, 0.92);
+    color: var(--di-cyan);
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-room-exit:hover { background: rgba(77, 249, 255, 0.14); }

@@ -60,6 +60,52 @@ services:
       # https://github.com/settings/developers
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+
+      # GitHub App `dii-space-sync` (optional): one-click repo→space sync and
+      # its push webhook. Distinct from the OAuth App above -- that one only
+      # signs people in. Absent, `githubApp.isConfigured()` is false and the
+      # whole feature reports `{configured: false}` instead of failing, which
+      # is exactly how it went unnoticed for three weeks after the cPanel→VPS
+      # move: the compose file that replaced the cPanel env never carried
+      # these three vars over. The key is base64 (`base64 -w0 <key>.pem`) so
+      # no loose .pem has to live on the host; _PATH is deliberately NOT
+      # passed here, because getPrivateKey() prefers it and an empty one
+      # would shadow the B64 value.
+      GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+      GITHUB_APP_PRIVATE_KEY_B64: ${GITHUB_APP_PRIVATE_KEY_B64:-}
+      GITHUB_APP_WEBHOOK_SECRET: ${GITHUB_APP_WEBHOOK_SECRET:-}
+
+      # Live co-presence mesh. The relay stays open -- visitors' browsers are
+      # clients, so anything embedded in the public page is not a secret. This
+      # only gates the reserved node ids (keeper-*), which is what stopped
+      # anyone claiming the rite's keeper identity. Unset means those ids are
+      # ungated, which is how it shipped; set a DIFFERENT value per tier.
+      MESH_ROOM_SECRET: ${MESH_ROOM_SECRET:-}
+      MESH_PROTECTED_NODE_PREFIXES: ${MESH_PROTECTED_NODE_PREFIXES:-}
+
+      # The tunnel — inscriptionRoutes.js mints a Telegram deep link for the
+      # person who can prove a crossing, and di.bo verifies it with the same
+      # secret. Unset on either side means the route 404s and the tunnel simply
+      # does not exist, which is the safe direction. Same lesson as the mesh
+      # secret directly above: a secret the deployment cannot deliver is not a
+      # secret it has, and the .env would have looked correct the whole time.
+      TUNNEL_SHARED_SECRET: ${TUNNEL_SHARED_SECRET:-}
+      TUNNEL_BOT_USERNAME: ${TUNNEL_BOT_USERNAME:-}
+
+      # meshHub.js room history — unset keeps persistence OFF; switch on with
+      # 'talk,keeper:say' only after the room's wording stops promising
+      # impermanence (compose env is an allow-list: a var missing here never
+      # reaches the container, however correct the .env looks — see #134).
+      MESH_HISTORY_CHANNELS: ${MESH_HISTORY_CHANNELS:-}
+
+      # approvalGate.js — see serverXR/.env.example. Unset (default
+      # false/empty) leaves every gated route behaving exactly as before
+      # this feature existed; staging overrides via STAGING_APPROVAL_*
+      # (docker-compose.staging.yml) so the two tiers can be enabled
+      # independently.
+      APPROVAL_GATE_ENABLED: ${APPROVAL_GATE_ENABLED:-false}
+      APPROVAL_BOT_URL: ${APPROVAL_BOT_URL:-}
+      APPROVAL_SHARED_SECRET: ${APPROVAL_SHARED_SECRET:-}
     restart: unless-stopped
     healthcheck:
       # 127.0.0.1, not localhost: busybox wget resolves localhost to the

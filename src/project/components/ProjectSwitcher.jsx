@@ -14,25 +14,51 @@ const SPACE_PROJECT_ORDER = {
         'ops-board', 'v-oooooo', 'br-id-ge-lab']
 }
 
+// Crew-only documents that must never appear in the visitor-facing switcher.
+// This list previously had no visibility concept at all -- it showed every
+// project the API returned, which is how the show's tech rider ("needs dash",
+// br-id-ge-needs: equipment lists, open/settled task tracking) ended up
+// public and copy-linkable next to the field/rite/landing. Hiding here, not
+// deleting the project -- the crew still uses it via its direct URL.
+const SPACE_PROJECT_HIDDEN = {
+    br_id_ge: ['br-id-ge-needs']
+}
+
 function sortProjectsForSpace(spaceId, projects) {
+    const hidden = SPACE_PROJECT_HIDDEN[spaceId]
+    const visible = hidden ? projects.filter((p) => !hidden.includes(p.id)) : projects
     const order = SPACE_PROJECT_ORDER[spaceId]
-    if (!order) return projects
+    if (!order) return visible
     const rank = (id) => {
         const index = order.indexOf(id)
         return index === -1 ? order.length : index
     }
-    return [...projects].sort((a, b) => rank(a.id) - rank(b.id))
+    return [...visible].sort((a, b) => rank(a.id) - rank(b.id))
 }
 
-const pillStyle = {
+// Idle: barely-there chrome, so it reads as UI rather than competing with
+// whatever a space renders under it (this sits over arbitrary, unknown
+// content -- every space's own header, art, or type). Full contrast only
+// once it's actually being used (hover/focus/open), same shape a real
+// button's affordance change would take, just tuned down at rest.
+const pillStyleIdle = {
     appearance: 'none',
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(10, 16, 24, 0.32)',
+    color: 'rgba(245, 247, 250, 0.85)',
+    borderRadius: '999px',
+    padding: '0.45rem 0.8rem',
+    fontSize: '0.8rem',
+    cursor: 'pointer',
+    backdropFilter: 'blur(8px)',
+    transition: 'background 0.15s ease, border-color 0.15s ease, color 0.15s ease'
+}
+
+const pillStyleActive = {
+    ...pillStyleIdle,
     border: '1px solid rgba(255,255,255,0.14)',
     background: 'rgba(10, 16, 24, 0.82)',
     color: '#f5f7fa',
-    borderRadius: '999px',
-    padding: '0.7rem 1rem',
-    fontSize: '0.95rem',
-    cursor: 'pointer',
     backdropFilter: 'blur(12px)'
 }
 
@@ -99,6 +125,7 @@ const copyButtonStyle = {
 // so viewers can hop between one-pagers without a detour through the hub.
 export default function ProjectSwitcher({ spaceId, currentProjectId, spaceLabel = '' }) {
     const [open, setOpen] = useState(false)
+    const [pillHover, setPillHover] = useState(false)
     const [projects, setProjects] = useState(null)
     const [copiedId, setCopiedId] = useState(null)
     const rootRef = useRef(null)
@@ -164,9 +191,13 @@ export default function ProjectSwitcher({ spaceId, currentProjectId, spaceLabel 
         >
             <button
                 type="button"
-                style={pillStyle}
+                style={open || pillHover ? pillStyleActive : pillStyleIdle}
                 aria-expanded={open}
                 onClick={() => setOpen((value) => !value)}
+                onMouseEnter={() => setPillHover(true)}
+                onMouseLeave={() => setPillHover(false)}
+                onFocus={() => setPillHover(true)}
+                onBlur={() => setPillHover(false)}
             >
                 {(spaceLabel || spaceId) + (open ? ' ▴' : ' ▾')}
             </button>

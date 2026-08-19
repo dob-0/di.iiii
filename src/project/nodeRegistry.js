@@ -29,11 +29,123 @@ export const NODE_CATEGORIES = [
     { id: 'view',     label: 'View',     color: '#ff79c6' },
     { id: 'math',     label: 'Math',     color: '#f1fa8c' },
     { id: 'world',    label: 'World',    color: '#ff9e6d' },
+    { id: 'agent',    label: 'Agent',    color: '#a8ff9e' },
     { id: 'custom',   label: 'Custom',   color: '#aaaaaa' },
 ]
 
 export const getCategoryColor = (categoryId) =>
     NODE_CATEGORIES.find((c) => c.id === categoryId)?.color || '#aaaaaa'
+
+// --- Families ---
+// The artist-facing grouping (palette sections, card headers, outliner dots).
+// Decided 2026-08-18 after the node truth audit: categories above group by
+// where the code lives (value.number under "source", studio under
+// "universe"), families group by what the artist is doing. Every type in
+// NODE_TYPES must appear in FAMILY_BY_TYPE — nodeRegistry.test.js enforces
+// both directions. Categories stay untouched underneath: search, surface
+// filters and old documents keep working.
+
+export const NODE_FAMILIES = [
+    { id: 'bring-in', label: 'bring in', color: '#5fa8ff' },
+    { id: 'make',     label: 'make',     color: '#8be9fd' },
+    { id: 'numbers',  label: 'numbers',  color: '#f1fa8c' },
+    { id: 'room',     label: 'the room', color: '#bd93f9' },
+    { id: 'watch',    label: 'watch',    color: '#ff79c6' },
+    { id: 'send-out', label: 'send out', color: '#ffb86c' },
+    { id: 'agents',   label: 'agents',   color: '#a8ff9e' },
+]
+
+export const FAMILY_BY_TYPE = {
+    // bring in — cameras, microphones, sensors, input devices, and files.
+    // A model/video/sound the person brings from their own disk belongs here,
+    // with the other doors into the graph, not with the primitives Raw makes
+    // out of nothing — that distinction is the whole point of the family.
+    // Doorways belong with the rooms they make holes in.
+    'port.in': 'room',
+    'port.out': 'room',
+    'geom.model': 'bring-in',
+    'media.video': 'bring-in',
+    'media.audio': 'bring-in',
+    'source.webcam': 'bring-in',
+    'source.mic': 'bring-in',
+    'device.midi.in': 'bring-in',
+    'device.osc.in': 'bring-in',
+    'source.ar': 'bring-in',
+    'source.insta360': 'bring-in',
+    'source.stereo': 'bring-in',
+    'source.realsense.d405': 'bring-in',
+    'device.ptz.osc': 'bring-in',
+    // make — things you conjure into the space
+    'geom.cube': 'make',
+    'geom.sphere': 'make',
+    'geom.plane': 'make',
+    'shape.merge': 'make',
+    'geom.constructor': 'make',
+    'view.text': 'make',
+    // Create sits with the things it makes, not with the panels it looks like.
+    'view.library': 'make',
+    'view.image': 'make',
+    'view.browser': 'make',
+    'node.null': 'make',
+    // numbers — values, time, math: the stuff you shape and wire
+    'value.number': 'numbers',
+    'value.color': 'numbers',
+    'value.vec3': 'numbers',
+    'value.boolean': 'numbers',
+    'value.string': 'numbers',
+    'time': 'numbers',
+    'math.add': 'numbers',
+    'math.subtract': 'numbers',
+    'math.multiply': 'numbers',
+    'math.divide': 'numbers',
+    'math.mod': 'numbers',
+    'math.pow': 'numbers',
+    'math.sin': 'numbers',
+    'math.mix': 'numbers',
+    'math.clamp': 'numbers',
+    // performable values — a fader IS a value.number you can play
+    'control.fader': 'numbers',
+    'control.xy': 'numbers',
+    'control.button': 'numbers',
+    // the room — light, sky, grid, worlds, desks, containers
+    'world.light': 'room',
+    'world.background': 'room',
+    'world.grid': 'room',
+    'universe.world': 'room',
+    'universe.space': 'room',
+    'universe.desk.3d': 'room',
+    'universe.desk.2d': 'room',
+    'universe.node0': 'room',
+    'universe.activate': 'room',
+    'universe.link': 'room',
+    'studio': 'room',
+    // watch — observe and inspect what is happening
+    'view.outliner': 'watch',
+    'view.inspector': 'watch',
+    'view.timeline': 'watch',
+    'view.director': 'watch',
+    'stream.monitor': 'watch',
+    // send out — leave the browser: MIDI/OSC out, streams, recordings
+    'device.midi.out': 'send-out',
+    'device.osc.out': 'send-out',
+    'stream.output': 'send-out',
+    'stream.recorder': 'send-out',
+    'stream.compositor': 'send-out',
+    'stream.switcher': 'send-out',
+    'stream.controller': 'send-out',
+    // agents — language models and working sessions as nodes
+    'agent': 'agents',
+    'agent.keeper': 'agents',
+    'work.agent': 'agents',
+    'work.status': 'agents',
+}
+
+export const getNodeFamily = (typeId) => {
+    const familyId = FAMILY_BY_TYPE[typeId]
+    return NODE_FAMILIES.find((f) => f.id === familyId) || null
+}
+
+export const getFamilyColorForType = (typeId) => getNodeFamily(typeId)?.color || '#aaaaaa'
 
 // --- Node Type Definitions ---
 // This is the node language. Add a new entry here to add a new node type.
@@ -138,7 +250,6 @@ export const NODE_TYPES = {
         label: 'Time',
         category: 'source',
         runtime: 'any',
-        authoringOnly: true,
         inputs: [
             { id: 'bpm', type: 'number', label: 'BPM', default: 120 },
         ],
@@ -173,14 +284,17 @@ export const NODE_TYPES = {
         label: 'Webcam',
         category: 'source',
         runtime: 'web',
-        authoringOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
             { id: 'frame', type: 'texture', label: 'Frame' },
         ],
         defaultValues: {},
-        render: 'hidden',
+        // panel-2d, not hidden: getUserMedia's permission-denied and
+        // no-camera-present are normal outcomes, not edge cases, so the node
+        // needs a visible surface to show requesting/denied/unavailable state
+        // instead of sitting blank (see docs/roadmaps/NODE_BACKLOG.md).
+        render: 'panel-2d',
     },
 
     'source.mic': {
@@ -188,7 +302,6 @@ export const NODE_TYPES = {
         label: 'Microphone',
         category: 'source',
         runtime: 'web',
-        authoringOnly: true,
         singleton: false,
         inputs: [],
         outputs: [
@@ -196,7 +309,59 @@ export const NODE_TYPES = {
             { id: 'frequency', type: 'any',    label: 'Frequency' },
         ],
         defaultValues: {},
-        render: 'hidden',
+        // panel-2d, not hidden — same reasoning as source.webcam: permission
+        // denial and no-microphone-present are normal outcomes that need a
+        // visible surface, not a blank node.
+        render: 'panel-2d',
+    },
+
+    'work.status': {
+        id: 'work.status',
+        label: 'Work Status',
+        category: 'source',
+        runtime: 'web',
+        // serverXR serves its routes only to loopback on a non-production
+        // server (devLocalGuard) — everywhere else the panel can only report
+        // that. The palette shows this as a "local dev" tag.
+        devLocalOnly: true,
+        singleton: false,
+        inputs: [],
+        outputs: [
+            { id: 'running', type: 'number',  label: 'Running Sessions' },
+            { id: 'dirty',   type: 'boolean', label: 'Any Tree Dirty'   },
+            { id: 'openPrs', type: 'number',  label: 'Open PRs'         },
+            { id: 'summary', type: 'string',  label: 'Summary'          },
+        ],
+        defaultValues: {},
+        // panel-2d: the readable surface is the point of the node, and its
+        // data (sessions, worktrees, PRs, deploys) only exists server-side —
+        // see serverXR/src/routes/workStatusRoutes.js, local-dev-only.
+        render: 'panel-2d',
+    },
+
+    'work.agent': {
+        id: 'work.agent',
+        label: 'Agent Run',
+        category: 'custom',
+        runtime: 'web',
+        // Same loopback-only gate as work.status (agentRunRoutes).
+        devLocalOnly: true,
+        singleton: false,
+        inputs: [
+            { id: 'prompt',  type: 'string', label: 'Prompt' },
+            { id: 'trigger', type: 'signal', label: 'Trigger' },
+        ],
+        outputs: [
+            { id: 'status',  type: 'string',  label: 'Status'  },
+            { id: 'running', type: 'boolean', label: 'Running' },
+            { id: 'result',  type: 'string',  label: 'Result'  },
+        ],
+        defaultValues: {},
+        // panel-2d: launches a headless `claude -p` run and reports its
+        // status/tail — see serverXR/src/routes/agentRunRoutes.js,
+        // local-dev-only. `trigger` fires on value CHANGE, same contract as
+        // time.beat, not on truthiness.
+        render: 'panel-2d',
     },
 
     'source.insta360': {
@@ -403,8 +568,11 @@ export const NODE_TYPES = {
         id: 'device.midi.in',
         label: 'MIDI In',
         category: 'device',
-        runtime: 'local',
-        authoringOnly: true,
+        // Web MIDI, not the local runtime: this is the one device family a page
+        // can already reach, which makes it the cheapest proof of the provider
+        // contract the bridge will later implement — see
+        // docs/architecture/RAW_WORKSPACE.md §5.4.
+        runtime: 'web',
         singleton: false,
         inputs: [],
         outputs: [
@@ -414,11 +582,21 @@ export const NODE_TYPES = {
             { id: 'value',    type: 'number', label: 'Value'    },
             { id: 'trigger',  type: 'signal', label: 'Trigger'  },
         ],
-        defaultValues: {
-            hostHint: 'windows',
-            channel: 1,
-        },
-        render: 'hidden',
+        // channel 0 = every channel. Defaulting to 1 silently dropped every
+        // message from a controller set to any other channel.
+        defaultValues: { deviceId: '', channel: 0 },
+        configInputs: [
+            { id: 'channel', type: 'number', label: 'Channel' },
+        ],
+        // panel-2d for the same reason as the capture family: denied permission,
+        // no browser support and nothing-plugged-in are all ordinary outcomes
+        // that need somewhere to be said.
+        render: 'panel-2d',
+        // 320x260 was too small twice over: the window's own four header buttons
+        // wrapped onto a second row, and that pushed the channel select and the
+        // last-message line below the fold. Matches the keeper's width so the
+        // header fits on one line.
+        defaultFrame: { width: 380, height: 340 },
     },
 
     'device.midi.out': {
@@ -638,16 +816,33 @@ export const NODE_TYPES = {
         inputs: [
             { id: 'title',    type: 'string',  label: 'Title',    default: 'World'    },
             { id: 'bgColor',  type: 'color',   label: 'Sky',      default: '#0a0e16'  },
-            { id: 'gridSize', type: 'number',  label: 'Grid',     default: 24         },
         ],
+        // A CONTAINER OUTPUTS ITS OWN SETTINGS, NEVER ITS CONTENTS.
+        //
+        // Before this every container declared zero outputs, so a press-and-pull
+        // on a World card silently DRAGGED THE CARD — nearestOutputPort had an
+        // empty list to iterate and the press fell through to the drag branch.
+        // That is "can't connect", at the data layer.
+        //
+        // Nothing about a child leaks through the boundary here. Reaching inside
+        // is port promotion — sentinel nodes placed in the container, one per
+        // exterior port — and is deliberately a separate thing. Assuming wires
+        // pass through a container automatically is the single most common
+        // container mistake in every node tool surveyed (TouchDesigner, Max,
+        // LabVIEW, ComfyUI), so the line is drawn hard and visibly.
+        //
+        // The ids match the input ids on purpose: the card then reads row for
+        // row as a pass-through table. Safe because inputs and outputs are
+        // separate keyspaces in the runtime and edgesByTarget only ever keys
+        // inputs, and a self-wire is impossible because resolveWireDrop skips
+        // the source node.
         outputs: [
-            { id: 'state',  type: 'any',    label: 'World State' },
-            { id: 'signal', type: 'signal', label: 'Changed'     },
+            { id: 'title',   type: 'string', label: 'Title' },
+            { id: 'bgColor', type: 'color',  label: 'Sky'   },
         ],
         defaultValues: {
             title: 'World',
             bgColor: '#0a0e16',
-            gridSize: 24,
             hostHint: 'any',
         },
         render: 'panel-2d',
@@ -658,26 +853,27 @@ export const NODE_TYPES = {
         label: 'Universe',
         category: 'universe',
         runtime: 'any',
-        authoringOnly: true,
+        // Not authoringOnly: showChrome is consumed for real (RawEditor's
+        // chromeVisible walks to the nearest ancestor of this type) — the
+        // flag sat here misclassifying a working node until the 2026-08-18
+        // node truth audit.
         singleton: false,
         inputs: [
-            { id: 'title',       type: 'string', label: 'Title', default: 'New Universe' },
-            { id: 'slug',        type: 'string', label: 'Slug',  default: 'new-universe'  },
-            { id: 'description', type: 'string', label: 'Description', default: ''         },
-            { id: 'active',      type: 'boolean', label: 'Active', default: true            },
             // Per-universe chrome control (product decision 2026-07-17): lets
             // one universe be a normal authoring space (full topbar) and
             // another a chromeless embed/kiosk view, without a global toggle.
-            // BetaEditor walks up from the current scope to the nearest
+            // RawEditor walks up from the current scope to the nearest
             // ancestor universe.space node and reads this; Esc always pops
             // back up a scope regardless (unrelated to this flag).
             { id: 'showChrome', type: 'boolean', label: 'Show Chrome', default: true },
         ],
-        outputs: [
-            { id: 'entry',  type: 'string', label: 'Entry URL'      },
-            { id: 'state',  type: 'any',    label: 'Universe State' },
-            { id: 'signal', type: 'signal', label: 'Changed'        },
-        ],
+        // NO outputs, and this is a decision rather than an oversight. Its one
+        // setting is showChrome, read by RawEditor's chrome walk and by nothing
+        // else; there is no input anywhere in the registry that a chrome boolean
+        // could drive to a result you could see. A port here would be the exact
+        // dead-wire disease this stage exists to avoid — it would draw, persist,
+        // survive a reload and carry nothing.
+        outputs: [],
         defaultValues: {
             hostHint: 'any',
         },
@@ -715,20 +911,27 @@ export const NODE_TYPES = {
         label: '3D Desk',
         category: 'universe',
         runtime: 'any',
-        authoringOnly: true,
         singleton: false,
         inputs: [
-            { id: 'title',       type: 'string', label: 'Title', default: '3D Desk'     },
             { id: 'position',    type: 'vec3',   label: 'Position', default: [0, 0, 0]  },
             { id: 'rotation',    type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
             { id: 'scale',       type: 'vec3',   label: 'Scale', default: [2, 2, 2]     },
             { id: 'gridVisible', type: 'boolean', label: 'Grid Visible', default: true   },
             { id: 'bgColor',     type: 'color',  label: 'Background', default: '#0a0e16' },
         ],
+        // Its own placement, readable from outside, so something that is NOT in
+        // the desk can follow the desk — a light aimed at it, a second desk
+        // mirroring it. Things INSIDE the desk already move with it through the
+        // scene graph (RawViewport renders children inside the parent's group),
+        // so this is for everything else.
+        //
+        // gridVisible and bgColor are deliberately NOT echoed back out: no input
+        // anywhere in the registry could consume them to a visible result, and a
+        // port that draws a wire and changes nothing is worse than no port.
         outputs: [
-            { id: 'state',   type: 'any',    label: 'Desk State' },
-            { id: 'preview', type: 'texture', label: 'Preview'    },
-            { id: 'signal',  type: 'signal', label: 'Changed'     },
+            { id: 'position', type: 'vec3', label: 'Position' },
+            { id: 'rotation', type: 'vec3', label: 'Rotation' },
+            { id: 'scale',    type: 'vec3', label: 'Scale'    },
         ],
         defaultValues: {
             hostHint: 'any',
@@ -797,8 +1000,12 @@ export const NODE_TYPES = {
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]  },
         ],
         outputs: [
-            { id: 'out',    type: 'geometry', label: 'Geometry' },
-            { id: 'bounds', type: 'vec3',     label: 'Bounds'   },
+            { id: 'bounds',   type: 'vec3',     label: 'Bounds'   },
+            // The shape itself, as a value. What makes a Cube more than a
+            // thing standing in the room: wired into a Merge or a
+            // Constructor's Out door, the cube IS data — the first carrier of
+            // the `geometry` port type since it was declared.
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
         ],
         defaultValues: {},
         render: 'spatial-3d',
@@ -817,7 +1024,7 @@ export const NODE_TYPES = {
             { id: 'rotation', type: 'vec3',   label: 'Rotation', default: [0, 0, 0]   },
         ],
         outputs: [
-            { id: 'out', type: 'geometry', label: 'Geometry' },
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
         ],
         defaultValues: {},
         render: 'spatial-3d',
@@ -830,16 +1037,222 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'color',      type: 'color',  label: 'Color',      default: '#ffffff'  },
-            { id: 'width',      type: 'number', label: 'Width',      default: 2          },
-            { id: 'height',     type: 'number', label: 'Height',     default: 2          },
-            { id: 'textureUrl', type: 'string', label: 'Texture URL', default: ''        },
-            { id: 'position',   type: 'vec3',   label: 'Position',   default: [0, 0, 0]  },
-            { id: 'rotation',   type: 'vec3',   label: 'Rotation',   default: [0, 0, 0]  },
+            { id: 'color',      type: 'color',   label: 'Color',       default: '#ffffff' },
+            { id: 'width',      type: 'number',  label: 'Width',       default: 2         },
+            { id: 'height',     type: 'number',  label: 'Height',      default: 2         },
+            { id: 'textureUrl', type: 'string',  label: 'Texture URL', default: ''        },
+            // A live texture (e.g. source.webcam.frame) wired in here wins over
+            // textureUrl — see renderNodeBody's geom.plane case. Distinct from
+            // textureUrl because a MediaStream-backed texture isn't a loadable
+            // URL, and 'texture'/'string' ports aren't wire-compatible.
+            { id: 'texture',    type: 'texture', label: 'Texture'                         },
+            { id: 'position',   type: 'vec3',    label: 'Position',    default: [0, 0, 0] },
+            { id: 'rotation',   type: 'vec3',    label: 'Rotation',    default: [0, 0, 0] },
         ],
         outputs: [
-            { id: 'out', type: 'geometry', label: 'Geometry' },
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
         ],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    // -----------------------------------------------------------------------
+    // THE CONSTRUCTOR — a node made of nodes
+    //
+    // The owner's sentence, made a palette entry: "we all have as a
+    // constructor". A container that WEARS whatever shape the nodes inside it
+    // build: enter it, place shapes, wire them (through Merge if there are
+    // several) into an Out door, walk out — and the Constructor stands in the
+    // room being that shape. Its inside is its definition; its outside is the
+    // result. The inside is a workshop, not a room: the parts standing in it
+    // are not drawn as objects, only what reaches a door is drawn — the same
+    // split TouchDesigner makes between a COMP's network and its output, and
+    // the reason building a snowman does not show three loose spheres AND the
+    // snowman.
+    //
+    // Deliberately a NEW type rather than a change to 3D Desk: the desk shows
+    // its contents, the constructor shows its result, and one container doing
+    // both depending on wiring would be a surface nobody could predict.
+    // -----------------------------------------------------------------------
+
+    'shape.merge': {
+        id: 'shape.merge',
+        label: 'Merge',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['merge', 'combine', 'together', 'join', 'group', 'shape', 'geometry'],
+        // Two, chained for more — the same convention every math node here
+        // uses, and an input can carry a group that is itself a merge.
+        inputs: [
+            { id: 'a', type: 'geometry', label: 'A' },
+            { id: 'b', type: 'geometry', label: 'B' },
+        ],
+        outputs: [
+            { id: 'out', type: 'geometry', label: 'Out' },
+        ],
+        defaultValues: {},
+        render: 'hidden',
+    },
+
+    'geom.constructor': {
+        id: 'geom.constructor',
+        label: 'Constructor',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['constructor', 'build', 'built', 'own', 'shape', 'graph', 'assemble', 'compose', 'make'],
+        inputs: [
+            { id: 'position', type: 'vec3', label: 'Position', default: [0, 0, 0] },
+            { id: 'rotation', type: 'vec3', label: 'Rotation', default: [0, 0, 0] },
+            { id: 'scale',    type: 'vec3', label: 'Scale',    default: [1, 1, 1] },
+        ],
+        // No declared outputs: everything it gives leaves through the doors
+        // standing inside it, which is the whole idea.
+        outputs: [],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    // -----------------------------------------------------------------------
+    // DOORWAYS — a hole in a container's wall
+    //
+    // Put one INSIDE a container and a socket appears on that container's outer
+    // face. This is the answer to "I want to build a world but can't connect
+    // anything to it", and it is the mechanism TouchDesigner, Blender, Max,
+    // Unreal and Houdini all arrived at separately.
+    //
+    // NOTHING HERE CROSSES A SCOPE BOUNDARY, which is what makes it safe: the
+    // wire outside joins two siblings in the parent scope, the wire inside joins
+    // two siblings within the container. RawEditor's both-endpoints-in-scope
+    // edge filter stays exactly as written, and the runtime needs no notion of
+    // scope at all.
+    // -----------------------------------------------------------------------
+
+    'port.in': {
+        id: 'port.in',
+        label: 'In',
+        category: 'universe',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['in', 'input', 'door', 'doorway', 'port', 'socket', 'expose', 'promote', 'inlet'],
+        // No inputs: what comes IN comes from the container's outer face, not
+        // from a wire on this card.
+        inputs: [
+            // Used when the container's socket is unwired. Without it an unwired
+            // door hands its container a port carrying undefined, and the node
+            // downstream quietly falls back to its own local value — which looks
+            // exactly like a door that works.
+            { id: 'fallback', type: 'any', label: 'If unwired', default: null },
+        ],
+        outputs: [
+            { id: 'value', type: 'any', label: 'Value' },
+        ],
+        // Not ports: the door's own identity, edited on the card rather than
+        // wired. Its `label` names the socket on the container's face and can
+        // change freely — the socket's identity is this node's id, so renaming
+        // never touches a wire.
+        configInputs: [
+            { id: 'label',    type: 'string', label: 'Socket name' },
+            { id: 'portType', type: 'string', label: 'Carries' },
+        ],
+        defaultValues: { label: 'In', portType: 'any', fallback: null },
+        render: 'hidden',
+    },
+
+    'port.out': {
+        id: 'port.out',
+        label: 'Out',
+        category: 'universe',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['out', 'output', 'door', 'doorway', 'port', 'socket', 'expose', 'promote', 'outlet'],
+        inputs: [
+            { id: 'value', type: 'any', label: 'Value', default: null },
+        ],
+        // No outputs: what goes OUT leaves through the container's outer face.
+        outputs: [],
+        configInputs: [
+            { id: 'label',    type: 'string', label: 'Socket name' },
+            { id: 'portType', type: 'string', label: 'Carries' },
+        ],
+        defaultValues: { label: 'Out', portType: 'any' },
+        render: 'hidden',
+    },
+
+    // -----------------------------------------------------------------------
+    // MEDIA — a file the person brought in, placed in space
+    //
+    // `src` carries an assetId string, not the bytes: the same convention
+    // view.image already uses. It is typed `string` (not `texture`, which
+    // means a live THREE.Texture on geom.plane) so the inspector's asset
+    // picker and a wired value.string both work, and so a webcam frame can
+    // never be silently accepted where a file is meant.
+    // -----------------------------------------------------------------------
+
+    'geom.model': {
+        id: 'geom.model',
+        label: 'Model',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        // Searched terms, from a real palette test: every one of these
+        // returned "no match" before this node existed.
+        keywords: ['model', 'glb', 'gltf', 'obj', 'stl', 'fbx', 'mesh', 'import', 'file', 'asset', '3d', 'scan'],
+        inputs: [
+            { id: 'src',            type: 'string',  label: 'Model',      default: ''        },
+            { id: 'position',       type: 'vec3',    label: 'Position',   default: [0, 0, 0] },
+            { id: 'rotation',       type: 'vec3',    label: 'Rotation',   default: [0, 0, 0] },
+            { id: 'scale',          type: 'vec3',    label: 'Scale',      default: [1, 1, 1] },
+            { id: 'playAnimations', type: 'boolean', label: 'Play',       default: true      },
+            { id: 'animationSpeed', type: 'number',  label: 'Speed',      default: 1, step: 0.1 },
+            { id: 'animationClip',  type: 'string',  label: 'Clip',       default: ''        },
+        ],
+        // No `bounds` output on purpose: a model's size is unknown until the
+        // file has loaded, so a port promising it would read as live and be
+        // empty. geom.cube can promise bounds because its size IS its input.
+        outputs: [],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'media.video': {
+        id: 'media.video',
+        label: 'Video',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['video', 'movie', 'footage', 'mp4', 'webm', 'mov', 'clip', 'import', 'file', 'asset', 'play'],
+        inputs: [
+            { id: 'src',      type: 'string',  label: 'Video',    default: ''        },
+            { id: 'position', type: 'vec3',    label: 'Position', default: [0, 0, 0] },
+            { id: 'rotation', type: 'vec3',    label: 'Rotation', default: [0, 0, 0] },
+            { id: 'scale',    type: 'vec3',    label: 'Scale',    default: [1, 1, 1] },
+            { id: 'muted',    type: 'boolean', label: 'Muted',    default: true      },
+            { id: 'volume',   type: 'number',  label: 'Volume',   default: 1, min: 0, max: 1, step: 0.05 },
+            { id: 'loop',     type: 'boolean', label: 'Loop',     default: true      },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
+    'media.audio': {
+        id: 'media.audio',
+        label: 'Sound',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['sound', 'audio', 'music', 'mp3', 'wav', 'ogg', 'speaker', 'import', 'file', 'asset', 'play'],
+        inputs: [
+            { id: 'src',      type: 'string',  label: 'Sound',    default: ''        },
+            { id: 'position', type: 'vec3',    label: 'Position', default: [0, 0, 0] },
+            { id: 'volume',   type: 'number',  label: 'Volume',   default: 1, min: 0, max: 1, step: 0.05 },
+            { id: 'distance', type: 'number',  label: 'Distance', default: 10, min: 0, step: 1 },
+            { id: 'loop',     type: 'boolean', label: 'Loop',     default: true      },
+            { id: 'autoplay', type: 'boolean', label: 'Autoplay', default: true      },
+        ],
+        outputs: [],
         defaultValues: {},
         render: 'spatial-3d',
     },
@@ -855,10 +1268,7 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'content',  type: 'string', label: 'Content',  default: 'Hello'      },
-            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 1.5, 0]  },
-            { id: 'width',    type: 'number', label: 'Width',    default: 340           },
-            { id: 'height',   type: 'number', label: 'Height',   default: 220           },
+            { id: 'content', type: 'string', label: 'Content', default: 'Hello' },
         ],
         outputs: [],
         defaultValues: {},
@@ -872,13 +1282,50 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'url',      type: 'string', label: 'URL',      default: 'https://example.com' },
-            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 1.5, 0]           },
-            { id: 'width',    type: 'number', label: 'Width',    default: 420                    },
-            { id: 'height',   type: 'number', label: 'Height',   default: 320                    },
+            { id: 'url', type: 'string', label: 'URL', default: 'https://example.com' },
         ],
         outputs: [],
         defaultValues: {},
+        render: 'panel-2d',
+    },
+
+    'view.director': {
+        id: 'view.director',
+        label: 'Director (algovrithm)',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        inputs: [],
+        outputs: [],
+        // The edit list itself is NOT stored here — its rows carry component
+        // references that cannot survive JSON. See DirectorPanelWindow.jsx.
+        defaultValues: {
+            piece: 'algovrithm',
+        },
+        // A timeline is read left-to-right across its whole duration; the
+        // generic panel card crops it into uselessness.
+        defaultFrame: { width: 1080, height: 640 },
+        render: 'panel-2d',
+    },
+
+    'view.timeline': {
+        id: 'view.timeline',
+        label: 'Timeline',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        // Ports stripped per review (dead-port rule): no runtime carries
+        // playhead/fps in or frame/clip out yet. Wire via nodeGraphRuntime
+        // when the data is real; the panel keeps its own playhead locally.
+        inputs: [],
+        outputs: [],
+        // Clips are integer frames throughout — see src/project/timeline/
+        // timelineCore.js for why seconds are not stored anywhere.
+        defaultValues: {
+            fps: 60,
+            clips: [],
+        },
+        defaultFrame: { width: 900, height: 260 },
         render: 'panel-2d',
     },
 
@@ -889,14 +1336,137 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'src',      type: 'texture', label: 'Source'   },
-            { id: 'position', type: 'vec3',    label: 'Position', default: [0, 1.5, 0] },
-            { id: 'width',    type: 'number',  label: 'Width',    default: 360          },
-            { id: 'height',   type: 'number',  label: 'Height',   default: 240          },
+            { id: 'src', type: 'texture', label: 'Source' },
         ],
         outputs: [],
         defaultValues: {},
         render: 'panel-2d',
+    },
+
+    // The two panels below finally implement type ids that RawEditor and
+    // BetaEditor have carried default window frames for since the lanes were
+    // written (WINDOW_DEFAULT_POSITIONS) without the types ever existing — the
+    // intent was declared and left unbuilt. They are the first pieces of
+    // Studio's own chrome to become nodes rather than hardcoded panels.
+    //
+    // Both are content-less by design: a panel node receives only `node` and
+    // `values`, but the editor dispatches its body from inside RawEditor, where
+    // the selection, document and callbacks already live. That is the seam that
+    // makes UI-as-node possible at all without threading twenty props through
+    // the graph.
+
+    'view.outliner': {
+        id: 'view.outliner',
+        label: 'Outliner',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Outliner' },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'panel-2d',
+    },
+
+    // Studio's Create window, as a node — the verb the other two were missing.
+    // An Outliner lists what exists and an Inspector edits what is selected;
+    // without this one, a visitor who enters the Studio node can look at an
+    // empty scene and change nothing about it. What it offers comes from
+    // entityPalette.js, shared with Studio's own Create window and Quick
+    // Insert, so the three lists cannot drift.
+    'view.library': {
+        id: 'view.library',
+        label: 'Create',
+        category: 'view',
+        keywords: ['create', 'add', 'library', 'shape', 'primitive', 'light', 'cube', 'box'],
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Create' },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'panel-2d',
+    },
+
+    'view.inspector': {
+        id: 'view.inspector',
+        label: 'Inspector',
+        category: 'view',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Inspector' },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'panel-2d',
+    },
+
+    // Chat with Claude, as a node. The panel talks to serverXR's AI proxy,
+    // which uses the account's own connected key (aiConnectionStore) — the
+    // browser never holds the key. The transcript lives server-side in
+    // ai_chats/ai_messages, NOT in node.values: the op-log is not a chat log.
+    // Only the server chat id is persisted on the node, so reopening the
+    // project reopens the same conversation.
+    'agent': {
+        id: 'agent',
+        label: 'Agent',
+        // Moved out of 'view' when the Agent category arrived with agent.keeper:
+        // a node called Agent filed under View reads as a filing mistake, and
+        // the two belong side by side — this one talks to a hosted model through
+        // the server, the keeper talks to one you name.
+        category: 'agent',
+        // what people actually type in the palette for this node
+        keywords: ['claude', 'chat', 'ai', 'assistant'],
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Agent' },
+        ],
+        outputs: [],
+        defaultValues: { chatId: null },
+        render: 'panel-2d',
+    },
+
+    // -----------------------------------------------------------------------
+    // STUDIO — the editor itself, as one node you can enter
+    // -----------------------------------------------------------------------
+
+    // One palette entry. Placing it gives you a card like any other; entering
+    // it reveals the subgraph it is assembled from. This is the TouchDesigner
+    // COMP / Nuke Group shape, and it is the same mechanism a user would use to
+    // build their own palette item — which is the point of doing it this way
+    // rather than special-casing Studio.
+    //
+    // `render: 'hidden'` is load-bearing and NOT a placeholder: RawEditor's
+    // graphCardNodes explicitly drops every `render === 'panel-2d'` node from
+    // the canvas (they exist only as floating windows), so a panel-2d Studio
+    // node would be invisible on the graph and could never be entered. A
+    // container has to be a card.
+    'studio': {
+        id: 'studio',
+        label: 'Studio',
+        category: 'universe',
+        runtime: 'any',
+        singleton: false,
+        inputs: [
+            { id: 'title', type: 'string', label: 'Title', default: 'Studio' },
+        ],
+        // Its own title, and nothing else. The old comment here said outputs
+        // were impossible because computeNodeOutput had no case for anything
+        // outside value.*/math.*/time — true then, and the fix was to add the
+        // case, not to leave the card unwireable. `state`/`signal` are still
+        // refused for the original reason: nothing computes them.
+        //
+        // What is NOT here, deliberately: anything about the Studio's contents.
+        // A container outputs its own settings, never what is inside it.
+        outputs: [
+            { id: 'title', type: 'string', label: 'Title' },
+        ],
+        defaultValues: { title: 'Studio' },
+        render: 'hidden',
     },
 
     // -----------------------------------------------------------------------
@@ -1028,8 +1598,11 @@ export const NODE_TYPES = {
         runtime: 'any',
         singleton: false,
         inputs: [
-            { id: 'a', type: 'any',    label: 'A'      },
-            { id: 'b', type: 'any',    label: 'B'      },
+            // Defaults so an unwired Mix answers 0 like every other math node
+            // rather than undefined — it was the one placeable output in the
+            // registry that produced nothing at rest (2026-08-18 port audit).
+            { id: 'a', type: 'any',    label: 'A',      default: 0   },
+            { id: 'b', type: 'any',    label: 'B',      default: 0   },
             { id: 't', type: 'number', label: 'Factor', default: 0.5 },
         ],
         outputs: [
@@ -1084,8 +1657,7 @@ export const NODE_TYPES = {
         category: 'world',
         runtime: 'any',
         inputs: [
-            { id: 'color',   type: 'color',   label: 'Color'   },
-            { id: 'texture', type: 'texture', label: 'Texture' },
+            { id: 'color', type: 'color', label: 'Color' },
         ],
         defaultValues: { color: '#0a0e16' },
         outputs: [],
@@ -1105,6 +1677,44 @@ export const NODE_TYPES = {
         outputs: [],
         defaultValues: {},
         render: 'hidden',
+    },
+
+    // --- Agent ---------------------------------------------------------------
+
+    'agent.keeper': {
+        id: 'agent.keeper',
+        label: 'Keeper',
+        category: 'agent',
+        runtime: 'web',
+        singleton: false,
+        inputs: [
+            { id: 'prompt', type: 'string', label: 'Prompt', default: '' },
+        ],
+        outputs: [
+            { id: 'reply', type: 'string',  label: 'Reply' },
+            { id: 'busy',  type: 'boolean', label: 'Busy'  },
+        ],
+        // Endpoint-shaped, not account-shaped: you name a URL and a model, so
+        // nothing runs as anyone. At a festival that URL is a GPU box on the
+        // same table and there is no internet — see docs/architecture/RAW_WORKSPACE.md.
+        defaultValues: { endpoint: '', model: '', system: '' },
+        // Config, not ports — you set these once for the room you are in, and
+        // nothing upstream should be able to repoint the keeper mid-graph.
+        // Without these the panel told you to "set an endpoint in the inspector"
+        // and the inspector had no such field.
+        configInputs: [
+            { id: 'endpoint', type: 'string', label: 'Endpoint' },
+            { id: 'model',    type: 'string', label: 'Model'    },
+            { id: 'system',   type: 'string', label: 'System'   },
+        ],
+        // panel-2d for the same reason as the capture family: "no endpoint set"
+        // and "the box isn't answering" are the normal states of this node, and
+        // both need somewhere to be said.
+        render: 'panel-2d',
+        // The default 360x280 clipped the Ask button below the fold on a fresh
+        // node — the panel carries setup text, a prompt box, an action row and a
+        // reply, where the capture panels carry one video element.
+        defaultFrame: { width: 380, height: 440 },
     },
 
     // -----------------------------------------------------------------------
@@ -1181,13 +1791,93 @@ export const createEdge = (fromNodeId, fromPort, toNodeId, toPort, options = {})
 })
 
 // List node types, optionally filtered by category, runtime context, or search query.
-export const listNodeTypes = ({ category = 'all', query = '', runtime = 'any' } = {}) => {
+// Node types that are DECLARED here but have nothing behind them: no case in
+// nodeGraphRuntime.js, no renderer, no capability code. Audited 2026-07-30 —
+// `getUserMedia`, `requestMIDIAccess` and `RTCPeerConnection` appear zero times
+// in src/, so nothing in the capture/device/streaming families can possibly
+// function. Placing one used to yield either silence or, for panel-2d types, a
+// generic text box that looked like a deliberate feature.
+//
+// They stay declared on purpose: each definition is the port contract to build
+// against. They are withheld from the palette so the editor stops advertising
+// work that does not exist. **Implementing one means deleting its line here** —
+// that is the whole workflow. Backlog and order: docs/roadmaps/NODE_BACKLOG.md.
+//
+// Existing documents are untouched: nodes already placed still load and render.
+// This gates creation, not existing content.
+export const UNIMPLEMENTED_NODE_TYPES = new Set([
+    // capture — no getUserMedia anywhere
+    'source.ar',
+    'source.insta360',
+    'source.stereo',
+    'source.realsense.d405',
+    // devices — no OSC client (UDP, needs the local bridge), and MIDI Out has
+    // no sender yet. device.midi.in came off this list on 2026-08-08: Web MIDI
+    // is real in the page, so that one is implemented.
+    'device.ptz.osc',
+    'device.osc.in',
+    'device.osc.out',
+    'device.midi.out',
+    // streaming — no compositor, no transport
+    'stream.compositor',
+    'stream.switcher',
+    'stream.output',
+    'stream.recorder',
+    'stream.monitor',
+    'stream.controller',
+    // structure — zero consumers outside this file
+    'universe.node0',
+    'universe.desk.2d',
+    'universe.activate',
+    'universe.link',
+    'node.null'
+])
+
+// Nodes that are MEANT to hold other nodes. Not a capability — `parentId` lets
+// any node hold any other, and that is deliberate (product decision
+// 2026-07-19) — but an intention: these are the ones whose whole point is
+// having an inside.
+export const CONTAINER_TYPE_IDS = new Set([
+    'universe.world',
+    'universe.space',
+    'universe.desk.3d',
+    'universe.node0',
+    'studio',
+    'node.null',
+    // The first container whose inside DEFINES its outside — see its
+    // registry entry. The long-term intention stated below (this set
+    // shrinking as nodes become graphs) starts here.
+    'geom.constructor'
+])
+
+// …and everything else, which is made of CODE: a case in a JavaScript switch,
+// not a graph of other nodes. Going inside a Cube shows an empty canvas — not
+// because you have not built it yet, but because there is nothing there to
+// build, and today there is no way for there to be.
+//
+// Derived rather than listed so it cannot rot as types are added. Stated at all
+// so the UI can say WHICH of those two facts an empty canvas is: an empty room,
+// or a thing that has no room. Showing one blank screen for both is what makes
+// entering a node feel broken.
+//
+// The long-term intention is for this set to shrink: a cube defined by its own
+// interior graph is the "everything is a constructor" direction. The first
+// step exists — `geom.constructor` wears the geometry its doors carry, and the
+// `geometry` port type finally has carriers — but the built-in Cube is still a
+// case in a switch; REDEFINING the built-ins as constructor graphs is the part
+// still ahead.
+export const isNodeMadeOfCode = (typeId) => Boolean(NODE_TYPES[typeId]) && !CONTAINER_TYPE_IDS.has(typeId)
+
+export const isNodeTypeImplemented = (typeId) => !UNIMPLEMENTED_NODE_TYPES.has(typeId)
+
+export const listNodeTypes = ({ category = 'all', query = '', runtime = 'any', includeUnimplemented = false } = {}) => {
     const q = String(query || '').trim().toLowerCase()
     return Object.values(NODE_TYPES).filter(type => {
+        if (!includeUnimplemented && !isNodeTypeImplemented(type.id)) return false
         if (category !== 'all' && type.category !== category) return false
         if (runtime !== 'any' && type.runtime !== 'any' && type.runtime !== runtime) return false
         if (!q) return true
-        return `${type.label} ${type.id} ${type.category}`.toLowerCase().includes(q)
+        return `${type.label} ${type.id} ${type.category} ${(type.keywords || []).join(' ')}`.toLowerCase().includes(q)
     })
 }
 
@@ -1195,17 +1885,66 @@ export const listNodeTypes = ({ category = 'all', query = '', runtime = 'any' } 
 // nodes is a map { [id]: nodeInstance }. edges is an array of edge objects.
 // Returns the connected output value if wired, otherwise the node's local value or port default.
 // Get all input port definitions for a node, merging type-level and instance-level (null node) ports.
-export const getNodeInputs = (node) => {
+// DOORWAYS — how a container gets ports it did not declare.
+//
+// Place a `port.in` or `port.out` node INSIDE a container and a matching socket
+// appears on that container's outer face. One interior node, one exterior port:
+// the mechanism every mature node tool converged on independently (TouchDesigner
+// In/Out operators, Blender's Group Input/Output, Max's inlet/outlet, Unreal's
+// tunnel nodes, Houdini's subnet inputs).
+//
+// THE SOCKET'S IDENTITY IS THE DOORWAY NODE'S OWN id, never its label. That one
+// choice removes three defects at once: renaming a door cannot break its wire,
+// two people adding doors at once cannot collide on a name, and deleting a door
+// and adding another cannot resurrect the old wire onto new plumbing.
+//
+// Order is DOCUMENT order, never graphX. Dragging a card commits an op per
+// animation frame, so position-ordering would re-index a container's face while
+// someone drags an unrelated node inside it, detaching every wire outside it in
+// a scope nobody is looking at. Honest limit: after reconciliation, document
+// order is server-sequence order, so a door created optimistically can change
+// row on sync. Identity is stable; row is not.
+export const DOORWAY_IN_TYPE_ID = 'port.in'
+export const DOORWAY_OUT_TYPE_ID = 'port.out'
+export const isDoorwayType = (typeId) => typeId === DOORWAY_IN_TYPE_ID || typeId === DOORWAY_OUT_TYPE_ID
+
+const doorwaySocket = (doorNode) => ({
+    id: doorNode.id,
+    type: doorNode.values?.portType || 'any',
+    label: doorNode.values?.label || doorNode.label || 'Door',
+    // Load-bearing: without a default, an unwired door hands its container a
+    // socket that draws, persists, survives a reload and carries undefined —
+    // the exact forbidden shape, three clicks in.
+    default: doorNode.values?.fallback ?? null
+})
+
+const doorwaysInside = (node, scopeNodes, typeId) => {
+    if (!node?.id || !Array.isArray(scopeNodes)) return null
+    const doors = scopeNodes.filter((other) => other?.typeId === typeId && other.parentId === node.id)
+    return doors.length ? doors.map(doorwaySocket) : null
+}
+
+export const getNodeInputs = (node, scopeNodes = null) => {
     const type = getNodeType(node?.typeId)
     if (!type) return []
-    if (!type.isNull) return type.inputs || []
-    return (node.values?.portDefs || []).filter(p => p.dir === 'in')
+    // node.null's dynamic ports come first and RETURN — so a null node cannot
+    // grow doors. Stated out loud rather than silently true: every node in
+    // production today is a node.null.
+    if (type.isNull) return (node.values?.portDefs || []).filter(p => p.dir === 'in')
+    const declared = type.inputs || []
+    const promoted = doorwaysInside(node, scopeNodes, DOORWAY_IN_TYPE_ID)
+    // Guarded, not spread unconditionally: an unguarded `[...declared]` turns a
+    // shared reference into a fresh array on every call, on a hot path, with
+    // nothing throwing to say so.
+    return promoted ? [...declared, ...promoted] : declared
 }
 
 // Get all output port definitions for a node, merging type-level and instance-level (null node) ports.
-export const getNodeOutputs = (node) => {
+export const getNodeOutputs = (node, scopeNodes = null) => {
     const type = getNodeType(node?.typeId)
     if (!type) return []
-    if (!type.isNull) return type.outputs || []
-    return (node.values?.portDefs || []).filter(p => p.dir === 'out')
+    if (type.isNull) return (node.values?.portDefs || []).filter(p => p.dir === 'out')
+    const declared = type.outputs || []
+    const promoted = doorwaysInside(node, scopeNodes, DOORWAY_OUT_TYPE_ID)
+    return promoted ? [...declared, ...promoted] : declared
 }

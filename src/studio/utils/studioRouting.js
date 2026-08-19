@@ -3,6 +3,17 @@ import { createBasePathHelpers, joinPath } from '../../project/routing/laneBaseP
 export const STUDIO_PAGE_SPACES = 'spaces'
 export const STUDIO_PAGE_HUB = 'hub'
 export const STUDIO_PAGE_PROJECT = 'project'
+
+// The authoring surface for a CODE space. Studio's editor opens a project
+// document, and a code space has none — its scene is React, and the thing that
+// authors it is the piece's own panel. So `/<space>/studio/director` is a
+// Studio page that mounts that panel instead of the document editor.
+//
+// Under `/studio` deliberately, not beside the piece: it inherits the same
+// ProtectedSurface gate every other Studio route has, which is the correct one
+// for an authoring tool. The piece's own `?director` route stays as it is, for
+// judging timing on the headset the work actually runs on.
+export const STUDIO_PAGE_DIRECTOR = 'director'
 export const STUDIO_RESERVED_SEGMENT = 'studio'
 export const DEFAULT_STUDIO_SPACE_ID = 'main'
 
@@ -31,6 +42,9 @@ export const buildStudioHubPath = (spaceId = null) => {
     }
     return joinPath(prefix, spaceId, STUDIO_RESERVED_SEGMENT)
 }
+
+export const buildStudioDirectorPath = (spaceId) =>
+    joinPath(getBasePrefix(), spaceId, STUDIO_RESERVED_SEGMENT, STUDIO_PAGE_DIRECTOR)
 
 export const buildStudioProjectPath = (projectId, spaceId = null) => {
     const prefix = getBasePrefix()
@@ -78,6 +92,15 @@ export const getStudioLocationState = (
             }
         }
 
+        if (segments[2] === STUDIO_PAGE_DIRECTOR && !segments[3]) {
+            return {
+                isStudio: true,
+                page: STUDIO_PAGE_DIRECTOR,
+                projectId: null,
+                spaceId: segments[0]
+            }
+        }
+
         return {
             isStudio: true,
             page: STUDIO_PAGE_HUB,
@@ -111,7 +134,8 @@ export const getStudioLocationState = (
         isStudio: true,
         page: STUDIO_PAGE_HUB,
         projectId: null,
-        spaceId: defaultSpaceId
+        spaceId: defaultSpaceId,
+        isDefaultSpace: true
     }
 }
 

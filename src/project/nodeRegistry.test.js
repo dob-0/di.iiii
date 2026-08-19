@@ -1,13 +1,23 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+import { cwd } from 'node:process'
 import { describe, expect, it } from 'vitest'
 import {
     NODE_TYPES,
     PORT_TYPES,
+    NODE_FAMILIES,
+    FAMILY_BY_TYPE,
     createNode,
     createEdge,
     listNodeTypes,
+    UNIMPLEMENTED_NODE_TYPES,
     arePortsCompatible,
+    getNodeFamily,
+    getNodeType,
     getNodeInputs,
     getNodeOutputs,
+    isNodeMadeOfCode,
+    CONTAINER_TYPE_IDS,
 } from './nodeRegistry.js'
 
 describe('PORT_TYPES', () => {
@@ -73,6 +83,24 @@ describe('NODE_TYPES', () => {
         expect(NODE_TYPES['universe.world'].singleton).toBeFalsy()
         expect(NODE_TYPES['time'].singleton).toBeFalsy()
         expect(NODE_TYPES['source.ar'].singleton).toBeFalsy()
+    })
+
+    // Regression (2026-08-01): `time` was implemented (removed from
+    // UNIMPLEMENTED_NODE_TYPES, evaluator added in nodeGraphRuntime) but kept
+    // its stale authoringOnly flag, so the palette still said "doesn't compute
+    // or render anything yet". Any type the runtime evaluates must not carry
+    // the flag — extracted from the evaluator source so a new implementation
+    // that forgets the flag fails here, not in the palette.
+    it('no runtime-evaluated node type is marked authoringOnly', () => {
+        const runtimePath = ['project/graph/nodeGraphRuntime.js', 'src/project/graph/nodeGraphRuntime.js']
+            .map((p) => resolve(cwd(), p)).find(existsSync)
+        const runtimeSource = readFileSync(runtimePath, 'utf8')
+        const evaluatedTypeIds = [...runtimeSource.matchAll(/case '([^']+)':/g)].map((m) => m[1])
+        expect(evaluatedTypeIds).toContain('time')
+        for (const typeId of evaluatedTypeIds) {
+            if (!NODE_TYPES[typeId]) continue
+            expect(NODE_TYPES[typeId].authoringOnly, `${typeId} is evaluated but flagged authoringOnly`).toBeFalsy()
+        }
     })
 
     it('universe.node0 is an ordinary node type', () => {
@@ -191,9 +219,11 @@ describe('createEdge', () => {
 })
 
 describe('listNodeTypes', () => {
-    it('returns all types when no filter given', () => {
+    it('returns every implemented type when no filter given', () => {
+        // Not every declared type: unimplemented ones are withheld from the
+        // palette so the editor stops offering nodes that do nothing.
         const all = listNodeTypes()
-        expect(all.length).toBe(Object.keys(NODE_TYPES).length)
+        expect(all.length).toBe(Object.keys(NODE_TYPES).length - UNIMPLEMENTED_NODE_TYPES.size)
     })
 
     it('filters by category', () => {
@@ -208,20 +238,28 @@ describe('listNodeTypes', () => {
         expect(results.map(t => t.id)).not.toContain('geom.sphere')
     })
 
+    it('matches keywords — "claude" and "chat" find the agent node', () => {
+        expect(listNodeTypes({ query: 'claude' }).map(t => t.id)).toContain('agent')
+        expect(listNodeTypes({ query: 'chat' }).map(t => t.id)).toContain('agent')
+    })
+
     it('returns all nodes including web-only when runtime filter is any (no filter)', () => {
-        const all = listNodeTypes({ runtime: 'any' })
+        const all = listNodeTypes({ runtime: 'any', includeUnimplemented: true })
         expect(all.length).toBe(Object.keys(NODE_TYPES).length)
     })
 
     it('includes only any+web nodes when runtime is web', () => {
-        const web = listNodeTypes({ runtime: 'web' })
+        // includeUnimplemented: source.ar/webcam are the web-runtime examples and
+        // are both still on the backlog — this asserts the runtime filter, not
+        // the palette gate.
+        const web = listNodeTypes({ runtime: 'web', includeUnimplemented: true })
         expect(web.map(t => t.id)).toContain('source.ar')
         expect(web.map(t => t.id)).toContain('source.webcam')
         expect(web.map(t => t.id)).toContain('geom.cube') // runtime: 'any' always included
     })
 
     it('excludes web-only nodes when runtime is local', () => {
-        const local = listNodeTypes({ runtime: 'local' })
+        const local = listNodeTypes({ runtime: 'local', includeUnimplemented: true })
         expect(local.map(t => t.id)).not.toContain('source.ar')
         expect(local.map(t => t.id)).toContain('geom.cube') // runtime: 'any' always included
     })
@@ -253,7 +291,14 @@ describe('getNodeInputs / getNodeOutputs', () => {
     it('returns type-level ports for standard nodes', () => {
         const node = createNode('geom.cube')
         expect(getNodeInputs(node).map(p => p.id)).toContain('color')
-        expect(getNodeOutputs(node).map(p => p.id)).toContain('out')
+        expect(getNodeOutputs(node).map(p => p.id)).toContain('bounds')
+    })
+
+    it('exposes a texture input on geom.plane distinct from textureUrl, for a live source like source.webcam', () => {
+        const node = createNode('geom.plane')
+        const inputIds = getNodeInputs(node).map(p => p.id)
+        expect(inputIds).toContain('texture')
+        expect(inputIds).toContain('textureUrl')
     })
 
     it('returns instance portDefs for null nodes', () => {
@@ -270,3 +315,123 @@ describe('getNodeInputs / getNodeOutputs', () => {
         expect(getNodeOutputs(node).map(p => p.id)).toContain('result')
     })
 })
+
+describe('unimplemented node types', () => {
+    it('withholds types with nothing behind them from the palette', () => {
+        const offered = listNodeTypes().map((type) => type.id)
+        // device.midi.in left this list on 2026-08-08 — Web MIDI is real in the
+        // page, so it is implemented. device.midi.out stands in its place: it
+        // has no sender yet.
+        for (const id of ['source.ar', 'device.midi.out', 'stream.compositor', 'universe.link']) {
+            expect(offered).not.toContain(id)
+        }
+    })
+
+    it('still offers everything that actually works', () => {
+        const offered = listNodeTypes().map((type) => type.id)
+        for (const id of [
+            'value.number', 'math.add', 'geom.cube', 'world.light',
+            'universe.world', 'view.image', 'view.browser', 'time',
+            'source.webcam', 'source.mic', 'agent.keeper', 'device.midi.in'
+        ]) {
+            expect(offered).toContain(id)
+        }
+    })
+
+    it('keeps the definitions resolvable so existing documents still load', () => {
+        // Gating creation must never break a document that already contains one.
+        for (const id of UNIMPLEMENTED_NODE_TYPES) {
+            expect(getNodeType(id)).toBeTruthy()
+        }
+    })
+
+    it('can list them explicitly, for the backlog', () => {
+        const all = listNodeTypes({ includeUnimplemented: true }).map((type) => type.id)
+        expect(all).toContain('source.ar')
+        expect(all.length).toBeGreaterThan(listNodeTypes().length)
+    })
+
+    it('names only types that really exist — a typo here would silently hide nothing', () => {
+        for (const id of UNIMPLEMENTED_NODE_TYPES) {
+            expect(getNodeType(id), `${id} is listed as unimplemented but is not a real type`).toBeTruthy()
+        }
+    })
+})
+
+// The palette groups by family; a type missing from the map would silently
+// fall out of browse mode while staying searchable — invisible until someone
+// notices a node "disappeared". Both directions are enforced here.
+describe('node families', () => {
+    it('every node type belongs to exactly one declared family', () => {
+        const familyIds = new Set(NODE_FAMILIES.map((family) => family.id))
+        for (const typeId of Object.keys(NODE_TYPES)) {
+            const familyId = FAMILY_BY_TYPE[typeId]
+            expect(familyId, `${typeId} has no family`).toBeTruthy()
+            expect(familyIds.has(familyId), `${typeId} points at unknown family ${familyId}`).toBe(true)
+        }
+    })
+
+    it('the family map names only types that really exist', () => {
+        for (const typeId of Object.keys(FAMILY_BY_TYPE)) {
+            expect(getNodeType(typeId), `${typeId} is mapped to a family but is not a real type`).toBeTruthy()
+        }
+    })
+
+    // A real palette test on staging searched these nine words and every one
+    // returned "no match" — the node did not exist. Now it does, and the
+    // words a person actually types have to reach it.
+    it.each([
+        ['model', 'geom.model'], ['glb', 'geom.model'], ['gltf', 'geom.model'],
+        ['mesh', 'geom.model'], ['fbx', 'geom.model'], ['scan', 'geom.model'],
+        ['video', 'media.video'], ['mp4', 'media.video'], ['footage', 'media.video'],
+        ['sound', 'media.audio'], ['audio', 'media.audio'], ['music', 'media.audio']
+    ])('searching the palette for "%s" finds %s', (query, typeId) => {
+        expect(listNodeTypes({ query }).map((type) => type.id)).toContain(typeId)
+    })
+
+    it('"import" and "file" reach all three ways of bringing something in', () => {
+        for (const query of ['import', 'file']) {
+            const found = listNodeTypes({ query }).map((type) => type.id)
+            expect(found, query).toEqual(expect.arrayContaining(['geom.model', 'media.video', 'media.audio']))
+        }
+    })
+
+    it('resolves a family with label and color for any placeable type', () => {
+        for (const type of listNodeTypes()) {
+            const family = getNodeFamily(type.id)
+            expect(family?.label, `${type.id} resolves no family`).toBeTruthy()
+            expect(family?.color).toMatch(/^#[0-9a-f]{6}$/i)
+        }
+    })
+})
+
+// An empty canvas means two different things and used to show one screen for
+// both: an empty ROOM, or a thing that HAS no room. Going inside a Cube gave
+// the same blank grid as a fresh workspace, with nothing to say that a Cube is
+// a case in a JavaScript switch and has no insides to look at.
+describe('what a node is made of', () => {
+    it('calls a cube, a light and a number made of code', () => {
+        for (const typeId of ['geom.cube', 'geom.sphere', 'world.light', 'value.number', 'math.add', 'view.text']) {
+            expect(isNodeMadeOfCode(typeId), typeId).toBe(true)
+        }
+    })
+
+    it('does not say that of the things whose whole point is having an inside', () => {
+        for (const typeId of ['universe.world', 'universe.desk.3d', 'studio', 'universe.space']) {
+            expect(isNodeMadeOfCode(typeId), typeId).toBe(false)
+        }
+    })
+
+    it('says nothing about a type it has never heard of', () => {
+        expect(isNodeMadeOfCode('not.a.real.type')).toBe(false)
+        expect(isNodeMadeOfCode(undefined)).toBe(false)
+    })
+
+    // Derived, not listed, so it cannot rot as types are added.
+    it('covers every registered type one way or the other', () => {
+        for (const typeId of Object.keys(NODE_TYPES)) {
+            expect(isNodeMadeOfCode(typeId) || CONTAINER_TYPE_IDS.has(typeId), typeId).toBe(true)
+        }
+    })
+})
+

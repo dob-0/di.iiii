@@ -42,16 +42,6 @@ vi.mock('./components/AuthGate.jsx', () => ({
     }
 }))
 
-vi.mock('./beta/BetaApp.jsx', () => ({
-    default: function MockBetaApp({ initialRoute }) {
-        return (
-            <div>
-                beta-app:{initialRoute?.page}:{initialRoute?.spaceId}
-            </div>
-        )
-    }
-}))
-
 vi.mock('./SpaceSurfaceApp.jsx', () => ({
     default: function MockSpaceSurfaceApp({ routeState }) {
         return (
@@ -75,6 +65,18 @@ vi.mock('./studio/StudioApp.jsx', () => ({
 vi.mock('./wcc/WccExperience.jsx', () => ({
     default: function MockWccExperience({ initialMode }) {
         return <div>wcc-experience:{initialMode}</div>
+    }
+}))
+
+vi.mock('./algoVrithm/AlgoVrithmExperience.jsx', () => ({
+    default: function MockAlgoVrithmExperience() {
+        return <div>algovrithm-experience</div>
+    }
+}))
+
+vi.mock('./algoVrithm/landing/AlgoVrithmLanding.jsx', () => ({
+    default: function MockAlgoVrithmLanding() {
+        return <div>algovrithm-landing</div>
     }
 }))
 
@@ -108,16 +110,30 @@ describe('RootApp', () => {
         expect(await screen.findByText('wcc-experience:scene')).toBeInTheDocument()
     })
 
-    it('keeps beta and legacy routes intact', async () => {
-        window.history.pushState({}, '', '/beta')
+    it('routes /algovrithm to the landing page and /algovrithm/scene to the piece', async () => {
+        // The split is load-bearing: entering costs three.js and a strobing
+        // piece, so the bare URL must never mount the experience.
+        window.history.pushState({}, '', '/algovrithm')
         const { unmount } = render(<RootApp />)
-        expect(await screen.findByText('beta-app:hub:main')).toBeInTheDocument()
+        expect(await screen.findByText('algovrithm-landing')).toBeInTheDocument()
+        expect(screen.queryByText('algovrithm-experience')).not.toBeInTheDocument()
         unmount()
 
-        window.history.pushState({}, '', '/gallery/beta/projects/test-project')
-        const { unmount: unmountBetaProject } = render(<RootApp />)
-        expect(await screen.findByText('beta-app:project:gallery')).toBeInTheDocument()
-        unmountBetaProject()
+        window.history.pushState({}, '', '/algovrithm/scene')
+        render(<RootApp />)
+        expect(await screen.findByText('algovrithm-experience')).toBeInTheDocument()
+    })
+
+    it('keeps legacy routes intact, and retired Beta URLs fall through like any unclaimed space', async () => {
+        // Beta was retired 2026-08-06 (absorbed into Raw) — 'beta' stays a
+        // reserved segment (see RESERVED_APP_SEGMENTS) so it can never collide
+        // with a real space slug, but no lane claims it anymore. A visitor on
+        // an old /beta link lands on the same unclaimed-space path as any
+        // other nonexistent space id, not a broken/blank screen.
+        window.history.pushState({}, '', '/beta')
+        const { unmount } = render(<RootApp />)
+        expect(await screen.findByText('space-surface-app:editor:beta')).toBeInTheDocument()
+        unmount()
 
         window.history.pushState({}, '', '/main')
         render(<RootApp />)

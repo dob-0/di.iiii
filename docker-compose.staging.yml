@@ -18,6 +18,15 @@ name: dii-staging
 
 services:
   server:
+    # Override prod's `${IMAGE_TAG:-latest}` default. `:latest` is pushed ONLY
+    # by the production workflow (main branch), and the staging workflow pins
+    # IMAGE_TAG=<sha> inside its SSH session only -- it never writes it to this
+    # checkout's .env. So any manual compose op here (the very usage this
+    # file's header documents: reboot recovery, restart after an OOM) pulled
+    # production code and ran it at staging.di-studio.xyz, silently breaking
+    # the dev->staging->main verify contract. `:staging` is what the staging
+    # workflow already pushes.
+    image: ghcr.io/${REGISTRY_USER:-youruser}/dii-server:${IMAGE_TAG:-staging}
     environment:
       # Deliberately separate from production's secrets -- same signing
       # key across environments would let a staging session cookie be
@@ -33,6 +42,26 @@ services:
       OAUTH_CALLBACK_BASE_URL: ${STAGING_OAUTH_CALLBACK_BASE_URL:-}
       GITHUB_CLIENT_ID: ${STAGING_GITHUB_CLIENT_ID:-}
       GITHUB_CLIENT_SECRET: ${STAGING_GITHUB_CLIENT_SECRET:-}
+      # Same App, separate installation/webhook secret per environment -- the
+      # webhook only ever reaches prod, so staging uses these for the App JWT
+      # (Disconnect/Connect forces a sync there). See docker-compose.yml.
+      GITHUB_APP_ID: ${STAGING_GITHUB_APP_ID:-}
+      GITHUB_APP_PRIVATE_KEY_B64: ${STAGING_GITHUB_APP_PRIVATE_KEY_B64:-}
+      GITHUB_APP_WEBHOOK_SECRET: ${STAGING_GITHUB_APP_WEBHOOK_SECRET:-}
+      MESH_ROOM_SECRET: ${STAGING_MESH_ROOM_SECRET:-}
+      # Staging mints links for a DIFFERENT bot with a DIFFERENT secret, or a
+      # token minted here would open a crossing on production.
+      TUNNEL_SHARED_SECRET: ${STAGING_TUNNEL_SHARED_SECRET:-}
+      TUNNEL_BOT_USERNAME: ${STAGING_TUNNEL_BOT_USERNAME:-}
+      MESH_PROTECTED_NODE_PREFIXES: ${STAGING_MESH_PROTECTED_NODE_PREFIXES:-}
+      # room history switch-on, staging tier (allow-list — see production file)
+      MESH_HISTORY_CHANNELS: ${STAGING_MESH_HISTORY_CHANNELS:-}
+      # approvalGate.js — see serverXR/.env.example. Same secret as di-bo's
+      # APPROVAL_SHARED_SECRET; unset here (default false/empty) leaves every
+      # gated route behaving exactly as before this feature existed.
+      APPROVAL_GATE_ENABLED: ${STAGING_APPROVAL_GATE_ENABLED:-false}
+      APPROVAL_BOT_URL: ${STAGING_APPROVAL_BOT_URL:-}
+      APPROVAL_SHARED_SECRET: ${STAGING_APPROVAL_SHARED_SECRET:-}
     # Small ceiling: staging only ever serves one person clicking through at
     # a time, it must not be able to meaningfully compete with production
     # for the VPS's 2 vCPU / 3.7GB (confirmed via `nproc`/`free -h` on the
@@ -44,12 +73,26 @@ services:
     mem_limit: 384m
 
   client:
-    # No `ports:` override here -- base docker-compose.yml's client port is
-    # `${PORT:-80}:8080` (container side is 8080 since audit #27's non-root
-    # nginx switch); the staging directory's .env sets the host-side PORT to
-    # a non-80 value (e.g. 8081) instead, so this list is never appended to (Compose
-    # concatenates list-type fields across -f files, it doesn't replace them
-    # -- an extra `ports:` entry here would try to bind 80 a second time and
-    # collide with production's Caddy).
+    # Same reason as the server image above -- never fall back to prod's tag.
+    image: ghcr.io/${REGISTRY_USER:-youruser}/dii-client:${IMAGE_TAG:-staging}
+    # Published to the host-gateway address only, never 0.0.0.0. The base file
+    # publishes `${PORT:-80}:8080` on every interface, and nothing here used to
+    # narrow it: http://<vps-ip>:8081/ served the whole staging SPA in cleartext,
+    # /serverXR/api/health included -- an unauthenticated host fingerprint (node
+    # version, kernel, cpu count, uptime), verified answering live 2026-08-05.
+    # Production's Caddy still reaches this stack, because it proxies to
+    # host.docker.internal:${STAGING_PORT} and that name resolves to the
+    # host-gateway address (docker0, 172.17.0.1 on this VPS -- confirmed with
+    # `getent hosts host.docker.internal` inside dii-caddy-1). Override
+    # STAGING_BIND_ADDR in the staging .env if this host's docker0 differs; a
+    # wrong value fails loudly at bind time rather than re-exposing the port.
+    # `!override` is required: Compose concatenates list-type fields across -f
+    # files, so a plain `ports:` here would ADD a binding instead of replacing
+    # the base file's. (`!reset`, as in docker-compose.caddy-hardened.yml,
+    # empties the field -- it cannot carry a replacement value; verified with
+    # `docker compose config` on the VPS, which rendered the client with no
+    # ports at all.)
+    ports: !override
+      - "${STAGING_BIND_ADDR:-172.17.0.1}:${PORT:-8081}:8080"
     cpus: '0.1'
     mem_limit: 64m

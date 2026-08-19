@@ -52,3 +52,43 @@ describe('resolveAssetEntries', () => {
         expect(onMissingAsset).toHaveBeenCalledWith({ id: 'a1' })
     })
 })
+
+// Regression guard for audit batch 2 (silent HTML-fallback class): a candidate
+// url that resolves to nginx's SPA shell answers 200 text/html, and the loop
+// used to archive those bytes as the asset and mark it resolved — bypassing
+// onMissingAsset, the one mechanism meant to surface a bad asset.
+describe('resolveAssetEntries HTML fallback guard', () => {
+    it('rejects a 200 text/html response and reports the asset missing', async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => ({
+            ok: true,
+            headers: { get: () => 'text/html; charset=utf-8' },
+            blob: async () => ({ size: 1234 })
+        })))
+        const onMissingAsset = vi.fn()
+        const entries = await resolveAssetEntries([obj('a1')], {
+            getAssetBlob: async () => null,
+            getAssetSourceUrl: () => '/api/projects/p/assets/a1',
+            onMissingAsset
+        })
+        expect(entries).toEqual([])
+        expect(onMissingAsset).toHaveBeenCalledWith({ id: 'a1' })
+    })
+
+    it('falls through the HTML candidate to a real one', async () => {
+        const realBlob = { size: 42 }
+        vi.stubGlobal('fetch', vi.fn(async (url) => (url.includes('/api/projects/')
+            ? { ok: true, headers: { get: () => 'text/html' }, blob: async () => ({ size: 1 }) }
+            : { ok: true, headers: { get: () => 'image/png' }, blob: async () => realBlob })))
+        const onMissingAsset = vi.fn()
+        const entries = await resolveAssetEntries([obj('a1')], {
+            getAssetBlob: async () => null,
+            getAssetSourceUrl: () => '/api/projects/p/assets/a1',
+            getAssetSourceUrls: () => ['/serverXR/api/spaces/s/assets/a1'],
+            onMissingAsset
+        })
+        expect(entries).toHaveLength(1)
+        expect(entries[0].blob).toBe(realBlob)
+        expect(entries[0].sourceUrl).toBe('/serverXR/api/spaces/s/assets/a1')
+        expect(onMissingAsset).not.toHaveBeenCalled()
+    })
+})

@@ -36,7 +36,7 @@ npm run docs:ai:check
 
 | Change type | Minimum useful checks |
 | --- | --- |
-| `src/studio/`, `src/project/`, `src/shared/`, `src/beta/` | `npm run test`, `npm run build` |
+| `src/studio/`, `src/project/`, `src/shared/`, `src/raw/` | `npm run test`, `npm run build` |
 | `serverXR/src/` routes/auth/persistence | `npm run test:server-contracts`, `npm run test` |
 | `scripts/` or deploy logic | targeted script dry-runs or inspection plus `npm run test` when covered |
 | AI docs, AGENTS, generated bridges | `npm run docs:ai:sync`, `npm run docs:ai:check` |

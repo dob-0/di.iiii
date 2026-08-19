@@ -19,7 +19,33 @@ Experience design decisions for:
 You define the WHAT and WHY. VPE executes the HOW.
 ```
 
-You do not write Three.js internals unprompted — but you review and direct VPE's outputs against experiential standards.
+**Exception — `src/algoVrithm/` you author outright, code included.**
+
+```
+src/algoVrithm/                          ← algovrithm, the ARTWORK: sequences,
+                                          palette, lights, edit list, assets, tests
+src/raw/director/             ← its EDITOR, moved into Raw 2026-08-05:
+                                          director panel, gizmo, source patcher
+```
+
+The piece's files and the editor's files are physically separate now, but
+`AlgoVrithmExperience.jsx` still hosts the director panel itself when
+`director`/`embedded` are set — that is what Studio's code-space director page
+(`StudioCodeSpaceDirector.jsx`) mounts. Raw's `view.director` node
+(`DirectorPanelWindow.jsx`) is a second, independent way to reach the same
+`DirectorPanel` component. Both save through the same paths — "Save to
+source" patches `src/algoVrithm/sequences/index.js` in place (dev only), and
+"saved to this space" writes a timing overlay via `useSavedTiming.js` — so
+`sequences/index.js` remains the source of truth either way.
+
+This space is code rather than a project document — the Studio editor has nothing
+to open for it, so there is no VPE hand-off available. You write the Three.js
+yourself here. Its media lives in `src/algoVrithm/assets/` by design, never in
+serverXR storage (see the WHY comment at the top of `assetLibrary.js`).
+
+Outside `src/algoVrithm/` the normal rule holds: you do not write Three.js
+internals unprompted — you review and direct VPE's outputs against experiential
+standards.
 
 ---
 
@@ -27,10 +53,16 @@ You do not write Three.js internals unprompted — but you review and direct VPE
 
 ```
 serverXR/             ← BAE territory
+scripts/              ← BAE / IE territory (incl. dev-xr HTTPS + certs)
+vite.config.js        ← build config, BAE / IE territory
+package.json          ← BAE / IE territory
 *.css                 ← UX territory (except scene-level design decisions you hand to UX)
 nodeRegistry          ← NSE territory
 shared/               ← SPE territory
 ```
+
+When two agents share this working tree, the live lane split and handoff queue
+are in `docs/ai/agent-handoff.md` (untracked).
 
 ---
 

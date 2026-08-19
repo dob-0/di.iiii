@@ -59,7 +59,14 @@ export const updateServerSpace = async (spaceId, updates = {}) => {
             isPublic: updates.isPublic,
             kind: updates.kind,
             publishedProjectId: updates.publishedProjectId,
-            previewImageAssetId: updates.previewImageAssetId
+            previewImageAssetId: updates.previewImageAssetId,
+            // Forwarded explicitly because both are meaningfully null: a null
+            // slug clears the public handle back to id-only addressing, and a
+            // null owner returns the space to the platform. undefined (the key
+            // absent) still means "don't touch" — JSON.stringify drops it.
+            ...(updates.slug !== undefined ? { slug: updates.slug } : {}),
+            ...(updates.ownerUserId !== undefined ? { ownerUserId: updates.ownerUserId } : {}),
+            ...(updates.openInscriptions !== undefined ? { openInscriptions: updates.openInscriptions } : {})
         }
     })
     return data.space
@@ -120,13 +127,23 @@ export const submitSceneOps = async (spaceId, baseVersion, ops = []) => {
     })
 }
 
-export const overwriteServerScene = async (spaceId, sceneData) => {
+/**
+ * Replace a space's whole scene.
+ *
+ * `expectedVersion` is the version this overwrite is deliberately replacing.
+ * Passing it makes even a forced publish conditional: the server refuses with
+ * 409 if the scene moved AGAIN between the moment the person was shown a
+ * version number and the moment they confirmed. Omitting it is unconditional
+ * last-write-wins, which is what every caller did before preconditions existed.
+ */
+export const overwriteServerScene = async (spaceId, sceneData, { expectedVersion = null } = {}) => {
     if (!spaceId) throw new Error('space id required')
     if (!sceneData || typeof sceneData !== 'object') {
         throw new Error('scene data required')
     }
     return apiFetch(`/api/spaces/${resolveServerSpaceId(spaceId)}/scene`, {
         method: 'PUT',
+        headers: Number.isInteger(expectedVersion) ? { 'If-Match': `"${expectedVersion}"` } : undefined,
         body: sceneData
     })
 }

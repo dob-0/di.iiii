@@ -242,6 +242,113 @@ describe('projectSchema', () => {
         expect(afterDeleteNode.edges).toHaveLength(0)
     })
 
+    // The one edge the ordinary cascade cannot catch: a doorway's wire names the
+    // CONTAINER and a port id, not the door, so both endpoint nodes survive the
+    // delete. createEdge validates endpoint nodes only and normalizeEdgesList
+    // drops edges by missing node id, never by missing port — so without the
+    // sweep this is a permanent orphan that no reload, normalisation or gesture
+    // can remove, parked at the corner of a card by inputPortCenter's idx<0
+    // branch. Mirrored in shared/projectSchema.cjs and covered there too: with
+    // the sweep on the client only, the wire vanishes locally and the server's
+    // replay resurrects it on the next sync.
+    it('sweeps the wire to a socket when the doorway that made it is deleted', () => {
+        const base = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'desk', typeId: 'universe.desk.3d', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'door', typeId: 'port.in', parentId: 'desk', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'sky', typeId: 'value.color', values: { value: '#ff0000' } } } },
+            {
+                type: 'createEdge',
+                payload: { edge: { id: 'e1', fromNodeId: 'sky', fromPort: 'out', toNodeId: 'desk', toPort: 'door' } }
+            }
+        ])
+        expect(base.edges).toHaveLength(1)
+
+        const afterDelete = applyProjectOps(base, [
+            { type: 'deleteNode', payload: { nodeId: 'door' } }
+        ])
+        // Both endpoints of the wire are still here — which is exactly why the
+        // ordinary cascade would have kept it.
+        expect(afterDelete.nodes.map((node) => node.id).sort()).toEqual(['desk', 'sky'])
+        expect(afterDelete.edges).toHaveLength(0)
+    })
+
+    describe('reparentNode', () => {
+        const withDeskAndCube = () => applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'desk', typeId: 'universe.desk.3d', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'cube', typeId: 'geom.cube', graphX: 10, graphY: 20, values: {} } } }
+        ])
+
+        it('moves a node into a container, with its new coordinates', () => {
+            const moved = applyProjectOps(withDeskAndCube(), [
+                { type: 'reparentNode', payload: { nodeId: 'cube', parentId: 'desk', graphX: 60, graphY: 80 } }
+            ])
+            const cube = moved.nodes.find((node) => node.id === 'cube')
+            expect(cube.parentId).toBe('desk')
+            expect(cube.graphX).toBe(60)
+            expect(cube.graphY).toBe(80)
+        })
+
+        // The whole reason this is one op rather than four. As loose ops the
+        // reducer refuses the parentId and STILL applies the coordinates, and a
+        // 409'd batch is resubmitted verbatim — leaving the node replanted at a
+        // coordinate meaningless in its scope with nothing said.
+        it('applies nothing at all when the destination does not exist', () => {
+            const before = withDeskAndCube()
+            const after = applyProjectOps(before, [
+                { type: 'reparentNode', payload: { nodeId: 'cube', parentId: 'ghost', graphX: 999, graphY: 999 } }
+            ])
+            const cube = after.nodes.find((node) => node.id === 'cube')
+            expect(cube.parentId).toBeFalsy()
+            expect(cube.graphX).toBe(10)
+            expect(cube.graphY).toBe(20)
+        })
+
+        it('refuses to make a node its own ancestor', () => {
+            const nested = applyProjectOps(withDeskAndCube(), [
+                { type: 'createNode', payload: { node: { id: 'inner', typeId: 'universe.desk.3d', parentId: 'desk', values: {} } } }
+            ])
+            // desk -> inner -> desk would be unreachable, undeletable and would
+            // recurse on every traversal.
+            const after = applyProjectOps(nested, [
+                { type: 'reparentNode', payload: { nodeId: 'desk', parentId: 'inner' } }
+            ])
+            expect(after.nodes.find((node) => node.id === 'desk').parentId).toBeFalsy()
+        })
+
+        it('undoes back to the scope AND the position it came from', () => {
+            const before = withDeskAndCube()
+            const op = { type: 'reparentNode', payload: { nodeId: 'cube', parentId: 'desk', graphX: 60, graphY: 80 } }
+            const inverse = invertProjectOps(before, [op])
+            const after = applyProjectOps(applyProjectOps(before, [op]), inverse)
+            const cube = after.nodes.find((node) => node.id === 'cube')
+            expect(cube.parentId).toBeFalsy()
+            expect(cube.graphX).toBe(10)
+            expect(cube.graphY).toBe(20)
+        })
+    })
+
+    // Found by reading invertSingleOp, not by a failing test: a doorway's
+    // exterior wire names the CONTAINER and the door's id, and the container is
+    // not among the deleted nodes — so the delete sweep removed the wire while
+    // the inverse's filter would never have restored it, and one Ctrl+Z would
+    // silently drop a wire the user still had.
+    it('restores the wire to a doorway socket when the delete is undone', () => {
+        const base = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'desk', typeId: 'universe.desk.3d', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'door', typeId: 'port.in', parentId: 'desk', values: {} } } },
+            { type: 'createNode', payload: { node: { id: 'sky', typeId: 'value.color', values: {} } } },
+            { type: 'createEdge', payload: { edge: { id: 'e1', fromNodeId: 'sky', fromPort: 'out', toNodeId: 'desk', toPort: 'door' } } }
+        ])
+        const op = { type: 'deleteNode', payload: { nodeId: 'door' } }
+        const inverse = invertProjectOps(base, [op])
+        const afterDelete = applyProjectOps(base, [op])
+        expect(afterDelete.edges).toHaveLength(0)
+
+        const restored = applyProjectOps(afterDelete, inverse)
+        expect(restored.nodes.find((node) => node.id === 'door')).toBeDefined()
+        expect(restored.edges.map((edge) => edge.id)).toEqual(['e1'])
+    })
+
     it('accepts unknown typeIds (matches the server, which never validates them)', () => {
         const base = normalizeProjectDocument({})
         // shared/projectSchema.cjs (the server's authoritative mirror) intentionally
@@ -297,6 +404,61 @@ describe('projectSchema', () => {
             { type: 'createNode', payload: { node: { id: 'world-b', typeId: 'universe.world', parentId: 'parentB' } } }
         ])
         expect(afterDifferentScope.nodes.filter((n) => n.typeId === 'universe.world')).toHaveLength(2)
+    })
+
+    it('updateEntity cannot smuggle a new id through the patch', () => {
+        const base = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createEntity', payload: { entity: { id: 'ent-a', type: 'box' } } },
+            { type: 'createEntity', payload: { entity: { id: 'ent-b', type: 'box' } } }
+        ])
+        const after = applyProjectOps(base, [
+            { type: 'updateEntity', payload: { entityId: 'ent-a', patch: { id: 'ent-b', name: 'renamed' } } }
+        ])
+        expect(after.entities.map((e) => e.id).sort()).toEqual(['ent-a', 'ent-b'])
+        expect(after.entities.find((e) => e.id === 'ent-a').name).toBe('renamed')
+    })
+
+    it('updateEdge cannot smuggle a new id through the patch', () => {
+        const base = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'n1', typeId: 'geom.cube' } } },
+            { type: 'createNode', payload: { node: { id: 'n2', typeId: 'geom.cube' } } },
+            { type: 'createEdge', payload: { edge: { id: 'edge-1', fromNodeId: 'n1', toNodeId: 'n2' } } }
+        ])
+        const after = applyProjectOps(base, [
+            { type: 'updateEdge', payload: { edgeId: 'edge-1', patch: { id: 'edge-2' } } }
+        ])
+        expect(after.edges.map((e) => e.id)).toEqual(['edge-1'])
+    })
+
+    it('deleteEntity survives a parentId cycle instead of recursing forever', () => {
+        const base = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createEntity', payload: { entity: { id: 'cyc-a', type: 'box' } } },
+            { type: 'createEntity', payload: { entity: { id: 'cyc-b', type: 'box' } } },
+            { type: 'updateEntity', payload: { entityId: 'cyc-a', patch: { parentId: 'cyc-b' } } },
+            { type: 'updateEntity', payload: { entityId: 'cyc-b', patch: { parentId: 'cyc-a' } } }
+        ])
+        const after = applyProjectOps(base, [
+            { type: 'deleteEntity', payload: { entityId: 'cyc-a' } }
+        ])
+        expect(after.entities).toHaveLength(0)
+    })
+
+    it('deleteNode survives a self-parent and a mutual parentId cycle', () => {
+        const selfParent = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'sp', typeId: 'universe.world', parentId: 'sp' } } }
+        ])
+        expect(applyProjectOps(selfParent, [
+            { type: 'deleteNode', payload: { nodeId: 'sp' } }
+        ]).nodes).toHaveLength(0)
+
+        const mutual = applyProjectOps(normalizeProjectDocument({}), [
+            { type: 'createNode', payload: { node: { id: 'cyc-a', typeId: 'universe.world' } } },
+            { type: 'createNode', payload: { node: { id: 'cyc-b', typeId: 'universe.world', parentId: 'cyc-a' } } },
+            { type: 'updateNode', payload: { nodeId: 'cyc-a', patch: { parentId: 'cyc-b' } } }
+        ])
+        expect(applyProjectOps(mutual, [
+            { type: 'deleteNode', payload: { nodeId: 'cyc-a' } }
+        ]).nodes).toHaveLength(0)
     })
 })
 
@@ -372,6 +534,23 @@ describe('invertProjectOps', () => {
         expect(forward.entities.map((entity) => entity.id)).toEqual(['box-2'])
         expect(restored.entities.map((entity) => entity.id).sort()).toEqual(['box-2', 'child-1', 'group-1'])
         expect(restored.entities.find((entity) => entity.id === 'child-1').parentId).toBe('group-1')
+    })
+
+    // createEntity/createEdge both restore the previous value when their id
+    // collides with an existing one, because forward apply overwrites
+    // ("hijacks") rather than no-ops on that id -- createNode was missing
+    // this and inverted a hijack to nothing, permanently losing the
+    // overwritten node with no undo path.
+    it('inverts a createNode id collision to a restore, not a no-op', () => {
+        const base = baseDoc()
+        const hijack = [{
+            type: 'createNode',
+            payload: { node: { id: 'n1', typeId: 'geom.cube', label: 'Hijacked', values: { x: 999 } } }
+        }]
+        const { forward, inverse, restored } = expectRoundTrip(base, hijack)
+        expect(forward.nodes.find((node) => node.id === 'n1').label).toBe('Hijacked')
+        expect(inverse).toEqual([{ type: 'createNode', payload: { node: expect.objectContaining({ id: 'n1', label: 'A' }) } }])
+        expect(restored.nodes.find((node) => node.id === 'n1').label).toBe('A')
     })
 
     it('inverts deleteNode to node + dropped edges + selection restore', () => {

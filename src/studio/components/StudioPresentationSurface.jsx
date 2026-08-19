@@ -21,6 +21,10 @@ const overlayInnerStyle = {
     backdropFilter: 'blur(12px)'
 }
 
+// deviceAccess (owner opt-in in presentationState) adds allow-same-origin so the
+// page has a real security origin — getUserMedia is impossible in an opaque one
+const PAGE_SANDBOX = 'allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals'
+
 const resolveStudioPreviewCamera = (document, cameraView) => {
     return cameraView || document.worldState?.savedView || null
 }
@@ -86,7 +90,8 @@ export default function StudioPresentationSurface({
                     title={document.projectMeta?.title || document.projectMeta?.id || 'Studio URL preview'}
                     src={codeUrl}
                     loading="lazy"
-                    sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals"
+                    sandbox={presentationState.deviceAccess ? `${PAGE_SANDBOX} allow-same-origin` : PAGE_SANDBOX}
+                    allow="camera; microphone; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
                     referrerPolicy="strict-origin-when-cross-origin"
                     style={{
                         border: 0,
@@ -113,7 +118,8 @@ export default function StudioPresentationSurface({
             <iframe
                 title={document.projectMeta?.title || document.projectMeta?.id || 'Studio code preview'}
                 srcDoc={previewDocument}
-                sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation allow-modals"
+                sandbox={presentationState.deviceAccess ? `${PAGE_SANDBOX} allow-same-origin` : PAGE_SANDBOX}
+                    allow="camera; microphone; fullscreen; xr-spatial-tracking; accelerometer; gyroscope; magnetometer"
                 style={{
                     border: 0,
                     width: '100%',

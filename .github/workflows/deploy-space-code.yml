@@ -1,5 +1,10 @@
 name: Deploy space code files
 
+# Lane contract: `dev` -> staging, `main` -> production, never crossed.
+# The push script's own default target is PRODUCTION, so the target is always
+# passed explicitly here — an unset secret must not silently deploy to live.
+# Production code pushes stay manual (`npm run space:code-push -- <spaceId>
+# --to https://di-studio.xyz/serverXR`) until a production token secret exists.
 on:
   push:
     branches: [dev]
@@ -13,20 +18,53 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22'
 
-      - name: Push changed space code files to live
+      - name: Push changed space code files to staging
         env:
-          LIVE_API_URL: ${{ secrets.LIVE_API_URL }}
+          # LIVE_* is the staging pair by repo convention (see scripts/data-inventory.mjs).
+          # The token goes through the environment, not argv, so it stays out of `ps`.
+          STAGING_API_URL: ${{ secrets.LIVE_API_URL }}
           LIVE_API_TOKEN: ${{ secrets.LIVE_API_TOKEN }}
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
-          for dir in spaces/*/code; do
-            [ -d "$dir" ] || continue
-            spaceId=$(echo "$dir" | cut -d/ -f2)
-            echo "Pushing code for space: $spaceId"
-            node scripts/space-code-push.mjs "$spaceId"
+          set -euo pipefail
+
+          if [ -z "${LIVE_API_TOKEN}" ]; then
+            echo "::error::LIVE_API_TOKEN (staging) is not configured — refusing to push."
+            exit 1
+          fi
+
+          target="${STAGING_API_URL:-https://staging.di-studio.xyz/serverXR}"
+          case "${target}" in
+            *staging.di-studio.xyz*) ;;
+            *) echo "::error::target ${target} is not the staging origin; dev never deploys to production."; exit 1 ;;
+          esac
+
+          # Only the spaces touched by this push, not every space in the repo.
+          if [ -n "${BEFORE_SHA}" ] && [ "${BEFORE_SHA}" != "0000000000000000000000000000000000000000" ] \
+             && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+            diff_base="${BEFORE_SHA}"
+          else
+            diff_base="${GITHUB_SHA}^"
+          fi
+
+          changed=$(git diff --name-only "${diff_base}" "${GITHUB_SHA}" -- 'spaces/*/code/**' \
+            | cut -d/ -f2 | sort -u)
+
+          if [ -z "${changed}" ]; then
+            echo "No space code changes in this push."
+            exit 0
+          fi
+
+          for spaceId in ${changed}; do
+            [ -d "spaces/${spaceId}/code" ] || { echo "spaces/${spaceId}/code removed — skipping"; continue; }
+            echo "Pushing code for space: ${spaceId} -> ${target}"
+            node scripts/space-code-push.mjs "${spaceId}" --to "${target}"
           done

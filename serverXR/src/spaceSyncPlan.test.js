@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { matchGlobs, planSync, rewriteAssetUrl, mimeFor } = require('./spaceSyncPlan.js')
+const { buildSyncedDocumentBody, matchGlobs, planSync, rewriteAssetUrl, mimeFor } = require('./spaceSyncPlan.js')
 
 const REPO = [
   'index.html',
@@ -73,5 +73,44 @@ describe('mimeFor', () => {
     expect(mimeFor('assets/video.mp4')).toBe('video/mp4')
     expect(mimeFor('x/y.GLB'.toLowerCase())).toBe('model/gltf-binary')
     expect(mimeFor('mystery.bin')).toBe('application/octet-stream')
+  })
+})
+
+// Regression guard for audit batch 2: the GitHub sync used to swallow a failed
+// internal document GET into {} and then PUT that empty base over the real
+// document (full no-baseVersion replace) — assets, projectMeta and owner
+// opt-ins wiped, sync still reporting success.
+describe('buildSyncedDocumentBody', () => {
+  const codeFiles = [{ name: 'index.html', content: '<main>hi</main>' }]
+
+  it('refuses to build a body when the GET returned no document', () => {
+    for (const current of [{}, null, undefined, { document: null }, { document: [] }, { document: 'nope' }]) {
+      expect(() => buildSyncedDocumentBody({ current, codeFiles })).toThrow(/no document/i)
+    }
+  })
+
+  it('preserves everything the sync does not own', () => {
+    const body = buildSyncedDocumentBody({
+      current: {
+        document: {
+          projectMeta: { id: 'p1', title: 'Kept' },
+          assets: [{ id: 'a1', name: 'photo.png' }],
+          entities: [{ id: 'e1' }],
+          presentationState: { mode: 'scene', deviceAccess: { camera: true } },
+          publishState: { shareEnabled: false, publishedAt: 12 }
+        }
+      },
+      codeFiles
+    })
+    expect(body.projectMeta).toEqual({ id: 'p1', title: 'Kept' })
+    expect(body.assets).toHaveLength(1)
+    expect(body.entities).toHaveLength(1)
+    expect(body.presentationState.deviceAccess).toEqual({ camera: true })
+    expect(body.publishState.publishedAt).toBe(12)
+    // ...and still applies what the sync does own.
+    expect(body.presentationState.mode).toBe('code')
+    expect(body.presentationState.entryView).toBe('code')
+    expect(body.presentationState.codeFiles).toEqual(codeFiles)
+    expect(body.publishState.shareEnabled).toBe(true)
   })
 })

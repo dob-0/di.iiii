@@ -1,31 +1,56 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Box, Button, Stack, Typography } from '@mui/material'
-import GridFloorBackground from '../components/GridFloorBackground.jsx'
+import { useKeyboardPageScroll } from '../hooks/useKeyboardPageScroll.js'
 import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
-import { buildBetaHubPath } from '../beta/utils/betaRouting.js'
-import { buildStudioHubPath } from '../studio/utils/studioRouting.js'
+import { buildRawHubPath } from '../raw/utils/rawRouting.js'
+import { ALGO_VRITHM_LABEL, ALGO_VRITHM_PATH, ALGO_VRITHM_SPACE_ID } from '../algoVrithm/algoVrithmRouting.js'
+import { buildStudioSpacesPath } from '../studio/utils/studioRouting.js'
 
-// "Try Beta"/"Open Studio" must land guests somewhere they can actually edit.
-// The bare '/beta'/'/studio' routes default to the 'main' space — di.iiii's
-// restricted flagship space, not a sandbox — so a guest session (which has no
-// write scope there) gets silently bounced by AuthGate's out-of-scope-but-
-// public redirect straight to the read-only live viewer, same destination as
-// the separate "Enter Space" button. Point both at the communal 'open' space
-// instead, which every session (guest included) already has implicit access to.
-const TRY_BETA_HREF = buildBetaHubPath('open')
-const OPEN_STUDIO_HREF = buildStudioHubPath('open')
+// Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
+// LiveProjectScene into the landing chunk for every visitor — including phones,
+// which never render it. Gating the mount alone did nothing: a static import
+// ships whether or not the component is used. Measured phone load before and
+// after to confirm.
+const GridFloorBackground = lazy(() => import('../components/GridFloorBackground.jsx'))
+
+// The landing page promotes one experimental lane, and that is Raw (formerly
+// Seed). Beta has been retired.
+//
+// Pointed at the communal 'open' space, not the bare '/raw' route: bare lane
+// routes default to the 'main' space — di.iiii's restricted flagship, not a
+// sandbox — so a guest session has no write scope there and AuthGate sends it
+// to the read-only viewer instead of the editor it clicked for. Every session,
+// guest included, already has implicit access to 'open'.
+const RAW_LANE_HREF = buildRawHubPath('open')
+// "Open Studio" goes to the spaces hub (`/studio`) for everyone. Two earlier
+// passes landed one level too deep: `/open/studio?browse=1` is StudioHub, which
+// despite the name is a *single space's project list* — the open space's — so
+// the label promised the top level and delivered one room inside it. SpaceHub
+// is guest-viewable (it renders the Open Space, the private sandbox and a
+// "Sign in to create" affordance), so there is no session for which the
+// narrower destination was the better one.
 import './landing.css'
 
 const FEATURED_SPACES = [
     { id: 'wcc', label: 'WCC Exhibition', href: '/wcc', className: 'landing-cta-wcc' },
-    { id: 'br-id-ge', label: 'br_id_ge', href: '/br_id_ge', className: 'landing-cta-br-id-ge' },
-    { id: 'beyond-form', label: 'beyond_form', href: '/beyond-form', className: 'landing-cta-beyond-form' }
+    { id: 'br-id-ge', label: 'br_id_ge · live at Notations #2', href: '/br_id_ge', className: 'landing-cta-br-id-ge' },
+    { id: 'beyond-form', label: 'beyond_form', href: '/beyond-form', className: 'landing-cta-beyond-form' },
+    { id: ALGO_VRITHM_SPACE_ID, label: ALGO_VRITHM_LABEL, href: ALGO_VRITHM_PATH, className: 'landing-cta-algo-vrithm' }
 ]
 
+// A `di up` install on the visitor's own machine has no accounts and no
+// quota — the server says so (config.local + requireAuth off) and this page
+// must not keep speaking hosted-product copy at someone who owns the whole
+// disk. Not a separate "mode": one boolean, and the two hosted sentences
+// below get local-truthful variants. Voice matches the wiki's local-install
+// article ("Run di.iiii on your own machine").
+const LOCAL_STEP_OPEN = { n: '01', title: 'Open a space', body: 'Click "Step inside" or go to any space URL. This is your machine — everything here is yours to edit, no account involved.' }
+const LOCAL_FEATURE_SPACES = { icon: '✦', title: 'Your machine, your spaces', desc: 'This di.iiii runs locally. Create as many spaces as you like — no sign-in, no quota, and your work stays in your own home folder.' }
+
 const STEPS = [
-    { n: '01', title: 'Open a space', body: 'Click "Open Studio" or go to any space URL. No account required to view. Sign in only to edit.' },
+    { n: '01', title: 'Open a space', body: 'Click "Step inside" or go to any space URL. No account required to view. Sign in only to edit.' },
     { n: '02', title: 'Add objects', body: 'Use the Library panel to add 3D shapes, text, images, or 3D models. Drag to position them.' },
     { n: '03', title: 'Customize your world', body: 'Change colors, lighting, camera angle, and background. Tweak with the Inspector on the right.' },
     { n: '04', title: 'Share or publish', body: 'Copy the space link to invite collaborators, or publish to make it live for the public.' }
@@ -96,7 +121,11 @@ const FEATURES = [
 const ROUTES = [
     { path: '/', label: 'Landing — this page' },
     { path: '/studio', label: 'Studio — main authoring editor' },
-    { path: '/beta', label: 'Beta — experimental node editor' },
+    // Space-scoped, not the bare /raw this used to list. A bare lane route
+    // defaults to the restricted 'main' space, where a guest session has no
+    // write scope, so a visitor who clicked this from the route map landed on
+    // "sign in to open the editor" instead of an editor.
+    { path: '/open/raw', label: 'Raw — experimental node-first editor' },
     { path: '/:spaceId', label: 'Public space viewer' },
     { path: '/serverXR/api/health', label: 'Backend health (JSON)' },
     { path: '/serverXR/api/auth/session', label: 'Auth session state (JSON)' },
@@ -115,6 +144,11 @@ const CAPABILITIES = [
 ]
 
 export default function LandingPage() {
+    // One destination for every session. It used to branch on the session,
+    // which also meant these static hrefs pointed at the guest destination
+    // during the tick before getApiSession resolved — click fast enough as a
+    // signed-in owner and you got sent somewhere else entirely.
+    const studioHref = buildStudioSpacesPath()
     const [entered, setEntered] = useState(false)
     // Walk/fly and the calm orbiting view are both rendered by the same
     // GridFloorBackground while "entered" -- previously the only way back to
@@ -128,13 +162,34 @@ export default function LandingPage() {
     // populated space instead of the decorative walkable void this page's
     // own background renders.
     const [mainSpaceId, setMainSpaceId] = useState(null)
-    const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches)
+    // True only when the server declares itself a local install AND auth is
+    // off — the pair that makes "sign in to edit" a false sentence. Read from
+    // /api/config, which this page already fetches; deliberately NOT from
+    // /api/auth/session, which would mint a guest session for every visitor.
+    const [isLocalInstall, setIsLocalInstall] = useState(false)
+    const [isMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(pointer: coarse)').matches)
+    // Phones do not get the decorative WebGL hero. landing.css has tried to
+    // disable it below 520px since the hero was built, but the rule targets
+    // `.lp-hero-canvas`, a class that no longer exists — the element is
+    // `.lp-hero-bg`. Renaming the rule would not have helped either: this is a
+    // *mount* problem, not a paint one. GridFloorBackground was rendered
+    // unconditionally and the wrapper only toggled `display`, so every phone
+    // visitor downloaded the 1.47 MB three-vendor chunk to look at something
+    // CSS then hid. Gating the mount is what actually saves the bytes.
+    const [isSmallScreen] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 520px)').matches)
     const heroRef = useRef(null)
+    const rootRef = useRef(null)
+
+    // The page root is the only scroller (base.css fixes html/body/#root), and it
+    // cannot take focus, so the reading keys need driving by hand.
+    useKeyboardPageScroll(rootRef)
 
     useEffect(() => {
         let cancelled = false
         getServerConfig().then((cfg) => {
-            if (!cancelled) setMainSpaceId(cfg?.defaultSpaceId || null)
+            if (cancelled) return
+            setMainSpaceId(cfg?.defaultSpaceId || null)
+            setIsLocalInstall(Boolean(cfg?.local) && cfg?.requireAuth === false)
         }).catch(() => {})
         return () => { cancelled = true }
     }, [])
@@ -174,30 +229,40 @@ export default function LandingPage() {
         return () => window.removeEventListener('keydown', onKey)
     }, [entered])
 
-    const showBackground = entered || heroInView
+    // `entered` is exempt from the small-screen gate: "Step inside" *is* the
+    // walkable scene, so a phone visitor who taps it has asked for three.js
+    // and gets it then — on demand, rather than on every passive page view.
+    const showBackground = entered || (heroInView && !isSmallScreen)
 
     return (
-        <Box className="lp-root" data-page="landing">
+        <Box className="lp-root" data-page="landing" ref={rootRef}>
 
             {/* ── NAV ──────────────────────────────────────────── */}
             {!entered && (
                 <nav className="lp-nav">
                     <a href="/" className="lp-nav-logo">di<span className="lp-dot">.</span>iiii</a>
+                    {/* "Raw" and "Enter Raw" were the same URL twice, and the
+                        lane name is vocabulary a first visitor does not have
+                        yet. The nav now carries the same one door as the hero,
+                        plus the return path for people who already have work. */}
                     <div className="lp-nav-links">
-                        <a href={OPEN_STUDIO_HREF} className="lp-nav-link">Studio</a>
-                        <a href={TRY_BETA_HREF} className="lp-nav-link">Beta</a>
+                        <a href={studioHref} className="lp-nav-link">Spaces</a>
                         <a href={buildWikiPath()} className="lp-nav-link">Wiki</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-nav-link">GitHub</a>
                     </div>
-                    <a href={OPEN_STUDIO_HREF} className="lp-nav-cta">Open Studio</a>
+                    <a href={RAW_LANE_HREF} className="lp-nav-cta">Step inside</a>
                 </nav>
             )}
 
             {/* ── HERO ─────────────────────────────────────────── */}
             <Box className="lp-hero" component="section" ref={heroRef}>
-                <Box className="lp-hero-bg" sx={{ display: showBackground ? 'block' : 'none' }}>
-                    <GridFloorBackground aria-hidden="true" interactive={entered && !viewMode} />
-                </Box>
+                {showBackground && (
+                    <Box className="lp-hero-bg" aria-hidden="true">
+                        <Suspense fallback={null}>
+                            <GridFloorBackground interactive={entered && !viewMode} />
+                        </Suspense>
+                    </Box>
+                )}
 
                 <Stack className={`lp-hero-inner${entered ? ' lp-hero-inner--hidden' : ''}`} alignItems="center" spacing={0}>
                     <Typography className="lp-eyebrow">
@@ -213,20 +278,33 @@ export default function LandingPage() {
                         No download. No install. Just open and create.
                     </Typography>
 
+                    {/* One door. Three peer buttons asked a stranger to pick a
+                        lane before they knew what a lane was, and two of the
+                        three led somewhere worse than the first: "Open Studio"
+                        to a hub that wants an account, "Enter Space" to the
+                        restricted 'main' space, where a guest is bounced to the
+                        read-only viewer. Studio is now depth behind the one
+                        door (it is a room on the seeded desk), not a rival to
+                        it. "Look around" is the decorative walkable void this
+                        page renders itself — it only exists where there is no
+                        real main space to enter, otherwise it is another door
+                        wearing a preview's clothes. */}
                     <Stack direction="row" spacing={2} sx={{ pt: 1, pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href="/open/studio">
+                        <Button className="landing-cta-primary" variant="contained" size="large" href={RAW_LANE_HREF}>
                             Step inside
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={OPEN_STUDIO_HREF}>
-                            Open Studio
-                        </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={TRY_BETA_HREF}>
-                            Try Beta
-                        </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
-                            Enter Space
-                        </Button>
+                        {!mainSpaceId && (
+                            <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
+                                Look around
+                            </Button>
+                        )}
                     </Stack>
+
+                    <Typography className="lp-cta-sub">
+                        no account, no install. Studio is a room on the same desk.
+                        <br />
+                        <a href={studioHref}>Already have spaces? Open Studio →</a>
+                    </Typography>
 
                     <Stack direction="row" spacing={1.5} sx={{ pb: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
                         {FEATURED_SPACES.map((space) => (
@@ -337,7 +415,7 @@ export default function LandingPage() {
                     </Typography>
 
                     <Box className="lp-steps">
-                        {STEPS.map((step) => (
+                        {(isLocalInstall ? [LOCAL_STEP_OPEN, ...STEPS.slice(1)] : STEPS).map((step) => (
                             <Box key={step.n} className="lp-step">
                                 <Typography className="lp-step-num" aria-hidden="true">{step.n}</Typography>
                                 <Box>
@@ -351,7 +429,7 @@ export default function LandingPage() {
                     <Box className="lp-tip">
                         <Typography className="lp-tip-icon" component="span" aria-hidden="true">→</Typography>
                         <Typography className="lp-tip-text" component="span">
-                            Keyboard shortcuts: <kbd>H</kbd> toggles the UI, <kbd>F</kbd> frames the scene, <kbd>Z</kbd> undoes the last action.
+                            Keyboard shortcuts: <kbd>H</kbd> toggles the UI, <kbd>F</kbd> frames the scene, <kbd>Ctrl/⌘</kbd>+<kbd>Z</kbd> undoes the last action.
                         </Typography>
                     </Box>
                 </Box>
@@ -385,7 +463,10 @@ export default function LandingPage() {
                     <Typography className="lp-section-title" component="h2">What you can do</Typography>
 
                     <Box className="lp-feature-grid">
-                        {FEATURES.map((f) => (
+                        {(isLocalInstall
+                            ? FEATURES.map((f) => (f.title === '3 free spaces' ? LOCAL_FEATURE_SPACES : f))
+                            : FEATURES
+                        ).map((f) => (
                             <Box key={f.title} className="lp-feature-card">
                                 <Typography className="lp-feature-icon" component="span" aria-hidden="true">{f.icon}</Typography>
                                 <Typography className="lp-feature-title" component="h3">{f.title}</Typography>
@@ -495,29 +576,20 @@ export default function LandingPage() {
                         Start building your space.
                     </Typography>
                     <Typography className="lp-enter-body">
-                        Step inside to build with everyone in the Open Space, open the Studio to start
-                        your own scene, or try Beta for the node-first workflow.
+                        The desk is already set: a live 3D room, the node that drives its sky,
+                        and Studio as a room you can walk into.
                         Everything runs in your browser — no sign-up required to explore.
                     </Typography>
                     <Stack direction="row" spacing={2} sx={{ flexWrap: 'wrap', justifyContent: 'center', mb: 2 }}>
-                        <Button className="landing-cta-primary" variant="contained" size="large" href="/open/studio">
+                        <Button className="landing-cta-primary" variant="contained" size="large" href={RAW_LANE_HREF}>
                             Step inside
                         </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={OPEN_STUDIO_HREF}>
-                            Open Studio
-                        </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" href={TRY_BETA_HREF}>
-                            Try Beta
-                        </Button>
-                        <Button className="landing-cta-ghost" variant="outlined" size="large" onClick={handleEnterSpace}>
-                            Enter Space
-                        </Button>
-                        <Button className="lp-btn-link" href="/serverXR/api/health">
-                            Check backend status ↗
-                        </Button>
                     </Stack>
+                    <Typography className="lp-cta-sub" sx={{ mb: 3 }}>
+                        <a href={studioHref}>Already have spaces? Open Studio →</a>
+                    </Typography>
                     <Typography className="lp-enter-note">
-                        Armenia &nbsp;·&nbsp; Web XR &nbsp;·&nbsp; thedi.studio
+                        Armenia &nbsp;·&nbsp; Web XR &nbsp;·&nbsp; <a href="https://thedi.studio" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>thedi.studio</a>
                     </Typography>
                 </Box>
             </Box>
@@ -526,14 +598,20 @@ export default function LandingPage() {
             <footer className="lp-footer">
                 <div className="lp-footer-inner">
                     <span className="lp-footer-brand">di<span className="lp-dot">.</span>iiii</span>
-                    <nav className="lp-footer-nav" aria-label="Footer navigation">
-                        <a href={OPEN_STUDIO_HREF} className="lp-footer-link">Studio</a>
-                        <a href={TRY_BETA_HREF} className="lp-footer-link">Beta</a>
+                    {/* inline flex-wrap: the nav row outgrew its one-line CSS
+                        when Privacy/Terms/Instagram joined; .lp-footer-inner
+                        already wraps, this lets the links themselves follow */}
+                    <nav className="lp-footer-nav" aria-label="Footer navigation" style={{ flexWrap: 'wrap' }}>
+                        <a href={RAW_LANE_HREF} className="lp-footer-link">Raw</a>
+                        <a href={studioHref} className="lp-footer-link">Studio</a>
                         <a href={buildWikiPath()} className="lp-footer-link">Wiki</a>
+                        <a href="/privacy" className="lp-footer-link">Privacy</a>
+                        <a href="/terms" className="lp-footer-link">Terms</a>
                         <a href="https://github.com/dob-0/di.iiii" target="_blank" rel="noopener noreferrer" className="lp-footer-link">GitHub</a>
+                        <a href="https://www.instagram.com/di.iiiiiiiiiiiiiiiiiiiii/" target="_blank" rel="noopener noreferrer" className="lp-footer-link">Instagram</a>
                         <a href="/serverXR/api/health" className="lp-footer-link">API</a>
                     </nav>
-                    <span className="lp-footer-note">Open source · Web XR · thedi.studio</span>
+                    <span className="lp-footer-note">Open source · Web XR · <a href="https://thedi.studio" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>thedi.studio</a></span>
                 </div>
             </footer>
             </>

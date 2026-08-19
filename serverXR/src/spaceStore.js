@@ -15,7 +15,7 @@ const SLUG_REGEX = /^[a-z0-9-]{3,48}$/
 // immutable `id`) must never shadow a reserved top-level route segment —
 // see src/utils/spaceRouting.js's RESERVED_APP_SEGMENTS on the client side,
 // which this mirrors. docs/architecture/SPEC_space_urls_and_portability.md.
-const RESERVED_SPACE_SLUGS = new Set(['admin', 'preferences', 'prefrenaces', 'preferances', 'wiki', 'beta', 'studio', 'p'])
+const RESERVED_SPACE_SLUGS = new Set(['admin', 'preferences', 'prefrenaces', 'preferances', 'wiki', 'beta', 'studio', 'raw', 'seed', 'open_jam', 'p'])
 
 // Thumbnail variants for image assets — the space hub grid used to pull the
 // full-resolution original for every card's preview image. Resized once per
@@ -29,6 +29,34 @@ const isThumbnailableImage = (mimeType) =>
   mimeType.startsWith(THUMBNAILABLE_MIME_PREFIX) &&
   !NON_THUMBNAILABLE_MIME_TYPES.has(mimeType)
 const thumbnailPath = (filePath, width) => `${filePath}.thumb-${width}.webp`
+
+// Uploaded assets are served from the app's own origin with a client-supplied
+// mimeType, so any type the browser renders as a *document* is stored XSS: an
+// SVG carrying inline <script> executes against the logged-in session that
+// opens its URL. The bytes can't be rewritten (SVG is a legitimate texture
+// format, see mediaAssetTypes.js), so the document context is taken away
+// instead. Subresource loads (<img>, TextureLoader) ignore Content-Disposition,
+// so scenes still render; only top-level navigation changes, and it downloads.
+// Nothing legitimately renders an uploaded text/html or xml asset, so those
+// also lose their content type.
+const NEVER_RENDERED_MIME_TYPES = new Set([
+  'text/html',
+  'application/xhtml+xml',
+  'text/xml',
+  'application/xml'
+])
+const applyAssetSafetyHeaders = (res, mimeType) => {
+  const mime = String(mimeType || '').toLowerCase().split(';')[0].trim()
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  if (NEVER_RENDERED_MIME_TYPES.has(mime)) {
+    res.setHeader('Content-Type', 'application/octet-stream')
+    res.setHeader('Content-Disposition', 'attachment')
+    return
+  }
+  if (mime === 'image/svg+xml') {
+    res.setHeader('Content-Disposition', 'attachment')
+  }
+}
 
 const SPACE_KINDS = ['normal', 'global', 'sandbox']
 const normalizeSpaceKind = (value) => SPACE_KINDS.includes(value) ? value : 'normal'
@@ -69,6 +97,11 @@ function createSpaceStore({
     return {
       spaceDir,
       scenePath: path.join(spaceDir, 'scene.json'),
+      // Small JSON blob a space carries alongside its scene. A CODE space —
+      // one whose piece is React in src/, not a project document — has no
+      // other place to keep the settings its author tunes, so before this it
+      // could only be tuned on a laptop running the dev server.
+      settingsPath: path.join(spaceDir, 'settings.json'),
       assetsDir: path.join(spaceDir, 'assets'),
       metaPath: path.join(spaceDir, 'meta.json'),
       opsPath: path.join(spaceDir, 'ops.json')
@@ -147,6 +180,7 @@ function createSpaceStore({
       opsInsert:     db.prepare('INSERT INTO space_ops (space_id, version, data, created_at) VALUES (?, ?, ?, ?)'),
       opsCount:      db.prepare('SELECT COUNT(*) as cnt FROM space_ops WHERE space_id = ?'),
       opsTrim:       db.prepare('DELETE FROM space_ops WHERE space_id = ? AND seq IN (SELECT seq FROM space_ops WHERE space_id = ? ORDER BY seq ASC LIMIT ?)'),
+      opsTrimAged:   db.prepare('DELETE FROM space_ops WHERE space_id = ? AND created_at < ?'),
     }
     return _s
   }
@@ -192,16 +226,16 @@ function createSpaceStore({
       }
       const nextSlug      = 'slug'             in updates ? (updates.slug ?? null)                                                                    : row.slug
       const nextLabel     = 'label'            in updates ? (updates.label ?? '')                                                                    : row.label
-      const nextPermanent = 'permanent'        in updates ? (Boolean(updates.permanent) ? 1 : 0)                                                    : row.permanent
+      const nextPermanent = 'permanent'        in updates ? (updates.permanent ? 1 : 0)                                                             : row.permanent
       const nextEdits     = 'allowEdits'       in updates ? (updates.allowEdits !== false ? 1 : 0)                                                  : row.allow_edits
-      const nextPublic    = 'isPublic'         in updates ? (Boolean(updates.isPublic) ? 1 : 0)                                                      : row.is_public
+      const nextPublic    = 'isPublic'         in updates ? (updates.isPublic ? 1 : 0)                                                               : row.is_public
       const nextKind      = 'kind'             in updates ? normalizeSpaceKind(updates.kind)                                                          : normalizeSpaceKind(row.kind)
       const nextPublished = 'publishedProjectId' in updates ? (updates.publishedProjectId ?? null)                                                   : row.published_project_id
       const nextPreview   = 'previewImageAssetId' in updates ? (updates.previewImageAssetId ?? null)                                                 : row.preview_image_asset_id
       const nextVersion   = 'sceneVersion'     in updates ? (Number.isFinite(Number(updates.sceneVersion)) ? Number(updates.sceneVersion) : row.scene_version) : row.scene_version
       const nextTouched   = updates.touch !== false ? now : row.last_touched_at
       const nextOwner     = 'ownerUserId'      in updates ? (updates.ownerUserId ?? null)                                                            : row.owner_user_id
-      const nextInscribe  = 'openInscriptions' in updates ? (Boolean(updates.openInscriptions) ? 1 : 0)                                              : row.open_inscriptions
+      const nextInscribe  = 'openInscriptions' in updates ? (updates.openInscriptions ? 1 : 0)                                                       : row.open_inscriptions
       update.run(nextSlug, nextLabel, nextPermanent, nextEdits, nextPublic, nextKind, nextPublished, nextPreview, nextVersion, now, nextTouched, nextOwner, nextInscribe, spaceId)
       return rowToMeta({ ...row, slug: nextSlug, label: nextLabel, permanent: nextPermanent, allow_edits: nextEdits, is_public: nextPublic, kind: nextKind, published_project_id: nextPublished, preview_image_asset_id: nextPreview, scene_version: nextVersion, updated_at: now, last_touched_at: nextTouched, owner_user_id: nextOwner, open_inscriptions: nextInscribe })
     })()
@@ -382,9 +416,13 @@ function createSpaceStore({
     })()
   }
 
-  const appendOpsHistory = async (spaceId, newOps = [], maxHistory = 500) => {
+  // maxAgeMs bounds the window by age as well as count; 0 disables it. Same
+  // reasoning as appendProjectOps in projectStore.js — counting alone ties how
+  // long history (and every asset it mentions) survives to how busy the space
+  // is, so a dormant space keeps its last ops forever.
+  const appendOpsHistory = async (spaceId, newOps = [], maxHistory = 500, maxAgeMs = 0) => {
     if (!Array.isArray(newOps) || newOps.length === 0) return
-    const { opsInsert, opsCount, opsTrim } = s()
+    const { opsInsert, opsCount, opsTrim, opsTrimAged } = s()
     const now = Date.now()
     getDb().transaction(() => {
       for (const op of newOps) {
@@ -392,6 +430,7 @@ function createSpaceStore({
       }
       const { cnt } = opsCount.get(spaceId)
       if (cnt > maxHistory) opsTrim.run(spaceId, spaceId, cnt - maxHistory)
+      if (maxAgeMs > 0) opsTrimAged.run(spaceId, now - maxAgeMs)
     })()
   }
 
@@ -436,6 +475,7 @@ function createSpaceStore({
 
   const serveFile = (res, filePath, contentType) => {
     res.setHeader('Content-Type', contentType || 'application/octet-stream')
+    applyAssetSafetyHeaders(res, contentType)
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
     const stream = fs.createReadStream(filePath)
     stream.on('error', (error) => {
@@ -544,4 +584,4 @@ function createSpaceStore({
   }
 }
 
-module.exports = { createSpaceStore }
+module.exports = { createSpaceStore, applyAssetSafetyHeaders }

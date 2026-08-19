@@ -1,5 +1,14 @@
 # Studio ↔ Beta: Shared vs Forked Map
 
+> **Superseded 2026-08-06: `src/beta/` was deleted** (see
+> `docs/architecture/PROJECT_SURFACES.md`'s "Beta retired, absorbed into
+> Raw"). This document is a historical snapshot of the Studio/Beta split as
+> it stood 2026-07-16 — kept because the shared-data-layer analysis below
+> (§1) still describes `src/project/` accurately for Studio and Raw today,
+> and the "implications for consolidation" reasoning (§4) is exactly what
+> played out. Every claim naming `src/beta/*` specifically now describes
+> deleted code; do not treat it as current.
+
 > Pure-code analysis (no AI/agent docs read). Generated from import graph + file inspection on branch `dev`.
 > **Corrected 2026-07-16**: the original version of this doc (see git history) claimed 7 files
 > under `src/beta/{state,services,hooks,import}/` were still "1-line re-export shims, safe to

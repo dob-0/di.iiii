@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react'
+import LoadingScreen from './LoadingScreen.jsx'
+import { isPreviewRequest } from '../utils/previewMode.js'
 
 export default function EditorOverlays({
     isUiVisible,
@@ -16,8 +18,16 @@ export default function EditorOverlays({
     const isDockedStatusPanel = typeof statusPanelClassName === 'string' && statusPanelClassName.includes('status-panel-docked')
     const showExpandedStatusRows = isDockedStatusPanel || isStatusExpanded
     const shouldRenderStatusPanel = isUiVisible && shouldShowStatusPanel
+    // Hiding the editor UI is what SURFACES this cluster, so a thumbnail — which
+    // has no UI by definition — was the one place it always showed. `exit-xr`
+    // stays: it is the only way out of a session, and offering no way out is
+    // worse than a button in a card nobody will ever be in XR inside.
+    const [isPreview] = useState(() => isPreviewRequest())
+    const previewSafeKeys = isPreview
+        ? ['exit-xr']
+        : ['enter-vr', 'enter-ar', 'exit-xr', 'interaction-mode']
     const hiddenXrButtons = !isUiVisible && Array.isArray(hiddenUiButtons)
-        ? hiddenUiButtons.filter((button) => ['enter-vr', 'enter-ar', 'exit-xr', 'interaction-mode'].includes(button.key))
+        ? hiddenUiButtons.filter((button) => previewSafeKeys.includes(button.key))
         : []
 
     useEffect(() => {
@@ -28,14 +38,12 @@ export default function EditorOverlays({
 
     return (
         <>
-            {isLoading && (
-                <div className="loading-overlay">
-                    <div className="loading-panel">
-                        <div className="loading-spinner" aria-hidden="true" />
-                        <p>Loading scene...</p>
-                    </div>
-                </div>
-            )}
+            {/* Same black-and-a-spinner as every other wait in the app. The
+                raised panel and the "Loading scene..." caption are gone: this
+                sits over the editor for a second or two and a bordered card
+                announcing itself was the loudest thing on screen for the whole
+                time it was up. */}
+            {isLoading && <LoadingScreen label="Loading" detail="Preparing the scene" />}
 
             {isFileDragActive && (
                 <div className="drop-overlay">

@@ -10,6 +10,16 @@ const XR_EMULATE_STUB = path.resolve(ROOT_DIR, 'src/xr/emulateStub.js')
 const DEV_PROXY_API_TARGET = (process.env.VITE_PROXY_API_TARGET || 'http://localhost:4000').trim()
 const APP_PACKAGE = JSON.parse(fs.readFileSync(path.resolve(ROOT_DIR, 'package.json'), 'utf8'))
 
+// Headset-reachable HTTPS, opt-in. Guarded on the files existing as well as the
+// flag so a stale env var cannot crash `npm run dev` with ENOENT — the failure
+// mode would be a dev server that refuses to start for a reason nowhere near
+// where you would look.
+const XR_KEY_PATH = path.resolve(ROOT_DIR, '.dev-certs/dev.key')
+const XR_CERT_PATH = path.resolve(ROOT_DIR, '.dev-certs/dev.crt')
+const DEV_XR_HTTPS = process.env.DEV_XR_HTTPS === '1'
+    && fs.existsSync(XR_KEY_PATH)
+    && fs.existsSync(XR_CERT_PATH)
+
 const readGitValue = (args) => {
     try {
         return execSync(`git ${args}`, {
@@ -46,6 +56,24 @@ const restartOnPublicChangePlugin = () => {
     }
 }
 
+/**
+ * Publish the install scripts as part of the site, so `curl … /get | sh` serves
+ * the same file that lives in the repo root. Copying them into public/ instead
+ * would mean two copies of a script people paste into a shell, and they would
+ * drift. nginx.conf maps /get -> /get.sh.
+ */
+const emitInstallScriptsPlugin = () => ({
+    name: 'emit-install-scripts',
+    apply: 'build',
+    generateBundle() {
+        for (const [source, fileName] of [['install.sh', 'get.sh'], ['install.ps1', 'get.ps1']]) {
+            const full = path.resolve(ROOT_DIR, source)
+            if (!fs.existsSync(full)) continue
+            this.emitFile({ type: 'asset', fileName, source: fs.readFileSync(full, 'utf8') })
+        }
+    }
+})
+
 const stubXrEmulatorPlugin = () => ({
     name: 'stub-xr-emulator',
     enforce: 'pre',
@@ -63,6 +91,93 @@ const stubXrEmulatorPlugin = () => ({
     }
 })
 
+// Let the algovrithm director panel write its edits back into
+// src/algoVrithm/sequences/index.js, which is that space's source of truth.
+//
+// The panel has always been a cutting room with no save: it edits a draft, the
+// piece renders from the draft, and the author copies formatted source back
+// into the file by hand. That was fine while the edit list was short and it is
+// not fine now — the array carries a couple of hundred lines of reasoning about
+// why each number is what it is, so the generated-source route means choosing
+// between saving your edits and keeping the notes.
+//
+// So this writes IN PLACE, via patchEditListSource: fields that changed are
+// rewritten, every other byte in the file is left alone. See that module for
+// why it compares values rather than regenerating text.
+//
+// DEV ONLY, and structurally so rather than by a runtime check — `apply:
+// 'serve'` means the plugin is not part of a production build at all, so there
+// is no endpoint to reach in anything that ships.
+//
+// The director became a general tool in 2026-08-05 and can now edit more than
+// one piece, so the request names WHICH piece. It still never names a path:
+// the browser sends an id, the id is looked up in this table, and an id that
+// is not in it is refused. Accepting a path from the request instead would
+// turn the dev server into an arbitrary file write, which is exactly what the
+// original single-path version was careful to avoid — adding pieces must not
+// quietly give that up.
+const algoVrithmSavePlugin = () => {
+    const EDIT_LISTS = {
+        algovrithm: path.resolve(ROOT_DIR, 'src/algoVrithm/sequences/index.js')
+    }
+
+    return {
+        name: 'algovrithm-save-edit-list',
+        apply: 'serve',
+        configureServer(server) {
+            server.middlewares.use('/__algovrithm/edit-list', (request, response, next) => {
+                if (request.method !== 'POST') return next()
+
+                const reply = (status, body) => {
+                    response.statusCode = status
+                    response.setHeader('Content-Type', 'application/json')
+                    response.end(JSON.stringify(body))
+                }
+
+                let body = ''
+                request.on('data', (chunk) => { body += chunk })
+                request.on('end', async () => {
+                    try {
+                        const { piece, sequences, baseline } = JSON.parse(body)
+                        if (!Array.isArray(sequences)) {
+                            return reply(400, { ok: false, reason: 'no sequences in the request' })
+                        }
+
+                        // Own-property lookup: a piece id of `constructor` or
+                        // `__proto__` would otherwise resolve to something off
+                        // Object.prototype rather than missing.
+                        const editListPath = Object.prototype.hasOwnProperty.call(EDIT_LISTS, piece)
+                            ? EDIT_LISTS[piece]
+                            : null
+                        if (!editListPath) {
+                            return reply(400, { ok: false, reason: `unknown piece ${JSON.stringify(piece)}` })
+                        }
+
+                        // Imported through Vite rather than with a bare import so
+                        // the module resolves the same way it does in the app.
+                        const { patchEditListSource } = await server.ssrLoadModule(
+                            '/raw/director/editListSource.js'
+                        )
+
+                        const source = fs.readFileSync(editListPath, 'utf8')
+                        const result = patchEditListSource(source, sequences, baseline ?? [])
+                        if (!result.ok) return reply(422, result)
+
+                        if (result.source === source) {
+                            return reply(200, { ok: true, changed: false })
+                        }
+
+                        fs.writeFileSync(editListPath, result.source, 'utf8')
+                        return reply(200, { ok: true, changed: true })
+                    } catch (error) {
+                        return reply(500, { ok: false, reason: String(error?.message || error) })
+                    }
+                })
+            })
+        }
+    }
+}
+
 // Resolve a path to auto-open in the browser.
 // Opt in with VITE_OPEN_SPACE (e.g. "main" or your space slug) or VITE_OPEN_PATH (e.g. "/my-space").
 // Without either set, `npm run dev` stays headless — use `npm run dev:browser` to launch one.
@@ -78,6 +193,19 @@ export default {
     root: 'src/',
     publicDir: '../public/',
     envDir: '../',
+    // Keep the dep-optimizer cache in the WORKTREE, not in node_modules.
+    //
+    // Worktrees symlink node_modules back to the main checkout (cheap, no
+    // reinstall), so vite's default `node_modules/.vite` is one shared
+    // directory for every server on this machine. Two dev servers then
+    // re-optimize into each other: the second run rewrites the chunk files
+    // while the first still serves entry modules pointing at the old chunk
+    // names. `@react-three/fiber` resolved to the pre-swap chunk and
+    // `@react-three/xr` to the post-swap one - two live copies of R3F, two
+    // React contexts, and every Canvas died with "R3F: Hooks can only be
+    // used within the Canvas component!" on a page that had not changed.
+    // ROOT_DIR is this file's own directory, so each worktree gets its own.
+    cacheDir: path.resolve(ROOT_DIR, '.vite-cache'),
     define: {
         __APP_VERSION__: JSON.stringify(APP_VERSION),
         __APP_GIT_BRANCH__: JSON.stringify(APP_GIT_BRANCH),
@@ -94,6 +222,12 @@ export default {
         stubXrEmulatorPlugin(),
         // Restart server on static/public file change
         restartOnPublicChangePlugin(),
+
+        // Publish install.sh / install.ps1 as /get.sh and /get.ps1
+        emitInstallScriptsPlugin(),
+
+        // Save from the algovrithm director panel (dev only)
+        algoVrithmSavePlugin(),
 
         // React support
         react(),
@@ -116,6 +250,21 @@ export default {
     server:
     {
         host: true, // Open to local network and display URL
+        // HTTPS, opt-in via `npm run dev:xr`. Only needed to reach the dev
+        // server from a VR HEADSET: WebXR requires a secure context, so a
+        // standalone headset cannot use the plain-http LAN address — WebXR is
+        // switched off there and no Enter VR button can exist. Plain `npm run
+        // dev` is unchanged and stays on http.
+        // See scripts/dev-xr-cert.mjs for why this rather than a tunnel.
+        https: DEV_XR_HTTPS ? { key: fs.readFileSync(XR_KEY_PATH), cert: fs.readFileSync(XR_CERT_PATH) } : undefined,
+        // Vite rejects requests whose Host header it does not recognise, which
+        // a tunnel's hostname is. Needed to reach the dev server from a VR
+        // headset: WebXR requires a secure context, so a headset browser cannot
+        // use the LAN IP over plain http and has to come in over https.
+        //
+        // Scoped to the tunnel domain rather than `true` — allowing any host
+        // re-opens the DNS-rebinding hole this check exists to close.
+        allowedHosts: ['.trycloudflare.com'],
         // Headless by default (`npm run dev`). DEV_BROWSER=1 hands browser-opening to
         // dev-stack.mjs (a wiped Chromium profile) instead; VITE_OPEN_SPACE/VITE_OPEN_PATH
         // opt in to Vite's own auto-open for a plain `npm run dev`.
@@ -256,7 +405,12 @@ export default {
     {
         include: [
             '**/*.{test,spec}.{js,jsx}',
-            '../serverXR/src/**/*.{test,spec}.js'
+            '../serverXR/src/**/*.{test,spec}.js',
+            // Vitest's root is src/, so anything outside it needs naming
+            // explicitly — same reason serverXR is listed above. Without this a
+            // test file under scripts/ is silently never collected, which is
+            // worse than having no test at all: it looks covered and is not.
+            '../scripts/**/*.{test,spec}.{js,mjs}'
         ],
         environment: 'jsdom',
         setupFiles: './setupTests.js',

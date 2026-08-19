@@ -1,0 +1,42 @@
+name: Vendor check — space-sync engine
+
+# Template for linked-space repos (br_id_ge, beyond_form, platform_recordar).
+# Copy into THAT repo at .github/workflows/vendor-check.yml — vendored automatically
+# by `node scripts/space-sync-vendor.mjs --release` in di.iiii, no manual copy needed
+# for repos with a git remote.
+#
+# What it does: fetches di.iiii's real scripts/space-sync.mjs (dev branch, public repo,
+# no token needed) and compares against this repo's vendored copy + minEngine. Fails
+# loudly on ANY mismatch or fetch error — this is the inversion that makes drift
+# detectable at all: di.iiii's own CI only ever has di.iiii checked out, so a check
+# living there is structurally unable to see this repo's copy (space-sync-vendor.mjs
+# is explicitly designed to SKIP, not fail, a repo it can't find on disk). That gap is
+# exactly what let the v5->v6 upgrade sit uncommitted for 15+ hours on 2026-08-06.
+#
+# Runs on every push AND weekly — the real failure mode here is an idle repo nobody
+# pushes to for weeks while di.iiii's engine moves on.
+
+on:
+  push: {}
+  schedule:
+    - cron: '0 6 * * 1' # every Monday
+  workflow_dispatch: {}
+  workflow_call: {} # so this repo's own deploy/sync workflow can gate on it
+
+permissions:
+  contents: read
+
+jobs:
+  vendor-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22'
+
+      - name: Check vendored engine against di.iiii upstream
+        run: node scripts/sync-space-check.mjs

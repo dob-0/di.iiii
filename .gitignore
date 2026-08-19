@@ -1,7 +1,12 @@
 # Node / build output
 node_modules/
+# ...and node_modules as a symlink (git worktrees commonly link it back to the
+# main checkout). The trailing-slash pattern above matches directories only, so
+# a symlink slipped through and got committed once.
+node_modules
 dist/
 .vite/
+.vite-cache/
 .cache/
 coverage/
 tmp/
@@ -37,9 +42,22 @@ CLAUDE.local.md
 docs/checkpoints/
 .cpanel.yml
 scratchpad/
+docs/ai/agent-handoff.md
 
 # Server data
 serverXR/data/
 serverXR/uploads/
 serverXR/.env
 serverXR/.env.local
+
+# verify-surfaces.mjs screenshots + report (local artefact)
+.verify-surfaces/
+# verify-capture.mjs screenshots (local artefact)
+.verify-capture/
+
+# Self-signed certs for `npm run dev:xr` (headset-reachable HTTPS). Machine-
+# specific and regenerated on demand — never commit them.
+.dev-certs/
+
+# di runtime artifacts (built by `npm run di:pack`)
+dist-runtime/

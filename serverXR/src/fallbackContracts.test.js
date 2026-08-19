@@ -14,7 +14,17 @@ import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+// Every test in this file boots a real serverXR process and talks to it over
+// the loopback. Vitest's default 5s per-test budget covers the *machine*, not
+// the behavior under test: with the suite running in parallel (or beside a
+// second suite -- how this was reproduced) a spawn + listen + first request
+// can cross 5s with nothing wrong. Two tests here failed exactly that way at
+// 5074ms and 5095ms. waitForHealth already allows 15s for the boot alone, so
+// the per-test budget has to be larger than that or the health wait can never
+// finish. Hooks get more again: afterEach stops every server it started.
+vi.setConfig({ testTimeout: 25_000, hookTimeout: 40_000 })
 
 const SERVER_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const SERVER_ENTRY = path.join(SERVER_ROOT, 'src/index.js')
@@ -226,6 +236,175 @@ describe('vanity slugs: space + project public handles', () => {
         // coerced to something else by either rejected attempt.
         const meta = await fetch(`${server.baseUrl}/api/spaces/space-two`)
         expect((await meta.json()).space.slug).toBeNull()
+
+        // Slug resolution wins over id in the public /:segment resolver, so a
+        // slug equal to ANOTHER space's id would hijack that space's link.
+        const hijack = await fetch(`${server.baseUrl}/api/spaces/space-two`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug: 'space-one' })
+        })
+        expect(hijack.status).toBe(409)
+
+        // Lane segments are reserved: a space slugged 'raw' or 'seed' would
+        // be shadowed by the Raw lane's single-segment routes.
+        for (const laneSlug of ['raw', 'seed']) {
+            const lane = await fetch(`${server.baseUrl}/api/spaces/space-two`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slug: laneSlug })
+            })
+            expect(lane.status).toBe(400)
+        }
+    })
+
+    it('rejects a reserved word as a new space id, not just as a PATCHed slug', async () => {
+        const server = await startServer()
+
+        // PATCH has rejected these since the slug-hijack fix, but creation did
+        // not — so the same word was still claimable as a space *id*, which
+        // resolves on the same URL segment. The space would then be permanently
+        // unreachable (the app route wins) and the word burned for everyone.
+        for (const reserved of ['studio', 'beta', 'raw', 'seed', 'admin', 'wiki', 'p']) {
+            const created = await fetch(`${server.baseUrl}/api/spaces`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label: 'Reserved', slug: reserved })
+            })
+            expect(created.status).toBe(400)
+
+            // and nothing was persisted under that id. Not 404 specifically:
+            // 'p' is below the 3-character slug minimum, so it is rejected on
+            // format before the reserved-word guard is reached and reads 400.
+            // The invariant that matters is that it does not resolve.
+            const probe = await fetch(`${server.baseUrl}/api/spaces/${reserved}`)
+            expect(probe.status).not.toBe(200)
+        }
+
+        // A non-reserved id on the same route still works, so the guard is not
+        // simply rejecting everything.
+        const ok = await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'Fine', slug: 'not-reserved' })
+        })
+        expect(ok.status).toBe(201)
+    })
+
+    it('github-link will not bind a space to a project from a different space', async () => {
+        const server = await startServer()
+
+        // Two spaces, each with its own project.
+        for (const spaceId of ['link-mine', 'link-theirs']) {
+            await fetch(`${server.baseUrl}/api/spaces`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ label: spaceId, slug: spaceId })
+            })
+            const created = await fetch(`${server.baseUrl}/api/spaces/${spaceId}/projects`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title: 'p', slug: `${spaceId}-project` })
+            })
+            expect(created.status).toBe(201)
+        }
+
+        // Owning 'link-mine' says nothing about 'link-theirs'-project. The link
+        // is what syncLinkedSpace later writes into using the server's own
+        // credentials, so accepting a foreign projectId here is a cross-tenant
+        // write primitive.
+        const crossTenant = await fetch(`${server.baseUrl}/api/spaces/link-mine/github-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'o', repo: 'r', projectId: 'link-theirs-project' })
+        })
+        expect(crossTenant.status).toBe(404)
+
+        // And the rejection is about ownership, not about the route being dead:
+        // the space's OWN project gets past this guard.
+        const ownProject = await fetch(`${server.baseUrl}/api/spaces/link-mine/github-link`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ owner: 'o', repo: 'r', projectId: 'link-mine-project' })
+        })
+        expect(ownProject.status).not.toBe(404)
+    })
+
+    it('commons share requires an accountable account — guest and anonymous sessions get 403', async () => {
+        const server = await startServer({
+            requireAuth: true,
+            extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false' }
+        })
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guestState = await guest.json()
+        const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
+        // The guest's own sandbox is writable by them — the identity guard,
+        // not writability, must be what blocks the publish.
+        const sandboxId = guestState.sandboxSpaceId
+        const fakeAssetId = 'a'.repeat(64)
+
+        const guestShare = await fetch(`${server.baseUrl}/api/spaces/${sandboxId}/assets/${fakeAssetId}/share`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Cookie: guestCookie },
+            body: JSON.stringify({ public: true })
+        })
+        expect(guestShare.status).toBe(403)
+        await expect(guestShare.json()).resolves.toMatchObject({ code: 'auth_required' })
+    })
+
+    // Regression guard for audit batch 2, same shape as the commons case above:
+    // `requireSignedInUser` tested only `state.type === 'session'`, but anonymous
+    // guests carry the SAME signed session cookie and resolve to that type on
+    // every request after issuance. So the check meant to gate GitHub sync
+    // management was a no-op for guests, exposing the App's whole installed-repo
+    // list (including collaborators' private repos) to any visitor.
+    it('GitHub sync routes reject an anonymous guest — a session cookie is not an account', async () => {
+        const server = await startServer({
+            requireAuth: true,
+            extraEnv: { AUTH_SESSION_COOKIE_SECURE: 'false' }
+        })
+        const guest = await fetch(`${server.baseUrl}/api/auth/session`)
+        const guestCookie = (guest.headers.get('set-cookie') || '').split(';')[0]
+
+        for (const route of ['/api/github/repos', '/api/github/app']) {
+            const res = await fetch(`${server.baseUrl}${route}`, { headers: { Cookie: guestCookie } })
+            expect(res.status).toBe(403)
+            await expect(res.json()).resolves.toMatchObject({ error: expect.stringMatching(/sign in/i) })
+        }
+    })
+
+    // Regression guard for audit batch 2: a create op with no id was applied
+    // with a SERVER-minted id but broadcast verbatim, so every peer minted a
+    // different one and the documents forked silently until a full reload.
+    it('rejects a create op with no id instead of persisting a batch that cannot converge', async () => {
+        const server = await startServer()
+        await fetch(`${server.baseUrl}/api/spaces/main/projects`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title: 'Op Guard' })
+        })
+
+        const res = await fetch(`${server.baseUrl}/api/projects/op-guard/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [{ type: 'createEntity', payload: { entity: { type: 'box' } } }]
+            })
+        })
+        expect(res.status).toBe(400)
+        await expect(res.json()).resolves.toMatchObject({ code: 'op_missing_id' })
+
+        // The same op WITH an id is accepted, so the guard isn't just blanket-rejecting.
+        const ok = await fetch(`${server.baseUrl}/api/projects/op-guard/ops`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                baseVersion: 0,
+                ops: [{ type: 'createEntity', payload: { entity: { id: 'e1', type: 'box' } } }]
+            })
+        })
+        expect(ok.status).toBe(200)
     })
 
     it('scopes project slug uniqueness to the owning space only — the same slug is fine in two different spaces', async () => {

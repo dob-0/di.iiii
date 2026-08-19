@@ -15,7 +15,7 @@ You are the QA/Test Engineer (QA) for di.iiii. Read your role card first: `docs/
 
 **Baseline that must never regress** (invariants, not counts — hardcoded counts in this file
 went stale twice; the suite grows every week):
-- `npm run lint` — 0 errors, 0 warnings
+- `npm run lint` — 0 errors, and **no new warnings** (record the current warning count in CURRENT.md; it must never increase)
 - `npm run test` — all pass; the test count never decreases across a change
 - `npm run test:server-contracts` — all pass; same rule
 
@@ -27,3 +27,7 @@ went stale twice; the suite grows every week):
 ## Done criteria
 
 All three test commands pass. Any new behavior has at minimum: happy path + one edge case covered.
+
+A regression guard must be **observed failing without the fix** — stash the fix, watch it go red, restore. A guard never seen red proves nothing.
+
+For anything user-facing this is still not done: see `docs/ai/verification-charter.md` and hand off to `human-verifier`.

@@ -161,10 +161,16 @@ describe('SpaceHub', () => {
             render(<SpaceHub />)
 
             await screen.findByText('showroom')
-            const previewFrame = screen.getByText('showroom')
+            // The iframe is two settles behind the card: the IntersectionObserver
+            // callback sets `visible`, and only the effect that runs after that
+            // render asks requestPreviewBoot for a slot and sets `booted`. A
+            // synchronous query here wins that race on an idle machine and loses
+            // it under load -- which is exactly how this test flaked.
+            const frameIn = (spaceId) => screen.getByText(spaceId)
                 .closest('.ssh-space-card')
                 .querySelector('.ssh-card-preview iframe')
-            expect(previewFrame).not.toBeNull()
+            await waitFor(() => expect(frameIn('showroom')).not.toBeNull())
+            const previewFrame = frameIn('showroom')
             expect(previewFrame.getAttribute('src')).toBe('/showroom?preview=1')
             expect(previewFrame.getAttribute('tabindex')).toBe('-1')
             // desktop virtual viewport, scaled down to the card by transform
@@ -200,8 +206,10 @@ describe('SpaceHub', () => {
             const framesIn = (spaceId) => screen.getByText(spaceId)
                 .closest('.ssh-space-card')
                 .querySelector('.ssh-card-preview iframe')
-            // only the first two boot; the third waits for a free slot
-            expect(framesIn('one')).not.toBeNull()
+            // only the first two boot; the third waits for a free slot. Wait for
+            // the boot to settle first -- see the sibling test above for why a
+            // synchronous read here is a race, not an assertion.
+            await waitFor(() => expect(framesIn('one')).not.toBeNull())
             expect(framesIn('two')).not.toBeNull()
             expect(framesIn('three')).toBeNull()
 

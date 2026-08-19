@@ -24,7 +24,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -75,11 +75,33 @@ jobs:
       - name: Check for silent hardcoded fallback patterns
         run: npm run check:fallback-patterns
 
+      # Guards the production white-screen/TDZ class: a package that imports
+      # three but sits outside the three-vendor manualChunks group is invisible
+      # in dev and fatal in the built bundle.
+      - name: Check three-vendor chunk allowlist
+        run: npm run check:three-vendor
+
+      # docs:ai:check diffs CURRENT.md against origin/dev to enforce that only
+      # `npm run land` writes it (see docs/ai/sessions/README.md) -- needs dev's
+      # history reachable, which the default shallow checkout doesn't have on a
+      # pull_request run. Cheap (depth 50, not full history); the check itself
+      # degrades to a no-op if this fetch fails, same shallow-guard shape as its
+      # existing freshness check.
+      - name: Fetch base ref for docs checks
+        if: github.event_name == 'pull_request'
+        run: git fetch --no-tags --depth=50 origin ${{ github.base_ref }}
+
       - name: Check AI docs
         run: npm run docs:ai:check
 
       - name: Check wiki / user-facing docs
         run: npm run docs:wiki:check
+
+      # The node-anatomy manifest points the "what is it made of" sheet at real
+      # line ranges; an edit that moves them without a re-sync would have the
+      # sheet quoting the wrong lines. File-reads only — shallow-clone safe.
+      - name: Check node anatomy manifest
+        run: npm run check:node-anatomy
 
   # Behavioral browser checks (input-device contracts + responsive sweep) —
   # shared with the publish workflow, which gates deploys on the same suite.

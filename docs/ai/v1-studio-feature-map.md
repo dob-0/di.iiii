@@ -39,7 +39,7 @@ Transform gizmo (translate/rotate/scale), single + multi-select, orbit camera, g
 | Local save/load | Studio is cloud-native; server is source of truth |
 | Space creation from editor | Handled via admin/CLI, not in-editor |
 | `window.prompt()` / `alert()` dialogs | Studio uses inline UI for everything — never copy |
-| Offline/local mode | Deferred; no offline requirement yet |
+| Offline/local mode | Shipped as the `di` CLI (2026-08): a local install runs the whole platform offline — see `docs/deploy/DI_CLI.md`. Offline is a supported deployment, not a deferred idea |
 
 ---
 

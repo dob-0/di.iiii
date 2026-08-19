@@ -40,13 +40,23 @@ export function useDriveImport({ importByUrl, importBySelection } = {}) {
     const [selected, setSelected] = useState(() => new Set())
     const [listing, setListing] = useState(false)
 
+    // The status fetch is kicked off from a mount effect and outlives the
+    // component when the surface closes (or a test tears down) mid-flight —
+    // setState then runs against a dead tree, which surfaces as an unhandled
+    // "window is not defined" and fails the whole vitest run.
+    const alive = useRef(true)
+    useEffect(() => {
+        alive.current = true
+        return () => { alive.current = false }
+    }, [])
+
     const refreshStatus = async () => {
         try {
             const next = await getDriveStatus()
-            setStatus(next)
+            if (alive.current) setStatus(next)
             return next
         } catch {
-            setStatus({ available: false, connected: false })
+            if (alive.current) setStatus({ available: false, connected: false })
             return null
         }
     }

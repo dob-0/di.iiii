@@ -1,16 +1,64 @@
-import { Box, Button, CircularProgress, Divider, Stack, TextField, Typography } from '@mui/material'
+import { Box, Button, CircularProgress, Divider, Link, Stack, TextField, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import useAuthSession from '../hooks/useAuthSession.js'
 import useSpacePublicFlag from '../hooks/useSpacePublicFlag.js'
 import { getApiAuthProviders, getOAuthUrl, hasServerApi } from '../services/apiClient.js'
 import { redeemSpaceInvite } from '../services/serverSpaces.js'
 import { appNavigate } from '../utils/appNavigate.js'
-import { buildAppSpacePath } from '../utils/spaceRouting.js'
+import { buildAppSpacePath, buildWikiPath } from '../utils/spaceRouting.js'
 import AccountButton from './AccountButton.jsx'
+import { OUT_OF_SCOPE_EXPLAIN, OUT_OF_SCOPE_REDIRECT } from './authGateScope.js'
+import LoadingScreen from './LoadingScreen.jsx'
 
 const readInviteTokenFromUrl = () => {
     if (typeof window === 'undefined') return null
     try { return new URLSearchParams(window.location.search).get('invite') || null } catch { return null }
+}
+
+// The one pair of OAuth buttons, shared by the sign-in card and the
+// out-of-scope editor card — same handlers, same styling, one source.
+const ProviderSignInButtons = ({ providers }) => {
+    if (!providers?.github && !providers?.google) return null
+    return (
+        <>
+            {providers.github && (
+                <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={() => { window.location.href = getOAuthUrl('github') }}
+                    sx={{
+                        textTransform: 'none',
+                        justifyContent: 'flex-start',
+                        gap: 1,
+                        borderColor: 'var(--ui-border)',
+                        color: 'var(--ui-text-primary)',
+                        '&:hover': { borderColor: 'var(--ui-accent)' }
+                    }}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" /></svg>
+                    Continue with GitHub
+                </Button>
+            )}
+            {providers.google && (
+                <Button
+                    fullWidth
+                    variant="outlined"
+                    onClick={() => { window.location.href = getOAuthUrl('google') }}
+                    sx={{
+                        textTransform: 'none',
+                        justifyContent: 'flex-start',
+                        gap: 1,
+                        borderColor: 'var(--ui-border)',
+                        color: 'var(--ui-text-primary)',
+                        '&:hover': { borderColor: 'var(--ui-accent)' }
+                    }}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
+                    Continue with Google
+                </Button>
+            )}
+        </>
+    )
 }
 
 const stripInviteFromUrl = () => {
@@ -21,7 +69,12 @@ const stripInviteFromUrl = () => {
     } catch { /* cosmetic — the param only matters on first load */ }
 }
 
-export default function AuthGate({ children, requiredSpaceId = null, showAccountButton = true }) {
+export default function AuthGate({
+    children,
+    requiredSpaceId = null,
+    showAccountButton = true,
+    outOfScopeBehavior = OUT_OF_SCOPE_REDIRECT
+}) {
     const authSession = useAuthSession()
     const { requireAuth, authenticated, loading, error, refresh, login } = authSession
     const [token, setToken] = useState('')
@@ -46,7 +99,7 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
         && Array.isArray(sessionSpaces)
         && !sessionSpaces.includes(requiredSpaceId)
     )
-    const { isPublic: liveIsPublic, loading: liveLoading } = useSpacePublicFlag(outOfScope ? requiredSpaceId : null)
+    const { isPublic: liveIsPublic, exists: liveExists, loading: liveLoading } = useSpacePublicFlag(outOfScope ? requiredSpaceId : null)
     const invitePending = inviteStatus === 'pending'
 
     useEffect(() => {
@@ -77,20 +130,22 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
         return () => { cancelled = true }
     }, [inviteToken, inviteStatus, authenticated, outOfScope, refresh])
 
+    const explainOutOfScope = outOfScope && liveIsPublic && !invitePending
+        && outOfScopeBehavior === OUT_OF_SCOPE_EXPLAIN
+
     useEffect(() => {
         // An unredeemed invite wins over the public-view redirect: an invite to
         // a public space still grants scope (e.g. to edit), so let it resolve.
-        if (outOfScope && liveIsPublic && !invitePending) {
+        if (outOfScope && liveIsPublic && !invitePending && !explainOutOfScope) {
             appNavigate(buildAppSpacePath(requiredSpaceId), { replace: true })
         }
-    }, [outOfScope, liveIsPublic, requiredSpaceId, invitePending])
+    }, [outOfScope, liveIsPublic, requiredSpaceId, invitePending, explainOutOfScope])
 
+    // The session resolving. Sat on a transparent background before, so it
+    // inherited whatever was underneath and looked like a different app on
+    // every surface — see LoadingScreen.jsx.
     if (loading) {
-        return (
-            <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CircularProgress size={28} sx={{ color: 'var(--ui-accent)' }} />
-            </Box>
-        )
+        return <LoadingScreen label="Loading" detail="Checking your session" />
     }
 
     // Error screen must come before the requireAuth check: when the backend is
@@ -98,24 +153,33 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
     // app render while every API call fails, producing a cascade of 100+ errors.
     if (error && hasServerApi) {
         return (
-            <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
-                <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
-                    <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
+            // Black like the loading screen, because it is the same moment
+            // seen from the other side — you were waiting, and now you are not.
+            // Not wordless though: a spinner says "keep waiting", and this is
+            // the state where waiting will never end. It has to say so, and it
+            // has to offer the retry.
+            <div className="loading-screen">
+                <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, alignItems: 'flex-start' }}>
+                    <Typography variant="h6" sx={{ color: '#fff', fontWeight: 700, letterSpacing: '-0.02em' }}>
                         di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
                     </Typography>
-                    <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                    <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.62)' }}>
                         Backend unavailable — {error}
                     </Typography>
                     <Button
                         variant="outlined"
                         size="small"
                         onClick={refresh}
-                        sx={{ textTransform: 'none', borderColor: 'var(--ui-border)', color: 'var(--ui-text-primary)' }}
+                        sx={{
+                            textTransform: 'none',
+                            borderColor: 'rgba(255, 255, 255, 0.24)',
+                            color: 'rgba(255, 255, 255, 0.92)'
+                        }}
                     >
                         Retry
                     </Button>
                 </Stack>
-            </Box>
+            </div>
         )
     }
 
@@ -127,28 +191,102 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
         const { spaces } = authSession
         const inScope = !requiredSpaceId || !Array.isArray(spaces) || spaces.includes(requiredSpaceId)
         if (!inScope) {
-            if (invitePending || liveLoading || liveIsPublic) {
+            // Editor lanes stop here and say why. The redirect below is right for
+            // a visitor following a shared link, but on an editor it fires as a
+            // replace() before anything paints — the surface simply becomes a
+            // different page, and Back cannot undo it. Reuses the same panel as
+            // the access-restricted case rather than introducing new chrome.
+            if (explainOutOfScope) {
                 return (
-                    <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <CircularProgress size={28} sx={{ color: 'var(--ui-accent)' }} />
+                    <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
+                        <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
+                            <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
+                                di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                                Sign in to open the editor for &ldquo;{requiredSpaceId}&rdquo;. Your current
+                                session can view this space, but not edit it.
+                            </Typography>
+                            <ProviderSignInButtons providers={providers} />
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => appNavigate(buildAppSpacePath(requiredSpaceId))}
+                                sx={{ textTransform: 'none', borderColor: 'var(--ui-border)', color: 'var(--ui-text-primary)' }}
+                            >
+                                Open the public view
+                            </Button>
+                            <AccountButton authState={authSession} onLogout={refresh} />
+                        </Stack>
                     </Box>
                 )
             }
+            if (invitePending || liveLoading || liveIsPublic) {
+                return <LoadingScreen label="Loading" detail="Checking access to this space" />
+            }
+            // Two cards, one panel. The space exists but this session can't
+            // enter it → say so and offer the doors that DO open. The space
+            // never existed (a mistyped id, most commonly — the server 404s) →
+            // scope language about it would be nonsense; say nothing lives
+            // there, with the same doors. Neither card lists raw session ids:
+            // "Allowed: open, sandbox-guestfa58…" was a dead end wearing a
+            // stack trace.
             return (
                 <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--ui-bg)' }}>
                     <Stack spacing={2} sx={{ width: '100%', maxWidth: 360, px: 3, py: 4, border: '1px solid var(--ui-border)', borderRadius: 2, background: 'var(--ui-surface)', alignItems: 'flex-start' }}>
                         <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
                             di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
                         </Typography>
-                        <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
-                            Access restricted — your session isn&apos;t scoped to &ldquo;{requiredSpaceId}&rdquo;.
-                            {spaces.length > 0 ? ` Allowed: ${spaces.join(', ')}.` : ' Allowed: no spaces.'}
-                        </Typography>
+                        {liveExists ? (
+                            <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                                Access restricted — your session isn&apos;t scoped to &ldquo;{requiredSpaceId}&rdquo;.
+                                Sign in with an account that has access, or step through one of your own doors.
+                            </Typography>
+                        ) : (
+                            <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                                Nothing lives at &ldquo;{requiredSpaceId}&rdquo; — there is no space with that
+                                address. Check the spelling, or step through one of your own doors.
+                            </Typography>
+                        )}
                         {inviteStatus === 'failed' && (
                             <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
                                 The invite link you followed is invalid or has expired — ask the owner for a fresh one.
                             </Typography>
                         )}
+                        {/* This card is where an invitee actually gets stuck — a
+                            guest session exists, so the sign-in card never
+                            shows. Give the browser-only path a door from here. */}
+                        {inviteToken && (
+                            <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                                <Link href={`${buildWikiPath()}#joining-a-space`} sx={{ color: 'var(--ui-accent)' }}>
+                                    What a collaborator can do
+                                </Link>
+                                {' '}&mdash; how an invite works, and what to ask for.
+                            </Typography>
+                        )}
+                        {/* The doors this session can actually use — named, never
+                            the raw ids. */}
+                        {authSession.openSpaceId && (
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => appNavigate(buildAppSpacePath(authSession.openSpaceId))}
+                                sx={{ textTransform: 'none', borderColor: 'var(--ui-border)', color: 'var(--ui-text-primary)' }}
+                            >
+                                Open Space
+                            </Button>
+                        )}
+                        {authSession.sandboxSpaceId && (
+                            <Button
+                                variant="outlined"
+                                size="small"
+                                onClick={() => appNavigate(buildAppSpacePath(authSession.sandboxSpaceId))}
+                                sx={{ textTransform: 'none', borderColor: 'var(--ui-border)', color: 'var(--ui-text-primary)' }}
+                            >
+                                Your private sandbox
+                            </Button>
+                        )}
+                        <ProviderSignInButtons providers={providers} />
                         <AccountButton authState={authSession} onLogout={refresh} />
                     </Stack>
                 </Box>
@@ -202,54 +340,31 @@ export default function AuthGate({ children, requiredSpaceId = null, showAccount
                 <Typography variant="h6" sx={{ color: 'var(--ui-text-primary)', fontWeight: 700, letterSpacing: '-0.02em' }}>
                     di<span style={{ color: 'var(--ui-accent)' }}>.</span>iiii
                 </Typography>
+                {/* An invite link lands here first, and the panel used to say
+                    only "Sign in to continue" — nothing told the person that the
+                    invite was still in hand and would be spent on whichever
+                    account they picked. Say what is being accepted, and give the
+                    browser-only path a door. */}
                 <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
-                    Sign in to continue.
+                    {inviteToken
+                        ? <>You&rsquo;ve been invited to {requiredSpaceId ? <>&ldquo;{requiredSpaceId}&rdquo;</> : 'a space'}. Sign in to accept &mdash; the invite is granted to the account you choose.</>
+                        : 'Sign in to continue.'}
                 </Typography>
+                {inviteToken && (
+                    <Typography variant="body2" sx={{ color: 'var(--ui-text-muted)' }}>
+                        First time here?{' '}
+                        <Link href={`${buildWikiPath()}#joining-a-space`} sx={{ color: 'var(--ui-accent)' }}>
+                            What a collaborator can do
+                        </Link>
+                        {' '}&mdash; nothing to install.
+                    </Typography>
+                )}
                 {providers === null ? (
                     <Box sx={{ display: 'flex', justifyContent: 'center', py: 1 }}>
                         <CircularProgress size={18} sx={{ color: 'var(--ui-accent)' }} />
                     </Box>
                 ) : null}
-                {(providers?.github || providers?.google) ? (
-                    <>
-                        {providers.github && (
-                            <Button
-                                fullWidth
-                                variant="outlined"
-                                onClick={() => { window.location.href = getOAuthUrl('github') }}
-                                sx={{
-                                    textTransform: 'none',
-                                    justifyContent: 'flex-start',
-                                    gap: 1,
-                                    borderColor: 'var(--ui-border)',
-                                    color: 'var(--ui-text-primary)',
-                                    '&:hover': { borderColor: 'var(--ui-accent)' }
-                                }}
-                            >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" /></svg>
-                                Continue with GitHub
-                            </Button>
-                        )}
-                        {providers.google && (
-                            <Button
-                                fullWidth
-                                variant="outlined"
-                                onClick={() => { window.location.href = getOAuthUrl('google') }}
-                                sx={{
-                                    textTransform: 'none',
-                                    justifyContent: 'flex-start',
-                                    gap: 1,
-                                    borderColor: 'var(--ui-border)',
-                                    color: 'var(--ui-text-primary)',
-                                    '&:hover': { borderColor: 'var(--ui-accent)' }
-                                }}
-                            >
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" /><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" /><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" /><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" /></svg>
-                                Continue with Google
-                            </Button>
-                        )}
-                    </>
-                ) : null}
+                <ProviderSignInButtons providers={providers} />
                 {(showToken || (providers !== null && !providers.github && !providers.google)) ? (
                     <>
                         {(providers?.github || providers?.google) ? (

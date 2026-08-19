@@ -3,15 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- viewport-fit=cover is what makes env(safe-area-inset-*) resolve to real
+         values. Without it every inset is 0, which silently neutered Studio's
+         existing studio-mobile.css safe-area rules on notched phones. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>di.iiii — browser-native XR authoring</title>
     <meta name="description" content="di.iiii is a browser-native platform for building and publishing spatial XR experiences — 3D scenes, node-driven behaviors, and AR/VR spaces — without leaving the web.">
     <meta name="theme-color" content="#000000">
+
+    <link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/jetbrains-mono-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
 
     <link rel="icon" type="image/png" sizes="16x16" href="/brand/favicon-16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/brand/favicon-32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/brand/apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/brand/icon-512.png" />
+
+    <link rel="canonical" href="https://di-studio.xyz/">
 
     <meta property="og:type" content="website">
     <meta property="og:title" content="di.iiii — browser-native XR authoring">

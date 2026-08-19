@@ -383,4 +383,50 @@ describe('useLiveSync', () => {
         expect(result.current.sceneStreamError).toBe('Scene event stream is reconnecting.')
         expect(result.current.isSceneStreamConnected).toBe(false)
     })
+
+    // Regression test for audit batch 2: a non-409 flush failure used to
+    // console.warn and break with no retry timer, so a transient POST failure
+    // left the edit visible locally, never persisted, and gone on reload.
+    it('retries a failed op flush instead of dropping the edit', async () => {
+        let attempts = 0
+        const sceneVersionRef = { current: 0 }
+        const submitSceneOps = vi.fn().mockImplementation(async (_spaceId, _baseVersion, ops) => {
+            attempts += 1
+            if (attempts === 1) throw new Error('Network error')
+            return { newVersion: sceneVersionRef.current + ops.length, ops }
+        })
+        const baseProps = createBaseProps({ submitSceneOps, sceneVersionRef })
+
+        const { result } = renderHook(() => {
+            const [sceneSnapshot, setSceneSnapshot] = useState(baseProps.sceneSnapshot)
+            const sync = useLiveSync({ ...baseProps, sceneSnapshot })
+            return { sync, setSceneSnapshot }
+        })
+
+        act(() => {
+            result.current.setSceneSnapshot(createScene({
+                objects: [{
+                    id: 'box-1',
+                    type: 'box',
+                    position: [0, 0, 0],
+                    rotation: [0, 0, 0],
+                    scale: [1, 1, 1]
+                }]
+            }))
+        })
+
+        await waitFor(() => {
+            expect(result.current.sync.sceneFlushError).toBe('Network error')
+        })
+
+        // The automatic retry re-sends the same ops and clears the error.
+        await waitFor(() => {
+            expect(submitSceneOps).toHaveBeenCalledTimes(2)
+        }, { timeout: 8000 })
+        expect(submitSceneOps.mock.calls[1][2]).toHaveLength(1)
+        expect(submitSceneOps.mock.calls[1][2][0]).toMatchObject({ type: 'addObject' })
+        await waitFor(() => {
+            expect(result.current.sync.sceneFlushError).toBeNull()
+        })
+    }, 12000)
 })

@@ -8,7 +8,7 @@
 ## Start Here
 
 - main authoring lane: `Studio`
-- experimental node-first lane: `Beta`
+- experimental node-first lane: `Raw`
 - compatibility lane: `V1`
 - backend authority: `serverXR`
 - public unit: `space`
@@ -154,9 +154,12 @@ Useful local routes:
 
 ## Contributing
 
-New contributor or AI agent joining the project? Start with [ONBOARDING.md](ONBOARDING.md) — it covers prerequisites, fork + clone, local env setup, `npm run dev`, and setting up Claude Code with the project's checked-in AI workflow (don't start a fresh one — see ONBOARDING §8).
+There are two doors, and most people only need the first:
 
-Default contribution model is fork-based:
+- **Collaborating on a space** — you were invited to build, not to run the platform. Nothing to install: [di-studio.xyz/wiki#joining-a-space](https://di-studio.xyz/wiki#joining-a-space) is the whole path, from the invite link to your first saved edit.
+- **Working on the code** — clone, run, and change the platform itself. Start with [ONBOARDING.md](ONBOARDING.md): prerequisites, fork + clone, local env setup, `npm run dev`, and setting up Claude Code with the project's checked-in AI workflow (don't start a fresh one — see ONBOARDING §8).
+
+The code path is fork-based:
 
 1. Fork `dob-0/di.iiii`, clone your fork, work there freely
 2. Validate before sharing: `npm run lint && npm run build && npm run test`

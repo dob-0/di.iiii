@@ -9,8 +9,7 @@ This repo currently behaves like one platform with multiple editor generations r
 | `Public Space View` | `/<space>` and `/main` | Active public surface | Pure viewer when the space has a live published project |
 | `V1 Legacy` | `/<space>` and `/main` | Fallback/history lane | Legacy editor fallback when a space does not have a live published project |
 | `Admin/Ops` | `/admin?space=<id>` | Active | Operator/debug/status route |
-| `V2 Beta` | `/<space>/beta` and `/beta` | Experimental v2 lane | Project workflow used for active experiments without replacing Studio |
-| `Seed` | `/<space>/seed` and `/seed` | Experimental lane, forked from Beta (2026-07-19) | Free-form node nesting (no singletons), universal per-node code panel — see `docs/architecture/RECURSIVE_NODE_CORE.md` |
+| `Raw` | `/<space>/raw` and `/raw` | Experimental lane (absorbed Beta's role 2026-08-06) | Free-form node nesting (no singletons), universal per-node code panel — see `docs/architecture/RECURSIVE_NODE_CORE.md` |
 | `Studio` | `/<space>/studio` and `/studio` | Stable main authoring workspace | Space-scoped project workflow |
 | `WCC` | `/wcc` and `/wcc/scene` | Active, linked-space exhibition | Landing page + 3D gallery for the "Women Creating Change" exhibition |
 | `serverXR` | `/serverXR` | Required backend | Spaces, projects, assets, ops, SSE, presence |
@@ -28,16 +27,13 @@ This repo currently behaves like one platform with multiple editor generations r
 - `src/hooks/`
   - V1/editor orchestration, sync, panels, and route behavior
 - `src/project/`
-  - canonical shared project model used by Beta and Studio
+  - canonical shared project model used by Raw and Studio
   - shared document, schema, sync, presence, and asset behavior should live here
   - includes the public project viewer used by live space routes
-- `src/beta/`
-  - Beta-specific routes and UI
+- `src/raw/`
+  - Raw-specific routes and UI — the sole experimental lane (Beta retired 2026-08-06)
   - experimental workspace attached to a space route
   - project logic here should be treated as wrappers over shared modules, not the long-term home
-- `src/seed/`
-  - Seed-specific routes and UI — a fork of `src/beta/` (2026-07-19), same ownership rules apply
-  - experimental workspace attached to a space route, kept independent of Beta (no shared components between the two lanes, each is a full fork)
 - `src/studio/`
   - Studio-specific routes and UI
   - stable main authoring surface attached to a space route
@@ -77,7 +73,7 @@ These source labels are currently meaningful:
 | Source | Meaning |
 | --- | --- |
 | `project` | neutral/default project metadata |
-| `beta-v2` | Beta-created or Beta-owned project |
+| `beta-v2` | historical — Beta-created project, from before Beta was retired 2026-08-06; existing tagged projects keep the label as provenance, nothing creates new ones |
 | `studio-v3` | Studio-created project |
 | `legacy-import` | generic legacy import data before a surface retags it |
 | `legacy-import-studio` | Studio import created from a V1 scene |
@@ -87,25 +83,43 @@ These source labels are currently meaningful:
 - let `/<space>` act as the public viewer route for the live published project
 - let Studio choose which project is live for each space
 - keep `V1` stable as the fallback/history editor while Studio owns the main authoring role
-- keep `Beta` as the active experimental lane
 - move shared project logic into `src/project/`
 - keep route purpose clearer than implementation history
-- keep Beta scoped under spaces instead of treating it like a separate product world
 - keep Studio scoped under spaces instead of treating it like a separate product world
-- keep `Seed` scoped under spaces the same way — no special-casing beyond what Beta already gets
+- keep `Raw` scoped under spaces the same way
 
-### On forking a new lane from Beta (Seed, 2026-07-19)
+### Beta retired, absorbed into Raw (2026-08-06)
+
+Raw was forked from Beta on 2026-07-19 (see below) with the question of
+whether it would absorb Beta, stay permanently parallel, or itself get
+superseded left explicitly open. That question is now resolved: Beta and Raw
+had diverged into a verbatim fork plus three behaviors (free nesting, an
+active-marker mechanism, scope-filtered edges) — a duplicate, not a genuine
+alternative — while Beta itself was already effectively unreachable (no
+landing link, no route-bundle entry, one dropdown in the legacy V1 spaces
+panel). `src/beta/` is deleted; Raw is the one node-first lane. Studio's
+read-only graph/world previews (`StudioGraphSurface.jsx`, `StudioWorldSurface.jsx`,
+formerly wrapping `BetaGraphSurface`/`BetaViewport`) now wrap Raw's
+`RawGraphSurface`/`RawViewport` instead — the only place Studio genuinely
+depended on Beta's code rather than just linking to it.
+
+Longer-term: Studio itself is being drawn into the node model rather than
+staying a fourth parallel surface — see `feat/raw-studio-node`, which adds a
+`studio` container node type (interior = Outliner/Scene/Inspector) that a
+user enters like any other node. That does not retire Studio-the-lane yet;
+`entities[]` and `nodes[]` remain two separate document models, and
+reconciling them is a separate, larger decision.
+
+### On forking a new lane from Beta (Raw, 2026-07-19)
 
 Before this, no lane had ever been forked from another lane — each existing
 lane (V1, Beta, Studio) was built independently, and no doc stated a policy
 for how an experimental lane graduates, gets superseded, or is retired (the
 closest prior mention, an unresolved "define which Beta features graduate
 into Studio" bullet, lives only in the archived `PROJECT_AUDIT_2026-04-17.md`
-and was never acted on). Seed is the first instance of this pattern: fork the
+and was never acted on). Raw is the first instance of this pattern: fork the
 whole lane, diverge only where the new lane's actual behavior differs (see
-`docs/architecture/RECURSIVE_NODE_CORE.md`'s "The `seed` lane" section for
+`docs/architecture/RECURSIVE_NODE_CORE.md`'s "The `raw` lane" section for
 exactly what changed), and let both lanes keep running side by side rather
-than committing up front to "Seed replaces Beta." Whether Seed eventually
-absorbs Beta, stays permanently parallel, or itself gets superseded by a
-later fork is an open product decision, not a foregone conclusion — update
-this section when that's decided.
+than committing up front to "Raw replaces Beta." See "Beta retired, absorbed
+into Raw" above for how that question was eventually resolved.

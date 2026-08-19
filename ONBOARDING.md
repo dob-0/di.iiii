@@ -5,6 +5,11 @@ run it locally, and start contributing the same way the rest of the team does.
 Follow it top to bottom. Tested on Windows 11 + Node 24; notes for macOS/Linux
 inline.
 
+> **Wrong door?** If you were invited to *collaborate on a space* — build scenes,
+> upload work, edit projects — you need none of this. That path is a browser tab
+> and nothing else: [di-studio.xyz/wiki#joining-a-space](https://di-studio.xyz/wiki#joining-a-space).
+> This page is for running and changing the platform itself.
+
 > TL;DR for the impatient: install prerequisites → fork & clone → `npm install`
 > (root **and** `serverXR`) → create `serverXR/.env` → `npm run dev` → open
 > `http://localhost:5173/main`. Using Claude Code? Don't skip §8 — the project

@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /preferences
+
+Sitemap: https://di-studio.xyz/sitemap.xml

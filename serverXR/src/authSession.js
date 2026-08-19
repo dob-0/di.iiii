@@ -36,6 +36,7 @@ const createAuthSessionValue = ({
     ...(normalizedSession.label ? { label: String(normalizedSession.label).trim() } : {}),
     ...(normalizedSession.role ? { role: String(normalizedSession.role).trim().toLowerCase() } : {}),
     ...(Array.isArray(normalizedSession.spaces) ? { spaces: normalizedSession.spaces } : {}),
+    ...(Number.isFinite(normalizedSession.tokenVersion) ? { tokenVersion: normalizedSession.tokenVersion } : {}),
     ...(normalizedSession.isUnrestricted ? { isUnrestricted: true } : {})
   })).toString('base64url')
   return {
@@ -46,7 +47,8 @@ const createAuthSessionValue = ({
 
 const verifyAuthSessionValue = (value, {
   secret,
-  now = Date.now()
+  now = Date.now(),
+  lookupTokenVersion = null
 } = {}) => {
   if (!value || !secret) {
     return { valid: false, reason: 'missing' }
@@ -64,6 +66,16 @@ const verifyAuthSessionValue = (value, {
     const session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'))
     if (!session?.expiresAt || Number(session.expiresAt) <= now) {
       return { valid: false, reason: 'expired' }
+    }
+    // Revocation: logout increments the account's stored token_version, so a
+    // cookie minted before it (including a copy on another device) no longer
+    // matches. A subject with no stored version — guest, sandbox, API-token
+    // identity — has nothing to compare and stays valid.
+    if (typeof lookupTokenVersion === 'function' && session.subject) {
+      const current = lookupTokenVersion(session.subject)
+      if (Number.isFinite(current) && (Number(session.tokenVersion) || 0) !== current) {
+        return { valid: false, reason: 'revoked' }
+      }
     }
     return { valid: true, session }
   } catch {

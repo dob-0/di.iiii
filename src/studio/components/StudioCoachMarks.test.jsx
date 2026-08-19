@@ -49,10 +49,14 @@ describe('StudioCoachMarks', () => {
         expect(screen.getByText('Tap an object to select it')).toBeTruthy()
     })
 
-    it('renders nothing for signed-in users or once dismissed', () => {
+    it('coaches signed-in users too, but never an unresolved session', () => {
         const { unmount } = render(<StudioCoachMarks {...baseProps} authType="session" />)
-        expect(screen.queryByRole('status')).toBeNull()
+        expect(screen.getByText('Tap an object to select it')).toBeTruthy()
         unmount()
+
+        const unresolved = render(<StudioCoachMarks {...baseProps} authType={null} />)
+        expect(screen.queryByRole('status')).toBeNull()
+        unresolved.unmount()
 
         render(<StudioCoachMarks {...baseProps} />)
         screen.getByLabelText('Dismiss guide').click()

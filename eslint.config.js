@@ -4,6 +4,28 @@ import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import jsxA11y from 'eslint-plugin-jsx-a11y'
 
+// Shared by the Node-side configs (serverXR, scripts, shared/). `try { … } catch {}`
+// is a deliberate idiom here for best-effort cleanup, and `Boolean(x) ? 1 : 0` is how
+// booleans are normalized for SQLite columns — neither is a defect worth failing CI.
+const nodeRules = {
+    'no-unused-vars': ['warn', { args: 'none', ignoreRestSiblings: true }],
+    'no-empty': ['error', { allowEmptyCatch: true }],
+    'no-extra-boolean-cast': 'error'
+}
+
+// vitest runs with `globals: true` (vite.config.js), so specs use these without importing.
+const vitestGlobals = {
+    describe: 'readonly',
+    it: 'readonly',
+    test: 'readonly',
+    expect: 'readonly',
+    vi: 'readonly',
+    beforeAll: 'readonly',
+    beforeEach: 'readonly',
+    afterAll: 'readonly',
+    afterEach: 'readonly'
+}
+
 export default [
     {
         ignores: [
@@ -64,7 +86,9 @@ export default [
         }
     },
     {
+        // serverXR runtime code is CommonJS; its vitest specs are ESM (block below).
         files: ['serverXR/**/*.js'],
+        ignores: ['serverXR/**/*.test.js'],
         languageOptions: {
             ecmaVersion: 'latest',
             sourceType: 'commonjs',
@@ -74,7 +98,50 @@ export default [
             }
         },
         rules: {
-            ...js.configs.recommended.rules
+            ...js.configs.recommended.rules,
+            ...nodeRules
         }
+    },
+    {
+        files: ['serverXR/**/*.test.js'],
+        languageOptions: {
+            ecmaVersion: 'latest',
+            sourceType: 'module',
+            globals: {
+                ...globals.node,
+                ...globals.es2021,
+                ...vitestGlobals
+            }
+        },
+        rules: {
+            ...js.configs.recommended.rules,
+            ...nodeRules
+        }
+    },
+    {
+        // Node tooling: automation scripts and the shared CommonJS schema contracts.
+        // Browser globals are in scope because the verify/check scripts ship
+        // page.evaluate() callbacks that run inside Playwright, not in Node.
+        files: ['scripts/**/*.{js,mjs}', 'shared/**/*.cjs', '*.config.js'],
+        languageOptions: {
+            ecmaVersion: 'latest',
+            sourceType: 'module',
+            globals: {
+                ...globals.node,
+                ...globals.browser,
+                ...globals.es2021,
+                ...vitestGlobals
+            }
+        },
+        rules: {
+            ...js.configs.recommended.rules,
+            ...nodeRules,
+            // NUL is matched deliberately when sanitizing path globs (space-sync.mjs).
+            'no-control-regex': 'error'
+        }
+    },
+    {
+        files: ['shared/**/*.cjs'],
+        languageOptions: { sourceType: 'commonjs' }
     }
 ]

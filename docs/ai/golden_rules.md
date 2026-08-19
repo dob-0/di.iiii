@@ -58,8 +58,8 @@ Hetzner VPS on 2026-07-15 (`docs/deploy/LIVE_DEPLOY.md` — the doc `AGENTS.md` 
 truth"); an agent session afterward still cited the old `publish-cpanel-prebuilt-v2.yml` workflow
 from session memory instead of re-reading that doc. Before citing a deploy workflow name or infra
 topology fact, re-read `docs/deploy/LIVE_DEPLOY.md` rather than recalling it. Before citing a
-model/tool name (e.g. an Ollama tag), verify it still exists (`ollama list` or equivalent) rather
-than trusting cached knowledge of what used to be configured.
+model or tool name, verify it still exists rather than trusting cached knowledge of what used
+to be configured — the local-model lane was documented here for months after it was gone.
 
 ### Run lint and tests after every code change
 ```bash
@@ -163,6 +163,26 @@ Guessing wrong on a destructive or architectural decision costs more than a one-
 
 **Files:** `AGENTS.md`, `docs/ai/workflows.md`, `README.md`
 
+### Restate the core concept in the user's own words and get it confirmed before building
+
+**Rule:** On any open-ended or architectural ask, write back what you believe the core concept *is* — in the requester's vocabulary, not a restatement of their sentence — and get an explicit yes before writing code. This is not "ask if ambiguous": a request can be perfectly clear as English and still leave you holding the wrong mental model.
+
+**Why:** 2026-08-06, the ask was "have the Studio in the graph… like in TouchDesigner where the palette has already-built things and you can build your own." Three readings were live: Studio panels each becoming a node type; one shared document with Studio and Raw as two views onto it; or Raw growing until it replaces Studio. All three are plausible, all three are weeks of divergent work, and the prompt discriminates between none of them. The actual answer was a fourth thing — *one* `studio` palette entry that, when you enter it, reveals the subgraph it is assembled from — i.e. a container node. One round of restating produced it in two sentences. Building first would have produced the wrong architecture confidently.
+
+**How:** Name the concept, name the mechanism you think implements it, and name what it is *not*. Prefer the user's own reference points (they said TouchDesigner, so answer in COMP/palette terms). If you find yourself listing three options in your head, that is the signal to stop and restate — not to pick the safest one and proceed. Pair this with the existing two-question cap: restating is one message, not a loop.
+
+**Files:** n/a (agent behavior). The concrete case: `src/project/nodeRegistry.js`, `src/raw/components/RawEditor.jsx`.
+
+### Every interaction ships a touch path, not just a responsive layout
+
+**Rule:** A surface is not mobile-ready because it reflows. Every action reachable on desktop must have a working path on a phone, designed in the same change that adds the action — never deferred to a later "mobile pass".
+
+**Why:** 2026-08-06 audit of Raw: **you could not connect two nodes on a phone at all.** `RawGraphSurface.jsx` starts a wire on the output dot's `pointerdown`; on touch the browser grants that element *implicit pointer capture*, so `pointerup` is delivered back to the output dot and never to the input dot under the finger — the drop handler could not fire, ever. Port dots were 8×8px against a 44px target. Edge deletion was hover-then-click on a 2px stroke, which touch cannot trigger, and it was the only way to delete an edge. None of this reflows into existence; the CSS was irrelevant. Worse, `RawGraphSurface.test.jsx` stubbed `setPointerCapture` with `vi.fn()`, so the drag tests passed green over exactly the semantics that were broken.
+
+**How:** For each new interaction ask: what fires it with one finger? Use pointer events with explicit `releasePointerCapture` + `document.elementFromPoint` for drag-and-drop between elements — implicit capture makes the naive `pointerup`-on-target pattern a desktop-only illusion. Hit targets ≥44px (a visual dot can stay small; enlarge the hit box). Never make hover the only affordance. Never stub `setPointerCapture` in a test that is meant to prove dragging works.
+
+**Files:** `src/raw/components/RawGraphSurface.jsx`, `src/raw/styles/raw.css`, `scripts/verify-surfaces.mjs`.
+
 ### Enforce a task contract before tool-heavy work
 
 **Rule:** Do not start broad searches or multi-file edits until goal, priority, scope, non-goals, and done criteria are explicit.
@@ -194,7 +214,7 @@ If `git status` shows unstaged edits you didn't make, assume another agent is mi
 
 ### Size every large task against usage limits before starting — and never let a limit brick the process
 
-**Rule:** Before starting any large task (multi-hour, multi-file, or fan-out/multi-agent), size it against Claude usage limits — the 5-hour rolling session window and the weekly cap. If usage state is known (`/usage`, or the user says they're near a limit), factor it in; if unknown, assume mid-window and route to the cheapest adequate model per the existing model-routing rules (Ollama free lane first for analysis/docs/planning). If the task plausibly won't fit the remaining window, split it into checkpointable phases *before* starting — each phase must end in a state safe to stop at: tests pass, work committed locally, nothing half-edited.
+**Rule:** Before starting any large task (multi-hour, multi-file, or fan-out/multi-agent), size it against Claude usage limits — the 5-hour rolling session window and the weekly cap. If usage state is known (`/usage`, or the user says they're near a limit), factor it in; if unknown, assume mid-window and route to the cheapest adequate model per the existing model-routing rules. If the task plausibly won't fit the remaining window, split it into checkpointable phases *before* starting — each phase must end in a state safe to stop at: tests pass, work committed locally, nothing half-edited.
 
 **Why:** A limit hit mid-task with files half-edited, WIP only in chat context, and no resume notes bricks the process: the next window starts cold, re-investigates, and may discard or clobber the unfinished work. Planning against the budget up front costs one minute; recovering from an unplanned cutoff costs a session.
 
@@ -205,7 +225,7 @@ If `git status` shows unstaged edits you didn't make, assume another agent is mi
 4. Update CURRENT.md's Open section with exact resume state: what's done, what's next, which files are mid-flight.
 Resume the next window from CURRENT.md, not from memory.
 
-**Files:** `CURRENT.md` (Open section = resume state), `docs/ai/roles/model-routing.md` (cheapest-adequate-model routing), `scripts/ollama-task.sh` (free lane).
+**Files:** `CURRENT.md` (Open section = resume state), `docs/ai/roles/model-routing.md` (cheapest-adequate-model routing).
 
 ### Valuable perks and conventions get codified the same session they appear — never left only in chat
 
@@ -220,6 +240,33 @@ Resume the next window from CURRENT.md, not from memory.
 ---
 
 ## Core Solutions — Discovered in This Repo
+
+### Verify as a human — desktop and phone — or it is not done
+
+**Rule:** Any change that can alter what a person sees or does is verified in a
+real browser, on desktop **and** on a phone, by looking at it — before it is
+called done. `npm run verify:surfaces`, then open the screenshots.
+
+**Why:** `docs/ai/known-fixes.md` holds 134 defects. 43 are *silent failures*
+(swallowed catch, hardcoded fallback, a 200 carrying the SPA shell instead of
+the asset), 29 are mobile/touch-only, 24 are "renders but is blank, invisible or
+covered". None of these fail a unit test — that is the definition of the class.
+Two shipped examples: the field's cores were built `visible:false` and only
+revealed by a button most visitors never pressed (data loaded, count correct,
+screen empty), and the rite set `body{cursor:none}` with nothing drawn in its
+place, so the mouse simply disappeared. Both were green everywhere.
+
+**How to apply:** `docs/ai/verification-charter.md` is the standard, including
+the device matrix and the two detection techniques that do NOT work here
+(`elementFromPoint` for occlusion; filtering chrome by "positioned AND painted").
+Agents: `human-verifier`, `silent-failure-hunter`, `release-verifier`.
+
+**Trap:** Claude's Chrome extension drives a tab where `document.hidden` is
+true, so Chrome freezes `requestAnimationFrame` and CSS transitions — every
+WebGL surface and animated reveal renders blank whether or not it is broken.
+This produced a false "production is broken" report. Use Playwright for anything
+that animates or renders 3D.
+
 
 Architectural decisions validated through real work. Add to this list when a solution proves itself.
 
@@ -318,6 +365,55 @@ docker build -f serverXR/Dockerfile -t dii-server .
 
 ---
 
+### Every space shows a preview by default, and the owner can always override it
+
+**Rule:** A space card is never blank. Every space gets an automatic preview with no
+action from anyone, and the owner can replace that automatic preview with an image
+they choose — and take it back off again. Automatic is the floor, not the ceiling:
+never ship a space kind whose only route to a preview is "the owner uploads one",
+and never make an uploaded image un-removable.
+
+**Why:** `algovrithm` shipped to production with a blank card while every other space
+had a picture, and the reason was structural rather than a missed step. The card falls
+back in a fixed order — a custom image, else a live miniature of the published project,
+else nothing — and that middle branch needs `isPublic && publishedProjectId`. A CODE
+space has no project document at all (its scene is React, in `src/`), so it can never
+reach the automatic branch and lands on `nothing`. The audit that found it also found
+`open` in the same hole for a different reason: it forwards into a shared jam project
+and so has no `publishedProjectId` of its own either. Two spaces, one missing floor.
+
+The override half is not decoration. The automatic miniature renders the published
+project, which for a timed piece is whatever moment the renderer happens to catch —
+for `algovrithm` that is frequently a black frame, since two of its beats are near-
+black by design. The owner has to be able to say "this frame, not that one", and to
+undo it later without an administrator.
+
+**How:** The order is in `SpaceHub.jsx` and is correct as written — keep it, and keep
+`handleUseLivePreview` (which clears `previewImageAssetId` back to `null`) as the way
+back to automatic. What must be added for any new space kind is a way to REACH the
+automatic branch. For a code space that means a captured frame of the piece itself,
+not a logo and not a placeholder: the card's job is to show what the visitor will get.
+
+Audit it from outside, against the deployed host, rather than trusting the local build —
+a space row can exist on one tier and not the other, which is how this one hid:
+
+```bash
+curl -s https://di-studio.xyz/serverXR/api/spaces | python3 -c "
+import json,sys
+for s in json.load(sys.stdin)['spaces']:
+    auto = s['isPublic'] and bool(s['publishedProjectId'])
+    print(s['id'], 'custom' if s['previewImageAssetId'] else ('auto' if auto else 'BLANK'))"
+```
+
+Anything printing `BLANK` is a bug in this rule, not a space waiting for its owner.
+
+**Files:** `src/studio/components/SpaceHub.jsx` (fallback order, upload, and the
+"use live preview" reset), `src/services/serverSpaces.js` (`getServerSpaceAssetUrl`,
+`uploadServerAsset`), `serverXR/src/routes/spaceRoutes.js` and `serverXR/src/spaceStore.js`
+(`previewImageAssetId`).
+
+---
+
 ## Context / Credit Awareness
 
 When context is running low:
@@ -330,6 +426,22 @@ When context is running low:
 Starting a large task in low context is worse than not starting it. Choose a task that fits.
 
 A good task size for a single agent session: one file split, one bug fix, one infra file, or one small feature completion. The easy wins list in PROGRESS.md is calibrated for this.
+
+---
+
+### Playwright probe scripts stay out of the repo — import by absolute path
+
+**Rule:** One-off browser probes (verification scripts, screenshot checks) live in
+the session scratchpad, never the repo root, and import the repo's Playwright by
+absolute path: `import { chromium } from '/home/nooo/di.iiii/node_modules/playwright/index.mjs'`.
+
+**Why:** a bare `import 'playwright'` only resolves from inside the repo (ESM
+ignores `NODE_PATH`), which is exactly why past sessions left `.detect.mjs`/
+`.fin.mjs` littered in the repo root — the script had to live there to run.
+The absolute import removes that excuse. Also: probe pages that hold SSE/WebSocket
+connections never reach Playwright's `networkidle` — use `domcontentloaded` plus
+an explicit wait, and avoid `page.screenshot()`'s font wait on pages with
+`font-display: swap` (assert `document.fonts.status` instead).
 
 ---
 
@@ -656,3 +768,105 @@ This does **not** fully solve node-to-node label collision (two labels can still
 **How:** `const withLock = createKeyedLock()` once per module; wrap the check-then-write in `await withLock(key, async () => { ...fresh read, compare, write... })`; re-derive "current version" from a fresh read taken *inside* the callback, since anything captured before acquiring the lock may already be stale by the time it runs. Add a defense-in-depth DB-level UNIQUE index on `(scope_id, version)` too (see `serverXR/src/db.js`'s `dedupeAndUniqueOps` migration) so that if this pattern is ever reintroduced somewhere new, it fails loudly (a thrown constraint violation) instead of silently corrupting the op log. When writing the regression test for this shape, use two `fetch()` calls started together via `Promise.all`, not two awaited sequentially — a sequential test cannot distinguish "the lock works" from "there was never a race to begin with."
 
 **Files:** `serverXR/src/asyncLock.js` (the reusable lock), `serverXR/src/routes/spaceRoutes.js` / `projectRoutes.js` (the three fixed call sites), `serverXR/src/routes/inscriptionRoutes.js` (the pre-existing correct precedent), `serverXR/src/db.js` (`dedupeAndUniqueOps`), `serverXR/src/httpContracts.test.js` / `projectContracts.test.js` (the concurrent-`Promise.all` regression tests), `docs/ai/known-fixes.md` (full incident writeup).
+
+### Memory is written at every boundary — including every compaction — or it is not written at all
+
+**Rule:** The durable residue of a session goes into user memory (`~/.claude/projects/-home-nooo/memory/`) at every session boundary *and at every context compaction*, not once at the end. Write what is now **true**, never what you did. Update `MEMORY.md` in the same breath as the file — a memory file with no index line is invisible to the next session, because the index is what actually loads. Rewrite files, never append to them; past ~6 KB a memory has stopped being a fact and become an unread log that drags its whole bulk into context on recall. The full contract is the meta memory `meta_memory_sync.md`.
+
+**Why:** The user reported on 2026-07-30 that memory collection wasn't working and that context kept going missing between sessions. It was true, and the cause was structural rather than a lapse: nothing *drove* memory. The only Stop hooks were `golden-rules-check.sh` (repo rules) and `sync-global-config.sh` (config backup) — neither touched memory, so writing it depended entirely on the model spontaneously deciding to, mid-task. The audit found `MEMORY.md` two days behind files that had been rewritten, `project_br_id_ge.md` grown to 17 KB of append-only paragraphs, and a multi-day di.iiii session (the Seed→Raw rename, the 27/22 node-gating decision) with zero memories written at all. This is the same failure the repo already recognized for golden rules ("capture mid-session, not at the end"), except worse: a golden rule can be reconstructed from `git log`, and a decision the user made in conversation cannot. Compaction is precisely where that context dies, so it is the moment to write, not a moment to survive.
+
+**How:** At every boundary, ask four questions and write only what has a real answer — (1) what did the user decide that the code does not explain → `project_*`; (2) what did the user correct me on, and why → `feedback_*` with **Why:** / **How to apply:**; (3) what name/URL/path did I have to discover → `reference_*`; (4) what state can the next session not re-derive → `project_*` or `CURRENT.md`. If the repo already records it (code structure, past fixes, git history), it does not belong in memory. The Stop hook `un-di/templates/hooks/memory-sync-check.sh` runs globally and reports drift — index staleness, orphans in either direction, oversize files, prolonged silence — but it is non-blocking and cannot write for you; treat its output as a checklist, not a pass.
+
+**Files:** `~/.claude/projects/-home-nooo/memory/meta_memory_sync.md` (the contract), `feedback_memory_recap_protocol.md`, `MEMORY.md` (the index that actually loads), `/home/nooo/un-di/templates/hooks/memory-sync-check.sh` (the Stop hook), `/home/nooo/.claude/settings.json` (where it's wired).
+
+### A field that is only written when something is created is a field that will drift — declare the space, not just its pages
+
+**Rule:** For any repo-linked di.iiii space, the repo declares the space itself in `di-space.space.json` — `label`, visibility, the tier map, and the list of project manifests that are supposed to exist — and `scripts/space-sync.mjs` reconciles those fields on *every* run, not at creation. Per-tier differences (staging's `openInscriptions:false`) are declared in that manifest's `tiers` block, so the intended difference can be told apart from drift; a tier marked `governed:false` (the dev box) is shown by the audit and never enforced. `--all` syncs every declared page in one command, `--audit` reads every tier and exits non-zero on any undeclared difference, and neither the sync nor the audit ever deletes: extras are reported, and removing one stays a deliberate `--prune` a person types.
+
+**Why:** This is the same bug three times, each caught only by accident. v3 fixed the project **slug** — sent in the CREATE POST and nowhere else, so a tier that got its projects any other way had null slugs and answered 404 at the door the landing page linked to, with perfectly synced content behind it. v4 fixed the project **title** — same shape, so `di-space.field.json` said "the field — every crossing, together" while all three tiers went on saying "the field". Then on 2026-08-05 the user opened prod, staging and `localhost:5173` side by side and saw the space *itself* named three different things: `br_id_ge`, `br_id_ge`, and `br_id_ge XR_ Notations:vi.ritual`. The space label was still create-only, and worse, it was taken from whichever *page* manifest ran first — provisioning a fresh tier from `di-space.landing.json` would have named the whole space "the landing — the door". The audit that came out of it immediately found more than the label: the dev tier had null slugs on `rite` and `field`, the old `the field` title, `br-id-ge-needs` missing entirely, and 70 projects the repo does not declare. **The real defect was never any single field — it was that drift could only be discovered by a human with three browser windows open, which only ever checks the surfaces someone happens to look at.**
+
+**How:** Put space-level truth in `di-space.space.json` and page-level truth in `di-space.<page>.json`; never let a page's `label` name the space. Add the field to `SPACE_FIELDS` / `TIER_FIELDS` in the engine so the reconcile, the audit and the docs cannot disagree about what "declared" means. Bump `ENGINE_VERSION`, then `npm run space:sync:release` — one command that writes the engine to every linked repo, bumps their `minEngine` to match, and commits + pushes each (the old two-step "`--write` then remember to commit and push three separate repos" is exactly where the real v5→v6 upgrade stalled uncommitted for 15+ hours on 2026-08-06). Run `--audit` in CI *after* the sync — a sync reporting success is not the same as tiers agreeing — and keep the audit read-only so it is safe to point at the live space. When adding any new create-time field to a space or project, write the reconcile in the same change; the guard that catches this class is asserting the PATCH exists, and it must be seen failing against the previous engine before it counts.
+
+**A checked-out worktree is a runnable copy of every tool in the repo, including the ones that write outside it.** Eight copies of `space-sync-vendor.mjs` existed on one machine on 2026-08-06, two of them next to a stale v4 engine — running `--write` from either would have silently downgraded every linked repo and reported success (it did, once, while testing the fix). Any tool whose job is to write into a DIFFERENT repo must verify it is running from the canonical checkout before it writes anything — see `checkSafeSource` in `space-sync-vendor.mjs` and `docs/ai/space-sync-vendoring.md` for the full guard.
+
+**Files:** `scripts/space-sync.mjs` (the engine: `SPACE_FIELDS`, step 1b, `audit()`), `scripts/space-sync.test.js` (the guards, including `minEngine === ENGINE_VERSION` for di.iiii's own spaces — strict equality, no lag excuse), `scripts/space-sync-vendor.mjs` (the guard + `--release`), `scripts/space-sync-selfcheck.mjs` + `docs/templates/vendor-check.yml` (vendored into each linked repo so drift can fail in a place that can actually see it), `docs/ai/space-sync-vendoring.md` (full reference), `br_id_ge/di-space.space.json` (the first space manifest), `br_id_ge/.github/workflows/sync-space.yml` (`--all` then `--audit`, gated on `vendor-check`), `docs/ai/known-fixes.md`.
+
+**Same shape, one level up — a grant is not a preference, and a half-grant is worse than none.** On 2026-08-05 the identical defect turned up on the platform's own object: `ownerUserId` was written only in the `POST` that creates a space, and read from the *session* making the request. Every repo-linked space is provisioned by an API token, which has no session, so all 8 production spaces were `ownerUserId: null` — and `ownerUserId` was not in the PATCH field list, so there was no route back. The store had supported the update the whole time; no caller could reach it. Consequence: publish, invite, rename and delete all fell through to a platform admin, and one person was the bottleneck for every space in the product. Two things generalise from the fix. First, **ownership is admin-only** — an owner cannot hand their own space away, because a grant that the grantee can re-grant is not a grant. Second, **ownership and reach are two grants and must move together**: assigning `ownerUserId` without adding the space to that account's scope produced an owner who could not open their own space, so the route now does both in one call (scope best-effort, so it can never fail the ownership write). The same audit found `serverSpaces.js` silently dropping `slug` on the way out — Preferences → Manage had an "Edit public link" button that had never done anything, because the server supported the field and the client never sent it. **When you add a field to a route, check the client actually forwards it; a button that posts nothing looks exactly like a button that works.**
+
+### A dev-server endpoint is not a save — if the surface ships, its writes have to ship with it
+
+**Rule:** When an authoring surface is reachable from a deployed build, the thing it writes to must be reachable from a deployed build too. A Vite `configureServer` middleware, a `vite.config.js` plugin with `apply: 'serve'`, an `import.meta.env.DEV` branch — these are correct for writing *source files* and are never a save path for anyone but the person running the dev server. If the panel can be opened on di-studio.xyz, the panel needs somewhere on the server to put an edit.
+
+**Why:** algovrithm's Director shipped exactly this way. It is a full timeline — clips, trims, worlds, lights — reachable from Studio's Spaces list on the live site, and its only "Save to source" POSTed `/__algovrithm/edit-list`, a dev-server middleware that patches `src/algoVrithm/sequences/index.js` in place. On the deployed site the button was there, it was pressable, and it wrote nothing: a collaborator could retime the whole piece and lose it on reload. It failed the way the worst defects fail — no error, no missing control, just work that quietly did not exist afterwards. The hole under it was structural, not specific: a **code space** (one whose scene is React in `src/` rather than a project document) had no server-side home for anything its author tunes, so every knob such a piece grows would land in the same trap.
+
+**How:** Give code spaces a place to keep settings — `GET/PUT /api/spaces/:id/settings`, one small JSON blob beside the scene, namespaced per piece, bounded by size rather than by schema (what the keys mean belongs to the piece; a platform schema would need editing every time a piece grew a knob). Store an **overlay**, not a copy: only the fields a director actually moves, keyed by row id, diffed against what the file declares. A row also carries a Component, a backdrop and paragraphs of argument about why a beat is that length — none of that is data, and a copy would either drop it or freeze it. The file stays the source of truth and the overlay says how this tier differs, so reading the source still tells you what the piece is and clearing the overlay always lands back on it. Resolve the overlay **before** the piece's clock is built, on a deadline, ignoring a late answer: applied afterwards it jumps the playhead mid-beat, and a slow backend must cost frames, not the show. Keep the dev path first when it is there — patching the real source with its comments intact is strictly better than an overlay — and make the button say *which* of the two it just did, because they differ in whether the work survives a deploy.
+
+**Files:** `serverXR/src/routes/spaceRoutes.js` (the settings routes), `src/services/spaceSettings.js`, `src/algoVrithm/timingOverlay.js` (the pure diff/apply), `src/algoVrithm/useSavedTiming.js` (the deadline), `src/algoVrithm/DirectorPanel.jsx` (the fallback and the wording), `docs/ai/known-fixes.md`.
+
+### Working material is not documentation — the public repo is a product, not a desk
+
+**Rule:** `dob-0/di.iiii` is public. Anything produced *while working* that is not part of the product does not go in it: funding applications, grant calendars, budgets and revenue models, named people and what was said to them, unsent drafts, anything with a deadline that is nobody else's business. That material lives in the private `di.iiii-ops` (`promo/`), the same pattern as `br_id_ge-ops`. Anything that helps someone **use, run or contribute to the platform** stays public — code, architecture, deploy runbooks, `known-fixes.md`, `golden_rules.md`.
+
+**Why:** For weeks the public repo carried `docs/promo/` — a grant calendar with amounts, deadlines and contact emails (EMAP, Horizon Europe, ECHOES, Prix Ars, Venice College Immersive, FIVARS), a named warm-contacts table with a `☐ not contacted` tracker, the revenue model and membership pricing, and four written-but-unsent announcements. None of it was a credential, so no secret scan would ever have flagged it, and nothing was broken enough to notice. The cut that matters is not *secret vs not secret* — it is **product vs desk**. A stakeholder list is not dangerous; it is simply not the reader's business, and publishing your negotiating position before you negotiate is a cost you pay silently.
+
+**How:** Cut **by kind, not by file**, so the boundary survives new files nobody has thought of yet. Resist the urge to sweep in infrastructure just because it sounds sensitive: deploy docs, the secret-*rotation* runbook, `/opt/di.iiii`, the VPS IP and the `ssh dii-vps` alias all stayed public — a self-hoster needs them, a public DNS record is not a secret, and moving `known-fixes.md` or `golden_rules.md` would break every agent that is instructed to read them. And be honest about what a move achieves: **`git rm` removes a file from `HEAD` and from nothing else.** Every version stays readable in the public history, so anything that was published must be treated as already seen — a rotation, a re-plan, or nothing, but never a pretence. Erasing for real means rewriting history and force-pushing a public repo, which is a separate, deliberate decision.
+
+**Files:** `di.iiii-ops/README.md` (the boundary, with what did *not* move and why), `docs/ai/known-fixes.md`.
+
+### A rule no build can see is a convention, not a protocol
+
+**Rule:** When you write down a rule that every agent is told to obey, ask in the same breath what would fail if it were broken. If the answer is "a person notices", it is not enforced. The contract in this repo is enforced in two very different ways, and it is worth knowing which half you are standing on: **CI fails** on `lint`, `build`, `test`, `test:server-contracts`, `test:schema-sync`, `check:fallback-patterns`, `check:three-vendor`, `docs:ai:check` (canonical files, generated bridges, scoped `AGENTS.md`, forbidden private hosts, and CURRENT.md's line limit) and `docs:wiki:check` (articles and highlights resolve, no private hosts, and a **freshness gap** — user-facing code changing more than 7 days after the newest wiki article fails the build). **Nothing fails** on a missing `known-fixes.md` row, a missing regression guard, an un-updated `PROGRESS.md`, an idea not parked in `INBOX.md`, or a surface reported as done without being looked at.
+
+**Why:** CURRENT.md opens with "≤50 lines. Read in full." — its own limit, in its own first line, and no check anywhere read it. On 2026-08-06 the file went over three times in one session, each time caught only because somebody ran `wc -l`. The rule had been in AGENTS.md for months and was true in exactly the way a wish is true. The check that now enforces it found the file at 51 lines the moment it was switched on.
+
+**How:** Prefer a check to a paragraph, and make it cheap: the line-limit guard is nine lines inside `check-agent-docs.mjs`. When a rule genuinely cannot be automated — "you have not verified it until you looked at it" — say so explicitly where it is written, so nobody mistakes discipline for a tripwire. And **watch a new check fail before trusting it**: append junk, see the error, revert. A guard you never saw fire proves nothing about the day it matters.
+
+**Files:** `scripts/check-agent-docs.mjs` (the enforced half), `scripts/check-wiki-sync.mjs` (the freshness gap), `.github/workflows/ci.yml` (what actually runs), `AGENTS.md` (where the unenforced half is written down).
+
+---
+
+### CURRENT.md states no commit SHA and no branch position
+
+**Rule:** Never write a commit SHA or an ahead/behind count into CURRENT.md. Run `npm run state` (scripts/repo-state.mjs) for those facts instead.
+
+**Why:** On 2026-08-06, two commits landed one minute apart from two different branches asserting contradictory positions for main — 682a556a said main is at 0b4b2b7f, 7a613c69 said dev and main level at ef6e1fe7. Neither agent lied; each transcribed a stale fact from its own worktree's view into a single-slot file. Derived facts belong to a live command, not hand-authored prose, because two branches can never disagree about what a command reports at the moment it runs.
+
+**How:** scripts/check-agent-docs.mjs bans commit-SHA and ahead/behind patterns in CURRENT.md and is wired into both CI and the pre-push gate; .claude/commands/recap.md (repo-local) tells the recap flow to run npm run state instead of transcribing git log.
+
+**Files:** `scripts/check-agent-docs.mjs, scripts/repo-state.mjs, scripts/repo-state-lib.mjs, .claude/commands/recap.md, CURRENT.md`
+
+---
+
+### CURRENT.md has exactly one writer: `npm run land`
+
+**Rule:** Never edit `CURRENT.md` on a feature branch. Write session notes to `docs/ai/sessions/<branch-slug>.md` instead (see its README for the format) and let `npm run land` — run on `dev`, at merge time — fold them into `PROGRESS.md` and rewrite `CURRENT.md`'s "Last session" from them.
+
+**Why:** The SHA/ahead-behind ban above fixed *what* got written into CURRENT.md; it did nothing about *when* or *by whom*. Every branch was still pre-writing what it guessed `dev` would look like once merged, and `CURRENT.md`'s own "replace, don't append" convention meant whichever branch wrote last won — silently destroying whatever the previous writer had recorded. Confirmed on 2026-08-06: three separate sessions' real notes were permanently overwritten this way before their branch ever merged, recoverable only via `git fsck --dangling` (which nobody would think to run) — one of them was on this very rule's own commit, caught while writing it. A single-writer point, naturally serialized by git (only one branch can be `dev` at a time), closes the race that a naming convention alone cannot.
+
+**How:** `docs:ai:check` enforces the shape: `CURRENT.md` must contain the literal `active_branch: dev`; a branch off `dev`/`main` must have a matching session note before pushing, and its `CURRENT.md` must not differ from `origin/dev`; `dev`/`main` themselves must have an empty `docs/ai/sessions/` (forces the fold-in — cleanup is part of landing, not a courtesy). `.claude/commands/recap.md` writes the note; `.claude/commands/land.md` runs the fold.
+
+**Files:** `docs/ai/sessions/README.md, scripts/session-land.mjs, scripts/session-land-lib.mjs, scripts/check-agent-docs.mjs, .claude/commands/recap.md, .claude/commands/land.md`
+
+---
+
+### One worktree per task; landing sweeps it, not memory
+
+**Rule:** Before starting a fan-out or a new worktree, run `npm run state` and check the count. `npm run land` (see above) sweeps merged/clean/non-live worktrees automatically at merge time — a worktree that survives a landing needs a reason (still live, still unmerged, or dirty), not a reminder to someone.
+
+**Why:** By 2026-08-06 there were 21 worktrees: 3 prunable with their /tmp scratchpad directories already deleted, one detached and stale at a commit from the previous day, and 17 branches sitting unmerged into dev. Nothing reported this — agents only discover it by accident, usually when a worktree they need is already locked by another one (git worktree add fails with 'already used by worktree at ...'). A cleanup step that depends on someone remembering to run it is the same shape of unenforced rule as the CURRENT.md line limit was before a check existed for it.
+
+**How:** `scripts/repo-state.mjs` prints the live worktree count and flags prunable/detached/live entries every session (wired into the SessionStart hook via `--brief`); `--sweep` removes only what `classifyWorktree`/`isSweepSafe` agree is safe (merged by `git cherry`, not just `merge-base` — catches squash merges — clean, and no live process bound to it via `/proc` scan), never `--force`, and names the exact reason + override command for everything it leaves alone. `npm run land` runs it as its last step.
+
+**Files:** `scripts/repo-state.mjs, scripts/repo-state-lib.mjs, scripts/session-land.mjs, docs/ai/parallel-agents.md`
+
+---
+
+### A screenshot referenced by path is not a screenshot you have
+
+**Rule:** When a bug report points at a screenshot by filesystem path instead of pasting it inline, read that path as the very first action, before anything else — including before reading the rest of a multi-image message. Do not batch it in with other reads a few tool calls later.
+
+**Why:** On 2026-08-06 a user pasted one screenshot inline and referenced two more by path (`/tmp/Spectacle.XXXXXX/Screenshot_*.png`) in the same message. By the time they were read — one reply-turn later, after other embedded work — one path's directory no longer existed and the other's was empty. Screenshot tools like Spectacle write to a fresh temp directory per capture and clear it aggressively, sometimes within the same minute. The content was gone for good: no `find`, no re-request to the same path, nothing recovers it. The two bugs those screenshots showed had to be re-derived by manual reproduction instead, burning most of a session on rediscovering what a single timely read would have shown directly.
+
+**How:** This is unenforced — a person (or a stale temp path) is the only thing that notices when it's skipped, the same shape as the verification rule in "A rule no build can see is a convention, not a protocol" above. Treat it with the same discipline: image-by-path references are perishable evidence, not durable input. Read first, investigate second. If a path is already gone when you get to it, say so plainly and ask for a resend rather than guessing at what it showed.
+
+**Files:** none — process discipline, not code.
