@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PropertyInspector from './PropertyInspector.jsx'
 import DesktopWindow from './DesktopWindow.jsx'
+import NodeAnatomyPanel from './NodeAnatomyPanel.jsx'
 import RawViewport from './RawViewport.jsx'
 import RawGraphSurface from './RawGraphSurface.jsx'
 import NodePalette from './NodePalette.jsx'
@@ -27,6 +28,7 @@ import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
 import { createEdge, createNode, getNodeFamily, getNodeType, isNodeMadeOfCode } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
+import { readNode } from '../../project/graph/nodeReading.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
@@ -46,7 +48,7 @@ import { buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
 import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
-import { clampWindowFrame, getGraphEdgeInsets, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { RAW_ANATOMY_Z, clampWindowFrame, getAnatomyDefaultFrame, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { isPaletteSummons, resolveZenPreference, writeZenPreference } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
@@ -166,6 +168,11 @@ export default function RawEditor({
     const zenReadRef = useRef(false)
     const [outlinerOpen, setOutlinerOpen] = useState(false)
     const [outlinerFrame, setOutlinerFrame] = useState({ x: 24, y: 56, width: 240, height: 360, zIndex: 20, minimized: false, pinned: false })
+    // The "what is it made of" sheet. Same shape as the Outliner's state, but
+    // its frame is seeded on open rather than at mount: it is the only window
+    // here whose opening size depends on the viewport it opens into, because on
+    // a phone it has to finish above where the selection sheet docks.
+    const [anatomyFrame, setAnatomyFrame] = useState(null)
     const [chatOpen, setChatOpen] = useState(false)
     const [chatFrame, setChatFrame] = useState({ x: 24, y: 432, width: 280, height: 360, zIndex: 20, minimized: false, pinned: false })
     const [readChatCount, setReadChatCount] = useState(0)
@@ -772,14 +779,36 @@ export default function RawEditor({
     // JavaScript switch, not a graph. An empty room and a thing that cannot
     // have a room are not the same fact, and showing one screen for both is the
     // lie that made entering a node feel broken.
+    const scopeNode = useMemo(
+        () => (currentScopeId ? authoredNodes.find((node) => node.id === currentScopeId) || null : null),
+        [authoredNodes, currentScopeId]
+    )
+
     const scopeEmptyHint = useMemo(() => {
         if (!currentScopeId) return `${pointerVerb} to place your first node.`
-        const scopeNode = authoredNodes.find((node) => node.id === currentScopeId)
         const label = scopeNode?.label || 'this node'
         return isNodeMadeOfCode(scopeNode?.typeId)
             ? `${label} is made of code, not of other nodes — there is nothing inside it to see. ${pointerVerb} to put something in anyway.`
             : `Inside ${label}. ${pointerVerb} to place the first node in it.`
-    }, [authoredNodes, currentScopeId, pointerVerb])
+    }, [currentScopeId, pointerVerb, scopeNode])
+
+    // …and the sentence above is only the first half of the answer. It says
+    // THAT a Cube has no inside; the sheet says what it has instead. Opening
+    // seeds the frame from the viewport, because on a phone the sheet has to
+    // finish above where the selection sheet docks and that arithmetic needs a
+    // height nobody has at mount.
+    const openAnatomy = useCallback(() => {
+        setAnatomyFrame(getAnatomyDefaultFrame({
+            viewportWidth: typeof window === 'undefined' ? 1280 : window.innerWidth,
+            viewportHeight: typeof window === 'undefined' ? 800 : window.innerHeight,
+            workspaceTop,
+            chromeVisible
+        }))
+    }, [chromeVisible, workspaceTop])
+
+    // Leaving the node closes the sheet. A sheet describing the node you have
+    // walked out of is worse than no sheet: it looks current and is not.
+    useEffect(() => { setAnatomyFrame(null) }, [currentScopeId])
 
     const buildNodeValues = (definitionId, params, place) =>
         buildNodeValuesForType(definitionId, params, place, {
@@ -1291,6 +1320,38 @@ export default function RawEditor({
         [document, clockNow, liveOutputs]
     )
 
+    // The sheet's own context, built from the SAME three inputs as the one the
+    // room draws with — evaluation is pure, so same document + same clock +
+    // same liveOutputs is the same answer, and the sheet cannot hold a second
+    // opinion about what a port is carrying.
+    //
+    // The one input it deliberately quantises is the clock. graphContext is
+    // rebuilt 60 times a second while a Time node exists, and a sine read at
+    // 60 Hz is an unreadable blur — so the sheet's clock advances in 125 ms
+    // steps. That makes the staleness a stated 125 ms rather than an accident,
+    // and it is a legibility decision, not a cost one: these rows are text
+    // somebody is reading, not a frame being drawn.
+    const anatomyNow = Math.floor((clockNow || 0) / 125) * 125
+    const anatomyReading = useMemo(() => {
+        if (!anatomyFrame || !scopeNode) return null
+        return readNode(scopeNode, {
+            // EVERY node, never the scoped card list: a container's sockets come
+            // from doorway nodes living in a different scope, and the scoped
+            // list finds none of them, silently, with every test still green.
+            allNodes: authoredNodes,
+            context: createNodeGraphContext(document, { now: anatomyNow, liveOutputs }),
+            document,
+            childCount: childCounts.get(scopeNode.id) || 0
+        })
+    }, [anatomyFrame, scopeNode, authoredNodes, document, liveOutputs, childCounts, anatomyNow])
+
+    const handleShowFeedingCard = useCallback((nodeId) => {
+        // What feeds the node you are standing in is a card in the scope
+        // OUTSIDE it, which is where walking out puts you.
+        handleNavigateToScope(navStack.length - 2)
+        selectNode(nodeId)
+    }, [handleNavigateToScope, navStack.length, selectNode])
+
     const renderViewNodeContent = (node) => {
         const resolvedValues = evaluateNodeInputs(node, graphContext)
         if (node.typeId === 'universe.world') {
@@ -1591,10 +1652,16 @@ export default function RawEditor({
     // the seeded welcome window up by 116px, and insets read off the stored
     // frame put the graph's free band in the wrong place entirely.
     const graphContentInsets = getGraphEdgeInsets({
-        frames: visibleViewNodes
-            .filter((node) => node.values?.frame?.minimized !== true)
-            .map((node) => node.values?.frame)
-            .filter(Boolean)
+        frames: [
+            // The anatomy sheet is a docked window like any other, so the fit
+            // has to dodge it too — otherwise the cards centre underneath the
+            // window explaining them.
+            ...(anatomyFrame && !anatomyFrame.minimized ? [anatomyFrame] : []),
+            ...visibleViewNodes
+                .filter((node) => node.values?.frame?.minimized !== true)
+                .map((node) => node.values?.frame)
+                .filter(Boolean)
+        ]
             .map((frame) => clampWindowFrame(frame, {
                 allowOverflowLeft: true,
                 allowOverflowTop: true,
@@ -1765,6 +1832,7 @@ export default function RawEditor({
                     portScopeNodes={authoredNodes}
                     onPromotePort={handlePromotePort}
                     onMakeScene={handleCreateSceneExample}
+                    onExplainScope={currentScopeId ? openAnatomy : null}
                     emptyHint={scopeEmptyHint}
                     edges={graphCardEdges}
                     selectedNodeId={workspaceState.selectedNodeId}
@@ -1908,7 +1976,7 @@ export default function RawEditor({
                     // Below the topbar when there is one, near the top when
                     // there is not. Measured: the topbar is 49px and full-width,
                     // so a fixed top:12px sat inside it with chrome on.
-                    style={{ top: `${(chromeVisible ? workspaceTop : 12) + 8}px` }}
+                    style={{ top: `${getScopeMarkerTop({ chromeVisible, workspaceTop })}px` }}
                 >
                     <button
                         type="button"
@@ -1919,8 +1987,25 @@ export default function RawEditor({
                         ‹
                     </button>
                     <span className="raw-scope-marker-label">
-                        inside <strong>{authoredNodes.find((n) => n.id === currentScopeId)?.label || 'a node'}</strong>
+                        inside <strong>{scopeNode?.label || 'a node'}</strong>
                     </span>
+                    {/* The general way in. The empty-state button only exists
+                        while the scope is empty, and a container you have put
+                        something in is exactly where "what is this made of" is
+                        most worth asking. */}
+                    <button
+                        type="button"
+                        className="raw-scope-marker-what"
+                        onClick={openAnatomy}
+                        title={`What ${scopeNode?.label || 'this node'} is made of`}
+                        // The visible words come FIRST and verbatim: an
+                        // aria-label replaces the accessible name outright, so
+                        // "What A container is made of" left somebody driving
+                        // by voice unable to say the label they can see.
+                        aria-label={`what is it made of — ${scopeNode?.label || 'this node'}`}
+                    >
+                        what is it made of
+                    </button>
                     {navStack.length > 2 && (
                         <button
                             type="button"
@@ -2017,6 +2102,23 @@ export default function RawEditor({
                         selectedNodeId={workspaceState.selectedNodeId || null}
                         onSelectNode={(nodeId) => selectNode(nodeId)}
                     />
+                </DesktopWindow>
+            )}
+
+            {anatomyFrame && anatomyReading && (
+                <DesktopWindow
+                    windowState={anatomyFrame}
+                    title={`What ${anatomyReading.label} is made of`}
+                    kicker={anatomyReading.kicker}
+                    accent={anatomyReading.accent}
+                    minTop={workspaceTop}
+                    onFocus={() => setAnatomyFrame((f) => ({ ...f, zIndex: RAW_ANATOMY_Z }))}
+                    onPatch={(patch) => setAnatomyFrame((f) => ({ ...f, ...patch }))}
+                    onClose={() => setAnatomyFrame(null)}
+                    onToggleMinimize={() => setAnatomyFrame((f) => ({ ...f, minimized: !f.minimized }))}
+                    onTogglePin={() => setAnatomyFrame((f) => ({ ...f, pinned: !f.pinned }))}
+                >
+                    <NodeAnatomyPanel reading={anatomyReading} onShowCard={handleShowFeedingCard} />
                 </DesktopWindow>
             )}
 

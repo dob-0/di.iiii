@@ -112,6 +112,30 @@ deleting its line from `UNIMPLEMENTED_NODE_TYPES` in `src/project/nodeRegistry.j
 3. Wire `sin` into something visible — a cube's position, a color channel.
 4. It moves on its own; delete the Time node and the clock stops.
 
+## Finding out what a node is
+
+Standing inside any node, press **what is it made of** — it sits beside the
+"inside X" label, and appears on the canvas itself when the node you are in
+holds nothing.
+
+It reads the node you are standing in, and asks the same four questions of every
+node there is:
+
+1. **What it takes and gives** — every port, its type, the value on it right
+   now, and where that value came from: down a wire (naming the card, with a way
+   to jump to it), typed here, or left at its default.
+2. **What works it out** — code, its own window, or an Out door standing inside
+   it. Containers usually answer two ways at once.
+3. **What puts it on screen** — the room, a window, or nowhere.
+4. **What is inside it** — nothing, for anything made of code; a count, for a
+   container.
+
+Two readings you cannot get anywhere else: a wire that is connected but carrying
+nothing says so (the node falls back to its own value in that case), and a
+doorway placed but never wired reads "nothing wired in".
+
+It only reads. Changing a value is still the inspector's job.
+
 ## What to do when something feels broken
 
 - Created a node and see nothing? Check whether it is a visible World/View node

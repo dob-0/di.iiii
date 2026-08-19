@@ -509,6 +509,7 @@ export const WIKI_ARTICLES = [
                 'While you drag a wire, every input that can take it lights up and every input that cannot goes quiet — an incompatible drop no longer fails silently.',
                 'Starting from nothing: a blank Raw workspace shows a “Make me a scene” button in the middle of the canvas. It builds a room with a light, a cube, a colour wired into that cube, and an empty Model node waiting for your own file — plus a note giving the moves in plain words. It is there because a blank workspace opens with no toolbar at all, so the ⋯ menu (which also offers it) does not exist for the person most likely to want it.',
                 'A container has a wall, and you make holes in it. Enter a World, a 3D Desk or a Studio, place an In node inside it, and a socket with that name appears on the container’s outer face — wire something into it from outside and the In node hands that value to whatever it feeds inside. An Out node does the same in reverse. This is how TouchDesigner, Blender, Max and Unreal all do it, and it is the answer to “I can’t connect anything to a World”. Renaming a doorway never breaks its wire: the socket is identified by the node itself, not by its name. Two limits worth knowing — a doorway only makes a socket on the container it is INSIDE, and a Code node (node.null) cannot grow one, because its ports are already fully hand-declared.',
+                'Standing inside any node, “what is it made of” — beside the “inside X” label, and on the canvas itself when there is nothing in there — opens a reading of that node: what it takes and gives with the values going through it at that moment, where each of those values came from, what works them out, what puts the node on screen, and what is inside it. Every node answers the same four, so reading one teaches you how to read all of them. It is the honest answer to “why can’t I see what a cube is”: a cube has no inside because it is made of code rather than of other nodes, and this says what it has instead.',
                 'A container also gives out its own settings, and only those: a World offers its Title and Sky, a 3D Desk its Position, Rotation and Scale, a Studio its Title. Nothing about what is inside a container leaks through its wall by itself — that is what the doorways are for, and it is deliberate. Assuming otherwise is the most common mistake people make with containers in every tool that has them.',
                 'Your own files come in through three “bring in” nodes: Model (.glb/.gltf incl. Draco and Meshopt, .obj, .stl, .fbx — with its animations, which Play/Speed/Clip control), Video and Sound. Drag a file straight onto the workspace and the node arrives holding it; drop it onto a room and it lands in that room, already visible. On a phone, where there is nothing to drag, the ＋ beside the node’s file picker opens the same door. In a saved project the file uploads and your collaborators get it; in a local workspace it stays in that browser.',
                 'Webcam is the first real capture node: it asks for camera permission, shows a live preview on the node itself (with a visible message if access is denied or no camera is found), and its Frame output can be wired into a Plane’s Texture input to project the live feed onto geometry.',
@@ -519,7 +520,7 @@ export const WIKI_ARTICLES = [
                 'A Director node (view.director) is a timeline editor for code-authored pieces, moved out of algovrithm into Raw on 2026-08-05 and generalised the same day — it takes the piece as input rather than being welded to one, so a future piece is a registration rather than a fork. For algovrithm it can retime and reorder its beats, edit each room’s colour, fog and lights, and drop assets onto the timeline — the same panel Studio’s code-space director page opens embedded in the piece, so this is a second way to reach it, not the only one. “Save to source” writes src/algoVrithm/sequences/index.js in place with its comments intact from either one.'
             ] }
         ],
-        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director', 'model', 'glb', 'video', 'sound', 'import', 'containers', 'doorways', 'ports', 'scene', 'example', 'getting-started'],
+        tags: ['raw', 'nodes', 'editor', 'experimental', 'nesting', 'webcam', 'microphone', 'work-status', 'agent-run', 'timeline', 'director', 'model', 'glb', 'video', 'sound', 'import', 'containers', 'doorways', 'ports', 'scene', 'example', 'getting-started', 'anatomy', 'made-of'],
         updated: '2026-08-19'
     },
     {
@@ -540,6 +541,27 @@ export const WIKI_ARTICLES = [
         ],
         tags: ['raw', 'studio', 'nodes', 'container', 'palette', 'nesting', 'touchdesigner', 'create'],
         updated: '2026-08-18'
+    },
+    {
+        id: 'what-a-node-is-made-of',
+        category: 'Editing',
+        title: 'What a node is made of',
+        summary: 'Walk into any node and read the same four things: what it takes and gives with the values going through it right now, what works those out, what puts the node on screen, and what is inside it.',
+        body: [
+            'Walking into a Cube used to show a blank canvas. Then it showed one sentence saying a Cube has no inside. Both answer “is there anything in here”, and neither answers the question people were actually asking, which is what the Cube IS. “what is it made of” — the control beside the “inside X” label, and a button on the canvas when the node you are in is empty — answers that one.',
+            'It asks the same four questions of every node there is. Three are answered differently from node to node; the fourth is the only structural difference between a Cube and a container.',
+            { list: [
+                'What it takes and gives — every port, its type, and the value on it at this moment, taken from the same reading the room is drawing with. Under each value is where it came from: down a wire (and from which card, with a control that takes you to it), typed on this node, or left at the port’s default.',
+                'What works it out — whether its answers come from code, from its own window while that window is open, or from an Out door standing inside it. A container usually answers two ways at once, and the sheet names both.',
+                'What puts it on screen — whether it stands in the room, opens as a window over the canvas, or is drawn nowhere at all and exists only to feed other nodes.',
+                'What is inside it — nothing, for anything made of code; or the count of what it holds, for a container you are standing in.'
+            ] },
+            'Two things it will tell you that nothing else does. A wire that is connected but carrying nothing reads as exactly that, rather than as a live wire — the node quietly falls back to its own value in that case, and now you can see it happen. And a doorway you placed but never wired reads “nothing wired in”, so you can tell at a glance which of a container’s doors are actually connected to anything.',
+            'It only reads. Nothing on it changes the document, and there is no field to type in — changing a value is still the Inspector’s job. A value shown as “nothing” means the port is genuinely carrying nothing, which is a different fact from carrying zero or an empty word, and the sheet keeps those apart on purpose.',
+            'What it does not do yet: show you the actual lines of code that make a Cube a Cube. That is the next step, and it is deliberately separate — pointing at code that has since moved would be worse than not pointing at all.'
+        ],
+        tags: ['raw', 'nodes', 'anatomy', 'ports', 'doorways', 'containers', 'made-of', 'learning', 'constructor'],
+        updated: '2026-08-19'
     },
     {
         id: 'raw-on-a-phone',

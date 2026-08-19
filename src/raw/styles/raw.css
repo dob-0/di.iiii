@@ -4716,3 +4716,243 @@
     background: transparent !important;
     color: rgba(255, 255, 255, 0.55) !important;
 }
+
+/* WHAT A NODE IS MADE OF — the anatomy sheet.
+   Lives inside a DesktopWindow, so the furniture (square corners, #101418
+   fill, neutral edge, the 2px family stripe) is inherited and this only owns
+   the reading. Cyan stays on interaction: the one button here is the only
+   thing that gets it, and only on hover or focus. */
+.raw-anatomy {
+    /* The window body is `overflow: hidden` so its children can scroll; four
+       sections of prose is the first thing in this lane that reliably needs to.
+       It is a window, NOT a child of .raw-graph-stage — the graph surface sets
+       touch-action: none on every descendant and calls preventDefault on wheel,
+       so a scroll region rendered there is dead to both a finger and a wheel. */
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px 16px 20px;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    font-size: 12px;
+    line-height: 1.55;
+    color: rgba(244, 247, 251, 0.72);
+}
+
+.raw-anatomy-banner {
+    margin: 0 0 12px;
+    padding: 8px 10px;
+    border-left: 2px solid var(--di-warning);
+    background: rgba(255, 179, 71, 0.08);
+    color: rgba(255, 213, 153, 0.92);
+}
+
+.raw-anatomy-lede {
+    margin: 0 0 16px;
+    color: rgba(244, 247, 251, 0.86);
+}
+
+.raw-anatomy-lede strong { color: var(--di-text); }
+
+.raw-anatomy-slot {
+    padding: 14px 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.raw-anatomy-slot h4 {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    margin: 0 0 8px;
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(244, 247, 251, 0.5);
+}
+
+/* The badge carries the ANSWER, not decoration — "a door", "its own window",
+   "nothing". It is the one word a person can scan four of and learn the shape
+   of a node from, so it gets the node's own family hue rather than a neutral. */
+.raw-anatomy-badge {
+    flex: 0 0 auto;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: none;
+    color: var(--window-accent, rgba(244, 247, 251, 0.6));
+}
+
+.raw-anatomy-slot h5 {
+    margin: 12px 0 6px;
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(244, 247, 251, 0.34);
+}
+
+.raw-anatomy-slot p { margin: 0; }
+
+.raw-anatomy-ports {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.raw-anatomy-port {
+    padding: 7px 0 8px 10px;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.raw-anatomy-port + .raw-anatomy-port { margin-top: 2px; }
+
+.raw-anatomy-port-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.raw-anatomy-port-head strong {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--di-text);
+}
+
+.raw-anatomy-port-head em {
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 10px;
+    font-style: normal;
+    letter-spacing: 0.06em;
+    color: rgba(244, 247, 251, 0.36);
+}
+
+.raw-anatomy-value {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 12px;
+    color: var(--di-text);
+    /* A vector or a long string must not push the window wider than the screen;
+       it wraps, because a horizontal scrollbar on a value is worse than a
+       second line. */
+    overflow-wrap: anywhere;
+}
+
+/* An empty port is a fact, not a missing one. It is dimmed and italic so a
+   glance down the column separates "nothing" from a value that reads as a
+   word — and it is never blank, which would read as a rendering failure. */
+.raw-anatomy-value.is-empty {
+    font-style: italic;
+    color: rgba(244, 247, 251, 0.38);
+}
+
+.raw-anatomy-swatch {
+    width: 12px;
+    height: 12px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.raw-anatomy-origin,
+.raw-anatomy-door {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.46);
+}
+
+.raw-anatomy-door { color: rgba(244, 247, 251, 0.38); }
+
+.raw-anatomy-goto {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-left: 6px;
+    padding: 0 8px;
+    border: 0;
+    background: none;
+    color: rgba(244, 247, 251, 0.6);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-anatomy-goto:hover,
+.raw-anatomy-goto:focus-visible { color: var(--di-cyan); }
+
+.raw-anatomy-none,
+.raw-anatomy-foot {
+    margin: 0;
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-anatomy-foot { margin-top: 10px; }
+
+.raw-anatomy-close {
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.09);
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+/* Two buttons where there was one. Stacked rather than side by side: at the
+   empty state's centred position a row of two pills is wider than a 320px
+   phone, and the offer that answers the question the person is standing in
+   front of goes first. */
+.raw-empty-state-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+@media (max-width: 640px) {
+    .raw-anatomy { padding: 12px 12px 18px; }
+    /* The window is the full width of the phone here, so the value column has
+       nowhere to overflow to; the port block loses its indent to buy the text
+       back the ten pixels. */
+    .raw-anatomy-port { padding-left: 8px; }
+}
+
+/* "what is it made of", on the scope marker. Text rather than a glyph: ‹ and ◈
+   are directions, and this is a question — there is no symbol for it that a
+   first-time visitor reads correctly. 44px because it sits in the marker, which
+   is the one strip a lost person on a phone reaches for. */
+.raw-scope-marker-what {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(77, 249, 255, 0.1);
+    color: var(--di-cyan);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-scope-marker-what:hover,
+.raw-scope-marker-what:focus-visible { background: rgba(77, 249, 255, 0.26); }
+
+/* The empty state had no max-width and had never carried more than one short
+   sentence; the "made of code" line ran the full 1440px of the canvas as a
+   single stretched row. Capped at a readable measure, and the cap belongs to
+   the block rather than to the paragraph so the two buttons centre under it. */
+.raw-empty-state { max-width: min(520px, calc(100vw - 48px)); }
+.raw-empty-state p { line-height: 1.55; }
