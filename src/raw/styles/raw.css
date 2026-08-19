@@ -5055,3 +5055,21 @@
 }
 
 .raw-room-exit:hover { background: rgba(77, 249, 255, 0.14); }
+
+/* The projector cable: /out is a room and nothing else. Fixed and black so a
+   reload flashes dark, not white, on a projector; the viewport shell inside
+   paints its own room. */
+.raw-out-surface {
+    position: fixed;
+    inset: 0;
+    background: #05070c;
+}
+
+.raw-out-message {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 14px;
+}

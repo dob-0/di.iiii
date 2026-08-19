@@ -173,6 +173,27 @@ Click an object to select it; click empty floor to deselect. Drag moves it —
 the camera holds still while you do. Hold **Shift** while dragging to lift it.
 **Ctrl/Cmd+D** duplicates whatever is selected, stepped slightly aside.
 
+## Putting it on a projector — /out
+
+`/out` is the projector cable: a URL that renders just-the-room, read-only,
+zero chrome. Open it on the output machine (or a second window), press F11,
+and never touch it — the desk stays your control room.
+
+- A project: `/{space}/raw/projects/{id}/out` — follows every edit live over
+  the same sync the desk uses, across machines. Works signed-out on public
+  spaces.
+- A space's local canvas: `/{space}/raw/out` (e.g. `/open/raw/out`) — follows
+  the desk live across windows of the SAME browser (a local canvas lives in
+  that browser; another machine cannot see it — use a project for that).
+- Aim it at a container's room with `?scope=<nodeId>`; mark a Camera ● inside
+  that scope and the output holds the authored shot.
+
+The page asks the screen to stay awake, and nothing on it takes a click.
+Honest limits, today: webcam/mic/MIDI feeds live in the window that owns
+them — capture on the output machine itself, or drive numbers only; and
+Time-driven motion runs on each window's own clock, so two windows can be
+offset. Both are known and on the list.
+
 ## What to do when something feels broken
 
 - Created a node and see nothing? Check whether it is a visible World/View node
