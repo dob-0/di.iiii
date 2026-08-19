@@ -129,8 +129,8 @@ export const NODE_ANATOMY = {
     'source.webcam': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 258,
-            toLine: 262,
+            fromLine: 284,
+            toLine: 288,
             sharedWith: [],
             answers: [
                 'frame'
@@ -148,8 +148,8 @@ export const NODE_ANATOMY = {
     'source.mic': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 283,
-            toLine: 290,
+            fromLine: 309,
+            toLine: 316,
             sharedWith: [],
             answers: [
                 'volume',
@@ -168,8 +168,8 @@ export const NODE_ANATOMY = {
     'work.status': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 291,
-            toLine: 296,
+            fromLine: 317,
+            toLine: 322,
             sharedWith: [],
             answers: [
                 'running',
@@ -190,8 +190,8 @@ export const NODE_ANATOMY = {
     'work.agent': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 297,
-            toLine: 301,
+            fromLine: 323,
+            toLine: 327,
             sharedWith: [],
             answers: [
                 'status',
@@ -247,8 +247,8 @@ export const NODE_ANATOMY = {
     'device.midi.in': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 263,
-            toLine: 273,
+            fromLine: 289,
+            toLine: 299,
             sharedWith: [],
             answers: [
                 'note',
@@ -323,8 +323,8 @@ export const NODE_ANATOMY = {
     'universe.world': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 391,
-            toLine: 395,
+            fromLine: 417,
+            toLine: 421,
             sharedWith: [],
             answers: [
                 'title',
@@ -355,8 +355,8 @@ export const NODE_ANATOMY = {
     'universe.desk.3d': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 396,
-            toLine: 400,
+            fromLine: 422,
+            toLine: 426,
             sharedWith: [],
             answers: [
                 'position',
@@ -446,8 +446,8 @@ export const NODE_ANATOMY = {
     'shape.merge': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 247,
-            toLine: 257,
+            fromLine: 273,
+            toLine: 283,
             sharedWith: [],
             answers: [
                 'out'
@@ -458,7 +458,15 @@ export const NODE_ANATOMY = {
         alsoNeeds: null
     },
     'geom.geo': {
-        computes: null,
+        computes: {
+            file: 'src/project/graph/nodeGraphRuntime.js',
+            fromLine: 247,
+            toLine: 272,
+            sharedWith: [],
+            answers: [
+                'geometry'
+            ]
+        },
         draws: {
             file: 'src/raw/components/RawViewport.jsx',
             fromLine: 283,
@@ -482,8 +490,8 @@ export const NODE_ANATOMY = {
     'port.in': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 368,
-            toLine: 379,
+            fromLine: 394,
+            toLine: 405,
             sharedWith: [],
             answers: [
                 'value'
@@ -629,8 +637,8 @@ export const NODE_ANATOMY = {
     studio: {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 404,
-            toLine: 408,
+            fromLine: 430,
+            toLine: 434,
             sharedWith: [],
             answers: [
                 'title'
@@ -643,8 +651,8 @@ export const NODE_ANATOMY = {
     'math.add': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 302,
-            toLine: 307,
+            fromLine: 328,
+            toLine: 333,
             sharedWith: [],
             answers: [
                 'out'
@@ -657,8 +665,8 @@ export const NODE_ANATOMY = {
     'math.subtract': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 308,
-            toLine: 313,
+            fromLine: 334,
+            toLine: 339,
             sharedWith: [],
             answers: [
                 'out'
@@ -671,8 +679,8 @@ export const NODE_ANATOMY = {
     'math.multiply': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 314,
-            toLine: 319,
+            fromLine: 340,
+            toLine: 345,
             sharedWith: [],
             answers: [
                 'out'
@@ -685,8 +693,8 @@ export const NODE_ANATOMY = {
     'math.divide': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 320,
-            toLine: 326,
+            fromLine: 346,
+            toLine: 352,
             sharedWith: [],
             answers: [
                 'out'
@@ -699,8 +707,8 @@ export const NODE_ANATOMY = {
     'math.mod': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 327,
-            toLine: 333,
+            fromLine: 353,
+            toLine: 359,
             sharedWith: [],
             answers: [
                 'out'
@@ -713,8 +721,8 @@ export const NODE_ANATOMY = {
     'math.pow': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 334,
-            toLine: 341,
+            fromLine: 360,
+            toLine: 367,
             sharedWith: [],
             answers: [
                 'out'
@@ -727,8 +735,8 @@ export const NODE_ANATOMY = {
     'math.sin': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 342,
-            toLine: 344,
+            fromLine: 368,
+            toLine: 370,
             sharedWith: [],
             answers: [
                 'out'
@@ -741,8 +749,8 @@ export const NODE_ANATOMY = {
     'math.mix': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 345,
-            toLine: 353,
+            fromLine: 371,
+            toLine: 379,
             sharedWith: [],
             answers: [
                 'out'
@@ -755,8 +763,8 @@ export const NODE_ANATOMY = {
     'math.clamp': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 354,
-            toLine: 361,
+            fromLine: 380,
+            toLine: 387,
             sharedWith: [],
             answers: [
                 'out'
@@ -803,8 +811,8 @@ export const NODE_ANATOMY = {
     'agent.keeper': {
         computes: {
             file: 'src/project/graph/nodeGraphRuntime.js',
-            fromLine: 274,
-            toLine: 282,
+            fromLine: 300,
+            toLine: 308,
             sharedWith: [],
             answers: [
                 'reply',
@@ -837,7 +845,7 @@ export const DOORWAY_PLACE = {
 }
 
 export const SOURCE_FINGERPRINTS = {
-    'src/project/graph/nodeGraphRuntime.js': '5bce7e8e',
+    'src/project/graph/nodeGraphRuntime.js': '2d05a0d4',
     'src/raw/components/RawViewport.jsx': 'f186931f',
-    'src/raw/components/RawEditor.jsx': 'fb275309'
+    'src/raw/components/RawEditor.jsx': 'e0dcae27'
 }
