@@ -46,9 +46,35 @@ this piecemeal; a partial bump just produces peer-conflict noise.
 
 ---
 
-## `react-router-dom` 6 → 7 — the upgrade makes CI *worse*
+## `react-router-dom` 6 → 7 — TAKEN 2026-08-19 (was parked; the block cleared)
 
-Two moderate advisories sit on 6.30.3:
+**Resolved. 7.18.2 is in.** The park below stood only until react-router shipped
+the RSC-CSRF patch, and 7.18.2 *is* that patch: GHSA-qwww-vcr4-c8h2's range is
+`>= 7.12.0, < 7.18.2`, first patched `7.18.2`. `npm audit --production
+--audit-level=high` now reports **0 vulnerabilities** on both the root and
+`serverXR` — the CI gate that blocked this is green, and the two moderates that
+sat on 6.x are gone with it.
+
+Zero code changes were needed. The API surface really is only `BrowserRouter`,
+`useLocation`, `useNavigate` across `src/RootApp.jsx` and
+`src/hooks/useAppRoute.js`, all unchanged in v7. Nothing else applied:
+`v7_relativeSplatPath` needs splat routes (this app has no `<Routes>`/`<Route>`
+at all — it branches on `useLocation()` by hand); `v7_fetcherPersist`,
+`v7_normalizeFormMethod`, `v7_partialHydration` and
+`v7_skipActionErrorRevalidation` all need a data router (`RouterProvider`),
+which is not used; `json`/`defer` are deprecated but never called (no loaders).
+`v7_startTransition` *is* now on by default, but every `React.lazy()` in
+`RootApp.jsx` is at module scope — the one pattern that flag is incompatible
+with is `lazy()` called *inside* a component, which does not occur here.
+
+Left deliberately undone: `react-router-dom` is a deprecated re-export shim in
+v7 and is removed in v8. Renaming the dependency to `react-router` and
+rewriting the two imports is the v8-readiness chore, not part of this bump —
+it would also move the package Dependabot tracks. Do it with the v8 upgrade.
+
+**Historical — why it was parked (2026-07-28):**
+
+Two moderate advisories sat on 6.30.3:
 
 | Advisory | Reachable here? |
 | --- | --- |
@@ -66,11 +92,12 @@ RSC-mode CSRF bypass, range `7.12.0 - 8.2.0`. Also unreachable (no RSC), but
 **high severity trips the CI gate and blocks deploys.** There is no clean
 version: 7.11.0 dodges the high but keeps the moderates.
 
-Verdict: **stay on 6.30.3.** Strictly better — same real-world exposure (nil),
-and CI stays green.
+Verdict at the time: **stay on 6.30.3.** Strictly better — same real-world
+exposure (nil), and CI stays green.
 
-**Re-check when:** react-router ships a release above 7.18.0 with the RSC CSRF
-advisory resolved. Then it's a genuinely free upgrade — take it.
+**Re-check trigger (fired 2026-08-19):** react-router ships a release above
+7.18.0 with the RSC CSRF advisory resolved. Then it's a genuinely free upgrade
+— take it. It did, and it was.
 
 ---
 
