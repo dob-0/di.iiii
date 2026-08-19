@@ -155,6 +155,18 @@ several): the moment a door exists, only what reaches a door is worn.
 Everything stays live — wire a colour into a part's Colour, or the clock's Sin
 into a Sphere's Radius, and the worn shape follows.
 
+## The Camera — the authored eye
+
+Place a **Camera** and it stands in the room as a small housing — placing one
+never changes your view. The ● toggle on its card marks it as the eye for
+this level; marked, the room is seen through it and its housing disappears.
+Position, Look At and FOV are inputs like any other — type them, or wire them
+(a `Time → Sin → Position` wire is a camera move).
+
+While a camera is marked, orbit is off: the shot is authored. Unmark or
+delete the Camera to look around freely again. A Camera inside a Geo frames
+that Geo's room, not the one outside.
+
 ## Arranging in the room
 
 Click an object to select it; click empty floor to deselect. Drag moves it —

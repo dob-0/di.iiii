@@ -104,6 +104,7 @@ export const FAMILY_BY_TYPE = {
     'math.clamp': 'numbers',
     // the room — light, sky, grid, worlds, desks, containers
     'world.light': 'room',
+    'world.camera': 'room',
     'world.background': 'room',
     'world.grid': 'room',
     'universe.world': 'room',
@@ -1616,6 +1617,30 @@ export const NODE_TYPES = {
         // spatial so it can STAND somewhere: draggable, contained, carried by
         // its parent. Unparented at root it draws nothing (see renderNodeBody)
         // so every existing document looks exactly as it did.
+        render: 'spatial-3d',
+    },
+
+    'world.camera': {
+        id: 'world.camera',
+        label: 'Camera',
+        category: 'world',
+        runtime: 'any',
+        inputs: [
+            // Defaults are byte-identical to the room's built-in view, so a
+            // Camera marked as the eye before being moved holds the shot the
+            // room already had.
+            { id: 'position', type: 'vec3',   label: 'Position', default: [0, 2.4, 6.5] },
+            { id: 'lookAt',   type: 'vec3',   label: 'Look At',  default: [0, 0.75, 0]  },
+            { id: 'fov',      type: 'number', label: 'FOV',      default: 50            },
+        ],
+        outputs: [],
+        defaultValues: {},
+        // spatial so it can stand somewhere and be carried by a container.
+        // The ● toggle marks the eye per scope — EXPLICIT-ONLY, unlike
+        // Light/Background/Grid's first-created fallback: an active camera
+        // hijacks the view, so placing one must never steal the shot
+        // (RawViewport.pickAuthoredCameraNode). The marked camera draws no
+        // body; unmarked cameras draw a small housing marker.
         render: 'spatial-3d',
     },
 

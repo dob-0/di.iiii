@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
@@ -20,6 +20,20 @@ import { asColor } from '../../utils/colorValue.js'
 import SceneEntityErrorBoundary from '../../components/SceneEntityErrorBoundary.jsx'
 
 const isSpatialNode = (node) => getNodeType(node?.typeId)?.render === 'spatial-3d'
+
+// The authored eye is EXPLICIT-ONLY: unlike Light/Background/Grid (additive,
+// safe to default to first-created), an active camera hijacks the view — so
+// placing a Camera must never steal the shot. Seen 2026-08-20: the palette
+// drops spatial nodes at the click point, and the first-created fallback cut
+// the room to an accidental floor-level close-up the moment the card landed.
+// Only the ● toggle makes a camera the eye.
+const pickAuthoredCameraNode = (nodes, scopeId, activeMap) => {
+    const markedId = (activeMap || {})[`world.camera::${scopeId || ''}`]
+    if (!markedId) return null
+    return (nodes || []).find((node) =>
+        node.id === markedId && node.typeId === 'world.camera' && (node.parentId || null) === (scopeId || null)
+    ) || null
+}
 
 // A mesh that is drawn but never picked.
 const NO_RAYCAST = () => null
@@ -318,6 +332,34 @@ export function renderNodeBody(node, values, assetMap = null) {
                     </mesh>
                 </group>
             )
+        case 'world.camera': {
+            // The eye you can pick up: a small housing with a lens cone aimed
+            // at its Look At. Only INACTIVE cameras are drawn — the active one
+            // is what the room is seen through (SceneContent filters it out;
+            // a housing centred on the near plane would only shed clipped
+            // fragments).
+            const camPos = asVec3(values.position, [0, 2.4, 6.5])
+            const camLook = asVec3(values.lookAt, [0, 0.75, 0])
+            const dx = camLook[0] - camPos[0]
+            const dy = camLook[1] - camPos[1]
+            const dz = camLook[2] - camPos[2]
+            const yaw = Math.atan2(dx, dz)
+            const pitch = -Math.atan2(dy, Math.sqrt(dx * dx + dz * dz) || 1)
+            return (
+                <group rotation={[0, yaw, 0]}>
+                    <group rotation={[pitch, 0, 0]}>
+                        <mesh>
+                            <boxGeometry args={[0.22, 0.16, 0.28]} />
+                            <meshStandardMaterial color="#9aa7ff" />
+                        </mesh>
+                        <mesh position={[0, 0, 0.24]} rotation={[Math.PI / 2, 0, 0]}>
+                            <coneGeometry args={[0.09, 0.16, 12, 1, true]} />
+                            <meshStandardMaterial color="#dfe6ff" wireframe />
+                        </mesh>
+                    </group>
+                </group>
+            )
+        }
         case 'universe.desk.3d':
             // The shell takes no clicks: it wraps whatever stands inside it, so
             // a pickable skin would swallow every pointer aimed at its contents
@@ -502,6 +544,28 @@ function SceneContent({
         () => pickActiveTypeNode(document.nodes, 'world.light', { scopeId, activeMap: document.workspaceState?.activeNodeIdByTypeScope }),
         [document.nodes, document.workspaceState?.activeNodeIdByTypeScope, scopeId]
     )
+    // The authored eye: the scope's active Camera node drives the view every
+    // frame (position, Look At, FOV — all wireable, so a Time→Sin dolly works
+    // with no further machinery). The active camera's own body is filtered out
+    // below: the room is seen THROUGH it, and a housing centred on the near
+    // plane would only shed clipped fragments.
+    const authoredCameraNode = useMemo(
+        () => pickAuthoredCameraNode(document.nodes, scopeId, document.workspaceState?.activeNodeIdByTypeScope),
+        [document.nodes, document.workspaceState?.activeNodeIdByTypeScope, scopeId]
+    )
+    useFrame(({ camera }) => {
+        if (!authoredCameraNode) return
+        const values = resolveSpatialValues(authoredCameraNode, graphContext, document.nodes)
+        const pos = asVec3(values.position, [0, 2.4, 6.5])
+        const look = asVec3(values.lookAt, [0, 0.75, 0])
+        const fov = asFiniteNumber(values.fov, 50)
+        camera.position.set(pos[0], pos[1], pos[2])
+        if (camera.fov !== fov) {
+            camera.fov = fov
+            camera.updateProjectionMatrix()
+        }
+        camera.lookAt(look[0], look[1], look[2])
+    })
     const gridNode = useMemo(
         () => pickActiveTypeNode(document.nodes, 'world.grid', { scopeId, activeMap: document.workspaceState?.activeNodeIdByTypeScope }),
         [document.nodes, document.workspaceState?.activeNodeIdByTypeScope, scopeId]
@@ -653,7 +717,7 @@ function SceneContent({
                 {/* Boundaried like entities are: a node can now load an
                     arbitrary file off someone's disk, and a corrupt mesh must
                     cost that one node, not the whole scene. */}
-                {renderableNodes.map((node) => (
+                {renderableNodes.filter((node) => node.id !== authoredCameraNode?.id).map((node) => (
                     <SceneEntityErrorBoundary key={node.id} resetKey={node.id}>
                         <NodeVisual
                             node={{ ...node, values: resolveSpatialValues(node, graphContext, document.nodes) }}
@@ -727,6 +791,13 @@ export default function RawViewport({
     const spatialNodes = useMemo(
         () => (document.nodes || []).filter((node) => isSpatialNode(node) && (scopeId === undefined || (node.parentId || null) === scopeId)),
         [document.nodes, scopeId]
+    )
+    // An active Camera node owns the view: orbit stays unmounted while one
+    // exists in this scope, or the two would fight over the same eye every
+    // frame. Deactivate (or delete) the Camera to orbit freely again.
+    const hasAuthoredCamera = useMemo(
+        () => Boolean(pickAuthoredCameraNode(document.nodes, scopeId, document.workspaceState?.activeNodeIdByTypeScope)),
+        [document.nodes, document.workspaceState?.activeNodeIdByTypeScope, scopeId]
     )
     const isEmpty = spatialNodes.length === 0 && (document.entities || []).length === 0
 
@@ -819,7 +890,7 @@ export default function RawViewport({
                     else onSelectEntity?.(null)
                 }}
             >
-                <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />
+                {!hasAuthoredCamera && <OrbitControls makeDefault target={camera.target || [0, 0.75, 0]} />}
                 <SceneContent
                     document={document}
                     selectedEntityId={selectedEntityId}
