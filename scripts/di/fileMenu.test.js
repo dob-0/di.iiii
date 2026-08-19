@@ -85,3 +85,35 @@ describe('opening a file is not a server-management task', () => {
         expect(save).not.toContain('runnerFor(home).stop')
     })
 })
+
+// The browser's half of the same idea: a Save on every space card and an Open
+// beside Create. Source-level, because the behaviour is covered by the server
+// contracts and what this guards against is the wiring being deleted.
+describe('the file menu in the browser', () => {
+    const hub = fs.readFileSync(path.join(HERE, '../../src/studio/components/SpaceHub.jsx'), 'utf8')
+    const service = fs.readFileSync(path.join(HERE, '../../src/services/serverSpaces.js'), 'utf8')
+
+    it('offers Save on a card and Open beside Create', () => {
+        expect(hub).toContain('Save to file')
+        expect(hub).toContain('Open a file')
+        expect(hub).toContain("accept=\".diiii,.tar.gz\"")
+    })
+
+    it('downloads by navigating, rather than pulling a whole bundle into memory', () => {
+        expect(service).toContain('window.location.assign(`${apiBaseUrl}/api/spaces/${id}/bundle`)')
+    })
+
+    it('offers another name when one is already taken, instead of only refusing', () => {
+        // The single failure with a way out. A terminal says "--as <newId>";
+        // a page can just ask.
+        expect(hub).toContain("clash?.code !== 'space_exists'")
+        expect(hub).toContain('Open it under another name')
+        expect(service).toContain('error.code = data?.code')
+    })
+
+    it('clears the picker so the same file can be tried twice', () => {
+        // Without this a failed open cannot be retried: choosing the same file
+        // fires no change event.
+        expect(hub).toContain('event.target.value = \'\'')
+    })
+})

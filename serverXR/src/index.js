@@ -751,6 +751,26 @@ const authAttemptLimiter = createRateLimiter({ windowMs: 60_000, max: 10, name: 
 const syncKeyMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'sync-key mints' })
 const inviteMintLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite mints' })
 const inviteRedeemLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 30, name: 'invite redeems' })
+// A separate multer from `upload`: the asset filter is an allow-list of media
+// types, and a space bundle is none of them. Its own filter (the two names a
+// bundle is ever written under) and its own destination, so a rejected upload
+// never lands anywhere the asset pipeline looks.
+const bundleUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, UPLOADS_DIR),
+    filename: (req, file, cb) => cb(null, `${Date.now()}-bundle.diiii`)
+  }),
+  limits: { fileSize: config.maxUploadBytes },
+  fileFilter: (req, file, cb) => {
+    const name = String(file.originalname || '').toLowerCase()
+    if (name.endsWith('.diiii') || name.endsWith('.space-bundle.tar.gz') || name.endsWith('.tar.gz')) {
+      cb(null, true)
+      return
+    }
+    cb(new Error('Not a di.iiii file. Save one with `di save`, or from the Spaces page.'))
+  }
+})
+
 const uploadLimiter = createRateLimiter({ windowMs: 10 * 60_000, max: 60, name: 'uploads' })
 // pull/push do real disk I/O plus an outbound HTTP call to the configured
 // live server, with no limiter previously — same class of gap the upload
@@ -1555,6 +1575,7 @@ const { replaceSceneAndBroadcast } = registerSpaceRoutes(router, {
   spaceExists,
   upsertSpaceMeta,
   upload,
+  bundleUpload,
   writeJson,
   approvalGate
 })

@@ -1,5 +1,8 @@
 const path = require('node:path')
+const fs = require('node:fs')
 const fsp = require('node:fs/promises')
+const os = require('node:os')
+const { spawn } = require('node:child_process')
 const crypto = require('node:crypto')
 const { hashFileSha256, isSha256AssetId } = require('../assetHash')
 const { scrubImageMetadata } = require('../assetScrub')
@@ -65,6 +68,7 @@ function registerSpaceRoutes(router, {
   spaceExists,
   upsertSpaceMeta,
   upload,
+  bundleUpload,
   writeJson,
   // writeOpsHistory is deliberately NOT injected here. It is delete-all-then-
   // insert, and a route that reaches for it destroys a space's history (see
@@ -436,6 +440,149 @@ function registerSpaceRoutes(router, {
       res.json(outcome.result)
     } catch (error) {
       next(error)
+    }
+  })
+
+  // ── work as files ─────────────────────────────────────────────────────────
+  //
+  // The same document the CLI writes with `di save` and reads with `di open`:
+  // one file holding everything a space is made of, portable to any install.
+  // These two routes are the browser's half of that, so a file can be saved and
+  // opened without a terminal.
+  //
+  // Both SPAWN scripts/space-bundle.mjs rather than reimplementing it. There is
+  // exactly one implementation of the format, and a second one living in the
+  // server would drift from it — quietly, and in a file format, which is the
+  // worst place for a drift to hide. The cost is a second connection to the
+  // same SQLite: fine for export, which only reads, and safe for import, which
+  // does its inserts in one transaction (SQLite allows a single writer at a
+  // time and the server holds no cache of space metadata — listSpaces hits the
+  // database on every call, so an imported space is visible immediately).
+
+  const bundleToolPath = () => {
+    // Beside the server in an installed runtime, one level up in a checkout.
+    const candidates = [
+      path.join(__dirname, '..', '..', '..', 'scripts', 'space-bundle.mjs'),
+      path.join(__dirname, '..', '..', 'scripts', 'space-bundle.mjs')
+    ]
+    return candidates.find((candidate) => fs.existsSync(candidate)) || null
+  }
+
+  const runBundleTool = (args) => new Promise((resolve) => {
+    const tool = bundleToolPath()
+    if (!tool) { resolve({ code: 1, output: 'the bundle tool is not part of this build' }); return }
+    const child = spawn(process.execPath, [tool, ...args], {
+      env: { ...process.env, DATA_ROOT: path.resolve(spacesDir, '..') },
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
+    let output = ''
+    child.stdout.on('data', (chunk) => { output += chunk })
+    child.stderr.on('data', (chunk) => { output += chunk })
+    child.on('error', (error) => resolve({ code: 1, output: String(error?.message || error) }))
+    child.on('exit', (code) => resolve({ code: code ?? 1, output }))
+  })
+
+  // Saving is reading, so it needs no more permission than looking at the space
+  // does — the router's own scope check has already run by the time we are here.
+  router.get('/api/spaces/:spaceId/bundle', async (req, res, next) => {
+    let workDir = null
+    try {
+      const spaceId = normalizeSpaceId(req.params.spaceId)
+      if (!(await spaceExists(spaceId))) return res.status(404).json({ error: 'Space not found.' })
+
+      workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'di-bundle-'))
+      const file = path.join(workDir, `${spaceId}.diiii`)
+      const { code, output } = await runBundleTool(['export', spaceId, '--out', file])
+      if (code !== 0 || !fs.existsSync(file)) {
+        logger.warn(`[bundle] export of ${spaceId} failed: ${output}`)
+        return res.status(500).json({ error: 'Could not save this space to a file.' })
+      }
+      res.download(file, `${spaceId}.diiii`, () => {
+        fsp.rm(workDir, { recursive: true, force: true }).catch(() => {})
+      })
+      workDir = null
+    } catch (error) {
+      next(error)
+    } finally {
+      if (workDir) await fsp.rm(workDir, { recursive: true, force: true }).catch(() => {})
+    }
+  })
+
+  // multer rejects a wrong file type by THROWING, which the generic error
+  // handler turns into a 500 "Server error" — so the one sentence that tells
+  // someone what to do instead never reaches them. Caught here and answered as
+  // what it is: a bad request, with the reason.
+  const acceptBundleFile = (req, res, next) => bundleUpload.single('bundle')(req, res, (error) => {
+    if (!error) return next()
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      const mb = Math.floor((config.maxUploadBytes || 0) / (1024 * 1024))
+      return res.status(413).json({
+        error: `That file is larger than this di.iiii accepts${mb ? ` (${mb} MB)` : ''}. Open it with \`di open\` instead — the command has no such limit.`
+      })
+    }
+    return res.status(400).json({ error: String(error.message || 'That file could not be read.') })
+  })
+
+  // Opening a file CREATES a space, so it answers to the same rule as creating
+  // one: an owning account, an admin, or a local install where auth is off.
+  router.post('/api/spaces/bundle', acceptBundleFile, async (req, res, next) => {
+    const uploaded = req.file?.path || null
+    try {
+      const state = req.authState || {}
+      const exempt = state.isUnrestricted || state.role === 'admin'
+      const sessionUserId = state.type === 'session' && !isGuestSubject(state.subject) ? state.subject : null
+      if (config.requireAuth && !exempt && !sessionUserId) {
+        return res.status(403).json({ error: 'Sign in with an account to open a file here.', code: 'auth_required' })
+      }
+      if (!uploaded) return res.status(400).json({ error: 'No file was sent.' })
+
+      const args = ['import', uploaded]
+      const as = normalizeSpaceId(String(req.body?.as || '').trim())
+      if (as) args.push('--as', as)
+
+      const { code, output } = await runBundleTool(args)
+      if (code !== 0) {
+        // The tool's own words: "this file was written by a newer di.iiii", and
+        // the like. Better than a summary of them — but the tool talks to a
+        // terminal, so two things have to be translated on the way out.
+        const said = output
+          // Node prints an ExperimentalWarning the first time node:sqlite
+          // loads. In a terminal it is noise; in a browser dialog it is the
+          // first thing someone reads.
+          .split('\n')
+          .filter((line) => !/^\(node:\d+\)|^\(Use `node/.test(line.trim()))
+          .join('\n')
+          .replace(/^\[space-bundle\] (ERROR: )?/gm, '')
+          .trim()
+        logger.warn(`[bundle] import failed: ${said}`)
+
+        // "use --force or --as <newId>" is good advice in a terminal and
+        // meaningless in a page with no flags in it. The browser gets the fact
+        // and decides what to offer.
+        const clash = /space "([a-z0-9-]+)" already exists/i.exec(said)
+        if (clash) {
+          return res.status(409).json({
+            error: `A space called "${clash[1]}" is already here.`,
+            code: 'space_exists',
+            spaceId: clash[1]
+          })
+        }
+        return res.status(400).json({ error: said || 'That file could not be opened.' })
+      }
+
+      const opened = as || /imported .*?as ([a-z0-9-]+)/i.exec(output)?.[1] || null
+      const meta = opened ? await loadSpaceMeta(opened) : null
+      if (opened && meta && sessionUserId && grantSpaceToSessionUser) {
+        // Whoever opened it can reach it. A space nobody is scoped to is a
+        // space that vanishes from its own owner's list — the exact trap
+        // ownership does not solve, since scope is what grants access.
+        await grantSpaceToSessionUser(req, opened)
+      }
+      res.status(201).json({ spaceId: opened, space: meta })
+    } catch (error) {
+      next(error)
+    } finally {
+      if (uploaded) await fsp.rm(uploaded, { force: true }).catch(() => {})
     }
   })
 

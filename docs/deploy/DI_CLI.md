@@ -56,6 +56,23 @@ only in memory. The server keeps it, continuously. A file is therefore the
 server for exactly that reason; `di open` stops it, imports, and puts it back,
 because that one does write.
 
+**In the browser too.** Every space card on the Spaces page has **Save to file**;
+**Open a file** sits beside + Create. Two routes back them —
+`GET /api/spaces/:id/bundle` and `POST /api/spaces/bundle` — and both SPAWN the
+same `scripts/space-bundle.mjs` rather than reimplementing the format. One
+implementation, because a second one living in the server would drift from it
+quietly, in a file format, which is the worst place for a drift to hide. Export
+only reads; import does its inserts in one transaction, and the server holds no
+cache of space metadata (`listSpaces` hits the database every call), so an
+imported space is visible immediately.
+
+The two things that have to be translated on the way to a browser: node's
+`ExperimentalWarning` when `node:sqlite` first loads (noise in a terminal, the
+first thing read in a dialog) and the tool's "use `--force` or `--as <newId>`",
+which is good advice where there are flags and meaningless where there are not.
+A name already taken comes back as `409 { code: 'space_exists' }` and the page
+asks for another name instead.
+
 **A file says what wrote it.** The manifest carries `writtenBy` (the di.iiii
 version) and `schemaVersion` (the shape its data was in) alongside the existing
 `format`/`version`. A file from a NEWER di.iiii is refused by name rather than

@@ -2779,3 +2779,104 @@ describe('nonexistent space vs restricted space', () => {
         expect(locked.status).toBe(403)
     })
 })
+
+// Work as files, the browser's half. The same document `di save` writes and
+// `di open` reads — one file holding a space, its whole history and its assets
+// — reachable without a terminal.
+//
+// Both routes SPAWN scripts/space-bundle.mjs rather than reimplementing the
+// format. These check the two things that wiring can get wrong: that the file
+// coming out is really a bundle, and that the failures arrive as something a
+// browser can act on rather than as a 500.
+describe('saving and opening a space as a file', () => {
+    it('hands back a real bundle, named for the space', async () => {
+        const server = await startServer({ requireAuth: false })
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'saveable', permanent: true })
+        })
+
+        const response = await fetch(`${server.baseUrl}/api/spaces/saveable/bundle`)
+        expect(response.status).toBe(200)
+        expect(response.headers.get('content-disposition')).toContain('saveable.diiii')
+
+        // A gzip member, not an error page with a 200 on it.
+        const bytes = Buffer.from(await response.arrayBuffer())
+        expect(bytes.length).toBeGreaterThan(0)
+        expect(bytes[0]).toBe(0x1f)
+        expect(bytes[1]).toBe(0x8b)
+    })
+
+    it('opens a saved file back into a space', async () => {
+        const server = await startServer({ requireAuth: false })
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'round trip', permanent: true })
+        })
+        const saved = Buffer.from(await (await fetch(`${server.baseUrl}/api/spaces/round-trip/bundle`)).arrayBuffer())
+
+        const form = new FormData()
+        form.append('bundle', new Blob([saved]), 'round-trip.diiii')
+        form.append('as', 'came-back')
+        const response = await fetch(`${server.baseUrl}/api/spaces/bundle`, { method: 'POST', body: form })
+        expect(response.status).toBe(201)
+        expect((await response.json()).spaceId).toBe('came-back')
+
+        const listed = await (await fetch(`${server.baseUrl}/api/spaces`)).json()
+        expect(listed.spaces.map((space) => space.id)).toContain('came-back')
+    })
+
+    it('answers a name already taken with 409 and a code, not with terminal flags', async () => {
+        // The tool says "use --force to overwrite or --as <newId>", which is
+        // good advice in a terminal and meaningless in a page. The browser gets
+        // the fact and offers its own way out.
+        const server = await startServer({ requireAuth: false })
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'clashing', permanent: true })
+        })
+        const saved = Buffer.from(await (await fetch(`${server.baseUrl}/api/spaces/clashing/bundle`)).arrayBuffer())
+
+        const form = new FormData()
+        form.append('bundle', new Blob([saved]), 'clashing.diiii')
+        const response = await fetch(`${server.baseUrl}/api/spaces/bundle`, { method: 'POST', body: form })
+        expect(response.status).toBe(409)
+        const body = await response.json()
+        expect(body.code).toBe('space_exists')
+        expect(body.spaceId).toBe('clashing')
+        expect(body.error).not.toContain('--force')
+        expect(body.error).not.toContain('--as')
+    })
+
+    it('refuses something that is not a di.iiii file, with the reason', async () => {
+        // multer rejects by throwing, which the generic handler turns into a
+        // 500 "Server error" — so the one sentence that says what to do instead
+        // never arrives.
+        const server = await startServer({ requireAuth: false })
+        const form = new FormData()
+        form.append('bundle', new Blob([Buffer.from('not a bundle')]), 'notes.txt')
+        const response = await fetch(`${server.baseUrl}/api/spaces/bundle`, { method: 'POST', body: form })
+        expect(response.status).toBe(400)
+        expect((await response.json()).error).toMatch(/Not a di\.iiii file/)
+    })
+
+    it('keeps node\'s own warnings out of what the browser is shown', async () => {
+        // node prints an ExperimentalWarning the first time node:sqlite loads.
+        // In a terminal it is noise; in a dialog it is the first thing read.
+        const server = await startServer({ requireAuth: false })
+        await fetch(`${server.baseUrl}/api/spaces`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ label: 'noisy', permanent: true })
+        })
+        const saved = Buffer.from(await (await fetch(`${server.baseUrl}/api/spaces/noisy/bundle`)).arrayBuffer())
+        const form = new FormData()
+        form.append('bundle', new Blob([saved]), 'noisy.diiii')
+        const response = await fetch(`${server.baseUrl}/api/spaces/bundle`, { method: 'POST', body: form })
+        const body = await response.json()
+        expect(body.error).not.toMatch(/ExperimentalWarning|\(node:\d+\)/)
+    })
+})

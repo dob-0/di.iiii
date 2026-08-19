@@ -11,7 +11,9 @@ import {
     purgeStaleSandboxes,
     uploadServerAsset,
     getServerSpaceAssetUrl,
-    mintSpaceInvite
+    mintSpaceInvite,
+    saveSpaceToFile,
+    openSpaceFromFile
 } from '../../services/serverSpaces.js'
 import { listProjects, getProject, updateProject } from '../../project/services/projectsApi.js'
 import GithubSyncSection from '../../components/preferences/GithubSyncSection.jsx'
@@ -268,6 +270,56 @@ export default function SpaceHub() {
         }
     }, [loadSpaces])
 
+    // Work as files, the browser half. The same document `di save` writes and
+    // `di open` reads: one file holding the space, its whole history and its
+    // assets, openable on any di.iiii. Saving is a plain download; opening is a
+    // file picker, because a browser has no other way to reach a disk.
+    const fileInputRef = useRef(null)
+    const [openingFile, setOpeningFile] = useState(false)
+
+    const handleSaveToFile = useCallback((space, e) => {
+        e?.stopPropagation?.()
+        saveSpaceToFile(space.id)
+    }, [])
+
+    const handlePickFile = useCallback(() => {
+        fileInputRef.current?.click()
+    }, [])
+
+    const handleFileChosen = useCallback(async (event) => {
+        const file = event.target.files?.[0]
+        // Cleared immediately so choosing the same file twice still fires a
+        // change event — otherwise a failed open cannot be retried.
+        event.target.value = ''
+        if (!file) return
+        setOpeningFile(true)
+        setStatus('opening...')
+        try {
+            let result
+            try {
+                result = await openSpaceFromFile(file)
+            } catch (clash) {
+                // The one failure with a way out: this space is already here.
+                // A terminal would say "--as <newId>"; a page can just ask.
+                if (clash?.code !== 'space_exists') throw clash
+                const suggested = `${clash.spaceId}-copy`
+                const as = window.prompt(`${clash.message}\n\nOpen it under another name:`, suggested)?.trim()
+                if (!as) { setStatus(''); return }
+                result = await openSpaceFromFile(file, { as })
+            }
+            await loadSpaces()
+            // loadSpaces clears status on success, so this goes after it.
+            if (result?.spaceId) setStatus(`opened ${result.spaceId}`)
+        } catch (openError) {
+            // Everything else: the server passed the bundle tool's own sentence
+            // through, and showing it verbatim is the difference between "could
+            // not open" and "this file was written by a newer di.iiii".
+            setStatus(String(openError?.message || openError))
+        } finally {
+            setOpeningFile(false)
+        }
+    }, [loadSpaces])
+
     const handleDelete = useCallback(async (space, e) => {
         e.stopPropagation()
         if (!window.confirm(`Delete "${space.label || space.id}"? This cannot be undone.`)) return
@@ -458,6 +510,25 @@ export default function SpaceHub() {
                                 <button type="button" className={viewMode === 'grid' ? 'on' : ''} onClick={() => selectView('grid')} aria-pressed={viewMode === 'grid'}>Grid</button>
                                 <button type="button" className={viewMode === 'map' ? 'on' : ''} onClick={() => selectView('map')} aria-pressed={viewMode === 'map'}>Map</button>
                             </div>
+                        )}
+                        {isAccount && (
+                            <>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".diiii,.tar.gz"
+                                    onChange={handleFileChosen}
+                                    style={{ display: 'none' }}
+                                />
+                                <button
+                                    className="ssh-card-btn"
+                                    onClick={handlePickFile}
+                                    disabled={isBusy || openingFile}
+                                    title="Open a space someone saved as a file"
+                                >
+                                    {openingFile ? 'Opening…' : 'Open a file'}
+                                </button>
+                            </>
                         )}
                         {isAccount ? (
                             creatingTitle === null ? (
@@ -651,6 +722,13 @@ export default function SpaceHub() {
                                                 onClick={e => handleOpenGithub(space, e)}
                                             >
                                                 GitHub sync
+                                            </button>
+                                            <button
+                                                className="ssh-card-btn"
+                                                onClick={e => handleSaveToFile(space, e)}
+                                                title="One file holding this space, its history and its assets — open it on any di.iiii"
+                                            >
+                                                Save to file
                                             </button>
                                             <button
                                                 className="ssh-card-btn ssh-card-btn--danger"
