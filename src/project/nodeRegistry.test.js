@@ -65,8 +65,11 @@ describe('NODE_TYPES', () => {
         expect(NODE_TYPES['view.image'].render).toBe('panel-2d')
     })
 
-    it('world and math nodes are hidden', () => {
-        expect(NODE_TYPES['world.light'].render).toBe('hidden')
+    it('world and math nodes are hidden — except Light, which can stand somewhere now', () => {
+        // world.light went spatial 2026-08-19 so a Light can be COLLECTED
+        // inside a container (a real point light with a marker); at root it
+        // still draws nothing and keeps its settings job.
+        expect(NODE_TYPES['world.light'].render).toBe('spatial-3d')
         expect(NODE_TYPES['world.background'].render).toBe('hidden')
         expect(NODE_TYPES['math.add'].render).toBe('hidden')
     })

@@ -140,6 +140,17 @@ outright if the running page and its code ever disagree.
 
 It only reads. Changing a value is still the inspector's job.
 
+## The Geo — collect a scene in a place
+
+The **Geo** is the plain container. Place one, enter it, and collect what you
+need — cubes, spheres, models, **Lights** — each appears in the room as you
+place it, and from outside the Geo carries them all as one thing you can move,
+lift and duplicate. Empty, it shows a faint floor tile so a place never reads
+as void. No wiring, no rules: when in doubt, build in a Geo.
+
+A Light placed inside any container is a real point light (colour, intensity,
+position). At the top level it stays what it was: the room's light settings.
+
 ## Building a node out of nodes
 
 The **Constructor** (palette, with the other "make" nodes) is a container that

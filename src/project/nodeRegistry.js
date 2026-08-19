@@ -109,6 +109,7 @@ export const FAMILY_BY_TYPE = {
     'universe.world': 'room',
     'universe.space': 'room',
     'universe.desk.3d': 'room',
+    'geom.geo': 'room',
     'universe.desk.2d': 'room',
     'universe.node0': 'room',
     'universe.activate': 'room',
@@ -1023,6 +1024,35 @@ export const NODE_TYPES = {
         render: 'hidden',
     },
 
+    // -----------------------------------------------------------------------
+    // THE GEO — TouchDesigner's Geometry COMP, by the owner's own word: "it's
+    // a clear geo you can enter and in it collect what you need — object,
+    // light... and so on." A container that IS simply a place: it arrives
+    // empty but never reads as void (a faint floor tile marks its footprint),
+    // everything spatial placed inside renders inside it and travels with it,
+    // and it adds NOTHING of its own — no shell box like the desk, no
+    // descriptor plumbing like the constructor. The plainest container there
+    // is, and deliberately so: the zoo of containers each doing something
+    // clever is what read as mess.
+    // -----------------------------------------------------------------------
+
+    'geom.geo': {
+        id: 'geom.geo',
+        label: 'Geo',
+        category: 'geometry',
+        runtime: 'any',
+        singleton: false,
+        keywords: ['geo', 'geometry', 'container', 'group', 'place', 'collect', 'comp', 'scene', 'assemble'],
+        inputs: [
+            { id: 'position', type: 'vec3', label: 'Position', default: [0, 0, 0] },
+            { id: 'rotation', type: 'vec3', label: 'Rotation', default: [0, 0, 0] },
+            { id: 'scale',    type: 'vec3', label: 'Scale',    default: [1, 1, 1] },
+        ],
+        outputs: [],
+        defaultValues: {},
+        render: 'spatial-3d',
+    },
+
     'geom.constructor': {
         id: 'geom.constructor',
         label: 'Constructor',
@@ -1573,10 +1603,20 @@ export const NODE_TYPES = {
             { id: 'directionalColor',        type: 'color',  label: 'Dir Color',         default: '#fff7ea'  },
             { id: 'directionalIntensity',    type: 'number', label: 'Dir Intensity',     default: 1.05       },
             { id: 'directionalPosition',     type: 'vec3',   label: 'Dir Position',      default: [8, 12, 4] },
+            // The point-light half: what a Light IS when it stands inside a
+            // container ("collect what you need — object, light…"). The
+            // ambient/directional fields above stay the per-scope settings
+            // they always were.
+            { id: 'color',     type: 'color',  label: 'Color',     default: '#ffe9c4'  },
+            { id: 'intensity', type: 'number', label: 'Intensity', default: 6          },
+            { id: 'position',  type: 'vec3',   label: 'Position',  default: [0, 1.6, 0] },
         ],
         outputs: [],
         defaultValues: {},
-        render: 'hidden',
+        // spatial so it can STAND somewhere: draggable, contained, carried by
+        // its parent. Unparented at root it draws nothing (see renderNodeBody)
+        // so every existing document looks exactly as it did.
+        render: 'spatial-3d',
     },
 
     'world.background': {
@@ -1769,6 +1809,7 @@ export const CONTAINER_TYPE_IDS = new Set([
     'universe.world',
     'universe.space',
     'universe.desk.3d',
+    'geom.geo',
     'universe.node0',
     'studio',
     'node.null',

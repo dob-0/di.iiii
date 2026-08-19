@@ -493,3 +493,54 @@ describe('the Constructor', () => {
         expect(body).toBeTruthy()
     })
 })
+
+describe('the Geo', () => {
+    // "It's a clear geo you can enter and in it collect what you need —
+    // object, light… and so on." The geo is a PLACE: visibly there when
+    // empty, everything spatial inside renders inside it, and a Light
+    // standing in it is a real light.
+    const geoDoc = (children = []) => ({
+        worldState: {},
+        entities: [],
+        edges: [],
+        nodes: [
+            { id: 'geo', typeId: 'geom.geo', parentId: null, label: 'Geo', values: { position: [1, 0, 0] } },
+            ...children
+        ]
+    })
+
+    it('marks its footprint even when empty — an empty place must not read as void', () => {
+        gridSpy.mockClear()
+        render(<RawViewport document={geoDoc()} scopeId={null} onWorldDoubleClick={() => {}} />)
+        expect(gridSpy).toHaveBeenCalled()
+    })
+
+    it('renders collected objects inside itself', () => {
+        boxObjectSpy.mockClear()
+        render(<RawViewport
+            document={geoDoc([{ id: 'c1', typeId: 'geom.cube', parentId: 'geo', label: 'Cube', values: {} }])}
+            scopeId={null}
+            onWorldDoubleClick={() => {}}
+        />)
+        expect(boxObjectSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it('a Light standing inside is a real point light; unparented it draws nothing', () => {
+        const { container } = render(<RawViewport
+            document={geoDoc([{ id: 'l1', typeId: 'world.light', parentId: 'geo', label: 'Light', values: { color: '#ff0000' } }])}
+            scopeId={null}
+            onWorldDoubleClick={() => {}}
+        />)
+        const point = [...container.querySelectorAll('pointlight')]
+        expect(point.length).toBe(1)
+        expect(point[0].getAttribute('color')).toBe('#ff0000')
+
+        // …and at root, no body: every existing document keeps its look.
+        const { container: rootOnly } = render(<RawViewport
+            document={{ worldState: {}, entities: [], edges: [], nodes: [{ id: 'l2', typeId: 'world.light', parentId: null, label: 'Light', values: {} }] }}
+            scopeId={null}
+            onWorldDoubleClick={() => {}}
+        />)
+        expect(rootOnly.querySelectorAll('pointlight').length).toBe(0)
+    })
+})
