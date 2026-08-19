@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the sheet can show the lines
+- the Constructor: a node made of nodes
 
 Full detail: `PROGRESS.md`.
 
