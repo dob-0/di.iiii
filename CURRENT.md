@@ -3,7 +3,7 @@
 **Every AI reads this before anything else. ≤50 lines. Read in full.**
 Updated at the end of every session. Replace content — do not append.
 
-active_branch: feat/control-surface-osc-midi (off dev, synced to dev 2026-08-19)
+active_branch: dev
 lanes: `dev` → staging.di-studio.xyz (rehearsal) · `main` → di-studio.xyz (live)
 
 ---
@@ -13,13 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- 2026-08-19: committed the July control-surface work (control.fader/xy/button
-  + OSC/MIDI egress), merged a month of dev into the branch. Seed→Raw rename
-  ported: widgets live in `src/raw/components/nodeControls/`, CONTROL_WIDGETS
-  in `RawGraphSurface`, `useDeviceEgress` mounted in `RawEditor`, control.*
-  types joined the `numbers` family. Owed from July: live-click the widgets,
-  TD + Ableton hookup.
-- upstream: the desk trilogy: room behind the graph, touch, the cut list
+- the desk trilogy: room behind the graph, touch, the cut list
 
 Full detail: `PROGRESS.md`.
 

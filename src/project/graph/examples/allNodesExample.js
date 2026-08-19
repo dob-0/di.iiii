@@ -136,6 +136,10 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('mix', 'math.mix', { label: 'Mix', col: 1, row: 6 })
     add('subtract', 'math.subtract', { label: 'Subtract', col: 1, row: 7 })
     add('pow', 'math.pow', { label: 'Power', col: 1, row: 8 })
+    // Performable controls — values you play rather than type.
+    add('fader', 'control.fader', { label: 'Fader', col: 1, row: 9, values: { value: 0.5 } })
+    add('xypad', 'control.xy', { label: 'XY Pad', col: 1, row: 10, values: { x: 0.5, y: 0.5 } })
+    add('button', 'control.button', { label: 'Button', col: 1, row: 11 })
 
     // --- column 2: world settings ---------------------------------------------
     add('light', 'world.light', { label: 'Light', col: 2, row: 0 })
