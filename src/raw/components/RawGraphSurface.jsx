@@ -907,7 +907,30 @@ export default function RawGraphSurface({
         // palette over the graph behind it.
         if (event.target?.closest?.('.raw-graph-port-menu')) return
         const graphPoint = clientPointToGraphPoint(event.clientX, event.clientY)
-        onDoubleClick({ clientX: event.clientX, clientY: event.clientY, graphX: graphPoint.x, graphY: graphPoint.y })
+        // Keep the whole card — and the door hanging off its left edge — inside
+        // the part of the canvas you can SEE. Double-tapping near an edge used
+        // to put the new card half off-screen, so the thing you just made was
+        // partly unreachable and its door was clipped away entirely.
+        const rect = containerRef.current?.getBoundingClientRect?.()
+        const clamped = { x: graphPoint.x, y: graphPoint.y }
+        if (rect?.width && rect?.height) {
+            // The card is placed CENTRED on this point by the caller, and its
+            // door hangs off the left edge — so the usable band is inset by half
+            // a card plus the door on the left, and half a card on the right.
+            const halfCard = CARD_WIDTH / 2
+            const topLeft = clientPointToGraphPoint(rect.left + GRAPH_FIT_PADDING_PX, rect.top + GRAPH_FIT_PADDING_PX)
+            const bottomRight = clientPointToGraphPoint(
+                rect.right - GRAPH_FIT_PADDING_PX,
+                rect.bottom - GRAPH_FIT_PADDING_PX - Math.max(0, bottomInset)
+            )
+            const minX = topLeft.x + halfCard + (DOOR_WIDTH_PX / viewportRef.current.zoom)
+            const maxX = bottomRight.x - halfCard
+            const minY = topLeft.y + HEADER_HEIGHT
+            const maxY = bottomRight.y - HEADER_HEIGHT
+            if (maxX > minX) clamped.x = clamp(graphPoint.x, minX, maxX)
+            if (maxY > minY) clamped.y = clamp(graphPoint.y, minY, maxY)
+        }
+        onDoubleClick({ clientX: event.clientX, clientY: event.clientY, graphX: clamped.x, graphY: clamped.y })
     }
 
     const handleSectionKeyDown = (event) => {

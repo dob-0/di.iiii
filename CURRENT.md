@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- "Make me a scene": something to open and copy
+- a second object no longer lands inside the first
 
 Full detail: `PROGRESS.md`.
 
