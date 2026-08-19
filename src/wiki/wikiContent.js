@@ -508,6 +508,7 @@ export const WIKI_ARTICLES = [
                 'The palette groups its nodes into seven families by what you are doing — bring in, make, numbers, the room, watch, send out, agents — each with its own colour, the same colour the node’s card wears on the canvas. Typing dissolves the groups into a flat search. It only lists node types that actually compute or render; a “shell” tag marks anything that places but carries nothing yet, and “local dev” marks nodes that only work against a local dev server.',
                 'While you drag a wire, every input that can take it lights up and every input that cannot goes quiet — an incompatible drop no longer fails silently.',
                 'Starting from nothing: a blank Raw workspace shows a “Make me a scene” button in the middle of the canvas. It builds a room with a light, a cube, a colour wired into that cube, and an empty Model node waiting for your own file — plus a note giving the moves in plain words. It is there because a blank workspace opens with no toolbar at all, so the ⋯ menu (which also offers it) does not exist for the person most likely to want it.',
+                'The Constructor is the first node made of nodes: a container that wears whatever shape the nodes inside it build. Wire a Cube’s Geometry output — or several parts through a Merge — into an Out door standing inside it, walk out, and it stands in the room being that shape, live. See “The Constructor: a node made of nodes”.',
                 'A container has a wall, and you make holes in it. Enter a World, a 3D Desk or a Studio, place an In node inside it, and a socket with that name appears on the container’s outer face — wire something into it from outside and the In node hands that value to whatever it feeds inside. An Out node does the same in reverse. This is how TouchDesigner, Blender, Max and Unreal all do it, and it is the answer to “I can’t connect anything to a World”. Renaming a doorway never breaks its wire: the socket is identified by the node itself, not by its name. Two limits worth knowing — a doorway only makes a socket on the container it is INSIDE, and a Code node (node.null) cannot grow one, because its ports are already fully hand-declared.',
                 'Standing inside any node, “what is it made of” — beside the “inside X” label, and on the canvas itself when there is nothing in there — opens a reading of that node: what it takes and gives with the values going through it at that moment, where each of those values came from, what works them out, what puts the node on screen, and what is inside it. Every node answers the same four, so reading one teaches you how to read all of them. It is the honest answer to “why can’t I see what a cube is”: a cube has no inside because it is made of code rather than of other nodes, and this says what it has instead.',
                 'A container also gives out its own settings, and only those: a World offers its Title and Sky, a 3D Desk its Position, Rotation and Scale, a Studio its Title. Nothing about what is inside a container leaks through its wall by itself — that is what the doorways are for, and it is deliberate. Assuming otherwise is the most common mistake people make with containers in every tool that has them.',
@@ -561,6 +562,27 @@ export const WIKI_ARTICLES = [
             'And it can show you the code. Where a node is worked out or drawn, the sheet names the file and the exact lines — “Show the lines” opens them, real and unedited, fetched only when you ask. The pointing can never rot: a build step measures the real files and CI fails the moment an edit moves them, and if a running page and its code ever disagree the sheet refuses to show anything rather than show the wrong lines. Where one piece of code answers for several nodes at once — the five value nodes share one — it says so, so reading it once is reading all of them.'
         ],
         tags: ['raw', 'nodes', 'anatomy', 'ports', 'doorways', 'containers', 'made-of', 'learning', 'constructor', 'code', 'source', 'lines'],
+        updated: '2026-08-19'
+    },
+    {
+        id: 'the-constructor',
+        category: 'Editing',
+        title: 'The Constructor: a node made of nodes',
+        summary: 'A container that wears whatever shape the nodes inside it build. Enter it, wire shapes into its Out door, walk out — it stands in the room being that shape.',
+        body: [
+            'Every node used to be made of code — you could read the code, but you could not open the node and change what it is. The Constructor is the first node made of nodes. Its inside is its definition; its outside is the result.',
+            { list: [
+                'Place a Constructor from the palette (it sits with the other “make” nodes). Until something is wired, it stands as a violet wireframe: shape goes here.',
+                'Enter it. Place a Cube or a Sphere or a Plane inside, place an Out node, and wire the shape’s Geometry output into the door. Walk out — the Constructor is now wearing that shape.',
+                'Several parts go through a Merge: two Geometry wires in, one out, chained for more. Each part keeps its own Position, Rotation and colour, so a snowman is two spheres with different positions, merged, wired to the door.',
+                'The inside is a workshop, not a room: the parts standing in it are not drawn as objects in the outer room — only what reaches a door is drawn. Standing inside, you see your parts; standing outside, you see the result.',
+                'Everything stays live. Wire a colour into a part inside, and the worn shape outside changes with it; wire the clock’s Sin into a Sphere’s Radius and the worn shape breathes.',
+                'Geometry is a value like any other — the violet port. Cube, Sphere and Plane each give their shape out as Geometry, and built shapes nest: place one Constructor inside another and wire the inner one’s socket onward toward the outer door.',
+                'Ask any Constructor “what is it made of” and the sheet answers like it answers everything: its doors, what they carry right now, and how many nodes are standing inside.'
+            ] },
+            'Limits, stated plainly: a worn shape carries colour but not textures or files yet; Model, Video and Sound do not give Geometry out; a feedback loop — two Constructors feeding each other — wears nothing rather than something arbitrary; and a runaway graph is capped at 256 pieces and 16 levels deep, so one wire cannot freeze the room.'
+        ],
+        tags: ['raw', 'constructor', 'geometry', 'shape', 'merge', 'nodes', 'container', 'doorways', 'build', 'graph'],
         updated: '2026-08-19'
     },
     {

@@ -1,4 +1,5 @@
 import { DOORWAY_OUT_TYPE_ID, getNodeInputs } from '../nodeRegistry.js'
+import { mergeGeometry } from './geometryDescriptor.js'
 
 const asNumber = (value, fallback = 0) => {
     const next = Number(value)
@@ -116,7 +117,31 @@ const getNodeInputDefault = (node, portId) => {
 export const evaluateNodeOutput = (node, portId, context, stack = new Set()) => {
     if (!node) return undefined
     const key = `${node.id}:out:${portId}`
-    if (stack.has(key)) return undefined
+    // A key that is part of a feedback loop answers undefined for the whole
+    // pass — checked before the cache, so a loop member's cut-shaped first
+    // answer can never be served as if it were the real one.
+    if (context?.cyclePoison?.has(key)) return undefined
+    if (stack.has(key)) {
+        // Everything from the re-entered key to the top of the stack IS the
+        // loop. Poisoning only the entry point made the cut land wherever the
+        // FIRST evaluation happened to walk in — so the same document gave
+        // the viewport one worn shape and the sheet another, depending on
+        // nothing but ask order (proved by execution during review: two
+        // constructors feeding each other, A-first vs B-first, contradictory
+        // shapes on screen at the same instant). Poisoning the whole loop
+        // makes every member answer the same undefined on every surface: a
+        // feedback loop carries nothing, deterministically, and consumers
+        // fall back to their own values exactly as they do for any dead wire.
+        if (context && !context.cyclePoison) context.cyclePoison = new Set()
+        if (context?.cyclePoison) {
+            const keys = [...stack]
+            for (let i = keys.indexOf(key); i >= 0 && i < keys.length; i += 1) {
+                context.cyclePoison.add(keys[i])
+            }
+            context.cyclePoison.add(key)
+        }
+        return undefined
+    }
 
     // A node's output within one pass depends only on the (fixed, for the
     // pass's lifetime) document + edges, so it's safe to cache by node+port
@@ -130,6 +155,12 @@ export const evaluateNodeOutput = (node, portId, context, stack = new Set()) => 
     nextStack.add(key)
 
     const result = computeNodeOutput(node, portId, context, nextStack)
+    // The poison can land DURING this very computation — the first entrant
+    // into a loop discovers the loop somewhere beneath itself, and without
+    // this check it would walk out carrying a cut-shaped value nobody else
+    // will ever see again. Checked after compute, not cached: the poison set
+    // outlives the pass's cache and governs every later read.
+    if (context?.cyclePoison?.has(key)) return undefined
     cache?.set(key, result)
     return result
 }
@@ -172,6 +203,56 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
         case 'geom.cube':
             if (portId === 'bounds') {
                 return asVec3(evaluateNodeInput(node, 'size', context, nextStack), [1, 1, 1])
+            }
+            // The shape as a VALUE — see geometryDescriptor.js. Read through
+            // evaluateNodeInput, never off node.values: a colour wired into
+            // the cube must colour the descriptor too, or the cube standing in
+            // the room and the cube travelling down a wire would be two
+            // different cubes wearing one name.
+            if (portId === 'geometry') {
+                return {
+                    kind: 'box',
+                    size: asVec3(evaluateNodeInput(node, 'size', context, nextStack), [1, 1, 1]),
+                    color: evaluateNodeInput(node, 'color', context, nextStack),
+                    position: asVec3(evaluateNodeInput(node, 'position', context, nextStack), [0, 0.5, 0]),
+                    rotation: asVec3(evaluateNodeInput(node, 'rotation', context, nextStack), [0, 0, 0])
+                }
+            }
+            break
+        case 'geom.sphere':
+            if (portId === 'geometry') {
+                return {
+                    kind: 'sphere',
+                    radius: asNumber(evaluateNodeInput(node, 'radius', context, nextStack), 0.5),
+                    color: evaluateNodeInput(node, 'color', context, nextStack),
+                    position: asVec3(evaluateNodeInput(node, 'position', context, nextStack), [0, 0.5, 0]),
+                    rotation: asVec3(evaluateNodeInput(node, 'rotation', context, nextStack), [0, 0, 0])
+                }
+            }
+            break
+        case 'geom.plane':
+            // Colour only, no texture: a descriptor is pure data, and the live
+            // `texture` input carries a THREE.Texture that is neither.
+            if (portId === 'geometry') {
+                return {
+                    kind: 'plane',
+                    width: asNumber(evaluateNodeInput(node, 'width', context, nextStack), 2),
+                    height: asNumber(evaluateNodeInput(node, 'height', context, nextStack), 2),
+                    color: evaluateNodeInput(node, 'color', context, nextStack),
+                    position: asVec3(evaluateNodeInput(node, 'position', context, nextStack), [0, 0, 0]),
+                    rotation: asVec3(evaluateNodeInput(node, 'rotation', context, nextStack), [0, 0, 0])
+                }
+            }
+            break
+        case 'shape.merge':
+            // mergeGeometry drops what is not a shape and returns undefined for
+            // nothing at all — so an unwired Merge carries NOTHING, visibly,
+            // rather than an empty group that draws as an invisible something.
+            if (portId === 'out') {
+                return mergeGeometry([
+                    evaluateNodeInput(node, 'a', context, nextStack),
+                    evaluateNodeInput(node, 'b', context, nextStack)
+                ])
             }
             break
         case 'source.webcam':

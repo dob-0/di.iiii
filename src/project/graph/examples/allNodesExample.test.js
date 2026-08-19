@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
     INERT_INPUTS,
-    UNWIRABLE_PORTS,
+    PASS_THROUGH_PORTS, UNWIRABLE_PORTS,
     buildAllNodesExample,
     paletteTypeIds
 } from './allNodesExample.js'
@@ -91,7 +91,7 @@ describe('all-nodes example graph', () => {
 
     it('documents only ports that really exist', () => {
         const stale = []
-        for (const entry of [...UNWIRABLE_PORTS, ...INERT_INPUTS]) {
+        for (const entry of [...UNWIRABLE_PORTS, ...INERT_INPUTS, ...PASS_THROUGH_PORTS]) {
             const lastDot = entry.port.lastIndexOf('.')
             const typeId = entry.port.slice(0, lastDot)
             const portId = entry.port.slice(lastDot + 1)
@@ -111,8 +111,10 @@ describe('all-nodes example graph', () => {
     // readers that working ports were decoration. Ask the runtime instead.
     it('derives port liveness from the runtime, in both directions', () => {
         const listed = new Set(UNWIRABLE_PORTS.map((entry) => entry.port))
+        const passThrough = new Set(PASS_THROUGH_PORTS.map((entry) => entry.port))
         const deadButUnlisted = []
         const listedButAlive = []
+        const passThroughButAliveBare = []
 
         for (const typeId of paletteTypeIds()) {
             const type = getNodeType(typeId)
@@ -121,13 +123,50 @@ describe('all-nodes example graph', () => {
                 const context = createNodeGraphContext({ nodes: [node], edges: [] })
                 const isDead = evaluateNodeOutput(node, port.id, context) === undefined
                 const key = `${typeId}.${port.id}`
-                if (isDead && !listed.has(key)) deadButUnlisted.push(key)
+                if (isDead && !listed.has(key) && !passThrough.has(key)) deadButUnlisted.push(key)
                 if (!isDead && listed.has(key)) listedButAlive.push(key)
+                // A pass-through port that answers with nothing wired has
+                // stopped being pass-through; the list must not overclaim.
+                if (!isDead && passThrough.has(key)) passThroughButAliveBare.push(key)
             }
         }
 
         expect(deadButUnlisted, 'a placeable output carries nothing and is not documented as such').toEqual([])
         expect(listedButAlive, 'documented as unwirable, but the runtime returns a value').toEqual([])
+        expect(passThroughButAliveBare, 'documented as pass-through, but alive with nothing wired in').toEqual([])
+    })
+
+    // The other direction of the pass-through claim: dead bare is only honest
+    // if feeding it brings it alive. One proving fixture per listed port, and
+    // an entry without one fails here rather than being taken on trust.
+    it('proves every pass-through port alive once fed', () => {
+        // A fixture returns the SETUP — the node and its context — and this
+        // loop does the evaluation itself, on the port the entry claims. A
+        // fixture that returned an evaluated value could prove the wrong
+        // thing: the review demonstrated a dead port hiding behind a proof
+        // cloned from shape.merge's, green in all three directions.
+        const proofs = {
+            'shape.merge.out': () => {
+                const cube = createNode('geom.cube', { id: 'proof-cube' })
+                const merge = createNode('shape.merge', { id: 'proof-merge' })
+                const context = createNodeGraphContext({
+                    nodes: [cube, merge],
+                    edges: [{ id: 'proof-e', fromNodeId: cube.id, fromPort: 'geometry', toNodeId: merge.id, toPort: 'a' }]
+                })
+                return { node: merge, context }
+            }
+        }
+        for (const entry of PASS_THROUGH_PORTS) {
+            const prove = proofs[entry.port]
+            expect(prove, `${entry.port} is listed pass-through but has no proving fixture`).toBeTruthy()
+            const { node, context } = prove()
+            const lastDot = entry.port.lastIndexOf('.')
+            expect(node.typeId, `${entry.port}: the fixture proves a different node`).toBe(entry.port.slice(0, lastDot))
+            expect(
+                evaluateNodeOutput(node, entry.port.slice(lastDot + 1), context),
+                `${entry.port} stayed dead even when fed`
+            ).toBeDefined()
+        }
     })
 
     // The live part of the graph: the maths chain must actually resolve to

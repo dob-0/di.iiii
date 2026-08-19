@@ -11,6 +11,8 @@
 // The port's declared type decides the rendering, never the value's shape: a
 // colour is a string and so is a title, and sniffing "does it start with #"
 // would put a swatch next to somebody's text.
+import { countGeometryPieces, isGeometryDescriptor } from './geometryDescriptor.js'
+
 export const NOTHING = 'nothing'
 
 const trimNumber = (value) => {
@@ -60,6 +62,10 @@ export function formatPortValue(value, type = 'any') {
         }
     }
     if (isTexture(value)) return { text: describeTexture(value), swatch: null, empty: false }
+    if (isGeometryDescriptor(value)) {
+        const pieces = countGeometryPieces(value)
+        return { text: `a shape — ${pieces} ${pieces === 1 ? 'piece' : 'pieces'}`, swatch: null, empty: false }
+    }
 
     // Reached by a live output carrying a MediaStream, an AudioBuffer, a model
     // — things with no honest one-line reading. Saying so beats "[object

@@ -233,7 +233,18 @@ export default function NodeAnatomyPanel({ reading, onShowCard = null }) {
     if (!reading) return <div className="raw-empty-state"><p>Nothing to read.</p></div>
 
     const { takes, gives, worksItOut, putsOnScreen, inside } = reading
-    const screen = PUTS_ON_SCREEN[putsOnScreen.kind] || PUTS_ON_SCREEN.nowhere
+    let screen = PUTS_ON_SCREEN[putsOnScreen.kind] || PUTS_ON_SCREEN.nowhere
+    // A container that stands in the room wearing its doors' geometry — the
+    // Constructor — must not get the generic room sentence, whose second half
+    // ("a different piece of code from the one above") points at code slot 2
+    // just said this node does not have. Caught by the adversarial review:
+    // the two slots contradicted each other on the same screen.
+    if (putsOnScreen.kind === 'room' && inside.kind === 'container' && worksItOut.byDoor.length) {
+        screen = {
+            badge: 'in the room',
+            text: 'It stands in the room wearing whatever its doors carry — the shape you see is the one built by the nodes inside it, and it changes the moment they do.'
+        }
+    }
     // No location rows on an unbuilt type: pointing a reader at lines behind a
     // set of ports with nothing behind them would dress the shell up as real —
     // the exact defect the banner above exists to prevent.
