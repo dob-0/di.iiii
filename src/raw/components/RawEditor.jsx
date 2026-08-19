@@ -36,7 +36,6 @@ import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
 import { buildSceneExample } from '../../project/graph/examples/sceneExample.js'
-import { buildStarterWorkspaceDocument } from '../../project/graph/examples/starterWorkspace.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
 import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
@@ -182,29 +181,20 @@ export default function RawEditor({
     // next to the selection state it depends on.
     const scaffoldRef = useRef(null)
 
-    // Whether THIS mount seeded the starter constellation — read once by the
-    // zen effect below, so a seeded (but brand-new) workspace still opens bare.
-    const seededStarterRef = useRef(false)
-
     const initialStoreState = useMemo(() => {
         if (projectId || !localStorageKey) return undefined
         const savedDocument = readLocalWorkspaceDocument(localStorageKey)
         if (savedDocument) return { document: savedDocument, version: 0 }
-        if (!seedOnFirstVisit) return undefined
-        // First visit to a blank local workspace: seed the starter desk as the
-        // document's ORIGIN (not an op batch), so undo unwinds to nothing
-        // instead of deleting the constellation node by node. The projectId
-        // guard above makes this unreachable for any server-backed document.
-        seededStarterRef.current = true
-        return {
-            document: buildStarterWorkspaceDocument({
-                workspaceTop: 168,
-                viewportWidth: typeof window !== 'undefined' ? window.innerWidth : 1280,
-                viewportHeight: typeof window !== 'undefined' ? window.innerHeight : 800
-            }),
-            version: 0
-        }
-    }, [localStorageKey, projectId, seedOnFirstVisit])
+        // NO starter seed any more. The audit measured it: 71 words, two open
+        // windows and a four-node demo installed as if they were your work —
+        // while the true-empty state (13 words, one offer) was the cleanest
+        // screen in the product and the one first-timers never saw. On a phone
+        // the seeded windows collided with the cards outright. The demo lives
+        // one tap away behind "Make me a scene", where choosing it is the
+        // person's own act. seedOnFirstVisit stays accepted for compatibility;
+        // it now means only "this route is a local canvas".
+        return undefined
+    }, [localStorageKey, projectId])
 
     const store = useProjectStore(initialStoreState)
     const { state, dispatch } = store
@@ -726,10 +716,7 @@ export default function RawEditor({
         if (zenReadRef.current || !document) return
         zenReadRef.current = true
         setZen(resolveZenPreference(zenWorkspaceKey, {
-            nodeCount: (document.nodes || []).length,
-            // The starter constellation is seeded, not built by the person —
-            // a seeded first visit still defaults to zen (stored choice wins).
-            defaultZen: seededStarterRef.current ? true : undefined
+            nodeCount: (document.nodes || []).length
         }))
     }, [document, zenWorkspaceKey])
 
@@ -832,10 +819,25 @@ export default function RawEditor({
         if (!definition) return
         const place = palettePlace || {}
         const values = buildNodeValues(definition.id, params, place)
+        // Step aside until the card lands CLEAR of every existing card in this
+        // scope. New cards used to land square on old ones — the audit watched
+        // a Merge bury a Cube's whole header, and a card land over another's
+        // door, which left that door silently unclickable forever. Same idea
+        // as findFreeSpot in the room, in card coordinates.
+        let cardX = (place.graphX ?? place.clientX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2)
+        let cardY = Math.max(20, (place.graphY ?? place.clientY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2))
+        const siblings = authoredNodes.filter((node) => (node.parentId || null) === (currentScopeId || null))
+        const collides = (x, y) => siblings.some((node) =>
+            Math.abs((node.graphX ?? 0) - x) < ROOT_WORLD_CARD_WIDTH + 16
+            && Math.abs((node.graphY ?? 0) - y) < 130)
+        for (let step = 0; step < 24 && collides(cardX, cardY); step += 1) {
+            cardX += 44
+            cardY += 44
+        }
         const nextNode = createNode(definition.id, {
             values,
-            graphX: (place.graphX ?? place.clientX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2),
-            graphY: Math.max(20, (place.graphY ?? place.clientY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2)),
+            graphX: cardX,
+            graphY: cardY,
             parentId: currentScopeId
         })
         if (!nextNode) return
@@ -1423,19 +1425,6 @@ export default function RawEditor({
                         markWorldLive(node)
                         setIsWorldFullscreen(true)
                     }}
-                    onEnterOverlay={() => {
-                        // The backdrop is permanent now; "world as background"
-                        // just means: make this the live world and put the
-                        // window away so the backdrop is what you look at.
-                        markWorldLive(node)
-                        applyLocalOps({
-                            type: 'updateNode',
-                            payload: {
-                                nodeId: node.id,
-                                patch: { values: { frame: { ...(node.values?.frame || {}), visible: false } } }
-                            }
-                        })
-                    }}
                 />
             )
         }
@@ -1687,7 +1676,10 @@ export default function RawEditor({
         }))
     ]
 
-    const workspaceTitle = isLocalWorkspace ? 'Blank White Workspace' : (document.projectMeta?.title || 'Raw Project')
+    // "Blank White Workspace" was neither blank nor white nor, in the
+    // product's vocabulary, a workspace. It is the canvas that lives in this
+    // browser.
+    const workspaceTitle = isLocalWorkspace ? 'Local canvas' : (document.projectMeta?.title || 'Raw Project')
     const graphTopInset = chromeVisible ? workspaceTop : 0
     // Windows float over the graph, so the fit has to dodge the docked ones or
     // it centres the card cluster underneath one — see getGraphEdgeInsets.
@@ -1779,21 +1771,6 @@ export default function RawEditor({
                             <button type="button" className="raw-topbar-help-action" onClick={() => setHelpOpen(true)}>
                                 Help
                             </button>
-                            <div className="raw-topbar-scale-control">
-                                <label htmlFor="node-scale-select">Size:</label>
-                                <select
-                                    id="node-scale-select"
-                                    value={nodeScale}
-                                    onChange={(e) => setNodeScale(parseFloat(e.target.value))}
-                                    title="Adjust node size for mobile, tablet, VR, or desktop viewing"
-                                >
-                                    {getAvailableScales().map((s) => (
-                                        <option key={s.value} value={s.value}>
-                                            {s.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
                             {surfaceNodeCount > 0 && (
                                 <button
                                     type="button"
@@ -1805,20 +1782,46 @@ export default function RawEditor({
                                     {surfaceNodeCount} {surfaceNodeCount === 1 ? 'node' : 'nodes'}
                                 </button>
                             )}
-                            <button
-                                type="button"
-                                className={`raw-topbar-node-count${chatOpen ? ' is-active' : ''}`}
-                                onClick={() => setChatOpen((v) => !v)}
-                                title="Toggle chat"
-                                aria-label="Toggle chat"
-                            >
-                                Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
-                            </button>
+                            {/* No Chat button alone in a local canvas: there
+                                is nobody on the other end (the doc lives in
+                                this browser), and a resident social control in
+                                a single-person room is the audit's definition
+                                of noise. It returns the moment presence shows
+                                anyone, and the ⋯ menu's Chat entry stays as
+                                the always-there path. */}
+                            {(!isLocalWorkspace || presence.users.length > 0 || unreadChatCount > 0) && (
+                                <button
+                                    type="button"
+                                    className={`raw-topbar-node-count${chatOpen ? ' is-active' : ''}`}
+                                    onClick={() => setChatOpen((v) => !v)}
+                                    title="Toggle chat"
+                                    aria-label="Toggle chat"
+                                >
+                                    Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
+                                </button>
+                            )}
                             <div className="raw-topbar-overflow">
                                 <button type="button" className="raw-topbar-overflow-btn" onClick={() => setOverflowOpen((v) => !v)}>⋯</button>
                                 {overflowOpen && (
                                     <div className="raw-topbar-overflow-menu">
                                         <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
+                                        {/* Configuration, not work — the ⋯ is
+                                            where the audit sent it. */}
+                                        <div className="raw-topbar-scale-control">
+                                            <label htmlFor="node-scale-select">Size:</label>
+                                            <select
+                                                id="node-scale-select"
+                                                value={nodeScale}
+                                                onChange={(e) => setNodeScale(parseFloat(e.target.value))}
+                                                title="Adjust node size for mobile, tablet, VR, or desktop viewing"
+                                            >
+                                                {getAvailableScales().map((s) => (
+                                                    <option key={s.value} value={s.value}>
+                                                        {s.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
                                         <button type="button" onClick={() => { handleCreateSceneExample(); setOverflowOpen(false) }}>Make me a scene</button>
                                         <button type="button" onClick={() => { handleCreateAllNodesExample(); setOverflowOpen(false) }}>All Nodes Example</button>
                                         <button type="button" onClick={() => { handleCreateStreamingPrototype(); setOverflowOpen(false) }}>Streaming Prototype</button>
@@ -1866,7 +1869,10 @@ export default function RawEditor({
             {!isWorldFullscreen && (
                 <div className="raw-world-overlay">
                     <RawViewport
-                        topInset={workspaceTop}
+                        // Zen has no topbar; honouring workspaceTop there
+                        // painted a dead black band across the top of the
+                        // room (seen on the first-visit screen).
+                        topInset={chromeVisible ? workspaceTop : 0}
                         document={document}
                         selectedEntityId={surfaceSelectedEntity?.id || null}
                         selectedNodeId={surfaceSelectedNode?.id || null}
@@ -1911,7 +1917,11 @@ export default function RawEditor({
                     portScopeNodes={authoredNodes}
                     onPromotePort={handlePromotePort}
                     onMakeScene={handleCreateSceneExample}
-                    onExplainScope={currentScopeId ? openAnatomy : null}
+                    // Only inside a CODE-made node: there the empty canvas IS
+                    // the question. A container's reading stays one tap away on
+                    // the marker's ? — two resident buttons for one answer was
+                    // the clutter the audit counted.
+                    onExplainScope={currentScopeId && isNodeMadeOfCode(scopeNode?.typeId) ? openAnatomy : null}
                     emptyHint={scopeEmptyHint}
                     edges={graphCardEdges}
                     selectedNodeId={workspaceState.selectedNodeId}
@@ -2072,18 +2082,18 @@ export default function RawEditor({
                         while the scope is empty, and a container you have put
                         something in is exactly where "what is this made of" is
                         most worth asking. */}
+                    {/* A glyph, not a sentence: the resident four-word button
+                        was the audit's example of info squatting on the one
+                        strip that must stay minimal. The question mark IS the
+                        question; title and accessible name carry the words. */}
                     <button
                         type="button"
                         className="raw-scope-marker-what"
                         onClick={openAnatomy}
                         title={`What ${scopeNode?.label || 'this node'} is made of`}
-                        // The visible words come FIRST and verbatim: an
-                        // aria-label replaces the accessible name outright, so
-                        // "What A container is made of" left somebody driving
-                        // by voice unable to say the label they can see.
                         aria-label={`what is it made of — ${scopeNode?.label || 'this node'}`}
                     >
-                        what is it made of
+                        ?
                     </button>
                     {navStack.length > 2 && (
                         <button

@@ -112,6 +112,14 @@ export const deriveNodeInspectorSections = (node) => {
     }
 
     const sections = fields.length ? [{ id: 'values', label: 'Ports', fields }] : []
-    sections.push(CODE_SECTION)
+    // Only when there IS stored code. The section used to ship on every node —
+    // a dead "Code — stored, not run" textarea under every Cube and Sphere,
+    // which the UX audit named the one systemic clutter generator ("useless
+    // infos", in the owner's words). A node.null keeps it unconditionally
+    // above: code is that type's whole identity. Anything else earns the box
+    // by actually carrying something in it.
+    if (typeof node.values?.__code === 'string' && node.values.__code.trim()) {
+        sections.push(CODE_SECTION)
+    }
     return sections
 }

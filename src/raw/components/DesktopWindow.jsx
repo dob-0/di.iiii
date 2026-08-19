@@ -201,14 +201,36 @@ export default function DesktopWindow({
                             Enter ›
                         </button>
                     )}
-                    <button type="button" onClick={(event) => { event.stopPropagation(); onTogglePin?.() }}>
-                        {windowState.pinned ? 'Unpin' : 'Pin'}
+                    {/* Glyphs, not words. Four words per title bar — and a
+                        full extra 390px row per window on a phone — for three
+                        actions every windowing system on earth spells with
+                        symbols. Enter › above keeps its word: it is the one
+                        action a first-timer must find. Accessible names carry
+                        the words the glyphs dropped. */}
+                    <button
+                        type="button"
+                        className={windowState.pinned ? 'is-active' : ''}
+                        aria-label={windowState.pinned ? 'Unpin' : 'Pin'}
+                        title={windowState.pinned ? 'Unpin' : 'Pin'}
+                        onClick={(event) => { event.stopPropagation(); onTogglePin?.() }}
+                    >
+                        ⌖
                     </button>
-                    <button type="button" onClick={(event) => { event.stopPropagation(); onToggleMinimize?.() }}>
-                        {windowState.minimized ? 'Expand' : 'Minimize'}
+                    <button
+                        type="button"
+                        aria-label={windowState.minimized ? 'Expand' : 'Minimize'}
+                        title={windowState.minimized ? 'Expand' : 'Minimize'}
+                        onClick={(event) => { event.stopPropagation(); onToggleMinimize?.() }}
+                    >
+                        {windowState.minimized ? '▣' : '–'}
                     </button>
-                    <button type="button" onClick={(event) => { event.stopPropagation(); onClose?.() }}>
-                        Close
+                    <button
+                        type="button"
+                        aria-label="Close"
+                        title="Close"
+                        onClick={(event) => { event.stopPropagation(); onClose?.() }}
+                    >
+                        ×
                     </button>
                 </div>
             </header>

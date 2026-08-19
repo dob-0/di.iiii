@@ -18,7 +18,6 @@ export default function WorldPanelWindow({
     isLive = false,
     onSetLive,
     onEnterFullscreen,
-    onEnterOverlay,
     liveOutputs = null,
 }) {
     return (
@@ -56,15 +55,6 @@ export default function WorldPanelWindow({
                     aria-pressed={isLive}
                 >
                     ●
-                </button>
-                <button
-                    type="button"
-                    className="raw-world-panel-btn"
-                    onClick={onEnterOverlay}
-                    title="World as background"
-                    aria-label="World as background"
-                >
-                    ◫
                 </button>
                 <button
                     type="button"
