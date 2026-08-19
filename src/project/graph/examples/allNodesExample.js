@@ -217,6 +217,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     // capture (handleLiveOutputChange in RawEditor), bypassing the pure
     // computeNodeOutput gap the rest of this file documents around.
     add('webcam', 'source.webcam', { label: 'Webcam', col: 6, row: 0 })
+    add('monitor', 'stream.monitor', { label: 'Monitor', col: 7, row: 0 })
     add('mic', 'source.mic', { label: 'Microphone', col: 6, row: 1 })
 
     // --- column 7: workflow nodes + the keeper -----------------------------
@@ -316,6 +317,7 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
         // a texture"); source.webcam has produced one for weeks, and the image
         // panel now draws it.
         wire('webcam', 'frame', 'image', 'src'),
+        wire('webcam', 'frame', 'monitor', 'src'),
         // geom.cube.bounds — likewise documented as dead, in fact a real vec3
         // of the cube's size. Wired to the desk's scale so the marker box grows
         // with the cube it is measuring.

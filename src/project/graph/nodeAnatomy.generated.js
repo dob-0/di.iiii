@@ -139,8 +139,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1442,
-            toLine: 1444,
+            fromLine: 1446,
+            toLine: 1448,
             sharedWith: []
         },
         alsoNeeds: null
@@ -159,8 +159,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1445,
-            toLine: 1447,
+            fromLine: 1449,
+            toLine: 1451,
             sharedWith: []
         },
         alsoNeeds: null
@@ -181,8 +181,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1469,
-            toLine: 1471,
+            fromLine: 1473,
+            toLine: 1475,
             sharedWith: []
         },
         alsoNeeds: null
@@ -202,8 +202,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1472,
-            toLine: 1481,
+            fromLine: 1476,
+            toLine: 1485,
             sharedWith: []
         },
         alsoNeeds: null
@@ -261,8 +261,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1448,
-            toLine: 1468,
+            fromLine: 1452,
+            toLine: 1472,
             sharedWith: []
         },
         alsoNeeds: null
@@ -300,7 +300,12 @@ export const NODE_ANATOMY = {
     'stream.monitor': {
         computes: null,
         draws: null,
-        panel: null,
+        panel: {
+            file: 'src/raw/components/RawEditor.jsx',
+            fromLine: 1443,
+            toLine: 1445,
+            sharedWith: []
+        },
         alsoNeeds: null
     },
     'stream.controller': {
@@ -329,8 +334,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1399,
-            toLine: 1435,
+            fromLine: 1400,
+            toLine: 1436,
             sharedWith: []
         },
         alsoNeeds: null
@@ -538,8 +543,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1436,
-            toLine: 1438,
+            fromLine: 1437,
+            toLine: 1439,
             sharedWith: []
         },
         alsoNeeds: null
@@ -549,8 +554,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1501,
-            toLine: 1503,
+            fromLine: 1505,
+            toLine: 1507,
             sharedWith: []
         },
         alsoNeeds: null
@@ -560,8 +565,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1504,
-            toLine: 1515,
+            fromLine: 1508,
+            toLine: 1519,
             sharedWith: []
         },
         alsoNeeds: null
@@ -571,8 +576,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1439,
-            toLine: 1441,
+            fromLine: 1440,
+            toLine: 1442,
             sharedWith: []
         },
         alsoNeeds: null
@@ -582,8 +587,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1520,
-            toLine: 1528,
+            fromLine: 1524,
+            toLine: 1532,
             sharedWith: []
         },
         alsoNeeds: null
@@ -593,8 +598,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1529,
-            toLine: 1531,
+            fromLine: 1533,
+            toLine: 1535,
             sharedWith: []
         },
         alsoNeeds: null
@@ -604,8 +609,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1532,
-            toLine: 1545,
+            fromLine: 1536,
+            toLine: 1549,
             sharedWith: []
         },
         alsoNeeds: null
@@ -615,8 +620,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1546,
-            toLine: 1556,
+            fromLine: 1550,
+            toLine: 1560,
             sharedWith: []
         },
         alsoNeeds: null
@@ -809,8 +814,8 @@ export const NODE_ANATOMY = {
         draws: null,
         panel: {
             file: 'src/raw/components/RawEditor.jsx',
-            fromLine: 1482,
-            toLine: 1500,
+            fromLine: 1486,
+            toLine: 1504,
             sharedWith: []
         },
         alsoNeeds: null
@@ -834,5 +839,5 @@ export const DOORWAY_PLACE = {
 export const SOURCE_FINGERPRINTS = {
     'src/project/graph/nodeGraphRuntime.js': '5bce7e8e',
     'src/raw/components/RawViewport.jsx': 'f186931f',
-    'src/raw/components/RawEditor.jsx': '638d81dd'
+    'src/raw/components/RawEditor.jsx': 'fb275309'
 }
