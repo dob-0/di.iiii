@@ -55,6 +55,10 @@ export const PASS_THROUGH_PORTS = [
     {
         port: 'shape.merge.out',
         why: 'merges what arrives; with nothing wired it carries nothing, deliberately distinct from an empty group'
+    },
+    {
+        port: 'geom.geo.geometry',
+        why: 'gives out what the Geo collects; empty it carries nothing — an empty place is not an invisible shape'
     }
 ]
 

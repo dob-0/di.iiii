@@ -1051,7 +1051,14 @@ export const NODE_TYPES = {
             { id: 'rotation', type: 'vec3', label: 'Rotation', default: [0, 0, 0] },
             { id: 'scale',    type: 'vec3', label: 'Scale',    default: [1, 1, 1] },
         ],
-        outputs: [],
+        // The Geo gives out what it collects — every spatial child's shape as
+        // one group, carried with the Geo's own transform — so geos CONNECT:
+        // Geo → Merge → another container composes collected geometry exactly
+        // like primitives do, and a Geo standing inside a Geo answers
+        // recursively (geometry inside geometry; owner, 2026-08-20).
+        outputs: [
+            { id: 'geometry', type: 'geometry', label: 'Geometry' },
+        ],
         defaultValues: {},
         render: 'spatial-3d',
     },

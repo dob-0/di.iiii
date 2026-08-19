@@ -154,6 +154,15 @@ describe('all-nodes example graph', () => {
                     edges: [{ id: 'proof-e', fromNodeId: cube.id, fromPort: 'geometry', toNodeId: merge.id, toPort: 'a' }]
                 })
                 return { node: merge, context }
+            },
+            // Containment, not a wire: a cube STANDING IN the geo is what
+            // brings its Geometry alive.
+            'geom.geo.geometry': () => {
+                const geo = createNode('geom.geo', { id: 'proof-geo' })
+                const cube = createNode('geom.cube', { id: 'proof-geo-cube' })
+                cube.parentId = geo.id
+                const context = createNodeGraphContext({ nodes: [geo, cube], edges: [] })
+                return { node: geo, context }
             }
         }
         for (const entry of PASS_THROUGH_PORTS) {

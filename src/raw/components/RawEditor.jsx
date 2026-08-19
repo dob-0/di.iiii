@@ -1930,7 +1930,13 @@ export default function RawEditor({
                     // unit test still passing.
                     portScopeNodes={authoredNodes}
                     onPromotePort={handlePromotePort}
-                    onMakeScene={handleCreateSceneExample}
+                    // Only at the ROOT of a truly blank desk. Inside a
+                    // container the same button injected the whole six-node
+                    // demo INTO the container the person was filling (seen
+                    // live 2026-08-20: a stray double-click inside a fresh
+                    // Geo buried it under a demo room). The ⋯ menu still
+                    // offers the demo deliberately, anywhere.
+                    onMakeScene={currentScopeId === null && nodes.length === 0 ? handleCreateSceneExample : null}
                     // Only inside a CODE-made node: there the empty canvas IS
                     // the question. A container's reading stays one tap away on
                     // the marker's ? — two resident buttons for one answer was

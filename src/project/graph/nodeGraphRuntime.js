@@ -1,5 +1,5 @@
-import { DOORWAY_OUT_TYPE_ID, getNodeInputs } from '../nodeRegistry.js'
-import { mergeGeometry } from './geometryDescriptor.js'
+import { DOORWAY_OUT_TYPE_ID, getNodeInputs, getNodeType } from '../nodeRegistry.js'
+import { isGeometryDescriptor, mergeGeometry } from './geometryDescriptor.js'
 
 const asNumber = (value, fallback = 0) => {
     const next = Number(value)
@@ -241,6 +241,32 @@ const computeNodeOutput = (node, portId, context, nextStack) => {
                     color: evaluateNodeInput(node, 'color', context, nextStack),
                     position: asVec3(evaluateNodeInput(node, 'position', context, nextStack), [0, 0, 0]),
                     rotation: asVec3(evaluateNodeInput(node, 'rotation', context, nextStack), [0, 0, 0])
+                }
+            }
+            break
+        case 'geom.geo':
+            // The Geo gives out what it collects: every spatial child's shape
+            // as one group, wrapped in the Geo's own transform — so geos
+            // connect (Geo → Merge → …) and a Geo standing inside a Geo
+            // answers recursively: geometry inside geometry. A child that
+            // carries no shape (a Light, a Camera) is simply not geometry and
+            // is skipped; an EMPTY Geo answers undefined, not an empty group
+            // that would draw as an invisible something (the Merge rule).
+            if (portId === 'geometry') {
+                const children = []
+                for (const other of context?.nodesById?.values() || []) {
+                    if ((other?.parentId || null) !== node.id) continue
+                    if (getNodeType(other.typeId)?.render !== 'spatial-3d') continue
+                    const value = evaluateNodeOutput(other, 'geometry', context, nextStack)
+                    if (isGeometryDescriptor(value)) children.push(value)
+                }
+                if (!children.length) return undefined
+                return {
+                    kind: 'group',
+                    position: asVec3(evaluateNodeInput(node, 'position', context, nextStack), [0, 1.2, 0]),
+                    rotation: asVec3(evaluateNodeInput(node, 'rotation', context, nextStack), [0, 0, 0]),
+                    scale: asVec3(evaluateNodeInput(node, 'scale', context, nextStack), [1, 1, 1]),
+                    children
                 }
             }
             break

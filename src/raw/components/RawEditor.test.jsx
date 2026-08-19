@@ -30,6 +30,9 @@ vi.mock('./RawGraphSurface.jsx', () => ({
             {props.onExplainScope && (
                 <button type="button" onClick={() => props.onExplainScope()}>explain-scope</button>
             )}
+            {props.onMakeScene && (
+                <button type="button" onClick={() => props.onMakeScene()}>make-me-a-scene</button>
+            )}
         </div>
     )
 }))
@@ -421,6 +424,32 @@ describe('RawEditor room backdrop gating', () => {
         ]))
         const { container } = render(<RawEditor localStorageKey={ROOM_STORAGE_KEY} canvasMode />)
         expect(container.querySelector('.raw-world-overlay')).toBeNull()
+    })
+})
+
+// "Make me a scene" is an offer for a truly blank desk, not a trapdoor: a
+// stray double-click inside a fresh Geo used to inject the whole six-node
+// demo INTO the container the person was filling (seen live 2026-08-20).
+describe('RawEditor make-me-a-scene scoping', () => {
+    const SCENE_STORAGE_KEY = 'test-make-scene-scope'
+
+    afterEach(() => {
+        window.localStorage.removeItem(SCENE_STORAGE_KEY)
+    })
+
+    it('offers the demo on a truly blank desk', () => {
+        window.localStorage.setItem(SCENE_STORAGE_KEY, makeWorkspaceDoc([]))
+        render(<RawEditor localStorageKey={SCENE_STORAGE_KEY} canvasMode />)
+        expect(screen.getByRole('button', { name: 'make-me-a-scene' })).toBeTruthy()
+    })
+
+    it('never offers it inside a container — an empty Geo is yours, not a demo stage', () => {
+        window.localStorage.setItem(SCENE_STORAGE_KEY, makeWorkspaceDoc([
+            { id: 'geo-1', typeId: 'geom.geo', label: 'Geo', values: {} }
+        ]))
+        render(<RawEditor localStorageKey={SCENE_STORAGE_KEY} canvasMode />)
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+        expect(screen.queryByRole('button', { name: 'make-me-a-scene' })).toBeNull()
     })
 })
 

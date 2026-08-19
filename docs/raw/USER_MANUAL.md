@@ -134,7 +134,13 @@ The **Geo** is the plain container. Place one, enter it, and collect what you
 need — cubes, spheres, models, **Lights** — each appears in the room as you
 place it, and from outside the Geo carries them all as one thing you can move,
 lift and duplicate. Empty, it shows a faint floor tile so a place never reads
-as void. No wiring, no rules: when in doubt, build in a Geo.
+as void. When in doubt, build in a Geo.
+
+The Geo also **gives out what it collects**: its Geometry socket carries
+everything standing in it as one shape. Wire two Geos through a **Merge** into
+a Constructor's door and the Constructor wears both scenes as one object; a
+Geo standing inside a Geo carries through the chain. Empty, the socket
+carries nothing — an empty place is not an invisible shape.
 
 A Light placed inside any container is a real point light (colour, intensity,
 position). At the top level it stays what it was: the room's light settings.
