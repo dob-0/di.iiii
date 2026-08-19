@@ -15,33 +15,36 @@ import ViewerDolly from './ViewerDolly.jsx'
 import TransformGizmo, { GIZMO_MODES, gizmoModesFor } from '../raw/director/TransformGizmo.jsx'
 import SpatialScore from './SpatialScore.jsx'
 import { isDirectorEnabled } from '../raw/director/directorFlag.js'
-import { ALGOVRITHM_PIECE } from '../raw/director/pieces.js'
+import { ALGOVRITHM_PIECE } from './directorPiece.js'
 import { reelPlayers } from './reelPlayers.js'
 import { XR_AR_ONLY, xrAvailability } from './xrAvailability.js'
 import { describeEyeHeight } from './xrStandpoint.js'
-import { totalDurationSec } from './editList.js'
+import { totalDurationSec } from '../timeline/editList.js'
 import {
     patchFromGizmo,
     resolveGroupTransform,
     setTransform
-} from './sequenceTransform.js'
+} from '../timeline/sequenceTransform.js'
 import {
     OUTSIDE_FOG_SCALE,
     STANDPOINT,
     VIEW_INSIDE,
     VIEW_OUTSIDE,
     isOutside
-} from './stageView.js'
+} from '../timeline/stageView.js'
 import { formatSplit, readSplit, writeSplit } from '../raw/director/splitLayout.js'
 import { resolveTravel } from './viewerTravel.js'
-import { parseLightName, setLightValue } from './worldLights.js'
-import { clipProgress, sourceProgress, useRitualClock } from './ritualClock.js'
+import { parseLightName, setLightValue } from '../timeline/worldLights.js'
+import { clipProgress, sourceProgress, useSceneClock } from '../timeline/clock.js'
 import { SEQUENCES } from './sequences/index.js'
-import useSavedTiming from './useSavedTiming.js'
-import useAutoHideChrome from './useAutoHideChrome.js'
+import useSavedTiming from '../raw/director/useSavedTiming.js'
+import useAutoHideChrome from '../hooks/useAutoHideChrome.js'
 import useEditHistory from '../raw/director/useEditHistory.js'
 import usePanelToggle from '../raw/director/usePanelToggle.js'
 import './algoVrithm.css'
+// The director's styling is the tool's, not this piece's — this file mounts
+// DirectorPanel, so it asks for the tool's stylesheet the same way Raw does.
+import '../raw/director/director.css'
 
 // algovrithm — a virtual installation on hyperreality: pixels and code
 // becoming reality. For an audience the piece plays itself; there is nothing
@@ -50,7 +53,7 @@ import './algoVrithm.css'
 // The scene is code, not a Studio project document, so the Studio editor has
 // nothing to open for this space. Structure:
 //
-//   ritualClock.js       one playhead, in seconds, plus a transport
+//   clock.js       one playhead, in seconds, plus a transport
 //   sequences/index.js   the edit list — which sequence owns which seconds
 //   sequences/*.jsx      one file per beat, each gets local 0..1 progress
 //   editList.js          timeline maths (move/trim/ripple, gap detection)
@@ -111,7 +114,7 @@ function Director({ playheadSec, sequences }) {
                 // What this clip shows OF ITS OWN MATERIAL. Identical to the
                 // window position until the clip has been cut, at which point
                 // each half plays only its share — see sourceProgress in
-                // ritualClock.js for why a cut needs this to be a cut.
+                // clock.js for why a cut needs this to be a cut.
                 const progress = sourceProgress(windowProgress, sequence.source)
 
                 // Placement lives on the edit list row, not in the sequence's
@@ -435,7 +438,9 @@ export default function AlgoVrithmExperience({ embedded = false, director = unde
     // later would jump the playhead mid-beat in front of an audience. The wait
     // is bounded (see useSavedTiming) and the placeholder is the same void the
     // piece opens on, so a slow or dead backend costs frames, not the show.
-    const timing = useSavedTiming()
+    // The hook is the platform's; the space and the baseline are this
+    // piece's, so they are passed rather than imported over there.
+    const timing = useSavedTiming({ spaceId: ALGOVRITHM_PIECE.savesToSpace, baseline: SEQUENCES })
     if (!timing.ready) {
         return <div className={`algo-vrithm-root${embedded ? ' is-embedded' : ''}`} aria-hidden="true" />
     }
@@ -524,7 +529,7 @@ function AlgoVrithmStage({
     // unattended for the length of an exhibition day, nobody is there to press
     // anything, and a visitor who walks up mid-piece only has to keep standing
     // there to see the beginning. The seam is covered — see the wrap in
-    // ritualClock's advance().
+    // the clock's advance().
     //
     // The clock does NOT tick itself; RitualClockDriver inside the Canvas does
     // that, so the piece runs on the headset's frame loop during a session.
@@ -533,7 +538,7 @@ function AlgoVrithmStage({
     // during render (the gizmo's live-sequence list, for one), and a `const`
     // declared after its own readers is a temporal-dead-zone crash that takes
     // the whole route to a black screen. Keep new readers below this line.
-    const clock = useRitualClock({
+    const clock = useSceneClock({
         durationSec,
         restartKey: xr.isXrPresenting,
         loop: true
@@ -578,7 +583,7 @@ function AlgoVrithmStage({
 
     // Rebuilt only when the split actually changes — this file already pays
     // attention to per-render style objects (see CANVAS_STYLE below).
-    const rootStyle = useMemo(() => ({ '--algo-vrithm-split': formatSplit(split) }), [split])
+    const rootStyle = useMemo(() => ({ '--di-split': formatSplit(split) }), [split])
 
     const [selectedId, setSelectedId] = useState(null)
     const [gizmoMode, setGizmoMode] = useState(GIZMO_MODES[0].id)

@@ -65,7 +65,7 @@ export default function SplitHandle({ split, onSplit }) {
 
     return (
         <div
-            className="algo-vrithm-split-handle"
+            className="di-split-handle"
             role="separator"
             aria-orientation="horizontal"
             aria-label="Resize the editor"

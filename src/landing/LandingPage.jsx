@@ -6,7 +6,6 @@ import { WIKI_HIGHLIGHTS } from '../wiki/wikiContent.js'
 import { buildWikiPath, buildAppSpacePath } from '../utils/spaceRouting.js'
 import { getServerConfig } from '../services/serverSpaces.js'
 import { buildRawHubPath } from '../raw/utils/rawRouting.js'
-import { ALGO_VRITHM_LABEL, ALGO_VRITHM_PATH, ALGO_VRITHM_SPACE_ID } from '../algoVrithm/algoVrithmRouting.js'
 import { buildStudioSpacesPath } from '../studio/utils/studioRouting.js'
 
 // Lazy, not static. As a plain import this pulled three.js (1.47 MB) and
@@ -38,7 +37,7 @@ const FEATURED_SPACES = [
     { id: 'wcc', label: 'WCC Exhibition', href: '/wcc', className: 'landing-cta-wcc' },
     { id: 'br-id-ge', label: 'br_id_ge · live at Notations #2', href: '/br_id_ge', className: 'landing-cta-br-id-ge' },
     { id: 'beyond-form', label: 'beyond_form', href: '/beyond-form', className: 'landing-cta-beyond-form' },
-    { id: ALGO_VRITHM_SPACE_ID, label: ALGO_VRITHM_LABEL, href: ALGO_VRITHM_PATH, className: 'landing-cta-algo-vrithm' }
+    { id: 'algovrithm', label: 'algovrithm', href: '/algovrithm', className: 'landing-cta-algo-vrithm' }
 ]
 
 // A `di up` install on the visitor's own machine has no accounts and no

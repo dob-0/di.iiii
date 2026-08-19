@@ -2,7 +2,7 @@ import { useRef } from 'react'
 import * as THREE from 'three'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useXR } from '@react-three/xr'
-import { STANDPOINT } from './stageView.js'
+import { STANDPOINT } from '../timeline/stageView.js'
 import { SETTLE_FRAMES, standpointLift } from './xrStandpoint.js'
 
 // Carries the viewer along the edit list's travel offset, and puts their eyes

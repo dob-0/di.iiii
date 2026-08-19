@@ -20,8 +20,8 @@ import {
     splitClip,
     timelinePosition,
     trimClip
-} from '../../algoVrithm/editList.js'
-import { PLAYBACK_RATES } from '../../algoVrithm/ritualClock.js'
+} from '../../timeline/editList.js'
+import { PLAYBACK_RATES } from '../../timeline/clock.js'
 import {
     DEFAULT_AMBIENT,
     addLight,
@@ -32,7 +32,7 @@ import {
     rowLights,
     setLightValue,
     setWorldValue
-} from '../../algoVrithm/worldLights.js'
+} from '../../timeline/worldLights.js'
 
 // The director panel — a video-editor timeline for the piece, for the author
 // only (see directorFlag.js). Nothing here ships to an audience.
@@ -82,7 +82,7 @@ function SecondsField({ value, onCommit, label, min = 0 }) {
 
     return (
         <input
-            className="algo-vrithm-director-field"
+            className="di-director-field"
             type="text"
             inputMode="decimal"
             aria-label={label}
@@ -127,8 +127,8 @@ function ColorChoice({ label, value, swatches, onChange, warn }) {
     const warning = warn(value)
 
     return (
-        <span className="algo-vrithm-director-color-choice">
-            <span className="algo-vrithm-director-swatches" role="group" aria-label={label}>
+        <span className="di-director-color-choice">
+            <span className="di-director-swatches" role="group" aria-label={label}>
                 {/* NAMED, not just shown. Four of the five world swatches are
                     near-black by design (#0D1114 through #2A3742) and read as
                     four identical empty boxes at chip size — the difference is
@@ -139,10 +139,10 @@ function ColorChoice({ label, value, swatches, onChange, warn }) {
                     in a tooltip you have to hover four times to read, which also
                     puts the palette's own vocabulary in front of the author. */}
                 {swatches.map((swatch) => (
-                    <span className="algo-vrithm-director-swatch-item" key={swatch.color}>
+                    <span className="di-director-swatch-item" key={swatch.color}>
                         <button
                             type="button"
-                            className={`algo-vrithm-director-swatch${sameHex(swatch.color, value) ? ' is-selected' : ''}`}
+                            className={`di-director-swatch${sameHex(swatch.color, value) ? ' is-selected' : ''}`}
                             // Inline because it IS the data: the swatch's job is
                             // to show its own colour, and no stylesheet can know
                             // what the palette holds. Same reason the clip
@@ -158,12 +158,12 @@ function ColorChoice({ label, value, swatches, onChange, warn }) {
                         {/* A name, not emphasis — the same way the asset chips
                             above carry their kind. The button keeps the
                             aria-label, so this is not read twice. */}
-                        <em className="algo-vrithm-director-swatch-name">{swatch.name}</em>
+                        <em className="di-director-swatch-name">{swatch.name}</em>
                     </span>
                 ))}
                 <button
                     type="button"
-                    className={`algo-vrithm-director-custom-toggle${custom ? ' is-active' : ''}`}
+                    className={`di-director-custom-toggle${custom ? ' is-active' : ''}`}
                     aria-expanded={custom || !offered}
                     onClick={() => setCustom((open) => !open)}
                 >
@@ -175,16 +175,16 @@ function ColorChoice({ label, value, swatches, onChange, warn }) {
                 and hiding the only control that can show it reads as the panel
                 having lost it. */}
             {(custom || !offered) && (
-                <span className="algo-vrithm-director-custom">
+                <span className="di-director-custom">
                     <input
-                        className="algo-vrithm-director-color"
+                        className="di-director-color"
                         type="color"
                         aria-label={`${label} — custom colour`}
                         value={value}
                         onChange={(event) => onChange(event.target.value)}
                     />
                     {warning && (
-                        <em className="algo-vrithm-director-warning">{warning.message}</em>
+                        <em className="di-director-warning">{warning.message}</em>
                     )}
                 </span>
             )}
@@ -197,16 +197,16 @@ function ColorChoice({ label, value, swatches, onChange, warn }) {
  *  every time they open it. */
 function Section({ title, open, onToggle, children }) {
     return (
-        <div className={`algo-vrithm-director-section${open ? ' is-open' : ''}`}>
+        <div className={`di-director-section${open ? ' is-open' : ''}`}>
             <button
                 type="button"
-                className="algo-vrithm-director-section-toggle"
+                className="di-director-section-toggle"
                 aria-expanded={open}
                 onClick={onToggle}
             >
                 {open ? '▾' : '▸'} {title}
             </button>
-            {open && <div className="algo-vrithm-director-section-body">{children}</div>}
+            {open && <div className="di-director-section-body">{children}</div>}
         </div>
     )
 }
@@ -523,24 +523,24 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
 
     return (
         <section
-            className={`algo-vrithm-director${collapsed ? ' is-collapsed' : ''}`}
+            className={`di-director${collapsed ? ' is-collapsed' : ''}`}
             aria-label="Director panel"
         >
-            <header className="algo-vrithm-director-head">
+            <header className="di-director-head">
                 <button
                     type="button"
-                    className="algo-vrithm-director-collapse"
+                    className="di-director-collapse"
                     aria-expanded={!collapsed}
                     title={collapsed ? 'Show the timeline' : 'Collapse to watch the piece'}
                     onClick={() => setCollapsed((value) => !value)}
                 >
                     {collapsed ? '▴' : '▾'}
                 </button>
-                <span className="algo-vrithm-director-tag">director</span>
-                <span className="algo-vrithm-director-time">
+                <span className="di-director-tag">director</span>
+                <span className="di-director-time">
                     {formatTimecode(clock.playheadSec)} / {formatTimecode(analysis.totalSec)}
                 </span>
-                <span className="algo-vrithm-director-now">
+                <span className="di-director-now">
                     {position.live.length
                         ? position.live.map((sequence) => sequence.title).join(' + ')
                         : 'nothing on screen'}
@@ -550,7 +550,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                 </span>
             </header>
 
-            <div className="algo-vrithm-director-transport">
+            <div className="di-director-transport">
                 <button type="button" onClick={clock.toggle} aria-label={clock.isPlaying ? 'Pause' : 'Play'}>
                     {clock.isPlaying ? '❙❙' : '▶'}
                 </button>
@@ -569,7 +569,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                 >
                     ✂
                 </button>
-                <span className="algo-vrithm-director-rates">
+                <span className="di-director-rates">
                     {PLAYBACK_RATES.map((rate) => (
                         <button
                             type="button"
@@ -581,24 +581,24 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                         </button>
                     ))}
                 </span>
-                <span className="algo-vrithm-director-hint">
+                <span className="di-director-hint">
                     space play · ← → nudge · B cut at playhead · drag clip to move · drag edge to trim · click clip to edit it below
                 </span>
             </div>
 
             <div
-                className="algo-vrithm-director-track"
+                className="di-director-track"
                 ref={trackRef}
                 onPointerDown={onScrubDown}
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
             >
-                <div className="algo-vrithm-director-ruler">
+                <div className="di-director-ruler">
                     {ticks.map((seconds) => (
                         <span
                             key={seconds}
-                            className="algo-vrithm-director-tick"
+                            className="di-director-tick"
                             style={{ left: toPercent(seconds) }}
                         >
                             {seconds}s
@@ -612,7 +612,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                 {analysis.gaps.map((gap) => (
                     <div
                         key={`gap-${gap.startSec}`}
-                        className="algo-vrithm-director-gap"
+                        className="di-director-gap"
                         title={`Dead frame ${gap.startSec}s – ${gap.endSec}s: the piece plays to an empty room`}
                         style={{
                             left: toPercent(gap.startSec),
@@ -622,10 +622,10 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                 ))}
 
                 {ordered.map((sequence) => (
-                    <div className="algo-vrithm-director-row" key={sequence.id}>
+                    <div className="di-director-row" key={sequence.id}>
                         <div
                             className={[
-                                'algo-vrithm-director-clip',
+                                'di-director-clip',
                                 isAssetClip(sequence) ? 'is-asset' : '',
                                 sequence.id === inspectedId ? 'is-inspected' : ''
                             ].filter(Boolean).join(' ')}
@@ -641,17 +641,17 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                             onPointerCancel={onPointerUp}
                         >
                             <span
-                                className="algo-vrithm-director-handle is-start"
+                                className="di-director-handle is-start"
                                 onPointerDown={(event) => onClipDown(event, sequence, 'start')}
                                 onPointerMove={onPointerMove}
                                 onPointerUp={onPointerUp}
                             />
-                            <span className="algo-vrithm-director-clip-label">
+                            <span className="di-director-clip-label">
                                 {sequence.title}
                                 <em>{clipDuration(sequence).toFixed(2)}s</em>
                             </span>
                             <span
-                                className="algo-vrithm-director-handle is-end"
+                                className="di-director-handle is-end"
                                 onPointerDown={(event) => onClipDown(event, sequence, 'end')}
                                 onPointerMove={onPointerMove}
                                 onPointerUp={onPointerUp}
@@ -660,7 +660,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                     </div>
                 ))}
 
-                <div className="algo-vrithm-director-cursor" style={{ left: toPercent(clock.playheadSec) }} />
+                <div className="di-director-cursor" style={{ left: toPercent(clock.playheadSec) }} />
             </div>
 
             {/* Which clip the controls below belong to. Without this the panel
@@ -670,18 +670,18 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                 fallback, and telling them apart is the difference between
                 trusting the panel and fighting it. */}
             {inspected.length > 0 && (
-                <div className="algo-vrithm-director-inspector-head">
+                <div className="di-director-inspector-head">
                     <span>{inspected[0].title}</span>
                     <em>{selectedRowId === inspectedId ? 'selected' : 'at playhead'}</em>
                 </div>
             )}
 
-            <ul className="algo-vrithm-director-rows">
+            <ul className="di-director-rows">
                 {inspected.map((sequence) => (
                     <li key={sequence.id}>
                         <button
                             type="button"
-                            className="algo-vrithm-director-jump"
+                            className="di-director-jump"
                             onClick={() => clock.seek(sequence.startSec)}
                         >
                             {sequence.title}
@@ -689,7 +689,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                         {/* <span> rather than <label>: the field carries its
                             own aria-label, and a <label> wrapping a component
                             reads as unassociated to the a11y lint. */}
-                        <span className="algo-vrithm-director-pair">
+                        <span className="di-director-pair">
                             starts
                             <SecondsField
                                 label={`${sequence.title} start in seconds`}
@@ -707,7 +707,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                             trims only that clip — so the two gestures cover
                             both jobs without a mode switch to remember: type to
                             retime the piece, drag to shape one handover. */}
-                        <span className="algo-vrithm-director-pair">
+                        <span className="di-director-pair">
                             lasts
                             <SecondsField
                                 label={`${sequence.title} length in seconds — later clips move with it`}
@@ -723,7 +723,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                             while it is there. They used to be the same dial —
                             the only way to slow a sequence was to lengthen it,
                             which shoved everything after it down the timeline. */}
-                        <span className="algo-vrithm-director-pair">
+                        <span className="di-director-pair">
                             speed ×
                             <SecondsField
                                 label={`${sequence.title} speed — 1 plays the whole sequence across its window`}
@@ -737,7 +737,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                             not already suspect there is something to hover, and
                             "in / for / speed" told an author who had not built
                             the panel nothing at all. */}
-                        <span className="algo-vrithm-director-rowhint">
+                        <span className="di-director-rowhint">
                             <b>starts</b> when this beat begins ·
                             {' '}<b>lasts</b> how long it runs — later clips move with it, so the piece gets longer ·
                             {' '}<b>speed ×</b> how fast it plays inside that time, moving nothing
@@ -745,7 +745,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
 
                         {/* Ripple: insert or remove time here and push every
                             later clip with it, instead of retyping them all. */}
-                        <span className="algo-vrithm-director-ripple">
+                        <span className="di-director-ripple">
                             <button
                                 type="button"
                                 title="Pull this and everything after it 1s earlier"
@@ -774,7 +774,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                                     ['height', 'y', 'metres above eye line'],
                                     ['bearing', '°', 'degrees round from straight ahead']
                                 ].map(([key, short, description]) => (
-                                    <span className="algo-vrithm-director-pair" key={key}>
+                                    <span className="di-director-pair" key={key}>
                                         {short}
                                         <SecondsField
                                             label={`${sequence.title} ${description}`}
@@ -803,7 +803,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                             empty room, with no clip left to click to get back. */}
                         <button
                             type="button"
-                            className="algo-vrithm-director-remove"
+                            className="di-director-remove"
                             disabled={ordered.length < 2}
                             title={ordered.length < 2
                                 ? 'The piece needs at least one sequence'
@@ -819,7 +819,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                             Both are edit-list data (see worldLights.js), so
                             everything here is written back by Save and by Copy
                             alike. */}
-                        <div className="algo-vrithm-director-sections">
+                        <div className="di-director-sections">
                             <Section
                                 title="world"
                                 open={Boolean(openSections[`${sequence.id}:world`])}
@@ -846,7 +846,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                                             ['fogFar', 'to', 'metres where it is solid'],
                                             ['ambient', 'fill', 'how much unlit air you can see, 0–1']
                                         ].map(([key, short, description]) => (
-                                            <span className="algo-vrithm-director-pair" key={key}>
+                                            <span className="di-director-pair" key={key}>
                                                 {short}
                                                 <SecondsField
                                                     label={`${sequence.title} ${description}`}
@@ -864,7 +864,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                                     // Deliberate: an asset clip has no opinion
                                     // about the room, and giving it one would
                                     // dim the piece for as long as it is up.
-                                    <span className="algo-vrithm-director-note">
+                                    <span className="di-director-note">
                                         no world of its own — this clip sits in whatever room the
                                         sequences around it make
                                     </span>
@@ -878,13 +878,13 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                             >
                                 <button
                                     type="button"
-                                    className="algo-vrithm-director-add-light"
+                                    className="di-director-add-light"
                                     onClick={() => onChange(addLight(sequences, sequence.id))}
                                 >
                                     ＋ add light
                                 </button>
                                 {rowLights(sequence).length === 0 && (
-                                    <span className="algo-vrithm-director-note">
+                                    <span className="di-director-note">
                                         none — this beat is lit by the room and by whatever the
                                         sequence draws
                                     </span>
@@ -897,13 +897,13 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                                     )
 
                                     return (
-                                        <div className="algo-vrithm-director-light" key={light.id}>
-                                            <span className="algo-vrithm-director-light-head">
+                                        <div className="di-director-light" key={light.id}>
+                                            <span className="di-director-light-head">
                                                 {/* Two kinds, not eight: a lamp
                                                     you see the effect of, and a
                                                     glow you can also see. */}
                                                 <span
-                                                    className="algo-vrithm-director-kinds"
+                                                    className="di-director-kinds"
                                                     role="group"
                                                     aria-label={`${light.id} kind`}
                                                 >
@@ -911,7 +911,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                                                         <button
                                                             type="button"
                                                             key={kind}
-                                                            className={`algo-vrithm-director-kind${kind === light.kind ? ' is-active' : ''}`}
+                                                            className={`di-director-kind${kind === light.kind ? ' is-active' : ''}`}
                                                             onClick={() => patch('kind', kind)}
                                                         >
                                                             {kind}
@@ -920,7 +920,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                                                 </span>
                                                 <button
                                                     type="button"
-                                                    className={`algo-vrithm-director-place${selectedId === name ? ' is-selected' : ''}`}
+                                                    className={`di-director-place${selectedId === name ? ' is-selected' : ''}`}
                                                     title="Drag this light where you want it (steps outside the piece to show the handles)"
                                                     onClick={() => placeLight(sequence, light.id)}
                                                 >
@@ -928,7 +928,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                                                 </button>
                                                 <button
                                                     type="button"
-                                                    className="algo-vrithm-director-light-remove"
+                                                    className="di-director-light-remove"
                                                     title={`Remove ${light.id}`}
                                                     onClick={() => onChange(
                                                         removeLight(sequences, sequence.id, light.id)
@@ -959,7 +959,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                                                 anyone who wants a value between
                                                 two stops. */}
                                             <span
-                                                className="algo-vrithm-director-stops"
+                                                className="di-director-stops"
                                                 role="group"
                                                 aria-label={`${light.id} intensity`}
                                             >
@@ -967,7 +967,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                                                     <button
                                                         type="button"
                                                         key={stop}
-                                                        className={`algo-vrithm-director-stop${value === light.intensity ? ' is-active' : ''}`}
+                                                        className={`di-director-stop${value === light.intensity ? ' is-active' : ''}`}
                                                         onClick={() => patch('intensity', value)}
                                                     >
                                                         {stop}
@@ -989,7 +989,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                                                     ? [['radius', 'size', 'metres across the visible glow']]
                                                     : [])
                                             ].map(([key, short, description]) => (
-                                                <span className="algo-vrithm-director-pair" key={key}>
+                                                <span className="di-director-pair" key={key}>
                                                     {short}
                                                     <SecondsField
                                                         label={`${sequence.title} ${light.id} ${description}`}
@@ -1010,10 +1010,10 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
             {/* The bin. Whatever is in the assets folder, nothing else — there
                 is no upload step because the folder IS the library. Adding
                 drops the clip at the playhead, which is where you are looking. */}
-            <div className="algo-vrithm-director-bin">
-                <span className="algo-vrithm-director-tag">assets</span>
+            <div className="di-director-bin">
+                <span className="di-director-tag">assets</span>
                 {assetLibrary.length === 0 ? (
-                    <span className="algo-vrithm-director-note">
+                    <span className="di-director-note">
                         empty — drop images, video or .glb into {assetFolder} and they appear here
                     </span>
                 ) : (
@@ -1021,7 +1021,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                         <button
                             type="button"
                             key={asset.id}
-                            className={`algo-vrithm-director-chip is-${asset.kind}`}
+                            className={`di-director-chip is-${asset.kind}`}
                             title={`Add ${asset.fileName} at ${formatTimecode(clock.playheadSec)}`}
                             onClick={() => onChange(
                                 addAssetClip(sequences, asset, clock.playheadSec, AssetClip)
@@ -1034,22 +1034,22 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                 )}
             </div>
 
-            <footer className="algo-vrithm-director-foot">
+            <footer className="di-director-foot">
                 {analysis.gaps.length > 0 && (
-                    <span className="algo-vrithm-director-warn">
+                    <span className="di-director-warn">
                         ⚠ dead frame{analysis.gaps.length > 1 ? 's' : ''}:{' '}
                         {analysis.gaps.map((gap) => `${gap.startSec}–${gap.endSec}s`).join(', ')}
                     </span>
                 )}
                 {analysis.cuts.length > 0 && (
-                    <span className="algo-vrithm-director-note">
+                    <span className="di-director-note">
                         hard cut at {analysis.cuts.map((cut) => `${cut.atSec}s`).join(', ')} — overlap the
                         clips to cross-fade instead
                     </span>
                 )}
                 <button
                     type="button"
-                    className="algo-vrithm-director-save"
+                    className="di-director-save"
                     onClick={handleSave}
                     disabled={saveState?.kind === 'saving'}
                 >
@@ -1066,10 +1066,10 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
                         : null}
                     {!saveState || saveState.kind === 'error' ? 'Save' : null}
                 </button>
-                <button type="button" className="algo-vrithm-director-copy" onClick={handleCopy}>
+                <button type="button" className="di-director-copy" onClick={handleCopy}>
                     {copied ? 'copied ✓' : 'Copy edit list'}
                 </button>
-                <span className="algo-vrithm-director-note">
+                <span className="di-director-note">
                     {saveState?.kind === 'error'
                         ? saveState.reason
                         : saveState?.where === 'space'
@@ -1082,7 +1082,7 @@ export default function DirectorPanel({ piece, sequences, onChange, clock, selec
 
             {source && (
                 <textarea
-                    className="algo-vrithm-director-source"
+                    className="di-director-source"
                     readOnly
                     value={source}
                     onFocus={(event) => event.target.select()}

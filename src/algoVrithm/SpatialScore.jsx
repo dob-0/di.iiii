@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
-import { clipProgress, smoothstep } from './ritualClock.js'
+import { clipProgress, smoothstep } from '../timeline/clock.js'
 import { totalVeil } from './transitions.js'
 import { armAudioUnlock } from './reelPlayers.js'
 import { attachLimiter } from './audioBus.js'
@@ -11,7 +11,7 @@ import { STROBE_HZ, STROBE_SHARPNESS } from './sequences/WhiteTunnel.jsx'
 import {
     COLUMNS, STROBE_WINDOW, STROBE_RUNS, STROBE_DECAY, SPHERE_Z, sphereHeight
 } from './sequences/DispersionSphere.jsx'
-import { DISPERSION_DEFAULTS } from './dispersionControls.js'
+import { DISPERSION_DEFAULTS } from '../timeline/dispersionControls.js'
 
 // The spatial score — sound for every beat that has none, synthesized and
 // placed in the room (2026-07-31, her ask: "do you can create spatial

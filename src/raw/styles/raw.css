@@ -4375,7 +4375,7 @@
    is no viewport to hang off — it has to be a normal block in the flow, or it
    floats over the window's own header. Scoped here so the artwork's own
    stylesheet stays exactly as she wrote it. */
-.raw-director-window .algo-vrithm-director {
+.raw-director-window .di-director {
     position: static;
     flex: 1;
     min-height: 0;

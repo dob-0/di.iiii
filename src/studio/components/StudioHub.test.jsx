@@ -3,7 +3,10 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import StudioHub from './StudioHub.jsx'
 import { setAppNavigate } from '../../utils/appNavigate.js'
-import { ALGO_VRITHM_PATH, ALGO_VRITHM_SCENE_PATH } from '../../algoVrithm/algoVrithmRouting.js'
+// Literals rather than an import from the piece: this is a test of Studio's
+// hub, and the paths are what a visitor types.
+const ALGO_VRITHM_PATH = '/algovrithm'
+const ALGO_VRITHM_SCENE_PATH = '/algovrithm/scene'
 // Resolves to the mock declared below, which is the point: the assertion then
 // checks that the button and codeSpaces.js agree on a destination, rather than
 // restating a literal that both could drift away from together.

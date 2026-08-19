@@ -414,6 +414,58 @@ Anything printing `BLANK` is a bug in this rule, not a space waiting for its own
 
 ---
 
+
+### Platform and works
+
+**Rule:** A new work does not get a folder in `src/`. It gets its own repository
+and arrives in di.iiii as a space, the way `br_id_ge` and `beyond_form` already
+do. The two works that live in this repo — `algovrithm` and `wcc` — are
+grandfathered, are named only in `src/works/works.js`, and nothing joins them.
+The platform never imports from inside a work; a work may import the platform
+freely.
+
+**Why:** 62 of 372 source files in `src/` were two specific artworks, and the
+entanglement was not where anyone would look for it. The Raw **director** — a
+general tool — imported one artwork for its timeline maths, its clock, its
+light model and its camera: thirteen files, ~1,650 lines. One of those imports
+reached that piece's `assetLibrary.js`, whose eager `import.meta.glob` put **88
+MB of its reels in the main bundle**, which is why `curl … /get | sh` shipped a
+117 MB artifact of which ~10 MB was the program. Nothing failed and nothing
+warned. The boundary had even been designed: `raw/director/pieces.js` said in
+as many words "THIS FILE is the only part of the director that knows algovrithm
+exists", and thirteen siblings made that false. A rule in a comment is a wish.
+
+**How:**
+
+- Where does a module go? Ask who it is FOR, not where it was written. The
+  timeline maths, the clock, the light model, the camera and the auto-hide hook
+  were written inside a piece and are the *tool's* — they live in `src/timeline`
+  and `src/hooks` now, and the piece imports them like anything else. The
+  piece's colours, its sequences, its media bin and its descriptor are the
+  *piece's*, and the platform receives them through
+  `src/algoVrithm/directorPiece.js`, never by import.
+- A work is named in `src/works/works.js` (facts the build needs: entry points,
+  asset directories, public directories) and mounted through
+  `src/works/routes.jsx` (lazy — always lazy). Those are the only two files in
+  the platform allowed to say a work's name.
+- Same rule for CSS. The director's stylesheet lived inside the artwork's, so
+  Raw's own `raw.css` had selectors reaching into an artwork's class names to
+  lay out a platform panel. Prefix a tool's classes with the tool's name.
+- The offline build reads the same registry. It used to hold its own typed list
+  of what to exclude, which meant a new work silently rejoined every artist's
+  download while the pack log still said "local profile".
+- Persisted names are not code names. `SETTINGS_KEY = 'algovrithm'` in
+  `src/timeline/timingOverlay.js` stays that word: it is the key production
+  data is stored under, and renaming it would silently orphan every retimed
+  space. That needs a migration, not an edit.
+
+**Files:** `src/works/works.js`, `src/works/routes.jsx`, `src/works/boundary.test.js`
+(fails the build if the platform imports a work), `scripts/packProfile.test.js`
+(a 15 MB budget on the local build — the backstop that needs no list to be
+right), `src/timeline/`, `src/raw/director/`, `docs/deploy/DI_CLI.md`.
+
+---
+
 ## Context / Credit Awareness
 
 When context is running low:

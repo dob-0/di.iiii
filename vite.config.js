@@ -4,6 +4,8 @@ import fs from 'node:fs'
 import { execSync } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+// Plain data, no imports of its own — see the note at the top of that file.
+import { workAssetDirs, workEntries, workPublicDirs } from './src/works/works.js'
 
 const ROOT_DIR = path.dirname(fileURLToPath(import.meta.url))
 const XR_EMULATE_STUB = path.resolve(ROOT_DIR, 'src/xr/emulateStub.js')
@@ -126,15 +128,15 @@ const LOCAL_PROFILE = process.env.DI_PROFILE === 'local'
 const HOSTED_PIECE_STUB = '\0di-local:hosted-piece'
 const HOSTED_ASSET_STUB = '\0di-local:hosted-asset'
 
-// Entry points of pieces that belong to di-studio.xyz, not to a copy of the
-// program. Each is already a lazy() import, so stubbing one drops its whole
-// subtree — and, for algovrithm, closes the only path that could mount a
-// sequence whose model no longer has a URL.
-const HOSTED_PIECE_ENTRIES = [
-    'src/algoVrithm/AlgoVrithmExperience.jsx',
-    'src/algoVrithm/landing/AlgoVrithmLanding.jsx',
-    'src/wcc/WccExperience.jsx'
-]
+// Which entry points and asset directories belong to a work rather than to the
+// program — read from the works registry, never typed here.
+//
+// This used to be a hand-written list of three paths, which meant the offline
+// build only knew about the works someone had remembered to tell it about. A
+// new work would have rejoined every artist's download in silence, with the
+// pack log still saying "local profile". One registry, two readers.
+const HOSTED_PIECE_ENTRIES = workEntries()
+const HOSTED_ASSET_DIRS = workAssetDirs().map((dir) => dir.replace(/^src\//, ''))
 
 // A piece's space does not exist in a fresh local install, so these routes are
 // unreachable there by the same rule as any other space you do not have. The
@@ -163,6 +165,11 @@ export default function HostedPiece() {
 // microsite, the cPanel php shims and the site's OpenGraph images got there.
 const LOCAL_PUBLIC_INCLUDE = ['fonts', 'draco', 'basis', 'brand']
 
+// Belt and braces: the include-list above already leaves a work's public
+// directory out, but if someone adds one to the list by accident the registry
+// says it does not belong in a copy of the program.
+const LOCAL_PUBLIC_EXCLUDE = workPublicDirs()
+
 const localPublicDirPlugin = () => ({
     name: 'di-local-public-dir',
     apply: 'build',
@@ -170,6 +177,9 @@ const localPublicDirPlugin = () => ({
         const outDir = options.dir || path.resolve(ROOT_DIR, 'dist')
         const from = path.resolve(ROOT_DIR, 'public')
         for (const name of LOCAL_PUBLIC_INCLUDE) {
+            if (LOCAL_PUBLIC_EXCLUDE.includes(name)) {
+                this.error(`di-local-public-dir: public/${name} belongs to a work (src/works/works.js) and cannot be part of a local build.`)
+            }
             const source = path.join(from, name)
             if (!fs.existsSync(source)) {
                 this.error(`di-local-public-dir: public/${name} is gone. Update the include list — do not ship a build missing it.`)
@@ -189,7 +199,7 @@ const localProfilePlugin = () => ({
         const resolved = await this.resolve(source, importer, { ...options, skipSelf: true })
         if (!resolved) return null
         const id = resolved.id.split('\\').join('/')
-        if (id.includes('/src/algoVrithm/assets/')) return HOSTED_ASSET_STUB
+        if (HOSTED_ASSET_DIRS.some((dir) => id.includes(`/src/${dir}/`))) return HOSTED_ASSET_STUB
         if (HOSTED_PIECE_ENTRIES.some((entry) => id.endsWith(`/${entry}`))) return HOSTED_PIECE_STUB
         return null
     },
