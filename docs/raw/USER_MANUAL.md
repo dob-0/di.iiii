@@ -134,6 +134,10 @@ Two readings you cannot get anywhere else: a wire that is connected but carrying
 nothing says so (the node falls back to its own value in that case), and a
 doorway placed but never wired reads "nothing wired in".
 
+Where a node is worked out or drawn by code, the sheet names the file and the
+exact lines, and **Show the lines** opens them — real, unedited, and refused
+outright if the running page and its code ever disagree.
+
 It only reads. Changing a value is still the inspector's job.
 
 ## What to do when something feels broken

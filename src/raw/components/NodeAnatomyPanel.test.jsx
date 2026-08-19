@@ -1,5 +1,9 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render, waitFor } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { NODE_ANATOMY } from '../../project/graph/nodeAnatomy.generated.js'
 import NodeAnatomyPanel from './NodeAnatomyPanel.jsx'
 import { createEdge, createNode } from '../../project/nodeRegistry.js'
 import { createNodeGraphContext } from '../../project/graph/nodeGraphRuntime.js'
@@ -121,11 +125,88 @@ describe('NodeAnatomyPanel', () => {
     })
 
     // The sheet reads. An editor that grew a control here would be a surface
-    // people stop trusting to be read-only.
+    // people stop trusting to be read-only — so the only buttons allowed are
+    // the two read-only acts: reveal lines, go to a card.
     it('offers no way to change anything', () => {
         const cube = createNode('geom.cube')
         const { container } = sheetFor(cube, [cube])
         expect(container.querySelectorAll('input, textarea, select')).toHaveLength(0)
-        expect(container.querySelectorAll('button')).toHaveLength(0)
+        for (const button of container.querySelectorAll('button')) {
+            expect(
+                button.className.includes('raw-anatomy-disclosure')
+                || button.className.includes('raw-anatomy-goto'),
+                button.className
+            ).toBe(true)
+        }
+    })
+})
+
+describe('where the code lives', () => {
+    const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../../..')
+
+    it('points a cube at the manifest lines, in both slots', () => {
+        const cube = createNode('geom.cube')
+        const { text } = sheetFor(cube, [cube])
+        const computes = NODE_ANATOMY['geom.cube'].computes
+        const draws = NODE_ANATOMY['geom.cube'].draws
+        // Asserted against the MANIFEST, not against literal line numbers — an
+        // edit to the runtime moves the lines, the sync moves the manifest, and
+        // this test must keep asserting the agreement rather than a snapshot.
+        expect(text).toContain(`nodeGraphRuntime.js · lines ${computes.fromLine}–${computes.toLine}`)
+        expect(text).toContain(`RawViewport.jsx · lines ${draws.fromLine}–${draws.toLine}`)
+    })
+
+    it('fetches the REAL lines when a disclosure is opened', async () => {
+        const cube = createNode('geom.cube')
+        const { container } = sheetFor(cube, [cube])
+        fireEvent.click([...container.querySelectorAll('.raw-anatomy-disclosure')][0])
+        await waitFor(() => expect(container.querySelector('.raw-anatomy-code')).toBeTruthy())
+        const shown = container.querySelector('.raw-anatomy-code').textContent
+        const place = NODE_ANATOMY['geom.cube'].computes
+        const disk = readFileSync(join(ROOT, place.file), 'utf8')
+            .split('\n').slice(place.fromLine - 1, place.toLine)
+        // Content equality against the file on DISK — a DOM-presence check
+        // here would stay green while the block quoted the wrong node.
+        const indent = Math.min(...disk.filter((l) => l.trim()).map((l) => l.length - l.trimStart().length))
+        expect(shown).toBe(disk.map((l) => l.slice(indent)).join('\n'))
+    })
+
+    it('says when one piece of code answers for several nodes', () => {
+        const number = createNode('value.number')
+        const { text } = sheetFor(number, [number])
+        expect(text).toMatch(/One piece answers for 5 nodes at once/)
+        expect(text).toContain('Read it and you have read all 5.')
+    })
+
+    it('gives a container the doorway lines every container shares', () => {
+        const box = createNode('universe.space')
+        const { container } = sheetFor(box, [box])
+        expect(container.querySelectorAll('.raw-anatomy-place').length).toBeGreaterThan(0)
+        expect(container.textContent).toMatch(/nodeGraphRuntime\.js · lines \d+–\d+/)
+    })
+
+    it('names the clock file a Time node cannot run without', () => {
+        const time = createNode('time')
+        const { text } = sheetFor(time, [time])
+        expect(text).toContain('useGraphClock.js')
+    })
+
+    it('locates a panel branch without offering lines it will not fetch', () => {
+        const webcam = createNode('source.webcam')
+        const { container, text } = sheetFor(webcam, [webcam])
+        const place = NODE_ANATOMY['source.webcam'].panel
+        expect(text).toContain(`RawEditor.jsx · lines ${place.fromLine}–${place.toLine}`)
+        // …and that row carries no disclosure: quoting the editor whole costs
+        // ~23 kB gzipped for a five-line branch.
+        const editorRow = [...container.querySelectorAll('.raw-anatomy-place')]
+            .find((el) => el.textContent.includes('RawEditor.jsx'))
+        expect(editorRow.querySelector('.raw-anatomy-disclosure')).toBeNull()
+    })
+
+    it('shows no location rows on a type that is not built', () => {
+        const unbuilt = createNode('stream.monitor')
+        const { container } = sheetFor(unbuilt, [unbuilt])
+        expect(container.querySelectorAll('.raw-anatomy-place')).toHaveLength(0)
+        expect(container.querySelectorAll('.raw-anatomy-disclosure')).toHaveLength(0)
     })
 })

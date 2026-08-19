@@ -558,9 +558,9 @@ export const WIKI_ARTICLES = [
             ] },
             'Two things it will tell you that nothing else does. A wire that is connected but carrying nothing reads as exactly that, rather than as a live wire — the node quietly falls back to its own value in that case, and now you can see it happen. And a doorway you placed but never wired reads “nothing wired in”, so you can tell at a glance which of a container’s doors are actually connected to anything.',
             'It only reads. Nothing on it changes the document, and there is no field to type in — changing a value is still the Inspector’s job. A value shown as “nothing” means the port is genuinely carrying nothing, which is a different fact from carrying zero or an empty word, and the sheet keeps those apart on purpose.',
-            'What it does not do yet: show you the actual lines of code that make a Cube a Cube. That is the next step, and it is deliberately separate — pointing at code that has since moved would be worse than not pointing at all.'
+            'And it can show you the code. Where a node is worked out or drawn, the sheet names the file and the exact lines — “Show the lines” opens them, real and unedited, fetched only when you ask. The pointing can never rot: a build step measures the real files and CI fails the moment an edit moves them, and if a running page and its code ever disagree the sheet refuses to show anything rather than show the wrong lines. Where one piece of code answers for several nodes at once — the five value nodes share one — it says so, so reading it once is reading all of them.'
         ],
-        tags: ['raw', 'nodes', 'anatomy', 'ports', 'doorways', 'containers', 'made-of', 'learning', 'constructor'],
+        tags: ['raw', 'nodes', 'anatomy', 'ports', 'doorways', 'containers', 'made-of', 'learning', 'constructor', 'code', 'source', 'lines'],
         updated: '2026-08-19'
     },
     {

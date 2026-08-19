@@ -4956,3 +4956,56 @@
    the block rather than to the paragraph so the two buttons centre under it. */
 .raw-empty-state { max-width: min(520px, calc(100vw - 48px)); }
 .raw-empty-state p { line-height: 1.55; }
+
+/* Where the code lives, and — behind one press — the lines themselves. */
+.raw-anatomy-place { margin-top: 8px; }
+
+.raw-anatomy-loc {
+    display: inline-block;
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.5);
+}
+
+.raw-anatomy-disclosure {
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    margin-left: 4px;
+    padding: 0 10px;
+    border: 0;
+    background: none;
+    color: rgba(244, 247, 251, 0.6);
+    font-family: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    touch-action: manipulation;
+}
+
+.raw-anatomy-disclosure:hover,
+.raw-anatomy-disclosure:focus-visible { color: var(--di-cyan); }
+
+.raw-anatomy-code-note {
+    margin: 4px 0 0;
+    font-size: 11px;
+    color: rgba(244, 247, 251, 0.4);
+}
+
+.raw-anatomy-code-note.is-refusal { color: var(--di-warning); }
+
+.raw-anatomy-code {
+    margin: 6px 0 0;
+    padding: 10px 12px;
+    background: #0a0a0a;
+    border-left: 2px solid rgba(255, 255, 255, 0.14);
+    font-family: var(--di-mono, 'JetBrains Mono', monospace);
+    font-size: 11px;
+    line-height: 1.5;
+    color: rgba(244, 247, 251, 0.78);
+    /* Sideways inside its own box, never wrapped: wrapped code lies about
+       where its lines end, and the window body must not scroll horizontally. */
+    overflow-x: auto;
+    white-space: pre;
+}

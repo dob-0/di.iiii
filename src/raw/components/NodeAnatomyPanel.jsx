@@ -1,5 +1,8 @@
-import { PORT_TYPES } from '../../project/nodeRegistry.js'
+import { useState } from 'react'
+import { PORT_TYPES, getNodeType } from '../../project/nodeRegistry.js'
 import { formatPortValue } from '../../project/graph/formatPortValue.js'
+import { DOORWAY_PLACE, NODE_ANATOMY } from '../../project/graph/nodeAnatomy.generated.js'
+import { MAX_QUOTED_LINES, canShowLines, loadSourceSlice } from '../utils/nodeSourceSlices.js'
 
 // What a node is made of — the same four questions for every node there is.
 //
@@ -102,6 +105,65 @@ const OutputRow = ({ row }) => (
     </li>
 )
 
+const baseName = (file) => file.slice(file.lastIndexOf('/') + 1)
+
+// A place code lives, and — where the file is one of the two the sheet may
+// quote — the lines themselves, behind one deliberate press. The location is
+// always shown; the quote is optional, because for most readers "it is these
+// five lines in this file" is the fact, and the lines are the proof.
+const REFUSALS = {
+    moved: 'The code moved after this page was built, so the lines below would be the wrong ones. Nothing is shown rather than something false. Reload the page.',
+    failed: 'The lines could not be fetched. Nothing is shown rather than something guessed.',
+    unavailable: '',
+    'too-long': ''
+}
+
+const SourceLines = ({ place }) => {
+    const [open, setOpen] = useState(false)
+    const [result, setResult] = useState(null)
+    if (!place) return null
+    const quotable = canShowLines(place.file) && (place.toLine - place.fromLine + 1) <= MAX_QUOTED_LINES
+    const toggle = () => {
+        const next = !open
+        setOpen(next)
+        if (next && !result) loadSourceSlice(place).then(setResult)
+    }
+    return (
+        <div className="raw-anatomy-place">
+            <span className="raw-anatomy-loc">
+                {baseName(place.file)} · lines {place.fromLine}–{place.toLine}
+            </span>
+            {quotable ? (
+                <button type="button" className="raw-anatomy-disclosure" onClick={toggle}>
+                    {open ? 'Hide the lines' : 'Show the lines'}
+                </button>
+            ) : null}
+            {open && !result ? <p className="raw-anatomy-code-note">Fetching the lines…</p> : null}
+            {open && result ? (
+                result.ok ? (
+                    <>
+                        <p className="raw-anatomy-code-note">
+                            The real lines, as they run. You can read them here, not change them.
+                        </p>
+                        <pre className="raw-anatomy-code">{result.text}</pre>
+                    </>
+                ) : (
+                    REFUSALS[result.reason]
+                        ? <p className="raw-anatomy-code-note is-refusal" role="status">{REFUSALS[result.reason]}</p>
+                        : null
+                )
+            ) : null}
+        </div>
+    )
+}
+
+const sharedWithSentence = (place) => {
+    if (!place?.sharedWith?.length) return null
+    const labels = place.sharedWith.map((id) => getNodeType(id)?.label).filter(Boolean)
+    const count = labels.length + 1
+    return `One piece answers for ${count} nodes at once — this one, ${labels.join(', ')}. Read it and you have read all ${count}.`
+}
+
 // Slot 2 is a summary of facts already established port by port, never a claim
 // of its own — which is why a node whose answers come from two different places
 // gets a sentence naming both rather than whichever one came first.
@@ -172,6 +234,10 @@ export default function NodeAnatomyPanel({ reading, onShowCard = null }) {
 
     const { takes, gives, worksItOut, putsOnScreen, inside } = reading
     const screen = PUTS_ON_SCREEN[putsOnScreen.kind] || PUTS_ON_SCREEN.nowhere
+    // No location rows on an unbuilt type: pointing a reader at lines behind a
+    // set of ports with nothing behind them would dress the shell up as real —
+    // the exact defect the banner above exists to prevent.
+    const anatomy = reading.implemented ? NODE_ANATOMY[reading.typeId] : null
 
     return (
         <div className="raw-anatomy">
@@ -218,6 +284,13 @@ export default function NodeAnatomyPanel({ reading, onShowCard = null }) {
                     <span className="raw-anatomy-badge">{worksItOutBadge(worksItOut)}</span>
                 </h4>
                 <p>{worksItOutSentence(worksItOut)}</p>
+                {sharedWithSentence(anatomy?.computes) ? <p>{sharedWithSentence(anatomy.computes)}</p> : null}
+                {anatomy?.alsoNeeds ? <p>{anatomy.alsoNeeds.sentence}</p> : null}
+                <SourceLines place={anatomy?.computes} />
+                {/* Every container shares these lines — the graph looks for an
+                    Out door before it looks at what kind of node this is, and
+                    that lookup is the same few lines for all of them. */}
+                {inside.kind === 'container' ? <SourceLines place={DOORWAY_PLACE} /> : null}
             </section>
 
             <section className="raw-anatomy-slot">
@@ -226,6 +299,17 @@ export default function NodeAnatomyPanel({ reading, onShowCard = null }) {
                     <span className="raw-anatomy-badge">{screen.badge}</span>
                 </h4>
                 <p>{screen.text}</p>
+                <SourceLines place={anatomy?.draws} />
+                {anatomy?.panel ? (
+                    // Location only, no quote: fetching the editor file whole
+                    // would ship ~23 kB gzipped of duplicate string for a
+                    // five-line branch. Saying where it is stays honest.
+                    <div className="raw-anatomy-place">
+                        <span className="raw-anatomy-loc">
+                            {baseName(anatomy.panel.file)} · lines {anatomy.panel.fromLine}–{anatomy.panel.toLine}
+                        </span>
+                    </div>
+                ) : null}
             </section>
 
             <section className="raw-anatomy-slot">
