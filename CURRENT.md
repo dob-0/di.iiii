@@ -13,7 +13,9 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the Constructor: a node made of nodes
+- the cut list: a minimal desk
+- the room behind the graph
+- touch works in the room
 
 Full detail: `PROGRESS.md`.
 
