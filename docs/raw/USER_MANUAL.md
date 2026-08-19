@@ -25,35 +25,23 @@ Creators should start with one visible result and one connection.
 2. Start with a visible node like `Text`, `Image`, `Cube`, or `Sphere`.
 3. Add one graph value node and wire it into that visible node.
 
-## The three surfaces
+## The desk and the room
 
-### World
+The desk is one surface: a flat graph of cards on a grid. The room lives
+behind it — from the moment something stands in it. Place a **Geo** or a
+**Cube** and the current level's room appears behind your cards; a clear desk,
+or a desk of pure code (values, math, containers of code), stays flat paper.
 
-Use World to place visible scene nodes like cubes, spheres, planes, lights, and
-background controls.
+- Scene nodes (Cube, Sphere, Plane, Geo, a Light inside a place) stand in the
+  room.
+- Panels (Text, Image, Browser, Timeline) open as floating windows over the
+  desk.
+- Value and math nodes drive both, through wires.
 
-1. Open `World`.
-2. Double-click the scene, or use the top action.
-3. Create a visible node such as `Cube`, `Sphere`, or `Background`.
-4. Select the node and adjust its values in the inspector.
-
-### View
-
-Use View to create 2D panels — text notes, image panels, browser panels.
-
-1. Open `View`.
-2. Double-click the surface.
-3. Create `Text` or `Image`.
-4. Select the panel and edit its content in the inspector.
-
-### Graph
-
-Use Graph to create value sources and math nodes that drive World and View.
-
-1. Open `Graph`.
-2. Create a value node such as `Number`, `String`, or `Color`.
-3. Drag from an output port into a compatible target input.
-4. Change the source value and confirm the target updates.
+The **Room** button (or ⤢) takes the room fullscreen for arranging — that is
+where clicking and dragging objects lives. Every container has its own room,
+and walking through a door swaps which room fills the screen. The backdrop
+room behind the cards shows consequences; it takes no clicks of its own.
 
 ## What is different in Raw (vs Beta)
 
