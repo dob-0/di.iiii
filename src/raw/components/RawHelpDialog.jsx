@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import {
     GUIDE_AUDIENCES,
     GUIDE_SECTIONS,
-    getGuideManualPath,
     getGuideSectionForSurface
 } from '../utils/rawGuide.js'
 
@@ -86,7 +85,6 @@ export default function RawHelpDialog({
     if (!open) return null
 
     const activeSection = GUIDE_SECTIONS.find((section) => section.id === activeSectionId) || suggestedSection
-    const manualPath = getGuideManualPath()
 
     return (
         <div className="raw-help-backdrop">
@@ -202,7 +200,9 @@ export default function RawHelpDialog({
                 </div>
 
                 <footer className="raw-help-footer">
-                    <span>Manual: {manualPath}</span>
+                    {/* No repo path in front of a visitor: docs/raw/… is
+                        unclickable and unreachable for the audience this
+                        dialog serves — developer residue, cut by the audit. */}
                     <button type="button" onClick={() => setActiveSectionId(suggestedSection.id)}>
                         Jump to {suggestedSection.label}
                     </button>

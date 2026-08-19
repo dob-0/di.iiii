@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the move op: a node can change scope at all
+- the desk trilogy: room behind the graph, touch, the cut list
 
 Full detail: `PROGRESS.md`.
 

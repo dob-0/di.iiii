@@ -155,11 +155,15 @@ export default function RawGraphSurface({
     portScopeNodes = null,
     selectedNodeId = null,
     emptyHint = 'Cursor is material. Double-click to place nodes.',
+    onExplainScope = null,
     onSelectNode,
     onEnterNode,
     // Optional, like every other handler here: Studio wraps this read-only and
     // passes none, so no menu is offered there at all.
     onPromotePort = null,
+    // Builds a worked example on a blank canvas. Optional: Studio wraps this
+    // read-only and offers nothing.
+    onMakeScene = null,
     onCreateEdge,
     onDeleteEdge,
     onDeleteNode,
@@ -904,7 +908,30 @@ export default function RawGraphSurface({
         // palette over the graph behind it.
         if (event.target?.closest?.('.raw-graph-port-menu')) return
         const graphPoint = clientPointToGraphPoint(event.clientX, event.clientY)
-        onDoubleClick({ clientX: event.clientX, clientY: event.clientY, graphX: graphPoint.x, graphY: graphPoint.y })
+        // Keep the whole card — and the door hanging off its left edge — inside
+        // the part of the canvas you can SEE. Double-tapping near an edge used
+        // to put the new card half off-screen, so the thing you just made was
+        // partly unreachable and its door was clipped away entirely.
+        const rect = containerRef.current?.getBoundingClientRect?.()
+        const clamped = { x: graphPoint.x, y: graphPoint.y }
+        if (rect?.width && rect?.height) {
+            // The card is placed CENTRED on this point by the caller, and its
+            // door hangs off the left edge — so the usable band is inset by half
+            // a card plus the door on the left, and half a card on the right.
+            const halfCard = CARD_WIDTH / 2
+            const topLeft = clientPointToGraphPoint(rect.left + GRAPH_FIT_PADDING_PX, rect.top + GRAPH_FIT_PADDING_PX)
+            const bottomRight = clientPointToGraphPoint(
+                rect.right - GRAPH_FIT_PADDING_PX,
+                rect.bottom - GRAPH_FIT_PADDING_PX - Math.max(0, bottomInset)
+            )
+            const minX = topLeft.x + halfCard + (DOOR_WIDTH_PX / viewportRef.current.zoom)
+            const maxX = bottomRight.x - halfCard
+            const minY = topLeft.y + HEADER_HEIGHT
+            const maxY = bottomRight.y - HEADER_HEIGHT
+            if (maxX > minX) clamped.x = clamp(graphPoint.x, minX, maxX)
+            if (maxY > minY) clamped.y = clamp(graphPoint.y, minY, maxY)
+        }
+        onDoubleClick({ clientX: event.clientX, clientY: event.clientY, graphX: clamped.x, graphY: clamped.y })
     }
 
     const handleSectionKeyDown = (event) => {
@@ -975,7 +1002,26 @@ export default function RawGraphSurface({
                 </button>
             ) : null}
             {nodes.length === 0 ? (
-                <div className="raw-empty-state" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', color: '#aaa', pointerEvents: 'none' }}>{emptyHint}</div>
+                // A blank workspace opens in ZEN, where there is NO topbar — so
+                // the ⋯ menu, and everything in it, does not exist for the
+                // person most likely to need it. The one offer that matters has
+                // to live here, on the canvas they are actually looking at.
+                <div className="raw-empty-state">
+                    <p>{emptyHint}</p>
+                    <div className="raw-empty-state-actions">
+                        {/* First, because inside a node that has no inside it is
+                            the answer to the question the person is standing in
+                            front of; the offer to build something is the answer
+                            to a different one. Both optional: Studio wraps this
+                            component read-only and passes no handlers. */}
+                        {onExplainScope ? (
+                            <button type="button" onClick={onExplainScope}>Show me what it&apos;s made of</button>
+                        ) : null}
+                        {onMakeScene ? (
+                            <button type="button" onClick={onMakeScene}>Make me a scene</button>
+                        ) : null}
+                    </div>
+                </div>
             ) : null}
             <div
                 className="raw-graph-stage"

@@ -112,6 +112,56 @@ deleting its line from `UNIMPLEMENTED_NODE_TYPES` in `src/project/nodeRegistry.j
 3. Wire `sin` into something visible — a cube's position, a color channel.
 4. It moves on its own; delete the Time node and the clock stops.
 
+## Finding out what a node is
+
+Standing inside any node, press **what is it made of** — it sits beside the
+"inside X" label, and appears on the canvas itself when the node you are in
+holds nothing.
+
+It reads the node you are standing in, and asks the same four questions of every
+node there is:
+
+1. **What it takes and gives** — every port, its type, the value on it right
+   now, and where that value came from: down a wire (naming the card, with a way
+   to jump to it), typed here, or left at its default.
+2. **What works it out** — code, its own window, or an Out door standing inside
+   it. Containers usually answer two ways at once.
+3. **What puts it on screen** — the room, a window, or nowhere.
+4. **What is inside it** — nothing, for anything made of code; a count, for a
+   container.
+
+Two readings you cannot get anywhere else: a wire that is connected but carrying
+nothing says so (the node falls back to its own value in that case), and a
+doorway placed but never wired reads "nothing wired in".
+
+Where a node is worked out or drawn by code, the sheet names the file and the
+exact lines, and **Show the lines** opens them — real, unedited, and refused
+outright if the running page and its code ever disagree.
+
+It only reads. Changing a value is still the inspector's job.
+
+## Building a node out of nodes
+
+The **Constructor** (palette, with the other "make" nodes) is a container that
+wears whatever shape the nodes inside it build. Empty, it stands as a violet
+wireframe.
+
+1. Enter it. Place a Cube (or Sphere, or Plane) — it appears in the room behind
+   your cards as you place it.
+2. Walk out — the Constructor is already wearing it. Nothing to wire.
+
+Everything spatial you place inside contributes automatically. For exact
+control, place an `Out` door and wire shapes into it (through a **Merge** for
+several): the moment a door exists, only what reaches a door is worn.
+Everything stays live — wire a colour into a part's Colour, or the clock's Sin
+into a Sphere's Radius, and the worn shape follows.
+
+## Arranging in the room
+
+Click an object to select it; click empty floor to deselect. Drag moves it —
+the camera holds still while you do. Hold **Shift** while dragging to lift it.
+**Ctrl/Cmd+D** duplicates whatever is selected, stepped slightly aside.
+
 ## What to do when something feels broken
 
 - Created a node and see nothing? Check whether it is a visible World/View node

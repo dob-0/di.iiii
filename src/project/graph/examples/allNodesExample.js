@@ -43,6 +43,21 @@ const ROW = 130
 // claim about the runtime that has to survive that check.
 export const UNWIRABLE_PORTS = []
 
+// Outputs that are PASS-THROUGH: alive exactly when something is wired in,
+// and honestly NOTHING when nothing is. A third category the 2026-08-19
+// constructor work forced into existence — the liveness test used to know
+// only alive-bare (a clock, a value with defaults) and dead (decoration), and
+// Merge is neither: its inputs are geometry, which has no sensible default,
+// so a bare Merge carrying an empty group instead would draw as an invisible
+// something. The test holds this list in BOTH directions too: each entry must
+// be dead bare AND provably alive once fed.
+export const PASS_THROUGH_PORTS = [
+    {
+        port: 'shape.merge.out',
+        why: 'merges what arrives; with nothing wired it carries nothing, deliberately distinct from an empty group'
+    }
+]
+
 // Ports that are declared and accept a value, but whose value is ignored by the
 // renderer — wiring them proves nothing, so the example leaves them alone.
 // Empty today: the registry's panel-2d/universe types were simplified down to
@@ -155,6 +170,19 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     add('doorIn', 'port.in', { label: 'In · a way through the wall', col: 3, row: 6, insideKey: 'desk', values: { label: 'Tint', portType: 'color' } })
     add('doorOut', 'port.out', { label: 'Out · a way back through', col: 3, row: 7, insideKey: 'desk', values: { label: 'Size', portType: 'vec3' } })
 
+    // --- the constructor cluster: a node made of nodes -----------------------
+    // WIRED, unlike the desk's doorways above, because here the wiring IS the
+    // point: the Merge's `out` must demonstrably carry something (the liveness
+    // test evaluates every placeable output against the runtime), and a
+    // Constructor standing empty would portray the one node whose whole idea
+    // is wearing its contents as a wireframe with no explanation. Two parts,
+    // merged, through a door — the smallest honest build.
+    add('ctor', 'geom.constructor', { label: 'Constructor', col: 4, row: 6, values: { position: [2.5, 0, 0] } })
+    add('ctorHead', 'geom.sphere', { label: 'Head', col: 3, row: 8, insideKey: 'ctor', values: { radius: 0.3, color: '#ffffff', position: [0, 1.2, 0] } })
+    add('ctorBody', 'geom.sphere', { label: 'Body', col: 3, row: 9, insideKey: 'ctor', values: { radius: 0.5, color: '#dfe8ff', position: [0, 0.5, 0] } })
+    add('ctorMerge', 'shape.merge', { label: 'Merge', col: 4, row: 8, insideKey: 'ctor' })
+    add('ctorDoor', 'port.out', { label: 'Out · the worn shape', col: 4, row: 9, insideKey: 'ctor', values: { label: 'Shape' } })
+
     add('text', 'view.text', { label: 'Text panel', col: 4, row: 3, values: { content: 'Every node type, one graph.' } })
     // Same-origin on purpose: the example must also open on a local install
     // with no network, where an iframe of di-studio.xyz is a dead panel.
@@ -205,6 +233,12 @@ export function buildAllNodesExample({ parentId = null, workspaceTop = 64 } = {}
     }
 
     const edges = [
+        // The constructor's build: head + body through the Merge into the
+        // door. This is what makes Merge's output demonstrably alive, and the
+        // Constructor demonstrably a snowman rather than a wireframe.
+        wire('ctorHead', 'geometry', 'ctorMerge', 'a'),
+        wire('ctorBody', 'geometry', 'ctorMerge', 'b'),
+        wire('ctorMerge', 'out', 'ctorDoor', 'value'),
         // A sine of elapsed time scaled to ±0.5 and offset to 1.0, giving a
         // 0.5..1.5 band that exactly fills the clamp range — this is what makes
         // the sphere pulse. Scale it any wider and the clamp saturates, which

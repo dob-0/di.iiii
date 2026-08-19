@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent, act, cleanup } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import TextPanelWindow from './TextPanelWindow.jsx'
 
@@ -22,6 +22,13 @@ vi.mock('./RawGraphSurface.jsx', () => ({
                 <button type="button" onClick={() => props.onEnterNode?.(props.nodes[0].id)}>
                     enter-first-node
                 </button>
+            )}
+            {/* The real surface offers this beside "Make me a scene" whenever
+                the scope you are standing in is empty. Same reason as the hint
+                above: without it here, the empty-state route to the sheet is
+                untested while the marker route passes. */}
+            {props.onExplainScope && (
+                <button type="button" onClick={() => props.onExplainScope()}>explain-scope</button>
             )}
         </div>
     )
@@ -762,5 +769,155 @@ describe('RawEditor capture panel callback stability', () => {
         const last = webcamPanelProps.at(-1).onFrameChange
         expect(webcamPanelProps.length).toBeGreaterThan(1)
         expect(last).toBe(first)
+    })
+})
+
+
+// A document built to catch ONE wiring mistake, because nothing simpler can.
+//
+// The sheet must be handed every node in the document, not the cards in the
+// scope you are standing in. Most fixtures cannot tell those apart: the doors
+// on the container you are inside are its children, so they are in the scoped
+// list too, and a scoped-list version of this sheet passes.
+//
+// What is NOT in the scoped list is the far end of a wire coming in from
+// outside — and if that far end is itself a container, the port the wire leaves
+// by is a door standing inside IT, two scopes away. Name that port and the
+// sheet has read the whole document; hand it the scoped list and the label
+// falls back to the door's raw id, which is a uuid nobody can read.
+//
+// So: a Source container with an Out door called Beat, wired into a Camera door
+// on the container we walk into. Standing inside the second one, the sheet has
+// to say "wired from Source · Beat".
+const ANATOMY_STORAGE_KEY = 'test-anatomy-ws'
+const FAR_DOOR_ID = 'door-out-of-source'
+const makeDoorwayDoc = () => JSON.stringify({
+    nodes: [
+        { id: 'box', typeId: 'universe.space', label: 'A container', values: {} },
+        {
+            id: 'door-in',
+            typeId: 'port.in',
+            label: 'In',
+            parentId: 'box',
+            values: { label: 'Camera', portType: 'vec3' }
+        },
+        { id: 'source', typeId: 'universe.space', label: 'Source', values: {} },
+        {
+            id: FAR_DOOR_ID,
+            typeId: 'port.out',
+            label: 'Out',
+            parentId: 'source',
+            values: { label: 'Beat', portType: 'vec3' }
+        },
+        { id: 'start', typeId: 'value.vec3', label: 'Start position', parentId: 'source', values: { value: [9, 9, 9] } }
+    ],
+    edges: [
+        { id: 'e0', fromNodeId: 'start', fromPort: 'out', toNodeId: FAR_DOOR_ID, toPort: 'value' },
+        { id: 'e1', fromNodeId: 'source', fromPort: FAR_DOOR_ID, toNodeId: 'box', toPort: 'door-in' }
+    ],
+    workspaceState: {}
+})
+
+describe('RawEditor — what a node is made of', () => {
+    afterEach(() => {
+        window.localStorage.removeItem(ANATOMY_STORAGE_KEY)
+    })
+
+    const enterTheContainer = () => {
+        window.localStorage.setItem(ANATOMY_STORAGE_KEY, makeDoorwayDoc())
+        render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+    }
+
+    it('is not offered at the top level — there is no node you are standing in', () => {
+        window.localStorage.setItem(ANATOMY_STORAGE_KEY, makeDoorwayDoc())
+        render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
+        expect(screen.queryByRole('button', { name: /made of/i })).toBeNull()
+        expect(screen.queryByRole('button', { name: 'explain-scope' })).toBeNull()
+    })
+
+    // THE wiring assertion. NodeAnatomyPanel can be perfect while the editor
+    // hands it the wrong node list or a context it built itself, and only a
+    // value that has travelled the whole way — a card two scopes out, through
+    // that container's own door, down a wire, onto this container's face — can
+    // tell the difference.
+    //
+    // Watched red: swapping `allNodes: authoredNodes` for the scoped card list
+    // renders "wired from Source · door-out-of-source" and fails here, while
+    // every other test in this file stays green.
+    it('reads a socket fed from outside, through a door, with the app own graph', () => {
+        enterTheContainer()
+        fireEvent.click(screen.getByRole('button', { name: /what is it made of/i }))
+        const sheet = document.querySelector('.raw-anatomy')
+        expect(sheet).toBeTruthy()
+        expect(sheet.textContent).toContain('9, 9, 9')
+        expect(sheet.textContent).toContain('wired from Source · Beat')
+        expect(sheet.textContent).not.toContain(FAR_DOOR_ID)
+        expect(sheet.textContent).toContain('this socket is the door \u201cCamera\u201d standing inside it')
+    })
+
+    // The empty-canvas entry point exists only inside CODE-made nodes, where
+    // the empty canvas IS the question; a container's reading stays one tap
+    // away on the marker's ? — two resident buttons for one answer was the
+    // clutter the audit counted.
+    it('offers the empty-canvas way in only inside a code-made node', () => {
+        enterTheContainer()
+        expect(screen.queryByRole('button', { name: 'explain-scope' })).toBeNull()
+        cleanup()
+        window.localStorage.setItem(ANATOMY_STORAGE_KEY, JSON.stringify({
+            nodes: [{ id: 'cube', typeId: 'geom.cube', label: 'A cube', values: {} }],
+            edges: [],
+            workspaceState: {}
+        }))
+        render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+        fireEvent.click(screen.getByRole('button', { name: 'explain-scope' }))
+        expect(document.querySelector('.raw-anatomy')).toBeTruthy()
+    })
+
+    // A sheet describing the node you have walked out of looks current and is
+    // not, which is worse than no sheet.
+    it('closes itself when you leave the node', () => {
+        enterTheContainer()
+        fireEvent.click(screen.getByRole('button', { name: /what is it made of/i }))
+        expect(document.querySelector('.raw-anatomy')).toBeTruthy()
+        // By class, not by name: the way out is labelled with a chevron and
+        // carries "Leave" only as a title, so its accessible name is the glyph.
+        fireEvent.click(document.querySelector('.raw-scope-marker-out'))
+        expect(document.querySelector('.raw-anatomy')).toBeNull()
+    })
+})
+
+
+describe('RawEditor — the room behind the graph', () => {
+    afterEach(() => {
+        window.localStorage.removeItem(ANATOMY_STORAGE_KEY)
+    })
+
+    // The audit's central finding: inside any non-World scope you built BLIND,
+    // and the owner concluded nesting did not work while the renderer was
+    // doing it correctly. The backdrop is therefore not opt-in: the current
+    // scope's room renders behind the graph in EVERY scope.
+    it('renders the room behind the graph at root and inside a container', () => {
+        window.localStorage.setItem(ANATOMY_STORAGE_KEY, makeDoorwayDoc())
+        render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
+        expect(screen.getAllByTestId('mock-viewport').length).toBeGreaterThanOrEqual(1)
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+        expect(screen.getAllByTestId('mock-viewport').length).toBeGreaterThanOrEqual(1)
+    })
+
+    // Fullscreen used to cancel on every scope step, so the render and the
+    // graph could never be part of one journey. Now a door swaps which room
+    // fills the screen — the TouchDesigner go-inside/come-out feel.
+    it('keeps the fullscreen room across scope navigation', () => {
+        window.localStorage.setItem(ANATOMY_STORAGE_KEY, makeDoorwayDoc())
+        render(<RawEditor localStorageKey={ANATOMY_STORAGE_KEY} />)
+        fireEvent.click(screen.getByRole('button', { name: 'Room' }))
+        expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
+        fireEvent.click(screen.getByRole('button', { name: 'enter-first-node' }))
+        expect(screen.getByRole('button', { name: '← Graph' })).toBeTruthy()
+        // …and the on-surface exit works without any chrome at all.
+        fireEvent.click(document.querySelector('.raw-room-exit'))
+        expect(screen.queryByRole('button', { name: '← Graph' })).toBeNull()
     })
 })

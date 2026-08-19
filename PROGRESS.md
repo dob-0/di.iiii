@@ -5,6 +5,454 @@ Read this before starting work. Update it before stopping.
 
 ---
 
+## 2026-08-19 — the cut list: a minimal desk
+
+Third of the three audit answers ("you're shitting the UI with useless infos —
+keep UI clean and minimalistic"). Every cut is one the audit counted; the
+result was measured the same way it measured the problem: **first visit
+71 → 18 visible words** (desktop; 15 on a phone; TouchDesigner shows ~50),
+**one placed cube 95 → 27**, with a screenshot read at each state.
+
+- **The starter seed is gone.** First visit is the clean empty room — one
+  sentence, one offer. The demo lives behind "Make me a scene", where choosing
+  it is the person's act. Its four-node constellation, two open windows and
+  phone layout collisions go with it (`starterWorkspace.js` + its test
+  deleted; the zen default no longer needs the seeded-flag special case).
+- **The dead CODE box is gone from every fresh node** — the audit's one
+  systemic clutter generator. `Code — stored, not run` appears exactly where
+  it is true: node.null always, anything else only when `values.__code`
+  actually carries something. Contract test rewritten truthfully.
+- **Window title bars spell three actions with glyphs** (⌖ – ×), words kept in
+  the accessible names; Enter › keeps its word — it is the one action a
+  first-timer must find.
+- **The ◫ "world as background" button is gone** — the permanent backdrop made
+  it a synonym for Close. ● live-marking stays (it has a real job with several
+  rooms).
+- **The scope marker's four-word explainer is a ?** (44px, full sentence in
+  title/aria); the empty-canvas "Show me what it's made of" now appears only
+  inside CODE-made nodes, where the empty canvas is the question.
+- **Topbar**: Size select moved into ⋯ (configuration, not work); Chat hidden
+  on a solo local canvas until presence shows anyone; "Blank White Workspace"
+  — neither blank, nor white, nor (vocabulary) a workspace — is now
+  "Local canvas".
+- **The empty-state offer moved to the lower band** — the audit watched a
+  double-click land on the centred button and inject a demo into somebody's
+  node, because the hint says "double-click" and the centre is where people
+  do it.
+- **Palette: exact label match outranks every substring match** — typing
+  "Out" + Enter used to open an Outliner panel, detonating the documented
+  door flow on its own palette. Guard watched red without the sort.
+- **New cards step aside until clear** — a Merge used to bury a Cube's whole
+  header, and a card over another's door left that door silently unclickable.
+- **Help lost the repo path line** (`docs/raw/USER_MANUAL.md` shown to
+  visitors); the wordmark no longer renders on phones (it sat on the cards);
+  the backdrop no longer honours a topbar zen doesn't show (dead band, seen).
+- Wiki updated where it described the seeded desk as fact.
+
+### Verified
+
+First visit, one-cube, and phone states driven and screenshot-read after every
+cut; the one-cube screen now shows the cube standing in the room exactly where
+the double-click landed, its card beneath it, an inspector with no dead box.
+No console errors anywhere.
+
+## 2026-08-19 — the room behind the graph
+
+The owner's verdict on the constructor work: "IT JUST INFO. I NEED FULL USABLE
+DESK WHERE I CAN CREATE FULL SCENES." A four-agent UX audit (driving the real
+UI as a first-timer) plus a TouchDesigner COMP-model deep-dive found why, and
+this change is the first of three answers.
+
+**The diagnosis, measured**: geometry-in-geometry already WORKED in the
+renderer — a sphere placed inside a cube renders and travels with it — but the
+UI (a) gave no 3D view inside any non-World scope, so every build was blind,
+(b) actively taught the wrong belief ("made of code — there is nothing inside
+it to see"), and (c) demanded Merge-and-door plumbing before a Constructor
+showed anything: sixteen blind actions for a two-part shape. The owner never
+found the working feature because the interface denied having it.
+
+**This change** (TouchDesigner's backdrop model — its own answer to "watch the
+result while editing the graph", the network floating over the output):
+
+- The current scope's room renders BEHIND the graph, always, in every scope —
+  cards float on top, and placing something shows it behind your cards the
+  moment it lands. The old opt-in overlay was also broken (it painted OVER the
+  graph — a later positioned sibling — and its canvas ate every pointer, so
+  cards went unreachable the moment it was on); the backdrop mounts as the
+  shell's FIRST child and refuses all pointer events, killing both failure
+  modes structurally. `isWorldOverlay` state retired.
+- Fullscreen is scope-generic and SURVIVES walking through doors: each door
+  swaps which room fills the screen. The topbar button is now "Room"/"← Graph"
+  and works in every scope (the old one toggled the root World window's frame —
+  a silent no-op anywhere else, measured by the audit). Fullscreen carries its
+  own on-surface exit (`.raw-room-exit`), because zen has no topbar and the
+  audit measured the old ⤢ as a trap; the zen dead-strip (`top: workspaceTop`
+  with no topbar) is gone too.
+- The empty-scope sentence for a code-made node no longer teaches the wrong
+  belief: a spatial node says "What you place here becomes part of it"; only a
+  non-spatial code node says it has no room.
+- **The Constructor wears its spatial children automatically when it has no
+  doors** — the TD flag model: everything inside contributes, wires carry
+  data. A door still means "exactly this, nothing else" and suppresses the
+  automatic path. Wiki + manual rewritten around place-not-plumb.
+
+### Verified
+
+Seen at 1440×900: the root room (snowman + violet placeholder) as the canvas
+itself with all cards hit-testing reachable; inside the Snowman, the workshop
+room behind the wires with a just-placed cube appearing the instant the palette
+closed. Phone 390×664 looked at too: cards behind the seeded World window there
+— PRE-EXISTING (window-over-cards, unchanged by this diff) and on the Phase C
+cut list, where the backdrop makes that window redundant anyway.
+
+### The other two answers, still ahead (audit-ranked)
+
+- **Touch**: click an object in the room to select it (today it never selects),
+  drag moves it with the grab offset (today it teleports AND orbits), Shift-drag
+  lifts, Ctrl+D duplicates, gizmo for rotate/scale.
+- **The cut list**: kill the starter seed (empty canvas first visit), CODE box
+  only when code exists, title-bar text buttons → icons, palette exact-match
+  first ("Out" summons an Outliner today), collision-free card placement,
+  explainers into ⋯. Full inventory in the audit (audit-shots/ + four reports
+  in the workflow journal wf_9b0100a1-048).
+
+## 2026-08-19 — touch works in the room
+
+Second of the three audit answers (first: the room behind the graph, PR #174).
+Every fix below was REPRODUCED by hand before fixing and RE-MEASURED after —
+the numbers are from driving the real UI.
+
+- **Drag moved objects by teleport while orbiting the camera under them.**
+  Measured: a 160px drag threw a sphere from [0,1.2,0] to [13.8,1.2,-9.9]. Two
+  causes: the raw ground-plane hit was written straight into position (an
+  elevated object's grab ray meets y=0 far behind it), and drei's
+  OrbitControls listens on the DOM canvas, which R3F stopPropagation never
+  reaches. Now: the grab offset is measured on a plane at the OBJECT's height
+  (the first fix, on the floor plane, still gave a lever arm — 180px moved it
+  4.2 units; at its own height, 2.1, hand-matched) and the controls are
+  disabled for the drag's duration via R3F's makeDefault controls state.
+- **Click on empty floor never deselected** — the invisible 400×400 drag plane
+  catches the ray, so the Canvas-level onPointerMissed (which does clear) never
+  fired. The plane now clears selection itself, guarded by R3F's event.delta so
+  the click that ends a drag cannot clear what it just dragged.
+- **Shift-drag lifts.** Ray intersected with a vertical camera-facing plane
+  through the object; anchored to the drag-START position, because a lift that
+  began with Shift already held baked a sideways step into its anchor
+  (measured: z drifted −1.5 during a pure lift; now [0,1.2,0]→[0,2.27,0]).
+- **Ctrl/Cmd+D duplicates** the selected node — the audit found no duplication
+  path of any kind. Node alone, not its subtree (a deep clone with
+  re-identified interior wiring is its own change), stepped +0.6/+0.6 in the
+  room and +48px on the canvas so the copy never lands exactly on the original.
+- The fullscreen room's `‹ graph` exit moved bottom-left — the first render
+  put it exactly under the scope marker's own ‹ (seen).
+
+### Verified
+
+Driven end-to-end at 1440×900: select → deselect → 1:1 drag with the camera
+still → pure vertical lift → duplicate landing beside the original, screenshot
+read at each step. No console errors.
+
+Still ahead (third answer): the clutter cut list — starter seed, CODE box,
+title-bar text buttons, palette exact-match ("Out" summons an Outliner),
+collision-free card placement, explainers into ⋯.
+
+## 2026-08-19 — the Constructor: a node made of nodes
+
+Depth 3 of the owner's "we all have as a constructor", and the last of the three
+he asked for. A new container, `geom.constructor` (label **Constructor** — his
+word), that WEARS whatever shape the nodes inside it build: enter it, place
+shapes, wire them (through Merge if several) into an Out door, walk out — it
+stands in the room being that shape. Its inside is its definition; its outside
+is the result.
+
+- **Geometry is a value now.** Plain descriptors (`geometryDescriptor.js`:
+  box/sphere/plane/group, position/rotation/colour carried along) — not THREE
+  objects, so evaluation stays pure and a descriptor asserts in a unit test with
+  no WebGL in sight. The `geometry` port type, declared in PORT_TYPES since the
+  beginning and carried by nothing, finally carries something.
+- Cube, Sphere and Plane gained a `Geometry` output, computed through
+  `evaluateNodeInput` so a wired colour colours the descriptor too — the cube
+  standing in the room and the cube travelling down a wire cannot be two
+  different cubes wearing one name.
+- `shape.merge` (two geometry wires in, one out, chained for more). An unwired
+  Merge carries NOTHING, deliberately distinct from an empty group that would
+  draw as an invisible something — which forced a third category into the
+  all-nodes example's liveness model: `PASS_THROUGH_PORTS`, held in both
+  directions (dead bare AND provably alive once fed, one proving fixture per
+  entry, an entry without a proof fails).
+- **The inside is a workshop, not a room**: a constructor's parts are not drawn
+  as standing objects in the outer room — only what reaches a door is drawn
+  (childMap suppression in RawViewport, same split TouchDesigner draws between
+  a COMP's network and its output). Watched red without the rule: four sphere
+  renders for a two-sphere snowman, worn AND standing. Standing INSIDE it, the
+  parts render as objects again — that is what you are there to arrange.
+- No door wired → a violet wireframe placeholder in the geometry port's own
+  hue: "shape goes here". No schema change anywhere — doorways, edges and
+  containers already carried everything this needed.
+- Caps: 256 pieces, 16 levels (`MAX_GEOMETRY_*`), one shared budget across the
+  renderer walk so branch-by-branch caps cannot multiply past the total.
+- The anatomy manifest resynced through its own day-old gate
+  (`docs:anatomy:sync`), all ten semantic assertions holding over the new cases
+  — the first proof the gate does what it was built for. `formatPortValue`
+  learned to describe a descriptor ("a shape — 3 pieces") after the sheet was
+  SEEN calling a snowman "something this sheet cannot read".
+
+### Verified
+
+Seen at 1440×900: a three-part snowman (two spheres + an orange nose cube, two
+chained Merges, one door) standing in the room next to the violet placeholder of
+an empty Constructor, with the loose parts correctly absent from the room;
+inside it, the definition reading as a graph; the sheet answering "It holds 6
+nodes. You are standing in them." No console errors. An adversarial review
+workflow (four lenses, refute-by-default verification) ran over the full diff
+before push; its confirmed findings were fixed in this same change.
+
+### The review's confirmed findings, and what happened to each
+
+Eleven confirmed (four lenses, refute-by-default verification, most proved by
+EXECUTION against the real runtime). Fixed in this change: the merge-chain
+depth-cap defect (17 hand-placed parts silently dropped the first two — bare
+groups now splice instead of nest, guarded by a 20-part chain test); feedback
+loops now poisoned whole so every surface answers "wears nothing"
+deterministically in every ask order (was: first evaluator won, viewport and
+sheet contradicted each other on screen); the wiki's impossible wire (clock →
+Size is number → vec3; now clock's Sin → Sphere's Radius); the nesting sentence
+(requires standing inside, now says so); the sheet's slot-3 sentence
+contradicting slot 2 on a Constructor; the legacy unscoped viewport drawing
+parts AND result; the stale "used by nothing" registry comment; and both
+PASS_THROUGH gate holes (existence check now covers the list; proofs return the
+setup and the test evaluates the claimed port itself).
+
+DEFERRED, deliberately: a part selected inside a container stays selected after
+walking out — the Delete FAB stays armed for a node no longer on screen. Real,
+but a pre-existing behaviour of every container (a World's children do the
+same), not introduced here; fixing it belongs to selection/scope plumbing, not
+to this change. REFUTED and left: the StrictMode double-render halving the
+piece budget — R3F v8 hardcodes strictness off inside its own reconciler root,
+so the mutation cannot double-fire today; a comment at the budget records that
+an R3F v9 upgrade flips exactly that switch.
+
+### Still true, and said out loud
+
+- A worn shape carries colour but not textures or files; Model/Video/Sound give
+  no Geometry out. Stated in the wiki article's limits paragraph.
+- Depth 3 does not retire depth 2: a Cube is still made of code, and its sheet
+  still shows that code. The set of code-made things shrinking further —
+  built-ins REDEFINED as constructor graphs — is the long-term direction
+  `CONTAINER_TYPE_IDS`' comment records, not this change.
+
+## 2026-08-19 — the sheet can show the lines
+
+The second half of "what is it made of": where a node is worked out or drawn, the
+sheet now names the file and the exact lines, and "Show the lines" opens them —
+real, unedited, fetched lazily, and refused outright rather than ever shown wrong.
+This is the owner's original sentence — "it can be what code is the cube" — kept
+honest by machinery instead of by promises.
+
+- **The manifest is measured, never written.** `scripts/sync-node-anatomy.mjs`
+  parses the three places code lives — `computeNodeOutput`'s switch, `renderNodeBody`'s
+  switch, and `renderViewNodeContent`'s if-chain, which no `case`-shaped scan can see —
+  with acorn, and emits `src/project/graph/nodeAnatomy.generated.js`: per type, line
+  ranges, fall-through groups as structural fact, and which ports each case answers.
+  The repo's first generated file under `src/`; same sync/check contract as
+  `sync-agent-docs.mjs`, CI-gated by `npm run check:node-anatomy`.
+- **AST, not regex, because regex was tried and lied three ways** (measured during
+  design): a fall-through case came back as a bare label with no body, a section
+  header comment got glued to the wrong node, and the editor's if-chain was invisible
+  entirely. `scripts/nodeAnatomy.test.js` holds ten SEMANTIC assertions — no empty
+  slice, no trailing comment, no foreign label, full 64-type coverage both ways,
+  answers ⊆ declared outputs, fingerprints match disk — because round-trip
+  determinism alone would freeze a buggy extractor's wrong output forever.
+- **Live-fed agreement, by two independent means.** The text scan of each slice for
+  `liveOutputs` must equal the Symbol-substitution probe's verdict on a real node,
+  type by type. The day a live case lands without the sheet learning of it, CI goes red.
+- **The browser slices by line range only** (`nodeSourceSlices.js`): an explicit
+  two-file `?raw` thunk map (runtime 5.0 kB gz + viewport 7.0 kB gz, own lazy chunks,
+  paid only on first press), a shared djb2 fingerprint (`sourceFingerprint.js`, one
+  function imported by build and browser so they cannot drift — and over the JS
+  string, not bytes: the em-dashes in this codebase's comments make byte offsets and
+  string offsets disagree silently). Mismatch → a visible refusal, watched red with
+  the guard removed. `RawEditor.jsx` is deliberately NOT fetchable — ~23 kB gz for a
+  five-line branch — so panel types get a location row without a quote.
+- Containers get the doorway lines every one of them shares (the pre-switch block
+  that answers a promoted socket before the type is even consulted); the five value
+  nodes say "one piece answers for 5 — read it and you have read all 5"; `time`
+  carries the single hand-kept extra place (`useGraphClock.js`), itself guarded by a
+  test asserting the symbol still lives in the named file.
+- `acorn`/`acorn-jsx` promoted from transitive to declared devDependencies — a clean
+  `npm ci` would otherwise break the sync script with no warning. Lock updated with
+  exactly those two lines (the full `npm install` regeneration also wanted to strip
+  `libc` fields — npm-version churn, kept out).
+
+### Verified
+
+Seen at 1440×900 and 390×664: the cube's real five-line runtime case and its real
+two-line draw return, quoted verbatim (asserted against the file on disk, not against
+DOM presence), scrolling sideways inside their own boxes with no horizontal page
+scroll; the container's doorway lines; the unbuilt type showing a banner and no
+location rows. The fingerprint refusal exercised against the REAL loader with a
+corrupted expectation — nothing mocked anywhere in the new tests.
+
+Branch stacked on feat/raw-node-anatomy (PR #171); rebase onto dev after it lands.
+
+## 2026-08-19 — what a node is made of
+
+Standing inside any node, "what is it made of" opens a reading of that node. It asks
+the same four questions of all 64 node types — what it takes and gives, what works
+that out, what puts it on screen, what is inside it — and the ONLY structural
+difference between a Cube and a container is that the fourth answer is occupied. That
+sameness is the point: a container stops being a special kind of thing and becomes a
+node whose fourth answer has something in it, which is also the seat depth 3 fills.
+
+This is the second of the three things the owner asked for with "we all have as a
+constructor". The first (entering a code-made node says so instead of showing a blank
+canvas) shipped in `feat-raw-scene-placement`. The third — a cube that IS a graph —
+is still ahead, and slot four is where it lands.
+
+- Two ways in, both only while you are standing inside something: a control on the
+  "inside X" marker, and a button on the canvas when that scope is empty. Studio wraps
+  `RawGraphSurface` read-only and passes no handler, so no button appears there.
+- Every fact comes from the running program. `readNode` (`src/project/graph/nodeReading.js`)
+  asks the registry which ports exist, asks the runtime what is on them, and derives
+  the rest by substitution. There is no hand-written sentence describing what a node
+  DOES anywhere in it — such a sentence is wrong after the next edit and no test can
+  catch it. Node labels and port labels are rendered verbatim from the registry, which
+  is also why the parallel vocabulary pass cannot break this surface.
+- `resolveInputRow` replicates `evaluateNodeInput`'s decision EXACTLY rather than
+  asking "is there an edge". Those are different facts: the runtime follows the wire,
+  and falls back to the node's own value if the far end resolves to undefined. A row
+  that printed "wired from X" while showing the node's own number is the confident
+  wrong answer this whole surface exists to remove.
+- `isLiveFedOutput` asks the runtime by substitution — evaluate twice, once with an
+  empty liveOutputs map and once with a `Symbol` under the port's key — instead of
+  keeping a list. A live case written tomorrow classifies itself on the day it lands,
+  and it catches the two that a "the value is null" test misses (`device.midi.in`
+  coalesces with `?? 0`, `agent.keeper` with `?? ''`).
+
+### Found by looking, not by reading
+
+Five defects, none of which any unit test could have reported:
+
+- Opened inside a Scene, the sheet rendered BEHIND the room's canvas
+  (`.raw-world-fullscreen` is z-index 1200, a window frame's default is 20) while its
+  button stayed perfectly clickable — a control that looked like it did nothing. Found
+  by hit-testing the middle of the sheet with `elementFromPoint`.
+- It opened underneath the selection inspector on a desktop and 3px inside the
+  selection sheet on a phone. Entering a node selects it, so the inspector is up
+  every single time this opens: the collision was the default case.
+- It opened level with the "inside X" marker, which is z-index 1400 and printed
+  straight over the window's own title.
+- Its `aria-label` replaced the visible words rather than containing them, so the
+  button answered to a name nobody could see (WCAG 2.5.3).
+- The marker control was 120×21 — well under this lane's own 44px floor.
+
+All three window-placement facts are now arithmetic in `windowLayout.js` with the
+measurements that produced them, and `getScopeMarkerTop` is shared by the marker's own
+style and the frame that must clear it, so the two cannot drift.
+
+### Two things this surface revealed that are NOT fixed here
+
+- **A doorway's declared fallback never reaches the runtime.** `doorwaySocket` sets
+  `default: fallback ?? null` specifically so an unwired door does not carry undefined
+  — but `getNodeInputDefault` calls `getNodeInputs(node)` with no scope list, so it
+  cannot see doorway sockets at all and returns undefined anyway. The comment at
+  `nodeRegistry.js` claims the defect is prevented; at runtime it is not. The sheet
+  reports what the runtime actually hands out ("nothing wired in", value `nothing`),
+  because a nicer sheet describing a room that does not exist is the worse outcome.
+  Fixing the runtime is a real behavioural change and wants its own review.
+- **The way out of a scope is labelled `‹` with "Leave" only as a title**, so its
+  accessible name is the glyph. Left alone deliberately: it is an existing control and
+  the parallel vocabulary pass owns its wording.
+
+### Verified
+
+Seen in a browser at 1440×900 (DPR 2) and 390×664 (DPR 3), against a local server, as
+an ordinary visitor: inside a Cube, inside a container with a wired In door and an
+unwired Out door, and inside a fullscreen Scene. No console errors, every control
+reachable at its centre by `elementFromPoint`, nothing under 44px, and the sheet clear
+of both the marker and the selection inspector on both surfaces.
+
+Two guards were watched failing before their fix: the provenance rule (an
+edge-presence implementation mislabels a wire that carries nothing), and the wiring
+(handing the sheet the scoped card list instead of the document renders a raw uuid
+where a door's name belongs).
+
+## 2026-08-19 — a second object no longer lands inside the first
+
+- Owner, after the scene example shipped: *"so problem in it that i have create other geometry
+  what it will happen so there are still something wrong"*. There was. Two things, both found
+  by adding objects in a browser rather than by reading.
+- **Everything was placed at the same spot.** A new object took its type's declared default
+  position, so the second thing you made stood exactly inside the first and a scene became a
+  pile at the origin. New objects now step out to the nearest free place — a widening ring of
+  eight, not a row: a row marches off into the distance and is out of shot by the fifth object,
+  while a ring keeps the scene in view. Pointing INTO the room still wins over stepping aside.
+- **THE BUG BEHIND THE BUG, and the reason to write this down.** The first fix tested
+  `values.position === undefined`. It read correctly, it passed seven unit tests, and it did
+  **nothing at all in the app** — because the palette hands every type's declared defaults in as
+  `params`, so `position` is *always* already set by the time that line runs. Only a browser
+  showed it: two spheres, both still at `[0, 0.5, 0]`. The test that mattered was not "is it
+  missing" but "did anyone actually CHOOSE this", which compares against the type's own declared
+  default. A unit test written against the same wrong assumption as the code confirms the
+  assumption, not the behaviour.
+- **New cards landed half off-screen.** Double-tapping near an edge placed a card centred on
+  that point, so part of it — and the door hanging off its left edge — was outside the canvas
+  and unreachable. The creation point is now clamped to the visible band, allowing for half a
+  card plus the door.
+- **Entering a Cube no longer shows the same blank grid as an empty workspace.** It says: *"A
+  cube is made of code, not of other nodes — there is nothing inside it to see."* An empty room
+  and a thing that HAS no room are different facts, and one screen for both is what made
+  entering a node feel broken. `isNodeMadeOfCode` derives this from the registry rather than
+  listing it, so it cannot rot as types are added — and the intention is for that set to
+  SHRINK. This is the first of the three things the owner asked for when they said *"we all
+  have as a constructor"*; the other two (a node shows what it is made of, and a cube that
+  truly IS a graph) are still ahead, and the unused `geometry` port type is where the second
+  one was started and abandoned.
+- **Seen**: built the scene, added a sphere, a cube and another sphere — four separate objects
+  standing apart in the room, each card fully on screen. Went inside a cube and read the new
+  sentence. Zero console errors.
+- Landed from an isolated clone again: the shared checkout still holds another session's
+  in-flight vocabulary pass.
+- Verified: lint 0 errors · 2315 tests · build clean.
+
+## 2026-08-19 — "Make me a scene": something to open and copy
+
+- The owner, after six stages of container work all shipping green: *"i still cannot connect and
+  understand how work"*, then *"i mean i want to create scene with the objects i mean cube light
+  or i want upload mine"*. Every single one of those was already possible. None of it was
+  legible. The answer is not another feature.
+- **The finding that mattered, and it took a browser to see it: a blank Raw workspace opens in
+  ZEN, so there is no topbar at all.** No ⋯ menu, no breadcrumb, nothing to press but the
+  canvas. Every example, every command, everything the lane can do was behind a menu that does
+  not exist for a first-time visitor. Measured: `topbar: false` on a blank workspace.
+- **Shipped**: a "Make me a scene" button in the middle of the blank canvas (and the same entry
+  in the ⋯ menu for anyone who has chrome). It builds:
+  - a room, open, so the scene is visible the moment it is made
+  - a light, so the room is lit rather than flat
+  - a cube, with a colour node wired into it — the one wire, chosen because its effect is
+    unmissable
+  - an empty Model node labelled "Your own model goes here"
+  - a note giving four moves in plain words: double-tap to add, drag your own file on, drag dot
+    to dot to wire, press › to go inside
+- **The Model node is deliberately EMPTY.** That is the state a person meets after placing one,
+  so the example meets it too — beside an instruction rather than alone. Seeding a fake asset id
+  would draw a broken model and teach the opposite.
+- **The note is written to the size of its own window, not the other way round.** Three passes,
+  each looked at: 17 lines showed 5 and cut mid-sentence; a taller window put the windows back
+  over the cards; widening it so the lines do not WRAP was the fix — wrapping, not line count,
+  was what pushed the last line below the fold. Windows are top-docked with a card band below,
+  the same lesson the starter workspace had to learn twice.
+- **Seen**: from a genuinely blank workspace, pressed the button, watched the scene build, then
+  dropped a 7.7MB `scan.glb` onto the canvas and watched it arrive in the room beside the cube.
+  Zero console errors.
+- **Shared-checkout note.** This landed from an isolated clone at `origin/dev`, not from
+  `/home/dob/di.iiii`: another session had 70+ files modified in that tree mid-flight, including
+  a vocabulary pass that had already renamed this button and the doorway menu items. Committing
+  from the shared tree would have taken their unfinished work with it. The 14 test failures seen
+  there were theirs; this change is green on 2304 in a clean copy. Expect a trivial wording
+  conflict when their pass lands — their naming wins.
+- Verified: lint 0 errors · 2304 tests · build clean.
+
 ## 2026-08-19 — the move op: a node can change scope at all
 
 - Stage 3a. `parentId` was written once at `createNode` and **never mutated by any code path** —

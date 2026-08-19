@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import PropertyInspector from './PropertyInspector.jsx'
 import DesktopWindow from './DesktopWindow.jsx'
+import NodeAnatomyPanel from './NodeAnatomyPanel.jsx'
 import RawViewport from './RawViewport.jsx'
 import RawGraphSurface from './RawGraphSurface.jsx'
 import NodePalette from './NodePalette.jsx'
@@ -25,15 +26,16 @@ import { useProjectDocumentSync } from '../../project/hooks/useProjectDocumentSy
 import { useOpHistory } from '../../project/hooks/useOpHistory.js'
 import { useProjectPresence } from '../../project/hooks/useProjectPresence.js'
 import { createEntityOfType, getInspectorSections } from '../../project/entityRegistry.js'
-import { createEdge, createNode, getNodeFamily, getNodeType } from '../../project/nodeRegistry.js'
+import { createEdge, createNode, getNodeFamily, getNodeType, isNodeMadeOfCode } from '../../project/nodeRegistry.js'
 import { deriveNodeInspectorSections } from '../../project/graph/nodeInspectorSections.js'
+import { readNode } from '../../project/graph/nodeReading.js'
 import { createNodeGraphContext, evaluateNodeInput, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
 import { resolveScopeWorldNode } from '../utils/viewportWorldState.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { useNodeGraphScope } from '../../project/graph/useNodeGraphScope.js'
 import { buildNodeValues as buildNodeValuesForType } from '../../project/graph/nodeGraphAuthoring.js'
 import { buildAllNodesExample } from '../../project/graph/examples/allNodesExample.js'
-import { buildStarterWorkspaceDocument } from '../../project/graph/examples/starterWorkspace.js'
+import { buildSceneExample } from '../../project/graph/examples/sceneExample.js'
 import { STUDIO_TYPE_ID, buildStudioInterior } from '../../project/graph/studioNode.js'
 import { getSurfaceWorkflow } from '../utils/surfaceWorkflow.js'
 import { matchesNodeTypeSurface } from '../../project/graph/nodeSurfaceFilters.js'
@@ -45,7 +47,7 @@ import { buildRawProjectsPath, navigateToRawPath } from '../utils/rawRouting.js'
 import { DEFAULT_PROJECT_SPACE_ID, uploadProjectAsset } from '../../project/services/projectsApi.js'
 import { saveAssetFromFile } from '../../storage/assetStore.js'
 import { describeRejectedFiles, partitionDroppedFiles, resolveDropScopeId } from '../utils/dropAsset.js'
-import { clampWindowFrame, getGraphEdgeInsets, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
+import { RAW_ANATOMY_Z, clampWindowFrame, getAnatomyDefaultFrame, getGraphEdgeInsets, getScopeMarkerTop, getWorkspaceTopInset, selectMountedPanelNodes } from '../utils/windowLayout.js'
 import { isPaletteSummons, resolveZenPreference, writeZenPreference } from '../utils/zenMode.js'
 import {
     clearLocalWorkspaceDocument,
@@ -165,39 +167,34 @@ export default function RawEditor({
     const zenReadRef = useRef(false)
     const [outlinerOpen, setOutlinerOpen] = useState(false)
     const [outlinerFrame, setOutlinerFrame] = useState({ x: 24, y: 56, width: 240, height: 360, zIndex: 20, minimized: false, pinned: false })
+    // The "what is it made of" sheet. Same shape as the Outliner's state, but
+    // its frame is seeded on open rather than at mount: it is the only window
+    // here whose opening size depends on the viewport it opens into, because on
+    // a phone it has to finish above where the selection sheet docks.
+    const [anatomyFrame, setAnatomyFrame] = useState(null)
     const [chatOpen, setChatOpen] = useState(false)
     const [chatFrame, setChatFrame] = useState({ x: 24, y: 432, width: 280, height: 360, zIndex: 20, minimized: false, pinned: false })
     const [readChatCount, setReadChatCount] = useState(0)
     const [isWorldFullscreen, setIsWorldFullscreen] = useState(false)
-    const [isWorldOverlay, setIsWorldOverlay] = useState(false)
     // Declared here because hostInspector's JSX is built partway down the
     // component and needs it; the effect that measures it lives further down,
     // next to the selection state it depends on.
     const scaffoldRef = useRef(null)
 
-    // Whether THIS mount seeded the starter constellation — read once by the
-    // zen effect below, so a seeded (but brand-new) workspace still opens bare.
-    const seededStarterRef = useRef(false)
-
     const initialStoreState = useMemo(() => {
         if (projectId || !localStorageKey) return undefined
         const savedDocument = readLocalWorkspaceDocument(localStorageKey)
         if (savedDocument) return { document: savedDocument, version: 0 }
-        if (!seedOnFirstVisit) return undefined
-        // First visit to a blank local workspace: seed the starter desk as the
-        // document's ORIGIN (not an op batch), so undo unwinds to nothing
-        // instead of deleting the constellation node by node. The projectId
-        // guard above makes this unreachable for any server-backed document.
-        seededStarterRef.current = true
-        return {
-            document: buildStarterWorkspaceDocument({
-                workspaceTop: 168,
-                viewportWidth: typeof window !== 'undefined' ? window.innerWidth : 1280,
-                viewportHeight: typeof window !== 'undefined' ? window.innerHeight : 800
-            }),
-            version: 0
-        }
-    }, [localStorageKey, projectId, seedOnFirstVisit])
+        // NO starter seed any more. The audit measured it: 71 words, two open
+        // windows and a four-node demo installed as if they were your work —
+        // while the true-empty state (13 words, one offer) was the cleanest
+        // screen in the product and the one first-timers never saw. On a phone
+        // the seeded windows collided with the cards outright. The demo lives
+        // one tap away behind "Make me a scene", where choosing it is the
+        // person's own act. seedOnFirstVisit stays accepted for compatibility;
+        // it now means only "this route is a local canvas".
+        return undefined
+    }, [localStorageKey, projectId])
 
     const store = useProjectStore(initialStoreState)
     const { state, dispatch } = store
@@ -412,17 +409,11 @@ export default function RawEditor({
     useEffect(() => {
         if (hasAnyNodes) return
         setIsWorldFullscreen(false)
-        setIsWorldOverlay(false)
         setOutlinerOpen(false)
         scopeReset()
     }, [hasAnyNodes, scopeReset])
 
-    useEffect(() => {
-        if (!hasWorldNode) {
-            setIsWorldFullscreen(false)
-            setIsWorldOverlay(false)
-        }
-    }, [hasWorldNode])
+
 
     const pendingLocalSaveRef = useRef(null)
     useEffect(() => {
@@ -571,10 +562,12 @@ export default function RawEditor({
     }, [authoredNodes, scopeEnterNode, applyLocalOps])
 
     const handleNavigateToScope = useCallback((targetIndex) => {
-        const newScopeId = navStack[targetIndex] ?? null
-        if (worldNode && newScopeId !== worldNode.id) setIsWorldFullscreen(false)
+        // Fullscreen SURVIVES scope navigation now: walking through a door
+        // swaps which room fills the screen, which is the TouchDesigner
+        // go-inside/come-out feel. It used to cancel on every step — the
+        // render and the graph could never both be part of one journey.
         scopeNavigateToScope(targetIndex)
-    }, [navStack, scopeNavigateToScope, worldNode])
+    }, [scopeNavigateToScope])
 
     // Browser/hardware BACK pops one scope level. This is the only exit on a
     // phone when a space hides the chrome (showChrome:false removes the back
@@ -723,10 +716,7 @@ export default function RawEditor({
         if (zenReadRef.current || !document) return
         zenReadRef.current = true
         setZen(resolveZenPreference(zenWorkspaceKey, {
-            nodeCount: (document.nodes || []).length,
-            // The starter constellation is seeded, not built by the person —
-            // a seeded first visit still defaults to zen (stored choice wins).
-            defaultZen: seededStarterRef.current ? true : undefined
+            nodeCount: (document.nodes || []).length
         }))
     }, [document, zenWorkspaceKey])
 
@@ -764,17 +754,90 @@ export default function RawEditor({
         })
     }
 
+    // What an empty canvas MEANS depends on where you are standing.
+    //
+    // Entering a Cube used to show the same blank grid as an empty workspace,
+    // with nothing to say that a Cube has no insides — it is a case in a
+    // JavaScript switch, not a graph. An empty room and a thing that cannot
+    // have a room are not the same fact, and showing one screen for both is the
+    // lie that made entering a node feel broken.
+    const scopeNode = useMemo(
+        () => (currentScopeId ? authoredNodes.find((node) => node.id === currentScopeId) || null : null),
+        [authoredNodes, currentScopeId]
+    )
+
+    const scopeEmptyHint = useMemo(() => {
+        if (!currentScopeId) return `${pointerVerb} to place your first node.`
+        const label = scopeNode?.label || 'this node'
+        // The old sentence for a code-made node — "there is nothing inside it
+        // to see" — taught the owner's exact wrong belief: children placed
+        // inside a spatial node DO render and DO travel with it, and the one
+        // sentence a first-timer read was the one denying it. Say the true
+        // thing, by kind: a spatial node carries what you put in it; only a
+        // non-spatial code node (a colour, a math step) genuinely has no room.
+        if (isNodeMadeOfCode(scopeNode?.typeId)) {
+            const spatial = getNodeType(scopeNode?.typeId)?.render === 'spatial-3d'
+            return spatial
+                ? `Inside ${label}. What you place here becomes part of it.`
+                : `Inside ${label} — code, no room of its own.`
+        }
+        return `Inside ${label}. ${pointerVerb} to place the first node in it.`
+    }, [currentScopeId, pointerVerb, scopeNode])
+
+    // …and the sentence above is only the first half of the answer. It says
+    // THAT a Cube has no inside; the sheet says what it has instead. Opening
+    // seeds the frame from the viewport, because on a phone the sheet has to
+    // finish above where the selection sheet docks and that arithmetic needs a
+    // height nobody has at mount.
+    const openAnatomy = useCallback(() => {
+        setAnatomyFrame(getAnatomyDefaultFrame({
+            viewportWidth: typeof window === 'undefined' ? 1280 : window.innerWidth,
+            viewportHeight: typeof window === 'undefined' ? 800 : window.innerHeight,
+            workspaceTop,
+            chromeVisible
+        }))
+    }, [chromeVisible, workspaceTop])
+
+    // Leaving the node closes the sheet. A sheet describing the node you have
+    // walked out of is worse than no sheet: it looks current and is not.
+    useEffect(() => { setAnatomyFrame(null) }, [currentScopeId])
+
     const buildNodeValues = (definitionId, params, place) =>
-        buildNodeValuesForType(definitionId, params, place, { workspaceTop, topZIndex })
+        buildNodeValuesForType(definitionId, params, place, {
+            workspaceTop,
+            topZIndex,
+            // What is already standing in the room this node is joining, so a
+            // new object steps aside instead of landing inside the last one.
+            occupied: authoredNodes
+                .filter((node) => (node.parentId || null) === (currentScopeId || null)
+                    && getNodeType(node.typeId)?.render === 'spatial-3d')
+                .map((node) => node.values?.position)
+                .filter(Boolean)
+        })
 
     const handlePaletteCreate = ({ definition, params, placement: palettePlace }) => {
         if (!definition) return
         const place = palettePlace || {}
         const values = buildNodeValues(definition.id, params, place)
+        // Step aside until the card lands CLEAR of every existing card in this
+        // scope. New cards used to land square on old ones — the audit watched
+        // a Merge bury a Cube's whole header, and a card land over another's
+        // door, which left that door silently unclickable forever. Same idea
+        // as findFreeSpot in the room, in card coordinates.
+        let cardX = (place.graphX ?? place.clientX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2)
+        let cardY = Math.max(20, (place.graphY ?? place.clientY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2))
+        const siblings = authoredNodes.filter((node) => (node.parentId || null) === (currentScopeId || null))
+        const collides = (x, y) => siblings.some((node) =>
+            Math.abs((node.graphX ?? 0) - x) < ROOT_WORLD_CARD_WIDTH + 16
+            && Math.abs((node.graphY ?? 0) - y) < 130)
+        for (let step = 0; step < 24 && collides(cardX, cardY); step += 1) {
+            cardX += 44
+            cardY += 44
+        }
         const nextNode = createNode(definition.id, {
             values,
-            graphX: (place.graphX ?? place.clientX ?? 280) - (ROOT_WORLD_CARD_WIDTH / 2),
-            graphY: Math.max(20, (place.graphY ?? place.clientY ?? 160) - (ROOT_WORLD_CARD_HEIGHT / 2)),
+            graphX: cardX,
+            graphY: cardY,
             parentId: currentScopeId
         })
         if (!nextNode) return
@@ -968,6 +1031,28 @@ export default function RawEditor({
         ], {
             activityMessage: `Created the all-nodes example (${exampleNodes.length} nodes, ${exampleEdges.length} edges).`
         })
+    }
+
+    // A scene made the way a person makes one: a room, a light, a shape, a place
+    // for your own file, and a note saying the moves in plain words. This is the
+    // answer to "I cannot understand how it works" — something to open and copy,
+    // rather than another feature.
+    const handleCreateSceneExample = () => {
+        const { nodes: sceneNodes, edges: sceneEdges } = buildSceneExample({
+            parentId: currentScopeId || null,
+            workspaceTop
+        })
+        if (!sceneNodes.length) return
+
+        dispatch({ type: 'select-entity', entityId: null })
+        applyLocalOps([
+            ...sceneNodes.map((node) => ({ type: 'createNode', payload: { node } })),
+            ...sceneEdges.map((edge) => ({ type: 'createEdge', payload: { edge } })),
+            {
+                type: 'setWorkspaceState',
+                payload: { patch: { activeSurface: 'graph', selectedNodeId: null } }
+            }
+        ], { activityMessage: 'Made a scene: a room, a light, a cube and a place for your own model.' })
     }
 
     const handleCreateStreamingPrototype = () => {
@@ -1237,10 +1322,72 @@ export default function RawEditor({
         type: 'updateNode',
         payload: { nodeId, patch: { graphX: nextX, graphY: nextY } }
     }), [applyLocalOps])
+
+    // Ctrl/Cmd+D. The audit found NO duplication path of any kind — a composed
+    // object could not be stamped twice except by rebuilding it. This clones
+    // the node alone (not its subtree — a container's copy arriving empty is
+    // visible and fixable; a deep clone with re-identified interior wiring is
+    // its own change), stepped aside in both spaces so the copy never lands
+    // exactly on the original.
+    const handleDuplicateSelected = useCallback(() => {
+        const source = workspaceState.selectedNodeId
+            ? authoredNodes.find((node) => node.id === workspaceState.selectedNodeId)
+            : null
+        if (!source) return
+        const values = JSON.parse(JSON.stringify(source.values || {}))
+        if (Array.isArray(values.position)) {
+            values.position = [values.position[0] + 0.6, values.position[1], values.position[2] + 0.6]
+        }
+        const copy = createNode(source.typeId, {
+            label: source.label,
+            parentId: source.parentId || null,
+            graphX: (source.graphX || 0) + 48,
+            graphY: (source.graphY || 0) + 48,
+            values
+        })
+        if (!copy) return
+        applyLocalOps(
+            { type: 'createNode', payload: { node: copy } },
+            { activityMessage: `Duplicated ${source.label || 'a node'}.` }
+        )
+        selectNode(copy.id)
+    }, [applyLocalOps, authoredNodes, selectNode, workspaceState.selectedNodeId])
     const graphContext = useMemo(
         () => createNodeGraphContext(document, { now: clockNow, liveOutputs }),
         [document, clockNow, liveOutputs]
     )
+
+    // The sheet's own context, built from the SAME three inputs as the one the
+    // room draws with — evaluation is pure, so same document + same clock +
+    // same liveOutputs is the same answer, and the sheet cannot hold a second
+    // opinion about what a port is carrying.
+    //
+    // The one input it deliberately quantises is the clock. graphContext is
+    // rebuilt 60 times a second while a Time node exists, and a sine read at
+    // 60 Hz is an unreadable blur — so the sheet's clock advances in 125 ms
+    // steps. That makes the staleness a stated 125 ms rather than an accident,
+    // and it is a legibility decision, not a cost one: these rows are text
+    // somebody is reading, not a frame being drawn.
+    const anatomyNow = Math.floor((clockNow || 0) / 125) * 125
+    const anatomyReading = useMemo(() => {
+        if (!anatomyFrame || !scopeNode) return null
+        return readNode(scopeNode, {
+            // EVERY node, never the scoped card list: a container's sockets come
+            // from doorway nodes living in a different scope, and the scoped
+            // list finds none of them, silently, with every test still green.
+            allNodes: authoredNodes,
+            context: createNodeGraphContext(document, { now: anatomyNow, liveOutputs }),
+            document,
+            childCount: childCounts.get(scopeNode.id) || 0
+        })
+    }, [anatomyFrame, scopeNode, authoredNodes, document, liveOutputs, childCounts, anatomyNow])
+
+    const handleShowFeedingCard = useCallback((nodeId) => {
+        // What feeds the node you are standing in is a card in the scope
+        // OUTSIDE it, which is where walking out puts you.
+        handleNavigateToScope(navStack.length - 2)
+        selectNode(nodeId)
+    }, [handleNavigateToScope, navStack.length, selectNode])
 
     const renderViewNodeContent = (node) => {
         const resolvedValues = evaluateNodeInputs(node, graphContext)
@@ -1277,17 +1424,6 @@ export default function RawEditor({
                         // world than the one clicked. Mark it live first.
                         markWorldLive(node)
                         setIsWorldFullscreen(true)
-                    }}
-                    onEnterOverlay={() => {
-                        markWorldLive(node)
-                        setIsWorldOverlay(true)
-                        applyLocalOps({
-                            type: 'updateNode',
-                            payload: {
-                                nodeId: node.id,
-                                patch: { values: { frame: { ...(node.values?.frame || {}), visible: false } } }
-                            }
-                        })
                     }}
                 />
             )
@@ -1476,6 +1612,13 @@ export default function RawEditor({
                 handleNavigateToScope(navStack.length - 2)
                 return
             }
+            if ((event.ctrlKey || event.metaKey) && event.key === 'd') {
+                // Browsers bookmark on Ctrl+D; duplicating the selected node
+                // is what a person arranging a scene means by it here.
+                event.preventDefault()
+                handleDuplicateSelected()
+                return
+            }
             const isUndo = (event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey
             const isRedo = (event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))
             if (!isUndo && !isRedo) return
@@ -1492,7 +1635,7 @@ export default function RawEditor({
         }
         window.addEventListener('keydown', handler)
         return () => window.removeEventListener('keydown', handler)
-    }, [handleNavigateToScope, navStack.length, undo, redo])
+    }, [handleDuplicateSelected, handleNavigateToScope, navStack.length, undo, redo])
 
     const handleMoveWorldNode = (nodeId, nextPosition) => {
         applyLocalOps({
@@ -1533,7 +1676,10 @@ export default function RawEditor({
         }))
     ]
 
-    const workspaceTitle = isLocalWorkspace ? 'Blank White Workspace' : (document.projectMeta?.title || 'Raw Project')
+    // "Blank White Workspace" was neither blank nor white nor, in the
+    // product's vocabulary, a workspace. It is the canvas that lives in this
+    // browser.
+    const workspaceTitle = isLocalWorkspace ? 'Local canvas' : (document.projectMeta?.title || 'Raw Project')
     const graphTopInset = chromeVisible ? workspaceTop : 0
     // Windows float over the graph, so the fit has to dodge the docked ones or
     // it centres the card cluster underneath one — see getGraphEdgeInsets.
@@ -1542,10 +1688,16 @@ export default function RawEditor({
     // the seeded welcome window up by 116px, and insets read off the stored
     // frame put the graph's free band in the wrong place entirely.
     const graphContentInsets = getGraphEdgeInsets({
-        frames: visibleViewNodes
-            .filter((node) => node.values?.frame?.minimized !== true)
-            .map((node) => node.values?.frame)
-            .filter(Boolean)
+        frames: [
+            // The anatomy sheet is a docked window like any other, so the fit
+            // has to dodge it too — otherwise the cards centre underneath the
+            // window explaining them.
+            ...(anatomyFrame && !anatomyFrame.minimized ? [anatomyFrame] : []),
+            ...visibleViewNodes
+                .filter((node) => node.values?.frame?.minimized !== true)
+                .map((node) => node.values?.frame)
+                .filter(Boolean)
+        ]
             .map((frame) => clampWindowFrame(frame, {
                 allowOverflowLeft: true,
                 allowOverflowTop: true,
@@ -1598,48 +1750,27 @@ export default function RawEditor({
                             ) : showEmptyHint ? (
                                 <span className="raw-topbar-location" aria-live="polite">{topbarLocationText}</span>
                             ) : null}
-                            {hasWorldNode && (
-                                <div className="raw-topbar-windows">
-                                    <button
-                                        type="button"
-                                        className={isWorldOverlay || isWorldFullscreen ? 'is-active' : ''}
-                                        onClick={() => {
-                                            if (isWorldFullscreen) { setIsWorldFullscreen(false); return }
-                                            if (isWorldOverlay) { setIsWorldOverlay(false); return }
-                                            const currentlyVisible = worldNode?.values?.frame?.visible !== false
-                                            applyLocalOps({
-                                                type: 'updateNode',
-                                                payload: {
-                                                    nodeId: worldNode.id,
-                                                    patch: { values: { frame: { ...(worldNode.values?.frame || {}), visible: !currentlyVisible } } }
-                                                }
-                                            })
-                                        }}
-                                    >
-                                        {isWorldFullscreen ? '← World' : isWorldOverlay ? '← Overlay' : 'World'}
-                                    </button>
-                                </div>
-                            )}
+                            <div className="raw-topbar-windows">
+                                <button
+                                    type="button"
+                                    className={isWorldFullscreen ? 'is-active' : ''}
+                                    // The room of the CURRENT scope, fullscreen —
+                                    // any scope, not only where a World card
+                                    // stands. The old behaviour toggled the root
+                                    // World window's frame, which is unmounted in
+                                    // every other scope: a button that did
+                                    // nothing, silently, exactly where a person
+                                    // most needed to see what they were building.
+                                    onClick={() => setIsWorldFullscreen((current) => !current)}
+                                >
+                                    {isWorldFullscreen ? '← Graph' : 'Room'}
+                                </button>
+                            </div>
                         </div>
                         <div className="raw-topbar-right">
                             <button type="button" className="raw-topbar-help-action" onClick={() => setHelpOpen(true)}>
                                 Help
                             </button>
-                            <div className="raw-topbar-scale-control">
-                                <label htmlFor="node-scale-select">Size:</label>
-                                <select
-                                    id="node-scale-select"
-                                    value={nodeScale}
-                                    onChange={(e) => setNodeScale(parseFloat(e.target.value))}
-                                    title="Adjust node size for mobile, tablet, VR, or desktop viewing"
-                                >
-                                    {getAvailableScales().map((s) => (
-                                        <option key={s.value} value={s.value}>
-                                            {s.label}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
                             {surfaceNodeCount > 0 && (
                                 <button
                                     type="button"
@@ -1651,20 +1782,47 @@ export default function RawEditor({
                                     {surfaceNodeCount} {surfaceNodeCount === 1 ? 'node' : 'nodes'}
                                 </button>
                             )}
-                            <button
-                                type="button"
-                                className={`raw-topbar-node-count${chatOpen ? ' is-active' : ''}`}
-                                onClick={() => setChatOpen((v) => !v)}
-                                title="Toggle chat"
-                                aria-label="Toggle chat"
-                            >
-                                Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
-                            </button>
+                            {/* No Chat button alone in a local canvas: there
+                                is nobody on the other end (the doc lives in
+                                this browser), and a resident social control in
+                                a single-person room is the audit's definition
+                                of noise. It returns the moment presence shows
+                                anyone, and the ⋯ menu's Chat entry stays as
+                                the always-there path. */}
+                            {(!isLocalWorkspace || presence.users.length > 0 || unreadChatCount > 0) && (
+                                <button
+                                    type="button"
+                                    className={`raw-topbar-node-count${chatOpen ? ' is-active' : ''}`}
+                                    onClick={() => setChatOpen((v) => !v)}
+                                    title="Toggle chat"
+                                    aria-label="Toggle chat"
+                                >
+                                    Chat{unreadChatCount > 0 ? ` (${unreadChatCount})` : ''}
+                                </button>
+                            )}
                             <div className="raw-topbar-overflow">
                                 <button type="button" className="raw-topbar-overflow-btn" onClick={() => setOverflowOpen((v) => !v)}>⋯</button>
                                 {overflowOpen && (
                                     <div className="raw-topbar-overflow-menu">
                                         <button type="button" onClick={() => { scopeReset(); setOverflowOpen(false) }}>Home</button>
+                                        {/* Configuration, not work — the ⋯ is
+                                            where the audit sent it. */}
+                                        <div className="raw-topbar-scale-control">
+                                            <label htmlFor="node-scale-select">Size:</label>
+                                            <select
+                                                id="node-scale-select"
+                                                value={nodeScale}
+                                                onChange={(e) => setNodeScale(parseFloat(e.target.value))}
+                                                title="Adjust node size for mobile, tablet, VR, or desktop viewing"
+                                            >
+                                                {getAvailableScales().map((s) => (
+                                                    <option key={s.value} value={s.value}>
+                                                        {s.label}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <button type="button" onClick={() => { handleCreateSceneExample(); setOverflowOpen(false) }}>Make me a scene</button>
                                         <button type="button" onClick={() => { handleCreateAllNodesExample(); setOverflowOpen(false) }}>All Nodes Example</button>
                                         <button type="button" onClick={() => { handleCreateStreamingPrototype(); setOverflowOpen(false) }}>Streaming Prototype</button>
                                         {isLocalWorkspace && (
@@ -1692,12 +1850,56 @@ export default function RawEditor({
             )}
 
             <section
-                className={`raw-surface-shell${isWorldOverlay && !isWorldFullscreen ? ' is-world-overlay' : ''}${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
+                className={`raw-surface-shell is-world-overlay${navStack.length > 1 ? ' is-inside-node' : ''}${dropState.over ? ' is-drop-target' : ''}`}
                 onDragEnter={handleSurfaceDragEnter}
                 onDragOver={handleSurfaceDragOver}
                 onDragLeave={handleSurfaceDragLeave}
                 onDrop={handleSurfaceDrop}
             >
+            {/* THE ROOM BEHIND THE GRAPH — always, in every scope.
+                TouchDesigner's answer to "watch the result while editing the
+                graph" is the backdrop: the output drawn full-frame behind the
+                network, nodes floating on top. Raw cannot afford TD's other
+                mechanism (a live viewer on every tile — WebGL caps contexts
+                around sixteen a page), so this one backdrop carries the whole
+                you-always-see-consequences contract, which is exactly why it
+                is no longer opt-in: the owner built scenes BLIND inside every
+                non-World scope and concluded nesting did not work, while the
+                renderer was doing it correctly the entire time. */}
+            {!isWorldFullscreen && (
+                <div className="raw-world-overlay">
+                    <RawViewport
+                        // Zen has no topbar; honouring workspaceTop there
+                        // painted a dead black band across the top of the
+                        // room (seen on the first-visit screen).
+                        topInset={chromeVisible ? workspaceTop : 0}
+                        document={document}
+                        selectedEntityId={surfaceSelectedEntity?.id || null}
+                        selectedNodeId={surfaceSelectedNode?.id || null}
+                        onSelectEntity={selectEntity}
+                        onSelectNode={selectNode}
+                        onClearSelection={clearSelection}
+                        onWorldDoubleClick={handleWorldSurfaceDoubleClick}
+                        onMoveNode={handleMoveWorldNode}
+                        cursors={presence.cursors}
+                        onCursorMove={presence.emitCursor}
+                        onCursorLeave={presence.clearCursor}
+                        nodeScale={nodeScale}
+                        showEmptyHint={false}
+                        // The room you are STANDING IN, not the inside of the
+                        // live World. The graph canvas filters on
+                        // currentScopeId and the palette creates with
+                        // parentId: currentScopeId — while this said
+                        // worldNode.id, the two halves of the screen named
+                        // different rooms, so anything placed at root landed
+                        // somewhere real and was never drawn. worldNode is
+                        // still passed, for sky and lighting.
+                        scopeId={currentScopeId}
+                        worldNode={worldNode}
+                        liveOutputs={liveOutputs}
+                    />
+                </div>
+            )}
                 {/* Graph is the primary surface — always visible */}
                 <RawGraphSurface
                     key={currentScopeId || 'root'}
@@ -1714,7 +1916,13 @@ export default function RawEditor({
                     // unit test still passing.
                     portScopeNodes={authoredNodes}
                     onPromotePort={handlePromotePort}
-                    emptyHint={`${pointerVerb} to place your first node.`}
+                    onMakeScene={handleCreateSceneExample}
+                    // Only inside a CODE-made node: there the empty canvas IS
+                    // the question. A container's reading stays one tap away on
+                    // the marker's ? — two resident buttons for one answer was
+                    // the clutter the audit counted.
+                    onExplainScope={currentScopeId && isNodeMadeOfCode(scopeNode?.typeId) ? openAnatomy : null}
+                    emptyHint={scopeEmptyHint}
                     edges={graphCardEdges}
                     selectedNodeId={workspaceState.selectedNodeId}
                     onEnterNode={handleEnterNode}
@@ -1857,7 +2065,7 @@ export default function RawEditor({
                     // Below the topbar when there is one, near the top when
                     // there is not. Measured: the topbar is 49px and full-width,
                     // so a fixed top:12px sat inside it with chrome on.
-                    style={{ top: `${(chromeVisible ? workspaceTop : 12) + 8}px` }}
+                    style={{ top: `${getScopeMarkerTop({ chromeVisible, workspaceTop })}px` }}
                 >
                     <button
                         type="button"
@@ -1868,8 +2076,25 @@ export default function RawEditor({
                         ‹
                     </button>
                     <span className="raw-scope-marker-label">
-                        inside <strong>{authoredNodes.find((n) => n.id === currentScopeId)?.label || 'a node'}</strong>
+                        inside <strong>{scopeNode?.label || 'a node'}</strong>
                     </span>
+                    {/* The general way in. The empty-state button only exists
+                        while the scope is empty, and a container you have put
+                        something in is exactly where "what is this made of" is
+                        most worth asking. */}
+                    {/* A glyph, not a sentence: the resident four-word button
+                        was the audit's example of info squatting on the one
+                        strip that must stay minimal. The question mark IS the
+                        question; title and accessible name carry the words. */}
+                    <button
+                        type="button"
+                        className="raw-scope-marker-what"
+                        onClick={openAnatomy}
+                        title={`What ${scopeNode?.label || 'this node'} is made of`}
+                        aria-label={`what is it made of — ${scopeNode?.label || 'this node'}`}
+                    >
+                        ?
+                    </button>
                     {navStack.length > 2 && (
                         <button
                             type="button"
@@ -1883,9 +2108,23 @@ export default function RawEditor({
                 </div>
             )}
 
-            {/* Fullscreen world — takes over the full viewport */}
-            {hasWorldNode && isWorldFullscreen && (
-                <div className="raw-world-fullscreen" style={{ top: `${workspaceTop}px` }}>
+            {/* Fullscreen room — takes over the full viewport. Any scope,
+                not only Worlds: the room you are standing in IS the thing
+                being built, whatever kind of node owns it. */}
+            {isWorldFullscreen && (
+                <div className="raw-world-fullscreen" style={{ top: `${chromeVisible ? workspaceTop : 0}px` }}>
+                    {/* The way back, on the surface itself: zen has no topbar,
+                        and a fullscreen room whose only exit lives in hidden
+                        chrome is a trap (measured: ⤢ in zen stranded you until
+                        you knew to summon the chrome by keyboard). */}
+                    <button
+                        type="button"
+                        className="raw-room-exit"
+                        onClick={() => setIsWorldFullscreen(false)}
+                        title="Back to the graph"
+                    >
+                        ‹ graph
+                    </button>
                     <RawViewport
                         topInset={0}
                         document={document}
@@ -1916,38 +2155,6 @@ export default function RawEditor({
                 </div>
             )}
 
-            {/* Overlay world — 3D scene renders behind the graph */}
-            {hasWorldNode && isWorldOverlay && !isWorldFullscreen && (
-                <div className="raw-world-overlay">
-                    <RawViewport
-                        topInset={workspaceTop}
-                        document={document}
-                        selectedEntityId={surfaceSelectedEntity?.id || null}
-                        selectedNodeId={surfaceSelectedNode?.id || null}
-                        onSelectEntity={selectEntity}
-                        onSelectNode={selectNode}
-                        onClearSelection={clearSelection}
-                        onWorldDoubleClick={handleWorldSurfaceDoubleClick}
-                        onMoveNode={handleMoveWorldNode}
-                        cursors={presence.cursors}
-                        onCursorMove={presence.emitCursor}
-                        onCursorLeave={presence.clearCursor}
-                        nodeScale={nodeScale}
-                        showEmptyHint={false}
-                        // The room you are STANDING IN, not the inside of the
-                        // live World. The graph canvas filters on
-                        // currentScopeId and the palette creates with
-                        // parentId: currentScopeId — while this said
-                        // worldNode.id, the two halves of the screen named
-                        // different rooms, so anything placed at root landed
-                        // somewhere real and was never drawn. worldNode is
-                        // still passed, for sky and lighting.
-                        scopeId={currentScopeId}
-                        worldNode={worldNode}
-                        liveOutputs={liveOutputs}
-                    />
-                </div>
-            )}
 
             {outlinerOpen && (
                 <DesktopWindow
@@ -1966,6 +2173,23 @@ export default function RawEditor({
                         selectedNodeId={workspaceState.selectedNodeId || null}
                         onSelectNode={(nodeId) => selectNode(nodeId)}
                     />
+                </DesktopWindow>
+            )}
+
+            {anatomyFrame && anatomyReading && (
+                <DesktopWindow
+                    windowState={anatomyFrame}
+                    title={`What ${anatomyReading.label} is made of`}
+                    kicker={anatomyReading.kicker}
+                    accent={anatomyReading.accent}
+                    minTop={workspaceTop}
+                    onFocus={() => setAnatomyFrame((f) => ({ ...f, zIndex: RAW_ANATOMY_Z }))}
+                    onPatch={(patch) => setAnatomyFrame((f) => ({ ...f, ...patch }))}
+                    onClose={() => setAnatomyFrame(null)}
+                    onToggleMinimize={() => setAnatomyFrame((f) => ({ ...f, minimized: !f.minimized }))}
+                    onTogglePin={() => setAnatomyFrame((f) => ({ ...f, pinned: !f.pinned }))}
+                >
+                    <NodeAnatomyPanel reading={anatomyReading} onShowCard={handleShowFeedingCard} />
                 </DesktopWindow>
             )}
 

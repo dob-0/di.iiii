@@ -758,3 +758,81 @@ describe('exposing a port on the container', () => {
     })
 })
 
+// A blank workspace opens in ZEN — no topbar, so the ⋯ menu and everything in
+// it does not exist for the person most likely to need it. The one offer that
+// matters has to live on the canvas they are actually looking at.
+describe('the blank canvas', () => {
+    it('offers to build a scene when there is nothing at all', () => {
+        const onMakeScene = vi.fn()
+        const { getByRole } = render(
+            <RawGraphSurface nodes={[]} edges={[]} onMakeScene={onMakeScene} />
+        )
+        fireEvent.click(getByRole('button', { name: /Make me a/ }))
+        expect(onMakeScene).toHaveBeenCalledTimes(1)
+    })
+
+    it('offers nothing once there is something on the canvas', () => {
+        const { queryByRole } = render(
+            <RawGraphSurface
+                nodes={[makeNode('geom.cube', { id: 'c' })]}
+                edges={[]}
+                onMakeScene={vi.fn()}
+            />
+        )
+        expect(queryByRole('button', { name: /Make me a/ })).toBeNull()
+    })
+
+    // Studio wraps this read-only and passes no handler.
+    it('offers nothing when there is nothing to offer', () => {
+        const { queryByRole } = render(<RawGraphSurface nodes={[]} edges={[]} />)
+        expect(queryByRole('button', { name: /Make me a/ })).toBeNull()
+    })
+})
+
+
+describe('the way into what a node is made of', () => {
+    const emptyScope = (props = {}) => render(
+        <RawGraphSurface
+            nodes={[]}
+            edges={[]}
+            emptyHint="A cube is made of code, not of other nodes."
+            {...props}
+        />
+    )
+
+    it('offers the reading before the offer to build something', () => {
+        const onExplainScope = vi.fn()
+        const onMakeScene = vi.fn()
+        const { container } = emptyScope({ onExplainScope, onMakeScene })
+        const buttons = [...container.querySelectorAll('.raw-empty-state-actions button')]
+        // Order matters: standing inside a node with no inside, "what is this"
+        // is the question being asked; "build me something" answers a different
+        // one and belongs second.
+        //
+        // Asserted as position + this button's own words, NOT as the pair of
+        // labels: the second button's wording is owned by a parallel vocabulary
+        // pass, and a test that pins somebody else's string goes red on their
+        // rename while saying nothing about the thing it is guarding.
+        expect(buttons).toHaveLength(2)
+        expect(buttons[0].textContent).toBe("Show me what it's made of")
+        fireEvent.click(buttons[1])
+        expect(onMakeScene).toHaveBeenCalledTimes(1)
+        expect(onExplainScope).not.toHaveBeenCalled()
+    })
+
+    // Studio wraps this component read-only and passes no handlers. A button
+    // that calls undefined is a button that throws in front of somebody.
+    it('offers nothing when no handler is given', () => {
+        const { container } = emptyScope()
+        expect(container.querySelectorAll('.raw-empty-state-actions button')).toHaveLength(0)
+        expect(container.querySelector('.raw-empty-state').textContent)
+            .toContain('made of code')
+    })
+
+    it('calls back when pressed', () => {
+        const onExplainScope = vi.fn()
+        const { container } = emptyScope({ onExplainScope })
+        fireEvent.click(container.querySelector('.raw-empty-state-actions button'))
+        expect(onExplainScope).toHaveBeenCalledTimes(1)
+    })
+})

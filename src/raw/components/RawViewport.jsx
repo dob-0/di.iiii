@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { Grid, Html, OrbitControls, useTexture } from '@react-three/drei'
 import BoxObject from '../../objectComponents/BoxObject.jsx'
 import SphereObject from '../../objectComponents/SphereObject.jsx'
@@ -12,6 +12,8 @@ import { buildAssetMap } from '../../project/viewport/buildAssetMap.js'
 import { getNodeType } from '../../project/nodeRegistry.js'
 import { getRawWorldBackgroundColor, pickActiveTypeNode } from '../utils/viewportWorldState.js'
 import { createNodeGraphContext, evaluateNodeInputs } from '../../project/graph/nodeGraphRuntime.js'
+import { wearConstructorGeometry } from '../../project/graph/constructorGeometry.js'
+import { MAX_GEOMETRY_DEPTH, MAX_GEOMETRY_PIECES, isGeometryDescriptor } from '../../project/graph/geometryDescriptor.js'
 import { hasClockNode, useGraphClock } from '../../project/graph/useGraphClock.js'
 import { WebglContextLostOverlay, useWebglContextGuard } from '../../components/WebglContextGuard.jsx'
 import { asColor } from '../../utils/colorValue.js'
@@ -83,6 +85,86 @@ function PlaneWithTexture({ w, h, textureUrl }) {
 // working; only the file-backed cases below need it. Without it those nodes
 // render nothing rather than throwing — a node with no file chosen yet is a
 // normal state, not an error.
+// Turns a geometry descriptor — plain data off a wire — into meshes. The
+// counterpart of renderNodeBody's per-type cases, for shapes that arrived by
+// value instead of by standing in the room. Same components as the standing
+// versions (BoxObject, SphereObject), so a cube worn by a Constructor and a
+// cube standing beside it are pixel-identical by construction.
+//
+// `budget` is one shared countdown across the whole walk (an object so the
+// count survives recursion), because MAX_GEOMETRY_PIECES caps the DESCRIPTOR,
+// not each branch — see geometryDescriptor.js for why the caps exist at all.
+//
+// Mutating it during render is safe TODAY only because this renders inside
+// R3F v8's own reconciler root, which hardcodes strictness off — StrictMode
+// does not cross that boundary, so nothing double-invokes this body. R3F v9
+// inherits StrictMode into the Canvas; on that upgrade this must move to a
+// plain recursive walk with a local counter or the cap silently halves in dev.
+function GeometryPieces({ descriptor, depth = 0, budget = null }) {
+    const spent = budget || { left: MAX_GEOMETRY_PIECES }
+    if (!isGeometryDescriptor(descriptor) || depth >= MAX_GEOMETRY_DEPTH || spent.left <= 0) return null
+    if (descriptor.kind === 'group') {
+        return (
+            <group
+                position={asVec3(descriptor.position, [0, 0, 0])}
+                rotation={asVec3(descriptor.rotation, [0, 0, 0])}
+                scale={asPositiveVec3(descriptor.scale, [1, 1, 1], 0.001, 20)}
+            >
+                {descriptor.children.map((child, index) => (
+                    <GeometryPieces key={index} descriptor={child} depth={depth + 1} budget={spent} />
+                ))}
+            </group>
+        )
+    }
+    spent.left -= 1
+    const place = {
+        position: asVec3(descriptor.position, [0, 0, 0]),
+        rotation: asVec3(descriptor.rotation, [0, 0, 0])
+    }
+    switch (descriptor.kind) {
+        case 'box':
+            return (
+                <group {...place}>
+                    <BoxObject color={asColor(descriptor.color, '#5fa8ff')} boxSize={asPositiveVec3(descriptor.size, [1, 1, 1])} />
+                </group>
+            )
+        case 'sphere':
+            return (
+                <group {...place}>
+                    <SphereObject
+                        color={asColor(descriptor.color, '#5fa8ff')}
+                        sphereRadius={Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptor.radius, 0.5))))}
+                    />
+                </group>
+            )
+        case 'plane':
+            return (
+                <mesh {...place}>
+                    <planeGeometry args={[
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptor.width, 2)))),
+                        Math.min(100, Math.max(0.001, Math.abs(asFiniteNumber(descriptor.height, 2))))
+                    ]} />
+                    <meshStandardMaterial color={asColor(descriptor.color, '#ffffff')} side={2} />
+                </mesh>
+            )
+        default:
+            return null
+    }
+}
+
+// evaluateNodeInputs plus the one value no input carries: what a Constructor
+// is wearing, read off its own Out doors. Computed HERE, where the whole
+// document and the running context both exist, because renderNodeBody gets
+// only (node, values, assetMap) and threading a context through every call
+// site for one type's sake would put the plumbing in eleven files.
+const resolveSpatialValues = (node, graphContext, allNodes) => {
+    const values = evaluateNodeInputs(node, graphContext)
+    if (node.typeId === 'geom.constructor') {
+        values.wornGeometry = wearConstructorGeometry(node, allNodes, graphContext)
+    }
+    return values
+}
+
 export function renderNodeBody(node, values, assetMap = null) {
     switch (node.typeId) {
         case 'geom.model': {
@@ -163,6 +245,27 @@ export function renderNodeBody(node, values, assetMap = null) {
         // tinted by its own bgColor field, with a small floor grid when
         // gridVisible is on - values.scale already sizes it via the outer
         // group transform (see NodeVisual), so this only needs a unit body.
+        case 'geom.constructor':
+            // Wearing something: the doors' geometry IS the body. Wearing
+            // nothing: a wireframe placeholder in the geometry port's own hue,
+            // so "not wired yet" and "wired to something invisible" cannot be
+            // confused — an unwired door carries undefined and draws nothing,
+            // this draws a frame saying "shape goes here".
+            if (values.wornGeometry) {
+                return <GeometryPieces descriptor={values.wornGeometry} />
+            }
+            return (
+                <group>
+                    <mesh>
+                        <boxGeometry args={[1, 1, 1]} />
+                        <meshStandardMaterial color="#bd93f9" transparent opacity={0.08} />
+                    </mesh>
+                    <mesh>
+                        <boxGeometry args={[1, 1, 1]} />
+                        <meshBasicMaterial color="#bd93f9" wireframe />
+                    </mesh>
+                </group>
+            )
         case 'universe.desk.3d':
             // The shell takes no clicks: it wraps whatever stands inside it, so
             // a pickable skin would swallow every pointer aimed at its contents
@@ -272,6 +375,7 @@ function SceneContent({
     selectedNodeId,
     onSelectEntity,
     onSelectNode,
+    onClearSelection = null,
     onWorldDoubleClick,
     onMoveNode,
     nodeScale = 1,
@@ -293,7 +397,20 @@ function SceneContent({
     // scopeId undefined = unscoped, matches the old document-wide behavior; a real
     // scope (including root, `null`) only renders/uses siblings of that scope — see
     // the identical comment in viewportWorldState.js.
-    const inScope = (node) => scopeId === undefined || (node.parentId || null) === scopeId
+    //
+    // With one carve-out either way: a constructor's parts are its DEFINITION,
+    // not standing objects, and the unscoped mode admitted every spatial node
+    // flat — so a legacy caller drew the snowman AND its loose spheres side by
+    // side, the exact double the childMap rule below exists to prevent.
+    const constructorIds = useMemo(
+        () => new Set((document.nodes || []).filter((node) => node.typeId === 'geom.constructor').map((node) => node.id)),
+        [document.nodes]
+    )
+    const inScope = (node) => (
+        scopeId === undefined
+            ? !constructorIds.has(node.parentId || null)
+            : (node.parentId || null) === scopeId
+    )
     const renderableNodes = useMemo(
         () => (document.nodes || []).filter((node) => isSpatialNode(node) && inScope(node)),
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -315,11 +432,16 @@ function SceneContent({
             const parentId = node.parentId || null
             if (!parentId) continue
             if (!byParent.has(parentId)) byParent.set(parentId, [])
-            byParent.get(parentId).push({ ...node, values: evaluateNodeInputs(node, graphContext) })
+            byParent.get(parentId).push({ ...node, values: resolveSpatialValues(node, graphContext, document.nodes) })
         }
         for (const [parentId, kids] of byParent) {
             const parent = spatial.find((node) => node.id === parentId)
-            if (parent?.typeId === 'universe.world') byParent.set(parentId, [])
+            // A World is its own stage. A Constructor's inside is a WORKSHOP:
+            // the parts standing in it are its definition, and only what
+            // reaches a door is its result — drawing both would show a snowman
+            // AND its three loose spheres. Same split TouchDesigner draws
+            // between a COMP's network and its output.
+            if (parent?.typeId === 'universe.world' || parent?.typeId === 'geom.constructor') byParent.set(parentId, [])
             else byParent.set(parentId, kids)
         }
         return byParent
@@ -335,7 +457,23 @@ function SceneContent({
     const resolvedLight = lightNode ? evaluateNodeInputs(lightNode, graphContext) : null
     const resolvedGrid = gridNode ? evaluateNodeInputs(gridNode, graphContext) : null
     const [draggingNodeId, setDraggingNodeId] = useState(null)
+    // Orbit yields while a node is being dragged: the controls listen on the
+    // DOM canvas, which R3F stopPropagation never reaches, so without this
+    // every drag moved the object AND spun the camera under it (measured —
+    // the second half of the teleport).
+    const controls = useThree((state) => state.controls)
+    useEffect(() => {
+        if (!controls) return undefined
+        controls.enabled = !draggingNodeId
+        return () => { controls.enabled = true }
+    }, [controls, draggingNodeId])
     const dragNodeYRef = useRef(0)
+    // Where on the ground the grab STARTED, relative to the object — subtracted
+    // on every move. Without it the raw plane-hit was written straight into
+    // position, and a 160px drag MEASURED as a teleport from [0,1.2,0] to
+    // [13.8,1.2,-9.9]: the pointer ray meets the y=0 plane far behind an
+    // elevated object, and that far point became the object's new home.
+    const dragGrabRef = useRef({ offX: 0, offZ: 0, x0: 0, z0: 0 })
     // rAF-gated (2026-07-17 perf audit): R3F's pointer events fire on every
     // raw DOM pointermove, which can exceed the display refresh rate on
     // high-poll-rate input devices -- each call was committing a document op
@@ -372,6 +510,11 @@ function SceneContent({
             <mesh
                 rotation={[-Math.PI / 2, 0, 0]}
                 position={[0, 0, 0]}
+                onClick={(event) => {
+                    if (draggingNodeId) return
+                    if ((event.delta ?? 0) > 4) return
+                    onClearSelection?.()
+                }}
                 onDoubleClick={(event) => {
                     event.stopPropagation()
                     if (draggingNodeId) return
@@ -384,8 +527,44 @@ function SceneContent({
                 onPointerMove={(event) => {
                     if (!draggingNodeId) return
                     event.stopPropagation()
-                    const point = event.point?.toArray?.() || [0, 0, 0]
-                    dragPendingRef.current = [point[0], dragNodeYRef.current, point[2]]
+                    // Same plane the grab measured on — the object's height —
+                    // computed from the ray, not from where the floor mesh was
+                    // hit (the mesh is only the event source).
+                    const { origin: rayOrigin, direction: rayDirection } = event.ray
+                    const th = Math.abs(rayDirection.y) > 1e-6
+                        ? (dragNodeYRef.current - rayOrigin.y) / rayDirection.y
+                        : -1
+                    const point = th > 0
+                        ? [rayOrigin.x + rayDirection.x * th, dragNodeYRef.current, rayOrigin.z + rayDirection.z * th]
+                        : (event.point?.toArray?.() || [0, 0, 0])
+                    const { offX, offZ, x0, z0 } = dragGrabRef.current
+                    if (event.nativeEvent?.shiftKey) {
+                        // Shift lifts. The ray is intersected with a vertical,
+                        // camera-facing plane through the object, so the object
+                        // tracks the pointer up and down the screen at any
+                        // orbit angle — the audit's ask, arranging needs height.
+                        // Anchored to where the drag STARTED, never to the
+                        // pointer: a lift that began with Shift already held
+                        // used to bake a sideways step into its anchor
+                        // (measured: z drifted −1.5 during a pure lift).
+                        const held = dragPendingRef.current || [x0 ?? point[0] + offX, dragNodeYRef.current, z0 ?? point[2] + offZ]
+                        const { origin, direction } = event.ray
+                        const camera = event.camera
+                        let nx = camera ? camera.position.x - held[0] : 0
+                        let nz = camera ? camera.position.z - held[2] : 1
+                        const len = Math.hypot(nx, nz) || 1
+                        nx /= len; nz /= len
+                        const denom = nx * direction.x + nz * direction.z
+                        if (Math.abs(denom) > 1e-6) {
+                            const t = (nx * (held[0] - origin.x) + nz * (held[2] - origin.z)) / denom
+                            if (t > 0) {
+                                dragNodeYRef.current = Math.max(0, origin.y + direction.y * t)
+                                dragPendingRef.current = [held[0], dragNodeYRef.current, held[2]]
+                            }
+                        }
+                    } else {
+                        dragPendingRef.current = [point[0] + offX, dragNodeYRef.current, point[2] + offZ]
+                    }
                     if (dragRafRef.current === null) {
                         dragRafRef.current = requestAnimationFrame(() => {
                             dragRafRef.current = null
@@ -425,7 +604,7 @@ function SceneContent({
                 {renderableNodes.map((node) => (
                     <SceneEntityErrorBoundary key={node.id} resetKey={node.id}>
                         <NodeVisual
-                            node={{ ...node, values: evaluateNodeInputs(node, graphContext) }}
+                            node={{ ...node, values: resolveSpatialValues(node, graphContext, document.nodes) }}
                             selected={node.id === selectedNodeId}
                             onSelect={onSelectNode}
                             onSelectNode={onSelectNode}
@@ -436,7 +615,30 @@ function SceneContent({
                             onPointerDown={(event) => {
                                 if (event.button !== 0) return
                                 event.stopPropagation()
-                                dragNodeYRef.current = node.values?.position?.[1] || 0
+                                const position = node.values?.position || [0, 0, 0]
+                                dragNodeYRef.current = position[1] || 0
+                                // The pointer ray's own ground hit, at grab
+                                // time — the same intersection the move
+                                // handler will keep computing, so the offset
+                                // between it and the object is exactly what
+                                // must be added back on every move.
+                                // Grab on the plane at the OBJECT's height,
+                                // not the floor: an elevated object's ray hits
+                                // the floor far behind it, and that lever arm
+                                // made a 180px drag move it four units
+                                // (measured). At its own height, hand and
+                                // object move one-to-one.
+                                const { origin, direction } = event.ray
+                                const t = Math.abs(direction.y) > 1e-6
+                                    ? (position[1] - origin.y) / direction.y
+                                    : 0
+                                dragGrabRef.current = {
+                                    x0: position[0],
+                                    z0: position[2],
+                                    ...(t > 0
+                                        ? { offX: position[0] - (origin.x + direction.x * t), offZ: position[2] - (origin.z + direction.z * t) }
+                                        : { offX: 0, offZ: 0 })
+                                }
                                 setDraggingNodeId(node.id)
                                 onSelectNode?.(node.id)
                             }}
@@ -572,6 +774,7 @@ export default function RawViewport({
                     selectedNodeId={selectedNodeId}
                     onSelectEntity={onSelectEntity}
                     onSelectNode={onSelectNode}
+                    onClearSelection={onClearSelection}
                     onWorldDoubleClick={onWorldDoubleClick}
                     onMoveNode={onMoveNode}
                     nodeScale={nodeScale}
