@@ -13,7 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the desk trilogy: room behind the graph, touch, the cut list
+- the Geo: a clear place to collect a scene
 
 Full detail: `PROGRESS.md`.
 
