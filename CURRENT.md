@@ -13,9 +13,7 @@ No commit SHAs or branch positions below — run `npm run state` for those; see
 
 ## Last session
 
-- the cut list: a minimal desk
-- the room behind the graph
-- touch works in the room
+- the desk trilogy: room behind the graph, touch, the cut list
 
 Full detail: `PROGRESS.md`.
 
